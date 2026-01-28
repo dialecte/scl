@@ -1,6 +1,6 @@
-import { toChainRecord, getLatestStagedRecord, toRawRecord } from '@dialecte/core'
-
 import { SCL_DIALECTE_CONFIG } from '../config/dialecte.config'
+
+import { toChainRecord, getLatestStagedRecord, toRawRecord } from '@dialecte/core'
 
 import type * as Core from '@dialecte/core'
 
