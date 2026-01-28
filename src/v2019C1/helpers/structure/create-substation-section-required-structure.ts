@@ -26,16 +26,14 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 		VoltageLevel: voltageLevels = [],
 		Bay: bays = [],
 	} = await sclChain.findDescendants({
-		filter: {
-			tagName: 'Substation',
-			attributes: { name: substationName, templateUuid: '' },
+		tagName: 'Substation',
+		attributes: { name: substationName, templateUuid: '' },
+		descendant: {
+			tagName: 'VoltageLevel',
+			attributes: { name: voltageLevelName, numPhases: '' },
 			descendant: {
-				tagName: 'VoltageLevel',
-				attributes: { name: voltageLevelName, numPhases: '' },
-				descendant: {
-					tagName: 'Bay',
-					attributes: { name: bayName, uuid: '' },
-				},
+				tagName: 'Bay',
+				attributes: { name: bayName, uuid: '' },
 			},
 		},
 	})
