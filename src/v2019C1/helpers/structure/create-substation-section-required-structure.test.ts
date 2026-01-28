@@ -1,5 +1,3 @@
-import { describe, it, expect } from 'vitest'
-
 import {
 	createSclTestDialecte,
 	XMLNS_SCL_NAMESPACE,
@@ -7,8 +5,9 @@ import {
 	XMLNS_DEV_NAMESPACE,
 	DEV_ID,
 } from '../test-fixtures'
-
 import { getOrCreateSubstationSectionRequiredStructure } from './create-substation-section-required-structure'
+
+import { describe, it, expect } from 'vitest'
 
 describe('getOrCreateSubstationSectionRequiredStructure', () => {
 	type FocusLevel = 'SCL' | 'Substation' | 'VoltageLevel' | 'Bay'
