@@ -1,6 +1,6 @@
-import { createDialecte } from '@dialecte/core'
-
 import { SCL_DIALECTE_CONFIG } from './config/dialecte.config'
+
+import { createDialecte } from '@dialecte/core'
 
 import type { Scl } from './config'
 
