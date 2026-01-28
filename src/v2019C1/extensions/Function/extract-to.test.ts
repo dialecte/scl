@@ -99,13 +99,13 @@ describe('Function', () => {
 
 				if (tc.operations) {
 					await executeChainOperations({
-						chain: sourceDialecte.fromRoot(),
+						chain: sourceDialecte.fromRoot() as Scl.Chain<Scl.ElementsOf>,
 						operations: tc.operations,
 					})
 				}
 
 				// Act
-				const { target } = await sourceDialecte
+				const { targetChain } = await sourceDialecte
 					.fromElement({ tagName: 'Function', id: 'function-ct' })
 					.extractTo({
 						target: {
@@ -115,20 +115,20 @@ describe('Function', () => {
 						},
 					})
 
-				await target.commit()
+				await targetChain.commit()
 
 				// Assert
-				const targetRoot = await targetDialecte
-					.fromRoot()
-					.findDescendants({ filter: { tagName: tc.input.targetLevel } })
+				const targetRoot = await targetDialecte.fromRoot().findDescendants()
 
 				// Check Function is at the correct level
-				const levelElement = targetRoot?.[tc.input.targetLevel]?.[0]
+				const levelElement = targetRoot[tc.input.targetLevel]?.[0]
 				expect(levelElement).toBeDefined()
 
 				const targetFunctions = await targetDialecte
 					.fromElement({ tagName: tc.input.targetLevel, id: levelElement!.id })
-					.findDescendants({ filter: { tagName: 'Function' } })
+					.findDescendants({ tagName: 'Function' })
+
+				assert(targetFunctions, 'Target Functions should be defined')
 
 				if (tc.expected.targetHasFunction) {
 					expect(targetFunctions?.Function).toBeDefined()
@@ -139,13 +139,9 @@ describe('Function', () => {
 
 					// Check LNode children handling
 					if (tc.expected.lNodesShouldHaveNoChildren !== undefined) {
-						const targetFunctionTree = await targetDialecte
-							.fromElement({ tagName: 'Function', id: targetFunction.id })
-							.getTree()
-
-						const { LNode: lNodes = [] } = await targetDialecte
+						const { LNode: lNodes } = await targetDialecte
 							.fromRoot()
-							.findDescendants({ filter: { tagName: 'LNode' } })
+							.findDescendants({ tagName: 'LNode' })
 
 						if (tc.expected.lNodesShouldHaveNoChildren) {
 							// FSD: LNodes should be cloned but with no children
@@ -163,22 +159,6 @@ describe('Function', () => {
 					expect(targetFunctions?.Function).toBeUndefined()
 				}
 			})
-		}
-
-		function findAllLNodesInTree(tree: any): any[] {
-			const lNodes: any[] = []
-
-			if (tree.tagName === 'LNode') {
-				lNodes.push(tree)
-			}
-
-			if (tree.children && tree.children.length > 0) {
-				for (const child of tree.children) {
-					lNodes.push(...findAllLNodesInTree(child))
-				}
-			}
-
-			return lNodes
 		}
 	})
 })

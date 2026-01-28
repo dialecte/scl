@@ -40,8 +40,8 @@ export function extractTo(params: Scl.MethodsParams<'Function'>) {
 		})
 
 		return {
-			source: sourceChain,
-			target: endingTargetChain,
+			sourceChain: sourceChain,
+			targetChain: endingTargetChain,
 		}
 	}
 }
