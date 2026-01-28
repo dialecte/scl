@@ -21,7 +21,7 @@ export const SCL_IO_CONFIG = {
 export const SCL_DATABASE_CONFIG = {
 	tables: {
 		xmlElements: {
-			name: 'xmlElements',
+			name: 'sclElements',
 			schema:
 				'id, tagName, [id+tagName], parent.id, parent.tagName, *children.id, *children.tagName',
 		},
