@@ -1,9 +1,10 @@
 import type { Scl } from '@/v2019C1/config'
+import type { Chain } from '@dialecte/core'
 
 export async function getOrCreateSubstationSectionRequiredStructure<
 	GenericLevel extends 'SCL' | 'Substation' | 'VoltageLevel' | 'Bay',
 >(params: {
-	chain: Scl.Chain<'SCL'>
+	chain: Chain<Scl.Config, 'SCL'>
 	focusLevel: GenericLevel
 	names?: {
 		substation?: string
@@ -11,7 +12,7 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 		bay?: string
 	}
 }): Promise<{
-	chain: Scl.Chain<GenericLevel>
+	chain: Chain<Scl.Config, GenericLevel>
 	substationId: string
 	voltageLevelId: string
 	bayId: string
@@ -39,7 +40,7 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 	})
 
 	// Create or navigate to Substation
-	let substationChain: Scl.Chain<'Substation'>
+	let substationChain: Chain<Scl.Config, 'Substation'>
 	let substationId
 	if (!substations?.[0]) {
 		substationId = crypto.randomUUID()
@@ -55,7 +56,7 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 	}
 
 	// Create or navigate to VoltageLevel
-	let voltageLevelChain: Scl.Chain<'VoltageLevel'>
+	let voltageLevelChain: Chain<Scl.Config, 'VoltageLevel'>
 	let voltageLevelId
 	if (!voltageLevels?.[0]) {
 		voltageLevelId = crypto.randomUUID()
@@ -74,7 +75,7 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 	}
 
 	// Create or navigate to Bay
-	let bayChain: Scl.Chain<'Bay'>
+	let bayChain: Chain<Scl.Config, 'Bay'>
 	let bayId
 	if (!bays?.[0]) {
 		bayId = crypto.randomUUID()
@@ -94,14 +95,14 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 
 	if (focusLevel === 'Bay')
 		return {
-			chain: bayChain as unknown as Scl.Chain<GenericLevel>,
+			chain: bayChain as unknown as Chain<Scl.Config, GenericLevel>,
 			substationId,
 			voltageLevelId,
 			bayId,
 		}
 	if (focusLevel === 'VoltageLevel')
 		return {
-			chain: bayChain.goToParent() as unknown as Scl.Chain<GenericLevel>,
+			chain: bayChain.goToParent() as unknown as Chain<Scl.Config, GenericLevel>,
 			substationId,
 			voltageLevelId,
 			bayId,
@@ -109,14 +110,17 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 
 	if (focusLevel === 'Substation')
 		return {
-			chain: bayChain.goToParent().goToParent() as unknown as Scl.Chain<GenericLevel>,
+			chain: bayChain.goToParent().goToParent() as unknown as Chain<Scl.Config, GenericLevel>,
 			substationId,
 			voltageLevelId,
 			bayId,
 		}
 
 	return {
-		chain: bayChain.goToParent().goToParent().goToParent() as unknown as Scl.Chain<GenericLevel>,
+		chain: bayChain.goToParent().goToParent().goToParent() as unknown as Chain<
+			Scl.Config,
+			GenericLevel
+		>,
 		substationId,
 		voltageLevelId,
 		bayId,

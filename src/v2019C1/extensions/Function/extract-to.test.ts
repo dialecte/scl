@@ -7,7 +7,7 @@ import { ALL_XMLNS_NAMESPACES, DEV_ID } from '@/v2019C1/helpers'
 import { importSclFiles } from '@/v2019C1/io'
 
 import type { Scl } from '@/v2019C1/config'
-import type { ChainTestOperation } from '@dialecte/core'
+import type { Chain, ChainTestOperation } from '@dialecte/core'
 
 const xmlString = /* xml */ `
 <SCL ${ALL_XMLNS_NAMESPACES}>
@@ -99,7 +99,7 @@ describe('Function', () => {
 
 				if (tc.operations) {
 					await executeChainOperations({
-						chain: sourceDialecte.fromRoot() as Scl.Chain<Scl.ElementsOf>,
+						chain: sourceDialecte.fromRoot() as Chain<Scl.Config, Scl.ElementsOf>,
 						operations: tc.operations,
 					})
 				}
