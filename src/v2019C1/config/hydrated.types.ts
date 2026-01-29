@@ -12,11 +12,6 @@ export namespace Scl {
 		GenericElement
 	>
 
-	export type Chain<GenericElement extends Core.ElementsOf<Config>> = Core.Chain<
-		Config,
-		GenericElement
-	>
-
 	// DEFINITION
 	export type ElementsOf = Core.ElementsOf<Config>
 	export type AttributesValueObjectOf<GenericElement extends ElementsOf> =
