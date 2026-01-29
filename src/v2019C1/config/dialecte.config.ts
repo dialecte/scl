@@ -7,7 +7,7 @@ import {
 	DESCENDANTS,
 	ANCESTORS,
 } from '../definition'
-//import { EXTENSIONS } from '../extensions'
+import { EXTENSIONS } from '../extensions'
 import { HOOKS } from '../hooks'
 
 import type { IOConfig, AnyDialecteConfig, DatabaseConfig, AnyDefinition } from '@dialecte/core'
@@ -62,5 +62,5 @@ export const SCL_DIALECTE_CONFIG = {
 	io: SCL_IO_CONFIG,
 	definition: DEFINITION as AnyDefinition,
 	hooks: HOOKS,
-	extensions: {},
+	extensions: EXTENSIONS,
 } as const satisfies AnyDialecteConfig
