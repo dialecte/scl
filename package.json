@@ -36,7 +36,7 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.0.4",
+		"@dialecte/core": "0.0.6",
 		"dexie": "4.2.0"
 	},
 	"devDependencies": {
