@@ -1,6 +1,6 @@
-import { beforeClone } from './clone'
-import { afterCreated } from './create'
-import { afterStandardizedRecord } from './standardized'
+import { afterCreated } from './after-created'
+import { afterStandardizedRecord } from './after-standardized-record'
+import { beforeClone } from './before-clone'
 
 import type { DialecteHooks } from '@dialecte/core'
 

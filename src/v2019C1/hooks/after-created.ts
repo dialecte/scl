@@ -60,6 +60,12 @@ export function afterCreated<
 	// If parent is already Private, add child directly to it
 	if (isParentRecordPrivate) {
 		const privateRecord = parentRecord as unknown as Core.RawRecord<GenericConfig, 'Private'>
+
+		// Check if child's parent is already set to this Private element (e.g., during cloning)
+		if (childRecord.parent?.id === privateRecord.id && childRecord.parent?.tagName === 'Private') {
+			return []
+		}
+
 		const stagedPrivateRecord = getLatestPrivateRecord(privateRecord.id)
 		const latestPrivateRecord =
 			stagedPrivateRecord && stagedPrivateRecord.status !== 'deleted'
