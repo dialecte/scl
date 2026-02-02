@@ -14,7 +14,6 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 
 	type TestCase = {
 		desc: string
-		only?: boolean
 		xmlString: string
 		params: {
 			focusLevel: FocusLevel
@@ -24,12 +23,6 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 				bay?: string
 			}
 		}
-		expected: {
-			focusTag: FocusLevel
-			focusName: string
-			parentTag?: 'SCL' | 'Substation' | 'VoltageLevel'
-			childrenCount: number
-		}
 	}
 
 	const testCases: TestCase[] = [
@@ -38,54 +31,30 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 			desc: 'creates full hierarchy focusing on Bay when SCL is empty',
 			xmlString: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1"></SCL>`,
 			params: { focusLevel: 'Bay' },
-			expected: {
-				focusTag: 'Bay',
-				focusName: 'TEMPLATE',
-				parentTag: 'VoltageLevel',
-				childrenCount: 0,
-			},
 		},
 		{
 			desc: 'creates full hierarchy focusing on VoltageLevel when SCL is empty',
 			xmlString: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1"></SCL>`,
 			params: { focusLevel: 'VoltageLevel' },
-			expected: {
-				focusTag: 'VoltageLevel',
-				focusName: 'TEMPLATE',
-				parentTag: 'Substation',
-				childrenCount: 1, // Bay was created
-			},
 		},
 		{
 			desc: 'creates full hierarchy focusing on Substation when SCL is empty',
 			xmlString: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1"></SCL>`,
 			params: { focusLevel: 'Substation' },
-			expected: {
-				focusTag: 'Substation',
-				focusName: 'TEMPLATE',
-				parentTag: 'SCL',
-				childrenCount: 1, // VoltageLevel was created
-			},
 		},
 
 		// Find existing and create missing
 		{
-			desc: 'finds existing Substation and creates missing VL and Bay',
+			desc: 'finds existing Substation and creates missing VoltageLevel and Bay',
 			xmlString: /* xml */ `
 				<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1">
 					<Substation ${DEV_ID}="2" name="TEMPLATE" />
 				</SCL>
 			`,
 			params: { focusLevel: 'Bay' },
-			expected: {
-				focusTag: 'Bay',
-				focusName: 'TEMPLATE',
-				parentTag: 'VoltageLevel',
-				childrenCount: 0,
-			},
 		},
 		{
-			desc: 'finds existing Sub and VL, creates Bay, focuses on VoltageLevel',
+			desc: 'finds existing Substation and VoltageLevel, creates Bay, focuses on VoltageLevel',
 			xmlString: /* xml */ `
 				<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1">
 					<Substation ${DEV_ID}="2" name="TEMPLATE">
@@ -94,12 +63,6 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 				</SCL>
 			`,
 			params: { focusLevel: 'VoltageLevel' },
-			expected: {
-				focusTag: 'VoltageLevel',
-				focusName: 'TEMPLATE',
-				parentTag: 'Substation',
-				childrenCount: 1, // Bay created
-			},
 		},
 		{
 			desc: 'finds complete hierarchy and focuses on Substation',
@@ -113,12 +76,6 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 				</SCL>
 			`,
 			params: { focusLevel: 'Substation' },
-			expected: {
-				focusTag: 'Substation',
-				focusName: 'TEMPLATE',
-				parentTag: 'SCL',
-				childrenCount: 1,
-			},
 		},
 
 		// Custom names
@@ -128,12 +85,6 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 			params: {
 				focusLevel: 'Bay',
 				names: { substation: 'SUB1', voltageLevel: 'VL1', bay: 'BAY1' },
-			},
-			expected: {
-				focusTag: 'Bay',
-				focusName: 'BAY1',
-				parentTag: 'VoltageLevel',
-				childrenCount: 0,
 			},
 		},
 		{
@@ -147,30 +98,25 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 				focusLevel: 'VoltageLevel',
 				names: { substation: 'SUB1', voltageLevel: 'VL1', bay: 'BAY1' },
 			},
-			expected: {
-				focusTag: 'VoltageLevel',
-				focusName: 'VL1',
-				parentTag: 'Substation',
-				childrenCount: 1,
-			},
 		},
 	]
 
-	let filteredTests = testCases
-	const onlyTests = testCases.filter((tc) => tc.only)
-	if (onlyTests.length) {
-		filteredTests = onlyTests
-	}
+	testCases.forEach(runTest)
 
-	filteredTests.forEach(runTest)
-
-	function runTest(tc: TestCase) {
-		it(tc.desc, async () => {
+	function runTest(testCase: TestCase) {
+		it(testCase.desc, async () => {
 			// Arrange
 			const { dialecte } = await createSclTestDialecte({
-				xmlString: tc.xmlString,
+				xmlString: testCase.xmlString,
 			})
-			const sclChain = dialecte.fromElement({ tagName: 'SCL', id: '1' })
+			const sclChain = dialecte.fromRoot()
+
+			const { focusLevel, names } = testCase.params
+			const {
+				substation: substationName,
+				voltageLevel: voltageLevelName,
+				bay: bayName,
+			} = names || {}
 
 			// Act
 			const {
@@ -180,28 +126,38 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 				bayId,
 			} = await getOrCreateSubstationSectionRequiredStructure({
 				chain: sclChain,
-				focusLevel: tc.params.focusLevel,
-				names: tc.params.names,
+				focusLevel,
+				names,
 			})
 
-			const context = await resultChain.getContext()
+			await resultChain.commit()
 
-			// Assert - Focus is at correct level
-			expect(context.currentFocus.tagName).toBe(tc.expected.focusTag)
+			const {
+				Substation: substations,
+				VoltageLevel: voltageLevels,
+				Bay: bays,
+			} = await dialecte.fromRoot().findDescendants()
 
-			// Assert - Focused element has correct name
-			const nameAttr = context.currentFocus.attributes.find(
-				(attribute) => attribute.name === 'name',
+			// Assert - Check structure
+
+			const { currentFocus: resultChainFocus } = await resultChain.getContext()
+
+			// Focus is correct
+			expect(resultChainFocus.tagName).toBe(focusLevel)
+
+			// Full hierarchy created
+			expect(substations.length).toBe(1)
+			expect(voltageLevels.length).toBe(1)
+			expect(bays.length).toBe(1)
+
+			// Names are correct
+			expect(substations[0].attributes.find((a) => a.name === 'name')?.value).toBe(
+				substationName ?? 'TEMPLATE',
 			)
-			expect(nameAttr?.value).toBe(tc.expected.focusName)
-
-			// Assert - Parent is correct (if not SCL)
-			if (tc.expected.parentTag) {
-				expect(context.currentFocus.parent?.tagName).toBe(tc.expected.parentTag)
-			}
-
-			// Assert - Children count is correct
-			expect(context.currentFocus.children.length).toBe(tc.expected.childrenCount)
+			expect(voltageLevels[0].attributes.find((a) => a.name === 'name')?.value).toBe(
+				voltageLevelName ?? 'TEMPLATE',
+			)
+			expect(bays[0].attributes.find((a) => a.name === 'name')?.value).toBe(bayName ?? 'TEMPLATE')
 
 			expect(substationId).toBeDefined()
 			expect(voltageLevelId).toBeDefined()
