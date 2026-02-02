@@ -38,7 +38,6 @@ describe('Function', () => {
 		type TestCase = {
 			description: string
 			input: {
-				targetExtension: 'FSD' | 'ASD' | 'ISD'
 				targetLevel: 'Substation' | 'Bay' | 'VoltageLevel'
 			}
 			expected: Partial<Record<Scl.DescendantsOf<'Function'>, number>>
@@ -48,11 +47,9 @@ describe('Function', () => {
 			{
 				description: 'FSD: filters out specified elements',
 				input: {
-					targetExtension: 'FSD',
 					targetLevel: 'Substation',
 				},
 				expected: {
-					SubFunction: 1,
 					LNode: 1,
 					LNodeSpecNaming: 1,
 				},
@@ -76,10 +73,9 @@ describe('Function', () => {
 
 				// Act
 				const { targetChain } = await sourceDialecte
-					.fromElement({ tagName: 'Function', id: 'function-hmi' })
+					.fromElement({ tagName: 'SubFunction', id: 'subfunction-hmi' })
 					.extractTo({
 						target: {
-							extension: testCase.input.targetExtension,
 							chain: targetDialecte.fromRoot(),
 							level: testCase.input.targetLevel,
 						},

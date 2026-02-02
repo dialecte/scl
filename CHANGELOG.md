@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.11] - 2026-01-29
+
+### Fixed
+
+- fix handling of `Private` elements in the `afterClone`hook
+
+## [0.0.10] - 2026-01-29
+
+### Changed
+
+- update core to 0.0.9
+
+## [0.0.9] - 2026-01-29
+
+### Changed
+
+- `afterClone` hook: exclude empty `Private` element from cloning process
+
 ## [0.0.7] - 2026-01-29
 
 ### Added
