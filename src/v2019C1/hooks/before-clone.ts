@@ -4,9 +4,15 @@ export function beforeClone<
 	GenericConfig extends Core.AnyDialecteConfig,
 	GenericElement extends Core.ElementsOf<GenericConfig>,
 >(params: {
-	record: Core.ChainRecord<GenericConfig, GenericElement>
-}): Core.ChainRecord<GenericConfig, GenericElement> {
+	record: Core.TreeRecord<GenericConfig, GenericElement>
+}): { shouldBeCloned: boolean; transformedRecord: Core.TreeRecord<GenericConfig, GenericElement> } {
 	const { record } = params
+
+	let shouldBeCloned = true
+
+	if (record.tagName === 'Private' && !record.tree.length) {
+		shouldBeCloned = false
+	}
 
 	// Remove all UUID attributes from cloned element
 	const filteredAttributes = record.attributes.filter(
@@ -14,7 +20,10 @@ export function beforeClone<
 	)
 
 	return {
-		...record,
-		attributes: filteredAttributes,
+		shouldBeCloned,
+		transformedRecord: {
+			...record,
+			attributes: filteredAttributes,
+		},
 	}
 }

@@ -1,6 +1,6 @@
 {
 	"name": "@dialecte/scl",
-	"version": "0.0.6",
+	"version": "0.0.11",
 	"description": "Dialecte - SCL (Substation Configuration Language) sdk",
 	"license": "MIT",
 	"repository": {
@@ -27,16 +27,18 @@
 		"//====== TEST ======//": "",
 		"test": "vitest",
 		"//====== CHECK ======//": "",
-		"check": "run-p type-check lint:check format:check",
+		"check": "run-p type-check lint:check format:check link:check",
 		"type-check": "tsc --noEmit",
 		"lint:check": "oxlint",
 		"lint:fix": "oxlint . --fix -D correctness --ignore-path .gitignore",
 		"format:check": "oxfmt --check",
 		"format:fix": "oxfmt",
+		"link:check": "env | grep -E '^npm_package_(dev)?dependencies' | grep -qE '(file:|link:|\\.\\./|workspace:)' && exit 1 || exit 0",
+		"//====== PREPARE ======//": "",
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.0.6",
+		"@dialecte/core": "0.0.10",
 		"dexie": "4.2.0"
 	},
 	"devDependencies": {
