@@ -1,3 +1,5 @@
+import { describe, it, expect } from 'vitest'
+
 import {
 	createSclTestDialecte,
 	XMLNS_SCL_NAMESPACE,
@@ -5,9 +7,11 @@ import {
 	XMLNS_DEV_NAMESPACE,
 	DEV_ID,
 } from '../test-fixtures'
+
 import { getOrCreateSubstationSectionRequiredStructure } from './create-substation-section-required-structure'
 
-import { describe, it, expect } from 'vitest'
+import type { Scl } from '@/v2019C1/config'
+import type { Chain } from '@dialecte/core'
 
 describe('getOrCreateSubstationSectionRequiredStructure', () => {
 	type FocusLevel = 'SCL' | 'Substation' | 'VoltageLevel' | 'Bay'
@@ -125,7 +129,7 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 				voltageLevelId,
 				bayId,
 			} = await getOrCreateSubstationSectionRequiredStructure({
-				chain: sclChain,
+				chain: sclChain as Chain<Scl.Config, 'SCL'>,
 				focusLevel,
 				names,
 			})
