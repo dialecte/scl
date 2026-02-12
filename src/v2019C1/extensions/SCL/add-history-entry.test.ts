@@ -1,10 +1,10 @@
-import { assert, executeChainOperations } from '@dialecte/core'
+import { assert, executeTableDrivenTestsChainOperations } from '@dialecte/core'
 import { describe, it, expect } from 'vitest'
 
 import { createSclTestDialecte } from '@/v2019C1/helpers'
 
 import type { Scl } from '@/v2019C1/config'
-import type { Chain, ChainTestOperation } from '@dialecte/core'
+import type { ChainTestOperation } from '@dialecte/core'
 
 const xmlString = /* xml */ `<SCL></SCL>`
 
@@ -321,8 +321,8 @@ describe('addEntryToHistory', () => {
 				})
 
 				if (testCase.operations) {
-					await executeChainOperations({
-						chain: dialecte.fromRoot() as Chain<Scl.Config, Scl.ElementsOf>,
+					await executeTableDrivenTestsChainOperations({
+						chain: dialecte.fromRoot(),
 						operations: testCase.operations,
 					})
 				}

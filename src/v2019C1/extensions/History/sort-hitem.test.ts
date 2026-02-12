@@ -1,4 +1,4 @@
-import { executeChainOperations } from '@dialecte/core'
+import { executeTableDrivenTestsChainOperations } from '@dialecte/core'
 import { describe, it, expect } from 'vitest'
 
 import {
@@ -9,7 +9,7 @@ import {
 } from '@/v2019C1/helpers'
 
 import type { Scl } from '@/v2019C1/config'
-import type { Chain, ChainTestOperation } from '@dialecte/core'
+import type { ChainTestOperation } from '@dialecte/core'
 
 const xmlString = /* xml */ `
 <SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_DEV_NAMESPACE} >
@@ -281,8 +281,8 @@ describe('getSortedHitems', () => {
 				// Arrange
 				const { dialecte, cleanup } = await createSclTestDialecte({ xmlString })
 
-				await executeChainOperations({
-					chain: dialecte.fromRoot() as Chain<Scl.Config, Scl.ElementsOf>,
+				await executeTableDrivenTestsChainOperations({
+					chain: dialecte.fromRoot(),
 					operations: testCase.operations,
 				})
 

@@ -1,9 +1,8 @@
 import { getAttributesValuesByName } from '@dialecte/core'
 
 import type { Scl } from '@/v2019C1/config'
-import type { ExtensionsMethodParams } from '@dialecte/core'
 
-export function getSortedHitems(params: ExtensionsMethodParams<Scl.Config, 'History'>) {
+export function getSortedHitems(params: Scl.MethodsParams<'History'>) {
 	const { chain, contextPromise } = params
 
 	return async function () {

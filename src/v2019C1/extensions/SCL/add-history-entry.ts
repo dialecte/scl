@@ -1,9 +1,8 @@
 import { getAttributesValuesByName } from '@dialecte/core'
 
 import type { Scl } from '@/v2019C1/config'
-import type { ExtensionsMethodParams, Chain } from '@dialecte/core'
 
-export function addEntryToHistory(params: ExtensionsMethodParams<Scl.Config, 'SCL'>) {
+export function addEntryToHistory(params: Scl.MethodsParams<'SCL'>) {
 	const { chain, contextPromise, dialecteConfig } = params
 
 	return function (params: {
@@ -19,7 +18,7 @@ export function addEntryToHistory(params: ExtensionsMethodParams<Scl.Config, 'SC
 			who: Scl.AttributesValueObjectOf<'Hitem'>['who']
 			what: Scl.AttributesValueObjectOf<'Hitem'>['what']
 		}
-	}) {
+	}): Scl.Chain<'SCL'> {
 		const { filename, header, item } = params
 		const { id, fileType, nameStructure, version, tool } = header
 		const { who, what } = item
@@ -33,7 +32,7 @@ export function addEntryToHistory(params: ExtensionsMethodParams<Scl.Config, 'SC
 				tagName: 'Header',
 			})
 
-			let headerChain: Chain<Scl.Config, 'Header'>
+			let headerChain: Scl.Chain<'Header'>
 			if (!headers.length) {
 				headerChain = initialChain.addChild({
 					tagName: 'Header',
@@ -65,7 +64,7 @@ export function addEntryToHistory(params: ExtensionsMethodParams<Scl.Config, 'SC
 			const historyId = (histories[0]?.id ||
 				crypto.randomUUID()) as `${string}-${string}-${string}-${string}-${string}`
 
-			let historyChain: Chain<Scl.Config, 'History'>
+			let historyChain: Scl.Chain<'History'>
 			if (!histories.length) {
 				historyChain = headerChain.addChild({
 					id: historyId,
@@ -75,8 +74,6 @@ export function addEntryToHistory(params: ExtensionsMethodParams<Scl.Config, 'SC
 				})
 			} else historyChain = headerChain.goToElement({ tagName: 'History', id: histories[0].id })
 
-			console.log('historyChain:', historyChain)
-			console.log('sclChain:', initialChain)
 			const lastHitem = await historyChain.getLatestHitem()
 			const { version: lastHitemVersion, revision: lastHitemRevision } = lastHitem
 				? getAttributesValuesByName({ attributes: lastHitem.attributes })

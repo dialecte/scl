@@ -1,18 +1,20 @@
 import { getOrCreateSubstationSectionRequiredStructure } from '@/v2019C1/helpers'
 
 import type { Scl } from '@/v2019C1/config'
-import type { Chain, ExtensionsMethodParams } from '@dialecte/core'
 
-export function extractTo(params: ExtensionsMethodParams<Scl.Config, 'Function'>) {
+export function extractTo(params: Scl.MethodsParams<'Function'>) {
 	const { chain, contextPromise } = params
 
 	return async function (params: {
 		target: {
 			extension: 'FSD' | 'ASD' | 'ISD'
-			chain: Chain<Scl.Config, 'SCL'>
+			chain: Scl.Chain<'SCL'>
 			level?: 'Substation' | 'Bay' | 'VoltageLevel'
 		}
-	}) {
+	}): Promise<{
+		sourceChain: Scl.Chain<'Function'>
+		targetChain: Scl.Chain<'Function'>
+	}> {
 		const {
 			target: { extension, chain: targetRootChain, level = 'Substation' },
 		} = params

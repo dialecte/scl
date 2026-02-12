@@ -38,7 +38,7 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.0.13",
+		"@dialecte/core": "^0.0.13",
 		"dexie": "4.2.0"
 	},
 	"devDependencies": {
@@ -48,8 +48,8 @@
 		"husky": "^9.1.7",
 		"jiti": "^2.4.2",
 		"npm-run-all2": "^8.0.4",
-		"oxfmt": "^0.27.0",
-		"oxlint": "^1.42.0",
+		"oxfmt": "^0.28.0",
+		"oxlint": "^1.43.0",
 		"playwright": "^1.53.2",
 		"tsx": "^4.20.6",
 		"typescript": "~5.8.0",

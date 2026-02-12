@@ -1,3 +1,4 @@
+import type { EXTENSIONS } from '../extensions'
 import type { SCL_DIALECTE_CONFIG } from './dialecte.config'
 import type * as Core from '@dialecte/core'
 
@@ -5,11 +6,17 @@ export namespace Scl {
 	export type Config = typeof SCL_DIALECTE_CONFIG
 
 	export type MethodsParams<GenericElement extends Core.ElementsOf<Config>> =
-		Core.ExtensionsMethodParams<Config, GenericElement>
+		Core.ExtensionsMethodParams<Config, GenericElement, typeof EXTENSIONS>
 
 	export type Context<GenericElement extends Core.ElementsOf<Config>> = Core.Context<
 		Config,
 		GenericElement
+	>
+
+	export type Chain<GenericElement extends ElementsOf> = Core.Chain<
+		Config,
+		GenericElement,
+		typeof EXTENSIONS
 	>
 
 	// DEFINITION

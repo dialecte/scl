@@ -1,10 +1,9 @@
 import type { Scl } from '@/v2019C1/config'
-import type { Chain } from '@dialecte/core'
 
 export async function getOrCreateSubstationSectionRequiredStructure<
 	GenericLevel extends 'SCL' | 'Substation' | 'VoltageLevel' | 'Bay',
 >(params: {
-	chain: Chain<Scl.Config, 'SCL'>
+	chain: Scl.Chain<'SCL'>
 	focusLevel: GenericLevel
 	names?: {
 		substation?: string
@@ -12,7 +11,7 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 		bay?: string
 	}
 }): Promise<{
-	chain: Chain<Scl.Config, GenericLevel>
+	chain: Scl.Chain<GenericLevel>
 	substationId: string
 	voltageLevelId: string
 	bayId: string
@@ -29,7 +28,7 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 	})
 
 	// Create or navigate to Substation
-	let substationChain: Chain<Scl.Config, 'Substation'>
+	let substationChain: Scl.Chain<'Substation'>
 	let substationId
 	if (!substations?.[0]) {
 		substationId = crypto.randomUUID()
@@ -51,7 +50,7 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 	})
 
 	// Create or navigate to VoltageLevel
-	let voltageLevelChain: Chain<Scl.Config, 'VoltageLevel'>
+	let voltageLevelChain: Scl.Chain<'VoltageLevel'>
 	let voltageLevelId
 	if (!voltageLevels?.[0]) {
 		voltageLevelId = crypto.randomUUID()
@@ -76,7 +75,7 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 	})
 
 	// Create or navigate to Bay
-	let bayChain: Chain<Scl.Config, 'Bay'>
+	let bayChain: Scl.Chain<'Bay'>
 	let bayId
 	if (!bays?.[0]) {
 		bayId = crypto.randomUUID()
@@ -94,22 +93,21 @@ export async function getOrCreateSubstationSectionRequiredStructure<
 		})
 	}
 
-	let returnedChain: Chain<Scl.Config, GenericLevel> = bayChain as unknown as Chain<
-		Scl.Config,
-		GenericLevel
-	>
+	let returnedChain: Scl.Chain<GenericLevel> = bayChain as unknown as Scl.Chain<GenericLevel>
 
 	if (focusLevel === 'VoltageLevel') {
-		returnedChain = bayChain.goToParent() as unknown as Chain<Scl.Config, GenericLevel>
+		returnedChain = bayChain.goToParent('VoltageLevel') as unknown as Scl.Chain<GenericLevel>
 	}
 	if (focusLevel === 'Substation') {
-		returnedChain = bayChain.goToParent().goToParent() as unknown as Chain<Scl.Config, GenericLevel>
+		returnedChain = bayChain
+			.goToParent('VoltageLevel')
+			.goToParent('Substation') as unknown as Scl.Chain<GenericLevel>
 	}
 	if (focusLevel === 'SCL') {
-		returnedChain = bayChain.goToParent().goToParent().goToParent() as unknown as Chain<
-			Scl.Config,
-			GenericLevel
-		>
+		returnedChain = bayChain
+			.goToParent('VoltageLevel')
+			.goToParent('Substation')
+			.goToParent('SCL') as unknown as Scl.Chain<GenericLevel>
 	}
 
 	return {

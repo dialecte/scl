@@ -7,13 +7,13 @@ import {
 	XMLNS_DEFAULT_NAMESPACE,
 	XMLNS_DEV_NAMESPACE,
 	toRawRecord,
-	executeChainOperations,
+	executeTableDrivenTestsChainOperations,
 } from '@dialecte/core'
 import { describe, it, expect } from 'vitest'
 
 import type { Scl } from '../config'
 import type * as Core from '@dialecte/core'
-import type { Chain, ChainTestOperation } from '@dialecte/core'
+import type { ChainTestOperation } from '@dialecte/core'
 
 const xmlString = /* xml */ `
 	<SCL ${XMLNS_DEFAULT_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="root">
@@ -234,8 +234,8 @@ describe('afterCreated', () => {
 			try {
 				// Execute setup operations if any
 				if (testCase.operations) {
-					await executeChainOperations({
-						chain: dialecte.fromRoot() as Chain<TestConfig, Scl.ElementsOf>,
+					await executeTableDrivenTestsChainOperations({
+						chain: dialecte.fromRoot(),
 						operations: testCase.operations,
 					})
 				}
