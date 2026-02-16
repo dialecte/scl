@@ -16,7 +16,7 @@ const xmlString = /* xml */ `
 						<eIEC61850-6-100:SclFileReference fileUuid="IHMI" fileType="FSD" version="1" revision="0" />
 					</eIEC61850-6-100:FunctionSclRef>
 				</Private>
-				<LNode iedName="HMI" ldInst="HMI_Function" lnClass="IHMI" lnInst="1" ${DEV_ID}="lnode-hmi">
+				<LNode iedName="HMI" ldInst="HMI_Function" lnType="IHMI_Type" lnClass="IHMI" lnInst="1" ${DEV_ID}="lnode-hmi">
 					<Private type="eIEC61850-6-100">
 						<eIEC61850-6-100:LNodeSpecNaming sIedName="HMI" sLdInst="HMI_Function" sLnClass="IHMI" sLnInst="1" sPrefix="" />
 						<eIEC61850-6-100:LNodeInputs>
@@ -30,6 +30,10 @@ const xmlString = /* xml */ `
 			</SubFunction>
 		</Function>
 	</Substation>
+	<DataTypeTemplates>
+		<LNodeType id="IHMI_Type" lnClass="IHMI" />
+		<LNodeType id="XCBR_Type" lnClass="XCBR" />
+	</DataTypeTemplates>
 </SCL>
 `
 
@@ -41,7 +45,9 @@ describe('Function', () => {
 				targetExtension: 'FSD' | 'ASD' | 'ISD'
 				targetLevel: 'Substation' | 'Bay' | 'VoltageLevel'
 			}
-			expected: Partial<Record<Scl.DescendantsOf<'Function'>, number>>
+			expected: Partial<
+				Record<Scl.DescendantsOf<'Function'> | Scl.DescendantsOf<'DataTypeTemplates'>, number>
+			>
 		}
 
 		const testCases: TestCase[] = [
@@ -55,6 +61,7 @@ describe('Function', () => {
 					SubFunction: 1,
 					LNode: 1,
 					LNodeSpecNaming: 1,
+					LNodeType: 1,
 				},
 			},
 		]
@@ -88,18 +95,17 @@ describe('Function', () => {
 				await targetChain.commit()
 
 				// Assert
-				const { Function: functionRoot } = await targetDialecte.fromRoot().findDescendants()
+				const allDescendants = await targetDialecte.fromRoot().findDescendants()
 
 				// Check Function exists at correct level
-				const levelElement = functionRoot[0].parent?.tagName
+				const levelElement = allDescendants.Function[0].parent?.tagName
 				expect(levelElement).toBe(testCase.input.targetLevel)
 
 				// Get all descendants from the target level
-				const functionDescendants = await targetDialecte.fromRoot().findDescendants()
+				//const functionDescendants = await targetDialecte.fromRoot().findDescendants()
 
 				for (const [descendantTag, expectedCount] of Object.entries(testCase.expected)) {
-					const actualCount =
-						functionDescendants[descendantTag as Scl.DescendantsOf<'Function'>]?.length || 0
+					const actualCount = allDescendants[descendantTag as keyof typeof allDescendants].length
 					expect(
 						actualCount,
 						`Expected ${expectedCount} ${descendantTag} elements, but found ${actualCount}`,
