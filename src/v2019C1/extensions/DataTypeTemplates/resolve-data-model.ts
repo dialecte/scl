@@ -23,59 +23,6 @@ export function resolveDataModel(params: Scl.MethodsParams<'DataTypeTemplates'>)
 			contextPromise: Promise.resolve(context),
 		})
 
-		const addIfNew = (
-			map: Map<string, Scl.TreeRecord<any>>,
-			id: string,
-			record: Scl.TreeRecord<any>,
-		) => {
-			if (!map.has(id)) {
-				map.set(id, record)
-				return true
-			}
-
-			return false
-		}
-
-		const resolveDataAttributes = async (
-			parentRecord: Scl.TreeRecord<'DOType'> | Scl.TreeRecord<'DAType'>,
-		): Promise<void> => {
-			const childTagName = parentRecord.tagName === 'DOType' ? 'DA' : 'BDA'
-
-			for (const child of parentRecord.tree) {
-				if (child.tagName !== childTagName) continue
-
-				const { type: typeId, bType } = await dataTypeTemplatesChain
-					.goToElement({ tagName: childTagName, id: child.id })
-					.getAttributesValues()
-
-				if (!typeId) continue
-
-				if (bType === 'Enum') {
-					const enumTypeTree = await dataTypeTemplatesChain.getTree({
-						include: {
-							tagName: 'EnumType',
-							attributes: { id: typeId },
-						},
-					})
-					const currentEnumType = enumTypeTree.tree[0]
-					addIfNew(dataModelMap.enumTypes, typeId, currentEnumType)
-				} else {
-					const daTypeTree = await dataTypeTemplatesChain.getTree({
-						include: {
-							tagName: 'DAType',
-							attributes: { id: typeId },
-						},
-					})
-					const currentDAType = daTypeTree.tree[0] as Scl.TreeRecord<'DAType'>
-
-					if (addIfNew(dataModelMap.daTypes, typeId, currentDAType)) {
-						// Recurse into nested DAType
-						await resolveDataAttributes(currentDAType)
-					}
-				}
-			}
-		}
-
 		for (const lnType of lnTypes) {
 			const dataTypeTemplateTree = await dataTypeTemplatesChain.getTree({
 				include: {
@@ -91,7 +38,11 @@ export function resolveDataModel(params: Scl.MethodsParams<'DataTypeTemplates'>)
 
 			const currentLNodeType = dataTypeTemplateTree.tree[0] as Scl.TreeRecord<'LNodeType'>
 
-			const isNewLNodeType = addIfNew(dataModelMap.lnodeTypes, lnType, currentLNodeType)
+			const isNewLNodeType = addIfNew({
+				map: dataModelMap.lnodeTypes,
+				id: lnType,
+				record: currentLNodeType,
+			})
 			if (!isNewLNodeType) continue
 
 			for (const doElement of currentLNodeType.tree) {
@@ -109,9 +60,13 @@ export function resolveDataModel(params: Scl.MethodsParams<'DataTypeTemplates'>)
 				})
 				const currentDoType = doTypeTree.tree[0] as Scl.TreeRecord<'DOType'>
 
-				if (addIfNew(dataModelMap.doTypes, doTypeId, currentDoType)) {
+				if (addIfNew({ map: dataModelMap.doTypes, id: doTypeId, record: currentDoType })) {
 					// DOType and nested DAType can reference DAType, so we need to resolve them recursively
-					await resolveDataAttributes(currentDoType)
+					await resolveDataAttributes({
+						dataTypeTemplatesChain,
+						dataModelMap,
+						parentRecord: currentDoType,
+					})
 				}
 			}
 		}
@@ -121,6 +76,92 @@ export function resolveDataModel(params: Scl.MethodsParams<'DataTypeTemplates'>)
 			DOType: Array.from(dataModelMap.doTypes.values()),
 			DAType: Array.from(dataModelMap.daTypes.values()),
 			EnumType: Array.from(dataModelMap.enumTypes.values()),
+		}
+	}
+}
+
+function addIfNew(params: {
+	map: Map<
+		string,
+		| Scl.TreeRecord<'LNodeType'>
+		| Scl.TreeRecord<'DOType'>
+		| Scl.TreeRecord<'DAType'>
+		| Scl.TreeRecord<'EnumType'>
+	>
+	id: string
+	record:
+		| Scl.TreeRecord<'LNodeType'>
+		| Scl.TreeRecord<'DOType'>
+		| Scl.TreeRecord<'DAType'>
+		| Scl.TreeRecord<'EnumType'>
+}): boolean {
+	const { map, id, record } = params
+
+	if (!map.has(id)) {
+		map.set(id, record)
+		return true
+	}
+
+	return false
+}
+
+async function resolveDataAttributes(params: {
+	dataTypeTemplatesChain: Scl.Chain<'DataTypeTemplates'>
+	dataModelMap: Record<
+		'lnodeTypes' | 'doTypes' | 'daTypes' | 'enumTypes',
+		Map<
+			string,
+			| Scl.TreeRecord<'LNodeType'>
+			| Scl.TreeRecord<'DOType'>
+			| Scl.TreeRecord<'DAType'>
+			| Scl.TreeRecord<'EnumType'>
+		>
+	>
+	parentRecord: Scl.TreeRecord<'DOType'> | Scl.TreeRecord<'DAType'>
+}): Promise<void> {
+	const { dataTypeTemplatesChain, dataModelMap, parentRecord } = params
+
+	const childTagName = parentRecord.tagName === 'DOType' ? 'DA' : 'BDA'
+
+	for (const child of parentRecord.tree) {
+		if (child.tagName !== childTagName) continue
+
+		const { type: typeId, bType } = await dataTypeTemplatesChain
+			.goToElement({ tagName: childTagName, id: child.id })
+			.getAttributesValues()
+
+		if (!typeId) continue
+
+		if (bType === 'Enum') {
+			const enumTypeTree = await dataTypeTemplatesChain.getTree({
+				include: {
+					tagName: 'EnumType',
+					attributes: { id: typeId },
+				},
+			})
+			const currentEnumType = enumTypeTree.tree[0]
+			addIfNew({
+				map: dataModelMap.enumTypes,
+				id: typeId,
+				record: currentEnumType as Scl.TreeRecord<'EnumType'>,
+			})
+		} else if (bType === 'Struct') {
+			const daTypeTree = await dataTypeTemplatesChain.getTree({
+				include: {
+					tagName: 'DAType',
+					attributes: { id: typeId },
+				},
+			})
+			const currentDAType = daTypeTree.tree[0] as Scl.TreeRecord<'DAType'>
+
+			if (addIfNew({ map: dataModelMap.daTypes, id: typeId, record: currentDAType })) {
+				// Recurse into nested DAType
+				await resolveDataAttributes({
+					dataTypeTemplatesChain,
+					dataModelMap,
+					parentRecord: currentDAType,
+				})
+			}
 		}
 	}
 }
