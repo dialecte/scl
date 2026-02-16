@@ -58,9 +58,15 @@ export function extractTo(params: Scl.MethodsParams<'Function'>) {
 
 		const { currentFocus: clonedFunction } = await targetChainWithFunction.getContext()
 
+		const targetChainWithFunctionAndCategories = await cloneFunctionCategories({
+			sourceChain: sourceChain.goToElement({ tagName: 'SCL' }),
+			targetChain: targetChainWithFunction.goToParent(level),
+			currentFunction: context.currentFocus,
+		})
+
 		const endingTargetChain = await cloneDataModel({
 			sourceChain,
-			targetChain: targetChainWithFunction.goToElement({ tagName: 'SCL' }),
+			targetChain: targetChainWithFunctionAndCategories.goToElement({ tagName: 'SCL' }),
 		})
 
 		return {
@@ -90,6 +96,7 @@ async function cloneDataModel(params: {
 
 		lnTypes.push(lnType)
 	}
+
 	const {
 		LNodeType: lnodeTypes,
 		DOType: doTypes,
@@ -141,4 +148,38 @@ async function cloneDataModel(params: {
 	}
 
 	return targetChainWithClonedDataModel
+}
+
+async function cloneFunctionCategories(params: {
+	sourceChain: Scl.Chain<'SCL'>
+	targetChain: Scl.Chain<'Substation' | 'Bay' | 'VoltageLevel'>
+	currentFunction: Scl.ChainRecord<'Function'>
+}): Promise<Scl.Chain<'Substation' | 'Bay' | 'VoltageLevel'>> {
+	const { sourceChain, targetChain, currentFunction } = params
+
+	const currentFunctionUuid = currentFunction.attributes.find(
+		(attribute) => attribute.name === 'uuid',
+	)?.value
+
+	const functionCategoriesTree = await sourceChain.findDescendantsAsTree({
+		tagName: 'FunctionCategory',
+		descendant: {
+			tagName: 'SubCategory',
+			descendant: {
+				tagName: 'FunctionCatRef',
+				attributes: { functionUuid: currentFunctionUuid },
+			},
+		},
+	})
+
+	let targetChainWithClonedCategories = targetChain
+
+	for (const categoryTree of functionCategoriesTree) {
+		targetChainWithClonedCategories = targetChainWithClonedCategories.deepCloneChild({
+			record: categoryTree,
+			setFocus: false,
+		})
+	}
+
+	return targetChainWithClonedCategories
 }

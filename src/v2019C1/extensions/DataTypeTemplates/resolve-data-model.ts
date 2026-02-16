@@ -162,6 +162,6 @@ async function resolveDataAttributes(params: {
 					parentRecord: currentDAType,
 				})
 			}
-		}
+		} else throw new Error(`No or unsupported bType (${bType}) for DA: ${child.id}`)
 	}
 }

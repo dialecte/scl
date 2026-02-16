@@ -63,6 +63,7 @@ function getLatestPrivateRecord<
 	| undefined {
 	const { privateId, context } = params
 	return getLatestStagedRecord({
+		dialecteConfig: SCL_DIALECTE_CONFIG as unknown as GenericConfig,
 		stagedOperations: context.stagedOperations,
 		id: privateId,
 		tagName: 'Private',
