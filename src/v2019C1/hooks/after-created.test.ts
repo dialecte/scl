@@ -198,7 +198,7 @@ describe('afterCreated', () => {
 				parent: { tagName: 'LNode' as const, id: 'ln1' },
 			} satisfies Scl.RawRecord<'Private'>,
 			expected: {
-				operationsCount: 2,
+				operationsCount: 3,
 				operations: [
 					{
 						status: 'updated',
@@ -214,6 +214,13 @@ describe('afterCreated', () => {
 								{ tagName: 'LNodeSpecNaming', id: '0-0-0-0-7' },
 								{ tagName: 'LNodeSpecNaming', id: '0-0-0-0-8' },
 							],
+						},
+					},
+					{
+						status: 'updated',
+						newRecord: {
+							tagName: 'LNode',
+							children: [{ tagName: 'Private', id: '0-0-0-0-6' }],
 						},
 					},
 				],
