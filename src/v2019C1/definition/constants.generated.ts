@@ -339,7 +339,7 @@ export const ELEMENT_NAMES_WITH_ATTRIBUTES_PATTERNS = [
 	'VoltageLevel',
 ] as const
 
-export const REQUIRED = {
+export const REQUIRED_ATTRIBUTES = {
 	AccessControl: [] as const,
 	AccessPoint: ['name'] as const,
 	Address: [] as const,
@@ -2812,6 +2812,7 @@ export const CHILDREN = {
 		'AllocationRole',
 		'Application',
 		'BehaviorDescription',
+		'FunctionCategory',
 	] as const,
 	BayType: [] as const,
 	BehaviorDescription: ['Text', 'InputVar', 'OutputVar', 'BehaviorReference'] as const,
@@ -2996,6 +2997,7 @@ export const CHILDREN = {
 		'IEDSourceFiles',
 		'MinRequestedSCDFiles',
 		'Labels',
+		'CheckoutID',
 	] as const,
 	IEDName: [] as const,
 	IEDSourceFiles: ['Text', 'Private', 'SclFileReference'] as const,
@@ -3069,6 +3071,7 @@ export const CHILDREN = {
 		'AllocationRole',
 		'Application',
 		'BehaviorDescription',
+		'FunctionCategory',
 	] as const,
 	Log: ['Text', 'Private'] as const,
 	LogControl: ['Text', 'Private', 'TrgOps'] as const,
@@ -3117,6 +3120,7 @@ export const CHILDREN = {
 		'AllocationRole',
 		'Application',
 		'BehaviorDescription',
+		'FunctionCategory',
 	] as const,
 	ProcessEcho: ['Text'] as const,
 	ProcessResource: ['Text', 'Resource'] as const,
@@ -3303,6 +3307,7 @@ export const CHILDREN = {
 		'AllocationRole',
 		'Application',
 		'BehaviorDescription',
+		'FunctionCategory',
 	] as const,
 	SupSubscription: [] as const,
 	TapChanger: ['Text', 'Private', 'Labels', 'LNode', 'SubEquipment', 'EqFunction'] as const,
@@ -3343,6 +3348,7 @@ export const CHILDREN = {
 		'AllocationRole',
 		'Application',
 		'BehaviorDescription',
+		'FunctionCategory',
 	] as const,
 } as const satisfies Record<AvailableElement, readonly AvailableElement[]>
 
@@ -3383,7 +3389,7 @@ export const PARENTS = {
 		'SubscriberLNode',
 	] as const,
 	BitRate: ['SubNetwork'] as const,
-	CheckoutID: [] as const,
+	CheckoutID: ['IED'] as const,
 	ClientLN: ['RptEnabled'] as const,
 	ClientServices: ['Services'] as const,
 	CommProt: ['Services'] as const,
@@ -3440,7 +3446,7 @@ export const PARENTS = {
 	FileHandling: ['Services'] as const,
 	Function: ['Bay', 'Line', 'Process', 'Substation', 'VoltageLevel'] as const,
 	FunctionCatRef: ['FunctionCategory', 'SubCategory'] as const,
-	FunctionCategory: [] as const,
+	FunctionCategory: ['Substation', 'VoltageLevel', 'Bay', 'Process', 'Line'] as const,
 	FunctionCategoryRef: ['FunctionRoleContent'] as const,
 	FunctionRef: ['AllocationRole', 'FunctionRoleContent'] as const,
 	FunctionRole: ['Application'] as const,
@@ -3907,6 +3913,10 @@ export const PARENTS = {
 	VoltageLevel: ['Substation'] as const,
 } as const satisfies Record<AvailableElement, readonly AvailableElement[]>
 
+/**
+ * DESCENDANTS maps each element to all its possible descendants (children, grandchildren, etc.)
+ * Computed by traversing the CHILDREN graph.
+ */
 export const DESCENDANTS = {
 	AccessControl: [] as const,
 	AccessPoint: [
@@ -4056,6 +4066,8 @@ export const DESCENDANTS = {
 		'EqFunction',
 		'EqSubFunction',
 		'Function',
+		'FunctionCatRef',
+		'FunctionCategory',
 		'FunctionCategoryRef',
 		'FunctionRef',
 		'FunctionRole',
@@ -4098,6 +4110,7 @@ export const DESCENDANTS = {
 		'SclFileReference',
 		'SignalRole',
 		'SourceRef',
+		'SubCategory',
 		'SubEquipment',
 		'SubFunction',
 		'SubscriberLNode',
@@ -4613,6 +4626,7 @@ export const DESCENDANTS = {
 		'AccessPoint',
 		'Association',
 		'Authentication',
+		'CheckoutID',
 		'ClientLN',
 		'ClientServices',
 		'CommProt',
@@ -4691,6 +4705,7 @@ export const DESCENDANTS = {
 		'SettingGroups',
 		'SmpRate',
 		'SmvOpts',
+		'SubCheckoutID',
 		'Subject',
 		'SupSubscription',
 		'Text',
@@ -4863,6 +4878,8 @@ export const DESCENDANTS = {
 		'EqFunction',
 		'EqSubFunction',
 		'Function',
+		'FunctionCatRef',
+		'FunctionCategory',
 		'FunctionCategoryRef',
 		'FunctionRef',
 		'FunctionRole',
@@ -4903,6 +4920,7 @@ export const DESCENDANTS = {
 		'SclFileReference',
 		'SignalRole',
 		'SourceRef',
+		'SubCategory',
 		'SubEquipment',
 		'SubFunction',
 		'SubscriberLNode',
@@ -5002,6 +5020,8 @@ export const DESCENDANTS = {
 		'EqFunction',
 		'EqSubFunction',
 		'Function',
+		'FunctionCatRef',
+		'FunctionCategory',
 		'FunctionCategoryRef',
 		'FunctionRef',
 		'FunctionRole',
@@ -5045,6 +5065,7 @@ export const DESCENDANTS = {
 		'SclFileReference',
 		'SignalRole',
 		'SourceRef',
+		'SubCategory',
 		'SubEquipment',
 		'SubFunction',
 		'SubscriberLNode',
@@ -5096,6 +5117,7 @@ export const DESCENDANTS = {
 		'BinaryWiringParameters',
 		'BinaryWiringParametersRef',
 		'BitRate',
+		'CheckoutID',
 		'ClientLN',
 		'ClientServices',
 		'CommProt',
@@ -5136,6 +5158,8 @@ export const DESCENDANTS = {
 		'FCDA',
 		'FileHandling',
 		'Function',
+		'FunctionCatRef',
+		'FunctionCategory',
 		'FunctionCategoryRef',
 		'FunctionRef',
 		'FunctionRole',
@@ -5258,6 +5282,8 @@ export const DESCENDANTS = {
 		'SmvOpts',
 		'SourceFiles',
 		'SourceRef',
+		'SubCategory',
+		'SubCheckoutID',
 		'SubEquipment',
 		'SubFunction',
 		'SubFunctionTemplate',
@@ -5615,6 +5641,8 @@ export const DESCENDANTS = {
 		'EqFunction',
 		'EqSubFunction',
 		'Function',
+		'FunctionCatRef',
+		'FunctionCategory',
 		'FunctionCategoryRef',
 		'FunctionRef',
 		'FunctionRole',
@@ -5657,6 +5685,7 @@ export const DESCENDANTS = {
 		'SclFileReference',
 		'SignalRole',
 		'SourceRef',
+		'SubCategory',
 		'SubEquipment',
 		'SubFunction',
 		'SubscriberLNode',
@@ -5790,6 +5819,8 @@ export const DESCENDANTS = {
 		'EqFunction',
 		'EqSubFunction',
 		'Function',
+		'FunctionCatRef',
+		'FunctionCategory',
 		'FunctionCategoryRef',
 		'FunctionRef',
 		'FunctionRole',
@@ -5832,6 +5863,7 @@ export const DESCENDANTS = {
 		'SclFileReference',
 		'SignalRole',
 		'SourceRef',
+		'SubCategory',
 		'SubEquipment',
 		'SubFunction',
 		'SubscriberLNode',
@@ -6000,7 +6032,7 @@ export const ANCESTORS = {
 		'VoltageLevel',
 	] as const,
 	BitRate: ['Communication', 'SCL', 'SubNetwork'] as const,
-	CheckoutID: [] as const,
+	CheckoutID: ['IED', 'SCL'] as const,
 	ClientLN: [
 		'AccessPoint',
 		'IED',
@@ -6188,8 +6220,17 @@ export const ANCESTORS = {
 	FCDA: ['AccessPoint', 'DataSet', 'IED', 'LDevice', 'LN', 'LN0', 'SCL', 'Server'] as const,
 	FileHandling: ['AccessPoint', 'IED', 'SCL', 'Services'] as const,
 	Function: ['Bay', 'Line', 'Process', 'SCL', 'Substation', 'VoltageLevel'] as const,
-	FunctionCatRef: ['FunctionCategory', 'SubCategory'] as const,
-	FunctionCategory: [] as const,
+	FunctionCatRef: [
+		'Bay',
+		'FunctionCategory',
+		'Line',
+		'Process',
+		'SCL',
+		'SubCategory',
+		'Substation',
+		'VoltageLevel',
+	] as const,
+	FunctionCategory: ['Bay', 'Line', 'Process', 'SCL', 'Substation', 'VoltageLevel'] as const,
 	FunctionCategoryRef: [
 		'Application',
 		'Bay',
@@ -7235,8 +7276,16 @@ export const ANCESTORS = {
 		'TransformerWinding',
 		'VoltageLevel',
 	] as const,
-	SubCategory: ['FunctionCategory'] as const,
-	SubCheckoutID: ['CheckoutID'] as const,
+	SubCategory: [
+		'Bay',
+		'FunctionCategory',
+		'Line',
+		'Process',
+		'SCL',
+		'Substation',
+		'VoltageLevel',
+	] as const,
+	SubCheckoutID: ['CheckoutID', 'IED', 'SCL'] as const,
 	SubEquipment: [
 		'Bay',
 		'ConductingEquipment',
@@ -7564,3 +7613,13 @@ export const ANCESTORS = {
 	Voltage: ['Line', 'Process', 'SCL', 'Substation', 'VoltageLevel'] as const,
 	VoltageLevel: ['Process', 'SCL', 'Substation'] as const,
 } as const satisfies Record<AvailableElement, readonly AvailableElement[]>
+
+/**
+ * Type helper to get all descendants of an element
+ */
+export type DescendantsOf<T extends AvailableElement> = (typeof DESCENDANTS)[T][number]
+
+/**
+ * Type helper to get all ancestors of an element
+ */
+export type AncestorsOf<T extends AvailableElement> = (typeof ANCESTORS)[T][number]

@@ -1,4 +1,3 @@
-// oxlint-disable
 export const DEFINITION = {
 	FunctionCategory: {
 		tag: 'FunctionCategory',
@@ -7,7 +6,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Category of functions. To be added to Process, Line, Substation, VoltageLevel and Bay SCL elements\n\nCategory of functions. To be added to Process, Line, Substation, VoltageLevel and Bay SCL elements',
+			'Category of functions. To be added to Process, Line, Substation, VoltageLevel and Bay SCL elements',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -211,7 +210,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'List of Process Resources related to a function. to be added to the SCL elements Function, SubFunction, EqFunction and EqSubFunction\n\nList of Process Resources related to a function. to be added to the SCL elements Function, SubFunction, EqFunction and EqSubFunction',
+			'List of Process Resources related to a function. to be added to the SCL elements Function, SubFunction, EqFunction and EqSubFunction',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -341,7 +340,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Functional relation from a Function/SubFunction to another element of the process\n\nFunctional relation from a Function/SubFunction to another element of the process',
+			'Functional relation from a Function/SubFunction to another element of the process',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -460,8 +459,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'List of specification inputs of the given LNode. To be added at LNode level\n\nList of specification inputs of the given LNode. To be added at LNode level',
+		documentation: 'List of specification inputs of the given LNode. To be added at LNode level',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -580,8 +578,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'List of specification outputs of the given LNode. To be added at LNode level\n\nList of specification outputs of the given LNode. To be added at LNode level',
+		documentation: 'List of specification outputs of the given LNode. To be added at LNode level',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -700,8 +697,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Definition of an echo LNode, mirroring the DO of another LNode\n\nDefinition of an echo LNode, mirroring the DO of another LNode',
+		documentation: 'Definition of an echo LNode, mirroring the DO of another LNode',
 		parents: ['DAS', 'DOS', 'SDS'],
 		validation: {
 			enumeration: null,
@@ -870,8 +866,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'LNode user specification. To be added to LNode SCL element\n\nLNode user specification. To be added to LNode SCL element',
+		documentation: 'LNode user specification. To be added to LNode SCL element',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -1228,8 +1223,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Data Object specification. To be added to LNode SCL element\n\nData Object specification. To be added to LNode SCL element',
+		documentation: 'Data Object specification. To be added to LNode SCL element',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -1558,7 +1552,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Reference to the FSD files used to create a Function. Could be added under Function/SubFunction/EqFunction/EqSubFunction\n\nReference to the FSD files used to create a Function. Could be added under Function/SubFunction/EqFunction/EqSubFunction',
+			'Reference to the FSD files used to create a Function. Could be added under Function/SubFunction/EqFunction/EqSubFunction',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -1648,7 +1642,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Element used by an IED to indicates that a file has been imported to give engineering rights on this IED. This is opening a transaction between both projects to lock it on first project until the checkout is given back from current project, which then lock the IED locally\n\nElement used by an IED to indicates that a file has been imported to give engineering rights on this IED. This is opening a transaction between both projects to lock it on first project until the checkout is given back from current project, which then lock the IED locally',
+			'Element used by an IED to indicates that a file has been imported to give engineering rights on this IED. This is opening a transaction between both projects to lock it on first project until the checkout is given back from current project, which then lock the IED locally',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -1902,7 +1896,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'A Variable is a way to define a global variable which can be modified by a user and applied to a list of SCL attributes\n\nA Variable is a way to define a global variable which can be modified by a user and applied to a list of SCL attributes',
+			'A Variable is a way to define a global variable which can be modified by a user and applied to a list of SCL attributes',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -2107,7 +2101,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'The CommunicationServiceSpecifications is containing parameters used to create control blocks during implementation\n\nThe CommunicationServiceSpecifications is containing parameters used to create control blocks during implementation',
+			'The CommunicationServiceSpecifications is containing parameters used to create control blocks during implementation',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -2269,7 +2263,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'The ServiceSpecification is containing parameters used to create control blocks or physical interface (LPDI/LPDO) during implementation\n\nThe ServiceSpecification is containing parameters used to create control blocks or physical interface (LPDI/LPDO) during implementation',
+			'The ServiceSpecification is containing parameters used to create control blocks or physical interface (LPDI/LPDO) during implementation',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -2499,8 +2493,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			"Bay type element is keeping value of the type. It's a free string\n\nBay type element is keeping value of the type. It's a free string",
+		documentation: "Bay type element is keeping value of the type. It's a free string",
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -2553,7 +2546,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Definition of an allocation role allowing definition of possible allocation to devices type without using virtual IED\n\nDefinition of an allocation role allowing definition of possible allocation to devices type without using virtual IED',
+			'Definition of an allocation role allowing definition of possible allocation to devices type without using virtual IED',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -2745,7 +2738,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Application definition to be added at Process, Substation, Voltage Level or Bay level\n\nApplication definition to be added at Process, Substation, Voltage Level or Bay level',
+			'Application definition to be added at Process, Substation, Voltage Level or Bay level',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -3039,7 +3032,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Element allowing to describe the behavior its parent (Application, Bay, Function, LN...)\n\nElement allowing to describe the behavior its parent (Application, Bay, Function, LN...)',
+			'Element allowing to describe the behavior its parent (Application, Bay, Function, LN...)',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -3357,7 +3350,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Element allowing to define a project, to identify the project and the process elements defined by this project\n\nElement allowing to define a project, to identify the project and the process elements defined by this project',
+			'Element allowing to define a project, to identify the project and the process elements defined by this project',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -3505,7 +3498,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Base element for FSD format, will be used as a template element for Function/SubFunction or EqFunction/EqSubFunction\n\nBase element for FSD format, will be used as a template element for Function/SubFunction or EqFunction/EqSubFunction',
+			'Base element for FSD format, will be used as a template element for Function/SubFunction or EqFunction/EqSubFunction',
 		parents: [],
 		validation: {
 			enumeration: null,
@@ -5111,7 +5104,7 @@ export const DEFINITION = {
 					validation: {
 						enumeration: null,
 						pattern: null,
-						minInclusive: '0',
+						minInclusive: 0,
 						maxInclusive: null,
 						minLength: null,
 						maxLength: null,
@@ -7953,8 +7946,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Recursive definition of function category\n\nRecursive definition of function category',
+		documentation: 'Recursive definition of function category',
 		parents: ['FunctionCategory', 'SubCategory'],
 		validation: {
 			enumeration: null,
@@ -8157,8 +8149,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to a function which is part of the current category\n\nReference to a function which is part of the current category',
+		documentation: 'Reference to a function which is part of the current category',
 		parents: ['FunctionCategory', 'SubCategory'],
 		validation: {
 			enumeration: null,
@@ -8762,7 +8753,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation: 'Reference to a data in the process\n\nReference to a data in the process',
+		documentation: 'Reference to a data in the process',
 		parents: ['LNodeInputs'],
 		validation: {
 			enumeration: null,
@@ -9306,8 +9297,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to a control data in the process\n\nReference to a control data in the process',
+		documentation: 'Reference to a control data in the process',
 		parents: ['LNodeOutputs'],
 		validation: {
 			enumeration: null,
@@ -9722,7 +9712,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation: 'Specification of a sub-Data Object\n\nSpecification of a sub-Data Object',
+		documentation: 'Specification of a sub-Data Object',
 		parents: ['DOS', 'SDS'],
 		validation: {
 			enumeration: null,
@@ -10077,7 +10067,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation: 'Specification of a Data attribute\n\nSpecification of a Data attribute',
+		documentation: 'Specification of a Data attribute',
 		parents: ['DOS', 'SDS'],
 		validation: {
 			enumeration: null,
@@ -10926,7 +10916,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Specification of the Log parameters expected for the current DOS when Log capability is required\n\nSpecification of the Log parameters expected for the current DOS when Log capability is required',
+			'Specification of the Log parameters expected for the current DOS when Log capability is required',
 		parents: ['DAS', 'DOS', 'SDS'],
 		validation: {
 			enumeration: null,
@@ -11436,7 +11426,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'When an IED is checkedout for a collaborative work by an SCC, it may be required to give right to a subpart of the collaborative project. So a CheckoutID may have an additional SubCheckoutID giving IED to nother project\n\nWhen an IED is checkedout for a collaborative work by an SCC, it may be required to give right to a subpart of the collaborative project. So a CheckoutID may have an additional SubCheckoutID giving IED to nother project',
+			'When an IED is checkedout for a collaborative work by an SCC, it may be required to give right to a subpart of the collaborative project. So a CheckoutID may have an additional SubCheckoutID giving IED to nother project',
 		parents: ['CheckoutID', 'SubCheckoutID'],
 		validation: {
 			enumeration: null,
@@ -13786,8 +13776,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to a function definition attached to current allocation role\n\nReference to a function definition attached to current allocation role',
+		documentation: 'Reference to a function definition attached to current allocation role',
 		parents: ['AllocationRole', 'FunctionRoleContent'],
 		validation: {
 			enumeration: null,
@@ -13958,7 +13947,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation: 'Role attached to the application type\n\nRole attached to the application type',
+		documentation: 'Role attached to the application type',
 		parents: ['Application'],
 		validation: {
 			enumeration: null,
@@ -14268,8 +14257,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Variant attached to the application type\n\nVariant attached to the application type',
+		documentation: 'Variant attached to the application type',
 		parents: ['Application', 'FunctionalVariantGroup'],
 		validation: {
 			enumeration: null,
@@ -14497,8 +14485,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Group of variants attached to the application type\n\nGroup of variants attached to the application type',
+		documentation: 'Group of variants attached to the application type',
 		parents: ['Application'],
 		validation: {
 			enumeration: null,
@@ -14683,8 +14670,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Allocation role attached to the application type\n\nAllocation role attached to the application type',
+		documentation: 'Allocation role attached to the application type',
 		parents: ['Application'],
 		validation: {
 			enumeration: null,
@@ -14837,8 +14823,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to the ASD files used to create an Application\n\nReference to the ASD files used to create an Application',
+		documentation: 'Reference to the ASD files used to create an Application',
 		parents: ['Application'],
 		validation: {
 			enumeration: null,
@@ -14927,8 +14912,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Input variable used in the behavior description\n\nInput variable used in the behavior description',
+		documentation: 'Input variable used in the behavior description',
 		parents: ['BehaviorDescription'],
 		validation: {
 			enumeration: null,
@@ -15183,8 +15167,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Output variable used in the behavior description\n\nOutput variable used in the behavior description',
+		documentation: 'Output variable used in the behavior description',
 		parents: ['BehaviorDescription'],
 		validation: {
 			enumeration: null,
@@ -15440,7 +15423,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Reference to a behavior description when for example a manufacturer wants to indicate its implementation of a user specification described by another behavior description\n\nReference to a behavior description when for example a manufacturer wants to indicate its implementation of a user specification described by another behavior description',
+			'Reference to a behavior description when for example a manufacturer wants to indicate its implementation of a user specification described by another behavior description',
 		parents: ['BehaviorDescription'],
 		validation: {
 			enumeration: null,
@@ -15569,8 +15552,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to the process elements belonging to the current project\n\nReference to the process elements belonging to the current project',
+		documentation: 'Reference to the process elements belonging to the current project',
 		parents: ['Project'],
 		validation: {
 			enumeration: null,
@@ -18143,7 +18125,7 @@ export const DEFINITION = {
 					validation: {
 						enumeration: null,
 						pattern: null,
-						minInclusive: '0',
+						minInclusive: 0,
 						maxInclusive: null,
 						minLength: null,
 						maxLength: null,
@@ -24775,8 +24757,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'resource bound to this element could be multi\n\nresource bound to this element could be multi',
+		documentation: 'resource bound to this element could be multi',
 		parents: ['ProcessResource'],
 		validation: {
 			enumeration: null,
@@ -24887,7 +24868,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Specification of the communication parameters expected for the current SourceRef when ServiceType is GOOSE\n\nSpecification of the communication parameters expected for the current SourceRef when ServiceType is GOOSE',
+			'Specification of the communication parameters expected for the current SourceRef when ServiceType is GOOSE',
 		parents: ['SourceRef', 'SubscriberLNode'],
 		validation: {
 			enumeration: null,
@@ -24998,7 +24979,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Specification of the communication parameters expected for the current SourceRef when ServiceType is SMV\n\nSpecification of the communication parameters expected for the current SourceRef when ServiceType is SMV',
+			'Specification of the communication parameters expected for the current SourceRef when ServiceType is SMV',
 		parents: ['SourceRef', 'SubscriberLNode'],
 		validation: {
 			enumeration: null,
@@ -25109,7 +25090,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Specification of the communication parameters expected for the current SourceRef when ServiceType is Report\n\nSpecification of the communication parameters expected for the current SourceRef when ServiceType is Report',
+			'Specification of the communication parameters expected for the current SourceRef when ServiceType is Report',
 		parents: ['SourceRef', 'SubscriberLNode'],
 		validation: {
 			enumeration: null,
@@ -25220,7 +25201,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Specification of the binary wiring parameters expected for the current SourceRef when ServiceType is Wired\n\nSpecification of the binary wiring parameters expected for the current SourceRef when ServiceType is Wired',
+			'Specification of the binary wiring parameters expected for the current SourceRef when ServiceType is Wired',
 		parents: ['ControlRef', 'ControllingLNode', 'SourceRef', 'SubscriberLNode'],
 		validation: {
 			enumeration: null,
@@ -25331,7 +25312,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Specification of the analogue wiring parameters expected for the current SourceRef when ServiceType is Wired\n\nSpecification of the analogue wiring parameters expected for the current SourceRef when ServiceType is Wired',
+			'Specification of the analogue wiring parameters expected for the current SourceRef when ServiceType is Wired',
 		parents: ['ControlRef', 'ControllingLNode', 'SourceRef'],
 		validation: {
 			enumeration: null,
@@ -26149,8 +26130,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Ref to a functional variant of the Application\n\nRef to a functional variant of the Application',
+		documentation: 'Ref to a functional variant of the Application',
 		parents: [
 			'AllocationRoleRef',
 			'BehaviorDescriptionRef',
@@ -26295,7 +26275,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Signal list attached to the referenced function in the context of the cureent Role definition\n\nSignal list attached to the referenced function in the context of the cureent Role definition',
+			'Signal list attached to the referenced function in the context of the cureent Role definition',
 		parents: ['FunctionRef'],
 		validation: {
 			enumeration: null,
@@ -26541,7 +26521,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'an instance of the current role. In case of application type definition, instance 1 is the default instance\n\nan instance of the current role. In case of application type definition, instance 1 is the default instance',
+			'an instance of the current role. In case of application type definition, instance 1 is the default instance',
 		parents: ['FunctionRole'],
 		validation: {
 			enumeration: null,
@@ -26761,7 +26741,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation: 'Sub variant of the current variant\n\nSub variant of the current variant',
+		documentation: 'Sub variant of the current variant',
 		parents: ['FunctionalSubVariant', 'FunctionalVariant'],
 		validation: {
 			enumeration: null,
@@ -26990,7 +26970,7 @@ export const DEFINITION = {
 			prefix: 'eIEC61850-6-100',
 		},
 		documentation:
-			'Reference to a variable attached to current variant, to parameterize the instance with the value defined in the reference\n\nReference to a variable attached to current variant, to parameterize the instance with the value defined in the reference',
+			'Reference to a variable attached to current variant, to parameterize the instance with the value defined in the reference',
 		parents: ['FunctionRoleContent', 'FunctionalSubVariant', 'FunctionalVariant'],
 		validation: {
 			enumeration: null,
@@ -40205,8 +40185,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to SourceRefs belonging to current role\n\nReference to SourceRefs belonging to current role',
+		documentation: 'Reference to SourceRefs belonging to current role',
 		parents: ['SignalRole'],
 		validation: {
 			enumeration: null,
@@ -40359,8 +40338,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to ControlRefs belonging to current role\n\nReference to ControlRefs belonging to current role',
+		documentation: 'Reference to ControlRefs belonging to current role',
 		parents: ['SignalRole'],
 		validation: {
 			enumeration: null,
@@ -40513,8 +40491,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to Data belonging to current role\n\nReference to Data belonging to current role',
+		documentation: 'Reference to Data belonging to current role',
 		parents: ['SignalRole'],
 		validation: {
 			enumeration: null,
@@ -40707,8 +40684,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to a behavior description attached to current role\n\nReference to a behavior description attached to current role',
+		documentation: 'Reference to a behavior description attached to current role',
 		parents: ['FunctionRoleContent'],
 		validation: {
 			enumeration: null,
@@ -40902,8 +40878,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to a process resource attached to current role\n\nReference to a process resource attached to current role',
+		documentation: 'Reference to a process resource attached to current role',
 		parents: ['FunctionRoleContent'],
 		validation: {
 			enumeration: null,
@@ -41056,8 +41031,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to a function category attached to current role\n\nReference to a function category attached to current role',
+		documentation: 'Reference to a function category attached to current role',
 		parents: ['FunctionRoleContent'],
 		validation: {
 			enumeration: null,
@@ -41210,8 +41184,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to a power system relation attached to current role\n\nReference to a power system relation attached to current role',
+		documentation: 'Reference to a power system relation attached to current role',
 		parents: ['FunctionRoleContent'],
 		validation: {
 			enumeration: null,
@@ -45176,8 +45149,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to InputVar belonging to current behavior description\n\nReference to InputVar belonging to current behavior description',
+		documentation: 'Reference to InputVar belonging to current behavior description',
 		parents: ['BehaviorDescriptionRef'],
 		validation: {
 			enumeration: null,
@@ -45330,8 +45302,7 @@ export const DEFINITION = {
 			uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 			prefix: 'eIEC61850-6-100',
 		},
-		documentation:
-			'Reference to OutputVar belonging to current behavior description\n\nReference to OutputVar belonging to current behavior description',
+		documentation: 'Reference to OutputVar belonging to current behavior description',
 		parents: ['BehaviorDescriptionRef'],
 		validation: {
 			enumeration: null,
