@@ -36,3 +36,6 @@ src/generated/
 src/documentation/
 
 AGENTS.md
+
+.vitepress/dist
+.vitepress/cache
