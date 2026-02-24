@@ -24,6 +24,10 @@
 		"//====== BUILD ======//": "",
 		"build": "run-p type-check \"build-only {@}\" --",
 		"build-only": "tsc -p tsconfig.json && vite build",
+		"//====== VITEPRESS ======//": "",
+		"doc:dev": "vitepress dev",
+		"doc:build": "vitepress build",
+		"doc:preview": "vitepress preview",
 		"//====== TEST ======//": "",
 		"test": "vitest",
 		"//====== CHECK ======//": "",
@@ -34,11 +38,11 @@
 		"format:check": "oxfmt --check",
 		"format:fix": "oxfmt",
 		"link:check": "env | grep -E '^npm_package_(dev)?dependencies' | grep -qE '(file:|link:|\\.\\./|workspace:)' && exit 1 || exit 0",
-		"//====== PREPARE ======//": "",
+		"//====== HOOKS ======//": "",
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.0.10",
+		"@dialecte/core": "file:../core",
 		"dexie": "4.2.0"
 	},
 	"devDependencies": {
@@ -55,6 +59,7 @@
 		"typescript": "~5.8.0",
 		"vite": "^7.0.0",
 		"vite-plugin-dts": "^4.5.4",
+		"vitepress": "^2.0.0-alpha.16",
 		"vitest": "^3.2.4",
 		"vitest-browser-vue": "^1.0.0"
 	}
