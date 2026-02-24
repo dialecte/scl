@@ -7,6 +7,8 @@ export default defineConfig({
 
 	title: 'SCL Dialecte',
 	description: 'IEC 61850, fully typed',
+	head: [['link', { rel: 'icon', href: '/scl/logo.svg' }]],
+
 	themeConfig: {
 		// https://vitepress.dev/reference/default-theme-config
 		logo: '/logo.svg',
@@ -14,8 +16,6 @@ export default defineConfig({
 		search: {
 			provider: 'local',
 		},
-
-		head: [['link', { rel: 'icon', href: '/logo.svg' }]],
 
 		nav: [
 			{ text: 'Home', link: '/' },

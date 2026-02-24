@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.12] - 2026-02-24
+
+### Changed
+
+- `extractTo` completed on `Function` to include
+  - `FunctionCategory` and children
+  - full data model
+
+### Added
+
+- `resolveDataModel` on `DataTypeTemplates`
+- `addHistoryEntry` on `SCL`
+- `getLatestHitem` on `History`
+- `getSortedHitems` on `History`
+
 ## [0.0.11] - 2026-01-29
 
 ### Fixed

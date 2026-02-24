@@ -42,14 +42,7 @@ export const SCL_NAMESPACES = {
 
 export const SCL_DIALECTE_CONFIG = {
 	rootElementName: 'SCL' as const,
-	singletonElements: [
-		'SCL',
-		'Header',
-		'Substation',
-		'Communication',
-		'IEDs',
-		'DataTypeTemplates',
-	] as const,
+	singletonElements: ['SCL', 'Header', 'History', 'Communication', 'DataTypeTemplates'] as const,
 	elements: ELEMENT_NAMES,
 	namespaces: SCL_NAMESPACES,
 	attributes: ATTRIBUTES,

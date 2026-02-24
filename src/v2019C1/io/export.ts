@@ -8,13 +8,15 @@ export function exportSclFile(params: {
 	databaseName: string
 	extension: Scl.Config['io']['supportedFileExtensions'][number]
 	withDownload?: boolean
+	withDatabaseIds?: boolean
 }) {
-	const { databaseName, extension, withDownload } = params
+	const { databaseName, extension, withDownload, withDatabaseIds } = params
 
 	return exportXmlFile({
+		dialecteConfig: SCL_DIALECTE_CONFIG,
 		databaseName,
 		extension,
 		withDownload,
-		dialecteConfig: SCL_DIALECTE_CONFIG,
+		withDatabaseIds,
 	})
 }
