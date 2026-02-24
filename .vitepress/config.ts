@@ -40,7 +40,14 @@ export default defineConfig({
 				},
 				{
 					text: 'Extensions',
-					items: [{ text: 'Overview', link: '/api/v2019C1/extensions' }],
+					items: [
+						{ text: 'Overview', link: '/api/v2019C1/extensions' },
+						{ text: 'DataTypeTemplates', link: '/api/v2019C1/extensions/data-type-templates' },
+						{ text: 'Function', link: '/api/v2019C1/extensions/function' },
+						{ text: 'History', link: '/api/v2019C1/extensions/history' },
+						{ text: 'SCL', link: '/api/v2019C1/extensions/scl' },
+						{ text: 'SubFunction', link: '/api/v2019C1/extensions/sub-function' },
+					],
 				},
 			],
 		},
