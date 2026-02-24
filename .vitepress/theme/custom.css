@@ -1,0 +1,20 @@
+/* Hero name — two-color gradient (orange → violet) */
+.VPHero .name .clip {
+	background: linear-gradient(120deg, #ffcc00 30%, #9333ea 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
+/* Hero image background glow */
+:root {
+	--vp-home-hero-name-color: #ffcc00;
+	--vp-home-hero-image-background-image: radial-gradient(
+		ellipse at center,
+		transparent 50%,
+		#ffcc00 50%,
+		var(--vp-button-brand-bg) 80%,
+		transparent 100%
+	);
+	--vp-home-hero-image-filter: blur(44px);
+}
