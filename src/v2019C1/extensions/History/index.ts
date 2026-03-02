@@ -1,2 +1,2 @@
 export * from './get-latest-hitem'
-export * from './sort-hitem'
+export * from './get-sorted-hitem'
