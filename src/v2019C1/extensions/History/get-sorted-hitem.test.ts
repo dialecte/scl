@@ -5,7 +5,7 @@ import {
 	createSclTestDialecte,
 	XMLNS_SCL_NAMESPACE,
 	XMLNS_DEV_NAMESPACE,
-	DEV_ID,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
 } from '@/v2019C1/helpers'
 
 import type { Scl } from '@/v2019C1/config'
@@ -14,7 +14,7 @@ import type { ChainTestOperation } from '@dialecte/core'
 const xmlString = /* xml */ `
 <SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_DEV_NAMESPACE} >
 	<Header>
-		<History ${DEV_ID}="historyId" />
+		<History ${CUSTOM_RECORD_ID_ATTRIBUTE}="historyId" />
 	</Header>
 </SCL>`
 

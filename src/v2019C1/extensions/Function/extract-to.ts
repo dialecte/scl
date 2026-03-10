@@ -1,4 +1,4 @@
-import { getOrCreateSubstationSectionRequiredStructure } from '@/v2019C1/helpers'
+import { extractFunction } from '../shared'
 
 import type { Scl } from '@/v2019C1/config'
 
@@ -26,160 +26,40 @@ export function extractTo(params: Scl.MethodsParams<'Function'>) {
 
 		const excludeFromFSDExtraction = [
 			// LNode children
-			{ tagName: 'LNodeInputs' as const, scope: 'self' as const },
-			{ tagName: 'LNodeOutputs' as const, scope: 'self' as const },
-			{ tagName: 'DOS' as const, scope: 'self' as const },
+			{ tagName: 'LNodeInputs', scope: 'self' } as const,
+			{ tagName: 'LNodeOutputs', scope: 'self' } as const,
+			{ tagName: 'DOS', scope: 'self' } as const,
 			// Function children
-			{ tagName: 'FunctionSclRef' as const, scope: 'self' as const },
-			{ tagName: 'Variable' as const, scope: 'self' as const },
-			{ tagName: 'GeneralEquipment' as const, scope: 'self' as const },
-			{ tagName: 'ConductingEquipment' as const, scope: 'self' as const },
-			{ tagName: 'ProcessResources' as const, scope: 'self' as const },
-			{ tagName: 'PowerSystemRelations' as const, scope: 'self' as const },
+			{ tagName: 'FunctionSclRef', scope: 'self' } as const,
+			{ tagName: 'Variable', scope: 'self' } as const,
+			{ tagName: 'GeneralEquipment', scope: 'self' } as const,
+			{ tagName: 'ConductingEquipment', scope: 'self' } as const,
+			{ tagName: 'ProcessResources', scope: 'self' } as const,
+			{ tagName: 'PowerSystemRelations', scope: 'self' } as const,
 			// Common
-			{ tagName: 'Labels' as const, scope: 'self' as const },
-			{ tagName: 'BehaviorDescription' as const, scope: 'self' as const },
+			{ tagName: 'Labels', scope: 'self' } as const,
+			{ tagName: 'BehaviorDescription', scope: 'self' } as const,
 		]
 
 		const functionTreeToClone = await sourceChain.getTree({
 			exclude: extension === 'FSD' ? excludeFromFSDExtraction : undefined,
 		})
 
-		const { chain: targetRootChainWithProperStructure } =
-			await getOrCreateSubstationSectionRequiredStructure({
+		const endingTargetChain = await extractFunction({
+			source: {
+				chain: sourceChain,
+				functionTreeToClone,
+			},
+			target: {
 				chain: targetRootChain,
-				focusLevel: level,
-			})
-
-		const targetChainWithFunction = targetRootChainWithProperStructure.deepCloneChild({
-			record: functionTreeToClone,
-			setFocus: true,
-		})
-
-		const { currentFocus: clonedFunction } = await targetChainWithFunction.getContext()
-
-		const targetChainWithFunctionAndCategories = await cloneFunctionCategories({
-			sourceChain: sourceChain.goToElement({ tagName: 'SCL' }),
-			targetChain: targetChainWithFunction.goToParent(level),
-			currentFunction: context.currentFocus,
-		})
-
-		const endingTargetChain = await cloneDataModel({
-			sourceChain,
-			targetChain: targetChainWithFunctionAndCategories.goToElement({ tagName: 'SCL' }),
+				extension,
+				level,
+			},
 		})
 
 		return {
 			sourceChain: sourceChain,
-			targetChain: endingTargetChain.goToElement({ tagName: 'Function', id: clonedFunction.id }),
+			targetChain: endingTargetChain,
 		}
 	}
-}
-
-async function cloneDataModel(params: {
-	sourceChain: Scl.Chain<'Function'>
-	targetChain: Scl.Chain<'SCL'>
-}): Promise<Scl.Chain<'DataTypeTemplates'>> {
-	const { sourceChain, targetChain } = params
-	const { LNode: lnodes } = await sourceChain.findDescendants({
-		tagName: 'LNode',
-	})
-
-	let lnTypes = []
-
-	for (const lnode of lnodes) {
-		const { lnType } = await sourceChain
-			.goToElement({ tagName: 'LNode', id: lnode.id })
-			.getAttributesValues()
-
-		if (!lnType) continue
-
-		lnTypes.push(lnType)
-	}
-
-	const {
-		LNodeType: lnodeTypes,
-		DOType: doTypes,
-		DAType: daTypes,
-		EnumType: enumTypes,
-	} = await sourceChain.goToElement({ tagName: 'DataTypeTemplates' }).resolveDataModel({ lnTypes })
-
-	const { DataTypeTemplates: targetDataTypeTemplates } = await targetChain.findDescendants({
-		tagName: 'DataTypeTemplates',
-	})
-
-	let targetChainWithClonedDataModel: Scl.Chain<'DataTypeTemplates'>
-	if (targetDataTypeTemplates.length) {
-		targetChainWithClonedDataModel = targetChain.goToElement({ tagName: 'DataTypeTemplates' })
-	} else {
-		targetChainWithClonedDataModel = targetChain.addChild({
-			tagName: 'DataTypeTemplates',
-			attributes: {},
-			setFocus: true,
-		})
-	}
-
-	for (const lnodeType of lnodeTypes) {
-		targetChainWithClonedDataModel = targetChainWithClonedDataModel.deepCloneChild({
-			record: lnodeType,
-			setFocus: false,
-		})
-	}
-
-	for (const doType of doTypes) {
-		targetChainWithClonedDataModel = targetChainWithClonedDataModel.deepCloneChild({
-			record: doType,
-			setFocus: false,
-		})
-	}
-
-	for (const daType of daTypes) {
-		targetChainWithClonedDataModel = targetChainWithClonedDataModel.deepCloneChild({
-			record: daType,
-			setFocus: false,
-		})
-	}
-
-	for (const enumType of enumTypes) {
-		targetChainWithClonedDataModel = targetChainWithClonedDataModel.deepCloneChild({
-			record: enumType,
-			setFocus: false,
-		})
-	}
-
-	return targetChainWithClonedDataModel
-}
-
-async function cloneFunctionCategories(params: {
-	sourceChain: Scl.Chain<'SCL'>
-	targetChain: Scl.Chain<'Substation' | 'Bay' | 'VoltageLevel'>
-	currentFunction: Scl.ChainRecord<'Function'>
-}): Promise<Scl.Chain<'Substation' | 'Bay' | 'VoltageLevel'>> {
-	const { sourceChain, targetChain, currentFunction } = params
-
-	const currentFunctionUuid = currentFunction.attributes.find(
-		(attribute) => attribute.name === 'uuid',
-	)?.value
-
-	const functionCategoriesTree = await sourceChain.findDescendantsAsTree({
-		tagName: 'FunctionCategory',
-		descendant: {
-			tagName: 'SubCategory',
-			descendant: {
-				tagName: 'FunctionCatRef',
-				attributes: { functionUuid: currentFunctionUuid },
-			},
-		},
-	})
-
-	let targetChainWithClonedCategories = targetChain
-
-	for (const categoryTree of functionCategoriesTree) {
-		targetChainWithClonedCategories = targetChainWithClonedCategories.deepCloneChild({
-			record: categoryTree,
-			setFocus: false,
-		})
-	}
-
-	return targetChainWithClonedCategories
 }

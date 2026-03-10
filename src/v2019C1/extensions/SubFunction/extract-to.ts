@@ -1,4 +1,4 @@
-import { getOrCreateSubstationSectionRequiredStructure } from '@/v2019C1/helpers'
+import { extractFunction } from '../shared'
 
 import type { Scl } from '@/v2019C1/config'
 
@@ -23,19 +23,19 @@ export function extractTo(params: Scl.MethodsParams<'SubFunction'>) {
 		const subFunctionTreeToClone = await sourceChain.getTree({
 			exclude: [
 				// LNode children
-				{ tagName: 'LNodeInputs' as const, scope: 'self' as const },
-				{ tagName: 'LNodeOutputs' as const, scope: 'self' as const },
-				{ tagName: 'DOS' as const, scope: 'self' as const },
+				{ tagName: 'LNodeInputs', scope: 'self' },
+				{ tagName: 'LNodeOutputs', scope: 'self' },
+				{ tagName: 'DOS', scope: 'self' },
 				// Function children
-				{ tagName: 'FunctionSclRef' as const, scope: 'self' as const },
-				{ tagName: 'Variable' as const, scope: 'self' as const },
-				{ tagName: 'GeneralEquipment' as const, scope: 'self' as const },
-				{ tagName: 'ConductingEquipment' as const, scope: 'self' as const },
-				{ tagName: 'ProcessResources' as const, scope: 'self' as const },
-				{ tagName: 'PowerSystemRelations' as const, scope: 'self' as const },
+				{ tagName: 'FunctionSclRef', scope: 'self' },
+				{ tagName: 'Variable', scope: 'self' },
+				{ tagName: 'GeneralEquipment', scope: 'self' },
+				{ tagName: 'ConductingEquipment', scope: 'self' },
+				{ tagName: 'ProcessResources', scope: 'self' },
+				{ tagName: 'PowerSystemRelations', scope: 'self' },
 				// Common
-				{ tagName: 'Labels' as const, scope: 'self' as const },
-				{ tagName: 'BehaviorDescription' as const, scope: 'self' as const },
+				{ tagName: 'Labels', scope: 'self' },
+				{ tagName: 'BehaviorDescription', scope: 'self' },
 			],
 		})
 
@@ -44,15 +44,16 @@ export function extractTo(params: Scl.MethodsParams<'SubFunction'>) {
 			tagName: 'Function',
 		} as Scl.TreeRecord<'Function'>
 
-		const { chain: targetRootChainWithProperStructure } =
-			await getOrCreateSubstationSectionRequiredStructure({
+		const endingTargetChain = await extractFunction({
+			source: {
+				chain: sourceChain,
+				functionTreeToClone: promoteSubFunctionToFunction,
+			},
+			target: {
 				chain: targetRootChain,
-				focusLevel: level,
-			})
-
-		const endingTargetChain = targetRootChainWithProperStructure.deepCloneChild({
-			record: promoteSubFunctionToFunction,
-			setFocus: true,
+				extension: 'FSD',
+				level,
+			},
 		})
 
 		return {

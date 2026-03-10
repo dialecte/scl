@@ -1,4 +1,4 @@
-import { getAttributesValuesByName } from '@dialecte/core'
+import { getAttributesValuesByName } from '@dialecte/core/helpers'
 
 import type { Scl } from '@/v2019C1/config'
 
@@ -17,11 +17,12 @@ export function addEntryToHistory(params: Scl.MethodsParams<'SCL'>) {
 		item: {
 			who: Scl.AttributesValueObjectOf<'Hitem'>['who']
 			what: Scl.AttributesValueObjectOf<'Hitem'>['what']
+			why: Scl.AttributesValueObjectOf<'Hitem'>['why']
 		}
 	}): Scl.Chain<'SCL'> {
 		const { filename, header, item } = params
 		const { id, fileType, nameStructure, version, tool } = header
-		const { who, what } = item
+		const { who, what, why } = item
 
 		const newContextPromise = contextPromise.then(async (context) => {
 			const initialChain = chain({
@@ -100,6 +101,7 @@ export function addEntryToHistory(params: Scl.MethodsParams<'SCL'>) {
 						when: formattedWhen,
 						who,
 						what,
+						why,
 						version: computedVersion,
 						revision: computedRevision,
 					},

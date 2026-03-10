@@ -3,7 +3,7 @@ import { afterCreated } from './after-created'
 
 import {
 	createTestDialecte,
-	DEV_ID,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
 	XMLNS_DEFAULT_NAMESPACE,
 	XMLNS_DEV_NAMESPACE,
 	toRawRecord,
@@ -16,10 +16,10 @@ import type * as Core from '@dialecte/core'
 import type { ChainTestOperation } from '@dialecte/core'
 
 const xmlString = /* xml */ `
-	<SCL ${XMLNS_DEFAULT_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="root">
-		<Substation ${DEV_ID}="sub1" name="Sub1">
-			<Function ${DEV_ID}="f1" name="F1">
-				<LNode ${DEV_ID}="ln1" lnClass="XCBR" />
+	<SCL ${XMLNS_DEFAULT_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${CUSTOM_RECORD_ID_ATTRIBUTE}="root">
+		<Substation ${CUSTOM_RECORD_ID_ATTRIBUTE}="sub1" name="Sub1">
+			<Function ${CUSTOM_RECORD_ID_ATTRIBUTE}="f1" name="F1">
+				<LNode ${CUSTOM_RECORD_ID_ATTRIBUTE}="ln1" lnClass="XCBR" />
 			</Function>
 		</Substation>
 	</SCL>

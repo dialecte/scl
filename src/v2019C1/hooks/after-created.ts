@@ -1,6 +1,6 @@
 import { SCL_DIALECTE_CONFIG } from '../config/dialecte.config'
 
-import { toChainRecord, getLatestStagedRecord, toRawRecord } from '@dialecte/core'
+import { toChainRecord, getLatestStagedRecord, toRawRecord } from '@dialecte/core/helpers'
 
 import type * as Core from '@dialecte/core'
 
@@ -23,8 +23,15 @@ export function afterCreated<
 		return []
 	}
 
-	// init
+	// Only wrap at the namespace boundary: parent must be in the default namespace.
+	// If the parent is already a non-default namespace element we are already inside
+	// the Private wrapper — adding another one would produce nested Privates.
 	const isParentRecordPrivate = (parentRecord.tagName as string) === 'Private'
+	const isParentInDefaultNamespace =
+		parentRecord.namespace.prefix === SCL_DIALECTE_CONFIG.namespaces.default.prefix
+	if (!isParentRecordPrivate && !isParentInDefaultNamespace) {
+		return []
+	}
 	// Parent is not Private, look for existing Private child with matching type
 	const existingPrivateRef = parentRecord.children.find((child) => child.tagName === 'Private')
 

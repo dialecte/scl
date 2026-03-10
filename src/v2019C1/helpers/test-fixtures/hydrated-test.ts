@@ -1,4 +1,9 @@
-import { createTestDialecte, XMLNS_DEV_NAMESPACE, DEV_ID } from '@dialecte/core'
+import {
+	createTestDialecte,
+	XMLNS_DEV_NAMESPACE,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	createXmlAssertions,
+} from '@dialecte/core/test'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { EXTENSIONS } from '@/v2019C1/extensions'
@@ -17,4 +22,8 @@ export async function createSclTestDialecte(params: { xmlString: string }) {
 	})
 }
 
-export { XMLNS_DEV_NAMESPACE, DEV_ID }
+export const { assertExpectedElementQueries, assertUnexpectedElementQueries } = createXmlAssertions(
+	{ namespaces: SCL_DIALECTE_CONFIG.namespaces },
+)
+
+export { XMLNS_DEV_NAMESPACE, CUSTOM_RECORD_ID_ATTRIBUTE }

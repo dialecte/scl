@@ -1,4 +1,4 @@
-import { getAttributesValuesByName } from '@dialecte/core'
+import { getAttributesValuesByName } from '@dialecte/core/helpers'
 
 import type { Scl } from '@/v2019C1/config'
 

@@ -1,22 +1,22 @@
 import { describe, it, expect } from 'vitest'
 
 import { createSclDialecte } from '@/v2019C1/dialecte'
-import { ALL_XMLNS_NAMESPACES, DEV_ID } from '@/v2019C1/helpers'
+import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE } from '@/v2019C1/helpers'
 import { importSclFiles } from '@/v2019C1/io'
 
 import type { Scl } from '@/v2019C1/config'
 
 const xmlString = /* xml */ `
 <SCL ${ALL_XMLNS_NAMESPACES}>
-	<Substation name="AA1" ${DEV_ID}="substation-aa1">
-		<Function name="HMI Function" ${DEV_ID}="function-hmi">
-			<SubFunction name="HMI" ${DEV_ID}="subfunction-hmi">
+	<Substation name="AA1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="substation-aa1">
+		<Function name="HMI Function" ${CUSTOM_RECORD_ID_ATTRIBUTE}="function-hmi">
+			<SubFunction name="HMI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="subfunction-hmi">
 				<Private type="eIEC61850-6-100">
 					<eIEC61850-6-100:FunctionSclRef>
 						<eIEC61850-6-100:SclFileReference fileUuid="IHMI" fileType="FSD" version="1" revision="0" />
 					</eIEC61850-6-100:FunctionSclRef>
 				</Private>
-				<LNode iedName="HMI" ldInst="HMI_Function" lnClass="IHMI" lnInst="1" ${DEV_ID}="lnode-hmi">
+				<LNode iedName="HMI" ldInst="HMI_Function" lnClass="IHMI" lnInst="1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnode-hmi">
 					<Private type="eIEC61850-6-100">
 						<eIEC61850-6-100:LNodeSpecNaming sIedName="HMI" sLdInst="HMI_Function" sLnClass="IHMI" sLnInst="1" sPrefix="" />
 						<eIEC61850-6-100:LNodeInputs>

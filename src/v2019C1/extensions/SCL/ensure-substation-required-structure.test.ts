@@ -1,18 +1,14 @@
+import { describe, it, expect } from 'vitest'
+
 import {
 	createSclTestDialecte,
 	XMLNS_SCL_NAMESPACE,
 	XMLNS_SCL_6_100_NAMESPACE,
 	XMLNS_DEV_NAMESPACE,
-	DEV_ID,
-} from '../test-fixtures'
-import { getOrCreateSubstationSectionRequiredStructure } from './create-substation-section-required-structure'
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+} from '@/v2019C1/helpers/test-fixtures'
 
-import { describe, it, expect } from 'vitest'
-
-import type { Scl } from '@/v2019C1/config'
-import type { Chain } from '@dialecte/core'
-
-describe('getOrCreateSubstationSectionRequiredStructure', () => {
+describe('ensureSubstationSectionRequiredStructure', () => {
 	type FocusLevel = 'SCL' | 'Substation' | 'VoltageLevel' | 'Bay'
 
 	type TestCase = {
@@ -32,17 +28,17 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 		// Create from empty SCL
 		{
 			desc: 'creates full hierarchy focusing on Bay when SCL is empty',
-			xmlString: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1"></SCL>`,
+			xmlString: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${CUSTOM_RECORD_ID_ATTRIBUTE}="1"></SCL>`,
 			params: { focusLevel: 'Bay' },
 		},
 		{
 			desc: 'creates full hierarchy focusing on VoltageLevel when SCL is empty',
-			xmlString: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1"></SCL>`,
+			xmlString: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${CUSTOM_RECORD_ID_ATTRIBUTE}="1"></SCL>`,
 			params: { focusLevel: 'VoltageLevel' },
 		},
 		{
 			desc: 'creates full hierarchy focusing on Substation when SCL is empty',
-			xmlString: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1"></SCL>`,
+			xmlString: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${CUSTOM_RECORD_ID_ATTRIBUTE}="1"></SCL>`,
 			params: { focusLevel: 'Substation' },
 		},
 
@@ -50,8 +46,8 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 		{
 			desc: 'finds existing Substation and creates missing VoltageLevel and Bay',
 			xmlString: /* xml */ `
-				<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1">
-					<Substation ${DEV_ID}="2" name="TEMPLATE" />
+				<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${CUSTOM_RECORD_ID_ATTRIBUTE}="1">
+					<Substation ${CUSTOM_RECORD_ID_ATTRIBUTE}="2" name="TEMPLATE" />
 				</SCL>
 			`,
 			params: { focusLevel: 'Bay' },
@@ -59,9 +55,9 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 		{
 			desc: 'finds existing Substation and VoltageLevel, creates Bay, focuses on VoltageLevel',
 			xmlString: /* xml */ `
-				<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1">
-					<Substation ${DEV_ID}="2" name="TEMPLATE">
-						<VoltageLevel ${DEV_ID}="3" name="TEMPLATE" />
+				<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${CUSTOM_RECORD_ID_ATTRIBUTE}="1">
+					<Substation ${CUSTOM_RECORD_ID_ATTRIBUTE}="2" name="TEMPLATE">
+						<VoltageLevel ${CUSTOM_RECORD_ID_ATTRIBUTE}="3" name="TEMPLATE" />
 					</Substation>
 				</SCL>
 			`,
@@ -70,10 +66,10 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 		{
 			desc: 'finds complete hierarchy and focuses on Substation',
 			xmlString: /* xml */ `
-				<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1">
-					<Substation ${DEV_ID}="2" name="TEMPLATE">
-						<VoltageLevel ${DEV_ID}="3" name="TEMPLATE">
-							<Bay ${DEV_ID}="4" name="TEMPLATE" />
+				<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${CUSTOM_RECORD_ID_ATTRIBUTE}="1">
+					<Substation ${CUSTOM_RECORD_ID_ATTRIBUTE}="2" name="TEMPLATE">
+						<VoltageLevel ${CUSTOM_RECORD_ID_ATTRIBUTE}="3" name="TEMPLATE">
+							<Bay ${CUSTOM_RECORD_ID_ATTRIBUTE}="4" name="TEMPLATE" />
 						</VoltageLevel>
 					</Substation>
 				</SCL>
@@ -84,7 +80,7 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 		// Custom names
 		{
 			desc: 'creates hierarchy with custom names focusing on Bay',
-			xmlString: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1"></SCL>`,
+			xmlString: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${CUSTOM_RECORD_ID_ATTRIBUTE}="1"></SCL>`,
 			params: {
 				focusLevel: 'Bay',
 				names: { substation: 'SUB1', voltageLevel: 'VL1', bay: 'BAY1' },
@@ -93,8 +89,8 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 		{
 			desc: 'finds Substation by custom name, creates VL and Bay with custom names',
 			xmlString: /* xml */ `
-				<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${DEV_ID}="1">
-					<Substation ${DEV_ID}="2" name="SUB1" />
+				<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${CUSTOM_RECORD_ID_ATTRIBUTE}="1">
+					<Substation ${CUSTOM_RECORD_ID_ATTRIBUTE}="2" name="SUB1" />
 				</SCL>
 			`,
 			params: {
@@ -127,8 +123,7 @@ describe('getOrCreateSubstationSectionRequiredStructure', () => {
 				substationId,
 				voltageLevelId,
 				bayId,
-			} = await getOrCreateSubstationSectionRequiredStructure({
-				chain: sclChain as Chain<Scl.Config, 'SCL'>,
+			} = await sclChain.ensureSubstationSectionRequiredStructure({
 				focusLevel,
 				names,
 			})
