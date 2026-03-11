@@ -1,13 +1,12 @@
 import { SCL_DIALECTE_CONFIG } from './config/dialecte.config'
-import { EXTENSIONS } from './extensions'
 
-import { createDialecte } from '@dialecte/core'
+import { openDialecteDocument } from '@dialecte/core'
 
-export function createSclDialecte(params: { databaseName: string }) {
-	const { databaseName } = params
-	return createDialecte({
-		databaseName: databaseName,
-		dialecteConfig: SCL_DIALECTE_CONFIG,
-		extensions: EXTENSIONS,
+import type { StorageOptions } from '@dialecte/core'
+
+export function openSclDocument(storage: StorageOptions) {
+	return openDialecteDocument({
+		config: SCL_DIALECTE_CONFIG,
+		storage,
 	})
 }

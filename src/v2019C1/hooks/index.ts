@@ -2,9 +2,9 @@ import { afterCreated } from './after-created'
 import { afterStandardizedRecord } from './after-standardized-record'
 import { beforeClone } from './before-clone'
 
-import type { DialecteHooks } from '@dialecte/core'
+import type { TransactionHooks } from '@dialecte/core'
 
-export const HOOKS: DialecteHooks = {
+export const HOOKS: TransactionHooks = {
 	beforeClone,
 	afterStandardizedRecord,
 	afterCreated,

@@ -5,7 +5,7 @@ layout: home
 hero:
   name: SCL Dialecte
   text: IEC 61850, fully typed.
-  tagline: Navigate, mutate, and query Substation Configuration Language files with a chainable, type-safe API — 210+ element types, zero guesswork.
+  tagline: Query, mutate, and manage Substation Configuration Language files with a type-safe Document API — 210+ element types, zero guesswork.
   image:
     src: /logo-reversed.svg
     alt: SCL Dialecte
@@ -21,9 +21,9 @@ features:
   - icon: ⚡
     title: 210+ Element Types
     details: Every SCL element — from Substation to ConductingEquipment — is fully typed. Attributes, children, and parent relationships are all compiler-checked.
-  - icon: 🔗
-    title: Chainable API
-    details: Navigate to a Bay, add a VoltageLevel, update an IED — all in one fluent chain. Changes are staged and committed atomically.
+  - icon: 📄
+    title: Document / Query / Transaction
+    details: Read with doc.query, write inside doc.transaction(). Changes are staged and committed atomically — no partial writes.
   - icon: 🧩
     title: IEC 61850-6-100 Ready
     details: First-class support for the 6-100 namespace extension. Qualified attributes and extended elements live alongside the base standard.

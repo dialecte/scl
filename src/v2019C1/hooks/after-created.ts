@@ -1,21 +1,23 @@
 import { SCL_DIALECTE_CONFIG } from '../config/dialecte.config'
 
-import { toChainRecord, getLatestStagedRecord, toRawRecord } from '@dialecte/core/helpers'
+import { getRecord } from '@dialecte/core'
+import { toRawRecord, toRef } from '@dialecte/core/helpers'
+import { assert } from '@dialecte/core/utils'
 
 import type * as Core from '@dialecte/core'
 
 /**
  * This hook wrap created elements with non-default namespace into a Private element.
  */
-export function afterCreated<
+export async function afterCreated<
 	GenericConfig extends Core.AnyDialecteConfig,
 	GenericElement extends Core.ElementsOf<GenericConfig>,
 	GenericParentElement extends Core.ParentsOf<GenericConfig, GenericElement>,
 >(params: {
 	childRecord: Core.RawRecord<GenericConfig, GenericElement>
 	parentRecord: Core.RawRecord<GenericConfig, GenericParentElement>
-	context: Core.Context<GenericConfig, GenericParentElement>
-}): Core.Operation<GenericConfig>[] {
+	context: Core.Context<GenericConfig>
+}): Promise<Core.Operation<GenericConfig>[]> {
 	const { childRecord, parentRecord, context } = params
 
 	// Only wrap if element has non-default namespace
@@ -32,6 +34,7 @@ export function afterCreated<
 	if (!isParentRecordPrivate && !isParentInDefaultNamespace) {
 		return []
 	}
+
 	// Parent is not Private, look for existing Private child with matching type
 	const existingPrivateRef = parentRecord.children.find((child) => child.tagName === 'Private')
 
@@ -56,24 +59,15 @@ export function afterCreated<
 	return handleNewPrivateRecordCase({ parentRecord, updatedParentRecord, childRecord })
 }
 
-function getLatestPrivateRecord<
-	GenericConfig extends Core.AnyDialecteConfig,
-	GenericContextElement extends Core.ElementsOf<GenericConfig>,
->(params: {
+async function getLatestPrivateRecord<GenericConfig extends Core.AnyDialecteConfig>(params: {
 	privateId: string
-	context: Core.Context<GenericConfig, GenericContextElement>
-}):
-	| {
-			record: Core.RawRecord<GenericConfig, 'Private'>
-			status: Core.Operation<GenericConfig>['status']
-	  }
-	| undefined {
+	context: Core.Context<GenericConfig>
+}): Promise<Core.TrackedRecord<GenericConfig, 'Private'> | undefined> {
 	const { privateId, context } = params
-	return getLatestStagedRecord({
-		dialecteConfig: SCL_DIALECTE_CONFIG as unknown as GenericConfig,
-		stagedOperations: context.stagedOperations,
-		id: privateId,
-		tagName: 'Private',
+
+	return await getRecord({
+		context,
+		ref: toRef({ id: privateId, tagName: 'Private' }),
 	})
 }
 
@@ -103,15 +97,15 @@ function addChildToPrivate<
 	return { childRecord: updatedChildRecord, privateRecord: updatedPrivateRecord }
 }
 
-function handleParentAsPrivateRecordCase<
+async function handleParentAsPrivateRecordCase<
 	GenericConfig extends Core.AnyDialecteConfig,
 	GenericElement extends Core.ElementsOf<GenericConfig>,
 	GenericParentElement extends Core.ParentsOf<GenericConfig, GenericElement>,
 >(params: {
 	parentRecord: Core.RawRecord<GenericConfig, GenericParentElement>
 	childRecord: Core.RawRecord<GenericConfig, GenericElement>
-	context: Core.Context<GenericConfig, GenericParentElement>
-}): Core.Operation<GenericConfig>[] {
+	context: Core.Context<GenericConfig>
+}): Promise<Core.Operation<GenericConfig>[]> {
 	const { parentRecord, childRecord, context } = params
 	const privateRecord = parentRecord as unknown as Core.RawRecord<GenericConfig, 'Private'>
 
@@ -120,11 +114,14 @@ function handleParentAsPrivateRecordCase<
 		return []
 	}
 
-	const stagedPrivateRecord = getLatestPrivateRecord({ privateId: privateRecord.id, context })
-	const latestPrivateRecord =
-		stagedPrivateRecord && stagedPrivateRecord.status !== 'deleted'
-			? toChainRecord({ record: stagedPrivateRecord.record, status: stagedPrivateRecord.status })
-			: privateRecord
+	const latestPrivateRecord = await getLatestPrivateRecord({ privateId: privateRecord.id, context })
+
+	assert(latestPrivateRecord, {
+		detail: 'Latest private record not found',
+		method: 'afterCreateHook::handleParentAsPrivateRecordCase',
+		key: 'ELEMENT_NOT_FOUND',
+	})
+
 	const { childRecord: updatedChild, privateRecord: updatedPrivate } = addChildToPrivate({
 		privateRecord: latestPrivateRecord,
 		childRecord,
@@ -144,7 +141,7 @@ function handleParentAsPrivateRecordCase<
 	]
 }
 
-function handleExistingPrivateRecordCase<
+async function handleExistingPrivateRecordCase<
 	GenericConfig extends Core.AnyDialecteConfig,
 	GenericElement extends Core.ElementsOf<GenericConfig>,
 	GenericParentElement extends Core.ParentsOf<GenericConfig, GenericElement>,
@@ -153,49 +150,51 @@ function handleExistingPrivateRecordCase<
 	parentRecord: Core.RawRecord<GenericConfig, GenericParentElement>
 	updatedParentRecord: Core.RawRecord<GenericConfig, GenericParentElement>
 	childRecord: Core.RawRecord<GenericConfig, GenericElement>
-	context: Core.Context<GenericConfig, GenericParentElement>
-}): Core.Operation<GenericConfig>[] {
+	context: Core.Context<GenericConfig>
+}): Promise<Core.Operation<GenericConfig>[]> {
 	const { existingPrivateRef, parentRecord, updatedParentRecord, childRecord, context } = params
-	const stagedPrivateRecord = getLatestPrivateRecord({ privateId: existingPrivateRef.id, context })
+	const latestPrivateRecord = await getLatestPrivateRecord({
+		privateId: existingPrivateRef.id,
+		context,
+	})
 
-	if (stagedPrivateRecord) {
-		const latestPrivateRecord = toChainRecord({
-			record: stagedPrivateRecord.record,
-			status: stagedPrivateRecord.status,
-		})
+	assert(latestPrivateRecord, {
+		detail: 'Latest private record not found',
+		method: 'afterCreateHook::handleExistingPrivateRecordCase',
+		key: 'ELEMENT_NOT_FOUND',
+	})
 
-		const hasMatchingType = latestPrivateRecord.attributes.some(
-			(attribute: Core.AnyAttribute) =>
-				attribute.name === 'type' && attribute.value === childRecord.namespace.prefix,
-		)
+	const hasMatchingType = latestPrivateRecord.attributes.some(
+		(attribute: Core.AnyAttribute) =>
+			attribute.name === 'type' && attribute.value === childRecord.namespace.prefix,
+	)
 
-		if (hasMatchingType) {
-			const { childRecord: updatedChild, privateRecord: updatedPrivate } = addChildToPrivate({
-				privateRecord: latestPrivateRecord,
-				childRecord,
-			})
-
-			return [
-				{
-					status: 'updated',
-					oldRecord: toRawRecord(childRecord),
-					newRecord: toRawRecord(updatedChild),
-				},
-				{
-					status: 'updated',
-					oldRecord: toRawRecord(latestPrivateRecord),
-					newRecord: toRawRecord(updatedPrivate),
-				},
-				{
-					status: 'updated',
-					oldRecord: toRawRecord(parentRecord),
-					newRecord: toRawRecord(updatedParentRecord),
-				},
-			]
-		}
+	if (!hasMatchingType) {
+		return []
 	}
 
-	return []
+	const { childRecord: updatedChild, privateRecord: updatedPrivate } = addChildToPrivate({
+		privateRecord: latestPrivateRecord,
+		childRecord,
+	})
+
+	return [
+		{
+			status: 'updated',
+			oldRecord: toRawRecord(childRecord),
+			newRecord: toRawRecord(updatedChild),
+		},
+		{
+			status: 'updated',
+			oldRecord: toRawRecord(latestPrivateRecord),
+			newRecord: toRawRecord(updatedPrivate),
+		},
+		{
+			status: 'updated',
+			oldRecord: toRawRecord(parentRecord),
+			newRecord: toRawRecord(updatedParentRecord),
+		},
+	]
 }
 
 function handleNewPrivateRecordCase<

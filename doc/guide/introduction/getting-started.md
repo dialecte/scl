@@ -34,53 +34,53 @@ const databaseNames = await importSclFiles({ files: Array.from(fileList) })
 // → ['station-a.scd', 'station-b.scd', ...]
 ```
 
-## Step 2 — Create a dialecte instance
+## Step 2 — Open a document
 
-Once a file is imported, connect to its database with `createSclDialecte`. This is how you create an instance for all queries and mutations.
+Once a file is imported, connect to its database with `openSclDocument`. This returns a `Document` instance for all queries and mutations.
 
 ```ts
-import { createSclDialecte } from '@dialecte/scl/v2019C1'
+import { openSclDocument } from '@dialecte/scl/v2019C1'
 
-const dialecte = await createSclDialecte({ databaseName })
+const doc = openSclDocument({ type: 'local', databaseName })
 ```
 
 ## Step 3 — Query the tree
 
-Use `fromRoot()` to start a chain from the root `SCL` element, then navigate down using `findDescendants`.
+Use `doc.query` to read records. Start from the root, then find descendants:
 
 ```ts
-// Find all Function elements anywhere in the tree
-const { Function: functions } = await dialecte.fromRoot().findDescendants({ tagName: 'Function' })
+const root = await doc.query.getRoot()
 
-for (const functionElement of functions) {
-	const { name } = await dialecte
-		.fromElement({ tagName: functionElement.tagName, id: functionElement.id })
-		.getAttributesValues()
-	console.log(functionElement.id, name)
+// Find all Function elements anywhere in the tree
+const { Function: functions } = await doc.query.findDescendants(root)
+
+for (const fn of functions) {
+	const { name } = await doc.query.getAttributes(fn)
+	console.log(fn.id, name)
 }
 ```
 
-Jump directly to a known element with `fromElement`:
+Get a specific record by ref:
 
 ```ts
-const { currentFocus } = await dialecte.fromElement({ tagName: 'IED', id: knownId }).getContext()
-
-console.log(currentFocus.tagName) // 'IED'
+const ied = await doc.query.getRecord({ tagName: 'IED', id: knownId })
+console.log(ied?.tagName) // 'IED'
 ```
 
 ## Step 4 — Mutate the tree
 
-Mutations are staged on a chain and written atomically with `.commit()`.
+Mutations happen inside a `transaction`. All operations are staged, then committed atomically when the callback returns.
 
 ```ts
-await dialecte
-	.fromRoot()
-	.goToElement({ tagName: 'Substation' })
-	.addChild({ tagName: 'VoltageLevel', attributes: { name: 'VL1' } })
-	.commit()
-```
+const substation = await doc.query.getRecord({ tagName: 'Substation' })
 
-The chain is immutable — each method returns a new chain, so you can branch and compose safely.
+await doc.transaction(async (tx) => {
+	await tx.addChild(substation, {
+		tagName: 'VoltageLevel',
+		attributes: { name: 'VL1' },
+	})
+})
+```
 
 ## Step 5 — Export to file
 
@@ -99,25 +99,29 @@ const { xmlDocument } = await exportSclFile({
 ## Full example
 
 ```ts
-import { importSclFiles, createSclDialecte, exportSclFile } from '@dialecte/scl/v2019C1'
+import { importSclFiles, openSclDocument, exportSclFile } from '@dialecte/scl/v2019C1'
 
 // 1. Import
 const [databaseName] = await importSclFiles({ files: [scdFile] })
 
-// 2. Connect
-const dialecte = await createSclDialecte({ databaseName })
+// 2. Open
+const doc = openSclDocument({ type: 'local', databaseName })
 
 // 3. Query
-const { Function: functions } = await dialecte.fromRoot().findDescendants({ tagName: 'Function' })
+const root = await doc.query.getRoot()
+const { Function: functions } = await doc.query.findDescendants(root)
 
 console.log(`Found ${functions.length} functions`)
 
 // 4. Mutate
-await dialecte
-	.fromRoot()
-	.goToElement({ tagName: 'Substation' })
-	.addChild({ tagName: 'Function', attributes: { name: 'Protection' } })
-	.commit()
+const substation = await doc.query.getRecord({ tagName: 'Substation' })
+
+await doc.transaction(async (tx) => {
+	await tx.addChild(substation, {
+		tagName: 'Function',
+		attributes: { name: 'Protection' },
+	})
+})
 
 // 5. Export
 await exportSclFile({ databaseName, extension: '.scd', withDownload: true })
@@ -125,4 +129,7 @@ await exportSclFile({ databaseName, extension: '.scd', withDownload: true })
 
 ## Next Steps
 
-- [Writing Extensions](https://dialecte.github.io/core/guide/extensions/) — how extensions work under the hood and how to write your own (core docs)
+- [Writing Extensions](https://dialecte.github.io/core/guide/extensions/) — how to extend Query and Transaction with domain-specific methods (core docs)
+- [Document API](https://dialecte.github.io/core/api/document) — lifecycle, transactions, undo/redo
+- [Query API](https://dialecte.github.io/core/api/query) — full reference for all read methods
+- [Transaction API](https://dialecte.github.io/core/api/transaction) — full reference for all mutation methods

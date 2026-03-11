@@ -1,34 +1,34 @@
-import { getAttributesValuesByName } from '@dialecte/core/helpers'
+// import { getAttributesValuesByName } from '@dialecte/core/helpers'
 
-import type { Scl } from '@/v2019C1/config'
+// import type { Scl } from '@/v2019C1/config'
 
-export function getSortedHitems(params: Scl.MethodsParams<'History'>) {
-	const { chain, contextPromise } = params
+// export function getSortedHitems(params: Scl.MethodsParams<'History'>) {
+// 	const { chain, contextPromise } = params
 
-	return async function () {
-		const sourceChain = chain({
-			contextPromise,
-		})
+// 	return async function () {
+// 		const sourceChain = chain({
+// 			contextPromise,
+// 		})
 
-		const { Hitem: hitems } = await sourceChain.findDescendants()
+// 		const { Hitem: hitems } = await sourceChain.findDescendants()
 
-		const sortedHitems = [...hitems].sort((a, b) => {
-			const { version: versionA, revision: revisionA } = getAttributesValuesByName({
-				attributes: a.attributes,
-			})
-			const { version: versionB, revision: revisionB } = getAttributesValuesByName({
-				attributes: b.attributes,
-			})
-			const versionANumber = Number(versionA || 0)
-			const versionBNumber = Number(versionB || 0)
-			if (versionANumber !== versionBNumber) {
-				return versionANumber - versionBNumber
-			}
-			const revisionANumber = Number(revisionA || 0)
-			const revisionBNumber = Number(revisionB || 0)
-			return revisionANumber - revisionBNumber
-		})
+// 		const sortedHitems = [...hitems].sort((a, b) => {
+// 			const { version: versionA, revision: revisionA } = getAttributesValuesByName({
+// 				attributes: a.attributes,
+// 			})
+// 			const { version: versionB, revision: revisionB } = getAttributesValuesByName({
+// 				attributes: b.attributes,
+// 			})
+// 			const versionANumber = Number(versionA || 0)
+// 			const versionBNumber = Number(versionB || 0)
+// 			if (versionANumber !== versionBNumber) {
+// 				return versionANumber - versionBNumber
+// 			}
+// 			const revisionANumber = Number(revisionA || 0)
+// 			const revisionBNumber = Number(revisionB || 0)
+// 			return revisionANumber - revisionBNumber
+// 		})
 
-		return sortedHitems
-	}
-}
+// 		return sortedHitems
+// 	}
+// }

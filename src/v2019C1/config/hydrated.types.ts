@@ -1,23 +1,13 @@
-import type { EXTENSIONS } from '../extensions'
+// import type { EXTENSIONS } from '../extensions'
 import type { SCL_DIALECTE_CONFIG } from './dialecte.config'
 import type * as Core from '@dialecte/core'
 
 export namespace Scl {
 	export type Config = typeof SCL_DIALECTE_CONFIG
 
-	export type MethodsParams<GenericElement extends Core.ElementsOf<Config>> =
-		Core.ExtensionsMethodParams<Config, GenericElement, typeof EXTENSIONS>
-
-	export type Context<GenericElement extends Core.ElementsOf<Config>> = Core.Context<
-		Config,
-		GenericElement
-	>
-
-	export type Chain<GenericElement extends ElementsOf> = Core.Chain<
-		Config,
-		GenericElement,
-		typeof EXTENSIONS
-	>
+	export type Context = Core.Context<Config>
+	export type Document = Core.Document<Config>
+	export type Query = Core.Query<Config>
 
 	// DEFINITION
 	export type ElementsOf = Core.ElementsOf<Config>
@@ -52,7 +42,7 @@ export namespace Scl {
 
 	// RECORDS
 	export type RawRecord<GenericElement extends ElementsOf> = Core.RawRecord<Config, GenericElement>
-	export type ChainRecord<GenericElement extends ElementsOf> = Core.ChainRecord<
+	export type TrackedRecord<GenericElement extends ElementsOf> = Core.TrackedRecord<
 		Config,
 		GenericElement
 	>
