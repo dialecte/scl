@@ -3,7 +3,7 @@ import type { SCL_DIALECTE_CONFIG } from './dialecte.config'
 import type * as Core from '@dialecte/core'
 
 export namespace Scl {
-	export type Config = typeof SCL_DIALECTE_CONFIG
+	export interface Config extends Readonly<typeof SCL_DIALECTE_CONFIG> {}
 
 	export type Context = Core.Context<Config>
 	export type Document = Core.Document<Config>
