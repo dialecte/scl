@@ -20,9 +20,9 @@ export default defineConfig({
 			'@': fileURLToPath(new URL('./src', import.meta.url)),
 		},
 	},
-	optimizeDeps: {
-		exclude: ['@dialecte/core'],
-	},
+	// optimizeDeps: {
+	// 	exclude: ['@dialecte/core'],
+	// },
 	build: {
 		sourcemap: import.meta.env?.DEV,
 		lib: {
@@ -31,8 +31,8 @@ export default defineConfig({
 			formats: ['es'],
 			fileName: 'v2019C1/index',
 		},
-		rollupOptions: {
-			external: [/^@dialecte\/core/, 'dexie'],
-		},
+		// rollupOptions: {
+		// 	external: [/^@dialecte\/core/, 'dexie'],
+		// },
 	},
 })
