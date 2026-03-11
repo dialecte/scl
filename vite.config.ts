@@ -20,6 +20,9 @@ export default defineConfig({
 			'@': fileURLToPath(new URL('./src', import.meta.url)),
 		},
 	},
+	optimizeDeps: {
+		exclude: ['@dialecte/core'],
+	},
 	build: {
 		sourcemap: import.meta.env?.DEV,
 		lib: {
