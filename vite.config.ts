@@ -28,5 +28,8 @@ export default defineConfig({
 			formats: ['es'],
 			fileName: 'v2019C1/index',
 		},
+		rollupOptions: {
+			external: ['@dialecte/core', 'dexie'],
+		},
 	},
 })
