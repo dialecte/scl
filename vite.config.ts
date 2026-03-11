@@ -29,7 +29,7 @@ export default defineConfig({
 			fileName: 'v2019C1/index',
 		},
 		rollupOptions: {
-			external: ['@dialecte/core', 'dexie'],
+			external: [/^@dialecte\/core/, 'dexie'],
 		},
 	},
 })
