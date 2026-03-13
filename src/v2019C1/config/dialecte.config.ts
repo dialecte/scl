@@ -8,13 +8,15 @@ import {
 	ANCESTORS,
 } from '../definition'
 import { HOOKS } from '../hooks'
+import { createSclIoHooks } from '../io/hooks'
 
 import type { IOConfig, AnyDialecteConfig, DatabaseConfig, AnyDefinition } from '@dialecte/core'
 
 // SCL-specific IO configuration
 export const SCL_IO_CONFIG = {
 	supportedFileExtensions: ['.fsd', '.asd', '.ssd', '.scd', '.isd', '.xml'],
-} as const satisfies IOConfig
+	hooks: createSclIoHooks(),
+} satisfies IOConfig
 
 // SCL database configuration
 export const SCL_DATABASE_CONFIG = {

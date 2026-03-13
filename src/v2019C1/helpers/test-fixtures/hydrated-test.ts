@@ -1,7 +1,11 @@
 import { CUSTOM_RECORD_ID_ATTRIBUTE, CUSTOM_RECORD_ID_ATTRIBUTE_NAME } from '@dialecte/core/helpers'
-import { createTestDialecte, XMLNS_DEV_NAMESPACE } from '@dialecte/core/test'
+import {
+	createTestDialecte,
+	createTestRecordFactory,
+	XMLNS_DEV_NAMESPACE,
+} from '@dialecte/core/test'
 
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+import { Scl, SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 
 export const XMLNS_SCL_NAMESPACE = `xmlns="http://www.iec.ch/61850/2003/SCL"`
 export const XMLNS_SCL_6_100_NAMESPACE = `xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100"`
@@ -16,3 +20,5 @@ export async function createSclTestDialecte(params: { xmlString: string }) {
 		dialecteConfig: SCL_DIALECTE_CONFIG,
 	})
 }
+
+export const createSclTestRecord = createTestRecordFactory<Scl.Config>(SCL_DIALECTE_CONFIG)

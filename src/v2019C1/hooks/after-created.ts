@@ -118,7 +118,6 @@ async function handleParentAsPrivateRecordCase<
 
 	assert(latestPrivateRecord, {
 		detail: 'Latest private record not found',
-		method: 'afterCreateHook::handleParentAsPrivateRecordCase',
 		key: 'ELEMENT_NOT_FOUND',
 	})
 
@@ -160,7 +159,6 @@ async function handleExistingPrivateRecordCase<
 
 	assert(latestPrivateRecord, {
 		detail: 'Latest private record not found',
-		method: 'afterCreateHook::handleExistingPrivateRecordCase',
 		key: 'ELEMENT_NOT_FOUND',
 	})
 
