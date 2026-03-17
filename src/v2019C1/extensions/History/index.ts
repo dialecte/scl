@@ -1,2 +1,5 @@
-// export * from './get-latest-hitem'
-// export * from './get-sorted-hitem'
+import * as historyQueries from './query'
+
+export const History = {
+	query: historyQueries,
+}

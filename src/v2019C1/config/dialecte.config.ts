@@ -57,3 +57,5 @@ export const SCL_DIALECTE_CONFIG = {
 	definition: DEFINITION as AnyDefinition,
 	hooks: HOOKS,
 } as const satisfies AnyDialecteConfig
+
+export interface Config extends Readonly<typeof SCL_DIALECTE_CONFIG> {}
