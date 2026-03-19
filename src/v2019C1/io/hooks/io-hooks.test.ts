@@ -35,6 +35,23 @@ describe('createSclIoHooks', () => {
 			],
 			expectedUpdates: 1,
 		},
+		'reference already has uuid attribute → 0 updates, 0 warnings': {
+			records: [
+				{ tagName: 'Function', attributes: { name: 'F1', uuid: 'uuid-f1' } },
+				{ tagName: 'FunctionRef', attributes: { function: 'F1', functionUuid: 'uuid-f1' } },
+			],
+			expectedUpdates: 0,
+		},
+		'VariableApplyTo with XPath element → 0 updates, 1 warning': {
+			records: [
+				{
+					tagName: 'VariableApplyTo',
+					attributes: { element: './/LNode//LNodeSpecNaming', attribute: 'sLdInst' },
+				},
+			],
+			expectedUpdates: 0,
+			expectedWarnings: 1,
+		},
 	}
 
 	let entries = Object.entries(testCases)
@@ -60,6 +77,30 @@ describe('createSclIoHooks', () => {
 			const second = await hooks.afterImport!()
 			expect(second.updates ?? []).toHaveLength(0)
 			expect(second.warnings ?? []).toHaveLength(0)
+		})
+	})
+
+	it('VariableApplyTo emits unsupported-xpath-reference warning with correct details', async () => {
+		const hooks = createSclIoHooks()
+		const record = makeRecord('VariableApplyTo', {
+			element: './/LNode//LNodeSpecNaming',
+			attribute: 'sLdInst',
+		})
+
+		hooks.beforeImportRecord!({ record, ancestry: [] })
+
+		const result = await hooks.afterImport!()
+		expect(result.updates ?? []).toHaveLength(0)
+		expect(result.warnings).toHaveLength(1)
+
+		const warning = result.warnings![0]
+		expect(warning.type).toBe('unsupported-xpath-reference')
+		expect(warning.recordId).toBe(record.id)
+		expect(warning.details).toEqual({
+			elementTag: 'VariableApplyTo',
+			pathAttribute: 'element',
+			uuidAttribute: 'elementUuid',
+			pathValue: './/LNode//LNodeSpecNaming',
 		})
 	})
 })

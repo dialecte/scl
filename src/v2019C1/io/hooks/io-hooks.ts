@@ -1,9 +1,20 @@
-import { buildElementPath, parseReferencePath, UUID_REFERENCE_PAIRS } from './path-resolution'
+import {
+	buildElementPath,
+	getResolutionType,
+	parseReferencePath,
+	UUID_REFERENCE_PAIRS,
+} from './path-resolution'
 
 import { ATTRIBUTES } from '@/v2019C1/definition'
 
-import type { PendingResolution, UnresolvedReferenceWarning } from './io-hooks.types'
-import type { AnyAttribute, AnyRawRecord, IOHooks, AfterImportResult } from '@dialecte/core'
+import type { PendingResolution, UnsupportedXPathWarning } from './io-hooks.types'
+import type {
+	AnyAttribute,
+	AnyRawRecord,
+	IOHooks,
+	AfterImportResult,
+	ImportWarning,
+} from '@dialecte/core'
 
 /**
  * Creates SCL IO hooks for UUID reference resolution.
@@ -15,8 +26,11 @@ import type { AnyAttribute, AnyRawRecord, IOHooks, AfterImportResult } from '@di
  * and bulk-updates the records.
  */
 export function createSclIoHooks(): IOHooks {
-	const pathIndex: Map<string, string> = new Map()
+	type Path = string & {}
+	type Uuid = string & {}
+	const pathIndex: Map<Path, Uuid> = new Map()
 	const pendingResolutions: PendingResolution[] = []
+	const xpathWarnings: UnsupportedXPathWarning[] = []
 
 	const beforeImportRecord = (params: {
 		record: AnyRawRecord
@@ -53,10 +67,23 @@ export function createSclIoHooks(): IOHooks {
 
 			if (existingUuid) continue
 
-			// Parse the reference path to get the lookup key
 			const parsed = parseReferencePath(tagName, pair.attribute.path, pathValue, ancestry)
 
-			if (!parsed) continue
+			if (!parsed) {
+				if (getResolutionType(tagName, pair.attribute.path) === 'unsupported') {
+					xpathWarnings.push({
+						type: 'unsupported-xpath-reference',
+						recordId: record.id,
+						details: {
+							elementTag: tagName,
+							pathAttribute: pair.attribute.path,
+							uuidAttribute: pair.attribute.uuid,
+							pathValue,
+						},
+					})
+				}
+				continue
+			}
 
 			pendingResolutions.push({
 				recordId: record.id,
@@ -71,7 +98,7 @@ export function createSclIoHooks(): IOHooks {
 
 	const afterImport = async (): Promise<AfterImportResult> => {
 		const updates: AfterImportResult['updates'] = []
-		const warnings: UnresolvedReferenceWarning[] = []
+		const warnings: ImportWarning[] = [...xpathWarnings]
 
 		for (const pending of pendingResolutions) {
 			const resolvedUuid =
@@ -102,6 +129,7 @@ export function createSclIoHooks(): IOHooks {
 
 		pathIndex.clear()
 		pendingResolutions.length = 0
+		xpathWarnings.length = 0
 
 		return {
 			updates,

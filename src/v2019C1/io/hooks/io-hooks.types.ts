@@ -18,3 +18,13 @@ export type UnresolvedReferenceWarning = ImportWarning & {
 		triedKeys: string[]
 	}
 }
+
+export type UnsupportedXPathWarning = ImportWarning & {
+	type: 'unsupported-xpath-reference'
+	details: {
+		elementTag: string
+		pathAttribute: string
+		uuidAttribute: string
+		pathValue: string
+	}
+}

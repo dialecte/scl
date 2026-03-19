@@ -400,6 +400,40 @@ describe('reference-parsing', () => {
 					'//v2019C1:ControlRef[@extCtrlAddr="IED1/LD1/XCBR1.Pos" and @extCtrlUuid="extctrl-pos-uuid"]',
 				],
 			},
+			'ControlRef.extCtrlAddr with IED-relative path, iedName on parent LNode → extCtrlUuid populated via fallback':
+				{
+					xml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES}>
+					<Substation name="S1">
+						<Bay name="B1">
+							<LNode iedName="IED1" ldInst="LD1" lnClass="XCBR" inst="1">
+								<Private type="eIEC61850-6-100">
+									<eIEC61850-6-100:LNodeOutputs>
+										<eIEC61850-6-100:ControlRef output="TripCmd" extCtrlAddr="LD1/XCBR1.Pos" />
+									</eIEC61850-6-100:LNodeOutputs>
+								</Private>
+							</LNode>
+						</Bay>
+					</Substation>
+					<IED name="IED1">
+						<AccessPoint name="AP1">
+							<Server>
+								<LDevice inst="LD1">
+									<LN prefix="" lnClass="XCBR" inst="1">
+										<Inputs>
+											<ExtCtrl intAddr="Pos" uuid="extctrl-pos-uuid" />
+										</Inputs>
+									</LN>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
+					expectedElementQueries: [
+						'//v2019C1:ControlRef[@extCtrlAddr="LD1/XCBR1.Pos" and @extCtrlUuid="extctrl-pos-uuid"]',
+					],
+				},
 			'SourceRef.extRefAddr with IED-relative path, iedName on parent LNode → extRefUuid populated via fallback':
 				{
 					xml: /* xml */ `

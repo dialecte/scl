@@ -148,8 +148,6 @@ describe('getPathSegment', () => {
 			}),
 			expected: { segment: 'LLN0', separator: '/' },
 		},
-
-		// LNode without inst attribute
 		'LNode with only lnClass and no inst → lnClass as path segment': {
 			record: createSclTestRecord({
 				record: { tagName: 'LNode', attributes: { lnClass: 'LLN0' } },

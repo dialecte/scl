@@ -181,8 +181,6 @@ Two path formats share this strategy:
 
 **Example (IEC 7-2):** `DOS.mappedDoName="PIU/CT_Function/I01ATCTR1.AmpSv"` → `lookupKey: "PIU/CT_Function/I01ATCTR1"` → populates `mappedLnUuid`.
 
-**When `mappedLnUuid` is already set:** the value may contain just a DO name (e.g., `"AmpSv"`), not a full path. The "skip if uuid already set" logic handles this — no resolution attempted.
-
 ### `ied-address` — 2 pairs
 
 References to ExtRef/ExtCtrl inside the IED section, identified by their `intAddr` attribute. ExtRef/ExtCtrl contribute `intAddr` as a path segment with `.` separator, so they are indexed at paths like `"PIU/CB_Function/LCBO1.TrCmd.stVal"`.
@@ -218,13 +216,44 @@ References within a BehaviorDescription scope. Paths are local — relative to t
 
 **Example:** `InputVar.inputName="Trip"` inside a BehaviorDescription under `S1/B1/XCBR1` → `lookupKey: "S1/B1/XCBR1.Trip"` → matches the indexed SourceRef → populates `inputUuid`.
 
-### `unsupported` — 1 pair
+### `unsupported` — 1 pair (VariableApplyTo XPath)
 
 | Element         | Path attribute | Reason                                                     |
 | --------------- | -------------- | ---------------------------------------------------------- |
 | VariableApplyTo | `element`      | Relative XPath expression — not indexable during streaming |
 
-VariableApplyTo is rarely used. Possible future options: post-import XPath evaluation or lazy resolution at query time.
+**Why it's different from all other pairs:**
+
+All other `tPathName` attributes contain **naming-based paths** (`S1/V1/B1/Protection`) — segments built from element `name` or `lnClass` attributes. VariableApplyTo's `element` attribute uses **XPath expressions** (`.//LNode//eIEC61850-6-100:LNodeSpecNaming`), despite sharing the same XSD type `tPathName`.
+
+**Key characteristics (per IEC TR 61850-90-30 §12.3.3):**
+
+1. **Relative to context element** — the `.` means the element containing the `Private/Variable` (e.g. a Bay). The XPath evaluates from that context node.
+2. **Can target multiple elements** — `//` is the descendant-or-self axis. `.//LNode` matches _every_ LNode under the context, not just one. One VariableApplyTo → N target elements → N UUID resolutions needed.
+3. **XPath subset used in practice** — `.` (self), `//Element` (descendant by tagName), `/Element` (child by tagName), `[@attr="value"]` (attribute predicate). No unions, position predicates, or functions.
+
+**Why the path index can't handle it:**
+
+Our pathIndex is name-based: `"S1/V1/B1/Protection"` → UUID. XPath is **tag-name based**: `.//LNode` matches elements by tagName, not by their `name` attribute. These are fundamentally different lookup mechanisms. `.//LNode//LNodeSpecNaming` cannot be translated into a regular path index lookup.
+
+**Why it can't be resolved during streaming (phase 1):**
+
+XPath requires the full tree. A VariableApplyTo near the top of the file could reference elements that appear later. The target elements may not exist yet when the VariableApplyTo is encountered by the SAX parser.
+
+**Future resolution approach:**
+
+Post-import XPath evaluation in phase 2 (afterImport), once all records are in the database:
+
+1. Detect XPath values (starts with `.` or `//`) during phase 1 → store context element + raw XPath in a pending list
+2. In phase 2, for each pending XPath:
+   - Decompose into steps (reuse `splitXpathIntoSteps` from assert-xml helper)
+   - Walk the record tree from the context element: `/` → children by tagName, `//` → descendants by tagName, `[@attr="value"]` → attribute filter
+   - Result = set of matching records (1 or many)
+   - Write `elementUuid` for each match
+
+**Current safeguard:**
+
+When a VariableApplyTo with an XPath `element` value is encountered during import, an `unsupported-xpath-reference` warning is emitted. This ensures the edge case is visible rather than silently skipped.
 
 ## Coverage summary
 

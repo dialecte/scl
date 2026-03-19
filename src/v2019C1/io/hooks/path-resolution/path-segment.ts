@@ -133,6 +133,7 @@ const PATH_EXTRACTORS: Record<string, PathExtractor> = {
 	PowerTransformer: byName(),
 	TransformerWinding: byName(),
 	GeneralEquipment: byName(),
+	SubEquipment: byName(),
 	LNode: byLnClass(),
 	Function: byName(),
 	SubFunction: byName(),
