@@ -146,6 +146,7 @@ const PATH_EXTRACTORS: Record<string, PathExtractor> = {
 	FunctionalVariant: byName(),
 	FunctionalSubVariant: byName(),
 	ProcessResource: byName(),
+	PowerSystemRelation: byName(),
 	Variable: byName(),
 	Process: byName(),
 }

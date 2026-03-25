@@ -166,6 +166,16 @@ describe('getPathSegment', () => {
 			}),
 			expected: null,
 		},
+		'PowerSystemRelation with name → name as path segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'PowerSystemRelation', attributes: { name: 'PSR1' } },
+			}),
+			expected: { segment: 'PSR1', separator: '/' },
+		},
+		'PowerSystemRelation without name → no path segment': {
+			record: createSclTestRecord({ record: { tagName: 'PowerSystemRelation' } }),
+			expected: null,
+		},
 
 		// Elements with no registered extractor
 		'Private element → no path segment': {
@@ -382,6 +392,16 @@ describe('buildElementPath', () => {
 				],
 				expected: 'S1/B1/PR1',
 			},
+		'PowerSystemRelation inside Substation hierarchy → name included in path': {
+			record: createSclTestRecord({
+				record: { tagName: 'PowerSystemRelation', attributes: { name: 'PSR1' } },
+			}),
+			ancestry: [
+				createSclTestRecord({ record: { tagName: 'SCL' } }),
+				createSclTestRecord({ record: { tagName: 'Substation', attributes: { name: 'S1' } } }),
+			],
+			expected: 'S1/PSR1',
+		},
 	}
 
 	Object.entries(testCases).forEach(([description, testCase]) => {

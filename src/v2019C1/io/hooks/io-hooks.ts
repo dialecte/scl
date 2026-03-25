@@ -18,12 +18,44 @@ import type {
 
 /**
  * Creates SCL IO hooks for UUID reference resolution.
+ * The import pipeline is two-pass:
  *
- * Phase 1 (beforeImportRecord): builds a path→uuid index for target elements
- * and collects pending resolutions for elements with path references.
+ * **Phase 1 — `beforeImportRecord`** (called once per record, in document order):
  *
- * Phase 2 (afterImport): resolves each pending path reference to a UUID
- * and bulk-updates the records.
+ * For each record, two things happen:
+ * 1. `ensureUuid` — if the element type supports `uuid`, generate and attach one if missing.
+ * 2. If it is a *target* element (e.g. `Function`), index its path → uuid in `pathIndex`.
+ * 3. If it is a *reference* element (e.g. `FunctionRef`), and only the path attribute is
+ *    present (not the uuid attribute), push a pending resolution.
+ *
+ * After processing these two XML records:
+ * ```xml
+ * <Function name="Fn1" uuid="abc-123" />   <!-- ancestor: S1 > Bay1 > VoltLevel1 -->
+ * <FunctionRef function="S1/Bay1/VoltLevel1/Fn1" />
+ * ```
+ * The internal state is:
+ * ```
+ * pathIndex         = { "S1/Bay1/VoltLevel1/Fn1": "abc-123" }
+ * pendingResolutions = [{ recordId: "ref-id", uuidAttributeName: "functionUuid",
+ *                         lookupKey: "S1/Bay1/VoltLevel1/Fn1" }]
+ * ```
+ *
+ * **Phase 2 — `afterImport`** (called once, after all records):
+ *
+ * Each pending resolution is looked up in `pathIndex`:
+ * ```
+ * "S1/Bay1/VoltLevel1/Fn1" → "abc-123"   ✓ resolved
+ * ```
+ * Returns an update instruction:
+ * ```
+ * { recordId: "ref-id", attributes: [{ name: "functionUuid", value: "abc-123" }] }
+ * ```
+ * The import pipeline bulk-applies these updates, so the stored `FunctionRef` record
+ * ends up with both `function="S1/Bay1/VoltLevel1/Fn1"` and `functionUuid="abc-123"`.
+ *
+ * Unresolvable references (path not in index) produce an `UnresolvedReferenceWarning`
+ * instead of an update.
+ *
  */
 export function createSclIoHooks(): IOHooks {
 	type Path = string & {}

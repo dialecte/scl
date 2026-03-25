@@ -9,38 +9,34 @@ import type { AnyRawRecord } from '@dialecte/core'
 describe('createSclIoHooks', () => {
 	type TestCase = {
 		records: Array<{ tagName: Scl.ElementsOf; attributes?: Record<string, string> }>
-		expectedUpdates: number
-		expectedWarnings?: number
+		expectedUpdates?: Array<{ attributes: Array<{ name: string; value: string }> }>
+		expectedWarnings?: Array<{ type: string }>
 		only?: boolean
 	}
 
 	const testCases: Record<string, TestCase> = {
 		'no records → 0 updates, 0 warnings': {
 			records: [],
-			expectedUpdates: 0,
 		},
 		'target only, no reference → 0 updates, 0 warnings': {
 			records: [{ tagName: 'Function', attributes: { name: 'F1', uuid: 'uuid-f1' } }],
-			expectedUpdates: 0,
 		},
 		'reference only, no indexed target → 0 updates, 1 warning': {
 			records: [{ tagName: 'FunctionRef', attributes: { function: 'F1' } }],
-			expectedUpdates: 0,
-			expectedWarnings: 1,
+			expectedWarnings: [{ type: 'unresolved-reference' }],
 		},
 		'target then reference with matching path → 1 update, 0 warnings': {
 			records: [
 				{ tagName: 'Function', attributes: { name: 'F1', uuid: 'uuid-f1' } },
 				{ tagName: 'FunctionRef', attributes: { function: 'F1' } },
 			],
-			expectedUpdates: 1,
+			expectedUpdates: [{ attributes: [{ name: 'functionUuid', value: 'uuid-f1' }] }],
 		},
 		'reference already has uuid attribute → 0 updates, 0 warnings': {
 			records: [
 				{ tagName: 'Function', attributes: { name: 'F1', uuid: 'uuid-f1' } },
 				{ tagName: 'FunctionRef', attributes: { function: 'F1', functionUuid: 'uuid-f1' } },
 			],
-			expectedUpdates: 0,
 		},
 		'VariableApplyTo with XPath element → 0 updates, 1 warning': {
 			records: [
@@ -49,8 +45,7 @@ describe('createSclIoHooks', () => {
 					attributes: { element: './/LNode//LNodeSpecNaming', attribute: 'sLdInst' },
 				},
 			],
-			expectedUpdates: 0,
-			expectedWarnings: 1,
+			expectedWarnings: [{ type: 'unsupported-xpath-reference' }],
 		},
 	}
 
@@ -70,17 +65,21 @@ describe('createSclIoHooks', () => {
 			}
 
 			const first = await hooks.afterImport!()
-			expect(first.updates ?? []).toHaveLength(testCase.expectedUpdates)
-			expect(first.warnings ?? []).toHaveLength(testCase.expectedWarnings ?? 0)
+			expect(first.updates?.map((u) => ({ attributes: u.attributes })) ?? []).toEqual(
+				testCase.expectedUpdates ?? [],
+			)
+			expect(first.warnings?.map((w) => ({ type: w.type })) ?? []).toEqual(
+				testCase.expectedWarnings ?? [],
+			)
 
 			// State is always cleared after afterImport
 			const second = await hooks.afterImport!()
-			expect(second.updates ?? []).toHaveLength(0)
-			expect(second.warnings ?? []).toHaveLength(0)
+			expect(second.updates ?? []).toEqual([])
+			expect(second.warnings ?? []).toEqual([])
 		})
 	})
 
-	it('VariableApplyTo emits unsupported-xpath-reference warning with correct details', async () => {
+	it('VariableApplyTo with XPath element → warning with full details and correct recordId', async () => {
 		const hooks = createSclIoHooks()
 		const record = makeRecord('VariableApplyTo', {
 			element: './/LNode//LNodeSpecNaming',
@@ -90,9 +89,7 @@ describe('createSclIoHooks', () => {
 		hooks.beforeImportRecord!({ record, ancestry: [] })
 
 		const result = await hooks.afterImport!()
-		expect(result.updates ?? []).toHaveLength(0)
 		expect(result.warnings).toHaveLength(1)
-
 		const warning = result.warnings![0]
 		expect(warning.type).toBe('unsupported-xpath-reference')
 		expect(warning.recordId).toBe(record.id)
@@ -102,6 +99,22 @@ describe('createSclIoHooks', () => {
 			uuidAttribute: 'elementUuid',
 			pathValue: './/LNode//LNodeSpecNaming',
 		})
+	})
+
+	it('Function indexed before FunctionRef → FunctionRef resolved with functionUuid', async () => {
+		const hooks = createSclIoHooks()
+		const refRecord = makeRecord('FunctionRef', { function: 'F1' })
+
+		hooks.beforeImportRecord!({
+			record: makeRecord('Function', { name: 'F1', uuid: 'uuid-f1' }),
+			ancestry: [],
+		})
+		hooks.beforeImportRecord!({ record: refRecord, ancestry: [] })
+
+		const result = await hooks.afterImport!()
+		expect(result.updates).toHaveLength(1)
+		expect(result.updates?.[0].recordId).toBe(refRecord.id)
+		expect(result.updates?.[0].attributes).toEqual([{ name: 'functionUuid', value: 'uuid-f1' }])
 	})
 })
 
