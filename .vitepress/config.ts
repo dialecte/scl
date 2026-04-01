@@ -35,18 +35,29 @@ export default defineConfig({
 			],
 			'/api/v2019C1/': [
 				{
-					text: 'Core',
-					items: [{ text: 'See on dialecte', link: 'https://dialecte.github.io/core/api' }],
+					text: 'v2019C1',
+					items: [
+						{ text: 'Overview', link: '/api/v2019C1/' },
+						{ text: 'Types', link: '/api/v2019C1/types' },
+						{ text: 'Test Helpers', link: '/api/v2019C1/test-helpers' },
+					],
 				},
 				{
 					text: 'Extensions',
 					items: [
-						{ text: 'Overview', link: '/api/v2019C1/extensions' },
-						{ text: 'DataTypeTemplates', link: '/api/v2019C1/extensions/data-type-templates' },
-						{ text: 'Function', link: '/api/v2019C1/extensions/function' },
+						{ text: 'Overview', link: '/api/v2019C1/extensions/' },
 						{ text: 'History', link: '/api/v2019C1/extensions/history' },
-						{ text: 'SCL', link: '/api/v2019C1/extensions/scl' },
-						{ text: 'SubFunction', link: '/api/v2019C1/extensions/sub-function' },
+						{ text: 'Data Model', link: '/api/v2019C1/extensions/data-model' },
+						{ text: 'Template', link: '/api/v2019C1/extensions/template' },
+					],
+				},
+				{
+					text: 'Core',
+					items: [
+						{
+							text: 'Query / Transaction / Document',
+							link: 'https://dialecte.github.io/core/api/',
+						},
 					],
 				},
 			],

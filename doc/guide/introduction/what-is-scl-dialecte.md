@@ -22,23 +22,46 @@ The SCL definition is produced from the **IEC 61850-6 v2019C1 XSD**. Every eleme
 import { openSclDocument } from '@dialecte/scl/v2019C1'
 ```
 
-### 2. Domain extensions (WIP)
+### 2. Domain extensions
 
-Domain-specific query and transaction methods are added by subclassing `Query` and `Transaction` from `@dialecte/core`. Planned extensions include:
+Domain-specific query and transaction methods are plain functions registered on the document under named groups. They are available directly on `doc.query` and `tx`:
 
-| Extension   | Element       | What it does                                                    |
-| ----------- | ------------- | --------------------------------------------------------------- |
-| `extractTo` | `Function`    | Extracts a Function and its subtree into a separate `.fsd` file |
-| `extractTo` | `SubFunction` | Same operation scoped to a SubFunction                          |
+```ts
+// Query extension
+const latest = await doc.query.history.getLatestHitem()
 
-These will be available as methods on the SCL-specific `Query` and `Transaction` subclasses.
+// Transaction extension
+await doc.transaction(async (tx) => {
+	await tx.history.addHistoryEntry({ filename, header, item })
+})
+```
+
+| Module      | Kind        | Method                                | What it does                                                      |
+| ----------- | ----------- | ------------------------------------- | ----------------------------------------------------------------- |
+| `history`   | query       | `getSortedHitems()`                   | All `Hitem` records sorted by version/revision ascending          |
+| `history`   | query       | `getLatestHitem()`                    | Most recent `Hitem` by version/revision                           |
+| `history`   | transaction | `addHistoryEntry(params)`             | Ensures `Header` + `History`, increments version, appends Hitem   |
+| `dataModel` | query       | `resolve(params)`                     | Walks `lnType` → `LNodeType` → `DOType` → `DAType`/`EnumType`     |
+| `dataModel` | transaction | `extract(params)`                     | Deep-clones missing data-model types into `DataTypeTemplates`     |
+| `template`  | transaction | `ensureSubstationTemplateStructure()` | Ensures `Substation/VoltageLevel/Bay` named `TEMPLATE` under root |
+
+See the [Extensions API](/api/v2019C1/extensions/) for full signatures.
 
 ### 3. Hooks
 
 Hooks enforce SCL-specific invariants automatically — no application code needed.
 
-| Hook                      | Trigger                        | What it does                                                                                                       |
-| ------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `afterCreated`            | After a child element is added | Wraps elements from a non-default namespace inside a `<Private>` container, as required by SCL                     |
-| `beforeClone`             | Before cloning a subtree       | Strips `uuid` attributes (clones must get fresh identifiers) and skips empty `<Private>` wrappers                  |
-| `beforeImportRecord` (IO) | During XML import              | Calls `ensureUuid` — every element that supports `uuid` is guaranteed to have one by the time it hits the database |
+**Transaction hooks:**
+
+| Hook                      | Trigger                        | What it does                                                                                   |
+| ------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `afterStandardizedRecord` | Before a record is persisted   | Generates a fresh `uuid` on any element that supports it but lacks one                         |
+| `beforeClone`             | Before cloning a subtree       | Strips `uuid` attributes (clones get fresh identifiers); skips empty `<Private>` wrappers      |
+| `afterCreated`            | After a child element is added | Wraps elements from a non-default namespace inside a `<Private>` container, as required by SCL |
+
+**IO hooks (import pipeline):**
+
+| Hook                 | Trigger              | What it does                                                                                         |
+| -------------------- | -------------------- | ---------------------------------------------------------------------------------------------------- |
+| `beforeImportRecord` | For each XML element | Ensures `uuid` present; indexes path → uuid for targets; queues pending UUID resolutions for refs    |
+| `afterImport`        | After all elements   | Resolves queued path references to UUID values; emits `UnresolvedReferenceWarning` when unresolvable |
