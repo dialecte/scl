@@ -6,6 +6,8 @@ import {
 	PARENTS,
 	DESCENDANTS,
 	ANCESTORS,
+	ROOT_ELEMENT,
+	SINGLETON_ELEMENTS,
 } from '../definition'
 import { HOOKS } from '../hooks'
 import { createSclIoHooks } from '../io/hooks'
@@ -43,8 +45,8 @@ export const SCL_NAMESPACES = {
 } as const
 
 export const SCL_DIALECTE_CONFIG = {
-	rootElementName: 'SCL' as const,
-	singletonElements: ['SCL', 'Header', 'History', 'Communication', 'DataTypeTemplates'] as const,
+	rootElementName: ROOT_ELEMENT,
+	singletonElements: SINGLETON_ELEMENTS,
 	elements: ELEMENT_NAMES,
 	namespaces: SCL_NAMESPACES,
 	attributes: ATTRIBUTES,
@@ -54,7 +56,7 @@ export const SCL_DIALECTE_CONFIG = {
 	ancestors: ANCESTORS,
 	database: SCL_DATABASE_CONFIG,
 	io: SCL_IO_CONFIG,
-	definition: DEFINITION as AnyDefinition,
+	definition: DEFINITION,
 	hooks: HOOKS,
 } as const satisfies AnyDialecteConfig
 

@@ -1,11 +1,7 @@
-import {
-	buildElementPath,
-	getResolutionType,
-	parseReferencePath,
-	UUID_REFERENCE_PAIRS,
-} from './path-resolution'
-
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { ATTRIBUTES } from '@/v2019C1/definition'
+import { buildPathFromAncestry } from '@/v2019C1/extensions/path/query/build/path-segment'
+import { parseReferencePath } from '@/v2019C1/extensions/path/query/resolve/parse-path'
 
 import type { PendingResolution, UnsupportedXPathWarning } from './io-hooks.types'
 import type {
@@ -76,7 +72,7 @@ export function createSclIoHooks(): IOHooks {
 		const isTargetElement = uuid && TARGET_ELEMENT_TYPES.has(tagName)
 		// Index target elements: build path → uuid mapping
 		if (isTargetElement) {
-			const path = buildElementPath({ record, ancestry })
+			const path = buildPathFromAncestry({ record, ancestry })
 			if (path) pathIndex.set(path, uuid)
 		}
 
@@ -99,10 +95,10 @@ export function createSclIoHooks(): IOHooks {
 
 			if (existingUuid) continue
 
-			const parsed = parseReferencePath(tagName, pair.attribute.path, pathValue, ancestry)
+			const parsed = parseReferencePath(pair.resolution, pair.attribute.path, pathValue, ancestry)
 
 			if (!parsed) {
-				if (getResolutionType(tagName, pair.attribute.path) === 'unsupported') {
+				if (pair.resolution === 'unsupported') {
 					xpathWarnings.push({
 						type: 'unsupported-xpath-reference',
 						recordId: record.id,
@@ -181,7 +177,7 @@ export function createSclIoHooks(): IOHooks {
  */
 const ELEMENTS_WITH_UUID: ReadonlySet<string> = new Set(
 	Object.entries(ATTRIBUTES)
-		.filter(([, attributes]) => 'uuid' in (attributes as Record<string, unknown>))
+		.filter(([, attributes]) => 'uuid' in attributes)
 		.map(([name]) => name),
 )
 

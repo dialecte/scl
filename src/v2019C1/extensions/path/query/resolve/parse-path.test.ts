@@ -1,49 +1,20 @@
-import { getResolutionType, parseLnodePath, parseReferencePath } from '.'
-import { UUID_REFERENCE_PAIRS } from './uuid-reference-pairs'
+import { getResolutionType, parseLnodePath, parseReferencePath } from './parse-path'
 
 import { describe, it, expect } from 'vitest'
 
-import { ALL_XMLNS_NAMESPACES, createSclTestDialecte } from '@/v2019C1/helpers'
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { ALL_XMLNS_NAMESPACES, runSclTestCases } from '@/v2019C1/test'
 
 import type { ResolutionType } from './types'
-
-// ── Helpers ──────────────────────────────────────────────────────────
-
-type IntegrationTestCase = {
-	xml: string
-	expectedElementQueries?: string[]
-	unexpectedElementQueries?: string[]
-}
-
-async function assertResolvedAttributes(tc: IntegrationTestCase) {
-	const {
-		exportCurrentTest,
-		assertExpectedElementQueries,
-		assertUnexpectedElementQueries,
-		cleanup,
-	} = await createSclTestDialecte({ xmlString: tc.xml })
-
-	try {
-		const { xmlDocument } = await exportCurrentTest()
-
-		if (tc.expectedElementQueries) {
-			assertExpectedElementQueries({ xmlDocument, queries: tc.expectedElementQueries })
-		}
-		if (tc.unexpectedElementQueries) {
-			assertUnexpectedElementQueries({ xmlDocument, queries: tc.unexpectedElementQueries })
-		}
-	} finally {
-		await cleanup()
-	}
-}
+import type { SclTest } from '@/v2019C1/test'
 
 // ── Integration tests: path resolution through XML import ────────────
 
 describe('reference-parsing', () => {
 	describe('direct strategy', () => {
-		const testCases: Record<string, IntegrationTestCase> = {
+		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
 			'FunctionCatRef with path to existing Function → functionUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Function name="Protection" uuid="func-prot-uuid" />
@@ -55,12 +26,12 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:FunctionCatRef[@function="S1/Protection" and @functionUuid="func-prot-uuid"]',
 				],
 			},
 			'FunctionRef with path to nested SubFunction → functionUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<VoltageLevel name="V1">
@@ -78,12 +49,12 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:FunctionRef[@function="S1/V1/Prot/Trip" and @functionUuid="sf-trip-uuid"]',
 				],
 			},
 			'ProcessResourceRef with path to ProcessResource → processResourceUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -105,12 +76,12 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:ProcessResourceRef[@processResource="S1/B1/PR1" and @processResourceUuid="pr-uuid"]',
 				],
 			},
 			'FunctionCatRef with path to non-existent element → functionUuid absent': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Function name="Existing" uuid="func-uuid" />
@@ -122,13 +93,13 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: ['//v2019C1:FunctionCatRef[@function="S1/NonExistent"]'],
-				unexpectedElementQueries: [
+				expectedQueries: ['//v2019C1:FunctionCatRef[@function="S1/NonExistent"]'],
+				unexpectedQueries: [
 					'//v2019C1:FunctionCatRef[@function="S1/NonExistent" and @functionUuid]',
 				],
 			},
 			'FunctionCatRef with functionUuid already present → existing value preserved': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Function name="Protection" uuid="func-prot-uuid" />
@@ -140,12 +111,12 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:FunctionCatRef[@function="S1/Protection" and @functionUuid="already-set"]',
 				],
 			},
 			'FunctionCatRef with target lacking uuid → uuid auto-generated and functionUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Function name="F2" />
@@ -157,19 +128,20 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: ['//v2019C1:FunctionCatRef[@function="S1/F2" and @functionUuid]'],
+				expectedQueries: ['//v2019C1:FunctionCatRef[@function="S1/F2" and @functionUuid]'],
 			},
 		}
 
-		Object.entries(testCases).forEach(([description, tc]) => {
-			it(description, () => assertResolvedAttributes(tc))
+		runSclTestCases({
+			testCases,
+			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
 		})
 	})
 
 	describe('lnode strategy', () => {
-		const testCases: Record<string, IntegrationTestCase> = {
+		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
 			'SourceRef.source with DO.DA qualifier → sourceLNodeUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -185,12 +157,12 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:SourceRef[@source="S1/B1/PXCBR1.Pos.stVal" and @sourceLNodeUuid="ln-pxcbr-uuid"]',
 				],
 			},
 			'SourceRef.source without qualifier → sourceLNodeUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -206,12 +178,12 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:SourceRef[@source="S1/B1/XCBR1" and @sourceLNodeUuid="ln-xcbr-uuid"]',
 				],
 			},
 			'ControlRef.controlled with DO qualifier → controlledLNodeUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -227,21 +199,22 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:ControlRef[@controlled="S1/B1/PTRC1.Tr" and @controlledLNodeUuid="ln-ptrc-uuid"]',
 				],
 			},
 		}
 
-		Object.entries(testCases).forEach(([description, tc]) => {
-			it(description, () => assertResolvedAttributes(tc))
+		runSclTestCases({
+			testCases,
+			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
 		})
 	})
 
 	describe('IEC 7-2 ObjectReference (lnode strategy)', () => {
-		const testCases: Record<string, IntegrationTestCase> = {
+		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
 			'DOS.mappedDoName referencing IED LN → mappedLnUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -265,12 +238,12 @@ describe('reference-parsing', () => {
 						</IED>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:DOS[@mappedDoName="IED1/LD1/XCBR1.Pos" and @mappedLnUuid="ied-xcbr-uuid"]',
 				],
 			},
 			'DAS.mappedDaName referencing IED LN → mappedLnUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -294,12 +267,12 @@ describe('reference-parsing', () => {
 						</IED>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:DAS[@mappedDaName="IED1/LD1/XCBR1.Pos.stVal" and @mappedLnUuid="ied-xcbr-uuid"]',
 				],
 			},
 			'DOS.mappedDoName through transparent AccessPoint → mappedLnUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -321,21 +294,22 @@ describe('reference-parsing', () => {
 						</IED>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:DOS[@mappedDoName="PIU/CT_Function/I01ATCTR1.AmpSv" and @mappedLnUuid="tctr-uuid"]',
 				],
 			},
 		}
 
-		Object.entries(testCases).forEach(([description, tc]) => {
-			it(description, () => assertResolvedAttributes(tc))
+		runSclTestCases({
+			testCases,
+			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
 		})
 	})
 
 	describe('ied-address strategy', () => {
-		const testCases: Record<string, IntegrationTestCase> = {
+		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
 			'SourceRef.extRefAddr with absolute IED path → extRefUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -363,12 +337,12 @@ describe('reference-parsing', () => {
 						</IED>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:SourceRef[@extRefAddr="PIU/CB_Function/LCBO1.TrCmd.stVal" and @extRefUuid="extref-trcmd-uuid"]',
 				],
 			},
 			'ControlRef.extCtrlAddr with absolute IED path → extCtrlUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -396,13 +370,13 @@ describe('reference-parsing', () => {
 						</IED>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:ControlRef[@extCtrlAddr="IED1/LD1/XCBR1.Pos" and @extCtrlUuid="extctrl-pos-uuid"]',
 				],
 			},
 			'ControlRef.extCtrlAddr with IED-relative path, iedName on parent LNode → extCtrlUuid populated via fallback':
 				{
-					xml: /* xml */ `
+					sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES}>
 					<Substation name="S1">
 						<Bay name="B1">
@@ -430,13 +404,13 @@ describe('reference-parsing', () => {
 					</IED>
 				</SCL>
 			`,
-					expectedElementQueries: [
+					expectedQueries: [
 						'//v2019C1:ControlRef[@extCtrlAddr="LD1/XCBR1.Pos" and @extCtrlUuid="extctrl-pos-uuid"]',
 					],
 				},
 			'SourceRef.extRefAddr with IED-relative path, iedName on parent LNode → extRefUuid populated via fallback':
 				{
-					xml: /* xml */ `
+					sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -464,21 +438,22 @@ describe('reference-parsing', () => {
 						</IED>
 					</SCL>
 				`,
-					expectedElementQueries: [
+					expectedQueries: [
 						'//v2019C1:SourceRef[@extRefAddr="CB_Function/LCBO1.TrCmd.stVal" and @extRefUuid="extref-trcmd-uuid"]',
 					],
 				},
 		}
 
-		Object.entries(testCases).forEach(([description, tc]) => {
-			it(description, () => assertResolvedAttributes(tc))
+		runSclTestCases({
+			testCases,
+			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
 		})
 	})
 
 	describe('behavior-description strategy', () => {
-		const testCases: Record<string, IntegrationTestCase> = {
+		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
 			'InputVar.dataName inside BehaviorDescription → lnodeUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -493,12 +468,12 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:InputVar[@dataName="Op.general" and @lnodeUuid="ln-xcbr-uuid"]',
 				],
 			},
 			'InputVar.inputName matching SourceRef → inputUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -517,12 +492,12 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:InputVar[@inputName="Trip" and @inputUuid="srcref-trip-uuid"]',
 				],
 			},
 			'OutputVar.outputName matching ControlRef → outputUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -541,12 +516,12 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:OutputVar[@outputName="TripCmd" and @outputUuid="ctrlref-tripcmd-uuid"]',
 				],
 			},
 			'OutputVar.dataName inside BehaviorDescription → lnodeUuid populated': {
-				xml: /* xml */ `
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -561,21 +536,22 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:OutputVar[@dataName="Pos.stVal" and @lnodeUuid="ln-xcbr-uuid"]',
 				],
 			},
 		}
 
-		Object.entries(testCases).forEach(([description, tc]) => {
-			it(description, () => assertResolvedAttributes(tc))
+		runSclTestCases({
+			testCases,
+			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
 		})
 	})
 
 	describe('multiple reference pairs on a single element', () => {
-		it('SourceRef with source and resourceName → both sourceLNodeUuid and resourceUuid populated', async () => {
-			await assertResolvedAttributes({
-				xml: /* xml */ `
+		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
+			'SourceRef with source and resourceName → both sourceLNodeUuid and resourceUuid populated': {
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -596,15 +572,12 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:SourceRef[@source="S1/B1/XCBR1.Pos" and @sourceLNodeUuid="ln-xcbr-uuid" and @resourceUuid="pr-uuid"]',
 				],
-			})
-		})
-
-		it('multiple different reference elements targeting the same ProcessResource → all resolved', async () => {
-			await assertResolvedAttributes({
-				xml: /* xml */ `
+			},
+			'multiple different reference elements targeting same ProcessResource → all resolved': {
+				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Private type="eIEC61850-6-100">
@@ -617,11 +590,16 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedElementQueries: [
+				expectedQueries: [
 					'//v2019C1:ProcessResourceRef[@processResource="S1/PR1" and @processResourceUuid="pr-uuid"]',
 					'//v2019C1:ControllingLNode[@resourceName="S1/PR1" and @resourceUuid="pr-uuid"]',
 				],
-			})
+			},
+		}
+
+		runSclTestCases({
+			testCases,
+			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
 		})
 	})
 
@@ -708,7 +686,12 @@ describe('reference-parsing', () => {
 
 		Object.entries(testCases).forEach(([description, tc]) => {
 			it(description, () => {
-				expect(parseReferencePath(tc.element, tc.attribute, tc.value)).toEqual(tc.expected)
+				const resolution = getResolutionType(tc.element, tc.attribute)
+				if (!resolution) {
+					expect(tc.expected).toBeNull()
+					return
+				}
+				expect(parseReferencePath(resolution, tc.attribute, tc.value)).toEqual(tc.expected)
 			})
 		})
 	})

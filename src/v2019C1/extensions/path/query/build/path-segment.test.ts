@@ -1,8 +1,8 @@
-import { buildElementPath, getPathSegment } from './path-segment'
+import { buildPathFromAncestry, getPathSegment } from './path-segment'
 
 import { describe, it, expect } from 'vitest'
 
-import { createSclTestRecord } from '@/v2019C1/helpers'
+import { createSclTestRecord } from '@/v2019C1/test'
 
 import type { AnyRawRecord } from '@dialecte/core'
 
@@ -406,7 +406,7 @@ describe('buildElementPath', () => {
 
 	Object.entries(testCases).forEach(([description, testCase]) => {
 		it(description, () => {
-			expect(buildElementPath({ record: testCase.record, ancestry: testCase.ancestry })).toBe(
+			expect(buildPathFromAncestry({ record: testCase.record, ancestry: testCase.ancestry })).toBe(
 				testCase.expected,
 			)
 		})

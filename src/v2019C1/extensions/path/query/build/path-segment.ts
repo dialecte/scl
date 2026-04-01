@@ -12,9 +12,8 @@
  * IED section paths:     "IED1/LD0/XCBR1.TrCmd.stVal"
  */
 
-import { AnyRawRecord } from '@dialecte/core'
-
-import type { PathSegment, PathExtractor } from './types'
+import type { PathSegment, PathExtractor } from './path-segment.types'
+import type { AnyRawRecord } from '@dialecte/core'
 
 // ── Public Methods ───────────────────────────────────────────────────
 
@@ -35,6 +34,8 @@ export function getPathSegment(record: AnyRawRecord): PathSegment | null {
 /**
  * Builds the canonical path for any SCL element from its record and ancestry.
  *
+ * Expects ancestry in top-down order: [root, ..., parent].
+ *
  * Process section:
  * - "S1/V1/B1/XCBR1"           (LNode under Bay)
  * - "S1/V1/B1/XCBR1.Trip"      (SourceRef under LNode)
@@ -45,7 +46,7 @@ export function getPathSegment(record: AnyRawRecord): PathSegment | null {
  *
  * Returns null when no segments exist.
  */
-export function buildElementPath(params: {
+export function buildPathFromAncestry(params: {
 	record: AnyRawRecord
 	ancestry: readonly AnyRawRecord[]
 }): string | null {
