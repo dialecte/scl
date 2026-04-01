@@ -6,18 +6,23 @@ import type * as Core from '@dialecte/core'
 
 describe('beforeClone', () => {
 	type TestCase = {
-		description: string
 		input: Omit<Core.AnyTreeRecord, 'namespace' | 'parent' | 'children' | 'value' | 'status'>
 		expected: {
 			shouldBeCloned: boolean
 			record: Omit<Core.AnyTreeRecord, 'namespace' | 'parent' | 'children' | 'value' | 'status'>
 		}
-		only?: boolean
 	}
 
-	const testCases: TestCase[] = [
-		{
-			description: 'removes uuid attribute from record',
+	const treeRecordPart = {
+		namespace: { prefix: '', uri: '' },
+		parent: null,
+		children: [],
+		value: '',
+		status: 'unchanged' as const,
+	}
+
+	const testCases: Record<string, TestCase> = {
+		'uuid attribute present → uuid removed': {
 			input: {
 				id: 'test-id',
 				tagName: 'Function',
@@ -41,8 +46,7 @@ describe('beforeClone', () => {
 				},
 			},
 		},
-		{
-			description: 'returns unchanged record when no uuid attribute',
+		'no uuid attribute → record unchanged': {
 			input: {
 				id: 'test-id',
 				tagName: 'SubFunction',
@@ -65,8 +69,7 @@ describe('beforeClone', () => {
 				},
 			},
 		},
-		{
-			description: 'handles record with empty attributes',
+		'empty attributes → record unchanged': {
 			input: {
 				id: 'test-id',
 				tagName: 'Function',
@@ -75,16 +78,10 @@ describe('beforeClone', () => {
 			},
 			expected: {
 				shouldBeCloned: true,
-				record: {
-					id: 'test-id',
-					tagName: 'Function',
-					attributes: [],
-					tree: [],
-				},
+				record: { id: 'test-id', tagName: 'Function', attributes: [], tree: [] },
 			},
 		},
-		{
-			description: 'removes multiple uuid attributes if present',
+		'multiple uuid attributes → all uuid attributes removed': {
 			input: {
 				id: 'test-id',
 				tagName: 'Function',
@@ -109,8 +106,7 @@ describe('beforeClone', () => {
 				},
 			},
 		},
-		{
-			description: 'skips empty Private element',
+		'empty Private element → skipped (shouldBeCloned=false)': {
 			input: {
 				id: 'test-id',
 				tagName: 'Private',
@@ -127,8 +123,7 @@ describe('beforeClone', () => {
 				},
 			},
 		},
-		{
-			description: 'clones Private element with children',
+		'Private element with children → cloned': {
 			input: {
 				id: 'test-id',
 				tagName: 'Private',
@@ -169,34 +164,12 @@ describe('beforeClone', () => {
 				},
 			},
 		},
-	]
-
-	testCases.forEach(testBeforeClone)
-
-	function testBeforeClone(testCase: TestCase) {
-		it(testCase.description, () => {
-			const treeRecordPart = {
-				namespace: { prefix: '', uri: '' },
-				parent: null,
-				children: [],
-				value: '',
-				status: 'unchanged' as const,
-			}
-
-			// Act
-			const result = beforeClone({
-				record: {
-					...testCase.input,
-					...treeRecordPart,
-				},
-			})
-
-			// Assert
-			expect(result.shouldBeCloned).toBe(testCase.expected.shouldBeCloned)
-			expect(result.transformedRecord).toEqual({
-				...testCase.expected.record,
-				...treeRecordPart,
-			})
-		})
 	}
+
+	it.each(Object.entries(testCases))('%s', (_, testCase) => {
+		const result = beforeClone({ record: { ...testCase.input, ...treeRecordPart } })
+
+		expect(result.shouldBeCloned).toBe(testCase.expected.shouldBeCloned)
+		expect(result.transformedRecord).toEqual({ ...testCase.expected.record, ...treeRecordPart })
+	})
 })

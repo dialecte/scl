@@ -8,20 +8,15 @@ import type * as Core from '@dialecte/core'
 
 describe('afterStandardizedRecord', () => {
 	type TestCase = {
-		description: string
-		input: {
-			record: Core.AnyRawRecord
-		}
+		input: { record: Core.AnyRawRecord }
 		expected: {
 			hasUuidAttribute: boolean
 			uuidValue?: string | 'generated'
-			namespace?: Core.Namespace
 		}
 	}
 
-	const testCases: TestCase[] = [
-		{
-			description: 'adds uuid when element supports uuid and has no uuid attribute',
+	const testCases: Record<string, TestCase> = {
+		'element supports uuid + no uuid attribute → uuid generated': {
 			input: {
 				record: {
 					id: '0-0-0-0-1',
@@ -33,13 +28,9 @@ describe('afterStandardizedRecord', () => {
 					parent: { tagName: 'Substation', id: 'sub1' },
 				} satisfies Scl.RawRecord<'Function'>,
 			},
-			expected: {
-				hasUuidAttribute: true,
-				uuidValue: 'generated',
-			},
+			expected: { hasUuidAttribute: true, uuidValue: 'generated' },
 		},
-		{
-			description: 'adds uuid when element has empty uuid attribute',
+		'element supports uuid + empty uuid attribute → uuid generated': {
 			input: {
 				record: {
 					id: '0-0-0-0-2',
@@ -54,13 +45,9 @@ describe('afterStandardizedRecord', () => {
 					parent: { tagName: 'Substation', id: 'sub1' },
 				} satisfies Scl.RawRecord<'Function'>,
 			},
-			expected: {
-				hasUuidAttribute: true,
-				uuidValue: 'generated',
-			},
+			expected: { hasUuidAttribute: true, uuidValue: 'generated' },
 		},
-		{
-			description: 'keeps existing valid uuid',
+		'element supports uuid + valid uuid present → uuid preserved': {
 			input: {
 				record: {
 					id: '0-0-0-0-3',
@@ -75,13 +62,9 @@ describe('afterStandardizedRecord', () => {
 					parent: { tagName: 'Substation', id: 'sub1' },
 				} satisfies Scl.RawRecord<'Function'>,
 			},
-			expected: {
-				hasUuidAttribute: true,
-				uuidValue: '123e4567-e89b-12d3-a456-426614174000',
-			},
+			expected: { hasUuidAttribute: true, uuidValue: '123e4567-e89b-12d3-a456-426614174000' },
 		},
-		{
-			description: 'does not add uuid when element does not support uuid',
+		'element does not support uuid → no uuid attribute added': {
 			input: {
 				record: {
 					id: '0-0-0-0-4',
@@ -93,43 +76,34 @@ describe('afterStandardizedRecord', () => {
 					parent: { tagName: 'Header', id: 'header1' },
 				} satisfies Scl.RawRecord<'Text'>,
 			},
-			expected: {
-				hasUuidAttribute: false,
-			},
+			expected: { hasUuidAttribute: false },
 		},
-	]
+	}
 
-	testCases.forEach((testCase) => {
-		it(testCase.description, () => {
-			// Act
-			const result = afterStandardizedRecord({
-				record: testCase.input.record as Scl.RawRecord<Scl.ElementsOf>,
-			})
-
-			// Assert
-			const uuidAttribute = result.attributes.find((attr) => attr.name === 'uuid')
-
-			if (testCase.expected.hasUuidAttribute) {
-				expect(uuidAttribute).toBeDefined()
-
-				if (testCase.expected.uuidValue === 'generated') {
-					// Verify it's a valid UUID format
-					expect(uuidAttribute?.value).toMatch(
-						/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-					)
-				} else if (testCase.expected.uuidValue) {
-					expect(uuidAttribute?.value).toBe(testCase.expected.uuidValue)
-				}
-			} else {
-				expect(uuidAttribute).toBeUndefined()
-			}
-
-			// Verify other attributes are preserved
-			const nonUuidAttributes = result.attributes.filter((attr) => attr.name !== 'uuid')
-			const inputNonUuidAttributes = testCase.input.record.attributes.filter(
-				(attr) => attr.name !== 'uuid',
-			)
-			expect(nonUuidAttributes).toEqual(inputNonUuidAttributes)
+	it.each(Object.entries(testCases))('%s', (_, testCase) => {
+		const result = afterStandardizedRecord({
+			record: testCase.input.record as Scl.RawRecord<Scl.ElementsOf>,
 		})
+
+		const uuidAttribute = result.attributes.find((attr) => attr.name === 'uuid')
+
+		if (testCase.expected.hasUuidAttribute) {
+			expect(uuidAttribute).toBeDefined()
+			if (testCase.expected.uuidValue === 'generated') {
+				expect(uuidAttribute?.value).toMatch(
+					/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+				)
+			} else if (testCase.expected.uuidValue) {
+				expect(uuidAttribute?.value).toBe(testCase.expected.uuidValue)
+			}
+		} else {
+			expect(uuidAttribute).toBeUndefined()
+		}
+
+		const nonUuidAttributes = result.attributes.filter((attr) => attr.name !== 'uuid')
+		const inputNonUuidAttributes = testCase.input.record.attributes.filter(
+			(attr) => attr.name !== 'uuid',
+		)
+		expect(nonUuidAttributes).toEqual(inputNonUuidAttributes)
 	})
 })

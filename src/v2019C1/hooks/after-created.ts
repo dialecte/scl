@@ -1,7 +1,7 @@
 import { SCL_DIALECTE_CONFIG } from '../config/dialecte.config'
 
 import { getRecord } from '@dialecte/core'
-import { toRawRecord, toRef } from '@dialecte/core/helpers'
+import { toRawRecord } from '@dialecte/core/helpers'
 import { assert } from '@dialecte/core/utils'
 
 import type * as Core from '@dialecte/core'
@@ -67,7 +67,7 @@ async function getLatestPrivateRecord<GenericConfig extends Core.AnyDialecteConf
 
 	return await getRecord({
 		context,
-		ref: toRef({ id: privateId, tagName: 'Private' }),
+		ref: { id: privateId, tagName: 'Private' as const },
 	})
 }
 

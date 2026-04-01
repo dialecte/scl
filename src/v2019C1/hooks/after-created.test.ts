@@ -5,17 +5,15 @@ import { createTestContext } from '@dialecte/core/test'
 import { describe, it, expect } from 'vitest'
 
 import {
-	createSclTestDialecte,
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
-} from '@/v2019C1/helpers/test-fixtures'
+	createSclTestDialecte,
+	runSclTestCases,
+} from '@/v2019C1/test'
 
-import type { Scl } from '../config'
+import type { Config } from '../config'
+import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 import type * as Core from '@dialecte/core'
-
-// Namespace prefixes in XPath queries must match keys in SCL_DIALECTE_CONFIG.namespaces:
-//   default:   → http://www.iec.ch/61850/2003/SCL
-//   v2019C1:   → http://www.iec.ch/61850/2019/SCL/6-100
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -45,21 +43,17 @@ const xmlWithPrivate = /* xml */ `
 
 describe('afterCreated', () => {
 	// ── Group 1: Integration ─────────────────────────────────────────────────
-	// Test the full flow via document.transaction — hook fires automatically.
-	// Assertions on the exported XML via XPath.
+	// Full flow via document.transaction — hook fires automatically.
+	// Assertions on exported XML via XPath.
 
 	describe('via document.transaction', () => {
-		type TestCase = {
-			desc: string
-			xmlString?: string
-			act: (document: Core.Document<Scl.Config>) => Promise<void>
-			expectedQueries: string[]
-			unexpectedQueries?: string[]
+		type TestCase = SclTest.BaseTestCase & {
+			act: (document: Core.Document<Config>) => Promise<void>
 		}
 
-		const testCases: TestCase[] = [
-			{
-				desc: 'default namespace child is placed directly under parent — no Private wrapping',
+		const testCases: SclTest.TestCases<TestCase> = {
+			'default namespace child → placed directly under parent, no Private wrapping': {
+				sourceXml: baseXml,
 				act: async (document) => {
 					await document.transaction(async (tx) => {
 						await tx.addChild(
@@ -71,17 +65,13 @@ describe('afterCreated', () => {
 				expectedQueries: ['//default:Substation[@name="Sub1"]/default:Function[@name="NewF"]'],
 				unexpectedQueries: ['//default:Substation/default:Private'],
 			},
-			{
-				desc: 'non-default namespace child is wrapped in a new Private element',
+			'non-default namespace child → wrapped in new Private element': {
+				sourceXml: baseXml,
 				act: async (document) => {
 					await document.transaction(async (tx) => {
 						await tx.addChild(
 							{ tagName: 'LNode', id: 'ln1' },
-							{
-								tagName: 'LNodeSpecNaming',
-								namespace: v2019C1,
-								attributes: { sIedName: 'IED1' },
-							},
+							{ tagName: 'LNodeSpecNaming', namespace: v2019C1, attributes: { sIedName: 'IED1' } },
 						)
 					})
 				},
@@ -90,25 +80,17 @@ describe('afterCreated', () => {
 				],
 				unexpectedQueries: ['//default:LNode/v2019C1:LNodeSpecNaming'],
 			},
-			{
-				desc: 'second non-default namespace child reuses the existing Private element',
+			'second non-default namespace child, existing Private → reuses existing Private': {
+				sourceXml: baseXml,
 				act: async (document) => {
 					await document.transaction(async (tx) => {
 						await tx.addChild(
 							{ tagName: 'LNode', id: 'ln1' },
-							{
-								tagName: 'LNodeSpecNaming',
-								namespace: v2019C1,
-								attributes: { sIedName: 'IED1' },
-							},
+							{ tagName: 'LNodeSpecNaming', namespace: v2019C1, attributes: { sIedName: 'IED1' } },
 						)
 						await tx.addChild(
 							{ tagName: 'LNode', id: 'ln1' },
-							{
-								tagName: 'LNodeSpecNaming',
-								namespace: v2019C1,
-								attributes: { sIedName: 'IED2' },
-							},
+							{ tagName: 'LNodeSpecNaming', namespace: v2019C1, attributes: { sIedName: 'IED2' } },
 						)
 					})
 				},
@@ -118,33 +100,20 @@ describe('afterCreated', () => {
 				],
 				unexpectedQueries: ['//default:LNode/default:Private[2]'],
 			},
-		]
+		}
 
-		it.each(testCases)('$desc', async ({ xmlString, act, expectedQueries, unexpectedQueries }) => {
-			const {
-				document,
-				cleanup,
-				exportCurrentTest,
-				assertExpectedElementQueries,
-				assertUnexpectedElementQueries,
-			} = await createSclTestDialecte({ xmlString: xmlString ?? baseXml })
-
-			try {
-				await act(document as Core.Document<Scl.Config>)
-				const { xmlDocument } = await exportCurrentTest()
-				assertExpectedElementQueries({ xmlDocument, queries: expectedQueries })
-				if (unexpectedQueries) {
-					assertUnexpectedElementQueries({ xmlDocument, queries: unexpectedQueries })
-				}
-			} finally {
-				await cleanup()
-			}
+		runSclTestCases({
+			testCases,
+			act: async ({ source, testCase }) => {
+				await testCase.act(source.document as Core.Document<Config>)
+				return { assertDatabaseName: source.databaseName }
+			},
 		})
 	})
 
 	// ── Group 2: Direct hook call ────────────────────────────────────────────
-	// Test edge cases where the parent is already a Private element.
-	// Operations are inspected directly rather than committing to DB.
+	// Edge cases where parent is already a Private element.
+	// Operations inspected directly rather than committing to DB.
 
 	describe('direct hook call — parent is Private', () => {
 		const buildLnodeSpecNaming = (parentId: string | null): Core.AnyRawRecord => ({
@@ -158,7 +127,6 @@ describe('afterCreated', () => {
 		})
 
 		type TestCase = {
-			desc: string
 			childParentId: string | null
 			expected: {
 				operationCount: number
@@ -169,9 +137,8 @@ describe('afterCreated', () => {
 			}
 		}
 
-		const testCases: TestCase[] = [
-			{
-				desc: 'adds child to Private parent when child has no existing parent',
+		const testCases: Record<string, TestCase> = {
+			'child has no parent → staged under Private, 2 operations': {
 				childParentId: null,
 				expected: {
 					operationCount: 2,
@@ -193,29 +160,24 @@ describe('afterCreated', () => {
 					],
 				},
 			},
-			{
-				desc: 'returns empty array when child parent is already set to Private (cloning scenario)',
+			'child parent already set to Private → no operations staged (cloning scenario)': {
 				childParentId: 'priv1',
 				expected: { operationCount: 0, operations: [] },
 			},
-		]
+		}
 
-		it.each(testCases)('$desc', async ({ childParentId, expected }) => {
+		it.each(Object.entries(testCases))('%s', async (_, { childParentId, expected }) => {
 			const { document, databaseName, cleanup } = await createSclTestDialecte({
 				xmlString: xmlWithPrivate,
 			})
 
 			try {
-				const privateRecord = await document.query.getRecord({
-					tagName: 'Private',
-					id: 'priv1',
-				})
+				const privateRecord = await document.query.getRecord({ tagName: 'Private', id: 'priv1' })
 				expect(privateRecord).toBeDefined()
 				if (!privateRecord) return
 
 				const context = createTestContext({ databaseName, dialecteConfig: SCL_DIALECTE_CONFIG })
 
-				// The type system is not considering Private at all : all element are promoted up
 				const result = await afterCreated({
 					childRecord: buildLnodeSpecNaming(childParentId) as any,
 					parentRecord: privateRecord as any,
