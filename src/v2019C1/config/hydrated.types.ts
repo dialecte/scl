@@ -9,6 +9,7 @@ export namespace Scl {
 
 	// DEFINITION
 	export type ElementsOf = Core.ElementsOf<Config>
+	export type Ref<GenericElement extends ElementsOf> = Core.Ref<Config, GenericElement>
 	export type AttributesValueObjectOf<GenericElement extends ElementsOf> =
 		Core.AttributesValueObjectOf<Config, GenericElement>
 	export type AttributesOf<GenericElement extends ElementsOf> = Core.AttributesOf<
