@@ -120,6 +120,69 @@ Fails if any of the provided XPath expressions matches (negative assertion).
 assertUnexpectedElementQueries(xmlString: string, xpaths: string[]): void
 ```
 
+## Stable record IDs with `dev:db-id`
+
+`createSclTestDialecte` always imports with `useCustomRecordsIds: true`. Any `dev:db-id` attribute in the XML becomes the actual database record ID — no random UUIDs, no lookups required in the test body.
+
+Use `CUSTOM_RECORD_ID_ATTRIBUTE` (the string `"dev:db-id"`) to write fixtures:
+
+```ts
+import {
+	createSclTestDialecte,
+	XMLNS_SCL_NAMESPACE,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+} from '@dialecte/scl/test'
+
+const { query, transaction } = await createSclTestDialecte({
+	xmlString: `
+		<SCL ${XMLNS_SCL_NAMESPACE} ${CUSTOM_RECORD_ID_ATTRIBUTE}="root">
+			<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="s1">
+				<VoltageLevel name="V1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="vl1"/>
+			</Substation>
+		</SCL>
+	`,
+})
+
+// Reference by stable ID — no query needed
+await transaction(async (tx) => {
+	await tx.addChild(
+		{ tagName: 'VoltageLevel', id: 'vl1' },
+		{
+			tagName: 'Bay',
+			attributes: { name: 'B1' },
+		},
+	)
+})
+```
+
+The same IDs are available in XPath assertions when exporting with `withDatabaseIds: true`:
+
+```ts
+// dev:db-id is written back into the exported XML under the dev: namespace
+expectedQueries: ['//scl:VoltageLevel[@dev:db-id="vl1"]/scl:Bay[@name="B1"]']
+```
+
+::: tip Prefer `dev:db-id` over raw lookups
+Assigning explicit IDs makes the `act` body independent of document structure. No `getRecord` call needed to find the element — just reference its ID directly.
+:::
+
+For the full explanation of how stable IDs and deterministic UUID mocking work, see [Testing — Stable record IDs](https://dialecte.github.io/core/guide/development/testing#stable-record-ids-with-dev-db-id) in the core docs.
+
+### Deterministic UUIDs for new elements
+
+When `runSclTestCases` calls your `act` function, `crypto.randomUUID` is already replaced with a counter mock — IDs assigned to newly created elements are `"0"`, `"1"`, `"2"`, ... in creation order. The import phase (parsing `sourceXml`) always uses real UUIDs, so fixture IDs never collide.
+
+This only applies inside `runSclTestCases`. When using `createSclTestDialecte` directly, call `createMockRandomUUID` yourself if you need deterministic IDs:
+
+```ts
+import { createSclTestDialecte, createMockRandomUUID } from '@dialecte/scl/test'
+
+crypto.randomUUID = createMockRandomUUID()
+// new elements created from here will have IDs "0", "1", "2", ...
+```
+
+---
+
 ## Namespace constants
 
 | Constant                    | Value                                                            |
