@@ -1,7 +1,11 @@
 import { defineConfig } from 'vitepress'
+import llmstxt from 'vitepress-plugin-llms'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+	vite: {
+		plugins: [llmstxt()],
+	},
 	srcDir: 'doc',
 	base: '/scl/',
 
@@ -27,6 +31,13 @@ export default defineConfig({
 					{ text: 'API', link: '/v2019C1/api/types' },
 					{ text: 'IO', link: '/v2019C1/io/' },
 					{ text: 'Extensions', link: '/v2019C1/extensions/' },
+				],
+			},
+			{
+				text: 'LLMs',
+				items: [
+					{ text: 'llms.txt', link: '/scl/llms.txt', target: '_blank' },
+					{ text: 'llms-full.txt', link: '/scl/llms-full.txt', target: '_blank' },
 				],
 			},
 		],
