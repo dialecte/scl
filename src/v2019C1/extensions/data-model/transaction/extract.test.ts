@@ -138,5 +138,5 @@ describe('extract', () => {
 		return { assertDatabaseName: target.databaseName }
 	}
 
-	runSclTestCases({ testCases, act })
+	runSclTestCases.withExport({ testCases, act })
 })

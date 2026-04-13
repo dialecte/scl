@@ -229,5 +229,5 @@ describe('resolveDataModel', () => {
 		return { assertDatabaseName: source.databaseName }
 	}
 
-	runSclTestCases({ testCases, act })
+	runSclTestCases.withExport({ testCases, act })
 })

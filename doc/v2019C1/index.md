@@ -14,22 +14,42 @@ The core Query and Transaction APIs are documented at [dialecte.github.io/core](
 import { importSclFiles, openSclDocument } from '@dialecte/scl/v2019C1'
 
 const [databaseName] = await importSclFiles({ files: [scdFile] })
-const doc = openSclDocument({ type: 'local', databaseName })
+const doc = openSclDocument({ storage: { type: 'local', databaseName } })
 ```
 
 `openSclDocument` returns a `Document` typed with the full SCL element set and all registered extensions.
+
+## Adding custom extensions
+
+Pass your own extension modules via the `extensions` parameter. They are merged on top of the SCL built-ins — no direct core dependency needed.
+
+```ts
+import { openSclDocument } from '@dialecte/scl/v2019C1'
+import { myFeature } from './extensions/my-feature'
+
+const doc = openSclDocument({
+	storage: { type: 'local', databaseName },
+	extensions: { myFeature },
+})
+
+// SCL built-ins + your extensions — all typed:
+const hitems = await doc.query.history.getSortedHitems()
+const result = await doc.query.myFeature.doSomething()
+```
+
+Each entry in `extensions` must follow the `{ query?, transaction? }` shape. See [Writing Extensions](https://dialecte.github.io/core/guide/extensions/) for the authoring guide.
 
 ## Extensions
 
 Domain-specific methods are bound onto every `doc.query` and `tx` instance under named groups:
 
-| Module      | Namespace on query/tx | Methods                             | Reference                                        |
-| ----------- | --------------------- | ----------------------------------- | ------------------------------------------------ |
-| `history`   | `doc.query.history`   | `getSortedHitems`, `getLatestHitem` | [History](/api/v2019C1/extensions/history)       |
-| `history`   | `tx.history`          | `addHistoryEntry`                   | [History](/api/v2019C1/extensions/history)       |
-| `dataModel` | `doc.query.dataModel` | `resolve`                           | [Data Model](/api/v2019C1/extensions/data-model) |
-| `dataModel` | `tx.dataModel`        | `extract`                           | [Data Model](/api/v2019C1/extensions/data-model) |
-| `template`  | `tx.template`         | `ensureSubstationTemplateStructure` | [Template](/api/v2019C1/extensions/template)     |
+| Module      | Namespace on query/tx | Methods                             | Reference                                    |
+| ----------- | --------------------- | ----------------------------------- | -------------------------------------------- |
+| `history`   | `doc.query.history`   | `getSortedHitems`, `getLatestHitem` | [History](/v2019C1/extensions/history)       |
+| `history`   | `tx.history`          | `addHistoryEntry`                   | [History](/v2019C1/extensions/history)       |
+| `dataModel` | `doc.query.dataModel` | `resolve`                           | [Data Model](/v2019C1/extensions/data-model) |
+| `dataModel` | `tx.dataModel`        | `extract`                           | [Data Model](/v2019C1/extensions/data-model) |
+| `template`  | `tx.template`         | `ensureSubstationTemplateStructure` | [Template](/v2019C1/extensions/template)     |
 
 ## `Scl` type namespace
 
@@ -62,4 +82,4 @@ import type { Scl } from '@dialecte/scl/v2019C1'
 | `Scl.Attribute<E>`               | `Core.Attribute<Config, E>`               | `{ name, value, namespace? }` for an attribute of `E`                         |
 | `Scl.QualifiedAttribute<E>`      | `Core.QualifiedAttribute<Config, E>`      | Attribute with namespace info                                                 |
 
-See [Types](/api/v2019C1/types) for full reference and sync mechanism.
+See [Types](/v2019C1/api/types) for full reference and sync mechanism.

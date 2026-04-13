@@ -50,7 +50,7 @@ describe('ensureSubstationStructure', () => {
 		},
 	}
 
-	runSclTestCases({
+	runSclTestCases.withExport({
 		testCases,
 		act: async ({ source }) => {
 			await source.document.transaction(async (tx) => {

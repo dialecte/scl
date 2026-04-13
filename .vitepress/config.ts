@@ -20,7 +20,15 @@ export default defineConfig({
 		nav: [
 			{ text: 'Home', link: '/' },
 			{ text: 'Guide', link: '/guide/introduction/getting-started' },
-			{ text: 'Api', items: [{ text: 'v2019C1', link: '/api/v2019C1' }] },
+			{
+				text: 'v2019C1',
+				items: [
+					{ text: 'Overview', link: '/v2019C1/' },
+					{ text: 'API', link: '/v2019C1/api/types' },
+					{ text: 'IO', link: '/v2019C1/io/' },
+					{ text: 'Extensions', link: '/v2019C1/extensions/' },
+				],
+			},
 		],
 
 		sidebar: {
@@ -33,22 +41,33 @@ export default defineConfig({
 					],
 				},
 			],
-			'/api/v2019C1/': [
+			'/v2019C1/': [
 				{
 					text: 'v2019C1',
+					items: [{ text: 'Overview', link: '/v2019C1/' }],
+				},
+				{
+					text: 'API',
 					items: [
-						{ text: 'Overview', link: '/api/v2019C1/' },
-						{ text: 'Types', link: '/api/v2019C1/types' },
-						{ text: 'Test Helpers', link: '/api/v2019C1/test-helpers' },
+						{ text: 'Types', link: '/v2019C1/api/types' },
+						{ text: 'Test Helpers', link: '/v2019C1/api/test-helpers' },
+					],
+				},
+				{
+					text: 'IO',
+					items: [
+						{ text: 'Overview', link: '/v2019C1/io/' },
+						{ text: 'Reference', link: '/v2019C1/io/io' },
+						{ text: 'Hooks', link: '/v2019C1/io/hooks' },
 					],
 				},
 				{
 					text: 'Extensions',
 					items: [
-						{ text: 'Overview', link: '/api/v2019C1/extensions/' },
-						{ text: 'History', link: '/api/v2019C1/extensions/history' },
-						{ text: 'Data Model', link: '/api/v2019C1/extensions/data-model' },
-						{ text: 'Template', link: '/api/v2019C1/extensions/template' },
+						{ text: 'Overview', link: '/v2019C1/extensions/' },
+						{ text: 'History', link: '/v2019C1/extensions/history' },
+						{ text: 'Data Model', link: '/v2019C1/extensions/data-model' },
+						{ text: 'Template', link: '/v2019C1/extensions/template' },
 					],
 				},
 				{

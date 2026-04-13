@@ -5,17 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-04-13
+
+### Added
+
+- IO documentation: overview, reference, hooks
+
+### Changed
+
+- `runSclTestCases`: now a pre-bound `TestRunner<Config>` object via `createTestRunner` — flat API: `.withExport`, `.withoutExport`, `.generic`
+- `@dialecte/core` updated to `0.1.9`
+- docs: restructured nav from `/api/v2019C1/` to `/v2019C1/` — API, IO, Extensions in separate sidebar sections
+
 ## [0.1.3] - 2026-04-01
 
 ### Added
 
-- Extensions (query & transaction): `history`, `dataModel`, `template``
-- Test helper
-- Documentation
+- Extensions (query & transaction): `history`, `dataModel`, `template`
+- Test helpers and documentation
 
 ### Removed
 
-- old chain API methods
+- Old chain API methods
 
 ## [0.1.2] - 2026-03-13
 

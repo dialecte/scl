@@ -41,7 +41,7 @@ Once a file is imported, connect to its database with `openSclDocument`. This re
 ```ts
 import { openSclDocument } from '@dialecte/scl/v2019C1'
 
-const doc = openSclDocument({ type: 'local', databaseName })
+const doc = openSclDocument({ storage: { type: 'local', databaseName } })
 ```
 
 ## Step 3 — Query the tree
@@ -105,7 +105,7 @@ import { importSclFiles, openSclDocument, exportSclFile } from '@dialecte/scl/v2
 const [databaseName] = await importSclFiles({ files: [scdFile] })
 
 // 2. Open
-const doc = openSclDocument({ type: 'local', databaseName })
+const doc = openSclDocument({ storage: { type: 'local', databaseName } })
 
 // 3. Query
 const root = await doc.query.getRoot()
@@ -129,7 +129,8 @@ await exportSclFile({ databaseName, extension: '.scd', withDownload: true })
 
 ## Next Steps
 
-- [Writing Extensions](https://dialecte.github.io/core/guide/extensions/) — how to extend Query and Transaction with domain-specific methods (core docs)
-- [Document API](https://dialecte.github.io/core/api/document) — lifecycle, transactions, undo/redo
-- [Query API](https://dialecte.github.io/core/api/query) — full reference for all read methods
+- [Custom extensions](/v2019C1/#adding-custom-extensions) - add your own query/transaction methods on top of the SCL built-ins
+- [Writing Extensions](https://dialecte.github.io/core/guide/extensions/) - how to write extension functions and modules (core docs)
+- [Document API](https://dialecte.github.io/core/api/document) - lifecycle, transactions, undo/redo
+- [Query API](https://dialecte.github.io/core/api/query) - full reference for all read methods
 - [Transaction API](https://dialecte.github.io/core/api/transaction) — full reference for all mutation methods

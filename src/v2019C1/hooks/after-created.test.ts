@@ -102,7 +102,7 @@ describe('afterCreated', () => {
 			},
 		}
 
-		runSclTestCases({
+		runSclTestCases.withExport({
 			testCases,
 			act: async ({ source, testCase }) => {
 				await testCase.act(source.document as Core.Document<Config>)

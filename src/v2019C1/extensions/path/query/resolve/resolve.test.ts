@@ -272,7 +272,7 @@ describe('resolveByPath', () => {
 		return { assertDatabaseName: source.databaseName }
 	}
 
-	runSclTestCases({ testCases, act })
+	runSclTestCases.withExport({ testCases, act })
 })
 
 // ── Integration tests: resolve (strategy-aware) ─────────────────────
@@ -467,5 +467,5 @@ describe('resolve', () => {
 		return { assertDatabaseName: source.databaseName }
 	}
 
-	runSclTestCases({ testCases, act })
+	runSclTestCases.withExport({ testCases, act })
 })
