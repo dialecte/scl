@@ -45,7 +45,7 @@ await doc.transaction(async (tx) => {
 | `dataModel` | transaction | `extract(params)`                     | Deep-clones missing data-model types into `DataTypeTemplates`     |
 | `template`  | transaction | `ensureSubstationTemplateStructure()` | Ensures `Substation/VoltageLevel/Bay` named `TEMPLATE` under root |
 
-See the [Extensions API](/api/v2019C1/extensions/) for full signatures.
+See the [Extensions API](/v2019C1/extensions/) for full signatures.
 
 ### 3. Hooks
 
