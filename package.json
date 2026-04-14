@@ -1,6 +1,6 @@
 {
 	"name": "@dialecte/scl",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "Dialecte - SCL (Substation Configuration Language) sdk",
 	"license": "MIT",
 	"repository": {
@@ -16,6 +16,10 @@
 		"./v2019C1": {
 			"types": "./dist/v2019C1/index.d.ts",
 			"default": "./dist/v2019C1/index.js"
+		},
+		"./v2019C1/test": {
+			"types": "./dist/v2019C1/test.d.ts",
+			"default": "./dist/v2019C1/test.js"
 		}
 	},
 	"scripts": {

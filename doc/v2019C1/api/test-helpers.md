@@ -4,7 +4,7 @@ description: Test helpers for @dialecte/scl v2019C1 — createSclTestDialecte, r
 
 # Test Helpers
 
-`@dialecte/scl` ships a test entry point with SCL-specific utilities. Import from `@dialecte/scl/test`:
+`@dialecte/scl` ships a test entry point with SCL-specific utilities. Import from `@dialecte/scl/v2019C1/test`:
 
 ```ts
 import {
@@ -15,7 +15,7 @@ import {
 	assertUnexpectedElementQueries,
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
-} from '@dialecte/scl/test'
+} from '@dialecte/scl/v2019C1/test'
 ```
 
 All helpers are wired to the SCL config internally — no config argument needed.
@@ -42,8 +42,8 @@ import {
 	runSclTestCases,
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
-} from '@dialecte/scl/test'
-import type { SclTest } from '@dialecte/scl/test'
+} from '@dialecte/scl/v2019C1/test'
+import type { SclTest } from '@dialecte/scl/v2019C1/test'
 
 type TestCase = SclTest.BaseTestCase & {
 	expectedOrder: { version: string; revision: string }[]
@@ -95,8 +95,8 @@ Use when `act` performs transactions and assertions must run on the exported XML
 
 ```ts
 import { describe } from 'vitest'
-import { runSclTestCases, ALL_XMLNS_NAMESPACES } from '@dialecte/scl/test'
-import type { SclTest } from '@dialecte/scl/test'
+import { runSclTestCases, ALL_XMLNS_NAMESPACES } from '@dialecte/scl/v2019C1/test'
+import type { SclTest } from '@dialecte/scl/v2019C1/test'
 
 type TestCase = SclTest.BaseTestCase & {
 	params: AddHistoryEntryParams
@@ -155,7 +155,7 @@ import {
 	createSclTestDialecte,
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
-} from '@dialecte/scl/test'
+} from '@dialecte/scl/v2019C1/test'
 
 const { document, cleanup } = await createSclTestDialecte({
 	xmlString: `
@@ -274,5 +274,5 @@ All types are bound to the SCL dialecte config via the `SclTest` namespace:
 | `SclTest.ActResult`    | `{ assertDatabaseName: string, withDatabaseIds?: boolean }`                                  |
 
 ```ts
-import type { SclTest } from '@dialecte/scl/test'
+import type { SclTest } from '@dialecte/scl/v2019C1/test'
 ```
