@@ -1,9 +1,8 @@
-import { SCL_DIALECTE_CONFIG } from '../config/dialecte.config'
 import { afterCreated } from './after-created'
 
-import { createTestContext } from '@dialecte/core/test'
 import { describe, it, expect } from 'vitest'
 
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 import {
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
@@ -11,7 +10,7 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test'
 
-import type { Config } from '../config'
+import type { Config } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 import type * as Core from '@dialecte/core'
 
@@ -176,12 +175,10 @@ describe('afterCreated', () => {
 				expect(privateRecord).toBeDefined()
 				if (!privateRecord) return
 
-				const context = createTestContext({ databaseName, dialecteConfig: SCL_DIALECTE_CONFIG })
-
 				const result = await afterCreated({
 					childRecord: buildLnodeSpecNaming(childParentId) as any,
 					parentRecord: privateRecord as any,
-					context,
+					query: document.query,
 				})
 
 				expect(result).toHaveLength(expected.operationCount)

@@ -1,9 +1,10 @@
-import { SCL_DIALECTE_CONFIG } from '../config/dialecte.config'
 import { afterStandardizedRecord } from './after-standardized-record'
 
 import { describe, it, expect } from 'vitest'
 
-import type { Scl } from '../config'
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
+
+import type { Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 describe('afterStandardizedRecord', () => {

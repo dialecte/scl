@@ -26,10 +26,12 @@ export default defineConfig({
 	build: {
 		sourcemap: import.meta.env?.DEV,
 		lib: {
-			entry: fileURLToPath(new URL('./src/v2019C1/index.ts', import.meta.url)),
+			entry: {
+				'v2019C1/index': fileURLToPath(new URL('./src/v2019C1/index.ts', import.meta.url)),
+				'v2019C1/test': fileURLToPath(new URL('./src/v2019C1/test/index.ts', import.meta.url)),
+			},
 			name: 'SclDialecte',
 			formats: ['es'],
-			fileName: 'v2019C1/index',
 		},
 		rollupOptions: {
 			external: [/^@dialecte\/core/, 'dexie'],
