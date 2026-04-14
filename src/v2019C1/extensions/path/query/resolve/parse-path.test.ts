@@ -12,7 +12,7 @@ import type { SclTest } from '@/v2019C1/test'
 
 describe('reference-parsing', () => {
 	describe('direct strategy', () => {
-		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
+		const testCases: SclTest.TestCases = {
 			'FunctionCatRef with path to existing Function → functionUuid populated': {
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
@@ -139,7 +139,7 @@ describe('reference-parsing', () => {
 	})
 
 	describe('lnode strategy', () => {
-		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
+		const testCases: SclTest.TestCases = {
 			'SourceRef.source with DO.DA qualifier → sourceLNodeUuid populated': {
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
@@ -212,7 +212,7 @@ describe('reference-parsing', () => {
 	})
 
 	describe('IEC 7-2 ObjectReference (lnode strategy)', () => {
-		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
+		const testCases: SclTest.TestCases = {
 			'DOS.mappedDoName referencing IED LN → mappedLnUuid populated': {
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
@@ -307,7 +307,7 @@ describe('reference-parsing', () => {
 	})
 
 	describe('ied-address strategy', () => {
-		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
+		const testCases: SclTest.TestCases = {
 			'SourceRef.extRefAddr with absolute IED path → extRefUuid populated': {
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
@@ -451,7 +451,7 @@ describe('reference-parsing', () => {
 	})
 
 	describe('behavior-description strategy', () => {
-		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
+		const testCases: SclTest.TestCases = {
 			'InputVar.dataName inside BehaviorDescription → lnodeUuid populated': {
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
@@ -549,7 +549,7 @@ describe('reference-parsing', () => {
 	})
 
 	describe('multiple reference pairs on a single element', () => {
-		const testCases: SclTest.TestCases<SclTest.BaseTestCase> = {
+		const testCases: SclTest.TestCases = {
 			'SourceRef with source and resourceName → both sourceLNodeUuid and resourceUuid populated': {
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>

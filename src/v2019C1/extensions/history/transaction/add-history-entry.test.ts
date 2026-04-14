@@ -7,7 +7,7 @@ import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } fro
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
-type TestCase = SclTest.BaseTestCase & {
+type TestCase = SclTest.BaseXmlTestCase & {
 	params: {
 		filename: string
 		header: {

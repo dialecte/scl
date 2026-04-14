@@ -11,11 +11,10 @@ export async function build(
 	const record = await query.getRecord(ref)
 	if (!record) return null
 
-	const ancestors = await query.findAncestors(ref)
-	const topDown = [...ancestors].reverse()
+	const ancestors = await query.findAncestors(ref, { order: 'top-down' })
 
 	return buildPathFromAncestry({
 		record: toRawRecord(record),
-		ancestry: topDown.map(toRawRecord),
+		ancestry: ancestors.map(toRawRecord),
 	})
 }

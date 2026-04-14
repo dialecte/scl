@@ -45,9 +45,8 @@ export async function resolve(
 
 	let ancestry: AnyRawRecord[] | undefined
 	if (pair.resolution === 'behavior-description' || pair.resolution === 'ied-address') {
-		const ancestors = await query.findAncestors(record)
-		// findAncestors returns bottom-up; parseReferencePath expects top-down
-		ancestry = [...ancestors].reverse().map((a) => toRawRecord(a) as AnyRawRecord)
+		const ancestors = await query.findAncestors(record, { order: 'top-down' })
+		ancestry = ancestors.map((a) => toRawRecord(a) as AnyRawRecord)
 	}
 
 	const parsed = parseReferencePath(

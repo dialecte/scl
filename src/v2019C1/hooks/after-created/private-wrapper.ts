@@ -1,5 +1,5 @@
 import { toRawRecord } from '@dialecte/core/helpers'
-import { assert } from '@dialecte/core/utils'
+import { invariant } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 
@@ -74,7 +74,7 @@ export async function handleParentAsPrivateRecordCase<
 
 	const latestPrivateRecord = await getLatestPrivateRecord({ privateId: privateRecord.id, query })
 
-	assert(latestPrivateRecord, {
+	invariant(latestPrivateRecord, {
 		detail: 'Latest private record not found',
 		key: 'ELEMENT_NOT_FOUND',
 	})
@@ -116,7 +116,7 @@ export async function handleExistingPrivateRecordCase<
 		query,
 	})
 
-	assert(latestPrivateRecord, {
+	invariant(latestPrivateRecord, {
 		detail: 'Latest private record not found',
 		key: 'ELEMENT_NOT_FOUND',
 	})

@@ -1,5 +1,5 @@
 import { isChildOf } from '@dialecte/core/helpers'
-import { assert } from '@dialecte/core/utils'
+import { invariant } from '@dialecte/core/utils'
 
 import type { ResolvedDataModel, DataModelMap } from './resolve.types'
 import type { Scl } from '@/v2019C1/config'
@@ -25,7 +25,7 @@ export async function resolve(
 			tagName: 'LNodeType',
 			attributes: { id: lnType },
 		})
-		assert(lnodeType, {
+		invariant(lnodeType, {
 			key: 'ELEMENT_NOT_FOUND',
 			detail: `LNodeType not found for lnType="${lnType}"`,
 		})

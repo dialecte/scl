@@ -142,7 +142,7 @@ describe('decomposeLnClassSegment', () => {
 
 // ── Integration tests: resolveByPath ─────────────────────────────────
 
-type ResolveByPathTestCase = SclTest.BaseTestCase & {
+type ResolveByPathTestCase = SclTest.BaseXmlTestCase & {
 	path: string
 	expected: { tagName: string; id: string } | null
 }
@@ -277,7 +277,7 @@ describe('resolveByPath', () => {
 
 // ── Integration tests: resolve (strategy-aware) ─────────────────────
 
-type ResolveRefTestCase = SclTest.BaseTestCase & {
+type ResolveRefTestCase = SclTest.BaseXmlTestCase & {
 	refId: string
 	refTagName: string
 	pathAttribute: string

@@ -10,7 +10,7 @@ import {
 
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
-type TestCase = SclTest.BaseTestCase & {
+type TestCase = SclTest.BaseXmlTestCase & {
 	ref: { tagName: string; id: string }
 	expected: string | null
 }

@@ -7,9 +7,7 @@ import { ALL_XMLNS_NAMESPACES, runSclTestCases } from '@/v2019C1/test'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
 describe('ensureSubstationStructure', () => {
-	type TestCase = SclTest.BaseTestCase
-
-	const testCases: SclTest.TestCases<TestCase> = {
+	const testCases: SclTest.TestCases = {
 		'empty SCL → TEMPLATE Substation/VoltageLevel/Bay created': {
 			sourceXml: /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES}><Header id="TestSCL"/></SCL>`,
 			expectedQueries: [

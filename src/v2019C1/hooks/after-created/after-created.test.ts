@@ -46,7 +46,7 @@ describe('afterCreated', () => {
 	// Assertions on exported XML via XPath.
 
 	describe('via document.transaction', () => {
-		type TestCase = SclTest.BaseTestCase & {
+		type TestCase = SclTest.BaseXmlTestCase & {
 			act: (document: Core.Document<Config>) => Promise<void>
 		}
 
