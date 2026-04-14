@@ -6,7 +6,7 @@ import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } fro
 
 import type { SclTest } from '@/v2019C1/test'
 
-type TestCase = SclTest.BaseTestCase & {
+type TestCase = SclTest.BaseXmlTestCase & {
 	expectedLatest: { version: string; revision: string } | null
 }
 
