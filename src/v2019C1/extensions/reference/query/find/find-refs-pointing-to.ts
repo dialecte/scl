@@ -3,12 +3,8 @@ import { isElementOf } from '@dialecte/core/helpers'
 import { SCL_DIALECTE_CONFIG, Scl } from '@/v2019C1/config'
 import { RESOLVABLE_RESOLUTIONS, RESOLUTION_TARGET_REFS } from '@/v2019C1/constants'
 
+import type { ResolvedReference } from './find-refs-pointing-to.types'
 import type { RefEntry } from '@/v2019C1/constants'
-
-export type ResolvedReference = {
-	ref: Scl.TrackedRecord<Scl.ElementsOf>
-	container: Scl.TrackedRecord<Scl.ElementsOf> | undefined
-}
 
 /**
  * Find all REF records that reference a target element by UUID,
@@ -73,5 +69,5 @@ async function findAncestorByTagName(
 	tagName: Scl.ElementsOf,
 ): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
 	const ancestors = await query.findAncestors(record, { stopAtTagName: tagName })
-	return ancestors.find((a) => a.tagName === tagName)
+	return ancestors.find((ancestor) => ancestor.tagName === tagName)
 }
