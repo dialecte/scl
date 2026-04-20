@@ -1,4 +1,4 @@
-import { addHistoryEntry } from './add-history-entry'
+import { addEntry } from './add-entry'
 
 import { describe } from 'vitest'
 
@@ -105,7 +105,7 @@ describe('addHistoryEntry', () => {
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		await source.document.transaction(async (tx) => {
-			await addHistoryEntry(tx, testCase.params)
+			await addEntry(tx, testCase.params)
 		})
 		return { assertDatabaseName: source.databaseName }
 	}

@@ -1,1 +1,1 @@
-export { addHistoryEntry } from './add-history-entry'
+export { addEntry } from './add-entry'

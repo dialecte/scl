@@ -2,7 +2,7 @@ import { getLatestHitem } from '../query'
 
 import type { Scl } from '@/v2019C1/config'
 
-export async function addHistoryEntry(
+export async function addEntry(
 	tx: Scl.Transaction,
 	params: {
 		filename: string
@@ -87,5 +87,9 @@ export async function addHistoryEntry(
 			what,
 			why,
 		},
+	})
+
+	await tx.update(headerRef, {
+		attributes: { version: computedVersion, revision: computedRevision },
 	})
 }
