@@ -1,4 +1,35 @@
-# Path resolution documentation
+# Reference extension documentation
+
+## Query API
+
+Five functions, two concerns: building paths (write side) and resolving them (read side), plus one reverse-lookup.
+
+### Symmetry
+
+```
+buildElementPath    ↔  resolveElementPath    (element ↔ canonical path string)
+buildRefPath        ↔  resolveRefPath         (REF attr value ↔ target record)
+                       findRefsTo             (reverse: target → all REF records)
+```
+
+### When to use each
+
+| Function             | Direction | Input                                | Output                                   | Use when                                                 |
+| -------------------- | --------- | ------------------------------------ | ---------------------------------------- | -------------------------------------------------------- |
+| `buildElementPath`   | write     | `ref`                                | canonical path string (`"S1/V1/B1/CE1"`) | computing the path _to_ an element from its ancestry     |
+| `buildRefPath`       | write     | `reference` (REF element) + `target` | path value to store on the REF attribute | updating a REF element to point at a new target          |
+| `resolveElementPath` | read      | raw path string                      | `TrackedRecord`                          | inverse of `buildElementPath` — walk tree by path string |
+| `resolveRefPath`     | read      | REF record + path attribute name     | `{ record, qualifier }`                  | inverse of `buildRefPath` — follow a REF to its target   |
+| `findRefsTo`         | reverse   | target ref                           | `ResolvedReference[]`                    | find all REF records pointing to a given element         |
+
+### Name distinctions
+
+- `buildElementPath` vs `buildRefPath` — element path is the canonical address of an element; ref path is the value stored on a REF attribute (which may include a qualifier, e.g. `.Pos.stVal`).
+- `resolveRefPath` vs `resolveElementPath` — resolveRefPath follows a REF record's stored attribute; resolveElementPath walks the tree directly from a string.
+- `findRefsTo` vs `resolveRefPath` — `resolveRefPath(ref)` gives you the target _of_ one ref; `findRefsTo(target)` gives you all refs _pointing at_ a target. Opposite direction.
+- `resolvesTo(ref, target)` would be a predicate (`boolean`) — not this function.
+
+---
 
 ## XML Sample
 

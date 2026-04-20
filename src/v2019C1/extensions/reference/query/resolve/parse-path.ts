@@ -1,9 +1,11 @@
 import { getPathSegment, joinPathParts } from '../build/path-segment'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { RESOLUTION_TYPE } from '@/v2019C1/constants'
 
 import type { PathSegment } from '../build/path-segment.types'
-import type { ResolutionType, ParsedReference } from './types'
+import type { ParsedReference } from './types'
+import type { ResolutionType } from '@/v2019C1/constants'
 import type { AnyRawRecord } from '@dialecte/core'
 
 /**
@@ -102,15 +104,15 @@ export function parseReferencePath(
 	pathValue: string,
 	ancestry?: readonly AnyRawRecord[],
 ): ParsedReference | null {
-	if (!resolution || resolution === 'unsupported') return null
+	if (!resolution || resolution === RESOLUTION_TYPE.unsupported) return null
 
-	if (resolution === 'direct') return { lookupKey: pathValue }
+	if (resolution === RESOLUTION_TYPE.direct) return { lookupKey: pathValue }
 
-	if (resolution === 'ied-address') return parseIedAddressPath(pathValue, ancestry)
+	if (resolution === RESOLUTION_TYPE.iedAddress) return parseIedAddressPath(pathValue, ancestry)
 
-	if (resolution === 'lnode') return parseLnodePath(pathValue)
+	if (resolution === RESOLUTION_TYPE.lnode) return parseLnodePath(pathValue)
 
-	if (resolution === 'behavior-description') {
+	if (resolution === RESOLUTION_TYPE.behaviorDescription) {
 		return parseBehaviorDescriptionPath(pathAttribute, pathValue, ancestry)
 	}
 

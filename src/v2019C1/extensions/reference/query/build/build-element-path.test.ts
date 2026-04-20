@@ -1,4 +1,4 @@
-import { build } from './build'
+import { buildElementPath } from './build-element-path'
 
 import { describe, expect } from 'vitest'
 
@@ -20,12 +20,12 @@ describe('buildElementPath', () => {
 
 	const testCases: SclTest.TestCases<TestCase> = {
 		'process section — named element chain': {
-			sourceXml: `
+			sourceXml: /* xml */ `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
 				<Substation name="S1" ${ID}="sub-1">
 					<VoltageLevel name="V1" ${ID}="vl-1">
 						<Bay name="B1" ${ID}="bay-1">
-							<ConductingEquipment name="CE1" ${ID}="ce-1"/>
+						<ConductingEquipment type="CBR" name="CE1" ${ID}="ce-1"/>
 						</Bay>
 					</VoltageLevel>
 				</Substation>
@@ -35,7 +35,7 @@ describe('buildElementPath', () => {
 		},
 
 		'IED section — AccessPoint and Server transparent': {
-			sourceXml: `
+			sourceXml: /* xml */ `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
 				<IED name="IED1" ${ID}="ied-1">
 					<AccessPoint name="AP1" ${ID}="ap-1">
@@ -52,7 +52,7 @@ describe('buildElementPath', () => {
 		},
 
 		'LNode with lnClass composite': {
-			sourceXml: `
+			sourceXml: /* xml */ `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
 				<Substation name="S1" ${ID}="sub-1">
 					<VoltageLevel name="V1" ${ID}="vl-1">
@@ -67,14 +67,16 @@ describe('buildElementPath', () => {
 		},
 
 		'SourceRef — dot separator': {
-			sourceXml: `
+			sourceXml: /* xml */ `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
 				<Substation name="S1" ${ID}="sub-1">
 					<VoltageLevel name="V1" ${ID}="vl-1">
 						<Bay name="B1" ${ID}="bay-1">
 							<LNode iedName="None" lnClass="XCBR" lnInst="1" prefix="P" ${ID}="lnode-1">
 								<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeInputs>
 									<eIEC61850-6-100:SourceRef input="Trip" ${ID}="sr-1"/>
+								</eIEC61850-6-100:LNodeInputs>
 								</Private>
 							</LNode>
 						</Bay>
@@ -86,7 +88,7 @@ describe('buildElementPath', () => {
 		},
 
 		'SCL root — no extractors match → null': {
-			sourceXml: `
+			sourceXml: /* xml */ `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
 				<Substation name="S1" ${ID}="sub-1"/>
 			</SCL>`,
@@ -95,7 +97,7 @@ describe('buildElementPath', () => {
 		},
 
 		'Function > SubFunction — nested named elements': {
-			sourceXml: `
+			sourceXml: /* xml */ `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
 				<Substation name="S1" ${ID}="sub-1">
 					<VoltageLevel name="V1" ${ID}="vl-1">
@@ -118,7 +120,7 @@ describe('buildElementPath', () => {
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		const query = source.document.query
 
-		const result = await build(query, testCase.ref as never)
+		const result = await buildElementPath(query, testCase.ref as never)
 
 		expect(result).toBe(testCase.expected)
 

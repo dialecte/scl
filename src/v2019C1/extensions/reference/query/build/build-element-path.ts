@@ -4,7 +4,7 @@ import { toRawRecord } from '@dialecte/core/helpers'
 
 import type { Scl } from '@/v2019C1/config'
 
-export async function build(
+export async function buildElementPath(
 	query: Scl.Query,
 	ref: Scl.Ref<Scl.ElementsOf>,
 ): Promise<string | null> {

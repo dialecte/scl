@@ -3,12 +3,13 @@ import { parseReferencePath, parsePathSegments } from './parse-path'
 
 import { toRawRecord } from '@dialecte/core/helpers'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-mappings'
+import { RESOLUTION_TYPE } from '@/v2019C1/constants'
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference'
 import { DEFINITION } from '@/v2019C1/definition'
 
 import type { PathSegment } from '../build/path-segment.types'
-import type { ResolutionType } from './types'
 import type { Scl } from '@/v2019C1/config'
+import type { ResolutionType } from '@/v2019C1/constants'
 import type { AnyRawRecord } from '@dialecte/core'
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -32,7 +33,7 @@ export type ResolveResult = {
  * const result = await resolve(query, sourceRefRecord, 'source')
  * // → { record: <LNode PXCBR1>, qualifier: "Pos.stVal" }
  */
-export async function resolve(
+export async function resolveReferencePath(
 	query: Scl.Query | Scl.Transaction,
 	record: Scl.TrackedRecord<Scl.ElementsOf>,
 	pathAttribute: string,
@@ -44,7 +45,10 @@ export async function resolve(
 	if (!pathValue) return undefined
 
 	let ancestry: AnyRawRecord[] | undefined
-	if (pair.resolution === 'behavior-description' || pair.resolution === 'ied-address') {
+	if (
+		pair.resolution === RESOLUTION_TYPE.behaviorDescription ||
+		pair.resolution === RESOLUTION_TYPE.iedAddress
+	) {
 		const ancestors = await query.findAncestors(record, { order: 'top-down' })
 		ancestry = ancestors.map((a) => toRawRecord(a) as AnyRawRecord)
 	}
@@ -74,34 +78,6 @@ export async function resolve(
 	return { record: resolved, qualifier: parsed.qualifier }
 }
 
-/**
- * Resolves a canonical SCL path to the record it points to.
- * Inverse of {@link buildElementPath}.
- *
- * Walks the tree from root, matching each path segment against children.
- * Transparent elements (AccessPoint, Server) are traversed automatically.
- *
- * @example
- * const record = await resolveByPath(query, "S1/V1/B1/CE1")
- * // → TrackedRecord for ConductingEquipment name="CE1"
- */
-export async function resolveByPath(
-	query: Scl.Query | Scl.Transaction,
-	path: string,
-): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
-	const segments = parsePathSegments(path)
-	if (segments.length === 0) return undefined
-
-	const root = await query.getRoot()
-
-	return walkSegments({
-		query,
-		current: root as Scl.TrackedRecord<Scl.ElementsOf>,
-		segments,
-		index: 0,
-	})
-}
-
 // ── Internal: reference pair lookup ──────────────────────────────────
 
 type ReferencePairs = typeof UUID_REFERENCE_PAIRS
@@ -115,12 +91,10 @@ function findReferencePair(tagName: string, pathAttribute: string): ReferencePai
 
 // ── Internal: candidate search + ancestry verification ───────────────
 
-/** Valid lnClass values from the definition, used to decompose composite path segments. */
 const LN_CLASS_VALUES: ReadonlySet<string> = new Set(
 	DEFINITION.LNode.attributes.details.lnClass.facets.enumeration,
 )
 
-/** Maps lnClass-based element tags to their instance attribute name. */
 const LN_CLASS_INST_ATTR: Record<string, string> = {
 	LNode: 'lnInst',
 	LN: 'inst',
@@ -182,7 +156,6 @@ async function findBySegmentAndAncestry(params: {
 	return undefined
 }
 
-/** Decompose segment and use findByAttributes for lnClass-based elements. */
 async function findLnClassTarget(params: {
 	query: Scl.Query | Scl.Transaction
 	tagName: string
@@ -216,7 +189,6 @@ async function findLnClassTarget(params: {
 	return undefined
 }
 
-/** Original segment-string comparison for non-lnClass elements. */
 async function findBySegmentScan(params: {
 	query: Scl.Query | Scl.Transaction
 	tagName: string
@@ -258,41 +230,4 @@ async function matchesAncestry(
 
 	if (ancestorSegments.length !== expectedSegments.length) return false
 	return ancestorSegments.every((seg, i) => seg.segment === expectedSegments[i].segment)
-}
-
-// ── Internal: tree walk (for resolveByPath) ──────────────────────────
-
-async function walkSegments(params: {
-	query: Scl.Query | Scl.Transaction
-	current: Scl.TrackedRecord<Scl.ElementsOf>
-	segments: PathSegment[]
-	index: number
-}): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
-	const { query, current, segments, index } = params
-	if (index >= segments.length) return current
-
-	const children = current.children ?? []
-	if (children.length === 0) return undefined
-
-	const childRecords = await query.getRecords(children)
-	const target = segments[index]
-
-	for (const child of childRecords) {
-		if (!child) continue
-
-		const seg = getPathSegment(toRawRecord(child))
-
-		// Transparent element — look through its children
-		if (!seg) {
-			const result = await walkSegments({ query, current: child, segments, index })
-			if (result) return result
-			continue
-		}
-
-		if (seg.segment === target.segment && seg.separator === target.separator) {
-			return walkSegments({ query, current: child, segments, index: index + 1 })
-		}
-	}
-
-	return undefined
 }
