@@ -1,17 +1,14 @@
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 
+import type { Scl } from '@/v2019C1'
 import type * as Core from '@dialecte/core'
-
 /**
  * Enforces the presence of a valid UUID attribute on elements whose definition
  * supports one. If no UUID exists (or the value is empty), generates a new one.
  */
-export function enforceUuidAttribute<
-	GenericConfig extends Core.AnyDialecteConfig,
-	GenericElement extends Core.ElementsOf<GenericConfig>,
->(params: {
-	record: Core.RawRecord<GenericConfig, GenericElement>
-}): Core.RawRecord<GenericConfig, GenericElement> {
+export function enforceUuidAttribute<GenericElement extends Scl.ElementsOf>(params: {
+	record: Scl.RawRecord<GenericElement>
+}): Scl.RawRecord<GenericElement> {
 	const { record } = params
 	const { tagName, attributes } = record
 
@@ -34,10 +31,10 @@ export function enforceUuidAttribute<
 		attributes: [
 			...filteredAttributes,
 			{
-				name: 'uuid' as Core.AttributesOf<GenericConfig, GenericElement>,
+				name: 'uuid' as Scl.AttributesOf<GenericElement>,
 				value: crypto.randomUUID(),
 				namespace: uuidNamespace,
 			},
-		] as Core.RawRecord<GenericConfig, GenericElement>['attributes'],
+		] as Scl.RawRecord<GenericElement>['attributes'],
 	}
 }

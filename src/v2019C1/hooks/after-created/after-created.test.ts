@@ -166,7 +166,7 @@ describe('afterCreated', () => {
 		}
 
 		it.each(Object.entries(testCases))('%s', async (_, { childParentId, expected }) => {
-			const { document, databaseName, cleanup } = await createSclTestDialecte({
+			const { document, cleanup } = await createSclTestDialecte({
 				xmlString: xmlWithPrivate,
 			})
 
@@ -191,6 +191,60 @@ describe('afterCreated', () => {
 			} finally {
 				await cleanup()
 			}
+		})
+	})
+
+	// ── Group 3: Private ancestor check ─────────────────────────────────────
+
+	describe('via document.transaction — matching Private ancestor', () => {
+		const xmlWithPrivateAncestor = /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation ${id}="sub1" name="Sub1">
+					<Function ${id}="f1" name="F1">
+						<LNode ${id}="ln1" lnClass="TCTR">
+							<Private ${id}="priv1" type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeSpecNaming ${id}="lns1" sIedName="PIU" sLdInst="CT_Function" sLnClass="TCTR" sLnInst="1" sPrefix="I01B"/>
+								<eIEC61850-6-100:DOS ${id}="dos1" name="AmpSv">
+									<eIEC61850-6-100:SDS ${id}="sds1" name="instMag">
+										<eIEC61850-6-100:DAS ${id}="das1" name="i"/>
+									</eIEC61850-6-100:SDS>
+								</eIEC61850-6-100:DOS>
+							</Private>
+						</LNode>
+					</Function>
+				</Substation>
+			</SCL>
+		`
+
+		type TestCase = SclTest.BaseXmlTestCase & {
+			act: (document: Core.Document<Config>) => Promise<void>
+		}
+
+		const testCases: SclTest.TestCases<TestCase> = {
+			'v2019C1 element added to LNode with existing matching Private (containing DOS/SDS/DAS) → reuses Private, no second Private':
+				{
+					sourceXml: xmlWithPrivateAncestor,
+					act: async (document) => {
+						await document.transaction(async (tx) => {
+							await tx.addChild(
+								{ tagName: 'SDS', id: 'sds1' },
+								{ tagName: 'DAS', attributes: { name: 'newDas' } },
+							)
+						})
+					},
+					expectedQueries: [
+						'//default:Private[@type="eIEC61850-6-100"]/v2019C1:DOS/v2019C1:SDS/v2019C1:DAS[@name="newDas"]',
+					],
+					unexpectedQueries: ['//default:LNode/default:Private[2]'],
+				},
+		}
+
+		runSclTestCases.withExport({
+			testCases,
+			act: async ({ source, testCase }) => {
+				await testCase.act(source.document as Core.Document<Config>)
+				return { assertDatabaseName: source.databaseName }
+			},
 		})
 	})
 })

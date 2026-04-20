@@ -8,6 +8,7 @@ import {
 } from '@dialecte/core/test'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+import { HOOKS } from '@/v2019C1/hooks'
 
 import type { Config } from '@/v2019C1/config/dialecte.config'
 
@@ -16,7 +17,7 @@ export const XMLNS_SCL_6_100_NAMESPACE = `xmlns:eIEC61850-6-100="http://www.iec.
 export const ALL_XMLNS_NAMESPACES = `${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE}`
 export { CUSTOM_RECORD_ID_ATTRIBUTE, CUSTOM_RECORD_ID_ATTRIBUTE_NAME }
 
-export const runSclTestCases = createTestRunner(SCL_DIALECTE_CONFIG)
+export const runSclTestCases = createTestRunner(SCL_DIALECTE_CONFIG, HOOKS)
 
 export async function createSclTestDialecte(params: { xmlString: string }) {
 	const { xmlString } = params
@@ -24,6 +25,7 @@ export async function createSclTestDialecte(params: { xmlString: string }) {
 	return await createTestDialecte({
 		xmlString,
 		dialecteConfig: SCL_DIALECTE_CONFIG,
+		hooks: HOOKS,
 	})
 }
 

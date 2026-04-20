@@ -1,17 +1,20 @@
 import { wrapWithPrivateElementIfNeeded } from './private-wrapper'
+import { setRefPaths } from './ref-paths'
 
-import type * as Core from '@dialecte/core'
+import type { Scl } from '@/v2019C1/config'
 
 export async function afterCreated<
-	GenericConfig extends Core.AnyDialecteConfig,
-	GenericElement extends Core.ElementsOf<GenericConfig>,
-	GenericParentElement extends Core.ParentsOf<GenericConfig, GenericElement>,
+	GenericElement extends Scl.ElementsOf,
+	GenericParentElement extends Scl.ParentsOf<GenericElement>,
 >(params: {
-	childRecord: Core.RawRecord<GenericConfig, GenericElement>
-	parentRecord: Core.RawRecord<GenericConfig, GenericParentElement>
-	query: Core.Query<GenericConfig>
-}): Promise<Core.Operation<GenericConfig>[]> {
+	childRecord: Scl.RawRecord<GenericElement>
+	parentRecord: Scl.RawRecord<GenericParentElement>
+	query: Scl.Query
+}): Promise<Scl.Operation[]> {
 	const { childRecord, parentRecord, query } = params
 
-	return wrapWithPrivateElementIfNeeded({ childRecord, parentRecord, query })
+	const privateOps = await wrapWithPrivateElementIfNeeded({ childRecord, parentRecord, query })
+	const refPathOps = await setRefPaths({ childRecord, query })
+
+	return [...privateOps, ...refPathOps]
 }

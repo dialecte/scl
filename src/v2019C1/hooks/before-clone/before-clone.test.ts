@@ -2,10 +2,14 @@ import { beforeClone } from './before-clone'
 
 import { describe, it, expect } from 'vitest'
 
+import { runSclTestCases } from '@/v2019C1/test'
+
+import type { Scl } from '@/v2019C1/config'
+import type { SclTest } from '@/v2019C1/test'
 import type * as Core from '@dialecte/core'
 
 describe('beforeClone', () => {
-	type TestCase = {
+	type TestCase = SclTest.BaseTestCase & {
 		input: Omit<Core.AnyTreeRecord, 'namespace' | 'parent' | 'children' | 'value' | 'status'>
 		expected: {
 			shouldBeCloned: boolean
@@ -21,7 +25,7 @@ describe('beforeClone', () => {
 		status: 'unchanged' as const,
 	}
 
-	const testCases: Record<string, TestCase> = {
+	const testCases: SclTest.TestCases<TestCase> = {
 		'uuid attribute present → uuid removed': {
 			input: {
 				id: 'test-id',
@@ -166,10 +170,16 @@ describe('beforeClone', () => {
 		},
 	}
 
-	it.each(Object.entries(testCases))('%s', (_, testCase) => {
-		const result = beforeClone({ record: { ...testCase.input, ...treeRecordPart } })
+	function act(testCase: TestCase) {
+		const record = {
+			...testCase.input,
+			...treeRecordPart,
+		} as unknown as Scl.TreeRecord<Scl.ElementsOf>
+		const result = beforeClone({ record })
 
 		expect(result.shouldBeCloned).toBe(testCase.expected.shouldBeCloned)
 		expect(result.transformedRecord).toEqual({ ...testCase.expected.record, ...treeRecordPart })
-	})
+	}
+
+	runSclTestCases.generic(testCases, act)
 })

@@ -1,11 +1,12 @@
+import type { Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
-export function beforeClone<
-	GenericConfig extends Core.AnyDialecteConfig,
-	GenericElement extends Core.ElementsOf<GenericConfig>,
->(params: {
-	record: Core.TreeRecord<GenericConfig, GenericElement>
-}): { shouldBeCloned: boolean; transformedRecord: Core.TreeRecord<GenericConfig, GenericElement> } {
+export function beforeClone<GenericElement extends Scl.ElementsOf>(params: {
+	record: Scl.TreeRecord<GenericElement>
+}): {
+	shouldBeCloned: boolean
+	transformedRecord: Scl.TreeRecord<GenericElement>
+} {
 	const { record } = params
 
 	let shouldBeCloned = true

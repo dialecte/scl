@@ -1,6 +1,7 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 import { invariant } from '@dialecte/core/utils'
 
+import { Scl } from '@/v2019C1'
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 
 import type * as Core from '@dialecte/core'
@@ -11,14 +12,13 @@ import type * as Core from '@dialecte/core'
  * Routes to the appropriate sub-case in private-wrapper.ts.
  */
 export async function wrapWithPrivateElementIfNeeded<
-	GenericConfig extends Core.AnyDialecteConfig,
-	GenericElement extends Core.ElementsOf<GenericConfig>,
-	GenericParentElement extends Core.ParentsOf<GenericConfig, GenericElement>,
+	GenericElement extends Scl.ElementsOf,
+	GenericParentElement extends Scl.ParentsOf<GenericElement>,
 >(params: {
-	childRecord: Core.RawRecord<GenericConfig, GenericElement>
-	parentRecord: Core.RawRecord<GenericConfig, GenericParentElement>
-	query: Core.Query<GenericConfig>
-}): Promise<Core.Operation<GenericConfig>[]> {
+	childRecord: Scl.RawRecord<GenericElement>
+	parentRecord: Scl.RawRecord<GenericParentElement>
+	query: Scl.Query
+}): Promise<Scl.Operation[]> {
 	const { childRecord, parentRecord, query } = params
 
 	if (childRecord.namespace.prefix === SCL_DIALECTE_CONFIG.namespaces.default.prefix) {
@@ -34,7 +34,7 @@ export async function wrapWithPrivateElementIfNeeded<
 
 	const existingPrivateRef = parentRecord.children.find((child) => child.tagName === 'Private')
 
-	const updatedParentRecord: Core.RawRecord<GenericConfig, GenericParentElement> = {
+	const updatedParentRecord: Scl.RawRecord<GenericParentElement> = {
 		...parentRecord,
 		children: parentRecord.children.filter((childRef) => childRef.id !== childRecord.id),
 	}
@@ -51,24 +51,40 @@ export async function wrapWithPrivateElementIfNeeded<
 		})
 	}
 
+	// No existing Private child — check if a matching Private ancestor already wraps this context.
+	// Walk up from parent: if any ancestor is Private with matching type, the element can be
+	// placed directly without creating a new wrapper.
+	const ancestors = await query.findAncestors(parentRecord)
+	const hasMatchingAncestor = ancestors.some(
+		(ancestor) =>
+			ancestor.tagName === 'Private' &&
+			ancestor.attributes.some(
+				(attribute) =>
+					attribute.name === 'type' && attribute.value === childRecord.namespace.prefix,
+			),
+	)
+	if (hasMatchingAncestor) return []
+
 	return handleNewPrivateRecordCase({ parentRecord, updatedParentRecord, childRecord })
 }
 
 // ── Sub-case handlers ─────────────────────────────────────────────────────────
 
 export async function handleParentAsPrivateRecordCase<
-	GenericConfig extends Core.AnyDialecteConfig,
-	GenericElement extends Core.ElementsOf<GenericConfig>,
-	GenericParentElement extends Core.ParentsOf<GenericConfig, GenericElement>,
+	GenericElement extends Scl.ElementsOf,
+	GenericParentElement extends Scl.ParentsOf<GenericElement>,
 >(params: {
-	parentRecord: Core.RawRecord<GenericConfig, GenericParentElement>
-	childRecord: Core.RawRecord<GenericConfig, GenericElement>
-	query: Core.Query<GenericConfig>
-}): Promise<Core.Operation<GenericConfig>[]> {
+	parentRecord: Scl.RawRecord<GenericParentElement>
+	childRecord: Scl.RawRecord<GenericElement>
+	query: Scl.Query
+}): Promise<Scl.Operation[]> {
 	const { parentRecord, childRecord, query } = params
-	const privateRecord = parentRecord as unknown as Core.RawRecord<GenericConfig, 'Private'>
+	const privateRecord = parentRecord as unknown as Scl.RawRecord<'Private'>
 
-	if (childRecord.parent?.id === privateRecord.id && childRecord.parent?.tagName === 'Private') {
+	if (
+		childRecord.parent?.id === privateRecord.id &&
+		(childRecord.parent?.tagName as string) === 'Private'
+	) {
 		return []
 	}
 
@@ -99,16 +115,15 @@ export async function handleParentAsPrivateRecordCase<
 }
 
 export async function handleExistingPrivateRecordCase<
-	GenericConfig extends Core.AnyDialecteConfig,
-	GenericElement extends Core.ElementsOf<GenericConfig>,
-	GenericParentElement extends Core.ParentsOf<GenericConfig, GenericElement>,
+	GenericElement extends Scl.ElementsOf,
+	GenericParentElement extends Scl.ParentsOf<GenericElement>,
 >(params: {
-	existingPrivateRef: Core.ChildRelationship<GenericConfig, GenericParentElement>
-	parentRecord: Core.RawRecord<GenericConfig, GenericParentElement>
-	updatedParentRecord: Core.RawRecord<GenericConfig, GenericParentElement>
-	childRecord: Core.RawRecord<GenericConfig, GenericElement>
-	query: Core.Query<GenericConfig>
-}): Promise<Core.Operation<GenericConfig>[]> {
+	existingPrivateRef: Scl.ChildRelationship<GenericParentElement>
+	parentRecord: Scl.RawRecord<GenericParentElement>
+	updatedParentRecord: Scl.RawRecord<GenericParentElement>
+	childRecord: Scl.RawRecord<GenericElement>
+	query: Scl.Query
+}): Promise<Scl.Operation[]> {
 	const { existingPrivateRef, parentRecord, updatedParentRecord, childRecord, query } = params
 
 	const latestPrivateRecord = await getLatestPrivateRecord({

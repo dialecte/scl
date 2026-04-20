@@ -9,10 +9,9 @@ import {
 	ROOT_ELEMENT,
 	SINGLETON_ELEMENTS,
 } from '../definition'
-import { HOOKS } from '../hooks'
 import { createSclIoHooks } from '../io/hooks'
 
-import type { IOConfig, AnyDialecteConfig, DatabaseConfig, AnyDefinition } from '@dialecte/core'
+import type { IOConfig, AnyDialecteConfig, DatabaseConfig } from '@dialecte/core'
 
 // SCL-specific IO configuration
 export const SCL_IO_CONFIG = {
@@ -57,7 +56,6 @@ export const SCL_DIALECTE_CONFIG = {
 	database: SCL_DATABASE_CONFIG,
 	io: SCL_IO_CONFIG,
 	definition: DEFINITION,
-	hooks: HOOKS,
 } as const satisfies AnyDialecteConfig
 
 export interface Config extends Readonly<typeof SCL_DIALECTE_CONFIG> {}
