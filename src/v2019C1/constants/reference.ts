@@ -1,3 +1,22 @@
+import { buildPairsByRefMap, buildResolutionsToTargetRefsMap } from './helpers'
+
+/**
+ * How a SCL reference path value should be resolved to a UUID.
+ *
+ * - direct:               the path value IS the exact lookup key
+ * - lnode:                LNodeSpecNaming / IEC 7-2 ObjectReference - strip ".DO[.DA]" qualifier from the last segment to get the LN/LNode lookup key
+ * - iedAddress:           ExtRef/ExtCtrl address - indexed by full IED-internal path, exact match with IED-relative fallback
+ * - behaviorDescription:  path relative to parent BehaviorDescription scope
+ * - unsupported:          path format requires context not available during streaming
+ */
+export const RESOLUTION_TYPE = {
+	direct: 'direct',
+	lnode: 'lnode',
+	iedAddress: 'ied-address',
+	behaviorDescription: 'behavior-description',
+	unsupported: 'unsupported',
+} as const
+
 /**
  * Complete mapping of elements that have path/name → UUID reference pairs.
  *
@@ -299,6 +318,36 @@ export const UUID_REFERENCE_PAIRS = {
 	],
 } as const
 
+// ── Resolution target map ────────────────────────────────────────────────────
+
+/**
+ * Maps each resolution strategy to a map of target tagName → RefEntry[].
+ *
+ * Built once at module load from UUID_REFERENCE_PAIRS.
+ * Use to look up which referrer elements point to a given target under a given strategy.
+ *
+ * @example
+ * const entries = RESOLUTION_TARGET_REFS['direct'].get('Function') ?? []
+ */
+export const RESOLUTION_TARGET_REFS = buildResolutionsToTargetRefsMap(UUID_REFERENCE_PAIRS)
+
+/**
+ * Resolution types that produce a computable path value.
+ * Excludes 'unsupported' which requires context not available at resolution time.
+ */
+export const RESOLVABLE_RESOLUTIONS = [
+	RESOLUTION_TYPE.direct,
+	RESOLUTION_TYPE.lnode,
+	RESOLUTION_TYPE.iedAddress,
+	RESOLUTION_TYPE.behaviorDescription,
+] as const
+
+/**
+ * Maps ref tagName → list of its UUID pair entries (flattened).
+ * Use for ref-side lookups (afterCreated REF case, beforeDelete sweeps).
+ */
+export const PAIRS_BY_REF = buildPairsByRefMap(UUID_REFERENCE_PAIRS)
+
 /**
  * Ref tag names where the record is kept even when all uuid refs are orphaned.
  * Only the uuid/path/companion attributes are cleared; non-ref attributes preserved.
@@ -321,3 +370,15 @@ export const REF_CONTAINERS: Partial<Record<keyof typeof UUID_REFERENCE_PAIRS, r
 		Resource: ['ProcessResource', 'ProcessResources'],
 		VariableApplyTo: ['Variable'],
 	} as const
+
+/**
+ * All uuid attribute names from UUID_REFERENCE_PAIRS, deduplicated.
+ * Use as the attribute list for remapUuidAttrs so new ref pairs are automatically covered.
+ */
+export const ALL_REF_UUID_ATTRIBUTES: readonly string[] = [
+	...new Set(
+		Object.values(UUID_REFERENCE_PAIRS).flatMap((pairs) =>
+			pairs.map((pair) => pair.attribute.uuid),
+		),
+	),
+]
