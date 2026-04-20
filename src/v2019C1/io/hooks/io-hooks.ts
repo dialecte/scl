@@ -1,7 +1,7 @@
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { ATTRIBUTES } from '@/v2019C1/definition'
-import { buildPathFromAncestry } from '@/v2019C1/extensions/path/query/build/path-segment'
-import { parseReferencePath } from '@/v2019C1/extensions/path/query/resolve/parse-path'
+import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
+import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 
 import type { PendingResolution, UnsupportedXPathWarning } from './io-hooks.types'
 import type {
@@ -98,7 +98,7 @@ export function createSclIoHooks(): IOHooks {
 			const parsed = parseReferencePath(pair.resolution, pair.attribute.path, pathValue, ancestry)
 
 			if (!parsed) {
-				if (pair.resolution === 'unsupported') {
+				if (pair.resolution === RESOLUTION_TYPE.unsupported) {
 					xpathWarnings.push({
 						type: 'unsupported-xpath-reference',
 						recordId: record.id,
