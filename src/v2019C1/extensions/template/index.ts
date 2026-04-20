@@ -1,7 +1,5 @@
-import { ensureSubstationTemplateStructure } from './ensure-substation-structure'
+import * as templateTransactions from './transaction'
 
 export const template = {
-	transaction: {
-		ensureSubstationTemplateStructure,
-	},
+	transaction: templateTransactions,
 }

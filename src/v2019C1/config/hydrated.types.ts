@@ -2,10 +2,12 @@ import type { Config } from './dialecte.config'
 import type * as Core from '@dialecte/core'
 
 export namespace Scl {
+	export type Document = Core.Document<Config>
 	export type Context = Core.Context<Config>
 
 	export type Query = Core.Query<Config>
 	export type Transaction = Core.Transaction<Config>
+	export type TransactionHooks = Core.TransactionHooks<Config>
 
 	// DEFINITION
 	export type ElementsOf = Core.ElementsOf<Config>
@@ -64,4 +66,7 @@ export namespace Scl {
 		Config,
 		GenericElement
 	>
+
+	// MISCELLANEOUS
+	export type CloneMapping = Core.CloneMapping<Config>
 }
