@@ -1,4 +1,5 @@
-import { cloneFunctionWithCategories } from './clone-function'
+import { ensureSubstationTemplateStructure } from '../ensure-substation-structure'
+import { cloneFunction, cloneFunctionCategories } from './clone-function'
 
 import { describe } from 'vitest'
 
@@ -20,7 +21,7 @@ const emptyTargetXml = /* xml */ `
 	</SCL>
 `
 
-describe('cloneFunctionWithCategories', () => {
+describe('cloneFunction + cloneFunctionCategories', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		targetXml: string
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
@@ -33,10 +34,17 @@ describe('cloneFunctionWithCategories', () => {
 		testCase,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
 		await target!.document.transaction(async (tx) => {
-			await cloneFunctionWithCategories(tx, {
+			const uuidRemap = await cloneFunction(tx, {
 				sourceQuery: source.document.query,
 				functionRef: testCase.functionRef,
 				targetParentRef: testCase.targetParentRef,
+			})
+			const structure = await ensureSubstationTemplateStructure(tx)
+			await cloneFunctionCategories(tx, {
+				sourceQuery: source.document.query,
+				functionRef: testCase.functionRef,
+				structure,
+				uuidRemap,
 			})
 		})
 		return { assertDatabaseName: target!.databaseName }

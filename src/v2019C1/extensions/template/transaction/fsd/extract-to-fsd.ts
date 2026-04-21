@@ -1,5 +1,5 @@
 import { ensureSubstationTemplateStructure } from '../../transaction/ensure-substation-structure'
-import { cloneFunctionWithCategories } from '../shared/clone-function'
+import { cloneFunction, cloneFunctionCategories } from '../shared/clone-function'
 import { FSD_EXCLUDE } from '../shared/exclude-filters'
 import { postExtractionCleanup } from '../shared/post-extraction-cleanup'
 
@@ -18,7 +18,11 @@ export async function extractToFsd(
 	},
 ): Promise<void> {
 	const { sourceQuery, functionRef, tool, who, nameStructure } = params
-	const { Substation } = await ensureSubstationTemplateStructure(tx)
+	const structure = await ensureSubstationTemplateStructure(tx)
+	const substationRef = {
+		tagName: structure.Substation.tagName,
+		id: structure.Substation.id,
+	} as const
 
 	const functionName =
 		(await sourceQuery.getAttribute(functionRef, { name: 'name' })) || 'Unnamed Function'
@@ -38,11 +42,18 @@ export async function extractToFsd(
 		},
 	})
 
-	await cloneFunctionWithCategories(tx, {
+	const uuidRemap = await cloneFunction(tx, {
 		sourceQuery,
 		functionRef,
-		targetParentRef: { tagName: Substation.tagName, id: Substation.id },
+		targetParentRef: substationRef,
 		exclude: FSD_EXCLUDE,
+	})
+
+	await cloneFunctionCategories(tx, {
+		sourceQuery,
+		functionRef,
+		structure,
+		uuidRemap,
 	})
 
 	await postExtractionCleanup(tx)

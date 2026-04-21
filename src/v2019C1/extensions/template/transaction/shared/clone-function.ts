@@ -5,19 +5,25 @@ import {
 	STRIP_ATTRS,
 } from './clone-utils'
 import { extractDataModel } from './extract-data-model'
+import { resolveStructureRef } from './resolve-structure-ref'
 
 import { stripAttributes } from '@dialecte/core/helpers'
 import { invariant } from '@dialecte/core/utils'
 
 import { reference } from '@/v2019C1/extensions/reference'
 
+import type { TemplateStructure } from './template.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
-import type { CloneMapping, ExcludeFilter } from '@dialecte/core'
+import type { ExcludeFilter } from '@dialecte/core'
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-export async function cloneFunctionWithCategories(
+/**
+ * Clones a Function/SubFunction tree into the target, promotes SubFunction to Function,
+ * and extracts the data model. Returns sourceUuid -> targetUuid remap.
+ */
+export async function cloneFunction(
 	tx: Scl.Transaction,
 	params: {
 		sourceQuery: Scl.Query
@@ -26,34 +32,6 @@ export async function cloneFunctionWithCategories(
 		exclude?: ExcludeFilter<Config>[]
 	},
 ): Promise<Map<string, string>> {
-	const { sourceQuery, functionRef, targetParentRef } = params
-
-	const { mappings, sourceIdToUuid } = await cloneFunction(tx, params)
-
-	const uuidRemap = await cloneFunctionCategories(tx, {
-		sourceQuery,
-		functionRef,
-		targetParentRef,
-		mappings,
-		sourceIdToUuid,
-	})
-
-	await extractDataModel(tx, { sourceQuery, scopeRef: functionRef })
-
-	return uuidRemap
-}
-
-// ── Clone Function tree ───────────────────────────────────────────────────────
-
-async function cloneFunction(
-	tx: Scl.Transaction,
-	params: {
-		sourceQuery: Scl.Query
-		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
-		targetParentRef: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
-		exclude?: ExcludeFilter<Config>[]
-	},
-): Promise<{ mappings: CloneMapping<Config>[]; sourceIdToUuid: Map<string, string> }> {
 	const { sourceQuery, functionRef, targetParentRef, exclude } = params
 
 	const tree = await sourceQuery.getTree(functionRef, { exclude })
@@ -73,32 +51,39 @@ async function cloneFunction(
 		strippedTree as Scl.TreeRecord<'Function'>,
 	)
 
-	return { mappings, sourceIdToUuid }
+	const uuidRemap = await buildUuidRemap({ tx, mappings, sourceIdToUuid })
+	await extractDataModel(tx, { sourceQuery, scopeRef: functionRef })
+
+	return uuidRemap
 }
 
-// ── Clone FunctionCategory trees referencing the function ─────────────────────
-
-async function cloneFunctionCategories(
+/**
+ * Clones FunctionCategory trees that reference the given function (or its SubFunctions).
+ * Each category is placed at its source-side structural level in the TEMPLATE structure.
+ * Remaps functionUuid attributes using the provided remap.
+ */
+export async function cloneFunctionCategories(
 	tx: Scl.Transaction,
 	params: {
 		sourceQuery: Scl.Query
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
-		targetParentRef: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
-		mappings: CloneMapping<Config>[]
-		sourceIdToUuid: Map<string, string>
+		structure: TemplateStructure
+		uuidRemap: Map<string, string>
 	},
-): Promise<Map<string, string>> {
-	const { sourceQuery, functionRef, targetParentRef, mappings, sourceIdToUuid } = params
+): Promise<void> {
+	const { sourceQuery, functionRef, structure, uuidRemap } = params
 
 	const categoryIds = await collectReferencedCategoryIds(sourceQuery, functionRef)
-	const uuidRemap = await buildUuidRemap({ tx, mappings, sourceIdToUuid })
 
 	for (const categoryId of categoryIds) {
 		const alreadyCloned = await isCategoryAlreadyCloned(tx, sourceQuery, categoryId)
 		if (alreadyCloned) continue
 
-		const tree = await sourceQuery.getTree({ tagName: 'FunctionCategory', id: categoryId })
+		const categoryRef: Scl.Ref<'FunctionCategory'> = { tagName: 'FunctionCategory', id: categoryId }
+		const tree = await sourceQuery.getTree(categoryRef)
 		if (!tree) continue
+
+		const targetParent = await resolveStructureRef(sourceQuery, categoryRef, structure)
 
 		const strippedTree = stripAttributes(tree, [...STRIP_ATTRS])
 		const remappedTree = remapUuidAttributes({
@@ -106,10 +91,8 @@ async function cloneFunctionCategories(
 			attributeNames: ['functionUuid'],
 			remap: uuidRemap,
 		})
-		await tx.deepClone(targetParentRef, remappedTree as Scl.TreeRecord<'FunctionCategory'>)
+		await tx.deepClone(targetParent, remappedTree as Scl.TreeRecord<'FunctionCategory'>)
 	}
-
-	return uuidRemap
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

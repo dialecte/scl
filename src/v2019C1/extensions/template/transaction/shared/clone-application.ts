@@ -1,10 +1,10 @@
-import { cloneFunctionWithCategories } from './clone-function'
+import { cloneFunction, cloneFunctionCategories } from './clone-function'
 import { cloneAllReferencedTargets, findMissingReferencedRecords } from './clone-referenced'
 import { remapUuidAttributes, STRIP_ATTRS } from './clone-utils'
 import { ALWAYS_EXCLUDE } from './exclude-filters'
+import { resolveStructureRef } from './resolve-structure-ref'
 
 import { stripAttributes } from '@dialecte/core/helpers'
-import { invariant } from '@dialecte/core/utils'
 
 import { ALL_REF_UUID_ATTRIBUTES } from '@/v2019C1/constants'
 
@@ -35,7 +35,7 @@ export async function cloneApplicationContent(
 	const tree = await sourceQuery.getTree(applicationRef, { exclude: ALWAYS_EXCLUDE })
 	if (!tree) return new Map()
 
-	// 1. Functions: resolve structural parent per function, clone with categories
+	// 1. Functions: resolve structural parent per function, clone tree + data model
 	const missingFunctions = await findMissingReferencedRecords(tx, {
 		sourceQuery,
 		scopeRef: applicationRef,
@@ -45,7 +45,7 @@ export async function cloneApplicationContent(
 	const functionRemap = new Map<string, string>()
 	for (const ref of missingFunctions) {
 		const targetParentRef = await resolveStructureRef(sourceQuery, ref, structure)
-		const partial = await cloneFunctionWithCategories(tx, {
+		const partial = await cloneFunction(tx, {
 			sourceQuery,
 			functionRef: ref,
 			targetParentRef,
@@ -54,8 +54,18 @@ export async function cloneApplicationContent(
 		for (const [key, value] of partial) functionRemap.set(key, value)
 	}
 
-	// 2. All other referenced targets - derived from UUID_REFERENCE_PAIRS ∩ DESCENDANTS
-	const REFS_ALREADY_HANDLED = new Set(['FunctionRef'])
+	// 2. FunctionCategories: clone at source-side structural level with functionUuid remap
+	for (const ref of missingFunctions) {
+		await cloneFunctionCategories(tx, {
+			sourceQuery,
+			functionRef: ref,
+			structure,
+			uuidRemap: functionRemap,
+		})
+	}
+
+	// 3. All other referenced targets - derived from UUID_REFERENCE_PAIRS and DESCENDANTS
+	const REFS_ALREADY_HANDLED = new Set(['FunctionRef', 'FunctionCategoryRef'])
 	const genericRemap = await cloneAllReferencedTargets(tx, {
 		sourceQuery,
 		scopeTagName: 'Application',
@@ -79,27 +89,4 @@ export async function cloneApplicationContent(
 	await tx.deepClone(targetParent, remappedTree as Scl.TreeRecord<'Application'>)
 
 	return remap
-}
-
-// ── Resolve target structure ref matching the source-side structural ancestor ─
-
-async function resolveStructureRef(
-	sourceQuery: Scl.Query,
-	ref: Scl.Ref<Scl.ElementsOf>,
-	structure: TemplateStructure,
-): Promise<Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>> {
-	const ancestors = await sourceQuery.findAncestors(ref, { stopAtTagName: 'Substation' })
-
-	const match = ancestors.find((record) => record.tagName in structure)
-	invariant(match, {
-		key: 'ELEMENT_NOT_FOUND',
-		detail: `No Substation/VoltageLevel/Bay ancestor found for ${ref.tagName}`,
-	})
-
-	const target = structure[match.tagName as keyof TemplateStructure]
-
-	return { tagName: target.tagName, id: target.id } as
-		| Scl.Ref<'Substation'>
-		| Scl.Ref<'VoltageLevel'>
-		| Scl.Ref<'Bay'>
 }
