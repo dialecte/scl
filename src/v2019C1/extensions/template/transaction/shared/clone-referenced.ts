@@ -1,6 +1,7 @@
 import { cloneTreeWithRemap } from './clone-utils'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { DESCENDANTS } from '@/v2019C1/definition'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { DescendantsFilter, ExcludeFilter } from '@dialecte/core'
@@ -103,4 +104,65 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 	}
 
 	return accRemap
+}
+
+// ── Config-driven bulk clone ─────────────────────────────────────────────────
+
+// DESCENDANTS guarantees scopeRef is an ancestor of every derived refTagName.
+// TypeScript cannot verify runtime-derived descendant constraints; cast once.
+type CloneRefsFn = (
+	tx: Scl.Transaction,
+	params: {
+		sourceQuery: Scl.Query
+		scopeRef: Scl.Ref<Scl.ElementsOf>
+		refTagName: RefTagName
+		targetTagName: Scl.ElementsOf
+		targetParent: Scl.Ref<Scl.ElementsOf>
+		exclude?: ExcludeFilter<Config>[]
+	},
+) => Promise<Map<string, string>>
+
+/**
+ * Clones all referenced targets for ref types derived from
+ * `DESCENDANTS[scopeTagName] ∩ UUID_REFERENCE_PAIRS`, skipping those in `skip`.
+ *
+ * Targets already present in the target tx are skipped (dedup via findMissingReferencedRecords).
+ */
+export async function cloneAllReferencedTargets(
+	tx: Scl.Transaction,
+	params: {
+		sourceQuery: Scl.Query
+		scopeTagName: Scl.ElementsOf
+		scopeRef: Scl.Ref<Scl.ElementsOf>
+		targetParent: Scl.Ref<Scl.ElementsOf>
+		skip?: ReadonlySet<string>
+		exclude?: ExcludeFilter<Config>[]
+	},
+): Promise<Map<string, string>> {
+	const { sourceQuery, scopeTagName, scopeRef, targetParent, skip = new Set(), exclude } = params
+	const remap = new Map<string, string>()
+
+	const refTags = (DESCENDANTS[scopeTagName] as readonly string[]).filter(
+		(tag): tag is RefTagName => tag in UUID_REFERENCE_PAIRS && !skip.has(tag),
+	)
+
+	const cloneRefs = cloneReferencedRecords as CloneRefsFn
+
+	for (const refTagName of refTags) {
+		for (const pair of UUID_REFERENCE_PAIRS[refTagName]) {
+			for (const targetTagName of pair.target) {
+				const partial = await cloneRefs(tx, {
+					sourceQuery,
+					scopeRef,
+					refTagName,
+					targetTagName: targetTagName as Scl.ElementsOf,
+					targetParent,
+					exclude,
+				})
+				for (const [k, v] of partial) remap.set(k, v)
+			}
+		}
+	}
+
+	return remap
 }

@@ -85,7 +85,7 @@ export async function buildUuidRemap(params: {
  * Recursively replaces uuid reference attribute values using the remap.
  * Operates on any set of attribute names (e.g. functionUuid, allocationRoleUuid).
  */
-export function remapUuidAttrs<T extends Scl.ElementsOf>(params: {
+export function remapUuidAttributes<T extends Scl.ElementsOf>(params: {
 	tree: Scl.TreeRecord<T>
 	attributeNames: readonly string[]
 	remap: Map<string, string>
@@ -105,7 +105,7 @@ export function remapUuidAttrs<T extends Scl.ElementsOf>(params: {
 		...tree,
 		attributes,
 		tree: tree.tree.map((child) =>
-			remapUuidAttrs({
+			remapUuidAttributes({
 				tree: child as unknown as Scl.TreeRecord<Scl.ElementsOf>,
 				attributeNames,
 				remap,

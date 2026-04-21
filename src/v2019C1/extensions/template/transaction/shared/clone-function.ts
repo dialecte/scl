@@ -1,4 +1,9 @@
-import { buildUuidRemap, collectUuidsByRecordId, remapUuidAttrs, STRIP_ATTRS } from './clone-utils'
+import {
+	buildUuidRemap,
+	collectUuidsByRecordId,
+	remapUuidAttributes,
+	STRIP_ATTRS,
+} from './clone-utils'
 import { extractDataModel } from './extract-data-model'
 
 import { stripAttributes } from '@dialecte/core/helpers'
@@ -96,7 +101,7 @@ async function cloneFunctionCategories(
 		if (!tree) continue
 
 		const strippedTree = stripAttributes(tree, [...STRIP_ATTRS])
-		const remappedTree = remapUuidAttrs({
+		const remappedTree = remapUuidAttributes({
 			tree: strippedTree,
 			attributeNames: ['functionUuid'],
 			remap: uuidRemap,
