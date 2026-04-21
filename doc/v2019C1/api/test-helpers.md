@@ -266,13 +266,39 @@ expectedQueries: ['//default:Substation[@name="S1"]']
 
 All types are bound to the SCL dialecte config via the `SclTest` namespace:
 
-| Type                   | Description                                                                                  |
-| ---------------------- | -------------------------------------------------------------------------------------------- |
-| `SclTest.BaseTestCase` | `BaseXmlTestCase` — `{ sourceXml, targetXml?, only?, expectedQueries?, unexpectedQueries? }` |
-| `SclTest.TestCases<T>` | `Record<string, T>` — key is the test description                                            |
-| `SclTest.ActParams<T>` | `{ source, target?, testCase }` — passed to `act`                                            |
-| `SclTest.ActResult`    | `{ assertDatabaseName: string, withDatabaseIds?: boolean }`                                  |
+| Type                      | Description                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------------------- |
+| `SclTest.BaseTestCase`    | `{ only?: boolean }` - minimal base for non-XML tests (e.g. `runSclTestCases.generic`)       |
+| `SclTest.BaseXmlTestCase` | `BaseTestCase & { sourceXml, targetXml?, expectedQueries?, unexpectedQueries? }` - XML tests |
+| `SclTest.TestCases<T>`    | `Record<string, T>` - key is the test description. Defaults to `BaseXmlTestCase`             |
+| `SclTest.TestContext`     | `{ document, databaseName }` - bound to SCL config                                           |
+| `SclTest.ActParams<T>`    | `{ source, target?, testCase }` - passed to `act`                                            |
+| `SclTest.ActResult`       | `{ assertDatabaseName: string, withDatabaseIds?: boolean }`                                  |
+| `SclTest.TestRunner`      | Runner type bound to SCL config                                                              |
+
+`TestCases<T>` accepts any type extending `BaseTestCase` - use `BaseTestCase` for non-XML generic tests, `BaseXmlTestCase` for XML round-trip tests:
+
+````ts
+// Non-XML test case (generic runner)
+type MyCase = SclTest.BaseTestCase & { input: number; expected: number }
+const cases: SclTest.TestCases<MyCase> = { ... }
+runSclTestCases.generic(cases, (testCase) => { ... })
+
+// XML test case (withExport / withoutExport)
+type MyXmlCase = SclTest.BaseXmlTestCase & { functionId: string }
+const cases: SclTest.TestCases<MyXmlCase> = { ... }
+runSclTestCases.withExport({ testCases: cases, act })onfig                                                              |
+
+`TestCases<T>` accepts any type extending `BaseTestCase` - use `BaseTestCase` for non-XML generic tests, `BaseXmlTestCase` for XML round-trip tests:
 
 ```ts
-import type { SclTest } from '@dialecte/scl/v2019C1/test'
-```
+// Non-XML test case (generic runner)
+type MyCase = SclTest.BaseTestCase & { input: number; expected: number }
+const cases: SclTest.TestCases<MyCase> = { ... }
+runSclTestCases.generic(cases, (testCase) => { ... })
+
+// XML test case (withExport / withoutExport)
+type MyXmlCase = SclTest.BaseXmlTestCase & { functionId: string }
+const cases: SclTest.TestCases<MyXmlCase> = { ... }
+runSclTestCases.withExport({ testCases: cases, act })
+````

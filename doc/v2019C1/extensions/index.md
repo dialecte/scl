@@ -1,5 +1,5 @@
 ---
-description: Overview of SCL-specific extensions for @dialecte/scl v2019C1 — history, dataModel, and template.
+description: Overview of SCL-specific extensions for @dialecte/scl v2019C1 -- history, dataModel, reference, template, and cleanUp.
 ---
 
 # Extensions
@@ -12,8 +12,10 @@ For a full explanation of how extensions work, see the [Writing Extensions](http
 
 | Module      | Access on `doc.query` | Access on `tx` | Reference                  |
 | ----------- | --------------------- | -------------- | -------------------------- |
-| `history`   | `doc.query.history`   | `tx.history`   | [History](./history)       |
+| `cleanUp`   | -                     | `tx.cleanUp`   | [Clean-up](./clean-up)     |
 | `dataModel` | `doc.query.dataModel` | `tx.dataModel` | [Data Model](./data-model) |
+| `history`   | `doc.query.history`   | `tx.history`   | [History](./history)       |
+| `reference` | `doc.query.reference` | -              | [Reference](./reference)   |
 | `template`  | -                     | `tx.template`  | [Template](./template)     |
 
 ## Usage pattern
