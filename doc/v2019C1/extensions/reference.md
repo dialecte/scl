@@ -46,7 +46,7 @@ reference.query.buildElementPath(
 ```
 
 ```ts
-const path = await reference.query.build(query, { tagName: 'Function', id: 'func-1' })
+const path = await reference.query.buildElementPath(query, { tagName: 'Function', id: 'func-1' })
 // -> "TEMPLATE/V1/B1/Protection"
 ```
 

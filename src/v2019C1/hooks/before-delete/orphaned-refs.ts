@@ -1,6 +1,6 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
-import { UUID_REFERENCE_PAIRS, KEEP_ON_ORPHAN_REFS } from '@/v2019C1/constants'
+import { UUID_REFERENCE_PAIRS, KEEP_ON_ORPHAN_REFS } from '@/v2019C1/extensions/reference'
 
 import type { Scl } from '@/v2019C1/config'
 

@@ -1,4 +1,4 @@
-import { UUID_REFERENCE_PAIRS, RESOLUTION_TYPE } from './reference'
+import { UUID_REFERENCE_PAIRS, RESOLUTION_TYPE } from './pairs'
 
 export type UuidReferencePairs = typeof UUID_REFERENCE_PAIRS
 export type ReferencePair = (typeof UUID_REFERENCE_PAIRS)[keyof typeof UUID_REFERENCE_PAIRS][number]

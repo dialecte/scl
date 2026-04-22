@@ -4,10 +4,10 @@ import { getPathSegment } from './path-segment'
 
 import { toRawRecord } from '@dialecte/core/helpers'
 
-import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
 import type { Scl } from '@/v2019C1/config'
-import type { ResolutionType, ReferencePair } from '@/v2019C1/constants'
+import type { ResolutionType, ReferencePair } from '@/v2019C1/extensions/reference'
 
 /**
  * Build the path value to store on a REF element's path attribute

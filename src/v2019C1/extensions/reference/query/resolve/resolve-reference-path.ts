@@ -3,13 +3,12 @@ import { parseReferencePath, parsePathSegments } from './parse-path'
 
 import { toRawRecord } from '@dialecte/core/helpers'
 
-import { RESOLUTION_TYPE } from '@/v2019C1/constants'
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference'
 import { DEFINITION } from '@/v2019C1/definition'
+import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
 import type { PathSegment } from '../build/path-segment.types'
 import type { Scl } from '@/v2019C1/config'
-import type { ResolutionType } from '@/v2019C1/constants'
+import type { ResolutionType } from '@/v2019C1/extensions/reference'
 import type { AnyRawRecord } from '@dialecte/core'
 
 // ── Types ────────────────────────────────────────────────────────────

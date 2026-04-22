@@ -1,11 +1,10 @@
 import { getPathSegment, joinPathParts } from '../build/path-segment'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { RESOLUTION_TYPE } from '@/v2019C1/constants'
+import { UUID_REFERENCE_PAIRS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
 
 import type { PathSegment } from '../build/path-segment.types'
 import type { ParsedReference } from './types'
-import type { ResolutionType } from '@/v2019C1/constants'
+import type { ResolutionType } from '@/v2019C1/extensions/reference'
 import type { AnyRawRecord } from '@dialecte/core'
 
 /**

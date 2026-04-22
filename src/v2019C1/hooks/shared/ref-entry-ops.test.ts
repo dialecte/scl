@@ -5,7 +5,7 @@ import { describe, expect } from 'vitest'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Config, Scl } from '@/v2019C1/config'
-import type { RefEntry } from '@/v2019C1/constants'
+import type { RefEntry } from '@/v2019C1/extensions/reference'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 import type * as Core from '@dialecte/core'
 

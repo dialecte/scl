@@ -1,11 +1,11 @@
 import { isElementOf } from '@dialecte/core/helpers'
 
 import { Scl, SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
-import { PAIRS_BY_REF } from '@/v2019C1/constants'
+import { PAIRS_BY_REF } from '@/v2019C1/extensions/reference'
 import { buildReferencePath } from '@/v2019C1/extensions/reference/query/build'
 import { getRefEntriesForTarget, updateRefsForEntry } from '@/v2019C1/hooks/shared'
 
-import type { RefPairEntry } from '@/v2019C1/constants'
+import type { RefPairEntry } from '@/v2019C1/extensions/reference'
 
 // ── Public entry point ────────────────────────────────────────────────────────
 

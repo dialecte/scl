@@ -1,10 +1,13 @@
 import { isElementOf, toRawRecord } from '@dialecte/core/helpers'
 
 import { Scl, SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
-import { RESOLVABLE_RESOLUTIONS, RESOLUTION_TARGET_REFS } from '@/v2019C1/constants'
-import { reference as referenceApi } from '@/v2019C1/extensions/reference'
+import {
+	reference as referenceApi,
+	RESOLVABLE_RESOLUTIONS,
+	RESOLUTION_TARGET_REFS,
+} from '@/v2019C1/extensions/reference'
 
-import type { RefEntry } from '@/v2019C1/constants'
+import type { RefEntry } from '@/v2019C1/extensions/reference'
 
 export async function updateRefsForEntry(params: {
 	uuid: string

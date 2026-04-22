@@ -1,10 +1,13 @@
 import { isElementOf } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG, Scl } from '@/v2019C1/config'
-import { RESOLVABLE_RESOLUTIONS, RESOLUTION_TARGET_REFS } from '@/v2019C1/constants'
+import {
+	RESOLVABLE_RESOLUTIONS,
+	RESOLUTION_TARGET_REFS,
+} from '@/v2019C1/extensions/reference/constants'
 
 import type { ResolvedReference } from './find-refs-pointing-to.types'
-import type { RefEntry } from '@/v2019C1/constants'
+import type { RefEntry } from '@/v2019C1/extensions/reference'
 
 /**
  * Find all REF records that reference a target element by UUID,

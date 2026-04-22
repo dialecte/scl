@@ -1,4 +1,4 @@
-import { REF_CONTAINERS } from '@/v2019C1/constants'
+import { REF_CONTAINERS } from '@/v2019C1/extensions/reference'
 
 import type { Scl } from '@/v2019C1/config'
 
