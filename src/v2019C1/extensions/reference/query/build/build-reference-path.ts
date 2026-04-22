@@ -6,8 +6,9 @@ import { toRawRecord } from '@dialecte/core/helpers'
 
 import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
 import type { ResolutionType, ReferencePair } from '@/v2019C1/extensions/reference'
+import type * as Core from '@dialecte/core'
 
 /**
  * Build the path value to store on a REF element's path attribute
@@ -22,7 +23,7 @@ import type { ResolutionType, ReferencePair } from '@/v2019C1/extensions/referen
  * @returns The computed path value, or null if unresolvable
  */
 export async function buildReferencePath(
-	query: Scl.Query,
+	query: Core.Query<Config>,
 	params: {
 		reference: Scl.Ref<Scl.ElementsOf>
 		target: Scl.Ref<Scl.ElementsOf>

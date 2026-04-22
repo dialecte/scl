@@ -1,11 +1,13 @@
 import { isElementOf } from '@dialecte/core/helpers'
 
-import { Scl, SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { PAIRS_BY_REF } from '@/v2019C1/extensions/reference'
 import { buildReferencePath } from '@/v2019C1/extensions/reference/query/build'
 import { getRefEntriesForTarget, updateRefsForEntry } from '@/v2019C1/hooks/shared'
 
+import type { Scl, Config } from '@/v2019C1/config'
 import type { RefPairEntry } from '@/v2019C1/extensions/reference'
+import type * as Core from '@dialecte/core'
 
 // ── Public entry point ────────────────────────────────────────────────────────
 
@@ -20,7 +22,7 @@ import type { RefPairEntry } from '@/v2019C1/extensions/reference'
  */
 export async function setRefPaths<GenericElement extends Scl.ElementsOf>(params: {
 	childRecord: Scl.RawRecord<GenericElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { childRecord, query } = params
 
@@ -39,7 +41,7 @@ export async function setRefPaths<GenericElement extends Scl.ElementsOf>(params:
  */
 async function setRefPathOnCreatedRef<GenericElement extends Scl.ElementsOf>(params: {
 	childRecord: Scl.RawRecord<GenericElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { childRecord, query } = params
 
@@ -59,7 +61,7 @@ async function setRefPathOnCreatedRef<GenericElement extends Scl.ElementsOf>(par
 async function resolveRefPair<GenericElement extends Scl.ElementsOf>(params: {
 	childRecord: Scl.RawRecord<GenericElement>
 	pair: RefPairEntry
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation | null> {
 	const { childRecord, pair, query } = params
 
@@ -95,7 +97,7 @@ async function resolveRefPair<GenericElement extends Scl.ElementsOf>(params: {
 async function findTargetByUuid(params: {
 	uuidValue: string
 	targetTagNames: readonly string[]
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<{ tagName: string; id: string } | null> {
 	const { uuidValue, targetTagNames, query } = params
 
@@ -119,7 +121,7 @@ async function findTargetByUuid(params: {
  */
 async function setRefPathsOnCreatedTarget<GenericElement extends Scl.ElementsOf>(params: {
 	childRecord: Scl.RawRecord<GenericElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { childRecord, query } = params
 

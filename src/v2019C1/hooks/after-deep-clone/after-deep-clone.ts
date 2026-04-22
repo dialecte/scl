@@ -1,6 +1,7 @@
 import { remapClonedRefPaths } from './ref-paths'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * After deepClone completes, re-sweep all cloned REF elements:
@@ -12,7 +13,7 @@ import type { Scl } from '@/v2019C1/config'
  */
 export async function afterDeepClone(params: {
 	cumulativeCloneMappings: Scl.CloneMapping[]
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	return remapClonedRefPaths(params)
 }

@@ -1,4 +1,5 @@
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * Resets LNode IED bindings when the referenced IED is absent from the target DB.
@@ -10,7 +11,7 @@ import type { Scl } from '@/v2019C1/config'
  *   from spec naming, clear iedName/ldInst/lnUuid, reset spec naming sIedName/sLdInst
  * - IED absent + no LNodeSpecNaming → clear all binding attrs
  */
-export async function resetLNodes(tx: Scl.Transaction): Promise<void> {
+export async function resetLNodes(tx: Core.Transaction<Config>): Promise<void> {
 	const lnodes = await tx.getRecordsByTagName('LNode')
 
 	for (const lnode of lnodes) {
@@ -30,7 +31,7 @@ export async function resetLNodes(tx: Scl.Transaction): Promise<void> {
 // ── Local helpers ───────────────────────────────────────────────────────────
 
 async function resetLNodeBinding(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	lnode: Scl.TrackedRecord<'LNode'>,
 ): Promise<void> {
 	const lNodeSpecNaming = await tx.getChild(lnode, 'LNodeSpecNaming')

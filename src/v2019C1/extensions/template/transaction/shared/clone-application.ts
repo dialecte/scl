@@ -7,7 +7,8 @@ import { resolveStructureRef } from './resolve-structure-ref'
 import { stripAttributes } from '@dialecte/core/helpers'
 
 import type { TemplateStructure } from './template.types'
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * ASD content brick: clones an Application and all its satellites (Functions,
@@ -17,9 +18,9 @@ import type { Scl } from '@/v2019C1/config'
  * Reusable by ISD extraction as the inner Application clone step.
  */
 export async function cloneApplicationContent(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		structure: TemplateStructure
 	},

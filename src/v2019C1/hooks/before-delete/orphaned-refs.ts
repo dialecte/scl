@@ -2,7 +2,8 @@ import { toRawRecord } from '@dialecte/core/helpers'
 
 import { UUID_REFERENCE_PAIRS, KEEP_ON_ORPHAN_REFS } from '@/v2019C1/extensions/reference'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 // ── Orphaned refs cleanup ─────────────────────────────────────────────────────
 
@@ -17,7 +18,7 @@ import type { Scl } from '@/v2019C1/config'
  */
 export async function cleanOrphanedRefs<GenericElement extends Scl.ElementsOf>(params: {
 	record: Scl.RawRecord<GenericElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { record, query } = params
 
@@ -44,7 +45,7 @@ async function processRefTagName(params: {
 	refTagName: keyof typeof UUID_REFERENCE_PAIRS
 	subtreeIds: Set<string>
 	subtreeUuids: Set<string>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { refTagName, subtreeIds, subtreeUuids, query } = params
 
@@ -71,7 +72,7 @@ async function processOrphanedRef(params: {
 	refRecord: Scl.TrackedRecord<Scl.ElementsOf>
 	refPairs: RefPairs
 	subtreeUuids: Set<string>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { refTagName, refRecord, refPairs, subtreeUuids, query } = params
 
@@ -129,7 +130,7 @@ function buildClearedAttributesOp(
 
 async function buildDeleteRefOps(
 	refRecord: Scl.TrackedRecord<Scl.ElementsOf>,
-	query: Scl.Query,
+	query: Core.Query<Config>,
 ): Promise<Scl.Operation[]> {
 	const operations: Scl.Operation[] = [
 		{ status: 'deleted', oldRecord: toRawRecord(refRecord), newRecord: undefined },
@@ -157,7 +158,7 @@ async function buildDeleteRefOps(
 
 async function collectSubtreeData<GenericElement extends Scl.ElementsOf>(params: {
 	record: Scl.RawRecord<GenericElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 	ids: Set<string>
 	uuids: Set<string>
 }): Promise<void> {

@@ -1,9 +1,10 @@
 import { getLatestHitem } from '../query'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 export async function addEntry(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
 		filename: string
 		header: {

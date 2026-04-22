@@ -1,6 +1,6 @@
 import { isElementOf } from '@dialecte/core/helpers'
 
-import { SCL_DIALECTE_CONFIG, Scl } from '@/v2019C1/config'
+import { SCL_DIALECTE_CONFIG, Scl, Config } from '@/v2019C1/config'
 import {
 	RESOLVABLE_RESOLUTIONS,
 	RESOLUTION_TARGET_REFS,
@@ -8,6 +8,7 @@ import {
 
 import type { ResolvedReference } from './find-refs-pointing-to.types'
 import type { RefEntry } from '@/v2019C1/extensions/reference'
+import type * as Core from '@dialecte/core'
 
 /**
  * Find all REF records that reference a target element by UUID,
@@ -17,7 +18,7 @@ import type { RefEntry } from '@/v2019C1/extensions/reference'
  * point to the target's tagName, then queries the DB for matches.
  */
 export async function findRefsPointingTo(
-	query: Scl.Query,
+	query: Core.Query<Config>,
 	params: {
 		target: Scl.Ref<Scl.ElementsOf>
 		containerTagName?: Scl.ElementsOf
@@ -67,7 +68,7 @@ function getRefEntriesForTarget(tagName: string): RefEntry[] {
 }
 
 async function findAncestorByTagName(
-	query: Scl.Query,
+	query: Core.Query<Config>,
 	record: Scl.TrackedRecord<Scl.ElementsOf>,
 	tagName: Scl.ElementsOf,
 ): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {

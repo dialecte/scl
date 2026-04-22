@@ -1,9 +1,10 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
-import { Scl } from '@/v2019C1/config'
 import { reference, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
+import type { Scl, Config } from '@/v2019C1/config'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
+import type * as Core from '@dialecte/core'
 
 /**
  * Re-sweep all cloned REF elements:
@@ -12,7 +13,7 @@ import type { ReferencePair } from '@/v2019C1/extensions/reference'
  */
 export async function remapClonedRefPaths(params: {
 	cumulativeCloneMappings: Scl.CloneMapping[]
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { cumulativeCloneMappings, query } = params
 
@@ -33,7 +34,7 @@ export async function remapClonedRefPaths(params: {
 
 async function buildUuidMaps(
 	mappings: Scl.CloneMapping[],
-	query: Scl.Query,
+	query: Core.Query<Config>,
 ): Promise<{
 	uuidMap: Map<string, string>
 	uuidToRef: Map<string, { tagName: string; id: string }>
@@ -51,7 +52,7 @@ async function buildUuidMaps(
 async function registerMappingUuids(params: {
 	source: Scl.CloneMapping['source']
 	target: Scl.CloneMapping['target']
-	query: Scl.Query
+	query: Core.Query<Config>
 	uuidMap: Map<string, string>
 	uuidToRef: Map<string, { tagName: string; id: string }>
 }): Promise<void> {
@@ -74,7 +75,7 @@ async function remapClonedRef(params: {
 	target: Scl.CloneMapping['target']
 	uuidMap: Map<string, string>
 	uuidToRef: Map<string, { tagName: string; id: string }>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation | null> {
 	const { target, uuidMap, uuidToRef, query } = params
 	const tagName = target.tagName
@@ -122,7 +123,7 @@ async function remapPair(params: {
 	updatedAttributes: readonly { name: string; value: string }[]
 	uuidMap: Map<string, string>
 	uuidToRef: Map<string, { tagName: string; id: string }>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<{ name: string; value: string }[] | null> {
 	const { pair, tagName, refId, uuidMap, uuidToRef, query } = params
 	let attributes = [...params.updatedAttributes]
@@ -175,7 +176,7 @@ async function recomputePathAttribute(params: {
 	uuidToRef: Map<string, { tagName: string; id: string }>
 	tagName: string
 	refId: string
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<{ name: string; value: string }[] | null> {
 	const { attributes, pathAttrName, newUuid, uuidToRef, tagName, refId, query } = params
 

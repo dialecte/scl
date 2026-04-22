@@ -1,6 +1,7 @@
 import { stripAttributes } from '@dialecte/core/helpers'
 
-import type { Config, Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 import type { ExcludeFilter } from '@dialecte/core'
 
 /** Attributes stripped from every cloned tree before persistence. */
@@ -11,9 +12,9 @@ export const STRIP_ATTRS = ['templateUuid', 'originUuid'] as const
  * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
  */
 export async function cloneTree(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		ref: Scl.Ref<Scl.ElementsOf>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		exclude?: ExcludeFilter<Config>[]

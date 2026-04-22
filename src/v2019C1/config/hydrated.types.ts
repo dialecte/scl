@@ -1,12 +1,15 @@
 import type { Config } from './dialecte.config'
+import type { SCL_EXTENSION_MODULES } from '@/v2019C1/extensions'
 import type * as Core from '@dialecte/core'
 
+type SclExtensions = Core.MergedExtensions<typeof SCL_EXTENSION_MODULES>
+
 export namespace Scl {
-	export type Document = Core.Document<Config>
+	export type Document = Core.Document<Config, SclExtensions>
 	export type Context = Core.Context<Config>
 
-	export type Query = Core.Query<Config>
-	export type Transaction = Core.Transaction<Config>
+	export type Query = Core.Query<Config> & Core.QueryExtensions<SclExtensions>
+	export type Transaction = Core.Transaction<Config> & Core.AllExtensions<SclExtensions>
 	export type TransactionHooks = Core.TransactionHooks<Config>
 
 	// DEFINITION

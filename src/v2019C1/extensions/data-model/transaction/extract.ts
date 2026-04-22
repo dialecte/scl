@@ -1,12 +1,13 @@
 import { resolve } from '../query'
 
 import type { ResolvedDataModel } from '../query/resolve.types'
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 export async function extract(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'>)[]
 	},
 ): Promise<void> {

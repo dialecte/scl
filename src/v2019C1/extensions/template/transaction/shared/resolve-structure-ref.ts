@@ -1,14 +1,15 @@
 import { invariant } from '@dialecte/core/utils'
 
 import type { TemplateStructure } from './template.types'
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * Finds the nearest Substation/VoltageLevel/Bay ancestor of a source-side ref
  * and returns the matching target-side structural ref from the template structure.
  */
 export async function resolveStructureRef(
-	sourceQuery: Scl.Query,
+	sourceQuery: Core.Query<Config>,
 	ref: Scl.Ref<Scl.ElementsOf>,
 	structure: TemplateStructure,
 ): Promise<Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>> {

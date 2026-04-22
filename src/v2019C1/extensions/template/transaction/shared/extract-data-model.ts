@@ -1,6 +1,7 @@
 import { dataModel } from '@/v2019C1/extensions/data-model'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * Extract DataTypeTemplates for all LNodes under a given scope.
@@ -9,9 +10,9 @@ import type { Scl } from '@/v2019C1/config'
  * to look up lnType references. Target records have different ids and would not resolve.
  */
 export async function extractDataModel(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		scopeRef: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<void> {

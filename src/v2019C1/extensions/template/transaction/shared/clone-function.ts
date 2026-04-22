@@ -10,6 +10,7 @@ import { reference } from '@/v2019C1/extensions/reference'
 import type { TemplateStructure } from './template.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
+import type * as Core from '@dialecte/core'
 import type { ExcludeFilter } from '@dialecte/core'
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -20,9 +21,9 @@ import type { ExcludeFilter } from '@dialecte/core'
  * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
  */
 export async function cloneFunction(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 		targetParentRef: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
 		exclude?: ExcludeFilter<Config>[]
@@ -51,9 +52,9 @@ export async function cloneFunction(
  * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
  */
 export async function cloneFunctionCategories(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 		structure: TemplateStructure
 	},
@@ -80,7 +81,7 @@ export async function cloneFunctionCategories(
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function collectReferencedCategoryIds(
-	sourceQuery: Scl.Query,
+	sourceQuery: Core.Query<Config>,
 	functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
 ): Promise<Set<string>> {
 	const refs = await findRefsForFunctionTree(sourceQuery, functionRef)
@@ -93,7 +94,7 @@ async function collectReferencedCategoryIds(
 }
 
 async function findRefsForFunctionTree(
-	sourceQuery: Scl.Query,
+	sourceQuery: Core.Query<Config>,
 	functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
 ): Promise<ResolvedReference[]> {
 	const results = await reference.query.findRefsPointingTo(sourceQuery, {
@@ -117,8 +118,8 @@ async function findRefsForFunctionTree(
 }
 
 async function isCategoryAlreadyCloned(
-	tx: Scl.Transaction,
-	sourceQuery: Scl.Query,
+	tx: Core.Transaction<Config>,
+	sourceQuery: Core.Query<Config>,
 	categoryId: string,
 ): Promise<boolean> {
 	const sourceCat = await sourceQuery.getRecord({

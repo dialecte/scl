@@ -1,9 +1,9 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 import { invariant } from '@dialecte/core/utils'
 
-import { Scl } from '@/v2019C1'
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 
+import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -17,7 +17,7 @@ export async function wrapWithPrivateElementIfNeeded<
 >(params: {
 	childRecord: Scl.RawRecord<GenericElement>
 	parentRecord: Scl.RawRecord<GenericParentElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { childRecord, parentRecord, query } = params
 
@@ -76,7 +76,7 @@ export async function handleParentAsPrivateRecordCase<
 >(params: {
 	parentRecord: Scl.RawRecord<GenericParentElement>
 	childRecord: Scl.RawRecord<GenericElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { parentRecord, childRecord, query } = params
 	const privateRecord = parentRecord as unknown as Scl.RawRecord<'Private'>
@@ -122,7 +122,7 @@ export async function handleExistingPrivateRecordCase<
 	parentRecord: Scl.RawRecord<GenericParentElement>
 	updatedParentRecord: Scl.RawRecord<GenericParentElement>
 	childRecord: Scl.RawRecord<GenericElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { existingPrivateRef, parentRecord, updatedParentRecord, childRecord, query } = params
 

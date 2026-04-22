@@ -1,6 +1,7 @@
 import { cleanUp } from '@/v2019C1/extensions/clean-up'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * Universal post-extraction cleanup run after cloning records into a target DB.
@@ -12,7 +13,7 @@ import type { Scl } from '@/v2019C1/config'
  * Same function runs for all extraction scopes (FSD, ASD, ISD).
  * Behavior differs based on target DB content.
  */
-export async function postExtractionCleanup(tx: Scl.Transaction): Promise<void> {
+export async function postExtractionCleanup(tx: Core.Transaction<Config>): Promise<void> {
 	await cleanUp.transaction.orphanUuidRefs(tx)
 	await cleanUp.transaction.resetLNode(tx)
 	await cleanUp.transaction.pruneEmptyContainers(tx)

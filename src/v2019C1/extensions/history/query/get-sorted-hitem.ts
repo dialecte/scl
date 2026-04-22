@@ -1,10 +1,13 @@
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * Query extension: returns all Hitem descendants of the History element,
  * sorted by version then revision (ascending).
  */
-export async function getSortedHitems(query: Scl.Query): Promise<Scl.TrackedRecord<'Hitem'>[]> {
+export async function getSortedHitems(
+	query: Core.Query<Config>,
+): Promise<Scl.TrackedRecord<'Hitem'>[]> {
 	const history = await query.getRecord({ tagName: 'History' })
 	if (!history) return []
 

@@ -2,10 +2,11 @@ import { isChildOf } from '@dialecte/core/helpers'
 import { invariant } from '@dialecte/core/utils'
 
 import type { ResolvedDataModel, DataModelMap } from './resolve.types'
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 export async function resolve(
-	query: Scl.Query,
+	query: Core.Query<Config>,
 	params: { records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'>)[] },
 ): Promise<ResolvedDataModel> {
 	const { records } = params
@@ -67,7 +68,7 @@ function addIfNew<T>(map: Map<string, T>, id: string, record: T): boolean {
 }
 
 async function resolveDataAttributes(params: {
-	query: Scl.Query | Scl.Transaction
+	query: Core.Query<Config> | Core.Transaction<Config>
 	parent: Scl.TrackedRecord<'DOType'> | Scl.TrackedRecord<'DAType'>
 	dataModelMap: DataModelMap
 }): Promise<void> {

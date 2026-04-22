@@ -1,6 +1,8 @@
-import { Scl } from '@/v2019C1/config'
 import { PATH_CONTRIBUTING_ATTRIBUTES } from '@/v2019C1/extensions/reference'
 import { getRefEntriesForTarget, updateRefsForEntry } from '@/v2019C1/hooks/shared'
+
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * When a target element is updated (e.g. renamed), recompute path attrs
@@ -13,7 +15,7 @@ import { getRefEntriesForTarget, updateRefsForEntry } from '@/v2019C1/hooks/shar
 export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(params: {
 	oldRecord: Scl.RawRecord<GenericElement>
 	newRecord: Scl.RawRecord<GenericElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { oldRecord, newRecord, query } = params
 	const operations: Scl.Operation[] = []
@@ -50,7 +52,7 @@ function hasPathAttributeChange<GenericElement extends Scl.ElementsOf>(
 
 async function updateDescendantRefPaths<GenericElement extends Scl.ElementsOf>(params: {
 	newRecord: Scl.RawRecord<GenericElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { newRecord, query } = params
 	const ref = { tagName: newRecord.tagName, id: newRecord.id } as Scl.Ref<GenericElement>

@@ -5,6 +5,7 @@ import { UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { RefTagName, TargetOf } from '@/v2019C1/extensions/reference'
+import type * as Core from '@dialecte/core'
 import type { DescendantsFilter, ExcludeFilter } from '@dialecte/core'
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -19,9 +20,9 @@ export async function findMissingReferencedRecords<
 	Ref extends RefTagName,
 	Target extends TargetOf<Ref>,
 >(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		scopeRef: Scl.Ref<Scl.AncestorsOf<Ref>>
 		refTagName: Ref
 		targetTagName: Target
@@ -47,6 +48,7 @@ export async function findMissingReferencedRecords<
 	for (const uuid of uuids) {
 		const uuidFilter = { uuid } as Scl.AttributesValueObjectOf<Target>
 		const [existing] = await tx.findByAttributes({ tagName: targetTagName, attributes: uuidFilter })
+
 		if (existing) continue
 
 		const [source] = await sourceQuery.findByAttributes({
@@ -70,9 +72,9 @@ export async function findMissingReferencedRecords<
  * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
  */
 export async function cloneReferencedRecords<Ref extends RefTagName, Target extends TargetOf<Ref>>(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		scopeRef: Scl.Ref<Scl.AncestorsOf<Ref>>
 		refTagName: Ref
 		targetTagName: Target
@@ -99,9 +101,9 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 // DESCENDANTS guarantees scopeRef is an ancestor of every derived refTagName.
 // TypeScript cannot verify runtime-derived descendant constraints; cast once.
 type CloneRefsFn = (
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		scopeRef: Scl.Ref<Scl.ElementsOf>
 		refTagName: RefTagName
 		targetTagName: Scl.ElementsOf
@@ -118,9 +120,9 @@ type CloneRefsFn = (
  * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
  */
 export async function cloneAllReferencedTargets(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		scopeTagName: Scl.ElementsOf
 		scopeRef: Scl.Ref<Scl.ElementsOf>
 		targetParent: Scl.Ref<Scl.ElementsOf>

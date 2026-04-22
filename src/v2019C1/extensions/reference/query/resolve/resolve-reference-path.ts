@@ -7,8 +7,9 @@ import { DEFINITION } from '@/v2019C1/definition'
 import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
 import type { PathSegment } from '../build/path-segment.types'
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
 import type { ResolutionType } from '@/v2019C1/extensions/reference'
+import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -33,7 +34,7 @@ export type ResolveResult = {
  * // → { record: <LNode PXCBR1>, qualifier: "Pos.stVal" }
  */
 export async function resolveReferencePath(
-	query: Scl.Query | Scl.Transaction,
+	query: Core.Query<Config> | Core.Transaction<Config>,
 	record: Scl.TrackedRecord<Scl.ElementsOf>,
 	pathAttribute: string,
 ): Promise<ResolveResult | undefined> {
@@ -122,7 +123,7 @@ export function decomposeLnClassSegment(
 }
 
 async function findBySegmentAndAncestry(params: {
-	query: Scl.Query | Scl.Transaction
+	query: Core.Query<Config> | Core.Transaction<Config>
 	targets: readonly string[]
 	segment: PathSegment
 	expectedAncestry: PathSegment[]
@@ -156,7 +157,7 @@ async function findBySegmentAndAncestry(params: {
 }
 
 async function findLnClassTarget(params: {
-	query: Scl.Query | Scl.Transaction
+	query: Core.Query<Config> | Core.Transaction<Config>
 	tagName: string
 	segment: PathSegment
 	instAttr: string
@@ -189,7 +190,7 @@ async function findLnClassTarget(params: {
 }
 
 async function findBySegmentScan(params: {
-	query: Scl.Query | Scl.Transaction
+	query: Core.Query<Config> | Core.Transaction<Config>
 	tagName: string
 	segment: PathSegment
 	expectedAncestry: PathSegment[]
@@ -211,7 +212,7 @@ async function findBySegmentScan(params: {
 }
 
 async function matchesAncestry(
-	query: Scl.Query | Scl.Transaction,
+	query: Core.Query<Config> | Core.Transaction<Config>,
 	candidate: Scl.TrackedRecord<Scl.ElementsOf>,
 	expectedSegments: PathSegment[],
 ): Promise<boolean> {

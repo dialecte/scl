@@ -4,7 +4,8 @@ import { parsePathSegments } from './parse-path'
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import type { PathSegment } from '../build/path-segment.types'
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * Resolves a canonical SCL path to the record it points to.
@@ -18,7 +19,7 @@ import type { Scl } from '@/v2019C1/config'
  * // → TrackedRecord for ConductingEquipment name="CE1"
  */
 export async function resolveElementPath(
-	query: Scl.Query | Scl.Transaction,
+	query: Core.Query<Config> | Core.Transaction<Config>,
 	path: string,
 ): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
 	const segments = parsePathSegments(path)
@@ -37,7 +38,7 @@ export async function resolveElementPath(
 // ── Internal: tree walk  ─────────────────────────────────────────────────────
 
 async function walkSegments(params: {
-	query: Scl.Query | Scl.Transaction
+	query: Core.Query<Config> | Core.Transaction<Config>
 	current: Scl.TrackedRecord<Scl.ElementsOf>
 	segments: PathSegment[]
 	index: number

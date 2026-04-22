@@ -1,6 +1,7 @@
 import { UUID_REFERENCE_PAIRS, KEEP_ON_ORPHAN_REFS } from '@/v2019C1/extensions/reference'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * Walks every UUID reference pair in the target DB.
@@ -8,7 +9,7 @@ import type { Scl } from '@/v2019C1/config'
  * - Target absent + keep-on-orphan → clear uuid/path/companion attrs
  * - Target absent + delete-on-orphan → delete record
  */
-export async function orphanUuidRefs(tx: Scl.Transaction): Promise<void> {
+export async function orphanUuidRefs(tx: Core.Transaction<Config>): Promise<void> {
 	const refTagNames = Object.keys(UUID_REFERENCE_PAIRS) as (keyof typeof UUID_REFERENCE_PAIRS)[]
 
 	for (const refTagName of refTagNames) {
@@ -54,7 +55,7 @@ export async function orphanUuidRefs(tx: Scl.Transaction): Promise<void> {
 // ── Local helpers ───────────────────────────────────────────────────────────
 
 async function findTargetByUuid(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	uuid: string,
 	targetTagNames: readonly string[],
 ): Promise<boolean> {

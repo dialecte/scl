@@ -1,6 +1,6 @@
 import { isElementOf, toRawRecord } from '@dialecte/core/helpers'
 
-import { Scl, SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+import { Scl, SCL_DIALECTE_CONFIG, Config } from '@/v2019C1/config'
 import {
 	reference as referenceApi,
 	RESOLVABLE_RESOLUTIONS,
@@ -8,12 +8,13 @@ import {
 } from '@/v2019C1/extensions/reference'
 
 import type { RefEntry } from '@/v2019C1/extensions/reference'
+import type * as Core from '@dialecte/core'
 
 export async function updateRefsForEntry(params: {
 	uuid: string
 	entry: RefEntry
 	target: Scl.Ref<Scl.ElementsOf>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { uuid, entry, target, query } = params
 

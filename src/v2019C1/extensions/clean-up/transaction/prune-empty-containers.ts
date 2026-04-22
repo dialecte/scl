@@ -1,6 +1,7 @@
 import { REF_CONTAINERS } from '@/v2019C1/extensions/reference'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * Removes empty containers: REF_CONTAINERS entries (inner→outer) and Private elements.
@@ -8,7 +9,7 @@ import type { Scl } from '@/v2019C1/config'
  * When all children of a ref type are deleted, their container
  * hierarchy may become empty. Private elements emptied by ref cleanup are also pruned.
  */
-export async function pruneEmptyContainers(tx: Scl.Transaction): Promise<void> {
+export async function pruneEmptyContainers(tx: Core.Transaction<Config>): Promise<void> {
 	const tagNames = [...Object.values(REF_CONTAINERS).flat(), 'Private']
 
 	for (const tagName of tagNames) {

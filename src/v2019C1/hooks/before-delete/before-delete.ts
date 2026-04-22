@@ -1,6 +1,7 @@
 import { cleanOrphanedRefs } from './orphaned-refs'
 
-import { Scl } from '@/v2019C1'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * Before a record (and its subtree) is deleted, clean up external refs that
@@ -8,7 +9,7 @@ import { Scl } from '@/v2019C1'
  */
 export async function beforeDelete<GenericElement extends Scl.ElementsOf>(params: {
 	record: Scl.RawRecord<GenericElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	return cleanOrphanedRefs(params)
 }

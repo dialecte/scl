@@ -5,12 +5,13 @@ import { postExtractionCleanup } from '../shared/post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 export async function extractToFsd(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 		tool: Scl.AttributesValueObjectOf<'Header'>['toolID']
 		who: Scl.AttributesValueObjectOf<'Hitem'>['who']

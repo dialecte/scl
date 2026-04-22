@@ -1,7 +1,8 @@
 import { wrapWithPrivateElementIfNeeded } from './private-wrapper'
 import { setRefPaths } from './ref-paths'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 export async function afterCreated<
 	GenericElement extends Scl.ElementsOf,
@@ -9,7 +10,7 @@ export async function afterCreated<
 >(params: {
 	childRecord: Scl.RawRecord<GenericElement>
 	parentRecord: Scl.RawRecord<GenericParentElement>
-	query: Scl.Query
+	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { childRecord, parentRecord, query } = params
 

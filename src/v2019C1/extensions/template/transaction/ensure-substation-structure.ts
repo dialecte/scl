@@ -1,6 +1,7 @@
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
-export async function ensureSubstationTemplateStructure(tx: Scl.Transaction): Promise<{
+export async function ensureSubstationTemplateStructure(tx: Core.Transaction<Config>): Promise<{
 	Substation: Scl.RawRecord<'Substation'>
 	VoltageLevel: Scl.RawRecord<'VoltageLevel'>
 	Bay: Scl.RawRecord<'Bay'>
