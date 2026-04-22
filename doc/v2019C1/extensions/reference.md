@@ -211,6 +211,44 @@ References to `ExtRef`/`ExtCtrl` inside the IED section via `intAddr`. Supports 
 
 References to `BehaviorDescription` elements by name. Only the target's name segment is used as the path value.
 
+### `unsupported`
+
+Path format requires context not available during streaming. These pairs are recognized but not resolvable at runtime.
+
+---
+
+## Exported constants
+
+The `reference` module re-exports its internal lookup tables and types for advanced use cases (custom hooks, validation, tooling).
+
+```ts
+import {
+	RESOLUTION_TYPE,
+	UUID_REFERENCE_PAIRS,
+	RESOLUTION_TARGET_REFS,
+	RESOLVABLE_RESOLUTIONS,
+	PAIRS_BY_REF,
+	ALL_REF_UUID_ATTRIBUTES,
+	KEEP_ON_ORPHAN_REFS,
+	REF_CONTAINERS,
+	PATH_EXTRACTION_CONFIG,
+	PATH_CONTRIBUTING_ATTRIBUTES,
+} from '@dialecte/scl/v2019C1'
+```
+
+| Constant                       | Description                                                                |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `RESOLUTION_TYPE`              | Enum-like object of strategy keys (`direct`, `lnode`, etc.)                |
+| `UUID_REFERENCE_PAIRS`         | All REF element + path attribute -> target + strategy pairs                |
+| `RESOLUTION_TARGET_REFS`       | Derived: target tag names that can be referenced                           |
+| `RESOLVABLE_RESOLUTIONS`       | Derived: pairs whose strategy is not `unsupported`                         |
+| `PAIRS_BY_REF`                 | Derived: pairs grouped by REF element tag name                             |
+| `ALL_REF_UUID_ATTRIBUTES`      | Derived: all uuid attribute names across pairs                             |
+| `KEEP_ON_ORPHAN_REFS`          | Rules for which attributes to preserve when a REF becomes orphaned         |
+| `REF_CONTAINERS`               | Tag names considered REF containers (for `findRefsPointingTo`)             |
+| `PATH_EXTRACTION_CONFIG`       | Per-element strategy for building path segments (`name`, `lnClass`, etc.)  |
+| `PATH_CONTRIBUTING_ATTRIBUTES` | Attribute names that affect path segments (derived from extraction config) |
+
 ---
 
 ## Typical workflows
