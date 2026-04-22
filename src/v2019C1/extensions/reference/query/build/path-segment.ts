@@ -12,8 +12,44 @@
  * IED section paths:     "IED1/LD0/XCBR1.TrCmd.stVal"
  */
 
+import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
+
 import type { PathSegment, PathExtractor } from './path-segment.types'
+import type { ExtractionStrategy } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import type { AnyRawRecord } from '@dialecte/core'
+
+// ── Extractor builders ───────────────────────────────────────────────
+
+function buildExtractor(strategy: ExtractionStrategy): PathExtractor {
+	switch (strategy.type) {
+		case 'transparent':
+			return () => null
+		case 'name': {
+			const separator = strategy.separator ?? '/'
+			return (record) => {
+				const name = getAttribute(record, 'name')
+				return name ? { segment: name, separator } : null
+			}
+		}
+		case 'lnClass':
+			return (record) => {
+				const lnClass = getAttribute(record, 'lnClass')
+				if (!lnClass) return null
+				const prefix = getAttribute(record, 'prefix') ?? ''
+				const inst = getAttribute(record, 'inst') ?? getAttribute(record, 'lnInst') ?? ''
+				return { segment: `${prefix}${lnClass}${inst}`, separator: '/' }
+			}
+		case 'attribute':
+			return (record) => {
+				const val = getAttribute(record, strategy.attr)
+				return val ? { segment: val, separator: strategy.separator } : null
+			}
+	}
+}
+
+const PATH_EXTRACTORS: Record<string, PathExtractor> = Object.fromEntries(
+	Object.entries(PATH_EXTRACTION_CONFIG).map(([tag, strategy]) => [tag, buildExtractor(strategy)]),
+)
 
 // ── Public Methods ───────────────────────────────────────────────────
 
@@ -63,93 +99,6 @@ export function buildPathFromAncestry(params: {
 
 	if (parts.length === 0) return null
 	return joinPathParts(parts)
-}
-
-// ── Extractor factories ───────────────────────────────────────────────
-
-/** Element does not contribute a segment (transparent container). */
-function transparent(): PathExtractor {
-	return () => null
-}
-
-/** Use the `name` attribute as the path segment. */
-function byName(separator: '/' | '.' = '/'): PathExtractor {
-	return (record) => {
-		const name = getAttribute(record, 'name')
-		return name ? { segment: name, separator } : null
-	}
-}
-
-/** Use the lnClass composite (prefix + lnClass + inst) as the path segment. */
-function byLnClass(): PathExtractor {
-	return (record) => {
-		const lnClass = getAttribute(record, 'lnClass')
-		if (!lnClass) return null
-		const prefix = getAttribute(record, 'prefix') ?? ''
-		const inst = getAttribute(record, 'inst') ?? getAttribute(record, 'lnInst') ?? ''
-		return { segment: `${prefix}${lnClass}${inst}`, separator: '/' }
-	}
-}
-
-/** Use a specific attribute as the path segment. */
-function byAttribute(attr: string, separator: '/' | '.'): PathExtractor {
-	return (record) => {
-		const val = getAttribute(record, attr)
-		return val ? { segment: val, separator } : null
-	}
-}
-
-/**
- * Strategy map for element-specific path extraction.
- *
- * Covers all elements that appear as path segment contributors or as UUID
- * reference targets in UUID_REFERENCE_PAIRS.
- */
-const PATH_EXTRACTORS: Record<string, PathExtractor> = {
-	// Transparent — do not contribute a path segment
-	AccessPoint: transparent(),
-	Server: transparent(),
-
-	// IED section — structural containers
-	LDevice: byAttribute('inst', '/'),
-	IED: byName(),
-
-	// IED section — logical nodes (targets of lnode resolution)
-	LN: byLnClass(),
-	LN0: byLnClass(),
-
-	// IED section — data references
-	ExtRef: byAttribute('intAddr', '.'),
-	ExtCtrl: byAttribute('intAddr', '.'),
-
-	// Process section — named path contributors (targets of lnode / ied-address resolution)
-	SourceRef: byAttribute('input', '.'),
-	ControlRef: byAttribute('output', '.'),
-
-	// Process section — targets of direct UUID resolution
-	Substation: byName(),
-	VoltageLevel: byName(),
-	Bay: byName(),
-	ConductingEquipment: byName(),
-	PowerTransformer: byName(),
-	TransformerWinding: byName(),
-	GeneralEquipment: byName(),
-	SubEquipment: byName(),
-	LNode: byLnClass(),
-	Function: byName(),
-	SubFunction: byName(),
-	EqFunction: byName(),
-	EqSubFunction: byName(),
-	AllocationRole: byName(),
-	BehaviorDescription: byName(),
-	FunctionCategory: byName(),
-	SubCategory: byName(),
-	FunctionalVariant: byName(),
-	FunctionalSubVariant: byName(),
-	ProcessResource: byName(),
-	PowerSystemRelation: byName(),
-	Variable: byName(),
-	Process: byName(),
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────

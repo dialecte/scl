@@ -177,13 +177,138 @@ describe('getPathSegment', () => {
 			expected: null,
 		},
 
-		// Elements with no registered extractor
+		// Transparent containers
 		'Private element → no path segment': {
 			record: createSclTestRecord({
 				record: { tagName: 'Private', attributes: { type: 'eIEC61850-6-100' } },
 			}),
 			expected: null,
 		},
+		'LNodeInputs element → no path segment': {
+			record: createSclTestRecord({ record: { tagName: 'LNodeInputs' } }),
+			expected: null,
+		},
+		'LNodeOutputs element → no path segment': {
+			record: createSclTestRecord({ record: { tagName: 'LNodeOutputs' } }),
+			expected: null,
+		},
+
+		// Data specifications (6-100, dot-separated)
+		'DOS with name → name as dot-separated segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'DOS', attributes: { name: 'Tr' } },
+			}),
+			expected: { segment: 'Tr', separator: '.' },
+		},
+		'DOS without name → no path segment': {
+			record: createSclTestRecord({ record: { tagName: 'DOS' } }),
+			expected: null,
+		},
+		'DAS with name → name as dot-separated segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'DAS', attributes: { name: 'general' } },
+			}),
+			expected: { segment: 'general', separator: '.' },
+		},
+		'DAS without name → no path segment': {
+			record: createSclTestRecord({ record: { tagName: 'DAS' } }),
+			expected: null,
+		},
+		'SDS with name → name as dot-separated segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'SDS', attributes: { name: 'q' } },
+			}),
+			expected: { segment: 'q', separator: '.' },
+		},
+		'SDS without name → no path segment': {
+			record: createSclTestRecord({ record: { tagName: 'SDS' } }),
+			expected: null,
+		},
+
+		// Data instances (IED side, dot-separated)
+		'DOI with name → name as dot-separated segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'DOI', attributes: { name: 'Pos' } },
+			}),
+			expected: { segment: 'Pos', separator: '.' },
+		},
+		'DOI without name → no path segment': {
+			record: createSclTestRecord({ record: { tagName: 'DOI' } }),
+			expected: null,
+		},
+		'SDI with name → name as dot-separated segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'SDI', attributes: { name: 'origin' } },
+			}),
+			expected: { segment: 'origin', separator: '.' },
+		},
+		'SDI without name → no path segment': {
+			record: createSclTestRecord({ record: { tagName: 'SDI' } }),
+			expected: null,
+		},
+		'DAI with name → name as dot-separated segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'DAI', attributes: { name: 'ctlVal' } },
+			}),
+			expected: { segment: 'ctlVal', separator: '.' },
+		},
+		'DAI without name → no path segment': {
+			record: createSclTestRecord({ record: { tagName: 'DAI' } }),
+			expected: null,
+		},
+
+		// Structural elements (slash-separated)
+		'Line with name → name as path segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'Line', attributes: { name: 'L1' } },
+			}),
+			expected: { segment: 'L1', separator: '/' },
+		},
+		'Line without name → no path segment': {
+			record: createSclTestRecord({ record: { tagName: 'Line' } }),
+			expected: null,
+		},
+		'ConnectivityNode with name → name as path segment': {
+			record: createSclTestRecord({
+				record: {
+					tagName: 'ConnectivityNode',
+					attributes: { name: 'CN1', pathName: 'S1/V1/B1/CN1' },
+				},
+			}),
+			expected: { segment: 'CN1', separator: '/' },
+		},
+		'TapChanger with name → name as path segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'TapChanger', attributes: { name: 'TC1', type: 'LTC' } },
+			}),
+			expected: { segment: 'TC1', separator: '/' },
+		},
+		'FunctionTemplate with name → name as path segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'FunctionTemplate', attributes: { name: 'FT1' } },
+			}),
+			expected: { segment: 'FT1', separator: '/' },
+		},
+		'SubFunctionTemplate with name → name as path segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'SubFunctionTemplate', attributes: { name: 'SFT1' } },
+			}),
+			expected: { segment: 'SFT1', separator: '/' },
+		},
+		'Application with name → name as path segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'Application', attributes: { name: 'App1' } },
+			}),
+			expected: { segment: 'App1', separator: '/' },
+		},
+		'FunctionalVariantGroup with name → name as path segment': {
+			record: createSclTestRecord({
+				record: { tagName: 'FunctionalVariantGroup', attributes: { name: 'FVG1' } },
+			}),
+			expected: { segment: 'FVG1', separator: '/' },
+		},
+
+		// Elements with no registered extractor
 		'SCL element → no path segment': {
 			record: createSclTestRecord({ record: { tagName: 'SCL' } }),
 			expected: null,
@@ -401,6 +526,118 @@ describe('buildElementPath', () => {
 				createSclTestRecord({ record: { tagName: 'Substation', attributes: { name: 'S1' } } }),
 			],
 			expected: 'S1/PSR1',
+		},
+
+		// 6-100 data specification paths (DOS/DAS/SDS)
+		'DOS under LNode → dot-separated after LNode': {
+			record: createSclTestRecord({
+				record: { tagName: 'DOS', attributes: { name: 'Tr' } },
+			}),
+			ancestry: [
+				createSclTestRecord({ record: { tagName: 'SCL' } }),
+				createSclTestRecord({ record: { tagName: 'Substation', attributes: { name: 'S1' } } }),
+				createSclTestRecord({ record: { tagName: 'VoltageLevel', attributes: { name: 'V1' } } }),
+				createSclTestRecord({ record: { tagName: 'Bay', attributes: { name: 'B1' } } }),
+				createSclTestRecord({
+					record: { tagName: 'LNode', attributes: { lnClass: 'PTRC', lnInst: '1' } },
+				}),
+				createSclTestRecord({
+					record: { tagName: 'Private', attributes: { type: 'eIEC61850-6-100' } },
+				}),
+			],
+			expected: 'S1/V1/B1/PTRC1.Tr',
+		},
+		'DAS under DOS → dot-separated chain': {
+			record: createSclTestRecord({
+				record: { tagName: 'DAS', attributes: { name: 'general' } },
+			}),
+			ancestry: [
+				createSclTestRecord({ record: { tagName: 'SCL' } }),
+				createSclTestRecord({ record: { tagName: 'Substation', attributes: { name: 'S1' } } }),
+				createSclTestRecord({ record: { tagName: 'VoltageLevel', attributes: { name: 'V1' } } }),
+				createSclTestRecord({ record: { tagName: 'Bay', attributes: { name: 'B1' } } }),
+				createSclTestRecord({
+					record: { tagName: 'LNode', attributes: { lnClass: 'PTRC', lnInst: '1' } },
+				}),
+				createSclTestRecord({
+					record: { tagName: 'Private', attributes: { type: 'eIEC61850-6-100' } },
+				}),
+				createSclTestRecord({ record: { tagName: 'DOS', attributes: { name: 'Tr' } } }),
+			],
+			expected: 'S1/V1/B1/PTRC1.Tr.general',
+		},
+		'SDS under DAS under DOS → full dot-separated data path': {
+			record: createSclTestRecord({
+				record: { tagName: 'SDS', attributes: { name: 'q' } },
+			}),
+			ancestry: [
+				createSclTestRecord({ record: { tagName: 'SCL' } }),
+				createSclTestRecord({ record: { tagName: 'Substation', attributes: { name: 'S1' } } }),
+				createSclTestRecord({ record: { tagName: 'Bay', attributes: { name: 'B1' } } }),
+				createSclTestRecord({
+					record: { tagName: 'LNode', attributes: { lnClass: 'PTRC', lnInst: '1' } },
+				}),
+				createSclTestRecord({
+					record: { tagName: 'Private', attributes: { type: 'eIEC61850-6-100' } },
+				}),
+				createSclTestRecord({ record: { tagName: 'DOS', attributes: { name: 'Tr' } } }),
+				createSclTestRecord({ record: { tagName: 'DAS', attributes: { name: 'general' } } }),
+			],
+			expected: 'S1/B1/PTRC1.Tr.general.q',
+		},
+
+		// IED data instance paths (DOI/SDI/DAI)
+		'DOI under LN → dot-separated after LN': {
+			record: createSclTestRecord({
+				record: { tagName: 'DOI', attributes: { name: 'Pos' } },
+			}),
+			ancestry: [
+				createSclTestRecord({ record: { tagName: 'SCL' } }),
+				createSclTestRecord({ record: { tagName: 'IED', attributes: { name: 'IED1' } } }),
+				createSclTestRecord({ record: { tagName: 'AccessPoint', attributes: { name: 'AP1' } } }),
+				createSclTestRecord({ record: { tagName: 'Server' } }),
+				createSclTestRecord({ record: { tagName: 'LDevice', attributes: { inst: 'LD0' } } }),
+				createSclTestRecord({
+					record: {
+						tagName: 'LN',
+						attributes: { prefix: '', lnClass: 'XCBR', inst: '1', lnType: '' },
+					},
+				}),
+			],
+			expected: 'IED1/LD0/XCBR1.Pos',
+		},
+		'DAI under SDI under DOI → full IED data instance path': {
+			record: createSclTestRecord({
+				record: { tagName: 'DAI', attributes: { name: 'ctlVal' } },
+			}),
+			ancestry: [
+				createSclTestRecord({ record: { tagName: 'SCL' } }),
+				createSclTestRecord({ record: { tagName: 'IED', attributes: { name: 'IED1' } } }),
+				createSclTestRecord({ record: { tagName: 'AccessPoint', attributes: { name: 'AP1' } } }),
+				createSclTestRecord({ record: { tagName: 'Server' } }),
+				createSclTestRecord({ record: { tagName: 'LDevice', attributes: { inst: 'LD0' } } }),
+				createSclTestRecord({
+					record: {
+						tagName: 'LN',
+						attributes: { prefix: '', lnClass: 'XCBR', inst: '1', lnType: '' },
+					},
+				}),
+				createSclTestRecord({ record: { tagName: 'DOI', attributes: { name: 'Pos' } } }),
+				createSclTestRecord({ record: { tagName: 'SDI', attributes: { name: 'origin' } } }),
+			],
+			expected: 'IED1/LD0/XCBR1.Pos.origin.ctlVal',
+		},
+
+		// Line topology
+		'Bay under Line → Line included in path': {
+			record: createSclTestRecord({
+				record: { tagName: 'Bay', attributes: { name: 'B1' } },
+			}),
+			ancestry: [
+				createSclTestRecord({ record: { tagName: 'SCL' } }),
+				createSclTestRecord({ record: { tagName: 'Line', attributes: { name: 'L1' } } }),
+			],
+			expected: 'L1/B1',
 		},
 	}
 

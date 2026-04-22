@@ -4,16 +4,8 @@ import { DESCENDANTS } from '@/v2019C1/definition'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { RefTagName, TargetOf } from '@/v2019C1/extensions/reference'
 import type { DescendantsFilter, ExcludeFilter } from '@dialecte/core'
-
-// ── Type helpers ──────────────────────────────────────────────────────────────
-
-/** All SCL elements that are valid ref tag names (have uuid reference pairs). */
-type RefTagName = keyof typeof UUID_REFERENCE_PAIRS & Scl.ElementsOf
-
-/** Valid target tag names for a given ref tag, narrowed to known SCL elements. */
-type TargetOf<Ref extends keyof typeof UUID_REFERENCE_PAIRS> =
-	(typeof UUID_REFERENCE_PAIRS)[Ref][number]['target'][number] & Scl.ElementsOf
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
