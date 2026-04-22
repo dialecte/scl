@@ -42,7 +42,7 @@ export async function extractToFsd(
 		},
 	})
 
-	const uuidRemap = await cloneFunction(tx, {
+	await cloneFunction(tx, {
 		sourceQuery,
 		functionRef,
 		targetParentRef: substationRef,
@@ -53,7 +53,6 @@ export async function extractToFsd(
 		sourceQuery,
 		functionRef,
 		structure,
-		uuidRemap,
 	})
 
 	await postExtractionCleanup(tx)

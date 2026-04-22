@@ -1,12 +1,10 @@
 import { cloneFunction, cloneFunctionCategories } from './clone-function'
 import { cloneAllReferencedTargets, findMissingReferencedRecords } from './clone-referenced'
-import { remapUuidAttributes, STRIP_ATTRS } from './clone-utils'
+import { STRIP_ATTRS } from './clone-utils'
 import { ALWAYS_EXCLUDE } from './exclude-filters'
 import { resolveStructureRef } from './resolve-structure-ref'
 
 import { stripAttributes } from '@dialecte/core/helpers'
-
-import { ALL_REF_UUID_ATTRIBUTES } from '@/v2019C1/constants'
 
 import type { TemplateStructure } from './template.types'
 import type { Scl } from '@/v2019C1/config'
@@ -15,7 +13,7 @@ import type { Scl } from '@/v2019C1/config'
  * ASD content brick: clones an Application and all its satellites (Functions,
  * AllocationRoles, BehaviorDescriptions) into the target template structure.
  *
- * Returns the merged sourceUuid -> targetUuid remap.
+ * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
  * Reusable by ISD extraction as the inner Application clone step.
  */
 export async function cloneApplicationContent(
@@ -25,7 +23,7 @@ export async function cloneApplicationContent(
 		applicationRef: Scl.Ref<'Application'>
 		structure: TemplateStructure
 	},
-): Promise<Map<string, string>> {
+): Promise<void> {
 	const { sourceQuery, applicationRef, structure } = params
 	const substationRef: Scl.Ref<'Substation'> = {
 		tagName: 'Substation',
@@ -33,7 +31,7 @@ export async function cloneApplicationContent(
 	}
 
 	const tree = await sourceQuery.getTree(applicationRef, { exclude: ALWAYS_EXCLUDE })
-	if (!tree) return new Map()
+	if (!tree) return
 
 	// 1. Functions: resolve structural parent per function, clone tree + data model
 	const missingFunctions = await findMissingReferencedRecords(tx, {
@@ -42,31 +40,28 @@ export async function cloneApplicationContent(
 		refTagName: 'FunctionRef',
 		targetTagName: 'Function',
 	})
-	const functionRemap = new Map<string, string>()
 	for (const ref of missingFunctions) {
 		const targetParentRef = await resolveStructureRef(sourceQuery, ref, structure)
-		const partial = await cloneFunction(tx, {
+		await cloneFunction(tx, {
 			sourceQuery,
 			functionRef: ref,
 			targetParentRef,
 			exclude: ALWAYS_EXCLUDE,
 		})
-		for (const [key, value] of partial) functionRemap.set(key, value)
 	}
 
-	// 2. FunctionCategories: clone at source-side structural level with functionUuid remap
+	// 2. FunctionCategories: clone at source-side structural level
 	for (const ref of missingFunctions) {
 		await cloneFunctionCategories(tx, {
 			sourceQuery,
 			functionRef: ref,
 			structure,
-			uuidRemap: functionRemap,
 		})
 	}
 
 	// 3. All other referenced targets - derived from UUID_REFERENCE_PAIRS and DESCENDANTS
 	const REFS_ALREADY_HANDLED = new Set(['FunctionRef', 'FunctionCategoryRef'])
-	const genericRemap = await cloneAllReferencedTargets(tx, {
+	await cloneAllReferencedTargets(tx, {
 		sourceQuery,
 		scopeTagName: 'Application',
 		scopeRef: applicationRef,
@@ -75,18 +70,8 @@ export async function cloneApplicationContent(
 		exclude: ALWAYS_EXCLUDE,
 	})
 
-	// 3. Remap Application tree and persist
-	const remap = new Map([...functionRemap, ...genericRemap])
-
+	// 4. Clone Application tree
 	const targetParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
-
 	const strippedTree = stripAttributes(tree, [...STRIP_ATTRS])
-	const remappedTree = remapUuidAttributes({
-		tree: strippedTree,
-		attributeNames: ALL_REF_UUID_ATTRIBUTES,
-		remap,
-	})
-	await tx.deepClone(targetParent, remappedTree as Scl.TreeRecord<'Application'>)
-
-	return remap
+	await tx.deepClone(targetParent, strippedTree as Scl.TreeRecord<'Application'>)
 }

@@ -1,10 +1,9 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import { Scl } from '@/v2019C1/config'
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { reference } from '@/v2019C1/extensions/reference'
+import { reference, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
-import type { ReferencePair } from '@/v2019C1/constants'
+import type { ReferencePair } from '@/v2019C1/extensions/reference'
 
 /**
  * Re-sweep all cloned REF elements:
@@ -12,17 +11,17 @@ import type { ReferencePair } from '@/v2019C1/constants'
  *  2. Recompute their path attrs from the now-visible cloned target elements.
  */
 export async function remapClonedRefPaths(params: {
-	mappings: Scl.CloneMapping[]
+	cumulativeCloneMappings: Scl.CloneMapping[]
 	query: Scl.Query
 }): Promise<Scl.Operation[]> {
-	const { mappings, query } = params
+	const { cumulativeCloneMappings, query } = params
 
-	const { uuidMap, uuidToRef } = await buildUuidMaps(mappings, query)
+	const { uuidMap, uuidToRef } = await buildUuidMaps(cumulativeCloneMappings, query)
 	if (uuidMap.size === 0) return []
 
 	const operations: Scl.Operation[] = []
 
-	for (const { target } of mappings) {
+	for (const { target } of cumulativeCloneMappings) {
 		const operation = await remapClonedRef({ target, uuidMap, uuidToRef, query })
 		if (operation) operations.push(operation)
 	}
@@ -58,16 +57,15 @@ async function registerMappingUuids(params: {
 }): Promise<void> {
 	const { source, target, query, uuidMap, uuidToRef } = params
 
-	const srcRecord = await query.getRecord(source)
 	const tgtRecord = await query.getRecord(target)
-	if (!srcRecord || !tgtRecord) return
+	if (!tgtRecord) return
 
-	const srcUuid = srcRecord.attributes.find((a) => a.name === 'uuid')?.value
-	const tgtUuid = tgtRecord.attributes.find((a) => a.name === 'uuid')?.value
-	if (!srcUuid || !tgtUuid) return
+	const sourceUuid = source.attributes.find((attribute) => attribute.name === 'uuid')?.value
+	const targetUuid = tgtRecord.attributes.find((attribute) => attribute.name === 'uuid')?.value
+	if (!sourceUuid || !targetUuid) return
 
-	uuidMap.set(srcUuid, tgtUuid)
-	uuidToRef.set(tgtUuid, { tagName: tgtRecord.tagName, id: tgtRecord.id })
+	uuidMap.set(sourceUuid, targetUuid)
+	uuidToRef.set(targetUuid, { tagName: tgtRecord.tagName, id: tgtRecord.id })
 }
 
 // ── Remap a single cloned REF element ─────────────────────────────────────────

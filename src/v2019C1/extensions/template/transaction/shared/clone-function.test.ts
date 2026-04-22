@@ -34,7 +34,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 		testCase,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
 		await target!.document.transaction(async (tx) => {
-			const uuidRemap = await cloneFunction(tx, {
+			await cloneFunction(tx, {
 				sourceQuery: source.document.query,
 				functionRef: testCase.functionRef,
 				targetParentRef: testCase.targetParentRef,
@@ -44,7 +44,6 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 				sourceQuery: source.document.query,
 				functionRef: testCase.functionRef,
 				structure,
-				uuidRemap,
 			})
 		})
 		return { assertDatabaseName: target!.databaseName }

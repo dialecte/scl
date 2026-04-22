@@ -11,7 +11,7 @@ import type { Scl } from '@/v2019C1/config'
  * during a single deepClone pass, so afterCreated could not resolve the path.
  */
 export async function afterDeepClone(params: {
-	mappings: Scl.CloneMapping[]
+	cumulativeCloneMappings: Scl.CloneMapping[]
 	query: Scl.Query
 }): Promise<Scl.Operation[]> {
 	return remapClonedRefPaths(params)

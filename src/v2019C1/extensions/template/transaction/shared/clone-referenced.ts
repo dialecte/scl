@@ -1,7 +1,7 @@
-import { cloneTreeWithRemap } from './clone-utils'
+import { cloneTree } from './clone-utils'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DESCENDANTS } from '@/v2019C1/definition'
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { DescendantsFilter, ExcludeFilter } from '@dialecte/core'
@@ -74,8 +74,8 @@ export async function findMissingReferencedRecords<
  *
  * Scans `scopeRef` descendants for `refTagName` elements, collects unique uuid
  * values (derived from the UUID_REFERENCE_PAIRS constant), skips records
- * already present in the target, clones each missing one into `targetParent`,
- * and returns the accumulated sourceUuid -> targetUuid remap.
+ * already present in the target, clones each missing one into `targetParent`.
+ * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
  */
 export async function cloneReferencedRecords<Ref extends RefTagName, Target extends TargetOf<Ref>>(
 	tx: Scl.Transaction,
@@ -87,7 +87,7 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		exclude?: ExcludeFilter<Config>[]
 	},
-): Promise<Map<string, string>> {
+): Promise<void> {
 	const { sourceQuery, scopeRef, refTagName, targetTagName, targetParent, exclude } = params
 
 	const missing = await findMissingReferencedRecords(tx, {
@@ -97,13 +97,9 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 		targetTagName,
 	})
 
-	const accRemap = new Map<string, string>()
 	for (const ref of missing) {
-		const remap = await cloneTreeWithRemap(tx, { sourceQuery, ref, targetParent, exclude })
-		for (const [key, value] of remap) accRemap.set(key, value)
+		await cloneTree(tx, { sourceQuery, ref, targetParent, exclude })
 	}
-
-	return accRemap
 }
 
 // ── Config-driven bulk clone ─────────────────────────────────────────────────
@@ -120,13 +116,14 @@ type CloneRefsFn = (
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		exclude?: ExcludeFilter<Config>[]
 	},
-) => Promise<Map<string, string>>
+) => Promise<void>
 
 /**
  * Clones all referenced targets for ref types derived from
  * `DESCENDANTS[scopeTagName] ∩ UUID_REFERENCE_PAIRS`, skipping those in `skip`.
  *
  * Targets already present in the target tx are skipped (dedup via findMissingReferencedRecords).
+ * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
  */
 export async function cloneAllReferencedTargets(
 	tx: Scl.Transaction,
@@ -138,9 +135,8 @@ export async function cloneAllReferencedTargets(
 		skip?: ReadonlySet<string>
 		exclude?: ExcludeFilter<Config>[]
 	},
-): Promise<Map<string, string>> {
+): Promise<void> {
 	const { sourceQuery, scopeTagName, scopeRef, targetParent, skip = new Set(), exclude } = params
-	const remap = new Map<string, string>()
 
 	const refTags = (DESCENDANTS[scopeTagName] as readonly string[]).filter(
 		(tag): tag is RefTagName => tag in UUID_REFERENCE_PAIRS && !skip.has(tag),
@@ -151,7 +147,7 @@ export async function cloneAllReferencedTargets(
 	for (const refTagName of refTags) {
 		for (const pair of UUID_REFERENCE_PAIRS[refTagName]) {
 			for (const targetTagName of pair.target) {
-				const partial = await cloneRefs(tx, {
+				await cloneRefs(tx, {
 					sourceQuery,
 					scopeRef,
 					refTagName,
@@ -159,10 +155,7 @@ export async function cloneAllReferencedTargets(
 					targetParent,
 					exclude,
 				})
-				for (const [k, v] of partial) remap.set(k, v)
 			}
 		}
 	}
-
-	return remap
 }

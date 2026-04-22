@@ -158,6 +158,61 @@ describe('updateRefPaths', () => {
 				unexpectedQueries: ['//default:SourceRef[@extRefAddr="IED1/LD0/XCBR1.TrCmd.stVal"]'],
 			},
 
+			// ── Ancestor rename (descendant ref path propagation) ────────────────
+
+			'ancestor rename — rename Bay → FunctionCatRef descendant path updated': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation ${id}="sub1" name="Sub1">
+							<VoltageLevel ${id}="vl1" name="V1">
+								<Bay ${id}="bay1" name="B1">
+									<Function ${id}="f1" name="F1" uuid="uuid-f1" />
+								</Bay>
+							</VoltageLevel>
+							<FunctionCategory ${id}="fcat1" name="Cat1">
+								<FunctionCatRef ${id}="ref1" function="Sub1/V1/B1/F1" functionUuid="uuid-f1" />
+							</FunctionCategory>
+						</Substation>
+					</SCL>
+				`,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update({ tagName: 'Bay', id: 'bay1' }, { attributes: { name: 'B2' } })
+					})
+				},
+				expectedQueries: ['//default:FunctionCatRef[@function="Sub1/V1/B2/F1"]'],
+				unexpectedQueries: ['//default:FunctionCatRef[@function="Sub1/V1/B1/F1"]'],
+			},
+
+			'ancestor rename — rename Substation → SourceRef lnode descendant path updated': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation ${id}="sub1" name="Sub1">
+							<Function ${id}="f1" name="F1">
+								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1" />
+							</Function>
+							<Function ${id}="f2" name="F2">
+								<LNode ${id}="ln2" lnClass="XSWI" lnInst="1">
+									<LNodeInputs ${id}="lni1">
+										<SourceRef ${id}="sref1" source="Sub1/F1/XCBR1" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal" />
+									</LNodeInputs>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update(
+							{ tagName: 'Substation', id: 'sub1' },
+							{ attributes: { name: 'Sub1New' } },
+						)
+					})
+				},
+				expectedQueries: ['//default:SourceRef[@source="Sub1New/F1/XCBR1"]'],
+				unexpectedQueries: ['//default:SourceRef[@source="Sub1/F1/XCBR1"]'],
+			},
+
 			// ── Strategy: behavior-description ───────────────────────────────────
 
 			'behavior-description — update SourceRef.input → InputVar.inputName updated': {
