@@ -1,13 +1,12 @@
-import { STRIP_ATTRS } from './clone-utils'
+import { cloneTree } from './clone-utils'
 import { extractDataModel } from './extract-data-model'
 import { resolveStructureRef } from './resolve-structure-ref'
 
-import { stripAttributes } from '@dialecte/core/helpers'
 import { invariant } from '@dialecte/core/utils'
 
 import { reference } from '@/v2019C1/extensions/reference'
 
-import type { TemplateStructure } from './template.types'
+import type { TemplateStructure } from './shared.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
@@ -19,6 +18,10 @@ import type { ExcludeFilter } from '@dialecte/core'
  * Clones a Function/SubFunction tree into the target, promotes SubFunction to Function,
  * and extracts the data model.
  * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
+ *
+ * @param stripRootAttributes - Attribute names to remove from the root element only (shallow).
+ *   FSD extraction strips `templateUuid` so the clone becomes a fresh template.
+ *   ASD extraction omits this param - no attributes are stripped.
  */
 export async function cloneFunction(
 	tx: Core.Transaction<Config>,
@@ -27,21 +30,23 @@ export async function cloneFunction(
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 		targetParentRef: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
 		exclude?: ExcludeFilter<Config>[]
+		stripRootAttributes?: readonly string[]
 	},
 ): Promise<void> {
-	const { sourceQuery, functionRef, targetParentRef, exclude } = params
+	const { sourceQuery, functionRef, targetParentRef, exclude, stripRootAttributes } = params
 
-	const tree = await sourceQuery.getTree(functionRef, { exclude })
-	invariant(tree, {
-		detail: `Expected a tree for ${JSON.stringify(functionRef)}, but got ${tree}`,
+	const strip = stripRootAttributes?.length
+		? { scope: 'root' as const, attributes: [...stripRootAttributes] }
+		: (false as const)
+
+	await cloneTree(tx, {
+		sourceQuery,
 		ref: functionRef,
+		targetParent: targetParentRef,
+		exclude,
+		promoteRoot: { from: 'SubFunction', to: 'Function' },
+		strip,
 	})
-
-	const promotedTree =
-		tree.tagName === 'SubFunction' ? { ...tree, tagName: 'Function' as const } : tree
-
-	const strippedTree = stripAttributes(promotedTree, [...STRIP_ATTRS])
-	await tx.deepClone(targetParentRef, strippedTree as Scl.TreeRecord<'Function'>)
 
 	await extractDataModel(tx, { sourceQuery, scopeRef: functionRef })
 }
@@ -57,9 +62,10 @@ export async function cloneFunctionCategories(
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 		structure: TemplateStructure
+		stripCategoriesUuid?: boolean
 	},
 ): Promise<void> {
-	const { sourceQuery, functionRef, structure } = params
+	const { sourceQuery, functionRef, structure, stripCategoriesUuid = true } = params
 
 	const categoryIds = await collectReferencedCategoryIds(sourceQuery, functionRef)
 
@@ -68,13 +74,14 @@ export async function cloneFunctionCategories(
 		if (alreadyCloned) continue
 
 		const categoryRef: Scl.Ref<'FunctionCategory'> = { tagName: 'FunctionCategory', id: categoryId }
-		const tree = await sourceQuery.getTree(categoryRef)
-		if (!tree) continue
-
 		const targetParent = await resolveStructureRef(sourceQuery, categoryRef, structure)
 
-		const strippedTree = stripAttributes(tree, [...STRIP_ATTRS])
-		await tx.deepClone(targetParent, strippedTree as Scl.TreeRecord<'FunctionCategory'>)
+		await cloneTree(tx, {
+			sourceQuery,
+			ref: categoryRef,
+			targetParent,
+			...(stripCategoriesUuid ? {} : { strip: false as const }),
+		})
 	}
 }
 

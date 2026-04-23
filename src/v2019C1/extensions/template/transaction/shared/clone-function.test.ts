@@ -26,6 +26,8 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 		targetXml: string
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 		targetParentRef: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
+		stripRootAttributes?: readonly string[]
+		stripCategoriesUuid?: boolean
 	}
 
 	const act = async ({
@@ -38,12 +40,14 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 				sourceQuery: source.document.query,
 				functionRef: testCase.functionRef,
 				targetParentRef: testCase.targetParentRef,
+				stripRootAttributes: testCase.stripRootAttributes,
 			})
 			const structure = await ensureSubstationTemplateStructure(tx)
 			await cloneFunctionCategories(tx, {
 				sourceQuery: source.document.query,
 				functionRef: testCase.functionRef,
 				structure,
+				stripCategoriesUuid: testCase.stripCategoriesUuid,
 			})
 		})
 		return { assertDatabaseName: target!.databaseName }
@@ -94,6 +98,54 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 					'//default:Function[@uuid="func-uuid"]',
 					'//default:SubFunction[@uuid="subfunc-uuid"]',
 				],
+			},
+			// FSD: strip templateUuid from root Function only; inner SubFunction keeps it
+			'FSD - Function with templateUuid, stripRootAttributes=[templateUuid] → root stripped, SubFunction untouched':
+				{
+					sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
+							<Function ${id}="func1" name="ProtFunc" uuid="func-uuid" templateUuid="tmpl-uuid">
+								<SubFunction ${id}="subfunc1" name="Sub" uuid="subfunc-uuid" templateUuid="sub-tmpl-uuid"/>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+					targetXml: emptyTargetXml,
+					functionRef: { tagName: 'Function', id: 'func1' } as Scl.Ref<'Function'>,
+					targetParentRef: { tagName: 'Substation', id: 'target-sub' } as Scl.Ref<'Substation'>,
+					stripRootAttributes: ['templateUuid'],
+					expectedQueries: [
+						'//default:Function[@name="ProtFunc"]',
+						// SubFunction retains templateUuid (shallow strip on root only)
+						'//default:SubFunction[@templateUuid="sub-tmpl-uuid"]',
+					],
+					unexpectedQueries: [
+						// Root Function templateUuid removed
+						'//default:Function[@templateUuid]',
+					],
+				},
+			// ASD: no stripping - all attributes preserved on root and children
+			'ASD - Function with templateUuid, no stripRootAttributes → all attributes preserved': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
+							<Function ${id}="func1" name="ProtFunc" uuid="func-uuid" templateUuid="tmpl-uuid">
+								<SubFunction ${id}="subfunc1" name="Sub" uuid="subfunc-uuid" templateUuid="sub-tmpl-uuid"/>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				targetXml: emptyTargetXml,
+				functionRef: { tagName: 'Function', id: 'func1' } as Scl.Ref<'Function'>,
+				targetParentRef: { tagName: 'Substation', id: 'target-sub' } as Scl.Ref<'Substation'>,
+				// no stripRootAttributes
+				expectedQueries: [
+					// Root Function retains templateUuid
+					'//default:Function[@name="ProtFunc"][@templateUuid="tmpl-uuid"]',
+					'//default:SubFunction[@templateUuid="sub-tmpl-uuid"]',
+				],
+				unexpectedQueries: [],
 			},
 			'SubFunction promoted to Function in target': {
 				sourceXml: /* xml */ `
@@ -219,6 +271,65 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 				expectedQueries: ['//default:Function[@name="Standalone"][@uuid]'],
 				unexpectedQueries: ['//v2019C1:FunctionCategory'],
 			},
+			'FSD - FunctionCategory with templateUuid and originUuid → root and all children stripped': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
+							<Private ${id}="sub-priv" type="eIEC61850-6-100">
+								<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="PROTECTION" uuid="fcat-uuid" templateUuid="tmpl-uuid" originUuid="origin-uuid">
+									<eIEC61850-6-100:SubCategory ${id}="scat1" name="PTOC" uuid="scat-uuid" templateUuid="sub-tmpl-uuid" originUuid="sub-origin-uuid">
+										<eIEC61850-6-100:FunctionCatRef ${id}="fcref1" function="TEMPLATE/ProtFunc" functionUuid="func-uuid"/>
+									</eIEC61850-6-100:SubCategory>
+								</eIEC61850-6-100:FunctionCategory>
+							</Private>
+							<Function ${id}="func1" name="ProtFunc" uuid="func-uuid"/>
+						</Substation>
+					</SCL>
+				`,
+				targetXml: emptyTargetXml,
+				functionRef: { tagName: 'Function', id: 'func1' } as Scl.Ref<'Function'>,
+				targetParentRef: { tagName: 'Substation', id: 'target-sub' } as Scl.Ref<'Substation'>,
+				// stripCategories defaults to true
+				expectedQueries: [
+					'//v2019C1:FunctionCategory[@name="PROTECTION"]',
+					'//v2019C1:SubCategory[@name="PTOC"]',
+				],
+				unexpectedQueries: [
+					// Root FunctionCategory strip attributes removed
+					'//v2019C1:FunctionCategory[@templateUuid]',
+					'//v2019C1:FunctionCategory[@originUuid]',
+					// SubCategory children also stripped (recursive stripAttributes)
+					'//v2019C1:SubCategory[@templateUuid]',
+					'//v2019C1:SubCategory[@originUuid]',
+				],
+			},
+			'ASD - FunctionCategory with templateUuid and originUuid, stripCategories=false → all attributes preserved':
+				{
+					sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
+							<Private ${id}="sub-priv" type="eIEC61850-6-100">
+								<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="PROTECTION" uuid="fcat-uuid" templateUuid="tmpl-uuid" originUuid="origin-uuid">
+									<eIEC61850-6-100:SubCategory ${id}="scat1" name="PTOC" uuid="scat-uuid" templateUuid="sub-tmpl-uuid" originUuid="sub-origin-uuid">
+										<eIEC61850-6-100:FunctionCatRef ${id}="fcref1" function="TEMPLATE/ProtFunc" functionUuid="func-uuid"/>
+									</eIEC61850-6-100:SubCategory>
+								</eIEC61850-6-100:FunctionCategory>
+							</Private>
+							<Function ${id}="func1" name="ProtFunc" uuid="func-uuid"/>
+						</Substation>
+					</SCL>
+				`,
+					targetXml: emptyTargetXml,
+					functionRef: { tagName: 'Function', id: 'func1' } as Scl.Ref<'Function'>,
+					targetParentRef: { tagName: 'Substation', id: 'target-sub' } as Scl.Ref<'Substation'>,
+					stripCategoriesUuid: false,
+					expectedQueries: [
+						// All attributes preserved
+						'//v2019C1:FunctionCategory[@name="PROTECTION"][@templateUuid="tmpl-uuid"][@originUuid="origin-uuid"]',
+						'//v2019C1:SubCategory[@name="PTOC"][@templateUuid="sub-tmpl-uuid"][@originUuid="sub-origin-uuid"]',
+					],
+					unexpectedQueries: [],
+				},
 		}
 
 		runSclTestCases.withExport<TestCase>({

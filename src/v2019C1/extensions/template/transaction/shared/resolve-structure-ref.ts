@@ -1,6 +1,6 @@
 import { invariant } from '@dialecte/core/utils'
 
-import type { TemplateStructure } from './template.types'
+import type { TemplateStructure } from './shared.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 

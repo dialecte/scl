@@ -1,12 +1,10 @@
 import { cloneFunction, cloneFunctionCategories } from './clone-function'
 import { cloneAllReferencedTargets, findMissingReferencedRecords } from './clone-referenced'
-import { STRIP_ATTRS } from './clone-utils'
+import { cloneTree } from './clone-utils'
 import { ALWAYS_EXCLUDE } from './exclude-filters'
 import { resolveStructureRef } from './resolve-structure-ref'
 
-import { stripAttributes } from '@dialecte/core/helpers'
-
-import type { TemplateStructure } from './template.types'
+import type { TemplateStructure } from './shared.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -31,9 +29,6 @@ export async function cloneApplicationContent(
 		id: structure.Substation.id,
 	}
 
-	const tree = await sourceQuery.getTree(applicationRef, { exclude: ALWAYS_EXCLUDE })
-	if (!tree) return
-
 	// 1. Functions: resolve structural parent per function, clone tree + data model
 	const missingFunctions = await findMissingReferencedRecords(tx, {
 		sourceQuery,
@@ -57,6 +52,7 @@ export async function cloneApplicationContent(
 			sourceQuery,
 			functionRef: ref,
 			structure,
+			stripCategoriesUuid: false,
 		})
 	}
 
@@ -73,6 +69,5 @@ export async function cloneApplicationContent(
 
 	// 4. Clone Application tree
 	const targetParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
-	const strippedTree = stripAttributes(tree, [...STRIP_ATTRS])
-	await tx.deepClone(targetParent, strippedTree as Scl.TreeRecord<'Application'>)
+	await cloneTree(tx, { sourceQuery, ref: applicationRef, targetParent, exclude: ALWAYS_EXCLUDE })
 }

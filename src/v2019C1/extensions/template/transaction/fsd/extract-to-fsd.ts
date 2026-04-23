@@ -48,6 +48,7 @@ export async function extractToFsd(
 		functionRef,
 		targetParentRef: substationRef,
 		exclude: FSD_EXCLUDE,
+		stripRootAttributes: ['templateUuid'],
 	})
 
 	await cloneFunctionCategories(tx, {

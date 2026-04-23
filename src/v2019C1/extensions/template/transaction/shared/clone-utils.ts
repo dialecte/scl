@@ -1,15 +1,24 @@
 import { stripAttributes } from '@dialecte/core/helpers'
 
+import type { StripConfig, PromoteRootConfig } from './shared.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { ExcludeFilter } from '@dialecte/core'
 
-/** Attributes stripped from every cloned tree before persistence. */
-export const STRIP_ATTRS = ['templateUuid', 'originUuid'] as const
+export type { StripConfig, PromoteRootConfig }
+
+const DEFAULT_STRIP: StripConfig = {
+	scope: 'tree',
+	attributes: ['templateUuid', 'originUuid'],
+}
 
 /**
- * Clone pipeline: getTree -> strip -> deepClone.
+ * Clone pipeline: getTree -> optional promote root tagName -> strip -> deepClone.
  * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
+ *
+ * By default strips `templateUuid` and `originUuid` from the entire tree.
+ * Pass `strip: false` to disable all stripping.
+ * Pass `strip: { scope, attributes }` to customise.
  */
 export async function cloneTree(
 	tx: Core.Transaction<Config>,
@@ -18,15 +27,30 @@ export async function cloneTree(
 		ref: Scl.Ref<Scl.ElementsOf>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		exclude?: ExcludeFilter<Config>[]
+		promoteRoot?: PromoteRootConfig
+		strip?: StripConfig | false
 	},
 ): Promise<void> {
-	const { sourceQuery, ref, targetParent, exclude } = params
+	const { sourceQuery, ref, targetParent, exclude, promoteRoot, strip = DEFAULT_STRIP } = params
 
 	const tree = await sourceQuery.getTree(ref, { exclude })
 	if (!tree) return
 
-	const strippedTree = stripAttributes(tree, [...STRIP_ATTRS])
+	const promoted =
+		promoteRoot && tree.tagName === promoteRoot.from ? { ...tree, tagName: promoteRoot.to } : tree
+
+	let result = promoted
+	if (strip) {
+		result =
+			strip.scope === 'tree'
+				? stripAttributes(promoted, strip.attributes)
+				: {
+						...promoted,
+						attributes: promoted.attributes.filter((a) => !strip.attributes.includes(a.name)),
+					}
+	}
+
 	// getTree on Scl.Ref<Scl.ElementsOf> includes 'SCL' in the union; deepClone requires
 	// a child element. 'SCL' is the document root and never a cloned satellite.
-	await tx.deepClone(targetParent, strippedTree as Scl.TreeRecord<Exclude<Scl.ElementsOf, 'SCL'>>)
+	await tx.deepClone(targetParent, result as Scl.TreeRecord<Exclude<Scl.ElementsOf, 'SCL'>>)
 }
