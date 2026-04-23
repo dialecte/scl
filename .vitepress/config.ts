@@ -78,7 +78,9 @@ export default defineConfig({
 						{ text: 'Overview', link: '/v2019C1/extensions/' },
 						{ text: 'History', link: '/v2019C1/extensions/history' },
 						{ text: 'Data Model', link: '/v2019C1/extensions/data-model' },
+						{ text: 'Reference', link: '/v2019C1/extensions/reference' },
 						{ text: 'Template', link: '/v2019C1/extensions/template' },
+						{ text: 'Clean Up', link: '/v2019C1/extensions/clean-up' },
 					],
 				},
 				{
