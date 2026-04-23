@@ -18,13 +18,13 @@ buildReferencePath  <->  resolveReferencePath   (REF attr value <-> target recor
                          findRefsPointingTo     (reverse: target -> all REF records)
 ```
 
-| Function               | Direction | Input                                | Output                                   | Use when                                                      |
-| ---------------------- | --------- | ------------------------------------ | ---------------------------------------- | ------------------------------------------------------------- |
-| `buildElementPath`     | write     | `ref`                                | canonical path string (`"S1/V1/B1/CE1"`) | computing the path _to_ an element from its ancestry          |
-| `buildReferencePath`   | write     | `reference` (REF element) + `target` | path value to store on the REF attribute | updating a REF element to point at a new target               |
-| `resolveElementPath`   | read      | raw path string                      | `TrackedRecord`                          | inverse of `buildElementPath` -- walk tree by path string     |
-| `resolveReferencePath` | read      | REF record + path attribute name     | `{ record, qualifier }`                  | inverse of `buildReferencePath` -- follow a REF to its target |
-| `findRefsPointingTo`   | reverse   | target ref + optional container      | `ResolvedReference[]`                    | find all REF records pointing to a given element              |
+| Function               | Direction | Input                                | Output                                                   | Use when                                                      |
+| ---------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------- |
+| `buildElementPath`     | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry          |
+| `buildReferencePath`   | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target               |
+| `resolveElementPath`   | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` -- walk tree by path string     |
+| `resolveReferencePath` | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildReferencePath` -- follow a REF to its target |
+| `findRefsPointingTo`   | reverse   | target ref + optional container      | `ResolvedReference[]`                                    | find all REF records pointing to a given element              |
 
 ### Name distinctions
 
@@ -36,18 +36,39 @@ buildReferencePath  <->  resolveReferencePath   (REF attr value <-> target recor
 
 ## buildElementPath
 
-Computes the canonical path string for any element from its ancestry chain.
+Computes the canonical path for any element from its ancestry chain. Returns an `ElementPath` containing the path string and a per-segment mapping back to the source element.
 
 ```ts
 reference.query.buildElementPath(
   query: Scl.Query,
   ref: Scl.Ref<Scl.ElementsOf>,
-): Promise<string | null>
+): Promise<ElementPath | null>
+```
+
+### Return type
+
+```ts
+type ElementPath = {
+	path: string // canonical path string, e.g. "S1/V1/B1/Protection"
+	segments: PathSegmentWithRef[] // one entry per path segment
+}
+
+type PathSegmentWithRef = {
+	segment: string // e.g. "S1", "Protection"
+	separator: '/' | '.'
+	ref: AnyRef // { tagName, id } of the element that produced this segment
+}
 ```
 
 ```ts
-const path = await reference.query.buildElementPath(query, { tagName: 'Function', id: 'func-1' })
-// -> "TEMPLATE/V1/B1/Protection"
+const result = await reference.query.buildElementPath(query, { tagName: 'Function', id: 'func-1' })
+// result.path -> "TEMPLATE/V1/B1/Protection"
+// result.segments -> [
+//   { segment: 'TEMPLATE', separator: '/', ref: { tagName: 'Substation', id: '...' } },
+//   { segment: 'V1',       separator: '/', ref: { tagName: 'VoltageLevel', id: '...' } },
+//   { segment: 'B1',       separator: '/', ref: { tagName: 'Bay', id: '...' } },
+//   { segment: 'Protection', separator: '/', ref: { tagName: 'Function', id: 'func-1' } },
+// ]
 ```
 
 Returns `null` if the record is not found. The path is built by concatenating each ancestor's path segment (typically the `name` attribute) with `/`.

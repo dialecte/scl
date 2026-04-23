@@ -10,9 +10,12 @@ import {
 
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
+type ExpectedSegment = { tagName: string; segment: string; separator: '/' | '.' }
+
 type TestCase = SclTest.BaseXmlTestCase & {
 	ref: { tagName: string; id: string }
 	expected: string | null
+	expectedSegments?: ExpectedSegment[]
 }
 
 describe('buildElementPath', () => {
@@ -32,6 +35,12 @@ describe('buildElementPath', () => {
 			</SCL>`,
 			ref: { tagName: 'ConductingEquipment', id: 'ce-1' },
 			expected: 'S1/V1/B1/CE1',
+			expectedSegments: [
+				{ tagName: 'Substation', segment: 'S1', separator: '/' },
+				{ tagName: 'VoltageLevel', segment: 'V1', separator: '/' },
+				{ tagName: 'Bay', segment: 'B1', separator: '/' },
+				{ tagName: 'ConductingEquipment', segment: 'CE1', separator: '/' },
+			],
 		},
 
 		'LN under IED/AccessPoint/Server/LDevice → AccessPoint and Server skipped in path': {
@@ -49,6 +58,11 @@ describe('buildElementPath', () => {
 			</SCL>`,
 			ref: { tagName: 'LN', id: 'ln-1' },
 			expected: 'IED1/LD0/XCBR1',
+			expectedSegments: [
+				{ tagName: 'IED', segment: 'IED1', separator: '/' },
+				{ tagName: 'LDevice', segment: 'LD0', separator: '/' },
+				{ tagName: 'LN', segment: 'XCBR1', separator: '/' },
+			],
 		},
 
 		'LNode with prefix under Substation/VoltageLevel/Bay → prefix+lnClass+lnInst concatenated': {
@@ -64,6 +78,12 @@ describe('buildElementPath', () => {
 			</SCL>`,
 			ref: { tagName: 'LNode', id: 'lnode-1' },
 			expected: 'S1/V1/B1/PXCBR1',
+			expectedSegments: [
+				{ tagName: 'Substation', segment: 'S1', separator: '/' },
+				{ tagName: 'VoltageLevel', segment: 'V1', separator: '/' },
+				{ tagName: 'Bay', segment: 'B1', separator: '/' },
+				{ tagName: 'LNode', segment: 'PXCBR1', separator: '/' },
+			],
 		},
 
 		'SourceRef with input under LNode → dot-separated after LNode segment': {
@@ -85,6 +105,13 @@ describe('buildElementPath', () => {
 			</SCL>`,
 			ref: { tagName: 'SourceRef', id: 'sr-1' },
 			expected: 'S1/V1/B1/PXCBR1.Trip',
+			expectedSegments: [
+				{ tagName: 'Substation', segment: 'S1', separator: '/' },
+				{ tagName: 'VoltageLevel', segment: 'V1', separator: '/' },
+				{ tagName: 'Bay', segment: 'B1', separator: '/' },
+				{ tagName: 'LNode', segment: 'PXCBR1', separator: '/' },
+				{ tagName: 'SourceRef', segment: 'Trip', separator: '.' },
+			],
 		},
 
 		'SCL root — no extractors match → null': {
@@ -113,6 +140,13 @@ describe('buildElementPath', () => {
 			</SCL>`,
 			ref: { tagName: 'DOS', id: 'dos-1' },
 			expected: 'S1/V1/B1/PTRC1.Tr',
+			expectedSegments: [
+				{ tagName: 'Substation', segment: 'S1', separator: '/' },
+				{ tagName: 'VoltageLevel', segment: 'V1', separator: '/' },
+				{ tagName: 'Bay', segment: 'B1', separator: '/' },
+				{ tagName: 'LNode', segment: 'PTRC1', separator: '/' },
+				{ tagName: 'DOS', segment: 'Tr', separator: '.' },
+			],
 		},
 
 		'DAS under DOS under LNode/Private (6-100) → dot-separated DO and DA names after LNode': {
@@ -134,6 +168,14 @@ describe('buildElementPath', () => {
 			</SCL>`,
 			ref: { tagName: 'DAS', id: 'das-1' },
 			expected: 'S1/V1/B1/PTRC1.Tr.general',
+			expectedSegments: [
+				{ tagName: 'Substation', segment: 'S1', separator: '/' },
+				{ tagName: 'VoltageLevel', segment: 'V1', separator: '/' },
+				{ tagName: 'Bay', segment: 'B1', separator: '/' },
+				{ tagName: 'LNode', segment: 'PTRC1', separator: '/' },
+				{ tagName: 'DOS', segment: 'Tr', separator: '.' },
+				{ tagName: 'DAS', segment: 'general', separator: '.' },
+			],
 		},
 
 		'SDS under DAS under DOS under LNode/Private (6-100) → full dot-separated data path': {
@@ -155,6 +197,14 @@ describe('buildElementPath', () => {
 			</SCL>`,
 			ref: { tagName: 'SDS', id: 'sds-1' },
 			expected: 'S1/B1/PTRC1.Tr.general.q',
+			expectedSegments: [
+				{ tagName: 'Substation', segment: 'S1', separator: '/' },
+				{ tagName: 'Bay', segment: 'B1', separator: '/' },
+				{ tagName: 'LNode', segment: 'PTRC1', separator: '/' },
+				{ tagName: 'DOS', segment: 'Tr', separator: '.' },
+				{ tagName: 'DAS', segment: 'general', separator: '.' },
+				{ tagName: 'SDS', segment: 'q', separator: '.' },
+			],
 		},
 
 		'DOI under LN in IED hierarchy → dot-separated after LN segment': {
@@ -174,6 +224,12 @@ describe('buildElementPath', () => {
 			</SCL>`,
 			ref: { tagName: 'DOI', id: 'doi-1' },
 			expected: 'IED1/LD0/XCBR1.Pos',
+			expectedSegments: [
+				{ tagName: 'IED', segment: 'IED1', separator: '/' },
+				{ tagName: 'LDevice', segment: 'LD0', separator: '/' },
+				{ tagName: 'LN', segment: 'XCBR1', separator: '/' },
+				{ tagName: 'DOI', segment: 'Pos', separator: '.' },
+			],
 		},
 
 		'DAI under SDI under DOI under LN in IED hierarchy → full dot-separated data instance path': {
@@ -197,6 +253,14 @@ describe('buildElementPath', () => {
 			</SCL>`,
 			ref: { tagName: 'DAI', id: 'dai-1' },
 			expected: 'IED1/LD0/XCBR1.Pos.origin.ctlVal',
+			expectedSegments: [
+				{ tagName: 'IED', segment: 'IED1', separator: '/' },
+				{ tagName: 'LDevice', segment: 'LD0', separator: '/' },
+				{ tagName: 'LN', segment: 'XCBR1', separator: '/' },
+				{ tagName: 'DOI', segment: 'Pos', separator: '.' },
+				{ tagName: 'SDI', segment: 'origin', separator: '.' },
+				{ tagName: 'DAI', segment: 'ctlVal', separator: '.' },
+			],
 		},
 
 		'ConductingEquipment under Line → Line name included in slash-separated path': {
@@ -208,6 +272,10 @@ describe('buildElementPath', () => {
 			</SCL>`,
 			ref: { tagName: 'ConductingEquipment', id: 'ce-1' },
 			expected: 'L1/DIS1',
+			expectedSegments: [
+				{ tagName: 'Line', segment: 'L1', separator: '/' },
+				{ tagName: 'ConductingEquipment', segment: 'DIS1', separator: '/' },
+			],
 		},
 
 		'SubFunction under Function in Substation hierarchy → all named ancestors slash-separated': {
@@ -225,6 +293,13 @@ describe('buildElementPath', () => {
 			</SCL>`,
 			ref: { tagName: 'SubFunction', id: 'sfunc-1' },
 			expected: 'S1/V1/B1/Prot/Trip',
+			expectedSegments: [
+				{ tagName: 'Substation', segment: 'S1', separator: '/' },
+				{ tagName: 'VoltageLevel', segment: 'V1', separator: '/' },
+				{ tagName: 'Bay', segment: 'B1', separator: '/' },
+				{ tagName: 'Function', segment: 'Prot', separator: '/' },
+				{ tagName: 'SubFunction', segment: 'Trip', separator: '/' },
+			],
 		},
 	}
 
@@ -236,7 +311,17 @@ describe('buildElementPath', () => {
 
 		const result = await buildElementPath(query, testCase.ref as never)
 
-		expect(result).toBe(testCase.expected)
+		expect(result?.path ?? null).toBe(testCase.expected)
+
+		if (testCase.expectedSegments) {
+			expect(
+				result!.segments.map((s) => ({
+					tagName: s.ref.tagName,
+					segment: s.segment,
+					separator: s.separator,
+				})),
+			).toEqual(testCase.expectedSegments)
+		}
 
 		return { assertDatabaseName: source.databaseName }
 	}

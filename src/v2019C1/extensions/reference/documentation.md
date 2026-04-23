@@ -14,13 +14,13 @@ buildRefPath        ↔  resolveRefPath         (REF attr value ↔ target recor
 
 ### When to use each
 
-| Function             | Direction | Input                                | Output                                   | Use when                                                 |
-| -------------------- | --------- | ------------------------------------ | ---------------------------------------- | -------------------------------------------------------- |
-| `buildElementPath`   | write     | `ref`                                | canonical path string (`"S1/V1/B1/CE1"`) | computing the path _to_ an element from its ancestry     |
-| `buildRefPath`       | write     | `reference` (REF element) + `target` | path value to store on the REF attribute | updating a REF element to point at a new target          |
-| `resolveElementPath` | read      | raw path string                      | `TrackedRecord`                          | inverse of `buildElementPath` — walk tree by path string |
-| `resolveRefPath`     | read      | REF record + path attribute name     | `{ record, qualifier }`                  | inverse of `buildRefPath` — follow a REF to its target   |
-| `findRefsTo`         | reverse   | target ref                           | `ResolvedReference[]`                    | find all REF records pointing to a given element         |
+| Function             | Direction | Input                                | Output                                                   | Use when                                                 |
+| -------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | -------------------------------------------------------- |
+| `buildElementPath`   | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry     |
+| `buildRefPath`       | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target          |
+| `resolveElementPath` | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` — walk tree by path string |
+| `resolveRefPath`     | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildRefPath` — follow a REF to its target   |
+| `findRefsTo`         | reverse   | target ref                           | `ResolvedReference[]`                                    | find all REF records pointing to a given element         |
 
 ### Name distinctions
 
@@ -70,7 +70,7 @@ The SAX parser streams elements one by one. For each element the hook receives t
 
 ```ts
 buildElementPath({ record: Function, ancestry: [S1, V1, B1] })
-// → "S1/V1/B1/Protection"
+// -> { path: "S1/V1/B1/Protection", segments: [{ segment: 'S1', separator: '/', ref: Substation }, ...] }
 
 pathIndex.set('S1/V1/B1/Protection', '<uuid-of-Function>')
 ```
@@ -81,7 +81,7 @@ pathIndex.set('S1/V1/B1/Protection', '<uuid-of-Function>')
 
 ```ts
 buildElementPath
-// → "S1/V1/B1/XCBR1"   (prefix="" + lnClass="XCBR" + lnInst="1")
+// -> { path: "S1/V1/B1/XCBR1", segments: [...] }   (prefix="" + lnClass="XCBR" + lnInst="1")
 
 pathIndex.set('S1/V1/B1/XCBR1', '<uuid-of-LNode>')
 ```

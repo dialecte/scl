@@ -1,6 +1,6 @@
 import { cleanUp } from '@/v2019C1/extensions/clean-up'
 
-import type { Scl, Config } from '@/v2019C1/config'
+import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**

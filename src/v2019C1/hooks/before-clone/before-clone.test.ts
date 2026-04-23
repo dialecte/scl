@@ -1,6 +1,6 @@
 import { beforeClone } from './before-clone'
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect } from 'vitest'
 
 import { runSclTestCases } from '@/v2019C1/test'
 

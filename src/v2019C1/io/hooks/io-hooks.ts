@@ -72,8 +72,8 @@ export function createSclIoHooks(): IOHooks {
 		const isTargetElement = uuid && TARGET_ELEMENT_TYPES.has(tagName)
 		// Index target elements: build path → uuid mapping
 		if (isTargetElement) {
-			const path = buildPathFromAncestry({ record, ancestry })
-			if (path) pathIndex.set(path, uuid)
+			const elementPath = buildPathFromAncestry({ record, ancestry })
+			if (elementPath) pathIndex.set(elementPath.path, uuid)
 		}
 
 		const hasReferences = ELEMENTS_WITH_REFERENCES.has(tagName)

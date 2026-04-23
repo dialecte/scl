@@ -14,7 +14,12 @@
 
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
 
-import type { PathSegment, PathExtractor } from './path-segment.types'
+import type {
+	PathSegment,
+	PathSegmentWithRef,
+	ElementPath,
+	PathExtractor,
+} from './path-segment.types'
 import type { ExtractionStrategy } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import type { AnyRawRecord } from '@dialecte/core'
 
@@ -85,20 +90,20 @@ export function getPathSegment(record: AnyRawRecord): PathSegment | null {
 export function buildPathFromAncestry(params: {
 	record: AnyRawRecord
 	ancestry: readonly AnyRawRecord[]
-}): string | null {
+}): ElementPath | null {
 	const { record, ancestry } = params
-	const parts: PathSegment[] = []
+	const parts: PathSegmentWithRef[] = []
 
 	for (const ancestor of ancestry) {
 		const seg = getPathSegment(ancestor)
-		if (seg) parts.push(seg)
+		if (seg) parts.push({ ...seg, ref: { tagName: ancestor.tagName, id: ancestor.id } })
 	}
 
 	const ownSeg = getPathSegment(record)
-	if (ownSeg) parts.push(ownSeg)
+	if (ownSeg) parts.push({ ...ownSeg, ref: { tagName: record.tagName, id: record.id } })
 
 	if (parts.length === 0) return null
-	return joinPathParts(parts)
+	return { path: joinPathParts(parts), segments: parts }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────

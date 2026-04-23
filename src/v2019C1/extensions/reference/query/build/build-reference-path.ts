@@ -43,8 +43,9 @@ export async function buildReferencePath(
 		return getPathSegment(toRawRecord(record))?.segment ?? null
 	}
 
-	const basePath = await buildElementPath(query, target)
-	if (!basePath) return null
+	const elementPath = await buildElementPath(query, target)
+	if (!elementPath) return null
+	const basePath = elementPath.path
 
 	if (resolution === RESOLUTION_TYPE.lnode) {
 		const refRecord = await query.getRecord(reference)
