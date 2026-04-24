@@ -15,9 +15,8 @@
 		"skipLibCheck": false,
 		"lib": ["ESNext", "DOM"],
 		"resolveJsonModule": true,
-		"baseUrl": ".",
 		"paths": {
-			"@/*": ["src/*"]
+			"@/*": ["./src/*"]
 		}
 	},
 

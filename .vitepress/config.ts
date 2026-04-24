@@ -61,6 +61,7 @@ export default defineConfig({
 					text: 'API',
 					items: [
 						{ text: 'Types', link: '/v2019C1/api/types' },
+						{ text: 'Element Catalog', link: '/v2019C1/api/elements' },
 						{ text: 'Test Helpers', link: '/v2019C1/api/test-helpers' },
 					],
 				},

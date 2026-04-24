@@ -44,6 +44,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['inst', 'name'],
 		},
 		children: {
 			sequence: [
@@ -634,6 +635,7 @@ export const DEFINITION = {
 					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
 				},
 			},
+			identityFields: ['associationID'],
 		},
 		children: {
 			sequence: [],
@@ -782,6 +784,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Val', 'Labels'],
@@ -2092,6 +2095,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['apName', 'iedName'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Address', 'GSE', 'SMV', 'PhysConn'],
@@ -2158,6 +2162,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['pathName'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Labels', 'LNode', 'ProcessResources'],
@@ -2273,6 +2278,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['output', 'outputInst'],
 		},
 		children: {
 			sequence: ['Text', 'BinaryWiringParametersRef', 'AnalogueWiringParametersRef'],
@@ -2565,6 +2571,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['ix', 'name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Val', 'Labels'],
@@ -2650,6 +2657,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['ix', 'name'],
 		},
 		children: {
 			sequence: [
@@ -2712,6 +2720,7 @@ export const DEFINITION = {
 				},
 				iedType: { default: '', facets: { whiteSpace: 'replace' } },
 			},
+			identityFields: ['id'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'BDA', 'ProtNs', 'Labels'],
@@ -2775,6 +2784,7 @@ export const DEFINITION = {
 				transient: { default: 'false', facets: { whiteSpace: 'collapse' } },
 				type: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Labels'],
@@ -2818,6 +2828,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'SDI', 'DAI', 'Labels'],
@@ -3069,6 +3080,7 @@ export const DEFINITION = {
 				},
 				iedType: { default: '', facets: { whiteSpace: 'replace' } },
 			},
+			identityFields: ['id'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'SDO', 'DA', 'Labels'],
@@ -3161,6 +3173,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'FCDA'],
@@ -3193,6 +3206,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: [],
 			details: {},
+			identityFields: ['id', 'lnClass'],
 		},
 		children: {
 			sequence: ['LNodeType', 'DOType', 'DAType', 'EnumType'],
@@ -3384,6 +3398,7 @@ export const DEFINITION = {
 					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
 				},
 			},
+			identityFields: ['id'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'EnumVal'],
@@ -3422,6 +3437,7 @@ export const DEFINITION = {
 					facets: { minInclusive: -2147483648, maxInclusive: 2147483647, whiteSpace: 'collapse' },
 				},
 			},
+			identityFields: ['ord'],
 		},
 		children: {
 			sequence: [],
@@ -3461,6 +3477,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -3590,6 +3607,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -5516,6 +5534,7 @@ export const DEFINITION = {
 			details: {
 				roleInst: { default: '1', facets: { minInclusive: 1, whiteSpace: 'collapse' } },
 			},
+			identityFields: ['roleInst'],
 		},
 		children: {
 			sequence: [
@@ -5966,6 +5985,7 @@ export const DEFINITION = {
 					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
 				},
 			},
+			identityFields: ['cbName', 'ldInst'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Address', 'MinTime', 'MaxTime'],
@@ -6047,6 +6067,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'IEDName', 'Protocol'],
@@ -6454,6 +6475,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: [],
 			details: {},
+			identityFields: ['revision', 'version'],
 		},
 		children: {
 			sequence: ['Hitem'],
@@ -6476,6 +6498,7 @@ export const DEFINITION = {
 				who: { facets: { whiteSpace: 'replace' } },
 				why: { facets: { whiteSpace: 'replace' } },
 			},
+			identityFields: ['revision', 'version'],
 		},
 		children: {
 			sequence: ['SourceFiles'],
@@ -6557,6 +6580,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -7240,6 +7264,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['inst'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'LN0', 'LN', 'AccessControl', 'Labels'],
@@ -7618,6 +7643,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['inst', 'lnClass', 'prefix'],
 		},
 		children: {
 			sequence: [
@@ -8346,6 +8372,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['iedName', 'ldInst', 'lnClass', 'lnInst', 'prefix'],
 		},
 		children: {
 			sequence: [
@@ -8978,6 +9005,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['id', 'lnClass'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'DO', 'Labels'],
@@ -9024,6 +9052,7 @@ export const DEFINITION = {
 					facets: { pattern: ['[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*'], whiteSpace: 'collapse' },
 				},
 			},
+			identityFields: ['id', 'lang'],
 		},
 		children: {
 			sequence: [],
@@ -9128,6 +9157,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -9258,6 +9288,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private'],
@@ -9534,6 +9565,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'TrgOps'],
@@ -9950,6 +9982,7 @@ export const DEFINITION = {
 				version: { required: true, facets: { whiteSpace: 'replace' } },
 				when: { facets: { whiteSpace: 'replace' } },
 			},
+			identityFields: ['fileUuid'],
 		},
 		children: {
 			sequence: [],
@@ -10266,6 +10299,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['type'],
 		},
 		children: {
 			sequence: [],
@@ -10354,6 +10388,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text'],
@@ -10682,6 +10717,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -10923,6 +10959,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Resource'],
@@ -11085,6 +11122,7 @@ export const DEFINITION = {
 			details: {
 				type: { default: '8-MMS', facets: { minLength: 1, whiteSpace: 'replace' } },
 			},
+			identityFields: ['type'],
 		},
 		children: {
 			sequence: [],
@@ -11203,6 +11241,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'TrgOps', 'OptFields', 'RptEnabled'],
@@ -11363,6 +11402,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['resInst'],
 		},
 		children: {
 			sequence: [],
@@ -11882,6 +11922,7 @@ export const DEFINITION = {
 				},
 				sAddr: { facets: { maxLength: 255, whiteSpace: 'replace' } },
 			},
+			identityFields: ['ix', 'name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'SDI', 'DAI', 'Labels'],
@@ -12027,6 +12068,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['ix', 'name'],
 		},
 		children: {
 			sequence: [
@@ -12133,6 +12175,7 @@ export const DEFINITION = {
 					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
 				},
 			},
+			identityFields: ['cbName', 'ldInst'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Address'],
@@ -12480,6 +12523,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'IEDName', 'SmvOpts', 'Protocol'],
@@ -12601,6 +12645,7 @@ export const DEFINITION = {
 					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
 				},
 			},
+			identityFields: ['inst'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Authentication', 'LDevice', 'Association'],
@@ -13080,6 +13125,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['input', 'inputInst', 'pDA'],
 		},
 		children: {
 			sequence: [
@@ -13233,6 +13279,7 @@ export const DEFINITION = {
 				},
 				virtual: { default: 'false', facets: { whiteSpace: 'collapse' } },
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Labels', 'LNode', 'EqFunction'],
@@ -13600,6 +13647,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -13764,6 +13812,7 @@ export const DEFINITION = {
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -13970,6 +14019,7 @@ export const DEFINITION = {
 				},
 				virtual: { default: 'false', facets: { whiteSpace: 'collapse' } },
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Labels', 'LNode', 'SubEquipment', 'EqFunction'],
