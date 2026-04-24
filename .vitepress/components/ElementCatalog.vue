@@ -148,7 +148,7 @@ onMounted(() => {
 
 <template>
 	<div class="element-catalog">
-		<h2 id="element-catalog">Element catalog</h2>
+		<h2 id="element-information">Element informations</h2>
 
 		<div class="filter-bar">
 			<div class="filter-input-wrap">
@@ -198,7 +198,7 @@ onMounted(() => {
 		</div>
 
 		<template v-for="group in filteredGroups" :key="group.title">
-			<h3 :id="'group-' + group.title.toLowerCase()">{{ group.title }}</h3>
+			<h4 :id="'group-' + group.title.toLowerCase()">{{ group.title }}</h4>
 			<p>{{ group.description }}</p>
 			<div class="table-wrap">
 				<table>
@@ -435,5 +435,12 @@ onMounted(() => {
 .facets {
 	font-size: 12px;
 	color: var(--vp-c-text-2);
+}
+
+h4 {
+	font-size: 16px;
+	font-weight: 500;
+	color: var(--vp-c-text-2);
+	margin-top: 24px;
 }
 </style>
