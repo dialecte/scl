@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.16] - 2026-04-30
+
+### Added
+
+- `presentation` extension: `extractElementTitle` query - returns a display-friendly title string for any SCL element based on `identityFields` with domain-specific overrides and separators
+
+### Changed
+
+- Upgrade to `@dialecte/core` v0.1.19 (key-based `OmitEntry` syntax)
+- `omit-filters`: migrated from `{ tagName: 'X' }` to plain string entries (rename from `exclude-filters`)
+- Template clone utilities: updated `getTree`/`findDescendants` calls to use new `omit`/`collect` API
+
 ## [0.1.15] - 2026-04-24
 
 ### Added

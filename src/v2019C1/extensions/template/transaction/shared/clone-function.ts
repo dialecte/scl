@@ -10,7 +10,7 @@ import type { TemplateStructure } from './shared.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
-import type { ExcludeFilter } from '@dialecte/core'
+import type { OmitEntry } from '@dialecte/core'
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -29,11 +29,11 @@ export async function cloneFunction(
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 		targetParentRef: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
-		exclude?: ExcludeFilter<Config>[]
+		omit?: OmitEntry<Config>[]
 		stripRootAttributes?: readonly string[]
 	},
 ): Promise<void> {
-	const { sourceQuery, functionRef, targetParentRef, exclude, stripRootAttributes } = params
+	const { sourceQuery, functionRef, targetParentRef, omit, stripRootAttributes } = params
 
 	const strip = stripRootAttributes?.length
 		? { scope: 'root' as const, attributes: [...stripRootAttributes] }
@@ -43,7 +43,7 @@ export async function cloneFunction(
 		sourceQuery,
 		ref: functionRef,
 		targetParent: targetParentRef,
-		exclude,
+		omit,
 		promoteRoot: { from: 'SubFunction', to: 'Function' },
 		strip,
 	})
@@ -110,7 +110,7 @@ async function findRefsForFunctionTree(
 	})
 
 	const { SubFunction: subFunctions = [] } = await sourceQuery.findDescendants(functionRef, {
-		tagName: 'SubFunction',
+		collect: 'SubFunction',
 	})
 
 	for (const subFunction of subFunctions) {

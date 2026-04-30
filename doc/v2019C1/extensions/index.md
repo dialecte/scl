@@ -10,13 +10,14 @@ For a full explanation of how extensions work, see the [Writing Extensions](http
 
 ## Registered modules
 
-| Module      | Access on `doc.query` | Access on `tx` | Reference                  |
-| ----------- | --------------------- | -------------- | -------------------------- |
-| `cleanUp`   | -                     | `tx.cleanUp`   | [Clean-up](./clean-up)     |
-| `dataModel` | `doc.query.dataModel` | `tx.dataModel` | [Data Model](./data-model) |
-| `history`   | `doc.query.history`   | `tx.history`   | [History](./history)       |
-| `reference` | `doc.query.reference` | -              | [Reference](./reference)   |
-| `template`  | -                     | `tx.template`  | [Template](./template)     |
+| Module         | Access on `doc.query`    | Access on `tx` | Reference                      |
+| -------------- | ------------------------ | -------------- | ------------------------------ |
+| `cleanUp`      | -                        | `tx.cleanUp`   | [Clean-up](./clean-up)         |
+| `dataModel`    | `doc.query.dataModel`    | `tx.dataModel` | [Data Model](./data-model)     |
+| `history`      | `doc.query.history`      | `tx.history`   | [History](./history)           |
+| `presentation` | `doc.query.presentation` | -              | [Presentation](./presentation) |
+| `reference`    | `doc.query.reference`    | -              | [Reference](./reference)       |
+| `template`     | -                        | `tx.template`  | [Template](./template)         |
 
 ## Usage pattern
 

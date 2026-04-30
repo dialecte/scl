@@ -19,8 +19,9 @@ export async function extractDataModel(
 	const { sourceQuery, scopeRef } = params
 
 	const { LNode: lnodes = [] } = await sourceQuery.findDescendants(scopeRef, {
-		tagName: 'LNode',
+		collect: 'LNode',
 	})
+
 	if (lnodes.length > 0) {
 		await dataModel.transaction.extract(tx, { sourceQuery, records: lnodes })
 	}

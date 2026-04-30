@@ -6,7 +6,7 @@ import { UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { RefTagName, TargetOf } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
-import type { DescendantsFilter, ExcludeFilter } from '@dialecte/core'
+import type { OmitEntry } from '@dialecte/core'
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -32,8 +32,8 @@ export async function findMissingReferencedRecords<
 	const uuidAttrName = UUID_REFERENCE_PAIRS[refTagName][0].attribute.uuid
 
 	const result = await sourceQuery.findDescendants(scopeRef, {
-		tagName: refTagName,
-	} as DescendantsFilter<Config>)
+		collect: refTagName,
+	})
 	const { [refTagName]: refs = [] } = result as { [K in Ref]: Scl.TrackedRecord<K>[] }
 
 	const uuids = new Set<string>()
@@ -79,10 +79,10 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 		refTagName: Ref
 		targetTagName: Target
 		targetParent: Scl.Ref<Scl.ElementsOf>
-		exclude?: ExcludeFilter<Config>[]
+		omit?: OmitEntry<Config>[]
 	},
 ): Promise<void> {
-	const { sourceQuery, scopeRef, refTagName, targetTagName, targetParent, exclude } = params
+	const { sourceQuery, scopeRef, refTagName, targetTagName, targetParent, omit } = params
 
 	const missing = await findMissingReferencedRecords(tx, {
 		sourceQuery,
@@ -92,7 +92,7 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 	})
 
 	for (const ref of missing) {
-		await cloneTree(tx, { sourceQuery, ref, targetParent, exclude })
+		await cloneTree(tx, { sourceQuery, ref, targetParent, omit })
 	}
 }
 
@@ -108,7 +108,7 @@ type CloneRefsFn = (
 		refTagName: RefTagName
 		targetTagName: Scl.ElementsOf
 		targetParent: Scl.Ref<Scl.ElementsOf>
-		exclude?: ExcludeFilter<Config>[]
+		omit?: OmitEntry<Config>[]
 	},
 ) => Promise<void>
 
@@ -127,10 +127,10 @@ export async function cloneAllReferencedTargets(
 		scopeRef: Scl.Ref<Scl.ElementsOf>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		skip?: ReadonlySet<string>
-		exclude?: ExcludeFilter<Config>[]
+		omit?: OmitEntry<Config>[]
 	},
 ): Promise<void> {
-	const { sourceQuery, scopeTagName, scopeRef, targetParent, skip = new Set(), exclude } = params
+	const { sourceQuery, scopeTagName, scopeRef, targetParent, skip = new Set(), omit } = params
 
 	const refTags = (DESCENDANTS[scopeTagName] as readonly string[]).filter(
 		(tag): tag is RefTagName => tag in UUID_REFERENCE_PAIRS && !skip.has(tag),
@@ -147,7 +147,7 @@ export async function cloneAllReferencedTargets(
 					refTagName,
 					targetTagName: targetTagName as Scl.ElementsOf,
 					targetParent,
-					exclude,
+					omit,
 				})
 			}
 		}

@@ -1,7 +1,7 @@
 import { cloneFunction, cloneFunctionCategories } from './clone-function'
 import { cloneAllReferencedTargets, findMissingReferencedRecords } from './clone-referenced'
 import { cloneTree } from './clone-utils'
-import { ALWAYS_EXCLUDE } from './exclude-filters'
+import { ALWAYS_OMIT } from './omit-filters'
 import { resolveStructureRef } from './resolve-structure-ref'
 
 import type { TemplateStructure } from './shared.types'
@@ -42,7 +42,7 @@ export async function cloneApplicationContent(
 			sourceQuery,
 			functionRef: ref,
 			targetParentRef,
-			exclude: ALWAYS_EXCLUDE,
+			omit: ALWAYS_OMIT,
 		})
 	}
 
@@ -64,10 +64,10 @@ export async function cloneApplicationContent(
 		scopeRef: applicationRef,
 		targetParent: substationRef,
 		skip: REFS_ALREADY_HANDLED,
-		exclude: ALWAYS_EXCLUDE,
+		omit: ALWAYS_OMIT,
 	})
 
 	// 4. Clone Application tree
 	const targetParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
-	await cloneTree(tx, { sourceQuery, ref: applicationRef, targetParent, exclude: ALWAYS_EXCLUDE })
+	await cloneTree(tx, { sourceQuery, ref: applicationRef, targetParent, omit: ALWAYS_OMIT })
 }

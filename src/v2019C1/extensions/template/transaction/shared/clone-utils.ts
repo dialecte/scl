@@ -3,7 +3,7 @@ import { stripAttributes } from '@dialecte/core/helpers'
 import type { StripConfig, PromoteRootConfig } from './shared.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
-import type { ExcludeFilter } from '@dialecte/core'
+import type { OmitEntry } from '@dialecte/core'
 
 export type { StripConfig, PromoteRootConfig }
 
@@ -26,14 +26,14 @@ export async function cloneTree(
 		sourceQuery: Core.Query<Config>
 		ref: Scl.Ref<Scl.ElementsOf>
 		targetParent: Scl.Ref<Scl.ElementsOf>
-		exclude?: ExcludeFilter<Config>[]
+		omit?: OmitEntry<Config>[]
 		promoteRoot?: PromoteRootConfig
 		strip?: StripConfig | false
 	},
 ): Promise<void> {
-	const { sourceQuery, ref, targetParent, exclude, promoteRoot, strip = DEFAULT_STRIP } = params
+	const { sourceQuery, ref, targetParent, omit, promoteRoot, strip = DEFAULT_STRIP } = params
 
-	const tree = await sourceQuery.getTree(ref, { exclude })
+	const tree = await sourceQuery.getTree(ref, { omit })
 	if (!tree) return
 
 	const promoted =

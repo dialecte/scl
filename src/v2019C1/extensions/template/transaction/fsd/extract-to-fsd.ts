@@ -1,6 +1,6 @@
 import { ensureSubstationTemplateStructure } from '../../transaction/ensure-substation-structure'
 import { cloneFunction, cloneFunctionCategories } from '../shared/clone-function'
-import { FSD_EXCLUDE } from '../shared/exclude-filters'
+import { FSD_OMIT } from '../shared/omit-filters'
 import { postExtractionCleanup } from '../shared/post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
@@ -47,7 +47,7 @@ export async function extractToFsd(
 		sourceQuery,
 		functionRef,
 		targetParentRef: substationRef,
-		exclude: FSD_EXCLUDE,
+		omit: FSD_OMIT,
 		stripRootAttributes: ['templateUuid'],
 	})
 
