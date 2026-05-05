@@ -63,7 +63,7 @@ async function updateDescendantRefPaths<GenericElement extends Scl.ElementsOf>(p
 		for (const record of records) {
 			if (record.id === newRecord.id) continue
 
-			const descendantUuid = await query.getAnyAttribute(record, { name: 'uuid' })
+			const descendantUuid = await query.any.getAttribute(record, { name: 'uuid' })
 			if (!descendantUuid) continue
 
 			const refEntries = getRefEntriesForTarget(record.tagName)

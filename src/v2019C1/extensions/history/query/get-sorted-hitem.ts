@@ -11,14 +11,24 @@ export async function getSortedHitems(
 	const history = await query.getRecord({ tagName: 'History' })
 	if (!history) return []
 
-	const { Hitem: hitems = [] } = await query.findDescendants(history)
+	const { Hitem: hitems = [] } = await query.findDescendants(history, { collect: 'Hitem' })
 
-	return [...hitems].sort((a, b) => {
-		const vA = Number(a.attributes.find((attr) => attr.name === 'version')?.value || 0)
-		const vB = Number(b.attributes.find((attr) => attr.name === 'version')?.value || 0)
-		if (vA !== vB) return vA - vB
-		const rA = Number(a.attributes.find((attr) => attr.name === 'revision')?.value || 0)
-		const rB = Number(b.attributes.find((attr) => attr.name === 'revision')?.value || 0)
-		return rA - rB
+	function getNumericAttributeValue(
+		record: (typeof hitems)[number],
+		name: 'version' | 'revision',
+	): number {
+		return Number(record.attributes.find((attr) => attr.name === name)?.value || 0)
+	}
+
+	const sortedHitems = [...hitems].sort((a, b) => {
+		const versionDifference =
+			getNumericAttributeValue(a, 'version') - getNumericAttributeValue(b, 'version')
+		if (versionDifference !== 0) return versionDifference
+
+		const revisionDifference =
+			getNumericAttributeValue(a, 'revision') - getNumericAttributeValue(b, 'revision')
+		return revisionDifference
 	})
+
+	return sortedHitems
 }

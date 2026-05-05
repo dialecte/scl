@@ -24,7 +24,7 @@ export async function extractElementTitle(
 	if (!record) return ''
 
 	const tag = record.tagName
-	const attributes = await query.getAnyAttributes(record)
+	const attributes = await query.any.getAttributes(record)
 
 	// Check override map
 	const overrideFields = TITLE_FIELDS_OVERRIDE[tag]
