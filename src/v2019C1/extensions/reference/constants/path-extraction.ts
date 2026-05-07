@@ -10,6 +10,8 @@ export type ExtractionStrategy =
 	| { type: 'name'; separator?: '/' | '.' }
 	| { type: 'lnClass' }
 	| { type: 'attribute'; attr: string; separator: '/' | '.' }
+	| { type: 'sourceRef' }
+	| { type: 'controlRef' }
 
 export const PATH_EXTRACTION_CONFIG: Record<string, ExtractionStrategy> = {
 	// Transparent - do not contribute a path segment
@@ -37,8 +39,8 @@ export const PATH_EXTRACTION_CONFIG: Record<string, ExtractionStrategy> = {
 	ExtCtrl: { type: 'attribute', attr: 'intAddr', separator: '.' },
 
 	// Process section - named path contributors (targets of lnode / ied-address resolution)
-	SourceRef: { type: 'attribute', attr: 'input', separator: '.' },
-	ControlRef: { type: 'attribute', attr: 'output', separator: '.' },
+	SourceRef: { type: 'sourceRef' },
+	ControlRef: { type: 'controlRef' },
 
 	// Process section - data specifications (6-100, dot-separated)
 	DOS: { type: 'name', separator: '.' },
@@ -95,6 +97,10 @@ export const PATH_CONTRIBUTING_ATTRIBUTES: ReadonlySet<string> = new Set(
 				return [...LNCLASS_ATTRIBUTES]
 			case 'attribute':
 				return [strategy.attr]
+			case 'sourceRef':
+				return ['input', 'inputInst', 'pDA']
+			case 'controlRef':
+				return ['output', 'outputInst']
 		}
 	}),
 )

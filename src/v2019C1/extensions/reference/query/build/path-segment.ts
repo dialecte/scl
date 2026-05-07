@@ -49,6 +49,26 @@ function buildExtractor(strategy: ExtractionStrategy): PathExtractor {
 				const val = getAttribute(record, strategy.attr)
 				return val ? { segment: val, separator: strategy.separator } : null
 			}
+		case 'sourceRef':
+			return (record) => {
+				const input = getAttribute(record, 'input')
+				if (!input) return null
+				let segment = input
+				const inputInst = getAttribute(record, 'inputInst')
+				if (inputInst && inputInst !== '1') segment += `(${inputInst})`
+				const pDA = getAttribute(record, 'pDA')
+				if (pDA) segment += `.${pDA}`
+				return { segment, separator: '.' }
+			}
+		case 'controlRef':
+			return (record) => {
+				const output = getAttribute(record, 'output')
+				if (!output) return null
+				let segment = output
+				const outputInst = getAttribute(record, 'outputInst')
+				if (outputInst && outputInst !== '1') segment += `(${outputInst})`
+				return { segment, separator: '.' }
+			}
 	}
 }
 

@@ -46,6 +46,7 @@ export const SCL_NAMESPACES = {
 export const SCL_DIALECTE_CONFIG = {
 	rootElementName: ROOT_ELEMENT,
 	singletonElements: SINGLETON_ELEMENTS,
+	transparentElements: ['Private'] as const,
 	elements: ELEMENT_NAMES,
 	namespaces: SCL_NAMESPACES,
 	attributes: ATTRIBUTES,

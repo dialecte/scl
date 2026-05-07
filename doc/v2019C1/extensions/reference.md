@@ -73,6 +73,31 @@ const result = await reference.query.buildElementPath(query, { tagName: 'Functio
 
 Returns `null` if the record is not found. The path is built by concatenating each ancestor's path segment (typically the `name` attribute) with `/`.
 
+### Path segment rules
+
+Most elements contribute their `name` attribute as segment. Special cases:
+
+| Element    | Segment format                            | Example                   |
+| ---------- | ----------------------------------------- | ------------------------- |
+| LNode/LN   | `prefix` + `lnClass` + `inst`             | `PXCBR1`, `LLN0`          |
+| LDevice    | `inst` attribute                          | `LD0`                     |
+| SourceRef  | `input` + optional `(inputInst)` + `.pDA` | `Trip`, `Trip(2).general` |
+| ControlRef | `output` + optional `(outputInst)`        | `TripCmd`, `TripCmd(2)`   |
+| ExtRef     | `intAddr` attribute                       | `TrCmd.stVal`             |
+
+**SourceRef/ControlRef disambiguation** (per IEC TR 61850-90-30, XSD identity constraints):
+
+- `(inputInst)` is appended when `inputInst` is present and != `"1"` (the XSD default)
+- `.pDA` is appended when `pDA` is non-empty
+- `(outputInst)` follows the same rule for ControlRef
+
+```ts
+// SourceRef with input="Trip", inputInst="1", pDA=""  ->  "Trip"
+// SourceRef with input="Trip", inputInst="2", pDA=""  ->  "Trip(2)"
+// SourceRef with input="Trip", inputInst="1", pDA="general"  ->  "Trip.general"
+// SourceRef with input="Trip", inputInst="2", pDA="general"  ->  "Trip(2).general"
+```
+
 ---
 
 ## buildReferencePath

@@ -62,6 +62,42 @@ describe('getPathSegment', () => {
 			}),
 			expected: { segment: 'Trip', separator: '.' },
 		},
+		'SourceRef with inputInst != 1 → appends (inputInst)': {
+			record: createSclTestRecord({
+				record: { tagName: 'SourceRef', attributes: { input: 'Trip', inputInst: '2' } },
+			}),
+			expected: { segment: 'Trip(2)', separator: '.' },
+		},
+		'SourceRef with pDA → appends .pDA': {
+			record: createSclTestRecord({
+				record: { tagName: 'SourceRef', attributes: { input: 'Trip', pDA: 'general' } },
+			}),
+			expected: { segment: 'Trip.general', separator: '.' },
+		},
+		'SourceRef with inputInst != 1 and pDA → appends (inputInst).pDA': {
+			record: createSclTestRecord({
+				record: {
+					tagName: 'SourceRef',
+					attributes: { input: 'Trip', inputInst: '2', pDA: 'general' },
+				},
+			}),
+			expected: { segment: 'Trip(2).general', separator: '.' },
+		},
+		'SourceRef with inputInst=1 (default) → no suffix': {
+			record: createSclTestRecord({
+				record: { tagName: 'SourceRef', attributes: { input: 'Trip', inputInst: '1' } },
+			}),
+			expected: { segment: 'Trip', separator: '.' },
+		},
+		'SourceRef with inputInst=1 and pDA → appends .pDA only': {
+			record: createSclTestRecord({
+				record: {
+					tagName: 'SourceRef',
+					attributes: { input: 'Trip', inputInst: '1', pDA: 'general' },
+				},
+			}),
+			expected: { segment: 'Trip.general', separator: '.' },
+		},
 		'SourceRef without input → no path segment': {
 			record: createSclTestRecord({ record: { tagName: 'SourceRef' } }),
 			expected: null,
@@ -69,6 +105,18 @@ describe('getPathSegment', () => {
 		'ControlRef with output → output as dot-separated segment': {
 			record: createSclTestRecord({
 				record: { tagName: 'ControlRef', attributes: { output: 'TripCmd' } },
+			}),
+			expected: { segment: 'TripCmd', separator: '.' },
+		},
+		'ControlRef with outputInst != 1 → appends (outputInst)': {
+			record: createSclTestRecord({
+				record: { tagName: 'ControlRef', attributes: { output: 'TripCmd', outputInst: '2' } },
+			}),
+			expected: { segment: 'TripCmd(2)', separator: '.' },
+		},
+		'ControlRef with outputInst=1 (default) → no suffix': {
+			record: createSclTestRecord({
+				record: { tagName: 'ControlRef', attributes: { output: 'TripCmd', outputInst: '1' } },
 			}),
 			expected: { segment: 'TripCmd', separator: '.' },
 		},
