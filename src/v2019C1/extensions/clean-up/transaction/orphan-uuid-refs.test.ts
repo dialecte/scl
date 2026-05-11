@@ -160,10 +160,10 @@ describe('cleanOrphanedUuidRefs', () => {
 	runSclTestCases.withExport({
 		testCases,
 		act: async ({ source }) => {
-			await source.document.transaction(async (tx) => {
+			await source.transaction(async (tx) => {
 				await orphanUuidRefs(tx)
 			})
-			return { assertDatabaseName: source.databaseName }
+			return { assertOn: 'source' }
 		},
 	})
 })

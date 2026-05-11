@@ -35,22 +35,23 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 		target,
 		testCase,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
-		await target!.document.transaction(async (tx) => {
+		if (!target) throw new Error('target required')
+		await target.transaction(async (tx) => {
 			await cloneFunction(tx, {
-				sourceQuery: source.document.query,
+				sourceQuery: source.query,
 				functionRef: testCase.functionRef,
 				targetParentRef: testCase.targetParentRef,
 				stripRootAttributes: testCase.stripRootAttributes,
 			})
 			const structure = await ensureSubstationTemplateStructure(tx)
 			await cloneFunctionCategories(tx, {
-				sourceQuery: source.document.query,
+				sourceQuery: source.query,
 				functionRef: testCase.functionRef,
 				structure,
 				stripCategoriesUuid: testCase.stripCategoriesUuid,
 			})
 		})
-		return { assertDatabaseName: target!.databaseName }
+		return { assertOn: 'target' }
 	}
 
 	// ── Function tree cloning ────────────────────────────────────────────────

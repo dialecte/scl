@@ -134,7 +134,7 @@ describe('reference-parsing', () => {
 
 		runSclTestCases.withExport({
 			testCases,
-			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
+			act: async () => ({ assertOn: 'source' }),
 		})
 	})
 
@@ -207,7 +207,7 @@ describe('reference-parsing', () => {
 
 		runSclTestCases.withExport({
 			testCases,
-			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
+			act: async () => ({ assertOn: 'source' }),
 		})
 	})
 
@@ -302,7 +302,7 @@ describe('reference-parsing', () => {
 
 		runSclTestCases.withExport({
 			testCases,
-			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
+			act: async () => ({ assertOn: 'source' }),
 		})
 	})
 
@@ -446,7 +446,7 @@ describe('reference-parsing', () => {
 
 		runSclTestCases.withExport({
 			testCases,
-			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
+			act: async () => ({ assertOn: 'source' }),
 		})
 	})
 
@@ -544,7 +544,7 @@ describe('reference-parsing', () => {
 
 		runSclTestCases.withExport({
 			testCases,
-			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
+			act: async () => ({ assertOn: 'source' }),
 		})
 	})
 
@@ -599,7 +599,7 @@ describe('reference-parsing', () => {
 
 		runSclTestCases.withExport({
 			testCases,
-			act: async ({ source }) => ({ assertDatabaseName: source.databaseName }),
+			act: async () => ({ assertOn: 'source' }),
 		})
 	})
 

@@ -25,13 +25,14 @@ describe('extractDataModel', () => {
 		target,
 		testCase,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
-		await target!.document.transaction(async (tx) => {
+		if (!target) throw new Error('target required')
+		await target.transaction(async (tx) => {
 			await extractDataModel(tx, {
-				sourceQuery: source.document.query,
+				sourceQuery: source.query,
 				scopeRef: testCase.scopeRef,
 			})
 		})
-		return { assertDatabaseName: target!.databaseName }
+		return { assertOn: 'target' }
 	}
 
 	// ── Full type chain extraction ───────────────────────────────────────────

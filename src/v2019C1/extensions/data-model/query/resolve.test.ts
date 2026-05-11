@@ -211,7 +211,7 @@ describe('resolveDataModel', () => {
 		testCase,
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		const query = source.document.query
+		const query = source.query
 
 		const lnodeRecord = await query.getRecord(testCase.lnodeRef)
 		if (!lnodeRecord) throw new Error('LNode not found')
@@ -226,7 +226,7 @@ describe('resolveDataModel', () => {
 		expect(toIds(result.daTypes)).toEqual(testCase.expected.daTypes)
 		expect(toIds(result.enumTypes)).toEqual(testCase.expected.enumTypes)
 
-		return { assertDatabaseName: source.databaseName }
+		return { assertOn: 'source' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })

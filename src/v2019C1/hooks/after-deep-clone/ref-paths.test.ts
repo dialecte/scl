@@ -65,8 +65,9 @@ describe('afterDeepClone', () => {
 		runSclTestCases.withExport<TestCase>({
 			testCases,
 			act: async ({ source, target, testCase }) => {
-				await testCase.act(source.document, target!.document)
-				return { assertDatabaseName: target!.databaseName }
+				if (!target) throw new Error('target required')
+				await testCase.act(source, target)
+				return { assertOn: 'target' }
 			},
 		})
 	})
@@ -127,8 +128,8 @@ describe('afterDeepClone', () => {
 		runSclTestCases.withExport<TestCase>({
 			testCases,
 			act: async ({ source, testCase }) => {
-				await testCase.act(source.document)
-				return { assertDatabaseName: source.databaseName }
+				await testCase.act(source)
+				return { assertOn: 'source' }
 			},
 		})
 	})

@@ -85,11 +85,11 @@ describe('resolveStructureRef', () => {
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		act: async ({ source, testCase }) => {
-			const structure = await source.document.transaction(async (tx) => {
+			const structure = await source.transaction(async (tx) => {
 				return ensureSubstationTemplateStructure(tx)
 			})
 
-			const result = await resolveStructureRef(source.document.query, testCase.ref, structure)
+			const result = await resolveStructureRef(source.query, testCase.ref, structure)
 
 			expect(result.tagName).toBe(testCase.expectedTagName)
 		},

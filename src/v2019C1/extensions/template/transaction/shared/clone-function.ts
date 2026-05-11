@@ -2,8 +2,6 @@ import { cloneTree } from './clone-utils'
 import { extractDataModel } from './extract-data-model'
 import { resolveStructureRef } from './resolve-structure-ref'
 
-import { invariant } from '@dialecte/core/utils'
-
 import { reference } from '@/v2019C1/extensions/reference'
 
 import type { TemplateStructure } from './shared.types'

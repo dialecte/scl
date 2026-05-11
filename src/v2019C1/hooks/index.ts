@@ -4,8 +4,12 @@ import { afterStandardizedRecord } from './after-standardized-record'
 import { afterUpdated } from './after-updated'
 import { beforeClone } from './before-clone'
 import { beforeDelete } from './before-delete'
+//io
+import { createSclIoHooks } from './io'
 
 import { Scl } from '@/v2019C1/config'
+
+import type { IOHooks } from '@dialecte/core'
 
 export const HOOKS: Scl.TransactionHooks = {
 	beforeClone,
@@ -15,3 +19,5 @@ export const HOOKS: Scl.TransactionHooks = {
 	afterUpdated,
 	beforeDelete,
 }
+
+export const IO_HOOKS: IOHooks = createSclIoHooks()

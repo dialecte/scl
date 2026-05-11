@@ -148,7 +148,7 @@ describe('extractElementTitle', () => {
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		act: async ({ source, testCase }) => {
-			const result = await extractElementTitle(source.document.query, testCase.ref)
+			const result = await extractElementTitle(source.query, testCase.ref)
 			expect(result).toBe(testCase.expectedTitle)
 		},
 	})

@@ -74,13 +74,13 @@ describe('getSortedHitems', () => {
 		testCase,
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		const sorted = await getSortedHitems(source.document.query)
+		const sorted = await getSortedHitems(source.query)
 		const result = sorted.map((h) => ({
 			version: h.attributes.find((a) => a.name === 'version')?.value ?? '',
 			revision: h.attributes.find((a) => a.name === 'revision')?.value ?? '',
 		}))
 		expect(result).toEqual(testCase.expectedOrder)
-		return { assertDatabaseName: source.databaseName }
+		return { assertOn: 'source' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })

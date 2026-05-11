@@ -104,10 +104,10 @@ describe('addHistoryEntry', () => {
 		testCase,
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		await source.document.transaction(async (tx) => {
+		await source.transaction(async (tx) => {
 			await addEntry(tx, testCase.params)
 		})
-		return { assertDatabaseName: source.databaseName }
+		return { assertOn: 'source' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })

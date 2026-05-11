@@ -68,7 +68,7 @@ describe('getLatestHitem', () => {
 		testCase,
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		const latest = await getLatestHitem(source.document.query)
+		const latest = await getLatestHitem(source.query)
 		if (testCase.expectedLatest === null) {
 			expect(latest).toBeUndefined()
 		} else {
@@ -79,7 +79,7 @@ describe('getLatestHitem', () => {
 				testCase.expectedLatest.revision,
 			)
 		}
-		return { assertDatabaseName: source.databaseName }
+		return { assertOn: 'source' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })

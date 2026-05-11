@@ -6,7 +6,7 @@ import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 import {
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
-	createSclTestDialecte,
+	createSclTestProject,
 	runSclTestCases,
 } from '@/v2019C1/test'
 
@@ -104,8 +104,8 @@ describe('afterCreated', () => {
 		runSclTestCases.withExport({
 			testCases,
 			act: async ({ source, testCase }) => {
-				await testCase.act(source.document as Core.Document<Config>)
-				return { assertDatabaseName: source.databaseName }
+				await testCase.act(source)
+				return { assertOn: 'source' }
 			},
 		})
 	})
@@ -166,19 +166,22 @@ describe('afterCreated', () => {
 		}
 
 		it.each(Object.entries(testCases))('%s', async (_, { childParentId, expected }) => {
-			const { document, cleanup } = await createSclTestDialecte({
-				xmlString: xmlWithPrivate,
+			const { project, source } = await createSclTestProject({
+				sourceXml: xmlWithPrivate,
 			})
 
 			try {
-				const privateRecord = await document.query.getRecord({ tagName: 'Private', id: 'priv1' })
+				const privateRecord = await source.document.query.getRecord({
+					tagName: 'Private',
+					id: 'priv1',
+				})
 				expect(privateRecord).toBeDefined()
 				if (!privateRecord) return
 
 				const result = await afterCreated({
 					childRecord: buildLnodeSpecNaming(childParentId) as any,
 					parentRecord: privateRecord as any,
-					query: document.query,
+					query: source.document.query,
 				})
 
 				expect(result).toHaveLength(expected.operationCount)
@@ -189,7 +192,7 @@ describe('afterCreated', () => {
 					}
 				})
 			} finally {
-				await cleanup()
+				await project.destroy()
 			}
 		})
 	})
@@ -242,8 +245,8 @@ describe('afterCreated', () => {
 		runSclTestCases.withExport({
 			testCases,
 			act: async ({ source, testCase }) => {
-				await testCase.act(source.document as Core.Document<Config>)
-				return { assertDatabaseName: source.databaseName }
+				await testCase.act(source)
+				return { assertOn: 'source' }
 			},
 		})
 	})

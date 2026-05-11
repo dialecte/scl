@@ -273,7 +273,7 @@ describe('buildReferencePath', () => {
 		testCase,
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		const query = source.document.query
+		const query = source.query
 
 		const result = await buildReferencePath(query, {
 			reference: testCase.reference as never,
@@ -282,7 +282,7 @@ describe('buildReferencePath', () => {
 
 		expect(result).toBe(testCase.expected)
 
-		return { assertDatabaseName: source.databaseName }
+		return { assertOn: 'source' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })

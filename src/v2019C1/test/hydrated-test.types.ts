@@ -5,7 +5,9 @@ export namespace SclTest {
 	export type BaseTestCase = CoreTest.BaseTestCase
 	export type BaseXmlTestCase = CoreTest.BaseXmlTestCase
 	export type TestCases<T extends BaseTestCase = BaseXmlTestCase> = Record<string, T>
-	export type TestContext = CoreTest.TestContext<Config>
+	export type TestDocument = CoreTest.TestDocument<Config>
+	export type TestProjectResult = CoreTest.TestProjectResult<Config>
+	export type TestRecord = CoreTest.TestRecord<Config>
 	export type ActParams<T extends CoreTest.BaseXmlTestCase> = CoreTest.ActParams<Config, T>
 	export type ActResult = CoreTest.ActResult
 	export type TestRunner = CoreTest.TestRunner<Config>

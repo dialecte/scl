@@ -126,8 +126,8 @@ describe('cleanOrphanedRefs', () => {
 		runSclTestCases.withExport({
 			testCases,
 			act: async ({ source, testCase }) => {
-				await testCase.act(source.document as Core.Document<Config>)
-				return { assertDatabaseName: source.databaseName }
+				await testCase.act(source)
+				return { assertOn: 'source' }
 			},
 		})
 	})

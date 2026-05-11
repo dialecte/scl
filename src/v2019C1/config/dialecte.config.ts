@@ -9,18 +9,25 @@ import {
 	ROOT_ELEMENT,
 	SINGLETON_ELEMENTS,
 } from '../definition'
-import { createSclIoHooks } from '../io/hooks'
+import { IO_HOOKS } from '../hooks/'
 
 import type { IOConfig, AnyDialecteConfig, DatabaseConfig } from '@dialecte/core'
 
 // SCL-specific IO configuration
 export const SCL_IO_CONFIG = {
 	supportedFileExtensions: ['.fsd', '.asd', '.ssd', '.scd', '.isd', '.xml'],
-	hooks: createSclIoHooks(),
+	hooks: IO_HOOKS,
 } satisfies IOConfig
 
 // SCL database configuration
 export const SCL_DATABASE_CONFIG = {
+	recordSchema: {
+		primaryKey: 'id',
+		indexes: ['tagName', 'parent.id', 'parent.tagName'],
+		compoundIndexes: [['id', 'tagName']],
+		arrayIndexes: ['children.id', 'children.tagName'],
+	},
+	/** @deprecated - kept for old io/ pipeline until Phase 5 removes it */
 	tables: {
 		xmlElements: {
 			name: 'sclElements',

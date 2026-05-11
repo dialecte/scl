@@ -71,8 +71,9 @@ describe('extractFsd', () => {
 		runSclTestCases.withExport<TestCase>({
 			testCases,
 			act: async ({ source, target, testCase }) => {
-				await testCase.act(source.document, target!.document)
-				return { assertDatabaseName: target!.databaseName }
+				if (!target) throw new Error('target required')
+				await testCase.act(source, target)
+				return { assertOn: 'target' }
 			},
 		})
 	})

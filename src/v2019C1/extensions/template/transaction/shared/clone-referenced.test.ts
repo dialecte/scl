@@ -99,9 +99,10 @@ describe('findMissingReferencedRecords', () => {
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		act: async ({ source, target, testCase }) => {
-			const result = await target!.document.transaction(async (tx) => {
+			if (!target) throw new Error('target required')
+			const result = await target.transaction(async (tx) => {
 				return findMissingReferencedRecords(tx, {
-					sourceQuery: source.document.query,
+					sourceQuery: source.query,
 					scopeRef: testCase.scopeRef,
 					refTagName: testCase.refTagName,
 					targetTagName: testCase.targetTagName,
@@ -121,16 +122,17 @@ describe('cloneReferencedRecords', () => {
 		source,
 		target,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
-		await target!.document.transaction(async (tx) => {
+		if (!target) throw new Error('target required')
+		await target.transaction(async (tx) => {
 			await cloneReferencedRecords(tx, {
-				sourceQuery: source.document.query,
+				sourceQuery: source.query,
 				scopeRef: { tagName: 'Application', id: 'app1' } as Scl.Ref<'Application'>,
 				refTagName: 'AllocationRoleRef',
 				targetTagName: 'AllocationRole',
 				targetParent: { tagName: 'Substation', id: 'target-sub' } as Scl.Ref<'Substation'>,
 			})
 		})
-		return { assertDatabaseName: target!.databaseName }
+		return { assertOn: 'target' }
 	}
 
 	describe('AllocationRole satellite clone', () => {

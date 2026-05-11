@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-05-11
+
+### Added
+
+- `createSclProject(params?)` factory: returns a pre-configured `Scl.Project` instance (config, extensions, hooks bundled); call `.open(name)` to connect the DB
+- `Scl.Project` type exported from `hydrated.types`
+
+### Changed
+
+- Migrated to `@dialecte/core` v0.2.2 Project architecture
+- `Scl.Project` is now `Project<Config, SclExtensions>` - full `import`, `export`, `openDocument`, `undo`, `redo` API available directly on the project instance
+- IO hooks (`createSclIoHooks`) moved from `io/hooks/` to `hooks/io/` - bundled with transaction hooks under `hooks/`
+- Test helpers: `createSclTestProject` replaces `createSclTestDialecte`; returns `{ project, source, target }` where `source`/`target` are `{ documentId, document }`
+- `ActResult.assertOn` replaces `assertDatabaseName`; `ActParams.source`/`target` are `Document` instances directly
+- All 25 test files updated to use new `ActParams` shape
+
+### Removed
+
+- `openSclProject` / `openSclDocument` / `createSclDocument` - replaced by `createSclProject().open(name)`
+- `importSclFiles`, `exportSclFile` standalone functions - replaced by `project.import(file)` / `project.export(documentId)`
+- `io/import.ts`, `io/export.ts` - IO is now handled by the Project instance
+
 ## [0.1.20] - 2026-05-07
 
 ### Added

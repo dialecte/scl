@@ -91,10 +91,10 @@ describe('postExtractionCleanup', () => {
 		runSclTestCases.withExport({
 			testCases,
 			act: async ({ source }) => {
-				await source.document.transaction(async (tx) => {
+				await source.transaction(async (tx) => {
 					await postExtractionCleanup(tx)
 				})
-				return { assertDatabaseName: source.databaseName }
+				return { assertOn: 'source' }
 			},
 		})
 	})
@@ -178,10 +178,10 @@ describe('postExtractionCleanup', () => {
 		runSclTestCases.withExport({
 			testCases,
 			act: async ({ source }) => {
-				await source.document.transaction(async (tx) => {
+				await source.transaction(async (tx) => {
 					await postExtractionCleanup(tx)
 				})
-				return { assertDatabaseName: source.databaseName }
+				return { assertOn: 'source' }
 			},
 		})
 	})
@@ -227,10 +227,10 @@ describe('postExtractionCleanup', () => {
 		runSclTestCases.withExport({
 			testCases,
 			act: async ({ source }) => {
-				await source.document.transaction(async (tx) => {
+				await source.transaction(async (tx) => {
 					await postExtractionCleanup(tx)
 				})
-				return { assertDatabaseName: source.databaseName }
+				return { assertOn: 'source' }
 			},
 		})
 	})
@@ -279,10 +279,10 @@ describe('postExtractionCleanup', () => {
 		runSclTestCases.withExport({
 			testCases,
 			act: async ({ source }) => {
-				await source.document.transaction(async (tx) => {
+				await source.transaction(async (tx) => {
 					await postExtractionCleanup(tx)
 				})
-				return { assertDatabaseName: source.databaseName }
+				return { assertOn: 'source' }
 			},
 		})
 	})

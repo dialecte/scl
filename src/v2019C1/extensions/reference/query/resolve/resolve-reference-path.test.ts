@@ -304,7 +304,7 @@ describe('resolve', () => {
 		testCase,
 		source,
 	}: SclTest.ActParams<ResolveRefTestCase>): Promise<SclTest.ActResult> {
-		const query = source.document.query
+		const query = source.query
 
 		const records = await query.getRecordsByTagName(testCase.refTagName as Scl.ElementsOf)
 		const refRecord = records.find((r) => r.id === testCase.refId)
@@ -329,7 +329,7 @@ describe('resolve', () => {
 			}
 		}
 
-		return { assertDatabaseName: source.databaseName }
+		return { assertOn: 'source' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })

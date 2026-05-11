@@ -1,6 +1,6 @@
 import { CUSTOM_RECORD_ID_ATTRIBUTE, CUSTOM_RECORD_ID_ATTRIBUTE_NAME } from '@dialecte/core/helpers'
 import {
-	createTestDialecte,
+	createTestProject,
 	createTestRecordFactory,
 	createXmlAssertions,
 	createTestRunner,
@@ -19,11 +19,12 @@ export { CUSTOM_RECORD_ID_ATTRIBUTE, CUSTOM_RECORD_ID_ATTRIBUTE_NAME }
 
 export const runSclTestCases = createTestRunner(SCL_DIALECTE_CONFIG, HOOKS)
 
-export async function createSclTestDialecte(params: { xmlString: string }) {
-	const { xmlString } = params
+export async function createSclTestProject(params: { sourceXml: string; targetXml?: string }) {
+	const { sourceXml, targetXml } = params
 
-	return await createTestDialecte({
-		xmlString,
+	return createTestProject({
+		sourceXml,
+		targetXml,
 		dialecteConfig: SCL_DIALECTE_CONFIG,
 		hooks: HOOKS,
 	})

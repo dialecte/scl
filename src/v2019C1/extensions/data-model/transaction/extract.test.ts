@@ -122,20 +122,20 @@ describe('extract', () => {
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 
-		const sourceQuery = source.document.query
+		const sourceQuery = source.query
 		const lnodeRecord = await sourceQuery.getRecord(testCase.lnodeRef)
 		if (!lnodeRecord) throw new Error('LNode not found')
 
-		await target.document.transaction(async (tx) => {
+		await target.transaction(async (tx) => {
 			await extract(tx, { sourceQuery, records: [lnodeRecord] })
 		})
 
-		const lnodeTypes = await target.document.query.getRecordsByTagName('LNodeType')
+		const lnodeTypes = await target.query.getRecordsByTagName('LNodeType')
 		expect(lnodeTypes.length, 'no duplicate LNodeTypes').toBe(
 			new Set(lnodeTypes.map((r) => r.attributes.find((a) => a.name === 'id')?.value)).size,
 		)
 
-		return { assertDatabaseName: target.databaseName }
+		return { assertOn: 'target' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })

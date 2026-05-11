@@ -25,9 +25,10 @@ describe('extractToAsd', () => {
 		target,
 		testCase,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
-		await target!.document.transaction(async (tx) => {
+		if (!target) throw new Error('target required')
+		await target.transaction(async (tx) => {
 			await extractToAsd(tx, {
-				sourceQuery: source.document.query,
+				sourceQuery: source.query,
 				applicationRef: {
 					tagName: 'Application',
 					id: testCase.applicationId,
@@ -36,7 +37,7 @@ describe('extractToAsd', () => {
 				who: 'test',
 			})
 		})
-		return { assertDatabaseName: target!.databaseName }
+		return { assertOn: 'target' }
 	}
 
 	// ── LNodeOutputRef / LNodeInputRef preservation ──────────────────────────

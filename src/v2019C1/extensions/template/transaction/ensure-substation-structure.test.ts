@@ -51,10 +51,10 @@ describe('ensureSubstationStructure', () => {
 	runSclTestCases.withExport({
 		testCases,
 		act: async ({ source }) => {
-			await source.document.transaction(async (tx) => {
+			await source.transaction(async (tx) => {
 				await ensureSubstationTemplateStructure(tx)
 			})
-			return { assertDatabaseName: source.databaseName }
+			return { assertOn: 'source' }
 		},
 	})
 })

@@ -4,10 +4,9 @@ import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
-import type { Config, Scl } from '@/v2019C1/config'
+import type { Scl } from '@/v2019C1/config'
 import type { RefEntry } from '@/v2019C1/extensions/reference'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
-import type * as Core from '@dialecte/core'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -202,8 +201,8 @@ describe('ref-entry-ops', () => {
 		runSclTestCases.withExport({
 			testCases,
 			act: async ({ source, testCase }) => {
-				await testCase.act(source.document as Core.Document<Config>)
-				return { assertDatabaseName: source.databaseName }
+				await testCase.act(source)
+				return { assertOn: 'source' }
 			},
 		})
 	})

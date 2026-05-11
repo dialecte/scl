@@ -307,7 +307,7 @@ describe('buildElementPath', () => {
 		testCase,
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		const query = source.document.query
+		const query = source.query
 
 		const result = await buildElementPath(query, testCase.ref as never)
 
@@ -323,7 +323,7 @@ describe('buildElementPath', () => {
 			).toEqual(testCase.expectedSegments)
 		}
 
-		return { assertDatabaseName: source.databaseName }
+		return { assertOn: 'source' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })

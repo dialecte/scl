@@ -1,33 +1,29 @@
+import { Scl } from './config'
 import { SCL_DIALECTE_CONFIG } from './config/dialecte.config'
 import { SCL_EXTENSION_MODULES } from './extensions'
 import { HOOKS } from './hooks'
 
-import { openDialecteDocument, createDialecteDocument } from '@dialecte/core'
+import { Project } from '@dialecte/core'
 
-import type { StorageOptions, ExtensionModules } from '@dialecte/core'
+import type { StorageParam, ExtensionModules } from '@dialecte/core'
 
-export function openSclDocument<
+/**
+ * Create an SCL project with pre-configured config, extensions, and hooks.
+ * Call .open(name) to initialize the store and hydrate state.
+ */
+export function createSclProject<
 	CustomModules extends ExtensionModules = Record<never, never>,
->(params: { storage: StorageOptions; extensions?: CustomModules }) {
-	const { storage, extensions } = params
+>(params?: { storage?: StorageParam; extensions?: CustomModules }): Scl.Project<CustomModules> {
+	const { storage = { type: 'local' }, extensions } = params ?? {}
 
-	return openDialecteDocument({
-		config: SCL_DIALECTE_CONFIG,
+	return new Project({
+		configs: { scl: SCL_DIALECTE_CONFIG },
+		defaultConfigKey: 'scl',
 		storage,
-		extensions: { base: SCL_EXTENSION_MODULES, custom: extensions },
+		extensionsRegistry: {
+			...SCL_EXTENSION_MODULES,
+			...extensions,
+		} as typeof SCL_EXTENSION_MODULES & CustomModules,
 		hooks: HOOKS,
-	})
-}
-
-export async function createSclDocument<
-	CustomModules extends ExtensionModules = Record<never, never>,
->(params: { storage: StorageOptions; extensions?: CustomModules }) {
-	const { storage, extensions } = params
-
-	return createDialecteDocument({
-		config: SCL_DIALECTE_CONFIG,
-		storage,
-		extensions: { base: SCL_EXTENSION_MODULES, custom: extensions },
-		hooks: HOOKS,
-	})
+	}) as Scl.Project<CustomModules>
 }

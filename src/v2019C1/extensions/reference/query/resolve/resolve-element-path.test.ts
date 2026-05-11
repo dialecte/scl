@@ -127,7 +127,7 @@ describe('resolveByPath', () => {
 		testCase,
 		source,
 	}: SclTest.ActParams<ResolveByPathTestCase>): Promise<SclTest.ActResult> {
-		const query = source.document.query
+		const query = source.query
 
 		const result = await resolveElementPath(query, testCase.path)
 
@@ -139,7 +139,7 @@ describe('resolveByPath', () => {
 			expect(result!.id).toBe(testCase.expected.id)
 		}
 
-		return { assertDatabaseName: source.databaseName }
+		return { assertOn: 'source' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })
