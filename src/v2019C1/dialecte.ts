@@ -20,10 +20,7 @@ export function createSclProject<
 		configs: { scl: SCL_DIALECTE_CONFIG },
 		defaultConfigKey: 'scl',
 		storage,
-		extensionsRegistry: {
-			...SCL_EXTENSION_MODULES,
-			...extensions,
-		} as typeof SCL_EXTENSION_MODULES & CustomModules,
+		extensions: { base: SCL_EXTENSION_MODULES, custom: extensions },
 		hooks: HOOKS,
 	}) as Scl.Project<CustomModules>
 }

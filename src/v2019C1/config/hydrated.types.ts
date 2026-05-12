@@ -2,11 +2,12 @@ import type { Config } from './dialecte.config'
 import type { SCL_EXTENSION_MODULES } from '@/v2019C1/extensions'
 import type * as Core from '@dialecte/core'
 
-type SclExtensions = Core.MergedExtensions<typeof SCL_EXTENSION_MODULES>
+type SclModules = typeof SCL_EXTENSION_MODULES
+type SclExtensions = Core.MergedExtensions<SclModules>
 
 export namespace Scl {
 	export type Project<GenericCustomModules extends Core.ExtensionModules = Record<never, never>> =
-		Core.Project<Config, SclExtensions & GenericCustomModules>
+		Core.Project<Config, SclModules & GenericCustomModules>
 	export type Document = Core.Document<Config, SclExtensions>
 	export type Context = Core.Context<Config>
 
