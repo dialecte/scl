@@ -272,7 +272,7 @@ All types are bound to the SCL dialecte config via the `SclTest` namespace:
 | `SclTest.BaseXmlTestCase` | `BaseTestCase & { sourceXml, targetXml?, expectedQueries?, unexpectedQueries? }` - XML tests |
 | `SclTest.TestCases<T>`    | `Record<string, T>` - key is the test description. Defaults to `BaseXmlTestCase`             |
 | `SclTest.TestContext`     | `{ document, databaseName }` - bound to SCL config                                           |
-| `SclTest.ActParams<T>`    | `{ source, target?, testCase }` - passed to `act`                                            |
+| `SclTest.ActParams<T>`    | `{ project, source, target?, testCase }` - passed to `act`                                   |
 | `SclTest.ActResult`       | `{ assertDatabaseName: string, withDatabaseIds?: boolean }`                                  |
 | `SclTest.TestRunner`      | Runner type bound to SCL config                                                              |
 
