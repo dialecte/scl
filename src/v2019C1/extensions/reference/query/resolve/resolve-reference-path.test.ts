@@ -298,6 +298,134 @@ describe('resolve', () => {
 			pathAttribute: 'function',
 			expected: { tagName: 'Function', id: 'func-b2' },
 		},
+
+		// ── UUID-based resolution (fast path) ────────────────────────────
+
+		'uuid — direct: FunctionCatRef with functionUuid → Function': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Function name="Protection" uuid="func-uuid-1" ${ID}="func-1" />
+					<Private type="eIEC61850-6-100">
+						<eIEC61850-6-100:FunctionCategory name="Cat1" ${ID}="fcat-1">
+							<eIEC61850-6-100:FunctionCatRef function="S1/Protection" functionUuid="func-uuid-1" ${ID}="fcatref-1" />
+						</eIEC61850-6-100:FunctionCategory>
+					</Private>
+				</Substation>
+			</SCL>`,
+			refId: 'fcatref-1',
+			refTagName: 'FunctionCatRef',
+			pathAttribute: 'function',
+			expected: { tagName: 'Function', id: 'func-1' },
+		},
+
+		'uuid — lnode: SourceRef.source with controlledLNodeUuid → LNode + qualifier': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Bay name="B1" ${ID}="bay-1">
+						<LNode prefix="P" lnClass="XCBR" lnInst="1" uuid="target-uuid" ${ID}="target-lnode" />
+						<LNode lnClass="PTRC" lnInst="1" ${ID}="source-lnode">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeInputs ${ID}="inputs-1">
+									<eIEC61850-6-100:SourceRef input="Trip" source="S1/B1/PXCBR1.Pos.stVal" sourceLNodeUuid="target-uuid" sourceDoName="Pos" sourceDaName="stVal" ${ID}="sr-1" />
+								</eIEC61850-6-100:LNodeInputs>
+							</Private>
+						</LNode>
+					</Bay>
+				</Substation>
+			</SCL>`,
+			refId: 'sr-1',
+			refTagName: 'SourceRef',
+			pathAttribute: 'source',
+			expected: { tagName: 'LNode', id: 'target-lnode', qualifier: 'Pos.stVal' },
+		},
+
+		'uuid — behaviorDescription: InputVar.inputName with inputUuid → SourceRef': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Bay name="B1" ${ID}="bay-1">
+						<LNode lnClass="PTRC" lnInst="1" ${ID}="owner-lnode">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeInputs ${ID}="inputs-1">
+									<eIEC61850-6-100:SourceRef input="Operate" pDA="general" uuid="sr-uuid-1" ${ID}="sr-1" />
+								</eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
+									<eIEC61850-6-100:InputVar varName="x" inputName="Operate.general" inputUuid="sr-uuid-1" ${ID}="iv-1" />
+								</eIEC61850-6-100:BehaviorDescription>
+							</Private>
+						</LNode>
+					</Bay>
+				</Substation>
+			</SCL>`,
+			refId: 'iv-1',
+			refTagName: 'InputVar',
+			pathAttribute: 'inputName',
+			expected: { tagName: 'SourceRef', id: 'sr-1' },
+		},
+
+		'uuid — behaviorDescription: InputVar.dataName with lnodeUuid → LNode + qualifier': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Bay name="B1" ${ID}="bay-1">
+						<LNode lnClass="XCBR" lnInst="1" uuid="ln-uuid-1" ${ID}="target-lnode">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
+									<eIEC61850-6-100:InputVar varName="pos" dataName="Pos.stVal" lnodeUuid="ln-uuid-1" doName="Pos" daName="stVal" ${ID}="iv-1" />
+								</eIEC61850-6-100:BehaviorDescription>
+							</Private>
+						</LNode>
+					</Bay>
+				</Substation>
+			</SCL>`,
+			refId: 'iv-1',
+			refTagName: 'InputVar',
+			pathAttribute: 'dataName',
+			expected: { tagName: 'LNode', id: 'target-lnode', qualifier: 'Pos.stVal' },
+		},
+
+		'uuid — behaviorDescription: OutputVar.outputName with outputUuid → ControlRef': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Bay name="B1" ${ID}="bay-1">
+						<LNode lnClass="XCBR" lnInst="1" ${ID}="owner-lnode">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeOutputs ${ID}="outputs-1">
+									<eIEC61850-6-100:ControlRef output="TripCmd" uuid="cr-uuid-1" ${ID}="cr-1" />
+								</eIEC61850-6-100:LNodeOutputs>
+								<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
+									<eIEC61850-6-100:OutputVar varName="y" outputName="TripCmd" outputUuid="cr-uuid-1" ${ID}="ov-1" />
+								</eIEC61850-6-100:BehaviorDescription>
+							</Private>
+						</LNode>
+					</Bay>
+				</Substation>
+			</SCL>`,
+			refId: 'ov-1',
+			refTagName: 'OutputVar',
+			pathAttribute: 'outputName',
+			expected: { tagName: 'ControlRef', id: 'cr-1' },
+		},
+
+		'uuid — stale uuid (target deleted) falls back to path → undefined': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Private type="eIEC61850-6-100">
+						<eIEC61850-6-100:FunctionCategory name="Cat1" ${ID}="fcat-1">
+							<eIEC61850-6-100:FunctionCatRef function="S1/NonExistent" functionUuid="deleted-uuid" ${ID}="fcatref-1" />
+						</eIEC61850-6-100:FunctionCategory>
+					</Private>
+				</Substation>
+			</SCL>`,
+			refId: 'fcatref-1',
+			refTagName: 'FunctionCatRef',
+			pathAttribute: 'function',
+			expected: null,
+		},
 	}
 
 	async function act({

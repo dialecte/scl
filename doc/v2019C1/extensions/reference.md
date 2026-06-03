@@ -174,9 +174,29 @@ const result = await reference.query.resolveReferencePath(query, functionRefReco
 // LNode resolution with qualifier: SourceRef -> LNode + DO/DA
 const result = await reference.query.resolveReferencePath(query, sourceRefRecord, 'source')
 // -> { record: <LNode PXCBR1>, qualifier: "Pos.stVal" }
+
+// BehaviorDescription resolution: InputVar -> SourceRef (via UUID)
+const result = await reference.query.resolveReferencePath(query, inputVarRecord, 'inputName')
+// -> { record: <SourceRef input="Operate"> }
 ```
 
-The function reads the path value from the record's attributes, infers the resolution strategy from `UUID_REFERENCE_PAIRS`, parses the path, and finds the target via segment matching + ancestry verification.
+### Resolution strategy
+
+The function uses a **UUID-first** approach:
+
+1. **UUID path (fast, exact)** - reads the companion UUID attribute (e.g. `inputUuid`, `lnodeUuid`, `functionUuid`) and finds the target by exact UUID match. Handles all disambiguation cases including multiple SourceRefs with the same `input` but different `pDA`.
+2. **Path fallback** - if the UUID attribute is absent or stale (target deleted), falls back to path-based resolution: parses the path value, splits into segments, and finds the target via segment matching + ancestry verification.
+
+| Strategy               | UUID attribute example | Qualifier extraction                                        |
+| ---------------------- | ---------------------- | ----------------------------------------------------------- |
+| `direct`               | `functionUuid`         | none                                                        |
+| `lnode`                | `sourceLNodeUuid`      | DO.DA suffix (e.g. "Pos.stVal")                             |
+| `behavior-description` | `inputUuid`            | pathValue for `dataName`, none for `inputName`/`outputName` |
+| `ied-address`          | `extCtrlUuid`          | none                                                        |
+
+::: tip
+UUID resolution is always preferred. It is O(1) and unambiguous. The path fallback exists for legacy data without UUID attributes.
+:::
 
 ---
 

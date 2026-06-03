@@ -1,5 +1,5 @@
 import { getPathSegment } from '../build/path-segment'
-import { parseReferencePath, parsePathSegments } from './parse-path'
+import { parseReferencePath, parsePathSegments, splitLnodeQualifier } from './parse-path'
 
 import { toRawRecord } from '@dialecte/core/helpers'
 
@@ -44,6 +44,12 @@ export async function resolveReferencePath(
 	const pathValue = record.attributes.find((a) => a.name === pathAttribute)?.value
 	if (!pathValue) return undefined
 
+	// Fast path: resolve via UUID when available (exact, no ambiguity)
+	const uuidResolved = await resolveByUuid(query, record, pair)
+	if (uuidResolved)
+		return { record: uuidResolved, qualifier: parseQualifier(pair, pathAttribute, pathValue) }
+
+	// Fallback: path-based resolution
 	let ancestry: AnyRawRecord[] | undefined
 	if (
 		pair.resolution === RESOLUTION_TYPE.behaviorDescription ||
@@ -87,6 +93,53 @@ function findReferencePair(tagName: string, pathAttribute: string): ReferencePai
 	const pairs = UUID_REFERENCE_PAIRS[tagName as keyof ReferencePairs]
 	if (!pairs) return undefined
 	return (pairs as readonly ReferencePairEntry[]).find((p) => p.attribute.path === pathAttribute)
+}
+
+// ── Internal: UUID-based resolution (fast path) ──────────────────────
+
+/**
+ * Resolves via the companion UUID attribute when present on the record.
+ * This is exact and handles all disambiguation cases (e.g. same input
+ * name with different pDA).
+ */
+async function resolveByUuid(
+	query: Core.Query<Config> | Core.Transaction<Config>,
+	record: Scl.TrackedRecord<Scl.ElementsOf>,
+	pair: ReferencePairEntry,
+): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
+	const uuidAttrName = pair.attribute.uuid
+	const uuidValue = record.attributes.find((a) => a.name === uuidAttrName)?.value
+	if (!uuidValue) return undefined
+
+	for (const tagName of pair.target) {
+		const matches = await query.findByAttributes({
+			tagName: tagName as Scl.ElementsOf,
+			attributes: { uuid: uuidValue } as Record<string, string>,
+		})
+		if (matches.length > 0) return matches[0] as Scl.TrackedRecord<Scl.ElementsOf>
+	}
+
+	return undefined
+}
+
+/**
+ * Extracts the qualifier from the path value without full path resolution.
+ * - lnode: qualifier is DO.DA suffix after LNode segment (e.g. "Pos.stVal")
+ * - behaviorDescription + dataName: the path value itself is the qualifier
+ * - behaviorDescription + inputName/outputName: no qualifier (target IS the ref)
+ */
+function parseQualifier(
+	pair: ReferencePairEntry,
+	pathAttribute: string,
+	pathValue: string,
+): string | undefined {
+	if (pair.resolution === RESOLUTION_TYPE.lnode) {
+		return splitLnodeQualifier(pathValue).qualifier
+	}
+	if (pair.resolution === RESOLUTION_TYPE.behaviorDescription && pathAttribute === 'dataName') {
+		return pathValue
+	}
+	return undefined
 }
 
 // ── Internal: candidate search + ancestry verification ───────────────
