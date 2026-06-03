@@ -53,7 +53,7 @@ Both extraction methods open a cross-document transaction: they read from `sourc
 Extracts an entire `Application` and its content into a new ASD file.
 
 ```ts
-tx.template.extractToAsd(tx, {
+tx.template.extractToAsd(params: {
   sourceQuery: Scl.Query,
   applicationRef: Scl.Ref<'Application'>,
   tool: string,
@@ -71,7 +71,7 @@ Steps:
 
 ```ts
 await targetDoc.transaction(async (tx) => {
-	await tx.template.extractToAsd(tx, {
+	await tx.template.extractToAsd({
 		sourceQuery: sourceDoc.query,
 		applicationRef: { tagName: 'Application', id: 'app-1' },
 		tool: 'Tool name',
@@ -85,7 +85,7 @@ await targetDoc.transaction(async (tx) => {
 Extracts a `Function` or `SubFunction` (with categories and data model) into a new FSD file.
 
 ```ts
-tx.template.extractToFsd(tx, {
+tx.template.extractToFsd(params: {
   sourceQuery: Scl.Query,
   functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
   tool: string,
@@ -104,7 +104,7 @@ Steps:
 
 ```ts
 await targetDoc.transaction(async (tx) => {
-	await tx.template.extractToFsd(tx, {
+	await tx.template.extractToFsd({
 		sourceQuery: sourceDoc.query,
 		functionRef: { tagName: 'Function', id: 'func-1' },
 		tool: 'Tool name',

@@ -40,12 +40,12 @@ const version = latest?.attributes.find((a) => a.name === 'version')?.value
 
 Access via `tx.history` inside a `doc.transaction()` callback.
 
-### `addHistoryEntry`
+### `addEntry`
 
 Ensures `Header` and `History` exist, increments version/revision relative to the last `Hitem`, and appends a new `Hitem`. Idempotent at the structural level — will not create duplicate containers.
 
 ```ts
-addHistoryEntry(params: {
+addEntry(params: {
   filename: string
   header: {
     id?: string
@@ -71,7 +71,7 @@ addHistoryEntry(params: {
 
 ```ts
 await doc.transaction(async (tx) => {
-	await tx.history.addHistoryEntry({
+	await tx.history.addEntry({
 		filename: 'station-a.scd',
 		header: {
 			fileType: 'SCD',

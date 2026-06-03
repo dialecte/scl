@@ -31,7 +31,7 @@ const latest = await doc.query.history.getLatestHitem()
 
 // Transaction extension — mutation
 await doc.transaction(async (tx) => {
-	await tx.history.addHistoryEntry({ filename, header, item })
+	await tx.history.addEntry({ filename, header, item })
 	await tx.template.ensureSubstationTemplateStructure()
 })
 ```

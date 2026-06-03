@@ -81,6 +81,7 @@ export default defineConfig({
 						{ text: 'Data Model', link: '/v2019C1/extensions/data-model' },
 						{ text: 'Reference', link: '/v2019C1/extensions/reference' },
 						{ text: 'Template', link: '/v2019C1/extensions/template' },
+						{ text: 'Presentation', link: '/v2019C1/extensions/presentation' },
 						{ text: 'Clean Up', link: '/v2019C1/extensions/clean-up' },
 					],
 				},
