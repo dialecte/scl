@@ -5,11 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.9] - 2026-05-22
+
+### Changed
+
+- packages major version update
+- Bump `@dialecte/core` to `0.2.14` - getTree handles transparent elements + blob storage + `Project.exportBlob`
+
 ## [0.2.8] - 2026-05-22
 
 ### Changed
 
-- Bump `@dialecte/core` to `0.2.13` - InMemoryStore with writable/read-only mode
+- Bump `@dialecte/core` to `0.2.12` - InMemoryStore with writable/read-only mode
 
 ## [0.2.7] - 2026-05-21
 
