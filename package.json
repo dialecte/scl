@@ -1,6 +1,6 @@
 {
 	"name": "@dialecte/scl",
-	"version": "0.2.8",
+	"version": "0.2.9",
 	"description": "Dialecte - SCL (Substation Configuration Language) sdk",
 	"license": "MIT",
 	"repository": {
@@ -47,28 +47,27 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.2.12",
+		"@dialecte/core": "0.2.15",
+		"@vitest/browser-playwright": "^4.1.8",
 		"dexie": "4.2.0"
 	},
 	"devDependencies": {
-		"@tsconfig/node22": "^22.0.2",
-		"@types/node": "^22.15.32",
-		"@vitest/browser": "^3.2.4",
+		"@tsconfig/node24": "^24.0.4",
+		"@types/node": "^24.12.4",
 		"husky": "^9.1.7",
 		"jiti": "^2.4.2",
 		"npm-run-all2": "^8.0.4",
-		"oxfmt": "^0.49.0",
-		"oxlint": "^1.64.0",
-		"oxlint-tsgolint": "^0.22.1",
-		"playwright": "^1.58.2",
-		"tsx": "^4.20.6",
-		"typescript": "^5.9.3",
-		"vite": "^7.3.1",
-		"vite-plugin-dts": "^4.5.4",
-		"vitepress": "^2.0.0-alpha.16",
+		"oxfmt": "^0.53.0",
+		"oxlint": "^1.68.0",
+		"oxlint-tsgolint": "^0.23.0",
+		"playwright": "^1.60.0",
+		"tsx": "^4.22.4",
+		"typescript": "^6.0.3",
+		"vite": "^8.0.16",
+		"vite-plugin-dts": "^5.0.2",
+		"vitepress": "^2.0.0-alpha.17",
 		"vitepress-mermaid-renderer": "^1.1.21",
-		"vitepress-plugin-llms": "^1.12.0",
-		"vitest": "^3.2.4",
-		"vitest-browser-vue": "^1.0.0"
+		"vitepress-plugin-llms": "^1.13.1",
+		"vitest": "^4.1.8"
 	}
 }
