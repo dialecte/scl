@@ -1,6 +1,6 @@
 {
 	"name": "@dialecte/scl",
-	"version": "0.2.9",
+	"version": "0.2.10",
 	"description": "Dialecte - SCL (Substation Configuration Language) sdk",
 	"license": "MIT",
 	"repository": {
@@ -47,13 +47,13 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.2.15",
-		"@vitest/browser-playwright": "^4.1.8",
+		"@dialecte/core": "0.2.16",
 		"dexie": "4.2.0"
 	},
 	"devDependencies": {
 		"@tsconfig/node24": "^24.0.4",
 		"@types/node": "^24.12.4",
+		"@vitest/browser-playwright": "^4.1.8",
 		"husky": "^9.1.7",
 		"jiti": "^2.4.2",
 		"npm-run-all2": "^8.0.4",
