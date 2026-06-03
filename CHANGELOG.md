@@ -5,13 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.10] - 2026-05-22
+## [Unreleased]
+
+## [0.2.11] - 2026-06-03
+
+### Added
+
+- `presentation.extractElementTitle` accepts `{ mode?: 'compact' | 'full' }` (defaults to compact).
+- `presentation.extractElementTitle` overloaded: pass `{ withLabels: true }` to receive `{ title: string; labels: Record<string, string> }` with `<Labels>` collected; default call still returns `string` - no breaking change.
+- Title overrides for IEC 90-30 and core SCL elements: `ExtRef`, `FCDA`, `ConnectedAP`, `ControlRef`, `SourceRef`, `FunctionRef`, `ApplicationScRef`, `LNodeSpecNaming`, `SubscriberLNode`, `ControllingLNode`, `InputVar`, `OutputVar`, and more.
+
+## [0.2.10] - 2026-06-03
 
 ### Changed
 
 - Bump `@dialecte/core` to `0.2.16` - fix missing extension types to test utilities
 
-## [0.2.9] - 2026-05-22
+## [0.2.9] - 2026-06-02
 
 ### Changed
 
