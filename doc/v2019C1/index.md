@@ -11,26 +11,29 @@ The core Query and Transaction APIs are documented at [dialecte.github.io/core](
 ## Instantiation
 
 ```ts
-import { importSclFiles, openSclDocument } from '@dialecte/scl/v2019C1'
+import { createSclProject } from '@dialecte/scl/v2019C1'
 
-const [databaseName] = await importSclFiles({ files: [scdFile] })
-const doc = openSclDocument({ storage: { type: 'local', databaseName } })
+const project = await createSclProject({ storage: { type: 'local' } }).open('my-project')
+const [{ documentId }] = await project.import([scdFile])
+const doc = project.openDocument(documentId)
 ```
 
-`openSclDocument` returns a `Document` typed with the full SCL element set and all registered extensions.
+`createSclProject` returns a [`Project`](https://dialecte.github.io/core/api/project) pre-configured with the SCL config, extensions, and hooks. `project.openDocument(id)` returns a `Document` typed with the full SCL element set and all registered extensions.
 
 ## Adding custom extensions
 
 Pass your own extension modules via the `extensions` parameter. They are merged on top of the SCL built-ins — no direct core dependency needed.
 
 ```ts
-import { openSclDocument } from '@dialecte/scl/v2019C1'
+import { createSclProject } from '@dialecte/scl/v2019C1'
 import { myFeature } from './extensions/my-feature'
 
-const doc = openSclDocument({
-	storage: { type: 'local', databaseName },
+const project = await createSclProject({
+	storage: { type: 'local' },
 	extensions: { myFeature },
-})
+}).open('my-project')
+
+const doc = project.openDocument(documentId)
 
 // SCL built-ins + your extensions — all typed:
 const hitems = await doc.query.history.getSortedHitems()
@@ -46,7 +49,7 @@ Domain-specific methods are bound onto every `doc.query` and `tx` instance under
 | Module      | Namespace on query/tx | Methods                             | Reference                                    |
 | ----------- | --------------------- | ----------------------------------- | -------------------------------------------- |
 | `history`   | `doc.query.history`   | `getSortedHitems`, `getLatestHitem` | [History](/v2019C1/extensions/history)       |
-| `history`   | `tx.history`          | `addHistoryEntry`                   | [History](/v2019C1/extensions/history)       |
+| `history`   | `tx.history`          | `addEntry`                          | [History](/v2019C1/extensions/history)       |
 | `dataModel` | `doc.query.dataModel` | `resolve`                           | [Data Model](/v2019C1/extensions/data-model) |
 | `dataModel` | `tx.dataModel`        | `extract`                           | [Data Model](/v2019C1/extensions/data-model) |
 | `template`  | `tx.template`         | `ensureSubstationTemplateStructure` | [Template](/v2019C1/extensions/template)     |

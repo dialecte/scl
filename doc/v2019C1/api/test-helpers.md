@@ -1,5 +1,5 @@
 ---
-description: Test helpers for @dialecte/scl v2019C1 — createSclTestDialecte, runSclTestCases, XML assertions, and namespace constants.
+description: Test helpers for @dialecte/scl v2019C1 — createSclTestProject, runSclTestCases, XML assertions, and namespace constants.
 ---
 
 # Test Helpers
@@ -9,7 +9,7 @@ description: Test helpers for @dialecte/scl v2019C1 — createSclTestDialecte, r
 ```ts
 import {
 	runSclTestCases,
-	createSclTestDialecte,
+	createSclTestProject,
 	createSclTestRecord,
 	assertExpectedElementQueries,
 	assertUnexpectedElementQueries,
@@ -91,15 +91,22 @@ describe('getSortedHitems', () => {
 
 ### Scenario 2 - XML export assertions (act returns ActResult)
 
-Use when `act` performs transactions and assertions must run on the exported XML via XPath. `assertDatabaseName` is **required** in the returned `ActResult`.
+Use when `act` performs transactions and assertions must run on the exported XML via XPath. `act` returns an optional `ActResult` to choose which document to assert on (defaults to `source`) and toggle `withDatabaseIds`.
 
 ```ts
 import { describe } from 'vitest'
 import { runSclTestCases, ALL_XMLNS_NAMESPACES } from '@dialecte/scl/v2019C1/test'
 import type { SclTest } from '@dialecte/scl/v2019C1/test'
 
-type TestCase = SclTest.BaseTestCase & {
-	params: AddHistoryEntryParams
+type TestCase = SclTest.BaseXmlTestCase & {
+	params: {
+		version: string
+		revision: string
+		when: string
+		who: string
+		what: string
+		why: string
+	}
 }
 
 const testCases: SclTest.TestCases<TestCase> = {
@@ -118,47 +125,52 @@ const testCases: SclTest.TestCases<TestCase> = {
 
 async function act({ source, testCase }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 	await source.document.transaction(async (tx) => {
-		await addHistoryEntry(tx, testCase.params)
+		await tx.history.addEntry(testCase.params)
 	})
-	return { assertDatabaseName: source.databaseName }
+	return { assertOn: 'source' }
 }
 
-describe('addHistoryEntry', () => {
+describe('addEntry', () => {
 	runSclTestCases.withExport({ testCases, act })
 })
 ```
 
-After `act` returns, `runSclTestCases.withExport` exports the named database and runs XPath assertions from `expectedQueries` / `unexpectedQueries`.
+After `act` returns, `runSclTestCases.withExport` exports the chosen document and runs XPath assertions from `expectedQueries` / `unexpectedQueries`.
 
 Use `runSclTestCases.withoutExport` when no export is needed — `act` returns `Promise<void>`, XPath assertions are skipped.
 
 ---
 
-## createSclTestDialecte
+## createSclTestProject
 
-Lower-level helper for tests that need manual control over intermediate assertions, multi-step verification, or transactions outside `runSclTestCases`.
+Lower-level helper for tests that need manual control over intermediate assertions, multi-step verification, or transactions outside `runSclTestCases`. Spins up a real in-memory `Project` with the source (and optionally target) file imported, and returns pre-opened documents.
 
 ```ts
-async function createSclTestDialecte(params: { xmlString: string }): Promise<{
-	document: Document<SclConfig>
-	databaseName: string
-	cleanup: () => Promise<void>
-	exportCurrentTest: (params?: {
-		extension?: string
-		withDatabaseIds?: boolean
-	}) => Promise<{ xmlDocument: XMLDocument; filename: string }>
-}>
+async function createSclTestProject(params: {
+	sourceXml: string
+	targetXml?: string
+}): Promise<SclTest.TestProjectResult>
+```
+
+The returned `TestProjectResult` shape:
+
+```ts
+{
+	project: Scl.Project
+	source: { documentId: string; document: Scl.Document }
+	target?: { documentId: string; document: Scl.Document }
+}
 ```
 
 ```ts
 import {
-	createSclTestDialecte,
+	createSclTestProject,
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 } from '@dialecte/scl/v2019C1/test'
 
-const { document, cleanup } = await createSclTestDialecte({
-	xmlString: `
+const { project, source } = await createSclTestProject({
+	sourceXml: `
 		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="s1">
 				<VoltageLevel name="V1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="vl1"/>
@@ -168,14 +180,17 @@ const { document, cleanup } = await createSclTestDialecte({
 })
 
 try {
-	const vls = await document.query.getChildren({ tagName: 'Substation', id: 's1' }, 'VoltageLevel')
+	const vls = await source.document.query.getChildren(
+		{ tagName: 'Substation', id: 's1' },
+		'VoltageLevel',
+	)
 	expect(vls).toHaveLength(1)
 } finally {
-	await cleanup()
+	await project.destroy()
 }
 ```
 
-Use `runSclTestCases` when the test fits the standard source → act → assert shape. Use `createSclTestDialecte` directly when:
+Use `runSclTestCases` when the test fits the standard source → act → assert shape. Use `createSclTestProject` directly when:
 
 - Asserting intermediate states between transactions
 - Multiple exports at different stages
@@ -198,7 +213,7 @@ const record = createSclTestRecord({
 
 `assertExpectedElementQueries` and `assertUnexpectedElementQueries` run XPath assertions against an `XMLDocument`. Both use the SCL namespace map.
 
-Use directly when calling `createSclTestDialecte` and exporting manually with `exportXmlFile`.
+Use directly when calling `createSclTestProject` and exporting manually via `project.export(documentId)`.
 
 ```ts
 assertExpectedElementQueries({ xmlDocument, queries: ['//default:Substation[@name="S1"]'] })
@@ -209,7 +224,7 @@ assertUnexpectedElementQueries({ xmlDocument, queries: ['//default:Bay[@name="de
 
 ## Stable record IDs with dev:db-id
 
-`createSclTestDialecte` always imports with `useCustomRecordsIds: true`. Any `dev:db-id` attribute in the XML becomes the actual database record ID — no lookups needed in `act`.
+`createSclTestProject` always imports with `useCustomRecordsIds: true`. Any `dev:db-id` attribute in the XML becomes the actual database record ID — no lookups needed in `act`.
 
 ```xml
 <Substation name="S1" dev:db-id="s1">
@@ -266,15 +281,16 @@ expectedQueries: ['//default:Substation[@name="S1"]']
 
 All types are bound to the SCL dialecte config via the `SclTest` namespace:
 
-| Type                      | Description                                                                                  |
-| ------------------------- | -------------------------------------------------------------------------------------------- |
-| `SclTest.BaseTestCase`    | `{ only?: boolean }` - minimal base for non-XML tests (e.g. `runSclTestCases.generic`)       |
-| `SclTest.BaseXmlTestCase` | `BaseTestCase & { sourceXml, targetXml?, expectedQueries?, unexpectedQueries? }` - XML tests |
-| `SclTest.TestCases<T>`    | `Record<string, T>` - key is the test description. Defaults to `BaseXmlTestCase`             |
-| `SclTest.TestContext`     | `{ document, databaseName }` - bound to SCL config                                           |
-| `SclTest.ActParams<T>`    | `{ project, source, target?, testCase }` - passed to `act`                                   |
-| `SclTest.ActResult`       | `{ assertDatabaseName: string, withDatabaseIds?: boolean }`                                  |
-| `SclTest.TestRunner`      | Runner type bound to SCL config                                                              |
+| Type                        | Description                                                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `SclTest.BaseTestCase`      | `{ only?: boolean }` - minimal base for non-XML tests (e.g. `runSclTestCases.generic`)               |
+| `SclTest.BaseXmlTestCase`   | `BaseTestCase & { sourceXml, targetXml?, expectedQueries?, unexpectedQueries? }` - XML tests         |
+| `SclTest.TestCases<T>`      | `Record<string, T>` - key is the test description. Defaults to `BaseXmlTestCase`                     |
+| `SclTest.TestDocument`      | `{ documentId: string, document: Scl.Document }` - pre-opened document inside the test project       |
+| `SclTest.TestProjectResult` | `{ project, source: TestDocument, target?: TestDocument }` - returned by `createSclTestProject`      |
+| `SclTest.ActParams<T>`      | `{ project, source, target?, testCase }` - passed to `act`                                           |
+| `SclTest.ActResult`         | `{ assertOn?: 'source' \| 'target', withDatabaseIds?: boolean }` - returned by `act` in `withExport` |
+| `SclTest.TestRunner`        | Runner type bound to SCL config                                                                      |
 
 `TestCases<T>` accepts any type extending `BaseTestCase` - use `BaseTestCase` for non-XML generic tests, `BaseXmlTestCase` for XML round-trip tests:
 

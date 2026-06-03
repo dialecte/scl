@@ -61,8 +61,8 @@ extract(params: {
 Typical use: when extracting a function to a new `.fsd` file, copy the data model types the function depends on.
 
 ```ts
-const sourceDoc = openSclDocument({ type: 'local', databaseName: sourceName })
-const targetDoc = openSclDocument({ type: 'local', databaseName: targetName })
+const sourceDoc = project.openDocument(sourceDocumentId)
+const targetDoc = project.openDocument(targetDocumentId)
 
 const { LNode: lnodes = [] } = await sourceDoc.query.findDescendants(functionRecord)
 

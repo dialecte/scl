@@ -14,37 +14,43 @@ $ pnpm add @dialecte/scl
 
 :::
 
-## Step 1 — Import an SCL file
+## Step 1 — Create a project
 
-`importSclFiles` parses one or more SCL files using a streaming SAX parser and stores each one in its own IndexedDB database. It returns the list of database names created, one per file.
+`createSclProject` returns a [`Project`](https://dialecte.github.io/core/api/project) pre-configured with the SCL config, extensions, and hooks. Call `.open(name)` to initialize storage and hydrate state.
+
+```ts
+import { createSclProject } from '@dialecte/scl/v2019C1'
+
+const project = await createSclProject({ storage: { type: 'local' } }).open('my-project')
+```
+
+## Step 2 — Import an SCL file
+
+`project.import` parses one or more SCL files using a streaming SAX parser and stores each one as a document in the project. It returns one entry per file, including the generated `documentId`.
 
 Supports `.fsd`, `.asd`, `.ssd`, `.scd`, `.isd`, and `.xml`.
 
 ```ts
-import { importSclFiles } from '@dialecte/scl/v2019C1'
-
 // Browser File object — e.g. from an <input type="file"> or FileDialog
-const [databaseName] = await importSclFiles({ files: [scdFile] })
+const [{ documentId }] = await project.import([scdFile])
 ```
 
 To import multiple files at once:
 
 ```ts
-const databaseNames = await importSclFiles({ files: Array.from(fileList) })
-// → ['station-a.scd', 'station-b.scd', ...]
+const imported = await project.import(Array.from(fileList))
+// → [{ documentId, recordCount }, ...]
 ```
 
-## Step 2 — Open a document
+## Step 3 — Open a document
 
-Once a file is imported, connect to its database with `openSclDocument`. This returns a `Document` instance for all queries and mutations.
+Once a file is imported, get a per-file `Document` for queries and mutations with `project.openDocument`.
 
 ```ts
-import { openSclDocument } from '@dialecte/scl/v2019C1'
-
-const doc = openSclDocument({ storage: { type: 'local', databaseName } })
+const doc = project.openDocument(documentId)
 ```
 
-## Step 3 — Query the tree
+## Step 4 — Query the tree
 
 Use `doc.query` to read records. Start from the root, then find descendants:
 
@@ -67,7 +73,7 @@ const ied = await doc.query.getRecord({ tagName: 'IED', id: knownId })
 console.log(ied?.tagName) // 'IED'
 ```
 
-## Step 4 — Mutate the tree
+## Step 5 — Mutate the tree
 
 Mutations happen inside a `transaction`. All operations are staged, then committed atomically when the callback returns.
 
@@ -82,38 +88,35 @@ await doc.transaction(async (tx) => {
 })
 ```
 
-## Step 5 — Export to file
+## Step 6 — Export to file
 
-`exportSclFile` serialises the database back to XML. Pass `withDownload: true` to trigger a browser download automatically.
+`project.export` serialises a document back to XML. Pass `withDownload: true` to trigger a browser download automatically.
 
 ```ts
-import { exportSclFile } from '@dialecte/scl/v2019C1'
-
-const { xmlDocument } = await exportSclFile({
-	databaseName,
-	extension: '.scd',
-	withDownload: true,
-})
+const { xmlDocument } = await project.export(documentId, { withDownload: true })
 ```
 
 ## Full example
 
 ```ts
-import { importSclFiles, openSclDocument, exportSclFile } from '@dialecte/scl/v2019C1'
+import { createSclProject } from '@dialecte/scl/v2019C1'
 
-// 1. Import
-const [databaseName] = await importSclFiles({ files: [scdFile] })
+// 1. Project
+const project = await createSclProject({ storage: { type: 'local' } }).open('my-project')
 
-// 2. Open
-const doc = openSclDocument({ storage: { type: 'local', databaseName } })
+// 2. Import
+const [{ documentId }] = await project.import([scdFile])
 
-// 3. Query
+// 3. Open
+const doc = project.openDocument(documentId)
+
+// 4. Query
 const root = await doc.query.getRoot()
 const { Function: functions } = await doc.query.findDescendants(root)
 
 console.log(`Found ${functions.length} functions`)
 
-// 4. Mutate
+// 5. Mutate
 const substation = await doc.query.getRecord({ tagName: 'Substation' })
 
 await doc.transaction(async (tx) => {
@@ -123,8 +126,8 @@ await doc.transaction(async (tx) => {
 	})
 })
 
-// 5. Export
-await exportSclFile({ databaseName, extension: '.scd', withDownload: true })
+// 6. Export
+await project.export(documentId, { withDownload: true })
 ```
 
 ## Next Steps

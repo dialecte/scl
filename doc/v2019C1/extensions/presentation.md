@@ -43,7 +43,7 @@ Some elements require specific attribute combinations or separators:
 ### Example
 
 ```ts
-const doc = openSclDocument({ type: 'local', databaseName })
+const doc = project.openDocument(documentId)
 
 const ied = await doc.query.getRecord({ tagName: 'IED', id: 'ied-1' })
 const title = await doc.query.presentation.extractElementTitle(ied)

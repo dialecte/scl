@@ -1,21 +1,22 @@
 ---
-description: Reference for @dialecte/scl v2019C1 IO functions — importSclFiles and exportSclFile.
+description: Reference for @dialecte/scl v2019C1 IO — project.import and project.export.
 ---
 
 # IO Reference
 
-SCL-specific wrappers around `@dialecte/core` IO. `SCL_DIALECTE_CONFIG` is applied internally — no config argument needed.
+SCL IO is exposed on the `Project` returned by `createSclProject`. `SCL_DIALECTE_CONFIG` is pre-applied — no config argument needed.
 
-See the [IO overview](/v2019C1/io/) for how these fit alongside `openSclDocument`.
+See the [IO overview](/v2019C1/io/) for how these fit alongside `project.openDocument`.
 
-## `importSclFiles`
+## `project.import`
 
-Parses one or more SCL files and stores their records into new database instances.
+Parses one or more SCL files and stores their records into the project.
 
 ```ts
-import { importSclFiles } from '@dialecte/scl/v2019C1'
+import { createSclProject } from '@dialecte/scl/v2019C1'
 
-const [databaseName] = await importSclFiles({ files: [scdFile] })
+const project = await createSclProject({ storage: { type: 'local' } }).open('my-project')
+const [{ documentId }] = await project.import([scdFile])
 ```
 
 **Params**
@@ -27,30 +28,24 @@ const [databaseName] = await importSclFiles({ files: [scdFile] })
 
 **Supported extensions** — `.fsd`, `.asd`, `.ssd`, `.scd`, `.isd`, `.xml`
 
-**Returns** `Promise<string[]>` — one database name per successfully imported file.
+**Returns** `Promise<{ documentId: string; recordCount: number }[]>` — one entry per successfully imported file.
 
 ---
 
-## `exportSclFile`
+## `project.export`
 
-Serializes a stored database back to an SCL file. Optionally triggers a browser download.
+Serializes a stored document back to an SCL file. Optionally triggers a browser download.
 
 ```ts
-import { exportSclFile } from '@dialecte/scl/v2019C1'
-
-const { xmlDocument, filename } = await exportSclFile({
-	databaseName,
-	extension: '.scd',
-})
+const { xmlDocument, filename } = await project.export(documentId)
 ```
 
 **Params**
 
-| Param             | Type                                                       | Description                                                   |
-| ----------------- | ---------------------------------------------------------- | ------------------------------------------------------------- |
-| `databaseName`    | `string`                                                   | Database name as returned by `importSclFiles`                 |
-| `extension`       | `'.fsd' \| '.asd' \| '.ssd' \| '.scd' \| '.isd' \| '.xml'` | Output file extension                                         |
-| `withDownload`    | `boolean`                                                  | Trigger browser file download. Default: `false`               |
-| `withDatabaseIds` | `boolean`                                                  | Include internal database IDs in the output. Default: `false` |
+| Param             | Type      | Description                                                   |
+| ----------------- | --------- | ------------------------------------------------------------- |
+| `documentId`      | `string`  | Document id as returned by `project.import`                   |
+| `withDownload`    | `boolean` | Trigger browser file download. Default: `false`               |
+| `withDatabaseIds` | `boolean` | Include internal database IDs in the output. Default: `false` |
 
 **Returns** `Promise<{ xmlDocument: XMLDocument; filename: string }>`

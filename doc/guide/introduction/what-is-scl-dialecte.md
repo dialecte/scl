@@ -19,7 +19,7 @@ SCL files are the exchange format between engineering tools in the substation au
 The SCL definition is produced from the **IEC 61850-6 v2019C1 XSD**. Every element, attribute, parent–child constraint, and namespace declared in the standard is captured in a typed config object. The version is reflected in the import path:
 
 ```ts
-import { openSclDocument } from '@dialecte/scl/v2019C1'
+import { createSclProject } from '@dialecte/scl/v2019C1'
 ```
 
 ### 2. Domain extensions
@@ -32,7 +32,7 @@ const latest = await doc.query.history.getLatestHitem()
 
 // Transaction extension
 await doc.transaction(async (tx) => {
-	await tx.history.addHistoryEntry({ filename, header, item })
+	await tx.history.addEntry({ filename, header, item })
 })
 ```
 
@@ -40,7 +40,7 @@ await doc.transaction(async (tx) => {
 | ----------- | ----------- | ------------------------------------- | ----------------------------------------------------------------- |
 | `history`   | query       | `getSortedHitems()`                   | All `Hitem` records sorted by version/revision ascending          |
 | `history`   | query       | `getLatestHitem()`                    | Most recent `Hitem` by version/revision                           |
-| `history`   | transaction | `addHistoryEntry(params)`             | Ensures `Header` + `History`, increments version, appends Hitem   |
+| `history`   | transaction | `addEntry(params)`                    | Ensures `Header` + `History`, increments version, appends Hitem   |
 | `dataModel` | query       | `resolve(params)`                     | Walks `lnType` → `LNodeType` → `DOType` → `DAType`/`EnumType`     |
 | `dataModel` | transaction | `extract(params)`                     | Deep-clones missing data-model types into `DataTypeTemplates`     |
 | `template`  | transaction | `ensureSubstationTemplateStructure()` | Ensures `Substation/VoltageLevel/Bay` named `TEMPLATE` under root |

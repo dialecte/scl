@@ -4,7 +4,7 @@ description: Overview of SCL-specific extensions for @dialecte/scl v2019C1 -- hi
 
 # Extensions
 
-Extensions add domain-specific methods to `doc.query` and `tx` under named groups. They are plain functions registered via `mergeExtensions()` and bound automatically by `openSclDocument`.
+Extensions add domain-specific methods to `doc.query` and `tx` under named groups. They are plain functions registered via `mergeExtensions()` and bound automatically by `createSclProject`.
 
 For a full explanation of how extensions work, see the [Writing Extensions](https://dialecte.github.io/core/guide/extensions/) guide in the core documentation.
 
@@ -22,9 +22,10 @@ For a full explanation of how extensions work, see the [Writing Extensions](http
 ## Usage pattern
 
 ```ts
-import { openSclDocument } from '@dialecte/scl/v2019C1'
+import { createSclProject } from '@dialecte/scl/v2019C1'
 
-const doc = openSclDocument({ type: 'local', databaseName })
+const project = await createSclProject({ storage: { type: 'local' } }).open('my-project')
+const doc = project.openDocument(documentId)
 
 // Query extension — read-only
 const latest = await doc.query.history.getLatestHitem()

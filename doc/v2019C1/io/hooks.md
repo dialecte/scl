@@ -1,10 +1,10 @@
 ---
-description: SCL IO hooks for @dialecte/scl v2019C1 — two-pass UUID reference resolution during importSclFiles.
+description: SCL IO hooks for @dialecte/scl v2019C1 — two-pass UUID reference resolution during project.import.
 ---
 
 # IO Hooks
 
-SCL v2019C1 registers IO hooks on `SCL_DIALECTE_CONFIG.io.hooks` automatically. They run during `importSclFiles` and are not user-configurable — this page documents what they do and what the output looks like.
+SCL v2019C1 registers IO hooks on `SCL_DIALECTE_CONFIG.io.hooks` automatically. They run during `project.import` and are not user-configurable — this page documents what they do and what the output looks like.
 
 For the general IO hooks API, see [Core IO hooks](https://dialecte.github.io/core/io/hooks).
 
@@ -73,4 +73,4 @@ Unresolvable paths (path not in index at end of import) produce `ImportWarning` 
 | `unresolved-reference`        | Path was present but no target with that path was found |
 | `unsupported-xpath-reference` | Path uses an XPath syntax not supported by the resolver |
 
-Warnings are returned via `AfterImportResult.warnings` and are accessible after `importSclFiles` completes if you inspect the database directly. Future: surface via the Document API.
+Warnings are returned via `AfterImportResult.warnings` and are accessible after `project.import` completes if you inspect the database directly. Future: surface via the Document API.
