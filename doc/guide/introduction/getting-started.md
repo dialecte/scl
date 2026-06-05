@@ -28,7 +28,7 @@ const project = await createSclProject({ storage: { type: 'local' } }).open('my-
 
 `project.import` parses one or more SCL files using a streaming SAX parser and stores each one as a document in the project. It returns one entry per file, including the generated `documentId`.
 
-Supports `.fsd`, `.asd`, `.ssd`, `.scd`, `.isd`, and `.xml`.
+Supports `.fsd`, `.asd`, `.ssd`, `.scd`, `.isd`, `.icd`, and `.xml`.
 
 ```ts
 // Browser File object — e.g. from an <input type="file"> or FileDialog

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.12] - 2026-06-05
+
+### Added
+
+- `.icd` (IED Capability Description) added to supported file extensions for `project.import`.
+
 ## [0.2.11] - 2026-06-03
 
 ### Added
