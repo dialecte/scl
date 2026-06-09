@@ -666,7 +666,20 @@ export type AttributesConfLNs = {
 	fixPrefix?: string
 }
 
-export type AttributesConfLdName = {}
+export type AttributesConfLdName = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
 export type AttributesConfLogControl = {
 	max: string
@@ -977,7 +990,20 @@ export type AttributesDOType = {
 	iedType?: string
 }
 
-export type AttributesDataObjectDirectory = {}
+export type AttributesDataObjectDirectory = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
 export type AttributesDataSet = {
 	desc?: string
@@ -986,7 +1012,20 @@ export type AttributesDataSet = {
 	uuid?: string
 }
 
-export type AttributesDataSetDirectory = {}
+export type AttributesDataSetDirectory = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
 export type AttributesDataTypeTemplates = {}
 
@@ -997,6 +1036,8 @@ export type AttributesDynAssociation = {
 export type AttributesDynDataSet = {
 	max: string
 	maxAttributes?: string
+	modify?: string
+	'xsi:type'?: 'tServiceForConfDataSet' | (string & {})
 }
 
 export type AttributesEnumType = {
@@ -2195,7 +2236,20 @@ export type AttributesGSEControl = {
 	uuid?: string
 }
 
-export type AttributesGSEDir = {}
+export type AttributesGSEDir = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
 export type AttributesGSESettings = {
 	appID?: 'Dyn' | 'Conf' | 'Fix' | (string & {})
@@ -2206,7 +2260,27 @@ export type AttributesGSESettings = {
 }
 
 export type AttributesGSSE = {
+	bufConf?: string
+	bufMode?: 'unbuffered' | 'buffered' | 'both' | (string & {})
+	delivery?: 'unicast' | 'multicast' | 'both' | (string & {})
+	deliveryConf?: string
+	fixedOffs?: string
+	goose?: string
 	max: string
+	maxAttributes?: string
+	maxBuf?: string
+	modify?: string
+	rGOOSE?: string
+	rSV?: string
+	sv?: string
+	'xsi:type'?:
+		| 'tGOOSEcapabilities'
+		| 'tSMVsc'
+		| 'tServiceConfReportControl'
+		| 'tServiceForConfDataSet'
+		| 'tServiceWithMaxAndMaxAttributes'
+		| 'tServiceWithMaxAndModify'
+		| (string & {})
 }
 
 export type AttributesGeneralEquipment = {
@@ -2218,13 +2292,65 @@ export type AttributesGeneralEquipment = {
 	virtual?: string
 }
 
-export type AttributesGetCBValues = {}
+export type AttributesGetCBValues = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
-export type AttributesGetDataObjectDefinition = {}
+export type AttributesGetDataObjectDefinition = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
-export type AttributesGetDataSetValue = {}
+export type AttributesGetDataSetValue = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
-export type AttributesGetDirectory = {}
+export type AttributesGetDirectory = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
 export type AttributesGooseParameters = {
 	cbName?: string
@@ -2468,6 +2594,8 @@ export type AttributesInputVarRef = {
 	desc?: string
 	value?: string
 	variable?: string
+	variableUuid?: string
+	'xsi:type'?: 'tVariableRefWithUuid' | (string & {})
 }
 
 export type AttributesInputs = {
@@ -3854,7 +3982,20 @@ export type AttributesMinTime = {
 	unit?: 's'
 }
 
-export type AttributesMultiAPPerSubNet = {}
+export type AttributesMultiAPPerSubNet = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
 export type AttributesNeutralPoint = {
 	bayName?: string
@@ -3896,6 +4037,8 @@ export type AttributesOutputVarRef = {
 	desc?: string
 	value?: string
 	variable?: string
+	variableUuid?: string
+	'xsi:type'?: 'tVariableRefWithUuid' | (string & {})
 }
 
 export type AttributesOutputs = {
@@ -3933,6 +4076,37 @@ export type AttributesP = {
 		| 'IPv6-IGMPv3Src'
 		| 'IP-IGMPv3Src'
 		| 'IP-ClassOfTraffic'
+		| (string & {})
+	'xsi:type'?:
+		| 'tP_APPID'
+		| 'tP_C37-118-IP-Port'
+		| 'tP_DNSName'
+		| 'tP_IP'
+		| 'tP_IP-ClassOfTraffic'
+		| 'tP_IP-GATEWAY'
+		| 'tP_IP-IGMPv3Src'
+		| 'tP_IP-SUBNET'
+		| 'tP_IPv6'
+		| 'tP_IPv6-GATEWAY'
+		| 'tP_IPv6-IGMPv3Src'
+		| 'tP_IPv6-SUBNET'
+		| 'tP_IPv6ClassOfTraffic'
+		| 'tP_IPv6FlowLabel'
+		| 'tP_MAC-Address'
+		| 'tP_MMS-Port'
+		| 'tP_OSI-AE-Invoke'
+		| 'tP_OSI-AE-Qualifier'
+		| 'tP_OSI-AP-Invoke'
+		| 'tP_OSI-AP-Title'
+		| 'tP_OSI-NSAP'
+		| 'tP_OSI-PSEL'
+		| 'tP_OSI-SSEL'
+		| 'tP_OSI-TSEL'
+		| 'tP_SNTP-Port'
+		| 'tP_TCP-Port'
+		| 'tP_UDP-Port'
+		| 'tP_VLAN-ID'
+		| 'tP_VLAN-PRIORITY'
 		| (string & {})
 }
 
@@ -4033,7 +4207,20 @@ export type AttributesProtocol = {
 	mustUnderstand: 'true'
 }
 
-export type AttributesReadWrite = {}
+export type AttributesReadWrite = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
 export type AttributesRedProt = {
 	hsr?: string
@@ -4094,6 +4281,9 @@ export type AttributesRptEnabled = {
 }
 
 export type AttributesSCL = {
+	'eIEC61850-6-100:release'?: '1'
+	'eIEC61850-6-100:revision'?: 'C'
+	'eIEC61850-6-100:version'?: '2019'
 	release: '5'
 	revision: 'C'
 	version: '2007'
@@ -4246,12 +4436,19 @@ export type AttributesSamplesPerSec = {}
 
 export type AttributesSclFileReference = {
 	desc?: string
+	engRight?: 'full' | 'fix' | 'dataflow' | (string & {})
 	fileName?: string
 	fileType: 'ICD' | 'IID' | 'CID' | 'SSD' | 'SCD' | 'SED' | (string & {})
 	fileUuid?: string
+	headerId?: string
 	revision: string
 	version: string
 	when?: string
+	'xsi:type'?:
+		| 'tCheckoutID'
+		| 'tMinRequestedSCDFile'
+		| 'tSclFileUUIDCheckoutRestriction'
+		| (string & {})
 }
 
 export type AttributesSecPerSamples = {}
@@ -4280,7 +4477,20 @@ export type AttributesServices = {
 	nameLength?: string
 }
 
-export type AttributesSetDataSetValue = {}
+export type AttributesSetDataSetValue = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
 export type AttributesSettingControl = {
 	actSG?: string
@@ -4448,7 +4658,20 @@ export type AttributesTimeSyncProt = {
 	sntp?: string
 }
 
-export type AttributesTimerActivatedControl = {}
+export type AttributesTimerActivatedControl = {
+	c37_238?: string
+	ftp?: string
+	ftps?: string
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	iec61850_9_3?: string
+	ipv6?: string
+	mms?: string
+	other?: string
+	serverAssociationInitiation?: string
+	sntp?: string
+	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+}
 
 export type AttributesTransformerWinding = {
 	desc?: string
