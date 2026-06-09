@@ -102,6 +102,28 @@ describe('resolveByPath', () => {
 			expected: { tagName: 'SubFunction', id: 'sfunc-1' },
 		},
 
+		'IED section — same name as Substation requires backtracking': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="TEMPLATE" ${ID}="sub-1">
+					<VoltageLevel name="TEMPLATE" ${ID}="vl-1">
+						<Bay name="TEMPLATE" ${ID}="bay-1"/>
+					</VoltageLevel>
+				</Substation>
+				<IED name="TEMPLATE" ${ID}="ied-1">
+					<AccessPoint name="AP1" ${ID}="ap-1">
+						<Server ${ID}="srv-1">
+							<LDevice inst="Measurement" ${ID}="ld-1">
+								<LN lnClass="MMXU" inst="1" prefix="" ${ID}="ln-1"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+			</SCL>`,
+			path: 'TEMPLATE/Measurement/MMXU1',
+			expected: { tagName: 'LN', id: 'ln-1' },
+		},
+
 		'non-existent path — returns null': {
 			sourceXml: `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">

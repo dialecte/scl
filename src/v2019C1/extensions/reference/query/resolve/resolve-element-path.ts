@@ -65,7 +65,9 @@ async function walkSegments(params: {
 		}
 
 		if (seg.segment === target.segment && seg.separator === target.separator) {
-			return walkSegments({ query, current: child, segments, index: index + 1 })
+			const result = await walkSegments({ query, current: child, segments, index: index + 1 })
+			if (result) return result
+			continue
 		}
 	}
 
