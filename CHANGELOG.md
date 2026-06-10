@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.15] - 2026-06-10
+
+### Added
+
+- missing `xsi` namespace to config and test utils
+
 ## [0.2.14] - 2026-06-09
 
 ### Fixed

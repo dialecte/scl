@@ -11,6 +11,8 @@ import {
 } from '../definition'
 import { IO_HOOKS } from '../hooks/'
 
+import { XSI_NAMESPACE } from '@dialecte/core/helpers'
+
 import type { IOConfig, AnyDialecteConfig, DatabaseConfig } from '@dialecte/core'
 
 // SCL-specific IO configuration
@@ -48,6 +50,7 @@ export const SCL_NAMESPACES = {
 		uri: 'http://www.iec.ch/61850/2019/SCL/6-100',
 		prefix: 'eIEC61850-6-100',
 	},
+	xsi: XSI_NAMESPACE,
 } as const
 
 export const SCL_DIALECTE_CONFIG = {
