@@ -4,7 +4,7 @@ description: Reference extension for @dialecte/scl v2019C1 -- path building, res
 
 # Reference
 
-The `reference` module provides query functions for working with SCL reference paths. Five functions, two concerns: **building** paths (write side) and **resolving** them (read side), plus one **reverse-lookup**.
+The `reference` module provides query functions for working with SCL reference paths. Seven functions, two concerns: **building** paths (write side) and **resolving** them (read side), plus one **reverse-lookup**.
 
 ```ts
 import { reference } from '@dialecte/scl/v2019C1'
@@ -13,9 +13,10 @@ import { reference } from '@dialecte/scl/v2019C1'
 ## Overview
 
 ```
-buildElementPath    <->  resolveElementPath    (element <-> canonical path string)
-buildReferencePath  <->  resolveReferencePath   (REF attr value <-> target record)
-                         findRefsPointingTo     (reverse: target -> all REF records)
+buildElementPath     <->  resolveElementPath    (element <-> canonical path string)
+buildReferencePath   <->  resolveReferencePath   (REF attr value <-> target record)
+                          findRefsPointingTo     (reverse: target -> all REF records)
+buildMappedLNodePath <->  resolveMappedLNode     (mapped LNode <-> implementing LN)
 ```
 
 | Function               | Direction | Input                                | Output                                                   | Use when                                                      |
@@ -25,12 +26,15 @@ buildReferencePath  <->  resolveReferencePath   (REF attr value <-> target recor
 | `resolveElementPath`   | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` -- walk tree by path string     |
 | `resolveReferencePath` | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildReferencePath` -- follow a REF to its target |
 | `findRefsPointingTo`   | reverse   | target ref + optional container      | `ResolvedReference[]`                                    | find all REF records pointing to a given element              |
+| `buildMappedLNodePath` | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode` |
+| `resolveMappedLNode`   | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`       |
 
 ### Name distinctions
 
 - **`buildElementPath`** vs **`buildReferencePath`** -- element path is the canonical address of an element; reference path is the value stored on a REF attribute (which may include a qualifier, e.g. `.Pos.stVal`).
 - **`resolveReferencePath`** vs **`resolveElementPath`** -- `resolveReferencePath` follows a REF record's stored attribute; `resolveElementPath` walks the tree directly from a raw string.
 - **`findRefsPointingTo`** vs **`resolveReferencePath`** -- `resolveReferencePath(ref)` gives you the target _of_ one ref; `findRefsPointingTo(target)` gives you all refs _pointing at_ a target. Opposite direction.
+- **`resolveMappedLNode`** vs **`resolveElementPath`** -- a mapped `LNode` has no path attribute pointing to its `LN`; the implementing identity is spread across `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`. `resolveMappedLNode` composes the IED-section path from those attributes (via `buildMappedLNodePath`) and resolves it with `resolveElementPath`.
 
 ---
 
@@ -151,6 +155,61 @@ const record = await reference.query.resolveElementPath(query, 'TEMPLATE/V1/B1/C
 ```
 
 Walks the tree from root, matching each path segment against children. Transparent elements (`AccessPoint`, `Server`) are traversed automatically -- they don't appear in the path but are crossed during tree walk.
+
+---
+
+## buildMappedLNodePath
+
+Composes the canonical IED-section path of the `LN` that implements a mapped `LNode`, from the LNode's implementation attributes.
+
+```ts
+reference.query.buildMappedLNodePath(
+  attrs: MappedLNodeAttributes,
+): string | null
+```
+
+```ts
+type MappedLNodeAttributes = {
+	iedName?: string
+	ldInst?: string
+	prefix?: string
+	lnClass?: string
+	lnInst?: string
+}
+```
+
+```ts
+reference.query.buildMappedLNodePath({
+	iedName: 'IED1',
+	ldInst: 'LD0',
+	prefix: '',
+	lnClass: 'XCBR',
+	lnInst: '1',
+})
+// -> "IED1/LD0/XCBR1"
+```
+
+A mapped `LNode` carries the identity of the IED `LN` that implements it. Returns `null` for an unmapped `LNode` (`iedName="None"` or missing) or when `ldInst`/`lnClass` are absent. The LN segment is `prefix + lnClass + lnInst`.
+
+---
+
+## resolveMappedLNode
+
+Resolves a mapped `LNode` to the IED `LN` (or `LN0`) that implements it. Inverse of `buildMappedLNodePath` paired with `resolveElementPath`.
+
+```ts
+reference.query.resolveMappedLNode(
+  query: Scl.Query | Scl.Transaction,
+  lnode: Scl.TrackedRecord<'LNode'>,
+): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined>
+```
+
+```ts
+const ln = await reference.query.resolveMappedLNode(query, lnodeRecord)
+// -> TrackedRecord for the implementing LN, or undefined
+```
+
+Reads `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` from the LNode, composes the IED-section path via `buildMappedLNodePath`, then resolves it with `resolveElementPath`. Returns `undefined` for unmapped LNodes or when the path does not resolve to an `LN`/`LN0`.
 
 ---
 

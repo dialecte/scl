@@ -10,17 +10,20 @@ Five functions, two concerns: building paths (write side) and resolving them (re
 buildElementPath    ↔  resolveElementPath    (element ↔ canonical path string)
 buildRefPath        ↔  resolveRefPath         (REF attr value ↔ target record)
                        findRefsTo             (reverse: target → all REF records)
+buildMappedLNodePath ↔ resolveMappedLNode     (mapped LNode ↔ implementing LN)
 ```
 
 ### When to use each
 
-| Function             | Direction | Input                                | Output                                                   | Use when                                                 |
-| -------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | -------------------------------------------------------- |
-| `buildElementPath`   | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry     |
-| `buildRefPath`       | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target          |
-| `resolveElementPath` | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` — walk tree by path string |
-| `resolveRefPath`     | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildRefPath` — follow a REF to its target   |
-| `findRefsTo`         | reverse   | target ref                           | `ResolvedReference[]`                                    | find all REF records pointing to a given element         |
+| Function               | Direction | Input                                | Output                                                   | Use when                                                      |
+| ---------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------- |
+| `buildElementPath`     | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry          |
+| `buildRefPath`         | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target               |
+| `resolveElementPath`   | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` — walk tree by path string      |
+| `resolveRefPath`       | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildRefPath` — follow a REF to its target        |
+| `findRefsTo`           | reverse   | target ref                           | `ResolvedReference[]`                                    | find all REF records pointing to a given element              |
+| `buildMappedLNodePath` | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode` |
+| `resolveMappedLNode`   | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`       |
 
 ### Name distinctions
 
@@ -28,6 +31,7 @@ buildRefPath        ↔  resolveRefPath         (REF attr value ↔ target recor
 - `resolveRefPath` vs `resolveElementPath` — resolveRefPath follows a REF record's stored attribute; resolveElementPath walks the tree directly from a string.
 - `findRefsTo` vs `resolveRefPath` — `resolveRefPath(ref)` gives you the target _of_ one ref; `findRefsTo(target)` gives you all refs _pointing at_ a target. Opposite direction.
 - `resolvesTo(ref, target)` would be a predicate (`boolean`) — not this function.
+- `resolveMappedLNode` vs `resolveElementPath` — a mapped `LNode` has no path attribute pointing to its `LN`; instead the implementing identity is spread across `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` (IEC 61850-90-30 §8.2). `resolveMappedLNode` composes the IED-section path from those attributes (via `buildMappedLNodePath`) and resolves it with `resolveElementPath`. Unmapped LNodes (`iedName="None"`) resolve to `undefined`.
 
 ---
 
@@ -257,7 +261,7 @@ References within a BehaviorDescription scope. Paths are local — relative to t
 
 All other `tPathName` attributes contain **naming-based paths** (`S1/V1/B1/Protection`) — segments built from element `name` or `lnClass` attributes. VariableApplyTo's `element` attribute uses **XPath expressions** (`.//LNode//eIEC61850-6-100:LNodeSpecNaming`), despite sharing the same XSD type `tPathName`.
 
-**Key characteristics (per IEC TR 61850-90-30 §12.3.3):**
+**Key characteristics (per IEC TR 61850-90-30):**
 
 1. **Relative to context element** — the `.` means the element containing the `Private/Variable` (e.g. a Bay). The XPath evaluates from that context node.
 2. **Can target multiple elements** — `//` is the descendant-or-self axis. `.//LNode` matches _every_ LNode under the context, not just one. One VariableApplyTo → N target elements → N UUID resolutions needed.
