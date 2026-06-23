@@ -38,6 +38,12 @@
 		"//====== CHECK ======//": "",
 		"check": "run-p type-check lint:check format:check link:check",
 		"type-check": "tsc --noEmit",
+		"//====== TYPE PERF ======//": "",
+		"coverage:gen": "dialecte coverage",
+		"type-bench": "npm run coverage:gen && dialecte bench",
+		"type-bench:check": "npm run coverage:gen && dialecte bench --check",
+		"type-narrowing": "npm run coverage:gen && dialecte narrowing",
+		"type-audit": "dialecte audit",
 		"lint:check": "oxlint",
 		"lint:fix": "oxlint . --fix -D correctness --ignore-path .gitignore",
 		"format:check": "oxfmt --check",
@@ -49,6 +55,7 @@
 		"@dialecte/core": "0.2.19"
 	},
 	"devDependencies": {
+		"@dialecte/cli": "0.0.1",
 		"@tsconfig/node24": "^24.0.4",
 		"@types/node": "^24.12.4",
 		"@vitest/browser-playwright": "^4.1.8",
