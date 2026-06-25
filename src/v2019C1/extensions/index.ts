@@ -3,6 +3,7 @@ import { dataModel } from './data-model'
 import { history } from './history'
 import { presentation } from './presentation'
 import { reference } from './reference'
+import { signature } from './signature'
 import { template } from './template'
 
 export const SCL_EXTENSION_MODULES = {
@@ -10,6 +11,7 @@ export const SCL_EXTENSION_MODULES = {
 	dataModel,
 	history,
 	reference,
+	signature,
 	template,
 	presentation,
 }
