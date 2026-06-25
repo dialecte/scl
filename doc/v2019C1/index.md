@@ -51,8 +51,10 @@ Domain-specific methods are bound onto every `doc.query` and `tx` instance under
 | `history`   | `doc.query.history`   | `getSortedHitems`, `getLatestHitem` | [History](/v2019C1/extensions/history)       |
 | `history`   | `tx.history`          | `addEntry`                          | [History](/v2019C1/extensions/history)       |
 | `dataModel` | `doc.query.dataModel` | `resolve`                           | [Data Model](/v2019C1/extensions/data-model) |
-| `dataModel` | `tx.dataModel`        | `extract`                           | [Data Model](/v2019C1/extensions/data-model) |
-| `template`  | `tx.template`         | `ensureSubstationTemplateStructure` | [Template](/v2019C1/extensions/template)     |
+| `dataModel` | `tx.dataModel`        | `importTypes`                       | [Data Model](/v2019C1/extensions/data-model) |
+| `extraction`| `tx.extraction`       | `deep`, `toFsd`, `toAsd`, `ensureSubstationTemplateStructure` | [Extraction](/v2019C1/extensions/extraction) |
+| `signature` | `doc.query.signature` | `elementSignature`                  | [Signature](/v2019C1/extensions/signature)   |
+| `reference` | `tx.reference`        | `applyTypeIdRemap`                  | [Reference](/v2019C1/extensions/reference)   |
 
 ## `Scl` type namespace
 

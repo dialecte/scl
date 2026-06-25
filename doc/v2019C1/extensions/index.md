@@ -1,5 +1,5 @@
 ---
-description: Overview of SCL-specific extensions for @dialecte/scl v2019C1 -- history, dataModel, reference, template, and cleanUp.
+description: Overview of SCL-specific extensions for @dialecte/scl v2019C1 -- history, dataModel, signature, reference, extraction, presentation and cleanUp.
 ---
 
 # Extensions
@@ -10,14 +10,15 @@ For a full explanation of how extensions work, see the [Writing Extensions](http
 
 ## Registered modules
 
-| Module         | Access on `doc.query`    | Access on `tx` | Reference                      |
-| -------------- | ------------------------ | -------------- | ------------------------------ |
-| `cleanUp`      | -                        | `tx.cleanUp`   | [Clean-up](./clean-up)         |
-| `dataModel`    | `doc.query.dataModel`    | `tx.dataModel` | [Data Model](./data-model)     |
-| `history`      | `doc.query.history`      | `tx.history`   | [History](./history)           |
-| `presentation` | `doc.query.presentation` | -              | [Presentation](./presentation) |
-| `reference`    | `doc.query.reference`    | -              | [Reference](./reference)       |
-| `template`     | -                        | `tx.template`  | [Template](./template)         |
+| Module         | Access on `doc.query`    | Access on `tx`   | Reference                      |
+| -------------- | ------------------------ | ---------------- | ------------------------------ |
+| `cleanUp`      | -                        | `tx.cleanUp`     | [Clean-up](./clean-up)         |
+| `dataModel`    | `doc.query.dataModel`    | `tx.dataModel`   | [Data Model](./data-model)     |
+| `extraction`   | -                        | `tx.extraction`  | [Extraction](./extraction)     |
+| `history`      | `doc.query.history`      | `tx.history`     | [History](./history)           |
+| `presentation` | `doc.query.presentation` | -                | [Presentation](./presentation) |
+| `reference`    | `doc.query.reference`    | `tx.reference`   | [Reference](./reference)       |
+| `signature`    | `doc.query.signature`    | -                | [Signature](./signature)       |
 
 ## Usage pattern
 
@@ -33,6 +34,6 @@ const latest = await doc.query.history.getLatestHitem()
 // Transaction extension — mutation
 await doc.transaction(async (tx) => {
 	await tx.history.addEntry({ filename, header, item })
-	await tx.template.ensureSubstationTemplateStructure()
+	await tx.extraction.ensureSubstationTemplateStructure()
 })
 ```

@@ -4,7 +4,7 @@ description: Reference extension for @dialecte/scl v2019C1 -- path building, res
 
 # Reference
 
-The `reference` module provides query functions for working with SCL reference paths. Seven functions, two concerns: **building** paths (write side) and **resolving** them (read side), plus one **reverse-lookup**.
+The `reference` module provides functions for working with SCL reference paths: query functions across **building** paths (write side), **resolving** them (read side) and one **reverse-lookup**, plus a **transaction** helper for remapping DataTypeTemplates type-id references.
 
 ```ts
 import { reference } from '@dialecte/scl/v2019C1'
@@ -301,6 +301,46 @@ The function:
 2. Uses `UUID_REFERENCE_PAIRS` to find which REF elements can point to that tag name
 3. Queries the DB for REF records whose uuid attribute matches
 4. Optionally resolves each REF to its nearest ancestor of `containerTagName`
+
+### Type-id targets
+
+`findRefsPointingTo` also resolves **DataTypeTemplates type references**, which are addressed by `id` (not `uuid`). When `target.tagName` is `LNodeType`, `DOType`, `DAType` or `EnumType`, it consults `TYPE_ID_REFERENCE_PAIRS` instead and returns the `lnType` / `type` referrers (`LN`, `LN0`, `LNode`, `DO`, `SDO`, `DA`, `BDA`) pointing at that type id.
+
+```ts
+// Find every instance/child referencing an LNodeType by id
+const refs = await reference.query.findRefsPointingTo(query, {
+	target: { tagName: 'LNodeType', id: 'CSWI_Type' },
+})
+// -> [{ ref: <LNode lnType="CSWI_Type"> }, { ref: <LN lnType="CSWI_Type"> }, ...]
+```
+
+---
+
+## Transaction methods
+
+Access via `tx.reference` inside a `doc.transaction()` callback.
+
+### `applyTypeIdRemap`
+
+Mechanically rewrites the type-id reference attributes (`lnType` / `type`) of the given records according to an `idRemap` (`old type id → new type id`). The registry of which attribute each tag carries comes from `TYPE_ID_REFERENCE_PAIRS`, so no SCL structure is hardcoded.
+
+```ts
+tx.reference.applyTypeIdRemap(params: {
+  records: Scl.Ref<Scl.ElementsOf>[]
+  idRemap: Map<string, string>
+}): Promise<void>
+```
+
+This is the repointing step used by [`dataModel.importTypes`](./data-model#importtypes) after a fork (R3): once a type is cloned under a new id, the referrers that should follow the fork are remapped. It is reusable by any caller that has computed an `idRemap` — e.g. the merging editor when redirecting in-scope referrers onto a forked type.
+
+```ts
+await doc.transaction(async (tx) => {
+	await tx.reference.applyTypeIdRemap({
+		records: inScopeReferrerRefs,
+		idRemap: new Map([['CSWI_Type', 'CSWI_Type_a1b2c3d4']]),
+	})
+})
+```
 
 ---
 
