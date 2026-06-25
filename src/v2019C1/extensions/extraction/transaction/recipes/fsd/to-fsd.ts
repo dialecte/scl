@@ -1,14 +1,14 @@
-import { cloneFunction, cloneFunctionCategories } from '../clone-function'
-import { ensureSubstationTemplateStructure } from '../ensure-substation-structure'
-import { FSD_OMIT } from '../omit-filters'
-import { postExtractionCleanup } from '../post-extraction-cleanup'
+import { cloneFunction, cloneFunctionCategories } from '../shared/clone-function'
+import { ensureSubstationTemplateStructure } from '../shared/ensure-substation-structure'
+import { postExtractionCleanup } from '../shared/post-extraction-cleanup'
+import { FSD_OMIT } from './omit'
 
 import { history } from '@/v2019C1/extensions/history'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
-export async function extractToFsd(
+export async function toFsd(
 	tx: Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>

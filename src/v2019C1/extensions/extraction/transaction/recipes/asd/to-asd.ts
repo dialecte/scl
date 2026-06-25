@@ -1,13 +1,13 @@
-import { cloneApplicationContent } from '../clone-application'
-import { ensureSubstationTemplateStructure } from '../ensure-substation-structure'
-import { postExtractionCleanup } from '../post-extraction-cleanup'
+import { ensureSubstationTemplateStructure } from '../shared/ensure-substation-structure'
+import { postExtractionCleanup } from '../shared/post-extraction-cleanup'
+import { cloneApplicationContent } from './clone-application'
 
 import { history } from '@/v2019C1/extensions/history'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
-export async function extractToAsd(
+export async function toAsd(
 	tx: Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>

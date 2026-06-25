@@ -1,1 +1,1 @@
-export { extractToAsd } from './extract-to-asd'
+export { toAsd } from './to-asd'

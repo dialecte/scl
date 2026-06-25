@@ -7,15 +7,3 @@ export const ALWAYS_OMIT: OmitEntry<Config>[] = [
 	'GeneralEquipment',
 	'ConductingEquipment',
 ]
-
-export const FSD_OMIT: OmitEntry<Config>[] = [
-	...ALWAYS_OMIT,
-	'DOS',
-	'Labels',
-	'LNodeInputs',
-	'LNodeOutputs',
-	'ProcessResources',
-	'PowerSystemRelations',
-	'BehaviorDescription',
-	'Variable',
-]

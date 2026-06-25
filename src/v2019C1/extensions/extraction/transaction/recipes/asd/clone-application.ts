@@ -1,13 +1,13 @@
 import {
 	cloneAllReferencedTargets,
 	findMissingReferencedRecords,
-} from '../primitives/clone-referenced'
-import { cloneTree } from '../primitives/clone-tree'
-import { cloneFunction, cloneFunctionCategories } from './clone-function'
-import { ALWAYS_OMIT } from './omit-filters'
-import { resolveStructureRef } from './resolve-structure-ref'
+} from '../../primitives/clone-referenced'
+import { cloneTree } from '../../primitives/clone-tree'
+import { cloneFunction, cloneFunctionCategories } from '../shared/clone-function'
+import { ALWAYS_OMIT } from '../shared/omit-filters'
+import { resolveStructureRef } from '../shared/resolve-structure-ref'
 
-import type { TemplateStructure } from './shared.types'
+import type { TemplateStructure } from '../shared/shared.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 

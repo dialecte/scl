@@ -1,1 +1,1 @@
-export { extractToFsd } from './extract-to-fsd'
+export { toFsd } from './to-fsd'

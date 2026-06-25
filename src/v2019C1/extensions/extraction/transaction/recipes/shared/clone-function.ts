@@ -1,5 +1,5 @@
-import { deep as deepExtract } from '../deep'
-import { cloneTree } from '../primitives/clone-tree'
+import { deep as deepExtract } from '../../deep'
+import { cloneTree } from '../../primitives/clone-tree'
 import { resolveStructureRef } from './resolve-structure-ref'
 
 import { reference } from '@/v2019C1/extensions/reference'
