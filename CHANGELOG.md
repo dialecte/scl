@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `signature` query extension: `elementSignature(...)` computes a structural, id-independent signature of an element subtree; with `resolveReferences`, id- and uuid-based references are folded into the referenced element's signature.
+- `reference` extension: first-class DataTypeTemplates type references. `findRefsPointingTo` now resolves referrers of `LNodeType`/`DOType`/`DAType`/`EnumType`, and the new `applyTypeIdRemap` transaction repoints `lnType`/`type` references.
+
+### Changed
+
+- `dataModel` `extract` is now content-addressed: structurally-identical types are reused, divergent ones are forked under a new id (overridable via `forkId`), and references are repointed — instead of duplicating types by id.
+
 ## [0.2.18] - 2026-06-11
 
 ### Added
