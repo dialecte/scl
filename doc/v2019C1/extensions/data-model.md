@@ -57,7 +57,7 @@ Resolves the type closure of the given `LNode`/`LN` records and imports it into 
 
 Child type references inside the imported types — and the `lnType`/`type` of the instances passed in `cloneMappings` — are repointed to the reconciled ids in the same transaction. With an empty / non-colliding target and no `cloneMappings`, the result is byte-identical to a plain id-preserving clone.
 
-> Renamed from `extract` in this release. Structural equality is computed by [`signature.elementSignature`](./signature).
+> Structural equality is computed by [`signature.elementSignature`](./signature).
 
 ```ts
 importTypes(params: {

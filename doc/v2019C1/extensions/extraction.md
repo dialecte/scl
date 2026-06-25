@@ -6,8 +6,6 @@ description: Extraction extension for @dialecte/scl v2019C1 — import an elemen
 
 The `extraction` extension copies an element _out_ of one document and _into_ another, together with its closures. It has one generic engine — `deep` — and two named **recipes** built on top of it that produce template FSD/ASD documents. It also exposes the `ensureSubstationTemplateStructure` helper the recipes use.
 
-> Replaces the former `import` and `template` extensions. `tx.template.extractToFsd` / `extractToAsd` are now `tx.extraction.toFsd` / `toAsd`.
-
 ```ts
 // generic
 tx.extraction.deep(...)
