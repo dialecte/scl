@@ -1,7 +1,7 @@
-import { ensureSubstationTemplateStructure } from '../../transaction/ensure-substation-structure'
-import { cloneFunction, cloneFunctionCategories } from '../shared/clone-function'
-import { FSD_OMIT } from '../shared/omit-filters'
-import { postExtractionCleanup } from '../shared/post-extraction-cleanup'
+import { cloneFunction, cloneFunctionCategories } from '../clone-function'
+import { ensureSubstationTemplateStructure } from '../ensure-substation-structure'
+import { FSD_OMIT } from '../omit-filters'
+import { postExtractionCleanup } from '../post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
 

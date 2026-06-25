@@ -1,4 +1,4 @@
-import { ensureSubstationTemplateStructure } from '../ensure-substation-structure'
+import { ensureSubstationTemplateStructure } from './ensure-substation-structure'
 import { resolveStructureRef } from './resolve-structure-ref'
 
 import { describe, expect } from 'vitest'

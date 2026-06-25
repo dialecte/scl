@@ -1,6 +1,9 @@
+import {
+	cloneAllReferencedTargets,
+	findMissingReferencedRecords,
+} from '../primitives/clone-referenced'
+import { cloneTree } from '../primitives/clone-tree'
 import { cloneFunction, cloneFunctionCategories } from './clone-function'
-import { cloneAllReferencedTargets, findMissingReferencedRecords } from './clone-referenced'
-import { cloneTree } from './clone-utils'
 import { ALWAYS_OMIT } from './omit-filters'
 import { resolveStructureRef } from './resolve-structure-ref'
 

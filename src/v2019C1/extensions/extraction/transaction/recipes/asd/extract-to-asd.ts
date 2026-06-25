@@ -1,6 +1,6 @@
-import { ensureSubstationTemplateStructure } from '../../transaction/ensure-substation-structure'
-import { cloneApplicationContent } from '../shared/clone-application'
-import { postExtractionCleanup } from '../shared/post-extraction-cleanup'
+import { cloneApplicationContent } from '../clone-application'
+import { ensureSubstationTemplateStructure } from '../ensure-substation-structure'
+import { postExtractionCleanup } from '../post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
 

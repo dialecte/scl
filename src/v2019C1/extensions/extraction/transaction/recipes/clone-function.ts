@@ -1,4 +1,4 @@
-import { cloneTree } from './clone-utils'
+import { cloneTree } from '../primitives/clone-tree'
 import { extractDataModel } from './extract-data-model'
 import { resolveStructureRef } from './resolve-structure-ref'
 

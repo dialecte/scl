@@ -1,5 +1,5 @@
-import { ensureSubstationTemplateStructure } from '../ensure-substation-structure'
 import { cloneFunction, cloneFunctionCategories } from './clone-function'
+import { ensureSubstationTemplateStructure } from './ensure-substation-structure'
 
 import { describe } from 'vitest'
 

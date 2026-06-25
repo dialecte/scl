@@ -1,6 +1,6 @@
 import { stripAttributes } from '@dialecte/core/helpers'
 
-import type { StripConfig, PromoteRootConfig } from './shared.types'
+import type { StripConfig, PromoteRootConfig } from './clone-tree.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
