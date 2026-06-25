@@ -8,14 +8,6 @@ export type TypeRecord =
 	| Scl.TrackedRecord<'DOType'>
 	| Scl.TrackedRecord<'LNodeType'>
 
-export type ForkIdContext = {
-	tagName: 'LNodeType' | 'DOType' | 'DAType' | 'EnumType'
-	/** The source type's own id, used as the default base name. */
-	baseName: string
-	/** §6.9 structural signature of the type (id-independent). */
-	signature: string
-}
-
 export type ImportTypesStats = { reused: number; preserved: number; forked: number }
 
 export type ImportTypesResult = {
@@ -34,6 +26,10 @@ export type ImportTypesParams = {
 	 * that share an id are never affected.
 	 */
 	cloneMappings?: Scl.CloneMapping[]
-	/** Override fork-id generation; default = deterministic content hash. */
-	forkId?: (ctx: ForkIdContext) => string
+	/**
+	 * Optional prefix prepended to a forked type's id. The id is always
+	 * `<forkPrefix><sourceId>_<contentHash>` — the content hash is appended
+	 * automatically so forks stay deterministic and content-addressed.
+	 */
+	forkPrefix?: string
 }

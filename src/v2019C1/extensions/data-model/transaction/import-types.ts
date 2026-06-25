@@ -8,18 +8,12 @@ import type {
 	ImportTypesParams,
 	ImportTypesResult,
 	ImportTypesStats,
-	ForkIdContext,
 	TypeRecord,
 } from './import-types.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
-export type {
-	ImportTypesParams,
-	ImportTypesResult,
-	ImportTypesStats,
-	ForkIdContext,
-} from './import-types.types'
+export type { ImportTypesParams, ImportTypesResult, ImportTypesStats } from './import-types.types'
 
 /**
  * Import the type closure of `records` into the target `DataTypeTemplates`,
@@ -28,7 +22,7 @@ export type {
  * - **R1** structurally-equal type already in the target → reuse its id (dedup);
  * - **R2** no match and the source id is free → clone, preserving the id;
  * - **R3** no match but the id is taken by different content → fork under a new
- *   id (`forkId`, default content hash) and propagate the fork upward.
+ *   content-hash id (`<forkPrefix><id>_<hash>`) and propagate the fork upward.
  *
  * Child type references inside the imported types — and the `lnType` of the
  * instances in `cloneMappings` (the caller's instance clone) — are repointed to
@@ -40,7 +34,7 @@ export async function importTypes(
 	tx: Core.Transaction<Config>,
 	params: ImportTypesParams,
 ): Promise<ImportTypesResult> {
-	const { sourceQuery, records, cloneMappings = [], forkId = defaultForkId } = params
+	const { sourceQuery, records, cloneMappings = [], forkPrefix = '' } = params
 
 	const resolved = await resolve(sourceQuery, { records })
 	const sourceTypes = collectTypesBottomUp(resolved)
@@ -84,7 +78,11 @@ export async function importTypes(
 		let targetId = sourceId
 		let preparedTree = tree
 		if (idTaken) {
-			targetId = forkId({ tagName: source.tagName, baseName: sourceId, signature })
+			targetId = await freeForkId(
+				tx,
+				source.tagName,
+				`${forkPrefix}${sourceId}_${shortHash(signature)}`,
+			)
 			preparedTree = withRootId(tree, targetId)
 			stats.forked++
 		} else {
@@ -159,9 +157,26 @@ function collectRefs(node: Scl.TreeRecord<Scl.ElementsOf>, out: Scl.Ref<Scl.Elem
 	for (const child of node.tree ?? []) collectRefs(child, out)
 }
 
-/** Deterministic content-hash fork id: `<baseName>_<shortHash(signature)>`. */
-export function defaultForkId(ctx: ForkIdContext): string {
-	return `${ctx.baseName}_${shortHash(ctx.signature)}`
+/**
+ * Resolve a free id for a forked type. The candidate is
+ * `<forkPrefix><sourceId>_<shortHash(signature)>` — the content hash makes it
+ * deterministic, so identical divergent content always forks to the same id. In
+ * the astronomically unlikely event the hash collides with an unrelated type
+ * already under that id, a numeric suffix disambiguates so two distinct types are
+ * never minted under one id.
+ */
+async function freeForkId(
+	tx: Core.Transaction<Config>,
+	tagName: TypeRecord['tagName'],
+	candidate: string,
+): Promise<string> {
+	let id = candidate
+	let suffix = 2
+	while ((await tx.findByAttributes({ tagName, attributes: { id } })).length > 0) {
+		id = `${candidate}_${suffix}`
+		suffix += 1
+	}
+	return id
 }
 
 /** FNV-1a 32-bit, hex. Stable across runs for a given signature. */

@@ -53,7 +53,7 @@ Resolves the type closure of the given `LNode`/`LN` records and imports it into 
 
 - **R1 — reuse:** a structurally-identical type already exists in the target → its id is reused (dedup);
 - **R2 — preserve:** no structural match and the id is free → clone, keeping the id;
-- **R3 — fork:** no match but the id is taken by _different_ content → clone under a new id (`forkId`, default a content hash) and propagate the fork to referrers.
+- **R3 — fork:** no match but the id is taken by _different_ content → clone under a new content-hash id (`<forkPrefix><id>_<hash>`, prefix optional) and propagate the fork to referrers.
 
 Child type references inside the imported types — and the `lnType`/`type` of the instances passed in `cloneMappings` — are repointed to the reconciled ids in the same transaction. With an empty / non-colliding target and no `cloneMappings`, the result is byte-identical to a plain id-preserving clone.
 
@@ -64,7 +64,7 @@ importTypes(params: {
   sourceQuery: Scl.Query
   records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'>)[]
   cloneMappings?: Scl.CloneMapping[]   // repoint cloned instances' lnType/type on fork
-  forkId?: (ctx: { tagName: string; baseName: string; signature: string }) => string
+  forkPrefix?: string                  // optional prefix; id is always <forkPrefix><id>_<contentHash>
 }): Promise<{
   idRemap: Map<string, string>                              // source type id -> reconciled id
   stats: { reused: number; preserved: number; forked: number }

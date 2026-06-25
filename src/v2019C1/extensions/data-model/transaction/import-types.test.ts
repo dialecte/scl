@@ -211,9 +211,9 @@ describe('importTypes', () => {
 			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
 			expectedQueries: [
 				'//default:DataTypeTemplates/default:LNodeType[@id="SHARED"]',
-				'//default:DataTypeTemplates/default:LNodeType[@id="SHARED__FORK"]',
+				'//default:DataTypeTemplates/default:LNodeType[starts-with(@id, "PRJ_SHARED_")]',
 				'//default:DataTypeTemplates/default:DOType[@id="SRC_DPC"]',
-				'//default:LN[@lnType="SHARED__FORK"]',
+				'//default:LN[starts-with(@lnType, "PRJ_SHARED_")]',
 			],
 			unexpectedQueries: ['//default:LN[@lnType="SHARED"]'],
 		},
@@ -238,7 +238,7 @@ describe('importTypes', () => {
 					source: { ...target, attributes: [] },
 					target,
 				})),
-				forkId: (ctx) => `${ctx.baseName}__FORK`,
+				forkPrefix: 'PRJ_',
 			})
 		})
 
