@@ -59,6 +59,31 @@ describe('import.deep', () => {
 				'//default:DataTypeTemplates/default:DOType[@id="DPC_Type"]/default:DA[@name="stVal"]',
 			],
 		},
+		'imports an Application and creates its missing uuid-referenced satellite': {
+			sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<Substation name="TEMPLATE" ${id}="sub-1" uuid="sub-uuid">
+					<Private ${id}="priv-1" type="eIEC61850-6-100">
+						<eIEC61850-6-100:AllocationRole ${id}="ar-1" name="HMI_PC" uuid="ar-uuid"/>
+						<eIEC61850-6-100:Application ${id}="app-1" name="HMI" type="DCS" uuid="app-uuid">
+							<eIEC61850-6-100:AllocationRoleRef ${id}="arref-1" allocationRole="TEMPLATE/HMI_PC" allocationRoleUuid="ar-uuid"/>
+						</eIEC61850-6-100:Application>
+					</Private>
+				</Substation>
+			</SCL>`,
+			targetXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-t">
+				<Substation name="TEMPLATE" ${id}="sub-t" uuid="sub-t-uuid">
+					<Private ${id}="priv-t" type="eIEC61850-6-100"/>
+				</Substation>
+			</SCL>`,
+			ref: { tagName: 'Application', id: 'app-1' },
+			targetParent: { tagName: 'Private', id: 'priv-t' },
+			expectedQueries: [
+				'//v2019C1:Application[@name="HMI"]',
+				'//v2019C1:AllocationRole[@name="HMI_PC"]',
+			],
+		},
 	}
 
 	async function act({

@@ -132,7 +132,7 @@ export async function cloneAllReferencedTargets(
 ): Promise<void> {
 	const { sourceQuery, scopeTagName, scopeRef, targetParent, skip = new Set(), omit } = params
 
-	const refTags = (DESCENDANTS[scopeTagName] as readonly string[]).filter(
+	const refTags = ((DESCENDANTS[scopeTagName] ?? []) as readonly string[]).filter(
 		(tag): tag is RefTagName => tag in UUID_REFERENCE_PAIRS && !skip.has(tag),
 	)
 

@@ -1,5 +1,5 @@
+import { deep as deepExtract } from '../deep'
 import { cloneTree } from '../primitives/clone-tree'
-import { extractDataModel } from './extract-data-model'
 import { resolveStructureRef } from './resolve-structure-ref'
 
 import { reference } from '@/v2019C1/extensions/reference'
@@ -37,16 +37,18 @@ export async function cloneFunction(
 		? { scope: 'root' as const, attributes: [...stripRootAttributes] }
 		: (false as const)
 
-	await cloneTree(tx, {
+	// The function's own forward uuid satellites (FunctionCategory, etc.) are placed
+	// at structural levels by the recipe, so the generic forward closure is disabled.
+	await deepExtract(tx, {
 		sourceQuery,
 		ref: functionRef,
 		targetParent: targetParentRef,
 		omit,
-		promoteRoot: { from: 'SubFunction', to: 'Function' },
 		strip,
+		promoteRoot: { from: 'SubFunction', to: 'Function' },
+		withTypes: true,
+		withReferences: false,
 	})
-
-	await extractDataModel(tx, { sourceQuery, scopeRef: functionRef })
 }
 
 /**

@@ -19,6 +19,9 @@ const DEFAULT_STRIP: StripConfig = {
  * By default strips `templateUuid` and `originUuid` from the entire tree.
  * Pass `strip: false` to disable all stripping.
  * Pass `strip: { scope, attributes }` to customise.
+ *
+ * Returns the `CloneResult` (cloned root record + source->target mappings), or
+ * `undefined` when the source element does not exist.
  */
 export async function cloneTree(
 	tx: Core.Transaction<Config>,
@@ -30,11 +33,11 @@ export async function cloneTree(
 		promoteRoot?: PromoteRootConfig
 		strip?: StripConfig | false
 	},
-): Promise<void> {
+): Promise<Core.CloneResult<Config, Exclude<Scl.ElementsOf, 'SCL'>> | undefined> {
 	const { sourceQuery, ref, targetParent, omit, promoteRoot, strip = DEFAULT_STRIP } = params
 
 	const tree = await sourceQuery.getTree(ref, { omit })
-	if (!tree) return
+	if (!tree) return undefined
 
 	const promoted =
 		promoteRoot && tree.tagName === promoteRoot.from ? { ...tree, tagName: promoteRoot.to } : tree
@@ -52,5 +55,5 @@ export async function cloneTree(
 
 	// getTree on Scl.Ref<Scl.ElementsOf> includes 'SCL' in the union; deepClone requires
 	// a child element. 'SCL' is the document root and never a cloned satellite.
-	await tx.deepClone(targetParent, result as Scl.TreeRecord<Exclude<Scl.ElementsOf, 'SCL'>>)
+	return await tx.deepClone(targetParent, result as Scl.TreeRecord<Exclude<Scl.ElementsOf, 'SCL'>>)
 }
