@@ -1,4 +1,15 @@
-import type { UuidReferencePairs, ResolutionType, RefEntry, RefPairEntry } from './types'
+import type {
+	UuidReferencePairs,
+	ResolutionType,
+	RefEntry,
+	RefPairEntry,
+	TypeIdReferencePair,
+	TypeIdReferencePairs,
+	TypeIdReferrer,
+	TypeIdRefAttribute,
+	TypeIdRefTagName,
+	TypeIdTarget,
+} from './types'
 
 export function buildResolutionsToTargetRefsMap(
 	UUID_REFERENCE_PAIRS: UuidReferencePairs,
@@ -39,6 +50,25 @@ export function buildPairsByRefMap(
 				targetTagNames: p.target,
 			})),
 		)
+	}
+	return map
+}
+
+/** Reverse index: target type tag -> the referrers (refTag + attribute) pointing at it. */
+export function buildTypeIdReferrersByTarget(
+	TYPE_ID_REFERENCE_PAIRS: TypeIdReferencePairs,
+): Map<TypeIdTarget, TypeIdReferrer[]> {
+	const map = new Map<TypeIdTarget, TypeIdReferrer[]>()
+	for (const [refTagName, pairs] of Object.entries(TYPE_ID_REFERENCE_PAIRS)) {
+		for (const pair of pairs as readonly TypeIdReferencePair[]) {
+			const existing = map.get(pair.target) ?? []
+			existing.push({
+				refTagName: refTagName as TypeIdRefTagName,
+				attribute: pair.attribute as TypeIdRefAttribute,
+				when: pair.when,
+			})
+			map.set(pair.target, existing)
+		}
 	}
 	return map
 }

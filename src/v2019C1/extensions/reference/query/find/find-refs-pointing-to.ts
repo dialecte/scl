@@ -4,18 +4,23 @@ import { SCL_DIALECTE_CONFIG, Scl, Config } from '@/v2019C1/config'
 import {
 	RESOLVABLE_RESOLUTIONS,
 	RESOLUTION_TARGET_REFS,
+	TYPE_ID_REFERRERS_BY_TARGET,
 } from '@/v2019C1/extensions/reference/constants'
+import { isTypeIdTarget } from '@/v2019C1/extensions/reference/guards'
 
 import type { ResolvedReference } from './find-refs-pointing-to.types'
-import type { RefEntry } from '@/v2019C1/extensions/reference'
+import type { RefEntry, TypeIdReferrer, TypeIdTarget } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
 
 /**
- * Find all REF records that reference a target element by UUID,
- * and resolve each to its nearest ancestor of a specific container tagName.
+ * Find all REF records that reference a target element, and resolve each to its
+ * nearest ancestor of a specific container tagName.
  *
- * Uses UUID_REFERENCE_PAIRS to discover which REF elements + uuid attributes
- * point to the target's tagName, then queries the DB for matches.
+ * Two reference systems are covered uniformly:
+ * - **uuid-pair refs** (`UUID_REFERENCE_PAIRS`) — matched on the target `uuid`;
+ * - **type-id refs** (`TYPE_ID_REFERENCE_PAIRS`) — when the target is a
+ *   DataTypeTemplates type (LNodeType/DOType/DAType/EnumType), matched on the
+ *   target `id` (`lnType`, `DO.type`, `DA.type`, …).
  */
 export async function findRefsPointingTo(
 	query: Core.Query<Config>,
@@ -29,6 +34,21 @@ export async function findRefsPointingTo(
 	const targetRecord = await query.getRecord(target)
 	if (!targetRecord) return []
 
+	if (isTypeIdTarget(targetRecord.tagName)) {
+		return findTypeIdReferrers(query, targetRecord, containerTagName)
+	}
+
+	return findUuidReferrers(query, targetRecord, containerTagName)
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Referrers via the uuid-pair system, matched on the target `uuid`. */
+async function findUuidReferrers(
+	query: Core.Query<Config>,
+	targetRecord: Scl.TrackedRecord<Scl.ElementsOf>,
+	containerTagName?: Scl.ElementsOf,
+): Promise<ResolvedReference[]> {
 	const uuid = targetRecord.attributes.find((a) => a.name === 'uuid')?.value
 	if (!uuid) return []
 
@@ -56,7 +76,44 @@ export async function findRefsPointingTo(
 	return results
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+/** Referrers of a DataTypeTemplates type, matched on its `id` (type-id refs). */
+async function findTypeIdReferrers(
+	query: Core.Query<Config>,
+	targetRecord: Scl.TrackedRecord<Scl.ElementsOf>,
+	containerTagName?: Scl.ElementsOf,
+): Promise<ResolvedReference[]> {
+	const id = targetRecord.attributes.find((a) => a.name === 'id')?.value
+	if (!id) return []
+
+	const referrers = TYPE_ID_REFERRERS_BY_TARGET.get(targetRecord.tagName as TypeIdTarget) ?? []
+	const results: ResolvedReference[] = []
+
+	for (const referrer of referrers) {
+		if (!isElementOf(referrer.refTagName, SCL_DIALECTE_CONFIG)) continue
+
+		const refRecords = await query.findByAttributes({
+			tagName: referrer.refTagName as Scl.ElementsOf,
+			attributes: { [referrer.attribute]: id },
+		})
+
+		for (const ref of refRecords) {
+			if (!matchesWhen(ref, referrer)) continue
+			const container = containerTagName
+				? await findAncestorByTagName(query, ref, containerTagName)
+				: undefined
+			results.push({ ref, container })
+		}
+	}
+
+	return results
+}
+
+/** Honour a referrer's optional discriminator (e.g. DA.bType === 'Enum'). */
+function matchesWhen(ref: Scl.TrackedRecord<Scl.ElementsOf>, referrer: TypeIdReferrer): boolean {
+	if (!referrer.when) return true
+	const value = ref.attributes.find((a) => a.name === referrer.when!.attribute)?.value
+	return value === referrer.when.equals
+}
 
 function getRefEntriesForTarget(tagName: string): RefEntry[] {
 	const entries: RefEntry[] = []

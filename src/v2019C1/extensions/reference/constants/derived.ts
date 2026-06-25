@@ -1,5 +1,12 @@
-import { buildPairsByRefMap, buildResolutionsToTargetRefsMap } from './helpers'
+import {
+	buildPairsByRefMap,
+	buildResolutionsToTargetRefsMap,
+	buildTypeIdReferrersByTarget,
+} from './helpers'
 import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from './pairs'
+import { TYPE_ID_REFERENCE_PAIRS } from './type-id-pairs'
+
+import type { TypeIdTarget, TypeIdReferrer } from './types'
 
 /**
  * Maps each resolution strategy to a map of target tagName -> RefEntry[].
@@ -40,3 +47,20 @@ export const ALL_REF_UUID_ATTRIBUTES: readonly string[] = [
 		),
 	),
 ]
+
+// ── Type-id reference derived structures ────────────────────────────────────────
+
+/** Distinct attribute names that can carry a type id, per referrer tag. */
+export const TYPE_ID_REF_ATTRIBUTES: ReadonlyMap<string, readonly string[]> = new Map(
+	Object.entries(TYPE_ID_REFERENCE_PAIRS).map(([tag, pairs]) => [
+		tag,
+		[...new Set(pairs.map((pair) => pair.attribute))],
+	]),
+)
+
+/** Reverse index: target type tag → the referrers (refTag + attribute) pointing at it. */
+export const TYPE_ID_REFERRERS_BY_TARGET: ReadonlyMap<TypeIdTarget, readonly TypeIdReferrer[]> =
+	buildTypeIdReferrersByTarget(TYPE_ID_REFERENCE_PAIRS)
+
+/** All DataTypeTemplates type tags that are targets of a type-id reference. */
+export const TYPE_ID_TARGET_TAGS: ReadonlySet<string> = new Set(TYPE_ID_REFERRERS_BY_TARGET.keys())
