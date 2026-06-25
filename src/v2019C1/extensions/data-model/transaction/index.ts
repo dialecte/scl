@@ -1,1 +1,1 @@
-export { extract } from './extract'
+export { importTypes } from './import-types'

@@ -1,4 +1,4 @@
-import { extract } from './extract'
+import { importTypes } from './import-types'
 
 import { describe, expect } from 'vitest'
 
@@ -16,7 +16,7 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	cloneTargets?: Scl.Ref<Scl.ElementsOf>[]
 }
 
-describe('extract', () => {
+describe('importTypes', () => {
 	const DTT = `${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-1"`
 	const EMPTY_TARGET = `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-t"></SCL>`
 
@@ -231,7 +231,7 @@ describe('extract', () => {
 		if (!lnodeRecord) throw new Error('LNode not found')
 
 		await target.transaction(async (tx) => {
-			await extract(tx, {
+			await importTypes(tx, {
 				sourceQuery,
 				records: [lnodeRecord],
 				cloneMappings: testCase.cloneTargets?.map((target) => ({

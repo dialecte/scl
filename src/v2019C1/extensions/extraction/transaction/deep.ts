@@ -1,7 +1,7 @@
 import { cloneAllReferencedTargets } from './primitives/clone-referenced'
 import { cloneTree } from './primitives/clone-tree'
 
-import { extract } from '@/v2019C1/extensions/data-model/transaction'
+import { importTypes } from '@/v2019C1/extensions/data-model/transaction'
 
 import type { ImportDeepParams, ImportDeepResult } from './deep.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -55,7 +55,7 @@ export async function deep(
 	if (withTypes) {
 		const records = await collectLogicalNodes(sourceQuery, ref)
 		if (records.length > 0) {
-			const result = await extract(tx, { sourceQuery, records, cloneMappings: clone.mappings })
+			const result = await importTypes(tx, { sourceQuery, records, cloneMappings: clone.mappings })
 			idRemap = result.idRemap
 		}
 	}

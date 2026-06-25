@@ -5,16 +5,21 @@ import { elementSignature } from '@/v2019C1/extensions/signature/query'
 
 import type { ResolvedDataModel } from '../query/resolve.types'
 import type {
-	ExtractParams,
-	ExtractResult,
-	ExtractStats,
+	ImportTypesParams,
+	ImportTypesResult,
+	ImportTypesStats,
 	ForkIdContext,
 	TypeRecord,
-} from './extract.types'
+} from './import-types.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
-export type { ExtractParams, ExtractResult, ExtractStats, ForkIdContext } from './extract.types'
+export type {
+	ImportTypesParams,
+	ImportTypesResult,
+	ImportTypesStats,
+	ForkIdContext,
+} from './import-types.types'
 
 /**
  * Import the type closure of `records` into the target `DataTypeTemplates`,
@@ -31,10 +36,10 @@ export type { ExtractParams, ExtractResult, ExtractStats, ForkIdContext } from '
  * target and no `cloneMappings` this is byte-identical to a plain id-preserving
  * clone.
  */
-export async function extract(
+export async function importTypes(
 	tx: Core.Transaction<Config>,
-	params: ExtractParams,
-): Promise<ExtractResult> {
+	params: ImportTypesParams,
+): Promise<ImportTypesResult> {
 	const { sourceQuery, records, cloneMappings = [], forkId = defaultForkId } = params
 
 	const resolved = await resolve(sourceQuery, { records })
@@ -51,7 +56,7 @@ export async function extract(
 
 	const idRemap = new Map<string, string>()
 	const clonedRoots: Scl.Ref<Scl.ElementsOf>[] = []
-	const stats: ExtractStats = { reused: 0, preserved: 0, forked: 0 }
+	const stats: ImportTypesStats = { reused: 0, preserved: 0, forked: 0 }
 
 	for (const source of sourceTypes) {
 		const sourceId = await sourceQuery.getAttribute(source, { name: 'id' })

@@ -16,15 +16,15 @@ export type ForkIdContext = {
 	signature: string
 }
 
-export type ExtractStats = { reused: number; preserved: number; forked: number }
+export type ImportTypesStats = { reused: number; preserved: number; forked: number }
 
-export type ExtractResult = {
+export type ImportTypesResult = {
 	/** source type id -> target type id (reused, preserved, or forked). */
 	idRemap: Map<string, string>
-	stats: ExtractStats
+	stats: ImportTypesStats
 }
 
-export type ExtractParams = {
+export type ImportTypesParams = {
 	sourceQuery: Core.Query<Config>
 	records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'>)[]
 	/**
