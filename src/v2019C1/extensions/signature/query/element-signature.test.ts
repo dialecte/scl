@@ -165,6 +165,40 @@ describe('elementSignature', () => {
 			resolveReferences: true,
 			equal: true,
 		},
+
+		'DAs differing only by an explicit schema-default attribute → equal (default folded)': {
+			sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<DataTypeTemplates ${id}="dtt-1">
+					<DOType id="DO1" cdc="SPS" ${id}="dot-1">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" dchg="false" ${id}="da-1"/>
+					</DOType>
+					<DOType id="DO2" cdc="SPS" ${id}="dot-2">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-2"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			a: { tagName: 'DOType', id: 'dot-1' },
+			b: { tagName: 'DOType', id: 'dot-2' },
+			equal: true,
+		},
+
+		'DAs differing by a non-default attribute value → different (only the default is folded)': {
+			sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<DataTypeTemplates ${id}="dtt-1">
+					<DOType id="DO1" cdc="SPS" ${id}="dot-1">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" dchg="true" ${id}="da-1"/>
+					</DOType>
+					<DOType id="DO2" cdc="SPS" ${id}="dot-2">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-2"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			a: { tagName: 'DOType', id: 'dot-1' },
+			b: { tagName: 'DOType', id: 'dot-2' },
+			equal: false,
+		},
 	}
 
 	runSclTestCases.withoutExport<TestCase>({

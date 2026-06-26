@@ -30,6 +30,7 @@ signature.query.elementSignature(
 ```
 
 - **`ignoreAttributes`** — attributes dropped before hashing (default `id`, `uuid`), so identity differences never affect the signature.
+- **schema defaults** — an attribute written with its XSD default value is folded out, so an explicit default and an omitted attribute compare equal (no spurious fork).
 - **`resolveReferences`** — when `true`, both **id references** (`lnType`/`type`, via `TYPE_ID_REFERENCE_PAIRS`) and **uuid references** (via `UUID_REFERENCE_PAIRS`, path companion attribute skipped) are folded into the _referenced element's_ signature rather than compared by their raw id/uuid value. This makes two types that point at structurally-identical-but-differently-named children compare equal. Cycle-safe.
 
 ```ts

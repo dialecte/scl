@@ -10,15 +10,15 @@ For a full explanation of how extensions work, see the [Writing Extensions](http
 
 ## Registered modules
 
-| Module         | Access on `doc.query`    | Access on `tx`   | Reference                      |
-| -------------- | ------------------------ | ---------------- | ------------------------------ |
-| `cleanUp`      | -                        | `tx.cleanUp`     | [Clean-up](./clean-up)         |
-| `dataModel`    | `doc.query.dataModel`    | `tx.dataModel`   | [Data Model](./data-model)     |
-| `extraction`   | -                        | `tx.extraction`  | [Extraction](./extraction)     |
-| `history`      | `doc.query.history`      | `tx.history`     | [History](./history)           |
-| `presentation` | `doc.query.presentation` | -                | [Presentation](./presentation) |
-| `reference`    | `doc.query.reference`    | `tx.reference`   | [Reference](./reference)       |
-| `signature`    | `doc.query.signature`    | -                | [Signature](./signature)       |
+| Module         | Access on `doc.query`    | Access on `tx`  | Reference                      |
+| -------------- | ------------------------ | --------------- | ------------------------------ |
+| `cleanUp`      | -                        | `tx.cleanUp`    | [Clean-up](./clean-up)         |
+| `dataModel`    | `doc.query.dataModel`    | `tx.dataModel`  | [Data Model](./data-model)     |
+| `extraction`   | -                        | `tx.extraction` | [Extraction](./extraction)     |
+| `history`      | `doc.query.history`      | `tx.history`    | [History](./history)           |
+| `presentation` | `doc.query.presentation` | -               | [Presentation](./presentation) |
+| `reference`    | `doc.query.reference`    | `tx.reference`  | [Reference](./reference)       |
+| `signature`    | `doc.query.signature`    | -               | [Signature](./signature)       |
 
 ## Usage pattern
 

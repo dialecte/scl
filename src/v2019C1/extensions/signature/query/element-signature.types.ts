@@ -22,3 +22,9 @@ export type ElementSignatureContext = {
 	memo: Map<string, string>
 	seen: Set<string>
 }
+
+/** Minimal view of a definition attribute's schema metadata used by the signature. */
+export type AttributeSchemaDetail = {
+	/** XSD default value — an attribute written with this value is equivalent to being absent. */
+	default?: string
+}

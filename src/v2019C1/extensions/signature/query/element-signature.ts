@@ -1,8 +1,13 @@
 import { DEFAULT_IGNORED_ATTRIBUTES } from './element-signature.constants'
 
+import { DEFINITION } from '@/v2019C1/definition'
 import { TYPE_ID_REFERENCE_PAIRS, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
-import type { ElementSignatureContext, ElementSignatureParams } from './element-signature.types'
+import type {
+	AttributeSchemaDetail,
+	ElementSignatureContext,
+	ElementSignatureParams,
+} from './element-signature.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type {
 	ReferencePair,
@@ -17,7 +22,9 @@ import type * as Core from '@dialecte/core'
  *
  * Two elements sharing a signature are structurally interchangeable: identity
  * attributes (`ignoreAttributes`, default `id`/`uuid`) are dropped, attributes
- * and children are ordered canonically. With `resolveReferences`, every id- or
+ * written with their schema default are folded out (so an explicit default and an
+ * omitted attribute compare equal), and attributes and children are ordered
+ * canonically. With `resolveReferences`, every id- or
  * uuid-based reference (detected via the reference registries) is folded in by
  * the *signature* of the element it points at rather than its id/uuid — so the
  * comparison never depends on identity anywhere in the resolved closure.
@@ -43,6 +50,14 @@ export async function elementSignature(
 // ── Internals ───────────────────────────────────────────────────────────────────
 
 const NO_SKIP: ReadonlySet<string> = new Set()
+
+/** The XSD default of `attributeName` on `tagName`, or `undefined` if it has none. */
+function schemaDefault(tagName: string, attributeName: string): string | undefined {
+	const element = DEFINITION[tagName as keyof typeof DEFINITION] as
+		| { attributes?: { details?: Record<string, AttributeSchemaDetail> } }
+		| undefined
+	return element?.attributes?.details?.[attributeName]?.default
+}
 
 async function computeSignature(
 	ref: Scl.Ref<Scl.ElementsOf>,
@@ -71,6 +86,9 @@ async function serialize(
 	const attributeParts: string[] = []
 	for (const attribute of node.attributes) {
 		if (context.ignore.has(attribute.name) || skip.has(attribute.name)) continue
+		// An attribute written with its schema default is equivalent to omitting it;
+		// fold it out so an explicit default never forks against an absent one.
+		if (attribute.value === schemaDefault(node.tagName, attribute.name)) continue
 		let value = attribute.value
 		if (context.resolveReferences) {
 			const folded = await foldReference(node, attribute.name, attribute.value, context)
