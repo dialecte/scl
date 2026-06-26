@@ -47,3 +47,16 @@ a === b // → true (same structure, ids ignored, child type-refs resolved)
 ```
 
 Used by `dataModel.importTypes`: the signature of an incoming type is matched against an index of the target's existing type signatures to decide **reuse** (match), **preserve** (no match, id free) or **fork** (no match, id taken).
+
+## Exported constants & types
+
+The `signature` module re-exports its identity-attribute default and parameter type for advanced use cases (custom signing, validation, tooling).
+
+```ts
+import { DEFAULT_IGNORED_ATTRIBUTES, type ElementSignatureParams } from '@dialecte/scl/v2019C1'
+```
+
+| Export                       | Kind                | Description                                                                               |
+| ---------------------------- | ------------------- | ----------------------------------------------------------------------------------------- |
+| `DEFAULT_IGNORED_ATTRIBUTES` | `readonly string[]` | Identity attributes excluded from a structural signature by default (`id`, `uuid`).       |
+| `ElementSignatureParams`     | type                | Parameter shape of `elementSignature` (`ref`, `resolveReferences?`, `ignoreAttributes?`). |

@@ -142,3 +142,23 @@ extraction/transaction/
 ```
 
 > `deep` is the **mechanism**; the recipes are **policy** (pruning, structural placement, transforms, history, clean-up). The type engine it composes is [`dataModel.importTypes`](./data-model#importtypes); the content-addressing behind that is [`signature.elementSignature`](./signature).
+
+## Exported types
+
+The `extraction` module re-exports the parameter/result shapes of `deep` and its clone-policy configs for typing call sites and authoring custom recipes.
+
+```ts
+import type {
+	ImportDeepParams,
+	ImportDeepResult,
+	StripConfig,
+	PromoteRootConfig,
+} from '@dialecte/scl/v2019C1'
+```
+
+| Type                | Description                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| `ImportDeepParams`  | Parameters of `deep` (source, refs, closure toggles, `omit` / `strip` / `promoteRoot`). |
+| `ImportDeepResult`  | Result of `deep` (`record`, `idRemap`).                                                 |
+| `StripConfig`       | Attribute-stripping policy — `{ scope: 'root' \| 'tree'; attributes: string[] }`.       |
+| `PromoteRootConfig` | Root tagName promotion — `{ from: Scl.ElementsOf; to: Scl.ElementsOf }`.                |

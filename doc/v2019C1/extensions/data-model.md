@@ -87,3 +87,17 @@ await targetDoc.transaction(async (tx) => {
 	// stats -> { reused, preserved, forked }
 })
 ```
+
+## Exported types
+
+The `dataModel` module re-exports the parameter and result shapes of `importTypes` for typing call sites and tooling.
+
+```ts
+import type { ImportTypesParams, ImportTypesResult, ImportTypesStats } from '@dialecte/scl/v2019C1'
+```
+
+| Type                | Description                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------- |
+| `ImportTypesParams` | Parameters of `importTypes` (`sourceQuery`, `records`, `cloneMappings?`, `forkPrefix?`). |
+| `ImportTypesResult` | Result of `importTypes` (`idRemap`, `stats`).                                            |
+| `ImportTypesStats`  | Per-run reconciliation counts — `{ reused, preserved, forked }`.                         |

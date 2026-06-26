@@ -37,3 +37,18 @@ await doc.transaction(async (tx) => {
 	await tx.extraction.ensureSubstationTemplateStructure()
 })
 ```
+
+## Public toolkit
+
+Each built-in extension re-exports its constants, type guards and parameter/result types from `@dialecte/scl/v2019C1`, so you can reuse them when authoring custom extensions, hooks, validation or tooling. The runtime extension objects themselves are intentionally **not** re-exported.
+
+```ts
+import {
+	RESOLUTION_TYPE, // reference
+	DEFAULT_IGNORED_ATTRIBUTES, // signature
+	type ImportTypesParams, // dataModel
+	type ImportDeepParams, // extraction
+} from '@dialecte/scl/v2019C1'
+```
+
+See each extension's exported surface: [reference](./reference#exported-constants), [signature](./signature#exported-constants--types), [data model](./data-model#exported-types), [extraction](./extraction#exported-types).
