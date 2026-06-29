@@ -13,7 +13,11 @@ import type * as Core from '@dialecte/core'
  */
 export async function wrapWithPrivateElementIfNeeded<
 	GenericElement extends Scl.ElementsOf,
-	GenericParentElement extends Scl.ParentsOf<GenericElement>,
+	// Bound to ElementsOf (not ParentsOf<GenericElement>): these helpers use records
+	// purely structurally and don't enforce the parent-child relationship. The
+	// ParentsOf<…> indexed-access bound made `query.findAncestors(parentRecord)` below
+	// blow up into a ~143-way union comparison (≈half of scl's whole-program check time).
+	GenericParentElement extends Scl.ElementsOf,
 >(params: {
 	childRecord: Scl.RawRecord<GenericElement>
 	parentRecord: Scl.RawRecord<GenericParentElement>
@@ -72,7 +76,11 @@ export async function wrapWithPrivateElementIfNeeded<
 
 export async function handleParentAsPrivateRecordCase<
 	GenericElement extends Scl.ElementsOf,
-	GenericParentElement extends Scl.ParentsOf<GenericElement>,
+	// Bound to ElementsOf (not ParentsOf<GenericElement>): these helpers use records
+	// purely structurally and don't enforce the parent-child relationship. The
+	// ParentsOf<…> indexed-access bound made `query.findAncestors(parentRecord)` below
+	// blow up into a ~143-way union comparison (≈half of scl's whole-program check time).
+	GenericParentElement extends Scl.ElementsOf,
 >(params: {
 	parentRecord: Scl.RawRecord<GenericParentElement>
 	childRecord: Scl.RawRecord<GenericElement>
@@ -116,7 +124,11 @@ export async function handleParentAsPrivateRecordCase<
 
 export async function handleExistingPrivateRecordCase<
 	GenericElement extends Scl.ElementsOf,
-	GenericParentElement extends Scl.ParentsOf<GenericElement>,
+	// Bound to ElementsOf (not ParentsOf<GenericElement>): these helpers use records
+	// purely structurally and don't enforce the parent-child relationship. The
+	// ParentsOf<…> indexed-access bound made `query.findAncestors(parentRecord)` below
+	// blow up into a ~143-way union comparison (≈half of scl's whole-program check time).
+	GenericParentElement extends Scl.ElementsOf,
 >(params: {
 	existingPrivateRef: Scl.ChildRelationship<GenericParentElement>
 	parentRecord: Scl.RawRecord<GenericParentElement>
@@ -170,7 +182,8 @@ export async function handleExistingPrivateRecordCase<
 export function handleNewPrivateRecordCase<
 	GenericConfig extends Core.AnyDialecteConfig,
 	GenericElement extends Core.ElementsOf<GenericConfig>,
-	GenericParentElement extends Core.ParentsOf<GenericConfig, GenericElement>,
+	// Relaxed from ParentsOf<…> to ElementsOf for the same reason as the helpers above.
+	GenericParentElement extends Core.ElementsOf<GenericConfig>,
 >(params: {
 	parentRecord: Core.RawRecord<GenericConfig, GenericParentElement>
 	updatedParentRecord: Core.RawRecord<GenericConfig, GenericParentElement>
