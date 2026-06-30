@@ -30,16 +30,18 @@ export async function cloneFunction(
 		omit?: OmitEntry<Config>[]
 		stripRootAttributes?: readonly string[]
 	},
-): Promise<void> {
+): Promise<Scl.CloneMapping[]> {
 	const { sourceQuery, functionRef, targetParentRef, omit, stripRootAttributes } = params
 
 	const strip = stripRootAttributes?.length
 		? { scope: 'root' as const, attributes: [...stripRootAttributes] }
 		: (false as const)
 
-	// The function's own forward uuid satellites (FunctionCategory, etc.) are placed
-	// at structural levels by the recipe, so the generic forward closure is disabled.
-	await deepExtract(tx, {
+	// `deep` is a faithful subtree copy (no forward uuid closure); the function's own
+	// satellites (FunctionCategory, ProcessResource, etc.) are placed at their source
+	// hierarchy level by the recipe. The returned mappings let the recipe resolve those
+	// placements against the cloned function subtree.
+	const { recordMappings } = await deepExtract(tx, {
 		sourceQuery,
 		ref: functionRef,
 		targetParent: targetParentRef,
@@ -47,8 +49,9 @@ export async function cloneFunction(
 		strip,
 		promoteRoot: { from: 'SubFunction', to: 'Function' },
 		withTypes: true,
-		withReferences: false,
 	})
+
+	return recordMappings
 }
 
 /**

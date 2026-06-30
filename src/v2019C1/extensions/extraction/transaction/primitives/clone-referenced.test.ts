@@ -129,7 +129,8 @@ describe('cloneReferencedRecords', () => {
 				scopeRef: { tagName: 'Application', id: 'app1' } as Scl.Ref<'Application'>,
 				refTagName: 'AllocationRoleRef',
 				targetTagName: 'AllocationRole',
-				targetParent: { tagName: 'Substation', id: 'target-sub' } as Scl.Ref<'Substation'>,
+				resolveTargetParent: async () =>
+					({ tagName: 'Substation', id: 'target-sub' }) as Scl.Ref<'Substation'>,
 			})
 		})
 		return { assertOn: 'target' }

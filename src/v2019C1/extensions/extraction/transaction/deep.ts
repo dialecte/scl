@@ -1,4 +1,3 @@
-import { cloneAllReferencedTargets } from './primitives/clone-referenced'
 import { cloneTree } from './primitives/clone-tree'
 
 import { importTypes } from '@/v2019C1/extensions/data-model/transaction'
@@ -8,18 +7,18 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
- * Import an element subtree into a target document together with its closures:
+ * Import an element subtree into a target document together with its type closure:
  *
- * 1. `withReferences` (default `true`) — forward uuid-reference closure: clone
- *    referenced satellites that are missing in the target (create-if-missing).
- *    Done first so the cloned subtree's references remap onto the new satellites;
- * 2. clone the subtree under `targetParent` (with optional `omit` / `strip` /
+ * 1. clone the subtree under `targetParent` (with optional `omit` / `strip` /
  *    `promoteRoot`);
- * 3. `withTypes` (default `true`) — content-addressed **type** closure: reconcile
+ * 2. `withTypes` (default `true`) — content-addressed **type** closure: reconcile
  *    the LN/LNode type closure (reuse / preserve / fork) and repoint the cloned
  *    instances' `lnType` through the clone mappings.
  *
- * Uuid references inside the clone are remapped by the `afterDeepClone` hook.
+ * `deep` is a faithful subtree copy: it does **not** follow forward uuid references.
+ * Reference rewiring is the caller's responsibility (recipes place same-domain
+ * satellites by ancestry; cross-domain/lineage rewiring is plan-driven). Uuid
+ * references inside the clone are remapped by the `afterDeepClone` hook.
  */
 export async function deep(
 	tx: Core.Transaction<Config>,
@@ -30,37 +29,24 @@ export async function deep(
 		ref,
 		targetParent,
 		withTypes = true,
-		withReferences = true,
-		skipReferences,
 		omit,
 		strip = false,
 		promoteRoot,
 	} = params
 
-	if (withReferences) {
-		await cloneAllReferencedTargets(tx, {
-			sourceQuery,
-			scopeTagName: ref.tagName,
-			scopeRef: ref,
-			targetParent,
-			skip: skipReferences,
-			omit,
-		})
-	}
-
 	const clone = await cloneTree(tx, { sourceQuery, ref, targetParent, omit, strip, promoteRoot })
 	if (!clone) throw new Error(`extraction.deep: source element not found: ${ref.tagName}#${ref.id}`)
 
-	let idRemap = new Map<string, string>()
+	let typeIdRemap = new Map<string, string>()
 	if (withTypes) {
 		const records = await collectLogicalNodes(sourceQuery, ref)
 		if (records.length > 0) {
 			const result = await importTypes(tx, { sourceQuery, records, cloneMappings: clone.mappings })
-			idRemap = result.idRemap
+			typeIdRemap = result.idRemap
 		}
 	}
 
-	return { record: clone.record, idRemap }
+	return { record: clone.record, typeIdRemap, recordMappings: clone.mappings }
 }
 
 /** All `LNode`/`LN` records under (and including) the imported subtree. */

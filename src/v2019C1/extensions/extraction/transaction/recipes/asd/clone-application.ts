@@ -5,7 +5,7 @@ import {
 import { cloneTree } from '../../primitives/clone-tree'
 import { cloneFunction, cloneFunctionCategories } from '../shared/clone-function'
 import { ALWAYS_OMIT } from '../shared/omit-filters'
-import { resolveStructureRef } from '../shared/resolve-structure-ref'
+import { resolveStructureRef, createAncestryResolver } from '../shared/resolve-structure-ref'
 
 import type { TemplateStructure } from '../shared/shared.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -27,10 +27,10 @@ export async function cloneApplicationContent(
 	},
 ): Promise<void> {
 	const { sourceQuery, applicationRef, structure } = params
-	const substationRef: Scl.Ref<'Substation'> = {
-		tagName: 'Substation',
-		id: structure.Substation.id,
-	}
+
+	// Source record id -> cloned target ref, accumulated as functions are cloned, so
+	// step 3's satellites can be placed back under their owning function.
+	const cloneIndex = new Map<string, Scl.Ref<Scl.ElementsOf>>()
 
 	// 1. Functions: resolve structural parent per function, clone tree + data model
 	const missingFunctions = await findMissingReferencedRecords(tx, {
@@ -41,12 +41,15 @@ export async function cloneApplicationContent(
 	})
 	for (const ref of missingFunctions) {
 		const targetParentRef = await resolveStructureRef(sourceQuery, ref, structure)
-		await cloneFunction(tx, {
+		const mappings = await cloneFunction(tx, {
 			sourceQuery,
 			functionRef: ref,
 			targetParentRef,
 			omit: ALWAYS_OMIT,
 		})
+		for (const mapping of mappings) {
+			if (mapping.source.id) cloneIndex.set(mapping.source.id, mapping.target)
+		}
 	}
 
 	// 2. FunctionCategories: clone at source-side structural level
@@ -59,13 +62,16 @@ export async function cloneApplicationContent(
 		})
 	}
 
-	// 3. All other referenced targets - derived from UUID_REFERENCE_PAIRS and DESCENDANTS
+	// 3. All other referenced targets - derived from UUID_REFERENCE_PAIRS and DESCENDANTS.
+	// Each is placed by mirroring its source hierarchy (under its owning function when it
+	// has one), not flattened to Substation.
 	const REFS_ALREADY_HANDLED = new Set(['FunctionRef', 'FunctionCategoryRef'])
 	await cloneAllReferencedTargets(tx, {
 		sourceQuery,
 		scopeTagName: 'Application',
 		scopeRef: applicationRef,
-		targetParent: substationRef,
+		resolveTargetParent: createAncestryResolver({ sourceQuery, structure, cloneIndex }),
+		alreadyCloned: new Set(cloneIndex.keys()),
 		skip: REFS_ALREADY_HANDLED,
 		omit: ALWAYS_OMIT,
 	})

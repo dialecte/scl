@@ -11,13 +11,6 @@ export type ImportDeepParams = {
 	targetParent: Scl.Ref<Scl.ElementsOf>
 	/** Import the referenced **type** closure (content-addressed). Default `true`. */
 	withTypes?: boolean
-	/**
-	 * Import the forward **uuid-reference** closure — clone referenced satellites
-	 * that are missing in the target (create-if-missing). Default `true`.
-	 */
-	withReferences?: boolean
-	/** Ref tag names to skip while resolving the uuid-reference closure. */
-	skipReferences?: ReadonlySet<string>
 	/** Child element tag names to drop from the cloned subtree. */
 	omit?: OmitEntry<Config>[]
 	/**
@@ -32,6 +25,8 @@ export type ImportDeepParams = {
 export type ImportDeepResult = {
 	/** The cloned root record in the target. */
 	record: Scl.RawRecord<Scl.ElementsOf>
-	/** source type id -> target type id, from the type reconciliation. */
-	idRemap: Map<string, string>
+	/** source type id -> reconciled target type id, from the data-model type reconciliation. */
+	typeIdRemap: Map<string, string>
+	/** Full source-record -> target-record structural mapping for the cloned subtree. */
+	recordMappings: Scl.CloneMapping[]
 }

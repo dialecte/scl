@@ -1,5 +1,5 @@
 ---
-description: Extraction extension for @dialecte/scl v2019C1 — import an element with its reference and type closure (deep), plus the FSD/ASD template recipes.
+description: Extraction extension for @dialecte/scl v2019C1 — import an element with its type closure (deep), plus the FSD/ASD template recipes.
 ---
 
 # Extraction
@@ -22,11 +22,10 @@ Access via `tx.extraction` inside a `doc.transaction()` callback. Every method o
 
 ### `deep`
 
-Imports an element subtree into `targetParent` together with its closures, in this order:
+Imports an element subtree into `targetParent` together with its type closure, in this order:
 
-1. **forward uuid-reference closure** (`withReferences`, default `true`) — clones referenced satellites missing in the target (create-if-missing). Run _first_, so the cloned subtree's references remap onto the new satellites.
-2. **subtree clone** — clones the element under `targetParent` (with optional `omit` / `strip` / `promoteRoot`).
-3. **content-addressed type closure** (`withTypes`, default `true`) — reconciles the LN/LNode type closure via `dataModel.importTypes` and repoints the cloned instances' `lnType` through the clone mappings.
+1. **subtree clone** — clones the element under `targetParent` (with optional `omit` / `strip` / `promoteRoot`).
+2. **content-addressed type closure** (`withTypes`, default `true`) — reconciles the LN/LNode type closure via `dataModel.importTypes` and repoints the cloned instances' `lnType` through the clone mappings.
 
 ```ts
 tx.extraction.deep(params: {
@@ -34,15 +33,17 @@ tx.extraction.deep(params: {
   ref: Scl.Ref<Scl.ElementsOf>            // element to import
   targetParent: Scl.Ref<Scl.ElementsOf>   // where the subtree is cloned
   withTypes?: boolean                      // default true
-  withReferences?: boolean                 // default true
-  skipReferences?: ReadonlySet<string>     // ref tag names to skip in the uuid closure
   omit?: OmitEntry[]                        // child tags to drop from the clone
   strip?: StripConfig | false              // default false (preserve provenance)
   promoteRoot?: { from: Scl.ElementsOf; to: Scl.ElementsOf }
-}): Promise<{ record: Scl.RawRecord<Scl.ElementsOf>; idRemap: Map<string, string> }>
+}): Promise<{
+  record: Scl.RawRecord<Scl.ElementsOf>    // cloned root
+  typeIdRemap: Map<string, string>         // source type id → reconciled target type id (DataTypeTemplates)
+  recordMappings: Scl.CloneMapping[]       // source record → target record, for the whole cloned subtree
+}>
 ```
 
-`deep` is a faithful copy-out: it does **not** reset IED bindings, strip template attributes, or clean up orphans — those are recipe policies (see `toFsd` / `toAsd`).
+`deep` is a faithful subtree copy: it clones the element and reconciles its type closure, returning the full `recordMappings` so callers can locate any cloned node in the target. It does **not** follow forward uuid references, reset IED bindings, strip template attributes, or clean up orphans — reference rewiring and those policies belong to the recipes/callers (see `toFsd` / `toAsd`).
 
 ```ts
 await targetDoc.transaction(async (tx) => {
@@ -105,8 +106,9 @@ Steps:
 
 1. Ensure the TEMPLATE substation structure.
 2. Write the ASD history header (`fileType: 'ASD'`).
-3. Clone the Application's functions, categories and referenced satellites into the structure (functions via `deep`).
-4. Run post-extraction clean-up.
+3. Clone the Application's functions (via `deep`) and their categories into the structure.
+4. Clone the remaining referenced satellites, placing each by mirroring its source hierarchy — a satellite owned by a function lands back under that function's clone — and cloning each target exactly once (satellites already brought in with a function are reused, not duplicated).
+5. Run post-extraction clean-up.
 
 ### `ensureSubstationTemplateStructure`
 
@@ -131,14 +133,16 @@ ensureSubstationTemplateStructure(): Promise<{
 
 ```
 extraction/transaction/
-  deep.ts                 generic import (uuid closure + clone + type closure)
+  deep.ts                 generic import (clone + type closure)
   primitives/             generic, policy-free mechanism
     clone-tree.ts         getTree → promote → strip → deepClone
-    clone-referenced.ts   forward uuid-reference closure (create-if-missing)
+    clone-referenced.ts   satellite clone — resolve missing referenced targets,
+                          dedup against already-cloned records, place per a resolver
   recipes/                template products + their bricks
     fsd/ , asd/
     shared/               clone-function, ensure-substation-structure,
-                          resolve-structure-ref, post-extraction-cleanup, omit-filters
+                          resolve-structure-ref (structural + ancestry placement),
+                          post-extraction-cleanup, omit-filters
 ```
 
 > `deep` is the **mechanism**; the recipes are **policy** (pruning, structural placement, transforms, history, clean-up). The type engine it composes is [`dataModel.importTypes`](./data-model#importtypes); the content-addressing behind that is [`signature.elementSignature`](./signature).
@@ -156,9 +160,9 @@ import type {
 } from '@dialecte/scl/v2019C1'
 ```
 
-| Type                | Description                                                                             |
-| ------------------- | --------------------------------------------------------------------------------------- |
-| `ImportDeepParams`  | Parameters of `deep` (source, refs, closure toggles, `omit` / `strip` / `promoteRoot`). |
-| `ImportDeepResult`  | Result of `deep` (`record`, `idRemap`).                                                 |
-| `StripConfig`       | Attribute-stripping policy — `{ scope: 'root' \| 'tree'; attributes: string[] }`.       |
-| `PromoteRootConfig` | Root tagName promotion — `{ from: Scl.ElementsOf; to: Scl.ElementsOf }`.                |
+| Type                | Description                                                                         |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| `ImportDeepParams`  | Parameters of `deep` (source, refs, `withTypes`, `omit` / `strip` / `promoteRoot`). |
+| `ImportDeepResult`  | Result of `deep` (`record`, `typeIdRemap`, `recordMappings`).                       |
+| `StripConfig`       | Attribute-stripping policy — `{ scope: 'root' \| 'tree'; attributes: string[] }`.   |
+| `PromoteRootConfig` | Root tagName promotion — `{ from: Scl.ElementsOf; to: Scl.ElementsOf }`.            |

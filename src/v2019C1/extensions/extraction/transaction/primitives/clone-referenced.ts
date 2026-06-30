@@ -26,9 +26,16 @@ export async function findMissingReferencedRecords<
 		scopeRef: Scl.Ref<Scl.AncestorsOf<Ref>>
 		refTagName: Ref
 		targetTagName: Target
+		/**
+		 * Source record ids already cloned earlier in this extraction (e.g. as part of
+		 * a function subtree). Their clones carry remapped uuids, so the source-uuid
+		 * existence check below cannot see them — skip by source id to avoid cloning
+		 * a misplaced duplicate.
+		 */
+		alreadyCloned?: ReadonlySet<string>
 	},
 ): Promise<Scl.Ref<Target>[]> {
-	const { sourceQuery, scopeRef, refTagName, targetTagName } = params
+	const { sourceQuery, scopeRef, refTagName, targetTagName, alreadyCloned } = params
 	const uuidAttrName = UUID_REFERENCE_PAIRS[refTagName][0].attribute.uuid
 
 	const result = await sourceQuery.findDescendants(scopeRef, {
@@ -47,15 +54,16 @@ export async function findMissingReferencedRecords<
 	const missing: Scl.Ref<Target>[] = []
 	for (const uuid of uuids) {
 		const uuidFilter = { uuid } as Scl.AttributesValueObjectOf<Target>
-		const [existing] = await tx.findByAttributes({ tagName: targetTagName, attributes: uuidFilter })
-
-		if (existing) continue
 
 		const [source] = await sourceQuery.findByAttributes({
 			tagName: targetTagName,
 			attributes: uuidFilter,
 		})
 		if (!source) continue
+		if (alreadyCloned?.has(source.id)) continue
+
+		const [existing] = await tx.findByAttributes({ tagName: targetTagName, attributes: uuidFilter })
+		if (existing) continue
 
 		missing.push({ tagName: targetTagName, id: source.id } as Scl.Ref<Target>)
 	}
@@ -63,12 +71,16 @@ export async function findMissingReferencedRecords<
 	return missing
 }
 
+/** Resolves the target parent each missing satellite is cloned under. */
+export type ResolveTargetParent = (ref: Scl.Ref<Scl.ElementsOf>) => Promise<Scl.Ref<Scl.ElementsOf>>
+
 /**
  * Generic satellite-clone helper.
  *
  * Scans `scopeRef` descendants for `refTagName` elements, collects unique uuid
  * values (derived from the UUID_REFERENCE_PAIRS constant), skips records
- * already present in the target, clones each missing one into `targetParent`.
+ * already present in the target, clones each missing one under the parent
+ * returned by `resolveTargetParent` (mirroring the source hierarchy).
  * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
  */
 export async function cloneReferencedRecords<Ref extends RefTagName, Target extends TargetOf<Ref>>(
@@ -78,20 +90,31 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 		scopeRef: Scl.Ref<Scl.AncestorsOf<Ref>>
 		refTagName: Ref
 		targetTagName: Target
-		targetParent: Scl.Ref<Scl.ElementsOf>
+		resolveTargetParent: ResolveTargetParent
+		alreadyCloned?: ReadonlySet<string>
 		omit?: OmitEntry<Config>[]
 	},
 ): Promise<void> {
-	const { sourceQuery, scopeRef, refTagName, targetTagName, targetParent, omit } = params
+	const {
+		sourceQuery,
+		scopeRef,
+		refTagName,
+		targetTagName,
+		resolveTargetParent,
+		alreadyCloned,
+		omit,
+	} = params
 
 	const missing = await findMissingReferencedRecords(tx, {
 		sourceQuery,
 		scopeRef,
 		refTagName,
 		targetTagName,
+		alreadyCloned,
 	})
 
 	for (const ref of missing) {
+		const targetParent = await resolveTargetParent(ref)
 		await cloneTree(tx, { sourceQuery, ref, targetParent, omit })
 	}
 }
@@ -107,7 +130,8 @@ type CloneRefsFn = (
 		scopeRef: Scl.Ref<Scl.ElementsOf>
 		refTagName: RefTagName
 		targetTagName: Scl.ElementsOf
-		targetParent: Scl.Ref<Scl.ElementsOf>
+		resolveTargetParent: ResolveTargetParent
+		alreadyCloned?: ReadonlySet<string>
 		omit?: OmitEntry<Config>[]
 	},
 ) => Promise<void>
@@ -115,6 +139,10 @@ type CloneRefsFn = (
 /**
  * Clones all referenced targets for ref types derived from
  * `DESCENDANTS[scopeTagName] ∩ UUID_REFERENCE_PAIRS`, skipping those in `skip`.
+ *
+ * Each missing target is cloned under the parent returned by `resolveTargetParent`,
+ * which mirrors the source hierarchy so satellites that live under a `Function` are
+ * not flattened to `Substation`.
  *
  * Targets already present in the target tx are skipped (dedup via findMissingReferencedRecords).
  * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
@@ -125,12 +153,21 @@ export async function cloneAllReferencedTargets(
 		sourceQuery: Core.Query<Config>
 		scopeTagName: Scl.ElementsOf
 		scopeRef: Scl.Ref<Scl.ElementsOf>
-		targetParent: Scl.Ref<Scl.ElementsOf>
+		resolveTargetParent: ResolveTargetParent
+		alreadyCloned?: ReadonlySet<string>
 		skip?: ReadonlySet<string>
 		omit?: OmitEntry<Config>[]
 	},
 ): Promise<void> {
-	const { sourceQuery, scopeTagName, scopeRef, targetParent, skip = new Set(), omit } = params
+	const {
+		sourceQuery,
+		scopeTagName,
+		scopeRef,
+		resolveTargetParent,
+		alreadyCloned,
+		skip = new Set(),
+		omit,
+	} = params
 
 	const refTags = ((DESCENDANTS[scopeTagName] ?? []) as readonly string[]).filter(
 		(tag): tag is RefTagName => tag in UUID_REFERENCE_PAIRS && !skip.has(tag),
@@ -146,7 +183,8 @@ export async function cloneAllReferencedTargets(
 					scopeRef,
 					refTagName,
 					targetTagName: targetTagName as Scl.ElementsOf,
-					targetParent,
+					resolveTargetParent,
+					alreadyCloned,
 					omit,
 				})
 			}
