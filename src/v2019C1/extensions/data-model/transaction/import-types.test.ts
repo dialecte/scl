@@ -8,12 +8,15 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test/hydrated-test'
 
+import type { ImportTypesStats } from './import-types'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 import type { Scl } from '@dialecte/scl/v2019C1'
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	lnodeRef: { tagName: 'LNode'; id: string }
 	cloneTargets?: Scl.Ref<Scl.ElementsOf>[]
+	/** Asserted against the returned `stats` when present. */
+	expectedStats?: Partial<ImportTypesStats>
 }
 
 describe('importTypes', () => {
@@ -168,7 +171,221 @@ describe('importTypes', () => {
 			],
 		},
 
-		'target has the same id but different content → forked under a new id, bound LN repointed': {
+		'reclaim: single-consumer update forks then reclaims the original ids down the chain': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">
+				<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="sub-1">
+					<VoltageLevel name="V1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="vl-1">
+						<Bay name="B1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="bay-1">
+							<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="SHARED" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnode-1"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-s">
+					<LNodeType id="SHARED" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-s">
+						<DO name="Pos" type="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-s"/>
+					</LNodeType>
+					<DOType id="DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-s">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-s"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			targetXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-t">
+				<IED name="T1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ied-t">
+					<AccessPoint name="AP1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ap-t">
+						<Server ${CUSTOM_RECORD_ID_ATTRIBUTE}="srv-t">
+							<LDevice inst="LD0" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ld-t">
+								<LN lnClass="CSWI" inst="1" lnType="SHARED" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ln-t"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-t">
+					<LNodeType id="SHARED" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-t">
+						<DO name="Pos" type="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-t"/>
+					</LNodeType>
+					<DOType id="DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-t">
+						<DA name="stVal" bType="INT32" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-t"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
+			expectedStats: { forked: 2, reclaimed: 2, reused: 0, preserved: 0 },
+			expectedQueries: [
+				'//default:DataTypeTemplates/default:LNodeType[@id="SHARED"]/default:DO[@type="DPC"]',
+				'//default:DataTypeTemplates/default:DOType[@id="DPC"]/default:DA[@bType="BOOLEAN"]',
+				'//default:LN[@lnType="SHARED"]',
+			],
+			unexpectedQueries: [
+				'//default:DataTypeTemplates/default:DOType[@id="DPC"]/default:DA[@bType="INT32"]',
+				'//default:DataTypeTemplates/default:LNodeType[starts-with(@id, "PRJ_")]',
+				'//default:DataTypeTemplates/default:DOType[starts-with(@id, "PRJ_")]',
+			],
+		},
+
+		'reclaim: a shared child whose content changed stays forked (only the top id reclaimed)': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">
+				<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="sub-1">
+					<VoltageLevel name="V1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="vl-1">
+						<Bay name="B1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="bay-1">
+							<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="SHARED" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnode-1"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-s">
+					<LNodeType id="SHARED" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-s">
+						<DO name="Pos" type="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-s"/>
+					</LNodeType>
+					<DOType id="DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-s">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-s"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			targetXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-t">
+				<IED name="T1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ied-t">
+					<AccessPoint name="AP1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ap-t">
+						<Server ${CUSTOM_RECORD_ID_ATTRIBUTE}="srv-t">
+							<LDevice inst="LD0" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ld-t">
+								<LN lnClass="CSWI" inst="1" lnType="SHARED" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ln-t"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-t">
+					<LNodeType id="SHARED" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-t">
+						<DO name="Pos" type="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-t"/>
+					</LNodeType>
+					<LNodeType id="OTHER" lnClass="MMXU" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-o">
+						<DO name="Health" type="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-o"/>
+					</LNodeType>
+					<DOType id="DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-t">
+						<DA name="stVal" bType="INT32" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-t"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
+			expectedStats: { forked: 2, reclaimed: 1 },
+			expectedQueries: [
+				'//default:DataTypeTemplates/default:LNodeType[@id="SHARED"]/default:DO[starts-with(@type, "PRJ_DPC_")]',
+				'//default:DataTypeTemplates/default:DOType[starts-with(@id, "PRJ_DPC_")]/default:DA[@bType="BOOLEAN"]',
+				'//default:DataTypeTemplates/default:DOType[@id="DPC"]/default:DA[@bType="INT32"]',
+				'//default:DataTypeTemplates/default:LNodeType[@id="OTHER"]/default:DO[@type="DPC"]',
+				'//default:LN[@lnType="SHARED"]',
+			],
+			unexpectedQueries: [
+				'//default:DataTypeTemplates/default:LNodeType[starts-with(@id, "PRJ_")]',
+			],
+		},
+
+		'reclaim: a shared child that did not change is reused, the changed parent is reclaimed': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">
+				<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="sub-1">
+					<VoltageLevel name="V1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="vl-1">
+						<Bay name="B1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="bay-1">
+							<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="SHARED" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnode-1"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-s">
+					<LNodeType id="SHARED" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-s">
+						<DO name="Mod" type="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-s"/>
+					</LNodeType>
+					<DOType id="DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-s">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-s"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			targetXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-t">
+				<IED name="T1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ied-t">
+					<AccessPoint name="AP1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ap-t">
+						<Server ${CUSTOM_RECORD_ID_ATTRIBUTE}="srv-t">
+							<LDevice inst="LD0" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ld-t">
+								<LN lnClass="CSWI" inst="1" lnType="SHARED" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ln-t"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-t">
+					<LNodeType id="SHARED" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-t">
+						<DO name="Pos" type="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-t"/>
+					</LNodeType>
+					<DOType id="DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-t">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-t"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
+			expectedStats: { reused: 1, forked: 1, reclaimed: 1, preserved: 0 },
+			expectedQueries: [
+				'//default:DataTypeTemplates/default:LNodeType[@id="SHARED"]/default:DO[@name="Mod"][@type="DPC"]',
+				'//default:DataTypeTemplates/default:DOType[@id="DPC"]/default:DA[@bType="BOOLEAN"]',
+				'//default:LN[@lnType="SHARED"]',
+			],
+			unexpectedQueries: [
+				'//default:DataTypeTemplates/default:LNodeType[starts-with(@id, "PRJ_")]',
+			],
+		},
+
+		'reclaim: a still-shared top type is not reclaimed (fork stands under its hashed id)': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">
+				<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="sub-1">
+					<VoltageLevel name="V1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="vl-1">
+						<Bay name="B1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="bay-1">
+							<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="SHARED" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnode-1"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-s">
+					<LNodeType id="SHARED" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-s">
+						<DO name="Pos" type="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-s"/>
+					</LNodeType>
+					<DOType id="DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-s">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-s"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			targetXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-t">
+				<IED name="T1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ied-t">
+					<AccessPoint name="AP1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ap-t">
+						<Server ${CUSTOM_RECORD_ID_ATTRIBUTE}="srv-t">
+							<LDevice inst="LD0" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ld-t">
+								<LN lnClass="CSWI" inst="1" lnType="SHARED" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ln-t"/>
+								<LN lnClass="CSWI" inst="2" lnType="SHARED" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ln-keep"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-t">
+					<LNodeType id="SHARED" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-t">
+						<DO name="Pos" type="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-t"/>
+					</LNodeType>
+					<DOType id="DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-t">
+						<DA name="stVal" bType="INT32" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-t"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
+			expectedStats: { forked: 2, reclaimed: 0 },
+			expectedQueries: [
+				'//default:DataTypeTemplates/default:LNodeType[@id="SHARED"]',
+				'//default:DataTypeTemplates/default:LNodeType[starts-with(@id, "PRJ_SHARED_")]',
+				'//default:LN[@inst="2"][@lnType="SHARED"]',
+				'//default:LN[@inst="1"][starts-with(@lnType, "PRJ_SHARED_")]',
+			],
+		},
+
+		'reclaim: an orphaned non-colliding child of a pruned chain is swept (no id to reclaim)': {
 			sourceXml: `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">
 				<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="sub-1">
@@ -200,22 +417,25 @@ describe('importTypes', () => {
 				</IED>
 				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-t">
 					<LNodeType id="SHARED" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-t">
-						<DO name="Pos" type="PRJ_DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-t"/>
+						<DO name="Pos" type="OLD_DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-t"/>
 					</LNodeType>
-					<DOType id="PRJ_DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-t">
+					<DOType id="OLD_DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-t">
 						<DA name="stVal" bType="INT32" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-t"/>
 					</DOType>
 				</DataTypeTemplates>
 			</SCL>`,
 			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
 			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
+			expectedStats: { forked: 1, preserved: 1, reclaimed: 1 },
 			expectedQueries: [
-				'//default:DataTypeTemplates/default:LNodeType[@id="SHARED"]',
-				'//default:DataTypeTemplates/default:LNodeType[starts-with(@id, "PRJ_SHARED_")]',
-				'//default:DataTypeTemplates/default:DOType[@id="SRC_DPC"]',
-				'//default:LN[starts-with(@lnType, "PRJ_SHARED_")]',
+				'//default:DataTypeTemplates/default:LNodeType[@id="SHARED"]/default:DO[@type="SRC_DPC"]',
+				'//default:DataTypeTemplates/default:DOType[@id="SRC_DPC"]/default:DA[@bType="BOOLEAN"]',
+				'//default:LN[@lnType="SHARED"]',
 			],
-			unexpectedQueries: ['//default:LN[@lnType="SHARED"]'],
+			unexpectedQueries: [
+				'//default:DataTypeTemplates/default:DOType[@id="OLD_DPC"]',
+				'//default:DataTypeTemplates/default:LNodeType[starts-with(@id, "PRJ_")]',
+			],
 		},
 	}
 
@@ -230,8 +450,9 @@ describe('importTypes', () => {
 		const lnodeRecord = await sourceQuery.getRecord(testCase.lnodeRef)
 		if (!lnodeRecord) throw new Error('LNode not found')
 
+		let stats: ImportTypesStats | undefined
 		await target.transaction(async (tx) => {
-			await importTypes(tx, {
+			const result = await importTypes(tx, {
 				sourceQuery,
 				records: [lnodeRecord],
 				cloneMappings: testCase.cloneTargets?.map((target) => ({
@@ -240,7 +461,10 @@ describe('importTypes', () => {
 				})),
 				forkPrefix: 'PRJ_',
 			})
+			stats = result.stats
 		})
+
+		if (testCase.expectedStats) expect(stats).toMatchObject(testCase.expectedStats)
 
 		const lnodeTypes = await target.query.getRecordsByTagName('LNodeType')
 		expect(lnodeTypes.length, 'no duplicate LNodeTypes').toBe(

@@ -41,7 +41,11 @@ export async function deep(
 	if (withTypes) {
 		const records = await collectLogicalNodes(sourceQuery, ref)
 		if (records.length > 0) {
-			const result = await importTypes(tx, { sourceQuery, records, cloneMappings: clone.mappings })
+			const result = await importTypes(tx, {
+				sourceQuery,
+				records,
+				cloneMappings: clone.mappings,
+			})
 			typeIdRemap = result.idRemap
 		}
 	}

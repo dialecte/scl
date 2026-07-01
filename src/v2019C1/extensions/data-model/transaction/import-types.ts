@@ -1,5 +1,7 @@
 import { resolve } from '../query'
 
+import { TYPE_ID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
+import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
 import { applyTypeIdRemap } from '@/v2019C1/extensions/reference/transaction'
 import { elementSignature } from '@/v2019C1/extensions/signature/query'
 
@@ -11,7 +13,20 @@ import type {
 	TypeRecord,
 } from './import-types.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type { TypeIdReferencePair, TypeIdRefTagName } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
+
+/** A fork (R3) that displaced a pre-existing target type under the same id. */
+type Collision = {
+	/** The SCL `id` the fork collided with (and may reclaim). */
+	oldId: string
+	/** The displaced pre-existing target type record. */
+	oldRef: Scl.Ref<Scl.ElementsOf>
+	/** The freshly-cloned fork record (its own id is `forkedId`). */
+	forkRef: Scl.Ref<Scl.ElementsOf>
+	/** The SCL `id` the fork was minted under (`<forkPrefix><oldId>_<hash>`). */
+	forkedId: string
+}
 
 export type { ImportTypesParams, ImportTypesResult, ImportTypesStats } from './import-types.types'
 
@@ -22,7 +37,12 @@ export type { ImportTypesParams, ImportTypesResult, ImportTypesStats } from './i
  * - **R1** structurally-equal type already in the target → reuse its id (dedup);
  * - **R2** no match and the source id is free → clone, preserving the id;
  * - **R3** no match but the id is taken by different content → fork under a new
- *   content-hash id (`<forkPrefix><id>_<hash>`) and propagate the fork upward.
+ *   content-hash id (`<forkPrefix><id>_<hash>`) and propagate the fork upward; then,
+ *   if the displaced target type is left with **no** file-wide referrers (an update
+ *   whose old version is no longer consumed), prune that orphan and reclaim its id
+ *   for the fork. Pruning is refcount-based and cascades to descendants only where
+ *   their own referrer count hits zero, so a child type still shared elsewhere keeps
+ *   its fork.
  *
  * Child type references inside the imported types — and the `lnType` of the
  * instances in `cloneMappings` (the caller's instance clone) — are repointed to
@@ -50,7 +70,8 @@ export async function importTypes(
 
 	const idRemap = new Map<string, string>()
 	const clonedRoots: Scl.Ref<Scl.ElementsOf>[] = []
-	const stats: ImportTypesStats = { reused: 0, preserved: 0, forked: 0 }
+	const collisions: Collision[] = []
+	const stats: ImportTypesStats = { reused: 0, preserved: 0, forked: 0, reclaimed: 0 }
 
 	for (const source of sourceTypes) {
 		const sourceId = await sourceQuery.getAttribute(source, { name: 'id' })
@@ -71,13 +92,14 @@ export async function importTypes(
 		const tree = await sourceQuery.getTree(source)
 		if (!tree) continue
 
-		const idTaken =
-			(await tx.findByAttributes({ tagName: source.tagName, attributes: { id: sourceId } }))
-				.length > 0
+		const [existing] = await tx.findByAttributes({
+			tagName: source.tagName,
+			attributes: { id: sourceId },
+		})
 
 		let targetId = sourceId
 		let preparedTree = tree
-		if (idTaken) {
+		if (existing) {
 			targetId = await freeForkId(
 				tx,
 				source.tagName,
@@ -91,7 +113,17 @@ export async function importTypes(
 
 		const clone = await tx.deepClone(dataTypeTemplates, preparedTree)
 		idRemap.set(sourceId, targetId)
-		if (clone?.record) clonedRoots.push(toRef(clone.record.tagName, clone.record.id))
+		if (clone?.record) {
+			clonedRoots.push(toRef(clone.record.tagName, clone.record.id))
+			if (existing) {
+				collisions.push({
+					oldId: sourceId,
+					oldRef: toRef(existing.tagName, existing.id),
+					forkRef: toRef(clone.record.tagName, clone.record.id),
+					forkedId: targetId,
+				})
+			}
+		}
 	}
 
 	// Second pass: now that idRemap is complete, repoint the child type-refs of
@@ -102,6 +134,17 @@ export async function importTypes(
 		if (tree) collectRefs(tree, recordsToRemap)
 	}
 	await applyTypeIdRemap(tx, { records: recordsToRemap, idRemap })
+
+	// Third pass: reclaim the ids of types a fork superseded, when the displaced old
+	// type is left with no file-wide referrers.
+	if (collisions.length > 0) {
+		await reclaimSupersededTypes(tx, {
+			collisions,
+			idRemap,
+			referrerRecords: recordsToRemap,
+			stats,
+		})
+	}
 
 	return { idRemap, stats }
 }
@@ -155,6 +198,151 @@ function toRef(tagName: string, id: string): Scl.Ref<Scl.ElementsOf> {
 function collectRefs(node: Scl.TreeRecord<Scl.ElementsOf>, out: Scl.Ref<Scl.ElementsOf>[]): void {
 	out.push(toRef(node.tagName, node.id))
 	for (const child of node.tree ?? []) collectRefs(child, out)
+}
+
+const refKey = (ref: Scl.Ref<Scl.ElementsOf>): string => `${ref.tagName}#${ref.id}`
+
+/**
+ * Reclaim the ids of types displaced by a fork. A collision's old target type that
+ * ends up with no file-wide referrers is pruned (cascading, refcount-based) and the
+ * fork is renamed back to the freed id — so an update whose old version is no longer
+ * consumed lands under the original id instead of a hashed fork plus an orphan. A
+ * displaced type still referenced elsewhere is left alone and its fork stands.
+ */
+async function reclaimSupersededTypes(
+	tx: Core.Transaction<Config>,
+	params: {
+		collisions: Collision[]
+		idRemap: Map<string, string>
+		referrerRecords: Scl.Ref<Scl.ElementsOf>[]
+		stats: ImportTypesStats
+	},
+): Promise<void> {
+	const { collisions, idRemap, referrerRecords, stats } = params
+
+	const freedOldIds = await pruneDeadSupersededTypes(tx, collisions)
+
+	// forkedId -> reclaimed original id, for the collisions whose old id was freed.
+	const reclaimMap = new Map<string, string>()
+	const reclaimedRoots: Scl.Ref<Scl.ElementsOf>[] = []
+	for (const collision of collisions) {
+		if (!freedOldIds.has(collision.oldId)) continue
+		await tx.update(collision.forkRef, { attributes: { id: collision.oldId } })
+		reclaimMap.set(collision.forkedId, collision.oldId)
+		reclaimedRoots.push(collision.forkRef)
+		stats.reclaimed++
+		// Reflect the reclaim in the returned source -> target map.
+		for (const [sourceId, targetId] of idRemap) {
+			if (targetId === collision.forkedId) idRemap.set(sourceId, collision.oldId)
+		}
+	}
+
+	if (reclaimMap.size === 0) return
+
+	// Repoint everything that pointed at a fork's hashed id (cloned instances and the
+	// forked types' own child refs) to the reclaimed original id.
+	const records = [...referrerRecords]
+	for (const root of reclaimedRoots) {
+		const tree = await tx.getTree(root)
+		if (tree) collectRefs(tree, records)
+	}
+	await applyTypeIdRemap(tx, { records, idRemap: reclaimMap })
+}
+
+/**
+ * Prune the displaced old types that are no longer referenced anywhere in the file,
+ * cascading to descendant types that lose their last referrer once a parent is
+ * deleted. Refcount-based (never chain-based): a descendant still shared elsewhere
+ * survives. Returns the set of collision ids that were actually freed.
+ */
+async function pruneDeadSupersededTypes(
+	tx: Core.Transaction<Config>,
+	collisions: Collision[],
+): Promise<Set<string>> {
+	const freedOldIds = new Set<string>()
+	// Map a candidate ref back to the collision id it may free (only the displaced
+	// old roots carry one; cascade-discovered descendants free nothing to reclaim).
+	const collidedIdByRef = new Map<string, string>(
+		collisions.map((c) => [refKey(c.oldRef), c.oldId]),
+	)
+
+	const worklist: Scl.Ref<Scl.ElementsOf>[] = collisions.map((c) => c.oldRef)
+	const queued = new Set<string>(worklist.map(refKey))
+	const deleted = new Set<string>()
+
+	let progressed = true
+	while (progressed) {
+		progressed = false
+		for (const ref of worklist) {
+			const key = refKey(ref)
+			if (deleted.has(key)) continue
+			const referrers = await findRefsPointingTo(tx, { target: ref })
+			if (referrers.length > 0) continue // still consumed — keep it (and its fork)
+
+			// Gather the child types it references before deleting (delete cascades and
+			// removes its own DO/DA children, dropping their referrers to child types).
+			const tree = await tx.getTree(ref)
+			const childTypeRefs = tree ? await referencedTypeRefs(tx, tree) : []
+
+			await tx.delete(ref)
+			deleted.add(key)
+			progressed = true
+			const collidedId = collidedIdByRef.get(key)
+			if (collidedId !== undefined) freedOldIds.add(collidedId)
+
+			// Re-evaluate the child types it referenced now that this parent is gone; a
+			// child that is itself a displaced old root is already in `collidedIdByRef`.
+			for (const childRef of childTypeRefs) {
+				const childKey = refKey(childRef)
+				if (!queued.has(childKey)) {
+					worklist.push(childRef)
+					queued.add(childKey)
+				}
+			}
+		}
+	}
+
+	return freedOldIds
+}
+
+/** Resolve every type-id reference (`lnType`, `DO/SDO.type`, `DA/BDA.type`) in a type's subtree to the target record it points at. */
+async function referencedTypeRefs(
+	tx: Core.Transaction<Config>,
+	tree: Scl.TreeRecord<Scl.ElementsOf>,
+): Promise<Scl.Ref<Scl.ElementsOf>[]> {
+	const out: Scl.Ref<Scl.ElementsOf>[] = []
+	const seen = new Set<string>()
+
+	async function walk(node: Scl.TreeRecord<Scl.ElementsOf>): Promise<void> {
+		const pairs = TYPE_ID_REFERENCE_PAIRS[node.tagName as TypeIdRefTagName] as
+			| readonly TypeIdReferencePair[]
+			| undefined
+		for (const pair of pairs ?? []) {
+			if (!matchesWhen(node, pair)) continue
+			const value = node.attributes.find((a) => a.name === pair.attribute)?.value
+			if (!value) continue
+			const [record] = await tx.findByAttributes({
+				tagName: pair.target as Scl.ElementsOf,
+				attributes: { id: value },
+			})
+			if (!record) continue
+			const ref = toRef(pair.target, record.id)
+			const key = refKey(ref)
+			if (!seen.has(key)) {
+				seen.add(key)
+				out.push(ref)
+			}
+		}
+		for (const child of node.tree ?? []) await walk(child)
+	}
+
+	await walk(tree)
+	return out
+}
+
+function matchesWhen(node: Scl.TreeRecord<Scl.ElementsOf>, pair: TypeIdReferencePair): boolean {
+	if (!pair.when) return true
+	return node.attributes.find((a) => a.name === pair.when!.attribute)?.value === pair.when.equals
 }
 
 /**

@@ -8,7 +8,13 @@ export type TypeRecord =
 	| Scl.TrackedRecord<'DOType'>
 	| Scl.TrackedRecord<'LNodeType'>
 
-export type ImportTypesStats = { reused: number; preserved: number; forked: number }
+export type ImportTypesStats = {
+	reused: number
+	preserved: number
+	forked: number
+	/** Forks whose id was reclaimed from a now-orphaned superseded type. */
+	reclaimed: number
+}
 
 export type ImportTypesResult = {
 	/** source type id -> target type id (reused, preserved, or forked). */
