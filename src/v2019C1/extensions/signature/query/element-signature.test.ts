@@ -199,6 +199,66 @@ describe('elementSignature', () => {
 			b: { tagName: 'DOType', id: 'dot-2' },
 			equal: false,
 		},
+
+		'two LNodeTypes whose DOs share one DOType in opposite child order, resolved → equal (no spurious @cycle)':
+			{
+				sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<DataTypeTemplates ${id}="dtt-1">
+					<LNodeType id="LN1" lnClass="ENC" ${id}="lnt-1">
+						<DO name="Beh" type="SharedD" ${id}="do-1a"/>
+						<DO name="Mod" type="SharedD" ${id}="do-1b"/>
+					</LNodeType>
+					<LNodeType id="LN2" lnClass="ENC" ${id}="lnt-2">
+						<DO name="Mod" type="SharedD" ${id}="do-2b"/>
+						<DO name="Beh" type="SharedD" ${id}="do-2a"/>
+					</LNodeType>
+					<DOType id="SharedD" cdc="ENS" ${id}="dot-s"><DA name="stVal" bType="INT32" fc="ST" ${id}="da-s"/></DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+				a: { tagName: 'LNodeType', id: 'lnt-1' },
+				b: { tagName: 'LNodeType', id: 'lnt-2' },
+				resolveReferences: true,
+				equal: true,
+			},
+
+		'LNodeTypes sharing a DOType vs pointing a member at a different DOType, resolved → different (no over-collapse)':
+			{
+				sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<DataTypeTemplates ${id}="dtt-1">
+					<LNodeType id="LN3" lnClass="ENS" ${id}="lnt-3">
+						<DO name="Beh" type="Da" ${id}="do-3a"/>
+						<DO name="Mod" type="Da" ${id}="do-3b"/>
+					</LNodeType>
+					<LNodeType id="LN4" lnClass="ENS" ${id}="lnt-4">
+						<DO name="Beh" type="Da" ${id}="do-4a"/>
+						<DO name="Mod" type="Db" ${id}="do-4b"/>
+					</LNodeType>
+					<DOType id="Da" cdc="ENS" ${id}="dot-da"><DA name="stVal" bType="INT32" fc="ST" ${id}="da-da"/></DOType>
+					<DOType id="Db" cdc="ENS" ${id}="dot-db"><DA name="stVal" bType="FLOAT32" fc="MX" ${id}="da-db"/></DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+				a: { tagName: 'LNodeType', id: 'lnt-3' },
+				b: { tagName: 'LNodeType', id: 'lnt-4' },
+				resolveReferences: true,
+				equal: false,
+			},
+
+		'two self-referential DOTypes (SDO → own DOType), resolved → equal via stable @cycle (no hang)':
+			{
+				sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<DataTypeTemplates ${id}="dtt-1">
+					<DOType id="Rec1" cdc="WYE" ${id}="dot-r1"><SDO name="phsA" type="Rec1" ${id}="sdo-1"/></DOType>
+					<DOType id="Rec2" cdc="WYE" ${id}="dot-r2"><SDO name="phsA" type="Rec2" ${id}="sdo-2"/></DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+				a: { tagName: 'DOType', id: 'dot-r1' },
+				b: { tagName: 'DOType', id: 'dot-r2' },
+				resolveReferences: true,
+				equal: true,
+			},
 	}
 
 	runSclTestCases.withoutExport<TestCase>({

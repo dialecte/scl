@@ -98,9 +98,21 @@ async function serialize(
 	}
 	attributeParts.sort()
 
-	const childParts = (
-		await Promise.all((node.tree ?? []).map((child) => serialize(child, context)))
-	).sort()
+	// Serialize children sequentially, not via Promise.all: a shared `seen` set only
+	// distinguishes a genuine back-reference from a plain shared reference when children
+	// run in order. Concurrent siblings would let one fold a type's real signature while a
+	// second, suspended mid-await, sees the key in `seen` and emits a spurious `@cycle`
+	// (order-dependent, so the same type hashes differently in source vs target and forks).
+	// Serialize children sequentially, not via Promise.all: a shared `seen` set only
+	// distinguishes a genuine back-reference from a plain shared reference when children
+	// run in order. Concurrent siblings would let one fold a type's real signature while a
+	// second, suspended mid-await, sees the key in `seen` and emits a spurious `@cycle`
+	// (order-dependent, so the same type hashes differently in source vs target and forks).
+	const childParts: string[] = []
+	for (const child of node.tree ?? []) {
+		childParts.push(await serialize(child, context))
+	}
+	childParts.sort()
 
 	const text = node.value?.trim()
 	const valuePart = text ? `,value:${JSON.stringify(text)}` : ''
