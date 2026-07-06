@@ -22,6 +22,12 @@ The SCL definition is produced from the **IEC 61850-6 v2019C1 XSD**. Every eleme
 import { createSclProject } from '@dialecte/scl/v2019C1'
 ```
 
+**Namespaces.** SCL spans the default SCL namespace, the 6-100 extension namespace (`eIEC61850-6-100`), and `xsi`. Names follow the [core namespace rules](https://dialecte.github.io/core/guide/development/helpers#attribute-namespaces):
+
+- Default-namespace attributes and elements use **bare** local names (`version`, `name`, `Substation`).
+- 6-100 and `xsi` names are **prefixed**: attributes such as `eIEC61850-6-100:version` and `xsi:type` (on polymorphic slots like `BodyContent`). This holds whether the record was imported or created, so you read and write them by the same name.
+- An element's namespace can depend on its **parent**: `Labels` is bare under `Substation`/`VoltageLevel`/`Bay` but `eIEC61850-6-100:Labels` under `DAS`/`DOS`/`SDS`. You always refer to it by the bare tag `Labels`; the correct namespace is applied automatically on serialization.
+
 ### 2. Domain extensions
 
 Domain-specific query and transaction methods are plain functions registered on the document under named groups. They are available directly on `doc.query` and `tx`:
@@ -53,15 +59,15 @@ Hooks enforce SCL-specific invariants automatically — no application code need
 
 **Transaction hooks:**
 
-| Hook                      | Trigger                        | What it does                                                                                   |
-| ------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `afterStandardizedRecord` | Before a record is persisted   | Generates a fresh `uuid` on any element that supports it but lacks one                         |
-| `beforeClone`             | Before cloning a subtree       | Strips `uuid` attributes (clones get fresh identifiers); skips empty `<Private>` wrappers      |
-| `afterCreated`            | After a child element is added | Wraps elements from a non-default namespace inside a `<Private>` container, as required by SCL |
+| Hook                      | Trigger                                               | What it does                                                                                   |
+| ------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `afterStandardizedRecord` | Every record entry point (create/clone/update/import) | Generates a fresh `uuid` on any element that supports it but lacks one (fill-only)             |
+| `beforeClone`             | Before cloning a subtree                              | Strips `uuid` attributes (clones get fresh identifiers); skips empty `<Private>` wrappers      |
+| `afterCreated`            | After a child element is added                        | Wraps elements from a non-default namespace inside a `<Private>` container, as required by SCL |
 
 **IO hooks (import pipeline):**
 
-| Hook                 | Trigger              | What it does                                                                                         |
-| -------------------- | -------------------- | ---------------------------------------------------------------------------------------------------- |
-| `beforeImportRecord` | For each XML element | Ensures `uuid` present; indexes path → uuid for targets; queues pending UUID resolutions for refs    |
-| `afterImport`        | After all elements   | Resolves queued path references to UUID values; emits `UnresolvedReferenceWarning` when unresolvable |
+| Hook                 | Trigger              | What it does                                                                                                                                               |
+| -------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `beforeImportRecord` | For each XML element | On the already-standardized record (uuid enforced by `afterStandardizedRecord`): indexes path → uuid for targets; queues pending UUID resolutions for refs |
+| `afterImport`        | After all elements   | Resolves queued path references to UUID values; emits `UnresolvedReferenceWarning` when unresolvable                                                       |

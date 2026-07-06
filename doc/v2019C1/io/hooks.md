@@ -4,7 +4,7 @@ description: SCL IO hooks for @dialecte/scl v2019C1 — two-pass UUID reference 
 
 # IO Hooks
 
-SCL v2019C1 registers IO hooks on `SCL_DIALECTE_CONFIG.io.hooks` automatically. They run during `project.import` and are not user-configurable — this page documents what they do and what the output looks like.
+`createSclProject` wires SCL's hooks onto the `Project` instance automatically (io hooks alongside the record hooks, as one `DialecteHooks` object). They run during `project.import` and are not user-configurable — this page documents what they do and what the output looks like.
 
 For the general IO hooks API, see [Core IO hooks](https://dialecte.github.io/core/io/hooks).
 
@@ -17,15 +17,18 @@ SCL uses two kinds of references between elements:
 
 Existing SCL files usually only contain path attributes. The IO hooks resolve each path to a UUID during import so that the stored records always have both. This makes UUID-based lookups reliable without a separate migration step.
 
+## UUID enforcement
+
+The `uuid` is enforced by the **`afterStandardizedRecord`** record hook, which runs during standardization — for every UUID-capable element that lacks one, on **every** entry point (import, create, clone, update). It is fill-only: an existing `uuid` is never regenerated. During import, standardization runs **before** `beforeImportRecord`, so by the time the IO pass sees a record its `uuid` is already present.
+
 ## Two-pass pipeline
 
 ### Pass 1 — `beforeImportRecord`
 
-Runs per record in document order. For each record:
+Runs per record in document order, on the already-standardized record. For each record:
 
-1. **UUID ensure** — if the element type supports `uuid` and the attribute is absent, a new UUID is generated and attached before the record is stored.
-2. **Target indexing** — if the element is a _target_ (e.g. `Function`, `LNode`): its computed path is added to a `pathIndex` map (`path → uuid`).
-3. **Reference queuing** — if the element is a _reference_ (e.g. `FunctionRef`) and only the path attribute is present: a pending resolution is queued.
+1. **Target indexing** — if the element is a _target_ (e.g. `Function`, `LNode`): its computed path is added to a `pathIndex` map (`path → uuid`), reading the `uuid` that standardization already set.
+2. **Reference queuing** — if the element is a _reference_ (e.g. `FunctionRef`) and only the path attribute is present: a pending resolution is queued.
 
 **Example — after processing these two records:**
 
