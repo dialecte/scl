@@ -34,8 +34,8 @@ describe('updateRefPaths', () => {
 						await tx.update({ tagName: 'Function', id: 'f1' }, { attributes: { name: 'F1New' } })
 					})
 				},
-				expectedQueries: ['//default:FunctionCatRef[@function="Sub1/F1New"]'],
-				unexpectedQueries: ['//default:FunctionCatRef[@function="Sub1/F1"]'],
+				expectedQueries: ['//v2019C1:FunctionCatRef[@function="Sub1/F1New"]'],
+				unexpectedQueries: ['//v2019C1:FunctionCatRef[@function="Sub1/F1"]'],
 			},
 
 			'direct — uuid mismatch → only matching ref updated, other untouched': {
@@ -57,10 +57,10 @@ describe('updateRefPaths', () => {
 					})
 				},
 				expectedQueries: [
-					'//default:FunctionCatRef[@function="Sub1/F1New"]',
-					'//default:FunctionCatRef[@function="Sub1/F2"]',
+					'//v2019C1:FunctionCatRef[@function="Sub1/F1New"]',
+					'//v2019C1:FunctionCatRef[@function="Sub1/F2"]',
 				],
-				unexpectedQueries: ['//default:FunctionCatRef[@function="Sub1/F1"]'],
+				unexpectedQueries: ['//v2019C1:FunctionCatRef[@function="Sub1/F1"]'],
 			},
 
 			// ── Strategy: lnode ─────────────────────────────────────────────────
@@ -87,8 +87,8 @@ describe('updateRefPaths', () => {
 						await tx.update({ tagName: 'LNode', id: 'ln1' }, { attributes: { lnInst: '2' } })
 					})
 				},
-				expectedQueries: ['//default:SourceRef[@source="Sub1/F1/XCBR2"]'],
-				unexpectedQueries: ['//default:SourceRef[@source="Sub1/F1/XCBR1"]'],
+				expectedQueries: ['//v2019C1:SourceRef[@source="Sub1/F1/XCBR2"]'],
+				unexpectedQueries: ['//v2019C1:SourceRef[@source="Sub1/F1/XCBR1"]'],
 			},
 
 			'lnode — update LNode lnInst → SourceRef.source with DO/DA suffix preserved': {
@@ -113,8 +113,8 @@ describe('updateRefPaths', () => {
 						await tx.update({ tagName: 'LNode', id: 'ln1' }, { attributes: { lnInst: '2' } })
 					})
 				},
-				expectedQueries: ['//default:SourceRef[@source="Sub1/F1/XCBR2.Pos.stVal"]'],
-				unexpectedQueries: ['//default:SourceRef[@source="Sub1/F1/XCBR1.Pos.stVal"]'],
+				expectedQueries: ['//v2019C1:SourceRef[@source="Sub1/F1/XCBR2.Pos.stVal"]'],
+				unexpectedQueries: ['//v2019C1:SourceRef[@source="Sub1/F1/XCBR1.Pos.stVal"]'],
 			},
 
 			// ── Strategy: ied-address ────────────────────────────────────────────
@@ -154,8 +154,8 @@ describe('updateRefPaths', () => {
 						)
 					})
 				},
-				expectedQueries: ['//default:SourceRef[@extRefAddr="IED1/LD0/XCBR1.TrCmd2.stVal"]'],
-				unexpectedQueries: ['//default:SourceRef[@extRefAddr="IED1/LD0/XCBR1.TrCmd.stVal"]'],
+				expectedQueries: ['//v2019C1:SourceRef[@extRefAddr="IED1/LD0/XCBR1.TrCmd2.stVal"]'],
+				unexpectedQueries: ['//v2019C1:SourceRef[@extRefAddr="IED1/LD0/XCBR1.TrCmd.stVal"]'],
 			},
 
 			// ── Ancestor rename (descendant ref path propagation) ────────────────
@@ -180,8 +180,8 @@ describe('updateRefPaths', () => {
 						await tx.update({ tagName: 'Bay', id: 'bay1' }, { attributes: { name: 'B2' } })
 					})
 				},
-				expectedQueries: ['//default:FunctionCatRef[@function="Sub1/V1/B2/F1"]'],
-				unexpectedQueries: ['//default:FunctionCatRef[@function="Sub1/V1/B1/F1"]'],
+				expectedQueries: ['//v2019C1:FunctionCatRef[@function="Sub1/V1/B2/F1"]'],
+				unexpectedQueries: ['//v2019C1:FunctionCatRef[@function="Sub1/V1/B1/F1"]'],
 			},
 
 			'ancestor rename — rename Substation → SourceRef lnode descendant path updated': {
@@ -209,8 +209,8 @@ describe('updateRefPaths', () => {
 						)
 					})
 				},
-				expectedQueries: ['//default:SourceRef[@source="Sub1New/F1/XCBR1"]'],
-				unexpectedQueries: ['//default:SourceRef[@source="Sub1/F1/XCBR1"]'],
+				expectedQueries: ['//v2019C1:SourceRef[@source="Sub1New/F1/XCBR1"]'],
+				unexpectedQueries: ['//v2019C1:SourceRef[@source="Sub1/F1/XCBR1"]'],
 			},
 
 			// ── Strategy: behavior-description ───────────────────────────────────
@@ -240,8 +240,8 @@ describe('updateRefPaths', () => {
 						)
 					})
 				},
-				expectedQueries: ['//default:InputVar[@inputName="TripCmd2"]'],
-				unexpectedQueries: ['//default:InputVar[@inputName="TripCmd"]'],
+				expectedQueries: ['//v2019C1:InputVar[@inputName="TripCmd2"]'],
+				unexpectedQueries: ['//v2019C1:InputVar[@inputName="TripCmd"]'],
 			},
 		}
 

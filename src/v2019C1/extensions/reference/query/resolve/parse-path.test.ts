@@ -63,7 +63,7 @@ describe('reference-parsing', () => {
 										<eIEC61850-6-100:ProcessResource name="PR1" uuid="pr-uuid" />
 									</eIEC61850-6-100:ProcessResources>
 								</Private>
-								<LNode lnClass="XCBR" inst="1">
+								<LNode lnClass="XCBR" lnInst="1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeInputs>
 											<eIEC61850-6-100:SourceRef input="Trip" resourceName="S1/B1/PR1">
@@ -145,8 +145,8 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode prefix="P" lnClass="XCBR" inst="1" uuid="ln-pxcbr-uuid" />
-								<LNode lnClass="PTRC" inst="1">
+								<LNode prefix="P" lnClass="XCBR" lnInst="1" uuid="ln-pxcbr-uuid" />
+								<LNode lnClass="PTRC" lnInst="1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeInputs>
 											<eIEC61850-6-100:SourceRef input="Trip" source="S1/B1/PXCBR1.Pos.stVal" sourceDoName="Pos" sourceDaName="stVal" />
@@ -166,8 +166,8 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode lnClass="XCBR" inst="1" uuid="ln-xcbr-uuid" />
-								<LNode lnClass="PTRC" inst="1">
+								<LNode lnClass="XCBR" lnInst="1" uuid="ln-xcbr-uuid" />
+								<LNode lnClass="PTRC" lnInst="1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeInputs>
 											<eIEC61850-6-100:SourceRef input="Trip" source="S1/B1/XCBR1" sourceDoName="Pos" />
@@ -187,8 +187,8 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode lnClass="PTRC" inst="1" uuid="ln-ptrc-uuid" />
-								<LNode lnClass="XCBR" inst="1">
+								<LNode lnClass="PTRC" lnInst="1" uuid="ln-ptrc-uuid" />
+								<LNode lnClass="XCBR" lnInst="1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeOutputs>
 											<eIEC61850-6-100:ControlRef output="TripCmd" controlled="S1/B1/PTRC1.Tr" controlledDoName="Tr" />
@@ -218,7 +218,7 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode lnClass="XCBR" inst="1">
+								<LNode lnClass="XCBR" lnInst="1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeSpecNaming sIedName="IED1" sLdInst="LD1" sLnClass="XCBR" sLnInst="1" sPrefix="" />
 										<eIEC61850-6-100:DOS name="Pos" mappedDoName="IED1/LD1/XCBR1.Pos" />
@@ -247,7 +247,7 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode lnClass="XCBR" inst="1">
+								<LNode lnClass="XCBR" lnInst="1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:DOS name="Pos">
 											<eIEC61850-6-100:DAS name="stVal" mappedDaName="IED1/LD1/XCBR1.Pos.stVal" />
@@ -276,7 +276,7 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode lnClass="MMXU" inst="1">
+								<LNode lnClass="MMXU" lnInst="1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:DOS name="A" mappedDoName="PIU/CT_Function/I01ATCTR1.AmpSv" />
 									</Private>
@@ -313,7 +313,7 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode lnClass="LCBO" inst="1">
+								<LNode lnClass="LCBO" lnInst="1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeInputs>
 											<eIEC61850-6-100:SourceRef input="Trip" extRefAddr="PIU/CB_Function/LCBO1.TrCmd.stVal" />
@@ -346,7 +346,7 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode lnClass="XCBR" inst="1">
+								<LNode lnClass="XCBR" lnInst="1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeOutputs>
 											<eIEC61850-6-100:ControlRef output="TripCmd" extCtrlAddr="IED1/LD1/XCBR1.Pos" />
@@ -380,7 +380,7 @@ describe('reference-parsing', () => {
 				<SCL ${ALL_XMLNS_NAMESPACES}>
 					<Substation name="S1">
 						<Bay name="B1">
-							<LNode iedName="IED1" ldInst="LD1" lnClass="XCBR" inst="1">
+							<LNode iedName="IED1" ldInst="LD1" lnClass="XCBR" lnInst="1">
 								<Private type="eIEC61850-6-100">
 									<eIEC61850-6-100:LNodeOutputs>
 										<eIEC61850-6-100:ControlRef output="TripCmd" extCtrlAddr="LD1/XCBR1.Pos" />
@@ -414,7 +414,7 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode iedName="PIU" ldInst="CB_Function" lnClass="LCBO" inst="1">
+								<LNode iedName="PIU" ldInst="CB_Function" lnClass="LCBO" lnInst="1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeInputs>
 											<eIEC61850-6-100:SourceRef input="Trip" extRefAddr="CB_Function/LCBO1.TrCmd.stVal" />
@@ -457,7 +457,7 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode lnClass="XCBR" inst="1" uuid="ln-xcbr-uuid">
+								<LNode lnClass="XCBR" lnInst="1" uuid="ln-xcbr-uuid">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:BehaviorDescription name="BD1">
 											<eIEC61850-6-100:InputVar dataName="Op.general" />
@@ -477,7 +477,7 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode lnClass="XCBR" inst="1" uuid="ln-xcbr-uuid">
+								<LNode lnClass="XCBR" lnInst="1" uuid="ln-xcbr-uuid">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeInputs>
 											<eIEC61850-6-100:SourceRef input="Trip" inputInst="1" uuid="srcref-trip-uuid" source="S1/B1/PTRC1.Tr.general" sourceDoName="Tr" sourceDaName="general" />
@@ -487,7 +487,7 @@ describe('reference-parsing', () => {
 										</eIEC61850-6-100:BehaviorDescription>
 									</Private>
 								</LNode>
-								<LNode lnClass="PTRC" inst="1" uuid="ln-ptrc-uuid" />
+								<LNode lnClass="PTRC" lnInst="1" uuid="ln-ptrc-uuid" />
 							</Bay>
 						</Substation>
 					</SCL>
@@ -501,7 +501,7 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode lnClass="XCBR" inst="1" uuid="ln-xcbr-uuid">
+								<LNode lnClass="XCBR" lnInst="1" uuid="ln-xcbr-uuid">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeOutputs>
 											<eIEC61850-6-100:ControlRef output="TripCmd" outputInst="1" uuid="ctrlref-tripcmd-uuid" controlled="S1/B1/PTRC1.Tr" controlledDoName="Tr" />
@@ -511,7 +511,7 @@ describe('reference-parsing', () => {
 										</eIEC61850-6-100:BehaviorDescription>
 									</Private>
 								</LNode>
-								<LNode lnClass="PTRC" inst="1" uuid="ln-ptrc-uuid" />
+								<LNode lnClass="PTRC" lnInst="1" uuid="ln-ptrc-uuid" />
 							</Bay>
 						</Substation>
 					</SCL>
@@ -525,7 +525,7 @@ describe('reference-parsing', () => {
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
-								<LNode lnClass="XCBR" inst="1" uuid="ln-xcbr-uuid">
+								<LNode lnClass="XCBR" lnInst="1" uuid="ln-xcbr-uuid">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:BehaviorDescription name="BD1">
 											<eIEC61850-6-100:OutputVar dataName="Pos.stVal" />
@@ -560,8 +560,8 @@ describe('reference-parsing', () => {
 										<eIEC61850-6-100:ProcessResource name="PR1" uuid="pr-uuid" />
 									</eIEC61850-6-100:ProcessResources>
 								</Private>
-								<LNode lnClass="XCBR" inst="1" uuid="ln-xcbr-uuid" />
-								<LNode lnClass="PTRC" inst="1">
+								<LNode lnClass="XCBR" lnInst="1" uuid="ln-xcbr-uuid" />
+								<LNode lnClass="PTRC" lnInst="1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeInputs>
 											<eIEC61850-6-100:SourceRef input="Trip" source="S1/B1/XCBR1.Pos" sourceDoName="Pos" resourceName="S1/B1/PR1" />

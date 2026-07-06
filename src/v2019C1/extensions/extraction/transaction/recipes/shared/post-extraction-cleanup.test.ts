@@ -152,7 +152,7 @@ describe('postExtractionCleanup', () => {
 					</SCL>
 				`,
 				expectedQueries: [
-					'//default:LNode[@iedName="None" and @lnClass="PTRC" and @lnInst="1" and @prefix="SP" and not(@ldInst) and not(@lnUuid)]',
+					'//default:LNode[@iedName="None" and @lnClass="PTRC" and @lnInst="1" and @prefix="SP" and @ldInst="" and not(@lnUuid)]',
 					'//v2019C1:LNodeSpecNaming[@sIedName="None" and not(@sLdInst)]',
 				],
 			},
@@ -170,7 +170,7 @@ describe('postExtractionCleanup', () => {
 					</SCL>
 				`,
 				expectedQueries: [
-					'//default:LNode[@iedName="None" and not(@ldInst) and not(@lnClass) and not(@lnInst) and not(@lnUuid)]',
+					'//default:LNode[@iedName="None" and @ldInst="" and @lnClass="" and @lnInst="" and not(@lnUuid)]',
 				],
 			},
 		}
