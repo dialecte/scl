@@ -9,16 +9,14 @@ import {
 	ROOT_ELEMENT,
 	SINGLETON_ELEMENTS,
 } from '../definition'
-import { IO_HOOKS } from '../hooks/'
 
 import { XSI_NAMESPACE } from '@dialecte/core/helpers'
 
 import type { IOConfig, AnyDialecteConfig, DatabaseConfig } from '@dialecte/core'
 
-// SCL-specific IO configuration
+// SCL-specific IO configuration (hooks are provided on the Project instance, not here)
 export const SCL_IO_CONFIG = {
 	supportedFileExtensions: ['.fsd', '.asd', '.ssd', '.scd', '.isd', '.icd', '.xml'],
-	hooks: IO_HOOKS,
 } satisfies IOConfig
 
 // SCL database configuration

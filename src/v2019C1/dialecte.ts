@@ -1,10 +1,11 @@
 import { Scl } from './config'
 import { SCL_DIALECTE_CONFIG } from './config/dialecte.config'
 import { SCL_EXTENSION_MODULES } from './extensions'
-import { HOOKS } from './hooks'
+import { HOOKS, createSclIoHooks } from './hooks'
 
 import { Project } from '@dialecte/core'
 
+import type { Config } from './config'
 import type { StorageParam, ExtensionModules } from '@dialecte/core'
 
 /**
@@ -16,11 +17,12 @@ export function createSclProject<
 >(params?: { storage?: StorageParam; extensions?: CustomModules }): Scl.Project<CustomModules> {
 	const { storage = { type: 'local' }, extensions } = params ?? {}
 
-	return new Project({
+	return new Project<Config, CustomModules>({
 		configs: { scl: SCL_DIALECTE_CONFIG },
 		defaultConfigKey: 'scl',
 		storage,
 		extensions: { base: SCL_EXTENSION_MODULES, custom: extensions },
-		hooks: HOOKS,
+		// All hooks on the instance: io hooks (fresh per project) + record hooks.
+		hooks: { ...createSclIoHooks(), ...HOOKS },
 	}) as Scl.Project<CustomModules>
 }

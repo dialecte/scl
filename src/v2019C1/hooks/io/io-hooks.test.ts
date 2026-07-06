@@ -1,4 +1,4 @@
-import { createSclIoHooks, ensureUuid } from './io-hooks'
+import { createSclIoHooks } from './io-hooks'
 
 import { describe, it, expect } from 'vitest'
 
@@ -115,80 +115,6 @@ describe('createSclIoHooks', () => {
 		expect(result.updates).toHaveLength(1)
 		expect(result.updates?.[0].recordId).toBe(refRecord.id)
 		expect(result.updates?.[0].attributes).toEqual([{ name: 'functionUuid', value: 'uuid-f1' }])
-	})
-})
-
-describe('ensureUuid', () => {
-	type TestCase = {
-		record: AnyRawRecord
-		expectedResult: 'existing' | 'generated' | 'undefined'
-		existingUuid?: string
-		only?: boolean
-	}
-
-	const testCases: Record<string, TestCase> = {
-		'element with existing uuid → existing uuid returned': {
-			record: makeRecord('Function', { name: 'F1', uuid: 'existing-uuid-1' }),
-			expectedResult: 'existing',
-			existingUuid: 'existing-uuid-1',
-		},
-		'element supporting uuid but missing it → uuid generated and added': {
-			record: makeRecord('Bay', { name: 'B1' }),
-			expectedResult: 'generated',
-		},
-		'element not supporting uuid → undefined returned': {
-			record: makeRecord('Private', { type: 'custom' }),
-			expectedResult: 'undefined',
-		},
-		'SCL root element → undefined returned': {
-			record: makeRecord('SCL'),
-			expectedResult: 'undefined',
-		},
-		'Substation without uuid → uuid generated and added': {
-			record: makeRecord('Substation', { name: 'S1' }),
-			expectedResult: 'generated',
-		},
-		'LNode without uuid → uuid generated and added': {
-			record: makeRecord('LNode', { lnClass: 'XCBR', lnInst: '1' }),
-			expectedResult: 'generated',
-		},
-		'IED with existing uuid → existing uuid returned': {
-			record: makeRecord('IED', { name: 'IED1', uuid: 'ied-uuid-1' }),
-			expectedResult: 'existing',
-			existingUuid: 'ied-uuid-1',
-		},
-		'DataTypeTemplates → undefined returned': {
-			record: makeRecord('DataTypeTemplates'),
-			expectedResult: 'undefined',
-		},
-	}
-
-	let entries = Object.entries(testCases)
-	const onlyEntries = entries.filter(([, tc]) => tc.only)
-	if (onlyEntries.length) entries = onlyEntries
-
-	entries.forEach(([description, tc]) => {
-		it(description, () => {
-			const result = ensureUuid(tc.record)
-
-			if (tc.expectedResult === 'existing') {
-				expect(result).toBe(tc.existingUuid)
-			} else if (tc.expectedResult === 'generated') {
-				expect(result).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
-				expect(tc.record.attributes.find((a) => a.name === 'uuid')?.value).toBe(result)
-			} else {
-				expect(result).toBeUndefined()
-				expect(tc.record.attributes.find((a) => a.name === 'uuid')).toBeUndefined()
-			}
-		})
-	})
-
-	it('element without uuid → calling twice returns same uuid and no duplicate attribute', () => {
-		const record = makeRecord('Function', { name: 'F1' })
-		const first = ensureUuid(record)
-		const second = ensureUuid(record)
-		expect(first).toBe(second)
-		expect(record.attributes.filter((a) => a.name === 'uuid')).toHaveLength(1)
 	})
 })
 

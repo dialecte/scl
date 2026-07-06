@@ -4,13 +4,12 @@ import { afterStandardizedRecord } from './after-standardized-record'
 import { afterUpdated } from './after-updated'
 import { beforeClone } from './before-clone'
 import { beforeDelete } from './before-delete'
-//io
-import { createSclIoHooks } from './io'
 
 import { Scl } from '@/v2019C1/config'
 
-import type { IOHooks } from '@dialecte/core'
-
+// Record-lifecycle hooks, fully typed against the SCL config with no cast: they
+// are provided on the Project instance (see createSclProject), not stored on the
+// config, so there is no Config→hooks self-reference.
 export const HOOKS: Scl.TransactionHooks = {
 	beforeClone,
 	afterStandardizedRecord,
@@ -20,4 +19,5 @@ export const HOOKS: Scl.TransactionHooks = {
 	beforeDelete,
 }
 
-export const IO_HOOKS: IOHooks = createSclIoHooks()
+// Re-exported so createSclProject can build fresh (stateful) io hooks per project.
+export { createSclIoHooks } from './io'

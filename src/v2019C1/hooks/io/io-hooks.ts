@@ -1,4 +1,3 @@
-import { ATTRIBUTES } from '@/v2019C1/definition'
 import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference/constants'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
@@ -18,10 +17,11 @@ import type {
  *
  * **Phase 1 — `beforeImportRecord`** (called once per record, in document order):
  *
- * For each record, two things happen:
- * 1. `ensureUuid` — if the element type supports `uuid`, generate and attach one if missing.
- * 2. If it is a *target* element (e.g. `Function`), index its path → uuid in `pathIndex`.
- * 3. If it is a *reference* element (e.g. `FunctionRef`), and only the path attribute is
+ * Records arrive already standardized, so any `uuid` enforced by
+ * `afterStandardizedRecord` is already present — no need to ensure it here.
+ * For each record:
+ * 1. If it is a *target* element (e.g. `Function`), index its path → uuid in `pathIndex`.
+ * 2. If it is a *reference* element (e.g. `FunctionRef`), and only the path attribute is
  *    present (not the uuid attribute), push a pending resolution.
  *
  * After processing these two XML records:
@@ -67,7 +67,9 @@ export function createSclIoHooks(): IOHooks {
 		const { record, ancestry } = params
 		const { tagName } = record
 
-		const uuid = ensureUuid(record)
+		// The record is already standardized, so afterStandardizedRecord has
+		// enforced a uuid where the element supports one — just read it.
+		const uuid = record.attributes.find((attribute) => attribute.name === 'uuid')?.value
 
 		const isTargetElement = uuid && TARGET_ELEMENT_TYPES.has(tagName)
 		// Index target elements: build path → uuid mapping
@@ -172,16 +174,6 @@ export function createSclIoHooks(): IOHooks {
 }
 
 /**
- * Set of element types which includes a `uuid` attribute.
- * Pre-computed from the generated ATTRIBUTES constant.
- */
-const ELEMENTS_WITH_UUID: ReadonlySet<string> = new Set(
-	Object.entries(ATTRIBUTES)
-		.filter(([, attributes]) => 'uuid' in attributes)
-		.map(([name]) => name),
-)
-
-/**
  * Elements that have reference pairs (quick lookup set).
  */
 const ELEMENTS_WITH_REFERENCES: Set<string> = new Set(Object.keys(UUID_REFERENCE_PAIRS))
@@ -193,19 +185,3 @@ const ELEMENTS_WITH_REFERENCES: Set<string> = new Set(Object.keys(UUID_REFERENCE
 const TARGET_ELEMENT_TYPES: Set<string> = new Set(
 	Object.values(UUID_REFERENCE_PAIRS).flatMap((pairs) => pairs.flatMap((pair) => pair.target)),
 )
-
-/**
- * Ensures that a record has a `uuid` attribute if its element type supports it.
- * Returns the existing or newly generated uuid, or undefined if the element
- * type does not support uuid in the SCL schema.
- */
-export function ensureUuid(record: AnyRawRecord): string | undefined {
-	if (!ELEMENTS_WITH_UUID.has(record.tagName)) return undefined
-
-	const existing = record.attributes.find((a: AnyAttribute) => a.name === 'uuid')
-	if (existing) return existing.value
-
-	const uuid = crypto.randomUUID()
-	record.attributes.push({ name: 'uuid', value: uuid })
-	return uuid
-}
