@@ -211,7 +211,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionRef: {},
 			},
 			choices: [{ options: ['FunctionRef'] }],
@@ -239,7 +242,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 			},
 			choices: [{ options: ['FunctionalVariantRef'] }],
@@ -267,7 +273,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -288,7 +297,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -337,7 +349,10 @@ export const DEFINITION = {
 			],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionRole: {
 					required: true,
 					minOccurs: 1,
@@ -370,8 +385,14 @@ export const DEFINITION = {
 			sequence: ['Text', 'SclFileReference'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
-				SclFileReference: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
+				SclFileReference: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -1087,7 +1108,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'InputVar', 'OutputVar', 'BehaviorReference'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				InputVar: {},
 				OutputVar: {},
 				BehaviorReference: {},
@@ -1124,7 +1148,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef', 'InputVarRef', 'OutputVarRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 				InputVarRef: {},
 				OutputVarRef: {},
@@ -1158,7 +1185,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -1230,7 +1260,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -1251,7 +1284,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -1719,7 +1755,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'GooseParameters', 'SMVParameters', 'ReportParameters'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				GooseParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				SMVParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				ReportParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
@@ -2313,7 +2352,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'BinaryWiringParametersRef', 'AnalogueWiringParametersRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				BinaryWiringParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				AnalogueWiringParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
@@ -2345,7 +2387,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'BinaryWiringParametersRef', 'AnalogueWiringParametersRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				BinaryWiringParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				AnalogueWiringParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
@@ -2700,12 +2745,20 @@ export const DEFINITION = {
 			],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				SubscriberLNode: { required: true, minOccurs: 1, maxOccurs: 1 },
 				ControllingLNode: { required: true, minOccurs: 1, maxOccurs: 1 },
 				ProcessEcho: { required: true, minOccurs: 1, maxOccurs: 1 },
 				LogParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
-				Val: { required: true, minOccurs: 1, maxOccurs: 1 },
+				Val: {
+					required: true,
+					minOccurs: 1,
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				Labels: {
 					maxOccurs: 1,
 					constraints: [
@@ -2719,6 +2772,7 @@ export const DEFINITION = {
 							],
 						},
 					],
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
 			choices: [
@@ -2963,7 +3017,10 @@ export const DEFINITION = {
 			],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				SDS: {
 					required: true,
 					minOccurs: 1,
@@ -3001,6 +3058,7 @@ export const DEFINITION = {
 							],
 						},
 					],
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
 			choices: [
@@ -5444,7 +5502,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -5483,7 +5544,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'SubCategory', 'FunctionCatRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				SubCategory: {},
 				FunctionCatRef: { required: true, minOccurs: 1 },
 			},
@@ -5511,7 +5575,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 			},
 			choices: [{ options: ['FunctionalVariantRef'] }],
@@ -5539,7 +5606,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef', 'SignalRole'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 				SignalRole: {},
 			},
@@ -5597,7 +5667,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef', 'FunctionRoleContent'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 				FunctionRoleContent: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
@@ -5640,7 +5713,10 @@ export const DEFINITION = {
 			],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				BehaviorDescriptionRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				ProcessResourceRef: { required: true, minOccurs: 1, maxOccurs: 1 },
@@ -5676,8 +5752,14 @@ export const DEFINITION = {
 			sequence: ['Text', 'SclFileReference'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
-				SclFileReference: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
+				SclFileReference: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -5717,8 +5799,13 @@ export const DEFINITION = {
 			sequence: ['Text', 'LNode', 'SubFunctionTemplate', 'GeneralEquipment', 'ConductingEquipment'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
-				LNode: {},
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
+				LNode: {
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				SubFunctionTemplate: {
 					constraints: [
 						{
@@ -5762,6 +5849,7 @@ export const DEFINITION = {
 							fields: [{ target: { kind: 'attribute', value: 'name', isAttribute: true } }],
 						},
 					],
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 				ConductingEquipment: {
 					constraints: [
@@ -5787,6 +5875,7 @@ export const DEFINITION = {
 							fields: [{ target: { kind: 'attribute', value: 'name', isAttribute: true } }],
 						},
 					],
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
 		},
@@ -5826,7 +5915,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalSubVariant', 'VariableRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalSubVariant: {},
 				VariableRef: {},
 			},
@@ -5868,7 +5960,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalSubVariant', 'VariableRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalSubVariant: {},
 				VariableRef: {},
 			},
@@ -5909,7 +6004,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariant'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariant: {},
 			},
 		},
@@ -5954,7 +6052,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -6655,7 +6756,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'L2CommParameters', 'L3IPv4CommParameters', 'L3IPv6CommParameters'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				L2CommParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				L3IPv4CommParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				L3IPv6CommParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
@@ -6685,7 +6789,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -7336,7 +7443,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -7367,7 +7477,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 			},
 			choices: [{ options: ['FunctionalVariantRef'] }],
@@ -7478,7 +7591,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -7515,7 +7631,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -7540,7 +7659,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -8755,7 +8877,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 			},
 			choices: [{ options: ['FunctionalVariantRef'] }],
@@ -8783,7 +8908,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 			},
 			choices: [{ options: ['FunctionalVariantRef'] }],
@@ -8804,7 +8932,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'SourceRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				SourceRef: { required: true, minOccurs: 1 },
 			},
 		},
@@ -8843,7 +8974,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 			},
 			choices: [{ options: ['FunctionalVariantRef'] }],
@@ -8864,7 +8998,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'ControlRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				ControlRef: { required: true, minOccurs: 1 },
 			},
 		},
@@ -9106,7 +9243,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -10123,7 +10263,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -10144,7 +10287,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -10543,7 +10689,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -10574,7 +10723,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 			},
 			choices: [{ options: ['FunctionalVariantRef'] }],
@@ -10777,7 +10929,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -10803,7 +10958,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 			},
 			choices: [{ options: ['FunctionalVariantRef'] }],
@@ -10825,7 +10983,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'PowerSystemRelation'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				PowerSystemRelation: { required: true, minOccurs: 1 },
 			},
 		},
@@ -11295,7 +11456,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -11348,7 +11512,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'Resource'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				Resource: {},
 			},
 		},
@@ -11383,7 +11550,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 			},
 			choices: [{ options: ['FunctionalVariantRef'] }],
@@ -11418,7 +11588,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'ProcessResource'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				ProcessResource: {
 					required: true,
 					minOccurs: 1,
@@ -11465,7 +11638,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'ProjectProcessReference'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				ProjectProcessReference: {},
 			},
 		},
@@ -11492,7 +11668,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -11690,7 +11869,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -11711,7 +11893,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -12517,7 +12702,10 @@ export const DEFINITION = {
 			],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				SDS: { required: true, minOccurs: 1, maxOccurs: 1 },
 				DAS: { required: true, minOccurs: 1, maxOccurs: 1 },
 				SubscriberLNode: { required: true, minOccurs: 1, maxOccurs: 1 },
@@ -12537,6 +12725,7 @@ export const DEFINITION = {
 							],
 						},
 					],
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
 			choices: [
@@ -12663,7 +12852,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'L2CommParameters', 'L3IPv4CommParameters', 'L3IPv6CommParameters'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				L2CommParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				L3IPv4CommParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				L3IPv6CommParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
@@ -12693,7 +12885,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -13189,7 +13384,10 @@ export const DEFINITION = {
 			],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				GooseParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				SMVParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				ReportParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
@@ -13435,7 +13633,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef', 'LNodeInputRef', 'LNodeOutputRef', 'LNodeDataRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 				LNodeInputRef: {},
 				LNodeOutputRef: {},
@@ -13621,7 +13822,10 @@ export const DEFINITION = {
 			],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				GooseParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				SMVParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				ReportParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
@@ -13676,7 +13880,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'SubCategory', 'FunctionCatRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				SubCategory: {},
 				FunctionCatRef: { required: true, minOccurs: 1 },
 			},
@@ -14016,8 +14223,13 @@ export const DEFINITION = {
 			sequence: ['Text', 'LNode', 'GeneralEquipment', 'ConductingEquipment', 'SubFunctionTemplate'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
-				LNode: {},
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
+				LNode: {
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				GeneralEquipment: {
 					constraints: [
 						{
@@ -14039,6 +14251,7 @@ export const DEFINITION = {
 							fields: [{ target: { kind: 'attribute', value: 'name', isAttribute: true } }],
 						},
 					],
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 				ConductingEquipment: {
 					constraints: [
@@ -14061,6 +14274,7 @@ export const DEFINITION = {
 							fields: [{ target: { kind: 'attribute', value: 'name', isAttribute: true } }],
 						},
 					],
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 				SubFunctionTemplate: {
 					constraints: [
@@ -14254,7 +14468,10 @@ export const DEFINITION = {
 			],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				GooseParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				SMVParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				ReportParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
@@ -15107,7 +15324,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'VariableApplyTo'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				VariableApplyTo: { required: true, minOccurs: 1 },
 			},
 		},
@@ -15161,7 +15381,10 @@ export const DEFINITION = {
 			sequence: ['Text'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 			},
 		},
 	},
@@ -15188,7 +15411,10 @@ export const DEFINITION = {
 			sequence: ['Text', 'FunctionalVariantRef'],
 			any: true,
 			details: {
-				Text: { maxOccurs: 1 },
+				Text: {
+					maxOccurs: 1,
+					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
+				},
 				FunctionalVariantRef: {},
 			},
 			choices: [{ options: ['FunctionalVariantRef'] }],
