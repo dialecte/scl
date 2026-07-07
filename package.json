@@ -1,6 +1,6 @@
 {
 	"name": "@dialecte/scl",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "Dialecte - SCL (Substation Configuration Language) sdk",
 	"license": "MIT",
 	"repository": {
@@ -53,7 +53,7 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.3.0"
+		"@dialecte/core": "0.4.0"
 	},
 	"devDependencies": {
 		"@dialecte/cli": "0.0.1",
