@@ -316,6 +316,29 @@ const refs = await reference.query.findRefsPointingTo(query, {
 
 ---
 
+## getProvenance
+
+Returns every source-file reference (`SclFileReference`) in the document, each resolved to the element that carries it. A source-file reference records which template file (and version) an element was instantiated from, or which files the document was created from — the cross-file counterpart of the in-document references above.
+
+```ts
+const entries = await reference.query.getProvenance(query)
+// -> [{ fileType: 'FSD', fileUuid: 'fsd-uuid', version: '2', revision: '1',
+//      anchor: { kind: 'function', ref: { tagName: 'Function', id: 'func-1' } } }, ...]
+```
+
+Each entry exposes `fileType`, `fileUuid`, `fileName`, `version`, `revision`, and the `anchor` (its `kind` plus the `ref` of the carrying element).
+
+| Anchor kind   | Carried by                                        | Meaning                              |
+| ------------- | ------------------------------------------------- | ------------------------------------ |
+| `function`    | `FunctionSclRef` under `Function` / `SubFunction` | function instantiated from an FSD    |
+| `application` | `ApplicationSclRef` under `Application`           | application instantiated from an ASD |
+| `ied`         | `IEDSourceFiles` under `IED`                      | IED imported from an ICD / IID       |
+| `document`    | `SourceFiles` under `Header`                       | files used to create this document   |
+
+The anchor is the nearest ancestor of the reference whose tag matches one of these kinds, so it is robust to intermediate `Private` wrappers.
+
+---
+
 ## Transaction methods
 
 Access via `tx.reference` inside a `doc.transaction()` callback.
