@@ -72,7 +72,12 @@ export async function extractElementTitle(
 	const mode = options.mode ?? 'compact'
 	const attributes = await query.any.getAttributes(record)
 
-	const title = resolveTitle({ tag, mode, attributes, value: record.value })
+	const spec = TITLE_FIELDS_OVERRIDE[tag]
+	const specAttributes = spec?.attributesFrom
+		? await getChildAttributes(query, record, spec.attributesFrom)
+		: attributes
+
+	const title = resolveTitle({ tag, spec, mode, attributes, specAttributes, value: record.value })
 	if (!options.withLabels) return title
 
 	const labels = await collectLabels(query, record)
@@ -83,16 +88,17 @@ export async function extractElementTitle(
 
 function resolveTitle(input: {
 	tag: string
+	spec: TitleSpec | undefined
 	mode: 'compact' | 'full'
 	attributes: Record<string, string>
+	specAttributes: Record<string, string>
 	value: string | undefined
 }): string {
-	const { tag, mode, attributes, value } = input
+	const { tag, spec, mode, attributes, specAttributes, value } = input
 
 	// 1. Override spec
-	const spec = TITLE_FIELDS_OVERRIDE[tag]
 	if (spec) {
-		const rendered = renderSpec(spec, attributes, mode)
+		const rendered = renderSpec(spec, specAttributes, mode)
 		if (rendered) return rendered
 	}
 
@@ -109,6 +115,15 @@ function resolveTitle(input: {
 
 	// 4. tagName
 	return attributes['name'] || tag
+}
+
+async function getChildAttributes(
+	query: Core.Query<Config>,
+	record: Core.AnyRawRecord,
+	childTag: string,
+): Promise<Record<string, string>> {
+	const [child] = await query.any.getChildren(record, childTag)
+	return child ? query.any.getAttributes(child) : {}
 }
 
 async function collectLabels(

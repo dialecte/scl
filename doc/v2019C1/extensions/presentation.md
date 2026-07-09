@@ -137,7 +137,7 @@ type TitleSpec = {
 | `FunctionCategoryRef`    | `functionCategory`                                               | -                                                                                           |
 | `LNodeInputRef`          | `sourceRef`                                                      | -                                                                                           |
 | `LNodeOutputRef`         | `controlRef`                                                     | -                                                                                           |
-| `ApplicationScRef`       | `fileType v{version}.{revision}`                                 | `fileUuid/fileType v{version}.{revision}`                                                   |
+| `ApplicationSclRef`      | `fileType v{version}.{revision}`                                 | `fileUuid/fileType v{version}.{revision}`                                                   |
 | `LNodeSpecNaming`        | `sIedName/sLdInst/sPrefix+sLnClass+sLnInst`                      | -                                                                                           |
 | `SubscriberLNode`        | `pLN(service)`                                                   | `resourceName/inputName/pLN(service)`                                                       |
 | `ControllingLNode`       | `pLN`                                                            | `resourceName/pLN`                                                                          |
@@ -147,6 +147,8 @@ type TitleSpec = {
 | `FCDA`                   | `ldInst/prefix+lnClass+lnInst.doName.daName[fc]`                 | `ldInst/prefix+lnClass+lnInst.doName.daName[fc][ix]` (`[ix]` dropped when empty)            |
 
 Tags not listed fall through to `record.value` (text-content elements like `BayType`, `IEDName`, `Val`) or to identityFields.
+
+> `ApplicationSclRef` sources its attributes (`fileType`, `version`, `revision`, `fileUuid`) from its child `SclFileReference`, since the IEC schema carries them there rather than on the element itself.
 
 ### Examples
 

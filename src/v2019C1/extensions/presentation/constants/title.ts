@@ -31,6 +31,12 @@ export type TitleSpec = {
 	full?: string | string[]
 	separator?: string
 	fullSeparator?: string
+	/**
+	 * Source the template/list attributes from a named child element instead
+	 * of the element itself. Used by composite refs whose data lives in a
+	 * child (e.g. `ApplicationSclRef > SclFileReference`).
+	 */
+	attributesFrom?: string
 }
 
 export const TITLE_FIELDS_OVERRIDE: Partial<Record<string, TitleSpec>> = {
@@ -80,9 +86,11 @@ export const TITLE_FIELDS_OVERRIDE: Partial<Record<string, TitleSpec>> = {
 
 	// ── 90-30 composite *Ref ──────────────────────────────────────────
 	// fileUuid is hostile to read; reserve it for full mode (or tooltips).
-	ApplicationScRef: {
+	// Attributes live on the child SclFileReference, not the element itself.
+	ApplicationSclRef: {
 		compact: '{fileType} v{version}.{revision}',
 		full: '{fileUuid}/{fileType} v{version}.{revision}',
+		attributesFrom: 'SclFileReference',
 	},
 
 	// ── 90-30 LNode-family extensions ─────────────────────────────────

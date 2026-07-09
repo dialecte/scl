@@ -1,6 +1,6 @@
 {
 	"name": "@dialecte/scl",
-	"version": "0.3.1",
+	"version": "0.3.2",
 	"description": "Dialecte - SCL (Substation Configuration Language) sdk",
 	"license": "MIT",
 	"repository": {
@@ -53,12 +53,13 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.4.0"
+		"@dialecte/core": "0.4.2"
 	},
 	"devDependencies": {
-		"@dialecte/cli": "0.0.1",
+		"@dialecte/cli": "0.0.2",
 		"@tsconfig/node24": "^24.0.4",
 		"@types/node": "^24.12.4",
+		"@typescript/native": "npm:typescript@^7.0.2",
 		"@vitest/browser-playwright": "4.1.8",
 		"husky": "^9.1.7",
 		"jiti": "^2.4.2",
@@ -68,7 +69,7 @@
 		"oxlint-tsgolint": "^0.23.0",
 		"playwright": "^1.60.0",
 		"tsx": "^4.22.4",
-		"typescript": "^6.0.3",
+		"typescript": "npm:@typescript/typescript6@^6.0.2",
 		"vite": "8.0.16",
 		"vite-plugin-dts": "^5.0.2",
 		"vitepress": "^2.0.0-alpha.17",

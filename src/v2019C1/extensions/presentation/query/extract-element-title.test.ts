@@ -210,11 +210,13 @@ describe('extractElementTitle', () => {
 		},
 
 		// ── 90-30 composite (Phase 4) ─────────────────────────────────
-		'ApplicationScRef → fileUuid/fileType/version.revision': {
+		'ApplicationSclRef → fileUuid/fileType/version.revision': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
-						<eIEC61850-6-100:ApplicationScRef fileUuid="uuid-1" fileType="ICD" version="1" revision="A" ${id}="asr1"/>
+						<eIEC61850-6-100:ApplicationSclRef ${id}="asr1">
+							<eIEC61850-6-100:SclFileReference fileUuid="uuid-1" fileType="ICD" version="1" revision="A" ${id}="sfr1"/>
+						</eIEC61850-6-100:ApplicationSclRef>
 					</Substation>
 				</SCL>
 			`,
@@ -462,12 +464,14 @@ describe('extractElementTitle', () => {
 
 		// ── Revised spec: GSE/SMV full mode deferred (needs parent iedName) ─
 
-		// ── Revised spec: ApplicationScRef full + ControllingLNode full
-		'ApplicationScRef full → fileUuid/fileType v{version}.{revision}': {
+		// ── Revised spec: ApplicationSclRef full + ControllingLNode full
+		'ApplicationSclRef full → fileUuid/fileType v{version}.{revision}': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
-						<eIEC61850-6-100:ApplicationScRef fileUuid="uuid-1" fileType="ICD" version="1" revision="A" ${id}="asr2"/>
+						<eIEC61850-6-100:ApplicationSclRef ${id}="asr2">
+							<eIEC61850-6-100:SclFileReference fileUuid="uuid-1" fileType="ICD" version="1" revision="A" ${id}="sfr2"/>
+						</eIEC61850-6-100:ApplicationSclRef>
 					</Substation>
 				</SCL>
 			`,
