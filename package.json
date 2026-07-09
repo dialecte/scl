@@ -28,6 +28,7 @@
 		"//====== BUILD ======//": "",
 		"build": "run-p type-check \"build-only {@}\" --",
 		"build-only": "tsc -p tsconfig.json && vite build",
+		"build:watch": "vite build --watch",
 		"//====== VITEPRESS ======//": "",
 		"doc:generate": "tsx .vitepress/scripts/generate-element-catalog.ts",
 		"doc:dev": "npm run doc:generate && vitepress dev",
