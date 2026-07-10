@@ -1,14 +1,17 @@
-import { cloneFunction, cloneFunctionCategories } from '../shared/clone-function'
 import { ensureSubstationTemplateStructure } from '../shared/ensure-substation-structure'
 import { postExtractionCleanup } from '../shared/post-extraction-cleanup'
 import { FSD_OMIT } from './omit'
 
 import { history } from '@/v2019C1/extensions/history'
+import {
+	cloneFunction,
+	cloneFunctionCategories,
+} from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
-export async function toFsd(
+export async function fsd(
 	tx: Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>

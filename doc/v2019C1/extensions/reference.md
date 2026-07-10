@@ -333,7 +333,7 @@ Each entry exposes `fileType`, `fileUuid`, `fileName`, `version`, `revision`, an
 | `function`    | `FunctionSclRef` under `Function` / `SubFunction` | function instantiated from an FSD    |
 | `application` | `ApplicationSclRef` under `Application`           | application instantiated from an ASD |
 | `ied`         | `IEDSourceFiles` under `IED`                      | IED imported from an ICD / IID       |
-| `document`    | `SourceFiles` under `Header`                       | files used to create this document   |
+| `document`    | `SourceFiles` under `Header`                      | files used to create this document   |
 
 The anchor is the nearest ancestor of the reference whose tag matches one of these kinds, so it is robust to intermediate `Private` wrappers.
 

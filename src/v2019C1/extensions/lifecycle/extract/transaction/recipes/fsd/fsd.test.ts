@@ -1,4 +1,4 @@
-import { toFsd } from './to-fsd'
+import { fsd } from './fsd'
 
 import { describe } from 'vitest'
 
@@ -14,7 +14,7 @@ const emptyTargetXml = /* xml */ `
 	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>
 `
 
-describe('toFsd', () => {
+describe('fsd', () => {
 	// ── FunctionCategory uuid remapping across deepClone ──────────────────
 	// Source has FunctionCatRef.functionUuid pointing to SubFunction.uuid.
 	// After extraction (SubFunction promoted to Function with new uuid),
@@ -51,7 +51,7 @@ describe('toFsd', () => {
 					targetXml: emptyTargetXml,
 					act: async (source, target) => {
 						await target.transaction(async (tx) => {
-							await toFsd(tx, {
+							await fsd(tx, {
 								sourceQuery: source.query,
 								functionRef: { tagName: 'SubFunction', id: 'subf1' },
 								tool: 'TEST',

@@ -1,10 +1,10 @@
-import { deep as deepExtract } from '../../deep'
-import { cloneTree } from '../../primitives/clone-tree'
+import { deep as deepExtract } from './deep'
+import { cloneTree } from './primitives/clone-tree'
 import { resolveStructureRef } from './resolve-structure-ref'
 
 import { reference } from '@/v2019C1/extensions/reference'
 
-import type { TemplateStructure } from './shared.types'
+import type { TargetStructure } from './structure.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
@@ -64,14 +64,15 @@ export async function cloneFunctionCategories(
 	params: {
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
-		structure: TemplateStructure
+		structure: TargetStructure
 		stripCategoriesUuid?: boolean
 	},
-): Promise<void> {
+): Promise<Scl.CloneMapping[]> {
 	const { sourceQuery, functionRef, structure, stripCategoriesUuid = true } = params
 
 	const categoryIds = await collectReferencedCategoryIds(sourceQuery, functionRef)
 
+	const mappings: Scl.CloneMapping[] = []
 	for (const categoryId of categoryIds) {
 		const alreadyCloned = await isCategoryAlreadyCloned(tx, sourceQuery, categoryId)
 		if (alreadyCloned) continue
@@ -79,13 +80,16 @@ export async function cloneFunctionCategories(
 		const categoryRef: Scl.Ref<'FunctionCategory'> = { tagName: 'FunctionCategory', id: categoryId }
 		const targetParent = await resolveStructureRef(sourceQuery, categoryRef, structure)
 
-		await cloneTree(tx, {
+		const clone = await cloneTree(tx, {
 			sourceQuery,
 			ref: categoryRef,
 			targetParent,
 			...(stripCategoriesUuid ? {} : { strip: false as const }),
 		})
+		if (clone) mappings.push(...clone.mappings)
 	}
+
+	return mappings
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

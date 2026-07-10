@@ -7,7 +7,7 @@ import { history } from '@/v2019C1/extensions/history'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
-export async function toAsd(
+export async function asd(
 	tx: Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>

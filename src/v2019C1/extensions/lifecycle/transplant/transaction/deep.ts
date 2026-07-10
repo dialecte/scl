@@ -35,7 +35,7 @@ export async function deep(
 	} = params
 
 	const clone = await cloneTree(tx, { sourceQuery, ref, targetParent, omit, strip, promoteRoot })
-	if (!clone) throw new Error(`extraction.deep: source element not found: ${ref.tagName}#${ref.id}`)
+	if (!clone) throw new Error(`transplant.deep: source element not found: ${ref.tagName}#${ref.id}`)
 
 	let typeIdRemap = new Map<string, string>()
 	if (withTypes) {

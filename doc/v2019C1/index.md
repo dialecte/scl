@@ -46,15 +46,17 @@ Each entry in `extensions` must follow the `{ query?, transaction? }` shape. See
 
 Domain-specific methods are bound onto every `doc.query` and `tx` instance under named groups:
 
-| Module       | Namespace on query/tx | Methods                                                       | Reference                                    |
-| ------------ | --------------------- | ------------------------------------------------------------- | -------------------------------------------- |
-| `history`    | `doc.query.history`   | `getSortedHitems`, `getLatestHitem`                           | [History](/v2019C1/extensions/history)       |
-| `history`    | `tx.history`          | `addEntry`                                                    | [History](/v2019C1/extensions/history)       |
-| `dataModel`  | `doc.query.dataModel` | `resolve`                                                     | [Data Model](/v2019C1/extensions/data-model) |
-| `dataModel`  | `tx.dataModel`        | `importTypes`                                                 | [Data Model](/v2019C1/extensions/data-model) |
-| `extraction` | `tx.extraction`       | `deep`, `toFsd`, `toAsd`, `ensureSubstationTemplateStructure` | [Extraction](/v2019C1/extensions/extraction) |
-| `signature`  | `doc.query.signature` | `elementSignature`                                            | [Signature](/v2019C1/extensions/signature)   |
-| `reference`  | `tx.reference`        | `applyTypeIdRemap`                                            | [Reference](/v2019C1/extensions/reference)   |
+| Module        | Namespace on query/tx | Methods                                           | Reference                                      |
+| ------------- | --------------------- | ------------------------------------------------- | ---------------------------------------------- |
+| `history`     | `doc.query.history`   | `getSortedHitems`, `getLatestHitem`               | [History](/v2019C1/extensions/history)         |
+| `history`     | `tx.history`          | `addEntry`                                        | [History](/v2019C1/extensions/history)         |
+| `dataModel`   | `doc.query.dataModel` | `resolve`                                         | [Data Model](/v2019C1/extensions/data-model)   |
+| `dataModel`   | `tx.dataModel`        | `importTypes`                                     | [Data Model](/v2019C1/extensions/data-model)   |
+| `extract`     | `tx.extract`          | `fsd`, `asd`, `ensureSubstationTemplateStructure` | [Extract](/v2019C1/extensions/extract)         |
+| `instantiate` | `tx.instantiate`      | `fsd`, `resolveTargetStructure`                   | [Instantiate](/v2019C1/extensions/instantiate) |
+| `transplant`  | `tx.transplant`       | `deep`                                            | [Transplant](/v2019C1/extensions/transplant)   |
+| `signature`   | `doc.query.signature` | `elementSignature`                                | [Signature](/v2019C1/extensions/signature)     |
+| `reference`   | `tx.reference`        | `applyTypeIdRemap`                                | [Reference](/v2019C1/extensions/reference)     |
 
 ## `Scl` type namespace
 

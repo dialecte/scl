@@ -1,4 +1,4 @@
-import { toAsd } from './to-asd'
+import { asd } from './asd'
 
 import { describe } from 'vitest'
 
@@ -21,7 +21,7 @@ const emptyTargetXml = /* xml */ `
  * could not see them and step 3 re-cloned them as misplaced duplicates. They must
  * now be cloned exactly once, under their owning function — never flattened.
  */
-describe('toAsd — referenced satellites are not duplicated/misplaced (#1796)', () => {
+describe('asd — referenced satellites are not duplicated/misplaced (#1796)', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		targetXml: string
 		applicationId: string
@@ -34,7 +34,7 @@ describe('toAsd — referenced satellites are not duplicated/misplaced (#1796)',
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
 		if (!target) throw new Error('target required')
 		await target.transaction(async (tx) => {
-			await toAsd(tx, {
+			await asd(tx, {
 				sourceQuery: source.query,
 				applicationRef: {
 					tagName: 'Application',

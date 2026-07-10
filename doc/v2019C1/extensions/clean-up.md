@@ -4,7 +4,7 @@ description: Clean-up extension for @dialecte/scl v2019C1 -- post-mutation integ
 
 # Clean-up
 
-Post-mutation integrity helpers accessible via `tx.cleanUp`. Also called internally by `extraction.toAsd`/`toFsd` via `postExtractionCleanup`.
+Post-mutation integrity helpers accessible via `tx.cleanUp`. Also called internally by `extract.asd`/`fsd` via `postExtractionCleanup`.
 
 ## Transaction methods
 

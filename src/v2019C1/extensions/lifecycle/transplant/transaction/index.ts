@@ -1,0 +1,15 @@
+// Transplant engine — direction-agnostic clone/graft primitives shared by the
+// `extraction` (project → template) and `instantiation` (template → project)
+// domains. Registered as the `transplant` extension: `deep` is exposed as
+// `tx.transplant.deep`; the remaining building blocks are consumed by sibling
+// recipes via this barrel.
+
+export { deep } from './deep'
+export type { ImportDeepParams, ImportDeepResult } from './deep.types'
+
+export * from './primitives/clone-tree'
+export * from './primitives/clone-referenced'
+
+export { cloneFunction, cloneFunctionCategories } from './clone-function'
+export { resolveStructureRef, createAncestryResolver } from './resolve-structure-ref'
+export type { TemplateStructure, TargetStructure } from './structure.types'

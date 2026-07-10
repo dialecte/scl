@@ -1,15 +1,32 @@
 import { cloneFunction, cloneFunctionCategories } from './clone-function'
-import { ensureSubstationTemplateStructure } from './ensure-substation-structure'
 
 import { describe } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
+import type * as Core from '@dialecte/core'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
+
+async function buildTemplateStructure(tx: Core.Transaction<Config>) {
+	const root = await tx.getRoot()
+	const substation = await tx.ensureChild(root, {
+		tagName: 'Substation',
+		attributes: { name: 'TEMPLATE' },
+	})
+	const voltageLevel = await tx.ensureChild(substation, {
+		tagName: 'VoltageLevel',
+		attributes: { name: 'TEMPLATE' },
+	})
+	const bay = await tx.ensureChild(voltageLevel, {
+		tagName: 'Bay',
+		attributes: { name: 'TEMPLATE' },
+	})
+	return { Substation: substation, VoltageLevel: voltageLevel, Bay: bay }
+}
 
 const emptyTargetXml = /* xml */ `
 	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
@@ -43,7 +60,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 				targetParentRef: testCase.targetParentRef,
 				stripRootAttributes: testCase.stripRootAttributes,
 			})
-			const structure = await ensureSubstationTemplateStructure(tx)
+			const structure = await buildTemplateStructure(tx)
 			await cloneFunctionCategories(tx, {
 				sourceQuery: source.query,
 				functionRef: testCase.functionRef,

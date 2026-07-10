@@ -1,4 +1,4 @@
-import { toAsd } from './to-asd'
+import { asd } from './asd'
 
 import { describe } from 'vitest'
 
@@ -14,7 +14,7 @@ const emptyTargetXml = /* xml */ `
 	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>
 `
 
-describe('toAsd', () => {
+describe('asd', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		targetXml: string
 		applicationId: string
@@ -27,7 +27,7 @@ describe('toAsd', () => {
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
 		if (!target) throw new Error('target required')
 		await target.transaction(async (tx) => {
-			await toAsd(tx, {
+			await asd(tx, {
 				sourceQuery: source.query,
 				applicationRef: {
 					tagName: 'Application',

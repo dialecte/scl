@@ -1,68 +1,29 @@
 ---
-description: Extraction extension for @dialecte/scl v2019C1 — import an element with its type closure (deep), plus the FSD/ASD template recipes.
+description: Extract extension for @dialecte/scl v2019C1 — the FSD/ASD template recipes (built on the transplant engine) plus the TEMPLATE-structure helper.
 ---
 
-# Extraction
+# Extract
 
-The `extraction` extension copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine — `deep` — and adds two named **recipes** that produce template FSD/ASD documents. It also exposes the `ensureSubstationTemplateStructure` helper the recipes use.
+The `extract` extension copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.transplant.deep`) and adds two named **recipes** that produce template FSD/ASD documents. It also exposes the `ensureSubstationTemplateStructure` helper the recipes use.
 
 ```ts
-// generic engine (from `transplant`, re-exported transitionally)
-tx.extraction.deep(...)
-// named recipes
-tx.extraction.toFsd(...)
-tx.extraction.toAsd(...)
+// named recipes (use the `transplant` engine internally — see tx.transplant.deep)
+tx.extract.fsd(...)
+tx.extract.asd(...)
 // helper
-tx.extraction.ensureSubstationTemplateStructure()
+tx.extract.ensureSubstationTemplateStructure()
 ```
 
 ## Transaction methods
 
-Access via `tx.extraction` inside a `doc.transaction()` callback. Every method opens a cross-document transaction: it reads from `sourceQuery` and writes into the current `tx`.
+Access via `tx.extract` inside a `doc.transaction()` callback. Every method opens a cross-document transaction: it reads from `sourceQuery` and writes into the current `tx`.
 
-### `deep`
-
-> `deep` is the [`transplant`](./transplant) engine (`tx.transplant.deep`), re-exported here transitionally as `tx.extraction.deep`.
-
-Imports an element subtree into `targetParent` together with its type closure, in this order:
-
-1. **subtree clone** — clones the element under `targetParent` (with optional `omit` / `strip` / `promoteRoot`).
-2. **content-addressed type closure** (`withTypes`, default `true`) — reconciles the LN/LNode type closure via `dataModel.importTypes` and repoints the cloned instances' `lnType` through the clone mappings.
-
-```ts
-tx.extraction.deep(params: {
-  sourceQuery: Scl.Query
-  ref: Scl.Ref<Scl.ElementsOf>            // element to import
-  targetParent: Scl.Ref<Scl.ElementsOf>   // where the subtree is cloned
-  withTypes?: boolean                      // default true
-  omit?: OmitEntry[]                        // child tags to drop from the clone
-  strip?: StripConfig | false              // default false (preserve provenance)
-  promoteRoot?: { from: Scl.ElementsOf; to: Scl.ElementsOf }
-}): Promise<{
-  record: Scl.RawRecord<Scl.ElementsOf>    // cloned root
-  typeIdRemap: Map<string, string>         // source type id → reconciled target type id (DataTypeTemplates)
-  recordMappings: Scl.CloneMapping[]       // source record → target record, for the whole cloned subtree
-}>
-```
-
-`deep` is a faithful subtree copy: it clones the element and reconciles its type closure, returning the full `recordMappings` so callers can locate any cloned node in the target. It does **not** follow forward uuid references, reset IED bindings, strip template attributes, or clean up orphans — reference rewiring and those policies belong to the recipes/callers (see `toFsd` / `toAsd`).
-
-```ts
-await targetDoc.transaction(async (tx) => {
-	await tx.extraction.deep({
-		sourceQuery: sourceDoc.query,
-		ref: { tagName: 'Function', id: 'func-1' },
-		targetParent: { tagName: 'Bay', id: 'bay-1' },
-	})
-})
-```
-
-### `toFsd`
+### `fsd`
 
 Extracts a `Function`/`SubFunction` into a new FSD template document.
 
 ```ts
-tx.extraction.toFsd(params: {
+tx.extract.fsd(params: {
   sourceQuery: Scl.Query
   functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
   tool: string
@@ -81,7 +42,7 @@ Steps:
 
 ```ts
 await targetDoc.transaction(async (tx) => {
-	await tx.extraction.toFsd({
+	await tx.extract.fsd({
 		sourceQuery: sourceDoc.query,
 		functionRef: { tagName: 'Function', id: 'func-1' },
 		tool: 'Tool name',
@@ -90,12 +51,12 @@ await targetDoc.transaction(async (tx) => {
 })
 ```
 
-### `toAsd`
+### `asd`
 
 Extracts an `Application` and its content into a new ASD template document.
 
 ```ts
-tx.extraction.toAsd(params: {
+tx.extract.asd(params: {
   sourceQuery: Scl.Query
   applicationRef: Scl.Ref<'Application'>
   tool: string
@@ -134,7 +95,7 @@ ensureSubstationTemplateStructure(): Promise<{
 ## Internal structure
 
 ```
-extraction/transaction/
+extract/transaction/
   deep.ts                 generic import (clone + type closure)
   primitives/             generic, policy-free mechanism
     clone-tree.ts         getTree → promote → strip → deepClone
@@ -151,7 +112,7 @@ extraction/transaction/
 
 ## Exported types
 
-The `extraction` module re-exports the parameter/result shapes of `deep` and its clone-policy configs for typing call sites and authoring custom recipes.
+The `extract` module re-exports the parameter/result shapes of `deep` and its clone-policy configs for typing call sites and authoring custom recipes.
 
 ```ts
 import type {

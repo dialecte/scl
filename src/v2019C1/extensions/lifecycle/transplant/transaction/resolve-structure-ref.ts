@@ -1,28 +1,32 @@
 import { invariant } from '@dialecte/core/utils'
 
-import type { ResolveTargetParent } from '../../primitives/clone-referenced'
-import type { TemplateStructure } from './shared.types'
+import type { ResolveTargetParent } from './primitives/clone-referenced'
+import type { TargetStructure } from './structure.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
  * Finds the nearest Substation/VoltageLevel/Bay ancestor of a source-side ref
- * and returns the matching target-side structural ref from the template structure.
+ * and returns the matching target-side structural ref from the target structure.
  */
 export async function resolveStructureRef(
 	sourceQuery: Core.Query<Config>,
 	ref: Scl.Ref<Scl.ElementsOf>,
-	structure: TemplateStructure,
+	structure: TargetStructure,
 ): Promise<Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>> {
 	const ancestors = await sourceQuery.findAncestors(ref, { stopAtTagName: 'Substation' })
 
 	const match = ancestors.find((record) => record.tagName in structure)
 	invariant(match, {
 		key: 'ELEMENT_NOT_FOUND',
-		detail: `No Substation/VoltageLevel/Bay ancestor found for ${ref.tagName}`,
+		detail: `No Substation/VoltageLevel/Bay level in the target structure for ${ref.tagName}`,
 	})
 
-	const target = structure[match.tagName as keyof TemplateStructure]
+	const target = structure[match.tagName as keyof TargetStructure]
+	invariant(target, {
+		key: 'ELEMENT_NOT_FOUND',
+		detail: `Target structure missing the ${match.tagName} level for ${ref.tagName}`,
+	})
 	return { tagName: target.tagName, id: target.id } as
 		| Scl.Ref<'Substation'>
 		| Scl.Ref<'VoltageLevel'>
@@ -41,7 +45,7 @@ export async function resolveStructureRef(
  */
 export function createAncestryResolver(context: {
 	sourceQuery: Core.Query<Config>
-	structure: TemplateStructure
+	structure: TargetStructure
 	cloneIndex: ReadonlyMap<string, Scl.Ref<Scl.ElementsOf>>
 }): ResolveTargetParent {
 	const { sourceQuery, structure, cloneIndex } = context
@@ -54,8 +58,8 @@ export function createAncestryResolver(context: {
 			if (cloned) return cloned
 
 			if (ancestor.tagName in structure) {
-				const target = structure[ancestor.tagName as keyof TemplateStructure]
-				return { tagName: target.tagName, id: target.id }
+				const target = structure[ancestor.tagName as keyof TargetStructure]
+				if (target) return { tagName: target.tagName, id: target.id }
 			}
 		}
 
