@@ -83,6 +83,7 @@ export default defineConfig({
 						{ text: 'Identity', link: '/v2019C1/extensions/identity' },
 						{ text: 'Extract', link: '/v2019C1/extensions/extract' },
 						{ text: 'Instantiate', link: '/v2019C1/extensions/instantiate' },
+						{ text: 'Update', link: '/v2019C1/extensions/update' },
 						{ text: 'Transplant', link: '/v2019C1/extensions/transplant' },
 						{ text: 'Template', link: '/v2019C1/extensions/template' },
 						{ text: 'Presentation', link: '/v2019C1/extensions/presentation' },

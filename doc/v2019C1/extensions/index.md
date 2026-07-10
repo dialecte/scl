@@ -54,3 +54,12 @@ import {
 ```
 
 See each extension's exported surface: [reference](./reference#exported-constants), [signature](./signature#exported-constants--types), [data model](./data-model#exported-types), [transplant](./transplant).
+
+## Internal lifecycle building blocks
+
+Some lifecycle areas are not (yet) registered `tx.*` modules — consumers import their functions directly:
+
+| Area     | Location                      | Reference                          |
+| -------- | ----------------------------- | ---------------------------------- |
+| `update` | `extensions/lifecycle/update` | [Update](./update)                 |
+| `engine` | `extensions/lifecycle/engine` | [Update § Engine](./update#engine) |
