@@ -1,9 +1,9 @@
 import { ensureSubstationTemplateStructure } from './ensure-substation-structure'
-import { ALWAYS_OMIT } from './omit-filters'
 import { postExtractionCleanup } from './post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
+import { ALWAYS_OMIT } from '@/v2019C1/extensions/lifecycle/layers/omit-filters'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'

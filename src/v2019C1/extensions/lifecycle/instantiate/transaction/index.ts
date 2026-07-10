@@ -1,3 +1,5 @@
 export { fsd } from './fsd'
+export { asd } from './asd'
 export { resolveTargetStructure } from './resolve-target-structure'
 export type { FsdParams } from './fsd.types'
+export type { AsdParams } from './asd.types'

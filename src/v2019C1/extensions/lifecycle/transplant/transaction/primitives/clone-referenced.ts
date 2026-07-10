@@ -94,7 +94,7 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 		alreadyCloned?: ReadonlySet<string>
 		omit?: OmitEntry<Config>[]
 	},
-): Promise<void> {
+): Promise<Scl.CloneMapping[]> {
 	const {
 		sourceQuery,
 		scopeRef,
@@ -113,10 +113,13 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 		alreadyCloned,
 	})
 
+	const mappings: Scl.CloneMapping[] = []
 	for (const ref of missing) {
 		const targetParent = await resolveTargetParent(ref)
-		await cloneTree(tx, { sourceQuery, ref, targetParent, omit })
+		const clone = await cloneTree(tx, { sourceQuery, ref, targetParent, omit })
+		if (clone) mappings.push(...clone.mappings)
 	}
+	return mappings
 }
 
 // ── Config-driven bulk clone ─────────────────────────────────────────────────
@@ -134,7 +137,7 @@ type CloneRefsFn = (
 		alreadyCloned?: ReadonlySet<string>
 		omit?: OmitEntry<Config>[]
 	},
-) => Promise<void>
+) => Promise<Scl.CloneMapping[]>
 
 /**
  * Clones all referenced targets for ref types derived from
@@ -158,7 +161,7 @@ export async function cloneAllReferencedTargets(
 		skip?: ReadonlySet<string>
 		omit?: OmitEntry<Config>[]
 	},
-): Promise<void> {
+): Promise<Scl.CloneMapping[]> {
 	const {
 		sourceQuery,
 		scopeTagName,
@@ -175,10 +178,11 @@ export async function cloneAllReferencedTargets(
 
 	const cloneRefs = cloneReferencedRecords as CloneRefsFn
 
+	const mappings: Scl.CloneMapping[] = []
 	for (const refTagName of refTags) {
 		for (const pair of UUID_REFERENCE_PAIRS[refTagName]) {
 			for (const targetTagName of pair.target) {
-				await cloneRefs(tx, {
+				const cloned = await cloneRefs(tx, {
 					sourceQuery,
 					scopeRef,
 					refTagName,
@@ -187,7 +191,9 @@ export async function cloneAllReferencedTargets(
 					alreadyCloned,
 					omit,
 				})
+				mappings.push(...cloned)
 			}
 		}
 	}
+	return mappings
 }

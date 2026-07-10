@@ -53,7 +53,7 @@ Domain-specific methods are bound onto every `doc.query` and `tx` instance under
 | `dataModel`   | `doc.query.dataModel` | `resolve`                                         | [Data Model](/v2019C1/extensions/data-model)   |
 | `dataModel`   | `tx.dataModel`        | `importTypes`                                     | [Data Model](/v2019C1/extensions/data-model)   |
 | `extract`     | `tx.extract`          | `fsd`, `asd`, `ensureSubstationTemplateStructure` | [Extract](/v2019C1/extensions/extract)         |
-| `instantiate` | `tx.instantiate`      | `fsd`, `resolveTargetStructure`                   | [Instantiate](/v2019C1/extensions/instantiate) |
+| `instantiate` | `tx.instantiate`      | `fsd`, `asd`, `resolveTargetStructure`            | [Instantiate](/v2019C1/extensions/instantiate) |
 | `transplant`  | `tx.transplant`       | `deep`                                            | [Transplant](/v2019C1/extensions/transplant)   |
 | `signature`   | `doc.query.signature` | `elementSignature`                                | [Signature](/v2019C1/extensions/signature)     |
 | `reference`   | `tx.reference`        | `applyTypeIdRemap`                                | [Reference](/v2019C1/extensions/reference)     |

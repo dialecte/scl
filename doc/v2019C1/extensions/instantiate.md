@@ -27,3 +27,22 @@ await project.transaction(async (tx) => {
 ```
 
 The clone's uuid references are remapped by the `afterDeepClone` hook. SET-specific policy — naming conventions, file-reference provenance, application assignment — is applied by consumer-registered hooks, not by the operation.
+
+## asd
+
+`asd({ sourceQuery, applicationRef, targetParent })` instantiates the content an ASD carries — the **application layer** — into a target document:
+
+1. clone the `Application` and its composed Functions, categories and satellites (`AllocationRole`, dataflow refs, …) with their type closure, under the structure resolved from `targetParent` (via the shared `layers/application` take-over, built on [`transplant.deep`](./transplant));
+2. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its ASD counterpart as its `templateUuid` while receiving a fresh `uuid`.
+
+```ts
+await project.transaction(async (tx) => {
+	await tx.instantiate.asd({
+		sourceQuery: asd.query,
+		applicationRef: { tagName: 'Application', id: 'app-1' },
+		targetParent: { tagName: 'Bay', id: 'bay-1' },
+	})
+})
+```
+
+`asd` is the exact application-layer counterpart of [`extract.asd`](./extract#asd): both compose the same `layers/application` take-over, differing only in direction (extract strips, instantiate stamps). SET policy (`ApplicationSclRef` provenance, assign-to-application) is applied by consumer hooks.

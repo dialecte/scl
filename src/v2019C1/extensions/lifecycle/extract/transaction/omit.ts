@@ -1,4 +1,4 @@
-import { ALWAYS_OMIT } from './omit-filters'
+import { ALWAYS_OMIT } from '@/v2019C1/extensions/lifecycle/layers/omit-filters'
 
 import type { Config } from '@/v2019C1/config'
 import type { OmitEntry } from '@dialecte/core'
