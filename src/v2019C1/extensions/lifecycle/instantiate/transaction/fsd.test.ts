@@ -22,6 +22,7 @@ describe('instantiate.fsd', () => {
 		'clones the FSD function + type closure and stamps template lineage': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="fsd">
+					<Header id="fsd-header" uuid="fsd-doc-uuid" version="2" revision="B" ${id}="hdr-s"/>
 					<Substation name="TEMPLATE" ${id}="sub-s">
 						<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 							<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" uuid="cat-src-uuid" ${id}="cat-s">
@@ -61,6 +62,8 @@ describe('instantiate.fsd', () => {
 				'//default:DataTypeTemplates/default:LNodeType[@id="CSWI_Type"]/default:DO[@name="Pos"]',
 				'//v2019C1:FunctionCategory[@name="MEASUREMENT"][@templateUuid="cat-src-uuid"]',
 				'//v2019C1:FunctionCategory/v2019C1:FunctionCatRef[@functionUuid]',
+				// instantiation provenance: the FSD file the function was created from (from Header)
+				'//default:Function[@name="Prot"]//v2019C1:FunctionSclRef/v2019C1:SclFileReference[@fileType="FSD"][@fileUuid="fsd-doc-uuid"][@version="2"][@revision="B"]',
 			],
 			unexpectedQueries: [
 				// the instance receives a fresh uuid; the source uuid survives only as templateUuid
@@ -105,6 +108,9 @@ describe('instantiate.fsd', () => {
 				'//default:Bay[@name="B1"]/default:Function[@name="Prot"][@templateUuid="fn-src-uuid"]',
 				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"]',
 				'//default:DataTypeTemplates/default:LNodeType[@id="CSWI_Type"]/default:DO[@name="Pos"]',
+				// no Header on the source -> required version/revision fall back to empty strings;
+				// the optional fileUuid is omitted (no source uuid to record)
+				'//default:Function[@name="Prot"]//v2019C1:FunctionSclRef/v2019C1:SclFileReference[@fileType="FSD"][@version=""][@revision=""]',
 			],
 			unexpectedQueries: [
 				'//default:Function[@uuid="fn-src-uuid"]',

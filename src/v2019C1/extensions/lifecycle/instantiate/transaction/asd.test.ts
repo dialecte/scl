@@ -21,6 +21,7 @@ describe('instantiate.asd', () => {
 		'clones the ASD Application + its Function + type closure and stamps instance lineage': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="asd">
+					<Header id="asd-header" uuid="asd-doc-uuid" version="3" revision="C" ${id}="hdr-s"/>
 					<Substation name="TEMPLATE" ${id}="sub-s">
 						<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 							<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="app-src-uuid" ${id}="app-s">
@@ -73,6 +74,8 @@ describe('instantiate.asd', () => {
 				'//default:DataTypeTemplates/default:LNodeType[@id="CSWI_Type"]/default:DO[@name="Pos"]',
 				// composition provenance (FunctionSclRef) is preserved on instantiate (not omitted)
 				'//default:Function[@name="Prot"]//v2019C1:SclFileReference[@fileName="Sub.fsd"]',
+				// instantiation provenance: the ASD file the application was created from (from Header)
+				'//v2019C1:Application[@name="HMI"]//v2019C1:ApplicationSclRef/v2019C1:SclFileReference[@fileType="ASD"][@fileUuid="asd-doc-uuid"][@version="3"][@revision="C"]',
 			],
 			unexpectedQueries: [
 				// instances receive fresh uuids; source uuids survive only as templateUuid

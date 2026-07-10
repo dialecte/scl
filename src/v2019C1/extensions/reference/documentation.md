@@ -300,3 +300,41 @@ When a VariableApplyTo with an XPath `element` value is encountered during impor
 | `behavior-description` | 4                          | ✅     |
 | `unsupported` (XPath)  | 1                          | ❌     |
 | **Total**              | **32 / 33**                |        |
+
+---
+
+## Transaction API
+
+| Function           | Concern              | Use when                                                                    |
+| ------------------ | -------------------- | --------------------------------------------------------------------------- |
+| `applyTypeIdRemap` | type-id references   | rewrite `lnType`/`DO.type`/... after a clone whose type-ids were reconciled |
+| `writeProvenance`  | file-reference links | stamp the template a cloned root was instantiated from                      |
+
+### `writeProvenance`
+
+Writes the **instantiation provenance link** on a cloned root: a fresh
+`FunctionSclRef` / `ApplicationSclRef` > `SclFileReference` pointing back at the
+template file the instance was created from (90-30 §17.2 / §17.3). Called by
+`instantiate.fsd` (`fileType: 'FSD'`) and `instantiate.asd` (`fileType: 'ASD'`).
+
+```ts
+await tx.reference.writeProvenance({ sourceQuery, targetRoot, fileType })
+```
+
+The kernel **self-sources** every field from the source document — no SET dependency:
+
+| `SclFileReference` attr | Source                                                    |
+| ----------------------- | --------------------------------------------------------- |
+| `fileType`              | caller (`FSD` / `ASD`)                                    |
+| `version` / `revision`  | source `Header` (empty string when the Header omits them) |
+| `fileUuid`              | source `Header.uuid` (omitted when there is no Header)    |
+| `fileName`              | `sourceQuery.getFilename()`                               |
+
+Notes:
+
+- **Always creates** a new ref (never reuses an existing one): a root may already
+  carry composition-provenance SclRefs (preserved by instantiate), and each
+  instantiation is a distinct link.
+- The 6-100 ref element is auto-wrapped in `<Private type="eIEC61850-6-100">` by
+  the serializer, so it serializes as `Function > Private > FunctionSclRef > SclFileReference`.
+- This is the **write** counterpart of the `getProvenance` query.
