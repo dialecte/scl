@@ -83,6 +83,55 @@ describe('instantiate.asd', () => {
 				'//default:Function[@uuid="fn-src-uuid"]',
 			],
 		},
+
+		'clones an AllocationRole referenced by the Application and stamps its lineage': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="asd">
+					<Substation name="TEMPLATE" ${id}="sub-s">
+						<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
+							<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="ar-src-uuid" ${id}="ar-s">
+								<eIEC61850-6-100:FunctionRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="ar-fref-s"/>
+							</eIEC61850-6-100:AllocationRole>
+							<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="app-src-uuid" ${id}="app-s">
+								<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="fr-s">
+									<eIEC61850-6-100:FunctionRoleContent ${id}="frc-s">
+										<eIEC61850-6-100:FunctionRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-s"/>
+									</eIEC61850-6-100:FunctionRoleContent>
+								</eIEC61850-6-100:FunctionRole>
+								<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/HMI_PC" allocationRoleUuid="ar-src-uuid" ${id}="arref-s"/>
+							</eIEC61850-6-100:Application>
+						</Private>
+						<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+							<Bay name="TEMPLATE" ${id}="bay-s">
+								<Function name="Prot" ${id}="fn-1" uuid="fn-src-uuid"/>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="scd">
+					<Substation name="S1" ${id}="sub-t">
+						<VoltageLevel name="V1" ${id}="vl-t">
+							<Bay name="B1" ${id}="bay-t"/>
+						</VoltageLevel>
+					</Substation>
+				</SCL>`,
+			applicationId: 'app-s',
+			targetParentId: 'bay-t',
+			expectedQueries: [
+				// the application is cloned and stamped
+				'//v2019C1:Application[@name="HMI"][@templateUuid="app-src-uuid"]',
+				// the referenced AllocationRole travels with the application and is stamped
+				'//v2019C1:AllocationRole[@name="HMI_PC"][@templateUuid="ar-src-uuid"]',
+				// the AllocationRoleRef pointing at it is remapped to the instance uuid
+				'//v2019C1:AllocationRoleRef[@allocationRoleUuid]',
+			],
+			unexpectedQueries: [
+				// instances receive fresh uuids; source uuids survive only as templateUuid
+				'//v2019C1:AllocationRole[@uuid="ar-src-uuid"]',
+				'//v2019C1:AllocationRoleRef[@allocationRoleUuid="ar-src-uuid"]',
+			],
+		},
 	}
 
 	async function act({
