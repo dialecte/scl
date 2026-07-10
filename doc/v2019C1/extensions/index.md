@@ -10,15 +10,17 @@ For a full explanation of how extensions work, see the [Writing Extensions](http
 
 ## Registered modules
 
-| Module         | Access on `doc.query`    | Access on `tx` | Reference                      |
-| -------------- | ------------------------ | -------------- | ------------------------------ |
-| `cleanUp`      | -                        | `tx.cleanUp`   | [Clean-up](./clean-up)         |
-| `dataModel`    | `doc.query.dataModel`    | `tx.dataModel` | [Data Model](./data-model)     |
-| `extract`      | -                        | `tx.extract`   | [Extraction](./extraction)     |
-| `history`      | `doc.query.history`      | `tx.history`   | [History](./history)           |
-| `presentation` | `doc.query.presentation` | -              | [Presentation](./presentation) |
-| `reference`    | `doc.query.reference`    | `tx.reference` | [Reference](./reference)       |
-| `signature`    | `doc.query.signature`    | -              | [Signature](./signature)       |
+| Module         | Access on `doc.query`    | Access on `tx`   | Reference                      |
+| -------------- | ------------------------ | ---------------- | ------------------------------ |
+| `cleanUp`      | -                        | `tx.cleanUp`     | [Clean-up](./clean-up)         |
+| `dataModel`    | `doc.query.dataModel`    | `tx.dataModel`   | [Data Model](./data-model)     |
+| `extract`      | -                        | `tx.extract`     | [Extract](./extract)           |
+| `instantiate`  | -                        | `tx.instantiate` | [Instantiate](./instantiate)   |
+| `transplant`   | -                        | `tx.transplant`  | [Transplant](./transplant)     |
+| `history`      | `doc.query.history`      | `tx.history`     | [History](./history)           |
+| `presentation` | `doc.query.presentation` | -                | [Presentation](./presentation) |
+| `reference`    | `doc.query.reference`    | `tx.reference`   | [Reference](./reference)       |
+| `signature`    | `doc.query.signature`    | -                | [Signature](./signature)       |
 
 ## Usage pattern
 
@@ -47,8 +49,8 @@ import {
 	RESOLUTION_TYPE, // reference
 	DEFAULT_IGNORED_ATTRIBUTES, // signature
 	type ImportTypesParams, // dataModel
-	type ImportDeepParams, // extraction
+	type ImportDeepParams, // transplant
 } from '@dialecte/scl/v2019C1'
 ```
 
-See each extension's exported surface: [reference](./reference#exported-constants), [signature](./signature#exported-constants--types), [data model](./data-model#exported-types), [extraction](./extraction#exported-types).
+See each extension's exported surface: [reference](./reference#exported-constants), [signature](./signature#exported-constants--types), [data model](./data-model#exported-types), [transplant](./transplant).

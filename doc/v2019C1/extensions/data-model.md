@@ -71,7 +71,7 @@ importTypes(params: {
 }>
 ```
 
-Typical use: when extracting a function to a new `.fsd` file, import the data model types the function depends on (this is what [`extraction.deep`](./extraction#deep) does internally).
+Typical use: when extracting a function to a new `.fsd` file, import the data model types the function depends on (this is what [`transplant.deep`](./transplant#deep) does internally).
 
 ```ts
 const sourceDoc = project.openDocument(sourceDocumentId)

@@ -4,7 +4,7 @@ title: Instantiate
 
 # Instantiate
 
-Instantiate template content into a target document — the inverse direction of the [extract](./extract) recipes. Each recipe clones a template subtree together with its type closure and stamps instance lineage.
+Instantiate template content into a target document — the inverse direction of the [extract](./extract) operation. Each operation clones a template subtree together with its type closure and stamps instance lineage.
 
 ## fsd
 
@@ -26,4 +26,4 @@ await project.transaction(async (tx) => {
 })
 ```
 
-The clone's uuid references are remapped by the `afterDeepClone` hook. SET-specific policy — naming conventions, file-reference provenance, application assignment — is applied by consumer-registered hooks, not by the recipe.
+The clone's uuid references are remapped by the `afterDeepClone` hook. SET-specific policy — naming conventions, file-reference provenance, application assignment — is applied by consumer-registered hooks, not by the operation.

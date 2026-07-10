@@ -1,11 +1,12 @@
-import { deep as deepExtract } from './deep'
-import { cloneTree } from './primitives/clone-tree'
-import { resolveStructureRef } from './resolve-structure-ref'
-
+import {
+	deep as deepExtract,
+	cloneTree,
+	resolveStructureRef,
+} from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { reference } from '@/v2019C1/extensions/reference'
 
-import type { TargetStructure } from './structure.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'

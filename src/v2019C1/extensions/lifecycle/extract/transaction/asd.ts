@@ -1,8 +1,9 @@
-import { ensureSubstationTemplateStructure } from '../shared/ensure-substation-structure'
-import { postExtractionCleanup } from '../shared/post-extraction-cleanup'
-import { cloneApplicationContent } from './clone-application'
+import { ensureSubstationTemplateStructure } from './ensure-substation-structure'
+import { ALWAYS_OMIT } from './omit-filters'
+import { postExtractionCleanup } from './post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
+import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -38,7 +39,7 @@ export async function asd(
 		},
 	})
 
-	await cloneApplicationContent(tx, { sourceQuery, applicationRef, structure })
+	await cloneApplicationContent(tx, { sourceQuery, applicationRef, structure, omit: ALWAYS_OMIT })
 
 	await postExtractionCleanup(tx)
 }

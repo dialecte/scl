@@ -26,4 +26,4 @@ await doc.transaction(async (tx) => {
 })
 ```
 
-The `mappings` are the `CloneMapping[]` produced by a `deepClone` (or the recipes in the extraction extension), so `writeIdentity` runs as a post-clone pass.
+The `mappings` are the `CloneMapping[]` produced by a `deepClone` (or the extract / instantiate operations), so `writeIdentity` runs as a post-clone pass.

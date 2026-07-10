@@ -10,6 +10,5 @@ export type { ImportDeepParams, ImportDeepResult } from './deep.types'
 export * from './primitives/clone-tree'
 export * from './primitives/clone-referenced'
 
-export { cloneFunction, cloneFunctionCategories } from './clone-function'
 export { resolveStructureRef, createAncestryResolver } from './resolve-structure-ref'
 export type { TemplateStructure, TargetStructure } from './structure.types'

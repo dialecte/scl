@@ -1,11 +1,11 @@
-import { ALWAYS_OMIT } from '../shared/omit-filters'
-
+import {
+	cloneFunction,
+	cloneFunctionCategories,
+} from '@/v2019C1/extensions/lifecycle/layers/function'
 import {
 	cloneAllReferencedTargets,
 	findMissingReferencedRecords,
 	cloneTree,
-	cloneFunction,
-	cloneFunctionCategories,
 	resolveStructureRef,
 	createAncestryResolver,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -13,6 +13,7 @@ import {
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TemplateStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
+import type { OmitEntry } from '@dialecte/core'
 
 /**
  * ASD content brick: clones an Application and all its satellites (Functions,
@@ -27,9 +28,10 @@ export async function cloneApplicationContent(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		structure: TemplateStructure
+		omit: OmitEntry<Config>[]
 	},
 ): Promise<void> {
-	const { sourceQuery, applicationRef, structure } = params
+	const { sourceQuery, applicationRef, structure, omit } = params
 
 	// Source record id -> cloned target ref, accumulated as functions are cloned, so
 	// step 3's satellites can be placed back under their owning function.
@@ -48,7 +50,7 @@ export async function cloneApplicationContent(
 			sourceQuery,
 			functionRef: ref,
 			targetParentRef,
-			omit: ALWAYS_OMIT,
+			omit,
 		})
 		for (const mapping of mappings) {
 			if (mapping.source.id) cloneIndex.set(mapping.source.id, mapping.target)
@@ -76,10 +78,10 @@ export async function cloneApplicationContent(
 		resolveTargetParent: createAncestryResolver({ sourceQuery, structure, cloneIndex }),
 		alreadyCloned: new Set(cloneIndex.keys()),
 		skip: REFS_ALREADY_HANDLED,
-		omit: ALWAYS_OMIT,
+		omit,
 	})
 
 	// 4. Clone Application tree
 	const targetParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
-	await cloneTree(tx, { sourceQuery, ref: applicationRef, targetParent, omit: ALWAYS_OMIT })
+	await cloneTree(tx, { sourceQuery, ref: applicationRef, targetParent, omit })
 }

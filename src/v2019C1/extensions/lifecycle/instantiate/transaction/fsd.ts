@@ -1,10 +1,8 @@
 import { resolveTargetStructure } from './resolve-target-structure'
 
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
-import {
-	deep,
-	cloneFunctionCategories,
-} from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+import { cloneFunctionCategories } from '@/v2019C1/extensions/lifecycle/layers/function'
+import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { FsdParams } from './fsd.types'
 import type { Config } from '@/v2019C1/config'

@@ -1,12 +1,12 @@
-import { ensureSubstationTemplateStructure } from '../shared/ensure-substation-structure'
-import { postExtractionCleanup } from '../shared/post-extraction-cleanup'
+import { ensureSubstationTemplateStructure } from './ensure-substation-structure'
 import { FSD_OMIT } from './omit'
+import { postExtractionCleanup } from './post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
 import {
 	cloneFunction,
 	cloneFunctionCategories,
-} from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+} from '@/v2019C1/extensions/lifecycle/layers/function'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'

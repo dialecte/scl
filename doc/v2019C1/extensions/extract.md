@@ -1,13 +1,13 @@
 ---
-description: Extract extension for @dialecte/scl v2019C1 — the FSD/ASD template recipes (built on the transplant engine) plus the TEMPLATE-structure helper.
+description: Extract extension for @dialecte/scl v2019C1 — the FSD/ASD template extractors (built on the transplant engine + layers) plus the TEMPLATE-structure helper.
 ---
 
 # Extract
 
-The `extract` extension copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.transplant.deep`) and adds two named **recipes** that produce template FSD/ASD documents. It also exposes the `ensureSubstationTemplateStructure` helper the recipes use.
+The `extract` extension copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.transplant.deep`) and the shared `layers/` take-over, adding two named extractors (`fsd`, `asd`) that produce template FSD/ASD documents. It also exposes the `ensureSubstationTemplateStructure` helper they use.
 
 ```ts
-// named recipes (use the `transplant` engine internally — see tx.transplant.deep)
+// named extractors (compose the transplant engine + layers with extract policy)
 tx.extract.fsd(...)
 tx.extract.asd(...)
 // helper
@@ -36,7 +36,7 @@ Steps:
 
 1. Ensure the TEMPLATE substation structure.
 2. Write the FSD history header (`fileType: 'FSD'`).
-3. Clone the function via `deep` — promote `SubFunction`→`Function`, strip `templateUuid`, apply FSD omit filters, import the type closure.
+3. Clone the function via `cloneFunction` (layers/function) — promote `SubFunction`→`Function`, strip the **root's** `templateUuid` (children keep theirs — subfunctions may be instantiated from other FSDs, 90-30 §16.1.2), apply FSD omit filters, import the type closure.
 4. Clone the referenced `FunctionCategory` trees at their structural level.
 5. Run post-extraction clean-up (orphan UUID refs, reset LNode bindings to `None`, prune empty containers).
 
@@ -94,25 +94,28 @@ ensureSubstationTemplateStructure(): Promise<{
 
 ## Internal structure
 
+`extract` composes shared **engine** + **layer** modules with its own extract-direction policy:
+
 ```
-extract/transaction/
-  deep.ts                 generic import (clone + type closure)
-  primitives/             generic, policy-free mechanism
-    clone-tree.ts         getTree → promote → strip → deepClone
-    clone-referenced.ts   satellite clone — resolve missing referenced targets,
-                          dedup against already-cloned records, place per a resolver
-  recipes/                template products + their bricks
-    fsd/ , asd/
-    shared/               clone-function, ensure-substation-structure,
-                          resolve-structure-ref (structural + ancestry placement),
-                          post-extraction-cleanup, omit-filters
+lifecycle/
+  transplant/transaction/     generic clone/graft mechanism (tx.transplant.deep)
+    deep.ts                   clone + content-addressed type closure
+    primitives/               clone-tree, clone-referenced
+    resolve-structure-ref.ts  structural + ancestry placement
+  layers/                     per-layer take-over, shared by extract & instantiate
+    function/                 clone-function (cloneFunction, cloneFunctionCategories)
+    application/              clone-application
+  extract/transaction/        the extract operation (this extension)
+    fsd.ts , asd.ts           file-type extractors
+    ensure-substation-structure.ts , post-extraction-cleanup.ts
+    omit.ts , omit-filters.ts extract-direction pruning policy
 ```
 
-> `deep` is the **mechanism**; the recipes are **policy** (pruning, structural placement, transforms, history, clean-up). The type engine it composes is [`dataModel.importTypes`](./data-model#importtypes); the content-addressing behind that is [`signature.elementSignature`](./signature).
+> `transplant.deep` is the **mechanism**; `layers/` hold the per-layer **take-over**; `extract` adds the extract-direction **policy** (pruning, TEMPLATE placement, history, root-strip, clean-up). The type engine it composes is [`dataModel.importTypes`](./data-model#importtypes); the content-addressing behind that is [`signature.elementSignature`](./signature).
 
 ## Exported types
 
-The `extract` module re-exports the parameter/result shapes of `deep` and its clone-policy configs for typing call sites and authoring custom recipes.
+The [`transplant`](./transplant) module exposes the parameter/result shapes of `deep` and its clone-policy configs for typing call sites.
 
 ```ts
 import type {

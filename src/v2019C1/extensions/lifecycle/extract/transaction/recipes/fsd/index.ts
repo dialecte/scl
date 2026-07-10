@@ -1,1 +1,0 @@
-export { fsd } from './fsd'

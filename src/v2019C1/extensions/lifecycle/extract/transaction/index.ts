@@ -1,3 +1,3 @@
-export { ensureSubstationTemplateStructure } from './recipes/shared/ensure-substation-structure'
-export { asd } from './recipes/asd'
-export { fsd } from './recipes/fsd'
+export { ensureSubstationTemplateStructure } from './ensure-substation-structure'
+export { asd } from './asd'
+export { fsd } from './fsd'
