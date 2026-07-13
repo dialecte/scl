@@ -6,25 +6,38 @@ title: Update
 
 Update reconciles a project against a **newer version of a template** it was built from. Each update verb is `instantiate-or-reconcile`: if the target has no instance yet it instantiates (the first-time case); if it already holds an instance, it reconciles the changes **onto** that instance instead of duplicating it.
 
-::: info Internal building blocks
-The `update` verbs and the `engine` primitives below are **internal** lifecycle building blocks in `extensions/lifecycle/update` and `extensions/lifecycle/engine`. They are **not** yet a registered `tx.*` module (unlike [`instantiate`](./instantiate) / [`extract`](./extract) / [`transplant`](./transplant)); consumers import the functions directly. A registered `tx.update` surface + a headless/review two-track wrapper are a planned follow-up.
+```ts
+// apply
+tx.lifecycle.update.fsd(...)
+tx.lifecycle.update.asd(...)
+// preview (read-only) — returns a DiffReport with the fast/full classification
+doc.query.lifecycle.update.reportFsd(...)
+doc.query.lifecycle.update.reportAsd(...)
+```
+
+::: info Engine primitives stay internal
+The `reconcile` / `diff` primitives below (in `extensions/lifecycle/engine`) are **internal** building blocks the registered verbs are built on; consumers import them directly only when composing new verbs.
 :::
 
-## update.fromFsd
+## `tx.lifecycle.update.fsd`
+
+Access via `tx.lifecycle.update` inside a `doc.transaction()` callback.
 
 `fsd({ sourceQuery, functionRef, targetParent })` reconciles a project against a (possibly newer) FSD:
 
 - if the target already holds an instance of this Function (an element under `targetParent` whose `templateUuid` equals the source Function's `uuid`), reconcile the updated template onto it;
 - otherwise instantiate it fresh (via [`instantiate.fsd`](./instantiate#fsd)).
 
-This unifies instantiate and update — instantiation is the first-time case of update.
+This unifies instantiate and update — instantiation is the first-time case of update. The read-only counterpart `doc.query.lifecycle.update.reportFsd({ sourceQuery, functionRef, targetParent })` returns a `DiffReport` (see [Engine](#engine)) without mutating.
 
-## update.fromAsd
+## `tx.lifecycle.update.asd`
 
 `asd({ sourceQuery, applicationRef, targetParent })` reconciles a project against a (possibly newer) ASD — the same engine one layer up, proving `engine.reconcile` is layer-agnostic. It runs two layers in order:
 
 1. **application layer** — reconcile the `Application` subtree (roles, allocation refs, attributes);
-2. **function-layer cascade** — _verbs compose verbs_: treat every composed Function the ASD references as an FSD to update and delegate to `update.fromFsd`. A function **added** by the newer ASD is instantiated; an existing one is reconciled. Each function is placed at its **own** resolved structural level (via `resolveTargetStructure` + `resolveStructureRef`, exactly like [`instantiate.asd`](./instantiate#asd)), not blindly under the ASD anchor.
+2. **function-layer cascade** — _verbs compose verbs_: treat every composed Function the ASD references as an FSD to update and delegate to `tx.lifecycle.update.fsd`. A function **added** by the newer ASD is instantiated; an existing one is reconciled. Each function is placed at its **own** resolved structural level (via `resolveTargetStructure` + `resolveStructureRef`, exactly like [`instantiate.asd`](./instantiate#asd)), not blindly under the ASD anchor.
+
+The read-only counterpart is `doc.query.lifecycle.update.reportAsd({ sourceQuery, applicationRef })`.
 
 > Cascade principle (applies to future update layers, e.g. SSD/topology): an update layer = reconcile its own subtree **+** for each referenced child-layer root, delegate to that child layer's update verb with the child's own resolved structural parent.
 

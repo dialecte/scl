@@ -1,5 +1,5 @@
 ---
-description: Overview of SCL-specific extensions for @dialecte/scl v2019C1 -- history, dataModel, signature, reference, extraction, presentation and cleanUp.
+description: Overview of SCL-specific extensions for @dialecte/scl v2019C1 -- history, dataModel, signature, reference, lifecycle, presentation and cleanUp.
 ---
 
 # Extensions
@@ -10,17 +10,17 @@ For a full explanation of how extensions work, see the [Writing Extensions](http
 
 ## Registered modules
 
-| Module         | Access on `doc.query`    | Access on `tx`   | Reference                      |
-| -------------- | ------------------------ | ---------------- | ------------------------------ |
-| `cleanUp`      | -                        | `tx.cleanUp`     | [Clean-up](./clean-up)         |
-| `dataModel`    | `doc.query.dataModel`    | `tx.dataModel`   | [Data Model](./data-model)     |
-| `extract`      | -                        | `tx.extract`     | [Extract](./extract)           |
-| `instantiate`  | -                        | `tx.instantiate` | [Instantiate](./instantiate)   |
-| `transplant`   | -                        | `tx.transplant`  | [Transplant](./transplant)     |
-| `history`      | `doc.query.history`      | `tx.history`     | [History](./history)           |
-| `presentation` | `doc.query.presentation` | -                | [Presentation](./presentation) |
-| `reference`    | `doc.query.reference`    | `tx.reference`   | [Reference](./reference)       |
-| `signature`    | `doc.query.signature`    | -                | [Signature](./signature)       |
+| Module         | Access on `doc.query`                | Access on `tx`                                                      | Reference                                                                                             |
+| -------------- | ------------------------------------ | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `cleanUp`      | -                                    | `tx.cleanUp`                                                        | [Clean-up](./clean-up)                                                                                |
+| `dataModel`    | `doc.query.dataModel`                | `tx.dataModel`                                                      | [Data Model](./data-model)                                                                            |
+| `lifecycle`    | `doc.query.lifecycle.update.report*` | `tx.lifecycle.extract` / `.instantiate` / `.transplant` / `.update` | [Extract](./extract) · [Instantiate](./instantiate) · [Transplant](./transplant) · [Update](./update) |
+| `history`      | `doc.query.history`                  | `tx.history`                                                        | [History](./history)                                                                                  |
+| `presentation` | `doc.query.presentation`             | -                                                                   | [Presentation](./presentation)                                                                        |
+| `reference`    | `doc.query.reference`                | `tx.reference`                                                      | [Reference](./reference)                                                                              |
+| `signature`    | `doc.query.signature`                | -                                                                   | [Signature](./signature)                                                                              |
+
+`lifecycle` is a single module whose transaction/query methods nest by verb, so the public surface is `tx.lifecycle.<verb>.<recipe>` (e.g. `tx.lifecycle.extract.fsd`, `tx.lifecycle.update.asd`) and `doc.query.lifecycle.update.reportFsd`.
 
 ## Usage pattern
 
@@ -36,7 +36,7 @@ const latest = await doc.query.history.getLatestHitem()
 // Transaction extension — mutation
 await doc.transaction(async (tx) => {
 	await tx.history.addEntry({ filename, header, item })
-	await tx.extract.ensureSubstationTemplateStructure()
+	await tx.lifecycle.extract.ensureSubstationTemplateStructure()
 })
 ```
 
@@ -57,9 +57,8 @@ See each extension's exported surface: [reference](./reference#exported-constant
 
 ## Internal lifecycle building blocks
 
-Some lifecycle areas are not (yet) registered `tx.*` modules — consumers import their functions directly:
+The lifecycle verbs are built on a shared engine that is **not** a registered `tx.*` module — consumers import its functions directly only when composing new verbs:
 
 | Area     | Location                      | Reference                          |
 | -------- | ----------------------------- | ---------------------------------- |
-| `update` | `extensions/lifecycle/update` | [Update](./update)                 |
 | `engine` | `extensions/lifecycle/engine` | [Update § Engine](./update#engine) |

@@ -4,26 +4,26 @@ description: Extract extension for @dialecte/scl v2019C1 — the FSD/ASD templat
 
 # Extract
 
-The `extract` extension copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.transplant.deep`) and the shared `layers/` take-over, adding two named extractors (`fsd`, `asd`) that produce template FSD/ASD documents. It also exposes the `ensureSubstationTemplateStructure` helper they use.
+The `extract` verb copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.lifecycle.transplant.deep`) and the shared `layers/` take-over, adding two named extractors (`fsd`, `asd`) that produce template FSD/ASD documents. It also exposes the `ensureSubstationTemplateStructure` helper they use.
 
 ```ts
 // named extractors (compose the transplant engine + layers with extract policy)
-tx.extract.fsd(...)
-tx.extract.asd(...)
+tx.lifecycle.extract.fsd(...)
+tx.lifecycle.extract.asd(...)
 // helper
-tx.extract.ensureSubstationTemplateStructure()
+tx.lifecycle.extract.ensureSubstationTemplateStructure()
 ```
 
 ## Transaction methods
 
-Access via `tx.extract` inside a `doc.transaction()` callback. Every method opens a cross-document transaction: it reads from `sourceQuery` and writes into the current `tx`.
+Access via `tx.lifecycle.extract` inside a `doc.transaction()` callback. Every method opens a cross-document transaction: it reads from `sourceQuery` and writes into the current `tx`.
 
 ### `fsd`
 
 Extracts a `Function`/`SubFunction` into a new FSD template document.
 
 ```ts
-tx.extract.fsd(params: {
+tx.lifecycle.extract.fsd(params: {
   sourceQuery: Scl.Query
   functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
   tool: string
@@ -42,7 +42,7 @@ Steps:
 
 ```ts
 await targetDoc.transaction(async (tx) => {
-	await tx.extract.fsd({
+	await tx.lifecycle.extract.fsd({
 		sourceQuery: sourceDoc.query,
 		functionRef: { tagName: 'Function', id: 'func-1' },
 		tool: 'Tool name',
@@ -56,7 +56,7 @@ await targetDoc.transaction(async (tx) => {
 Extracts an `Application` and its content into a new ASD template document.
 
 ```ts
-tx.extract.asd(params: {
+tx.lifecycle.extract.asd(params: {
   sourceQuery: Scl.Query
   applicationRef: Scl.Ref<'Application'>
   tool: string
@@ -98,7 +98,7 @@ ensureSubstationTemplateStructure(): Promise<{
 
 ```
 lifecycle/
-  transplant/transaction/     generic clone/graft mechanism (tx.transplant.deep)
+  transplant/transaction/     generic clone/graft mechanism (tx.lifecycle.transplant.deep)
     deep.ts                   clone + content-addressed type closure
     primitives/               clone-tree, clone-referenced
     resolve-structure-ref.ts  structural + ancestry placement

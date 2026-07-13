@@ -4,15 +4,15 @@ description: Transplant engine for @dialecte/scl v2019C1 — the shared clone/gr
 
 # Transplant
 
-The `transplant` extension is the **engine** behind the lifecycle content operations. It moves an SCL subtree — together with its content-addressed type closure — from one document into another. Both [extract](./extract) (project → template) and [instantiate](./instantiate) (template → project) are _directions_ built on top of it.
+The `transplant` verb is the **engine** behind the lifecycle content operations. It moves an SCL subtree — together with its content-addressed type closure — from one document into another. Both [extract](./extract) (project → template) and [instantiate](./instantiate) (template → project) are _directions_ built on top of it.
 
 ```ts
-tx.transplant.deep(...)
+tx.lifecycle.transplant.deep(...)
 ```
 
 ## Transaction methods
 
-Access via `tx.transplant` inside a `doc.transaction()` callback. `deep` opens a cross-document transaction: it reads from `sourceQuery` and writes into the current `tx`.
+Access via `tx.lifecycle.transplant` inside a `doc.transaction()` callback. `deep` opens a cross-document transaction: it reads from `sourceQuery` and writes into the current `tx`.
 
 ### `deep`
 
@@ -24,7 +24,7 @@ Access via `tx.transplant` inside a `doc.transaction()` callback. `deep` opens a
 `deep` is a **faithful** subtree copy: it does _not_ follow forward uuid references, reset IED bindings, strip template attributes, or clean up orphans. Reference rewiring and identity stamping are the caller's responsibility (see [extract](./extract), [instantiate](./instantiate) and [identity](./identity)). It returns the full `recordMappings` (source → clone for every node) so callers can locate any cloned node in the target.
 
 ```ts
-tx.transplant.deep(params: {
+tx.lifecycle.transplant.deep(params: {
   sourceQuery: Scl.Query
   ref: Scl.Ref<Scl.ElementsOf>            // element to import
   targetParent: Scl.Ref<Scl.ElementsOf>   // where the subtree is cloned
@@ -41,7 +41,7 @@ tx.transplant.deep(params: {
 
 ```ts
 await targetDoc.transaction(async (tx) => {
-	await tx.transplant.deep({
+	await tx.lifecycle.transplant.deep({
 		sourceQuery: sourceDoc.query,
 		ref: { tagName: 'Function', id: 'func-1' },
 		targetParent: { tagName: 'Bay', id: 'bay-1' },

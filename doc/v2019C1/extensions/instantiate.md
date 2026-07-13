@@ -8,7 +8,7 @@ Instantiate template content into a target document — the inverse direction of
 
 ## fsd
 
-Access via `tx.instantiate` inside a `doc.transaction()` callback.
+Access via `tx.lifecycle.instantiate` inside a `doc.transaction()` callback.
 
 `fsd({ sourceQuery, functionRef, targetParent })` instantiates the content an FSD carries into a target document:
 
@@ -18,7 +18,7 @@ Access via `tx.instantiate` inside a `doc.transaction()` callback.
 
 ```ts
 await project.transaction(async (tx) => {
-	await tx.instantiate.fsd({
+	await tx.lifecycle.instantiate.fsd({
 		sourceQuery: fsd.query,
 		functionRef: { tagName: 'Function', id: 'fn-1' },
 		targetParent: { tagName: 'Bay', id: 'bay-1' },
@@ -37,7 +37,7 @@ The clone's uuid references are remapped by the `afterDeepClone` hook. SET-speci
 
 ```ts
 await project.transaction(async (tx) => {
-	await tx.instantiate.asd({
+	await tx.lifecycle.instantiate.asd({
 		sourceQuery: asd.query,
 		applicationRef: { tagName: 'Application', id: 'app-1' },
 		targetParent: { tagName: 'Bay', id: 'bay-1' },
