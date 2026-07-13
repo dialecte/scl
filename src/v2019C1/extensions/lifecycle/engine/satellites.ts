@@ -24,26 +24,38 @@ export const CARRIED_SATELLITE_CONTAINERS = {
  * The distinct satellite CONTAINERS carried by `primaryRef`, resolved by walking
  * the incoming reference edges (`findRefsPointingTo`) whose ref tag is flagged as
  * carrying (see {@link CARRIED_SATELLITE_CONTAINERS}). Same finder the clone path
- * uses (`cloneFunctionCategories`). v1 scopes to the primary itself; SubFunction
- * descendants are deferred.
+ * uses (`cloneFunctionCategories`), and like it, satellites carried by the
+ * function's `SubFunction` descendants count too.
  */
 export async function resolveCarriedSatellites(
 	query: Core.Query<Config>,
 	params: { primaryRef: Scl.Ref<Scl.ElementsOf> },
 ): Promise<Scl.Ref<Scl.ElementsOf>[]> {
 	const { primaryRef } = params
+
+	// the primary itself plus its SubFunction descendants may each carry satellites
+	const targets: Scl.Ref<Scl.ElementsOf>[] = [primaryRef]
+	const { SubFunction: subFunctions = [] } = await query.findDescendants(primaryRef, {
+		collect: 'SubFunction',
+	})
+	for (const subFunction of subFunctions) {
+		targets.push({ tagName: 'SubFunction', id: subFunction.id })
+	}
+
 	const seen = new Set<string>()
 	const satellites: Scl.Ref<Scl.ElementsOf>[] = []
 
-	for (const containerTag of Object.values(CARRIED_SATELLITE_CONTAINERS)) {
-		const refs = await reference.query.findRefsPointingTo(query, {
-			target: primaryRef,
-			containerTagName: containerTag as Scl.ElementsOf,
-		})
-		for (const { container } of refs) {
-			if (!container || seen.has(container.id)) continue
-			seen.add(container.id)
-			satellites.push(toRef(container) as Scl.Ref<Scl.ElementsOf>)
+	for (const target of targets) {
+		for (const containerTag of Object.values(CARRIED_SATELLITE_CONTAINERS)) {
+			const refs = await reference.query.findRefsPointingTo(query, {
+				target,
+				containerTagName: containerTag as Scl.ElementsOf,
+			})
+			for (const { container } of refs) {
+				if (!container || seen.has(container.id)) continue
+				seen.add(container.id)
+				satellites.push(toRef(container) as Scl.Ref<Scl.ElementsOf>)
+			}
 		}
 	}
 	return satellites
