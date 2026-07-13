@@ -4,6 +4,7 @@ import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
+import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -15,6 +16,10 @@ import type * as Core from '@dialecte/core'
  *    `targetParent` whose `templateUuid` equals the source function's `uuid`),
  *    reconcile the updated template ONTO it (`engine.reconcile`);
  *  - otherwise instantiate it fresh (`instantiate.fsd`).
+ *
+ * `accepted` (optional) gates the write to the accepted decision groups: passed
+ * through to `reconcile`, and for a first-time instantiate the whole function is
+ * one group, so it is skipped unless its source id is accepted.
  */
 export async function fsd(
 	tx: Core.Transaction<Config>,
@@ -22,17 +27,25 @@ export async function fsd(
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
+		accepted?: AcceptedIds
 	},
 ): Promise<void> {
-	const { sourceQuery, functionRef, targetParent } = params
+	const { sourceQuery, functionRef, targetParent, accepted } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	const instance = await findInstanceUnder(tx, { targetParent, tagName: 'Function', sourceUuid })
 
 	if (instance) {
-		await reconcile(tx, { sourceQuery, sourceRootRef: functionRef, instanceRootRef: instance })
+		await reconcile(tx, {
+			sourceQuery,
+			sourceRootRef: functionRef,
+			instanceRootRef: instance,
+			accepted,
+		})
 		return
 	}
 
+	// first-time = one added group; gate the whole instantiate on its acceptance
+	if (accepted && !accepted.sourceIds.has(functionRef.id)) return
 	await instantiateFsd(tx, { sourceQuery, functionRef, targetParent })
 }

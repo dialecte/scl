@@ -10,6 +10,7 @@ import {
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
+import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -27,6 +28,11 @@ import type * as Core from '@dialecte/core'
  *     references as an FSD to update and delegate to `update.fromFsd`
  *     (instantiate-or-reconcile). Verbs compose verbs: a function added by the
  *     newer ASD is instantiated, an existing one is reconciled.
+ *
+ * `accepted` (optional) gates every write to the accepted decision groups — the
+ * application reconcile, the composed-function reconciles, and the first-time
+ * instantiate — so the ASD full track honours the user's decisions across both
+ * layers.
  */
 export async function asd(
 	tx: Core.Transaction<Config>,
@@ -34,23 +40,31 @@ export async function asd(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
+		accepted?: AcceptedIds
 	},
 ): Promise<void> {
-	const { sourceQuery, applicationRef, targetParent } = params
+	const { sourceQuery, applicationRef, targetParent, accepted } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 
 	const instance = await findInstanceByTemplateUuid(tx, { tagName: 'Application', sourceUuid })
 	if (!instance) {
+		// first-time = one added group; gate the whole instantiate on its acceptance
+		if (accepted && !accepted.sourceIds.has(applicationRef.id)) return
 		await instantiateAsd(tx, { sourceQuery, applicationRef, targetParent })
 		return
 	}
 
 	// 1. application layer
-	await reconcile(tx, { sourceQuery, sourceRootRef: applicationRef, instanceRootRef: instance })
+	await reconcile(tx, {
+		sourceQuery,
+		sourceRootRef: applicationRef,
+		instanceRootRef: instance,
+		accepted,
+	})
 
 	// 2. function-layer cascade
-	await cascadeComposedFunctions(tx, { sourceQuery, applicationRef, targetParent })
+	await cascadeComposedFunctions(tx, { sourceQuery, applicationRef, targetParent, accepted })
 }
 
 /**
@@ -68,9 +82,10 @@ async function cascadeComposedFunctions(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
+		accepted?: AcceptedIds
 	},
 ): Promise<void> {
-	const { sourceQuery, applicationRef, targetParent } = params
+	const { sourceQuery, applicationRef, targetParent, accepted } = params
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 	if (functionUuids.size === 0) return
 
@@ -84,6 +99,6 @@ async function cascadeComposedFunctions(
 		if (!sourceFunction) continue
 		const functionRef = { tagName: 'Function', id: sourceFunction.id } as Scl.Ref<'Function'>
 		const functionTargetParent = await resolveStructureRef(sourceQuery, functionRef, structure)
-		await updateFsd(tx, { sourceQuery, functionRef, targetParent: functionTargetParent })
+		await updateFsd(tx, { sourceQuery, functionRef, targetParent: functionTargetParent, accepted })
 	}
 }
