@@ -1,4 +1,5 @@
 import { groupChanges } from './group'
+import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
 
@@ -18,8 +19,6 @@ import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
  * Deliberately scoped: one subtree, matched by `templateUuid`, no reference
  * reconciliation or multi-instance disambiguation.
  */
-const IDENTITY_ATTRS = new Set(['uuid', 'templateUuid', 'originUuid'])
-
 export async function diff(params: {
 	sourceQuery: Core.Query<Config>
 	targetQuery: Core.Query<Config>
@@ -41,19 +40,18 @@ export async function diff(params: {
 	}
 
 	const index = new Map<string, AnyTreeRecord>()
-	await indexByTemplateUuid(targetQuery, instanceTree, index)
+	await indexByTemplateUuid(targetQuery, { node: instanceTree, index })
 
 	const sourceUuids = new Set<string>()
-	await collectUuids(sourceQuery, sourceTree, sourceUuids)
+	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
 
-	const root = await diffMatched(
-		sourceQuery,
+	const root = await diffMatched(sourceQuery, {
 		targetQuery,
-		sourceTree,
-		instanceTree,
+		sourceNode: sourceTree,
+		instanceNode: instanceTree,
 		index,
 		sourceUuids,
-	)
+	})
 	const summary = summarize(root)
 	const needsDecisions = summary.added + summary.removed + summary.modified > 0
 	return { root, groups: groupChanges(root), needsDecisions, summary }
@@ -61,18 +59,20 @@ export async function diff(params: {
 
 async function diffMatched(
 	sourceQuery: Core.Query<Config>,
-	targetQuery: Core.Query<Config>,
-	sourceNode: AnyTreeRecord,
-	instanceNode: AnyTreeRecord,
-	index: Map<string, AnyTreeRecord>,
-	sourceUuids: ReadonlySet<string>,
+	params: {
+		targetQuery: Core.Query<Config>
+		sourceNode: AnyTreeRecord
+		instanceNode: AnyTreeRecord
+		index: Map<string, AnyTreeRecord>
+		sourceUuids: ReadonlySet<string>
+	},
 ): Promise<DiffNode> {
-	const attributeChanges = await computeAttributeChanges(
-		sourceQuery,
+	const { targetQuery, sourceNode, instanceNode, index, sourceUuids } = params
+	const attributeChanges = await computeAttributeChanges(sourceQuery, {
 		targetQuery,
 		sourceNode,
 		instanceNode,
-	)
+	})
 
 	const children: DiffNode[] = []
 	const matchedInstanceIds = new Set<string>()
@@ -80,11 +80,28 @@ async function diffMatched(
 	// source children: matched -> recurse; unmatched -> added subtree
 	for (const sourceChild of sourceNode.tree) {
 		const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
-		const matched = sourceUuid ? index.get(sourceUuid) : undefined
+		// Match by templateUuid lineage; fall back to a same-tag unmatched sibling
+		// for uuid-less elements (e.g. FunctionRoleContent) so they are not
+		// reported as spurious adds.
+		const matched =
+			(sourceUuid ? index.get(sourceUuid) : undefined) ??
+			(sourceUuid
+				? undefined
+				: instanceNode.tree.find(
+						(instanceChild) =>
+							instanceChild.tagName === sourceChild.tagName &&
+							!matchedInstanceIds.has(instanceChild.id),
+					))
 		if (matched) {
 			matchedInstanceIds.add(matched.id)
 			children.push(
-				await diffMatched(sourceQuery, targetQuery, sourceChild, matched, index, sourceUuids),
+				await diffMatched(sourceQuery, {
+					targetQuery,
+					sourceNode: sourceChild,
+					instanceNode: matched,
+					index,
+					sourceUuids,
+				}),
 			)
 		} else {
 			children.push(addedNode(sourceChild))
@@ -122,10 +139,13 @@ function removedNode(node: AnyTreeRecord): DiffNode {
 
 async function computeAttributeChanges(
 	sourceQuery: Core.Query<Config>,
-	targetQuery: Core.Query<Config>,
-	sourceNode: AnyTreeRecord,
-	instanceNode: AnyTreeRecord,
+	params: {
+		targetQuery: Core.Query<Config>
+		sourceNode: AnyTreeRecord
+		instanceNode: AnyTreeRecord
+	},
 ): Promise<AttributeChange[]> {
+	const { targetQuery, sourceNode, instanceNode } = params
 	const desired = visibleAttributes(await sourceQuery.any.getAttributes(sourceNode))
 	const current = visibleAttributes(await targetQuery.any.getAttributes(instanceNode))
 
@@ -138,34 +158,45 @@ async function computeAttributeChanges(
 	return changes
 }
 
-/** Drop identity + the project-owned `name` from an attribute map. */
-function visibleAttributes(attributes: Record<string, string>): Record<string, string> {
-	const visible: Record<string, string> = {}
-	for (const [name, value] of Object.entries(attributes)) {
-		if (IDENTITY_ATTRS.has(name) || name === 'name') continue
-		visible[name] = value
-	}
-	return visible
-}
-
 async function indexByTemplateUuid(
 	targetQuery: Core.Query<Config>,
-	node: AnyTreeRecord,
-	index: Map<string, AnyTreeRecord>,
+	params: { node: AnyTreeRecord; index: Map<string, AnyTreeRecord> },
 ): Promise<void> {
+	const { node, index } = params
 	const templateUuid = await targetQuery.any.getAttribute(node, { name: 'templateUuid' })
 	if (templateUuid) index.set(templateUuid, node)
-	for (const child of node.tree) await indexByTemplateUuid(targetQuery, child, index)
+	for (const child of node.tree) await indexByTemplateUuid(targetQuery, { node: child, index })
 }
 
 async function collectUuids(
 	sourceQuery: Core.Query<Config>,
-	node: AnyTreeRecord,
-	out: Set<string>,
+	params: { node: AnyTreeRecord; out: Set<string> },
 ): Promise<void> {
+	const { node, out } = params
 	const uuid = await sourceQuery.any.getAttribute(node, { name: 'uuid' })
 	if (uuid) out.add(uuid)
-	for (const child of node.tree) await collectUuids(sourceQuery, child, out)
+	for (const child of node.tree) await collectUuids(sourceQuery, { node: child, out })
+}
+
+/**
+ * Combine several reports into one (e.g. an ASD's application-layer report plus
+ * one per composed function). `root` keeps the first report's tree; `groups` is
+ * the concatenation (the full-track decision surface); `summary` sums; and
+ * `needsDecisions` is true if any part needs a decision.
+ */
+export function mergeReports(reports: [DiffReport, ...DiffReport[]]): DiffReport {
+	const [first] = reports
+	const groups = reports.flatMap((report) => report.groups)
+	const summary = reports.reduce<DiffSummary>(
+		(acc, report) => ({
+			added: acc.added + report.summary.added,
+			removed: acc.removed + report.summary.removed,
+			modified: acc.modified + report.summary.modified,
+		}),
+		{ added: 0, removed: 0, modified: 0 },
+	)
+	const needsDecisions = reports.some((report) => report.needsDecisions)
+	return { root: first.root, groups, needsDecisions, summary }
 }
 
 function summarize(root: DiffNode): DiffSummary {

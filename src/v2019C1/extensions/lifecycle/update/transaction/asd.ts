@@ -1,4 +1,5 @@
-import { findApplicationInstance } from '../find-instance'
+import { collectComposedFunctionUuids } from '../composed-functions'
+import { findInstanceByTemplateUuid } from '../find-instance'
 import { fsd as updateFsd } from './fsd'
 
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
@@ -10,7 +11,6 @@ import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/t
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
-import type { AnyTreeRecord } from '@dialecte/core'
 
 /**
  * `update.fromAsd` — reconcile a project against a (possibly newer) ASD.
@@ -40,7 +40,7 @@ export async function asd(
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 
-	const instance = await findApplicationInstance(tx, sourceUuid)
+	const instance = await findInstanceByTemplateUuid(tx, { tagName: 'Application', sourceUuid })
 	if (!instance) {
 		await instantiateAsd(tx, { sourceQuery, applicationRef, targetParent })
 		return
@@ -50,7 +50,7 @@ export async function asd(
 	await reconcile(tx, { sourceQuery, sourceRootRef: applicationRef, instanceRootRef: instance })
 
 	// 2. function-layer cascade
-	await cascadeComposedFunctions(tx, sourceQuery, applicationRef, targetParent)
+	await cascadeComposedFunctions(tx, { sourceQuery, applicationRef, targetParent })
 }
 
 /**
@@ -64,13 +64,14 @@ export async function asd(
  */
 async function cascadeComposedFunctions(
 	tx: Core.Transaction<Config>,
-	sourceQuery: Core.Query<Config>,
-	applicationRef: Scl.Ref<'Application'>,
-	targetParent: Scl.Ref<Scl.ElementsOf>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		applicationRef: Scl.Ref<'Application'>
+		targetParent: Scl.Ref<Scl.ElementsOf>
+	},
 ): Promise<void> {
-	const functionUuids = new Set<string>()
-	const applicationTree = await sourceQuery.any.getTree(applicationRef)
-	if (applicationTree) await collectFunctionRefUuids(sourceQuery, applicationTree, functionUuids)
+	const { sourceQuery, applicationRef, targetParent } = params
+	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 	if (functionUuids.size === 0) return
 
 	const structure = await resolveTargetStructure(tx, targetParent)
@@ -85,17 +86,4 @@ async function cascadeComposedFunctions(
 		const functionTargetParent = await resolveStructureRef(sourceQuery, functionRef, structure)
 		await updateFsd(tx, { sourceQuery, functionRef, targetParent: functionTargetParent })
 	}
-}
-
-/** Collect `functionUuid` from every `FunctionRef` in the Application subtree. */
-async function collectFunctionRefUuids(
-	sourceQuery: Core.Query<Config>,
-	node: AnyTreeRecord,
-	out: Set<string>,
-): Promise<void> {
-	if (node.tagName === 'FunctionRef') {
-		const functionUuid = await sourceQuery.any.getAttribute(node, { name: 'functionUuid' })
-		if (functionUuid) out.add(functionUuid)
-	}
-	for (const child of node.tree) await collectFunctionRefUuids(sourceQuery, child, out)
 }
