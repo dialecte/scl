@@ -1,4 +1,5 @@
 import { findInstanceUnder } from '../find-instance'
+import { reconcileCarriedSatellites } from './function-satellites'
 
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
@@ -42,6 +43,8 @@ export async function fsd(
 			instanceRootRef: instance,
 			accepted,
 		})
+		// carried satellites (e.g. FunctionCategory) travel with the function group
+		await reconcileCarriedSatellites(tx, { sourceQuery, functionRef, accepted })
 		return
 	}
 
