@@ -66,8 +66,8 @@ function collectNodeId(params: {
 }): void {
 	const { node, sourceIds, instanceIds } = params
 	if (node.change === 'removed') {
-		if (node.instanceRef) instanceIds.add(node.instanceRef.id)
-	} else if (node.sourceRef) {
+		if (node.instanceRef?.id) instanceIds.add(node.instanceRef.id)
+	} else if (node.sourceRef?.id) {
 		sourceIds.add(node.sourceRef.id)
 	}
 }

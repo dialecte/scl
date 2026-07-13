@@ -33,34 +33,49 @@ tx.lifecycle.apply(tx, { verb, sourceQuery, ref, anchor, report })
 
 `report.needsDecisions` gates the track:
 
-- **fast** (`false`) — first-time instantiate or a conflict-free change → `apply` writes headless;
-- **full** (`true`) — the instance exists and something changed → `apply` writes **nothing** and returns the report unchanged, so the caller collects decisions first (decisions → ops is a planned follow-up).
+- **fast** (`false`) — first-time instantiate or a conflict-free change → `apply` writes headless (pass no `decisions`);
+- **full** (`true`) — the instance exists and something changed → `apply` needs `decisions`. Without them it writes **nothing** and returns the report so the caller can drive the review; with them it applies only the accepted groups (across both layers for an ASD).
+
+### Decision groups (full track)
+
+`report.groups` is the accept/skip surface (07 §3.1). The user decides on a **group**, never an individual element — each group carries its primary change plus the companions that travel with it, so a partial, incoherent apply is impossible.
+
+```ts
+type DecisionGroup = {
+	id: string // key in the decisions map
+	change: 'added' | 'removed' | 'modified'
+	title: string
+	primary: DiffNode
+	companions: DiffNode[] // read-only detail — travel with the primary, never toggled alone
+	dependsOn: string[] // group ids this one requires
+	suggestedAction: 'accept'
+}
+```
+
+`apply` takes `decisions: Map<groupId, 'accept' | 'skip'>`. A group absent from the map defaults to `accept` (so an empty map applies everything); the engine rejects a set that accepts a group whose `dependsOn` parent is skipped.
 
 Wrap `apply` in `doc.prepare(...)` for a previewable, reversible dry-run:
 
 ```ts
-const report = await doc.query.lifecycle.report({
+const target = {
 	verb: 'fsd',
 	sourceQuery: template.query,
 	ref: { tagName: 'Function', id: 'fn-1' },
 	anchor: { tagName: 'Bay', id: 'bay-1' },
-})
+} as const
 
+const report = await doc.query.lifecycle.report(target)
+
+const decisions = new Map<string, 'accept' | 'skip'>()
 if (report.needsDecisions) {
-	// full: render report, collect decisions (follow-up)
-} else {
-	const prepared = await doc.prepare((tx) =>
-		tx.lifecycle.apply(tx, {
-			verb: 'fsd',
-			sourceQuery: template.query,
-			ref: { tagName: 'Function', id: 'fn-1' },
-			anchor: { tagName: 'Bay', id: 'bay-1' },
-			report,
-		}),
-	)
-	await prepared.commit() // or prepared.discard()
+	// render report.groups, collect the user's accept/skip choices into `decisions`
 }
+
+const prepared = await doc.prepare((tx) => tx.lifecycle.apply(tx, { ...target, report, decisions }))
+await prepared.commit() // or prepared.discard()
 ```
+
+````
 
 ## `tx.lifecycle.update.fsd`
 
@@ -108,6 +123,6 @@ type DiffReport = {
 	needsDecisions: boolean
 	summary: { added: number; removed: number; modified: number }
 }
-```
+````
 
 Matched by `templateUuid`, same-space attribute compare. **Classify** decides the track: no instance = first-time instantiate = **fast** (headless); an existing instance with any change = **full** (needs decisions). This is the report a headless/review wrapper consumes to route fast vs full.
