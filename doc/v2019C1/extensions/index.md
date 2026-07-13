@@ -14,13 +14,13 @@ For a full explanation of how extensions work, see the [Writing Extensions](http
 | -------------- | ------------------------------------ | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `cleanUp`      | -                                    | `tx.cleanUp`                                                        | [Clean-up](./clean-up)                                                                                |
 | `dataModel`    | `doc.query.dataModel`                | `tx.dataModel`                                                      | [Data Model](./data-model)                                                                            |
-| `lifecycle`    | `doc.query.lifecycle.update.report*` | `tx.lifecycle.extract` / `.instantiate` / `.transplant` / `.update` | [Extract](./extract) · [Instantiate](./instantiate) · [Transplant](./transplant) · [Update](./update) |
+| `lifecycle`    | `doc.query.lifecycle.update.report*` / `doc.query.lifecycle.report` | `tx.lifecycle.extract` / `.instantiate` / `.transplant` / `.update` / `.apply` | [Extract](./extract) · [Instantiate](./instantiate) · [Transplant](./transplant) · [Update](./update) |
 | `history`      | `doc.query.history`                  | `tx.history`                                                        | [History](./history)                                                                                  |
 | `presentation` | `doc.query.presentation`             | -                                                                   | [Presentation](./presentation)                                                                        |
 | `reference`    | `doc.query.reference`                | `tx.reference`                                                      | [Reference](./reference)                                                                              |
 | `signature`    | `doc.query.signature`                | -                                                                   | [Signature](./signature)                                                                              |
 
-`lifecycle` is a single module whose transaction/query methods nest by verb, so the public surface is `tx.lifecycle.<verb>.<recipe>` (e.g. `tx.lifecycle.extract.fsd`, `tx.lifecycle.update.asd`) and `doc.query.lifecycle.update.reportFsd`.
+`lifecycle` is a single module whose transaction/query methods nest by verb, so the public surface is `tx.lifecycle.<verb>.<recipe>` (e.g. `tx.lifecycle.extract.fsd`, `tx.lifecycle.update.asd`) and `doc.query.lifecycle.update.reportFsd`. The verb-agnostic two-track seam — `doc.query.lifecycle.report({ verb, sourceQuery, ref, anchor })` then `tx.lifecycle.apply(tx, { ..., report })` — is the recommended consumer entry point (see [Update](./update#two-track-seam-report-apply)).
 
 ## Usage pattern
 

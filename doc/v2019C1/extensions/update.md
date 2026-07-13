@@ -19,6 +19,49 @@ doc.query.lifecycle.update.reportAsd(...)
 The `reconcile` / `diff` primitives below (in `extensions/lifecycle/engine`) are **internal** building blocks the registered verbs are built on; consumers import them directly only when composing new verbs.
 :::
 
+## Two-track seam — `report` + `apply`
+
+The verb-agnostic seam is the recommended consumer entry point. **Dialecte decides the track**, the consumer never picks it: ask for a report, then apply.
+
+```ts
+query.lifecycle.report({ verb, sourceQuery, ref, anchor }) // -> DiffReport { needsDecisions, ... }
+tx.lifecycle.apply(tx, { verb, sourceQuery, ref, anchor, report })
+```
+
+- `verb`: `'fsd'` (then `ref` is a `Function`) or `'asd'` (then `ref` is an `Application`);
+- `anchor`: the target parent the instance lives under / is placed into.
+
+`report.needsDecisions` gates the track:
+
+- **fast** (`false`) — first-time instantiate or a conflict-free change → `apply` writes headless;
+- **full** (`true`) — the instance exists and something changed → `apply` writes **nothing** and returns the report unchanged, so the caller collects decisions first (decisions → ops is a planned follow-up).
+
+Wrap `apply` in `doc.prepare(...)` for a previewable, reversible dry-run:
+
+```ts
+const report = await doc.query.lifecycle.report({
+	verb: 'fsd',
+	sourceQuery: template.query,
+	ref: { tagName: 'Function', id: 'fn-1' },
+	anchor: { tagName: 'Bay', id: 'bay-1' },
+})
+
+if (report.needsDecisions) {
+	// full: render report, collect decisions (follow-up)
+} else {
+	const prepared = await doc.prepare((tx) =>
+		tx.lifecycle.apply(tx, {
+			verb: 'fsd',
+			sourceQuery: template.query,
+			ref: { tagName: 'Function', id: 'fn-1' },
+			anchor: { tagName: 'Bay', id: 'bay-1' },
+			report,
+		}),
+	)
+	await prepared.commit() // or prepared.discard()
+}
+```
+
 ## `tx.lifecycle.update.fsd`
 
 Access via `tx.lifecycle.update` inside a `doc.transaction()` callback.
