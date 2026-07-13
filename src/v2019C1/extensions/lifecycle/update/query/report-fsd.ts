@@ -1,7 +1,5 @@
 import { findInstanceUnder } from '../find-instance'
-import { foldCarriedSatellites } from './report-function-satellites'
-
-import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { reportFunction } from './report-function'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -26,13 +24,5 @@ export async function reportFsd(
 	const { sourceQuery, functionRef, targetParent } = params
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	const instance = await findInstanceUnder(query, { targetParent, tagName: 'Function', sourceUuid })
-	const report = await diff({
-		sourceQuery,
-		targetQuery: query,
-		sourceRootRef: functionRef,
-		instanceRootRef: instance,
-	})
-	// first-time (no instance): satellites are created via the clone path; nothing to fold
-	if (!instance) return report
-	return foldCarriedSatellites(query, { sourceQuery, functionRef, report })
+	return reportFunction(query, { sourceQuery, functionRef, instance })
 }

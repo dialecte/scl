@@ -1,5 +1,6 @@
 import { collectComposedFunctionUuids } from '../composed-functions'
 import { findInstanceByTemplateUuid } from '../find-instance'
+import { reportFunction } from './report-function'
 
 import { diff, mergeReports } from '@/v2019C1/extensions/lifecycle/engine/diff'
 
@@ -62,11 +63,10 @@ async function reportComposedFunctions(
 			sourceUuid: functionUuid,
 		})
 		reports.push(
-			await diff({
+			await reportFunction(query, {
 				sourceQuery,
-				targetQuery: query,
-				sourceRootRef: functionRef,
-				instanceRootRef: functionInstance,
+				functionRef,
+				instance: functionInstance,
 			}),
 		)
 	}
