@@ -1,10 +1,8 @@
 import { resolveTargetStructure } from './resolve-target-structure'
 
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
-import {
-	cloneFunctionCategories,
-	cloneVariables,
-} from '@/v2019C1/extensions/lifecycle/layers/function'
+import { cloneFunctionCategories } from '@/v2019C1/extensions/lifecycle/layers/function'
+import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/satellites/clone-applied-satellites'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
@@ -46,16 +44,17 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		stripCategoriesUuid: false,
 	})
 
-	// external Variables that apply to the function also travel with it
-	const variableMappings = await cloneVariables(tx, {
+	// external cross-cutting satellites (Variable / BehaviorDescription) that apply
+	// to any element in the function subtree also travel with it
+	const appliedMappings = await cloneAppliedSatellites(tx, {
 		sourceQuery,
-		functionRef,
+		primaryRef: functionRef,
 		structure,
-		stripVariablesUuid: false,
+		strip: false,
 	})
 
 	await writeIdentity(tx, {
-		mappings: [...recordMappings, ...categoryMappings, ...variableMappings],
+		mappings: [...recordMappings, ...categoryMappings, ...appliedMappings],
 		mode: 'stamp-template',
 	})
 

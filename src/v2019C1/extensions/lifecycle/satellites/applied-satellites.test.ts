@@ -56,6 +56,27 @@ describe('resolveAppliedSatellites (cross-cutting: applies to any element in the
 				</SCL>`,
 			expectedTags: [],
 		},
+
+		'finds a BehaviorDescription referencing the function LNode': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="fsd">
+					<Substation name="TEMPLATE" ${id}="sub-s">
+						<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
+							<eIEC61850-6-100:BehaviorDescription name="BD1" uuid="bd-src-uuid" ${id}="bd-s">
+								<eIEC61850-6-100:InputVar dataName="TEMPLATE/Prot/CSWI1" lnodeUuid="lnode-src-uuid" doName="Pos" ${id}="iv-s"/>
+							</eIEC61850-6-100:BehaviorDescription>
+						</Private>
+						<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+							<Bay name="TEMPLATE" ${id}="bay-s">
+								<Function name="Prot" ${id}="fn-1" uuid="fn-src-uuid">
+									<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-1" uuid="lnode-src-uuid"/>
+								</Function>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>`,
+			expectedTags: ['BehaviorDescription'],
+		},
 	}
 
 	async function act({ testCase, source }: SclTest.ActParams<TestCase>): Promise<void> {
