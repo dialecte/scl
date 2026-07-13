@@ -3,7 +3,9 @@ import { toRef } from '@dialecte/core/helpers'
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
+import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
 /**
@@ -26,9 +28,9 @@ import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 const IDENTITY_ATTRS = new Set(['uuid', 'templateUuid', 'originUuid'])
 
 export async function reconcile(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		sourceRootRef: AnyRefOrRecord
 		instanceRootRef: AnyRefOrRecord
 	},
@@ -54,8 +56,8 @@ export async function reconcile(
 }
 
 async function reconcileChildren(
-	tx: Scl.Transaction,
-	sourceQuery: Scl.Query,
+	tx: Core.Transaction<Config>,
+	sourceQuery: Core.Query<Config>,
 	sourceNode: AnyTreeRecord,
 	instanceParent: AnyTreeRecord,
 	index: Map<string, AnyTreeRecord>,
@@ -72,8 +74,8 @@ async function reconcileChildren(
 
 		const { recordMappings } = await deep(tx, {
 			sourceQuery,
-			ref: toRef(sourceChild),
-			targetParent: toRef(instanceParent),
+			ref: toRef(sourceChild) as unknown as Scl.Ref<Scl.ElementsOf>,
+			targetParent: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,
 			strip: false,
 		})
 		await writeIdentity(tx, { mappings: recordMappings, mode: 'stamp-template' })
@@ -81,7 +83,7 @@ async function reconcileChildren(
 }
 
 async function deleteRemoved(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	instanceNode: AnyTreeRecord,
 	sourceUuids: ReadonlySet<string>,
 ): Promise<void> {
@@ -97,7 +99,7 @@ async function deleteRemoved(
 }
 
 async function collectRemoved(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	node: AnyTreeRecord,
 	sourceUuids: ReadonlySet<string>,
 	out: AnyTreeRecord[],
@@ -111,8 +113,8 @@ async function collectRemoved(
 }
 
 async function updateMatchedAttributes(
-	tx: Scl.Transaction,
-	sourceQuery: Scl.Query,
+	tx: Core.Transaction<Config>,
+	sourceQuery: Core.Query<Config>,
 	instanceRecord: AnyTreeRecord,
 	sourceNode: AnyTreeRecord,
 ): Promise<void> {
@@ -139,7 +141,7 @@ function visibleAttributes(attributes: Record<string, string>): Record<string, s
 }
 
 async function indexByTemplateUuid(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	node: AnyTreeRecord,
 	index: Map<string, AnyTreeRecord>,
 ): Promise<void> {
@@ -149,7 +151,7 @@ async function indexByTemplateUuid(
 }
 
 async function collectUuids(
-	sourceQuery: Scl.Query,
+	sourceQuery: Core.Query<Config>,
 	node: AnyTreeRecord,
 	out: Set<string>,
 ): Promise<void> {

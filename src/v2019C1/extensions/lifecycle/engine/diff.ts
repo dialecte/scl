@@ -1,7 +1,8 @@
 import { toRef } from '@dialecte/core/helpers'
 
 import type { AttributeChange, DiffNode, DiffReport, DiffSummary } from './diff.types'
-import type { Scl } from '@/v2019C1/config'
+import type { Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
 /**
@@ -18,17 +19,18 @@ import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 const IDENTITY_ATTRS = new Set(['uuid', 'templateUuid', 'originUuid'])
 
 export async function diff(params: {
-	sourceQuery: Scl.Query
-	targetQuery: Scl.Query
+	sourceQuery: Core.Query<Config>
+	targetQuery: Core.Query<Config>
 	sourceRootRef: AnyRefOrRecord
-	instanceRootRef: AnyRefOrRecord
+	/** Omit (or pass a ref that resolves to nothing) for a first-time instantiate. */
+	instanceRootRef?: AnyRefOrRecord
 }): Promise<DiffReport> {
 	const { sourceQuery, targetQuery, sourceRootRef, instanceRootRef } = params
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	if (!sourceTree) throw new Error('diff: source subtree not found')
 
-	const instanceTree = await targetQuery.any.getTree(instanceRootRef)
+	const instanceTree = instanceRootRef ? await targetQuery.any.getTree(instanceRootRef) : undefined
 
 	// no instance yet -> first-time instantiate: the whole template is added (fast)
 	if (!instanceTree) {
@@ -56,8 +58,8 @@ export async function diff(params: {
 }
 
 async function diffMatched(
-	sourceQuery: Scl.Query,
-	targetQuery: Scl.Query,
+	sourceQuery: Core.Query<Config>,
+	targetQuery: Core.Query<Config>,
 	sourceNode: AnyTreeRecord,
 	instanceNode: AnyTreeRecord,
 	index: Map<string, AnyTreeRecord>,
@@ -117,8 +119,8 @@ function removedNode(node: AnyTreeRecord): DiffNode {
 }
 
 async function computeAttributeChanges(
-	sourceQuery: Scl.Query,
-	targetQuery: Scl.Query,
+	sourceQuery: Core.Query<Config>,
+	targetQuery: Core.Query<Config>,
 	sourceNode: AnyTreeRecord,
 	instanceNode: AnyTreeRecord,
 ): Promise<AttributeChange[]> {
@@ -145,7 +147,7 @@ function visibleAttributes(attributes: Record<string, string>): Record<string, s
 }
 
 async function indexByTemplateUuid(
-	targetQuery: Scl.Query,
+	targetQuery: Core.Query<Config>,
 	node: AnyTreeRecord,
 	index: Map<string, AnyTreeRecord>,
 ): Promise<void> {
@@ -155,7 +157,7 @@ async function indexByTemplateUuid(
 }
 
 async function collectUuids(
-	sourceQuery: Scl.Query,
+	sourceQuery: Core.Query<Config>,
 	node: AnyTreeRecord,
 	out: Set<string>,
 ): Promise<void> {

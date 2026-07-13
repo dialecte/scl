@@ -1,3 +1,4 @@
+import { findApplicationInstance } from '../find-instance'
 import { fsd as updateFsd } from './fsd'
 
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
@@ -7,8 +8,9 @@ import {
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
-import type { Scl } from '@/v2019C1/config'
-import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
+import type { AnyTreeRecord } from '@dialecte/core'
 
 /**
  * `update.fromAsd` — reconcile a project against a (possibly newer) ASD.
@@ -27,9 +29,9 @@ import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
  *     newer ASD is instantiated, an existing one is reconciled.
  */
 export async function asd(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 	},
@@ -61,8 +63,8 @@ export async function asd(
  * different Substation/VoltageLevel/Bay than the anchor is found/placed correctly.
  */
 async function cascadeComposedFunctions(
-	tx: Scl.Transaction,
-	sourceQuery: Scl.Query,
+	tx: Core.Transaction<Config>,
+	sourceQuery: Core.Query<Config>,
 	applicationRef: Scl.Ref<'Application'>,
 	targetParent: Scl.Ref<Scl.ElementsOf>,
 ): Promise<void> {
@@ -87,7 +89,7 @@ async function cascadeComposedFunctions(
 
 /** Collect `functionUuid` from every `FunctionRef` in the Application subtree. */
 async function collectFunctionRefUuids(
-	sourceQuery: Scl.Query,
+	sourceQuery: Core.Query<Config>,
 	node: AnyTreeRecord,
 	out: Set<string>,
 ): Promise<void> {
@@ -96,19 +98,4 @@ async function collectFunctionRefUuids(
 		if (functionUuid) out.add(functionUuid)
 	}
 	for (const child of node.tree) await collectFunctionRefUuids(sourceQuery, child, out)
-}
-
-/** The `Application` whose `templateUuid` equals the source uuid, if any. */
-async function findApplicationInstance(
-	tx: Scl.Transaction,
-	sourceUuid: string | undefined,
-): Promise<AnyTrackedRecord | undefined> {
-	if (!sourceUuid) return undefined
-	const applications = await tx.any.getRecordsByTagName('Application')
-	for (const application of applications) {
-		if ((await tx.any.getAttribute(application, { name: 'templateUuid' })) === sourceUuid) {
-			return application
-		}
-	}
-	return undefined
 }

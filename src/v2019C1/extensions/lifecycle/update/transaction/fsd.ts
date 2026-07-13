@@ -1,8 +1,10 @@
+import { findFunctionInstance } from '../find-instance'
+
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 
-import type { Scl } from '@/v2019C1/config'
-import type { AnyTreeRecord } from '@dialecte/core'
+import type { Scl, Config } from '@/v2019C1/config'
+import type * as Core from '@dialecte/core'
 
 /**
  * `update.fromFsd` — reconcile a project against a (possibly newer) FSD.
@@ -15,9 +17,9 @@ import type { AnyTreeRecord } from '@dialecte/core'
  *  - otherwise instantiate it fresh (`instantiate.fsd`).
  */
 export async function fsd(
-	tx: Scl.Transaction,
+	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Scl.Query
+		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 	},
@@ -25,9 +27,7 @@ export async function fsd(
 	const { sourceQuery, functionRef, targetParent } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
-
-	const parentTree = await tx.any.getTree(targetParent)
-	const instance = parentTree ? await findInstance(tx, parentTree, sourceUuid) : undefined
+	const instance = await findFunctionInstance(tx, targetParent, sourceUuid)
 
 	if (instance) {
 		await reconcile(tx, { sourceQuery, sourceRootRef: functionRef, instanceRootRef: instance })
@@ -35,23 +35,4 @@ export async function fsd(
 	}
 
 	await instantiateFsd(tx, { sourceQuery, functionRef, targetParent })
-}
-
-/** First `Function` descendant whose `templateUuid` equals the source uuid. */
-async function findInstance(
-	tx: Scl.Transaction,
-	node: AnyTreeRecord,
-	sourceUuid: string | undefined,
-): Promise<AnyTreeRecord | undefined> {
-	if (
-		node.tagName === 'Function' &&
-		(await tx.any.getAttribute(node, { name: 'templateUuid' })) === sourceUuid
-	) {
-		return node
-	}
-	for (const child of node.tree) {
-		const found = await findInstance(tx, child, sourceUuid)
-		if (found) return found
-	}
-	return undefined
 }
