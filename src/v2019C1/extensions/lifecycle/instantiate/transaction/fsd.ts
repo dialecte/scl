@@ -1,7 +1,10 @@
 import { resolveTargetStructure } from './resolve-target-structure'
 
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
-import { cloneFunctionCategories } from '@/v2019C1/extensions/lifecycle/layers/function'
+import {
+	cloneFunctionCategories,
+	cloneVariables,
+} from '@/v2019C1/extensions/lifecycle/layers/function'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
@@ -43,8 +46,16 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		stripCategoriesUuid: false,
 	})
 
+	// external Variables that apply to the function also travel with it
+	const variableMappings = await cloneVariables(tx, {
+		sourceQuery,
+		functionRef,
+		structure,
+		stripVariablesUuid: false,
+	})
+
 	await writeIdentity(tx, {
-		mappings: [...recordMappings, ...categoryMappings],
+		mappings: [...recordMappings, ...categoryMappings, ...variableMappings],
 		mode: 'stamp-template',
 	})
 
