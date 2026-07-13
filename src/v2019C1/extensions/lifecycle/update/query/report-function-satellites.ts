@@ -14,10 +14,10 @@ import type * as Core from '@dialecte/core'
  * never saw it; here it is diffed on its own (matched globally by
  * `templateUuid`) and its changed root is attached to the function's group.
  *
- * v1 scope: only when the function itself is a changed primary and an instance
- * satellite already exists (an existing instance = the update track). No
- * satellite deletion; a satellite-only change with an unchanged function, and
- * SubFunction-carried satellites, are deferred.
+ * v1 scope: only when the function itself is a changed primary. An existing
+ * instance satellite -> its change; no instance yet -> the update ADDS it (an
+ * all-added companion). No satellite deletion; a satellite-only change with an
+ * unchanged function, and SubFunction-carried satellites, are deferred.
  */
 export async function foldCarriedSatellites(
 	query: Core.Query<Config>,
@@ -41,8 +41,8 @@ export async function foldCarriedSatellites(
 			tagName: satelliteRef.tagName,
 			sourceUuid,
 		})
-		if (!instance) continue
 
+		// no instance yet -> a newly-classified satellite the update adds (all-added subtree)
 		const satelliteReport = await diff({
 			sourceQuery,
 			targetQuery: query,

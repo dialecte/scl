@@ -44,7 +44,7 @@ export async function fsd(
 			accepted,
 		})
 		// carried satellites (e.g. FunctionCategory) travel with the function group
-		await reconcileCarriedSatellites(tx, { sourceQuery, functionRef, accepted })
+		await reconcileCarriedSatellites(tx, { sourceQuery, functionRef, targetParent, accepted })
 		return
 	}
 
