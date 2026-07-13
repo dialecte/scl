@@ -1,4 +1,4 @@
-import { findFunctionInstance } from '../find-instance'
+import { findInstanceUnder } from '../find-instance'
 
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
@@ -27,7 +27,7 @@ export async function fsd(
 	const { sourceQuery, functionRef, targetParent } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
-	const instance = await findFunctionInstance(tx, targetParent, sourceUuid)
+	const instance = await findInstanceUnder(tx, { targetParent, tagName: 'Function', sourceUuid })
 
 	if (instance) {
 		await reconcile(tx, { sourceQuery, sourceRootRef: functionRef, instanceRootRef: instance })

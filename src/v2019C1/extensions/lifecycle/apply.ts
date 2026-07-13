@@ -1,6 +1,6 @@
 import { acceptedRefIds, assertDecisionsCoherent } from './engine/decide'
 import { reconcile } from './engine/reconcile'
-import { findFunctionInstance } from './update/find-instance'
+import { findInstanceUnder } from './update/find-instance'
 import { asd as updateAsd, fsd as updateFsd } from './update/transaction'
 
 import { invariant } from '@dialecte/core/utils'
@@ -71,8 +71,8 @@ async function applyDecided(
 ): Promise<void> {
 	const { report, decisions } = params
 
-	assertDecisionsCoherent(report.groups, decisions)
-	const accepted = acceptedRefIds(report.groups, decisions)
+	assertDecisionsCoherent({ groups: report.groups, decisions })
+	const accepted = acceptedRefIds({ groups: report.groups, decisions })
 
 	// Gated apply is implemented for the function layer; the ASD cascade gating
 	// is a planned follow-up (07 §4.1 / update.fromAsd cascade).
@@ -81,7 +81,11 @@ async function applyDecided(
 	})
 
 	const { uuid } = await params.sourceQuery.getAttributes(params.ref)
-	const instance = await findFunctionInstance(tx, params.anchor, uuid)
+	const instance = await findInstanceUnder(tx, {
+		targetParent: params.anchor,
+		tagName: 'Function',
+		sourceUuid: uuid,
+	})
 	invariant(instance, {
 		detail: 'lifecycle.apply: full track expects an existing instance to reconcile onto',
 	})

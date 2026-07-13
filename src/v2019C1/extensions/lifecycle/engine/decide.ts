@@ -13,19 +13,23 @@ export type AcceptedIds = {
 }
 
 /** A group is accepted unless explicitly skipped (absent -> suggestedAction = accept). */
-function isAccepted(groupId: string, decisions: DecisionMap): boolean {
-	return decisions.get(groupId) !== 'skip'
+function isAccepted(params: { groupId: string; decisions: DecisionMap }): boolean {
+	return params.decisions.get(params.groupId) !== 'skip'
 }
 
 /**
  * Dependency guard (07 §4): reject a decision set that accepts a group whose
  * `dependsOn` parent is skipped. Runs before any write.
  */
-export function assertDecisionsCoherent(groups: DecisionGroup[], decisions: DecisionMap): void {
+export function assertDecisionsCoherent(params: {
+	groups: DecisionGroup[]
+	decisions: DecisionMap
+}): void {
+	const { groups, decisions } = params
 	for (const group of groups) {
-		if (!isAccepted(group.id, decisions)) continue
+		if (!isAccepted({ groupId: group.id, decisions })) continue
 		for (const parentId of group.dependsOn) {
-			invariant(isAccepted(parentId, decisions), {
+			invariant(isAccepted({ groupId: parentId, decisions }), {
 				detail: `decision accepts group "${group.id}" but its dependency "${parentId}" is skipped`,
 			})
 		}
@@ -37,21 +41,30 @@ export function assertDecisionsCoherent(groups: DecisionGroup[], decisions: Deci
  * primary + companions. Added/modified nodes contribute their `sourceRef`
  * (reconcile matches/grafts by source); removed nodes contribute `instanceRef`.
  */
-export function acceptedRefIds(groups: DecisionGroup[], decisions: DecisionMap): AcceptedIds {
+export function acceptedRefIds(params: {
+	groups: DecisionGroup[]
+	decisions: DecisionMap
+}): AcceptedIds {
+	const { groups, decisions } = params
 	const sourceIds = new Set<string>()
 	const instanceIds = new Set<string>()
 
 	for (const group of groups) {
-		if (!isAccepted(group.id, decisions)) continue
+		if (!isAccepted({ groupId: group.id, decisions })) continue
 		for (const node of [group.primary, ...group.companions]) {
-			collectNodeId(node, sourceIds, instanceIds)
+			collectNodeId({ node, sourceIds, instanceIds })
 		}
 	}
 
 	return { sourceIds, instanceIds }
 }
 
-function collectNodeId(node: DiffNode, sourceIds: Set<string>, instanceIds: Set<string>): void {
+function collectNodeId(params: {
+	node: DiffNode
+	sourceIds: Set<string>
+	instanceIds: Set<string>
+}): void {
+	const { node, sourceIds, instanceIds } = params
 	if (node.change === 'removed') {
 		if (node.instanceRef) instanceIds.add(node.instanceRef.id)
 	} else if (node.sourceRef) {

@@ -80,7 +80,7 @@ describe('decide', () => {
 
 		function act(testCase: TestCase) {
 			const decisions: DecisionMap = new Map(testCase.decisions)
-			const { sourceIds, instanceIds } = acceptedRefIds(testCase.groups, decisions)
+			const { sourceIds, instanceIds } = acceptedRefIds({ groups: testCase.groups, decisions })
 			expect([...sourceIds].sort()).toEqual(testCase.expected.sourceIds.sort())
 			expect([...instanceIds].sort()).toEqual(testCase.expected.instanceIds.sort())
 		}
@@ -94,11 +94,13 @@ describe('decide', () => {
 
 		it('accepting a child whose parent is skipped -> throws', () => {
 			const decisions: DecisionMap = new Map([['parent', 'skip']])
-			expect(() => assertDecisionsCoherent([parent, child], decisions)).toThrow()
+			expect(() => assertDecisionsCoherent({ groups: [parent, child], decisions })).toThrow()
 		})
 
 		it('accepting both parent and child -> ok', () => {
-			expect(() => assertDecisionsCoherent([parent, child], new Map())).not.toThrow()
+			expect(() =>
+				assertDecisionsCoherent({ groups: [parent, child], decisions: new Map() }),
+			).not.toThrow()
 		})
 
 		it('skipping the child while its parent is skipped -> ok', () => {
@@ -106,7 +108,7 @@ describe('decide', () => {
 				['parent', 'skip'],
 				['child', 'skip'],
 			])
-			expect(() => assertDecisionsCoherent([parent, child], decisions)).not.toThrow()
+			expect(() => assertDecisionsCoherent({ groups: [parent, child], decisions })).not.toThrow()
 		})
 	})
 })

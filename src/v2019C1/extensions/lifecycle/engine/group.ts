@@ -15,20 +15,21 @@ import type { DecisionGroup, DiffNode } from './diff.types'
  */
 export function groupChanges(root: DiffNode): DecisionGroup[] {
 	const groups: DecisionGroup[] = []
-	collectGroups(root, groups)
+	collectGroups({ node: root, out: groups })
 	return groups
 }
 
-function collectGroups(node: DiffNode, out: DecisionGroup[]): void {
+function collectGroups(params: { node: DiffNode; out: DecisionGroup[] }): void {
+	const { node, out } = params
 	if (node.change === 'unchanged') {
-		for (const child of node.children) collectGroups(child, out)
+		for (const child of node.children) collectGroups({ node: child, out })
 		return
 	}
 
 	// node is a topmost changed node -> a group root; its changed descendants
 	// become companions (we do NOT recurse into groups here).
 	const companions: DiffNode[] = []
-	collectChangedDescendants(node, companions)
+	collectChangedDescendants({ node, out: companions })
 
 	out.push({
 		id: groupId(node),
@@ -41,10 +42,11 @@ function collectGroups(node: DiffNode, out: DecisionGroup[]): void {
 	})
 }
 
-function collectChangedDescendants(node: DiffNode, out: DiffNode[]): void {
+function collectChangedDescendants(params: { node: DiffNode; out: DiffNode[] }): void {
+	const { node, out } = params
 	for (const child of node.children) {
 		if (child.change !== 'unchanged') out.push(child)
-		collectChangedDescendants(child, out)
+		collectChangedDescendants({ node: child, out })
 	}
 }
 

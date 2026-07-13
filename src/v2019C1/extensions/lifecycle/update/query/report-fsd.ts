@@ -1,4 +1,4 @@
-import { findFunctionInstance } from '../find-instance'
+import { findInstanceUnder } from '../find-instance'
 
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 
@@ -21,7 +21,7 @@ export async function reportFsd(
 ): Promise<DiffReport> {
 	const { sourceQuery, functionRef, targetParent } = params
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
-	const instance = await findFunctionInstance(query, targetParent, sourceUuid)
+	const instance = await findInstanceUnder(query, { targetParent, tagName: 'Function', sourceUuid })
 	return diff({
 		sourceQuery,
 		targetQuery: query,
