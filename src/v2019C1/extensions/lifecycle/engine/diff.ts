@@ -1,3 +1,5 @@
+import { groupChanges } from './group'
+
 import { toRef } from '@dialecte/core/helpers'
 
 import type { AttributeChange, DiffNode, DiffReport, DiffSummary } from './diff.types'
@@ -35,7 +37,7 @@ export async function diff(params: {
 	// no instance yet -> first-time instantiate: the whole template is added (fast)
 	if (!instanceTree) {
 		const root = addedNode(sourceTree)
-		return { root, needsDecisions: false, summary: summarize(root) }
+		return { root, groups: groupChanges(root), needsDecisions: false, summary: summarize(root) }
 	}
 
 	const index = new Map<string, AnyTreeRecord>()
@@ -54,7 +56,7 @@ export async function diff(params: {
 	)
 	const summary = summarize(root)
 	const needsDecisions = summary.added + summary.removed + summary.modified > 0
-	return { root, needsDecisions, summary }
+	return { root, groups: groupChanges(root), needsDecisions, summary }
 }
 
 async function diffMatched(

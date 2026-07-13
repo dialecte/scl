@@ -18,7 +18,11 @@ const bayRef = { tagName: 'Bay', id: 'bay-t1' } as Scl.Ref<'Bay'>
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	mutate?: (tx: Scl.Transaction) => Promise<void>
-	expected: { needsDecisions: boolean; summary: DiffSummary }
+	expected: {
+		needsDecisions: boolean
+		summary: DiffSummary
+		groups: { change: 'added' | 'removed' | 'modified'; tagName: string }[]
+	}
 }
 
 const sourceXml = /* xml */ `
@@ -56,7 +60,11 @@ describe('engine.diff (project-then-diff report + classify)', () => {
 		'no change → nothing to decide (fast)': {
 			sourceXml,
 			targetXml,
-			expected: { needsDecisions: false, summary: { added: 0, removed: 0, modified: 0 } },
+			expected: {
+				needsDecisions: false,
+				summary: { added: 0, removed: 0, modified: 0 },
+				groups: [],
+			},
 		},
 
 		'changed attribute → modified, needs decisions (full)': {
@@ -65,7 +73,11 @@ describe('engine.diff (project-then-diff report + classify)', () => {
 			mutate: async (tx) => {
 				await tx.update(functionRef, { attributes: { desc: 'v2' } })
 			},
-			expected: { needsDecisions: true, summary: { added: 0, removed: 0, modified: 1 } },
+			expected: {
+				needsDecisions: true,
+				summary: { added: 0, removed: 0, modified: 1 },
+				groups: [{ change: 'modified', tagName: 'Function' }],
+			},
 		},
 
 		'added element → added, needs decisions (full)': {
@@ -77,7 +89,11 @@ describe('engine.diff (project-then-diff report + classify)', () => {
 					attributes: { iedName: 'None', lnClass: 'XCBR', lnInst: '1', lnType: 'CSWI_Type' },
 				})
 			},
-			expected: { needsDecisions: true, summary: { added: 1, removed: 0, modified: 0 } },
+			expected: {
+				needsDecisions: true,
+				summary: { added: 1, removed: 0, modified: 0 },
+				groups: [{ change: 'added', tagName: 'LNode' }],
+			},
 		},
 
 		'removed element → removed, needs decisions (full)': {
@@ -86,7 +102,11 @@ describe('engine.diff (project-then-diff report + classify)', () => {
 			mutate: async (tx) => {
 				await tx.delete({ tagName: 'LNode', id: 'lnode-1' } as Scl.Ref<'LNode'>)
 			},
-			expected: { needsDecisions: true, summary: { added: 0, removed: 1, modified: 0 } },
+			expected: {
+				needsDecisions: true,
+				summary: { added: 0, removed: 1, modified: 0 },
+				groups: [{ change: 'removed', tagName: 'LNode' }],
+			},
 		},
 	}
 
@@ -118,6 +138,9 @@ describe('engine.diff (project-then-diff report + classify)', () => {
 
 		expect(report.needsDecisions).toBe(testCase.expected.needsDecisions)
 		expect(report.summary).toEqual(testCase.expected.summary)
+		expect(report.groups.map((g) => ({ change: g.change, tagName: g.primary.tagName }))).toEqual(
+			testCase.expected.groups,
+		)
 
 		return { assertOn: 'source' }
 	}
