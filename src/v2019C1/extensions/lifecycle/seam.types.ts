@@ -1,5 +1,5 @@
 import type { Scl, Config } from '@/v2019C1/config'
-import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 
 /** Which template layer the lifecycle seam operates on. */
@@ -31,5 +31,9 @@ export type LifecycleTarget =
 /**
  * `apply` inputs: the target plus the `report` produced by `report` (the
  * consumer classifies first, then applies). The report gates the track.
+ *
+ * `decisions` drives the full track: absent -> the caller has not decided yet
+ * (apply writes nothing and returns the report); present -> apply the accepted
+ * groups only (a group absent from the map defaults to accept).
  */
-export type LifecycleApplyParams = LifecycleTarget & { report: DiffReport }
+export type LifecycleApplyParams = LifecycleTarget & { report: DiffReport; decisions?: DecisionMap }

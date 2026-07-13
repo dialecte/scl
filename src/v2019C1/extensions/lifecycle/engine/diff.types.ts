@@ -54,3 +54,12 @@ export type DiffReport = {
 	needsDecisions: boolean
 	summary: DiffSummary
 }
+
+/** A user's choice on one decision group. */
+export type GroupDecision = 'accept' | 'skip'
+
+/**
+ * The consumer's decisions, keyed by `DecisionGroup.id`. A group absent from the
+ * map takes its `suggestedAction` (accept). So an empty map = accept everything.
+ */
+export type DecisionMap = Map<string, GroupDecision>

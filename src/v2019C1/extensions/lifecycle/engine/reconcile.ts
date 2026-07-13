@@ -3,6 +3,7 @@ import { toRef } from '@dialecte/core/helpers'
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
+import type { AcceptedIds } from './decide'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -33,9 +34,14 @@ export async function reconcile(
 		sourceQuery: Core.Query<Config>
 		sourceRootRef: AnyRefOrRecord
 		instanceRootRef: AnyRefOrRecord
+		/**
+		 * When present, only elements in these accepted record-id sets are written
+		 * (full-track decision gating). Omit to apply every change (fast track).
+		 */
+		accepted?: AcceptedIds
 	},
 ): Promise<void> {
-	const { sourceQuery, sourceRootRef, instanceRootRef } = params
+	const { sourceQuery, sourceRootRef, instanceRootRef, accepted } = params
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	const instanceTree = await tx.any.getTree(instanceRootRef)
@@ -48,11 +54,11 @@ export async function reconcile(
 	await collectUuids(sourceQuery, sourceTree, sourceUuids)
 
 	// root + descendants: update matched in place, graft new
-	await updateMatchedAttributes(tx, sourceQuery, instanceTree, sourceTree)
-	await reconcileChildren(tx, sourceQuery, sourceTree, instanceTree, index)
+	await updateMatchedAttributes(tx, sourceQuery, instanceTree, sourceTree, accepted)
+	await reconcileChildren(tx, sourceQuery, sourceTree, instanceTree, index, accepted)
 
 	// removed from the template: delete instance elements whose lineage is gone
-	await deleteRemoved(tx, instanceTree, sourceUuids)
+	await deleteRemoved(tx, instanceTree, sourceUuids, accepted)
 }
 
 async function reconcileChildren(
@@ -61,16 +67,20 @@ async function reconcileChildren(
 	sourceNode: AnyTreeRecord,
 	instanceParent: AnyTreeRecord,
 	index: Map<string, AnyTreeRecord>,
+	accepted: AcceptedIds | undefined,
 ): Promise<void> {
 	for (const sourceChild of sourceNode.tree) {
 		const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
 		const matched = sourceUuid ? index.get(sourceUuid) : undefined
 
 		if (matched) {
-			await updateMatchedAttributes(tx, sourceQuery, matched, sourceChild)
-			await reconcileChildren(tx, sourceQuery, sourceChild, matched, index)
+			await updateMatchedAttributes(tx, sourceQuery, matched, sourceChild, accepted)
+			await reconcileChildren(tx, sourceQuery, sourceChild, matched, index, accepted)
 			continue
 		}
+
+		// graft a new template element (with its subtree/companions via deep)
+		if (accepted && !accepted.sourceIds.has(sourceChild.id)) continue
 
 		const { recordMappings } = await deep(tx, {
 			sourceQuery,
@@ -86,9 +96,10 @@ async function deleteRemoved(
 	tx: Core.Transaction<Config>,
 	instanceNode: AnyTreeRecord,
 	sourceUuids: ReadonlySet<string>,
+	accepted: AcceptedIds | undefined,
 ): Promise<void> {
 	const toDelete: AnyTreeRecord[] = []
-	await collectRemoved(tx, instanceNode, sourceUuids, toDelete)
+	await collectRemoved(tx, instanceNode, sourceUuids, accepted, toDelete)
 
 	for (const record of toDelete) {
 		// Idempotent: deleting a parent cascades its children, so a later child
@@ -102,14 +113,16 @@ async function collectRemoved(
 	tx: Core.Transaction<Config>,
 	node: AnyTreeRecord,
 	sourceUuids: ReadonlySet<string>,
+	accepted: AcceptedIds | undefined,
 	out: AnyTreeRecord[],
 ): Promise<void> {
 	const templateUuid = await tx.any.getAttribute(node, { name: 'templateUuid' })
 	if (templateUuid && !sourceUuids.has(templateUuid)) {
-		out.push(node)
+		// removed subtree = one atomic group; delete only if that group is accepted
+		if (!accepted || accepted.instanceIds.has(node.id)) out.push(node)
 		return // its subtree cascades with it; do not descend
 	}
-	for (const child of node.tree) await collectRemoved(tx, child, sourceUuids, out)
+	for (const child of node.tree) await collectRemoved(tx, child, sourceUuids, accepted, out)
 }
 
 async function updateMatchedAttributes(
@@ -117,7 +130,10 @@ async function updateMatchedAttributes(
 	sourceQuery: Core.Query<Config>,
 	instanceRecord: AnyTreeRecord,
 	sourceNode: AnyTreeRecord,
+	accepted?: AcceptedIds,
 ): Promise<void> {
+	if (accepted && !accepted.sourceIds.has(sourceNode.id)) return
+
 	const desired = visibleAttributes(await sourceQuery.any.getAttributes(sourceNode))
 	const current = visibleAttributes(await tx.any.getAttributes(instanceRecord))
 
