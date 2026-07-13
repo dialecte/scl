@@ -14,7 +14,8 @@ Access via `tx.lifecycle.instantiate` inside a `doc.transaction()` callback.
 
 1. clone the function subtree and its content-addressed type closure under `targetParent` (via [`transplant.deep`](./transplant));
 2. clone the `FunctionCategory` classification that references the function, placed at its structural level in the target project — the target Substation/VoltageLevel/Bay structure is resolved from `targetParent` (which may be a `Bay`, `VoltageLevel`, or `Substation`);
-3. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its FSD counterpart as its `templateUuid` while receiving a fresh `uuid`.
+3. clone the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to any element in the function subtree, each at its own structural level;
+4. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its FSD counterpart as its `templateUuid` while receiving a fresh `uuid`.
 
 ```ts
 await project.transaction(async (tx) => {
@@ -32,7 +33,7 @@ The clone's uuid references are remapped by the `afterDeepClone` hook. SET-speci
 
 `asd({ sourceQuery, applicationRef, targetParent })` instantiates the content an ASD carries — the **application layer** — into a target document:
 
-1. clone the `Application` and its composed Functions, categories and satellites (`AllocationRole`, dataflow refs, …) with their type closure, under the structure resolved from `targetParent` (via the shared `layers/application` take-over, built on [`transplant.deep`](./transplant));
+1. clone the `Application` and its composed Functions, categories and satellites (`AllocationRole`, dataflow refs, …) with their type closure, under the structure resolved from `targetParent` (via the shared `layers/application` take-over, built on [`transplant.deep`](./transplant)), together with the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to the Application or its content;
 2. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its ASD counterpart as its `templateUuid` while receiving a fresh `uuid`.
 
 ```ts

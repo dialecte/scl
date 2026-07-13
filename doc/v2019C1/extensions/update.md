@@ -99,6 +99,37 @@ The read-only counterpart is `doc.query.lifecycle.update.reportAsd({ sourceQuery
 
 > Cascade principle (applies to future update layers, e.g. SSD/topology): an update layer = reconcile its own subtree **+** for each referenced child-layer root, delegate to that child layer's update verb with the child's own resolved structural parent.
 
+## Satellites
+
+A **satellite** is an element that lives **outside** the transplanted subtree but is linked to it by a UUID reference, so it must travel with it across every verb (extract, instantiate, update, report, apply). The verbs carry satellites automatically — there is no separate API to call.
+
+### Two kinds
+
+- **Layer-specific** — found by a layer-owned reference edge:
+  - `FunctionCategory` (function layer) — a classification that **references into** the function via `FunctionCatRef.functionUuid` (reverse ref); lives at Substation / VoltageLevel / Bay level.
+  - `AllocationRole` (application layer) — an IED role the application **references out** to via `AllocationRoleRef.allocationRoleUuid`.
+- **Cross-cutting** — apply to **any** element in **any** subtree (90-30 §12.1 / §13.1), found generically for every layer primary:
+  - `Variable` — sets attributes/values on the elements its `VariableApplyTo.elementUuid` points at. A Variable may target **any** SCL element (90-30 §12.3.3), so discovery is not limited to a fixed element set.
+  - `BehaviorDescription` — documents the behaviour of the `LNode`s its `InputVar` / `OutputVar.lnodeUuid` reference.
+
+  A cross-cutting satellite that lives **inside** the subtree is carried by the normal clone/diff; only external ones are handled as satellites.
+
+### On `report` — companions, never independent
+
+Each satellite's change folds into the **primary's** decision group as a read-only companion. Satellites are never independently decidable: accepting a group applies the primary **and** its satellites atomically; skipping applies neither. You cannot accept one side of a tightly-linked pair and leave the other broken.
+
+### On `apply` / `update` — a 3-way merge
+
+For each satellite the update verb does one of:
+
+- **graft** — the newer template references a satellite the target lacks → clone it at its structural level and stamp instance lineage (so a newly-referenced `AllocationRole` / `Variable` travels on update, not only on first-time instantiate);
+- **reconcile in place** — an existing instance satellite → reconcile its changed attributes onto it;
+- **delete** — the satellite **element** was removed from the template → delete the instance, **guarded** by a whole-document last-referrer check so a satellite still referenced by another primary is kept.
+
+::: warning Catalog persistence — un-referencing is not deletion
+`FunctionCategory`, `AllocationRole`, `Variable` and `BehaviorDescription` are **catalog / shared / documentation** elements (90-30 §11–§13): a category classifies many functions, a role is shared for harmonization, a variable targets many elements. So **un-referencing a satellite does not delete it** — only removing the element from the template does. Dropping the *link* (e.g. a removed `AllocationRoleRef`) removes only the reference element and leaves the catalog element in place.
+:::
+
 ## Engine
 
 The update verbs are built on two engine primitives in `extensions/lifecycle/engine`.
@@ -109,7 +140,8 @@ The update verbs are built on two engine primitives in `extensions/lifecycle/eng
 
 - matched element → update its user-visible attributes in place;
 - new source element → graft its subtree (via [`transplant.deep`](./transplant) + `identity.writeIdentity` stamp);
-- instance element whose template lineage is gone from the source → delete.
+- instance element whose template lineage is gone from the source → delete;
+- instance **reference** element (a uuid-less link such as a dropped `AllocationRoleRef`) with no matching source child → removed, so the link disappears when the template drops it.
 
 Because the instance is already in instance-space, comparing template to instance is clean once identity and the project-owned `name` are excluded — no attribute-suppression heuristics.
 
