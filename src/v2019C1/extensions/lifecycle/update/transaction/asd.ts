@@ -1,5 +1,6 @@
 import { collectComposedFunctionUuids } from '../composed-functions'
 import { findInstanceByTemplateUuid } from '../find-instance'
+import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
 import { fsd as updateFsd } from './fsd'
 import { reconcileSatellites } from './satellite-reconcile'
 
@@ -57,6 +58,13 @@ export async function asd(
 		return
 	}
 
+	// application-layer satellites (e.g. a referenced AllocationRole) travel with the
+	// application group. Resolve the instance-side satellites BEFORE the reconcile below
+	// (which may drop a satellite ref) so removals are still detectable.
+	const instanceSatelliteRefs = await resolveApplicationSatellites(tx, {
+		applicationRef: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
+	})
+
 	// 1. application layer
 	await reconcile(tx, {
 		sourceQuery,
@@ -65,10 +73,25 @@ export async function asd(
 		accepted,
 	})
 
-	// application-layer satellites (e.g. a referenced AllocationRole) travel with the
-	// application group
 	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
-	await reconcileSatellites(tx, { sourceQuery, satelliteRefs, accepted })
+	const structure = await resolveTargetStructure(tx, targetParent)
+	await reconcileSatellites(tx, {
+		sourceQuery,
+		satelliteRefs,
+		instanceSatelliteRefs,
+		structure,
+		accepted,
+	})
+
+	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
+	// in the Application subtree travel with the application group
+	await reconcileCrossCuttingSatellites(tx, {
+		sourceQuery,
+		primaryRef: applicationRef,
+		instancePrimaryRef: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
+		structure,
+		accepted,
+	})
 
 	// 2. function-layer cascade
 	await cascadeComposedFunctions(tx, { sourceQuery, applicationRef, targetParent, accepted })

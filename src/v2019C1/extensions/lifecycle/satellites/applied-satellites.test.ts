@@ -11,8 +11,12 @@ const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
 const functionRef = { tagName: 'Function', id: 'fn-1' } as Scl.Ref<'Function'>
+const bayRef = { tagName: 'Bay', id: 'bay-s' } as Scl.Ref<Scl.ElementsOf>
 
-type TestCase = SclTest.BaseXmlTestCase & { expectedTags: string[] }
+type TestCase = SclTest.BaseXmlTestCase & {
+	expectedTags: string[]
+	primaryRef?: Scl.Ref<Scl.ElementsOf>
+}
 
 describe('resolveAppliedSatellites (cross-cutting: applies to any element in the subtree)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -77,10 +81,29 @@ describe('resolveAppliedSatellites (cross-cutting: applies to any element in the
 				</SCL>`,
 			expectedTags: ['BehaviorDescription'],
 		},
+
+		'finds a Variable applying to a non-function element type (global target scope — Bay)': {
+			primaryRef: bayRef,
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="ssd">
+					<Substation name="TEMPLATE" ${id}="sub-s">
+						<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
+							<eIEC61850-6-100:Variable name="BayTag" value="B1" uuid="var-src-uuid" ${id}="var-s">
+								<eIEC61850-6-100:VariableApplyTo element="TEMPLATE" elementUuid="bay-src-uuid" ${id}="vat-s"/>
+							</eIEC61850-6-100:Variable>
+						</Private>
+						<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+							<Bay name="TEMPLATE" ${id}="bay-s" uuid="bay-src-uuid"/>
+						</VoltageLevel>
+					</Substation>
+				</SCL>`,
+			expectedTags: ['Variable'],
+		},
 	}
 
 	async function act({ testCase, source }: SclTest.ActParams<TestCase>): Promise<void> {
-		const satellites = await resolveAppliedSatellites(source.query, { primaryRef: functionRef })
+		const primaryRef = testCase.primaryRef ?? functionRef
+		const satellites = await resolveAppliedSatellites(source.query, { primaryRef })
 		expect(satellites.map((ref) => ref.tagName).sort()).toEqual(testCase.expectedTags.sort())
 	}
 

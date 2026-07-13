@@ -3,10 +3,15 @@ import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
 
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+
 import type { AttributeChange, DiffNode, DiffReport, DiffSummary } from './diff.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
+
+/** Reference (link) element tags — the only uuid-less children removable on update. */
+const REFERENCE_TAG_NAMES = new Set<string>(Object.keys(UUID_REFERENCE_PAIRS))
 
 /**
  * Engine diff (ENGINE.md §3): compares an (updated) template subtree against the
@@ -108,13 +113,17 @@ async function diffMatched(
 		}
 	}
 
-	// instance children whose template lineage is gone from the source -> removed
+	// instance children with no surviving source match -> removed:
+	//  - an identified element whose template lineage is gone (templateUuid not in source), OR
+	//  - a uuid-less REFERENCE (link) element with no matching source child (e.g. a
+	//    dropped AllocationRoleRef). Non-ref content is left alone.
 	for (const instanceChild of instanceNode.tree) {
 		if (matchedInstanceIds.has(instanceChild.id)) continue
 		const templateUuid = await targetQuery.any.getAttribute(instanceChild, { name: 'templateUuid' })
-		if (templateUuid && !sourceUuids.has(templateUuid)) {
-			children.push(removedNode(instanceChild))
-		}
+		const removed = templateUuid
+			? !sourceUuids.has(templateUuid)
+			: REFERENCE_TAG_NAMES.has(instanceChild.tagName)
+		if (removed) children.push(removedNode(instanceChild))
 	}
 
 	return {

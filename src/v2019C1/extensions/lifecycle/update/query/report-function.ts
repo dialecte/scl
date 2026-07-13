@@ -1,8 +1,7 @@
+import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
 import { foldCarriedSatellites } from './report-function-satellites'
-import { foldSatelliteCompanions } from './satellite-companions'
 
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/satellites/applied-satellites'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -44,11 +43,10 @@ export async function reportFunction(
 		functionRef,
 		report,
 	})
-	const applied = await resolveAppliedSatellites(sourceQuery, { primaryRef: functionRef })
-	return foldSatelliteCompanions(query, {
+	return foldCrossCuttingSatellites(query, {
 		sourceQuery,
 		primaryRef: functionRef,
-		satelliteRefs: applied,
+		instancePrimaryRef: { tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
 		report: withLayerSatellites,
 	})
 }

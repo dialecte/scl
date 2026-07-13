@@ -1,10 +1,12 @@
 import { findInstanceUnder } from '../find-instance'
+import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reconcileCarriedSatellites } from './function-satellites'
-import { reconcileSatellites } from './satellite-reconcile'
 
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
-import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
-import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/satellites/applied-satellites'
+import {
+	fsd as instantiateFsd,
+	resolveTargetStructure,
+} from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
@@ -47,11 +49,15 @@ export async function fsd(
 		})
 		// carried satellites (e.g. FunctionCategory) travel with the function group
 		await reconcileCarriedSatellites(tx, { sourceQuery, functionRef, targetParent, accepted })
-		// cross-cutting satellites (e.g. a Variable applying to any subtree element)
-		const appliedSatellites = await resolveAppliedSatellites(sourceQuery, {
+		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
+		const structure = await resolveTargetStructure(tx, targetParent)
+		await reconcileCrossCuttingSatellites(tx, {
+			sourceQuery,
 			primaryRef: functionRef,
+			instancePrimaryRef: { tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
+			structure,
+			accepted,
 		})
-		await reconcileSatellites(tx, { sourceQuery, satelliteRefs: appliedSatellites, accepted })
 		return
 	}
 

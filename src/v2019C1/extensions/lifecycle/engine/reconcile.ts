@@ -2,6 +2,7 @@ import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
 
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
@@ -10,6 +11,9 @@ import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
+
+/** Reference (link) element tags — the only uuid-less children removable on update. */
+const REFERENCE_TAG_NAMES = new Set<string>(Object.keys(UUID_REFERENCE_PAIRS))
 
 /**
  * Engine apply-core (ENGINE.md §3/§8): reconcile an updated template subtree
@@ -128,6 +132,21 @@ async function reconcileChildren(
 			strip: false,
 		})
 		await writeIdentity(tx, { mappings: recordMappings, mode: 'stamp-template' })
+	}
+
+	// uuid-less REFERENCE (link) instance children with no matching source child are
+	// removed links (e.g. a dropped AllocationRoleRef). Identified removals
+	// (templateUuid lineage gone) are handled by `deleteRemoved`; non-ref content is
+	// left alone. Gated by the removed node's acceptance.
+	for (const instanceChild of instanceParent.tree) {
+		if (matchedInstanceIds.has(instanceChild.id)) continue
+		if (!REFERENCE_TAG_NAMES.has(instanceChild.tagName)) continue
+		const templateUuid = await tx.any.getAttribute(instanceChild, { name: 'templateUuid' })
+		if (templateUuid) continue
+		if (accepted && !accepted.instanceIds.has(instanceChild.id)) continue
+
+		const live = await tx.any.getRecord(instanceChild)
+		if (live) await tx.any.delete(instanceChild)
 	}
 }
 

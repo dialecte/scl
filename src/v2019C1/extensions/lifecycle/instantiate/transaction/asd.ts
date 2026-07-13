@@ -2,6 +2,7 @@ import { resolveTargetStructure } from './resolve-target-structure'
 
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
+import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/satellites/clone-applied-satellites'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { AsdParams } from './asd.types'
@@ -31,7 +32,16 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		structure,
 	})
 
-	await writeIdentity(tx, { mappings, mode: 'stamp-template' })
+	// external cross-cutting satellites (Variable / BehaviorDescription) applying to
+	// any element in the Application subtree travel with it
+	const appliedMappings = await cloneAppliedSatellites(tx, {
+		sourceQuery,
+		primaryRef: applicationRef,
+		structure,
+		strip: false,
+	})
+
+	await writeIdentity(tx, { mappings: [...mappings, ...appliedMappings], mode: 'stamp-template' })
 
 	const rootMapping = mappings.find((mapping) => mapping.source.id === applicationRef.id)
 	if (rootMapping) {

@@ -10,6 +10,8 @@
  * - `target`: the element tag(s) the UUID resolves to
  * - `companions`: attributes that must/may be set when the UUID is used
  */
+import { ELEMENT_NAMES } from '@/v2019C1/definition/constants.generated'
+
 export const UUID_REFERENCE_PAIRS = {
 	AllocationRoleRef: [
 		{
@@ -285,7 +287,9 @@ export const UUID_REFERENCE_PAIRS = {
 		{
 			attribute: { path: 'element', uuid: 'elementUuid' },
 			resolution: 'unsupported',
-			target: ['LNode', 'Function', 'SubFunction', 'EqFunction', 'EqSubFunction'],
+			// A Variable applies to ANY element (90-30 §12.3.3, Table 33: "the element
+			// where to apply the variable"); the target scope is the full SCL element set.
+			target: ELEMENT_NAMES,
 			companions: [
 				{ name: 'doName', required: false },
 				{ name: 'daName', required: false },

@@ -1,5 +1,6 @@
 import { collectComposedFunctionUuids } from '../composed-functions'
 import { findInstanceByTemplateUuid } from '../find-instance'
+import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reportFunction } from './report-function'
 import { foldSatelliteCompanions } from './satellite-companions'
 
@@ -41,10 +42,30 @@ export async function reportAsd(
 	// application-layer satellites (e.g. a referenced AllocationRole) travel with
 	// the application's decision group
 	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
+	const instanceSatelliteRefs = applicationInstance
+		? await resolveApplicationSatellites(query, {
+				applicationRef: {
+					tagName: 'Application',
+					id: applicationInstance.id,
+				} as Scl.Ref<'Application'>,
+			})
+		: []
 	await foldSatelliteCompanions(query, {
 		sourceQuery,
 		primaryRef: applicationRef,
 		satelliteRefs,
+		instanceSatelliteRefs,
+		report: applicationReport,
+	})
+
+	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
+	// in the Application subtree travel with the application group
+	await foldCrossCuttingSatellites(query, {
+		sourceQuery,
+		primaryRef: applicationRef,
+		instancePrimaryRef: applicationInstance
+			? ({ tagName: 'Application', id: applicationInstance.id } as Scl.Ref<Scl.ElementsOf>)
+			: undefined,
 		report: applicationReport,
 	})
 
