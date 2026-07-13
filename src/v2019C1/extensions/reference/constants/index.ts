@@ -1,5 +1,4 @@
 export { RESOLUTION_TYPE } from './resolution-types'
-export { UUID_REFERENCE_PAIRS } from './pairs'
 export { TYPE_ID_REFERENCE_PAIRS } from './type-id-pairs'
 export {
 	RESOLUTION_TARGET_REFS,

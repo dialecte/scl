@@ -1,4 +1,5 @@
-import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference/constants'
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 

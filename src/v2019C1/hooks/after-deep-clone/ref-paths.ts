@@ -1,6 +1,7 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
-import { reference, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { reference } from '@/v2019C1/extensions/reference'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'

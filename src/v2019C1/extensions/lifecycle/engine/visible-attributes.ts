@@ -1,4 +1,4 @@
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference/constants/pairs'
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 
 const IDENTITY_ATTRS = new Set(['uuid', 'templateUuid', 'originUuid'])
 

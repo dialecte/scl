@@ -1,4 +1,4 @@
-import { UUID_REFERENCE_PAIRS } from './pairs'
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 
 /**
  * Ref tag names where the record is kept even when all uuid refs are orphaned.

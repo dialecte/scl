@@ -3,8 +3,10 @@ import {
 	buildResolutionsToTargetRefsMap,
 	buildTypeIdReferrersByTarget,
 } from './helpers'
-import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from './pairs'
+import { RESOLUTION_TYPE } from './resolution-types'
 import { TYPE_ID_REFERENCE_PAIRS } from './type-id-pairs'
+
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 
 import type { TypeIdTarget, TypeIdReferrer } from './types'
 

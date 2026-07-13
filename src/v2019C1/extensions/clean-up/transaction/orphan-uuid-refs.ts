@@ -1,4 +1,5 @@
-import { UUID_REFERENCE_PAIRS, KEEP_ON_ORPHAN_REFS } from '@/v2019C1/extensions/reference'
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { KEEP_ON_ORPHAN_REFS } from '@/v2019C1/extensions/reference'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'

@@ -1,7 +1,7 @@
 import { cloneTree } from './clone-tree'
 
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DESCENDANTS } from '@/v2019C1/definition'
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { RefTagName, TargetOf } from '@/v2019C1/extensions/reference'

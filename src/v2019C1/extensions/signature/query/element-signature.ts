@@ -1,7 +1,8 @@
 import { DEFAULT_IGNORED_ATTRIBUTES } from './element-signature.constants'
 
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DEFINITION } from '@/v2019C1/definition'
-import { TYPE_ID_REFERENCE_PAIRS, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
+import { TYPE_ID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 
 import type {
 	AttributeSchemaDetail,

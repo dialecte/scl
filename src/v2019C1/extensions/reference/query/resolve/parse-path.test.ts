@@ -2,7 +2,7 @@ import { getResolutionType, parseLnodePath, parseReferencePath } from './parse-p
 
 import { describe, it, expect } from 'vitest'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference/constants'
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { ALL_XMLNS_NAMESPACES, runSclTestCases } from '@/v2019C1/test'
 
 import type { ResolutionType } from '@/v2019C1/extensions/reference/constants'

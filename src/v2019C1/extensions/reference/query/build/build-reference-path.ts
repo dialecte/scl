@@ -4,7 +4,8 @@ import { getPathSegment } from './path-segment'
 
 import { toRawRecord } from '@dialecte/core/helpers'
 
-import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { ResolutionType, ReferencePair } from '@/v2019C1/extensions/reference'

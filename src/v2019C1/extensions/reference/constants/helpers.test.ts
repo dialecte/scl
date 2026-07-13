@@ -3,10 +3,11 @@ import {
 	buildResolutionsToTargetRefsMap,
 	buildTypeIdReferrersByTarget,
 } from './helpers'
-import { UUID_REFERENCE_PAIRS } from './pairs'
 import { TYPE_ID_REFERENCE_PAIRS } from './type-id-pairs'
 
 import { describe, expect, test } from 'vitest'
+
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 
 describe('buildTypeIdReferrersByTarget', () => {
 	const referrers = buildTypeIdReferrersByTarget(TYPE_ID_REFERENCE_PAIRS)

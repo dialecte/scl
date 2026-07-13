@@ -1,5 +1,7 @@
-import { UUID_REFERENCE_PAIRS, RESOLUTION_TYPE } from './pairs'
+import { RESOLUTION_TYPE } from './resolution-types'
 import { TYPE_ID_REFERENCE_PAIRS } from './type-id-pairs'
+
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 
 import type { Scl } from '@/v2019C1/config'
 

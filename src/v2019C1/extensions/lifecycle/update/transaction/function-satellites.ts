@@ -2,9 +2,11 @@ import { findInstanceByTemplateUuid } from '../find-instance'
 
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
-import { resolveCarriedSatellites } from '@/v2019C1/extensions/lifecycle/engine/satellites'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
-import { cloneFunctionCategories } from '@/v2019C1/extensions/lifecycle/layers/function'
+import {
+	cloneFunctionCategories,
+	resolveFunctionSatellites,
+} from '@/v2019C1/extensions/lifecycle/layers/function'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
@@ -35,7 +37,7 @@ export async function reconcileCarriedSatellites(
 ): Promise<void> {
 	const { sourceQuery, functionRef, targetParent, accepted } = params
 
-	const satellites = await resolveCarriedSatellites(sourceQuery, { primaryRef: functionRef })
+	const satellites = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
 	let hasMissing = false
 	for (const satelliteRef of satellites) {
 		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)

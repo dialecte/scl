@@ -1,7 +1,7 @@
 import { findInstanceByTemplateUuid } from '../find-instance'
 
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import { resolveCarriedSatellites } from '@/v2019C1/extensions/lifecycle/engine/satellites'
+import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers/function'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -34,7 +34,7 @@ export async function foldCarriedSatellites(
 	)
 	if (!group) return report
 
-	const satellites = await resolveCarriedSatellites(sourceQuery, { primaryRef: functionRef })
+	const satellites = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
 	for (const satelliteRef of satellites) {
 		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
 		const instance = await findInstanceByTemplateUuid(query, {

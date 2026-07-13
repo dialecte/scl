@@ -3,8 +3,9 @@ import { parseReferencePath, parsePathSegments, splitLnodeQualifier } from './pa
 
 import { toRawRecord } from '@dialecte/core/helpers'
 
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DEFINITION } from '@/v2019C1/definition'
-import { RESOLUTION_TYPE, UUID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
+import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
 
 import type { PathSegment } from '../build/path-segment.types'
 import type { Scl, Config } from '@/v2019C1/config'

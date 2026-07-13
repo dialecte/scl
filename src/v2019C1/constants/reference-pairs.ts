@@ -1,7 +1,8 @@
-import { RESOLUTION_TYPE } from './resolution-types'
-
 /**
  * Complete mapping of elements that have path/name -> UUID reference pairs.
+ *
+ * Dialecte-wide source of truth for reference edges (shared, not owned by any
+ * single extension).
  *
  * Each entry maps an element tag to its reference attribute pairs where:
  * - `path`: the attribute holding a pathname or name reference
@@ -300,5 +301,3 @@ export const UUID_REFERENCE_PAIRS = {
 		},
 	],
 } as const
-
-export { RESOLUTION_TYPE }
