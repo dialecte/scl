@@ -1,12 +1,14 @@
 import { collectComposedFunctionUuids } from '../composed-functions'
 import { findInstanceByTemplateUuid } from '../find-instance'
 import { fsd as updateFsd } from './fsd'
+import { reconcileSatellites } from './satellite-reconcile'
 
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import {
 	asd as instantiateAsd,
 	resolveTargetStructure,
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -62,6 +64,11 @@ export async function asd(
 		instanceRootRef: instance,
 		accepted,
 	})
+
+	// application-layer satellites (e.g. a referenced AllocationRole) travel with the
+	// application group
+	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
+	await reconcileSatellites(tx, { sourceQuery, satelliteRefs, accepted })
 
 	// 2. function-layer cascade
 	await cascadeComposedFunctions(tx, { sourceQuery, applicationRef, targetParent, accepted })

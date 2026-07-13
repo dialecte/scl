@@ -1,8 +1,10 @@
 import { collectComposedFunctionUuids } from '../composed-functions'
 import { findInstanceByTemplateUuid } from '../find-instance'
 import { reportFunction } from './report-function'
+import { foldSatelliteCompanions } from './satellite-companions'
 
 import { diff, mergeReports } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -34,6 +36,16 @@ export async function reportAsd(
 		targetQuery: query,
 		sourceRootRef: applicationRef,
 		instanceRootRef: applicationInstance,
+	})
+
+	// application-layer satellites (e.g. a referenced AllocationRole) travel with
+	// the application's decision group
+	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
+	await foldSatelliteCompanions(query, {
+		sourceQuery,
+		primaryRef: applicationRef,
+		satelliteRefs,
+		report: applicationReport,
 	})
 
 	const functionReports = await reportComposedFunctions(query, { sourceQuery, applicationRef })
