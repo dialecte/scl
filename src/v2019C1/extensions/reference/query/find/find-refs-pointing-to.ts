@@ -2,7 +2,7 @@ import { isElementOf } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG, Scl, Config } from '@/v2019C1/config'
 import {
-	RESOLVABLE_RESOLUTIONS,
+	ALL_RESOLUTIONS,
 	RESOLUTION_TARGET_REFS,
 	TYPE_ID_REFERRERS_BY_TARGET,
 } from '@/v2019C1/extensions/reference/constants'
@@ -117,8 +117,8 @@ function matchesWhen(ref: Scl.TrackedRecord<Scl.ElementsOf>, referrer: TypeIdRef
 
 function getRefEntriesForTarget(tagName: string): RefEntry[] {
 	const entries: RefEntry[] = []
-	for (const resolution of RESOLVABLE_RESOLUTIONS) {
-		const found = RESOLUTION_TARGET_REFS[resolution].get(tagName)
+	for (const resolution of ALL_RESOLUTIONS) {
+		const found = RESOLUTION_TARGET_REFS[resolution]?.get(tagName)
 		if (found) entries.push(...found)
 	}
 	return entries

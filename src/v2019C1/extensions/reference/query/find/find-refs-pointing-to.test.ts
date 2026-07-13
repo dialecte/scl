@@ -110,6 +110,22 @@ describe('findRefsPointingTo', () => {
 			target: { tagName: 'LNode', id: 'lnode-a' },
 			expectedReferrers: [{ tagName: 'ControlRef', id: 'cref-1' }],
 		},
+
+		'unsupported-resolution ref discovered by uuid → VariableApplyTo pointing at a Function': {
+			sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<Substation name="S1" ${id}="sub-1">
+					<Private type="eIEC61850-6-100" ${id}="sub-priv-1">
+						<eIEC61850-6-100:Variable name="V1" ${id}="var-1">
+							<eIEC61850-6-100:VariableApplyTo element="S1/F1" elementUuid="uuid-fn1" ${id}="vat-1"/>
+						</eIEC61850-6-100:Variable>
+					</Private>
+					<Function name="F1" uuid="uuid-fn1" ${id}="fn-1"/>
+				</Substation>
+			</SCL>`,
+			target: { tagName: 'Function', id: 'fn-1' },
+			expectedReferrers: [{ tagName: 'VariableApplyTo', id: 'vat-1' }],
+		},
 	}
 
 	runSclTestCases.withoutExport<TestCase>({

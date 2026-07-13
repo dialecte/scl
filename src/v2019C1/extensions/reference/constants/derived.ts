@@ -33,6 +33,14 @@ export const RESOLVABLE_RESOLUTIONS = [
 ] as const
 
 /**
+ * All resolution strategies, including 'unsupported'. UUID-based discovery of a
+ * referrer is INDEPENDENT of path resolvability: a ref carries a uuid attribute
+ * even when its path string cannot be built. Use this (not RESOLVABLE_RESOLUTIONS)
+ * to find referrers by uuid; use RESOLVABLE_RESOLUTIONS only for path building.
+ */
+export const ALL_RESOLUTIONS = [...RESOLVABLE_RESOLUTIONS, RESOLUTION_TYPE.unsupported] as const
+
+/**
  * Maps ref tagName -> list of its UUID pair entries (flattened).
  * Use for ref-side lookups (afterCreated REF case, beforeDelete sweeps).
  */
