@@ -43,6 +43,17 @@ describe('buildElementPath', () => {
 			],
 		},
 
+		'segment-less target (LNodeType) → null — cannot address an element with no path segment': {
+			sourceXml: /* xml */ `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<DataTypeTemplates ${ID}="dtt-1">
+					<LNodeType id="XCBR_Type" lnClass="XCBR" ${ID}="lnt-1"/>
+				</DataTypeTemplates>
+			</SCL>`,
+			ref: { tagName: 'LNodeType', id: 'lnt-1' },
+			expected: null,
+		},
+
 		'LN under IED/AccessPoint/Server/LDevice → AccessPoint and Server skipped in path': {
 			sourceXml: /* xml */ `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">

@@ -234,7 +234,7 @@ describe('buildReferencePath', () => {
 		},
 
 		// ── edge cases ───────────────────────────────────────────────────
-		'unsupported resolution → null': {
+		'unsupported (VariableApplyTo) → uuid-derived plain name-path': {
 			sourceXml: /* xml */ `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
 				<Substation name="S1" ${ID}="sub-1">
@@ -255,6 +255,67 @@ describe('buildReferencePath', () => {
 			</SCL>`,
 			reference: { tagName: 'VariableApplyTo', id: 'va-1' },
 			target: { tagName: 'Function', id: 'func-1' },
+			expected: 'S1/V1/B1/Prot',
+		},
+
+		'VariableApplyTo → LNode uses LN naming (prefix+lnClass+inst)': {
+			sourceXml: /* xml */ `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<VoltageLevel name="V1" ${ID}="vl-1">
+						<Bay name="B1" ${ID}="bay-1">
+							<LNode iedName="None" lnClass="XCBR" lnInst="1" prefix="A" uuid="ln-uuid" ${ID}="lnode-1"/>
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:Variable name="V" uuid="var-uuid" ${ID}="var-1">
+									<eIEC61850-6-100:VariableApplyTo element="" elementUuid="ln-uuid" ${ID}="va-1"/>
+								</eIEC61850-6-100:Variable>
+							</Private>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+			</SCL>`,
+			reference: { tagName: 'VariableApplyTo', id: 'va-1' },
+			target: { tagName: 'LNode', id: 'lnode-1' },
+			expected: 'S1/V1/B1/AXCBR1',
+		},
+
+		'VariableApplyTo → ConductingEquipment uses its name': {
+			sourceXml: /* xml */ `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<VoltageLevel name="V1" ${ID}="vl-1">
+						<Bay name="B1" ${ID}="bay-1">
+							<ConductingEquipment name="QA1" type="CBR" uuid="ce-uuid" ${ID}="ce-1"/>
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:Variable name="V" uuid="var-uuid" ${ID}="var-1">
+									<eIEC61850-6-100:VariableApplyTo element="" elementUuid="ce-uuid" ${ID}="va-1"/>
+								</eIEC61850-6-100:Variable>
+							</Private>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+			</SCL>`,
+			reference: { tagName: 'VariableApplyTo', id: 'va-1' },
+			target: { tagName: 'ConductingEquipment', id: 'ce-1' },
+			expected: 'S1/V1/B1/QA1',
+		},
+
+		'VariableApplyTo → a segment-less target (LNodeType) → null (path left untouched)': {
+			sourceXml: /* xml */ `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Private type="eIEC61850-6-100">
+						<eIEC61850-6-100:Variable name="V" uuid="var-uuid" ${ID}="var-1">
+							<eIEC61850-6-100:VariableApplyTo element="keep-me" elementUuid="lnt-uuid" ${ID}="va-1"/>
+						</eIEC61850-6-100:Variable>
+					</Private>
+				</Substation>
+				<DataTypeTemplates ${ID}="dtt-1">
+					<LNodeType id="XCBR_Type" lnClass="XCBR" ${ID}="lnt-1"/>
+				</DataTypeTemplates>
+			</SCL>`,
+			reference: { tagName: 'VariableApplyTo', id: 'va-1' },
+			target: { tagName: 'LNodeType', id: 'lnt-1' },
 			expected: null,
 		},
 
