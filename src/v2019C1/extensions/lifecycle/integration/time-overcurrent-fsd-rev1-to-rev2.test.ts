@@ -19,15 +19,10 @@ import type { SclTest } from '@/v2019C1/test'
 // Integration test distilled from the hand-written `FSD/Time Overcurrent` FSD
 // (2019C1). Real uuids kept for traceability; structure reduced to the
 // lifecycle-relevant core and counter-checked against the Dialecte definition.
-// This one exercises satellite GRAFT: rev2 adds a NEW FunctionCategory that
-// classifies the (already-instantiated) function, so on accept the new category
-// is grafted onto the instance; on skip it is not.
-//
-// NOTE: the mirror-image case — satellite DELETION when the template retires a
-// FunctionCategory element — is a KNOWN GAP for the function layer (the WS2
-// 3-way path exists only for the application-layer AllocationRole satellite;
-// `reconcileCarriedSatellites` here is reconcile+graft only). Left as a separate
-// fix slice, not asserted by this test.
+// This one exercises satellite DELETION: rev2 retires the FunctionCategory
+// ELEMENT from the template (catalog retirement, not a mere un-reference), so on
+// accept the instance's FunctionCategory is deleted; on skip it stays. The
+// deletion rides the function's decision group (its desc is bumped to form it).
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -35,10 +30,8 @@ const ns = ALL_XMLNS_NAMESPACES
 const FN_UUID = '1b67e1e0-e9a6-4e59-bb11-70188134d9a6' // real Time Overcurrent function uuid
 const FCAT_UUID = 'a88fe312-94d5-4e57-9437-37a808cc75ac' // real Protection FCAT uuid
 
-const FCAT2_UUID = 'bkp-fcat-src-uuid' // rev2-added Backup Protection category
-
 const functionRef = { tagName: 'Function', id: 'fn-1' } as Scl.Ref<'Function'>
-const substationRef = { tagName: 'Substation', id: 'sub-s' } as Scl.Ref<'Substation'>
+const categoryRef = { tagName: 'FunctionCategory', id: 'fcat-s' } as Scl.Ref<'FunctionCategory'>
 const bayRef = { tagName: 'Bay', id: 'bay-t' } as Scl.Ref<'Bay'>
 
 type TestCase = SclTest.BaseXmlTestCase & {
@@ -87,37 +80,29 @@ const skipAll =
 	(groups: DecisionGroup[]): DecisionMap =>
 		new Map(groups.map((g) => [g.id, 'skip'] as const))
 
-// rev1 -> rev2: the function is updated (bumps its decision group) and a new
-// FunctionCategory classifying it is added to the template. The graft rides the
+// rev1 -> rev2: the function is updated (bumps its decision group) and the
+// FunctionCategory element is retired from the template. The deletion rides the
 // function group: accepted together, or neither.
 const toRev2 = async (tx: Scl.Transaction): Promise<void> => {
 	await tx.update(functionRef, { attributes: { desc: 'rev2 function' } })
-	const category = await tx.addChild(substationRef, {
-		tagName: 'FunctionCategory',
-		attributes: { name: 'Backup Protection', uuid: FCAT2_UUID },
-	})
-	await tx.addChild(category, {
-		tagName: 'FunctionCatRef',
-		attributes: { functionUuid: FN_UUID, function: 'TEMPLATE/Time Overcurrent' },
-	})
+	await tx.delete(categoryRef)
 }
 
-describe('lifecycle integration — Time Overcurrent FSD rev1 → rev2 (satellite graft)', () => {
+describe('lifecycle integration — Time Overcurrent FSD rev1 → rev2 (satellite deletion)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'accepting updates the function and grafts the newly-added FunctionCategory': {
+		'accepting updates the function and deletes the retired FunctionCategory': {
 			sourceXml,
 			targetXml,
 			mutate: toRev2,
 			decide: () => new Map(),
-			expectedQueries: [
-				`//default:Function[@templateUuid="${FN_UUID}"][@desc="rev2 function"]`,
+			expectedQueries: [`//default:Function[@templateUuid="${FN_UUID}"][@desc="rev2 function"]`],
+			unexpectedQueries: [
+				'//default:Function[@desc="rev1 function"]',
 				`//v2019C1:FunctionCategory[@templateUuid="${FCAT_UUID}"]`,
-				`//v2019C1:FunctionCategory[@name="Backup Protection"][@templateUuid="${FCAT2_UUID}"]`,
 			],
-			unexpectedQueries: ['//default:Function[@desc="rev1 function"]'],
 		},
 
-		'skipping keeps the rev1 function and does not graft the new FunctionCategory': {
+		'skipping keeps both the rev1 function and its FunctionCategory': {
 			sourceXml,
 			targetXml,
 			mutate: toRev2,
@@ -126,10 +111,7 @@ describe('lifecycle integration — Time Overcurrent FSD rev1 → rev2 (satellit
 				'//default:Function[@desc="rev1 function"]',
 				`//v2019C1:FunctionCategory[@templateUuid="${FCAT_UUID}"]`,
 			],
-			unexpectedQueries: [
-				'//default:Function[@desc="rev2 function"]',
-				'//v2019C1:FunctionCategory[@name="Backup Protection"]',
-			],
+			unexpectedQueries: ['//default:Function[@desc="rev2 function"]'],
 		},
 	}
 
@@ -169,7 +151,7 @@ describe('lifecycle integration — Time Overcurrent FSD rev1 → rev2 (satellit
 	runSclTestCases.withExport({ testCases, act })
 })
 
-// Golden: freeze the full accept-all rev2 instance (function updated, new category grafted).
+// Golden: freeze the full accept-all rev2 instance (function updated, category deleted).
 describe('lifecycle integration — Time Overcurrent FSD rev1 → rev2 (golden)', () => {
 	test('accept-all rev2 produces the expected instance', async () => {
 		const { project, source, target } = await createSclTestProject({ sourceXml, targetXml })

@@ -48,7 +48,13 @@ export async function fsd(
 			accepted,
 		})
 		// carried satellites (e.g. FunctionCategory) travel with the function group
-		await reconcileCarriedSatellites(tx, { sourceQuery, functionRef, targetParent, accepted })
+		await reconcileCarriedSatellites(tx, {
+			sourceQuery,
+			functionRef,
+			instanceRef: instance,
+			targetParent,
+			accepted,
+		})
 		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
 		const structure = await resolveTargetStructure(tx, targetParent)
 		await reconcileCrossCuttingSatellites(tx, {

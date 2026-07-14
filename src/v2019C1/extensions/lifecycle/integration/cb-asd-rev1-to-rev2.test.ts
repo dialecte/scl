@@ -103,6 +103,15 @@ const skipAll =
 	(groups: DecisionGroup[]): DecisionMap =>
 		new Map(groups.map((g) => [g.id, 'skip'] as const))
 
+// Skip ONLY the composed-function decision group (primary is the Function), leaving
+// the application-layer group accepted. Exercises cascade gating across layers.
+const skipComposedFunction =
+	() =>
+	(groups: DecisionGroup[]): DecisionMap =>
+		new Map(
+			groups.filter((g) => g.primary.tagName === 'Function').map((g) => [g.id, 'skip'] as const),
+		)
+
 // rev1 -> rev2: the template evolves the application, its AllocationRole satellite,
 // the FunctionCategory satellite, and the composed Function.
 const toRev2 = async (tx: Scl.Transaction): Promise<void> => {
@@ -152,6 +161,24 @@ describe('lifecycle integration — CB ASD rev1 → rev2 (application + satellit
 				'//default:Function[@desc="rev2 function"]',
 			],
 		},
+
+		'skipping only the composed-function group keeps it at rev1 while the application layer takes rev2':
+			{
+				sourceXml,
+				targetXml,
+				mutate: toRev2,
+				decide: skipComposedFunction(),
+				expectedQueries: [
+					'//v2019C1:Application[@desc="rev2 app"]',
+					'//v2019C1:AllocationRole[@desc="rev2 role"]',
+					'//default:Function[@desc="rev1 function"]',
+					'//v2019C1:FunctionCategory[@desc="rev1 category"]',
+				],
+				unexpectedQueries: [
+					'//default:Function[@desc="rev2 function"]',
+					'//v2019C1:FunctionCategory[@desc="rev2 category"]',
+				],
+			},
 	}
 
 	async function act({

@@ -7,10 +7,12 @@ import {
 	cloneFunctionCategories,
 	resolveFunctionSatellites,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
+import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import type * as Core from '@dialecte/core'
+import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
  * Reconcile each carried satellite (e.g. a `FunctionCategory`) of a function ONTO
@@ -24,18 +26,26 @@ import type * as Core from '@dialecte/core'
  * A satellite the updated template ADDS (no instance yet — a newly-classified
  * function) is grafted via the clone path (`cloneFunctionCategories` +
  * `writeIdentity`, mirroring `instantiate.fsd`), gated by the function group's
- * acceptance. v1: no satellite deletion.
+ * acceptance.
+ *
+ * A satellite the template RETIRED (its element no longer in the source, matched
+ * against the `instance`'s satellites) is DELETED — the coupling invariant: it
+ * rides the function group (gated by `accepted.instanceIds`), guarded by a
+ * whole-target-doc last-referrer check so a category still referenced by ANOTHER
+ * function is kept (shared-satellite safety). Catalog persistence (90-30 §11.3):
+ * the trigger is source-element non-existence, NOT a dropped link.
  */
 export async function reconcileCarriedSatellites(
 	tx: Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'>
+		instanceRef: AnyRefOrRecord
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		accepted?: AcceptedIds
 	},
 ): Promise<void> {
-	const { sourceQuery, functionRef, targetParent, accepted } = params
+	const { sourceQuery, functionRef, instanceRef, targetParent, accepted } = params
 
 	const satellites = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
 	let hasMissing = false
@@ -69,5 +79,32 @@ export async function reconcileCarriedSatellites(
 			stripCategoriesUuid: false,
 		})
 		await writeIdentity(tx, { mappings, mode: 'stamp-template' })
+	}
+
+	// delete: an instance satellite whose template ELEMENT was retired from the source
+	// (its uuid no longer exists there). Resolved against the instance's own satellites
+	// so a dropped FunctionCatRef doesn't hide it. Gated on the removal companion's
+	// acceptance; guarded by a last-referrer check (kept if any other function refs it).
+	const instanceSatellites = await resolveFunctionSatellites(tx, {
+		primaryRef: { tagName: 'Function', id: instanceRef.id } as Scl.Ref<'Function'>,
+	})
+	for (const instanceSatelliteRef of instanceSatellites) {
+		const { templateUuid } = await tx.any.getAttributes(instanceSatelliteRef)
+		if (!templateUuid) continue
+
+		const [stillInSource] = await sourceQuery.any.findByAttributes({
+			tagName: instanceSatelliteRef.tagName,
+			attributes: { uuid: templateUuid },
+		})
+		if (stillInSource) continue
+
+		if (accepted && instanceSatelliteRef.id && !accepted.instanceIds.has(instanceSatelliteRef.id)) {
+			continue
+		}
+
+		const referrers = await findRefsPointingTo(tx, { target: instanceSatelliteRef })
+		if (referrers.length > 0) continue
+
+		await tx.delete(instanceSatelliteRef)
 	}
 }

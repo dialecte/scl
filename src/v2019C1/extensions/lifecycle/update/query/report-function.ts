@@ -41,6 +41,7 @@ export async function reportFunction(
 	const withLayerSatellites = await foldCarriedSatellites(query, {
 		sourceQuery,
 		functionRef,
+		instance,
 		report,
 	})
 	return foldCrossCuttingSatellites(query, {
