@@ -1,7 +1,7 @@
-import { acceptedRefIds, assertDecisionsCoherent } from './engine/decide'
+import { acceptedRefIds, assertDecisionsCoherent, collisionOverrides } from './engine/decide'
 import { asd as updateAsd, fsd as updateFsd } from './update/transaction'
 
-import type { AcceptedIds } from './engine/decide'
+import type { AcceptedIds, CollisionOverrides } from './engine/decide'
 import type { LifecycleApplyParams, LifecycleTarget } from './seam.types'
 import type { Config } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -35,26 +35,33 @@ export async function apply(
 	const { report, decisions } = params
 
 	if (!report.needsDecisions) {
-		await runVerb(tx, params, undefined) // fast track: no gate = apply all
+		await runVerb(tx, params, undefined, undefined) // fast track: no gate = apply all
 		return report
 	}
 
 	if (!decisions) return report // full track, not decided yet
 
 	assertDecisionsCoherent({ groups: report.groups, decisions })
-	await runVerb(tx, params, acceptedRefIds({ groups: report.groups, decisions }))
+	await runVerb(
+		tx,
+		params,
+		acceptedRefIds({ groups: report.groups, decisions }),
+		collisionOverrides({ groups: report.groups, decisions }),
+	)
 	return report
 }
 
 /**
  * Delegate to the per-layer update verb. `accepted` is the decision gate:
  * `undefined` (fast) applies everything; present (full) applies only the
- * accepted groups + companions.
+ * accepted groups + companions. `overrides` carries the user-edited values
+ * that drive collision resolution on the full track.
  */
 async function runVerb(
 	tx: Core.Transaction<Config>,
 	target: LifecycleTarget,
 	accepted: AcceptedIds | undefined,
+	overrides: CollisionOverrides | undefined,
 ): Promise<void> {
 	if (target.verb === 'fsd') {
 		await updateFsd(tx, {
@@ -62,6 +69,7 @@ async function runVerb(
 			functionRef: target.ref,
 			targetParent: target.anchor,
 			accepted,
+			overrides,
 		})
 	} else {
 		await updateAsd(tx, {
@@ -69,6 +77,7 @@ async function runVerb(
 			applicationRef: target.ref,
 			targetParent: target.anchor,
 			accepted,
+			overrides,
 		})
 	}
 }

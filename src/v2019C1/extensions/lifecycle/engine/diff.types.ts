@@ -63,8 +63,15 @@ export type DiffReport = {
 	summary: DiffSummary
 }
 
-/** A user's choice on one decision group. */
-export type GroupDecision = 'accept' | 'skip'
+/**
+ * A user's choice on one decision group. Either a plain accept/skip, or an object
+ * carrying edited `values` for the primary's editable attributes (applied on accept —
+ * e.g. a user-chosen name that overrides the auto-resolved collision value).
+ */
+export type GroupDecision =
+	| 'accept'
+	| 'skip'
+	| { action: 'accept' | 'skip'; values?: Record<string, string> }
 
 /**
  * The consumer's decisions, keyed by `DecisionGroup.id`. A group absent from the

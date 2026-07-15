@@ -25,7 +25,7 @@ import type * as Core from '@dialecte/core'
  * policy (naming, application assignment) is applied by consumer hooks, not here.
  */
 export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Promise<void> {
-	const { sourceQuery, functionRef, targetParent } = params
+	const { sourceQuery, functionRef, targetParent, overrides } = params
 
 	const { recordMappings } = await deep(tx, {
 		sourceQuery,
@@ -61,9 +61,13 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 
 	const rootMapping = recordMappings.find((mapping) => mapping.source.id === functionRef.id)
 	if (rootMapping) {
-		// validate the placed function against its parent context; auto-resolve a name
-		// collision among siblings (schema constraint)
-		await resolvePlacementCollision(tx, { ref: rootMapping.target, parentRef: targetParent })
+		// validate the placed function against its parent context; apply any user edits
+		// then auto-resolve a name collision among siblings (schema constraint)
+		await resolvePlacementCollision(tx, {
+			ref: rootMapping.target,
+			parentRef: targetParent,
+			overrides: overrides?.get(functionRef.id),
+		})
 		await writeProvenance(tx, {
 			sourceQuery,
 			targetRoot: rootMapping.target,

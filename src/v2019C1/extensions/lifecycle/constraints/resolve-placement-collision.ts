@@ -30,7 +30,9 @@ export type PlacementResolution =
  *     `unresolvable` for the future validation/conflict surface.
  *
  * This is the auto-resolution (default fallback) half; a full-track consumer can
- * instead surface the violation as a decision and supply the value.
+ * instead supply `overrides` (user-edited values for editable attributes). Those are
+ * applied first, then uniqueness is re-ensured on the key field — so a user-typed name
+ * that itself collides is still bumped to a free value.
  */
 export async function resolvePlacementCollision(
 	tx: Core.Transaction<Config>,
@@ -38,14 +40,28 @@ export async function resolvePlacementCollision(
 		ref: Scl.Ref<Scl.ElementsOf>
 		parentRef?: Scl.Ref<Scl.ElementsOf>
 		decorate?: CollisionDecorator
+		overrides?: Record<string, string>
 	},
 ): Promise<PlacementResolution> {
-	const { ref, decorate } = params
+	const { ref, decorate, overrides } = params
 
-	const parentRef = params.parentRef ?? (await tx.getRecord(ref))?.parentRef
+	const parentRef =
+		params.parentRef ?? ((await tx.getRecord(ref))?.parent as Scl.Ref<Scl.ElementsOf> | undefined)
 	if (!parentRef) return { status: 'ok' }
 
-	const candidate = await tx.getAttributes(ref)
+	let candidate: Record<string, string | undefined> = await tx.getAttributes(ref)
+
+	// apply the user's edited values for editable attributes first
+	if (overrides) {
+		for (const [attr, value] of Object.entries(overrides)) {
+			const mode = classifyAttribute(ref.tagName, attr)
+			if ((mode === 'rename' || mode === 'free') && candidate[attr] !== value) {
+				await tx.update(ref, { attributes: { [attr]: value } })
+				candidate = { ...candidate, [attr]: value }
+			}
+		}
+	}
+
 	const violation = await findConstraintViolation(tx, {
 		parentRef,
 		childTag: ref.tagName,

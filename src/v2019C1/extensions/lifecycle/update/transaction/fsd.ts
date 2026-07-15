@@ -9,7 +9,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
-import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import type { AcceptedIds, CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -33,9 +33,10 @@ export async function fsd(
 		functionRef: Scl.Ref<'Function'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		accepted?: AcceptedIds
+		overrides?: CollisionOverrides
 	},
 ): Promise<void> {
-	const { sourceQuery, functionRef, targetParent, accepted } = params
+	const { sourceQuery, functionRef, targetParent, accepted, overrides } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	const instance = await findInstanceUnder(tx, { targetParent, tagName: 'Function', sourceUuid })
@@ -69,5 +70,5 @@ export async function fsd(
 
 	// first-time = one added group; gate the whole instantiate on its acceptance
 	if (accepted && !accepted.sourceIds.has(functionRef.id)) return
-	await instantiateFsd(tx, { sourceQuery, functionRef, targetParent })
+	await instantiateFsd(tx, { sourceQuery, functionRef, targetParent, overrides })
 }

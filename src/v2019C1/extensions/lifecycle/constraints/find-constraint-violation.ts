@@ -64,9 +64,10 @@ function attributeValue(
 }
 
 function getConstraints(tag: string): SchemaConstraint[] {
-	return (
-		(DEFINITION as Record<string, { constraints?: SchemaConstraint[] }>)[tag]?.constraints ?? []
-	)
+	const def = DEFINITION[tag as keyof typeof DEFINITION] as
+		| { constraints?: readonly SchemaConstraint[] }
+		| undefined
+	return [...(def?.constraints ?? [])]
 }
 
 /** A constraint selects a tag when a selector step is a wildcard or names that tag. */

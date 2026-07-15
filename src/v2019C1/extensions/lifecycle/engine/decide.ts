@@ -1,6 +1,6 @@
 import { invariant } from '@dialecte/core/utils'
 
-import type { DecisionGroup, DecisionMap, DiffNode } from './diff.types'
+import type { DecisionGroup, DecisionMap, DiffNode, GroupDecision } from './diff.types'
 
 /**
  * The record ids reconcile is allowed to touch, derived from the accepted
@@ -12,9 +12,45 @@ export type AcceptedIds = {
 	instanceIds: ReadonlySet<string>
 }
 
+/** source-element id -> user-edited values for that element's editable attributes. */
+export type CollisionOverrides = ReadonlyMap<string, Record<string, string>>
+
+/** The action of a decision (absent -> accept; string or object form). */
+export function decisionAction(decision: GroupDecision | undefined): 'accept' | 'skip' {
+	if (decision === undefined) return 'accept'
+	if (typeof decision === 'string') return decision
+	return decision.action
+}
+
+/** The user-edited values carried by a decision, if any. */
+function decisionValues(decision: GroupDecision | undefined): Record<string, string> | undefined {
+	return typeof decision === 'object' ? decision.values : undefined
+}
+
 /** A group is accepted unless explicitly skipped (absent -> suggestedAction = accept). */
 function isAccepted(params: { groupId: string; decisions: DecisionMap }): boolean {
-	return params.decisions.get(params.groupId) !== 'skip'
+	return decisionAction(params.decisions.get(params.groupId)) !== 'skip'
+}
+
+/**
+ * The user-edited values for each accepted group, keyed by the primary's SOURCE id
+ * (the placed element is matched by its source at instantiate time). Skipped groups
+ * and groups with no edits are omitted.
+ */
+export function collisionOverrides(params: {
+	groups: DecisionGroup[]
+	decisions: DecisionMap
+}): CollisionOverrides {
+	const { groups, decisions } = params
+	const out = new Map<string, Record<string, string>>()
+	for (const group of groups) {
+		const decision = decisions.get(group.id)
+		if (decisionAction(decision) === 'skip') continue
+		const values = decisionValues(decision)
+		const sourceId = group.primary.sourceRef?.id
+		if (values && sourceId) out.set(sourceId, values)
+	}
+	return out
 }
 
 /**

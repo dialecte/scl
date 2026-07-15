@@ -13,7 +13,7 @@ import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/lay
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
-import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import type { AcceptedIds, CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -44,9 +44,10 @@ export async function asd(
 		applicationRef: Scl.Ref<'Application'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		accepted?: AcceptedIds
+		overrides?: CollisionOverrides
 	},
 ): Promise<void> {
-	const { sourceQuery, applicationRef, targetParent, accepted } = params
+	const { sourceQuery, applicationRef, targetParent, accepted, overrides } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 
@@ -94,7 +95,13 @@ export async function asd(
 	})
 
 	// 2. function-layer cascade
-	await cascadeComposedFunctions(tx, { sourceQuery, applicationRef, targetParent, accepted })
+	await cascadeComposedFunctions(tx, {
+		sourceQuery,
+		applicationRef,
+		targetParent,
+		accepted,
+		overrides,
+	})
 }
 
 /**
@@ -113,9 +120,10 @@ async function cascadeComposedFunctions(
 		applicationRef: Scl.Ref<'Application'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		accepted?: AcceptedIds
+		overrides?: CollisionOverrides
 	},
 ): Promise<void> {
-	const { sourceQuery, applicationRef, targetParent, accepted } = params
+	const { sourceQuery, applicationRef, targetParent, accepted, overrides } = params
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 	if (functionUuids.size === 0) return
 
@@ -129,6 +137,12 @@ async function cascadeComposedFunctions(
 		if (!sourceFunction) continue
 		const functionRef = { tagName: 'Function', id: sourceFunction.id } as Scl.Ref<'Function'>
 		const functionTargetParent = await resolveStructureRef(sourceQuery, functionRef, structure)
-		await updateFsd(tx, { sourceQuery, functionRef, targetParent: functionTargetParent, accepted })
+		await updateFsd(tx, {
+			sourceQuery,
+			functionRef,
+			targetParent: functionTargetParent,
+			accepted,
+			overrides,
+		})
 	}
 }
