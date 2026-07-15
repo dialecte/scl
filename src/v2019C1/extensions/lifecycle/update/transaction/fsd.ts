@@ -47,6 +47,7 @@ export async function fsd(
 			sourceRootRef: functionRef,
 			instanceRootRef: instance,
 			accepted,
+			overrides,
 		})
 		// carried satellites (e.g. FunctionCategory) travel with the function group
 		await reconcileCarriedSatellites(tx, {

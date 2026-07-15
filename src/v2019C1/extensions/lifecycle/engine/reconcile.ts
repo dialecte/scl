@@ -4,9 +4,10 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
+import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
-import type { AcceptedIds } from './decide'
+import type { AcceptedIds, CollisionOverrides } from './decide'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -44,9 +45,14 @@ export async function reconcile(
 		 * (full-track decision gating). Omit to apply every change (fast track).
 		 */
 		accepted?: AcceptedIds
+		/**
+		 * User-edited values per source element id (full track). Applied to a grafted
+		 * element before its placement collision is resolved. Omit for auto-resolve only.
+		 */
+		overrides?: CollisionOverrides
 	},
 ): Promise<void> {
-	const { sourceQuery, sourceRootRef, instanceRootRef, accepted } = params
+	const { sourceQuery, sourceRootRef, instanceRootRef, accepted, overrides } = params
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	const instanceTree = await tx.any.getTree(instanceRootRef)
@@ -71,6 +77,7 @@ export async function reconcile(
 		instanceParent: instanceTree,
 		index,
 		accepted,
+		overrides,
 	})
 
 	// removed from the template: delete instance elements whose lineage is gone
@@ -85,9 +92,10 @@ async function reconcileChildren(
 		instanceParent: AnyTreeRecord
 		index: Map<string, AnyTreeRecord>
 		accepted: AcceptedIds | undefined
+		overrides: CollisionOverrides | undefined
 	},
 ): Promise<void> {
-	const { sourceQuery, sourceNode, instanceParent, index, accepted } = params
+	const { sourceQuery, sourceNode, instanceParent, index, accepted, overrides } = params
 	const matchedInstanceIds = new Set<string>()
 	for (const sourceChild of sourceNode.tree) {
 		const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
@@ -118,6 +126,7 @@ async function reconcileChildren(
 				instanceParent: matched,
 				index,
 				accepted,
+				overrides,
 			})
 			continue
 		}
@@ -132,6 +141,17 @@ async function reconcileChildren(
 			strip: false,
 		})
 		await writeIdentity(tx, { mappings: recordMappings, mode: 'stamp-template' })
+
+		// validate the grafted element against its instance-parent context: apply any
+		// user edit then auto-resolve a name collision among siblings (schema constraint)
+		const graftRoot = recordMappings.find((mapping) => mapping.source.id === sourceChild.id)
+		if (graftRoot) {
+			await resolvePlacementCollision(tx, {
+				ref: graftRoot.target,
+				parentRef: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,
+				overrides: overrides?.get(sourceChild.id),
+			})
+		}
 	}
 
 	// uuid-less REFERENCE (link) instance children with no matching source child are

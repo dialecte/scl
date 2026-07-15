@@ -72,6 +72,7 @@ export async function asd(
 		sourceRootRef: applicationRef,
 		instanceRootRef: instance,
 		accepted,
+		overrides,
 	})
 
 	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
