@@ -28,11 +28,9 @@ import type * as Core from '@dialecte/core'
  *    function's `uuid`) -> reconcile the updated template ONTO EACH.
  *
  * The standard allows several instances of one template under one anchor. The
- * FSD seam passes the `report` + `decisions`, and each instance is gated by ONLY
+ * `report` + `decisions` are passed through, and each instance is gated by ONLY
  * its own groups (partitioned by `instanceScopeId`) so the user can update a
- * SUBSET. The ASD composed-function cascade still passes a pre-computed
- * `accepted`/`overrides` (single-instance path); when it resolves several
- * instances they all take that gate (Phase B unifies this).
+ * SUBSET. Both the FSD seam and the ASD composed-function cascade drive it this way.
  */
 export async function fsd(
 	tx: Core.Transaction<Config>,
@@ -40,15 +38,12 @@ export async function fsd(
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
-		/** FSD seam (multi-instance): partitioned per instance by `instanceScopeId`. */
+		/** Multi-instance gate: partitioned per instance by `instanceScopeId`. */
 		report?: DiffReport
 		decisions?: DecisionMap
-		/** ASD cascade (legacy single-instance gate); ignored when `decisions` is set. */
-		accepted?: AcceptedIds
-		overrides?: CollisionOverrides
 	},
 ): Promise<void> {
-	const { sourceQuery, functionRef, targetParent, report, decisions, accepted, overrides } = params
+	const { sourceQuery, functionRef, targetParent, report, decisions } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	const instances = await findInstancesUnder(tx, { targetParent, tagName: 'Function', sourceUuid })
@@ -57,8 +52,8 @@ export async function fsd(
 
 	if (instances.length === 0) {
 		// first-time = one added group; gate the whole instantiate on its acceptance
-		const gate = decisions ? acceptedRefIds({ groups, decisions }) : accepted
-		const gateOverrides = decisions ? collisionOverrides({ groups, decisions }) : overrides
+		const gate = decisions ? acceptedRefIds({ groups, decisions }) : undefined
+		const gateOverrides = decisions ? collisionOverrides({ groups, decisions }) : undefined
 		if (gate && !gate.sourceIds.has(functionRef.id)) return
 		await instantiateFsd(tx, { sourceQuery, functionRef, targetParent, overrides: gateOverrides })
 		return
@@ -70,8 +65,6 @@ export async function fsd(
 			instanceId: instance.id,
 			groups,
 			decisions,
-			accepted,
-			overrides,
 		})
 
 		await reconcile(tx, {
@@ -101,22 +94,20 @@ export async function fsd(
 }
 
 /**
- * The gate for one instance: on the FSD seam derive it from ONLY that instance's
- * groups (source ids are unique within one instance); on the ASD cascade fall back
- * to the pre-computed gate.
+ * The gate for one instance: with `decisions`, derive it from ONLY that instance's
+ * groups (source ids are unique within one instance); without, apply everything
+ * (fast track).
  */
 function gateFor(params: {
 	instanceId: string
 	groups: DecisionGroup[]
 	decisions: DecisionMap | undefined
-	accepted: AcceptedIds | undefined
-	overrides: CollisionOverrides | undefined
 }): {
 	instanceAccepted: AcceptedIds | undefined
 	instanceOverrides: CollisionOverrides | undefined
 } {
-	const { instanceId, groups, decisions, accepted, overrides } = params
-	if (!decisions) return { instanceAccepted: accepted, instanceOverrides: overrides }
+	const { instanceId, groups, decisions } = params
+	if (!decisions) return { instanceAccepted: undefined, instanceOverrides: undefined }
 	const instanceGroups = groups.filter((group) => group.instanceScopeId === instanceId)
 	return {
 		instanceAccepted: acceptedRefIds({ groups: instanceGroups, decisions }),

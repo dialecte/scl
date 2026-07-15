@@ -1,4 +1,4 @@
-import { acceptedRefIds, assertDecisionsCoherent, collisionOverrides } from './engine/decide'
+import { assertDecisionsCoherent } from './engine/decide'
 import { asd as updateAsd, fsd as updateFsd } from './update/transaction'
 
 import type { LifecycleApplyParams, LifecycleTarget } from './seam.types'
@@ -66,16 +66,12 @@ async function runVerb(
 			decisions,
 		})
 	} else {
-		const accepted = decisions ? acceptedRefIds({ groups: report.groups, decisions }) : undefined
-		const overrides = decisions
-			? collisionOverrides({ groups: report.groups, decisions })
-			: undefined
 		await updateAsd(tx, {
 			sourceQuery: target.sourceQuery,
 			applicationRef: target.ref,
 			targetParent: target.anchor,
-			accepted,
-			overrides,
+			report,
+			decisions,
 		})
 	}
 }

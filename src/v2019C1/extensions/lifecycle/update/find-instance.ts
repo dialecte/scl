@@ -79,13 +79,28 @@ export async function findInstanceByTemplateUuid(
 	reader: Reader,
 	params: { tagName: Scl.ElementsOf; sourceUuid: string | undefined },
 ): Promise<AnyTrackedRecord | undefined> {
+	const [first] = await findInstancesByTemplateUuid(reader, params)
+	return first
+}
+
+/**
+ * ALL records of `tagName` anywhere whose `templateUuid` equals the source uuid,
+ * in document order. The global counterpart of {@link findInstancesUnder} used
+ * where there is no placement anchor (the ASD report/apply cascade), so several
+ * instances of one template are enumerated and gated as a subset (multi-instance).
+ */
+export async function findInstancesByTemplateUuid(
+	reader: Reader,
+	params: { tagName: Scl.ElementsOf; sourceUuid: string | undefined },
+): Promise<AnyTrackedRecord[]> {
 	const { tagName, sourceUuid } = params
-	if (!sourceUuid) return undefined
+	if (!sourceUuid) return []
 	const records = await reader.any.getRecordsByTagName(tagName)
+	const out: AnyTrackedRecord[] = []
 	for (const record of records) {
 		if ((await reader.any.getAttribute(record, { name: 'templateUuid' })) === sourceUuid) {
-			return record
+			out.push(record)
 		}
 	}
-	return undefined
+	return out
 }
