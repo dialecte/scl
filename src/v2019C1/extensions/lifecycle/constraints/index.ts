@@ -1,4 +1,11 @@
 export { classifyAttribute, editableAttributes } from './classify-attribute'
 export { getIdentityFields } from './identity-fields'
+export { findConstraintViolation } from './find-constraint-violation'
+export { findConstraintViolations } from './find-constraint-violations'
+export { resolveUniqueValue } from './resolve-unique-value'
+export { resolvePlacementCollision } from './resolve-placement-collision'
 
 export type { AttributeEditability, EditableAttribute } from './classify-attribute.types'
+export type { ConstraintViolation, SchemaConstraint } from './find-constraint-violation.types'
+export type { CollisionDecorator } from './resolve-unique-value.types'
+export type { PlacementResolution } from './resolve-placement-collision'

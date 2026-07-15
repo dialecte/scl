@@ -1,6 +1,7 @@
 import { resolveTargetStructure } from './resolve-target-structure'
 
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
+import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneFunctionCategories } from '@/v2019C1/extensions/lifecycle/layers/function'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/satellites/clone-applied-satellites'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -60,6 +61,9 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 
 	const rootMapping = recordMappings.find((mapping) => mapping.source.id === functionRef.id)
 	if (rootMapping) {
+		// validate the placed function against its parent context; auto-resolve a name
+		// collision among siblings (schema constraint)
+		await resolvePlacementCollision(tx, { ref: rootMapping.target, parentRef: targetParent })
 		await writeProvenance(tx, {
 			sourceQuery,
 			targetRoot: rootMapping.target,

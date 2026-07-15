@@ -1,3 +1,4 @@
+import type { EditableAttribute } from '../constraints'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
 /** How a diffed element changed between the (updated) template and the instance. */
@@ -40,6 +41,13 @@ export type DecisionGroup = {
 	companions: DiffNode[]
 	dependsOn: string[]
 	suggestedAction: 'accept'
+	/**
+	 * The primary element's user-editable attributes with their edit mode
+	 * (schema-derived via the attribute classifier), tagged at report time so the UI
+	 * renders inputs directly from the report without re-deriving. Omitted until the
+	 * report seam tags it.
+	 */
+	editableAttributes?: EditableAttribute[]
 }
 
 export type DiffReport = {

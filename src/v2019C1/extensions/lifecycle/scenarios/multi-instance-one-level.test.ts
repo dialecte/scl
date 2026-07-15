@@ -14,13 +14,13 @@ import type { SclTest } from '@/v2019C1/test'
 // a templateUuid at one anchor level. A later template update is reported/applied
 // against that anchor.
 //
-// Pins current anchor-disambiguation behaviour:
-//  - instantiate is unconditional -> two instances coexist (same templateUuid, fresh
-//    uuids, colliding names);
-//  - update resolves ONE instance per (anchor, templateUuid) via findInstanceUnder, so
-//    exactly one is reconciled to v2 and the other stays v1 (asserted by the absence of
-//    a SECOND v1/v2 Function under the Bay).
-// Disambiguating WHICH instance (or fanning out to all) is a deferred capability.
+// Pins current behaviour:
+//  - instantiate is unconditional, but a NAME COLLISION is auto-resolved: the second
+//    instance is renamed Prot -> Prot_1 (schema constraint uniqueChildNameInBay), so
+//    the two instances coexist with DISTINCT names (same templateUuid, fresh uuids);
+//  - a template update still resolves ONE instance per (anchor, templateUuid) via
+//    findInstanceUnder, so exactly one is reconciled to v2 and the other stays v1.
+// Disambiguating WHICH instance (or fanning out to all) is a deferred capability (Part C).
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -60,30 +60,36 @@ const targetXml = /* xml */ `
 
 type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 
-describe('lifecycle scenario — multi-instance same template at one level (anchor disambiguation)', () => {
+describe('lifecycle scenario — multi-instance same template at one level (collision + anchor)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'two instances share a templateUuid under one Bay; a template update reconciles exactly one': {
-			sourceXml,
-			targetXml,
-			expectedQueries: [
-				'//default:Bay/default:Function[@templateUuid="fn-1"]', // shared template lineage
-				'//default:Bay/default:Function[@desc="v1"]', // the untouched instance
-				'//default:Bay/default:Function[@desc="v2"]', // the reconciled instance
-			],
-			// exactly one of each — no second v1 or v2 Function under the Bay
-			unexpectedQueries: [
-				'//default:Bay/default:Function[@desc="v1"][2]',
-				'//default:Bay/default:Function[@desc="v2"][2]',
-			],
-		},
+		'a repeated instantiate auto-resolves the name collision; a template update reconciles exactly one':
+			{
+				sourceXml,
+				targetXml,
+				expectedQueries: [
+					'//default:Bay/default:Function[@templateUuid="fn-1"]', // shared template lineage
+					'//default:Bay/default:Function[@name="Prot"]', // first instance keeps the name
+					'//default:Bay/default:Function[@name="Prot_1"]', // collision auto-resolved
+					'//default:Bay/default:Function[@desc="v1"]', // the untouched instance
+					'//default:Bay/default:Function[@desc="v2"]', // the reconciled instance
+				],
+				unexpectedQueries: [
+					// names are distinct (no second Prot) and exactly one of each desc
+					'//default:Bay/default:Function[@name="Prot"][2]',
+					'//default:Bay/default:Function[@desc="v1"][2]',
+					'//default:Bay/default:Function[@desc="v2"][2]',
+				],
+			},
 	}
 
 	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 
-		// instantiate the same template twice under B1
+		// instantiate the same template twice under B1 (two separate operations)
 		await target.transaction(async (tx) => {
 			await instantiateFsd(tx, { sourceQuery: source.query, functionRef, targetParent: bayRef })
+		})
+		await target.transaction(async (tx) => {
 			await instantiateFsd(tx, { sourceQuery: source.query, functionRef, targetParent: bayRef })
 		})
 
