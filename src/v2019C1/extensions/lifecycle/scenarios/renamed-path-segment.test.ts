@@ -11,13 +11,12 @@ import type { SclTest } from '@/v2019C1/test'
 // traverses that middle segment. On instantiate the path is rebuilt into instance
 // space (uuid-derived). Then the middle segment is renamed IN THE PROJECT.
 //
-// This pins the rename-coherence behaviour:
-//  - instantiate rebuilds the path (S1/V1/B1/Prot/Mid/CSWI1) — asserted present;
-//  - a project-side rename updates the SubFunction name (MidRenamed — asserted present)
-//    but does NOT rebuild the dependent ref path: the coherent MidRenamed path is
-//    absent (asserted), so the element path stays STALE while the uuid stays correct.
-// Rebuild-on-rename is a deferred coherence-pass hook. When it lands, the two path
-// assertions flip.
+// This asserts rename coherence:
+//  - instantiate rebuilds the path (S1/V1/B1/Prot/Mid/CSWI1);
+//  - a project-side rename of the middle segment updates the SubFunction name AND
+//    rebuilds the dependent ref path (S1/V1/B1/Prot/MidRenamed/CSWI1) from the uuid,
+//    via the after-updated coherence cascade (descendant-referrer rebuild). The uuid
+//    stays correct throughout.
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -66,16 +65,16 @@ type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 
 describe('lifecycle scenario — renamed middle path segment (project-side rename coherence)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'instantiate rebuilds the ref path; a later project rename leaves the path stale': {
+		'instantiate rebuilds the ref path; a later project rename rebuilds it again (coherent)': {
 			sourceXml,
 			targetXml,
 			expectedQueries: [
 				'//default:SubFunction[@name="MidRenamed"]',
-				// STALE: the path still traverses the old segment name
-				'//v2019C1:VariableApplyTo[@element="S1/V1/B1/Prot/Mid/CSWI1"]',
+				// COHERENT: the path is rebuilt from the uuid to traverse the renamed segment
+				'//v2019C1:VariableApplyTo[@element="S1/V1/B1/Prot/MidRenamed/CSWI1"]',
 			],
-			// the coherent (rebuilt) path is NOT produced — pins the deferred hook
-			unexpectedQueries: ['//v2019C1:VariableApplyTo[@element="S1/V1/B1/Prot/MidRenamed/CSWI1"]'],
+			// the stale (pre-rename) path is gone
+			unexpectedQueries: ['//v2019C1:VariableApplyTo[@element="S1/V1/B1/Prot/Mid/CSWI1"]'],
 		},
 	}
 

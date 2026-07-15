@@ -3,7 +3,7 @@ import { isElementOf, toRawRecord } from '@dialecte/core/helpers'
 import { Scl, SCL_DIALECTE_CONFIG, Config } from '@/v2019C1/config'
 import {
 	reference as referenceApi,
-	RESOLVABLE_RESOLUTIONS,
+	ALL_RESOLUTIONS,
 	RESOLUTION_TARGET_REFS,
 } from '@/v2019C1/extensions/reference'
 
@@ -54,8 +54,11 @@ export async function updateRefsForEntry(params: {
 
 export function getRefEntriesForTarget(tagName: string): RefEntry[] {
 	const entries: RefEntry[] = []
-	for (const resolution of RESOLVABLE_RESOLUTIONS) {
-		const found = RESOLUTION_TARGET_REFS[resolution].get(tagName)
+	// ALL_RESOLUTIONS (not just RESOLVABLE) so a referrer whose path is 'unsupported'
+	// to PARSE (e.g. VariableApplyTo, an XPath selector) still has its path REBUILT on a
+	// target rename — target->path is buildable from the resolved uuid (see buildReferencePath).
+	for (const resolution of ALL_RESOLUTIONS) {
+		const found = RESOLUTION_TARGET_REFS[resolution]?.get(tagName)
 		if (found) entries.push(...found)
 	}
 	return entries

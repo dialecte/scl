@@ -25,17 +25,17 @@ describe('ref-entry-ops', () => {
 		}
 
 		const testCases: Record<string, TestCase> = {
-			'Function → direct refs (FunctionCatRef, FunctionRef, Resource)': {
+			'Function → direct refs (FunctionCatRef, FunctionRef, Resource) + VariableApplyTo': {
 				tagName: 'Function',
 				expected: {
-					length: 3,
-					refTagNames: ['FunctionCatRef', 'FunctionRef', 'Resource'],
+					length: 4,
+					refTagNames: ['FunctionCatRef', 'FunctionRef', 'Resource', 'VariableApplyTo'],
 				},
 			},
-			'LNode → lnode + behavior-description + direct refs': {
+			'LNode → lnode + behavior-description + direct refs + VariableApplyTo': {
 				tagName: 'LNode',
 				expected: {
-					length: 7,
+					length: 8,
 					refTagNames: [
 						'ControlRef',
 						'LNodeDataRef',
@@ -44,23 +44,25 @@ describe('ref-entry-ops', () => {
 						'SourceRef',
 						'InputVar',
 						'OutputVar',
+						'VariableApplyTo',
 					],
 				},
 			},
-			'ExtRef → ied-address refs (SourceRef)': {
+			'ExtRef → ied-address refs (SourceRef) + VariableApplyTo': {
 				tagName: 'ExtRef',
 				expected: {
-					length: 1,
-					refTagNames: ['SourceRef'],
-				},
-			},
-			'SourceRef → direct + behavior-description refs (LNodeInputRef, InputVar)': {
-				tagName: 'SourceRef',
-				expected: {
 					length: 2,
-					refTagNames: ['InputVar', 'LNodeInputRef'],
+					refTagNames: ['SourceRef', 'VariableApplyTo'],
 				},
 			},
+			'SourceRef → direct + behavior-description refs (LNodeInputRef, InputVar) + VariableApplyTo':
+				{
+					tagName: 'SourceRef',
+					expected: {
+						length: 3,
+						refTagNames: ['InputVar', 'LNodeInputRef', 'VariableApplyTo'],
+					},
+				},
 			'unknown tagName → empty': {
 				tagName: 'Nonexistent',
 				expected: { length: 0, refTagNames: [] },
