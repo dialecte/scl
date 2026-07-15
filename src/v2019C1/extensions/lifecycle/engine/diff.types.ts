@@ -48,6 +48,13 @@ export type DecisionGroup = {
 	 * report seam tags it.
 	 */
 	editableAttributes?: EditableAttribute[]
+	/**
+	 * The id of the instance root this group belongs to, when several instances of one
+	 * template are reported together (multi-instance). Lets the decision layer target a
+	 * SUBSET of instances and lets apply partition groups per instance. Omitted for a
+	 * first-time instantiate (no instance yet).
+	 */
+	instanceScopeId?: string
 }
 
 export type DiffReport = {

@@ -59,7 +59,7 @@ export async function diff(params: {
 	})
 	const summary = summarize(root)
 	const needsDecisions = summary.added + summary.removed + summary.modified > 0
-	return { root, groups: groupChanges(root), needsDecisions, summary }
+	return { root, groups: groupChanges(root, instanceTree.id), needsDecisions, summary }
 }
 
 async function diffMatched(

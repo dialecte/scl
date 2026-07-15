@@ -1,10 +1,9 @@
 import { acceptedRefIds, assertDecisionsCoherent, collisionOverrides } from './engine/decide'
 import { asd as updateAsd, fsd as updateFsd } from './update/transaction'
 
-import type { AcceptedIds, CollisionOverrides } from './engine/decide'
 import type { LifecycleApplyParams, LifecycleTarget } from './seam.types'
 import type { Config } from '@/v2019C1/config'
-import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -35,43 +34,42 @@ export async function apply(
 	const { report, decisions } = params
 
 	if (!report.needsDecisions) {
-		await runVerb(tx, params, undefined, undefined) // fast track: no gate = apply all
+		await runVerb(tx, params, report, undefined) // fast track: no gate = apply all
 		return report
 	}
 
 	if (!decisions) return report // full track, not decided yet
 
 	assertDecisionsCoherent({ groups: report.groups, decisions })
-	await runVerb(
-		tx,
-		params,
-		acceptedRefIds({ groups: report.groups, decisions }),
-		collisionOverrides({ groups: report.groups, decisions }),
-	)
+	await runVerb(tx, params, report, decisions)
 	return report
 }
 
 /**
- * Delegate to the per-layer update verb. `accepted` is the decision gate:
- * `undefined` (fast) applies everything; present (full) applies only the
- * accepted groups + companions. `overrides` carries the user-edited values
- * that drive collision resolution on the full track.
+ * Delegate to the per-layer update verb. The FSD verb owns the multi-instance loop,
+ * so it receives the `report` + `decisions` and partitions gating per instance. The
+ * ASD verb still takes a pre-computed `accepted`/`overrides` (single-instance path;
+ * Phase B unifies it).
  */
 async function runVerb(
 	tx: Core.Transaction<Config>,
 	target: LifecycleTarget,
-	accepted: AcceptedIds | undefined,
-	overrides: CollisionOverrides | undefined,
+	report: DiffReport,
+	decisions: DecisionMap | undefined,
 ): Promise<void> {
 	if (target.verb === 'fsd') {
 		await updateFsd(tx, {
 			sourceQuery: target.sourceQuery,
 			functionRef: target.ref,
 			targetParent: target.anchor,
-			accepted,
-			overrides,
+			report,
+			decisions,
 		})
 	} else {
+		const accepted = decisions ? acceptedRefIds({ groups: report.groups, decisions }) : undefined
+		const overrides = decisions
+			? collisionOverrides({ groups: report.groups, decisions })
+			: undefined
 		await updateAsd(tx, {
 			sourceQuery: target.sourceQuery,
 			applicationRef: target.ref,

@@ -13,16 +13,20 @@ import type { DecisionGroup, DiffNode } from './diff.types'
  * reference-linked companions (satellites via the ownership map + ref pairs),
  * and `dependsOn` edges for nested-independent changes — both currently empty.
  */
-export function groupChanges(root: DiffNode): DecisionGroup[] {
+export function groupChanges(root: DiffNode, instanceScopeId?: string): DecisionGroup[] {
 	const groups: DecisionGroup[] = []
-	collectGroups({ node: root, out: groups })
+	collectGroups({ node: root, instanceScopeId, out: groups })
 	return groups
 }
 
-function collectGroups(params: { node: DiffNode; out: DecisionGroup[] }): void {
-	const { node, out } = params
+function collectGroups(params: {
+	node: DiffNode
+	instanceScopeId: string | undefined
+	out: DecisionGroup[]
+}): void {
+	const { node, instanceScopeId, out } = params
 	if (node.change === 'unchanged') {
-		for (const child of node.children) collectGroups({ node: child, out })
+		for (const child of node.children) collectGroups({ node: child, instanceScopeId, out })
 		return
 	}
 
@@ -32,13 +36,14 @@ function collectGroups(params: { node: DiffNode; out: DecisionGroup[] }): void {
 	collectChangedDescendants({ node, out: companions })
 
 	out.push({
-		id: groupId(node),
+		id: groupId(node, instanceScopeId),
 		change: node.change,
 		title: `${node.change} ${node.tagName}`,
 		primary: node,
 		companions,
 		dependsOn: [],
 		suggestedAction: 'accept',
+		instanceScopeId,
 	})
 }
 
@@ -51,7 +56,10 @@ function collectChangedDescendants(params: { node: DiffNode; out: DiffNode[] }):
 }
 
 /** Stable, unique key for the primary — the ref that exists for its change kind. */
-function groupId(node: DiffNode): string {
+function groupId(node: DiffNode, instanceScopeId: string | undefined): string {
 	const ref = node.sourceRef ?? node.instanceRef
-	return ref ? `${ref.tagName}:${ref.id}` : node.tagName
+	const base = ref ? `${ref.tagName}:${ref.id}` : node.tagName
+	// scope by the instance root so the SAME template element in two instances yields
+	// two distinct group ids (multi-instance targeting)
+	return instanceScopeId ? `${instanceScopeId}::${base}` : base
 }

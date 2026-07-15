@@ -7,6 +7,7 @@ import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiat
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
+import type { GroupDecision } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
 // Engine-hardening scenario (hand-authored, schema-checked). One template Function is
@@ -58,34 +59,61 @@ const targetXml = /* xml */ `
 		</Substation>
 	</SCL>`
 
-type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
+type TestCase = SclTest.BaseXmlTestCase & {
+	targetXml: string
+	mode: 'accept-all' | 'accept-prot-only' | 'skip-all'
+}
 
 describe('lifecycle scenario — multi-instance same template at one level (collision + anchor)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'a repeated instantiate auto-resolves the name collision; a template update reconciles exactly one':
-			{
-				sourceXml,
-				targetXml,
-				expectedQueries: [
-					'//default:Bay/default:Function[@templateUuid="fn-1"]', // shared template lineage
-					'//default:Bay/default:Function[@name="Prot"]', // first instance keeps the name
-					'//default:Bay/default:Function[@name="Prot_1"]', // collision auto-resolved
-					'//default:Bay/default:Function[@desc="v1"]', // the untouched instance
-					'//default:Bay/default:Function[@desc="v2"]', // the reconciled instance
-				],
-				unexpectedQueries: [
-					// names are distinct (no second Prot) and exactly one of each desc
-					'//default:Bay/default:Function[@name="Prot"][2]',
-					'//default:Bay/default:Function[@desc="v1"][2]',
-					'//default:Bay/default:Function[@desc="v2"][2]',
-				],
-			},
+		'accept-all reconciles EVERY instance to v2': {
+			sourceXml,
+			targetXml,
+			mode: 'accept-all',
+			expectedQueries: [
+				'//default:Bay/default:Function[@name="Prot"][@desc="v2"]', // first instance updated
+				'//default:Bay/default:Function[@name="Prot_1"][@desc="v2"]', // second instance updated too
+			],
+			unexpectedQueries: [
+				'//default:Bay/default:Function[@desc="v1"]', // no instance left at v1
+			],
+		},
+		'accepting only one instance updates just that one (targeted subset)': {
+			sourceXml,
+			targetXml,
+			mode: 'accept-prot-only',
+			expectedQueries: [
+				'//default:Bay/default:Function[@name="Prot"][@desc="v2"]', // selected instance updated
+				'//default:Bay/default:Function[@name="Prot_1"][@desc="v1"]', // unselected instance untouched
+			],
+			unexpectedQueries: [
+				'//default:Bay/default:Function[@name="Prot"][@desc="v1"]',
+				'//default:Bay/default:Function[@name="Prot_1"][@desc="v2"]',
+			],
+		},
+		'skip-all leaves every instance at v1': {
+			sourceXml,
+			targetXml,
+			mode: 'skip-all',
+			expectedQueries: [
+				'//default:Bay/default:Function[@name="Prot"][@desc="v1"]',
+				'//default:Bay/default:Function[@name="Prot_1"][@desc="v1"]',
+			],
+			unexpectedQueries: [
+				'//default:Bay/default:Function[@desc="v2"]', // nothing updated
+			],
+		},
 	}
 
-	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+	async function act({
+		source,
+		target,
+		testCase,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 
-		// instantiate the same template twice under B1 (two separate operations)
+		// instantiate the same template twice under B1 (two separate operations) — the
+		// second is auto-renamed Prot -> Prot_1 by collision resolution (S3)
 		await target.transaction(async (tx) => {
 			await instantiateFsd(tx, { sourceQuery: source.query, functionRef, targetParent: bayRef })
 		})
@@ -104,6 +132,23 @@ describe('lifecycle scenario — multi-instance same template at one level (coll
 			ref: functionRef,
 			anchor: bayRef,
 		})
+
+		// the report now carries ONE decision-group set per instance; the decision map
+		// is the selector — accept the subset of instances to update
+		const decisions = new Map<string, GroupDecision>()
+		if (testCase.mode === 'skip-all') {
+			for (const group of rep.groups) decisions.set(group.id, 'skip')
+		} else if (testCase.mode === 'accept-prot-only') {
+			const [prot1] = await target.query.findByAttributes({
+				tagName: 'Function',
+				attributes: { name: 'Prot_1' },
+			})
+			for (const group of rep.groups) {
+				if (group.instanceScopeId === prot1?.id) decisions.set(group.id, 'skip')
+			}
+		}
+		// accept-all -> empty map (absent groups default to accept)
+
 		await target.transaction(async (tx) => {
 			await apply(tx, {
 				verb: 'fsd',
@@ -111,7 +156,7 @@ describe('lifecycle scenario — multi-instance same template at one level (coll
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: new Map(),
+				decisions,
 			})
 		})
 

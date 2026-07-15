@@ -18,29 +18,55 @@ export async function findInstanceUnder(
 		sourceUuid: string | undefined
 	},
 ): Promise<AnyTreeRecord | undefined> {
-	const { targetParent, tagName, sourceUuid } = params
-	if (!sourceUuid) return undefined
-	const parentTree = await reader.any.getTree(targetParent)
-	if (!parentTree) return undefined
-	return walkForTemplateUuid(reader, { node: parentTree, tagName, sourceUuid })
+	const [first] = await findInstancesUnder(reader, params)
+	return first
 }
 
-async function walkForTemplateUuid(
+/**
+ * ALL records of `tagName` under `targetParent` whose `templateUuid` equals the
+ * source uuid, in document order. The standard permits several instances of one
+ * template (each with a unique instance uuid) under one anchor, so update/report
+ * enumerate them and let the decision layer target a subset (multi-instance).
+ * A matched instance root is not descended into (its subtree holds no sibling
+ * instance of the same template lineage).
+ */
+export async function findInstancesUnder(
 	reader: Reader,
-	params: { node: AnyTreeRecord; tagName: Scl.ElementsOf; sourceUuid: string },
-): Promise<AnyTreeRecord | undefined> {
-	const { node, tagName, sourceUuid } = params
+	params: {
+		targetParent: Scl.Ref<Scl.ElementsOf>
+		tagName: Scl.ElementsOf
+		sourceUuid: string | undefined
+	},
+): Promise<AnyTreeRecord[]> {
+	const { targetParent, tagName, sourceUuid } = params
+	if (!sourceUuid) return []
+	const parentTree = await reader.any.getTree(targetParent)
+	if (!parentTree) return []
+	const out: AnyTreeRecord[] = []
+	await collectByTemplateUuid(reader, { node: parentTree, tagName, sourceUuid, out })
+	return out
+}
+
+async function collectByTemplateUuid(
+	reader: Reader,
+	params: {
+		node: AnyTreeRecord
+		tagName: Scl.ElementsOf
+		sourceUuid: string
+		out: AnyTreeRecord[]
+	},
+): Promise<void> {
+	const { node, tagName, sourceUuid, out } = params
 	if (
 		node.tagName === tagName &&
 		(await reader.any.getAttribute(node, { name: 'templateUuid' })) === sourceUuid
 	) {
-		return node
+		out.push(node)
+		return // a matched instance root; do not descend into its own subtree
 	}
 	for (const child of node.tree) {
-		const found = await walkForTemplateUuid(reader, { node: child, tagName, sourceUuid })
-		if (found) return found
+		await collectByTemplateUuid(reader, { node: child, tagName, sourceUuid, out })
 	}
-	return undefined
 }
 
 /**

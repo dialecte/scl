@@ -1,5 +1,7 @@
-import { findInstanceUnder } from '../find-instance'
+import { findInstancesUnder } from '../find-instance'
 import { reportFunction } from './report-function'
+
+import { mergeReports } from '@/v2019C1/extensions/lifecycle/engine/diff'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -8,7 +10,11 @@ import type * as Core from '@dialecte/core'
 /**
  * Report (read-only) what `update.fromFsd` would change: a {@link DiffReport}
  * with the fast/full classification. No instance yet -> first-time = fast
- * (`needsDecisions: false`); an existing instance with changes -> full.
+ * (`needsDecisions: false`); one or more existing instances with changes -> full.
+ *
+ * The standard permits several instances of one template under one anchor, so
+ * EVERY matching instance is diffed and its groups merged into one report (each
+ * group tagged with its `instanceScopeId`); the decision layer targets a subset.
  *
  * A carried `FunctionCategory` satellite (outside the function subtree) travels
  * as a companion of the function's decision group (ENGINE.md §16).
@@ -23,6 +29,20 @@ export async function reportFsd(
 ): Promise<DiffReport> {
 	const { sourceQuery, functionRef, targetParent } = params
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
-	const instance = await findInstanceUnder(query, { targetParent, tagName: 'Function', sourceUuid })
-	return reportFunction(query, { sourceQuery, functionRef, instance })
+	const instances = await findInstancesUnder(query, {
+		targetParent,
+		tagName: 'Function',
+		sourceUuid,
+	})
+
+	// no instance yet -> first-time = fast track
+	if (instances.length === 0) {
+		return reportFunction(query, { sourceQuery, functionRef, instance: undefined })
+	}
+
+	const reports: DiffReport[] = []
+	for (const instance of instances) {
+		reports.push(await reportFunction(query, { sourceQuery, functionRef, instance }))
+	}
+	return mergeReports(reports as [DiffReport, ...DiffReport[]])
 }
