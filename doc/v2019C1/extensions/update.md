@@ -49,10 +49,34 @@ type DecisionGroup = {
 	companions: DiffNode[] // read-only detail — travel with the primary, never toggled alone
 	dependsOn: string[] // group ids this one requires
 	suggestedAction: 'accept'
+	editableAttributes?: EditableAttribute[] // schema-derived editable fields of `primary`
 }
+
+// which attributes of the primary a UI may edit (and how) — derived from the schema,
+// so the report is self-describing and the UI never re-derives them
+type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 ```
 
-`apply` takes `decisions: Map<groupId, 'accept' | 'skip'>`. A group absent from the map defaults to `accept` (so an empty map applies everything); the engine rejects a set that accepts a group whose `dependsOn` parent is skipped.
+`apply` takes `decisions: Map<groupId, GroupDecision>` where a decision is either a plain
+accept/skip or an object carrying **edited values** for the group's `editableAttributes`:
+
+```ts
+type GroupDecision = 'accept' | 'skip' | { action: 'accept' | 'skip'; values?: Record<string, string> }
+```
+
+A group absent from the map defaults to `accept` (so an empty map applies everything); the engine
+rejects a set that accepts a group whose `dependsOn` parent is skipped.
+
+### Placement collision resolution
+
+When a group is accepted and its primary is **placed** (a first-time instantiate, a composed function,
+or a graft onto an existing instance), the engine validates it against its parent context and
+auto-resolves a scoped-uniqueness collision (e.g. two children with the same `name` under one Bay →
+`Prot` becomes `Prot_1`). Identity-only collisions are left untouched (never a silent delete + create).
+
+The engine always **owns uniqueness**. A `values` override lets the user set an editable field (typically
+`name`): the user's value is applied first, then uniqueness is re-ensured — a user name that itself
+collides is still bumped. Only attributes listed in the group's `editableAttributes` are honoured.
 
 Wrap `apply` in `doc.prepare(...)` for a previewable, reversible dry-run:
 
@@ -66,9 +90,10 @@ const target = {
 
 const report = await doc.query.lifecycle.report(target)
 
-const decisions = new Map<string, 'accept' | 'skip'>()
+const decisions = new Map<string, GroupDecision>()
 if (report.needsDecisions) {
-	// render report.groups, collect the user's accept/skip choices into `decisions`
+	// render report.groups (+ each group's editableAttributes), collect the user's
+	// accept/skip choices — and any edited values — into `decisions`
 }
 
 const prepared = await doc.prepare((tx) => tx.lifecycle.apply(tx, { ...target, report, decisions }))
@@ -139,7 +164,7 @@ The update verbs are built on two engine primitives in `extensions/lifecycle/eng
 `reconcile(tx, { sourceQuery, sourceRootRef, instanceRootRef })` reconciles an updated template subtree **onto** an existing instance. Elements match by `templateUuid` (= the source element's `uuid`, immutable across template versions):
 
 - matched element → update its user-visible attributes in place;
-- new source element → graft its subtree (via [`transplant.deep`](./transplant) + `identity.writeIdentity` stamp);
+- new source element → graft its subtree (via [`transplant.deep`](./transplant) + `identity.writeIdentity` stamp), then auto-resolve a name [collision](#placement-collision-resolution) on the grafted element against its instance parent;
 - instance element whose template lineage is gone from the source → delete;
 - instance **reference** element (a uuid-less link such as a dropped `AllocationRoleRef`) with no matching source child → removed, so the link disappears when the template drops it.
 
