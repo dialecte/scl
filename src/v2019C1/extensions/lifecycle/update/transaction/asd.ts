@@ -1,9 +1,10 @@
 import { collectComposedFunctionUuids } from '../composed-functions'
-import { findInstanceByTemplateUuid } from '../find-instance'
+import { findInstancesByTemplateUuid } from '../find-instance'
 import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
 import { fsd as updateFsd } from './fsd'
 import { reconcileSatellites } from './satellite-reconcile'
 
+import { acceptedRefIds, collisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import {
 	asd as instantiateAsd,
@@ -13,29 +14,29 @@ import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/lay
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
-import type { AcceptedIds, CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 
 /**
  * `update.fromAsd` — reconcile a project against a (possibly newer) ASD.
  *
  * Same engine as `update.fromFsd`, one layer up (proves `engine.reconcile` is
- * layer-agnostic): if the target already holds an instance of this Application
- * (an `Application` whose `templateUuid` equals the source Application's `uuid`),
- * reconcile the updated template ONTO it; otherwise instantiate it fresh.
+ * layer-agnostic): the standard permits several instances of one ASD template
+ * under one anchor, so EVERY matching `Application` instance is reconciled; if
+ * none exists yet, the application is instantiated fresh.
  *
  * Two layers, in order:
- *  1. application layer — reconcile the `Application` subtree (roles, allocation
+ *  1. application layer — reconcile each `Application` subtree (roles, allocation
  *     refs, attributes);
  *  2. function-layer cascade (G2) — treat every composed Function the ASD
  *     references as an FSD to update and delegate to `update.fromFsd`
- *     (instantiate-or-reconcile). Verbs compose verbs: a function added by the
- *     newer ASD is instantiated, an existing one is reconciled.
+ *     (instantiate-or-reconcile), which fans out per composed-function instance.
+ *     Verbs compose verbs: a function added by the newer ASD is instantiated, an
+ *     existing one is reconciled.
  *
- * `accepted` (optional) gates every write to the accepted decision groups — the
- * application reconcile, the composed-function reconciles, and the first-time
- * instantiate — so the ASD full track honours the user's decisions across both
- * layers.
+ * `report` + `decisions` gate every write: each Application instance is gated by
+ * ONLY its own groups (partitioned by `instanceScopeId`) so the user can update a
+ * subset of instances across both layers.
  */
 export async function asd(
 	tx: Core.Transaction<Config>,
@@ -43,65 +44,81 @@ export async function asd(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
-		accepted?: AcceptedIds
-		overrides?: CollisionOverrides
+		report?: DiffReport
+		decisions?: DecisionMap
 	},
 ): Promise<void> {
-	const { sourceQuery, applicationRef, targetParent, accepted, overrides } = params
+	const { sourceQuery, applicationRef, targetParent, report, decisions } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
+	const instances = await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid })
+	const groups = report?.groups ?? []
 
-	const instance = await findInstanceByTemplateUuid(tx, { tagName: 'Application', sourceUuid })
-	if (!instance) {
+	if (instances.length === 0) {
 		// first-time = one added group; gate the whole instantiate on its acceptance
-		if (accepted && !accepted.sourceIds.has(applicationRef.id)) return
-		await instantiateAsd(tx, { sourceQuery, applicationRef, targetParent, overrides })
+		const gate = decisions ? acceptedRefIds({ groups, decisions }) : undefined
+		const gateOverrides = decisions ? collisionOverrides({ groups, decisions }) : undefined
+		if (gate && !gate.sourceIds.has(applicationRef.id)) return
+		await instantiateAsd(tx, {
+			sourceQuery,
+			applicationRef,
+			targetParent,
+			overrides: gateOverrides,
+		})
 		return
 	}
 
-	// application-layer satellites (e.g. a referenced AllocationRole) travel with the
-	// application group. Resolve the instance-side satellites BEFORE the reconcile below
-	// (which may drop a satellite ref) so removals are still detectable.
-	const instanceSatelliteRefs = await resolveApplicationSatellites(tx, {
-		applicationRef: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
-	})
-
-	// 1. application layer
-	await reconcile(tx, {
-		sourceQuery,
-		sourceRootRef: applicationRef,
-		instanceRootRef: instance,
-		accepted,
-		overrides,
-	})
-
-	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
 	const structure = await resolveTargetStructure(tx, targetParent)
-	await reconcileSatellites(tx, {
-		sourceQuery,
-		satelliteRefs,
-		instanceSatelliteRefs,
-		structure,
-		accepted,
-	})
+	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
 
-	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
-	// in the Application subtree travel with the application group
-	await reconcileCrossCuttingSatellites(tx, {
-		sourceQuery,
-		primaryRef: applicationRef,
-		instancePrimaryRef: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
-		structure,
-		accepted,
-	})
+	for (const instance of instances) {
+		// gate THIS instance by only its own groups (source ids are unique within one instance)
+		const instanceGroups = groups.filter((group) => group.instanceScopeId === instance.id)
+		const accepted = decisions ? acceptedRefIds({ groups: instanceGroups, decisions }) : undefined
+		const overrides = decisions
+			? collisionOverrides({ groups: instanceGroups, decisions })
+			: undefined
 
-	// 2. function-layer cascade
+		// application-layer satellites (e.g. a referenced AllocationRole) travel with the
+		// application group. Resolve the instance-side satellites BEFORE the reconcile below
+		// (which may drop a satellite ref) so removals are still detectable.
+		const instanceSatelliteRefs = await resolveApplicationSatellites(tx, {
+			applicationRef: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
+		})
+
+		// 1. application layer
+		await reconcile(tx, {
+			sourceQuery,
+			sourceRootRef: applicationRef,
+			instanceRootRef: instance,
+			accepted,
+			overrides,
+		})
+		await reconcileSatellites(tx, {
+			sourceQuery,
+			satelliteRefs,
+			instanceSatelliteRefs,
+			structure,
+			accepted,
+		})
+		// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
+		// in the Application subtree travel with the application group
+		await reconcileCrossCuttingSatellites(tx, {
+			sourceQuery,
+			primaryRef: applicationRef,
+			instancePrimaryRef: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
+			structure,
+			accepted,
+		})
+	}
+
+	// 2. function-layer cascade — updateFsd fans out per composed-function instance
 	await cascadeComposedFunctions(tx, {
 		sourceQuery,
 		applicationRef,
 		targetParent,
-		accepted,
-		overrides,
+		report,
+		decisions,
 	})
 }
 
@@ -120,11 +137,11 @@ async function cascadeComposedFunctions(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
-		accepted?: AcceptedIds
-		overrides?: CollisionOverrides
+		report?: DiffReport
+		decisions?: DecisionMap
 	},
 ): Promise<void> {
-	const { sourceQuery, applicationRef, targetParent, accepted, overrides } = params
+	const { sourceQuery, applicationRef, targetParent, report, decisions } = params
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 	if (functionUuids.size === 0) return
 
@@ -142,8 +159,8 @@ async function cascadeComposedFunctions(
 			sourceQuery,
 			functionRef,
 			targetParent: functionTargetParent,
-			accepted,
-			overrides,
+			report,
+			decisions,
 		})
 	}
 }

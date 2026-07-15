@@ -1,5 +1,5 @@
 import { collectComposedFunctionUuids } from '../composed-functions'
-import { findInstanceByTemplateUuid } from '../find-instance'
+import { findInstancesByTemplateUuid } from '../find-instance'
 import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reportFunction } from './report-function'
 import { foldSatelliteCompanions } from './satellite-companions'
@@ -10,6 +10,7 @@ import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/lay
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
+import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
  * Report (read-only) what `update.fromAsd` would change: the **application
@@ -17,6 +18,11 @@ import type * as Core from '@dialecte/core'
  * composed Function the ASD references, mirroring the apply cascade). The
  * per-layer reports are merged into one — `groups` covers both layers, so the
  * full-track surface is complete. Fast/full classification as in {@link reportFsd}.
+ *
+ * The standard permits several instances of one ASD template under one anchor, so
+ * EVERY Application instance AND every composed-Function instance is diffed; their
+ * groups (each tagged with its `instanceScopeId`) are merged, and the decision
+ * layer targets a subset (multi-instance, Part C).
  */
 export async function reportAsd(
 	query: Core.Query<Config>,
@@ -28,26 +34,54 @@ export async function reportAsd(
 	const { sourceQuery, applicationRef } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
-	const applicationInstance = await findInstanceByTemplateUuid(query, {
+	const applicationInstances = await findInstancesByTemplateUuid(query, {
 		tagName: 'Application',
 		sourceUuid,
 	})
+
+	const reports: DiffReport[] = []
+	if (applicationInstances.length === 0) {
+		// first-time = fast track; the whole application is added
+		reports.push(
+			await reportApplicationInstance(query, { sourceQuery, applicationRef, instance: undefined }),
+		)
+	} else {
+		for (const instance of applicationInstances) {
+			reports.push(
+				await reportApplicationInstance(query, { sourceQuery, applicationRef, instance }),
+			)
+		}
+	}
+
+	const functionReports = await reportComposedFunctions(query, { sourceQuery, applicationRef })
+
+	return mergeReports([...reports, ...functionReports] as [DiffReport, ...DiffReport[]])
+}
+
+/** Diff one Application instance and fold its (layer + cross-cutting) satellites. */
+async function reportApplicationInstance(
+	query: Core.Query<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		applicationRef: Scl.Ref<'Application'>
+		instance: AnyTrackedRecord | undefined
+	},
+): Promise<DiffReport> {
+	const { sourceQuery, applicationRef, instance } = params
+
 	const applicationReport = await diff({
 		sourceQuery,
 		targetQuery: query,
 		sourceRootRef: applicationRef,
-		instanceRootRef: applicationInstance,
+		instanceRootRef: instance,
 	})
 
 	// application-layer satellites (e.g. a referenced AllocationRole) travel with
 	// the application's decision group
 	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
-	const instanceSatelliteRefs = applicationInstance
+	const instanceSatelliteRefs = instance
 		? await resolveApplicationSatellites(query, {
-				applicationRef: {
-					tagName: 'Application',
-					id: applicationInstance.id,
-				} as Scl.Ref<'Application'>,
+				applicationRef: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
 			})
 		: []
 	await foldSatelliteCompanions(query, {
@@ -63,18 +97,16 @@ export async function reportAsd(
 	await foldCrossCuttingSatellites(query, {
 		sourceQuery,
 		primaryRef: applicationRef,
-		instancePrimaryRef: applicationInstance
-			? ({ tagName: 'Application', id: applicationInstance.id } as Scl.Ref<Scl.ElementsOf>)
+		instancePrimaryRef: instance
+			? ({ tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>)
 			: undefined,
 		report: applicationReport,
 	})
 
-	const functionReports = await reportComposedFunctions(query, { sourceQuery, applicationRef })
-
-	return mergeReports([applicationReport, ...functionReports])
+	return applicationReport
 }
 
-/** One report per composed Function (found globally by `templateUuid`). */
+/** One report per composed Function INSTANCE (found globally by `templateUuid`). */
 async function reportComposedFunctions(
 	query: Core.Query<Config>,
 	params: { sourceQuery: Core.Query<Config>; applicationRef: Scl.Ref<'Application'> },
@@ -91,17 +123,19 @@ async function reportComposedFunctions(
 		if (!sourceFunction) continue
 
 		const functionRef = { tagName: 'Function', id: sourceFunction.id } as Scl.Ref<'Function'>
-		const functionInstance = await findInstanceByTemplateUuid(query, {
+		const functionInstances = await findInstancesByTemplateUuid(query, {
 			tagName: 'Function',
 			sourceUuid: functionUuid,
 		})
-		reports.push(
-			await reportFunction(query, {
-				sourceQuery,
-				functionRef,
-				instance: functionInstance,
-			}),
-		)
+		if (functionInstances.length === 0) {
+			reports.push(await reportFunction(query, { sourceQuery, functionRef, instance: undefined }))
+			continue
+		}
+		for (const functionInstance of functionInstances) {
+			reports.push(
+				await reportFunction(query, { sourceQuery, functionRef, instance: functionInstance }),
+			)
+		}
 	}
 	return reports
 }

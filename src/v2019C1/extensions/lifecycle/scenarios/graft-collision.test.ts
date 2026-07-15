@@ -1,10 +1,13 @@
+import { apply } from '../apply'
+import { report } from '../report'
+
 import { describe } from 'vitest'
 
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
-import { fsd as updateFsd } from '@/v2019C1/extensions/lifecycle/update/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
+import type { GroupDecision } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
 // Slice 3 (graft) — when a template update GRAFTS a new child onto an existing instance,
@@ -113,16 +116,30 @@ describe('lifecycle scenario — reconcile resolves a grafted element name colli
 			})) as Scl.Ref<'SubFunction'>
 		})
 
-		// update: the new SubFunction is grafted onto the instance and its collision resolved
-		const overrides = testCase.overrideName
-			? new Map([[sourceSubRef.id, { name: testCase.overrideName }]])
-			: undefined
+		// update via the seam: the new SubFunction is grafted onto the instance and its
+		// collision resolved; a user override rides on the grafted group's decision `values`
+		const rep = await report(target.query, {
+			verb: 'fsd',
+			sourceQuery: source.query,
+			ref: functionRef,
+			anchor: bayRef,
+		})
+		const decisions = new Map<string, GroupDecision>()
+		if (testCase.overrideName) {
+			const graftGroup = rep.groups.find(
+				(group) => group.change === 'added' && group.primary.sourceRef?.id === sourceSubRef.id,
+			)
+			if (!graftGroup) throw new Error('graft group not found')
+			decisions.set(graftGroup.id, { action: 'accept', values: { name: testCase.overrideName } })
+		}
 		await target.transaction(async (tx) => {
-			await updateFsd(tx, {
+			await apply(tx, {
+				verb: 'fsd',
 				sourceQuery: source.query,
-				functionRef,
-				targetParent: bayRef,
-				overrides,
+				ref: functionRef,
+				anchor: bayRef,
+				report: rep,
+				decisions,
 			})
 		})
 
