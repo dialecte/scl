@@ -71,9 +71,12 @@ describe('lifecycle scenario — instantiate.asd resolves Application name colli
 			expectedQueries: [
 				'//v2019C1:Application[@name="HMI"]', // first instance keeps the template name
 				'//v2019C1:Application[@name="HMI_1"]', // collision auto-resolved
+				'//default:Bay/default:Function[@name="Prot"]', // first composed function
+				'//default:Bay/default:Function[@name="Prot_1"]', // its collision auto-resolved too
 			],
 			unexpectedQueries: [
 				'//v2019C1:Application[@name="HMI"][2]', // no duplicate name
+				'//default:Bay/default:Function[@name="Prot"][2]', // composed function name kept unique
 			],
 		},
 		'a user override names the second Application': {

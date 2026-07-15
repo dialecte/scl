@@ -4,7 +4,10 @@ import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/satellites/clone-applied-satellites'
-import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+import {
+	findMissingReferencedRecords,
+	resolveStructureRef,
+} from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { AsdParams } from './asd.types'
@@ -28,6 +31,16 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	const { sourceQuery, applicationRef, targetParent, overrides } = params
 
 	const structure = await resolveTargetStructure(tx, targetParent)
+
+	// capture the composed Function source refs BEFORE cloning (they are "missing" only
+	// until placed) so their clones can be collision-checked at their structural level
+	const composedFunctionRefs = await findMissingReferencedRecords(tx, {
+		sourceQuery,
+		scopeRef: applicationRef,
+		refTagName: 'FunctionRef',
+		targetTagName: 'Function',
+	})
+
 	const mappings = await cloneApplicationContent(tx, {
 		sourceQuery,
 		applicationRef,
@@ -44,6 +57,19 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	})
 
 	await writeIdentity(tx, { mappings: [...mappings, ...appliedMappings], mode: 'stamp-template' })
+
+	// resolve a name collision for each placed composed Function at its own structural
+	// level (a repeated instantiate would otherwise duplicate a Function name in the Bay)
+	for (const functionRef of composedFunctionRefs) {
+		const functionMapping = mappings.find((mapping) => mapping.source.id === functionRef.id)
+		if (!functionMapping) continue
+		const functionParent = await resolveStructureRef(sourceQuery, functionRef, structure)
+		await resolvePlacementCollision(tx, {
+			ref: functionMapping.target,
+			parentRef: functionParent,
+			overrides: overrides?.get(functionRef.id),
+		})
+	}
 
 	const rootMapping = mappings.find((mapping) => mapping.source.id === applicationRef.id)
 	if (rootMapping) {
