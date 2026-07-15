@@ -1,8 +1,10 @@
 import { resolveTargetStructure } from './resolve-target-structure'
 
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
+import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/satellites/clone-applied-satellites'
+import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { AsdParams } from './asd.types'
@@ -23,7 +25,7 @@ import type * as Core from '@dialecte/core'
  * (naming, assign-to-application) is applied by consumer hooks, not here.
  */
 export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Promise<void> {
-	const { sourceQuery, applicationRef, targetParent } = params
+	const { sourceQuery, applicationRef, targetParent, overrides } = params
 
 	const structure = await resolveTargetStructure(tx, targetParent)
 	const mappings = await cloneApplicationContent(tx, {
@@ -45,6 +47,15 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 
 	const rootMapping = mappings.find((mapping) => mapping.source.id === applicationRef.id)
 	if (rootMapping) {
+		// validate the placed application against its parent context (resolved at the
+		// application's own structural level, not the anchor): apply any user edits then
+		// auto-resolve a name collision among siblings (schema constraint)
+		const applicationParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
+		await resolvePlacementCollision(tx, {
+			ref: rootMapping.target,
+			parentRef: applicationParent,
+			overrides: overrides?.get(applicationRef.id),
+		})
 		await writeProvenance(tx, {
 			sourceQuery,
 			targetRoot: rootMapping.target,

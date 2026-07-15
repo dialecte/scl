@@ -55,7 +55,7 @@ export async function asd(
 	if (!instance) {
 		// first-time = one added group; gate the whole instantiate on its acceptance
 		if (accepted && !accepted.sourceIds.has(applicationRef.id)) return
-		await instantiateAsd(tx, { sourceQuery, applicationRef, targetParent })
+		await instantiateAsd(tx, { sourceQuery, applicationRef, targetParent, overrides })
 		return
 	}
 
