@@ -1,7 +1,7 @@
 import { apply } from '../apply'
 import { report } from '../report'
 
-import { describe } from 'vitest'
+import { describe, expect } from 'vitest'
 
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -132,6 +132,11 @@ describe('lifecycle scenario — multi-instance same template at one level (coll
 			ref: functionRef,
 			anchor: bayRef,
 		})
+
+		// each group is self-describing: its instance is labelled for the UI (Prot / Prot_1)
+		const titles = new Set(rep.groups.map((group) => group.instanceScopeTitle))
+		expect(titles.has('Prot')).toBe(true)
+		expect(titles.has('Prot_1')).toBe(true)
 
 		// the report now carries ONE decision-group set per instance; the decision map
 		// is the selector — accept the subset of instances to update

@@ -50,6 +50,8 @@ type DecisionGroup = {
 	dependsOn: string[] // group ids this one requires
 	suggestedAction: 'accept'
 	editableAttributes?: EditableAttribute[] // schema-derived editable fields of `primary`
+	instanceScopeId?: string // id of the instance root this group belongs to (multi-instance)
+	instanceScopeTitle?: string // human label of that instance root (e.g. "Prot" vs "Prot_1")
 }
 
 // which attributes of the primary a UI may edit (and how) — derived from the schema,
@@ -61,11 +63,28 @@ type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 accept/skip or an object carrying **edited values** for the group's `editableAttributes`:
 
 ```ts
-type GroupDecision = 'accept' | 'skip' | { action: 'accept' | 'skip'; values?: Record<string, string> }
+type GroupDecision =
+	| 'accept'
+	| 'skip'
+	| { action: 'accept' | 'skip'; values?: Record<string, string> }
 ```
 
 A group absent from the map defaults to `accept` (so an empty map applies everything); the engine
 rejects a set that accepts a group whose `dependsOn` parent is skipped.
+
+### Multiple instances of one template
+
+The standard allows several instances of one template under one anchor (each with a unique instance
+`uuid`, sharing one `templateUuid`). `report` enumerates **every** instance and returns one
+decision-group set per instance in the single `report.groups`, each group tagged with its
+`instanceScopeId` (the instance root) and a self-describing `instanceScopeTitle`. There is **one**
+report, not one per instance.
+
+The decision map is the selector: accept the groups of the instances you want and skip the rest to
+update a **subset** (e.g. 2 of 4). `apply` reconciles each instance independently, gated by only its
+own groups. A UI groups by `instanceScopeId`, labels each section with `instanceScopeTitle`, and keys
+the `decisions` map by `group.id` (already scoped per instance, so globally unique).
+
 
 ### Placement collision resolution
 

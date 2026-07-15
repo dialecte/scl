@@ -55,6 +55,13 @@ export type DecisionGroup = {
 	 * first-time instantiate (no instance yet).
 	 */
 	instanceScopeId?: string
+	/**
+	 * Human-readable title of the instance root (`extractElementTitle`), tagged at the
+	 * report seam so a multi-instance UI can label each instance section (e.g. `Prot`
+	 * vs `Prot_1`) without resolving the element itself. Omitted for a first-time
+	 * instantiate.
+	 */
+	instanceScopeTitle?: string
 }
 
 export type DiffReport = {

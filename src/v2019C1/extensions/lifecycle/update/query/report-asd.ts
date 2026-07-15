@@ -6,6 +6,7 @@ import { foldSatelliteCompanions } from './satellite-companions'
 
 import { diff, mergeReports } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
+import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -103,6 +104,11 @@ async function reportApplicationInstance(
 		report: applicationReport,
 	})
 
+	if (instance) {
+		const title = await extractElementTitle(query, instance)
+		for (const group of applicationReport.groups) group.instanceScopeTitle = title
+	}
+
 	return applicationReport
 }
 
@@ -132,9 +138,14 @@ async function reportComposedFunctions(
 			continue
 		}
 		for (const functionInstance of functionInstances) {
-			reports.push(
-				await reportFunction(query, { sourceQuery, functionRef, instance: functionInstance }),
-			)
+			const functionReport = await reportFunction(query, {
+				sourceQuery,
+				functionRef,
+				instance: functionInstance,
+			})
+			const title = await extractElementTitle(query, functionInstance)
+			for (const group of functionReport.groups) group.instanceScopeTitle = title
+			reports.push(functionReport)
 		}
 	}
 	return reports

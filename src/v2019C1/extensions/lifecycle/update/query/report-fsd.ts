@@ -2,6 +2,7 @@ import { findInstancesUnder } from '../find-instance'
 import { reportFunction } from './report-function'
 
 import { mergeReports } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -42,7 +43,10 @@ export async function reportFsd(
 
 	const reports: DiffReport[] = []
 	for (const instance of instances) {
-		reports.push(await reportFunction(query, { sourceQuery, functionRef, instance }))
+		const instanceReport = await reportFunction(query, { sourceQuery, functionRef, instance })
+		const title = await extractElementTitle(query, instance)
+		for (const group of instanceReport.groups) group.instanceScopeTitle = title
+		reports.push(instanceReport)
 	}
 	return mergeReports(reports as [DiffReport, ...DiffReport[]])
 }

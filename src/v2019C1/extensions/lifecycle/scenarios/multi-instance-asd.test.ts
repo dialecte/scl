@@ -1,7 +1,7 @@
 import { apply } from '../apply'
 import { report } from '../report'
 
-import { describe } from 'vitest'
+import { describe, expect } from 'vitest'
 
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -134,6 +134,13 @@ describe('lifecycle scenario — multi-instance ASD update (Part C, Phase B)', (
 			ref: applicationRef,
 			anchor: bayRef,
 		})
+
+		// each group is self-describing: its instance is labelled for the UI, on both layers
+		const titles = new Set(rep.groups.map((group) => group.instanceScopeTitle))
+		expect(titles.has('HMI')).toBe(true)
+		expect(titles.has('HMI_1')).toBe(true)
+		expect(titles.has('Prot')).toBe(true)
+		expect(titles.has('Prot_1')).toBe(true)
 
 		const decisions = new Map<string, GroupDecision>()
 		if (testCase.mode === 'skip-all') {
