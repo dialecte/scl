@@ -142,6 +142,9 @@ describe('lifecycle scenario — multi-instance ASD update (Part C, Phase B)', (
 		expect(titles.has('Prot')).toBe(true)
 		expect(titles.has('Prot_1')).toBe(true)
 
+		// one root per instance across both layers: 2 Applications + 2 composed Functions
+		expect(rep.roots).toHaveLength(4)
+
 		const decisions = new Map<string, GroupDecision>()
 		if (testCase.mode === 'skip-all') {
 			for (const group of rep.groups) decisions.set(group.id, 'skip')

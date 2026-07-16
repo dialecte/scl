@@ -138,6 +138,10 @@ describe('lifecycle scenario — multi-instance same template at one level (coll
 		expect(titles.has('Prot')).toBe(true)
 		expect(titles.has('Prot_1')).toBe(true)
 
+		// the report carries one root per instance (the full instance tree, unchanged
+		// context included) so a UI can render each instance directly
+		expect(rep.roots).toHaveLength(2)
+
 		// the report now carries ONE decision-group set per instance; the decision map
 		// is the selector — accept the subset of instances to update
 		const decisions = new Map<string, GroupDecision>()

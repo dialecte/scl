@@ -41,7 +41,13 @@ export async function diff(params: {
 	// no instance yet -> first-time instantiate: the whole template is added (fast)
 	if (!instanceTree) {
 		const root = addedNode(sourceTree)
-		return { root, groups: groupChanges(root), needsDecisions: false, summary: summarize(root) }
+		return {
+			root,
+			roots: [root],
+			groups: groupChanges(root),
+			needsDecisions: false,
+			summary: summarize(root),
+		}
 	}
 
 	const index = new Map<string, AnyTreeRecord>()
@@ -59,7 +65,13 @@ export async function diff(params: {
 	})
 	const summary = summarize(root)
 	const needsDecisions = summary.added + summary.removed + summary.modified > 0
-	return { root, groups: groupChanges(root, instanceTree.id), needsDecisions, summary }
+	return {
+		root,
+		roots: [root],
+		groups: groupChanges(root, instanceTree.id),
+		needsDecisions,
+		summary,
+	}
 }
 
 async function diffMatched(
@@ -205,7 +217,13 @@ export function mergeReports(reports: [DiffReport, ...DiffReport[]]): DiffReport
 		{ added: 0, removed: 0, modified: 0 },
 	)
 	const needsDecisions = reports.some((report) => report.needsDecisions)
-	return { root: first.root, groups, needsDecisions, summary }
+	return {
+		root: first.root,
+		roots: reports.flatMap((report) => report.roots),
+		groups,
+		needsDecisions,
+		summary,
+	}
 }
 
 function summarize(root: DiffNode): DiffSummary {

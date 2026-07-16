@@ -66,6 +66,12 @@ export type DecisionGroup = {
 
 export type DiffReport = {
 	root: DiffNode
+	/**
+	 * One root per instance in the report. A single diff carries `[root]`; a merged
+	 * multi-instance report carries every instance's root (both layers for an ASD), so
+	 * a UI can render each instance's full tree (unchanged context included) directly.
+	 */
+	roots: DiffNode[]
 	/** The change tree folded into accept/skip units — the full-track surface. */
 	groups: DecisionGroup[]
 	/**

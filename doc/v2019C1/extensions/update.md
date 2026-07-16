@@ -85,7 +85,6 @@ update a **subset** (e.g. 2 of 4). `apply` reconciles each instance independentl
 own groups. A UI groups by `instanceScopeId`, labels each section with `instanceScopeTitle`, and keys
 the `decisions` map by `group.id` (already scoped per instance, so globally unique).
 
-
 ### Placement collision resolution
 
 When a group is accepted and its primary is **placed** (a first-time instantiate, a composed function,
@@ -196,6 +195,8 @@ Because the instance is already in instance-space, comparing template to instanc
 ```ts
 type DiffReport = {
 	root: DiffNode // change: added | removed | modified | unchanged, attributeChanges, children
+	roots: DiffNode[] // one root per instance (both layers for an ASD); [root] for a single diff
+	groups: DecisionGroup[]
 	needsDecisions: boolean
 	summary: { added: number; removed: number; modified: number }
 }
