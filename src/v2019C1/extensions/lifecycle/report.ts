@@ -28,10 +28,12 @@ export async function report(
 					sourceQuery: target.sourceQuery,
 					functionRef: target.ref,
 					targetParent: target.anchor,
+					scenario: target.scenario,
 				})
 			: await reportAsd(query, {
 					sourceQuery: target.sourceQuery,
 					applicationRef: target.ref,
+					scenario: target.scenario,
 				})
 
 	for (const group of report.groups) {

@@ -6,6 +6,7 @@ import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/seam.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -26,15 +27,16 @@ export async function reportFsd(
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
+		scenario?: LifecycleScenario
 	},
 ): Promise<DiffReport> {
-	const { sourceQuery, functionRef, targetParent } = params
+	const { sourceQuery, functionRef, targetParent, scenario } = params
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
-	const instances = await findInstancesUnder(query, {
-		targetParent,
-		tagName: 'Function',
-		sourceUuid,
-	})
+	// `instantiate` always places a NEW instance, so it never matches an existing one.
+	const instances =
+		scenario === 'instantiate'
+			? []
+			: await findInstancesUnder(query, { targetParent, tagName: 'Function', sourceUuid })
 
 	// no instance yet -> first-time = fast track
 	if (instances.length === 0) {

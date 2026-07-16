@@ -10,6 +10,7 @@ import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/seam.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
@@ -30,15 +31,17 @@ export async function reportAsd(
 	params: {
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
+		scenario?: LifecycleScenario
 	},
 ): Promise<DiffReport> {
-	const { sourceQuery, applicationRef } = params
+	const { sourceQuery, applicationRef, scenario } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
-	const applicationInstances = await findInstancesByTemplateUuid(query, {
-		tagName: 'Application',
-		sourceUuid,
-	})
+	// `instantiate` always places a NEW instance, so it never matches an existing one.
+	const applicationInstances =
+		scenario === 'instantiate'
+			? []
+			: await findInstancesByTemplateUuid(query, { tagName: 'Application', sourceUuid })
 
 	const reports: DiffReport[] = []
 	if (applicationInstances.length === 0) {
@@ -54,7 +57,11 @@ export async function reportAsd(
 		}
 	}
 
-	const functionReports = await reportComposedFunctions(query, { sourceQuery, applicationRef })
+	const functionReports = await reportComposedFunctions(query, {
+		sourceQuery,
+		applicationRef,
+		scenario,
+	})
 
 	return mergeReports([...reports, ...functionReports] as [DiffReport, ...DiffReport[]])
 }
@@ -115,9 +122,13 @@ async function reportApplicationInstance(
 /** One report per composed Function INSTANCE (found globally by `templateUuid`). */
 async function reportComposedFunctions(
 	query: Core.Query<Config>,
-	params: { sourceQuery: Core.Query<Config>; applicationRef: Scl.Ref<'Application'> },
+	params: {
+		sourceQuery: Core.Query<Config>
+		applicationRef: Scl.Ref<'Application'>
+		scenario?: LifecycleScenario
+	},
 ): Promise<DiffReport[]> {
-	const { sourceQuery, applicationRef } = params
+	const { sourceQuery, applicationRef, scenario } = params
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 
 	const reports: DiffReport[] = []
@@ -129,10 +140,14 @@ async function reportComposedFunctions(
 		if (!sourceFunction) continue
 
 		const functionRef = { tagName: 'Function', id: sourceFunction.id } as Scl.Ref<'Function'>
-		const functionInstances = await findInstancesByTemplateUuid(query, {
-			tagName: 'Function',
-			sourceUuid: functionUuid,
-		})
+		// `instantiate` always places NEW composed-function instances too.
+		const functionInstances =
+			scenario === 'instantiate'
+				? []
+				: await findInstancesByTemplateUuid(query, {
+						tagName: 'Function',
+						sourceUuid: functionUuid,
+					})
 		if (functionInstances.length === 0) {
 			reports.push(await reportFunction(query, { sourceQuery, functionRef, instance: undefined }))
 			continue

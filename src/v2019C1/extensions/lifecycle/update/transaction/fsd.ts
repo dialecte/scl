@@ -16,6 +16,7 @@ import type {
 	DecisionMap,
 	DiffReport,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/seam.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -38,15 +39,21 @@ export async function fsd(
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
+		/** `instantiate` forces a fresh instance; `update` (default) reconciles. */
+		scenario?: LifecycleScenario
 		/** Multi-instance gate: partitioned per instance by `instanceScopeId`. */
 		report?: DiffReport
 		decisions?: DecisionMap
 	},
 ): Promise<void> {
-	const { sourceQuery, functionRef, targetParent, report, decisions } = params
+	const { sourceQuery, functionRef, targetParent, scenario, report, decisions } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
-	const instances = await findInstancesUnder(tx, { targetParent, tagName: 'Function', sourceUuid })
+	// `instantiate` always places a NEW instance, so it never matches an existing one.
+	const instances =
+		scenario === 'instantiate'
+			? []
+			: await findInstancesUnder(tx, { targetParent, tagName: 'Function', sourceUuid })
 
 	const groups = report?.groups ?? []
 

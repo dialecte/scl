@@ -4,7 +4,7 @@ title: Update
 
 # Update
 
-Update reconciles a project against a **newer version of a template** it was built from. Each update verb is `instantiate-or-reconcile`: if the target has no instance yet it instantiates (the first-time case); if it already holds an instance, it reconciles the changes **onto** that instance instead of duplicating it.
+Update reconciles a project against a **newer version of a template** it was built from. The lifecycle seam exposes two explicit operations via `scenario`: **`instantiate`** places a new instance (duplicates allowed), while **`update`** reconciles a newer template **onto** an existing instance instead of duplicating it. With `scenario: 'update'` and no instance yet, update falls back to the first-time instantiate.
 
 ```ts
 // apply
@@ -24,16 +24,24 @@ The `reconcile` / `diff` primitives below (in `extensions/lifecycle/engine`) are
 The verb-agnostic seam is the recommended consumer entry point. **Dialecte decides the track**, the consumer never picks it: ask for a report, then apply.
 
 ```ts
-query.lifecycle.report({ verb, sourceQuery, ref, anchor }) // -> DiffReport { needsDecisions, ... }
-tx.lifecycle.apply(tx, { verb, sourceQuery, ref, anchor, report })
+query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor }) // -> DiffReport { needsDecisions, ... }
+tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report })
 ```
 
-- `verb`: `'fsd'` (then `ref` is a `Function`) or `'asd'` (then `ref` is an `Application`);
+- `verb`: `'fsd'` (then `ref` is a `Function`) or `'asd'` (then `ref` is an `Application`) — the **layer**;
+- `scenario`: `'instantiate'` or `'update'` — the **operation** (see below; defaults to `'update'`);
 - `anchor`: the target parent the instance lives under / is placed into.
+
+### Scenario — instantiate vs update
+
+`instantiate` and `update` are **distinct operations**, chosen explicitly by the consumer — dialecte does not infer one from the other (a same-version re-upload is a valid duplicate, so inference is unsafe):
+
+- **`instantiate`** — place a **new** instance of the template. Duplicates are allowed: re-applying the same template yields **another** instance (never a silent no-op), with a sibling name collision auto-resolved (e.g. `HMI` → `HMI_1`, and its composed functions `Prot` → `Prot_1`). The placed `name` is an editable field so the user can override the auto-resolved value.
+- **`update`** — reconcile the template **onto** its existing instance(s). If none exists yet it is the first-time case (instantiate); with existing instances it reconciles in place and never duplicates.
 
 `report.needsDecisions` gates the track:
 
-- **fast** (`false`) — first-time instantiate or a conflict-free change → `apply` writes headless (pass no `decisions`);
+- **fast** (`false`) — first-time instantiate or a conflict-free change → `apply` writes headless (pass no `decisions`). User value edits still ride through if `decisions` are supplied;
 - **full** (`true`) — the instance exists and something changed → `apply` needs `decisions`. Without them it writes **nothing** and returns the report so the caller can drive the review; with them it applies only the accepted groups (across both layers for an ASD).
 
 ### Decision groups (full track)
@@ -101,6 +109,7 @@ Wrap `apply` in `doc.prepare(...)` for a previewable, reversible dry-run:
 ```ts
 const target = {
 	verb: 'fsd',
+	scenario: 'instantiate', // or 'update'
 	sourceQuery: template.query,
 	ref: { tagName: 'Function', id: 'fn-1' },
 	anchor: { tagName: 'Bay', id: 'bay-1' },
@@ -116,6 +125,16 @@ if (report.needsDecisions) {
 
 const prepared = await doc.prepare((tx) => tx.lifecycle.apply(tx, { ...target, report, decisions }))
 await prepared.commit() // or prepared.discard()
+```
+
+### Presentation scope
+
+`presentationScope(target)` is a small, layer-derived descriptor a UI can use to render the merge as a **structural tree**: where to root it and which top-level SCL sections are irrelevant to the layer. For `fsd` / `asd` it roots at `Substation` and omits `DataTypeTemplates`, `Communication` and `IED` (the IED layer will bring `IED` back into scope).
+
+```ts
+import { presentationScope } from '@dialecte/scl/v2019C1'
+
+const { rootTag, omit } = presentationScope(target) // { rootTag: 'Substation', omit: [...] }
 ```
 
 ````

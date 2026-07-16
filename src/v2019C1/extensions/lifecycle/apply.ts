@@ -14,7 +14,8 @@ import type * as Core from '@dialecte/core'
  *
  *  - **fast** (`needsDecisions === false`): first-time instantiate or a
  *    conflict-free change → apply headless (delegate to the per-layer update
- *    verb with no gate). `decisions` are ignored.
+ *    verb with no gate). When `decisions` are still supplied, their user value
+ *    edits (editable attributes) are honored; there is simply no accept/skip gate.
  *  - **full, not decided** (`needsDecisions === true`, no `decisions`): a human
  *    must resolve decisions first → nothing is written; the report is returned
  *    unchanged so the caller can drive the review flow.
@@ -33,13 +34,15 @@ export async function apply(
 ): Promise<DiffReport> {
 	const { report, decisions } = params
 
-	if (!report.needsDecisions) {
+	// No decisions supplied: fast track applies headless; full track waits for a human.
+	if (!decisions) {
+		if (report.needsDecisions) return report // full track, not decided yet
 		await runVerb(tx, params, report, undefined) // fast track: no gate = apply all
 		return report
 	}
 
-	if (!decisions) return report // full track, not decided yet
-
+	// Decisions supplied: honor gating AND user value edits — even on the fast track,
+	// a conflict-free instantiate can still carry edited editable attributes.
 	assertDecisionsCoherent({ groups: report.groups, decisions })
 	await runVerb(tx, params, report, decisions)
 	return report
@@ -62,6 +65,7 @@ async function runVerb(
 			sourceQuery: target.sourceQuery,
 			functionRef: target.ref,
 			targetParent: target.anchor,
+			scenario: target.scenario,
 			report,
 			decisions,
 		})
@@ -70,6 +74,7 @@ async function runVerb(
 			sourceQuery: target.sourceQuery,
 			applicationRef: target.ref,
 			targetParent: target.anchor,
+			scenario: target.scenario,
 			report,
 			decisions,
 		})

@@ -15,6 +15,7 @@ import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/t
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/seam.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -44,14 +45,20 @@ export async function asd(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
+		/** `instantiate` forces a fresh instance; `update` (default) reconciles. */
+		scenario?: LifecycleScenario
 		report?: DiffReport
 		decisions?: DecisionMap
 	},
 ): Promise<void> {
-	const { sourceQuery, applicationRef, targetParent, report, decisions } = params
+	const { sourceQuery, applicationRef, targetParent, scenario, report, decisions } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
-	const instances = await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid })
+	// `instantiate` always places a NEW instance, so it never matches an existing one.
+	const instances =
+		scenario === 'instantiate'
+			? []
+			: await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid })
 	const groups = report?.groups ?? []
 
 	if (instances.length === 0) {
@@ -117,6 +124,7 @@ export async function asd(
 		sourceQuery,
 		applicationRef,
 		targetParent,
+		scenario,
 		report,
 		decisions,
 	})
@@ -137,11 +145,12 @@ async function cascadeComposedFunctions(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
+		scenario?: LifecycleScenario
 		report?: DiffReport
 		decisions?: DecisionMap
 	},
 ): Promise<void> {
-	const { sourceQuery, applicationRef, targetParent, report, decisions } = params
+	const { sourceQuery, applicationRef, targetParent, scenario, report, decisions } = params
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 	if (functionUuids.size === 0) return
 
@@ -159,6 +168,7 @@ async function cascadeComposedFunctions(
 			sourceQuery,
 			functionRef,
 			targetParent: functionTargetParent,
+			scenario,
 			report,
 			decisions,
 		})
