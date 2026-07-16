@@ -19,4 +19,12 @@ export type {
 	EditableAttribute,
 } from './constraints/classify-attribute.types'
 
-export type { LifecycleApplyParams, LifecycleTarget, LifecycleVerb } from './seam.types'
+export type {
+	LifecycleApplyParams,
+	LifecycleScenario,
+	LifecycleTarget,
+	LifecycleVerb,
+} from './seam.types'
+
+export { presentationScope } from './presentation-scope'
+export type { PresentationScope } from './presentation-scope'
