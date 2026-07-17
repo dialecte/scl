@@ -3,12 +3,12 @@ import {
 	findConstraintViolation,
 	isEditableMode,
 	resolveUniqueValue,
-} from './constraints'
-import { findInstancesByTemplateUuid } from './update/find-instance'
+} from '@/v2019C1/extensions/lifecycle/constraints'
+import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 
-import type { LifecycleTarget } from './seam.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/seam.types'
 import type * as Core from '@dialecte/core'
 
 /**

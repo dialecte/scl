@@ -1,6 +1,5 @@
-import { findInstanceByTemplateUuid } from '../find-instance'
-
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'

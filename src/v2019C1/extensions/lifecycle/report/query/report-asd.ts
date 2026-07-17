@@ -1,10 +1,10 @@
-import { collectComposedFunctionUuids } from '../composed-functions'
-import { findInstancesByTemplateUuid } from '../find-instance'
 import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reportFunction } from './report-function'
 import { foldSatelliteCompanions } from './satellite-companions'
 
 import { diff, mergeReports } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { collectComposedFunctionUuids } from '@/v2019C1/extensions/lifecycle/instance'
+import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
 

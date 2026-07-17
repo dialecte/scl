@@ -27,5 +27,5 @@ export type {
 	LifecycleVerb,
 } from './seam.types'
 
-export { presentationScope } from './presentation-scope'
-export type { PresentationScope } from './presentation-scope'
+export { presentationScope } from './report/public'
+export type { PresentationScope } from './report/public'

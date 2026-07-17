@@ -1,9 +1,9 @@
-import { findInstancesUnder } from '../find-instance'
 import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reconcileCarriedSatellites } from './function-satellites'
 
 import { acceptedRefIds, collisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
+import { findInstancesUnder } from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	fsd as instantiateFsd,
 	resolveTargetStructure,

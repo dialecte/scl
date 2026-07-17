@@ -1,7 +1,6 @@
-import { findInstanceByTemplateUuid } from '../find-instance'
-
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
+import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	cloneTree,
 	resolveStructureRef,

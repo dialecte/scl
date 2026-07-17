@@ -1,7 +1,7 @@
-import { findInstancesUnder } from '../find-instance'
 import { reportFunction } from './report-function'
 
 import { mergeReports } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { findInstancesUnder } from '@/v2019C1/extensions/lifecycle/instance'
 import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
 
 import type { Scl, Config } from '@/v2019C1/config'

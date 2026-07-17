@@ -1,11 +1,11 @@
 import { markPlacementConflicts } from './mark-placement-conflicts'
-import { reportAsd, reportFsd } from './update/query'
+import { reportAsd, reportFsd } from './query'
 
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
 
-import type { LifecycleTarget } from './seam.types'
 import type { Config } from '@/v2019C1/config'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/seam.types'
 import type * as Core from '@dialecte/core'
 
 /**

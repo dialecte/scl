@@ -1,5 +1,5 @@
-import type { LifecycleTarget } from './seam.types'
 import type { Scl } from '@/v2019C1/config'
+import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/seam.types'
 
 /**
  * How to present a lifecycle merge as a structural tree: where to root it and

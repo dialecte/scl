@@ -1,11 +1,11 @@
-import { collectComposedFunctionUuids } from '../composed-functions'
-import { findInstancesByTemplateUuid } from '../find-instance'
 import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
 import { fsd as updateFsd } from './fsd'
 import { reconcileSatellites } from './satellite-reconcile'
 
 import { acceptedRefIds, collisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
+import { collectComposedFunctionUuids } from '@/v2019C1/extensions/lifecycle/instance'
+import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	asd as instantiateAsd,
 	resolveTargetStructure,

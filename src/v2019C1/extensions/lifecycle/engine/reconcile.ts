@@ -70,6 +70,7 @@ export async function reconcile(
 		instanceRecord: instanceTree,
 		sourceNode: sourceTree,
 		accepted,
+		overrides,
 	})
 	await reconcileChildren(tx, {
 		sourceQuery,
@@ -119,6 +120,7 @@ async function reconcileChildren(
 				instanceRecord: matched,
 				sourceNode: sourceChild,
 				accepted,
+				overrides,
 			})
 			await reconcileChildren(tx, {
 				sourceQuery,
@@ -218,12 +220,18 @@ async function updateMatchedAttributes(
 		instanceRecord: AnyTreeRecord
 		sourceNode: AnyTreeRecord
 		accepted?: AcceptedIds
+		overrides?: CollisionOverrides
 	},
 ): Promise<void> {
-	const { sourceQuery, instanceRecord, sourceNode, accepted } = params
+	const { sourceQuery, instanceRecord, sourceNode, accepted, overrides } = params
 	if (accepted && !accepted.sourceIds.has(sourceNode.id)) return
 
-	const desired = visibleAttributes(await sourceQuery.any.getAttributes(sourceNode))
+	// The template's attributes, with the user's value edits overlaid (so an in-place
+	// update honors an edited `desc`/`name` just like a freshly grafted element does).
+	const desired = {
+		...visibleAttributes(await sourceQuery.any.getAttributes(sourceNode)),
+		...overrides?.get(sourceNode.id),
+	}
 	const current = visibleAttributes(await tx.any.getAttributes(instanceRecord))
 
 	const updates: Record<string, string> = {}
