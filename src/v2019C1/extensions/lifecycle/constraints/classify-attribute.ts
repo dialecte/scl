@@ -30,6 +30,16 @@ export function classifyAttribute(tag: string, attr: string): AttributeEditabili
 	return 'free'
 }
 
+/** The classifier modes the UI may expose as editable inputs (no identity/reference side effect). */
+export const EDITABLE_MODES = ['rename', 'free'] as const
+
+/** Whether a classified attribute is user-editable (`rename` or `free`). */
+export function isEditableMode(
+	mode: AttributeEditability,
+): mode is (typeof EDITABLE_MODES)[number] {
+	return (EDITABLE_MODES as readonly string[]).includes(mode)
+}
+
 /**
  * The attributes of `tag` the UI may edit with no harmful side effect, each with its
  * edit mode. `rename` triggers a managed remap; `free` has no side effect. Identity
@@ -40,7 +50,7 @@ export function editableAttributes(tag: string): EditableAttribute[] {
 	const out: EditableAttribute[] = []
 	for (const attr of attrs) {
 		const mode = classifyAttribute(tag, attr)
-		if (mode === 'rename' || mode === 'free') out.push({ attr, mode })
+		if (isEditableMode(mode)) out.push({ attr, mode })
 	}
 	return out
 }

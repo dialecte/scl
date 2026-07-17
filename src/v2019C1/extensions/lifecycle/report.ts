@@ -1,3 +1,4 @@
+import { markPlacementConflicts } from './mark-placement-conflicts'
 import { reportAsd, reportFsd } from './update/query'
 
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
@@ -39,6 +40,9 @@ export async function report(
 	for (const group of report.groups) {
 		group.editableAttributes = editableAttributes(group.primary.tagName)
 	}
+
+	// flag placement collisions (resolvable auto-value or identity-locked skip/adopt)
+	await markPlacementConflicts(query, target, report)
 
 	return report
 }

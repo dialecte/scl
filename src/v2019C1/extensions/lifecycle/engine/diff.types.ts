@@ -21,6 +21,17 @@ export type DiffNode = {
 export type DiffSummary = { added: number; removed: number; modified: number }
 
 /**
+ * An identity-locked placement collision on a decision group's primary: every field
+ * of the violated uniqueness constraint is identity (none editable), so the engine
+ * cannot differentiate a copy. `adoptTargetId` is the existing element the primary is
+ * identity-equal to (the reconcile target when the user chooses to adopt).
+ */
+export type GroupConflict = {
+	fields: string[]
+	adoptTargetId: string
+}
+
+/**
  * A decision unit for the full track (ENGINE.md §8, 07 §3.1). The user decides
  * on a GROUP, never on an individual element.
  *
@@ -48,6 +59,16 @@ export type DecisionGroup = {
 	 * report seam tags it.
 	 */
 	editableAttributes?: EditableAttribute[]
+	/**
+	 * Set at report time when placing the primary would violate a scoped-uniqueness
+	 * constraint whose fields are ALL identity (non-editable) — the engine cannot make
+	 * a distinct copy, so `instantiate` cannot duplicate it. The group then needs a
+	 * decision: `skip` (leave the existing element) or `accept` = **adopt** (reconcile
+	 * the template onto `adoptTargetId`, i.e. update that existing element in place).
+	 * Omitted when there is no collision or the collision is resolvable (an editable
+	 * field is bumped instead — see {@link EditableAttribute.conflict}).
+	 */
+	conflict?: GroupConflict
 	/**
 	 * The id of the instance root this group belongs to, when several instances of one
 	 * template are reported together (multi-instance). Lets the decision layer target a

@@ -104,6 +104,41 @@ The engine always **owns uniqueness**. A `values` override lets the user set an 
 `name`): the user's value is applied first, then uniqueness is re-ensured — a user name that itself
 collides is still bumped. Only attributes listed in the group's `editableAttributes` are honoured.
 
+#### Conflict classification at report time (`instantiate`)
+
+`report` classifies placement collisions **before** apply so the UI can surface them. It is generic over
+any scoped-uniqueness constraint and any field combination (a constraint may span several fields), and
+scenario-aware. For each placed group primary it partitions the violated constraint's `fields` into
+**editable** (`rename`/`free`) vs **identity**:
+
+- **resolvable** — at least one field is editable: the engine can make a distinct copy. The report flags
+  that field on the group's `editableAttributes` with `conflict: true` and the collision-free
+  `suggestedValue` (the UI pre-fills it; the user may override). No decision is required.
+- **identity-locked** — every field is identity (none editable): the primary is identity-equal to an
+  existing element and cannot be duplicated. The report sets `group.conflict = { fields, adoptTargetId }`
+  and `needsDecisions: true`, so the user chooses **skip** (leave the existing element) or **adopt**
+  (reconcile the template onto `adoptTargetId` — i.e. update that existing element in place). Adopt is a
+  non-destructive reconcile, never a delete + recreate.
+
+`update` never classifies a conflict: an identity match there is the **reconcile target**, not a collision.
+
+```ts
+type EditableAttribute = {
+	attr: string
+	mode: 'rename' | 'free'
+	conflict?: boolean // engine auto-resolved a placement collision on this field
+	suggestedValue?: string // the collision-free value it proposes (resolvable case)
+}
+
+type GroupConflict = { fields: string[]; adoptTargetId: string } // identity-locked
+
+type DecisionGroup = {
+	// …
+	editableAttributes?: EditableAttribute[]
+	conflict?: GroupConflict // identity-locked collision → skip | adopt
+}
+```
+
 Wrap `apply` in `doc.prepare(...)` for a previewable, reversible dry-run:
 
 ```ts

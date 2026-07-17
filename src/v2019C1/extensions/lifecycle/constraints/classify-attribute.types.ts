@@ -13,4 +13,11 @@ export type AttributeEditability =
 export type EditableAttribute = {
 	attr: string
 	mode: 'rename' | 'free'
+	/**
+	 * Set at report time when placing this element would collide on this field and the
+	 * engine auto-resolved it. `suggestedValue` is the collision-free value the engine
+	 * proposes (the user may keep or override it).
+	 */
+	conflict?: boolean
+	suggestedValue?: string
 }

@@ -1,4 +1,9 @@
-export { classifyAttribute, editableAttributes } from './classify-attribute'
+export {
+	classifyAttribute,
+	editableAttributes,
+	isEditableMode,
+	EDITABLE_MODES,
+} from './classify-attribute'
 export { getIdentityFields } from './identity-fields'
 export { findConstraintViolation } from './find-constraint-violation'
 export { findConstraintViolations } from './find-constraint-violations'

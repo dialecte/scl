@@ -11,6 +11,7 @@ export type {
 	DiffNode,
 	DiffReport,
 	DiffSummary,
+	GroupConflict,
 	GroupDecision,
 } from './engine/diff.types'
 
