@@ -10,7 +10,7 @@ exports[`lifecycle integration — Time Overcurrent FSD rev1 → rev2 (golden) >
                 <Function desc="rev2 function" name="Time Overcurrent" templateUuid="1b67e1e0-e9a6-4e59-bb11-70188134d9a6" uuid="1">
                     <Private type="eIEC61850-6-100">
                         <eIEC61850-6-100:FunctionSclRef>
-                            <eIEC61850-6-100:SclFileReference fileName="test-16" fileType="FSD" revision="" version=""/>
+                            <eIEC61850-6-100:SclFileReference fileName="source" fileType="FSD" revision="" version=""/>
                         </eIEC61850-6-100:FunctionSclRef>
                     </Private>
                     <LNode iedName="None" ldInst="" lnClass="PTOC" lnInst="1" lnType="PTOC_Type" prefix="" templateUuid="lnode-src-uuid" uuid="3"/>

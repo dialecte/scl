@@ -24,7 +24,7 @@ exports[`lifecycle integration — CB ASD rev1 → rev2 (golden) > accept-all re
                         </eIEC61850-6-100:FunctionRole>
                         <eIEC61850-6-100:AllocationRoleRef allocationRole="S1/V1/B1/P1" allocationRoleUuid="14"/>
                         <eIEC61850-6-100:ApplicationSclRef>
-                            <eIEC61850-6-100:SclFileReference fileName="test-27" fileType="ASD" revision="" version=""/>
+                            <eIEC61850-6-100:SclFileReference fileName="source" fileType="ASD" revision="" version=""/>
                         </eIEC61850-6-100:ApplicationSclRef>
                     </eIEC61850-6-100:Application>
                 </Private>

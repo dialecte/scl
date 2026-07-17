@@ -14,7 +14,7 @@ exports[`lifecycle integration — Output Conditioner FSD rev1 → rev2 (golden)
                 <Function desc="rev2 function" name="Output Conditioner" templateUuid="5938b1b5-a55c-4b17-b95b-2ff28ba89fa3" uuid="1">
                     <Private type="eIEC61850-6-100">
                         <eIEC61850-6-100:FunctionSclRef>
-                            <eIEC61850-6-100:SclFileReference fileName="test-22" fileType="FSD" revision="" version=""/>
+                            <eIEC61850-6-100:SclFileReference fileName="source" fileType="FSD" revision="" version=""/>
                         </eIEC61850-6-100:FunctionSclRef>
                     </Private>
                     <LNode iedName="none" ldInst="" lnClass="LCBO" lnInst="1" lnType="LCBO_Type" prefix="" templateUuid="lnode-src-uuid" uuid="3">

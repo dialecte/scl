@@ -17,7 +17,7 @@ exports[`lifecycle integration — CB Interface FSD rev1 → rev2 (golden) > acc
                 <Function desc="rev2 function" name="CB Interface" templateUuid="d996cde9-fc40-4510-8b08-d685da2be6e5" uuid="1">
                     <Private type="eIEC61850-6-100">
                         <eIEC61850-6-100:FunctionSclRef>
-                            <eIEC61850-6-100:SclFileReference fileName="test-21" fileType="FSD" revision="" version=""/>
+                            <eIEC61850-6-100:SclFileReference fileName="source" fileType="FSD" revision="" version=""/>
                         </eIEC61850-6-100:FunctionSclRef>
                     </Private>
                     <LNode iedName="None" ldInst="" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" prefix="" templateUuid="lnode-src-uuid" uuid="3"/>
