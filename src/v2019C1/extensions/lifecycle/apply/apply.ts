@@ -1,8 +1,11 @@
-import { assertDecisionsCoherent } from './engine/decide'
-import { asd as updateAsd, fsd as updateFsd } from './update/transaction'
+import { assertDecisionsCoherent } from '@/v2019C1/extensions/lifecycle/engine'
+import { asd as updateAsd, fsd as updateFsd } from '@/v2019C1/extensions/lifecycle/update'
 
-import type { LifecycleApplyParams, LifecycleTarget } from './contract.types'
 import type { Config } from '@/v2019C1/config'
+import type {
+	LifecycleApplyParams,
+	LifecycleTarget,
+} from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 
