@@ -1,16 +1,15 @@
-import { apply } from '../apply'
-import { report } from '../report'
-
 import { describe } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
 import type { GroupDecision } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
-// Slice 3 (graft) — when a template update GRAFTS a new child onto an existing instance,
+// Slice 3 (add) — when a template update ADDS a new child onto an existing instance,
 // the placed element is validated against its instance-parent context: a name collision
 // is auto-resolved, and the full track can override the name. Engine owns uniqueness.
 
@@ -55,20 +54,20 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	overrideName?: string
 }
 
-describe('lifecycle scenario — reconcile resolves a grafted element name collision (Slice 3)', () => {
+describe('lifecycle scenario — reconcile resolves a added element name collision (Slice 3)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'a grafted SubFunction colliding with a project sibling is auto-resolved': {
+		'a added SubFunction colliding with a project sibling is auto-resolved': {
 			sourceXml,
 			targetXml,
 			expectedQueries: [
 				'//default:Function[@name="Prot"]/default:SubFunction[@name="Aux"]', // the project sibling is kept
-				'//default:Function[@name="Prot"]/default:SubFunction[@name="Aux_1"]', // the graft is renamed
+				'//default:Function[@name="Prot"]/default:SubFunction[@name="Aux_1"]', // the add is renamed
 			],
 			unexpectedQueries: [
 				'//default:Function[@name="Prot"]/default:SubFunction[@name="Aux"][2]', // no duplicate name
 			],
 		},
-		'a user override names the grafted SubFunction': {
+		'a user override names the added SubFunction': {
 			sourceXml,
 			targetXml,
 			overrideName: 'AuxB',
@@ -116,8 +115,8 @@ describe('lifecycle scenario — reconcile resolves a grafted element name colli
 			})) as Scl.Ref<'SubFunction'>
 		})
 
-		// update via the seam: the new SubFunction is grafted onto the instance and its
-		// collision resolved; a user override rides on the grafted group's decision `values`
+		// update via the surface: the new SubFunction is added onto the instance and its
+		// collision resolved; a user override rides on the added group's decision `values`
 		const rep = await report(target.query, {
 			verb: 'fsd',
 			sourceQuery: source.query,
@@ -126,11 +125,11 @@ describe('lifecycle scenario — reconcile resolves a grafted element name colli
 		})
 		const decisions = new Map<string, GroupDecision>()
 		if (testCase.overrideName) {
-			const graftGroup = rep.groups.find(
+			const addGroup = rep.groups.find(
 				(group) => group.change === 'added' && group.primary.sourceRef?.id === sourceSubRef.id,
 			)
-			if (!graftGroup) throw new Error('graft group not found')
-			decisions.set(graftGroup.id, { action: 'accept', values: { name: testCase.overrideName } })
+			if (!addGroup) throw new Error('add group not found')
+			decisions.set(addGroup.id, { action: 'accept', values: { name: testCase.overrideName } })
 		}
 		await target.transaction(async (tx) => {
 			await apply(tx, {

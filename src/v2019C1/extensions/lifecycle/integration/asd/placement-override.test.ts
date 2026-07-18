@@ -1,7 +1,6 @@
-import { asd as instantiateAsd } from '../instantiate/transaction'
-
 import { describe } from 'vitest'
 
+import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'

@@ -1,10 +1,9 @@
-import { apply } from '../apply'
-import { report } from '../report'
-
 import { createMockRandomUUID } from '@dialecte/core/test'
 import { describe, expect, test } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import {
 	ALL_XMLNS_NAMESPACES,
 	createSclTestProject,
@@ -12,8 +11,8 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test'
 
-import type { DecisionGroup, DecisionMap } from '../engine/diff.types'
 import type { Scl } from '@/v2019C1/config'
+import type { DecisionGroup, DecisionMap } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
 // Integration test distilled from the hand-written `FSD/Time Overcurrent` FSD

@@ -1,13 +1,12 @@
-import { apply } from './apply'
-import { report } from './report'
-
 import { describe } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
-import type { DecisionGroup, DecisionMap } from './engine/diff.types'
 import type { Scl } from '@/v2019C1/config'
+import type { DecisionGroup, DecisionMap } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -24,7 +23,7 @@ type TestCase = SclTest.BaseXmlTestCase & {
 }
 
 // The function is instantiated WITHOUT a classification; a later template adds a
-// FunctionCategory pointing at it. The update must graft the new satellite.
+// FunctionCategory pointing at it. The update must add the new satellite.
 const sourceXml = /* xml */ `
 	<SCL ${ns} ${id}="fsd">
 		<Substation name="TEMPLATE" ${id}="sub-s">
@@ -74,9 +73,9 @@ const addCategory = async (tx: Scl.Transaction): Promise<void> => {
 	})
 }
 
-describe('lifecycle.apply — grafting a newly-classified FunctionCategory (full track)', () => {
+describe('lifecycle.apply — adding a newly-classified FunctionCategory (full track)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'accepting the function group grafts the added FunctionCategory': {
+		'accepting the function group adds the added FunctionCategory': {
 			sourceXml,
 			targetXml,
 			mutate: addCategory,
@@ -88,7 +87,7 @@ describe('lifecycle.apply — grafting a newly-classified FunctionCategory (full
 			],
 		},
 
-		'skipping the function group grafts nothing': {
+		'skipping the function group adds nothing': {
 			sourceXml,
 			targetXml,
 			mutate: addCategory,

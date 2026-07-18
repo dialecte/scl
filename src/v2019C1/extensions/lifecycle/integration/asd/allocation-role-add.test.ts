@@ -1,13 +1,12 @@
-import { apply } from './apply'
-import { report } from './report'
-
 import { describe } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
-import type { DecisionGroup, DecisionMap } from './engine/diff.types'
 import type { Scl } from '@/v2019C1/config'
+import type { DecisionGroup, DecisionMap } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -76,9 +75,9 @@ const mutate = async (tx: Scl.Transaction): Promise<void> => {
 	})
 }
 
-describe('lifecycle.apply — grafting a newly-referenced AllocationRole (application-layer satellite)', () => {
+describe('lifecycle.apply — adding a newly-referenced AllocationRole (application-layer satellite)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'accepting the application group grafts the newly-referenced AllocationRole into the target': {
+		'accepting the application group adds the newly-referenced AllocationRole into the target': {
 			sourceXml,
 			targetXml,
 			mutate,
@@ -86,7 +85,7 @@ describe('lifecycle.apply — grafting a newly-referenced AllocationRole (applic
 			expectedQueries: ['//v2019C1:AllocationRole[@templateUuid="ar2-src-uuid"][@name="BAY_CTRL"]'],
 		},
 
-		'skipping the application group does not graft the AllocationRole': {
+		'skipping the application group does not add the AllocationRole': {
 			sourceXml,
 			targetXml,
 			mutate,

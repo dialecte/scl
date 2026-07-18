@@ -1,8 +1,7 @@
-import { apply } from '../apply'
-import { report } from '../report'
-
 import { describe, expect } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
@@ -10,7 +9,7 @@ import type { SclTest } from '@/v2019C1/test'
 
 // Engine-hardening scenario (hand-authored, schema-checked). First-time application
 // into a target that holds the topology skeleton but no instance of the template:
-// the seam reports a fast track (needsDecisions === false — the one non-XML,
+// the surface reports a fast track (needsDecisions === false — the one non-XML,
 // report-level assertion), and a headless apply (no decisions) instantiates the
 // function with stamped instance lineage + imported type closure.
 
@@ -71,7 +70,7 @@ describe('lifecycle scenario — empty target / uninstantiated template (fast tr
 	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 
-		// no instance yet -> the seam must classify this as the fast track. This is the
+		// no instance yet -> the surface must classify this as the fast track. This is the
 		// one report-level (non-XML) assertion the scenario needs.
 		const rep = await report(target.query, {
 			verb: 'fsd',

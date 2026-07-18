@@ -1,10 +1,9 @@
-import { apply } from '../apply'
-import { report } from '../report'
-
 import { createMockRandomUUID } from '@dialecte/core/test'
 import { describe, expect, test } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import {
 	ALL_XMLNS_NAMESPACES,
 	createSclTestProject,
@@ -12,8 +11,8 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test'
 
-import type { DecisionGroup, DecisionMap } from '../engine/diff.types'
 import type { Scl } from '@/v2019C1/config'
+import type { DecisionGroup, DecisionMap } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
 // Integration test distilled from the hand-written `CB APP/CB rev1 → rev2.asd`
@@ -24,7 +23,7 @@ import type { SclTest } from '@/v2019C1/test'
 //    rev1 Bay-level placement (the real files move it up between revs);
 //  - AllocationRole is a Bay-level satellite the Application references outward via
 //    AllocationRoleRef; Application composes the Function via FunctionRef.
-// rev1→rev2 exercises, through the two-track report/apply seam: the Application
+// rev1→rev2 exercises, through the two-track report/apply surface: the Application
 // reconcile, the AllocationRole satellite reconcile, the FunctionCategory satellite
 // reconcile, and the composed-function cascade (the referenced Function updated as
 // an FSD one layer down).

@@ -1,10 +1,9 @@
-import { apply } from '../apply'
-import { report } from '../report'
-
 import { createMockRandomUUID } from '@dialecte/core/test'
 import { describe, expect, test } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import {
 	ALL_XMLNS_NAMESPACES,
 	createSclTestProject,
@@ -12,8 +11,8 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test'
 
-import type { DecisionGroup, DecisionMap } from '../engine/diff.types'
 import type { Scl } from '@/v2019C1/config'
+import type { DecisionGroup, DecisionMap } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
 // Integration test distilled from the hand-written `CB APP/Output Conditioner`
@@ -22,7 +21,7 @@ import type { SclTest } from '@/v2019C1/test'
 // Unlike the CB Interface FSD test, this one carries an OPEN `SourceRef`
 // (a later-binding dataflow input, 90-30 §6.2.3): it must travel on instantiate
 // and survive the reconcile WITHOUT being auto-bound. rev1→rev2 exercises a
-// function reconcile, the FunctionCategory satellite, a grafted LNode, and the
+// function reconcile, the FunctionCategory satellite, a added LNode, and the
 // preservation of the open SourceRef.
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -87,7 +86,7 @@ const skipAll =
 	(groups: DecisionGroup[]): DecisionMap =>
 		new Map(groups.map((g) => [g.id, 'skip'] as const))
 
-// rev1 -> rev2: the template evolves the function + its category and grafts a new
+// rev1 -> rev2: the template evolves the function + its category and adds a new
 // LNode. The open SourceRef is left as-is by the template author.
 const toRev2 = async (tx: Scl.Transaction): Promise<void> => {
 	await tx.update(functionRef, { attributes: { desc: 'rev2 function' } })
@@ -98,7 +97,7 @@ const toRev2 = async (tx: Scl.Transaction): Promise<void> => {
 	})
 }
 
-describe('lifecycle integration — Output Conditioner FSD rev1 → rev2 (open SourceRef + graft)', () => {
+describe('lifecycle integration — Output Conditioner FSD rev1 → rev2 (open SourceRef + add)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'accepting carries rev2 and preserves the open SourceRef': {
 			sourceXml,

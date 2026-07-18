@@ -1,9 +1,8 @@
-import { apply } from './apply'
-import { report } from './report'
-
 import { describe, expect } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
@@ -52,7 +51,7 @@ const targetXml = /* xml */ `
 		</Substation>
 	</SCL>`
 
-describe('lifecycle two-track seam (report + apply)', () => {
+describe('lifecycle two-track surface (report + apply)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'fast (first-time): no decisions -> apply instantiates headless': {
 			sourceXml,
@@ -74,7 +73,7 @@ describe('lifecycle two-track seam (report + apply)', () => {
 					'//default:Bay[@name="B1"]/default:Function[@name="Prot"][@templateUuid="fn-src-uuid"]',
 				],
 				unexpectedQueries: [
-					// no second copy grafted by the reconcile
+					// no second copy added by the reconcile
 					'//default:Bay[@name="B1"]/default:Function[@name="Prot"][2]',
 				],
 			},

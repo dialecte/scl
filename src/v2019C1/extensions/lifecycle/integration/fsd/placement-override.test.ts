@@ -1,15 +1,14 @@
-import { apply } from '../apply'
-import { report } from '../report'
-
 import { describe } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
 import type { GroupDecision } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
-// Full-track override seam (FSD, first-time instantiate). The UI decides on a GROUP and
+// Full-track override surface (FSD, first-time instantiate). The UI decides on a GROUP and
 // may edit its editable attributes (`name` = rename, `desc` = free). Those edits ride
 // through `report -> apply` as `GroupDecision.values` and must land verbatim on the
 // placed instance — this is the path the merge UI drives (distinct from the ASD test,
@@ -61,7 +60,7 @@ describe('lifecycle scenario — instantiate.fsd applies user edits via decision
 			sourceXml,
 			targetXml,
 			expectedQueries: [
-				// user-edited name + desc applied verbatim on the grafted instance
+				// user-edited name + desc applied verbatim on the added instance
 				'//default:Bay/default:Function[@name="Custom_Name"][@desc="edited-desc"]',
 			],
 			unexpectedQueries: [

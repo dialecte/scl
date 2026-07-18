@@ -52,7 +52,7 @@ const targetXml = /* xml */ `
 
 describe('update.fsd (engine: instantiate-or-reconcile)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'reconciles onto the existing instance: updates in place + grafts new, no duplicate': {
+		'reconciles onto the existing instance: updates in place + adds new, no duplicate': {
 			sourceXml,
 			targetXml,
 			preInstantiate: true,

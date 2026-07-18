@@ -1,9 +1,8 @@
-import { apply } from '../apply'
-import { report } from '../report'
-
 import { describe } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
@@ -109,7 +108,7 @@ describe('lifecycle scenario — re-apply an ASD (instantiate vs update)', () =>
 			await instantiateAsd(tx, { sourceQuery: source.query, applicationRef, targetParent: bayRef })
 		})
 
-		// re-apply the SAME template through the seam with the chosen scenario
+		// re-apply the SAME template through the surface with the chosen scenario
 		const rep = await report(target.query, {
 			verb: 'asd',
 			scenario: testCase.scenario,

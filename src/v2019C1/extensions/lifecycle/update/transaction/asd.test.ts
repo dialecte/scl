@@ -61,7 +61,7 @@ const targetXml = /* xml */ `
 
 describe('update.asd (engine: instantiate-or-reconcile, application layer)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'reconciles onto the existing Application: updates in place + grafts a role, no duplicate': {
+		'reconciles onto the existing Application: updates in place + adds a role, no duplicate': {
 			sourceXml,
 			targetXml,
 			preInstantiate: true,
