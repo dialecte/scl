@@ -7,7 +7,7 @@ import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
-import type { AcceptedIds, CollisionOverrides } from './decide'
+import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -23,7 +23,7 @@ const REFERENCE_TAG_NAMES = new Set<string>(Object.keys(UUID_REFERENCE_PAIRS))
  * `uuid`, immutable across template versions):
  *
  *  - matched element    -> update its user-visible attributes in place
- *  - new source element -> graft its subtree under the matched parent
+ *  - new source element -> add its subtree under the matched parent
  *    (`transplant.deep` + `writeIdentity` stamp)
  *  - instance element whose template lineage no longer exists in the source
  *    -> delete
@@ -46,7 +46,7 @@ export async function reconcile(
 		 */
 		accepted?: AcceptedIds
 		/**
-		 * User-edited values per source element id (full track). Applied to a grafted
+		 * User-edited values per source element id (full track). Applied to a added
 		 * element before its placement collision is resolved. Omit for auto-resolve only.
 		 */
 		overrides?: CollisionOverrides
@@ -64,7 +64,7 @@ export async function reconcile(
 	const sourceUuids = new Set<string>()
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
 
-	// root + descendants: update matched in place, graft new
+	// root + descendants: update matched in place, add new
 	await updateMatchedAttributes(tx, {
 		sourceQuery,
 		instanceRecord: instanceTree,
@@ -102,7 +102,7 @@ async function reconcileChildren(
 		const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
 		// Match by templateUuid lineage; fall back to a same-tag unmatched sibling
 		// for uuid-less elements (e.g. FunctionRoleContent) so they are reconciled
-		// in place, not re-grafted as duplicates.
+		// in place, not re-added as duplicates.
 		const matched =
 			(sourceUuid ? index.get(sourceUuid) : undefined) ??
 			(sourceUuid
@@ -133,7 +133,7 @@ async function reconcileChildren(
 			continue
 		}
 
-		// graft a new template element (with its subtree/companions via deep)
+		// add a new template element (with its subtree/companions via deep)
 		if (accepted && !accepted.sourceIds.has(sourceChild.id)) continue
 
 		const { recordMappings } = await deep(tx, {
@@ -144,12 +144,12 @@ async function reconcileChildren(
 		})
 		await writeIdentity(tx, { mappings: recordMappings, mode: 'stamp-template' })
 
-		// validate the grafted element against its instance-parent context: apply any
+		// validate the added element against its instance-parent context: apply any
 		// user edit then auto-resolve a name collision among siblings (schema constraint)
-		const graftRoot = recordMappings.find((mapping) => mapping.source.id === sourceChild.id)
-		if (graftRoot) {
+		const addRoot = recordMappings.find((mapping) => mapping.source.id === sourceChild.id)
+		if (addRoot) {
 			await resolvePlacementCollision(tx, {
-				ref: graftRoot.target,
+				ref: addRoot.target,
 				parentRef: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,
 				overrides: overrides?.get(sourceChild.id),
 			})
@@ -227,7 +227,7 @@ async function updateMatchedAttributes(
 	if (accepted && !accepted.sourceIds.has(sourceNode.id)) return
 
 	// The template's attributes, with the user's value edits overlaid (so an in-place
-	// update honors an edited `desc`/`name` just like a freshly grafted element does).
+	// update honors an edited `desc`/`name` just like a freshly added element does).
 	const desired = {
 		...visibleAttributes(await sourceQuery.any.getAttributes(sourceNode)),
 		...overrides?.get(sourceNode.id),

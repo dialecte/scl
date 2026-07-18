@@ -4,12 +4,12 @@ import { reportAsd, reportFsd } from './query'
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
 
 import type { Config } from '@/v2019C1/config'
+import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/seam.types'
 import type * as Core from '@dialecte/core'
 
 /**
- * `query.lifecycle.report` — the generic read-only classify seam (ENGINE.md §6).
+ * `query.lifecycle.report` — the generic read-only classify surface (ENGINE.md §6).
  *
  * Dispatches on `verb` to the per-layer report and returns a {@link DiffReport}.
  * `report.needsDecisions` tells the consumer the track: `false` = fast (apply

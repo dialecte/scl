@@ -5,8 +5,6 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
 
-export type { StripConfig, PromoteRootConfig }
-
 const DEFAULT_STRIP: StripConfig = {
 	scope: 'tree',
 	attributes: ['templateUuid', 'originUuid'],

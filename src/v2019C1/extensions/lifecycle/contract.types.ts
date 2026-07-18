@@ -2,7 +2,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 
-/** Which template layer the lifecycle seam operates on. */
+/** Which template layer the lifecycle surface operates on. */
 export type LifecycleVerb = 'fsd' | 'asd'
 
 /**

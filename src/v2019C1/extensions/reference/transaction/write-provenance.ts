@@ -31,13 +31,15 @@ export async function writeProvenance(
 	const headerAttributes = header ? await sourceQuery.getAttributes(header) : undefined
 
 	const sclRef = await tx.addChild(targetRoot, { tagName: SCL_REF_TAG[fileType] })
+
+	const { name } = await sourceQuery.getDocumentInfo()
 	await tx.addChild(sclRef, {
 		tagName: 'SclFileReference',
 		attributes: {
 			fileType,
 			version: headerAttributes?.version ?? '',
 			revision: headerAttributes?.revision ?? '',
-			fileName: sourceQuery.getFilename(),
+			fileName: name,
 			fileUuid: headerAttributes?.uuid ?? '',
 		},
 	})

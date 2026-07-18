@@ -9,8 +9,8 @@ import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/lay
 import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
 
 import type { Scl, Config } from '@/v2019C1/config'
+import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/seam.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 

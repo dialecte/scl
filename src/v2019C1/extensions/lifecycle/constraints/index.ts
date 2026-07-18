@@ -1,9 +1,5 @@
-export {
-	classifyAttribute,
-	editableAttributes,
-	isEditableMode,
-	EDITABLE_MODES,
-} from './classify-attribute'
+export { classifyAttribute, editableAttributes, isEditableMode } from './classify-attribute'
+export { EDITABLE_MODES } from './classify-attribute.constants'
 export { getIdentityFields } from './identity-fields'
 export { findConstraintViolation } from './find-constraint-violation'
 export { findConstraintViolations } from './find-constraint-violations'
@@ -13,4 +9,4 @@ export { resolvePlacementCollision } from './resolve-placement-collision'
 export type { AttributeEditability, EditableAttribute } from './classify-attribute.types'
 export type { ConstraintViolation, SchemaConstraint } from './find-constraint-violation.types'
 export type { CollisionDecorator } from './resolve-unique-value.types'
-export type { PlacementResolution } from './resolve-placement-collision'
+export type { PlacementResolution } from './resolve-placement-collision.types'

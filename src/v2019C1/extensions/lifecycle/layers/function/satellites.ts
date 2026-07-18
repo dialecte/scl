@@ -1,21 +1,11 @@
+import { FUNCTION_SATELLITE_CONTAINERS } from './satellites.constants'
+
 import { toRef } from '@dialecte/core/helpers'
 
 import { reference } from '@/v2019C1/extensions/reference'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
-
-/**
- * The function layer's SATELLITE container tags: elements that live OUTSIDE the
- * function subtree but reference back into it and therefore travel with the
- * function (90-30 SCL-Location). The function layer OWNS this list explicitly —
- * satellites are a per-layer concern, not a generic engine data hook.
- *
- * v1 = FunctionCategory (via `FunctionCatRef`). Variable / BehaviorDescription
- * are planned satellites (see the layer checklist) and will be added here with
- * their own clone handlers.
- */
-const FUNCTION_SATELLITE_CONTAINERS = ['FunctionCategory'] as const
 
 /**
  * Resolve the function-layer satellites carried by a function: the external

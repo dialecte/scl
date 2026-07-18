@@ -1,9 +1,9 @@
 import { reconcileSatellites } from './satellite-reconcile'
 
-import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/satellites/applied-satellites'
+import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 
 import type { Config, Scl } from '@/v2019C1/config'
-import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 
@@ -12,7 +12,7 @@ import type * as Core from '@dialecte/core'
  * §12.1/§13.1) that apply to ANY element in the primary subtree, gated by
  * `accepted`. The single apply-side entry point every layer calls with its own
  * `primaryRef` (function, application, and future IED / topology) so the 3-way
- * graft / reconcile-in-place / delete is uniform and impossible to forget.
+ * add / reconcile-in-place / delete is uniform and impossible to forget.
  *
  * `instancePrimaryRef` is the target-side primary (for removal detection); pass it
  * when an instance exists. Layer-owned satellites (FunctionCategory, AllocationRole)

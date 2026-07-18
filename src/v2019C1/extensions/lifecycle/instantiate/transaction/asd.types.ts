@@ -1,5 +1,5 @@
 import type { Scl, Config } from '@/v2019C1/config'
-import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type * as Core from '@dialecte/core'
 
 export type AsdParams = {

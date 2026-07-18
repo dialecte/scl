@@ -1,3 +1,4 @@
+import { EDITABLE_MODES, LINEAGE } from './classify-attribute.constants'
 import { getIdentityFields } from './identity-fields'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
@@ -5,9 +6,6 @@ import { ATTRIBUTES } from '@/v2019C1/definition/constants.generated'
 import { PATH_CONTRIBUTING_ATTRIBUTES } from '@/v2019C1/extensions/reference'
 
 import type { AttributeEditability, EditableAttribute } from './classify-attribute.types'
-
-/** Lineage attributes — identity backbone, never user-editable. */
-const LINEAGE = new Set(['uuid', 'templateUuid', 'originUuid'])
 
 /**
  * Classify how the UI may treat an attribute of an element during a lifecycle
@@ -29,9 +27,6 @@ export function classifyAttribute(tag: string, attr: string): AttributeEditabili
 	if (PATH_CONTRIBUTING_ATTRIBUTES.has(attr) || getIdentityFields(tag).has(attr)) return 'identity'
 	return 'free'
 }
-
-/** The classifier modes the UI may expose as editable inputs (no identity/reference side effect). */
-export const EDITABLE_MODES = ['rename', 'free'] as const
 
 /** Whether a classified attribute is user-editable (`rename` or `free`). */
 export function isEditableMode(

@@ -4,7 +4,7 @@ import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiat
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
-import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { SclTest } from '@/v2019C1/test'
 
 // Slice 3 — the full track lets the user override an editable attribute at placement.

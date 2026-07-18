@@ -1,3 +1,5 @@
+import { CROSS_CUTTING_SATELLITE_CONTAINERS } from './applied-satellites.constants'
+
 import { toRef } from '@dialecte/core/helpers'
 
 import { reference } from '@/v2019C1/extensions/reference'
@@ -5,18 +7,6 @@ import { reference } from '@/v2019C1/extensions/reference'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
-
-/**
- * CROSS-CUTTING satellite containers: elements that apply to ANY SCL element
- * (via a uuid reference into it) and therefore travel with WHATEVER subtree
- * contains their target — not owned by a single layer (90-30 §12.1 / §13.1).
- *
- * v1 = `Variable` (via `VariableApplyTo.elementUuid`) and `BehaviorDescription`
- * (via `InputVar`/`OutputVar.lnodeUuid`). Only uuid-bound targets are covered;
- * XPath-selector variables (no `elementUuid`) need XPath resolution (see TO_DO.md)
- * and are deferred.
- */
-export const CROSS_CUTTING_SATELLITE_CONTAINERS = ['Variable', 'BehaviorDescription'] as const
 
 /**
  * Resolve the cross-cutting satellites that apply to ANY element within the

@@ -1,6 +1,6 @@
 import { invariant } from '@dialecte/core/utils'
 
-import type { ResolveTargetParent } from './primitives/clone-referenced'
+import type { ResolveTargetParent } from './primitives/clone-referenced.types'
 import type { TargetStructure } from './structure.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'

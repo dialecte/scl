@@ -9,7 +9,7 @@ import {
 import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
 
 import type { Config, Scl } from '@/v2019C1/config'
-import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
@@ -23,7 +23,7 @@ import type { AnyRefOrRecord } from '@dialecte/core'
  * (its report companion contributed that id).
  *
  * A satellite the updated template ADDS (no instance yet — a newly-classified
- * function) is grafted via the clone path (`cloneFunctionCategories` +
+ * function) is added via the clone path (`cloneFunctionCategories` +
  * `writeIdentity`, mirroring `instantiate.fsd`), gated by the function group's
  * acceptance.
  *
@@ -67,7 +67,7 @@ export async function reconcileCarriedSatellites(
 		})
 	}
 
-	// graft newly-classified satellites (companions of the function group), gated by
+	// add newly-classified satellites (companions of the function group), gated by
 	// the group's acceptance; cloneFunctionCategories is idempotent on already-cloned.
 	if (hasMissing && (!accepted || accepted.sourceIds.has(functionRef.id))) {
 		const structure = await resolveTargetStructure(tx, targetParent)

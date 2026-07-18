@@ -56,7 +56,7 @@ export type DecisionGroup = {
 	 * The primary element's user-editable attributes with their edit mode
 	 * (schema-derived via the attribute classifier), tagged at report time so the UI
 	 * renders inputs directly from the report without re-deriving. Omitted until the
-	 * report seam tags it.
+	 * report surface tags it.
 	 */
 	editableAttributes?: EditableAttribute[]
 	/**
@@ -78,7 +78,7 @@ export type DecisionGroup = {
 	instanceScopeId?: string
 	/**
 	 * Human-readable title of the instance root (`extractElementTitle`), tagged at the
-	 * report seam so a multi-instance UI can label each instance section (e.g. `Prot`
+	 * report surface so a multi-instance UI can label each instance section (e.g. `Prot`
 	 * vs `Prot_1`) without resolving the element itself. Omitted for a first-time
 	 * instantiate.
 	 */

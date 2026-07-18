@@ -6,7 +6,7 @@ import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiat
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/seam.types'
+import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SclTest } from '@/v2019C1/test'
 
 // Placement-conflict classification on the report (scenario = instantiate):

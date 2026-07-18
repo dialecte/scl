@@ -1,13 +1,13 @@
 import { assertDecisionsCoherent } from './engine/decide'
 import { asd as updateAsd, fsd as updateFsd } from './update/transaction'
 
-import type { LifecycleApplyParams, LifecycleTarget } from './seam.types'
+import type { LifecycleApplyParams, LifecycleTarget } from './contract.types'
 import type { Config } from '@/v2019C1/config'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 
 /**
- * `tx.lifecycle.apply` — the generic write seam (ENGINE.md §4/§6, 07 §4).
+ * `tx.lifecycle.apply` — the generic write surface (ENGINE.md §4/§6, 07 §4).
  *
  * The consumer classifies first (`query.lifecycle.report`) and passes the
  * `report` in. The report + `decisions` gate what is written:

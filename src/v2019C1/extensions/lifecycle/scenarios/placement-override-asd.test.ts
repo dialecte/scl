@@ -5,7 +5,7 @@ import { describe } from 'vitest'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
-import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { SclTest } from '@/v2019C1/test'
 
 // Slice 3 (ASD parity) — instantiate.asd resolves an Application name collision at its

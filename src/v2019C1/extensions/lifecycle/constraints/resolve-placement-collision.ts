@@ -2,19 +2,10 @@ import { classifyAttribute } from './classify-attribute'
 import { findConstraintViolation } from './find-constraint-violation'
 import { resolveUniqueValue } from './resolve-unique-value'
 
-import type { ConstraintViolation } from './find-constraint-violation.types'
+import type { PlacementResolution } from './resolve-placement-collision.types'
 import type { CollisionDecorator } from './resolve-unique-value.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
-
-/** The outcome of resolving a placement collision. */
-export type PlacementResolution =
-	/** No constraint was violated. */
-	| { status: 'ok' }
-	/** A violation auto-resolved by bumping an editable field to a free value. */
-	| { status: 'resolved'; attr: string; from: string; to: string }
-	/** A violation whose key is entirely identity — not auto-resolvable here. */
-	| { status: 'unresolvable'; violation: ConstraintViolation }
 
 /**
  * Validate a just-placed element against its parent context and resolve a scoped-

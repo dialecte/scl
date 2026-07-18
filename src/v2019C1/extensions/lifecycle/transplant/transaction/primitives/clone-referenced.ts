@@ -3,6 +3,7 @@ import { cloneTree } from './clone-tree'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DESCENDANTS } from '@/v2019C1/definition'
 
+import type { ResolveTargetParent } from './clone-referenced.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { RefTagName, TargetOf } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
@@ -70,9 +71,6 @@ export async function findMissingReferencedRecords<
 
 	return missing
 }
-
-/** Resolves the target parent each missing satellite is cloned under. */
-export type ResolveTargetParent = (ref: Scl.Ref<Scl.ElementsOf>) => Promise<Scl.Ref<Scl.ElementsOf>>
 
 /**
  * Generic satellite-clone helper.

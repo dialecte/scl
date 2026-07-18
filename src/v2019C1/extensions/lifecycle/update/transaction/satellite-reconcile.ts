@@ -8,7 +8,7 @@ import {
 import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
 
 import type { Config, Scl } from '@/v2019C1/config'
-import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 
@@ -19,13 +19,13 @@ import type * as Core from '@dialecte/core'
  * same finder against the instance primary BEFORE the primary reconcile runs, since
  * that reconcile may drop the referring ref). Three cases, matched by `templateUuid`:
  *  - an EXISTING instance -> reconcile-in-place (`engine.reconcile`);
- *  - NO instance yet -> GRAFT it (clone at source structural level + stamp lineage),
+ *  - NO instance yet -> ADD it (clone at source structural level + stamp lineage),
  *    so a newly-referenced satellite travels on update, not only first-time instantiate;
  *  - a TARGET instance the source no longer references -> DELETE it (the coupling
  *    invariant: it rides the primary group), guarded by a whole-target-doc
  *    last-referrer check so a satellite still referenced by ANOTHER primary is kept.
  *
- * Gating: reconcile-in-place + graft on `accepted.sourceIds` (the satellite's report
+ * Gating: reconcile-in-place + add on `accepted.sourceIds` (the satellite's report
  * companion contributed its source id); delete on `accepted.instanceIds` (its removed
  * companion contributed the instance id).
  */
@@ -59,7 +59,7 @@ export async function reconcileSatellites(
 			continue
 		}
 
-		// graft: no instance yet — gated on the satellite's own acceptance (its report
+		// add: no instance yet — gated on the satellite's own acceptance (its report
 		// companion contributed its id to the accepted primary group)
 		if (accepted && satelliteRef.id && !accepted.sourceIds.has(satelliteRef.id)) continue
 

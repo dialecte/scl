@@ -1,19 +1,7 @@
 import { invariant } from '@dialecte/core/utils'
 
+import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { DecisionGroup, DecisionMap, DiffNode, GroupDecision } from './diff.types'
-
-/**
- * The record ids reconcile is allowed to touch, derived from the accepted
- * groups. `sourceIds` gate updates/grafts (matched by the source element);
- * `instanceIds` gate deletes (matched by the instance element).
- */
-export type AcceptedIds = {
-	sourceIds: ReadonlySet<string>
-	instanceIds: ReadonlySet<string>
-}
-
-/** source-element id -> user-edited values for that element's editable attributes. */
-export type CollisionOverrides = ReadonlyMap<string, Record<string, string>>
 
 /** The action of a decision (absent -> accept; string or object form). */
 export function decisionAction(decision: GroupDecision | undefined): 'accept' | 'skip' {
@@ -75,7 +63,7 @@ export function assertDecisionsCoherent(params: {
 /**
  * Collect the record ids reconcile may write, from every accepted group's
  * primary + companions. Added/modified nodes contribute their `sourceRef`
- * (reconcile matches/grafts by source); removed nodes contribute `instanceRef`.
+ * (reconcile matches/adds by source); removed nodes contribute `instanceRef`.
  */
 export function acceptedRefIds(params: {
 	groups: DecisionGroup[]

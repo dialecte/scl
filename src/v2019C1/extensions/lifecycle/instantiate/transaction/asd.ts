@@ -2,8 +2,8 @@ import { resolveTargetStructure } from './resolve-target-structure'
 
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
+import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
-import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/satellites/clone-applied-satellites'
 import {
 	findMissingReferencedRecords,
 	resolveStructureRef,

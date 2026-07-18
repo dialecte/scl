@@ -10,13 +10,16 @@ import {
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
-import type { AcceptedIds, CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	AcceptedIds,
+	CollisionOverrides,
+} from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type {
 	DecisionGroup,
 	DecisionMap,
 	DiffReport,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/seam.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -31,7 +34,7 @@ import type * as Core from '@dialecte/core'
  * The standard allows several instances of one template under one anchor. The
  * `report` + `decisions` are passed through, and each instance is gated by ONLY
  * its own groups (partitioned by `instanceScopeId`) so the user can update a
- * SUBSET. Both the FSD seam and the ASD composed-function cascade drive it this way.
+ * SUBSET. Both the FSD surface and the ASD composed-function cascade drive it this way.
  */
 export async function fsd(
 	tx: Core.Transaction<Config>,

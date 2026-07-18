@@ -1,4 +1,4 @@
-// Transplant engine — direction-agnostic clone/graft primitives shared by the
+// Transplant engine — direction-agnostic clone primitives shared by the
 // `extraction` (project → template) and `instantiation` (template → project)
 // domains. Registered as the `transplant` extension: `deep` is exposed as
 // `tx.transplant.deep`; the remaining building blocks are consumed by sibling
