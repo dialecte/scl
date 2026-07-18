@@ -98,7 +98,7 @@ ensureSubstationTemplateStructure(): Promise<{
 
 ```
 lifecycle/
-  transplant/transaction/     generic clone/graft mechanism (tx.lifecycle.transplant.deep)
+  transplant/transaction/     generic clone mechanism (tx.lifecycle.transplant.deep)
     deep.ts                   clone + content-addressed type closure
     primitives/               clone-tree, clone-referenced
     resolve-structure-ref.ts  structural + ancestry placement

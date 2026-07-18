@@ -1,5 +1,5 @@
 ---
-description: Transplant engine for @dialecte/scl v2019C1 — the shared clone/graft primitive (deep) that moves an SCL subtree, with its type closure, between documents.
+description: Transplant engine for @dialecte/scl v2019C1 — the shared clone primitive (deep) that moves an SCL subtree, with its type closure, between documents.
 ---
 
 # Transplant

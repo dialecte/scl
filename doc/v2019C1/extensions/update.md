@@ -4,24 +4,23 @@ title: Update
 
 # Update
 
-Update reconciles a project against a **newer version of a template** it was built from. The lifecycle seam exposes two explicit operations via `scenario`: **`instantiate`** places a new instance (duplicates allowed), while **`update`** reconciles a newer template **onto** an existing instance instead of duplicating it. With `scenario: 'update'` and no instance yet, update falls back to the first-time instantiate.
+Update reconciles a project against a **newer version of a template** it was built from. The lifecycle surface exposes two explicit operations via `scenario`: **`instantiate`** places a new instance (duplicates allowed), while **`update`** reconciles a newer template **onto** an existing instance instead of duplicating it. With `scenario: 'update'` and no instance yet, update falls back to the first-time instantiate.
 
 ```ts
 // apply
 tx.lifecycle.update.fsd(...)
 tx.lifecycle.update.asd(...)
 // preview (read-only) — returns a DiffReport with the fast/full classification
-doc.query.lifecycle.update.reportFsd(...)
-doc.query.lifecycle.update.reportAsd(...)
+doc.query.lifecycle.report(...)
 ```
 
 ::: info Engine primitives stay internal
 The `reconcile` / `diff` primitives below (in `extensions/lifecycle/engine`) are **internal** building blocks the registered verbs are built on; consumers import them directly only when composing new verbs.
 :::
 
-## Two-track seam — `report` + `apply`
+## Two-track surface — `report` + `apply`
 
-The verb-agnostic seam is the recommended consumer entry point. **Dialecte decides the track**, the consumer never picks it: ask for a report, then apply.
+The verb-agnostic surface is the recommended consumer entry point. **Dialecte decides the track**, the consumer never picks it: ask for a report, then apply.
 
 ```ts
 query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor }) // -> DiffReport { needsDecisions, ... }
@@ -96,7 +95,7 @@ the `decisions` map by `group.id` (already scoped per instance, so globally uniq
 ### Placement collision resolution
 
 When a group is accepted and its primary is **placed** (a first-time instantiate, a composed function,
-or a graft onto an existing instance), the engine validates it against its parent context and
+or a add onto an existing instance), the engine validates it against its parent context and
 auto-resolves a scoped-uniqueness collision (e.g. two children with the same `name` under one Bay →
 `Prot` becomes `Prot_1`). Identity-only collisions are left untouched (never a silent delete + create).
 
@@ -183,7 +182,7 @@ Access via `tx.lifecycle.update` inside a `doc.transaction()` callback.
 - if the target already holds an instance of this Function (an element under `targetParent` whose `templateUuid` equals the source Function's `uuid`), reconcile the updated template onto it;
 - otherwise instantiate it fresh (via [`instantiate.fsd`](./instantiate#fsd)).
 
-This unifies instantiate and update — instantiation is the first-time case of update. The read-only counterpart `doc.query.lifecycle.update.reportFsd({ sourceQuery, functionRef, targetParent })` returns a `DiffReport` (see [Engine](#engine)) without mutating.
+This unifies instantiate and update — instantiation is the first-time case of update. The read-only counterpart `doc.query.lifecycle.report({ verb: 'fsd', sourceQuery, ref: functionRef, anchor: targetParent })` returns a `DiffReport` (see [Engine](#engine)) without mutating.
 
 ## `tx.lifecycle.update.asd`
 
@@ -192,7 +191,7 @@ This unifies instantiate and update — instantiation is the first-time case of 
 1. **application layer** — reconcile the `Application` subtree (roles, allocation refs, attributes);
 2. **function-layer cascade** — _verbs compose verbs_: treat every composed Function the ASD references as an FSD to update and delegate to `tx.lifecycle.update.fsd`. A function **added** by the newer ASD is instantiated; an existing one is reconciled. Each function is placed at its **own** resolved structural level (via `resolveTargetStructure` + `resolveStructureRef`, exactly like [`instantiate.asd`](./instantiate#asd)), not blindly under the ASD anchor.
 
-The read-only counterpart is `doc.query.lifecycle.update.reportAsd({ sourceQuery, applicationRef })`.
+The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQuery, ref: applicationRef })`.
 
 > Cascade principle (applies to future update layers, e.g. SSD/topology): an update layer = reconcile its own subtree **+** for each referenced child-layer root, delegate to that child layer's update verb with the child's own resolved structural parent.
 
@@ -219,7 +218,7 @@ Each satellite's change folds into the **primary's** decision group as a read-on
 
 For each satellite the update verb does one of:
 
-- **graft** — the newer template references a satellite the target lacks → clone it at its structural level and stamp instance lineage (so a newly-referenced `AllocationRole` / `Variable` travels on update, not only on first-time instantiate);
+- **add** — the newer template references a satellite the target lacks → clone it at its structural level and stamp instance lineage (so a newly-referenced `AllocationRole` / `Variable` travels on update, not only on first-time instantiate);
 - **reconcile in place** — an existing instance satellite → reconcile its changed attributes onto it;
 - **delete** — the satellite **element** was removed from the template → delete the instance, **guarded** by a whole-document last-referrer check so a satellite still referenced by another primary is kept.
 
@@ -236,7 +235,7 @@ The update verbs are built on two engine primitives in `extensions/lifecycle/eng
 `reconcile(tx, { sourceQuery, sourceRootRef, instanceRootRef })` reconciles an updated template subtree **onto** an existing instance. Elements match by `templateUuid` (= the source element's `uuid`, immutable across template versions):
 
 - matched element → update its user-visible attributes in place;
-- new source element → graft its subtree (via [`transplant.deep`](./transplant) + `identity.writeIdentity` stamp), then auto-resolve a name [collision](#placement-collision-resolution) on the grafted element against its instance parent;
+- new source element → add its subtree (via [`transplant.deep`](./transplant) + `identity.writeIdentity` stamp), then auto-resolve a name [collision](#placement-collision-resolution) on the added element against its instance parent;
 - instance element whose template lineage is gone from the source → delete;
 - instance **reference** element (a uuid-less link such as a dropped `AllocationRoleRef`) with no matching source child → removed, so the link disappears when the template drops it.
 
