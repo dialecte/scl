@@ -4,39 +4,39 @@
 	"runs": 3,
 	"results": {
 		"whole-program (check)": {
-			"Instantiations": 219566,
-			"Types": 215601,
-			"Symbols": 647829
+			"Instantiations": 248402,
+			"Types": 225628,
+			"Symbols": 665368
 		},
 		"whole-program (emit)": {
-			"Instantiations": 219566,
-			"Types": 215601,
-			"Symbols": 647829
+			"Instantiations": 248402,
+			"Types": 225628,
+			"Symbols": 665368
 		},
 		"baseline (import)": {
-			"Instantiations": 204149,
-			"Types": 198873,
-			"Symbols": 586876
+			"Instantiations": 237343,
+			"Types": 210241,
+			"Symbols": 605287
 		},
 		"coverage: surface": {
-			"Instantiations": 222675,
-			"Types": 204087,
-			"Symbols": 591165
+			"Instantiations": 255939,
+			"Types": 215459,
+			"Symbols": 609590
 		},
 		"coverage: calls": {
-			"Instantiations": 363374,
-			"Types": 261783,
-			"Symbols": 682435
+			"Instantiations": 476019,
+			"Types": 281094,
+			"Symbols": 714848
 		},
 		"coverage: deep": {
-			"Instantiations": 205988,
-			"Types": 199249,
-			"Symbols": 587890
+			"Instantiations": 239184,
+			"Types": 210626,
+			"Symbols": 606343
 		},
 		"coverage: api": {
-			"Instantiations": 236572,
-			"Types": 206834,
-			"Symbols": 605400
+			"Instantiations": 273768,
+			"Types": 219222,
+			"Symbols": 624847
 		}
 	}
 }
