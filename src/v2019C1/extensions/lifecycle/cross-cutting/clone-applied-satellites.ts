@@ -1,6 +1,7 @@
 import { resolveAppliedSatellites } from './applied-satellites'
 
 import {
+	addChildrenTo,
 	cloneTree,
 	resolveStructureRef,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -17,6 +18,11 @@ import type * as Core from '@dialecte/core'
  * inside the subtree are cloned by `deep`, not here (the resolver excludes them).
  * UUID remapping is handled by the afterDeepClone hook; the caller stamps lineage
  * via `writeIdentity`.
+ *
+ * A satellite whose same-tag/same-name twin already exists in the target IS that
+ * shared entity: its referencing children (`VariableApplyTo`, `InputVar`/`OutputVar`,
+ * ...) are ADDED to the existing satellite rather than the whole thing being skipped -
+ * skipping would drop the application to the newly-instantiated element.
  */
 export async function cloneAppliedSatellites(
 	tx: Core.Transaction<Config>,
@@ -33,7 +39,17 @@ export async function cloneAppliedSatellites(
 
 	const mappings: Scl.CloneMapping[] = []
 	for (const satelliteRef of satellites) {
-		if (await isAlreadyCloned(tx, sourceQuery, satelliteRef)) continue
+		const existing = await findExistingSatelliteByName(tx, sourceQuery, satelliteRef)
+		if (existing) {
+			const addedMappings = await addChildrenTo(tx, {
+				sourceQuery,
+				source: satelliteRef,
+				target: existing,
+				strip: false,
+			})
+			mappings.push(...addedMappings)
+			continue
+		}
 
 		const targetParent = await resolveStructureRef(sourceQuery, satelliteRef, structure)
 		const clone = await cloneTree(tx, {
@@ -47,21 +63,23 @@ export async function cloneAppliedSatellites(
 	return mappings
 }
 
-/** A same-tag, same-name satellite already present in the target = already cloned (dedup shared). */
-async function isAlreadyCloned(
+/** The existing same-tag, same-name satellite in the target (shared entity), if any. */
+async function findExistingSatelliteByName(
 	tx: Core.Transaction<Config>,
 	sourceQuery: Core.Query<Config>,
 	satelliteRef: Scl.Ref<Scl.ElementsOf>,
-): Promise<boolean> {
+): Promise<Scl.Ref<Scl.ElementsOf> | undefined> {
 	const source = await sourceQuery.any.getRecord(satelliteRef)
-	if (!source) return false
+	if (!source) return undefined
 
 	const name = await sourceQuery.any.getAttribute(source, { name: 'name' })
-	if (!name) return false
+	if (!name) return undefined
 
 	const [existing] = await tx.any.findByAttributes({
 		tagName: satelliteRef.tagName,
 		attributes: { name },
 	})
-	return Boolean(existing)
+	return existing
+		? ({ tagName: satelliteRef.tagName, id: existing.id } as Scl.Ref<Scl.ElementsOf>)
+		: undefined
 }

@@ -1,5 +1,6 @@
 import {
 	deep as deepExtract,
+	addChildrenTo,
 	cloneTree,
 	resolveStructureRef,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -48,7 +49,7 @@ export async function cloneFunction(
 		targetParent: targetParentRef,
 		omit,
 		strip,
-		promoteRoot: { from: 'SubFunction', to: 'Function' },
+		retagRoot: { from: 'SubFunction', to: 'Function' },
 		withTypes: true,
 	})
 
@@ -75,10 +76,23 @@ export async function cloneFunctionCategories(
 
 	const mappings: Scl.CloneMapping[] = []
 	for (const categoryId of categoryIds) {
-		const alreadyCloned = await isCategoryAlreadyCloned(tx, sourceQuery, categoryId)
-		if (alreadyCloned) continue
-
 		const categoryRef: Scl.Ref<'FunctionCategory'> = { tagName: 'FunctionCategory', id: categoryId }
+
+		// A same-name category already in the target IS the catalog entry (categories are
+		// name-keyed). Do NOT skip - that would drop this function's classification. Instead
+		// add the category's referencing children (FunctionCatRef, SubCategory) to it.
+		const existing = await findExistingCategoryByName(tx, sourceQuery, categoryId)
+		if (existing) {
+			const addedMappings = await addChildrenTo(tx, {
+				sourceQuery,
+				source: categoryRef,
+				target: existing,
+				strip: false,
+			})
+			mappings.push(...addedMappings)
+			continue
+		}
+
 		const targetParent = await resolveStructureRef(sourceQuery, categoryRef, structure)
 
 		const clone = await cloneTree(tx, {
@@ -132,23 +146,24 @@ async function findRefsForFunctionTree(
 	return results
 }
 
-async function isCategoryAlreadyCloned(
+/** The existing target FunctionCategory sharing the source category's name (categories are name-keyed). */
+async function findExistingCategoryByName(
 	tx: Core.Transaction<Config>,
 	sourceQuery: Core.Query<Config>,
 	categoryId: string,
-): Promise<boolean> {
+): Promise<Scl.Ref<'FunctionCategory'> | undefined> {
 	const sourceCat = await sourceQuery.getRecord({
 		tagName: 'FunctionCategory' as const,
 		id: categoryId,
 	})
-	if (!sourceCat) return false
+	if (!sourceCat) return undefined
 
 	const name = await sourceQuery.getAttribute(sourceCat, { name: 'name' })
-	if (!name) return false
+	if (!name) return undefined
 
 	const [existing] = await tx.findByAttributes({
 		tagName: 'FunctionCategory',
 		attributes: { name },
 	})
-	return Boolean(existing)
+	return existing ? { tagName: 'FunctionCategory', id: existing.id } : undefined
 }
