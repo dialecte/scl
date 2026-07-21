@@ -7,8 +7,8 @@ import { cloneFunctionCategories } from '@/v2019C1/extensions/lifecycle/layers/f
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
-import type { FsdParams } from './fsd.types'
-import type { Config } from '@/v2019C1/config'
+import type { FsdParams, FsdResult } from './fsd.types'
+import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -19,19 +19,35 @@ import type * as Core from '@dialecte/core'
  * (`identity.writeIdentity`) so each cloned element records its FSD counterpart
  * as its `templateUuid` while receiving a fresh `uuid`.
  *
+ * When the target parent is itself a `Function`/`SubFunction`, the placed root is
+ * retagged to `SubFunction` (schema: a function nested in a function is a
+ * subfunction) — the inverse of the `SubFunction -> Function` promotion applied
+ * on extraction.
+ *
  * The clone's uuid references are remapped by the `afterDeepClone` hook. The
  * instantiation provenance link (`FunctionSclRef` -> `SclFileReference` back to
  * the FSD) is written on the cloned root by `reference.writeProvenance`; SET
  * policy (naming, application assignment) is applied by consumer hooks, not here.
+ *
+ * Returns the instantiated root ref (retagged if applicable) and the full
+ * source -> clone record mappings, so a consumer can drive follow-up rules
+ * against the fresh instance without re-querying by templateUuid.
  */
-export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Promise<void> {
+export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Promise<FsdResult> {
 	const { sourceQuery, functionRef, targetParent, overrides } = params
+
+	// A function placed under a (Sub)Function is, per schema, a SubFunction.
+	const retagRoot =
+		targetParent.tagName === 'Function' || targetParent.tagName === 'SubFunction'
+			? ({ from: 'Function', to: 'SubFunction' } as const)
+			: undefined
 
 	const { recordMappings } = await deep(tx, {
 		sourceQuery,
 		ref: functionRef,
 		targetParent,
 		strip: false,
+		retagRoot,
 	})
 
 	// An FSD also carries the FunctionCategory classification that references the
@@ -60,18 +76,28 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	})
 
 	const rootMapping = recordMappings.find((mapping) => mapping.source.id === functionRef.id)
-	if (rootMapping) {
-		// validate the placed function against its parent context; apply any user edits
-		// then auto-resolve a name collision among siblings (schema constraint)
-		await resolvePlacementCollision(tx, {
-			ref: rootMapping.target,
-			parentRef: targetParent,
-			overrides: overrides?.get(functionRef.id),
-		})
-		await writeProvenance(tx, {
-			sourceQuery,
-			targetRoot: rootMapping.target,
-			fileType: 'FSD',
-		})
+	if (!rootMapping) {
+		throw new Error(
+			`instantiate.fsd: cloned root not found for ${functionRef.tagName}#${functionRef.id}`,
+		)
 	}
+
+	// The placed root is a Function, or a SubFunction when `retagRoot` demoted it
+	// under a (Sub)Function parent — keep that union visible to callers.
+	const instantiatedRef = rootMapping.target as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
+
+	// validate the placed function against its parent context; apply any user edits
+	// then auto-resolve a name collision among siblings (schema constraint)
+	await resolvePlacementCollision(tx, {
+		ref: instantiatedRef,
+		parentRef: targetParent,
+		overrides: overrides?.get(functionRef.id),
+	})
+	await writeProvenance(tx, {
+		sourceQuery,
+		targetRoot: instantiatedRef,
+		fileType: 'FSD',
+	})
+
+	return { functionRef: instantiatedRef, recordMappings }
 }

@@ -11,3 +11,12 @@ export type AsdParams = {
 	/** User-edited values per source element id (full track); drives collision override. */
 	overrides?: CollisionOverrides
 }
+
+export type AsdResult = {
+	/** The instantiated Application in the target. */
+	applicationRef: Scl.Ref<'Application'>
+	/** The instantiated composed Function roots (referenced by the Application). */
+	composedFunctionRefs: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
+	/** Full source-record -> target-record mapping for the cloned content. */
+	recordMappings: Scl.CloneMapping[]
+}

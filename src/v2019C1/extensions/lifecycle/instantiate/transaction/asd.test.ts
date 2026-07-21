@@ -1,8 +1,13 @@
 import { asd } from './asd'
 
-import { describe } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
-import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import {
+	ALL_XMLNS_NAMESPACES,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	createSclTestProject,
+	runSclTestCases,
+} from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
@@ -132,6 +137,52 @@ describe('instantiate.asd', () => {
 				'//v2019C1:AllocationRoleRef[@allocationRoleUuid="ar-src-uuid"]',
 			],
 		},
+
+		'maps a referenced AllocationRole onto an existing same-name role instead of duplicating it': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="asd">
+					<Substation name="TEMPLATE" ${id}="sub-s">
+						<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
+							<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="ar-src-uuid" ${id}="ar-s">
+								<eIEC61850-6-100:FunctionRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="ar-fref-s"/>
+							</eIEC61850-6-100:AllocationRole>
+							<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="app-src-uuid" ${id}="app-s">
+								<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/HMI_PC" allocationRoleUuid="ar-src-uuid" ${id}="arref-s"/>
+							</eIEC61850-6-100:Application>
+						</Private>
+						<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+							<Bay name="TEMPLATE" ${id}="bay-s">
+								<Function name="Prot" ${id}="fn-1" uuid="fn-src-uuid"/>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="scd">
+					<Substation name="S1" ${id}="sub-t">
+						<Private type="eIEC61850-6-100" ${id}="priv-t">
+							<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="existing-ar-uuid" ${id}="ar-t"/>
+						</Private>
+						<VoltageLevel name="V1" ${id}="vl-t">
+							<Bay name="B1" ${id}="bay-t"/>
+						</VoltageLevel>
+					</Substation>
+				</SCL>`,
+			applicationId: 'app-s',
+			targetParentId: 'bay-t',
+			expectedQueries: [
+				// the incoming allocation (FunctionRef) is added to the pre-existing role
+				'//v2019C1:AllocationRole[@uuid="existing-ar-uuid"]/v2019C1:FunctionRef',
+				// the Application's AllocationRoleRef is remapped onto the existing role
+				'//v2019C1:AllocationRoleRef[@allocationRoleUuid="existing-ar-uuid"]',
+			],
+			unexpectedQueries: [
+				// no duplicate same-name AllocationRole is created
+				'//v2019C1:AllocationRole[@name="HMI_PC"][2]',
+				// the source role is not cloned as a new (stamped) role
+				'//v2019C1:AllocationRole[@templateUuid="ar-src-uuid"]',
+			],
+		},
 	}
 
 	async function act({
@@ -156,4 +207,50 @@ describe('instantiate.asd', () => {
 	}
 
 	runSclTestCases.withExport({ testCases, act })
+})
+
+describe('instantiate.asd return value', () => {
+	it('returns the instantiated application ref, its composed function refs, and mappings', async () => {
+		const sourceXml = /* xml */ `
+			<SCL ${ns} ${id}="asd">
+				<Substation name="TEMPLATE" ${id}="sub-s">
+					<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
+						<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="app-src-uuid" ${id}="app-s">
+							<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="fr-s">
+								<eIEC61850-6-100:FunctionRoleContent ${id}="frc-s">
+									<eIEC61850-6-100:FunctionRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-s"/>
+								</eIEC61850-6-100:FunctionRoleContent>
+							</eIEC61850-6-100:FunctionRole>
+						</eIEC61850-6-100:Application>
+					</Private>
+					<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+						<Bay name="TEMPLATE" ${id}="bay-s">
+							<Function name="Prot" ${id}="fn-1" uuid="fn-src-uuid"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+			</SCL>`
+		const targetXml = /* xml */ `
+			<SCL ${ns} ${id}="scd">
+				<Substation name="S1" ${id}="sub-t">
+					<VoltageLevel name="V1" ${id}="vl-t"><Bay name="B1" ${id}="bay-t"/></VoltageLevel>
+				</Substation>
+			</SCL>`
+
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		if (!target) throw new Error('target required')
+
+		let result: Awaited<ReturnType<typeof asd>> | undefined
+		await target.document.transaction(async (tx) => {
+			result = await asd(tx, {
+				sourceQuery: source.document.query,
+				applicationRef: { tagName: 'Application', id: 'app-s' },
+				targetParent: { tagName: 'Bay', id: 'bay-t' },
+			})
+		})
+
+		expect(result?.applicationRef.tagName).toBe('Application')
+		expect(result?.composedFunctionRefs.length).toBe(1)
+		expect(result?.recordMappings.some((m) => m.source.id === 'app-s')).toBe(true)
+	})
 })

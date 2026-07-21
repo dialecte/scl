@@ -66,6 +66,30 @@ describe('instantiate.fsd — carried Variable satellite', () => {
 				'//v2019C1:Variable[@uuid="var-src-uuid"]',
 			],
 		},
+
+		'applies to the existing same-name Variable without duplicating it': {
+			sourceXml,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="scd">
+					<Substation name="S1" ${id}="sub-t">
+						<Private type="eIEC61850-6-100" ${id}="priv-t">
+							<eIEC61850-6-100:Variable name="VXCBR" uuid="existing-var-uuid" ${id}="var-t"/>
+						</Private>
+						<VoltageLevel name="V1" ${id}="vl-t">
+							<Bay name="B1" ${id}="bay-t"/>
+						</VoltageLevel>
+					</Substation>
+				</SCL>`,
+			expectedQueries: [
+				// the instance function's application lands on the pre-existing Variable
+				'//v2019C1:Variable[@uuid="existing-var-uuid"]/v2019C1:VariableApplyTo',
+			],
+			unexpectedQueries: [
+				// no second same-name Variable is created
+				'//v2019C1:Variable[@name="VXCBR"][2]',
+				'//v2019C1:Variable[@uuid="var-src-uuid"]',
+			],
+		},
 	}
 
 	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {

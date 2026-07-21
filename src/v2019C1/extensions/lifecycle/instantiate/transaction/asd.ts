@@ -10,8 +10,8 @@ import {
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
-import type { AsdParams } from './asd.types'
-import type { Config } from '@/v2019C1/config'
+import type { AsdParams, AsdResult } from './asd.types'
+import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -26,8 +26,12 @@ import type * as Core from '@dialecte/core'
  * instantiation provenance link (`ApplicationSclRef` -> `SclFileReference` back to
  * the ASD) is written on the cloned root by `reference.writeProvenance`; SET policy
  * (naming, assign-to-application) is applied by consumer hooks, not here.
+ *
+ * Returns the instantiated Application ref, its composed Function roots, and the full
+ * source -> clone mappings, so a consumer can drive follow-up rules against the fresh
+ * instance without re-querying by templateUuid.
  */
-export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Promise<void> {
+export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Promise<AsdResult> {
 	const { sourceQuery, applicationRef, targetParent, overrides } = params
 
 	const structure = await resolveTargetStructure(tx, targetParent)
@@ -72,20 +76,35 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	}
 
 	const rootMapping = mappings.find((mapping) => mapping.source.id === applicationRef.id)
-	if (rootMapping) {
-		// validate the placed application against its parent context (resolved at the
-		// application's own structural level, not the anchor): apply any user edits then
-		// auto-resolve a name collision among siblings (schema constraint)
-		const applicationParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
-		await resolvePlacementCollision(tx, {
-			ref: rootMapping.target,
-			parentRef: applicationParent,
-			overrides: overrides?.get(applicationRef.id),
-		})
-		await writeProvenance(tx, {
-			sourceQuery,
-			targetRoot: rootMapping.target,
-			fileType: 'ASD',
-		})
+	if (!rootMapping) {
+		throw new Error(`instantiate.asd: cloned Application not found for ${applicationRef.id}`)
+	}
+
+	// validate the placed application against its parent context (resolved at the
+	// application's own structural level, not the anchor): apply any user edits then
+	// auto-resolve a name collision among siblings (schema constraint)
+	const applicationParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
+	await resolvePlacementCollision(tx, {
+		ref: rootMapping.target,
+		parentRef: applicationParent,
+		overrides: overrides?.get(applicationRef.id),
+	})
+	await writeProvenance(tx, {
+		sourceQuery,
+		targetRoot: rootMapping.target,
+		fileType: 'ASD',
+	})
+
+	const composedFunctionInstanceRefs = composedFunctionRefs
+		.map((functionRef) => mappings.find((mapping) => mapping.source.id === functionRef.id)?.target)
+		.filter((target): target is Scl.Ref<Scl.ElementsOf> => Boolean(target)) as (
+		| Scl.Ref<'Function'>
+		| Scl.Ref<'SubFunction'>
+	)[]
+
+	return {
+		applicationRef: rootMapping.target as Scl.Ref<'Application'>,
+		composedFunctionRefs: composedFunctionInstanceRefs,
+		recordMappings: mappings,
 	}
 }

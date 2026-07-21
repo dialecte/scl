@@ -11,3 +11,13 @@ export type FsdParams = {
 	/** User-edited values per source element id (full track); drives collision override. */
 	overrides?: CollisionOverrides
 }
+
+export type FsdResult = {
+	/**
+	 * The instantiated root in the target. Tag is `SubFunction` when the function
+	 * was placed under a (Sub)Function (retagged), otherwise `Function`.
+	 */
+	functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
+	/** Full source-record -> target-record mapping for the cloned subtree. */
+	recordMappings: Scl.CloneMapping[]
+}

@@ -30,6 +30,8 @@ await project.transaction(async (tx) => {
 
 The clone's uuid references are remapped by the `afterDeepClone` hook. SET-specific policy — naming conventions, file-reference provenance, application assignment — is applied by consumer-registered hooks, not by the operation.
 
+Returns `{ functionRef, recordMappings }` — the instantiated root (retagged to `SubFunction` when placed under a `(Sub)Function`) and the full source→target `recordMappings`, so a caller can act on the placed function without re-querying by `templateUuid`.
+
 ## asd
 
 `asd({ sourceQuery, applicationRef, targetParent })` instantiates the content an ASD carries — the **application layer** — into a target document:
@@ -49,3 +51,5 @@ await project.transaction(async (tx) => {
 ```
 
 `asd` is the exact application-layer counterpart of [`extract.asd`](./extract#asd): both compose the same `layers/application` take-over, differing only in direction (extract strips, instantiate stamps). SET policy (`ApplicationSclRef` provenance, assign-to-application) is applied by consumer hooks.
+
+Returns `{ applicationRef, composedFunctionRefs, recordMappings }` — the instantiated `Application`, its composed root Functions, and the full source→target `recordMappings`.
