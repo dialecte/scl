@@ -48,7 +48,7 @@ export async function fsd(
 		report?: DiffReport
 		decisions?: DecisionMap
 	},
-): Promise<void> {
+): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
 	const { sourceQuery, functionRef, targetParent, scenario, report, decisions } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
@@ -64,9 +64,14 @@ export async function fsd(
 		// first-time = one added group; gate the whole instantiate on its acceptance
 		const gate = decisions ? acceptedRefIds({ groups, decisions }) : undefined
 		const gateOverrides = decisions ? collisionOverrides({ groups, decisions }) : undefined
-		if (gate && !gate.sourceIds.has(functionRef.id)) return
-		await instantiateFsd(tx, { sourceQuery, functionRef, targetParent, overrides: gateOverrides })
-		return
+		if (gate && !gate.sourceIds.has(functionRef.id)) return []
+		const { functionRef: root } = await instantiateFsd(tx, {
+			sourceQuery,
+			functionRef,
+			targetParent,
+			overrides: gateOverrides,
+		})
+		return [root]
 	}
 
 	const structure = await resolveTargetStructure(tx, targetParent)
@@ -101,6 +106,10 @@ export async function fsd(
 			accepted: instanceAccepted,
 		})
 	}
+
+	return instances.map(
+		(instance) => ({ tagName: 'Function', id: instance.id }) as Scl.Ref<'Function'>,
+	)
 }
 
 /**

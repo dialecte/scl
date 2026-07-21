@@ -50,7 +50,10 @@ export async function asd(
 		report?: DiffReport
 		decisions?: DecisionMap
 	},
-): Promise<void> {
+): Promise<{
+	applications: Scl.Ref<'Application'>[]
+	functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
+}> {
 	const { sourceQuery, applicationRef, targetParent, scenario, report, decisions } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
@@ -65,14 +68,14 @@ export async function asd(
 		// first-time = one added group; gate the whole instantiate on its acceptance
 		const gate = decisions ? acceptedRefIds({ groups, decisions }) : undefined
 		const gateOverrides = decisions ? collisionOverrides({ groups, decisions }) : undefined
-		if (gate && !gate.sourceIds.has(applicationRef.id)) return
-		await instantiateAsd(tx, {
+		if (gate && !gate.sourceIds.has(applicationRef.id)) return { applications: [], functions: [] }
+		const { applicationRef: application, composedFunctionRefs } = await instantiateAsd(tx, {
 			sourceQuery,
 			applicationRef,
 			targetParent,
 			overrides: gateOverrides,
 		})
-		return
+		return { applications: [application], functions: composedFunctionRefs }
 	}
 
 	const structure = await resolveTargetStructure(tx, targetParent)
@@ -120,7 +123,7 @@ export async function asd(
 	}
 
 	// 2. function-layer cascade — updateFsd fans out per composed-function instance
-	await cascadeComposedFunctions(tx, {
+	const functions = await cascadeComposedFunctions(tx, {
 		sourceQuery,
 		applicationRef,
 		targetParent,
@@ -128,6 +131,13 @@ export async function asd(
 		report,
 		decisions,
 	})
+
+	return {
+		applications: instances.map(
+			(instance) => ({ tagName: 'Application', id: instance.id }) as Scl.Ref<'Application'>,
+		),
+		functions,
+	}
 }
 
 /**
@@ -149,13 +159,14 @@ async function cascadeComposedFunctions(
 		report?: DiffReport
 		decisions?: DecisionMap
 	},
-): Promise<void> {
+): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
 	const { sourceQuery, applicationRef, targetParent, scenario, report, decisions } = params
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
-	if (functionUuids.size === 0) return
+	if (functionUuids.size === 0) return []
 
 	const structure = await resolveTargetStructure(tx, targetParent)
 
+	const roots: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[] = []
 	for (const functionUuid of functionUuids) {
 		const [sourceFunction] = await sourceQuery.any.findByAttributes({
 			tagName: 'Function',
@@ -164,7 +175,7 @@ async function cascadeComposedFunctions(
 		if (!sourceFunction) continue
 		const functionRef = { tagName: 'Function', id: sourceFunction.id } as Scl.Ref<'Function'>
 		const functionTargetParent = await resolveStructureRef(sourceQuery, functionRef, structure)
-		await updateFsd(tx, {
+		const functionRoots = await updateFsd(tx, {
 			sourceQuery,
 			functionRef,
 			targetParent: functionTargetParent,
@@ -172,5 +183,7 @@ async function cascadeComposedFunctions(
 			report,
 			decisions,
 		})
+		roots.push(...functionRoots)
 	}
+	return roots
 }

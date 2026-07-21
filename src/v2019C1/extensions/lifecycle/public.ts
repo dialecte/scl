@@ -25,5 +25,7 @@ export type {
 	LifecycleVerb,
 } from './contract.types'
 
+export type { AppliedInstances, ApplyResult } from './apply'
+
 export { presentationScope } from './report/public'
 export type { PresentationScope } from './report/public'

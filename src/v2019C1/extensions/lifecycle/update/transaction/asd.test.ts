@@ -1,9 +1,14 @@
 import { asd as updateAsd } from './asd'
 
-import { describe } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
-import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import {
+	ALL_XMLNS_NAMESPACES,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	createSclTestProject,
+	runSclTestCases,
+} from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
@@ -185,4 +190,26 @@ describe('update.asd (engine: instantiate-or-reconcile, application layer)', () 
 	}
 
 	runSclTestCases.withExport({ testCases, act })
+})
+
+describe('update.asd — returns the applied instance roots', () => {
+	it('instantiate scenario: returns the new Application + its composed Function roots', async () => {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		if (!target) throw new Error('target required')
+
+		let result: Awaited<ReturnType<typeof updateAsd>> | undefined
+		await target.document.transaction(async (tx) => {
+			result = await updateAsd(tx, {
+				sourceQuery: source.document.query,
+				applicationRef,
+				targetParent: bayRef,
+				scenario: 'instantiate',
+			})
+		})
+
+		expect(result?.applications).toHaveLength(1)
+		expect(result?.applications[0]?.tagName).toBe('Application')
+		expect(result?.functions).toHaveLength(1)
+		expect(result?.functions[0]?.tagName).toBe('Function')
+	})
 })

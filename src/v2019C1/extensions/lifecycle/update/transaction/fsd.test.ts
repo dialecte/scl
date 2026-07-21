@@ -1,9 +1,14 @@
 import { fsd as updateFsd } from './fsd'
 
-import { describe } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
-import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import {
+	ALL_XMLNS_NAMESPACES,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	createSclTestProject,
+	runSclTestCases,
+} from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
@@ -127,4 +132,49 @@ describe('update.fsd (engine: instantiate-or-reconcile)', () => {
 	}
 
 	runSclTestCases.withExport({ testCases, act })
+})
+
+describe('update.fsd — returns the applied instance roots', () => {
+	it('instantiate scenario: returns the freshly placed Function root', async () => {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		if (!target) throw new Error('target required')
+
+		let result: Awaited<ReturnType<typeof updateFsd>> | undefined
+		await target.document.transaction(async (tx) => {
+			result = await updateFsd(tx, {
+				sourceQuery: source.document.query,
+				functionRef,
+				targetParent: bayRef,
+				scenario: 'instantiate',
+			})
+		})
+
+		expect(result).toHaveLength(1)
+		expect(result?.[0]?.tagName).toBe('Function')
+	})
+
+	it('reconcile scenario: returns the matched existing instance root', async () => {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		if (!target) throw new Error('target required')
+
+		await target.document.transaction(async (tx) => {
+			await instantiateFsd(tx, {
+				sourceQuery: source.document.query,
+				functionRef,
+				targetParent: bayRef,
+			})
+		})
+
+		let result: Awaited<ReturnType<typeof updateFsd>> | undefined
+		await target.document.transaction(async (tx) => {
+			result = await updateFsd(tx, {
+				sourceQuery: source.document.query,
+				functionRef,
+				targetParent: bayRef,
+			})
+		})
+
+		expect(result).toHaveLength(1)
+		expect(result?.[0]?.tagName).toBe('Function')
+	})
 })

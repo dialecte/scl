@@ -1,6 +1,7 @@
 import { assertDecisionsCoherent } from '@/v2019C1/extensions/lifecycle/engine'
 import { asd as updateAsd, fsd as updateFsd } from '@/v2019C1/extensions/lifecycle/update'
 
+import type { AppliedInstances, ApplyResult } from './apply.types'
 import type { Config } from '@/v2019C1/config'
 import type {
 	LifecycleApplyParams,
@@ -28,27 +29,35 @@ import type * as Core from '@dialecte/core'
  *    to accept. The engine rejects a decision set that accepts a group whose
  *    `dependsOn` parent is skipped (07 §4).
  *
- * Returns the effective report. Run inside `doc.prepare(tx => tx.lifecycle.apply(...))`
+ * Returns `{ report, instances }` — the effective report plus the instance roots
+ * the write produced/reconciled. Run inside `doc.prepare(tx => tx.lifecycle.apply(...))`
  * for a previewable, reversible dry-run.
  */
 export async function apply(
 	tx: Core.Transaction<Config>,
 	params: LifecycleApplyParams,
-): Promise<DiffReport> {
+): Promise<ApplyResult> {
 	const { report, decisions } = params
 
 	// No decisions supplied: fast track applies headless; full track waits for a human.
 	if (!decisions) {
-		if (report.needsDecisions) return report // full track, not decided yet
-		await runVerb(tx, params, report, undefined) // fast track: no gate = apply all
-		return report
+		if (report.needsDecisions) return { report, instances: emptyInstances(params.verb) } // not decided yet
+		const instances = await runVerb(tx, params, report, undefined) // fast track: no gate = apply all
+		return { report, instances }
 	}
 
 	// Decisions supplied: honor gating AND user value edits — even on the fast track,
 	// a conflict-free instantiate can still carry edited editable attributes.
 	assertDecisionsCoherent({ groups: report.groups, decisions })
-	await runVerb(tx, params, report, decisions)
-	return report
+	const instances = await runVerb(tx, params, report, decisions)
+	return { report, instances }
+}
+
+/** The empty instance set for a verb (the not-decided-yet track writes nothing). */
+function emptyInstances(verb: LifecycleTarget['verb']): AppliedInstances {
+	return verb === 'fsd'
+		? { verb: 'fsd', functions: [] }
+		: { verb: 'asd', applications: [], functions: [] }
 }
 
 /**
@@ -62,9 +71,9 @@ async function runVerb(
 	target: LifecycleTarget,
 	report: DiffReport,
 	decisions: DecisionMap | undefined,
-): Promise<void> {
+): Promise<AppliedInstances> {
 	if (target.verb === 'fsd') {
-		await updateFsd(tx, {
+		const functions = await updateFsd(tx, {
 			sourceQuery: target.sourceQuery,
 			functionRef: target.ref,
 			targetParent: target.anchor,
@@ -72,14 +81,15 @@ async function runVerb(
 			report,
 			decisions,
 		})
-	} else {
-		await updateAsd(tx, {
-			sourceQuery: target.sourceQuery,
-			applicationRef: target.ref,
-			targetParent: target.anchor,
-			scenario: target.scenario,
-			report,
-			decisions,
-		})
+		return { verb: 'fsd', functions }
 	}
+	const { applications, functions } = await updateAsd(tx, {
+		sourceQuery: target.sourceQuery,
+		applicationRef: target.ref,
+		targetParent: target.anchor,
+		scenario: target.scenario,
+		report,
+		decisions,
+	})
+	return { verb: 'asd', applications, functions }
 }

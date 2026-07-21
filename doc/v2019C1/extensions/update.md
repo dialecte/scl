@@ -24,12 +24,34 @@ The verb-agnostic surface is the recommended consumer entry point. **Dialecte de
 
 ```ts
 query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor }) // -> DiffReport { needsDecisions, ... }
-tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report })
+tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report }) // -> ApplyResult { report, instances }
 ```
 
 - `verb`: `'fsd'` (then `ref` is a `Function`) or `'asd'` (then `ref` is an `Application`) — the **layer**;
 - `scenario`: `'instantiate'` or `'update'` — the **operation** (see below; defaults to `'update'`);
 - `anchor`: the target parent the instance lives under / is placed into.
+
+### Apply result
+
+`apply` returns an `ApplyResult`: the effective `report` plus `instances`, the instance roots the write
+produced or reconciled. A consumer acts on the roots **in the same transaction** (name, wire, select,
+chain) without re-deriving them. Flat arrays are scenario-honest — `instantiate` yields one root set;
+`update` may reconcile several instances of one template; the not-decided-yet track yields empty arrays.
+
+```ts
+type ApplyResult = {
+	report: DiffReport
+	instances: AppliedInstances
+}
+
+type AppliedInstances =
+	| { verb: 'fsd'; functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[] }
+	| {
+			verb: 'asd'
+			applications: Scl.Ref<'Application'>[]
+			functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
+	  }
+```
 
 ### Scenario — instantiate vs update
 
