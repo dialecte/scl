@@ -89,6 +89,37 @@ describe('import.deep', () => {
 				'//default:Substation/default:Private[@type="eIEC61850-6-100"][2]',
 			],
 		},
+		'imports an IED subtree with LN0 and its dependent type closure': {
+			sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<IED name="VENDOR_A" ${id}="ied-1">
+					<AccessPoint name="P1" ${id}="ap-1">
+						<Server ${id}="srv-1">
+							<LDevice inst="LD0" ${id}="ld-1">
+								<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-1"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${id}="dtt-1">
+					<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-0">
+						<DO name="Mod" type="LLN0_ENC_Type" ${id}="do-0"/>
+					</LNodeType>
+					<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-0">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			targetXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-t"/>`,
+			ref: { tagName: 'IED', id: 'ied-1' },
+			targetParent: { tagName: 'SCL', id: 'scl-t' },
+			expectedQueries: [
+				'//default:IED[@name="VENDOR_A"]/default:AccessPoint/default:Server/default:LDevice/default:LN0[@lnType="LLN0_Type"]',
+				'//default:DataTypeTemplates/default:LNodeType[@id="LLN0_Type"]',
+				'//default:DataTypeTemplates/default:DOType[@id="LLN0_ENC_Type"]/default:DA[@name="stVal"]',
+			],
+		},
 	}
 
 	async function act({

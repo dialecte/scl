@@ -9,8 +9,8 @@ import {
 } from '@/v2019C1/test/hydrated-test'
 
 import type { ImportTypesStats } from './import-types'
+import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
-import type { Scl } from '@dialecte/scl/v2019C1'
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	lnodeRef: { tagName: 'LNode'; id: string }
