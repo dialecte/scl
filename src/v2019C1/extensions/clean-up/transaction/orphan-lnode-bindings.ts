@@ -5,7 +5,9 @@ import type * as Core from '@dialecte/core'
  * Resets LNode IED bindings when the referenced IED is absent from the target DB.
  *
  * Logic per LNode:
- * - iedName is 'None' or empty → skip (already unbound)
+ * - iedName is 'None', empty, or absent → normalize the unbound marker to an
+ *   explicit iedName='None' (the store is faithful, so an omitted iedName is not
+ *   auto-stamped on import; the cleanup makes the canonical marker explicit)
  * - IED with matching name found → skip (binding valid)
  * - IED absent + LNodeSpecNaming child exists → restore lnClass/lnInst/prefix
  *   from spec naming, clear iedName/ldInst/lnUuid, reset spec naming sIedName/sLdInst
@@ -16,7 +18,11 @@ export async function resetLNodes(tx: Core.Transaction<Config>): Promise<void> {
 
 	for (const lnode of lnodes) {
 		const iedName = await tx.getAttribute(lnode, { name: 'iedName' })
-		if (!iedName || iedName === 'None') continue
+		if (!iedName || iedName === 'None') {
+			// Already unbound — stamp the explicit 'None' marker (no-op if already stored).
+			await tx.update(lnode, { attributes: { iedName: 'None' } })
+			continue
+		}
 
 		const [ied] = await tx.findByAttributes({
 			tagName: 'IED',

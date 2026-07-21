@@ -37,8 +37,9 @@ describe('cleanOrphanedLNodeBindings', () => {
 					</Substation>
 				</SCL>
 			`,
-			// Standardization fills the schema default iedName="None" (the canonical
-			// "unbound" marker); resetLNodes leaves the binding otherwise unchanged.
+			// The store is faithful (an omitted iedName is not auto-stamped on import);
+			// resetLNodes stamps the explicit canonical iedName="None" unbound marker and
+			// leaves the binding otherwise unchanged.
 			expectedQueries: ['//default:LNode[@iedName="None" and @lnClass="PTRC" and @lnInst="1"]'],
 		},
 
@@ -77,7 +78,7 @@ describe('cleanOrphanedLNodeBindings', () => {
 				</SCL>
 			`,
 			expectedQueries: [
-				'//default:LNode[@iedName="None" and @lnClass="PTRC" and @lnInst="1" and @prefix="SP" and @ldInst="" and not(@lnUuid) and not(@templateUuid) and not(@originUuid)]',
+				'//default:LNode[@iedName="None" and @lnClass="PTRC" and @lnInst="1" and @prefix="SP" and not(@ldInst) and not(@lnUuid) and not(@templateUuid) and not(@originUuid)]',
 				'//v2019C1:LNodeSpecNaming[@sIedName="None" and not(@sLdInst)]',
 			],
 			unexpectedQueries: [
@@ -102,7 +103,7 @@ describe('cleanOrphanedLNodeBindings', () => {
 				</SCL>
 			`,
 			expectedQueries: [
-				'//default:LNode[@iedName="None" and @lnClass="PTRC" and @lnInst="1" and @prefix="" and @ldInst="" and not(@lnUuid)]',
+				'//default:LNode[@iedName="None" and @lnClass="PTRC" and @lnInst="1" and not(@prefix) and not(@ldInst) and not(@lnUuid)]',
 			],
 		},
 
@@ -120,7 +121,7 @@ describe('cleanOrphanedLNodeBindings', () => {
 				</SCL>
 			`,
 			expectedQueries: [
-				'//default:LNode[@iedName="None" and @ldInst="" and @lnClass="" and @lnInst="" and @prefix="" and not(@lnUuid) and not(@templateUuid)]',
+				'//default:LNode[@iedName="None" and not(@ldInst) and @lnClass="" and not(@lnInst) and not(@prefix) and not(@lnUuid) and not(@templateUuid)]',
 			],
 			unexpectedQueries: ['//default:LNode[@iedName="GONE_IED"]'],
 		},
