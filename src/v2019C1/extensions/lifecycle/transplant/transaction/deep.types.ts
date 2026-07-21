@@ -1,4 +1,4 @@
-import type { PromoteRootConfig, StripConfig } from './primitives/clone-tree.types'
+import type { RetagRootConfig, StripConfig } from './primitives/clone-tree.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
@@ -19,7 +19,7 @@ export type ImportDeepParams = {
 	 */
 	strip?: StripConfig | false
 	/** Replace the root tagName when it matches `from` (e.g. SubFunction -> Function). */
-	promoteRoot?: PromoteRootConfig
+	retagRoot?: RetagRootConfig
 }
 
 export type ImportDeepResult = {

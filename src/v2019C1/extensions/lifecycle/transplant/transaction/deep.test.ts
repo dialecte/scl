@@ -59,6 +59,36 @@ describe('import.deep', () => {
 				'//default:DataTypeTemplates/default:DOType[@id="DPC_Type"]/default:DA[@name="stVal"]',
 			],
 		},
+
+		'merges a cloned Private into an existing same-type Private instead of duplicating it': {
+			sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<Substation name="TEMPLATE" ${id}="sub-1">
+					<Private type="eIEC61850-6-100" ${id}="src-priv">
+						<eIEC61850-6-100:FunctionCategory ${id}="src-cat" name="SRC_CAT" uuid="src-cat-uuid"/>
+					</Private>
+				</Substation>
+			</SCL>`,
+			targetXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-t">
+				<Substation name="S1" ${id}="sub-t">
+					<Private type="eIEC61850-6-100" ${id}="tgt-priv">
+						<eIEC61850-6-100:FunctionCategory ${id}="tgt-cat" name="EXISTING_CAT" uuid="existing-cat-uuid"/>
+					</Private>
+				</Substation>
+			</SCL>`,
+			ref: { tagName: 'Private', id: 'src-priv' },
+			targetParent: { tagName: 'Substation', id: 'sub-t' },
+			expectedQueries: [
+				// both categories live under the single existing Private
+				'//default:Substation/default:Private[@type="eIEC61850-6-100"]/v2019C1:FunctionCategory[@name="EXISTING_CAT"]',
+				'//default:Substation/default:Private[@type="eIEC61850-6-100"]/v2019C1:FunctionCategory[@name="SRC_CAT"]',
+			],
+			unexpectedQueries: [
+				// no second Private of the same type is created
+				'//default:Substation/default:Private[@type="eIEC61850-6-100"][2]',
+			],
+		},
 	}
 
 	async function act({

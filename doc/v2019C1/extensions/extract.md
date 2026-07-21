@@ -122,13 +122,13 @@ import type {
 	ImportDeepParams,
 	ImportDeepResult,
 	StripConfig,
-	PromoteRootConfig,
+	RetagRootConfig,
 } from '@dialecte/scl/v2019C1'
 ```
 
-| Type                | Description                                                                         |
-| ------------------- | ----------------------------------------------------------------------------------- |
-| `ImportDeepParams`  | Parameters of `deep` (source, refs, `withTypes`, `omit` / `strip` / `promoteRoot`). |
-| `ImportDeepResult`  | Result of `deep` (`record`, `typeIdRemap`, `recordMappings`).                       |
-| `StripConfig`       | Attribute-stripping policy — `{ scope: 'root' \| 'tree'; attributes: string[] }`.   |
-| `PromoteRootConfig` | Root tagName promotion — `{ from: Scl.ElementsOf; to: Scl.ElementsOf }`.            |
+| Type               | Description                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| `ImportDeepParams` | Parameters of `deep` (source, refs, `withTypes`, `omit` / `strip` / `retagRoot`).      |
+| `ImportDeepResult` | Result of `deep` (`record`, `typeIdRemap`, `recordMappings`).                          |
+| `StripConfig`      | Attribute-stripping policy — `{ scope: 'root' \| 'tree'; attributes: string[] }`.      |
+| `RetagRootConfig`  | Direction-neutral root tagName retag — `{ from: Scl.ElementsOf; to: Scl.ElementsOf }`. |

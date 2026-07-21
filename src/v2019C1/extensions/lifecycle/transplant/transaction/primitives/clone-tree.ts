@@ -1,6 +1,6 @@
 import { stripAttributes } from '@dialecte/core/helpers'
 
-import type { StripConfig, PromoteRootConfig } from './clone-tree.types'
+import type { StripConfig, RetagRootConfig } from './clone-tree.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
@@ -11,7 +11,7 @@ const DEFAULT_STRIP: StripConfig = {
 }
 
 /**
- * Clone pipeline: getTree -> optional promote root tagName -> strip -> deepClone.
+ * Clone pipeline: getTree -> optional retag root tagName -> strip -> deepClone.
  * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
  *
  * By default strips `templateUuid` and `originUuid` from the entire tree.
@@ -28,26 +28,26 @@ export async function cloneTree(
 		ref: Scl.Ref<Scl.ElementsOf>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		omit?: OmitEntry<Config>[]
-		promoteRoot?: PromoteRootConfig
+		retagRoot?: RetagRootConfig
 		strip?: StripConfig | false
 	},
 ): Promise<Core.CloneResult<Config, Exclude<Scl.ElementsOf, 'SCL'>> | undefined> {
-	const { sourceQuery, ref, targetParent, omit, promoteRoot, strip = DEFAULT_STRIP } = params
+	const { sourceQuery, ref, targetParent, omit, retagRoot, strip = DEFAULT_STRIP } = params
 
 	const tree = await sourceQuery.getTree(ref, { omit })
 	if (!tree) return undefined
 
-	const promoted =
-		promoteRoot && tree.tagName === promoteRoot.from ? { ...tree, tagName: promoteRoot.to } : tree
+	const retagged =
+		retagRoot && tree.tagName === retagRoot.from ? { ...tree, tagName: retagRoot.to } : tree
 
-	let result = promoted
+	let result = retagged
 	if (strip) {
 		result =
 			strip.scope === 'tree'
-				? stripAttributes(promoted, strip.attributes)
+				? stripAttributes(retagged, strip.attributes)
 				: {
-						...promoted,
-						attributes: promoted.attributes.filter((a) => !strip.attributes.includes(a.name)),
+						...retagged,
+						attributes: retagged.attributes.filter((a) => !strip.attributes.includes(a.name)),
 					}
 	}
 

@@ -7,7 +7,7 @@ export type StripConfig = {
 	attributes: string[]
 }
 
-export type PromoteRootConfig = {
+export type RetagRootConfig = {
 	/** Replace the root tagName when it matches `from`. */
 	from: Scl.ElementsOf
 	to: Scl.ElementsOf
