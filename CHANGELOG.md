@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-07-22
+
+- Add `DataTypeTemplates` to lifecyle report presentation scope
+
 ## [0.3.5] - 2026-07-22
 
 - Bump `@dialecte/core` to `0.4.6` - ExtendedDocument

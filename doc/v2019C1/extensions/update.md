@@ -185,12 +185,13 @@ await prepared.commit() // or prepared.discard()
 
 ### Presentation scope
 
-`presentationScope(target)` is a small, layer-derived descriptor a UI can use to render the merge as a **structural tree**: where to root it and which top-level SCL sections are irrelevant to the layer. For `fsd` / `asd` it roots at `Substation` and omits `DataTypeTemplates`, `Communication` and `IED` (the IED layer will bring `IED` back into scope).
+`presentationScope(target)` is a small, layer-derived descriptor a UI can use to render the merge as a **structural tree**: where to root it, which top-level SCL sections are irrelevant to the layer, and which to include alongside the rooted subtree. For `fsd` / `asd` it roots at `Substation`, includes `DataTypeTemplates` (a sibling of `Substation` that the layer references), and omits `Communication` and `IED` (the IED layer will bring `IED` back into scope).
 
 ```ts
 import { presentationScope } from '@dialecte/scl/v2019C1'
 
-const { rootTag, omit } = presentationScope(target) // { rootTag: 'Substation', omit: [...] }
+const { rootTag, omit, include } = presentationScope(target)
+// { rootTag: 'Substation', omit: ['Communication', 'IED'], include: ['DataTypeTemplates'] }
 ```
 
 ````
