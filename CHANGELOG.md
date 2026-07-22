@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-07-22
+
+- Bump `@dialecte/core` to `0.4.6` - ExtendedDocument
+
 ## [0.3.4] - 2026-07-22
 
 ### Changed

@@ -9,6 +9,11 @@ export namespace Scl {
 	export type Project<GenericCustomModules extends Core.ExtensionModules = Record<never, never>> =
 		Core.Project<Config, SclModules & GenericCustomModules>
 	export type Document = Core.Document<Config, SclExtensions>
+
+	export type ExtendedDocument<
+		GenericCustomModules extends Core.ExtensionModules = Record<never, never>,
+	> = Core.ExtendedDocument<Config, SclModules & GenericCustomModules>
+
 	export type Context = Core.Context<Config>
 
 	export type Query = Core.Query<Config> & Core.QueryExtensions<SclExtensions>
