@@ -7,7 +7,9 @@ import type * as Core from '@dialecte/core'
 
 export async function resolve(
 	query: Core.Query<Config>,
-	params: { records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'>)[] },
+	params: {
+		records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]
+	},
 ): Promise<ResolvedDataModel> {
 	const { records } = params
 

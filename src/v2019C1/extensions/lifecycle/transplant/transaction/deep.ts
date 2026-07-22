@@ -112,12 +112,15 @@ async function resolveExistingPrivateMergeTarget(
 	return undefined
 }
 
-/** All `LNode`/`LN` records under (and including) the imported subtree. */
+/** All `LNode`/`LN`/`LN0` records under (and including) the imported subtree. */
 async function collectLogicalNodes(
 	sourceQuery: Core.Query<Config>,
 	ref: Scl.Ref<Scl.ElementsOf>,
-): Promise<(Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'>)[]> {
-	const { LNode = [] } = await sourceQuery.findDescendants(ref, { collect: 'LNode' })
-	const { LN = [] } = await sourceQuery.findDescendants(ref, { collect: 'LN' })
-	return [...LNode, ...LN]
+): Promise<(Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]> {
+	const {
+		LNode = [],
+		LN = [],
+		LN0 = [],
+	} = await sourceQuery.findDescendants(ref, { collect: ['LNode', 'LN', 'LN0'] })
+	return [...LNode, ...LN, ...LN0]
 }

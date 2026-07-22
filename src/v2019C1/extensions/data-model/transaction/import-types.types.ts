@@ -24,7 +24,7 @@ export type ImportTypesResult = {
 
 export type ImportTypesParams = {
 	sourceQuery: Core.Query<Config>
-	records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'>)[]
+	records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]
 	/**
 	 * Clone mappings from the caller's instance `deepClone` (its `mappings`). The
 	 * `lnType` of each cloned target whose source type was forked/deduped is

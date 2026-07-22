@@ -13,7 +13,7 @@ import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
 type TestCase = SclTest.BaseXmlTestCase & {
-	lnodeRef: { tagName: 'LNode'; id: string }
+	sourceRef: { tagName: 'LNode'; id: string }
 	cloneTargets?: Scl.Ref<Scl.ElementsOf>[]
 	/** Asserted against the returned `stats` when present. */
 	expectedStats?: Partial<ImportTypesStats>
@@ -47,7 +47,7 @@ describe('importTypes', () => {
 				</DataTypeTemplates>
 			</SCL>`,
 			targetXml: EMPTY_TARGET,
-			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			sourceRef: { tagName: 'LNode', id: 'lnode-1' },
 			expectedQueries: [
 				'//default:DataTypeTemplates/default:LNodeType[@id="CSWI_Type"]',
 				'//default:DataTypeTemplates/default:DOType[@id="DPC_Type"]/default:DA[@name="stVal"]',
@@ -80,7 +80,7 @@ describe('importTypes', () => {
 					<LNodeType id="CSWI_Type" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-t"/>
 				</DataTypeTemplates>
 			</SCL>`,
-			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			sourceRef: { tagName: 'LNode', id: 'lnode-1' },
 			expectedQueries: [
 				'//default:DataTypeTemplates/default:LNodeType[@id="CSWI_Type"]',
 				'//default:DataTypeTemplates/default:DOType[@id="DPC_Type"]',
@@ -110,7 +110,7 @@ describe('importTypes', () => {
 				</DataTypeTemplates>
 			</SCL>`,
 			targetXml: EMPTY_TARGET,
-			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			sourceRef: { tagName: 'LNode', id: 'lnode-1' },
 			expectedQueries: [
 				'//default:SCL/default:DataTypeTemplates',
 				'//default:DataTypeTemplates/default:LNodeType[@id="MMXU_Type"]',
@@ -159,7 +159,7 @@ describe('importTypes', () => {
 					</DOType>
 				</DataTypeTemplates>
 			</SCL>`,
-			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			sourceRef: { tagName: 'LNode', id: 'lnode-1' },
 			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
 			expectedQueries: [
 				'//default:DataTypeTemplates/default:LNodeType[@id="PRJ_CSWI"]',
@@ -210,7 +210,7 @@ describe('importTypes', () => {
 					</DOType>
 				</DataTypeTemplates>
 			</SCL>`,
-			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			sourceRef: { tagName: 'LNode', id: 'lnode-1' },
 			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
 			expectedStats: { forked: 2, reclaimed: 2, reused: 0, preserved: 0 },
 			expectedQueries: [
@@ -267,7 +267,7 @@ describe('importTypes', () => {
 					</DOType>
 				</DataTypeTemplates>
 			</SCL>`,
-			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			sourceRef: { tagName: 'LNode', id: 'lnode-1' },
 			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
 			expectedStats: { forked: 2, reclaimed: 1 },
 			expectedQueries: [
@@ -321,7 +321,7 @@ describe('importTypes', () => {
 					</DOType>
 				</DataTypeTemplates>
 			</SCL>`,
-			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			sourceRef: { tagName: 'LNode', id: 'lnode-1' },
 			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
 			expectedStats: { reused: 1, forked: 1, reclaimed: 1, preserved: 0 },
 			expectedQueries: [
@@ -374,7 +374,7 @@ describe('importTypes', () => {
 					</DOType>
 				</DataTypeTemplates>
 			</SCL>`,
-			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			sourceRef: { tagName: 'LNode', id: 'lnode-1' },
 			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
 			expectedStats: { forked: 2, reclaimed: 0 },
 			expectedQueries: [
@@ -424,7 +424,7 @@ describe('importTypes', () => {
 					</DOType>
 				</DataTypeTemplates>
 			</SCL>`,
-			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
+			sourceRef: { tagName: 'LNode', id: 'lnode-1' },
 			cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
 			expectedStats: { forked: 1, preserved: 1, reclaimed: 1 },
 			expectedQueries: [
@@ -447,7 +447,7 @@ describe('importTypes', () => {
 		if (!target) throw new Error('target required')
 
 		const sourceQuery = source.query
-		const lnodeRecord = await sourceQuery.getRecord(testCase.lnodeRef)
+		const lnodeRecord = await sourceQuery.getRecord(testCase.sourceRef)
 		if (!lnodeRecord) throw new Error('LNode not found')
 
 		let stats: ImportTypesStats | undefined
