@@ -120,6 +120,65 @@ describe('import.deep', () => {
 				'//default:DataTypeTemplates/default:DOType[@id="LLN0_ENC_Type"]/default:DA[@name="stVal"]',
 			],
 		},
+		'forks an LN0-owned type on id collision and repoints the cloned LN0 lnType': {
+			sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<IED name="VENDOR_A" ${id}="ied-1">
+					<AccessPoint name="P1" ${id}="ap-1">
+						<Server ${id}="srv-1">
+							<LDevice inst="LD0" ${id}="ld-1">
+								<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-1"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${id}="dtt-1">
+					<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-0">
+						<DO name="Mod" type="LLN0_ENC_Type" ${id}="do-0"/>
+					</LNodeType>
+					<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-0">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			targetXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-t">
+				<!-- a pre-existing LN0 keeps the colliding target type alive, so the
+				     source type must fork under a hashed id instead of reclaiming it: -->
+				<IED name="TARGET" ${id}="ied-t">
+					<AccessPoint name="P1" ${id}="ap-t">
+						<Server ${id}="srv-t">
+							<LDevice inst="LD0" ${id}="ld-t">
+								<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-keep"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${id}="dtt-t">
+					<!-- same id, different content → source type must fork: -->
+					<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-t">
+						<DO name="Beh" type="LLN0_ENC_Type" ${id}="do-t"/>
+					</LNodeType>
+					<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-t">
+						<DA name="stVal" bType="INT32" fc="ST" ${id}="da-t"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			ref: { tagName: 'IED', id: 'ied-1' },
+			targetParent: { tagName: 'SCL', id: 'scl-t' },
+			expectedQueries: [
+				// pre-existing colliding type is preserved (its own LN0 still references it)
+				'//default:DataTypeTemplates/default:LNodeType[@id="LLN0_Type"]/default:DO[@name="Beh"]',
+				'//default:IED[@name="TARGET"]/default:AccessPoint/default:Server/default:LDevice/default:LN0[@lnType="LLN0_Type"]',
+				// the source type forks under a hashed id and the cloned LN0 is repointed to it
+				'//default:DataTypeTemplates/default:LNodeType[starts-with(@id, "LLN0_Type_")]/default:DO[@name="Mod"]',
+				'//default:IED[@name="VENDOR_A"]/default:AccessPoint/default:Server/default:LDevice/default:LN0[starts-with(@lnType, "LLN0_Type_")]',
+			],
+			unexpectedQueries: [
+				// the cloned LN0 must not keep the un-reconciled source id
+				'//default:IED[@name="VENDOR_A"]/default:AccessPoint/default:Server/default:LDevice/default:LN0[@lnType="LLN0_Type"]',
+			],
+		},
 	}
 
 	async function act({

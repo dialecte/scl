@@ -117,8 +117,10 @@ async function collectLogicalNodes(
 	sourceQuery: Core.Query<Config>,
 	ref: Scl.Ref<Scl.ElementsOf>,
 ): Promise<(Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]> {
-	const { LNode = [] } = await sourceQuery.findDescendants(ref, { collect: 'LNode' })
-	const { LN = [] } = await sourceQuery.findDescendants(ref, { collect: 'LN' })
-	const { LN0 = [] } = await sourceQuery.findDescendants(ref, { collect: 'LN0' })
+	const {
+		LNode = [],
+		LN = [],
+		LN0 = [],
+	} = await sourceQuery.findDescendants(ref, { collect: ['LNode', 'LN', 'LN0'] })
 	return [...LNode, ...LN, ...LN0]
 }
