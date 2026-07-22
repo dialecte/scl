@@ -4,7 +4,7 @@ description: Data Model extension for @dialecte/scl v2019C1 — resolve LNodeTyp
 
 # Data Model
 
-The `dataModel` extension resolves the IEC 61850 data model for `LNode` and `LN` records, and imports the required types into a target `DataTypeTemplates` section — content-addressed, so structurally-identical types are deduplicated and divergent ones are forked.
+The `dataModel` extension resolves the IEC 61850 data model for `LNode`, `LN` and `LN0` records, and imports the required types into a target `DataTypeTemplates` section — content-addressed, so structurally-identical types are deduplicated and divergent ones are forked.
 
 ## Types
 
@@ -27,11 +27,11 @@ Access via `doc.query.dataModel`.
 
 ### `resolve`
 
-Walks the data model tree starting from a list of `LNode` or `LN` records. For each record it follows `lnType` → `LNodeType` → `DO.type` → `DOType` → `DA.type` → `DAType`/`EnumType`. Deduplicates by `id`.
+Walks the data model tree starting from a list of `LNode`, `LN` or `LN0` records. For each record it follows `lnType` → `LNodeType` → `DO.type` → `DOType` → `DA.type` → `DAType`/`EnumType`. Deduplicates by `id`.
 
 ```ts
 resolve(params: {
-  records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'>)[]
+  records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]
 }): Promise<ResolvedDataModel>
 ```
 
@@ -49,7 +49,7 @@ Access via `tx.dataModel` inside a `doc.transaction()` callback.
 
 ### `importTypes`
 
-Resolves the type closure of the given `LNode`/`LN` records and imports it into the current transaction's `DataTypeTemplates` (created if absent), **content-addressed** (§6.9). For each type, bottom-up:
+Resolves the type closure of the given `LNode`/`LN`/`LN0` records and imports it into the current transaction's `DataTypeTemplates` (created if absent), **content-addressed** (§6.9). For each type, bottom-up:
 
 - **R1 — reuse:** a structurally-identical type already exists in the target → its id is reused (dedup);
 - **R2 — preserve:** no structural match and the id is free → clone, keeping the id;
@@ -62,7 +62,7 @@ Child type references inside the imported types — and the `lnType`/`type` of t
 ```ts
 importTypes(params: {
   sourceQuery: Scl.Query
-  records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'>)[]
+  records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]
   cloneMappings?: Scl.CloneMapping[]   // repoint cloned instances' lnType/type on fork
   forkPrefix?: string                  // optional prefix; id is always <forkPrefix><id>_<contentHash>
 }): Promise<{
