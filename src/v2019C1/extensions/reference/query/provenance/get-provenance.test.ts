@@ -176,7 +176,7 @@ describe('getProvenance', () => {
 	runSclTestCases.withExport({ testCases, act })
 })
 
-function sortEntries<GenericEntry extends { anchorId: string; fileType: string }>(
+function sortEntries<GenericEntry extends { anchorId: string | undefined; fileType: string }>(
 	entries: GenericEntry[],
 ): GenericEntry[] {
 	return [...entries].sort((a, b) =>

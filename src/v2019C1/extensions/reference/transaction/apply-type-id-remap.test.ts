@@ -8,10 +8,11 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test/hydrated-test'
 
+import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
 type TestCase = SclTest.BaseXmlTestCase & {
-	records: { tagName: string; id: string }[]
+	records: Scl.Ref<Scl.ElementsOf>[]
 	idRemap: [string, string][]
 }
 

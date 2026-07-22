@@ -13,7 +13,7 @@ const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
 const applicationRef = { tagName: 'Application', id: 'app-s' } as Scl.Ref<'Application'>
-const privateRef = { tagName: 'Private', id: 'sub-priv-s' } as Scl.Ref<'Private'>
+const substationRef = { tagName: 'Substation', id: 'sub-s' } as Scl.Ref<'Substation'>
 const bayRef = { tagName: 'Bay', id: 'bay-t' } as Scl.Ref<'Bay'>
 
 type TestCase = SclTest.BaseXmlTestCase & {
@@ -65,7 +65,7 @@ const skipAll =
 // AllocationRoleRef from the application to it (the application group thus changes).
 const mutate = async (tx: Scl.Transaction): Promise<void> => {
 	await tx.update(applicationRef, { attributes: { desc: 'now references BAY_CTRL' } })
-	await tx.addChild(privateRef, {
+	await tx.addChild(substationRef, {
 		tagName: 'AllocationRole',
 		attributes: { name: 'BAY_CTRL', uuid: 'ar2-src-uuid' },
 	})

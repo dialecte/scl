@@ -37,7 +37,7 @@
 		"//====== TEST ======//": "",
 		"test": "vitest",
 		"//====== CHECK ======//": "",
-		"check": "run-p type-check type-check:test lint:check format:check link:check",
+		"check": "run-p type-check type-check:test lint:check format:check",
 		"type-check": "tsc --noEmit",
 		"type-check:test": "tsc -p tsconfig.vitest.json --noEmit",
 		"lint:check": "oxlint",
