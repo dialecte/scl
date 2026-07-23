@@ -35,9 +35,10 @@ export async function reportFunction(
 		sourceRootRef: functionRef,
 		instanceRootRef: instance,
 	})
-	// first-time (no instance): satellites are created via the clone path; nothing to fold
-	if (!instance) return report
-
+	// On FIRST-TIME (no instance) the satellites are still created via the clone path,
+	// so they must be folded as `added` companions too — otherwise the merge-review
+	// hides them when context is off. The folds no-op their instance side when
+	// `instance`/`instancePrimaryRef` is undefined.
 	const withLayerSatellites = await foldCarriedSatellites(query, {
 		sourceQuery,
 		functionRef,
@@ -47,7 +48,9 @@ export async function reportFunction(
 	return foldCrossCuttingSatellites(query, {
 		sourceQuery,
 		primaryRef: functionRef,
-		instancePrimaryRef: { tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
+		instancePrimaryRef: instance
+			? ({ tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>)
+			: undefined,
 		report: withLayerSatellites,
 	})
 }
