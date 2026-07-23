@@ -48,3 +48,14 @@ await targetDoc.transaction(async (tx) => {
 	})
 })
 ```
+
+## Private preservation
+
+Because `deep` is a faithful copy, vendor `Private` elements are cloned **verbatim**, including ones that carry no child elements:
+
+- **text-only** privates whose payload is their value (e.g. `<Private type="Siemens-MasterId">…</Private>`);
+- **empty flag** privates whose meaning is their mere presence (e.g. `<Private type="Siemens-IsSiprotec5IED"/>`);
+- **namespaced** privates wrapping foreign-namespace content (e.g. `<Private type="eIEC61850-6-100"><eIEC61850-6-100:SsdReference/></Private>`).
+
+Only a **truly-empty** `Private` — no child elements, no text value, and no `type` — is dropped as noise. This applies to every `transplant.deep` consumer (extract, instantiate, and the layer clones).
+

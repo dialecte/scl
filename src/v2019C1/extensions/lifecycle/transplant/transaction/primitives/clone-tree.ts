@@ -34,7 +34,11 @@ export async function cloneTree(
 ): Promise<Core.CloneResult<Config, Exclude<Scl.ElementsOf, 'SCL'>> | undefined> {
 	const { sourceQuery, ref, targetParent, omit, retagRoot, strip = DEFAULT_STRIP } = params
 
-	const tree = await sourceQuery.getTree(ref, { omit })
+	// A clone must be a faithful copy: keep transparent `Private` wrappers in the tree
+	// (`unwrap: []` disables the default transparent-element unwrap) so vendor privates —
+	// including text-only (e.g. Siemens-MasterId) and empty flags (e.g. Siemens-IsSiprotec5IED) —
+	// reach `deepClone` instead of being flattened away.
+	const tree = await sourceQuery.getTree(ref, { omit, unwrap: [] })
 	if (!tree) return undefined
 
 	const retagged =

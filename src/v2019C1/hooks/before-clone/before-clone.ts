@@ -11,7 +11,12 @@ export function beforeClone<GenericElement extends Scl.ElementsOf>(params: {
 
 	let shouldBeCloned = true
 
-	if (record.tagName === 'Private' && !record.tree.length) {
+	// Skip only truly-empty `Private` noise: no child elements, no text value, and no `type`.
+	// Vendor privates carry information in their value or by their
+	// mere presence with a `type`, so they must be cloned.
+	const hasValue = !!record.value?.trim()
+	const hasType = record.attributes.some((attribute) => attribute.name === 'type')
+	if (record.tagName === 'Private' && !record.tree.length && !hasValue && !hasType) {
 		shouldBeCloned = false
 	}
 

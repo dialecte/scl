@@ -179,6 +179,49 @@ describe('import.deep', () => {
 				'//default:IED[@name="VENDOR_A"]/default:AccessPoint/default:Server/default:LDevice/default:LN0[@lnType="LLN0_Type"]',
 			],
 		},
+		'preserves text-only, empty-flag and namespaced vendor Private on IED clone': {
+			sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<IED name="VENDOR_A" ${id}="ied-1">
+					<Private type="Siemens-MasterId" ${id}="priv-master">23a3beb5-7342-4114-b042-6fb04f2312d2</Private>
+					<Private type="eIEC61850-6-100" ${id}="priv-ssd">
+						<eIEC61850-6-100:SsdReference desc="SET_Sample1" version="0" revision="14" ${id}="ssd-ref"/>
+					</Private>
+					<Private type="Siemens-IsSiprotec5IED" ${id}="priv-flag"/>
+					<AccessPoint name="P1" ${id}="ap-1">
+						<Server ${id}="srv-1">
+							<LDevice inst="LD0" ${id}="ld-1">
+								<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-1">
+									<Private type="Siemens-MasterId" ${id}="priv-ln0">2189c448-8f8a-439e-b3cb-9e87608463d6</Private>
+								</LN0>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${id}="dtt-1">
+					<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-0">
+						<DO name="Mod" type="LLN0_ENC_Type" ${id}="do-0"/>
+					</LNodeType>
+					<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-0">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			targetXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-t"/>`,
+			ref: { tagName: 'IED', id: 'ied-1' },
+			targetParent: { tagName: 'SCL', id: 'scl-t' },
+			expectedQueries: [
+				// text-only vendor Private survives on the IED
+				'//default:IED[@name="VENDOR_A"]/default:Private[@type="Siemens-MasterId"]',
+				// empty vendor Private survives on the IED
+				'//default:IED[@name="VENDOR_A"]/default:Private[@type="Siemens-IsSiprotec5IED"]',
+				// namespaced Private and its foreign-ns child survive on the IED
+				'//default:IED[@name="VENDOR_A"]/default:Private[@type="eIEC61850-6-100"]/v2019C1:SsdReference',
+				// nested text-only vendor Private survives on the LN0
+				'//default:IED[@name="VENDOR_A"]/default:AccessPoint/default:Server/default:LDevice/default:LN0/default:Private[@type="Siemens-MasterId"]',
+			],
+		},
 	}
 
 	async function act({

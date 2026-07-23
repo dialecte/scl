@@ -110,7 +110,7 @@ describe('beforeClone', () => {
 				},
 			},
 		},
-		'empty Private element → skipped (shouldBeCloned=false)': {
+		'type-only empty Private element → cloned (vendor flag)': {
 			input: {
 				id: 'test-id',
 				tagName: 'Private',
@@ -118,11 +118,28 @@ describe('beforeClone', () => {
 				tree: [],
 			},
 			expected: {
-				shouldBeCloned: false,
+				shouldBeCloned: true,
 				record: {
 					id: 'test-id',
 					tagName: 'Private',
 					attributes: [{ name: 'type', value: 'some-type' }],
+					tree: [],
+				},
+			},
+		},
+		'truly-empty Private element (no type, value, children) → skipped': {
+			input: {
+				id: 'test-id',
+				tagName: 'Private',
+				attributes: [],
+				tree: [],
+			},
+			expected: {
+				shouldBeCloned: false,
+				record: {
+					id: 'test-id',
+					tagName: 'Private',
+					attributes: [],
 					tree: [],
 				},
 			},

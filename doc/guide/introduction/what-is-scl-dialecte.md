@@ -59,10 +59,10 @@ Hooks enforce SCL-specific invariants automatically — no application code need
 
 **Transaction hooks:**
 
-| Hook                      | Trigger                                               | What it does                                                                                   |
-| ------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `afterStandardizedRecord` | Every record entry point (create/clone/update/import) | Generates a fresh `uuid` on any element that supports it but lacks one (fill-only)             |
-| `beforeClone`             | Before cloning a subtree                              | Strips `uuid` attributes (clones get fresh identifiers); skips empty `<Private>` wrappers      |
+| Hook                      | Trigger                                               | What it does                                                                                                                         |
+| ------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `afterStandardizedRecord` | Every record entry point (create/clone/update/import) | Generates a fresh `uuid` on any element that supports it but lacks one (fill-only)                                                   |
+| `beforeClone`             | Before cloning a subtree                              | Strips `uuid` attributes (clones get fresh identifiers); skips only truly-empty `<Private>` wrappers (no children, value, or `type`) |
 | `afterCreated`            | After a child element is added                        | Wraps elements from a non-default namespace inside a `<Private>` container, as required by SCL |
 
 **IO hooks (import pipeline):**
