@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-07-23
+
+### Added
+
+- `keepNameTypesFrom` option on `dataModel.importTypes` and `lifecycle.apply` (and `transplant.deep` via `withTypes: { keepNameFrom }`) — on a type-dedup name clash, choose whether the target (default) or the source keeps the type name.
+
+### Fixed
+
+- Vendor `Private` elements are now preserved when cloning a subtree (`transplant.deep`, extract, instantiate) — text-only privates and empty flag privates are no longer dropped; only a truly-empty `Private` (no children, value, or `type`) is skipped.
+
 ## [0.3.6] - 2026-07-22
 
 - Add `DataTypeTemplates` to lifecyle report presentation scope

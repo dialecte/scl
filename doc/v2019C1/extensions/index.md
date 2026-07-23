@@ -49,6 +49,7 @@ import {
 	RESOLUTION_TYPE, // reference
 	DEFAULT_IGNORED_ATTRIBUTES, // signature
 	type ImportTypesParams, // dataModel
+	type KeepNameTypesFrom, // dataModel
 	type ImportDeepParams, // transplant
 } from '@dialecte/scl/v2019C1'
 ```

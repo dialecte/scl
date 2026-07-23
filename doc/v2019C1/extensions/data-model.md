@@ -49,11 +49,11 @@ Access via `tx.dataModel` inside a `doc.transaction()` callback.
 
 ### `importTypes`
 
-Resolves the type closure of the given `LNode`/`LN`/`LN0` records and imports it into the current transaction's `DataTypeTemplates` (created if absent), **content-addressed** (§6.9). For each type, bottom-up:
+Resolves the type closure of the given `LNode`/`LN`/`LN0` records and imports it into the current transaction's `DataTypeTemplates` (created if absent), **content-addressed**. For each type, bottom-up:
 
-- **R1 — reuse:** a structurally-identical type already exists in the target → its id is reused (dedup);
-- **R2 — preserve:** no structural match and the id is free → clone, keeping the id;
-- **R3 — fork:** no match but the id is taken by _different_ content → clone under a new content-hash id (`<forkPrefix><id>_<hash>`, prefix optional) and propagate the fork to referrers.
+- **reuse:** a structurally-identical type already exists in the target → its id is reused (dedup). By default the target keeps its id (`keepNameTypesFrom: 'target'`); pass `keepNameTypesFrom: 'source'` to adopt the incoming id instead and repoint the target's existing referrers;
+- **preserve:** no structural match and the id is free → clone, keeping the id;
+- **fork:** no match but the id is taken by _different_ content → clone under a new content-hash id (`<forkPrefix><id>_<hash>`, prefix optional) and propagate the fork to referrers.
 
 Child type references inside the imported types — and the `lnType`/`type` of the instances passed in `cloneMappings` — are repointed to the reconciled ids in the same transaction. With an empty / non-colliding target and no `cloneMappings`, the result is byte-identical to a plain id-preserving clone.
 
@@ -65,6 +65,7 @@ importTypes(params: {
   records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]
   cloneMappings?: Scl.CloneMapping[]   // repoint cloned instances' lnType/type on fork
   forkPrefix?: string                  // optional prefix; id is always <forkPrefix><id>_<contentHash>
+  keepNameTypesFrom?: 'source' | 'target' // dedup: which side keeps the type name (default 'target')
 }): Promise<{
   idRemap: Map<string, string>                              // source type id -> reconciled id
   stats: { reused: number; preserved: number; forked: number }
@@ -93,11 +94,17 @@ await targetDoc.transaction(async (tx) => {
 The `dataModel` module re-exports the parameter and result shapes of `importTypes` for typing call sites and tooling.
 
 ```ts
-import type { ImportTypesParams, ImportTypesResult, ImportTypesStats } from '@dialecte/scl/v2019C1'
+import type {
+	ImportTypesParams,
+	ImportTypesResult,
+	ImportTypesStats,
+	KeepNameTypesFrom,
+} from '@dialecte/scl/v2019C1'
 ```
 
-| Type                | Description                                                                              |
-| ------------------- | ---------------------------------------------------------------------------------------- |
-| `ImportTypesParams` | Parameters of `importTypes` (`sourceQuery`, `records`, `cloneMappings?`, `forkPrefix?`). |
-| `ImportTypesResult` | Result of `importTypes` (`idRemap`, `stats`).                                            |
-| `ImportTypesStats`  | Per-run reconciliation counts — `{ reused, preserved, forked }`.                         |
+| Type                | Description                                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `ImportTypesParams` | Parameters of `importTypes` (`sourceQuery`, `records`, `cloneMappings?`, `forkPrefix?`, `keepNameTypesFrom?`). |
+| `ImportTypesResult` | Result of `importTypes` (`idRemap`, `stats`).                                                                  |
+| `ImportTypesStats`  | Per-run reconciliation counts — `{ reused, preserved, forked }`.                                               |
+| `KeepNameTypesFrom` | On a dedup, which side keeps the type name — `'source' \| 'target'`.                                           |

@@ -19,7 +19,7 @@ Access via `tx.lifecycle.transplant` inside a `doc.transaction()` callback. `dee
 `deep({ sourceQuery, ref, targetParent, omit?, strip?, retagRoot?, withTypes? })` imports an element subtree into `targetParent` together with its type closure, in this order:
 
 1. **subtree clone** — clones the element under `targetParent` (with optional `omit` / `strip` / `retagRoot`).
-2. **content-addressed type closure** (`withTypes`, default `true`) — reconciles the `LNode`/`LN`/`LN0` type closure via `dataModel.importTypes` and repoints the cloned instances' `lnType` through the clone mappings.
+2. **content-addressed type closure** (`withTypes`, default `true`) — reconciles the `LNode`/`LN`/`LN0` type closure via `dataModel.importTypes` and repoints the cloned instances' `lnType` through the clone mappings. Pass `withTypes: { keepNameFrom: 'source' | 'target' }` to choose which side keeps the type name on a dedup (`'target'` default = destination is the naming authority); `withTypes: false` skips the closure for a bare subtree copy.
 
 `deep` is a **faithful** subtree copy: it does _not_ follow forward uuid references, reset IED bindings, strip template attributes, or clean up orphans. Reference rewiring and identity stamping are the caller's responsibility (see [extract](./extract), [instantiate](./instantiate) and [identity](./identity)). It returns the full `recordMappings` (source → clone for every node) so callers can locate any cloned node in the target.
 
@@ -28,7 +28,7 @@ tx.lifecycle.transplant.deep(params: {
   sourceQuery: Scl.Query
   ref: Scl.Ref<Scl.ElementsOf>            // element to import
   targetParent: Scl.Ref<Scl.ElementsOf>   // where the subtree is cloned
-  withTypes?: boolean                      // default true
+  withTypes?: boolean | { keepNameFrom?: 'source' | 'target' } // default true; object picks the dedup name authority
   omit?: OmitEntry[]                        // child tags to drop from the clone
   strip?: StripConfig | false              // default false (preserve provenance)
   retagRoot?: { from: Scl.ElementsOf; to: Scl.ElementsOf } // direction-neutral root retag (e.g. instantiate Function->SubFunction, extract SubFunction->Function)
@@ -58,4 +58,3 @@ Because `deep` is a faithful copy, vendor `Private` elements are cloned **verbat
 - **namespaced** privates wrapping foreign-namespace content (e.g. `<Private type="eIEC61850-6-100"><eIEC61850-6-100:SsdReference/></Private>`).
 
 Only a **truly-empty** `Private` — no child elements, no text value, and no `type` — is dropped as noise. This applies to every `transplant.deep` consumer (extract, instantiate, and the layer clones).
-

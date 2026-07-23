@@ -24,12 +24,13 @@ The verb-agnostic surface is the recommended consumer entry point. **Dialecte de
 
 ```ts
 query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor }) // -> DiffReport { needsDecisions, ... }
-tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report }) // -> ApplyResult { report, instances }
+tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, keepNameTypesFrom? }) // -> ApplyResult { report, instances }
 ```
 
 - `verb`: `'fsd'` (then `ref` is a `Function`) or `'asd'` (then `ref` is an `Application`) — the **layer**;
 - `scenario`: `'instantiate'` or `'update'` — the **operation** (see below; defaults to `'update'`);
 - `anchor`: the target parent the instance lives under / is placed into.
+- `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template).
 
 ### Apply result
 
