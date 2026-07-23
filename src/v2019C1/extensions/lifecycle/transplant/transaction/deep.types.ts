@@ -1,5 +1,6 @@
 import type { RetagRootConfig, StripConfig } from './primitives/clone-tree.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
 
@@ -9,8 +10,15 @@ export type ImportDeepParams = {
 	ref: Scl.Ref<Scl.ElementsOf>
 	/** Target parent the subtree is cloned under. */
 	targetParent: Scl.Ref<Scl.ElementsOf>
-	/** Import the referenced **type** closure (content-addressed). Default `true`. */
-	withTypes?: boolean
+	/**
+	 * Import the referenced **type** closure (content-addressed). Default `true`.
+	 *
+	 * - `true` / omitted — import, destination keeps the type name on a dedup;
+	 * - `false` — faithful subtree copy, no type closure;
+	 * - `{ keepNameFrom }` — import, choosing which side keeps the type name on a
+	 *   dedup (`'target'` default, `'source'` = incoming file is the authority).
+	 */
+	withTypes?: boolean | { keepNameFrom?: KeepNameTypesFrom }
 	/** Child element tag names to drop from the cloned subtree. */
 	omit?: OmitEntry<Config>[]
 	/**

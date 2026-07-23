@@ -16,7 +16,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { TypeIdReferencePair, TypeIdRefTagName } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
 
-/** A fork (R3) that displaced a pre-existing target type under the same id. */
+/** A fork that displaced a pre-existing target type under the same id. */
 type Collision = {
 	/** The SCL `id` the fork collided with (and may reclaim). */
 	oldId: string
@@ -28,11 +28,16 @@ type Collision = {
 	forkedId: string
 }
 
-export type { ImportTypesParams, ImportTypesResult, ImportTypesStats } from './import-types.types'
+export type {
+	ImportTypesParams,
+	ImportTypesResult,
+	ImportTypesStats,
+	KeepNameTypesFrom,
+} from './import-types.types'
 
 /**
  * Import the type closure of `records` into the target `DataTypeTemplates`,
- * content-addressed (§6.9):
+ * content-addressed. For each type, bottom-up:
  *
  * - **R1** structurally-equal type already in the target → reuse its id (dedup);
  * - **R2** no match and the source id is free → clone, preserving the id;
@@ -54,7 +59,13 @@ export async function importTypes(
 	tx: Core.Transaction<Config>,
 	params: ImportTypesParams,
 ): Promise<ImportTypesResult> {
-	const { sourceQuery, records, cloneMappings = [], forkPrefix = '' } = params
+	const {
+		sourceQuery,
+		records,
+		cloneMappings = [],
+		forkPrefix = '',
+		keepNameTypesFrom = 'target',
+	} = params
 
 	const resolved = await resolve(sourceQuery, { records })
 	const sourceTypes = collectTypesBottomUp(resolved)
@@ -84,7 +95,18 @@ export async function importTypes(
 
 		const reusedId = preExisting.get(signature)
 		if (reusedId !== undefined) {
-			idRemap.set(sourceId, reusedId)
+			const survivingId =
+				keepNameTypesFrom === 'source'
+					? await adoptIncomingName(tx, {
+							tagName: source.tagName,
+							currentId: reusedId,
+							desiredId: sourceId,
+						})
+					: reusedId
+			idRemap.set(sourceId, survivingId)
+			// Keep the dedup index consistent so a later incoming type sharing this
+			// signature reuses the renamed (surviving) id, not the vanished old one.
+			if (survivingId !== reusedId) preExisting.set(signature, survivingId)
 			stats.reused++
 			continue
 		}
@@ -176,6 +198,38 @@ async function buildPreExistingSignatureIndex(
 		}
 	}
 	return index
+}
+
+/**
+ * Adopt the incoming id for a reused (deduped) target type so the incoming file
+ * stays the naming authority (`keepNameTypesFrom: 'source'`): rename the pre-existing
+ * target type to `desiredId` and repoint the target's existing referrers to
+ * follow. Returns the surviving id. Falls back to `currentId` (current behavior)
+ * when the rename is a no-op (ids already equal), the record vanished, or
+ * `desiredId` is already taken by a different type (invariant: one type per id).
+ */
+async function adoptIncomingName(
+	tx: Core.Transaction<Config>,
+	params: { tagName: TypeRecord['tagName']; currentId: string; desiredId: string },
+): Promise<string> {
+	const { tagName, currentId, desiredId } = params
+	if (currentId === desiredId) return currentId
+
+	const [reusedRecord] = await tx.findByAttributes({ tagName, attributes: { id: currentId } })
+	if (!reusedRecord) return currentId
+
+	const [occupant] = await tx.findByAttributes({ tagName, attributes: { id: desiredId } })
+	if (occupant && occupant.id !== reusedRecord.id) return currentId
+
+	const reusedRef = toRef(reusedRecord.tagName, reusedRecord.id)
+	// Collect referrers before the rename (they still hold `currentId`), then rewrite.
+	const referrers = await findRefsPointingTo(tx, { target: reusedRef })
+	await tx.update(reusedRef, { attributes: { id: desiredId } })
+	await applyTypeIdRemap(tx, {
+		records: referrers.map((r) => toRef(r.ref.tagName, r.ref.id)),
+		idRemap: new Map([[currentId, desiredId]]),
+	})
+	return desiredId
 }
 
 function withRootId<GenericElement extends Scl.ElementsOf>(

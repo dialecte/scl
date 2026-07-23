@@ -8,6 +8,8 @@ export type TypeRecord =
 	| Scl.TrackedRecord<'DOType'>
 	| Scl.TrackedRecord<'LNodeType'>
 
+export type KeepNameTypesFrom = 'source' | 'target'
+
 export type ImportTypesStats = {
 	reused: number
 	preserved: number
@@ -38,4 +40,17 @@ export type ImportTypesParams = {
 	 * automatically so forks stay deterministic and content-addressed.
 	 */
 	forkPrefix?: string
+	/**
+	 * On dedup (structurally-equal type already present in the target under a
+	 * different id), which side's id/name the surviving type keeps:
+	 *
+	 * - `'target'` (default) — reuse the pre-existing target id; incoming instances
+	 *   repoint to it. The destination is authoritative for the name.
+	 * - `'source'` — rename the pre-existing target type to the incoming id and
+	 *   repoint the target's existing referrers to follow. The incoming file is
+	 *   authoritative for the name.
+	 *
+	 * Only affects dedup; preserve and fork/reclaim are unchanged.
+	 */
+	keepNameTypesFrom?: KeepNameTypesFrom
 }
