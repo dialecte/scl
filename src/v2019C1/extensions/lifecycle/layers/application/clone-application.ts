@@ -12,6 +12,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
+import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
@@ -32,9 +33,10 @@ export async function cloneApplicationContent(
 		structure: TargetStructure
 		/** Child tags to drop from clones. Extract prunes (ALWAYS_OMIT); instantiate omits nothing. */
 		omit?: OmitEntry<Config>[]
+		keepNameTypesFrom?: KeepNameTypesFrom
 	},
 ): Promise<Scl.CloneMapping[]> {
-	const { sourceQuery, applicationRef, structure, omit } = params
+	const { sourceQuery, applicationRef, structure, omit, keepNameTypesFrom } = params
 
 	// Source record id -> cloned target ref, accumulated as functions are cloned, so
 	// step 3's satellites can be placed back under their owning function.
@@ -55,6 +57,7 @@ export async function cloneApplicationContent(
 			functionRef: ref,
 			targetParentRef,
 			omit,
+			keepNameTypesFrom,
 		})
 		allMappings.push(...mappings)
 		for (const mapping of mappings) {

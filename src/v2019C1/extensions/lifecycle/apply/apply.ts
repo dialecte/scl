@@ -68,7 +68,7 @@ function emptyInstances(verb: LifecycleTarget['verb']): AppliedInstances {
  */
 async function runVerb(
 	tx: Core.Transaction<Config>,
-	target: LifecycleTarget,
+	target: LifecycleApplyParams,
 	report: DiffReport,
 	decisions: DecisionMap | undefined,
 ): Promise<AppliedInstances> {
@@ -80,6 +80,7 @@ async function runVerb(
 			scenario: target.scenario,
 			report,
 			decisions,
+			keepNameTypesFrom: target.keepNameTypesFrom,
 		})
 		return { verb: 'fsd', functions }
 	}
@@ -90,6 +91,7 @@ async function runVerb(
 		scenario: target.scenario,
 		report,
 		decisions,
+		keepNameTypesFrom: target.keepNameTypesFrom,
 	})
 	return { verb: 'asd', applications, functions }
 }

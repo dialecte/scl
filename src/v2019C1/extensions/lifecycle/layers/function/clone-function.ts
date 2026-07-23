@@ -7,6 +7,7 @@ import {
 import { reference } from '@/v2019C1/extensions/reference'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
@@ -31,9 +32,17 @@ export async function cloneFunction(
 		targetParentRef: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
 		omit?: OmitEntry<Config>[]
 		stripRootAttributes?: readonly string[]
+		keepNameTypesFrom?: KeepNameTypesFrom
 	},
 ): Promise<Scl.CloneMapping[]> {
-	const { sourceQuery, functionRef, targetParentRef, omit, stripRootAttributes } = params
+	const {
+		sourceQuery,
+		functionRef,
+		targetParentRef,
+		omit,
+		stripRootAttributes,
+		keepNameTypesFrom,
+	} = params
 
 	const strip = stripRootAttributes?.length
 		? { scope: 'root' as const, attributes: [...stripRootAttributes] }
@@ -50,7 +59,7 @@ export async function cloneFunction(
 		omit,
 		strip,
 		retagRoot: { from: 'SubFunction', to: 'Function' },
-		withTypes: true,
+		withTypes: { keepNameFrom: keepNameTypesFrom },
 	})
 
 	return recordMappings

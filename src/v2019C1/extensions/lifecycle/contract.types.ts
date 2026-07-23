@@ -1,4 +1,5 @@
 import type { Scl, Config } from '@/v2019C1/config'
+import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 
@@ -52,4 +53,12 @@ export type LifecycleTarget =
  * (apply writes nothing and returns the report); present -> apply the accepted
  * groups only (a group absent from the map defaults to accept).
  */
-export type LifecycleApplyParams = LifecycleTarget & { report: DiffReport; decisions?: DecisionMap }
+export type LifecycleApplyParams = LifecycleTarget & {
+	report: DiffReport
+	decisions?: DecisionMap
+	/**
+	 * On a type dedup during apply, which side's id/name the surviving type keeps.
+	 * Forwarded to `importTypes`. Default `'target'` (destination authority).
+	 */
+	keepNameTypesFrom?: KeepNameTypesFrom
+}

@@ -10,6 +10,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
+import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
 	AcceptedIds,
@@ -47,9 +48,12 @@ export async function fsd(
 		/** Multi-instance gate: partitioned per instance by `instanceScopeId`. */
 		report?: DiffReport
 		decisions?: DecisionMap
+		/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */
+		keepNameTypesFrom?: KeepNameTypesFrom
 	},
 ): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
-	const { sourceQuery, functionRef, targetParent, scenario, report, decisions } = params
+	const { sourceQuery, functionRef, targetParent, scenario, report, decisions, keepNameTypesFrom } =
+		params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	// `instantiate` always places a NEW instance, so it never matches an existing one.
@@ -70,6 +74,7 @@ export async function fsd(
 			functionRef,
 			targetParent,
 			overrides: gateOverrides,
+			keepNameTypesFrom,
 		})
 		return [root]
 	}
@@ -88,6 +93,7 @@ export async function fsd(
 			instanceRootRef: instance,
 			accepted: instanceAccepted,
 			overrides: instanceOverrides,
+			keepNameTypesFrom,
 		})
 		// carried satellites (e.g. FunctionCategory) travel with the function group
 		await reconcileCarriedSatellites(tx, {

@@ -14,6 +14,7 @@ import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/lay
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
+import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
@@ -49,12 +50,22 @@ export async function asd(
 		scenario?: LifecycleScenario
 		report?: DiffReport
 		decisions?: DecisionMap
+		/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */
+		keepNameTypesFrom?: KeepNameTypesFrom
 	},
 ): Promise<{
 	applications: Scl.Ref<'Application'>[]
 	functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
 }> {
-	const { sourceQuery, applicationRef, targetParent, scenario, report, decisions } = params
+	const {
+		sourceQuery,
+		applicationRef,
+		targetParent,
+		scenario,
+		report,
+		decisions,
+		keepNameTypesFrom,
+	} = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	// `instantiate` always places a NEW instance, so it never matches an existing one.
@@ -74,6 +85,7 @@ export async function asd(
 			applicationRef,
 			targetParent,
 			overrides: gateOverrides,
+			keepNameTypesFrom,
 		})
 		return { applications: [application], functions: composedFunctionRefs }
 	}
@@ -103,6 +115,7 @@ export async function asd(
 			instanceRootRef: instance,
 			accepted,
 			overrides,
+			keepNameTypesFrom,
 		})
 		await reconcileSatellites(tx, {
 			sourceQuery,
@@ -130,6 +143,7 @@ export async function asd(
 		scenario,
 		report,
 		decisions,
+		keepNameTypesFrom,
 	})
 
 	return {
@@ -158,9 +172,18 @@ async function cascadeComposedFunctions(
 		scenario?: LifecycleScenario
 		report?: DiffReport
 		decisions?: DecisionMap
+		keepNameTypesFrom?: KeepNameTypesFrom
 	},
 ): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
-	const { sourceQuery, applicationRef, targetParent, scenario, report, decisions } = params
+	const {
+		sourceQuery,
+		applicationRef,
+		targetParent,
+		scenario,
+		report,
+		decisions,
+		keepNameTypesFrom,
+	} = params
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 	if (functionUuids.size === 0) return []
 
@@ -182,6 +205,7 @@ async function cascadeComposedFunctions(
 			scenario,
 			report,
 			decisions,
+			keepNameTypesFrom,
 		})
 		roots.push(...functionRoots)
 	}

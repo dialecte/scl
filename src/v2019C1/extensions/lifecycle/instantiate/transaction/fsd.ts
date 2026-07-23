@@ -34,7 +34,7 @@ import type * as Core from '@dialecte/core'
  * against the fresh instance without re-querying by templateUuid.
  */
 export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Promise<FsdResult> {
-	const { sourceQuery, functionRef, targetParent, overrides } = params
+	const { sourceQuery, functionRef, targetParent, overrides, keepNameTypesFrom } = params
 
 	// A function placed under a (Sub)Function is, per schema, a SubFunction.
 	const retagRoot =
@@ -48,6 +48,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		targetParent,
 		strip: false,
 		retagRoot,
+		withTypes: { keepNameFrom: keepNameTypesFrom },
 	})
 
 	// An FSD also carries the FunctionCategory classification that references the

@@ -10,6 +10,7 @@ import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
+import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -50,9 +51,12 @@ export async function reconcile(
 		 * element before its placement collision is resolved. Omit for auto-resolve only.
 		 */
 		overrides?: CollisionOverrides
+		/** Type-dedup name authority for added subtrees, forwarded to `importTypes`. */
+		keepNameTypesFrom?: KeepNameTypesFrom
 	},
 ): Promise<void> {
-	const { sourceQuery, sourceRootRef, instanceRootRef, accepted, overrides } = params
+	const { sourceQuery, sourceRootRef, instanceRootRef, accepted, overrides, keepNameTypesFrom } =
+		params
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	const instanceTree = await tx.any.getTree(instanceRootRef)
@@ -79,6 +83,7 @@ export async function reconcile(
 		index,
 		accepted,
 		overrides,
+		keepNameTypesFrom,
 	})
 
 	// removed from the template: delete instance elements whose lineage is gone
@@ -94,9 +99,11 @@ async function reconcileChildren(
 		index: Map<string, AnyTreeRecord>
 		accepted: AcceptedIds | undefined
 		overrides: CollisionOverrides | undefined
+		keepNameTypesFrom: KeepNameTypesFrom | undefined
 	},
 ): Promise<void> {
-	const { sourceQuery, sourceNode, instanceParent, index, accepted, overrides } = params
+	const { sourceQuery, sourceNode, instanceParent, index, accepted, overrides, keepNameTypesFrom } =
+		params
 	const matchedInstanceIds = new Set<string>()
 	for (const sourceChild of sourceNode.tree) {
 		const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
@@ -129,6 +136,7 @@ async function reconcileChildren(
 				index,
 				accepted,
 				overrides,
+				keepNameTypesFrom,
 			})
 			continue
 		}
@@ -141,6 +149,7 @@ async function reconcileChildren(
 			ref: toRef(sourceChild) as unknown as Scl.Ref<Scl.ElementsOf>,
 			targetParent: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,
 			strip: false,
+			withTypes: { keepNameFrom: keepNameTypesFrom },
 		})
 		await writeIdentity(tx, { mappings: recordMappings, mode: 'stamp-template' })
 

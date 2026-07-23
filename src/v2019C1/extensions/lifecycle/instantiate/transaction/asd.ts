@@ -32,7 +32,7 @@ import type * as Core from '@dialecte/core'
  * instance without re-querying by templateUuid.
  */
 export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Promise<AsdResult> {
-	const { sourceQuery, applicationRef, targetParent, overrides } = params
+	const { sourceQuery, applicationRef, targetParent, overrides, keepNameTypesFrom } = params
 
 	const structure = await resolveTargetStructure(tx, targetParent)
 
@@ -49,6 +49,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		sourceQuery,
 		applicationRef,
 		structure,
+		keepNameTypesFrom,
 	})
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) applying to
