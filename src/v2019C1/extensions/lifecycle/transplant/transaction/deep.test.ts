@@ -14,6 +14,7 @@ import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 type TestCase = SclTest.BaseXmlTestCase & {
 	ref: { tagName: string; id: string }
 	targetParent: { tagName: string; id: string }
+	keepNameFrom?: 'source' | 'target'
 }
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -179,6 +180,65 @@ describe('import.deep', () => {
 				'//default:IED[@name="VENDOR_A"]/default:AccessPoint/default:Server/default:LDevice/default:LN0[@lnType="LLN0_Type"]',
 			],
 		},
+		'keepNameFrom source → deep forwards it so the reused type adopts the incoming id': {
+			sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<IED name="VENDOR_A" ${id}="ied-1">
+					<AccessPoint name="P1" ${id}="ap-1">
+						<Server ${id}="srv-1">
+							<LDevice inst="LD0" ${id}="ld-1">
+								<LN0 lnClass="LLN0" inst="" lnType="LLN0_ICD" ${id}="ln0-1"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${id}="dtt-1">
+					<LNodeType id="LLN0_ICD" lnClass="LLN0" ${id}="lnt-0">
+						<DO name="Mod" type="LLN0_ENC_ICD" ${id}="do-0"/>
+					</LNodeType>
+					<DOType id="LLN0_ENC_ICD" cdc="ENC" ${id}="dot-0">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			targetXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-t">
+				<IED name="TARGET" ${id}="ied-t">
+					<AccessPoint name="P1" ${id}="ap-t">
+						<Server ${id}="srv-t">
+							<LDevice inst="LD0" ${id}="ld-t">
+								<LN0 lnClass="LLN0" inst="" lnType="LLN0_SSD" ${id}="ln0-keep"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${id}="dtt-t">
+					<!-- structurally equal to the source type, different id: -->
+					<LNodeType id="LLN0_SSD" lnClass="LLN0" ${id}="lnt-t">
+						<DO name="Mod" type="LLN0_ENC_SSD" ${id}="do-t"/>
+					</LNodeType>
+					<DOType id="LLN0_ENC_SSD" cdc="ENC" ${id}="dot-t">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-t"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			ref: { tagName: 'IED', id: 'ied-1' },
+			targetParent: { tagName: 'SCL', id: 'scl-t' },
+			keepNameFrom: 'source',
+			expectedQueries: [
+				'//default:DataTypeTemplates/default:LNodeType[@id="LLN0_ICD"]/default:DO[@name="Mod"]',
+				'//default:DataTypeTemplates/default:DOType[@id="LLN0_ENC_ICD"]',
+				// the pre-existing target LN0 follows the rename
+				'//default:IED[@name="TARGET"]/default:AccessPoint/default:Server/default:LDevice/default:LN0[@lnType="LLN0_ICD"]',
+				// the cloned source LN0 also references the surviving (incoming) id
+				'//default:IED[@name="VENDOR_A"]/default:AccessPoint/default:Server/default:LDevice/default:LN0[@lnType="LLN0_ICD"]',
+			],
+			unexpectedQueries: [
+				'//default:DataTypeTemplates/default:LNodeType[@id="LLN0_SSD"]',
+				'//default:DataTypeTemplates/default:DOType[@id="LLN0_ENC_SSD"]',
+				'//default:LN0[@lnType="LLN0_SSD"]',
+			],
+		},
 		'preserves text-only, empty-flag and namespaced vendor Private on IED clone': {
 			sourceXml: /* xml */ `
 			<SCL ${ns} ${id}="scl-1">
@@ -236,6 +296,7 @@ describe('import.deep', () => {
 				sourceQuery: source.query,
 				ref: testCase.ref as Scl.Ref<Scl.ElementsOf>,
 				targetParent: testCase.targetParent as Scl.Ref<Scl.ElementsOf>,
+				withTypes: { keepNameFrom: testCase.keepNameFrom },
 			})
 		})
 
