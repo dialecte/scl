@@ -26,18 +26,7 @@
 // need no override: the resolver falls through to `record.value` when the
 // override and identityFields strategies yield nothing.
 
-export type TitleSpec = {
-	compact: string | string[]
-	full?: string | string[]
-	separator?: string
-	fullSeparator?: string
-	/**
-	 * Source the template/list attributes from a named child element instead
-	 * of the element itself. Used by composite refs whose data lives in a
-	 * child (e.g. `ApplicationSclRef > SclFileReference`).
-	 */
-	attributesFrom?: string
-}
+import type { TitleSpec } from './title.types'
 
 export const TITLE_FIELDS_OVERRIDE: Partial<Record<string, TitleSpec>> = {
 	// ── Core SCL ──────────────────────────────────────────────────────
@@ -64,12 +53,23 @@ export const TITLE_FIELDS_OVERRIDE: Partial<Record<string, TitleSpec>> = {
 
 	// ── Composite data-flow (extension namespace) ─────────────────────
 	// Brackets denote instance index; slashes denote path segments.
+	// Compact prefers the concrete binding (controlled/source), falling back to
+	// the pLN.pDO[.pDA] specification hint when the ref is still "open". Full
+	// mode shows both hint and binding. `output`/`input` are the mandatory
+	// identifiers.
 	ControlRef: {
-		compact: '{output}[{outputInst}]/{pLN}.{pDO}/{controlled}',
+		compact: [
+			{ whenPresent: 'controlled', template: '{output}[{outputInst}]/{controlled}' },
+			{ template: '{output}[{outputInst}]/{pLN}.{pDO}' },
+		],
+		full: '{output}[{outputInst}]/{pLN}.{pDO}/{controlled}',
 	},
 	SourceRef: {
-		compact: '{pLN}.{pDO}.{pDA}',
-		full: '{service}/Input[{inputInst}]/{pLN}.{pDO}.{pDA}/{source}',
+		compact: [
+			{ whenPresent: 'source', template: '{service}/{input}[{inputInst}]/{source}' },
+			{ template: '{service}/{input}[{inputInst}]/{pLN}.{pDO}.{pDA}' },
+		],
+		full: '{service}/{input}[{inputInst}]/{pLN}.{pDO}.{pDA}/{source}',
 	},
 
 	// ── 90-30 simple *Ref (single attribute) ──────────────────────────

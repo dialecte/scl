@@ -426,8 +426,9 @@ describe('extractElementTitle', () => {
 			},
 		},
 
-		// ── Revised spec: composite refs ──────────────────────────────
-		'ControlRef compact → output[outputInst]/pLN.pDO/controlled': {
+		// ── Revised spec: composite refs (conditional compact) ────────
+		// ControlRef: prefer concrete `controlled`, fall back to pLN.pDO hint.
+		'ControlRef compact (connected) → output[outputInst]/controlled': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
@@ -436,30 +437,65 @@ describe('extractElementTitle', () => {
 				</SCL>
 			`,
 			ref: { tagName: 'ControlRef', id: 'cref1' },
-			expectedTitle: 'CMD[1]/CSWI.Pos/XCBR1',
+			expectedTitle: 'CMD[1]/XCBR1',
 		},
-		'SourceRef compact → pLN.pDO.pDA': {
+		'ControlRef compact (open) → output[outputInst]/pLN.pDO': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
-						<eIEC61850-6-100:SourceRef service="GOOSE" inputInst="2" pLN="PTRC" pDO="Trip" pDA="general" source="Trip.general" ${id}="sref1"/>
+						<eIEC61850-6-100:ControlRef output="CMD" outputInst="1" pLN="CSWI" pDO="Pos" ${id}="cref-open"/>
+					</Substation>
+				</SCL>
+			`,
+			ref: { tagName: 'ControlRef', id: 'cref-open' },
+			expectedTitle: 'CMD[1]/CSWI.Pos',
+		},
+		'ControlRef full → output[outputInst]/pLN.pDO/controlled': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<eIEC61850-6-100:ControlRef output="CMD" outputInst="1" pLN="CSWI" pDO="Pos" controlled="XCBR1" ${id}="cref-full"/>
+					</Substation>
+				</SCL>
+			`,
+			ref: { tagName: 'ControlRef', id: 'cref-full' },
+			mode: 'full',
+			expectedTitle: 'CMD[1]/CSWI.Pos/XCBR1',
+		},
+		// SourceRef: prefer concrete `source`, fall back to pLN.pDO.pDA hint.
+		'SourceRef compact (connected) → service/input[inputInst]/source': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<eIEC61850-6-100:SourceRef service="GOOSE" input="TripIn" inputInst="2" pLN="PTRC" pDO="Trip" pDA="general" source="Trip.general" ${id}="sref1"/>
 					</Substation>
 				</SCL>
 			`,
 			ref: { tagName: 'SourceRef', id: 'sref1' },
-			expectedTitle: 'PTRC.Trip.general',
+			expectedTitle: 'GOOSE/TripIn[2]/Trip.general',
 		},
-		'SourceRef full → service/Input[inputInst]/pLN.pDO.pDA/source': {
+		'SourceRef compact (open) → service/input[inputInst]/pLN.pDO.pDA': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
-						<eIEC61850-6-100:SourceRef service="GOOSE" inputInst="2" pLN="PTRC" pDO="Trip" pDA="general" source="Trip.general" ${id}="sref2"/>
+						<eIEC61850-6-100:SourceRef service="GOOSE" input="TripIn" inputInst="2" pLN="PTRC" pDO="Trip" pDA="general" ${id}="sref-open"/>
+					</Substation>
+				</SCL>
+			`,
+			ref: { tagName: 'SourceRef', id: 'sref-open' },
+			expectedTitle: 'GOOSE/TripIn[2]/PTRC.Trip.general',
+		},
+		'SourceRef full → service/input[inputInst]/pLN.pDO.pDA/source': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<eIEC61850-6-100:SourceRef service="GOOSE" input="TripIn" inputInst="2" pLN="PTRC" pDO="Trip" pDA="general" source="Trip.general" ${id}="sref2"/>
 					</Substation>
 				</SCL>
 			`,
 			ref: { tagName: 'SourceRef', id: 'sref2' },
 			mode: 'full',
-			expectedTitle: 'GOOSE/Input[2]/PTRC.Trip.general/Trip.general',
+			expectedTitle: 'GOOSE/TripIn[2]/PTRC.Trip.general/Trip.general',
 		},
 
 		// ── Revised spec: GSE/SMV full mode deferred (needs parent iedName) ─

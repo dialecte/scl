@@ -90,15 +90,18 @@ yields:
 
 ```ts
 type TitleSpec = {
-	compact: string | string[] // template string with {attr} placeholders OR attribute list
-	full?: string | string[]
+	compact: string | string[] | ConditionalTitle // template, attribute list, OR ordered variants
+	full?: string | string[] | ConditionalTitle
 	separator?: string // default '' when fields is string[]
 	fullSeparator?: string // defaults to separator
 }
+
+type ConditionalTitle = { whenPresent?: string; template: string }[]
 ```
 
 - **String[]** -- list of attribute names joined by `separator`. Empty values are dropped before joining.
 - **Template string** -- supports `{attrName}` placeholders and arbitrary literals (parentheses, brackets, etc.). The renderer collapses repeated `/`, drops empty `[]` pairs, and trims edge `/`, so optional attributes (e.g. `ExtRef.srcCBName`, `FCDA.ix`) can be embedded directly without conditional logic.
+- **ConditionalTitle** -- ordered variants; the renderer picks the **first** whose `whenPresent` attribute is non-empty (a variant without `whenPresent` is an unconditional fallback) and renders its template. Used when a title switches between a concrete binding and a specification hint -- e.g. `SourceRef` renders `source` when connected, else the `pLN.pDO.pDA` hint; `ControlRef` renders `controlled` when connected, else `pLN.pDO`.
 
 ### Separator conventions
 
@@ -111,40 +114,40 @@ type TitleSpec = {
 
 ### Built-in overrides
 
-| Element                  | Compact title                                                    | Full title                                                                                  |
-| ------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `LNode`                  | `prefix + lnClass + lnInst`                                      | `iedName/ldInst/prefix+lnClass+lnInst`                                                      |
-| `LN` / `LN0`             | `prefix + lnClass + inst`                                        | -                                                                                           |
-| `LDevice`                | `inst`                                                           | -                                                                                           |
-| `ConnectedAP`            | `iedName/apName`                                                 | -                                                                                           |
-| `GSE` / `SMV`            | `ldInst/cbName`                                                  | - (full needs parent `iedName`; deferred)                                                   |
-| `Private`                | `type`                                                           | -                                                                                           |
-| `EnumVal`                | `ord`                                                            | -                                                                                           |
-| `Association`            | `associationID`                                                  | -                                                                                           |
-| `ConnectivityNode`       | `pathName`                                                       | -                                                                                           |
-| `FunctionRoleContent`    | `roleInst`                                                       | -                                                                                           |
-| `Resource`               | `resInst`                                                        | -                                                                                           |
-| `Hitem` / `History`      | `version.revision`                                               | -                                                                                           |
-| `ControlRef`             | `output[outputInst]/pLN.pDO/controlled`                          | -                                                                                           |
-| `SourceRef`              | `pLN.pDO.pDA`                                                    | `service/Input[inputInst]/pLN.pDO.pDA/source`                                               |
-| `FunctionCatRef`         | `function`                                                       | -                                                                                           |
-| `FunctionRef`            | `function`                                                       | -                                                                                           |
-| `AllocationRoleRef`      | `allocationRole`                                                 | -                                                                                           |
-| `PowerSystemRelationRef` | `powerSystemRelation`                                            | -                                                                                           |
-| `BehaviorDescriptionRef` | `behaviorDescription`                                            | -                                                                                           |
-| `ProcessResourceRef`     | `processResource`                                                | -                                                                                           |
-| `LNodeDataRef`           | `data`                                                           | -                                                                                           |
-| `FunctionCategoryRef`    | `functionCategory`                                               | -                                                                                           |
-| `LNodeInputRef`          | `sourceRef`                                                      | -                                                                                           |
-| `LNodeOutputRef`         | `controlRef`                                                     | -                                                                                           |
-| `ApplicationSclRef`      | `fileType v{version}.{revision}`                                 | `fileUuid/fileType v{version}.{revision}`                                                   |
-| `LNodeSpecNaming`        | `sIedName/sLdInst/sPrefix+sLnClass+sLnInst`                      | -                                                                                           |
-| `SubscriberLNode`        | `pLN(service)`                                                   | `resourceName/inputName/pLN(service)`                                                       |
-| `ControllingLNode`       | `pLN`                                                            | `resourceName/pLN`                                                                          |
-| `InputVar`               | `varName:inputName`                                              | -                                                                                           |
-| `OutputVar`              | `varName:outputName`                                             | -                                                                                           |
-| `ExtRef`                 | `iedName/ldInst/prefix+lnClass+lnInst.doName.daName[/srcCBName]` | `pServT/intAddr/pLN.pDO.pDA/iedName/ldInst/prefix+lnClass+lnInst.doName.daName[/srcCBName]` |
-| `FCDA`                   | `ldInst/prefix+lnClass+lnInst.doName.daName[fc]`                 | `ldInst/prefix+lnClass+lnInst.doName.daName[fc][ix]` (`[ix]` dropped when empty)            |
+| Element                  | Compact title                                                                                 | Full title                                                                                  |
+| ------------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `LNode`                  | `prefix + lnClass + lnInst`                                                                   | `iedName/ldInst/prefix+lnClass+lnInst`                                                      |
+| `LN` / `LN0`             | `prefix + lnClass + inst`                                                                     | -                                                                                           |
+| `LDevice`                | `inst`                                                                                        | -                                                                                           |
+| `ConnectedAP`            | `iedName/apName`                                                                              | -                                                                                           |
+| `GSE` / `SMV`            | `ldInst/cbName`                                                                               | - (full needs parent `iedName`; deferred)                                                   |
+| `Private`                | `type`                                                                                        | -                                                                                           |
+| `EnumVal`                | `ord`                                                                                         | -                                                                                           |
+| `Association`            | `associationID`                                                                               | -                                                                                           |
+| `ConnectivityNode`       | `pathName`                                                                                    | -                                                                                           |
+| `FunctionRoleContent`    | `roleInst`                                                                                    | -                                                                                           |
+| `Resource`               | `resInst`                                                                                     | -                                                                                           |
+| `Hitem` / `History`      | `version.revision`                                                                            | -                                                                                           |
+| `ControlRef`             | `output[outputInst]/controlled` when connected, else `output[outputInst]/pLN.pDO`             | `output[outputInst]/pLN.pDO/controlled`                                                     |
+| `SourceRef`              | `service/input[inputInst]/source` when connected, else `service/input[inputInst]/pLN.pDO.pDA` | `service/input[inputInst]/pLN.pDO.pDA/source`                                               |
+| `FunctionCatRef`         | `function`                                                                                    | -                                                                                           |
+| `FunctionRef`            | `function`                                                                                    | -                                                                                           |
+| `AllocationRoleRef`      | `allocationRole`                                                                              | -                                                                                           |
+| `PowerSystemRelationRef` | `powerSystemRelation`                                                                         | -                                                                                           |
+| `BehaviorDescriptionRef` | `behaviorDescription`                                                                         | -                                                                                           |
+| `ProcessResourceRef`     | `processResource`                                                                             | -                                                                                           |
+| `LNodeDataRef`           | `data`                                                                                        | -                                                                                           |
+| `FunctionCategoryRef`    | `functionCategory`                                                                            | -                                                                                           |
+| `LNodeInputRef`          | `sourceRef`                                                                                   | -                                                                                           |
+| `LNodeOutputRef`         | `controlRef`                                                                                  | -                                                                                           |
+| `ApplicationSclRef`      | `fileType v{version}.{revision}`                                                              | `fileUuid/fileType v{version}.{revision}`                                                   |
+| `LNodeSpecNaming`        | `sIedName/sLdInst/sPrefix+sLnClass+sLnInst`                                                   | -                                                                                           |
+| `SubscriberLNode`        | `pLN(service)`                                                                                | `resourceName/inputName/pLN(service)`                                                       |
+| `ControllingLNode`       | `pLN`                                                                                         | `resourceName/pLN`                                                                          |
+| `InputVar`               | `varName:inputName`                                                                           | -                                                                                           |
+| `OutputVar`              | `varName:outputName`                                                                          | -                                                                                           |
+| `ExtRef`                 | `iedName/ldInst/prefix+lnClass+lnInst.doName.daName[/srcCBName]`                              | `pServT/intAddr/pLN.pDO.pDA/iedName/ldInst/prefix+lnClass+lnInst.doName.daName[/srcCBName]` |
+| `FCDA`                   | `ldInst/prefix+lnClass+lnInst.doName.daName[fc]`                                              | `ldInst/prefix+lnClass+lnInst.doName.daName[fc][ix]` (`[ix]` dropped when empty)            |
 
 Tags not listed fall through to `record.value` (text-content elements like `BayType`, `IEDName`, `Val`) or to identityFields.
 

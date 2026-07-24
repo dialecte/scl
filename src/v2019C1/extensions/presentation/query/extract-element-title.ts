@@ -2,38 +2,15 @@ import { TITLE_FIELDS_OVERRIDE } from '../constants/title'
 
 import { DEFINITION } from '@/v2019C1/definition'
 
-import type { TitleSpec } from '../constants/title'
+import type { ConditionalTitle, TitleSpec } from '../constants/title.types'
+import type {
+	ElementTitle,
+	ExtractElementTitleOptions,
+	ExtractElementTitleOptionsWithLabels,
+} from './extract-element-title.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
-
-// ── Types ────────────────────────────────────────────────────────────
-
-export type ExtractElementTitleOptions = {
-	mode?: 'compact' | 'full'
-}
-
-export type ExtractElementTitleOptionsWithLabels = ExtractElementTitleOptions & {
-	withLabels: true
-}
-
-/**
- * Rich title payload (returned when `withLabels: true`).
- *
- * - `title` is the engineering identifier computed from override -> text body
- *   -> identityFields -> tagName.
- * - `labels` is a two-level map `[lang][id]` → text:
- *   - outer key: lowercased BCP 47 language tag (e.g. `en`, `en-us`, `fr`).
- *   - inner key: IEC `id` attribute of the `<Label>` element; `''` when absent.
- *   Empty object when no `<Labels>` element is present.
- *
- * Typical UI usage:
- *   const display = labels[currentLang]?.[''] ?? labels.en?.[''] ?? title
- */
-export type ElementTitle = {
-	title: string
-	labels: Record<string, Record<string, string>>
-}
 
 // ── Public API ───────────────────────────────────────────────────────
 
@@ -173,8 +150,20 @@ function renderSpec(
 	if (typeof fields === 'string') {
 		return renderTemplate(fields, attributes)
 	}
+	if (isConditionalTitle(fields)) {
+		for (const variant of fields) {
+			if (variant.whenPresent && !attributes[variant.whenPresent]) continue
+			const rendered = renderTemplate(variant.template, attributes)
+			if (rendered) return rendered
+		}
+		return ''
+	}
 	const parts = fields.map((f) => attributes[f]).filter(Boolean)
 	return parts.length > 0 ? parts.join(separator) : ''
+}
+
+function isConditionalTitle(fields: string[] | ConditionalTitle): fields is ConditionalTitle {
+	return typeof fields[0] === 'object'
 }
 
 /**

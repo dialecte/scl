@@ -5,5 +5,6 @@
 export * from './data-model/public'
 export * from './lifecycle/public'
 export * from './lifecycle/transplant/public'
+export * from './presentation/public'
 export * from './reference/public'
 export * from './signature/public'
