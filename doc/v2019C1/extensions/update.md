@@ -38,6 +38,8 @@ tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, keepN
 produced or reconciled. A consumer acts on the roots **in the same transaction** (name, wire, select,
 chain) without re-deriving them. Flat arrays are scenario-honest — `instantiate` yields one root set;
 `update` may reconcile several instances of one template; the not-decided-yet track yields empty arrays.
+On the full track a matched instance whose changes are **all skipped** is left untouched, so it is
+excluded from the returned roots — only instances actually reconciled are returned.
 
 ```ts
 type ApplyResult = {

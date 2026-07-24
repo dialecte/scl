@@ -3,6 +3,7 @@ import { asd as updateAsd } from './asd'
 import { describe, expect, it } from 'vitest'
 
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import {
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
@@ -11,6 +12,7 @@ import {
 } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
+import type { DecisionMap } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -211,5 +213,48 @@ describe('update.asd — returns the applied instance roots', () => {
 		expect(result?.applications[0]?.tagName).toBe('Application')
 		expect(result?.functions).toHaveLength(1)
 		expect(result?.functions[0]?.tagName).toBe('Function')
+	})
+
+	it('gate: a matched instance whose groups are all skipped is not returned in applications', async () => {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		if (!target) throw new Error('target required')
+
+		// one existing instance to reconcile against
+		await target.document.transaction(async (tx) => {
+			await instantiateAsd(tx, {
+				sourceQuery: source.document.query,
+				applicationRef,
+				targetParent: bayRef,
+			})
+		})
+		// the newer ASD adds a role, so there is exactly one diff group to skip
+		await source.document.transaction(async (tx) => {
+			await tx.addChild(applicationRef, {
+				tagName: 'FunctionRole',
+				attributes: { name: 'ROLE2' },
+			})
+		})
+
+		const rep = await report(target.document.query, {
+			verb: 'asd',
+			sourceQuery: source.document.query,
+			ref: applicationRef,
+			anchor: bayRef,
+		})
+		const decisions = new Map(rep.groups.map((g) => [g.id, 'skip'] as const)) as DecisionMap
+
+		let result: Awaited<ReturnType<typeof updateAsd>> | undefined
+		await target.document.transaction(async (tx) => {
+			result = await updateAsd(tx, {
+				sourceQuery: source.document.query,
+				applicationRef,
+				targetParent: bayRef,
+				report: rep,
+				decisions,
+			})
+		})
+
+		// the instance was fully skipped -> nothing was written -> not an applied root
+		expect(result?.applications).toHaveLength(0)
 	})
 })

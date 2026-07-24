@@ -93,6 +93,12 @@ export async function asd(
 	const structure = await resolveTargetStructure(tx, targetParent)
 	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
 
+	// The instances this write actually reconciled. A fully-skipped instance (all its
+	// groups skipped) is left untouched, so it is NOT an applied root and is excluded
+	// from the returned `applications` — otherwise a consumer's post-apply policy
+	// would run against instances the user chose to skip.
+	const writtenInstances: Scl.Ref<'Application'>[] = []
+
 	for (const instance of instances) {
 		// gate THIS instance by only its own groups (source ids are unique within one instance)
 		const instanceGroups = groups.filter((group) => group.instanceScopeId === instance.id)
@@ -100,6 +106,13 @@ export async function asd(
 		const overrides = decisions
 			? collisionOverrides({ groups: instanceGroups, decisions })
 			: undefined
+
+		// fast track (no decisions) always writes; a decided instance writes only when at
+		// least one of its groups is accepted.
+		const wasWritten = !accepted || accepted.sourceIds.size > 0 || accepted.instanceIds.size > 0
+		if (wasWritten) {
+			writtenInstances.push({ tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>)
+		}
 
 		// application-layer satellites (e.g. a referenced AllocationRole) travel with the
 		// application group. Resolve the instance-side satellites BEFORE the reconcile below
@@ -147,9 +160,7 @@ export async function asd(
 	})
 
 	return {
-		applications: instances.map(
-			(instance) => ({ tagName: 'Application', id: instance.id }) as Scl.Ref<'Application'>,
-		),
+		applications: writtenInstances,
 		functions,
 	}
 }
