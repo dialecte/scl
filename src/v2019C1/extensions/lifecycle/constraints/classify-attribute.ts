@@ -15,7 +15,7 @@ import type { AttributeEditability, EditableAttribute } from './classify-attribu
  *  - a reference path/uuid attribute (from `UUID_REFERENCE_PAIRS`) -> `reference`
  *    (system-owned, remapped automatically);
  *  - `name` -> `rename` (the mutable label; changing it triggers a managed ref-path
- *    rebuild — 61850-6 §8.5.6: the uuid is fixed, the name evolves);
+ *    rebuild — the uuid is fixed, the name evolves);
  *  - any other path-contributing attribute (lnClass, prefix, inst, …) or scoped-key
  *    field -> `identity` (intrinsic; changing it is a delete+create, not an edit);
  *  - everything else -> `free`.

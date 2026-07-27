@@ -230,8 +230,8 @@ A **satellite** is an element that lives **outside** the transplanted subtree bu
 - **Layer-specific** — found by a layer-owned reference edge:
   - `FunctionCategory` (function layer) — a classification that **references into** the function via `FunctionCatRef.functionUuid` (reverse ref); lives at Substation / VoltageLevel / Bay level.
   - `AllocationRole` (application layer) — an IED role the application **references out** to via `AllocationRoleRef.allocationRoleUuid`.
-- **Cross-cutting** — apply to **any** element in **any** subtree (90-30 §12.1 / §13.1), found generically for every layer primary:
-  - `Variable` — sets attributes/values on the elements its `VariableApplyTo.elementUuid` points at. A Variable may target **any** SCL element (90-30 §12.3.3), so discovery is not limited to a fixed element set.
+- **Cross-cutting** — apply to **any** element in **any** subtree, found generically for every layer primary:
+  - `Variable` — sets attributes/values on the elements its `VariableApplyTo.elementUuid` points at. A Variable may target **any** SCL element, so discovery is not limited to a fixed element set.
   - `BehaviorDescription` — documents the behaviour of the `LNode`s its `InputVar` / `OutputVar.lnodeUuid` reference.
 
   A cross-cutting satellite that lives **inside** the subtree is carried by the normal clone/diff; only external ones are handled as satellites.
@@ -249,7 +249,7 @@ For each satellite the update verb does one of:
 - **delete** — the satellite **element** was removed from the template → delete the instance, **guarded** by a whole-document last-referrer check so a satellite still referenced by another primary is kept.
 
 ::: warning Catalog persistence — un-referencing is not deletion
-`FunctionCategory`, `AllocationRole`, `Variable` and `BehaviorDescription` are **catalog / shared / documentation** elements (90-30 §11–§13): a category classifies many functions, a role is shared for harmonization, a variable targets many elements. So **un-referencing a satellite does not delete it** — only removing the element from the template does. Dropping the *link* (e.g. a removed `AllocationRoleRef`) removes only the reference element and leaves the catalog element in place.
+`FunctionCategory`, `AllocationRole`, `Variable` and `BehaviorDescription` are **catalog / shared / documentation** elements: a category classifies many functions, a role is shared for harmonization, a variable targets many elements. So **un-referencing a satellite does not delete it** — only removing the element from the template does. Dropping the *link* (e.g. a removed `AllocationRoleRef`) removes only the reference element and leaves the catalog element in place.
 :::
 
 ## Engine

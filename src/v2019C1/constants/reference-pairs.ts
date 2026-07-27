@@ -287,8 +287,7 @@ export const UUID_REFERENCE_PAIRS = {
 		{
 			attribute: { path: 'element', uuid: 'elementUuid' },
 			resolution: 'unsupported',
-			// A Variable applies to ANY element (90-30 §12.3.3, Table 33: "the element
-			// where to apply the variable"); the target scope is the full SCL element set.
+			// A Variable applies to ANY element; the target scope is the full SCL element set.
 			target: ELEMENT_NAMES,
 			companions: [
 				{ name: 'doName', required: false },

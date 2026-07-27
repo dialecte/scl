@@ -36,7 +36,7 @@ Steps:
 
 1. Ensure the TEMPLATE substation structure.
 2. Write the FSD history header (`fileType: 'FSD'`).
-3. Clone the function via `cloneFunction` (layers/function) — promote `SubFunction`→`Function`, strip the **root's** `templateUuid` (children keep theirs — subfunctions may be instantiated from other FSDs, 90-30 §16.1.2), apply FSD omit filters, import the type closure.
+3. Clone the function via `cloneFunction` (layers/function) — promote `SubFunction`→`Function`, strip the **root's** `templateUuid` (children keep theirs — subfunctions may be instantiated from other FSDs), apply FSD omit filters, import the type closure.
 4. Clone the referenced `FunctionCategory` trees at their structural level.
 5. Run post-extraction clean-up (orphan UUID refs, reset LNode bindings to `None`, prune empty containers).
 

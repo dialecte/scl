@@ -89,7 +89,7 @@ Most elements contribute their `name` attribute as segment. Special cases:
 | ControlRef | `output` + optional `(outputInst)`        | `TripCmd`, `TripCmd(2)`   |
 | ExtRef     | `intAddr` attribute                       | `TrCmd.stVal`             |
 
-**SourceRef/ControlRef disambiguation** (per IEC TR 61850-90-30, XSD identity constraints):
+**SourceRef/ControlRef disambiguation** (XSD identity constraints):
 
 - `(inputInst)` is appended when `inputInst` is present and != `"1"` (the XSD default)
 - `.pDA` is appended when `pDA` is non-empty
@@ -310,7 +310,7 @@ The function:
 ::: info UUID discovery is path-independent
 Discovery keys on the target's **uuid**, regardless of whether the ref's textual path is resolvable. So a ref whose path can't be rebuilt into a stable name (e.g. `VariableApplyTo`, whose `element` may be an XPath — `resolution: 'unsupported'`) is still found by its uuid. This is what lets the lifecycle verbs discover the cross-cutting [satellites](./update#satellites) that apply to an element.
 
-A `Variable` may apply to **any** SCL element (90-30 §12.3.3), so `VariableApplyTo`'s target set in `UUID_REFERENCE_PAIRS` is the full element set — `findRefsPointingTo` finds a `Variable` pointing at any target tag, not a hand-picked subset.
+A `Variable` may apply to **any** SCL element, so `VariableApplyTo`'s target set in `UUID_REFERENCE_PAIRS` is the full element set — `findRefsPointingTo` finds a `Variable` pointing at any target tag, not a hand-picked subset.
 :::
 
 ### Type-id targets

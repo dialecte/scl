@@ -75,7 +75,7 @@ export async function reconcileSatellites(
 
 	// delete: a target instance satellite whose template ELEMENT was removed from the
 	// source. Catalog/shared satellites (FunctionCategory, AllocationRole, Variable,
-	// BehaviorDescription — 90-30 §11-13) persist when merely un-referenced, so the
+	// BehaviorDescription) persist when merely un-referenced, so the
 	// trigger is source-element non-existence, NOT a dropped link.
 	for (const instanceRef of instanceSatelliteRefs ?? []) {
 		const { templateUuid } = await tx.any.getAttributes(instanceRef)

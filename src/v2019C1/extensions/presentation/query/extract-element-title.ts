@@ -18,7 +18,7 @@ import type { AnyRefOrRecord } from '@dialecte/core'
  * Query extension: extracts a human-readable title for an SCL element.
  *
  * Default returns the title string. Pass `{ withLabels: true }` to also
- * collect `<Labels>/<Label lang="...">` children (IEC 61850-6 i18n); this
+ * collect `<Labels>/<Label lang="...">` children (i18n labels); this
  * incurs extra child-record traversal so it is opt-in.
  *
  * Resolution precedence for the title (first non-empty wins):

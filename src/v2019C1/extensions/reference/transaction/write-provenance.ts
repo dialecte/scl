@@ -2,7 +2,7 @@ import type { ProvenanceFileType, WriteProvenanceParams } from './write-provenan
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
-/** SclRef wrapper element per template kind (90-30 §17.2 / §17.3). */
+/** SclRef wrapper element per template kind. */
 const SCL_REF_TAG: Record<ProvenanceFileType, 'FunctionSclRef' | 'ApplicationSclRef'> = {
 	FSD: 'FunctionSclRef',
 	ASD: 'ApplicationSclRef',
@@ -11,7 +11,7 @@ const SCL_REF_TAG: Record<ProvenanceFileType, 'FunctionSclRef' | 'ApplicationScl
 /**
  * Writes the instantiation provenance link on the cloned root: a fresh
  * `FunctionSclRef` / `ApplicationSclRef` > `SclFileReference` pointing back at the
- * template file the instance was created from (90-30 §17.2 / §17.3).
+ * template file the instance was created from.
  *
  * The kernel self-sources every field from the source document — `fileType` from
  * the caller, `version` / `revision` / `fileUuid` from the template `Header`,

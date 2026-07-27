@@ -31,7 +31,7 @@ import type { AnyRefOrRecord } from '@dialecte/core'
  * against the `instance`'s satellites) is DELETED — the coupling invariant: it
  * rides the function group (gated by `accepted.instanceIds`), guarded by a
  * whole-target-doc last-referrer check so a category still referenced by ANOTHER
- * function is kept (shared-satellite safety). Catalog persistence (90-30 §11.3):
+ * function is kept (shared-satellite safety). Catalog persistence:
  * the trigger is source-element non-existence, NOT a dropped link.
  */
 export async function reconcileCarriedSatellites(

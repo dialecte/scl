@@ -19,7 +19,7 @@ import type { SclTest } from '@/v2019C1/test'
 // FSD (2019C1). Real uuids kept for traceability; structure reduced to the
 // lifecycle-relevant core and counter-checked against the Dialecte definition.
 // Unlike the CB Interface FSD test, this one carries an OPEN `SourceRef`
-// (a later-binding dataflow input, 90-30 §6.2.3): it must travel on instantiate
+// (a later-binding dataflow input): it must travel on instantiate
 // and survive the reconcile WITHOUT being auto-bound. rev1→rev2 exercises a
 // function reconcile, the FunctionCategory satellite, a added LNode, and the
 // preservation of the open SourceRef.

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-07-24
+
+### Added
+
+- `presentation` extension now publishes its types via the package root: `ElementTitle`, `ExtractElementTitleOptions`, `ExtractElementTitleOptionsWithLabels` (the `extractElementTitle` contract) and `TitleSpec`/`ConditionalTitle` (the title-override authoring format).
+- Reference coherence is now maintained automatically as a side effect of create/update — set the stable half and `@dialecte/scl` derives the rest:
+  - `mappedDoName`/`mappedDaName` on `DOS`/`SDS`/`DAS` is normalised to the implementing short name and kept only when it differs from the specified `name` (a `DAS` under an unmapped parent DO carries the implementing `DO.DA`).
+  - `SourceRef`/`ControlRef`/`ProcessEcho`/`LNodeDataRef` rebuild their path qualifier from the companion `*DoName`/`*DaName` names when those change.
+  - `LNode` implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) is stamped from the target `LN` when `lnUuid` is set, and restored from `LNodeSpecNaming` when it is cleared (the specification `lnType` is preserved). `templateUuid` is left untouched it records the template the `LNode` was instantiated from (the key used to locate the implementing ICD), which is owned by the instantiate lifecycle, not by binding. The orphan-binding cleanup (`resetLNodes`) likewise preserves `templateUuid`.
+
+### Changed
+
+- `presentation.extractElementTitle` compact titles for `SourceRef` and `ControlRef` now reflect the connected/open state: a connected ref shows its concrete binding (`SourceRef.source`, `ControlRef.controlled`), an open ref shows the `pLN.pDO[.pDA]` specification hint. Both now lead with the mandatory identifier (`input`/`output`) instead of the hint alone. `TitleSpec` gains a `ConditionalTitle` variant form to express this.
+- `transplant.deep` (and its consumers — extract, instantiate, layer clones) now drops elements of a **supported** namespace (`default` / `eIEC61850-6-100`) that the 2019C1 schema no longer defines — deprecated/unknown elements such as `SsdReference` (superseded by `SclFileReference`) — together with a `Private` wrapper left holding only such elements. An empty `Private` whose `type` names a namespace we own (e.g. `eIEC61850-6-100`) is also dropped. Foreign/vendor privates (including empty vendor flags) and privates that also contain a known element are still preserved verbatim.
+- `buildReferencePath` for `lnode` references now takes the DO/DA qualifier from the companion attributes when the stored path already carries one (a path that stops at the LN level stays companions-only). It returns `null` for `DOS`/`SDS`/`DAS`, whose `mappedDoName`/`mappedDaName` is authored documentation produced by the hooks rather than a rebuildable path.
+- `update.asd`/`lifecycle.apply` no longer returns a matched instance among the applied roots when all of that instance's changes were skipped, so a consumer's post-apply policy runs only on instances that were actually reconciled.
+
+## [0.3.8] - 2026-07-24
+
 ### Fixed
 
 - First-time instantiate now reports a Function's satellites (`FunctionCategory`, `Variable`, `BehaviorDescription`) as added companions, so a merge review shows everything that will be created — not just the function subtree.

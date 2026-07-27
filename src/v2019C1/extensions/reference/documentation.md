@@ -31,7 +31,7 @@ buildMappedLNodePath ↔ resolveMappedLNode     (mapped LNode ↔ implementing L
 - `resolveRefPath` vs `resolveElementPath` — resolveRefPath follows a REF record's stored attribute; resolveElementPath walks the tree directly from a string.
 - `findRefsTo` vs `resolveRefPath` — `resolveRefPath(ref)` gives you the target _of_ one ref; `findRefsTo(target)` gives you all refs _pointing at_ a target. Opposite direction.
 - `resolvesTo(ref, target)` would be a predicate (`boolean`) — not this function.
-- `resolveMappedLNode` vs `resolveElementPath` — a mapped `LNode` has no path attribute pointing to its `LN`; instead the implementing identity is spread across `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` (IEC 61850-90-30 §8.2). `resolveMappedLNode` composes the IED-section path from those attributes (via `buildMappedLNodePath`) and resolves it with `resolveElementPath`. Unmapped LNodes (`iedName="None"`) resolve to `undefined`.
+- `resolveMappedLNode` vs `resolveElementPath` — a mapped `LNode` has no path attribute pointing to its `LN`; instead the implementing identity is spread across `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`. `resolveMappedLNode` composes the IED-section path from those attributes (via `buildMappedLNodePath`) and resolves it with `resolveElementPath`. Unmapped LNodes (`iedName="None"`) resolve to `undefined`.
 
 ---
 
@@ -225,7 +225,7 @@ References to ExtRef/ExtCtrl inside the IED section, identified by their `intAdd
 | SourceRef  | `extRefAddr`   | ExtRef  |
 | ControlRef | `extCtrlAddr`  | ExtCtrl |
 
-**Two variants** (per IEC TR 61850-90-30):
+**Two variants**:
 
 | Variant      | When                                | extRefAddr value                    | Lookup                                                                              |
 | ------------ | ----------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------- |
@@ -261,7 +261,7 @@ References within a BehaviorDescription scope. Paths are local — relative to t
 
 All other `tPathName` attributes contain **naming-based paths** (`S1/V1/B1/Protection`) — segments built from element `name` or `lnClass` attributes. VariableApplyTo's `element` attribute uses **XPath expressions** (`.//LNode//eIEC61850-6-100:LNodeSpecNaming`), despite sharing the same XSD type `tPathName`.
 
-**Key characteristics (per IEC TR 61850-90-30):**
+**Key characteristics:**
 
 1. **Relative to context element** — the `.` means the element containing the `Private/Variable` (e.g. a Bay). The XPath evaluates from that context node.
 2. **Can target multiple elements** — `//` is the descendant-or-self axis. `.//LNode` matches _every_ LNode under the context, not just one. One VariableApplyTo → N target elements → N UUID resolutions needed.
@@ -314,7 +314,7 @@ When a VariableApplyTo with an XPath `element` value is encountered during impor
 
 Writes the **instantiation provenance link** on a cloned root: a fresh
 `FunctionSclRef` / `ApplicationSclRef` > `SclFileReference` pointing back at the
-template file the instance was created from (90-30 §17.2 / §17.3). Called by
+template file the instance was created from. Called by
 `instantiate.fsd` (`fileType: 'FSD'`) and `instantiate.asd` (`fileType: 'ASD'`).
 
 ```ts

@@ -23,7 +23,7 @@ import type * as Core from '@dialecte/core'
  * (e.g. `VariableApplyTo.element` may be an XPath). The reverse direction
  * (target -> path) is still buildable from the resolved target: we write a plain
  * name-path, which is a coherent single-target form (a simple name-path is also a
- * valid XPath) and keeps uuid + name references in agreement (61850-6 §8.5.6).
+ * valid XPath) and keeps uuid + name references in agreement.
  *
  * @param query   - Active document query
  * @param params  - reference (the REF element) + target (the element it points to)

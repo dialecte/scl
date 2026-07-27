@@ -61,7 +61,7 @@ The title is computed using the first non-empty rule:
 
 ### Labels resolution
 
-`labels` (only collected when `withLabels: true`) is read from `<Labels>/<Label>` children defined by IEC 61850-6:
+`labels` (only collected when `withLabels: true`) is read from `<Labels>/<Label>` children:
 
 ```xml
 <Substation name="S1">

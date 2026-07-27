@@ -208,7 +208,7 @@ function findScopeContextPath(ancestry: readonly AnyRawRecord[]): string | null 
 /**
  * Strips disambiguation suffix and qualifier from an input/output name.
  *
- * Per IEC TR 61850-90-30:
+ * Normalisation rules:
  * - Instance suffix: "Trip(2)" → "Trip"
  * - Qualifier suffix: "Trip.pDA" → "Trip"
  * - Both: "Trip(2).pDA" → "Trip"

@@ -79,7 +79,7 @@ describe('fsd', () => {
 	})
 
 	// ── Lineage: the extracted root is the new template; children keep provenance ──
-	// 90-30 §16.1.2: a function's subfunctions may themselves be instantiated from other
+	// A function's subfunctions may themselves be instantiated from other
 	// FSDs, identified via SclFileReference + UUID. So the root's own `templateUuid` is
 	// stripped (it becomes a fresh template) while child `templateUuid` is PRESERVED.
 	describe('lineage: root becomes a fresh template, children keep composition provenance', () => {

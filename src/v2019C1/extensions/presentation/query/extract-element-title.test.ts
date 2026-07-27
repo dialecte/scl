@@ -196,7 +196,7 @@ describe('extractElementTitle', () => {
 			expectedTitle: 'IED_A/LD0/PXCBR1',
 		},
 
-		// ── 90-30 simple *Ref (Phase 3) ───────────────────────────────
+		// ── simple *Ref (Phase 3) ───────────────────────────────
 		'FunctionCatRef → function': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
@@ -209,7 +209,7 @@ describe('extractElementTitle', () => {
 			expectedTitle: 'Sub1/F1',
 		},
 
-		// ── 90-30 composite (Phase 4) ─────────────────────────────────
+		// ── composite (Phase 4) ─────────────────────────────────
 		'ApplicationSclRef → fileUuid/fileType/version.revision': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">

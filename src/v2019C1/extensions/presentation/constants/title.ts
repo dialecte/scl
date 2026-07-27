@@ -72,7 +72,7 @@ export const TITLE_FIELDS_OVERRIDE: Partial<Record<string, TitleSpec>> = {
 		full: '{service}/{input}[{inputInst}]/{pLN}.{pDO}.{pDA}/{source}',
 	},
 
-	// ── 90-30 simple *Ref (single attribute) ──────────────────────────
+	// ── simple *Ref (single attribute) ──────────────────────────
 	FunctionCatRef: { compact: ['function'] },
 	FunctionRef: { compact: ['function'] },
 	AllocationRoleRef: { compact: ['allocationRole'] },
@@ -84,7 +84,7 @@ export const TITLE_FIELDS_OVERRIDE: Partial<Record<string, TitleSpec>> = {
 	LNodeInputRef: { compact: ['sourceRef'] },
 	LNodeOutputRef: { compact: ['controlRef'] },
 
-	// ── 90-30 composite *Ref ──────────────────────────────────────────
+	// ── composite *Ref ──────────────────────────────────────────
 	// fileUuid is hostile to read; reserve it for full mode (or tooltips).
 	// Attributes live on the child SclFileReference, not the element itself.
 	ApplicationSclRef: {
