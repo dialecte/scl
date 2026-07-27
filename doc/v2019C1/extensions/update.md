@@ -75,12 +75,12 @@ type AppliedInstances =
 ```ts
 type DecisionGroup = {
 	id: string // key in the decisions map
-	change: 'added' | 'removed' | 'modified'
+	change: 'added' | 'removed' | 'modified' | 'target-only'
 	title: string
 	primary: DiffNode
 	companions: DiffNode[] // read-only detail — travel with the primary, never toggled alone
 	dependsOn: string[] // group ids this one requires
-	suggestedAction: 'accept'
+	suggestedAction: 'accept' | 'skip' // default when the group is absent from the decision map
 	editableAttributes?: EditableAttribute[] // schema-derived editable fields of `primary`
 	instanceScopeId?: string // id of the instance root this group belongs to (multi-instance)
 	instanceScopeTitle?: string // human label of that instance root (e.g. "Prot" vs "Prot_1")
@@ -101,8 +101,10 @@ type GroupDecision =
 	| { action: 'accept' | 'skip'; values?: Record<string, string> }
 ```
 
-A group absent from the map defaults to `accept` (so an empty map applies everything); the engine
-rejects a set that accepts a group whose `dependsOn` parent is skipped.
+A group absent from the map defaults to its `suggestedAction` — `accept` for most changes (so an
+empty map applies everything), but `skip` for a `target-only` group, so an author-added element is
+kept unless the user explicitly opts into removing it. The engine rejects a set that accepts a group
+whose `dependsOn` parent is skipped.
 
 ### Multiple instances of one template
 
@@ -264,6 +266,7 @@ The update verbs are built on two engine primitives in `extensions/lifecycle/eng
 - new source element → add its subtree (via [`transplant.deep`](./transplant) + `identity.writeIdentity` stamp), then auto-resolve a name [collision](#placement-collision-resolution) on the added element against its instance parent;
 - instance element whose template lineage is gone from the source → delete;
 - instance **reference** element (a uuid-less link such as a dropped `AllocationRoleRef`) with no matching source child → removed, so the link disappears when the template drops it.
+- instance element with **no** template lineage that the pipeline did not create (an author-added element such as a `DOS`/`DAS` added to an `LNode` after instantiation) → **target-only**: reported as its own decision group defaulting to keep, preserved by default and deleted only when that group is explicitly accepted. Pipeline-created naming/provenance (`LNodeSpecNaming`, `FunctionSclRef`, …) is excluded and the transparent `Private` wrapper is unwrapped.
 
 Because the instance is already in instance-space, comparing template to instance is clean once identity and the project-owned `name` are excluded — no attribute-suppression heuristics.
 
@@ -273,7 +276,7 @@ Because the instance is already in instance-space, comparing template to instanc
 
 ```ts
 type DiffReport = {
-	root: DiffNode // change: added | removed | modified | unchanged, attributeChanges, children
+	root: DiffNode // change: added | removed | modified | unchanged | target-only, attributeChanges, children
 	roots: DiffNode[] // one root per instance (both layers for an ASD); [root] for a single diff
 	groups: DecisionGroup[]
 	needsDecisions: boolean

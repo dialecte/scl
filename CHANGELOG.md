@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`target-only` change classification (author-added preservation).** An instance element with no template lineage — added by the author after instantiation (e.g. a `DOS`/`DAS` under an `LNode`'s `Private`, or a locally-authored `LNode`) — is now reported as its own decision group defaulting to **keep** (`suggestedAction: 'skip'`) and is deleted only when that group is explicitly accepted; skipped/absent it is preserved. `DiffChange` gains `'target-only'` and `DecisionGroup.suggestedAction` widens to `'accept' | 'skip'`. Pipeline-created naming/provenance (`LNodeSpecNaming`, `FunctionSclRef`, `ApplicationSclRef`, `SclFileReference`) is excluded, and the transparent `Private` wrapper is unwrapped, so only genuine author content is classified.
+
+### Changed
+
+- A decision group's `suggestedAction` is now honoured as the default when the group is **absent** from the decision map (previously an absent decision always meant `accept`). All existing groups still default to `accept`; only `target-only` groups default to `skip`.
+- `report` now surfaces a **satellite-only** change — a satellite (`FunctionCategory`, `AllocationRole`, `Variable`, `BehaviorDescription`) that changed while its primary is unchanged — as its own decision group, instead of dropping it. Removals still ride the primary group (coupling invariant).
+
+### Fixed
+
+- `reconcile` / `apply` now **clears an attribute the updated template dropped** (present on the instance, absent from the template) instead of leaving the stale instance value — so a removed optional attribute (e.g. `desc`) is reflected in the applied result and its XML diff.
+- **Nested changes inside a satellite subtree** (e.g. a `SubCategory` inside a `FunctionCategory`) are now applied when the owning decision group is accepted, instead of being silently skipped — the satellite folds its whole changed subtree, not only its root.
+
 ## [0.3.9] - 2026-07-24
 
 ### Added
