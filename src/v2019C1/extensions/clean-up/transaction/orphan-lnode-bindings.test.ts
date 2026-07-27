@@ -7,6 +7,13 @@ import { ALL_XMLNS_NAMESPACES, runSclTestCases } from '@/v2019C1/test'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
 describe('cleanOrphanedLNodeBindings', () => {
+	// The orphan-cleanup reset and the `reconcileLNodeBinding` update hook are two
+	// distinct triggers for the same unbind outcome — cleanup fires on import when the
+	// implementing IED is absent, the hook fires on a `lnUuid` delta during a
+	// transaction. They must agree: both force iedName='None', restore
+	// prefix/lnClass/lnInst from LNodeSpecNaming, and preserve `templateUuid`. The
+	// spec-naming reset case below mirrors the hook's "clear lnUuid → restored from
+	// LNodeSpecNaming" case in after-updated/ref-paths.test.ts.
 	const testCases: SclTest.TestCases = {
 		'LNode with iedName=None → unchanged': {
 			sourceXml: /* xml */ `
@@ -78,7 +85,7 @@ describe('cleanOrphanedLNodeBindings', () => {
 				</SCL>
 			`,
 			expectedQueries: [
-				'//default:LNode[@iedName="None" and @lnClass="PTRC" and @lnInst="1" and @prefix="SP" and not(@ldInst) and not(@lnUuid) and not(@templateUuid) and not(@originUuid)]',
+				'//default:LNode[@iedName="None" and @lnClass="PTRC" and @lnInst="1" and @prefix="SP" and not(@ldInst) and not(@lnUuid) and @templateUuid="tpl-1" and not(@originUuid)]',
 				'//v2019C1:LNodeSpecNaming[@sIedName="None" and not(@sLdInst)]',
 			],
 			unexpectedQueries: [
@@ -121,7 +128,7 @@ describe('cleanOrphanedLNodeBindings', () => {
 				</SCL>
 			`,
 			expectedQueries: [
-				'//default:LNode[@iedName="None" and not(@ldInst) and @lnClass="" and not(@lnInst) and not(@prefix) and not(@lnUuid) and not(@templateUuid)]',
+				'//default:LNode[@iedName="None" and not(@ldInst) and @lnClass="" and not(@lnInst) and not(@prefix) and not(@lnUuid) and @templateUuid="tpl-2"]',
 			],
 			unexpectedQueries: ['//default:LNode[@iedName="GONE_IED"]'],
 		},

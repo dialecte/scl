@@ -12,6 +12,10 @@ import type * as Core from '@dialecte/core'
  * - IED absent + LNodeSpecNaming child exists → restore lnClass/lnInst/prefix
  *   from spec naming, clear iedName/ldInst/lnUuid, reset spec naming sIedName/sLdInst
  * - IED absent + no LNodeSpecNaming → clear all binding attrs
+ *
+ * `templateUuid` is preserved in every case: it records the template the LNode was
+ * instantiated from (the key used to re-locate an implementing ICD), which is
+ * independent of whether the implementing IED is currently present.
  */
 export async function resetLNodes(tx: Core.Transaction<Config>): Promise<void> {
 	const lnodes = await tx.getRecordsByTagName('LNode')
@@ -56,7 +60,6 @@ async function resetLNodeBinding(
 				iedName: 'None',
 				ldInst: undefined,
 				lnUuid: undefined,
-				templateUuid: undefined,
 				lnClass: sLnClass || undefined,
 				lnInst: sLnInst || undefined,
 				prefix: sPrefix || undefined,
@@ -68,7 +71,6 @@ async function resetLNodeBinding(
 				iedName: 'None',
 				ldInst: undefined,
 				lnUuid: undefined,
-				templateUuid: undefined,
 				lnClass: undefined,
 				lnInst: undefined,
 				prefix: undefined,
