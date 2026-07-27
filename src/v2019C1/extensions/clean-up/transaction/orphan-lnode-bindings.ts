@@ -1,17 +1,22 @@
+import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query'
+
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
  * Resets LNode IED bindings when the referenced IED is absent from the target DB.
  *
- * Logic per LNode:
- * - iedName is 'None', empty, or absent → normalize the unbound marker to an
+ * Shares the lock predicate with the lifecycle merge: `isLNodeLocked` = the LNode
+ * is bound to an IED (`iedName` set, not `'None'`). Cleanup then OWNS the unlock —
+ * it resolves whether a locked binding is still valid (IED present) or dangling:
+ *
+ * - not locked (iedName 'None'/empty/absent) → normalize the unbound marker to an
  *   explicit iedName='None' (the store is faithful, so an omitted iedName is not
  *   auto-stamped on import; the cleanup makes the canonical marker explicit)
- * - IED with matching name found → skip (binding valid)
- * - IED absent + LNodeSpecNaming child exists → restore lnClass/lnInst/prefix
+ * - locked + referenced IED present → skip (binding valid)
+ * - locked + IED absent + LNodeSpecNaming child exists → restore lnClass/lnInst/prefix
  *   from spec naming, clear iedName/ldInst/lnUuid, reset spec naming sIedName/sLdInst
- * - IED absent + no LNodeSpecNaming → clear all binding attrs
+ * - locked + IED absent + no LNodeSpecNaming → clear all binding attrs
  *
  * `templateUuid` is preserved in every case: it records the template the LNode was
  * instantiated from (the key used to re-locate an implementing ICD), which is
@@ -21,18 +26,18 @@ export async function resetLNodes(tx: Core.Transaction<Config>): Promise<void> {
 	const lnodes = await tx.getRecordsByTagName('LNode')
 
 	for (const lnode of lnodes) {
-		const iedName = await tx.getAttribute(lnode, { name: 'iedName' })
-		if (!iedName || iedName === 'None') {
-			// Already unbound — stamp the explicit 'None' marker (no-op if already stored).
+		if (!(await isLNodeLocked(tx, lnode))) {
+			// not bound — stamp the explicit 'None' marker (no-op if already stored).
 			await tx.update(lnode, { attributes: { iedName: 'None' } })
 			continue
 		}
 
+		const iedName = await tx.getAttribute(lnode, { name: 'iedName' })
 		const [ied] = await tx.findByAttributes({
 			tagName: 'IED',
 			attributes: { name: iedName },
 		})
-		if (ied) continue
+		if (ied) continue // binding still valid
 
 		await resetLNodeBinding(tx, lnode)
 	}

@@ -7,6 +7,7 @@ import { RESOLUTION_TYPE } from './resolution-types'
 import { TYPE_ID_REFERENCE_PAIRS } from './type-id-pairs'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { DEFINITION } from '@/v2019C1/definition/definition.generated'
 
 import type { TypeIdTarget, TypeIdReferrer } from './types'
 
@@ -91,3 +92,15 @@ export const TYPE_ID_REFERRERS_BY_TARGET: ReadonlyMap<TypeIdTarget, readonly Typ
 
 /** All DataTypeTemplates type tags that are targets of a type-id reference. */
 export const TYPE_ID_TARGET_TAGS: ReadonlySet<string> = new Set(TYPE_ID_REFERRERS_BY_TARGET.keys())
+
+/**
+ * The attributes an LNode locked (implemented) in an IED owns: its schema identity
+ * tuple (`iedName/ldInst/prefix/lnClass/lnInst`) plus its type reference (`lnType`).
+ * A lifecycle reconcile must never overwrite these on a locked LNode. Derived from
+ * the schema `identityFields` and the type-id reference registry.
+ */
+export const LOCKED_LNODE_ATTRIBUTES: ReadonlySet<string> = new Set<string>([
+	...((DEFINITION as Record<string, { attributes?: { identityFields?: readonly string[] } }>).LNode
+		?.attributes?.identityFields ?? []),
+	...(TYPE_ID_REF_ATTRIBUTES.get('LNode') ?? []),
+])

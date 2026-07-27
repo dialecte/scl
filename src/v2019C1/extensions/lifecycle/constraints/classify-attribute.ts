@@ -3,7 +3,10 @@ import { getIdentityFields } from './identity-fields'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { ATTRIBUTES } from '@/v2019C1/definition/constants.generated'
-import { PATH_CONTRIBUTING_ATTRIBUTES } from '@/v2019C1/extensions/reference'
+import {
+	PATH_CONTRIBUTING_ATTRIBUTES,
+	TYPE_ID_REF_ATTRIBUTES,
+} from '@/v2019C1/extensions/reference'
 
 import type { AttributeEditability, EditableAttribute } from './classify-attribute.types'
 
@@ -12,8 +15,9 @@ import type { AttributeEditability, EditableAttribute } from './classify-attribu
  * transaction (schema-derived, no hardcoded element rules):
  *
  *  - lineage (`uuid`/`templateUuid`/`originUuid`) -> `identity`;
- *  - a reference path/uuid attribute (from `UUID_REFERENCE_PAIRS`) -> `reference`
- *    (system-owned, remapped automatically);
+ *  - a reference path/uuid attribute (from `UUID_REFERENCE_PAIRS`) or a type-id
+ *    reference (`lnType`, `DO/SDO/DA/BDA.type`) -> `reference` (system-owned,
+ *    resolved/remapped internally — never a user edit);
  *  - `name` -> `rename` (the mutable label; changing it triggers a managed ref-path
  *    rebuild — the uuid is fixed, the name evolves);
  *  - any other path-contributing attribute (lnClass, prefix, inst, …) or scoped-key
@@ -23,6 +27,7 @@ import type { AttributeEditability, EditableAttribute } from './classify-attribu
 export function classifyAttribute(tag: string, attr: string): AttributeEditability {
 	if (LINEAGE.has(attr)) return 'identity'
 	if (referenceAttributesOf(tag).has(attr)) return 'reference'
+	if (typeIdReferenceAttributesOf(tag).has(attr)) return 'reference'
 	if (attr === 'name') return 'rename'
 	if (PATH_CONTRIBUTING_ATTRIBUTES.has(attr) || getIdentityFields(tag).has(attr)) return 'identity'
 	return 'free'
@@ -59,6 +64,12 @@ function referenceAttributesOf(tag: string): ReadonlySet<string> {
 		set.add(pair.attribute.uuid)
 	}
 	return set
+}
+
+/** The type-id reference attributes of `tag` (`lnType`, `DO/SDO/DA/BDA.type`). */
+function typeIdReferenceAttributesOf(tag: string): ReadonlySet<string> {
+	const attrs = TYPE_ID_REF_ATTRIBUTES.get(tag)
+	return attrs ? new Set(attrs) : EMPTY
 }
 
 const EMPTY: ReadonlySet<string> = new Set()

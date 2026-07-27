@@ -54,6 +54,12 @@ describe('classifyAttribute', () => {
 			attr: 'allocationRole',
 			expected: 'reference',
 		},
+		// type-id reference attrs -> reference (system-owned, resolved internally)
+		'LNode.lnType -> reference': { tag: 'LNode', attr: 'lnType', expected: 'reference' },
+		'LN.lnType -> reference': { tag: 'LN', attr: 'lnType', expected: 'reference' },
+		'LN0.lnType -> reference': { tag: 'LN0', attr: 'lnType', expected: 'reference' },
+		'DO.type -> reference': { tag: 'DO', attr: 'type', expected: 'reference' },
+		'DA.type -> reference': { tag: 'DA', attr: 'type', expected: 'reference' },
 	}
 
 	function act(testCase: TestCase) {
@@ -82,7 +88,7 @@ describe('editableAttributes', () => {
 		'LNode hides its identity tuple': {
 			tag: 'LNode',
 			includes: [],
-			excludes: ['lnClass', 'lnInst', 'iedName', 'prefix', 'uuid'],
+			excludes: ['lnClass', 'lnInst', 'iedName', 'prefix', 'uuid', 'lnType'],
 		},
 	}
 
