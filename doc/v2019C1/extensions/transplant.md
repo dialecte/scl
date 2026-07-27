@@ -55,6 +55,11 @@ Because `deep` is a faithful copy, vendor `Private` elements are cloned **verbat
 
 - **text-only** privates whose payload is their value (e.g. `<Private type="Siemens-MasterId">…</Private>`);
 - **empty flag** privates whose meaning is their mere presence (e.g. `<Private type="Siemens-IsSiprotec5IED"/>`);
-- **namespaced** privates wrapping foreign-namespace content (e.g. `<Private type="eIEC61850-6-100"><eIEC61850-6-100:SsdReference/></Private>`).
+- **foreign-namespace** privates wrapping vendor content in a namespace we do not define (kept opaque).
 
-Only a **truly-empty** `Private` — no child elements, no text value, and no `type` — is dropped as noise. This applies to every `transplant.deep` consumer (extract, instantiate, and the layer clones).
+Two kinds of content are **dropped**:
+
+- a **truly-anonymous** `Private` — no child elements, no text value, **and no `type` attribute** — as noise. A vendor empty-flag private (e.g. `<Private type="Siemens-IsSiprotec5IED"/>`) carries a vendor `type` and is preserved; an empty `Private` whose `type` names a namespace **we own** (e.g. `<Private type="eIEC61850-6-100"/>`) is instead dropped — such a wrapper is meaningless without content;
+- an element in a **supported** namespace (`default` or `eIEC61850-6-100`) that our 2019C1 schema no longer defines — a deprecated/unknown element such as `SsdReference` (superseded by `SclFileReference`) — together with the `Private` wrapper left holding only such elements. For supported namespaces we know the full element set, so unknown elements are stale and not carried forward. A `Private` mixing at least one known element is preserved (only the unknown children are dropped).
+
+This applies to every `transplant.deep` consumer (extract, instantiate, and the layer clones).

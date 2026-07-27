@@ -11,6 +11,7 @@ import type * as Core from '@dialecte/core'
 describe('beforeClone', () => {
 	type TestCase = SclTest.BaseTestCase & {
 		input: Omit<Core.AnyTreeRecord, 'namespace' | 'parent' | 'children' | 'value' | 'status'>
+		namespace?: Core.Namespace
 		expected: {
 			shouldBeCloned: boolean
 			record: Omit<Core.AnyTreeRecord, 'namespace' | 'parent' | 'children' | 'value' | 'status'>
@@ -24,6 +25,19 @@ describe('beforeClone', () => {
 		value: '',
 		status: 'unchanged' as const,
 	}
+
+	const V2019C1_URI = 'http://www.iec.ch/61850/2019/SCL/6-100'
+	const supportedChild = (tagName: string) => ({
+		id: `child-${tagName}`,
+		tagName,
+		attributes: [],
+		namespace: { prefix: 'eIEC61850-6-100', uri: V2019C1_URI },
+		parent: null,
+		children: [],
+		value: '',
+		status: 'unchanged' as const,
+		tree: [],
+	})
 
 	const testCases: SclTest.TestCases<TestCase> = {
 		'uuid attribute present → uuid removed': {
@@ -185,17 +199,123 @@ describe('beforeClone', () => {
 				},
 			},
 		},
+		'unknown element in a supported namespace → skipped (deprecated SsdReference)': {
+			input: {
+				id: 'test-id',
+				tagName: 'SsdReference',
+				attributes: [{ name: 'desc', value: 'SET_Sample1' }],
+				tree: [],
+			},
+			namespace: { prefix: 'eIEC61850-6-100', uri: V2019C1_URI },
+			expected: {
+				shouldBeCloned: false,
+				record: {
+					id: 'test-id',
+					tagName: 'SsdReference',
+					attributes: [{ name: 'desc', value: 'SET_Sample1' }],
+					tree: [],
+				},
+			},
+		},
+		'known element in a supported namespace → cloned (DOS)': {
+			input: {
+				id: 'test-id',
+				tagName: 'DOS',
+				attributes: [{ name: 'name', value: 'Pos' }],
+				tree: [],
+			},
+			namespace: { prefix: 'eIEC61850-6-100', uri: V2019C1_URI },
+			expected: {
+				shouldBeCloned: true,
+				record: {
+					id: 'test-id',
+					tagName: 'DOS',
+					attributes: [{ name: 'name', value: 'Pos' }],
+					tree: [],
+				},
+			},
+		},
+		'unknown element in a foreign namespace → cloned (vendor content preserved)': {
+			input: {
+				id: 'test-id',
+				tagName: 'VendorThing',
+				attributes: [],
+				tree: [],
+			},
+			namespace: { prefix: 'vendor', uri: 'http://example.com/vendor' },
+			expected: {
+				shouldBeCloned: true,
+				record: { id: 'test-id', tagName: 'VendorThing', attributes: [], tree: [] },
+			},
+		},
+		'Private wrapping only deprecated supported-ns elements → skipped': {
+			input: {
+				id: 'test-id',
+				tagName: 'Private',
+				attributes: [{ name: 'type', value: 'eIEC61850-6-100' }],
+				tree: [supportedChild('SsdReference')],
+			},
+			expected: {
+				shouldBeCloned: false,
+				record: {
+					id: 'test-id',
+					tagName: 'Private',
+					attributes: [{ name: 'type', value: 'eIEC61850-6-100' }],
+					tree: [supportedChild('SsdReference')],
+				},
+			},
+		},
+		'Private wrapping a known supported-ns element alongside a deprecated one → cloned': {
+			input: {
+				id: 'test-id',
+				tagName: 'Private',
+				attributes: [{ name: 'type', value: 'eIEC61850-6-100' }],
+				tree: [supportedChild('DOS'), supportedChild('SsdReference')],
+			},
+			expected: {
+				shouldBeCloned: true,
+				record: {
+					id: 'test-id',
+					tagName: 'Private',
+					attributes: [{ name: 'type', value: 'eIEC61850-6-100' }],
+					tree: [supportedChild('DOS'), supportedChild('SsdReference')],
+				},
+			},
+		},
+		'empty Private of a supported-namespace type → skipped (no meaningful content)': {
+			input: {
+				id: 'test-id',
+				tagName: 'Private',
+				attributes: [{ name: 'type', value: 'eIEC61850-6-100' }],
+				tree: [],
+			},
+			expected: {
+				shouldBeCloned: false,
+				record: {
+					id: 'test-id',
+					tagName: 'Private',
+					attributes: [{ name: 'type', value: 'eIEC61850-6-100' }],
+					tree: [],
+				},
+			},
+		},
 	}
 
 	function act(testCase: TestCase) {
+		const namespace = testCase.namespace ?? treeRecordPart.namespace
 		const record = {
 			...testCase.input,
 			...treeRecordPart,
+			namespace,
 		} as unknown as Scl.TreeRecord<Scl.ElementsOf>
 		const result = beforeClone({ record })
 
 		expect(result.shouldBeCloned).toBe(testCase.expected.shouldBeCloned)
-		expect(result.transformedRecord).toEqual({ ...testCase.expected.record, ...treeRecordPart })
+		expect(result.transformedRecord).toEqual({
+			...testCase.expected.record,
+			...treeRecordPart,
+			namespace,
+		})
 	}
 
 	runSclTestCases.generic(testCases, act)

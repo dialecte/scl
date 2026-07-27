@@ -276,10 +276,15 @@ describe('import.deep', () => {
 				'//default:IED[@name="VENDOR_A"]/default:Private[@type="Siemens-MasterId"]',
 				// empty vendor Private survives on the IED
 				'//default:IED[@name="VENDOR_A"]/default:Private[@type="Siemens-IsSiprotec5IED"]',
-				// namespaced Private and its foreign-ns child survive on the IED
-				'//default:IED[@name="VENDOR_A"]/default:Private[@type="eIEC61850-6-100"]/v2019C1:SsdReference',
 				// nested text-only vendor Private survives on the LN0
 				'//default:IED[@name="VENDOR_A"]/default:AccessPoint/default:Server/default:LDevice/default:LN0/default:Private[@type="Siemens-MasterId"]',
+			],
+			unexpectedQueries: [
+				// `SsdReference` is deprecated in 2019C1 (→ `SclFileReference`); it is not a
+				// known element of the supported `eIEC61850-6-100` namespace, so it is filtered
+				// out on clone — together with the Private wrapper that held only it.
+				'//v2019C1:SsdReference',
+				'//default:IED[@name="VENDOR_A"]/default:Private[@type="eIEC61850-6-100"]',
 			],
 		},
 	}
