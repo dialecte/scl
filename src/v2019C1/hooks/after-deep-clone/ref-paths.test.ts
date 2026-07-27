@@ -60,6 +60,32 @@ describe('afterDeepClone', () => {
 					'//v2019C1:FunctionRef[@functionUuid="uuid-f1"]',
 				],
 			},
+
+			// A bound LNode (lnUuid + stamped identity) whose implementing LN is NOT part
+			// of the cloned subtree keeps its binding verbatim: afterDeepClone remaps the
+			// uuids of cloned elements and rebuilds ref paths, but does NOT re-run the
+			// LNode-binding reconciler. Re-homing a binding to a different IED is owned by
+			// the instantiate lifecycle, not by the clone hook — this pins that boundary.
+			'clone Function with a bound LNode → identity + lnUuid preserved verbatim': {
+				sourceXml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="root">
+					<Substation ${CUSTOM_RECORD_ID_ATTRIBUTE}="sub1" name="Sub1">
+						<Function ${CUSTOM_RECORD_ID_ATTRIBUTE}="f1" name="F1" uuid="uuid-f1">
+							<LNode ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnode1" iedName="PIU" ldInst="CTRL" lnClass="CSWI" lnInst="2" prefix="CB" lnUuid="ln-uuid" templateUuid="lnode-tpl" uuid="uuid-lnode1" />
+						</Function>
+					</Substation>
+				</SCL>`,
+				targetXml: emptyTarget,
+				act: async (source, target) => {
+					const tree = await source.query.getTree({ tagName: 'Function', id: 'f1' })
+					await target.transaction(async (tx) => {
+						if (tree) await tx.deepClone({ tagName: 'Substation' as const, id: 'sub1' }, tree)
+					})
+				},
+				expectedQueries: [
+					'//default:LNode[@iedName="PIU"][@ldInst="CTRL"][@lnClass="CSWI"][@lnInst="2"][@prefix="CB"][@lnUuid="ln-uuid"][@templateUuid="lnode-tpl"]',
+				],
+			},
 		}
 
 		runSclTestCases.withExport<TestCase>({

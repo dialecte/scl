@@ -126,15 +126,20 @@ const path = await reference.query.buildReferencePath(query, {
 })
 // -> "TEMPLATE/V1/Protection"
 
-// For lnode resolution, preserves the DO/DA qualifier from the current value
+// For lnode resolution, the DO/DA qualifier comes from the companion names
 const path = await reference.query.buildReferencePath(query, {
 	reference: { tagName: 'SourceRef', id: 'sref-1' },
 	target: { tagName: 'LNode', id: 'lnode-1' },
 })
-// -> "TEMPLATE/V1/B1/PXCBR1.Pos.stVal"  (qualifier preserved from current sourceRef value)
+// -> "TEMPLATE/V1/B1/PXCBR1.Pos.stVal"  (qualifier from sourceDoName/sourceDaName)
 ```
 
 Derives the resolution strategy from `UUID_REFERENCE_PAIRS` using the reference and target tag names. Returns `null` if no pair matches or the path is unresolvable.
+
+Element-specific behaviour:
+
+- **lnode** refs (`SourceRef`, `ControlRef`, `ProcessEcho`, `LNodeDataRef`): the DO/DA qualifier is taken from the companion `*DoName`/`*DaName` attributes when the stored path already carries one; a path that stops at the LN level stays companions-only.
+- **mapped-name** refs (`DOS`/`SDS`/`DAS`): returns `null` — `mappedDoName`/`mappedDaName` is authored documentation produced by the hooks (see [Automatic coherence](#automatic-coherence-record-hooks)), not a rebuildable path.
 
 ---
 
@@ -399,7 +404,7 @@ The qualifier chain can be arbitrarily deep (e.g. `MMXU1.PhV.phsA.cVal.mag.f` --
 
 ### `ied-address` -- 2 pairs
 
-References to `ExtRef`/`ExtCtrl` inside the IED section via `intAddr`. Supports full path and IED-relative fallback.
+Reference to `ExtRef`/`ExtCtrl` inside the IED section via `intAddr`. Supports full path and IED-relative fallback.
 
 ### `behavior-description` -- 4 pairs
 
@@ -408,6 +413,25 @@ References to `BehaviorDescription` elements by name. Only the target's name seg
 ### `unsupported`
 
 Path format requires context not available during streaming. These pairs are recognized but not resolvable at runtime.
+
+---
+
+## Automatic coherence (record hooks)
+
+Reference coherence is an invariant that `@dialecte/scl` maintains for you: the record-lifecycle hooks (`afterCreated`, `afterUpdated`, `beforeDelete`) keep a reference's derived attributes in agreement with its stable identity as a side effect of every mutation. You set the stable half; dialecte derives the rest.
+
+| On mutation of…                                             | dialecte keeps in agreement                    | Rule                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| any reference                                               | path attribute ↔ companion uuid                | path rebuilt from the target on create, on target rename, and cleaned up on delete                                                                                                                                                                                                                                                                            |
+| `DOS`/`SDS`/`DAS`                                           | `mappedDoName` / `mappedDaName`                | the implementing short name, present only when it differs from the specified `name`; a `DAS` under an unmapped parent DO carries `DO.DA`                                                                                                                                                                                                                      |
+| `SourceRef` / `ControlRef` / `ProcessEcho` / `LNodeDataRef` | path qualifier ↔ companion `*DoName`/`*DaName` | editing a companion DO/DA name rebuilds the path qualifier                                                                                                                                                                                                                                                                                                    |
+| `LNode`                                                     | identity ↔ `lnUuid`                            | setting `lnUuid` stamps `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` from the target `LN`; clearing it restores the specification identity from `LNodeSpecNaming` (`lnType` stays the specification type). `templateUuid` is left untouched — it records the template the `LNode` was instantiated from, owned by the instantiate lifecycle, not by binding |
+
+Because these run as hooks, a tool never has to compute the derived half — setting the uuid, the companion names or `lnUuid` is enough, and the matching path, short name or identity is filled in the same transaction.
+
+::: info Idempotent
+Each rule is a no-op when the record is already coherent, so re-applying the same intent (e.g. writing both halves at once) produces the same document.
+:::
 
 ---
 

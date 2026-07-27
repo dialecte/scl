@@ -1,9 +1,13 @@
-import { isElementOf } from '@dialecte/core/helpers'
+import { isElementOf, widen } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { PAIRS_BY_REF } from '@/v2019C1/extensions/reference'
 import { buildReferencePath } from '@/v2019C1/extensions/reference/query/build'
-import { getRefEntriesForTarget, updateRefsForEntry } from '@/v2019C1/hooks/shared'
+import {
+	getRefEntriesForTarget,
+	reconcileMappedName,
+	updateRefsForEntry,
+} from '@/v2019C1/hooks/shared'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { RefPairEntry } from '@/v2019C1/extensions/reference'
@@ -29,7 +33,10 @@ export async function setRefPaths<GenericElement extends Scl.ElementsOf>(params:
 	const asRef = await setRefPathOnCreatedRef({ childRecord, query })
 	const asTarget = await setRefPathsOnCreatedTarget({ childRecord, query })
 
-	return [...asRef, ...asTarget]
+	const mappedNameOp = await reconcileMappedName(query, widen(childRecord))
+	const asMappedName = mappedNameOp ? [mappedNameOp] : []
+
+	return [...asRef, ...asTarget, ...asMappedName]
 }
 
 // ── Case 1: REF created ───────────────────────────────────────────────────────

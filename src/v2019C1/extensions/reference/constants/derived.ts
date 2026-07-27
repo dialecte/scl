@@ -47,6 +47,23 @@ export const ALL_RESOLUTIONS = [...RESOLVABLE_RESOLUTIONS, RESOLUTION_TYPE.unsup
 export const PAIRS_BY_REF = buildPairsByRefMap(UUID_REFERENCE_PAIRS)
 
 /**
+ * Refs whose path attribute is a "mapped name" documentation value — the short
+ * DO/SDO/DA name present ONLY when it differs from the specified `name`, NOT a
+ * rebuildable ObjectReference. Maps ref tag → its `{ path, uuid }` attribute
+ * names. Derived from UUID_REFERENCE_PAIRS so DOS/SDS (`mappedDoName`) and DAS
+ * (`mappedDaName`) stay in one source.
+ */
+export const MAPPED_NAME_REFS: ReadonlyMap<string, { path: string; uuid: string }> = new Map(
+	Object.entries(UUID_REFERENCE_PAIRS).flatMap(([refTag, pairs]) =>
+		pairs
+			.filter(
+				(pair) => pair.attribute.path === 'mappedDoName' || pair.attribute.path === 'mappedDaName',
+			)
+			.map((pair) => [refTag, { path: pair.attribute.path, uuid: pair.attribute.uuid }] as const),
+	),
+)
+
+/**
  * All uuid attribute names from UUID_REFERENCE_PAIRS, deduplicated.
  * Use as the attribute list for remapUuidAttrs so new ref pairs are automatically covered.
  */

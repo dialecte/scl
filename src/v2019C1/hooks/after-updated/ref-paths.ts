@@ -1,5 +1,13 @@
+import { widen } from '@dialecte/core/helpers'
+
 import { PATH_CONTRIBUTING_ATTRIBUTES } from '@/v2019C1/extensions/reference'
-import { getRefEntriesForTarget, updateRefsForEntry } from '@/v2019C1/hooks/shared'
+import {
+	getRefEntriesForTarget,
+	reconcileLNodeBinding,
+	reconcileMappedName,
+	reconcileReferrerRefPaths,
+	updateRefsForEntry,
+} from '@/v2019C1/hooks/shared'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -11,14 +19,40 @@ import type * as Core from '@dialecte/core'
  * Also handles ancestor renames: when a path-contributing attribute changes,
  * rebuilds ref paths for all descendant targets (e.g. renaming a Bay updates
  * FunctionRef paths that pass through it).
+ *
+ * When the updated record is itself a mapped-name referrer (`DOS`/`SDS`/`DAS`),
+ * re-normalizes its `mappedDoName`/`mappedDaName` to the short-name form. When it
+ * is any other referrer whose binding attributes (target uuid or companion DO/DA
+ * names) changed, rebuilds its own path so name and uuid references stay in
+ * agreement (the referrer-side counterpart of the after-created hook).
  */
 export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(params: {
+	query: Core.Query<Config>
 	oldRecord: Scl.RawRecord<GenericElement>
 	newRecord: Scl.RawRecord<GenericElement>
-	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { oldRecord, newRecord, query } = params
 	const operations: Scl.Operation[] = []
+
+	const previous = widen(oldRecord)
+	const current = widen(newRecord)
+
+	const mappedNameOp = await reconcileMappedName(query, current)
+	if (mappedNameOp) operations.push(mappedNameOp)
+
+	const lnodeBindingOp = await reconcileLNodeBinding({
+		oldRecord: previous,
+		newRecord: current,
+		query,
+	})
+	if (lnodeBindingOp) operations.push(lnodeBindingOp)
+
+	const referrerOps = await reconcileReferrerRefPaths({
+		oldRecord: previous,
+		newRecord: current,
+		query,
+	})
+	operations.push(...referrerOps)
 
 	const uuid = newRecord.attributes.find((a) => a.name === 'uuid')?.value
 	if (uuid) {

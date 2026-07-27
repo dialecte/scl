@@ -328,6 +328,37 @@ describe('buildReferencePath', () => {
 			target: { tagName: 'Substation', id: 'sub-1' },
 			expected: null,
 		},
+
+		// DOS/SDS mappedDoName is authored short-name documentation (90-30 §7.4),
+		// never a generically rebuilt path — buildReferencePath must not touch it.
+		'mapped-data — DOS → LN → null (never rebuilt as a path)': {
+			sourceXml: /* xml */ `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<IED name="VENDOR_A" ${ID}="ied-1">
+					<AccessPoint name="AP1" ${ID}="ap-1">
+						<Server ${ID}="srv-1">
+							<LDevice inst="LD0" ${ID}="ld-1">
+								<LN lnClass="MMXU" inst="1" prefix="" uuid="mmxu-uuid" ${ID}="ln-1"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<Substation name="S1" ${ID}="sub-1">
+					<VoltageLevel name="V1" ${ID}="vl-1">
+						<Bay name="B1" ${ID}="bay-1">
+							<LNode iedName="None" lnClass="MMXU" lnInst="1" prefix="" ${ID}="lnode-1">
+								<Private type="eIEC61850-6-100">
+									<eIEC61850-6-100:DOS name="PhV" mappedDoName="PhV" mappedLnUuid="mmxu-uuid" ${ID}="dos-1"/>
+								</Private>
+							</LNode>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+			</SCL>`,
+			reference: { tagName: 'DOS', id: 'dos-1' },
+			target: { tagName: 'LN', id: 'ln-1' },
+			expected: null,
+		},
 	}
 
 	async function act({

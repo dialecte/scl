@@ -5,7 +5,7 @@ import { getPathSegment } from './path-segment'
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
+import { RESOLUTION_TYPE, MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { ResolutionType, ReferencePair } from '@/v2019C1/extensions/reference'
@@ -38,6 +38,12 @@ export async function buildReferencePath(
 ): Promise<string | null> {
 	const { reference, target } = params
 
+	// DOS/SDS/DAS `mappedDoName`/`mappedDaName` is authored short-name mapping
+	// documentation, not a rebuildable ObjectReference. Never regenerate it here —
+	// that would re-expand it into a full path and break rename/clone cascades. Its
+	// value is produced by `buildMappedName` (dispatched from the create/update hook).
+	if (MAPPED_NAME_REFS.has(reference.tagName)) return null
+
 	const pair = findPair(reference.tagName, target.tagName)
 	if (!pair) return null
 
@@ -56,14 +62,47 @@ export async function buildReferencePath(
 	if (resolution === RESOLUTION_TYPE.lnode) {
 		const refRecord = await query.getRecord(reference)
 		if (!refRecord) return basePath
-		const currentValue = refRecord.attributes.find((a) => a.name === pair.attribute.path)?.value
-		if (!currentValue) return basePath
-		const { qualifier } = splitLnodeQualifier(currentValue)
-		return qualifier ? `${basePath}.${qualifier}` : basePath
+		// A path that stops at the LN level is a valid companions-only form (the
+		// DO/DA lives in the companion attributes); leave it at that level. Only when
+		// the path already carries a DO/DA qualifier do the companions drive its value.
+		const currentQualifier = currentPathQualifier(refRecord, pair)
+		if (!currentQualifier) return basePath
+		const qualifier = qualifierFromCompanions(refRecord, pair) ?? currentQualifier
+		return `${basePath}.${qualifier}`
 	}
 
 	// direct + unsupported: the plain name-path to the target.
 	return basePath
+}
+
+/**
+ * Build the DO[.DA] qualifier from the companion name attributes (the
+ * authoritative expression of the DO/DA), so a rebind done by editing
+ * `sourceDoName`/`sourceDaName` (or their peers) is reflected in the path.
+ * Returns undefined when no companion DO name is set.
+ */
+function qualifierFromCompanions(
+	record: { attributes: readonly { name: string; value: string }[] },
+	pair: ReferencePair,
+): string | undefined {
+	const [doCompanion, daCompanion] = pair.companions
+	if (!doCompanion) return undefined
+	const doValue = record.attributes.find((a) => a.name === doCompanion.name)?.value
+	if (!doValue) return undefined
+	const daValue = daCompanion
+		? record.attributes.find((a) => a.name === daCompanion.name)?.value
+		: undefined
+	return daValue ? `${doValue}.${daValue}` : doValue
+}
+
+/** The DO[.DA] qualifier currently embedded in the reference's own path value. */
+function currentPathQualifier(
+	record: { attributes: readonly { name: string; value: string }[] },
+	pair: ReferencePair,
+): string | undefined {
+	const currentValue = record.attributes.find((a) => a.name === pair.attribute.path)?.value
+	if (!currentValue) return undefined
+	return splitLnodeQualifier(currentValue).qualifier
 }
 
 function findPair(referenceTagName: string, targetTagName: string): ReferencePair | null {
