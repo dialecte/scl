@@ -93,6 +93,8 @@ type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 
 Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: `reconcile` never overwrites them, even when a UI-instructed edit lists them. The binding is the lock (`dataModel.isLNodeLocked`); a dangling binding stays locked until orphan cleanup resolves it.
 
+On a `modified` group, each editable attribute that changed is tagged with its delta (`before` = instance current, `after` = template incoming, `changed: true`) and surfaced first, so the UI can render the changed editable fields prominently (defaulting the input to `after`, with a one-click "keep current" = `before`) and offer the unchanged editable fields as secondary.
+
 `apply` takes `decisions: Map<groupId, GroupDecision>` where a decision is either a plain
 accept/skip or an object carrying **edited values** for the group's `editableAttributes`:
 
@@ -156,6 +158,9 @@ type EditableAttribute = {
 	mode: 'rename' | 'free'
 	conflict?: boolean // engine auto-resolved a placement collision on this field
 	suggestedValue?: string // the collision-free value it proposes (resolvable case)
+	before?: string // instance's current value, when this editable attribute changed
+	after?: string // template's incoming value, when this editable attribute changed
+	changed?: boolean // this editable attribute changed on update (surfaced first)
 }
 
 type GroupConflict = { fields: string[]; adoptTargetId: string } // identity-locked

@@ -20,4 +20,14 @@ export type EditableAttribute = {
 	 */
 	conflict?: boolean
 	suggestedValue?: string
+	/**
+	 * Modification delta for a `modified` group, present only when this editable attribute
+	 * actually changed on update. `before` = the instance's current value, `after` = the
+	 * template's incoming value (`undefined` on either side = the attribute is absent /
+	 * being cleared). `changed` marks it so the UI can surface changed fields first and
+	 * default the input to `after` with a "keep current" (`before`) affordance.
+	 */
+	before?: string
+	after?: string
+	changed?: boolean
 }

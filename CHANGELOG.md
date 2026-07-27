@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A decision group's `suggestedAction` is now the default when the group is **absent** from the decision map (previously an absent decision always meant `accept`); only `target-only` groups default to `skip`.
 - `report` surfaces a **satellite-only** change — a satellite (`FunctionCategory`, `AllocationRole`, `Variable`, `BehaviorDescription`) that changed while its primary did not — as its own decision group instead of dropping it (removals still ride the primary group).
 - A locked `LNode` owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: a template reconcile (`update`/`instantiate`), type dedup (`importTypes`), and orphan-binding cleanup (`resetLNodes`) never overwrite, remap, or reset them — even on a UI-instructed edit. Type-id reference attributes (`lnType`, `DO`/`SDO`/`DA`/`BDA` `type`) are now classified `reference` (system-owned).
+- `report` now annotates each decision group's `editableAttributes` with the modification delta (`before` = instance current, `after` = template incoming, `changed`) and surfaces changed editable attributes first, so a UI can render the changed editable fields with a "keep current" affordance without re-deriving the diff.
 
 ### Fixed
 

@@ -81,6 +81,18 @@ describe('lifecycle report — decision groups are tagged with editable attribut
 		expect(byAttr.get('desc')).toBe('free')
 		expect(byAttr.has('uuid')).toBe(false) // identity — not editable
 		expect(byAttr.has('templateUuid')).toBe(false) // lineage — not editable
+
+		// The changed editable attribute carries its delta and is surfaced first.
+		const desc = editable.find((entry) => entry.attr === 'desc')
+		expect(desc?.changed).toBe(true)
+		expect(desc?.before).toBe('v1') // instance's current value
+		expect(desc?.after).toBe('v2') // template's incoming value
+		expect(editable[0]?.attr).toBe('desc') // changed-first ordering
+
+		// An unchanged editable attribute stays present but is not flagged.
+		const name = editable.find((entry) => entry.attr === 'name')
+		expect(name?.changed).toBeFalsy()
+		expect(name?.before).toBeUndefined()
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
