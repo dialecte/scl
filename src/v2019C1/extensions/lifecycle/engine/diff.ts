@@ -14,6 +14,20 @@ import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 const REFERENCE_TAG_NAMES = new Set<string>(Object.keys(UUID_REFERENCE_PAIRS))
 
 /**
+ * Instance-only metadata the lifecycle pipeline itself creates (naming + provenance),
+ * NOT author content. These must never be classified as `target-only` (they would then
+ * surface as spurious "keep/remove" decisions and could be deleted). The transparent
+ * `Private` wrapper is unwrapped so genuine author children inside it (e.g. a `DOS`) are
+ * still classified.
+ */
+const ENGINE_MANAGED_TAGS = new Set<string>([
+	'LNodeSpecNaming',
+	'FunctionSclRef',
+	'ApplicationSclRef',
+	'SclFileReference',
+])
+
+/**
  * Engine diff (ENGINE.md §3): compares an (updated) template subtree against the
  * existing instance, matched by `templateUuid` (= the source element's `uuid`),
  * and produces a structured `DiffReport`. This is the read-only "project then
@@ -64,11 +78,13 @@ export async function diff(params: {
 		sourceUuids,
 	})
 	const summary = summarize(root)
-	const needsDecisions = summary.added + summary.removed + summary.modified > 0
+	const groups = groupChanges(root, instanceTree.id)
+	// Any decision group (including a target-only author addition) needs a decision.
+	const needsDecisions = groups.length > 0
 	return {
 		root,
 		roots: [root],
-		groups: groupChanges(root, instanceTree.id),
+		groups,
 		needsDecisions,
 		summary,
 	}
@@ -125,17 +141,25 @@ async function diffMatched(
 		}
 	}
 
-	// instance children with no surviving source match -> removed:
-	//  - an identified element whose template lineage is gone (templateUuid not in source), OR
+	// instance children with no surviving source match:
+	//  - an identified element whose template lineage is gone (templateUuid not in source)
+	//    -> removed;
 	//  - a uuid-less REFERENCE (link) element with no matching source child (e.g. a
-	//    dropped AllocationRoleRef). Non-ref content is left alone.
+	//    dropped AllocationRoleRef) -> removed;
+	//  - a non-ref element with NO templateUuid = author-added after instantiation
+	//    -> target-only (preserved by default; removed only on explicit accept).
 	for (const instanceChild of instanceNode.tree) {
 		if (matchedInstanceIds.has(instanceChild.id)) continue
 		const templateUuid = await targetQuery.any.getAttribute(instanceChild, { name: 'templateUuid' })
-		const removed = templateUuid
-			? !sourceUuids.has(templateUuid)
-			: REFERENCE_TAG_NAMES.has(instanceChild.tagName)
-		if (removed) children.push(removedNode(instanceChild))
+		if (templateUuid) {
+			if (!sourceUuids.has(templateUuid)) children.push(removedNode(instanceChild))
+			continue
+		}
+		if (REFERENCE_TAG_NAMES.has(instanceChild.tagName)) {
+			children.push(removedNode(instanceChild))
+			continue
+		}
+		pushInstanceOnly(instanceChild, children)
 	}
 
 	return {
@@ -156,6 +180,27 @@ function addedNode(node: AnyTreeRecord): DiffNode {
 function removedNode(node: AnyTreeRecord): DiffNode {
 	const children: DiffNode[] = node.tree.map((child) => removedNode(child))
 	return { change: 'removed', tagName: node.tagName, instanceRef: toRef(node), children }
+}
+
+// An author-added instance element with no source lineage. Its subtree travels with it.
+function targetOnlyNode(node: AnyTreeRecord): DiffNode {
+	const children: DiffNode[] = node.tree.map((child) => targetOnlyNode(child))
+	return { change: 'target-only', tagName: node.tagName, instanceRef: toRef(node), children }
+}
+
+/**
+ * Classify an unmatched, uuid-less, non-reference instance child. Engine-managed
+ * metadata is ignored (preserved silently); the transparent `Private` wrapper is
+ * unwrapped so genuine author children inside it are still surfaced; anything else is
+ * an author-added `target-only` element.
+ */
+function pushInstanceOnly(node: AnyTreeRecord, out: DiffNode[]): void {
+	if (ENGINE_MANAGED_TAGS.has(node.tagName)) return
+	if (node.tagName === 'Private') {
+		for (const child of node.tree) pushInstanceOnly(child, out)
+		return
+	}
+	out.push(targetOnlyNode(node))
 }
 
 async function computeAttributeChanges(

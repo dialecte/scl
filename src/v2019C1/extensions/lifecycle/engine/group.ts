@@ -42,12 +42,14 @@ function collectGroups(params: {
 		primary: node,
 		companions,
 		dependsOn: [],
-		suggestedAction: 'accept',
+		// A target-only (author-added) element defaults to KEEP: skip unless the user
+		// explicitly opts into removing it. Everything else defaults to accept.
+		suggestedAction: node.change === 'target-only' ? 'skip' : 'accept',
 		instanceScopeId,
 	})
 }
 
-function collectChangedDescendants(params: { node: DiffNode; out: DiffNode[] }): void {
+export function collectChangedDescendants(params: { node: DiffNode; out: DiffNode[] }): void {
 	const { node, out } = params
 	for (const child of node.children) {
 		if (child.change !== 'unchanged') out.push(child)

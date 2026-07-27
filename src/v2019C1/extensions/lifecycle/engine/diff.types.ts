@@ -2,7 +2,9 @@ import type { EditableAttribute } from '../constraints'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
 /** How a diffed element changed between the (updated) template and the instance. */
-export type DiffChange = 'added' | 'removed' | 'modified' | 'unchanged'
+// `target-only` = an instance element with NO source lineage (author-added after
+// instantiation). It is preserved by default and only removed on explicit accept.
+export type DiffChange = 'added' | 'removed' | 'modified' | 'unchanged' | 'target-only'
 
 export type AttributeChange = { name: string; before?: string; after?: string }
 
@@ -51,7 +53,7 @@ export type DecisionGroup = {
 	primary: DiffNode
 	companions: DiffNode[]
 	dependsOn: string[]
-	suggestedAction: 'accept'
+	suggestedAction: 'accept' | 'skip'
 	/**
 	 * The primary element's user-editable attributes with their edit mode
 	 * (schema-derived via the attribute classifier), tagged at report time so the UI

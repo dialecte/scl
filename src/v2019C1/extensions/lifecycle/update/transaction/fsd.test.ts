@@ -46,6 +46,29 @@ const sourceXml = /* xml */ `
 		</DataTypeTemplates>
 	</SCL>`
 
+// Same as `sourceXml` but the template Function carries a `desc` — so an instance
+// gets it on instantiate and a later template that DROPS it must clear it on reconcile.
+const sourceWithDescXml = /* xml */ `
+	<SCL ${ns} ${id}="fsd">
+		<Substation name="TEMPLATE" ${id}="sub-s">
+			<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+				<Bay name="TEMPLATE" ${id}="bay-s">
+					<Function name="Prot" desc="rev1" ${id}="fn-1" uuid="fn-src-uuid">
+						<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-1" uuid="lnode-src-uuid"/>
+					</Function>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+		<DataTypeTemplates ${id}="dtt-s">
+			<LNodeType id="CSWI_Type" lnClass="CSWI" ${id}="lnt-s">
+				<DO name="Pos" type="DPC_Type" ${id}="do-s"/>
+			</LNodeType>
+			<DOType id="DPC_Type" cdc="DPC" ${id}="dot-s">
+				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
+			</DOType>
+		</DataTypeTemplates>
+	</SCL>`
+
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
 		<Substation name="S1" ${id}="sub-t">
@@ -57,6 +80,23 @@ const targetXml = /* xml */ `
 
 describe('update.fsd (engine: instantiate-or-reconcile)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
+		'clears an attribute the template dropped (present on instance, absent on template)': {
+			sourceXml: sourceWithDescXml,
+			targetXml,
+			preInstantiate: true,
+			mutate: async (tx) => {
+				// the newer template no longer carries `desc`
+				await tx.update(functionRef, { attributes: { desc: undefined } })
+			},
+			expectedQueries: [
+				'//default:Bay[@name="B1"]/default:Function[@name="Prot"][@templateUuid="fn-src-uuid"]',
+			],
+			unexpectedQueries: [
+				// reconcile must remove the now-absent attribute, not leave the stale instance value
+				'//default:Bay[@name="B1"]/default:Function[@name="Prot"][@desc]',
+			],
+		},
+
 		'reconciles onto the existing instance: updates in place + adds new, no duplicate': {
 			sourceXml,
 			targetXml,

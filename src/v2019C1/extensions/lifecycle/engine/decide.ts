@@ -15,9 +15,19 @@ function decisionValues(decision: GroupDecision | undefined): Record<string, str
 	return typeof decision === 'object' ? decision.values : undefined
 }
 
-/** A group is accepted unless explicitly skipped (absent -> suggestedAction = accept). */
-function isAccepted(params: { groupId: string; decisions: DecisionMap }): boolean {
-	return decisionAction(params.decisions.get(params.groupId)) !== 'skip'
+/** The resolved action for a group: an explicit decision, else its `suggestedAction`. */
+function resolvedAction(params: {
+	group: DecisionGroup
+	decisions: DecisionMap
+}): 'accept' | 'skip' {
+	const decision = params.decisions.get(params.group.id)
+	if (decision === undefined) return params.group.suggestedAction
+	return decisionAction(decision)
+}
+
+/** A group is accepted when its resolved action is not `skip`. */
+function isAccepted(params: { group: DecisionGroup; decisions: DecisionMap }): boolean {
+	return resolvedAction(params) !== 'skip'
 }
 
 /**
@@ -33,7 +43,7 @@ export function collisionOverrides(params: {
 	const out = new Map<string, Record<string, string>>()
 	for (const group of groups) {
 		const decision = decisions.get(group.id)
-		if (decisionAction(decision) === 'skip') continue
+		if (resolvedAction({ group, decisions }) === 'skip') continue
 		const values = decisionValues(decision)
 		const sourceId = group.primary.sourceRef?.id
 		if (values && sourceId) out.set(sourceId, values)
@@ -51,13 +61,17 @@ export function assertDecisionsCoherent(params: {
 }): void {
 	const { groups, decisions } = params
 	for (const group of groups) {
-		if (!isAccepted({ groupId: group.id, decisions })) continue
+		if (!isAccepted({ group, decisions })) continue
 		for (const parentId of group.dependsOn) {
-			invariant(isAccepted({ groupId: parentId, decisions }), {
+			invariant(isAccepted({ group: groupById(groups, parentId) ?? group, decisions }), {
 				detail: `decision accepts group "${group.id}" but its dependency "${parentId}" is skipped`,
 			})
 		}
 	}
+}
+
+function groupById(groups: DecisionGroup[], id: string): DecisionGroup | undefined {
+	return groups.find((group) => group.id === id)
 }
 
 /**
@@ -74,7 +88,7 @@ export function acceptedRefIds(params: {
 	const instanceIds = new Set<string>()
 
 	for (const group of groups) {
-		if (!isAccepted({ groupId: group.id, decisions })) continue
+		if (!isAccepted({ group, decisions })) continue
 		for (const node of [group.primary, ...group.companions]) {
 			collectNodeId({ node, sourceIds, instanceIds })
 		}
@@ -89,7 +103,7 @@ function collectNodeId(params: {
 	instanceIds: Set<string>
 }): void {
 	const { node, sourceIds, instanceIds } = params
-	if (node.change === 'removed') {
+	if (node.change === 'removed' || node.change === 'target-only') {
 		if (node.instanceRef?.id) instanceIds.add(node.instanceRef.id)
 	} else if (node.sourceRef?.id) {
 		sourceIds.add(node.sourceRef.id)

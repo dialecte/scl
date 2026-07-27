@@ -165,16 +165,22 @@ async function reconcileChildren(
 		}
 	}
 
-	// uuid-less REFERENCE (link) instance children with no matching source child are
-	// removed links (e.g. a dropped AllocationRoleRef). Identified removals
-	// (templateUuid lineage gone) are handled by `deleteRemoved`; non-ref content is
-	// left alone. Gated by the removed node's acceptance.
+	// Unmatched instance children with no `templateUuid`:
+	//  - a REFERENCE (link) tag = a dropped link → removed (fast track removes it; the
+	//    full track gates on the removed node's acceptance);
+	//  - any other tag = an author-added TARGET-ONLY element → preserved by default and
+	//    removed ONLY when its own decision group is explicitly accepted.
+	// Identified removals (templateUuid lineage gone) are handled by `deleteRemoved`.
 	for (const instanceChild of instanceParent.tree) {
 		if (matchedInstanceIds.has(instanceChild.id)) continue
-		if (!REFERENCE_TAG_NAMES.has(instanceChild.tagName)) continue
 		const templateUuid = await tx.any.getAttribute(instanceChild, { name: 'templateUuid' })
 		if (templateUuid) continue
-		if (accepted && !accepted.instanceIds.has(instanceChild.id)) continue
+		if (REFERENCE_TAG_NAMES.has(instanceChild.tagName)) {
+			if (accepted && !accepted.instanceIds.has(instanceChild.id)) continue
+		} else {
+			// never remove an author addition implicitly — require an explicit accept
+			if (!accepted || !accepted.instanceIds.has(instanceChild.id)) continue
+		}
 
 		const live = await tx.any.getRecord(instanceChild)
 		if (live) await tx.any.delete(instanceChild)
@@ -243,12 +249,18 @@ async function updateMatchedAttributes(
 	}
 	const current = visibleAttributes(await tx.any.getAttributes(instanceRecord))
 
-	const updates: Record<string, string> = {}
-	for (const [name, value] of Object.entries(desired)) {
-		if (current[name] !== value) updates[name] = value
+	// Union of both sides: a name present on the template overwrites, a name the
+	// template dropped (present on the instance, absent from `desired`) is cleared
+	// (`undefined` removes it) — otherwise a reconcile would leave a stale instance value.
+	const updates: Record<string, string | undefined> = {}
+	for (const name of new Set([...Object.keys(desired), ...Object.keys(current)])) {
+		const next = name in desired ? desired[name] : undefined
+		if (current[name] !== next) updates[name] = next
 	}
 	if (Object.keys(updates).length > 0) {
-		await tx.any.update(instanceRecord, { attributes: updates })
+		// `update` removes an attribute on an `undefined` value; the AnyTransaction param is
+		// typed string-only, so cast the dynamic map (matches the repo's `as Record` pattern).
+		await tx.any.update(instanceRecord, { attributes: updates as Record<string, string> })
 	}
 }
 
