@@ -10,8 +10,9 @@ export {
 	TYPE_ID_REF_ATTRIBUTES,
 	TYPE_ID_REFERRERS_BY_TARGET,
 	TYPE_ID_TARGET_TAGS,
+	LOCKED_LNODE_ATTRIBUTES,
 } from './derived'
-export { KEEP_ON_ORPHAN_REFS, REF_CONTAINERS } from './orphan-rules'
+export { REF_CONTAINERS } from './orphan-rules'
 export { PATH_EXTRACTION_CONFIG, PATH_CONTRIBUTING_ATTRIBUTES } from './path-extraction'
 export type * from './types'
 export type { ExtractionStrategy } from './path-extraction'

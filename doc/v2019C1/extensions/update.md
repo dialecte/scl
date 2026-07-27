@@ -91,6 +91,8 @@ type DecisionGroup = {
 type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 ```
 
+Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: `reconcile` never overwrites them, even when a UI-instructed edit lists them. The binding is the lock (`dataModel.isLNodeLocked`); a dangling binding stays locked until orphan cleanup resolves it.
+
 `apply` takes `decisions: Map<groupId, GroupDecision>` where a decision is either a plain
 accept/skip or an object carrying **edited values** for the group's `editableAttributes`:
 

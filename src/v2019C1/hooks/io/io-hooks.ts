@@ -1,4 +1,8 @@
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import {
+	REFERENCE_TAG_NAMES,
+	TARGET_ELEMENT_TYPES,
+	UUID_REFERENCE_PAIRS,
+} from '@/v2019C1/constants'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
@@ -79,7 +83,7 @@ export function createSclIoHooks(): IOHooks {
 			if (elementPath) pathIndex.set(elementPath.path, uuid)
 		}
 
-		const hasReferences = ELEMENTS_WITH_REFERENCES.has(tagName)
+		const hasReferences = REFERENCE_TAG_NAMES.has(tagName)
 		if (!hasReferences) return
 
 		// Collect pending resolutions for elements with reference pairs
@@ -173,16 +177,3 @@ export function createSclIoHooks(): IOHooks {
 		afterImport,
 	}
 }
-
-/**
- * Elements that have reference pairs (quick lookup set).
- */
-const ELEMENTS_WITH_REFERENCES: Set<string> = new Set(Object.keys(UUID_REFERENCE_PAIRS))
-
-/**
- * All element types that can be targeted by a UUID reference.
- * Built from the `target` arrays in UUID_REFERENCE_PAIRS.
- */
-const TARGET_ELEMENT_TYPES: Set<string> = new Set(
-	Object.values(UUID_REFERENCE_PAIRS).flatMap((pairs) => pairs.flatMap((pair) => pair.target)),
-)

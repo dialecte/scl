@@ -1,5 +1,4 @@
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { KEEP_ON_ORPHAN_REFS } from '@/v2019C1/extensions/reference'
+import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAGS, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -11,9 +10,7 @@ import type * as Core from '@dialecte/core'
  * - Target absent + delete-on-orphan → delete record
  */
 export async function orphanUuidRefs(tx: Core.Transaction<Config>): Promise<void> {
-	const refTagNames = Object.keys(UUID_REFERENCE_PAIRS) as (keyof typeof UUID_REFERENCE_PAIRS)[]
-
-	for (const refTagName of refTagNames) {
+	for (const refTagName of REFERENCE_TAGS) {
 		const refPairs = UUID_REFERENCE_PAIRS[refTagName]
 		const refRecords = await tx.getRecordsByTagName(refTagName)
 

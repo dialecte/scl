@@ -2,10 +2,12 @@ import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
+import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query'
 import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+import { LOCKED_LNODE_ATTRIBUTES } from '@/v2019C1/extensions/reference'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { Config } from '@/v2019C1/config'
@@ -13,9 +15,6 @@ import type { Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
-
-/** Reference (link) element tags — the only uuid-less children removable on update. */
-const REFERENCE_TAG_NAMES = new Set<string>(Object.keys(UUID_REFERENCE_PAIRS))
 
 /**
  * Engine apply-core (ENGINE.md §3/§8): reconcile an updated template subtree
@@ -175,7 +174,10 @@ async function reconcileChildren(
 		if (matchedInstanceIds.has(instanceChild.id)) continue
 		const templateUuid = await tx.any.getAttribute(instanceChild, { name: 'templateUuid' })
 		if (templateUuid) continue
-		if (REFERENCE_TAG_NAMES.has(instanceChild.tagName)) {
+		if (
+			REFERENCE_TAG_NAMES.has(instanceChild.tagName) &&
+			!KEEP_ON_ORPHAN_REFS.has(instanceChild.tagName)
+		) {
 			if (accepted && !accepted.instanceIds.has(instanceChild.id)) continue
 		} else {
 			// never remove an author addition implicitly — require an explicit accept
@@ -257,6 +259,17 @@ async function updateMatchedAttributes(
 		const next = name in desired ? desired[name] : undefined
 		if (current[name] !== next) updates[name] = next
 	}
+
+	// A locked LNode (implemented in an IED) owns its identity + `lnType` — never let a
+	// template reconcile (or a user edit overlaid above) overwrite any of them.
+	if (
+		instanceRecord.tagName === 'LNode' &&
+		Object.keys(updates).some((attr) => LOCKED_LNODE_ATTRIBUTES.has(attr)) &&
+		(await isLNodeLocked(tx, instanceRecord))
+	) {
+		for (const attr of LOCKED_LNODE_ATTRIBUTES) delete updates[attr]
+	}
+
 	if (Object.keys(updates).length > 0) {
 		// `update` removes an attribute on an `undefined` value; the AnyTransaction param is
 		// typed string-only, so cast the dynamic map (matches the repo's `as Record` pattern).

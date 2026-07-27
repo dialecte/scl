@@ -304,3 +304,45 @@ export const UUID_REFERENCE_PAIRS = {
 		},
 	],
 } as const
+
+/**
+ * Reference tags that carry semantic CONTENT beyond the pointer: the eIEC signal specs
+ * (`DOS`/`SDS`/`DAS`), the dataflow bindings (`SourceRef`/`ControlRef`), behaviour
+ * variables (`InputVar`/`OutputVar`) and `ProcessEcho`. Central, single-source-of-truth
+ * policy consumed in two places:
+ *  - orphan cleanup KEEPS such an element when its ref is orphaned (clears only the
+ *    uuid/path/companion attributes) instead of deleting it;
+ *  - the lifecycle dropped-link removal treats an author-added, uuid-less one as
+ *    `target-only` content (preserved by default), NOT a dropped link.
+ * Authored from the ref-tag keys (`satisfies` validates each is a real reference tag) but
+ * exposed as a `ReadonlySet<string>` so a plain `tagName` lookup needs no cast.
+ */
+const KEEP_ON_ORPHAN_REF_TAGS = [
+	'SourceRef',
+	'ControlRef',
+	'DOS',
+	'SDS',
+	'DAS',
+	'InputVar',
+	'OutputVar',
+	'ProcessEcho',
+] as const satisfies readonly (keyof typeof UUID_REFERENCE_PAIRS)[]
+
+export const KEEP_ON_ORPHAN_REFS: ReadonlySet<string> = new Set<string>(KEEP_ON_ORPHAN_REF_TAGS)
+
+/** All reference tag names (keys of {@link UUID_REFERENCE_PAIRS}), typed for iteration. */
+export const REFERENCE_TAGS = Object.keys(
+	UUID_REFERENCE_PAIRS,
+) as (keyof typeof UUID_REFERENCE_PAIRS)[]
+
+/** Reference tag names as a string set, for membership tests (`has(tagName)`). */
+export const REFERENCE_TAG_NAMES: ReadonlySet<string> = new Set(REFERENCE_TAGS)
+
+/**
+ * All element types that can be **targeted** by a UUID reference — the flattened
+ * `target` arrays of {@link UUID_REFERENCE_PAIRS}. Use to recognise a referenceable
+ * element (e.g. index its path -> uuid on import).
+ */
+export const TARGET_ELEMENT_TYPES: ReadonlySet<string> = new Set(
+	Object.values(UUID_REFERENCE_PAIRS).flatMap((pairs) => pairs.flatMap((pair) => pair.target)),
+)

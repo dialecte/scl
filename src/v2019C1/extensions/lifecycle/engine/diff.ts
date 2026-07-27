@@ -3,15 +3,12 @@ import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
 
 import type { AttributeChange, DiffNode, DiffReport, DiffSummary } from './diff.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
-
-/** Reference (link) element tags — the only uuid-less children removable on update. */
-const REFERENCE_TAG_NAMES = new Set<string>(Object.keys(UUID_REFERENCE_PAIRS))
 
 /**
  * Instance-only metadata the lifecycle pipeline itself creates (naming + provenance),
@@ -155,7 +152,10 @@ async function diffMatched(
 			if (!sourceUuids.has(templateUuid)) children.push(removedNode(instanceChild))
 			continue
 		}
-		if (REFERENCE_TAG_NAMES.has(instanceChild.tagName)) {
+		if (
+			REFERENCE_TAG_NAMES.has(instanceChild.tagName) &&
+			!KEEP_ON_ORPHAN_REFS.has(instanceChild.tagName)
+		) {
 			children.push(removedNode(instanceChild))
 			continue
 		}

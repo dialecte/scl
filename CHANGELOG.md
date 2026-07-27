@@ -5,22 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-- **`target-only` change classification (author-added preservation).** An instance element with no template lineage — added by the author after instantiation (e.g. a `DOS`/`DAS` under an `LNode`'s `Private`, or a locally-authored `LNode`) — is now reported as its own decision group defaulting to **keep** (`suggestedAction: 'skip'`) and is deleted only when that group is explicitly accepted; skipped/absent it is preserved. `DiffChange` gains `'target-only'` and `DecisionGroup.suggestedAction` widens to `'accept' | 'skip'`. Pipeline-created naming/provenance (`LNodeSpecNaming`, `FunctionSclRef`, `ApplicationSclRef`, `SclFileReference`) is excluded, and the transparent `Private` wrapper is unwrapped, so only genuine author content is classified.
-
-### Changed
-
-- A decision group's `suggestedAction` is now honoured as the default when the group is **absent** from the decision map (previously an absent decision always meant `accept`). All existing groups still default to `accept`; only `target-only` groups default to `skip`.
-- `report` now surfaces a **satellite-only** change — a satellite (`FunctionCategory`, `AllocationRole`, `Variable`, `BehaviorDescription`) that changed while its primary is unchanged — as its own decision group, instead of dropping it. Removals still ride the primary group (coupling invariant).
-
-### Fixed
-
-- `reconcile` / `apply` now **clears an attribute the updated template dropped** (present on the instance, absent from the template) instead of leaving the stale instance value — so a removed optional attribute (e.g. `desc`) is reflected in the applied result and its XML diff.
-- **Nested changes inside a satellite subtree** (e.g. a `SubCategory` inside a `FunctionCategory`) are now applied when the owning decision group is accepted, instead of being silently skipped — the satellite folds its whole changed subtree, not only its root.
-
 ## [0.3.9] - 2026-07-24
 
 ### Added
@@ -30,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `mappedDoName`/`mappedDaName` on `DOS`/`SDS`/`DAS` is normalised to the implementing short name and kept only when it differs from the specified `name` (a `DAS` under an unmapped parent DO carries the implementing `DO.DA`).
   - `SourceRef`/`ControlRef`/`ProcessEcho`/`LNodeDataRef` rebuild their path qualifier from the companion `*DoName`/`*DaName` names when those change.
   - `LNode` implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) is stamped from the target `LN` when `lnUuid` is set, and restored from `LNodeSpecNaming` when it is cleared (the specification `lnType` is preserved). `templateUuid` is left untouched it records the template the `LNode` was instantiated from (the key used to locate the implementing ICD), which is owned by the instantiate lifecycle, not by binding. The orphan-binding cleanup (`resetLNodes`) likewise preserves `templateUuid`.
+- Merge review now classifies **author-added** elements — an instance element with no template lineage (e.g. a `DOS`/`DAS` under an `LNode`'s `Private`, or a local `LNode`) — as a `target-only` decision group: kept by default (`suggestedAction: 'skip'`), removed only when explicitly accepted. Pipeline naming/provenance (`LNodeSpecNaming`, `FunctionSclRef`, `ApplicationSclRef`, `SclFileReference`) is excluded. `DiffChange` gains `'target-only'`; `DecisionGroup.suggestedAction` widens to `'accept' | 'skip'`.
+- `dataModel.isLNodeLocked(query, ref)` — predicate for whether an `LNode` is **locked** (bound to an IED: `iedName` set, not the `'None'` marker). A dangling binding stays locked (protected) until orphan cleanup resolves it.
 
 ### Changed
 
@@ -37,6 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `transplant.deep` (and its consumers — extract, instantiate, layer clones) now drops elements of a **supported** namespace (`default` / `eIEC61850-6-100`) that the 2019C1 schema no longer defines — deprecated/unknown elements such as `SsdReference` (superseded by `SclFileReference`) — together with a `Private` wrapper left holding only such elements. An empty `Private` whose `type` names a namespace we own (e.g. `eIEC61850-6-100`) is also dropped. Foreign/vendor privates (including empty vendor flags) and privates that also contain a known element are still preserved verbatim.
 - `buildReferencePath` for `lnode` references now takes the DO/DA qualifier from the companion attributes when the stored path already carries one (a path that stops at the LN level stays companions-only). It returns `null` for `DOS`/`SDS`/`DAS`, whose `mappedDoName`/`mappedDaName` is authored documentation produced by the hooks rather than a rebuildable path.
 - `update.asd`/`lifecycle.apply` no longer returns a matched instance among the applied roots when all of that instance's changes were skipped, so a consumer's post-apply policy runs only on instances that were actually reconciled.
+- A decision group's `suggestedAction` is now the default when the group is **absent** from the decision map (previously an absent decision always meant `accept`); only `target-only` groups default to `skip`.
+- `report` surfaces a **satellite-only** change — a satellite (`FunctionCategory`, `AllocationRole`, `Variable`, `BehaviorDescription`) that changed while its primary did not — as its own decision group instead of dropping it (removals still ride the primary group).
+- A locked `LNode` owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: a template reconcile (`update`/`instantiate`), type dedup (`importTypes`), and orphan-binding cleanup (`resetLNodes`) never overwrite, remap, or reset them — even on a UI-instructed edit. Type-id reference attributes (`lnType`, `DO`/`SDO`/`DA`/`BDA` `type`) are now classified `reference` (system-owned).
+
+### Fixed
+
+- `reconcile`/`apply` now **clears an attribute the updated template dropped** (present on the instance, absent from the template) instead of leaving the stale value — so a removed optional attribute (e.g. `desc`) is reflected in the result and its XML diff.
+- **Nested changes inside a satellite subtree** (e.g. a `SubCategory` inside a `FunctionCategory`) are now applied when the owning group is accepted, instead of being silently skipped.
+- **Author-added `DOS`/`SDS`/`DAS`** (and other content-bearing references) are no longer removed on update: the dropped-link removal excludes the `KEEP_ON_ORPHAN_REFS` content tags (`DOS`/`SDS`/`DAS`, `SourceRef`, `ControlRef`, `InputVar`/`OutputVar`, `ProcessEcho`), so an author-added one is `target-only` — kept by default.
 
 ## [0.3.8] - 2026-07-24
 

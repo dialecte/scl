@@ -1,7 +1,6 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { KEEP_ON_ORPHAN_REFS } from '@/v2019C1/extensions/reference'
+import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAGS, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -30,9 +29,8 @@ export async function cleanOrphanedRefs<GenericElement extends Scl.ElementsOf>(p
 	if (subtreeUuids.size === 0) return []
 
 	const operations: Scl.Operation[] = []
-	const refTagNames = Object.keys(UUID_REFERENCE_PAIRS) as (keyof typeof UUID_REFERENCE_PAIRS)[]
 
-	for (const refTagName of refTagNames) {
+	for (const refTagName of REFERENCE_TAGS) {
 		const ops = await processRefTagName({ refTagName, subtreeIds, subtreeUuids, query })
 		operations.push(...ops)
 	}
