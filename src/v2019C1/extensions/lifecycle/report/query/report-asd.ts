@@ -98,6 +98,7 @@ async function reportApplicationInstance(
 		satelliteRefs,
 		instanceSatelliteRefs,
 		report: applicationReport,
+		instanceScopeId: instance?.id,
 	})
 
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element

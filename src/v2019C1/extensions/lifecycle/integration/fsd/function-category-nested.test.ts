@@ -13,24 +13,21 @@ const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
 const functionRef = { tagName: 'Function', id: 'fn-1' } as Scl.Ref<'Function'>
-const categoryRef = { tagName: 'FunctionCategory', id: 'cat-s' } as Scl.Ref<'FunctionCategory'>
+const subCategoryRef = { tagName: 'SubCategory', id: 'subcat-s' } as Scl.Ref<'SubCategory'>
 const bayRef = { tagName: 'Bay', id: 'bay-t1' } as Scl.Ref<'Bay'>
 
-type TestCase = SclTest.BaseXmlTestCase & {
-	targetXml: string
-	mutate: (tx: Scl.Transaction) => Promise<void>
-	decide: (groups: DecisionGroup[]) => DecisionMap
-}
-
-// A Function carrying a FunctionCategory satellite (Substation-level, linked by
-// FunctionCatRef.functionUuid). The satellite must travel with the function's
-// decision group on apply, not just in the report.
+// A FunctionCategory satellite whose FunctionCatRef is NESTED inside a SubCategory.
+// A template change on the SubCategory (a descendant of the satellite root) must
+// travel with the function's decision group on apply — the generic "nested change
+// inside a satellite subtree" case (not just the satellite root's own attributes).
 const sourceXml = /* xml */ `
 	<SCL ${ns} ${id}="fsd">
 		<Substation name="TEMPLATE" ${id}="sub-s">
 			<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 				<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" uuid="cat-src-uuid" ${id}="cat-s">
-					<eIEC61850-6-100:FunctionCatRef functionUuid="fn-src-uuid" function="TEMPLATE/Prot" ${id}="catref-s"/>
+					<eIEC61850-6-100:SubCategory name="CURRENT" uuid="subcat-src-uuid" desc="rev1 sub" ${id}="subcat-s">
+						<eIEC61850-6-100:FunctionCatRef functionUuid="fn-src-uuid" function="TEMPLATE/Prot" ${id}="catref-s"/>
+					</eIEC61850-6-100:SubCategory>
 				</eIEC61850-6-100:FunctionCategory>
 			</Private>
 			<VoltageLevel name="TEMPLATE" ${id}="vl-s">
@@ -60,62 +57,41 @@ const targetXml = /* xml */ `
 		</Substation>
 	</SCL>`
 
-const skipWhere =
-	(predicate: (g: DecisionGroup) => boolean) =>
+const skipAll =
+	() =>
 	(groups: DecisionGroup[]): DecisionMap =>
-		new Map(groups.filter(predicate).map((g) => [g.id, 'skip'] as const))
+		new Map(groups.map((g) => [g.id, 'skip'] as const))
 
-describe('lifecycle.apply — carried FunctionCategory satellite (full track)', () => {
+describe('lifecycle.apply — nested change inside a FunctionCategory satellite', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'accepting the function group also updates its carried FunctionCategory': {
+		'accepting the function group also updates a NESTED SubCategory of the satellite': {
 			sourceXml,
 			targetXml,
 			mutate: async (tx) => {
 				await tx.update(functionRef, { attributes: { desc: 'updated function' } })
-				await tx.update(categoryRef, { attributes: { desc: 'updated category' } })
+				await tx.update(subCategoryRef, { attributes: { desc: 'rev2 sub' } })
 			},
 			decide: () => new Map(),
 			expectedQueries: [
 				'//default:Function[@name="Prot"][@desc="updated function"]',
-				'//v2019C1:FunctionCategory[@templateUuid="cat-src-uuid"][@desc="updated category"]',
+				'//v2019C1:SubCategory[@templateUuid="subcat-src-uuid"][@desc="rev2 sub"]',
 			],
-		},
-
-		'skipping the function group leaves its carried FunctionCategory untouched': {
-			sourceXml,
-			targetXml,
-			mutate: async (tx) => {
-				await tx.update(functionRef, { attributes: { desc: 'updated function' } })
-				await tx.update(categoryRef, { attributes: { desc: 'updated category' } })
-			},
-			decide: skipWhere(() => true),
 			unexpectedQueries: [
-				'//default:Function[@name="Prot"][@desc="updated function"]',
-				'//v2019C1:FunctionCategory[@desc="updated category"]',
+				// the stale rev1 value must not survive the reconcile
+				'//v2019C1:SubCategory[@desc="rev1 sub"]',
 			],
 		},
 
-		'satellite-only change (function unchanged) still surfaces + applies on accept': {
+		'skipping the function group leaves the nested SubCategory untouched': {
 			sourceXml,
 			targetXml,
 			mutate: async (tx) => {
-				// only the satellite changes; the function itself is untouched
-				await tx.update(categoryRef, { attributes: { desc: 'satellite only' } })
+				await tx.update(functionRef, { attributes: { desc: 'updated function' } })
+				await tx.update(subCategoryRef, { attributes: { desc: 'rev2 sub' } })
 			},
-			decide: () => new Map(),
-			expectedQueries: [
-				'//v2019C1:FunctionCategory[@templateUuid="cat-src-uuid"][@desc="satellite only"]',
-			],
-		},
-
-		'satellite-only change is left untouched when skipped': {
-			sourceXml,
-			targetXml,
-			mutate: async (tx) => {
-				await tx.update(categoryRef, { attributes: { desc: 'satellite only' } })
-			},
-			decide: skipWhere(() => true),
-			unexpectedQueries: ['//v2019C1:FunctionCategory[@desc="satellite only"]'],
+			decide: skipAll(),
+			expectedQueries: ['//v2019C1:SubCategory[@desc="rev1 sub"]'],
+			unexpectedQueries: ['//v2019C1:SubCategory[@desc="rev2 sub"]'],
 		},
 	}
 
@@ -154,3 +130,9 @@ describe('lifecycle.apply — carried FunctionCategory satellite (full track)', 
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+type TestCase = SclTest.BaseXmlTestCase & {
+	targetXml: string
+	mutate: (tx: Scl.Transaction) => Promise<void>
+	decide: (groups: DecisionGroup[]) => DecisionMap
+}

@@ -1,4 +1,8 @@
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import {
+	collectChangedDescendants,
+	groupChanges,
+} from '@/v2019C1/extensions/lifecycle/engine/group'
 import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 
 import type { Config, Scl } from '@/v2019C1/config'
@@ -31,12 +35,14 @@ export async function foldSatelliteCompanions(
 		satelliteRefs: Scl.Ref<Scl.ElementsOf>[]
 		instanceSatelliteRefs?: Scl.Ref<Scl.ElementsOf>[]
 		report: DiffReport
+		/** Instance scope for a standalone satellite group (primary-unchanged case). */
+		instanceScopeId?: string
 	},
 ): Promise<DiffReport> {
-	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report } = params
+	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
+		params
 
 	const group = report.groups.find((candidate) => candidate.primary.sourceRef?.id === primaryRef.id)
-	if (!group) return report
 
 	for (const satelliteRef of satelliteRefs) {
 		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
@@ -51,26 +57,47 @@ export async function foldSatelliteCompanions(
 			sourceRootRef: satelliteRef,
 			instanceRootRef: instance,
 		})
-		if (satelliteReport.root.change !== 'unchanged') group.companions.push(satelliteReport.root)
+		const changed =
+			satelliteReport.summary.added +
+				satelliteReport.summary.removed +
+				satelliteReport.summary.modified >
+			0
+		if (!changed) continue
+
+		if (group) {
+			// Fold the satellite root AND every changed descendant (e.g. a SubCategory inside a
+			// FunctionCategory) as companions of the primary group, so `acceptedRefIds` collects
+			// the nested ids and the gated reconcile writes them.
+			if (satelliteReport.root.change !== 'unchanged') group.companions.push(satelliteReport.root)
+			collectChangedDescendants({ node: satelliteReport.root, out: group.companions })
+		} else {
+			// The primary itself is unchanged, so a satellite-only change has no group to ride.
+			// Surface it as its OWN decision group(s) — otherwise it would be invisible and
+			// never applied (item: AllocationRole/FunctionCategory not highlighted).
+			report.groups.push(...groupChanges(satelliteReport.root, instanceScopeId))
+			report.needsDecisions = true
+		}
 	}
 
-	// removals: a target instance satellite whose template ELEMENT was removed from
-	// the source. Catalog/shared satellites persist when merely un-referenced, so the
-	// trigger is source-element non-existence, NOT a dropped link.
-	for (const instanceRef of instanceSatelliteRefs ?? []) {
-		const { templateUuid } = await query.any.getAttributes(instanceRef)
-		if (!templateUuid) continue
-		const [stillInSource] = await sourceQuery.any.findByAttributes({
-			tagName: instanceRef.tagName,
-			attributes: { uuid: templateUuid },
-		})
-		if (stillInSource) continue
-		group.companions.push({
-			change: 'removed',
-			tagName: instanceRef.tagName,
-			instanceRef,
-			children: [],
-		})
+	// removals ride the primary group (coupling invariant): a target instance satellite
+	// whose template ELEMENT was removed from the source. Catalog/shared satellites persist
+	// when merely un-referenced, so the trigger is source-element non-existence, NOT a link drop.
+	if (group) {
+		for (const instanceRef of instanceSatelliteRefs ?? []) {
+			const { templateUuid } = await query.any.getAttributes(instanceRef)
+			if (!templateUuid) continue
+			const [stillInSource] = await sourceQuery.any.findByAttributes({
+				tagName: instanceRef.tagName,
+				attributes: { uuid: templateUuid },
+			})
+			if (stillInSource) continue
+			group.companions.push({
+				change: 'removed',
+				tagName: instanceRef.tagName,
+				instanceRef,
+				children: [],
+			})
+		}
 	}
 
 	return report

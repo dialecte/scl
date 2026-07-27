@@ -39,5 +39,6 @@ export async function foldCarriedSatellites(
 		satelliteRefs,
 		instanceSatelliteRefs,
 		report,
+		instanceScopeId: instance?.id,
 	})
 }

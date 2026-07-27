@@ -39,5 +39,6 @@ export async function foldCrossCuttingSatellites(
 		satelliteRefs,
 		instanceSatelliteRefs,
 		report,
+		instanceScopeId: instancePrimaryRef?.id,
 	})
 }
