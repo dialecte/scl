@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.10] - 2026-07-28
+
+### Added
+
+- `query.lifecycle.checkTemplateUuids()` — a read-only identity-integrity check that reports definitive SCL invariant violations: a `templateUuid` reused across unrelated element types, a duplicate instance `uuid`, or a `templateUuid` that resolves in-file to an element of a different type. Lets a consumer warn about a malformed project before merging. New `TemplateUuidWarning` type.
+
+### Changed
+
+- The lifecycle report is now one entry per instance. `DiffReport` exposes `instances: ReportInstance[]` — each with `title`, `linked`, `upToDate`, `tree`, `groups`, and `memberIds` — instead of the flat `roots` plus per-group `instanceScopeId`/`instanceScopeTitle`. Use `allGroups(report)` to flatten every instance's groups; `mergeReports` is replaced by `assembleReport`.
+
+### Removed
+
+- The editable-attribute modification delta (`before`/`after`/`changed` on `EditableAttribute`, and the changed-first ordering) is dropped — a report no longer annotates which editable fields changed on update.
+
+### Fixed
+
+- Update/merge no longer marks a reference (e.g. an `AllocationRoleRef`) as removed when a project reuses a placeholder `templateUuid` that differs from the template — references now fall back to matching by their resolvable target name.
+- Updating a project authored with placeholder `templateUuid`s no longer duplicates catalog satellites (e.g. `AllocationRole`); the existing element is recognised by name and reconciled in place — and the update report no longer shows it as a false `added` on every instance.
+- A `templateUuid` that coincides with a source `uuid` no longer causes a cross-type match — template lineage now requires the matched instance to be the same element type.
+- Instantiating the same template several times no longer reports the earlier instances as falsely "outdated": a shared satellite that links to each instance (e.g. an `AllocationRole` referencing one `Function` per instantiation) keeps its sibling links instead of flagging them as removed.
+- A shared satellite whose source genuinely dropped a reference to an element in its own scope now reports that instance link as `removed` (instead of blanket-keeping it), so the carrying primary is correctly flagged outdated.
+
 ## [0.3.9] - 2026-07-24
 
 ### Added
@@ -26,7 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A decision group's `suggestedAction` is now the default when the group is **absent** from the decision map (previously an absent decision always meant `accept`); only `target-only` groups default to `skip`.
 - `report` surfaces a **satellite-only** change — a satellite (`FunctionCategory`, `AllocationRole`, `Variable`, `BehaviorDescription`) that changed while its primary did not — as its own decision group instead of dropping it (removals still ride the primary group).
 - A locked `LNode` owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: a template reconcile (`update`/`instantiate`), type dedup (`importTypes`), and orphan-binding cleanup (`resetLNodes`) never overwrite, remap, or reset them — even on a UI-instructed edit. Type-id reference attributes (`lnType`, `DO`/`SDO`/`DA`/`BDA` `type`) are now classified `reference` (system-owned).
-- `report` now annotates each decision group's `editableAttributes` with the modification delta (`before` = instance current, `after` = template incoming, `changed`) and surfaces changed editable attributes first, so a UI can render the changed editable fields with a "keep current" affordance without re-deriving the diff.
 
 ### Fixed
 

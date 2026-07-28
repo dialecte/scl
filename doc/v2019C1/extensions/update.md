@@ -23,7 +23,7 @@ The `reconcile` / `diff` primitives below (in `extensions/lifecycle/engine`) are
 The verb-agnostic surface is the recommended consumer entry point. **Dialecte decides the track**, the consumer never picks it: ask for a report, then apply.
 
 ```ts
-query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor }) // -> DiffReport { needsDecisions, ... }
+query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor }) // -> DiffReport { instances, needsDecisions, summary }
 tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, keepNameTypesFrom? }) // -> ApplyResult { report, instances }
 ```
 
@@ -70,7 +70,11 @@ type AppliedInstances =
 
 ### Decision groups (full track)
 
-`report.groups` is the accept/skip surface (07 §3.1). The user decides on a **group**, never an individual element — each group carries its primary change plus the companions that travel with it, so a partial, incoherent apply is impossible.
+`report` is a list of instances (`report.instances`), one {@link ReportInstance} per matched
+instance; each instance owns its accept/skip `groups` (07 §3.1). `allGroups(report)` flattens the
+groups across every instance. The user decides on a **group**, never an individual element — each
+group carries its primary change plus the companions that travel with it, so a partial, incoherent
+apply is impossible.
 
 ```ts
 type DecisionGroup = {
@@ -82,8 +86,6 @@ type DecisionGroup = {
 	dependsOn: string[] // group ids this one requires
 	suggestedAction: 'accept' | 'skip' // default when the group is absent from the decision map
 	editableAttributes?: EditableAttribute[] // schema-derived editable fields of `primary`
-	instanceScopeId?: string // id of the instance root this group belongs to (multi-instance)
-	instanceScopeTitle?: string // human label of that instance root (e.g. "Prot" vs "Prot_1")
 }
 
 // which attributes of the primary a UI may edit (and how) — derived from the schema,
@@ -92,8 +94,6 @@ type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 ```
 
 Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: `reconcile` never overwrites them, even when a UI-instructed edit lists them. The binding is the lock (`dataModel.isLNodeLocked`); a dangling binding stays locked until orphan cleanup resolves it.
-
-On a `modified` group, each editable attribute that changed is tagged with its delta (`before` = instance current, `after` = template incoming, `changed: true`) and surfaced first, so the UI can render the changed editable fields prominently (defaulting the input to `after`, with a one-click "keep current" = `before`) and offer the unchanged editable fields as secondary.
 
 `apply` takes `decisions: Map<groupId, GroupDecision>` where a decision is either a plain
 accept/skip or an object carrying **edited values** for the group's `editableAttributes`:
@@ -112,15 +112,14 @@ whose `dependsOn` parent is skipped.
 
 ### Multiple instances of one template
 
-The standard allows several instances of one template under one anchor (each with a unique instance
-`uuid`, sharing one `templateUuid`). `report` enumerates **every** instance and returns one
-decision-group set per instance in the single `report.groups`, each group tagged with its
-`instanceScopeId` (the instance root) and a self-describing `instanceScopeTitle`. There is **one**
-report, not one per instance.
+Several instances of one template may live under one anchor (each with a unique instance `uuid`,
+sharing one `templateUuid`). `report` enumerates **every** instance and returns one
+{@link ReportInstance} per instance in `report.instances`, each carrying its own `groups`, `title`,
+and `memberIds`. There is **one** report holding all instances.
 
 The decision map is the selector: accept the groups of the instances you want and skip the rest to
 update a **subset** (e.g. 2 of 4). `apply` reconciles each instance independently, gated by only its
-own groups. A UI groups by `instanceScopeId`, labels each section with `instanceScopeTitle`, and keys
+own groups. A UI iterates `report.instances`, labels each section with the instance `title`, and keys
 the `decisions` map by `group.id` (already scoped per instance, so globally unique).
 
 ### Placement collision resolution
@@ -158,9 +157,6 @@ type EditableAttribute = {
 	mode: 'rename' | 'free'
 	conflict?: boolean // engine auto-resolved a placement collision on this field
 	suggestedValue?: string // the collision-free value it proposes (resolvable case)
-	before?: string // instance's current value, when this editable attribute changed
-	after?: string // template's incoming value, when this editable attribute changed
-	changed?: boolean // this editable attribute changed on update (surfaced first)
 }
 
 type GroupConflict = { fields: string[]; adoptTargetId: string } // identity-locked
@@ -187,8 +183,9 @@ const report = await doc.query.lifecycle.report(target)
 
 const decisions = new Map<string, GroupDecision>()
 if (report.needsDecisions) {
-	// render report.groups (+ each group's editableAttributes), collect the user's
-	// accept/skip choices — and any edited values — into `decisions`
+	// iterate report.instances and render each instance's groups (+ each group's
+	// editableAttributes) — or allGroups(report) to flatten — collect the user's
+	// accept/skip choices, and any edited values, into `decisions`
 }
 
 const prepared = await doc.prepare((tx) => tx.lifecycle.apply(tx, { ...target, report, decisions }))
@@ -283,12 +280,47 @@ Because the instance is already in instance-space, comparing template to instanc
 
 ```ts
 type DiffReport = {
-	root: DiffNode // change: added | removed | modified | unchanged | target-only, attributeChanges, children
-	roots: DiffNode[] // one root per instance (both layers for an ASD); [root] for a single diff
-	groups: DecisionGroup[]
+	instances: ReportInstance[] // one entry per matched instance (both layers for an ASD)
 	needsDecisions: boolean
 	summary: { added: number; removed: number; modified: number }
+}
+
+type ReportInstance = {
+	rootRef?: AnyRefOrRecord // the instance root; omitted for a first-time instantiate
+	title: string // human label (e.g. "Prot" vs "Prot_1")
+	linked: boolean // recognised as an instantiation of the loaded template
+	upToDate: boolean // nothing to apply for this instance (no groups)
+	tree: DiffNode // full diff tree for this instance (unchanged context included)
+	groups: DecisionGroup[] // this instance's accept/skip units
+	memberIds: string[] // every element id of this instance (subtree + satellites) — select/highlight
 }
 ````
 
 Matched by `templateUuid`, same-space attribute compare. **Classify** decides the track: no instance = first-time instantiate = **fast** (headless); an existing instance with any change = **full** (needs decisions). This is the report a headless/review wrapper consumes to route fast vs full.
+
+## Identity integrity — `checkTemplateUuids`
+
+`query.lifecycle.checkTemplateUuids()` is a generic, read-only check over the whole document. It
+returns a `TemplateUuidWarning[]`, each a **definitive** SCL identity-integrity violation (not a
+heuristic) that a consumer can surface as a warning. Template lineage matching relies on these
+invariants holding, so a project that breaks them (e.g. an authoring tool that stamps one
+placeholder `templateUuid` across many elements) can be flagged before it is merged.
+
+```ts
+type TemplateUuidWarningCode =
+	| 'cross-type-template-uuid' // one templateUuid borne by elements of ≥2 element types
+	| 'duplicate-instance-uuid' // one uuid used by ≥2 elements (instance uuids must be unique)
+	| 'template-uuid-type-mismatch' // a templateUuid resolves in-file to an element of another type
+
+type TemplateUuidWarning = {
+	code: TemplateUuidWarningCode
+	level: 'warning'
+	value: string // the offending uuid / templateUuid
+	tagNames: string[] // the distinct element types involved (the evidence)
+	refs: AnyRefOrRecord[] // every element involved — for select/highlight
+	count: number
+	message: string
+}
+```
+
+Legitimate same-type `templateUuid` sharing (multi-instance) and unique values are never reported.
