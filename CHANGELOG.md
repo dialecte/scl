@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `query.lifecycle.checkTemplateUuids()` — a read-only identity-integrity check that reports definitive SCL invariant violations: a `templateUuid` reused across unrelated element types, a duplicate instance `uuid`, or a `templateUuid` that resolves in-file to an element of a different type. Lets a consumer warn about a malformed project before merging. New `TemplateUuidWarning` type.
+- `TEMPLATE_UUID_WARNING_INFO` — per-code human copy (`title` / `description` / `fallback`) for the checker's warnings, so a consumer UI renders the explanation and recovery strategy from one source instead of duplicating (and drifting from) it. New `TemplateUuidWarningInfo` type.
 
 ### Changed
 

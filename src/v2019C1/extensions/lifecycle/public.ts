@@ -30,4 +30,9 @@ export type { AppliedInstances, ApplyResult } from './apply'
 export { presentationScope } from './report/public'
 export type { PresentationScope } from './report/public'
 
-export type { TemplateUuidWarning, TemplateUuidWarningCode } from './validate'
+export { TEMPLATE_UUID_WARNING_INFO } from './validate'
+export type {
+	TemplateUuidWarning,
+	TemplateUuidWarningCode,
+	TemplateUuidWarningInfo,
+} from './validate'

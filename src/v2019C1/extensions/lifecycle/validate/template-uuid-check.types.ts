@@ -30,3 +30,17 @@ export type TemplateUuidWarning = {
 	/** Human-readable explanation. */
 	message: string
 }
+
+/**
+ * Per-CODE human copy for a {@link TemplateUuidWarning} — the source of truth a consumer UI renders
+ * so the explanation never drifts from the checker. Where each `message` describes one offending
+ * occurrence, this describes the violation CLASS and the recovery the lifecycle engine applies.
+ */
+export type TemplateUuidWarningInfo = {
+	/** Short human title for the violation class. */
+	title: string
+	/** What the violation is, in plain terms (why the lineage cannot be trusted). */
+	description: string
+	/** How the engine still proceeds despite it (the recovery / fallback strategy). */
+	fallback: string
+}

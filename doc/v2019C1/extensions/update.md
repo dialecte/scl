@@ -324,3 +324,18 @@ type TemplateUuidWarning = {
 ```
 
 Legitimate same-type `templateUuid` sharing (multi-instance) and unique values are never reported.
+
+Each warning's `message` describes one offending occurrence. To explain the violation **class** and
+the engine's recovery, render `TEMPLATE_UUID_WARNING_INFO[warning.code]` — a per-code
+`{ title, description, fallback }` map. It is the single source of truth for that copy, so a consumer
+UI never re-authors (and drifts from) the explanation.
+
+```ts
+type TemplateUuidWarningInfo = {
+	title: string // short name for the violation class
+	description: string // what it is, in plain terms (why lineage can't be trusted)
+	fallback: string // how the merge still proceeds (recognise by name, etc.)
+}
+
+const TEMPLATE_UUID_WARNING_INFO: Record<TemplateUuidWarningCode, TemplateUuidWarningInfo>
+```
