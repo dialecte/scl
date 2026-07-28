@@ -136,7 +136,7 @@ describe('engine.diff (project-then-diff report + classify)', () => {
 			instanceRootRef: instanceFunction,
 		})
 
-		expect(report.needsDecisions).toBe(testCase.expected.needsDecisions)
+		expect(report.groups.length > 0).toBe(testCase.expected.needsDecisions)
 		expect(report.summary).toEqual(testCase.expected.summary)
 		expect(report.groups.map((g) => ({ change: g.change, tagName: g.primary.tagName }))).toEqual(
 			testCase.expected.groups,

@@ -4,7 +4,7 @@ import { foldCarriedSatellites } from './report-function-satellites'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 
 import type { Config, Scl } from '@/v2019C1/config'
-import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
@@ -26,7 +26,7 @@ export async function reportFunction(
 		functionRef: Scl.Ref<'Function'>
 		instance: AnyRefOrRecord | undefined
 	},
-): Promise<DiffReport> {
+): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
 
 	const report = await diff({

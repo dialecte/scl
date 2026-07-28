@@ -2,6 +2,7 @@ import { reportAsd } from './report-asd'
 
 import { describe, expect } from 'vitest'
 
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
@@ -104,9 +105,9 @@ describe('reportAsd (application layer + composed-function cascade)', () => {
 
 		expect(report.needsDecisions).toBe(testCase.expected.needsDecisions)
 		for (const tag of testCase.expected.groupTags) {
-			expect(report.groups.some((group) => group.primary.tagName === tag)).toBe(true)
+			expect(allGroups(report).some((group) => group.primary.tagName === tag)).toBe(true)
 		}
-		if (testCase.expected.groupTags.length === 0) expect(report.groups).toHaveLength(0)
+		if (testCase.expected.groupTags.length === 0) expect(allGroups(report)).toHaveLength(0)
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

@@ -1,4 +1,4 @@
-import { assertDecisionsCoherent } from '@/v2019C1/extensions/lifecycle/engine'
+import { allGroups, assertDecisionsCoherent } from '@/v2019C1/extensions/lifecycle/engine'
 import { asd as updateAsd, fsd as updateFsd } from '@/v2019C1/extensions/lifecycle/update'
 
 import type { AppliedInstances, ApplyResult } from './apply.types'
@@ -48,7 +48,7 @@ export async function apply(
 
 	// Decisions supplied: honor gating AND user value edits — even on the fast track,
 	// a conflict-free instantiate can still carry edited editable attributes.
-	assertDecisionsCoherent({ groups: report.groups, decisions })
+	assertDecisionsCoherent({ groups: allGroups(report), decisions })
 	const instances = await runVerb(tx, params, report, decisions)
 	return { report, instances }
 }

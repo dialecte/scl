@@ -2,7 +2,12 @@ import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
 import { fsd as updateFsd } from './fsd'
 import { reconcileSatellites } from './satellite-reconcile'
 
-import { acceptedRefIds, collisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import {
+	acceptedRefIds,
+	collisionOverrides,
+	groupsForInstance,
+} from '@/v2019C1/extensions/lifecycle/engine/decide'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { collectComposedFunctionUuids } from '@/v2019C1/extensions/lifecycle/instance'
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
@@ -23,8 +28,8 @@ import type * as Core from '@dialecte/core'
  * `update.fromAsd` — reconcile a project against a (possibly newer) ASD.
  *
  * Same engine as `update.fromFsd`, one layer up (proves `engine.reconcile` is
- * layer-agnostic): the standard permits several instances of one ASD template
- * under one anchor, so EVERY matching `Application` instance is reconciled; if
+ * layer-agnostic): several instances of one ASD template may live under one
+ * anchor, so EVERY matching `Application` instance is reconciled; if
  * none exists yet, the application is instantiated fresh.
  *
  * Two layers, in order:
@@ -73,12 +78,14 @@ export async function asd(
 		scenario === 'instantiate'
 			? []
 			: await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid })
-	const groups = report?.groups ?? []
+	const addedGroups = report ? allGroups(report) : []
 
 	if (instances.length === 0) {
 		// first-time = one added group; gate the whole instantiate on its acceptance
-		const gate = decisions ? acceptedRefIds({ groups, decisions }) : undefined
-		const gateOverrides = decisions ? collisionOverrides({ groups, decisions }) : undefined
+		const gate = decisions ? acceptedRefIds({ groups: addedGroups, decisions }) : undefined
+		const gateOverrides = decisions
+			? collisionOverrides({ groups: addedGroups, decisions })
+			: undefined
 		if (gate && !gate.sourceIds.has(applicationRef.id)) return { applications: [], functions: [] }
 		const { applicationRef: application, composedFunctionRefs } = await instantiateAsd(tx, {
 			sourceQuery,
@@ -101,7 +108,7 @@ export async function asd(
 
 	for (const instance of instances) {
 		// gate THIS instance by only its own groups (source ids are unique within one instance)
-		const instanceGroups = groups.filter((group) => group.instanceScopeId === instance.id)
+		const instanceGroups = groupsForInstance(report, instance.id)
 		const accepted = decisions ? acceptedRefIds({ groups: instanceGroups, decisions }) : undefined
 		const overrides = decisions
 			? collisionOverrides({ groups: instanceGroups, decisions })

@@ -42,11 +42,12 @@ export async function reconcileSatellites(
 	const { sourceQuery, satelliteRefs, instanceSatelliteRefs, structure, accepted } = params
 
 	for (const satelliteRef of satelliteRefs) {
-		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
+		const { uuid: sourceUuid, name: sourceName } = await sourceQuery.any.getAttributes(satelliteRef)
 
 		const instance = await findInstanceByTemplateUuid(tx, {
 			tagName: satelliteRef.tagName,
 			sourceUuid,
+			sourceName,
 		})
 
 		if (instance) {

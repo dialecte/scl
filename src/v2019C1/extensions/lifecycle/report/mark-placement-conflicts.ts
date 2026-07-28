@@ -4,6 +4,7 @@ import {
 	isEditableMode,
 	resolveUniqueValue,
 } from '@/v2019C1/extensions/lifecycle/constraints'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 
 import type { Config, Scl } from '@/v2019C1/config'
@@ -34,7 +35,7 @@ export async function markPlacementConflicts(
 ): Promise<void> {
 	if (target.scenario !== 'instantiate') return
 
-	for (const group of report.groups) {
+	for (const group of allGroups(report)) {
 		if (group.change !== 'added') continue
 		const sourceRef = group.primary.sourceRef
 		if (!sourceRef) continue

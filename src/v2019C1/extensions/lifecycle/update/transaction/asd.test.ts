@@ -2,6 +2,7 @@ import { asd as updateAsd } from './asd'
 
 import { describe, expect, it } from 'vitest'
 
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import {
@@ -241,7 +242,7 @@ describe('update.asd — returns the applied instance roots', () => {
 			ref: applicationRef,
 			anchor: bayRef,
 		})
-		const decisions = new Map(rep.groups.map((g) => [g.id, 'skip'] as const)) as DecisionMap
+		const decisions = new Map(allGroups(rep).map((g) => [g.id, 'skip'] as const)) as DecisionMap
 
 		let result: Awaited<ReturnType<typeof updateAsd>> | undefined
 		await target.document.transaction(async (tx) => {

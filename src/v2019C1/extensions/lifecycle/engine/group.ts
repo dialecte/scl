@@ -13,20 +13,20 @@ import type { DecisionGroup, DiffNode } from './diff.types'
  * reference-linked companions (satellites via the ownership map + ref pairs),
  * and `dependsOn` edges for nested-independent changes — both currently empty.
  */
-export function groupChanges(root: DiffNode, instanceScopeId?: string): DecisionGroup[] {
+export function groupChanges(root: DiffNode, scopePrefix?: string): DecisionGroup[] {
 	const groups: DecisionGroup[] = []
-	collectGroups({ node: root, instanceScopeId, out: groups })
+	collectGroups({ node: root, scopePrefix, out: groups })
 	return groups
 }
 
 function collectGroups(params: {
 	node: DiffNode
-	instanceScopeId: string | undefined
+	scopePrefix: string | undefined
 	out: DecisionGroup[]
 }): void {
-	const { node, instanceScopeId, out } = params
+	const { node, scopePrefix, out } = params
 	if (node.change === 'unchanged') {
-		for (const child of node.children) collectGroups({ node: child, instanceScopeId, out })
+		for (const child of node.children) collectGroups({ node: child, scopePrefix, out })
 		return
 	}
 
@@ -36,7 +36,7 @@ function collectGroups(params: {
 	collectChangedDescendants({ node, out: companions })
 
 	out.push({
-		id: groupId(node, instanceScopeId),
+		id: groupId(node, scopePrefix),
 		change: node.change,
 		title: `${node.change} ${node.tagName}`,
 		primary: node,
@@ -45,7 +45,6 @@ function collectGroups(params: {
 		// A target-only (author-added) element defaults to KEEP: skip unless the user
 		// explicitly opts into removing it. Everything else defaults to accept.
 		suggestedAction: node.change === 'target-only' ? 'skip' : 'accept',
-		instanceScopeId,
 	})
 }
 
@@ -58,10 +57,10 @@ export function collectChangedDescendants(params: { node: DiffNode; out: DiffNod
 }
 
 /** Stable, unique key for the primary — the ref that exists for its change kind. */
-function groupId(node: DiffNode, instanceScopeId: string | undefined): string {
+function groupId(node: DiffNode, scopePrefix: string | undefined): string {
 	const ref = node.sourceRef ?? node.instanceRef
 	const base = ref ? `${ref.tagName}:${ref.id}` : node.tagName
 	// scope by the instance root so the SAME template element in two instances yields
 	// two distinct group ids (multi-instance targeting)
-	return instanceScopeId ? `${instanceScopeId}::${base}` : base
+	return scopePrefix ? `${scopePrefix}::${base}` : base
 }

@@ -1,12 +1,12 @@
 import { reportFunction } from './report-function'
+import { buildReportInstance } from './report-instance'
 
-import { mergeReports } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { findInstancesUnder } from '@/v2019C1/extensions/lifecycle/instance'
-import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -14,9 +14,9 @@ import type * as Core from '@dialecte/core'
  * with the fast/full classification. No instance yet -> first-time = fast
  * (`needsDecisions: false`); one or more existing instances with changes -> full.
  *
- * The standard permits several instances of one template under one anchor, so
- * EVERY matching instance is diffed and its groups merged into one report (each
- * group tagged with its `instanceScopeId`); the decision layer targets a subset.
+ * Several instances of one template are allowed under one anchor, so
+ * EVERY matching instance is diffed and reported as its own {@link ReportInstance};
+ * the decision layer targets a subset (each instance owns its groups).
  *
  * A carried `FunctionCategory` satellite (outside the function subtree) travels
  * as a companion of the function's decision group (ENGINE.md §16).
@@ -40,15 +40,32 @@ export async function reportFsd(
 
 	// no instance yet -> first-time = fast track
 	if (instances.length === 0) {
-		return reportFunction(query, { sourceQuery, functionRef, instance: undefined })
+		const instanceDiff = await reportFunction(query, {
+			sourceQuery,
+			functionRef,
+			instance: undefined,
+		})
+		return assembleReport([
+			await buildReportInstance(query, {
+				instanceDiff,
+				instance: undefined,
+				sourceQuery,
+				sourceRef: functionRef,
+			}),
+		])
 	}
 
-	const reports: DiffReport[] = []
+	const reportInstances: ReportInstance[] = []
 	for (const instance of instances) {
-		const instanceReport = await reportFunction(query, { sourceQuery, functionRef, instance })
-		const title = await extractElementTitle(query, instance)
-		for (const group of instanceReport.groups) group.instanceScopeTitle = title
-		reports.push(instanceReport)
+		const instanceDiff = await reportFunction(query, { sourceQuery, functionRef, instance })
+		reportInstances.push(
+			await buildReportInstance(query, {
+				instanceDiff,
+				instance,
+				sourceQuery,
+				sourceRef: functionRef,
+			}),
+		)
 	}
-	return mergeReports(reports as [DiffReport, ...DiffReport[]])
+	return assembleReport(reportInstances)
 }

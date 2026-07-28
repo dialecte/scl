@@ -2,6 +2,7 @@ import { createMockRandomUUID } from '@dialecte/core/test'
 import { describe, expect, test } from 'vitest'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import {
@@ -140,7 +141,7 @@ describe('lifecycle integration — Time Overcurrent FSD rev1 → rev2 (satellit
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(rep.groups),
+				decisions: testCase.decide(allGroups(rep)),
 			})
 		})
 

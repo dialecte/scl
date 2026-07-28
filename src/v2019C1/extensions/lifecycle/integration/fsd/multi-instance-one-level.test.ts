@@ -1,6 +1,7 @@
 import { describe, expect } from 'vitest'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -132,28 +133,28 @@ describe('lifecycle scenario — multi-instance same template at one level (coll
 			anchor: bayRef,
 		})
 
-		// each group is self-describing: its instance is labelled for the UI (Prot / Prot_1)
-		const titles = new Set(rep.groups.map((group) => group.instanceScopeTitle))
+		// each instance is self-describing: its root is labelled for the UI (Prot / Prot_1)
+		const titles = new Set(rep.instances.map((instance) => instance.title))
 		expect(titles.has('Prot')).toBe(true)
 		expect(titles.has('Prot_1')).toBe(true)
 
-		// the report carries one root per instance (the full instance tree, unchanged
+		// the report carries one instance per root (the full instance tree, unchanged
 		// context included) so a UI can render each instance directly
-		expect(rep.roots).toHaveLength(2)
+		expect(rep.instances).toHaveLength(2)
 
 		// the report now carries ONE decision-group set per instance; the decision map
 		// is the selector — accept the subset of instances to update
 		const decisions = new Map<string, GroupDecision>()
 		if (testCase.mode === 'skip-all') {
-			for (const group of rep.groups) decisions.set(group.id, 'skip')
+			for (const group of allGroups(rep)) decisions.set(group.id, 'skip')
 		} else if (testCase.mode === 'accept-prot-only') {
 			const [prot1] = await target.query.findByAttributes({
 				tagName: 'Function',
 				attributes: { name: 'Prot_1' },
 			})
-			for (const group of rep.groups) {
-				if (group.instanceScopeId === prot1?.id) decisions.set(group.id, 'skip')
-			}
+			const prot1Groups =
+				rep.instances.find((instance) => instance.rootRef?.id === prot1?.id)?.groups ?? []
+			for (const group of prot1Groups) decisions.set(group.id, 'skip')
 		}
 		// accept-all -> empty map (absent groups default to accept)
 

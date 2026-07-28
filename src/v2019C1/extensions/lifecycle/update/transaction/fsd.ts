@@ -1,7 +1,12 @@
 import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reconcileCarriedSatellites } from './function-satellites'
 
-import { acceptedRefIds, collisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import {
+	acceptedRefIds,
+	collisionOverrides,
+	groupsForInstance,
+} from '@/v2019C1/extensions/lifecycle/engine/decide'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { findInstancesUnder } from '@/v2019C1/extensions/lifecycle/instance'
 import {
@@ -62,12 +67,14 @@ export async function fsd(
 			? []
 			: await findInstancesUnder(tx, { targetParent, tagName: 'Function', sourceUuid })
 
-	const groups = report?.groups ?? []
+	const addedGroups = report ? allGroups(report) : []
 
 	if (instances.length === 0) {
 		// first-time = one added group; gate the whole instantiate on its acceptance
-		const gate = decisions ? acceptedRefIds({ groups, decisions }) : undefined
-		const gateOverrides = decisions ? collisionOverrides({ groups, decisions }) : undefined
+		const gate = decisions ? acceptedRefIds({ groups: addedGroups, decisions }) : undefined
+		const gateOverrides = decisions
+			? collisionOverrides({ groups: addedGroups, decisions })
+			: undefined
 		if (gate && !gate.sourceIds.has(functionRef.id)) return []
 		const { functionRef: root } = await instantiateFsd(tx, {
 			sourceQuery,
@@ -82,8 +89,7 @@ export async function fsd(
 	const structure = await resolveTargetStructure(tx, targetParent)
 	for (const instance of instances) {
 		const { instanceAccepted, instanceOverrides } = gateFor({
-			instanceId: instance.id,
-			groups,
+			instanceGroups: groupsForInstance(report, instance.id),
 			decisions,
 		})
 
@@ -123,17 +129,12 @@ export async function fsd(
  * groups (source ids are unique within one instance); without, apply everything
  * (fast track).
  */
-function gateFor(params: {
-	instanceId: string
-	groups: DecisionGroup[]
-	decisions: DecisionMap | undefined
-}): {
+function gateFor(params: { instanceGroups: DecisionGroup[]; decisions: DecisionMap | undefined }): {
 	instanceAccepted: AcceptedIds | undefined
 	instanceOverrides: CollisionOverrides | undefined
 } {
-	const { instanceId, groups, decisions } = params
+	const { instanceGroups, decisions } = params
 	if (!decisions) return { instanceAccepted: undefined, instanceOverrides: undefined }
-	const instanceGroups = groups.filter((group) => group.instanceScopeId === instanceId)
 	return {
 		instanceAccepted: acceptedRefIds({ groups: instanceGroups, decisions }),
 		instanceOverrides: collisionOverrides({ groups: instanceGroups, decisions }),

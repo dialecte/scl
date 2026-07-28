@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import {
@@ -100,7 +101,7 @@ async function reportAndApply(
 			ref: functionRef,
 			anchor: bayRef,
 			report: rep,
-			decisions: decide(rep.groups),
+			decisions: decide(allGroups(rep)),
 		})
 	})
 	return (await targetDoc.query.getSnapshot({ as: 'xml' })) as string
@@ -115,7 +116,7 @@ describe('lifecycle — target-only (author-added, no source lineage)', () => {
 			ref: functionRef,
 			anchor: bayRef,
 		})
-		const targetOnly = rep.groups.filter((g) => g.change === 'target-only')
+		const targetOnly = allGroups(rep).filter((g) => g.change === 'target-only')
 		expect(targetOnly).toHaveLength(1)
 		expect(targetOnly[0]?.suggestedAction).toBe('skip')
 	})

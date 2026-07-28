@@ -1,5 +1,6 @@
 import { describe, expect } from 'vitest'
 
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -98,7 +99,7 @@ describe('lifecycle report — placement-conflict classification', () => {
 			anchor: bayRef,
 		})
 
-		const appGroup = rep.groups.find((group) => group.primary.tagName === 'Application')
+		const appGroup = allGroups(rep).find((group) => group.primary.tagName === 'Application')
 		const nameAttr = appGroup?.editableAttributes?.find((entry) => entry.attr === 'name')
 
 		if (testCase.expectedNameConflict) {

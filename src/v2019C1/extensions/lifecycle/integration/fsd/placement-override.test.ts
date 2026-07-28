@@ -1,6 +1,7 @@
 import { describe } from 'vitest'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
@@ -85,7 +86,7 @@ describe('lifecycle scenario — instantiate.fsd applies user edits via decision
 		})
 
 		// edit the root function's editable attributes, keyed by its group id
-		const rootGroup = rep.groups.find((group) => group.primary.sourceRef?.id === functionRef.id)
+		const rootGroup = allGroups(rep).find((group) => group.primary.sourceRef?.id === functionRef.id)
 		if (!rootGroup) throw new Error('root function group not found in report')
 
 		const decisions = new Map<string, GroupDecision>([

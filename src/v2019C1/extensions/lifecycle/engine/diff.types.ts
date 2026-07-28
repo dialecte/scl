@@ -23,6 +23,18 @@ export type DiffNode = {
 export type DiffSummary = { added: number; removed: number; modified: number }
 
 /**
+ * The engine's per-instance diff primitive: one instance's change `root` tree, its
+ * decision `groups`, and its `summary`. The report builders enrich this into a
+ * {@link ReportInstance} (title / linkage / member ids) and aggregate several into a
+ * {@link DiffReport}. Internal to the report pipeline — consumers see `DiffReport`.
+ */
+export type InstanceDiff = {
+	root: DiffNode
+	groups: DecisionGroup[]
+	summary: DiffSummary
+}
+
+/**
  * An identity-locked placement collision on a decision group's primary: every field
  * of the violated uniqueness constraint is identity (none editable), so the engine
  * cannot differentiate a copy. `adoptTargetId` is the existing element the primary is
@@ -71,36 +83,37 @@ export type DecisionGroup = {
 	 * field is bumped instead — see {@link EditableAttribute.conflict}).
 	 */
 	conflict?: GroupConflict
-	/**
-	 * The id of the instance root this group belongs to, when several instances of one
-	 * template are reported together (multi-instance). Lets the decision layer target a
-	 * SUBSET of instances and lets apply partition groups per instance. Omitted for a
-	 * first-time instantiate (no instance yet).
-	 */
-	instanceScopeId?: string
-	/**
-	 * Human-readable title of the instance root (`extractElementTitle`), tagged at the
-	 * report surface so a multi-instance UI can label each instance section (e.g. `Prot`
-	 * vs `Prot_1`) without resolving the element itself. Omitted for a first-time
-	 * instantiate.
-	 */
-	instanceScopeTitle?: string
+}
+
+/**
+ * One instance in a report: a linked template instance (`Application`/`Function`) with
+ * its diff tree, its decision groups, and its linkage/up-to-date status. The report is a
+ * list of these — a changed instance and an up-to-date instance render through the same
+ * shape (the up-to-date one simply has no `groups`).
+ */
+export type ReportInstance = {
+	/** The instance root record (`Application`/`Function`). Omitted for a first-time instantiate. */
+	rootRef?: AnyRefOrRecord
+	/** Human-readable title of the instance root (`extractElementTitle`). */
+	title: string
+	/** Recognised as an instantiation of the loaded template (provenance or `templateUuid` lineage). */
+	linked: boolean
+	/** Nothing to apply for this instance (`groups.length === 0`). */
+	upToDate: boolean
+	/** The full diff tree for this instance (unchanged context included). */
+	tree: DiffNode
+	/** The change tree folded into accept/skip units for this instance. */
+	groups: DecisionGroup[]
+	/** Every element id belonging to this instance (subtree ∪ external satellites) — select/highlight. */
+	memberIds: string[]
 }
 
 export type DiffReport = {
-	root: DiffNode
+	/** One entry per reported instance (`Application`/`Function`). */
+	instances: ReportInstance[]
 	/**
-	 * One root per instance in the report. A single diff carries `[root]`; a merged
-	 * multi-instance report carries every instance's root (both layers for an ASD), so
-	 * a UI can render each instance's full tree (unchanged context included) directly.
-	 */
-	roots: DiffNode[]
-	/** The change tree folded into accept/skip units — the full-track surface. */
-	groups: DecisionGroup[]
-	/**
-	 * `false` = fast track (apply headless): either a first-time instantiate (no
-	 * existing instance) or nothing changed. `true` = full track: the instance
-	 * exists and something changed, so the caller must resolve decisions.
+	 * `false` = fast track (apply headless): a first-time instantiate or nothing changed
+	 * anywhere. `true` = full track: some instance has changes to resolve.
 	 */
 	needsDecisions: boolean
 	summary: DiffSummary

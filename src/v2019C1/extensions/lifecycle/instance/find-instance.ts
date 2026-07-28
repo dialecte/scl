@@ -77,7 +77,7 @@ async function collectByTemplateUuid(
  */
 export async function findInstanceByTemplateUuid(
 	reader: Reader,
-	params: { tagName: Scl.ElementsOf; sourceUuid: string | undefined },
+	params: { tagName: Scl.ElementsOf; sourceUuid: string | undefined; sourceName?: string },
 ): Promise<AnyTrackedRecord | undefined> {
 	const [first] = await findInstancesByTemplateUuid(reader, params)
 	return first
@@ -88,19 +88,38 @@ export async function findInstanceByTemplateUuid(
  * in document order. The global counterpart of {@link findInstancesUnder} used
  * where there is no placement anchor (the ASD report/apply cascade), so several
  * instances of one template are enumerated and gated as a subset (multi-instance).
+ *
+ * `sourceName` opt-in fallback: when NO instance carries the source `uuid` as its
+ * `templateUuid` — an externally-authored project whose `templateUuid` lineage is
+ * broken (a placeholder value, not the source uuid, as real .ssd files reuse one
+ * dummy across elements) — recognize the instance by `name` instead, but ONLY when
+ * it is unambiguous (exactly one same-tag element of that name), so an unrelated
+ * element is never adopted. Callers that omit `sourceName` keep the strict lineage
+ * behaviour.
  */
 export async function findInstancesByTemplateUuid(
 	reader: Reader,
-	params: { tagName: Scl.ElementsOf; sourceUuid: string | undefined },
+	params: { tagName: Scl.ElementsOf; sourceUuid: string | undefined; sourceName?: string },
 ): Promise<AnyTrackedRecord[]> {
-	const { tagName, sourceUuid } = params
-	if (!sourceUuid) return []
+	const { tagName, sourceUuid, sourceName } = params
 	const records = await reader.any.getRecordsByTagName(tagName)
-	const out: AnyTrackedRecord[] = []
-	for (const record of records) {
-		if ((await reader.any.getAttribute(record, { name: 'templateUuid' })) === sourceUuid) {
-			out.push(record)
+
+	const byLineage: AnyTrackedRecord[] = []
+	if (sourceUuid) {
+		for (const record of records) {
+			if ((await reader.any.getAttribute(record, { name: 'templateUuid' })) === sourceUuid) {
+				byLineage.push(record)
+			}
 		}
 	}
-	return out
+	if (byLineage.length > 0) return byLineage
+	if (!sourceName) return []
+
+	const byName: AnyTrackedRecord[] = []
+	for (const record of records) {
+		if ((await reader.any.getAttribute(record, { name: 'name' })) === sourceName) {
+			byName.push(record)
+		}
+	}
+	return byName.length === 1 ? byName : []
 }

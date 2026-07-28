@@ -49,10 +49,11 @@ export async function reconcileCarriedSatellites(
 	const satellites = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
 	let hasMissing = false
 	for (const satelliteRef of satellites) {
-		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
+		const { uuid: sourceUuid, name: sourceName } = await sourceQuery.any.getAttributes(satelliteRef)
 		const instance = await findInstanceByTemplateUuid(tx, {
 			tagName: satelliteRef.tagName,
 			sourceUuid,
+			sourceName,
 		})
 		if (!instance) {
 			hasMissing = true

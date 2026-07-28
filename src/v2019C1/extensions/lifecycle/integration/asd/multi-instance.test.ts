@@ -1,6 +1,7 @@
 import { describe, expect } from 'vitest'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -134,27 +135,27 @@ describe('lifecycle scenario — multi-instance ASD update (Part C, Phase B)', (
 			anchor: bayRef,
 		})
 
-		// each group is self-describing: its instance is labelled for the UI, on both layers
-		const titles = new Set(rep.groups.map((group) => group.instanceScopeTitle))
+		// each instance is self-describing: its root is labelled for the UI, on both layers
+		const titles = new Set(rep.instances.map((instance) => instance.title))
 		expect(titles.has('HMI')).toBe(true)
 		expect(titles.has('HMI_1')).toBe(true)
 		expect(titles.has('Prot')).toBe(true)
 		expect(titles.has('Prot_1')).toBe(true)
 
-		// one root per instance across both layers: 2 Applications + 2 composed Functions
-		expect(rep.roots).toHaveLength(4)
+		// one instance per root across both layers: 2 Applications + 2 composed Functions
+		expect(rep.instances).toHaveLength(4)
 
 		const decisions = new Map<string, GroupDecision>()
 		if (testCase.mode === 'skip-all') {
-			for (const group of rep.groups) decisions.set(group.id, 'skip')
+			for (const group of allGroups(rep)) decisions.set(group.id, 'skip')
 		} else if (testCase.mode === 'accept-except-hmi1-app') {
 			const [hmi1] = await target.query.findByAttributes({
 				tagName: 'Application',
 				attributes: { name: 'HMI_1' },
 			})
-			for (const group of rep.groups) {
-				if (group.instanceScopeId === hmi1?.id) decisions.set(group.id, 'skip')
-			}
+			const hmi1Groups =
+				rep.instances.find((instance) => instance.rootRef?.id === hmi1?.id)?.groups ?? []
+			for (const group of hmi1Groups) decisions.set(group.id, 'skip')
 		}
 		// accept-all -> empty map
 

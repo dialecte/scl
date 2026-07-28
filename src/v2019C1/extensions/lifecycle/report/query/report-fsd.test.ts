@@ -2,6 +2,7 @@ import { reportFsd } from './report-fsd'
 
 import { describe, expect } from 'vitest'
 
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
@@ -88,7 +89,7 @@ describe('reportFsd (function layer + carried FunctionCategory satellite)', () =
 
 		expect(report.needsDecisions).toBe(true)
 
-		const functionGroup = report.groups.find((group) => group.primary.tagName === 'Function')
+		const functionGroup = allGroups(report).find((group) => group.primary.tagName === 'Function')
 		expect(functionGroup).toBeDefined()
 
 		// the carried FunctionCategory change must travel as a companion of the

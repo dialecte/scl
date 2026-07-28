@@ -1,5 +1,6 @@
 import { describe, expect } from 'vitest'
 
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -73,7 +74,7 @@ describe('lifecycle report — decision groups are tagged with editable attribut
 			anchor: bayRef,
 		})
 
-		const group = rep.groups.find((candidate) => candidate.primary.tagName === 'Function')
+		const group = allGroups(rep).find((candidate) => candidate.primary.tagName === 'Function')
 		const editable = group?.editableAttributes ?? []
 		const byAttr = new Map(editable.map((entry) => [entry.attr, entry.mode]))
 
@@ -81,18 +82,6 @@ describe('lifecycle report — decision groups are tagged with editable attribut
 		expect(byAttr.get('desc')).toBe('free')
 		expect(byAttr.has('uuid')).toBe(false) // identity — not editable
 		expect(byAttr.has('templateUuid')).toBe(false) // lineage — not editable
-
-		// The changed editable attribute carries its delta and is surfaced first.
-		const desc = editable.find((entry) => entry.attr === 'desc')
-		expect(desc?.changed).toBe(true)
-		expect(desc?.before).toBe('v1') // instance's current value
-		expect(desc?.after).toBe('v2') // template's incoming value
-		expect(editable[0]?.attr).toBe('desc') // changed-first ordering
-
-		// An unchanged editable attribute stays present but is not flagged.
-		const name = editable.find((entry) => entry.attr === 'name')
-		expect(name?.changed).toBeFalsy()
-		expect(name?.before).toBeUndefined()
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

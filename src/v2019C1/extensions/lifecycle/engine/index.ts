@@ -1,4 +1,4 @@
-export { diff, mergeReports } from './diff'
+export { diff, assembleReport, allGroups, collectTreeIds } from './diff'
 export { groupChanges } from './group'
 export { reconcile } from './reconcile'
 export {

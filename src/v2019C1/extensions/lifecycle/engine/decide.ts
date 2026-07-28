@@ -1,7 +1,15 @@
 import { invariant } from '@dialecte/core/utils'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
-import type { DecisionGroup, DecisionMap, DiffNode, GroupDecision } from './diff.types'
+import type { DecisionGroup, DecisionMap, DiffNode, DiffReport, GroupDecision } from './diff.types'
+
+/** The decision groups scoped to one instance root (empty when the instance is absent/up-to-date). */
+export function groupsForInstance(
+	report: DiffReport | undefined,
+	instanceId: string,
+): DecisionGroup[] {
+	return report?.instances.find((instance) => instance.rootRef?.id === instanceId)?.groups ?? []
+}
 
 /** The action of a decision (absent -> accept; string or object form). */
 export function decisionAction(decision: GroupDecision | undefined): 'accept' | 'skip' {

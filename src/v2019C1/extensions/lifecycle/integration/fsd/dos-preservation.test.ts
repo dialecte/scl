@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import {
@@ -112,7 +113,7 @@ async function updateAndSerialize(
 			ref: functionRef,
 			anchor: bayRef,
 			report: rep,
-			decisions: decide(rep.groups),
+			decisions: decide(allGroups(rep)),
 		})
 	})
 	return (await targetDoc.query.getSnapshot({ as: 'xml' })) as string
@@ -127,7 +128,7 @@ describe('lifecycle — author DOS under a matched LNode/Private (content-refere
 			ref: functionRef,
 			anchor: bayRef,
 		})
-		const dosGroup = rep.groups.find((g) => g.primary.tagName === 'DOS')
+		const dosGroup = allGroups(rep).find((g) => g.primary.tagName === 'DOS')
 		expect(dosGroup?.primary.change).toBe('target-only')
 		expect(dosGroup?.suggestedAction).toBe('skip')
 	})

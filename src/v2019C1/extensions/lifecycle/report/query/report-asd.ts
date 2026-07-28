@@ -1,16 +1,20 @@
 import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reportFunction } from './report-function'
+import { buildReportInstance } from './report-instance'
 import { foldSatelliteCompanions } from './satellite-companions'
 
-import { diff, mergeReports } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { collectComposedFunctionUuids } from '@/v2019C1/extensions/lifecycle/instance'
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
-import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DiffReport,
+	InstanceDiff,
+	ReportInstance,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
@@ -43,27 +47,46 @@ export async function reportAsd(
 			? []
 			: await findInstancesByTemplateUuid(query, { tagName: 'Application', sourceUuid })
 
-	const reports: DiffReport[] = []
+	const reportInstances: ReportInstance[] = []
 	if (applicationInstances.length === 0) {
-		// first-time = fast track; the whole application is added
-		reports.push(
-			await reportApplicationInstance(query, { sourceQuery, applicationRef, instance: undefined }),
+		const instanceDiff = await reportApplicationInstance(query, {
+			sourceQuery,
+			applicationRef,
+			instance: undefined,
+		})
+		reportInstances.push(
+			await buildReportInstance(query, {
+				instanceDiff,
+				instance: undefined,
+				sourceQuery,
+				sourceRef: applicationRef,
+			}),
 		)
 	} else {
 		for (const instance of applicationInstances) {
-			reports.push(
-				await reportApplicationInstance(query, { sourceQuery, applicationRef, instance }),
+			const instanceDiff = await reportApplicationInstance(query, {
+				sourceQuery,
+				applicationRef,
+				instance,
+			})
+			reportInstances.push(
+				await buildReportInstance(query, {
+					instanceDiff,
+					instance,
+					sourceQuery,
+					sourceRef: applicationRef,
+				}),
 			)
 		}
 	}
 
-	const functionReports = await reportComposedFunctions(query, {
+	const functionInstances = await reportComposedFunctions(query, {
 		sourceQuery,
 		applicationRef,
 		scenario,
 	})
 
-	return mergeReports([...reports, ...functionReports] as [DiffReport, ...DiffReport[]])
+	return assembleReport([...reportInstances, ...functionInstances])
 }
 
 /** Diff one Application instance and fold its (layer + cross-cutting) satellites. */
@@ -74,7 +97,7 @@ async function reportApplicationInstance(
 		applicationRef: Scl.Ref<'Application'>
 		instance: AnyTrackedRecord | undefined
 	},
-): Promise<DiffReport> {
+): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
 
 	const applicationReport = await diff({
@@ -112,15 +135,10 @@ async function reportApplicationInstance(
 		report: applicationReport,
 	})
 
-	if (instance) {
-		const title = await extractElementTitle(query, instance)
-		for (const group of applicationReport.groups) group.instanceScopeTitle = title
-	}
-
 	return applicationReport
 }
 
-/** One report per composed Function INSTANCE (found globally by `templateUuid`). */
+/** One {@link ReportInstance} per composed Function INSTANCE (found globally by `templateUuid`). */
 async function reportComposedFunctions(
 	query: Core.Query<Config>,
 	params: {
@@ -128,11 +146,11 @@ async function reportComposedFunctions(
 		applicationRef: Scl.Ref<'Application'>
 		scenario?: LifecycleScenario
 	},
-): Promise<DiffReport[]> {
+): Promise<ReportInstance[]> {
 	const { sourceQuery, applicationRef, scenario } = params
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 
-	const reports: DiffReport[] = []
+	const reportInstances: ReportInstance[] = []
 	for (const functionUuid of functionUuids) {
 		const [sourceFunction] = await sourceQuery.any.findByAttributes({
 			tagName: 'Function',
@@ -150,19 +168,36 @@ async function reportComposedFunctions(
 						sourceUuid: functionUuid,
 					})
 		if (functionInstances.length === 0) {
-			reports.push(await reportFunction(query, { sourceQuery, functionRef, instance: undefined }))
+			const instanceDiff = await reportFunction(query, {
+				sourceQuery,
+				functionRef,
+				instance: undefined,
+			})
+			reportInstances.push(
+				await buildReportInstance(query, {
+					instanceDiff,
+					instance: undefined,
+					sourceQuery,
+					sourceRef: functionRef,
+				}),
+			)
 			continue
 		}
 		for (const functionInstance of functionInstances) {
-			const functionReport = await reportFunction(query, {
+			const instanceDiff = await reportFunction(query, {
 				sourceQuery,
 				functionRef,
 				instance: functionInstance,
 			})
-			const title = await extractElementTitle(query, functionInstance)
-			for (const group of functionReport.groups) group.instanceScopeTitle = title
-			reports.push(functionReport)
+			reportInstances.push(
+				await buildReportInstance(query, {
+					instanceDiff,
+					instance: functionInstance,
+					sourceQuery,
+					sourceRef: functionRef,
+				}),
+			)
 		}
 	}
-	return reports
+	return reportInstances
 }

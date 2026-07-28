@@ -1,6 +1,7 @@
 import { describe } from 'vitest'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -110,7 +111,7 @@ describe('lifecycle.apply — removing a retired FunctionCategory (function-laye
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(rep.groups),
+				decisions: testCase.decide(allGroups(rep)),
 			})
 		})
 

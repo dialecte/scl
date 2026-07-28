@@ -3,7 +3,7 @@ import { foldSatelliteCompanions } from './satellite-companions'
 import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers/function'
 
 import type { Config, Scl } from '@/v2019C1/config'
-import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
@@ -23,9 +23,9 @@ export async function foldCarriedSatellites(
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'>
 		instance: AnyRefOrRecord | undefined
-		report: DiffReport
+		report: InstanceDiff
 	},
-): Promise<DiffReport> {
+): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance, report } = params
 	const satelliteRefs = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
 	const instanceSatelliteRefs = instance

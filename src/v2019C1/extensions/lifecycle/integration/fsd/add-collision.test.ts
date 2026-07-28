@@ -1,6 +1,7 @@
 import { describe } from 'vitest'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -125,7 +126,7 @@ describe('lifecycle scenario — reconcile resolves a added element name collisi
 		})
 		const decisions = new Map<string, GroupDecision>()
 		if (testCase.overrideName) {
-			const addGroup = rep.groups.find(
+			const addGroup = allGroups(rep).find(
 				(group) => group.change === 'added' && group.primary.sourceRef?.id === sourceSubRef.id,
 			)
 			if (!addGroup) throw new Error('add group not found')

@@ -2,6 +2,7 @@ import { reportFsd } from './report-fsd'
 
 import { describe, expect } from 'vitest'
 
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
@@ -74,7 +75,7 @@ describe('reportFsd — first-time instantiate carries the FunctionCategory sate
 			scenario: 'instantiate',
 		})
 
-		const functionGroup = report.groups.find((group) => group.primary.tagName === 'Function')
+		const functionGroup = allGroups(report).find((group) => group.primary.tagName === 'Function')
 		expect(functionGroup).toBeDefined()
 
 		const category = functionGroup!.companions.find((node) => node.tagName === 'FunctionCategory')
