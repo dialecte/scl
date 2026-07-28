@@ -1,7 +1,7 @@
 import {
 	deep as deepExtract,
-	addChildrenTo,
 	cloneTree,
+	mergeChildrenInto,
 	resolveStructureRef,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { reference } from '@/v2019C1/extensions/reference'
@@ -88,11 +88,12 @@ export async function cloneFunctionCategories(
 		const categoryRef: Scl.Ref<'FunctionCategory'> = { tagName: 'FunctionCategory', id: categoryId }
 
 		// A same-name category already in the target IS the catalog entry (categories are
-		// name-keyed). Do NOT skip - that would drop this function's classification. Instead
-		// add the category's referencing children (FunctionCatRef, SubCategory) to it.
+		// name-keyed). Do NOT skip - that would drop this function's classification. Merge the
+		// category's referencing children (FunctionCatRef, SubCategory) into it, reusing same-name
+		// nested containers instead of duplicating them.
 		const existing = await findExistingCategoryByName(tx, sourceQuery, categoryId)
 		if (existing) {
-			const addedMappings = await addChildrenTo(tx, {
+			const addedMappings = await mergeChildrenInto(tx, {
 				sourceQuery,
 				source: categoryRef,
 				target: existing,

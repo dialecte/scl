@@ -24,6 +24,8 @@ export async function foldCrossCuttingSatellites(
 		primaryRef: Scl.Ref<Scl.ElementsOf>
 		instancePrimaryRef?: Scl.Ref<Scl.ElementsOf>
 		report: InstanceDiff
+		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
+		refsAlwaysAdded?: boolean
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, instancePrimaryRef, report } = params
@@ -40,5 +42,6 @@ export async function foldCrossCuttingSatellites(
 		instanceSatelliteRefs,
 		report,
 		instanceScopeId: instancePrimaryRef?.id,
+		refsAlwaysAdded: params.refsAlwaysAdded ?? false,
 	})
 }

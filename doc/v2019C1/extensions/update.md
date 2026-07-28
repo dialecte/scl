@@ -114,8 +114,8 @@ whose `dependsOn` parent is skipped.
 
 Several instances of one template may live under one anchor (each with a unique instance `uuid`,
 sharing one `templateUuid`). `report` enumerates **every** instance and returns one
-{@link ReportInstance} per instance in `report.instances`, each carrying its own `groups`, `title`,
-and `memberIds`. There is **one** report holding all instances.
+{@link ReportInstance} per instance in `report.instances`, each carrying its own `groups` and
+`title`. There is **one** report holding all instances.
 
 The decision map is the selector: accept the groups of the instances you want and skip the rest to
 update a **subset** (e.g. 2 of 4). `apply` reconciles each instance independently, gated by only its
@@ -246,6 +246,12 @@ A **satellite** is an element that lives **outside** the transplanted subtree bu
 
 Each satellite's change folds into the **primary's** decision group as a read-only companion. Satellites are never independently decidable: accepting a group applies the primary **and** its satellites atomically; skipping applies neither. You cannot accept one side of a tightly-linked pair and leave the other broken.
 
+The companion preserves the satellite's **structure**: when a change is nested inside a container that already exists in the target (e.g. a new reference added into an existing `FunctionCategory` / `SubCategory`), the existing container rides as the companion — anchored to its instance — carrying the added element **in place**, so a consumer can show and couple the addition against the real container rather than as a detached node.
+
+::: info Instantiate creates its own references
+On `scenario: 'instantiate'`, a shared satellite container may already exist (a previous instantiation created it), but each instantiation owns its **own** per-instance reference children. So a reference into an already-existing shared satellite is reported as **added** (the container itself is matched and merged into), never a no-op — mirroring what `apply` writes (the new references are merged into the existing container).
+:::
+
 ### On `apply` / `update` — a 3-way merge
 
 For each satellite the update verb does one of:
@@ -292,7 +298,6 @@ type ReportInstance = {
 	upToDate: boolean // nothing to apply for this instance (no groups)
 	tree: DiffNode // full diff tree for this instance (unchanged context included)
 	groups: DecisionGroup[] // this instance's accept/skip units
-	memberIds: string[] // every element id of this instance (subtree + satellites) — select/highlight
 }
 ````
 

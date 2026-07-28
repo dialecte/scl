@@ -79,9 +79,19 @@ export async function diff(params: {
 	 * Only consulted when the ref would otherwise be kept.
 	 */
 	leftoverRefPolicy?: LeftoverRefPolicy
+	/**
+	 * Treat every REFERENCE child (link element) as `added` instead of matching it to an existing
+	 * instance ref by template lineage. Set for a satellite folded on the INSTANTIATE scenario: a
+	 * fresh instantiation always creates its OWN per-instance refs (e.g. one `FunctionCatRef` per new
+	 * SubFunction), so a ref that lineage-matches a PRIOR instance's ref is still a genuine addition.
+	 * The container itself still matches (merge into it); only its ref children are forced added, and
+	 * the prior instance's refs are kept as unchanged context (with `keepLeftoverRefs`).
+	 */
+	refsAlwaysAdded?: boolean
 }): Promise<InstanceDiff> {
 	const { sourceQuery, targetQuery, sourceRootRef, instanceRootRef, keepLeftoverRefs } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
+	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	if (!sourceTree) throw new Error('diff: source subtree not found')
@@ -108,6 +118,7 @@ export async function diff(params: {
 		sourceUuids,
 		keepLeftoverRefs: keepLeftoverRefs ?? false,
 		leftoverRefPolicy,
+		refsAlwaysAdded,
 	})
 	const summary = summarize(root)
 	const groups = groupChanges(root, instanceTree.id)
@@ -124,10 +135,12 @@ async function diffMatched(
 		sourceUuids: ReadonlySet<string>
 		keepLeftoverRefs: boolean
 		leftoverRefPolicy?: LeftoverRefPolicy
+		refsAlwaysAdded?: boolean
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
+	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 	const attributeChanges = await computeAttributeChanges(sourceQuery, {
 		targetQuery,
 		sourceNode,
@@ -145,6 +158,7 @@ async function diffMatched(
 			instanceNode,
 			index,
 			matchedInstanceIds,
+			refsAlwaysAdded,
 		})
 		if (matched) {
 			matchedInstanceIds.add(matched.id)
@@ -157,6 +171,7 @@ async function diffMatched(
 					sourceUuids,
 					keepLeftoverRefs,
 					leftoverRefPolicy,
+					refsAlwaysAdded,
 				}),
 			)
 		} else {
@@ -236,6 +251,7 @@ async function matchInstanceChild(
 		instanceNode: AnyTreeRecord
 		index: Map<string, AnyTreeRecord>
 		matchedInstanceIds: ReadonlySet<string>
+		refsAlwaysAdded?: boolean
 	},
 ): Promise<AnyTreeRecord | undefined> {
 	const { targetQuery, sourceChild, instanceNode, index, matchedInstanceIds } = params
@@ -249,6 +265,10 @@ async function matchInstanceChild(
 		const matched = index.get(sourceUuid)
 		return matched && matched.tagName === sourceChild.tagName ? matched : undefined
 	}
+
+	// INSTANTIATE: a fresh instantiation creates its OWN per-instance refs, so never match a link to
+	// a prior instance's ref — surface it as `added` (the prior refs stay as kept context).
+	if (params.refsAlwaysAdded && REFERENCE_TAG_NAMES.has(sourceChild.tagName)) return undefined
 
 	const candidates = instanceNode.tree.filter(
 		(instanceChild) =>

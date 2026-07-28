@@ -1,9 +1,6 @@
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import {
-	collectChangedDescendants,
-	groupChanges,
-} from '@/v2019C1/extensions/lifecycle/engine/group'
+import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 
 import type { Config, Scl } from '@/v2019C1/config'
@@ -40,6 +37,8 @@ export async function foldSatelliteCompanions(
 		report: InstanceDiff
 		/** Instance scope for a standalone satellite group (primary-unchanged case). */
 		instanceScopeId?: string
+		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
+		refsAlwaysAdded?: boolean
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
@@ -66,6 +65,10 @@ export async function foldSatelliteCompanions(
 			// Provenance override: a leftover ref IS a genuine removal when its target is in the
 			// source's own scope and the source satellite no longer references it (see below).
 			leftoverRefPolicy: await buildLeftoverRefPolicy(query, sourceQuery, satelliteRef),
+			// INSTANTIATE: the satellite container may already exist (matched), but this instantiation's
+			// per-instance refs are genuinely new — classify them added instead of lineage-matching a
+			// prior instance's refs (which would report a no-op while apply still merges 4 more in).
+			refsAlwaysAdded: params.refsAlwaysAdded ?? false,
 		})
 		const changed =
 			satelliteReport.summary.added +
@@ -75,11 +78,13 @@ export async function foldSatelliteCompanions(
 		if (!changed) continue
 
 		if (group) {
-			// Fold the satellite root AND every changed descendant (e.g. a SubCategory inside a
-			// FunctionCategory) as companions of the primary group, so `acceptedRefIds` collects
-			// the nested ids and the gated reconcile writes them.
-			if (satelliteReport.root.change !== 'unchanged') group.companions.push(satelliteReport.root)
-			collectChangedDescendants({ node: satelliteReport.root, out: group.companions })
+			// Fold the satellite as a STRUCTURED companion of the primary group: push the diff
+			// ROOT and preserve its nesting (the root may be an already-existing container matched
+			// by `instanceRef`, carrying a newly-`added` descendant). Keeping the structure lets the
+			// review correlate the added descendant to its existing container by position — a flat
+			// bag loses that anchor (a `FunctionCatRef` has no `name` to resolve against). The gate
+			// (`acceptedRefIds`) recurses the subtree, so nested accepted ids are still written.
+			group.companions.push(satelliteReport.root)
 		} else {
 			// The primary itself is unchanged, so a satellite-only change has no group to ride.
 			// Surface it as its OWN decision group(s) — otherwise it would be invisible and

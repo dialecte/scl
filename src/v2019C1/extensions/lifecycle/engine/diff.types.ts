@@ -25,7 +25,7 @@ export type DiffSummary = { added: number; removed: number; modified: number }
 /**
  * The engine's per-instance diff primitive: one instance's change `root` tree, its
  * decision `groups`, and its `summary`. The report builders enrich this into a
- * {@link ReportInstance} (title / linkage / member ids) and aggregate several into a
+ * {@link ReportInstance} (title / linkage) and aggregate several into a
  * {@link DiffReport}. Internal to the report pipeline — consumers see `DiffReport`.
  */
 export type InstanceDiff = {
@@ -104,8 +104,6 @@ export type ReportInstance = {
 	tree: DiffNode
 	/** The change tree folded into accept/skip units for this instance. */
 	groups: DecisionGroup[]
-	/** Every element id belonging to this instance (subtree ∪ external satellites) — select/highlight. */
-	memberIds: string[]
 }
 
 export type DiffReport = {

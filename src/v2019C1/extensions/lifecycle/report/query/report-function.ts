@@ -25,9 +25,12 @@ export async function reportFunction(
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'>
 		instance: AnyRefOrRecord | undefined
+		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
+		refsAlwaysAdded?: boolean
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
+	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 
 	const report = await diff({
 		sourceQuery,
@@ -44,6 +47,7 @@ export async function reportFunction(
 		functionRef,
 		instance,
 		report,
+		refsAlwaysAdded,
 	})
 	return foldCrossCuttingSatellites(query, {
 		sourceQuery,
@@ -52,5 +56,6 @@ export async function reportFunction(
 			? ({ tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>)
 			: undefined,
 		report: withLayerSatellites,
+		refsAlwaysAdded,
 	})
 }

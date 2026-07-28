@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.11] - 2026-07-28
+
+### Changed
+
+- A carried satellite's changes now fold onto its decision group as a **structured** companion — the satellite's diff root (with its nesting preserved) — instead of a flattened bag of changed descendants. When a template change only adds content into an already-existing satellite container (e.g. a new `FunctionCatRef` into a `FunctionCategory` that a prior instantiation created), the existing container rides as the companion (anchored by its `instanceRef`) carrying the added node nested inside, so a consumer can place the addition against the real container instead of guessing by tag/name.
+
+### Fixed
+
+- On re-instantiating a template, a node newly added into an already-existing satellite container is now surfaced (and applied) correctly: the change is no longer flattened away from its container, so merge review can show/couple it and accepting the group writes it into the existing container without duplicating the container.
+- On `scenario: 'instantiate'`, a shared satellite's per-instance reference children are now reported as `added` instead of being matched to a previous instance's references. Placing another instance whose classification container (e.g. a `FunctionCategory` / `SubCategory`) already exists no longer reports a false no-op — the new references are shown as additions into the existing container, consistent with what `apply` writes (`report` no longer disagreed with `apply` for the second instantiation of a carried satellite). New internal `refsAlwaysAdded` diff option threads the scenario to the satellite fold.
+- The apply gate now recurses a structured companion's subtree, so a nested accepted reference is still written (a change nested under an unchanged container is no longer dropped from what gets applied).
+
 ## [0.3.10] - 2026-07-28
 
 ### Added
@@ -14,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The lifecycle report is now one entry per instance. `DiffReport` exposes `instances: ReportInstance[]` — each with `title`, `linked`, `upToDate`, `tree`, `groups`, and `memberIds` — instead of the flat `roots` plus per-group `instanceScopeId`/`instanceScopeTitle`. Use `allGroups(report)` to flatten every instance's groups; `mergeReports` is replaced by `assembleReport`.
+- The lifecycle report is now one entry per instance. `DiffReport` exposes `instances: ReportInstance[]` — each with `title`, `linked`, `upToDate`, `tree`, and `groups` — instead of the flat `roots` plus per-group `instanceScopeId`/`instanceScopeTitle`. Use `allGroups(report)` to flatten every instance's groups; `mergeReports` is replaced by `assembleReport`.
 
 ### Removed
 

@@ -1,8 +1,8 @@
 import { resolveAppliedSatellites } from './applied-satellites'
 
 import {
-	addChildrenTo,
 	cloneTree,
+	mergeChildrenInto,
 	resolveStructureRef,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
@@ -41,7 +41,7 @@ export async function cloneAppliedSatellites(
 	for (const satelliteRef of satellites) {
 		const existing = await findExistingSatelliteByName(tx, sourceQuery, satelliteRef)
 		if (existing) {
-			const addedMappings = await addChildrenTo(tx, {
+			const addedMappings = await mergeChildrenInto(tx, {
 				sourceQuery,
 				source: satelliteRef,
 				target: existing,

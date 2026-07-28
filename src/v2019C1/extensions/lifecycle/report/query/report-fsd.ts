@@ -44,6 +44,7 @@ export async function reportFsd(
 			sourceQuery,
 			functionRef,
 			instance: undefined,
+			refsAlwaysAdded: scenario === 'instantiate',
 		})
 		return assembleReport([
 			await buildReportInstance(query, {
@@ -57,7 +58,12 @@ export async function reportFsd(
 
 	const reportInstances: ReportInstance[] = []
 	for (const instance of instances) {
-		const instanceDiff = await reportFunction(query, { sourceQuery, functionRef, instance })
+		const instanceDiff = await reportFunction(query, {
+			sourceQuery,
+			functionRef,
+			instance,
+			refsAlwaysAdded: scenario === 'instantiate',
+		})
 		reportInstances.push(
 			await buildReportInstance(query, {
 				instanceDiff,

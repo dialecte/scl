@@ -24,6 +24,8 @@ export async function foldCarriedSatellites(
 		functionRef: Scl.Ref<'Function'>
 		instance: AnyRefOrRecord | undefined
 		report: InstanceDiff
+		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
+		refsAlwaysAdded?: boolean
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance, report } = params
@@ -40,5 +42,6 @@ export async function foldCarriedSatellites(
 		instanceSatelliteRefs,
 		report,
 		instanceScopeId: instance?.id,
+		refsAlwaysAdded: params.refsAlwaysAdded ?? false,
 	})
 }

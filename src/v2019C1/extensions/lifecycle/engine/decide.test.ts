@@ -52,6 +52,27 @@ describe('decide', () => {
 		const g2 = group('g2', 'modified', node('modified', 'Function', 'fn-2'))
 		const g3 = group('g3', 'removed', node('removed', 'LNode', 'ln-x'))
 
+		// A STRUCTURED companion: an unchanged container (the existing FunctionCategory,
+		// matched by instanceRef) carrying an `added` ref nested inside — the shape a
+		// satellite folded onto an already-existing container takes. The gate must recurse
+		// the companion subtree to collect the nested added id, else the accepted ref is
+		// never written.
+		const nestedCategory: DiffNode = {
+			change: 'unchanged',
+			tagName: 'FunctionCategory',
+			sourceRef: { tagName: 'FunctionCategory', id: 'cat-1' },
+			instanceRef: { tagName: 'FunctionCategory', id: 'cat-1' },
+			children: [
+				{
+					change: 'added',
+					tagName: 'FunctionCatRef',
+					sourceRef: { tagName: 'FunctionCatRef', id: 'ref-1' },
+					children: [],
+				},
+			],
+		}
+		const g4 = group('g4', 'modified', node('modified', 'Function', 'fn-3'), [nestedCategory])
+
 		const testCases: Record<string, TestCase> = {
 			'accept one, skip another -> only accepted ids (primary + companions)': {
 				groups: [g1, g2],
@@ -75,6 +96,11 @@ describe('decide', () => {
 				groups: [g3],
 				decisions: [['g3', 'skip']],
 				expected: { sourceIds: [], instanceIds: [] },
+			},
+			'structured companion: nested added id is collected (gate recurses the subtree)': {
+				groups: [g4],
+				decisions: [['g4', 'accept']],
+				expected: { sourceIds: ['fn-3', 'ref-1'], instanceIds: [] },
 			},
 		}
 

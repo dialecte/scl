@@ -11,7 +11,6 @@ import {
 } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
-import type { DecisionGroup } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -142,8 +141,8 @@ describe('repro — ASD application instantiate w/ FunctionCategory satellite (C
 	})
 
 	// SYMPTOM 1 (application instantiate): the composed function's FunctionCategory satellite is
-	// folded AND part of the function instance's member cluster.
-	it('instantiate report: satellite folded on the composed function AND in its memberIds', async () => {
+	// folded as a companion of the function decision group.
+	it('instantiate report: satellite folded on the composed function', async () => {
 		const { source, target } = await createSclTestProject({
 			sourceXml,
 			targetXml: emptyTargetXml,
@@ -163,15 +162,6 @@ describe('repro — ASD application instantiate w/ FunctionCategory satellite (C
 		expect(functionGroup, 'composed function group present').toBeDefined()
 		const catCompanion = functionGroup?.companions.find((c) => c.tagName === 'FunctionCategory')
 		expect(catCompanion, 'FunctionCategory folded as companion of the function group').toBeDefined()
-
-		const fnInstance = rep.instances.find(
-			(inst) => inst.tree.tagName === 'Function' && inst.groups.length > 0,
-		)
-		expect(fnInstance, 'a reported Function instance').toBeDefined()
-		const members = new Set(fnInstance!.memberIds)
-		const companionMemberIds = companionMemberSet(functionGroup ? [functionGroup] : [])
-		const missing = [...companionMemberIds].filter((cid) => !members.has(cid))
-		expect(missing, 'satellite companion ids are in the function memberIds').toEqual([])
 	})
 
 	// SYMPTOM 3 (application update, screenshot 3): applying an update against an UNCHANGED
@@ -424,7 +414,49 @@ describe('repro — ASD application instantiate w/ FunctionCategory satellite (C
 			.map((inst) => inst.tree.tagName)
 		expect(outdated, 'the Application carrying the satellite is outdated').toContain('Application')
 	})
+
+	// SYMPTOM (user repro, second instantiation): the Measurement/Current satellite already exists
+	// (created by the first instantiate). Previewing a SECOND instantiation must report the NEW
+	// per-instance FunctionCatRefs as `added` NESTED under the existing (matched) category/subcategory
+	// — so merge-review shows/couples them (they are NOT unchanged; the apply merges 4 more refs in).
+	it('second instantiation preview: new FunctionCatRefs fold as added under the existing category', async () => {
+		const { source, target } = await instantiateInto()
+
+		const rep = await report(target.document.query, {
+			verb: 'asd',
+			sourceQuery: source.document.query,
+			ref: applicationRef,
+			anchor: bayRef,
+			scenario: 'instantiate',
+		})
+
+		const functionGroup = allGroups(rep).find((g) => g.primary.tagName === 'Function')
+		expect(functionGroup, 'composed function group present').toBeDefined()
+
+		const category = functionGroup!.companions.find((c) => c.tagName === 'FunctionCategory')
+		expect(category, 'existing FunctionCategory folded as a structured companion').toBeDefined()
+		expect(category!.instanceRef?.id, 'category anchored to the existing instance').toBeDefined()
+
+		const addedRefs = collectAdded(category!).filter((n) => n.tagName === 'FunctionCatRef')
+		expect(addedRefs.length, 'the four new per-instance FunctionCatRefs are reported added').toBe(4)
+	})
 })
+
+type DiffLike = { change?: string; tagName: string; children?: unknown[] }
+
+function collectByChange(node: DiffLike, wanted: string): { change?: string; tagName: string }[] {
+	const out: { change?: string; tagName: string }[] = []
+	const walk = (n: DiffLike): void => {
+		if (n.change === wanted) out.push({ change: n.change, tagName: n.tagName })
+		for (const child of (n.children as DiffLike[]) ?? []) walk(child)
+	}
+	walk(node)
+	return out
+}
+
+function collectAdded(node: DiffLike): { change?: string; tagName: string }[] {
+	return collectByChange(node, 'added')
+}
 
 function collectRemoved(node: {
 	change?: string
@@ -445,15 +477,4 @@ function collectRemoved(node: {
 	if (anyNode.primary) walk(anyNode.primary as never)
 	for (const companion of anyNode.companions ?? []) walk(companion as never)
 	return out
-}
-
-function companionMemberSet(groups: DecisionGroup[]): Set<string> {
-	const ids = new Set<string>()
-	const walk = (node: DecisionGroup['companions'][number]): void => {
-		const ref = node.sourceRef ?? node.instanceRef
-		if (ref?.id) ids.add(ref.id)
-		for (const child of node.children) walk(child)
-	}
-	for (const group of groups) for (const companion of group.companions) walk(companion)
-	return ids
 }

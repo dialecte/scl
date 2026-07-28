@@ -53,6 +53,7 @@ export async function reportAsd(
 			sourceQuery,
 			applicationRef,
 			instance: undefined,
+			refsAlwaysAdded: scenario === 'instantiate',
 		})
 		reportInstances.push(
 			await buildReportInstance(query, {
@@ -68,6 +69,7 @@ export async function reportAsd(
 				sourceQuery,
 				applicationRef,
 				instance,
+				refsAlwaysAdded: scenario === 'instantiate',
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
@@ -96,9 +98,11 @@ async function reportApplicationInstance(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		instance: AnyTrackedRecord | undefined
+		refsAlwaysAdded?: boolean
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
+	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 
 	const applicationReport = await diff({
 		sourceQuery,
@@ -122,6 +126,7 @@ async function reportApplicationInstance(
 		instanceSatelliteRefs,
 		report: applicationReport,
 		instanceScopeId: instance?.id,
+		refsAlwaysAdded,
 	})
 
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
@@ -133,6 +138,7 @@ async function reportApplicationInstance(
 			? ({ tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>)
 			: undefined,
 		report: applicationReport,
+		refsAlwaysAdded,
 	})
 
 	return applicationReport
@@ -172,6 +178,7 @@ async function reportComposedFunctions(
 				sourceQuery,
 				functionRef,
 				instance: undefined,
+				refsAlwaysAdded: scenario === 'instantiate',
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
@@ -188,6 +195,7 @@ async function reportComposedFunctions(
 				sourceQuery,
 				functionRef,
 				instance: functionInstance,
+				refsAlwaysAdded: scenario === 'instantiate',
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {

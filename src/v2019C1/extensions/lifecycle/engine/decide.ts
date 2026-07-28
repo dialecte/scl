@@ -86,6 +86,11 @@ function groupById(groups: DecisionGroup[], id: string): DecisionGroup | undefin
  * Collect the record ids reconcile may write, from every accepted group's
  * primary + companions. Added/modified nodes contribute their `sourceRef`
  * (reconcile matches/adds by source); removed nodes contribute `instanceRef`.
+ *
+ * A companion can be a STRUCTURED subtree (a satellite folded onto an existing
+ * container: an unchanged container carrying a changed descendant), so recurse each
+ * node and skip unchanged context — otherwise a nested accepted change is never
+ * written.
  */
 export function acceptedRefIds(params: {
 	groups: DecisionGroup[]
@@ -98,11 +103,22 @@ export function acceptedRefIds(params: {
 	for (const group of groups) {
 		if (!isAccepted({ group, decisions })) continue
 		for (const node of [group.primary, ...group.companions]) {
-			collectNodeId({ node, sourceIds, instanceIds })
+			collectNodeIds({ node, sourceIds, instanceIds })
 		}
 	}
 
 	return { sourceIds, instanceIds }
+}
+
+/** Collect the ids of a node and every descendant (structured companions carry nesting). */
+function collectNodeIds(params: {
+	node: DiffNode
+	sourceIds: Set<string>
+	instanceIds: Set<string>
+}): void {
+	const { node, sourceIds, instanceIds } = params
+	collectNodeId({ node, sourceIds, instanceIds })
+	for (const child of node.children) collectNodeIds({ node: child, sourceIds, instanceIds })
 }
 
 function collectNodeId(params: {
@@ -111,6 +127,7 @@ function collectNodeId(params: {
 	instanceIds: Set<string>
 }): void {
 	const { node, sourceIds, instanceIds } = params
+	if (node.change === 'unchanged') return
 	if (node.change === 'removed' || node.change === 'target-only') {
 		if (node.instanceRef?.id) instanceIds.add(node.instanceRef.id)
 	} else if (node.sourceRef?.id) {
