@@ -4,6 +4,7 @@ import * as instantiateTransaction from './instantiate'
 import { report } from './report'
 import { deep } from './transplant'
 import * as updateTransaction from './update'
+import { checkTemplateUuids } from './validate'
 
 /**
  * SCL content lifecycle — the verbs that move template/instance content across
@@ -31,6 +32,7 @@ import * as updateTransaction from './update'
 export const lifecycle = {
 	query: {
 		report,
+		checkTemplateUuids,
 	},
 	transaction: {
 		extract: extractTransaction,
