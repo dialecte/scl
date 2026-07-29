@@ -11,7 +11,7 @@ import type { SclTest } from '@/v2019C1/test'
 
 // `scenario` split: re-applying an already-instantiated ASD.
 //  - `instantiate` -> place ANOTHER instance (name collision auto-resolved, e.g. HMI_1);
-//  - `update` (default) -> reconcile the existing instance (idempotent no-op here).
+//  - `template` (default) -> reconcile the existing instance (idempotent no-op here).
 // This proves instantiate and update are distinct operations chosen explicitly.
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -84,7 +84,7 @@ describe('lifecycle scenario — re-apply an ASD (instantiate vs update)', () =>
 		'update reconciles the existing instance (no duplicate)': {
 			sourceXml,
 			targetXml,
-			scenario: 'update',
+			scenario: 'template',
 			expectedQueries: [
 				'//v2019C1:Application[@name="HMI"]', // reconciled in place
 				'//default:Bay/default:Function[@name="Prot"]',

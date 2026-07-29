@@ -13,6 +13,8 @@ import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -52,17 +54,29 @@ export async function reconcile(
 		overrides?: CollisionOverrides
 		/** Type-dedup name authority for added subtrees, forwarded to `importTypes`. */
 		keepNameTypesFrom?: KeepNameTypesFrom
+		/** How instance elements match source. `templateUuid` (default) or `uuid` (fork). */
+		matchKey?: MatchKey
+		/** Identity write mode for grafted elements. `stamp-template` (default) or `keep` (fork). */
+		identityMode?: IdentityMode
 	},
 ): Promise<void> {
-	const { sourceQuery, sourceRootRef, instanceRootRef, accepted, overrides, keepNameTypesFrom } =
-		params
+	const {
+		sourceQuery,
+		sourceRootRef,
+		instanceRootRef,
+		accepted,
+		overrides,
+		keepNameTypesFrom,
+		matchKey = 'templateUuid',
+		identityMode = 'stamp-template',
+	} = params
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	const instanceTree = await tx.any.getTree(instanceRootRef)
 	if (!sourceTree || !instanceTree) return
 
 	const index = new Map<string, AnyTreeRecord>()
-	await indexByTemplateUuid(tx, { node: instanceTree, index })
+	await indexByMatchKey(tx, { node: instanceTree, index, matchKey })
 
 	const sourceUuids = new Set<string>()
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
@@ -83,10 +97,12 @@ export async function reconcile(
 		accepted,
 		overrides,
 		keepNameTypesFrom,
+		matchKey,
+		identityMode,
 	})
 
 	// removed from the template: delete instance elements whose lineage is gone
-	await deleteRemoved(tx, { instanceNode: instanceTree, sourceUuids, accepted })
+	await deleteRemoved(tx, { instanceNode: instanceTree, sourceUuids, accepted, matchKey })
 }
 
 async function reconcileChildren(
@@ -99,10 +115,21 @@ async function reconcileChildren(
 		accepted: AcceptedIds | undefined
 		overrides: CollisionOverrides | undefined
 		keepNameTypesFrom: KeepNameTypesFrom | undefined
+		matchKey: MatchKey
+		identityMode: IdentityMode
 	},
 ): Promise<void> {
-	const { sourceQuery, sourceNode, instanceParent, index, accepted, overrides, keepNameTypesFrom } =
-		params
+	const {
+		sourceQuery,
+		sourceNode,
+		instanceParent,
+		index,
+		accepted,
+		overrides,
+		keepNameTypesFrom,
+		matchKey,
+		identityMode,
+	} = params
 	const matchedInstanceIds = new Set<string>()
 	for (const sourceChild of sourceNode.tree) {
 		const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
@@ -136,6 +163,8 @@ async function reconcileChildren(
 				accepted,
 				overrides,
 				keepNameTypesFrom,
+				matchKey,
+				identityMode,
 			})
 			continue
 		}
@@ -150,12 +179,13 @@ async function reconcileChildren(
 			strip: false,
 			withTypes: { keepNameFrom: keepNameTypesFrom },
 		})
-		await writeIdentity(tx, { mappings: recordMappings, mode: 'stamp-template' })
+		await writeIdentity(tx, { mappings: recordMappings, mode: identityMode })
 
 		// validate the added element against its instance-parent context: apply any
-		// user edit then auto-resolve a name collision among siblings (schema constraint)
+		// user edit then auto-resolve a name collision among siblings (schema constraint).
+		// Fork keeps identity (same-file revision) — no re-stamp, no collision bump.
 		const addRoot = recordMappings.find((mapping) => mapping.source.id === sourceChild.id)
-		if (addRoot) {
+		if (addRoot && identityMode !== 'keep') {
 			await resolvePlacementCollision(tx, {
 				ref: addRoot.target,
 				parentRef: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,
@@ -195,11 +225,12 @@ async function deleteRemoved(
 		instanceNode: AnyTreeRecord
 		sourceUuids: ReadonlySet<string>
 		accepted: AcceptedIds | undefined
+		matchKey: MatchKey
 	},
 ): Promise<void> {
-	const { instanceNode, sourceUuids, accepted } = params
+	const { instanceNode, sourceUuids, accepted, matchKey } = params
 	const toDelete: AnyTreeRecord[] = []
-	await collectRemoved(tx, { node: instanceNode, sourceUuids, accepted, out: toDelete })
+	await collectRemoved(tx, { node: instanceNode, sourceUuids, accepted, matchKey, out: toDelete })
 
 	for (const record of toDelete) {
 		// Idempotent: deleting a parent cascades its children, so a later child
@@ -215,18 +246,19 @@ async function collectRemoved(
 		node: AnyTreeRecord
 		sourceUuids: ReadonlySet<string>
 		accepted: AcceptedIds | undefined
+		matchKey: MatchKey
 		out: AnyTreeRecord[]
 	},
 ): Promise<void> {
-	const { node, sourceUuids, accepted, out } = params
-	const templateUuid = await tx.any.getAttribute(node, { name: 'templateUuid' })
-	if (templateUuid && !sourceUuids.has(templateUuid)) {
+	const { node, sourceUuids, accepted, matchKey, out } = params
+	const lineage = await tx.any.getAttribute(node, { name: matchKey })
+	if (lineage && !sourceUuids.has(lineage)) {
 		// removed subtree = one atomic group; delete only if that group is accepted
 		if (!accepted || accepted.instanceIds.has(node.id)) out.push(node)
 		return // its subtree cascades with it; do not descend
 	}
 	for (const child of node.tree) {
-		await collectRemoved(tx, { node: child, sourceUuids, accepted, out })
+		await collectRemoved(tx, { node: child, sourceUuids, accepted, matchKey, out })
 	}
 }
 
@@ -277,14 +309,14 @@ async function updateMatchedAttributes(
 	}
 }
 
-async function indexByTemplateUuid(
+async function indexByMatchKey(
 	tx: Core.Transaction<Config>,
-	params: { node: AnyTreeRecord; index: Map<string, AnyTreeRecord> },
+	params: { node: AnyTreeRecord; index: Map<string, AnyTreeRecord>; matchKey: MatchKey },
 ): Promise<void> {
-	const { node, index } = params
-	const templateUuid = await tx.any.getAttribute(node, { name: 'templateUuid' })
-	if (templateUuid) index.set(templateUuid, node)
-	for (const child of node.tree) await indexByTemplateUuid(tx, { node: child, index })
+	const { node, index, matchKey } = params
+	const key = await tx.any.getAttribute(node, { name: matchKey })
+	if (key) index.set(key, node)
+	for (const child of node.tree) await indexByMatchKey(tx, { node: child, index, matchKey })
 }
 
 async function collectUuids(

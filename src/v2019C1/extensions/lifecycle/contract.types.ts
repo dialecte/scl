@@ -7,16 +7,29 @@ import type * as Core from '@dialecte/core'
 export type LifecycleVerb = 'fsd' | 'asd'
 
 /**
+ * The two reconcile modes of the `Update` operation, distinguished by how the
+ * SOURCE relates to the TARGET:
+ *  - `template` — source is a TEMPLATE; reconcile it onto its EXISTING
+ *    instance(s). Match by `templateUuid` (= source `uuid`), stamp lineage on
+ *    added elements, rotate provenance. Was `update`.
+ *  - `fork` — source is a newer REVISION of the SAME file; reconcile it onto the
+ *    prior revision, KEEPING identity. Match by `uuid` (source and target share
+ *    it), no re-stamp, no provenance. The single-layer form of an SCD fork.
+ */
+export type UpdateMode = 'template' | 'fork'
+
+/**
  * Which lifecycle operation the user chose:
  *  - `instantiate` — place a NEW instance of the template (duplicates allowed;
  *    a sibling name collision is resolved). Re-applying the same template yields
  *    another instance, never a silent no-op.
- *  - `update` — reconcile the template onto its EXISTING instance(s).
+ *  - `template` / `fork` — the two {@link UpdateMode} reconcile modes.
  *
- * Picked explicitly by the consumer — it cannot be inferred reliably (a same-
- * version re-upload is a valid duplicate). Defaults to `update` for back-compat.
+ * Picked explicitly by the consumer (or auto-detected from the source↔target
+ * relationship) — it cannot be inferred reliably (a same-version re-upload is a
+ * valid duplicate). Defaults to `template` for back-compat.
  */
-export type LifecycleScenario = 'instantiate' | 'update'
+export type LifecycleScenario = 'instantiate' | UpdateMode
 
 /**
  * What to reconcile and where — the uniform `{ verb, sourceQuery, ref, anchor }`
@@ -31,7 +44,7 @@ export type LifecycleTarget =
 			ref: Scl.Ref<'Function'>
 			/** Target parent the instance lives under / is placed into. */
 			anchor: Scl.Ref<Scl.ElementsOf>
-			/** Operation to perform. Defaults to `update`. */
+			/** Operation to perform. Defaults to `template`. */
 			scenario?: LifecycleScenario
 	  }
 	| {
@@ -41,7 +54,7 @@ export type LifecycleTarget =
 			ref: Scl.Ref<'Application'>
 			/** Target parent the composed functions are placed into. */
 			anchor: Scl.Ref<Scl.ElementsOf>
-			/** Operation to perform. Defaults to `update`. */
+			/** Operation to perform. Defaults to `template`. */
 			scenario?: LifecycleScenario
 	  }
 

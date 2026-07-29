@@ -1,4 +1,5 @@
 import type { Scl, Config } from '@/v2019C1/config'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -16,6 +17,8 @@ export async function findInstanceUnder(
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		tagName: Scl.ElementsOf
 		sourceUuid: string | undefined
+		/** Attribute matched against `sourceUuid`. Default `templateUuid`; `uuid` for fork. */
+		matchKey?: MatchKey
 	},
 ): Promise<AnyTreeRecord | undefined> {
 	const [first] = await findInstancesUnder(reader, params)
@@ -36,36 +39,39 @@ export async function findInstancesUnder(
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		tagName: Scl.ElementsOf
 		sourceUuid: string | undefined
+		/** Attribute matched against `sourceUuid`. Default `templateUuid`; `uuid` for fork. */
+		matchKey?: MatchKey
 	},
 ): Promise<AnyTreeRecord[]> {
-	const { targetParent, tagName, sourceUuid } = params
+	const { targetParent, tagName, sourceUuid, matchKey = 'templateUuid' } = params
 	if (!sourceUuid) return []
 	const parentTree = await reader.any.getTree(targetParent)
 	if (!parentTree) return []
 	const out: AnyTreeRecord[] = []
-	await collectByTemplateUuid(reader, { node: parentTree, tagName, sourceUuid, out })
+	await collectByMatchKey(reader, { node: parentTree, tagName, sourceUuid, matchKey, out })
 	return out
 }
 
-async function collectByTemplateUuid(
+async function collectByMatchKey(
 	reader: Reader,
 	params: {
 		node: AnyTreeRecord
 		tagName: Scl.ElementsOf
 		sourceUuid: string
+		matchKey: MatchKey
 		out: AnyTreeRecord[]
 	},
 ): Promise<void> {
-	const { node, tagName, sourceUuid, out } = params
+	const { node, tagName, sourceUuid, matchKey, out } = params
 	if (
 		node.tagName === tagName &&
-		(await reader.any.getAttribute(node, { name: 'templateUuid' })) === sourceUuid
+		(await reader.any.getAttribute(node, { name: matchKey })) === sourceUuid
 	) {
 		out.push(node)
 		return // a matched instance root; do not descend into its own subtree
 	}
 	for (const child of node.tree) {
-		await collectByTemplateUuid(reader, { node: child, tagName, sourceUuid, out })
+		await collectByMatchKey(reader, { node: child, tagName, sourceUuid, matchKey, out })
 	}
 }
 

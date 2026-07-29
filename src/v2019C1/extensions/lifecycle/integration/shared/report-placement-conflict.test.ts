@@ -78,7 +78,7 @@ describe('lifecycle report — placement-conflict classification', () => {
 		'update does not flag a conflict (identity match is the reconcile target)': {
 			sourceXml,
 			targetXml,
-			scenario: 'update',
+			scenario: 'template',
 			expectedNameConflict: undefined,
 		},
 	}

@@ -51,7 +51,7 @@ export async function asd(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
-		/** `instantiate` forces a fresh instance; `update` (default) reconciles. */
+		/** `instantiate` forces a fresh instance; `template` (default) reconciles. */
 		scenario?: LifecycleScenario
 		report?: DiffReport
 		decisions?: DecisionMap
