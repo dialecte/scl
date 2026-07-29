@@ -13,6 +13,10 @@ import {
 	fsd as instantiateFsd,
 	resolveTargetStructure,
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import {
+	identityModeForScenario,
+	matchKeyForScenario,
+} from '@/v2019C1/extensions/lifecycle/scenario'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
@@ -48,7 +52,7 @@ export async function fsd(
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
-		/** `instantiate` forces a fresh instance; `update` (default) reconciles. */
+		/** `instantiate` forces a fresh instance; `template` (default) reconciles. */
 		scenario?: LifecycleScenario
 		/** Multi-instance gate: partitioned per instance by `instanceScopeId`. */
 		report?: DiffReport
@@ -61,11 +65,13 @@ export async function fsd(
 		params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
+	const matchKey = matchKeyForScenario(scenario)
+	const identityMode = identityModeForScenario(scenario)
 	// `instantiate` always places a NEW instance, so it never matches an existing one.
 	const instances =
 		scenario === 'instantiate'
 			? []
-			: await findInstancesUnder(tx, { targetParent, tagName: 'Function', sourceUuid })
+			: await findInstancesUnder(tx, { targetParent, tagName: 'Function', sourceUuid, matchKey })
 
 	const addedGroups = report ? allGroups(report) : []
 
@@ -100,6 +106,8 @@ export async function fsd(
 			accepted: instanceAccepted,
 			overrides: instanceOverrides,
 			keepNameTypesFrom,
+			matchKey,
+			identityMode,
 		})
 		// carried satellites (e.g. FunctionCategory) travel with the function group
 		await reconcileCarriedSatellites(tx, {
