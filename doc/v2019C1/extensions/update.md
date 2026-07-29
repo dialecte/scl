@@ -4,7 +4,7 @@ title: Update
 
 # Update
 
-Update reconciles a project against a **newer version of a template** it was built from. The lifecycle surface exposes two explicit operations via `scenario`: **`instantiate`** places a new instance (duplicates allowed), while **`update`** reconciles a newer template **onto** an existing instance instead of duplicating it. With `scenario: 'update'` and no instance yet, update falls back to the first-time instantiate.
+Update reconciles a project against a **newer version of a template** it was built from. The lifecycle surface exposes three explicit operations via `scenario`. **`instantiate`** places a new instance (duplicates allowed). The two **Update** modes reconcile onto an existing target instead of duplicating: **`template`** reconciles a newer _template_ onto its instance(s) (matched by `templateUuid`, lineage stamped), and **`fork`** reconciles a newer _revision of the same file_ onto the prior revision, keeping identity (matched by `uuid`, no re-stamp). With `template` and no instance yet, it falls back to the first-time instantiate.
 
 ```ts
 // apply
@@ -28,7 +28,7 @@ tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, keepN
 ```
 
 - `verb`: `'fsd'` (then `ref` is a `Function`) or `'asd'` (then `ref` is an `Application`) — the **layer**;
-- `scenario`: `'instantiate'` or `'update'` — the **operation** (see below; defaults to `'update'`);
+- `scenario`: `'instantiate'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`);
 - `anchor`: the target parent the instance lives under / is placed into.
 - `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template).
 
@@ -37,7 +37,7 @@ tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, keepN
 `apply` returns an `ApplyResult`: the effective `report` plus `instances`, the instance roots the write
 produced or reconciled. A consumer acts on the roots **in the same transaction** (name, wire, select,
 chain) without re-deriving them. Flat arrays are scenario-honest — `instantiate` yields one root set;
-`update` may reconcile several instances of one template; the not-decided-yet track yields empty arrays.
+`template`/`fork` may reconcile several instances of one template; the not-decided-yet track yields empty arrays.
 On the full track a matched instance whose changes are **all skipped** is left untouched, so it is
 excluded from the returned roots — only instances actually reconciled are returned.
 
@@ -56,12 +56,13 @@ type AppliedInstances =
 	  }
 ```
 
-### Scenario — instantiate vs update
+### Scenario — instantiate vs template vs fork
 
-`instantiate` and `update` are **distinct operations**, chosen explicitly by the consumer — dialecte does not infer one from the other (a same-version re-upload is a valid duplicate, so inference is unsafe):
+The scenarios are **distinct operations**, chosen explicitly by the consumer — dialecte does not infer one from the other (a same-version re-upload is a valid duplicate, so inference is unsafe). `template` and `fork` are the two modes of the **Update** action, distinguished by how the source relates to the target:
 
 - **`instantiate`** — place a **new** instance of the template. Duplicates are allowed: re-applying the same template yields **another** instance (never a silent no-op), with a sibling name collision auto-resolved (e.g. `HMI` → `HMI_1`, and its composed functions `Prot` → `Prot_1`). The placed `name` is an editable field so the user can override the auto-resolved value.
-- **`update`** — reconcile the template **onto** its existing instance(s). If none exists yet it is the first-time case (instantiate); with existing instances it reconciles in place and never duplicates.
+- **`template`** — source is a **template**; reconcile it **onto** its existing instance(s). Elements match by `templateUuid` (= the source `uuid`); added elements are stamped with instance lineage. If none exists yet it is the first-time case (instantiate); with existing instances it reconciles in place and never duplicates. _(Was `update`.)_
+- **`fork`** — source is a newer **revision of the same file**; reconcile it onto the prior revision, **keeping identity**. Source and target share `uuid`, so elements match by `uuid` (not `templateUuid`); the reconcile updates in place with **no re-stamp and no provenance**, and deletes elements the new revision dropped. The single-layer form of an SCD fork — e.g. bringing an FSD/ASD template from revision _n_ to _n+1_.
 
 `report.needsDecisions` gates the track:
 
@@ -149,7 +150,7 @@ scenario-aware. For each placed group primary it partitions the violated constra
   (reconcile the template onto `adoptTargetId` — i.e. update that existing element in place). Adopt is a
   non-destructive reconcile, never a delete + recreate.
 
-`update` never classifies a conflict: an identity match there is the **reconcile target**, not a collision.
+`template`/`fork` never classify a conflict: an identity match there is the **reconcile target**, not a collision.
 
 ```ts
 type EditableAttribute = {
@@ -173,7 +174,7 @@ Wrap `apply` in `doc.prepare(...)` for a previewable, reversible dry-run:
 ```ts
 const target = {
 	verb: 'fsd',
-	scenario: 'instantiate', // or 'update'
+	scenario: 'instantiate', // or 'template' | 'fork'
 	sourceQuery: template.query,
 	ref: { tagName: 'Function', id: 'fn-1' },
 	anchor: { tagName: 'Bay', id: 'bay-1' },
