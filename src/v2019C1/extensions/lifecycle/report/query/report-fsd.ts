@@ -3,6 +3,7 @@ import { buildReportInstance } from './report-instance'
 
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { findInstancesUnder } from '@/v2019C1/extensions/lifecycle/instance'
+import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -32,11 +33,12 @@ export async function reportFsd(
 ): Promise<DiffReport> {
 	const { sourceQuery, functionRef, targetParent, scenario } = params
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
+	const matchKey = matchKeyForScenario(scenario)
 	// `instantiate` always places a NEW instance, so it never matches an existing one.
 	const instances =
 		scenario === 'instantiate'
 			? []
-			: await findInstancesUnder(query, { targetParent, tagName: 'Function', sourceUuid })
+			: await findInstancesUnder(query, { targetParent, tagName: 'Function', sourceUuid, matchKey })
 
 	// no instance yet -> first-time = fast track
 	if (instances.length === 0) {
@@ -45,6 +47,7 @@ export async function reportFsd(
 			functionRef,
 			instance: undefined,
 			refsAlwaysAdded: scenario === 'instantiate',
+			matchKey,
 		})
 		return assembleReport([
 			await buildReportInstance(query, {
@@ -63,6 +66,7 @@ export async function reportFsd(
 			functionRef,
 			instance,
 			refsAlwaysAdded: scenario === 'instantiate',
+			matchKey,
 		})
 		reportInstances.push(
 			await buildReportInstance(query, {

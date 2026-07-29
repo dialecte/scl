@@ -5,6 +5,7 @@ import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
@@ -27,6 +28,8 @@ export async function reportFunction(
 		instance: AnyRefOrRecord | undefined
 		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
 		refsAlwaysAdded?: boolean
+		/** How the instance matches source. `templateUuid` (default) or `uuid` (fork). */
+		matchKey?: MatchKey
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
@@ -37,6 +40,7 @@ export async function reportFunction(
 		targetQuery: query,
 		sourceRootRef: functionRef,
 		instanceRootRef: instance,
+		matchKey: params.matchKey,
 	})
 	// On FIRST-TIME (no instance) the satellites are still created via the clone path,
 	// so they must be folded as `added` companions too — otherwise the merge-review

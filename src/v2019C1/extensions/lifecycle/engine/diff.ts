@@ -19,6 +19,7 @@ import type {
 	ReportInstance,
 } from './diff.types'
 import type { Config } from '@/v2019C1/config'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -88,10 +89,13 @@ export async function diff(params: {
 	 * the prior instance's refs are kept as unchanged context (with `keepLeftoverRefs`).
 	 */
 	refsAlwaysAdded?: boolean
+	/** How instance elements match source. `templateUuid` (default) or `uuid` (fork). */
+	matchKey?: MatchKey
 }): Promise<InstanceDiff> {
 	const { sourceQuery, targetQuery, sourceRootRef, instanceRootRef, keepLeftoverRefs } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
+	const matchKey = params.matchKey ?? 'templateUuid'
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	if (!sourceTree) throw new Error('diff: source subtree not found')
@@ -105,7 +109,7 @@ export async function diff(params: {
 	}
 
 	const index = new Map<string, AnyTreeRecord>()
-	await indexByTemplateUuid(targetQuery, { node: instanceTree, index })
+	await indexByMatchKey(targetQuery, { node: instanceTree, index, matchKey })
 
 	const sourceUuids = new Set<string>()
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
@@ -119,6 +123,7 @@ export async function diff(params: {
 		keepLeftoverRefs: keepLeftoverRefs ?? false,
 		leftoverRefPolicy,
 		refsAlwaysAdded,
+		matchKey,
 	})
 	const summary = summarize(root)
 	const groups = groupChanges(root, instanceTree.id)
@@ -136,9 +141,11 @@ async function diffMatched(
 		keepLeftoverRefs: boolean
 		leftoverRefPolicy?: LeftoverRefPolicy
 		refsAlwaysAdded?: boolean
+		matchKey: MatchKey
 	},
 ): Promise<DiffNode> {
-	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs } = params
+	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
+		params
 	const leftoverRefPolicy = params.leftoverRefPolicy
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 	const attributeChanges = await computeAttributeChanges(sourceQuery, {
@@ -172,6 +179,7 @@ async function diffMatched(
 					keepLeftoverRefs,
 					leftoverRefPolicy,
 					refsAlwaysAdded,
+					matchKey,
 				}),
 			)
 		} else {
@@ -197,9 +205,9 @@ async function diffMatched(
 	const sourceRefIdentities = await collectSourceRefIdentities(sourceQuery, sourceNode)
 	for (const instanceChild of instanceNode.tree) {
 		if (matchedInstanceIds.has(instanceChild.id)) continue
-		const templateUuid = await targetQuery.any.getAttribute(instanceChild, { name: 'templateUuid' })
-		if (templateUuid) {
-			if (!sourceUuids.has(templateUuid)) children.push(removedNode(instanceChild))
+		const lineage = await targetQuery.any.getAttribute(instanceChild, { name: matchKey })
+		if (lineage) {
+			if (!sourceUuids.has(lineage)) children.push(removedNode(instanceChild))
 			continue
 		}
 		if (
@@ -488,14 +496,15 @@ async function computeAttributeChanges(
 	return changes
 }
 
-async function indexByTemplateUuid(
+async function indexByMatchKey(
 	targetQuery: Core.Query<Config>,
-	params: { node: AnyTreeRecord; index: Map<string, AnyTreeRecord> },
+	params: { node: AnyTreeRecord; index: Map<string, AnyTreeRecord>; matchKey: MatchKey },
 ): Promise<void> {
-	const { node, index } = params
-	const templateUuid = await targetQuery.any.getAttribute(node, { name: 'templateUuid' })
-	if (templateUuid) index.set(templateUuid, node)
-	for (const child of node.tree) await indexByTemplateUuid(targetQuery, { node: child, index })
+	const { node, index, matchKey } = params
+	const key = await targetQuery.any.getAttribute(node, { name: matchKey })
+	if (key) index.set(key, node)
+	for (const child of node.tree)
+		await indexByMatchKey(targetQuery, { node: child, index, matchKey })
 }
 
 async function collectUuids(
