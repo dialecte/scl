@@ -26,7 +26,7 @@ const [{ documentId }] = await project.import([scdFile])
 | `files`               | `File[]`  | Browser `File` objects to import                                        |
 | `useCustomRecordsIds` | `boolean` | Keep IDs from the file instead of generating new ones. Default: `false` |
 
-**Supported extensions** — `.fsd`, `.asd`, `.ssd`, `.scd`, `.isd`, `.icd`, `.xml`
+**Supported extensions** — `.fsd`, `.asd`, `.ssd`, `.scd`, `.isd`, `.icd`, `.iid`, `.xml`
 
 **Returns** `Promise<{ documentId: string; recordCount: number }[]>` — one entry per successfully imported file.
 

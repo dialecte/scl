@@ -16,7 +16,7 @@ import type { IOConfig, AnyDialecteConfig, DatabaseConfig } from '@dialecte/core
 
 // SCL-specific IO configuration (hooks are provided on the Project instance, not here)
 export const SCL_IO_CONFIG = {
-	supportedFileExtensions: ['.fsd', '.asd', '.ssd', '.scd', '.isd', '.icd', '.xml'],
+	supportedFileExtensions: ['.fsd', '.asd', '.ssd', '.scd', '.isd', '.icd', '.iid', '.xml'],
 } satisfies IOConfig
 
 // SCL database configuration
