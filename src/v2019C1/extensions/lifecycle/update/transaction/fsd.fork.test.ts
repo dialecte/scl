@@ -64,7 +64,50 @@ const targetXml = /* xml */ `
 			</DOType>
 		</DataTypeTemplates>
 	</SCL>`
+// FSD revision 2 that ADDS a new LNode (XCBR, uuid `lnode-new-uuid`) not present in rev1.
+const addSourceXml = /* xml */ `
+	<SCL ${ns} ${id}="fsd-v2-add">
+		<Substation name="TEMPLATE" ${id}="sub-gs">
+			<VoltageLevel name="TEMPLATE" ${id}="vl-gs">
+				<Bay name="TEMPLATE" ${id}="bay-gs">
+					<Function name="Prot" ${id}="fn-1" uuid="fn-src-uuid">
+						<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-gs" uuid="lnode-src-uuid"/>
+						<LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="CSWI_Type" ${id}="lnode-new" uuid="lnode-new-uuid"/>
+					</Function>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+		<DataTypeTemplates ${id}="dtt-gs">
+			<LNodeType id="CSWI_Type" lnClass="CSWI" ${id}="lnt-gs">
+				<DO name="Pos" type="DPC_Type" ${id}="do-gs"/>
+			</LNodeType>
+			<DOType id="DPC_Type" cdc="DPC" ${id}="dot-gs">
+				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-gs"/>
+			</DOType>
+		</DataTypeTemplates>
+	</SCL>`
 
+// FSD revision 1 (target of the add case): only the CSWI LNode, same uuids, no templateUuid.
+const addTargetXml = /* xml */ `
+	<SCL ${ns} ${id}="fsd-v1-add">
+		<Substation name="TEMPLATE" ${id}="sub-gt">
+			<VoltageLevel name="TEMPLATE" ${id}="vl-gt">
+				<Bay name="TEMPLATE" ${id}="bay-t">
+					<Function name="Prot" ${id}="fn-gt" uuid="fn-src-uuid">
+						<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-gt" uuid="lnode-src-uuid"/>
+					</Function>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+		<DataTypeTemplates ${id}="dtt-gt">
+			<LNodeType id="CSWI_Type" lnClass="CSWI" ${id}="lnt-gt">
+				<DO name="Pos" type="DPC_Type" ${id}="do-gt"/>
+			</LNodeType>
+			<DOType id="DPC_Type" cdc="DPC" ${id}="dot-gt">
+				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-gt"/>
+			</DOType>
+		</DataTypeTemplates>
+	</SCL>`
 describe('update.fsd — fork (same-file revision, keep identity)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'fork reconciles the same-uuid revision in place: keep identity, no templateUuid, delete removed':
@@ -82,12 +125,26 @@ describe('update.fsd — fork (same-file revision, keep identity)', () => {
 					'//default:Function[@uuid="fn-src-uuid"][@templateUuid]',
 					// no stale value left behind
 					'//default:Function[@uuid="fn-src-uuid"][@desc="rev1"]',
-					// no duplicate function grafted alongside the original
+					// no duplicate function added alongside the original
 					'//default:Function[@templateUuid="fn-src-uuid"]',
 					// the LNode dropped by rev2 is deleted
 					'//default:Function[@uuid="fn-src-uuid"]/default:LNode[@lnClass="XCBR"]',
 				],
 			},
+		'fork adds a NEW revision element preserving its source uuid (keep identity)': {
+			sourceXml: addSourceXml,
+			targetXml: addTargetXml,
+			expectedQueries: [
+				// the added LNode keeps the SOURCE uuid from rev2 (fork converges to the same identity)
+				'//default:Function[@uuid="fn-src-uuid"]/default:LNode[@lnClass="XCBR"][@uuid="lnode-new-uuid"]',
+				// the pre-existing CSWI LNode is untouched
+				'//default:Function[@uuid="fn-src-uuid"]/default:LNode[@lnClass="CSWI"][@uuid="lnode-src-uuid"]',
+			],
+			unexpectedQueries: [
+				// fork keeps identity: the added element carries NO templateUuid
+				'//default:LNode[@lnClass="XCBR"][@templateUuid]',
+			],
+		},
 	}
 
 	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {

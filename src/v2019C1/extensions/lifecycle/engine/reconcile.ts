@@ -4,7 +4,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query'
-import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
+import { restoreClonedUuids, writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { LOCKED_LNODE_ATTRIBUTES } from '@/v2019C1/extensions/reference'
@@ -56,7 +56,7 @@ export async function reconcile(
 		keepNameTypesFrom?: KeepNameTypesFrom
 		/** How instance elements match source. `templateUuid` (default) or `uuid` (fork). */
 		matchKey?: MatchKey
-		/** Identity write mode for grafted elements. `stamp-template` (default) or `keep` (fork). */
+		/** Identity write mode for added elements. `stamp-template` (default) or `keep` (fork). */
 		identityMode?: IdentityMode
 	},
 ): Promise<void> {
@@ -180,6 +180,9 @@ async function reconcileChildren(
 			withTypes: { keepNameFrom: keepNameTypesFrom },
 		})
 		await writeIdentity(tx, { mappings: recordMappings, mode: identityMode })
+		// fork keeps identity: converge the added element to the source revision's uuids (a fresh clone
+		// would otherwise diverge from the source, breaking a later fork/compare)
+		if (identityMode === 'keep') await restoreClonedUuids(tx, { mappings: recordMappings })
 
 		// validate the added element against its instance-parent context: apply any
 		// user edit then auto-resolve a name collision among siblings (schema constraint).

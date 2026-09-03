@@ -9,9 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- add `.iid` support
-
-- `fork` lifecycle scenario — reconcile a newer **revision of the same file** onto its prior revision, keeping identity. `query.lifecycle.report` / `tx.lifecycle.apply` / `update.fsd` accept `scenario: 'fork'`: elements match by `uuid` (not `templateUuid`), the reconcile updates in place with **no re-stamp and no provenance**, and deletes elements the new revision dropped — no duplicate is grafted. It is the single-layer form of an SCD fork (e.g. bringing an FSD from revision _n_ to _n+1_). Implemented for the FSD layer; ASD follows.
+- `fork` lifecycle scenario — reconcile a newer **revision of the same file** onto its prior revision, keeping identity. `query.lifecycle.report` / `tx.lifecycle.apply` / `update.fsd` accept `scenario: 'fork'`: elements match by `uuid` (not `templateUuid`), the reconcile updates in place with **no re-stamp and no provenance**, deletes elements the new revision dropped, and adds a newly added element **keeping its source uuid** (a fork converges the target to the source revision's identity) — no duplicate is added. It is the single-layer form of an SCD fork (e.g. bringing an FSD from revision _n_ to _n+1_). Implemented for the FSD layer; ASD follows.
 
 ### Changed
 
