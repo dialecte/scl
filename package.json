@@ -1,6 +1,6 @@
 {
 	"name": "@dialecte/scl",
-	"version": "0.3.12",
+	"version": "0.3.13",
 	"description": "Dialecte - SCL (Substation Configuration Language) sdk",
 	"license": "MIT",
 	"repository": {

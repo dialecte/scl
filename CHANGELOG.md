@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## UNRELEASED
+
+## [0.3.13] - 2026-09-03
+
+### Added
+
+- `reference.applyUuidRemap(tx, { mappings })` — repoint a set of freshly cloned elements' `uuid` references to their clones and recompute the reference paths, in one pass. Deep clone now produces a faithful copy and the caller owns rewiring; the lifecycle recipes (extract/instantiate FSD + ASD) call this once over their accumulated clone mappings. This replaces the former per-clone `afterDeepClone` core hook, whose per-element scan grew quadratically during a type-closure import.
+
+- `elementSignature(query, { signatureCache })` — an optional shared signature cache (`Map<tagName:id, signature>`, exported as `SignatureCache`). Passing one map across many `elementSignature` calls over the **same** document (e.g. every top-level type in a `DataTypeTemplates` import) signs a shared descendant once instead of per caller. Never share a cache across documents.
+
+### Changed
+
+- Deep clone (`lifecycle.transplant.deep`) no longer auto-rewires cloned `uuid` references; it is a pure structural copy and the caller rewires via `reference.applyUuidRemap`. The `afterDeepClone` hook registration is removed. Type import (`importTypes`) does no uuid remap at all (types carry no uuid references), which removes the previous quadratic cost on large type closures.
+
 ## [0.3.12] - 2026-07-29
 
 ### Added
