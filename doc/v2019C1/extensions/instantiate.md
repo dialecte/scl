@@ -28,7 +28,7 @@ await project.transaction(async (tx) => {
 })
 ```
 
-The clone's uuid references are remapped by the `afterDeepClone` hook. SET-specific policy — naming conventions, file-reference provenance, application assignment — is applied by consumer-registered hooks, not by the operation.
+The clone's uuid references are repointed by [`reference.applyUuidRemap`](./reference#applyuuidremap) over the recipe's combined clone mappings — deep clone itself is purely structural. SET-specific policy — naming conventions, file-reference provenance, application assignment — is applied by consumer-registered hooks, not by the operation.
 
 Returns `{ functionRef, recordMappings }` — the instantiated root (retagged to `SubFunction` when placed under a `(Sub)Function`) and the full source→target `recordMappings`, so a caller can act on the placed function without re-querying by `templateUuid`.
 

@@ -4,7 +4,7 @@ description: Reference extension for @dialecte/scl v2019C1 -- path building, res
 
 # Reference
 
-The `reference` module provides functions for working with SCL reference paths: query functions across **building** paths (write side), **resolving** them (read side) and one **reverse-lookup**, plus a **transaction** helper for remapping DataTypeTemplates type-id references.
+The `reference` module provides functions for working with SCL reference paths: query functions across **building** paths (write side), **resolving** them (read side) and one **reverse-lookup**, plus **transaction** helpers for remapping DataTypeTemplates type-id references (`applyTypeIdRemap`) and cloned uuid references (`applyUuidRemap`).
 
 ```ts
 import { reference } from '@dialecte/scl/v2019C1'
@@ -375,6 +375,22 @@ await doc.transaction(async (tx) => {
 	})
 })
 ```
+
+---
+
+### `applyUuidRemap`
+
+Repoints the **uuid** reference attributes of freshly cloned elements onto their clones and recomputes the reference paths, in one pass. Takes the source→target `mappings` a clone produced (`CloneMapping[]`); for each cloned element it rewrites every uuid-ref attribute (from `UUID_REFERENCE_PAIRS`) whose value matches a cloned source uuid to the target's uuid, then rebuilds the companion path.
+
+```ts
+tx.reference.applyUuidRemap(params: {
+  mappings: CloneMapping<Config>[]
+}): Promise<void>
+```
+
+Deep clone ([`transplant.deep`](./transplant)) is a **purely structural** copy — it does not rewire references; the caller owns rewiring. The lifecycle recipes ([`instantiate`](./instantiate) / [`extract`](./extract), FSD + ASD) call `applyUuidRemap` **once** over their accumulated clone mappings (function + categories + satellites), so a reference that crosses sub-clones — e.g. a `FunctionCatRef` on a cloned category pointing at the cloned function — resolves to its target. Run it after every clone is staged and before lineage stamping / provenance, which read the repointed refs.
+
+This replaces the former `afterDeepClone` core hook (removed): that hook's per-element scan accumulated across the whole transaction and grew with clone size.
 
 ---
 

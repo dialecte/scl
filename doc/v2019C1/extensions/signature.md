@@ -25,6 +25,7 @@ signature.query.elementSignature(
     ref: Scl.Ref<Scl.ElementsOf>
     resolveReferences?: boolean       // default false
     ignoreAttributes?: string[]       // default ['id', 'uuid']
+    signatureCache?: SignatureCache   // shared signature cache (same document)
   },
 ): Promise<string>
 ```
@@ -32,6 +33,7 @@ signature.query.elementSignature(
 - **`ignoreAttributes`** — attributes dropped before hashing (default `id`, `uuid`), so identity differences never affect the signature.
 - **schema defaults** — an attribute written with its XSD default value is folded out, so an explicit default and an omitted attribute compare equal (no spurious fork).
 - **`resolveReferences`** — when `true`, both **id references** (`lnType`/`type`, via `TYPE_ID_REFERENCE_PAIRS`) and **uuid references** (via `UUID_REFERENCE_PAIRS`, path companion attribute skipped) are folded into the _referenced element's_ signature rather than compared by their raw id/uuid value. This makes two types that point at structurally-identical-but-differently-named children compare equal. Cycle-safe.
+- **`signatureCache`** — an optional cache of already-computed signatures (`SignatureCache = Map<tagName:id, signature>`). Pass one map across many `elementSignature` calls over the **same** document (e.g. every top-level type in a `DataTypeTemplates` import) so a shared descendant is signed once instead of once per caller. Never share a cache across documents — ids are only unique within one.
 
 ```ts
 // Two LNodeTypes that differ only in id but are otherwise identical:
@@ -53,10 +55,15 @@ Used by `dataModel.importTypes`: the signature of an incoming type is matched ag
 The `signature` module re-exports its identity-attribute default and parameter type for advanced use cases (custom signing, validation, tooling).
 
 ```ts
-import { DEFAULT_IGNORED_ATTRIBUTES, type ElementSignatureParams } from '@dialecte/scl/v2019C1'
+import {
+	DEFAULT_IGNORED_ATTRIBUTES,
+	type ElementSignatureParams,
+	type SignatureCache,
+} from '@dialecte/scl/v2019C1'
 ```
 
-| Export                       | Kind                | Description                                                                               |
-| ---------------------------- | ------------------- | ----------------------------------------------------------------------------------------- |
-| `DEFAULT_IGNORED_ATTRIBUTES` | `readonly string[]` | Identity attributes excluded from a structural signature by default (`id`, `uuid`).       |
-| `ElementSignatureParams`     | type                | Parameter shape of `elementSignature` (`ref`, `resolveReferences?`, `ignoreAttributes?`). |
+| Export                       | Kind                | Description                                                                                                  |
+| ---------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `DEFAULT_IGNORED_ATTRIBUTES` | `readonly string[]` | Identity attributes excluded from a structural signature by default (`id`, `uuid`).                          |
+| `ElementSignatureParams`     | type                | Parameter shape of `elementSignature` (`ref`, `resolveReferences?`, `ignoreAttributes?`, `signatureCache?`). |
+| `SignatureCache`             | type                | `Map<tagName:id, signature>` — the shared signature cache passed as `signatureCache`.                        |
