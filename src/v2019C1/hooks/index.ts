@@ -1,5 +1,4 @@
 import { afterCreated } from './after-created'
-import { afterDeepClone } from './after-deep-clone'
 import { afterStandardizedRecord } from './after-standardized-record'
 import { afterUpdated } from './after-updated'
 import { beforeClone } from './before-clone'
@@ -14,7 +13,6 @@ export const HOOKS: Scl.TransactionHooks = {
 	beforeClone,
 	afterStandardizedRecord,
 	afterCreated,
-	afterDeepClone,
 	afterUpdated,
 	beforeDelete,
 }

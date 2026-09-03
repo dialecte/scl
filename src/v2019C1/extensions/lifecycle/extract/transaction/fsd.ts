@@ -7,6 +7,7 @@ import {
 	cloneFunction,
 	cloneFunctionCategories,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
+import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -46,7 +47,7 @@ export async function fsd(
 		},
 	})
 
-	await cloneFunction(tx, {
+	const functionMappings = await cloneFunction(tx, {
 		sourceQuery,
 		functionRef,
 		targetParentRef: substationRef,
@@ -54,11 +55,15 @@ export async function fsd(
 		stripRootAttributes: ['templateUuid'],
 	})
 
-	await cloneFunctionCategories(tx, {
+	const categoryMappings = await cloneFunctionCategories(tx, {
 		sourceQuery,
 		functionRef,
 		structure,
 	})
+
+	// Repoint cloned uuid refs (e.g. FunctionCatRef -> the cloned Function) across ALL
+	// clones of this operation, before cleanup reads those refs to detect orphans.
+	await applyUuidRemap(tx, { mappings: [...functionMappings, ...categoryMappings] })
 
 	await postExtractionCleanup(tx)
 }

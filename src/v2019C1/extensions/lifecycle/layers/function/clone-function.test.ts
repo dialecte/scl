@@ -2,6 +2,7 @@ import { cloneFunction, cloneFunctionCategories } from './clone-function'
 
 import { describe } from 'vitest'
 
+import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -54,19 +55,21 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
 		if (!target) throw new Error('target required')
 		await target.transaction(async (tx) => {
-			await cloneFunction(tx, {
+			const functionMappings = await cloneFunction(tx, {
 				sourceQuery: source.query,
 				functionRef: testCase.functionRef,
 				targetParentRef: testCase.targetParentRef,
 				stripRootAttributes: testCase.stripRootAttributes,
 			})
 			const structure = await buildTemplateStructure(tx)
-			await cloneFunctionCategories(tx, {
+			const categoryMappings = await cloneFunctionCategories(tx, {
 				sourceQuery: source.query,
 				functionRef: testCase.functionRef,
 				structure,
 				stripCategoriesUuid: testCase.stripCategoriesUuid,
 			})
+			// caller owns uuid rewiring across the function + category clones
+			await applyUuidRemap(tx, { mappings: [...functionMappings, ...categoryMappings] })
 		})
 		return { assertOn: 'target' }
 	}

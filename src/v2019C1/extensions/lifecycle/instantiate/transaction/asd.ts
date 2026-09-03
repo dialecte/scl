@@ -8,7 +8,7 @@ import {
 	findMissingReferencedRecords,
 	resolveStructureRef,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
-import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
+import { applyUuidRemap, writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { AsdParams, AsdResult } from './asd.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -22,8 +22,8 @@ import type * as Core from '@dialecte/core'
  * (`layers/application`), then stamps instance lineage (`identity.writeIdentity` in
  * `stamp-template` mode) on every cloned element.
  *
- * The clone's uuid references are remapped by the `afterDeepClone` hook. The
- * instantiation provenance link (`ApplicationSclRef` -> `SclFileReference` back to
+ * The clone's uuid references are repointed by `reference.applyUuidRemap` over the
+ * combined mappings. The instantiation provenance link (`ApplicationSclRef` -> `SclFileReference` back to
  * the ASD) is written on the cloned root by `reference.writeProvenance`; SET policy
  * (naming, assign-to-application) is applied by consumer hooks, not here.
  *
@@ -61,7 +61,12 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		strip: false,
 	})
 
-	await writeIdentity(tx, { mappings: [...mappings, ...appliedMappings], mode: 'stamp-template' })
+	const allMappings = [...mappings, ...appliedMappings]
+
+	// Repoint cloned uuid refs before lineage stamping and follow-up passes read them.
+	await applyUuidRemap(tx, { mappings: allMappings })
+
+	await writeIdentity(tx, { mappings: allMappings, mode: 'stamp-template' })
 
 	// resolve a name collision for each placed composed Function at its own structural
 	// level (a repeated instantiate would otherwise duplicate a Function name in the Bay)

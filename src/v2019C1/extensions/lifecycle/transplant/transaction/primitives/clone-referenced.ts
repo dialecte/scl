@@ -79,7 +79,7 @@ export async function findMissingReferencedRecords<
  * values (derived from the UUID_REFERENCE_PAIRS constant), skips records
  * already present in the target, clones each missing one under the parent
  * returned by `resolveTargetParent` (mirroring the source hierarchy).
- * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
+ * UUID remapping is the caller's responsibility via `reference.applyUuidRemap` over the returned mappings.
  */
 export async function cloneReferencedRecords<Ref extends RefTagName, Target extends TargetOf<Ref>>(
 	tx: Core.Transaction<Config>,
@@ -146,7 +146,7 @@ type CloneRefsFn = (
  * not flattened to `Substation`.
  *
  * Targets already present in the target tx are skipped (dedup via findMissingReferencedRecords).
- * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
+ * UUID remapping is the caller's responsibility via `reference.applyUuidRemap` over the returned mappings.
  */
 export async function cloneAllReferencedTargets(
 	tx: Core.Transaction<Config>,

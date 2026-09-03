@@ -165,7 +165,7 @@ describe('repro — ASD application instantiate w/ FunctionCategory satellite (C
 	})
 
 	// SYMPTOM 3 (application update, screenshot 3): applying an update against an UNCHANGED
-	// template must not graft a DUPLICATE AllocationRole nor then classify the original
+	// template must not add a DUPLICATE AllocationRole nor then classify the original
 	// AllocationRoleRef as `removed`. Reproduces the accumulated-state duplicate PIU.
 	it('update apply (unchanged template) does not duplicate the AllocationRole satellite', async () => {
 		const { source, target } = await instantiateInto()
@@ -211,7 +211,7 @@ describe('repro — ASD application instantiate w/ FunctionCategory satellite (C
 	// SYMPTOM 3 (externally-authored project — real .ssd): the existing instance AllocationRole
 	// carries a PLACEHOLDER templateUuid that is NOT the source uuid (rev19.ssd smears one dummy
 	// across every element). Update must still RECOGNIZE it as the instance of the source
-	// satellite (by name within lineage) and reconcile in place — never graft a DUPLICATE.
+	// satellite (by name within lineage) and reconcile in place — never add a DUPLICATE.
 	it('update apply recognizes an externally-authored instance (dummy templateUuid) — no duplicate', async () => {
 		const { source, target } = await instantiateInto()
 

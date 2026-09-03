@@ -4,6 +4,7 @@ import { postExtractionCleanup } from './post-extraction-cleanup'
 import { history } from '@/v2019C1/extensions/history'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { ALWAYS_OMIT } from '@/v2019C1/extensions/lifecycle/layers/omit-filters'
+import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -39,7 +40,16 @@ export async function asd(
 		},
 	})
 
-	await cloneApplicationContent(tx, { sourceQuery, applicationRef, structure, omit: ALWAYS_OMIT })
+	const mappings = await cloneApplicationContent(tx, {
+		sourceQuery,
+		applicationRef,
+		structure,
+		omit: ALWAYS_OMIT,
+	})
+
+	// Repoint cloned uuid refs across ALL clones of this operation, before cleanup
+	// reads those refs to detect orphans.
+	await applyUuidRemap(tx, { mappings })
 
 	await postExtractionCleanup(tx)
 }

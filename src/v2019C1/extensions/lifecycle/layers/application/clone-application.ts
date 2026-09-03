@@ -23,7 +23,8 @@ import type { OmitEntry } from '@dialecte/core'
  * the target structure. Direction-agnostic — returns the full `CloneMapping[]` so
  * the calling operation applies identity policy (extract strips, instantiate stamps).
  *
- * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
+ * UUID remapping is the caller's responsibility via `reference.applyUuidRemap` over the
+ * returned mappings.
  */
 export async function cloneApplicationContent(
 	tx: Core.Transaction<Config>,
@@ -110,7 +111,7 @@ export async function cloneApplicationContent(
 	if (applicationClone) allMappings.push(...applicationClone.mappings)
 
 	// 5. Repoint the cloned AllocationRoleRefs of any reused role onto the existing role
-	// (the role was not cloned, so the after-deep-clone remap left the source uuid in place).
+	// (the role was not cloned, so `applyUuidRemap` leaves the source uuid in place).
 	for (const reuse of roleReuse) {
 		const refs = await tx.findByAttributes({
 			tagName: 'AllocationRoleRef',

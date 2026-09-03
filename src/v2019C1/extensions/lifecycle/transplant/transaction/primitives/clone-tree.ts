@@ -12,7 +12,7 @@ const DEFAULT_STRIP: StripConfig = {
 
 /**
  * Clone pipeline: getTree -> optional retag root tagName -> strip -> deepClone.
- * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
+ * UUID remapping is the caller's responsibility via `reference.applyUuidRemap` over the returned mappings.
  *
  * By default strips `templateUuid` and `originUuid` from the entire tree.
  * Pass `strip: false` to disable all stripping.

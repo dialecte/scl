@@ -7,7 +7,7 @@ import type * as Core from '@dialecte/core'
  * Mechanically rewrite every type-id reference attribute (`lnType`, `DO.type`,
  * `SDO.type`, `DA.type`, `BDA.type`) in `records` whose current value appears in
  * `idRemap`. Registry-driven via {@link TYPE_ID_REF_ATTRIBUTES} (no hardcoded
- * tag list). Counterpart of the uuid-ref remap done by `afterDeepClone`, but for
+ * tag list). Counterpart of {@link applyUuidRemap} (the uuid-ref remap), but for
  * the id-string type-reference system.
  *
  * Idempotent: an attribute whose value is not a key of `idRemap` (or maps to

@@ -18,7 +18,8 @@ import type { OmitEntry } from '@dialecte/core'
 /**
  * Clones a Function/SubFunction tree into the target, promotes SubFunction to Function,
  * and extracts the data model.
- * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
+ * UUID remapping is the caller's responsibility via `reference.applyUuidRemap` over the
+ * returned mappings (see the recipe that orchestrates this and the category clones).
  *
  * @param stripRootAttributes - Attribute names to remove from the root element only (shallow).
  *   FSD extraction strips `templateUuid` so the clone becomes a fresh template.
@@ -68,7 +69,8 @@ export async function cloneFunction(
 /**
  * Clones FunctionCategory trees that reference the given function (or its SubFunctions).
  * Each category is placed at its source-side structural level in the TEMPLATE structure.
- * UUID remapping is handled by afterDeepClone hook via cumulativeCloneMappings.
+ * UUID remapping (FunctionCatRef -> the cloned Function) is the caller's responsibility via
+ * `reference.applyUuidRemap` over the combined function + category mappings.
  */
 export async function cloneFunctionCategories(
 	tx: Core.Transaction<Config>,

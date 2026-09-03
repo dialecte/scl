@@ -16,7 +16,7 @@ import type * as Core from '@dialecte/core'
  * placed at its source structural level. Tag-agnostic: whatever
  * `resolveAppliedSatellites` returns is cloned by its own tag. Satellites living
  * inside the subtree are cloned by `deep`, not here (the resolver excludes them).
- * UUID remapping is handled by the afterDeepClone hook; the caller stamps lineage
+ * UUID remapping is the caller's responsibility via `reference.applyUuidRemap`; the caller stamps lineage
  * via `writeIdentity`.
  *
  * A satellite whose same-tag/same-name twin already exists in the target IS that

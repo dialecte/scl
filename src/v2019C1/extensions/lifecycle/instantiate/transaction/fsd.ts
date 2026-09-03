@@ -5,7 +5,7 @@ import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constr
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { cloneFunctionCategories } from '@/v2019C1/extensions/lifecycle/layers/function'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
-import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
+import { applyUuidRemap, writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { FsdParams, FsdResult } from './fsd.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -24,8 +24,8 @@ import type * as Core from '@dialecte/core'
  * subfunction) — the inverse of the `SubFunction -> Function` promotion applied
  * on extraction.
  *
- * The clone's uuid references are remapped by the `afterDeepClone` hook. The
- * instantiation provenance link (`FunctionSclRef` -> `SclFileReference` back to
+ * The clone's uuid references are repointed by `reference.applyUuidRemap` over the
+ * combined mappings. The instantiation provenance link (`FunctionSclRef` -> `SclFileReference` back to
  * the FSD) is written on the cloned root by `reference.writeProvenance`; SET
  * policy (naming, application assignment) is applied by consumer hooks, not here.
  *
@@ -71,8 +71,14 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		strip: false,
 	})
 
+	const allMappings = [...recordMappings, ...categoryMappings, ...appliedMappings]
+
+	// Repoint cloned uuid refs (e.g. FunctionCatRef -> cloned Function) before lineage
+	// stamping and provenance read the cloned refs.
+	await applyUuidRemap(tx, { mappings: allMappings })
+
 	await writeIdentity(tx, {
-		mappings: [...recordMappings, ...categoryMappings, ...appliedMappings],
+		mappings: allMappings,
 		mode: 'stamp-template',
 	})
 
