@@ -42,7 +42,7 @@ export async function elementSignature(
 		query,
 		resolveReferences: params.resolveReferences ?? false,
 		ignore: new Set(params.ignoreAttributes ?? DEFAULT_IGNORED_ATTRIBUTES),
-		memo: new Map(),
+		signatureCache: params.signatureCache ?? new Map(),
 		seen: new Set(),
 	}
 	return computeSignature(params.ref, context)
@@ -65,7 +65,7 @@ async function computeSignature(
 	context: ElementSignatureContext,
 ): Promise<string> {
 	const key = `${ref.tagName}:${ref.id}`
-	const cached = context.memo.get(key)
+	const cached = context.signatureCache.get(key)
 	if (cached !== undefined) return cached
 	if (context.seen.has(key)) return `@cycle:${ref.tagName}`
 
@@ -74,7 +74,7 @@ async function computeSignature(
 	const signature = tree ? await serialize(tree, context) : ''
 	context.seen.delete(key)
 
-	context.memo.set(key, signature)
+	context.signatureCache.set(key, signature)
 	return signature
 }
 

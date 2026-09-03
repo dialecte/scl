@@ -84,6 +84,10 @@ export async function importTypes(
 	const collisions: Collision[] = []
 	const stats: ImportTypesStats = { reused: 0, preserved: 0, forked: 0, reclaimed: 0 }
 
+	// One signature cache for the whole source loop: a descendant type shared by
+	// many top-level types is computed once, not re-walked per top-level type.
+	const sourceSignatureCache = new Map<string, string>()
+
 	for (const source of sourceTypes) {
 		const sourceId = await sourceQuery.getAttribute(source, { name: 'id' })
 		if (!sourceId) continue
@@ -91,6 +95,7 @@ export async function importTypes(
 		const signature = await elementSignature(sourceQuery, {
 			ref: { tagName: source.tagName, id: source.id },
 			resolveReferences: true,
+			signatureCache: sourceSignatureCache,
 		})
 
 		const reusedId = preExisting.get(signature)
@@ -191,6 +196,9 @@ async function buildPreExistingSignatureIndex(
 	tx: Core.Transaction<Config>,
 ): Promise<Map<string, string>> {
 	const index = new Map<string, string>()
+	// One signature cache across every pre-existing target type, same rationale as
+	// the source loop: shared descendants are signed once.
+	const signatureCache = new Map<string, string>()
 	for (const tagName of TYPE_TAGS) {
 		const existing = await tx.getRecordsByTagName(tagName)
 		for (const record of existing) {
@@ -199,6 +207,7 @@ async function buildPreExistingSignatureIndex(
 			const signature = await elementSignature(tx, {
 				ref: { tagName, id: record.id },
 				resolveReferences: true,
+				signatureCache,
 			})
 			if (!index.has(signature)) index.set(signature, id)
 		}

@@ -282,3 +282,36 @@ describe('elementSignature', () => {
 		},
 	})
 })
+
+describe('elementSignature — shared signatureCache', () => {
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		'a descendant referenced by two top-level types is computed once when the cache is shared': {
+			sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<DataTypeTemplates ${id}="dtt-1">
+					<LNodeType id="LNa" lnClass="ENS" ${id}="lnt-a"><DO name="Beh" type="Da" ${id}="do-a"/></LNodeType>
+					<LNodeType id="LNb" lnClass="ENS" ${id}="lnt-b"><DO name="Mod" type="Da" ${id}="do-b"/></LNodeType>
+					<DOType id="Da" cdc="ENS" ${id}="dot-da"><DA name="stVal" bType="INT32" fc="ST" ${id}="da-da"/></DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+		},
+	}
+
+	runSclTestCases.withoutExport<SclTest.BaseXmlTestCase>({
+		testCases,
+		act: async ({ source }) => {
+			// Pre-seed the shared descendant's entry with a sentinel. A resolved
+			// reference to it must fold in the sentinel, proving the cache is consulted
+			// instead of recomputing the subtree from the store.
+			const signatureCache = new Map<string, string>([['DOType:dot-da', '@sentinel']])
+
+			const sig = await elementSignature(source.query, {
+				ref: { tagName: 'LNodeType', id: 'lnt-a' } as Scl.Ref<Scl.ElementsOf>,
+				resolveReferences: true,
+				signatureCache,
+			})
+
+			expect(sig, sig).toContain('@sentinel')
+		},
+	})
+})
