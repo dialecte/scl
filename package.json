@@ -54,7 +54,7 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.4.9"
+		"@dialecte/core": "0.4.11"
 	},
 	"devDependencies": {
 		"@dialecte/cli": "0.0.2",
@@ -65,9 +65,9 @@
 		"husky": "^9.1.7",
 		"jiti": "^2.4.2",
 		"npm-run-all2": "^8.0.4",
-		"oxfmt": "^0.53.0",
-		"oxlint": "^1.68.0",
-		"oxlint-tsgolint": "^0.23.0",
+		"oxfmt": "^0.66.0",
+		"oxlint": "^1.81.0",
+		"oxlint-tsgolint": "^7.0.2001",
 		"playwright": "^1.61.1",
 		"tsx": "^4.22.4",
 		"typescript": "npm:@typescript/typescript6@^6.0.2",

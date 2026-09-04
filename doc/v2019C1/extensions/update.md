@@ -101,9 +101,7 @@ accept/skip or an object carrying **edited values** for the group's `editableAtt
 
 ```ts
 type GroupDecision =
-	| 'accept'
-	| 'skip'
-	| { action: 'accept' | 'skip'; values?: Record<string, string> }
+	'accept' | 'skip' | { action: 'accept' | 'skip'; values?: Record<string, string> }
 ```
 
 A group absent from the map defaults to its `suggestedAction` — `accept` for most changes (so an
