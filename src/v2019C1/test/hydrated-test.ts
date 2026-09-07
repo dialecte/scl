@@ -35,8 +35,12 @@ export const runSclTestCases = createTestRunner<Config, SclModules>({
 	hooks: SCL_HOOKS,
 })
 
-export async function createSclTestProject(params: { sourceXml: string; targetXml?: string }) {
-	const { sourceXml, targetXml } = params
+export async function createSclTestProject(params: {
+	sourceXml: string
+	targetXml?: string
+	dev?: { perf?: boolean }
+}) {
+	const { sourceXml, targetXml, dev } = params
 
 	return createTestProject<Config, SclModules>({
 		sourceXml,
@@ -44,6 +48,7 @@ export async function createSclTestProject(params: { sourceXml: string; targetXm
 		dialecteConfig: SCL_DIALECTE_CONFIG,
 		extensions: SCL_EXTENSIONS,
 		hooks: SCL_HOOKS,
+		dev,
 	})
 }
 

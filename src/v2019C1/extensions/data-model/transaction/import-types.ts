@@ -67,6 +67,8 @@ export async function importTypes(
 		keepNameTypesFrom = 'target',
 	} = params
 
+	tx.perf.start('scl::importTypes')
+
 	const resolved = await resolve(sourceQuery, { records })
 	const sourceTypes = collectTypesBottomUp(resolved)
 
@@ -75,9 +77,17 @@ export async function importTypes(
 		attributes: {},
 	})
 
+	// The source loop is the heavy phase — size the bar to it (one step per type).
+	// The cheap remap/reclaim tail still captions via nextStep; those extra steps
+	// clamp the bar at 100% (harmless). The pre-existing index runs first under the
+	// initial caption without its own steps.
+	tx.progress.plan({ steps: sourceTypes.length, label: 'Indexing existing types…' })
+
 	// Dedup only against the types that already existed in the target (never
 	// against types we mint during this run).
+	tx.perf.start('scl::importTypes::preExistingIndex')
 	const preExisting = await buildPreExistingSignatureIndex(tx)
+	tx.perf.stop('scl::importTypes::preExistingIndex')
 
 	const idRemap = new Map<string, string>()
 	const clonedRoots: Scl.Ref<Scl.ElementsOf>[] = []
@@ -88,8 +98,12 @@ export async function importTypes(
 	// many top-level types is computed once, not re-walked per top-level type.
 	const sourceSignatureCache = new Map<string, string>()
 
+	tx.perf.start('scl::importTypes::sourceLoop')
+
 	for (const source of sourceTypes) {
 		const sourceId = await sourceQuery.getAttribute(source, { name: 'id' })
+		// One step per source type; the caption rides the advance (close-previous).
+		tx.progress.nextStep(sourceId ? `Importing ${sourceId}` : undefined)
 		if (!sourceId) continue
 
 		const signature = await elementSignature(sourceQuery, {
@@ -152,33 +166,44 @@ export async function importTypes(
 			}
 		}
 	}
+	tx.perf.stop('scl::importTypes::sourceLoop')
 
 	// Second pass: now that idRemap is complete, repoint the child type-refs of
 	// every cloned type and the `lnType` of the cloned instances (clone mappings).
 	// A locked LNode (implemented in an IED) owns its `lnType` — exclude it from the
 	// instance remap so a fork/dedup never rewrites it.
+	tx.perf.start('scl::importTypes::remap')
 	const recordsToRemap: Scl.Ref<Scl.ElementsOf>[] = []
 	for (const mapping of cloneMappings) {
 		if (mapping.target.tagName === 'LNode' && (await isLNodeLocked(tx, mapping.target))) continue
 		recordsToRemap.push(mapping.target)
 	}
 	for (const root of clonedRoots) {
+		tx.progress.nextStep('Repointing references…')
 		const tree = await tx.getTree(root)
 		if (tree) collectRefs(tree, recordsToRemap)
 	}
 	await applyTypeIdRemap(tx, { records: recordsToRemap, idRemap })
+	tx.perf.stop('scl::importTypes::remap')
 
 	// Third pass: reclaim the ids of types a fork superseded, when the displaced old
 	// type is left with no file-wide referrers.
 	if (collisions.length > 0) {
+		tx.progress.nextStep('Reclaiming ids…')
+		tx.perf.start('scl::importTypes::reclaim')
 		await reclaimSupersededTypes(tx, {
 			collisions,
 			idRemap,
 			referrerRecords: recordsToRemap,
 			stats,
 		})
+		tx.perf.stop('scl::importTypes::reclaim')
 	}
 
+	tx.progress.endPlan()
+	// Best-effort dev span: only the success path stops it; a throw aborts the
+	// transaction and simply leaves no measure (report reads measures, not marks).
+	tx.perf.stop('scl::importTypes')
 	return { idRemap, stats }
 }
 

@@ -89,6 +89,10 @@ await targetDoc.transaction(async (tx) => {
 })
 ```
 
+### Observability
+
+`importTypes` drives the transaction's progress bar — a single nested plan over its phases (pre-existing index → source loop → repoint → reclaim), each captioned (`Indexing existing types…`, `Importing <id>`, `Repointing references…`, `Reclaiming ids…`), so the sub-bar advances per source type instead of freezing on a large closure. Under `dev.perf`, it emits a `scl::importTypes` span with `::preExistingIndex` / `::sourceLoop` / `::remap` / `::reclaim` sub-spans, read via `doc.perf.report()` (nothing is written when `dev.perf` is off).
+
 ## Exported types
 
 The `dataModel` module re-exports the parameter and result shapes of `importTypes` for typing call sites and tooling.
