@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## UNRELEASED
+## [0.3.14] - 2026-09-07
+
+### Added
+
+- **`importTypes` reports progress + dev perf spans.** Progress: one nested plan spans all phases (pre-existing index → source loop → repoint → reclaim) so the sub-bar never freezes between them; captions (`Indexing existing types…`, `Importing <id>`, `Repointing references…`, `Reclaiming ids…`) ride the step advances. Perf (`dev.perf` only): `scl::importTypes` + sub-spans `::preExistingIndex`/`::sourceLoop`/`::remap`/`::reclaim`, via `perf.report()`.
+
+### Fixed
+
+- A template `update` that **adds** a subtree containing an internal uuid reference (e.g. a new `SubFunction` whose `SourceRef` binds to a sibling `LNode` added in the same revision) no longer leaves that reference dangling at the source uuid. The reconcile add path now runs `applyUuidRemap` over the added mappings so the reference is repointed onto the added element's fresh instance uuid — restoring the reference rewiring that the removed `afterDeepClone` hook used to do for this path (a fork add is unaffected: it keeps identity in source space).
 
 ## [0.3.13] - 2026-09-03
 
