@@ -8,6 +8,7 @@ import { restoreClonedUuids, writeIdentity } from '@/v2019C1/extensions/identity
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { LOCKED_LNODE_ATTRIBUTES } from '@/v2019C1/extensions/reference'
+import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { Config } from '@/v2019C1/config'
@@ -180,9 +181,14 @@ async function reconcileChildren(
 			withTypes: { keepNameFrom: keepNameTypesFrom },
 		})
 		await writeIdentity(tx, { mappings: recordMappings, mode: identityMode })
-		// fork keeps identity: converge the added element to the source revision's uuids (a fresh clone
-		// would otherwise diverge from the source, breaking a later fork/compare)
-		if (identityMode === 'keep') await restoreClonedUuids(tx, { mappings: recordMappings })
+		if (identityMode === 'keep') {
+			// fork keeps identity: converge the added element to the source revision's uuids (a
+			// fresh clone would otherwise diverge from the source, breaking a later fork/compare)
+			await restoreClonedUuids(tx, { mappings: recordMappings })
+		} else {
+			// template: repoint the added subtree's internal uuid refs onto the fresh instance uuids
+			await applyUuidRemap(tx, { mappings: recordMappings })
+		}
 
 		// validate the added element against its instance-parent context: apply any
 		// user edit then auto-resolve a name collision among siblings (schema constraint).
