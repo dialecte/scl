@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Added
+
+- **Fork now works on application templates (ASD), not just functions (FSD).** An ASD can be brought from one revision to the next while keeping its identity, and the functions it composes are forked along with it.
+- **Fork carries satellites too.** The categories, allocation roles and variables attached to a forked template are updated in place — or added while keeping their own identity — instead of being treated as brand-new elements.
+
+### Changed
+
+- **Faster fork updates.** Adding elements during a fork now restores their identity in a single pass, roughly halving the work on large subtrees.
+
 ## [0.3.14] - 2026-09-07
 
 ### Added
