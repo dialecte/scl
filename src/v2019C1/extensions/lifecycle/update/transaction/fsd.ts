@@ -116,6 +116,8 @@ export async function fsd(
 			instanceRef: instance,
 			targetParent,
 			accepted: instanceAccepted,
+			matchKey,
+			identityMode,
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
 		await reconcileCrossCuttingSatellites(tx, {
@@ -124,6 +126,8 @@ export async function fsd(
 			instancePrimaryRef: { tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
 			structure,
 			accepted: instanceAccepted,
+			matchKey,
+			identityMode,
 		})
 	}
 

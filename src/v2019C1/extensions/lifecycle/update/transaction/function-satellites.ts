@@ -1,4 +1,4 @@
-import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
+import { restoreClonedUuids, writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
@@ -9,7 +9,9 @@ import {
 import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
@@ -42,9 +44,21 @@ export async function reconcileCarriedSatellites(
 		instanceRef: AnyRefOrRecord
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		accepted?: AcceptedIds
+		/** `templateUuid` (default) or `uuid` (fork) match for the satellite instance. */
+		matchKey?: MatchKey
+		/** `stamp-template` (default) or `keep` (fork) identity for an added satellite. */
+		identityMode?: IdentityMode
 	},
 ): Promise<void> {
-	const { sourceQuery, functionRef, instanceRef, targetParent, accepted } = params
+	const {
+		sourceQuery,
+		functionRef,
+		instanceRef,
+		targetParent,
+		accepted,
+		matchKey = 'templateUuid',
+		identityMode = 'stamp-template',
+	} = params
 
 	const satellites = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
 	let hasMissing = false
@@ -54,6 +68,7 @@ export async function reconcileCarriedSatellites(
 			tagName: satelliteRef.tagName,
 			sourceUuid,
 			sourceName,
+			matchKey,
 		})
 		if (!instance) {
 			hasMissing = true
@@ -65,6 +80,8 @@ export async function reconcileCarriedSatellites(
 			sourceRootRef: satelliteRef,
 			instanceRootRef: instance,
 			accepted,
+			matchKey,
+			identityMode,
 		})
 	}
 
@@ -78,7 +95,9 @@ export async function reconcileCarriedSatellites(
 			structure,
 			stripCategoriesUuid: false,
 		})
-		await writeIdentity(tx, { mappings, mode: 'stamp-template' })
+		await writeIdentity(tx, { mappings, mode: identityMode })
+		// fork keeps identity: converge the added satellite to its source uuid
+		if (identityMode === 'keep') await restoreClonedUuids(tx, { mappings })
 	}
 
 	// delete: an instance satellite whose template ELEMENT was retired from the source
@@ -89,12 +108,12 @@ export async function reconcileCarriedSatellites(
 		primaryRef: { tagName: 'Function', id: instanceRef.id } as Scl.Ref<'Function'>,
 	})
 	for (const instanceSatelliteRef of instanceSatellites) {
-		const { templateUuid } = await tx.any.getAttributes(instanceSatelliteRef)
-		if (!templateUuid) continue
+		const lineage = await tx.any.getAttribute(instanceSatelliteRef, { name: matchKey })
+		if (!lineage) continue
 
 		const [stillInSource] = await sourceQuery.any.findByAttributes({
 			tagName: instanceSatelliteRef.tagName,
-			attributes: { uuid: templateUuid },
+			attributes: { uuid: lineage },
 		})
 		if (stillInSource) continue
 

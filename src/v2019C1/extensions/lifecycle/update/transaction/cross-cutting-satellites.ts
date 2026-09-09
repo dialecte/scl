@@ -3,7 +3,9 @@ import { reconcileSatellites } from './satellite-reconcile'
 import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 
@@ -26,9 +28,19 @@ export async function reconcileCrossCuttingSatellites(
 		instancePrimaryRef?: Scl.Ref<Scl.ElementsOf>
 		structure: TargetStructure
 		accepted?: AcceptedIds
+		matchKey?: MatchKey
+		identityMode?: IdentityMode
 	},
 ): Promise<void> {
-	const { sourceQuery, primaryRef, instancePrimaryRef, structure, accepted } = params
+	const {
+		sourceQuery,
+		primaryRef,
+		instancePrimaryRef,
+		structure,
+		accepted,
+		matchKey,
+		identityMode,
+	} = params
 
 	const satelliteRefs = await resolveAppliedSatellites(sourceQuery, { primaryRef })
 	const instanceSatelliteRefs = instancePrimaryRef
@@ -41,5 +53,7 @@ export async function reconcileCrossCuttingSatellites(
 		instanceSatelliteRefs,
 		structure,
 		accepted,
+		matchKey,
+		identityMode,
 	})
 }
