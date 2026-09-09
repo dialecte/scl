@@ -16,6 +16,10 @@ import {
 	resolveTargetStructure,
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
+import {
+	identityModeForScenario,
+	matchKeyForScenario,
+} from '@/v2019C1/extensions/lifecycle/scenario'
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -73,11 +77,13 @@ export async function asd(
 	} = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
+	const matchKey = matchKeyForScenario(scenario)
+	const identityMode = identityModeForScenario(scenario)
 	// `instantiate` always places a NEW instance, so it never matches an existing one.
 	const instances =
 		scenario === 'instantiate'
 			? []
-			: await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid })
+			: await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid, matchKey })
 	const addedGroups = report ? allGroups(report) : []
 
 	if (instances.length === 0) {
@@ -136,6 +142,8 @@ export async function asd(
 			accepted,
 			overrides,
 			keepNameTypesFrom,
+			matchKey,
+			identityMode,
 		})
 		await reconcileSatellites(tx, {
 			sourceQuery,
@@ -143,6 +151,8 @@ export async function asd(
 			instanceSatelliteRefs,
 			structure,
 			accepted,
+			matchKey,
+			identityMode,
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
 		// in the Application subtree travel with the application group
@@ -152,6 +162,8 @@ export async function asd(
 			instancePrimaryRef: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
 			structure,
 			accepted,
+			matchKey,
+			identityMode,
 		})
 	}
 

@@ -83,7 +83,12 @@ async function collectByMatchKey(
  */
 export async function findInstanceByTemplateUuid(
 	reader: Reader,
-	params: { tagName: Scl.ElementsOf; sourceUuid: string | undefined; sourceName?: string },
+	params: {
+		tagName: Scl.ElementsOf
+		sourceUuid: string | undefined
+		sourceName?: string
+		matchKey?: MatchKey
+	},
 ): Promise<AnyTrackedRecord | undefined> {
 	const [first] = await findInstancesByTemplateUuid(reader, params)
 	return first
@@ -105,15 +110,21 @@ export async function findInstanceByTemplateUuid(
  */
 export async function findInstancesByTemplateUuid(
 	reader: Reader,
-	params: { tagName: Scl.ElementsOf; sourceUuid: string | undefined; sourceName?: string },
+	params: {
+		tagName: Scl.ElementsOf
+		sourceUuid: string | undefined
+		sourceName?: string
+		/** Attribute matched against `sourceUuid`. Default `templateUuid`; `uuid` for fork. */
+		matchKey?: MatchKey
+	},
 ): Promise<AnyTrackedRecord[]> {
-	const { tagName, sourceUuid, sourceName } = params
+	const { tagName, sourceUuid, sourceName, matchKey = 'templateUuid' } = params
 	const records = await reader.any.getRecordsByTagName(tagName)
 
 	const byLineage: AnyTrackedRecord[] = []
 	if (sourceUuid) {
 		for (const record of records) {
-			if ((await reader.any.getAttribute(record, { name: 'templateUuid' })) === sourceUuid) {
+			if ((await reader.any.getAttribute(record, { name: matchKey })) === sourceUuid) {
 				byLineage.push(record)
 			}
 		}

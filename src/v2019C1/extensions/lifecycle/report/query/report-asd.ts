@@ -7,6 +7,7 @@ import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff
 import { collectComposedFunctionUuids } from '@/v2019C1/extensions/lifecycle/instance'
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
+import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -15,6 +16,7 @@ import type {
 	InstanceDiff,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
@@ -41,11 +43,12 @@ export async function reportAsd(
 	const { sourceQuery, applicationRef, scenario } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
+	const matchKey = matchKeyForScenario(scenario)
 	// `instantiate` always places a NEW instance, so it never matches an existing one.
 	const applicationInstances =
 		scenario === 'instantiate'
 			? []
-			: await findInstancesByTemplateUuid(query, { tagName: 'Application', sourceUuid })
+			: await findInstancesByTemplateUuid(query, { tagName: 'Application', sourceUuid, matchKey })
 
 	const reportInstances: ReportInstance[] = []
 	if (applicationInstances.length === 0) {
@@ -54,6 +57,7 @@ export async function reportAsd(
 			applicationRef,
 			instance: undefined,
 			refsAlwaysAdded: scenario === 'instantiate',
+			matchKey,
 		})
 		reportInstances.push(
 			await buildReportInstance(query, {
@@ -70,6 +74,7 @@ export async function reportAsd(
 				applicationRef,
 				instance,
 				refsAlwaysAdded: scenario === 'instantiate',
+				matchKey,
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
@@ -99,6 +104,7 @@ async function reportApplicationInstance(
 		applicationRef: Scl.Ref<'Application'>
 		instance: AnyTrackedRecord | undefined
 		refsAlwaysAdded?: boolean
+		matchKey?: MatchKey
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
@@ -109,6 +115,7 @@ async function reportApplicationInstance(
 		targetQuery: query,
 		sourceRootRef: applicationRef,
 		instanceRootRef: instance,
+		matchKey: params.matchKey,
 	})
 
 	// application-layer satellites (e.g. a referenced AllocationRole) travel with
@@ -154,6 +161,7 @@ async function reportComposedFunctions(
 	},
 ): Promise<ReportInstance[]> {
 	const { sourceQuery, applicationRef, scenario } = params
+	const matchKey = matchKeyForScenario(scenario)
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 
 	const reportInstances: ReportInstance[] = []
@@ -172,6 +180,7 @@ async function reportComposedFunctions(
 				: await findInstancesByTemplateUuid(query, {
 						tagName: 'Function',
 						sourceUuid: functionUuid,
+						matchKey,
 					})
 		if (functionInstances.length === 0) {
 			const instanceDiff = await reportFunction(query, {
@@ -179,6 +188,7 @@ async function reportComposedFunctions(
 				functionRef,
 				instance: undefined,
 				refsAlwaysAdded: scenario === 'instantiate',
+				matchKey,
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
@@ -196,6 +206,7 @@ async function reportComposedFunctions(
 				functionRef,
 				instance: functionInstance,
 				refsAlwaysAdded: scenario === 'instantiate',
+				matchKey,
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
