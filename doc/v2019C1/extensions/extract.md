@@ -1,15 +1,16 @@
 ---
-description: Extract extension for @dialecte/scl v2019C1 — the FSD/ASD template extractors (built on the transplant engine + layers) plus the TEMPLATE-structure helper.
+description: Extract extension for @dialecte/scl v2019C1 — the FSD/ASD/SSD template extractors (built on the transplant engine + layers) plus the TEMPLATE-structure helper.
 ---
 
 # Extract
 
-The `extract` verb copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.lifecycle.transplant.deep`) and the shared `layers/` take-over, adding two named extractors (`fsd`, `asd`) that produce template FSD/ASD documents. It also exposes the `ensureSubstationTemplateStructure` helper they use.
+The `extract` verb copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.lifecycle.transplant.deep`) and the shared `layers/` take-over, adding three named extractors (`fsd`, `asd`, `ssd`) that produce template FSD/ASD/SSD documents. It also exposes the `ensureSubstationTemplateStructure` helper they use.
 
 ```ts
 // named extractors (compose the transplant engine + layers with extract policy)
 tx.lifecycle.extract.fsd(...)
 tx.lifecycle.extract.asd(...)
+tx.lifecycle.extract.ssd(...)
 // helper
 tx.lifecycle.extract.ensureSubstationTemplateStructure()
 ```
@@ -73,6 +74,30 @@ Steps:
 4. Clone the remaining referenced satellites, placing each by mirroring its source hierarchy — a satellite owned by a function lands back under that function's clone — and cloning each target exactly once (satellites already brought in with a function are reused, not duplicated).
 5. Run post-extraction clean-up.
 
+### `ssd`
+
+Extracts a `Substation`, `VoltageLevel` or `Bay` and its content into a new SSD template document.
+
+```ts
+tx.lifecycle.extract.ssd(params: {
+  sourceQuery: Scl.Query
+  scopeRef: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
+  tool: string
+  who: string
+  nameStructure?: string
+}): Promise<{ warnings: string[] }>
+```
+
+Steps:
+
+1. Ensure the TEMPLATE substation structure.
+2. Write the SSD history header (`fileType: 'SSD'`).
+3. Gather the scope's content via `cloneTopologyContent` (layers/topology): its Applications and the Functions they compose, any standalone Functions, and the top-level equipment (including `ConnectivityNode`, so the single-line diagram stays connected) — each with its type closure.
+4. Name the selected entrypoint as the reusable root and strip its `templateUuid`; the TEMPLATE ancestors are left untouched.
+5. Repoint cloned UUID references and run post-extraction clean-up.
+
+Returns the warnings gathered while extracting — currently one entry when the source has `IED` / `Communication` sections, which are not yet carried into an SSD.
+
 ### `ensureSubstationTemplateStructure`
 
 Ensures the mandatory `TEMPLATE` hierarchy exists under the root `SCL`, creating each level if absent. Idempotent — safe to call multiple times.
@@ -105,8 +130,9 @@ lifecycle/
   layers/                     per-layer take-over, shared by extract & instantiate
     function/                 clone-function (cloneFunction, cloneFunctionCategories)
     application/              clone-application
+    topology/                 root selection + cloneTopologyContent (SSD scope take-over)
   extract/transaction/        the extract operation (this extension)
-    fsd.ts , asd.ts           file-type extractors
+    fsd.ts , asd.ts , ssd.ts  file-type extractors
     ensure-substation-structure.ts , post-extraction-cleanup.ts
     omit.ts , omit-filters.ts extract-direction pruning policy
 ```
