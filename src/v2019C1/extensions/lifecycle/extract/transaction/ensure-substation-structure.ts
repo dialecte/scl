@@ -1,3 +1,5 @@
+import { TEMPLATE_NAME } from '@/v2019C1/constants'
+
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -10,17 +12,17 @@ export async function ensureSubstationTemplateStructure(tx: Core.Transaction<Con
 
 	const substation = await tx.ensureChild(root, {
 		tagName: 'Substation',
-		attributes: { name: 'TEMPLATE' },
+		attributes: { name: TEMPLATE_NAME },
 	})
 
 	const voltageLevel = await tx.ensureChild(substation, {
 		tagName: 'VoltageLevel',
-		attributes: { name: 'TEMPLATE' },
+		attributes: { name: TEMPLATE_NAME },
 	})
 
 	const bay = await tx.ensureChild(voltageLevel, {
 		tagName: 'Bay',
-		attributes: { name: 'TEMPLATE' },
+		attributes: { name: TEMPLATE_NAME },
 	})
 
 	return {
