@@ -7,14 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.3.15] - 2026-09-11
+
 ### Added
 
 - **Fork now works on application templates (ASD), not just functions (FSD).** An ASD can be brought from one revision to the next while keeping its identity, and the functions it composes are forked along with it.
 - **Fork carries satellites too.** The categories, allocation roles and variables attached to a forked template are updated in place — or added while keeping their own identity — instead of being treated as brand-new elements.
+- **Export a bay, voltage level or substation as an SSD.** Pick one in a project and export it to a standalone SSD file. It gathers the equipment, the applications and the functions they use, plus the data types they need, into a reusable template named after what you exported. Parts that cannot be carried yet (IEDs and communication) are left out and reported back.
+- **Exported SSDs stay wired up.** The connectivity between equipment now travels with it, so the single-line diagram in the exported file keeps its connections instead of dangling.
 
 ### Changed
 
 - **Faster fork updates.** Adding elements during a fork now restores their identity in a single pass, roughly halving the work on large subtrees.
+- **`writeProvenance` can now record a whole source file.** Alongside tagging a function or application root, it can note an imported file in the project header (`Header > SourceFiles`), which is how an imported SSD or SCD records where it came from. The call now takes a `target` describing which of the two to write.
+
+### Fixed
+
+- **Categories are no longer duplicated when exporting.** A category shared by several applications or functions is now written once, instead of being repeated for every one that uses it.
 
 ## [0.3.14] - 2026-09-07
 

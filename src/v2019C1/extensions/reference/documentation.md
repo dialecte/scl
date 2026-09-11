@@ -330,12 +330,12 @@ await tx.reference.writeProvenance({ sourceQuery, target: { anchor: 'document', 
 
 The kernel **self-sources** every field from the source document — no SET dependency:
 
-| `SclFileReference` attr | Source                                                    |
-| ----------------------- | --------------------------------------------------------- |
+| `SclFileReference` attr | Source                                                         |
+| ----------------------- | -------------------------------------------------------------- |
 | `fileType`              | `FSD` / `ASD` (implied by anchor) or the `document` `fileType` |
-| `version` / `revision`  | source `Header` (empty string when the Header omits them) |
-| `fileUuid`              | source `Header.uuid` (omitted when there is no Header)    |
-| `fileName`              | `sourceQuery.getFilename()`                               |
+| `version` / `revision`  | source `Header` (empty string when the Header omits them)      |
+| `fileUuid`              | source `Header.uuid` (omitted when there is no Header)         |
+| `fileName`              | `sourceQuery.getFilename()`                                    |
 
 Notes:
 
