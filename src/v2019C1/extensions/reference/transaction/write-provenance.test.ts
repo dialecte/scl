@@ -8,14 +8,14 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test/hydrated-test'
 
-import type { ProvenanceFileType } from './write-provenance.types'
+import type { SclFileType } from './write-provenance.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
 type TestCase = SclTest.BaseXmlTestCase & {
-	rootTag: Scl.ElementsOf
-	rootId: string
-	fileType: ProvenanceFileType
+	target:
+		| { anchor: 'function' | 'application'; rootTag: Scl.ElementsOf; rootId: string }
+		| { anchor: 'document'; fileType: SclFileType }
 }
 
 describe('writeProvenance', () => {
@@ -35,9 +35,7 @@ describe('writeProvenance', () => {
 						</VoltageLevel>
 					</Substation>
 				</SCL>`,
-			rootTag: 'Function',
-			rootId: 'fn-1',
-			fileType: 'FSD',
+			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 			expectedQueries: [
 				'//default:Function[@name="Prot"]//v2019C1:FunctionSclRef/v2019C1:SclFileReference[@fileType="FSD"][@fileUuid="doc-uuid"][@version="2"][@revision="B"]',
 			],
@@ -54,13 +52,24 @@ describe('writeProvenance', () => {
 						</Private>
 					</Substation>
 				</SCL>`,
-			rootTag: 'Application',
-			rootId: 'app-1',
-			fileType: 'ASD',
+			target: { anchor: 'application', rootTag: 'Application', rootId: 'app-1' },
 			expectedQueries: [
 				'//v2019C1:Application[@name="HMI"]//v2019C1:ApplicationSclRef/v2019C1:SclFileReference[@fileType="ASD"][@fileUuid="doc-uuid"][@version="3"][@revision="C"]',
 			],
 			unexpectedQueries: ['//v2019C1:FunctionSclRef'],
+		},
+
+		'SSD: appends a Header > SourceFiles > SclFileReference sourced from the Header': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${ID}="scl-1">
+					<Header id="proj" uuid="ssd-uuid" version="0" revision="14" ${ID}="hdr-1"/>
+					<Substation name="S1" ${ID}="sub-1"/>
+				</SCL>`,
+			target: { anchor: 'document', fileType: 'SSD' },
+			expectedQueries: [
+				'//default:Header/default:SourceFiles/default:SclFileReference[@fileType="SSD"][@fileUuid="ssd-uuid"][@version="0"][@revision="14"]',
+			],
+			unexpectedQueries: ['//v2019C1:FunctionSclRef', '//v2019C1:ApplicationSclRef'],
 		},
 
 		'no Header: required version/revision fall back to empty strings, optional fileUuid is omitted':
@@ -75,9 +84,7 @@ describe('writeProvenance', () => {
 						</VoltageLevel>
 					</Substation>
 				</SCL>`,
-				rootTag: 'Function',
-				rootId: 'fn-1',
-				fileType: 'FSD',
+				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 				expectedQueries: [
 					'//default:Function[@name="Prot"]//v2019C1:FunctionSclRef/v2019C1:SclFileReference[@fileType="FSD"][@version=""][@revision=""]',
 				],
@@ -102,9 +109,7 @@ describe('writeProvenance', () => {
 						</VoltageLevel>
 					</Substation>
 				</SCL>`,
-			rootTag: 'Function',
-			rootId: 'fn-1',
-			fileType: 'FSD',
+			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 			expectedQueries: [
 				// the preserved composition ref is untouched
 				'//default:Function[@name="Prot"]//v2019C1:SclFileReference[@fileName="existing.fsd"][@version="9"][@revision="Z"]',
@@ -119,13 +124,30 @@ describe('writeProvenance', () => {
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		await source.transaction(async (tx) => {
+			const t = testCase.target
+			if (t.anchor === 'document') {
+				await writeProvenance(tx, {
+					sourceQuery: source.query,
+					target: { anchor: 'document', fileType: t.fileType },
+				})
+				return
+			}
+			if (t.anchor === 'function') {
+				await writeProvenance(tx, {
+					sourceQuery: source.query,
+					target: {
+						anchor: 'function',
+						root: { tagName: t.rootTag, id: t.rootId } as unknown as Scl.Ref<'Function'>,
+					},
+				})
+				return
+			}
 			await writeProvenance(tx, {
 				sourceQuery: source.query,
-				targetRoot: {
-					tagName: testCase.rootTag,
-					id: testCase.rootId,
-				} as unknown as Scl.Ref<Scl.ElementsOf>,
-				fileType: testCase.fileType,
+				target: {
+					anchor: 'application',
+					root: { tagName: t.rootTag, id: t.rootId } as unknown as Scl.Ref<'Application'>,
+				},
 			})
 		})
 

@@ -102,8 +102,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	})
 	await writeProvenance(tx, {
 		sourceQuery,
-		targetRoot: instantiatedRef,
-		fileType: 'FSD',
+		target: { anchor: 'function', root: instantiatedRef },
 	})
 
 	return { functionRef: instantiatedRef, recordMappings }

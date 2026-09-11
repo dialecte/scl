@@ -312,29 +312,37 @@ When a VariableApplyTo with an XPath `element` value is encountered during impor
 
 ### `writeProvenance`
 
-Writes the **instantiation provenance link** on a cloned root: a fresh
-`FunctionSclRef` / `ApplicationSclRef` > `SclFileReference` pointing back at the
-template file the instance was created from. Called by
-`instantiate.fsd` (`fileType: 'FSD'`) and `instantiate.asd` (`fileType: 'ASD'`).
+Writes an **instantiation / import provenance link**: an `SclFileReference` pointing
+back at the source file, chosen by a discriminated `target`:
+
+- `{ anchor: 'function', root }` — a fresh `FunctionSclRef` on the cloned `Function` (FSD).
+- `{ anchor: 'application', root }` — a fresh `ApplicationSclRef` on the cloned `Application` (ASD).
+- `{ anchor: 'document', fileType }` — appended to the target `Header > SourceFiles` (SSD / SCD):
+  a whole-file source with no per-root wrapper.
+
+Called by `instantiate.fsd` / `instantiate.asd` (root anchors) and the topology / document
+verbs (document anchor).
 
 ```ts
-await tx.reference.writeProvenance({ sourceQuery, targetRoot, fileType })
+await tx.reference.writeProvenance({ sourceQuery, target: { anchor: 'function', root } })
+await tx.reference.writeProvenance({ sourceQuery, target: { anchor: 'document', fileType: 'SSD' } })
 ```
 
 The kernel **self-sources** every field from the source document — no SET dependency:
 
 | `SclFileReference` attr | Source                                                    |
 | ----------------------- | --------------------------------------------------------- |
-| `fileType`              | caller (`FSD` / `ASD`)                                    |
+| `fileType`              | `FSD` / `ASD` (implied by anchor) or the `document` `fileType` |
 | `version` / `revision`  | source `Header` (empty string when the Header omits them) |
 | `fileUuid`              | source `Header.uuid` (omitted when there is no Header)    |
 | `fileName`              | `sourceQuery.getFilename()`                               |
 
 Notes:
 
-- **Always creates** a new ref (never reuses an existing one): a root may already
-  carry composition-provenance SclRefs (preserved by instantiate), and each
-  instantiation is a distinct link.
-- The 6-100 ref element is auto-wrapped in `<Private type="eIEC61850-6-100">` by
-  the serializer, so it serializes as `Function > Private > FunctionSclRef > SclFileReference`.
+- Root anchors **always create** a new ref (never reuse): a root may already carry
+  composition-provenance SclRefs (preserved by instantiate), and each instantiation is a distinct link.
+- The document anchor **appends** to `Header > SourceFiles` (the Header must exist) and uses the
+  base-SCL `SclFileReference` (default namespace), not the 6-100 one.
+- The 6-100 root ref element is auto-wrapped in `<Private type="eIEC61850-6-100">` by the serializer,
+  so it serializes as `Function > Private > FunctionSclRef > SclFileReference`.
 - This is the **write** counterpart of the `getProvenance` query.

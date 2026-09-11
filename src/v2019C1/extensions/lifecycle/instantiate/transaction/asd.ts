@@ -97,8 +97,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	})
 	await writeProvenance(tx, {
 		sourceQuery,
-		targetRoot: rootMapping.target,
-		fileType: 'ASD',
+		target: { anchor: 'application', root: rootMapping.target as Scl.Ref<'Application'> },
 	})
 
 	const composedFunctionInstanceRefs = composedFunctionRefs

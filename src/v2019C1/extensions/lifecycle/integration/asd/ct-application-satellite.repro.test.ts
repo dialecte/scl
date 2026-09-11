@@ -460,7 +460,7 @@ function collectAdded(node: DiffLike): { change?: string; tagName: string }[] {
 
 function collectRemoved(node: {
 	change?: string
-	tagName: string
+	tagName?: string
 	companions?: unknown[]
 	children?: unknown[]
 	primary?: unknown
