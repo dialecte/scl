@@ -10,7 +10,7 @@ import type { SclTest } from '@/v2019C1/test'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-describe('mergeChildrenInto — recursive name-keyed container reuse', () => {
+describe('mergeChildrenInto - recursive name-keyed container reuse', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		targetXml: string
 		source: Scl.Ref<Scl.ElementsOf>
@@ -74,6 +74,45 @@ describe('mergeChildrenInto — recursive name-keyed container reuse', () => {
 			unexpectedQueries: [
 				// No duplicate "Interface" wrapper.
 				'(//v2019C1:SubCategory[@name="Interface"])[2]',
+			],
+		},
+
+		// A shared catalog category is reached from several source functions/applications, so the SAME
+		// category is merged into its target twin more than once. An identical leaf reference (a
+		// FunctionCatRef with the same function/functionUuid) already present in the target must be
+		// treated as already-merged, not re-cloned - otherwise refs pile up N times.
+		'identical FunctionCatRef leaf is not duplicated on repeated merge': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
+						<Private ${id}="sub-priv" type="eIEC61850-6-100">
+							<eIEC61850-6-100:FunctionCategory ${id}="fcat-src" name="MEASUREMENT" uuid="fcat-src-uuid">
+								<eIEC61850-6-100:FunctionCatRef ${id}="fcref-src" function="TEMPLATE/Measurement Function" functionUuid="meas-uuid"/>
+							</eIEC61850-6-100:FunctionCategory>
+						</Private>
+					</Substation>
+				</SCL>
+			`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<Substation ${id}="target-sub" name="TEMPLATE" uuid="target-sub-uuid">
+						<Private ${id}="target-priv" type="eIEC61850-6-100">
+							<eIEC61850-6-100:FunctionCategory ${id}="fcat-tgt" name="MEASUREMENT" uuid="fcat-tgt-uuid">
+								<eIEC61850-6-100:FunctionCatRef ${id}="fcref-tgt" function="TEMPLATE/Measurement Function" functionUuid="meas-uuid"/>
+							</eIEC61850-6-100:FunctionCategory>
+						</Private>
+					</Substation>
+				</SCL>
+			`,
+			source: { tagName: 'FunctionCategory', id: 'fcat-src' } as Scl.Ref<Scl.ElementsOf>,
+			target: { tagName: 'FunctionCategory', id: 'fcat-tgt' } as Scl.Ref<Scl.ElementsOf>,
+			expectedQueries: [
+				// The single pre-existing ref remains.
+				'//v2019C1:FunctionCategory[@name="MEASUREMENT"]/v2019C1:FunctionCatRef[@function="TEMPLATE/Measurement Function"]',
+			],
+			unexpectedQueries: [
+				// No second identical ref.
+				'(//v2019C1:FunctionCatRef[@function="TEMPLATE/Measurement Function"])[2]',
 			],
 		},
 	}

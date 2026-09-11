@@ -1,5 +1,7 @@
 import { cloneTree } from './clone-tree'
 
+import { elementSignature } from '@/v2019C1/extensions/signature/query'
+
 import type { StripConfig } from './clone-tree.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -11,7 +13,7 @@ import type * as Core from '@dialecte/core'
  * Generic, element-agnostic counterpart of {@link addChildrenTo}: where `addChildrenTo` pours every
  * source child in as a fresh clone, this walks name-keyed containers (e.g. `FunctionCategory` ->
  * `SubCategory`) and, when a same-tag/same-name child already exists under the target, recurses into
- * it — so only the genuinely new leaves (references, unnamed content) are cloned. A source child with
+ * it - so only the genuinely new leaves (references, unnamed content) are cloned. A source child with
  * no `name`, or with no matching twin, is cloned whole.
  */
 export async function mergeChildrenInto(
@@ -37,12 +39,17 @@ export async function mergeChildrenInto(
 		const twin = name ? await findChildByName(tx, target, childRef.tagName, name) : undefined
 
 		if (twin) {
-			// A same-tag/same-name container already exists — merge INTO it rather than duplicate it.
+			// A same-tag/same-name container already exists - merge INTO it rather than duplicate it.
 			mappings.push(
 				...(await mergeChildrenInto(tx, { sourceQuery, source: child, target: twin, strip })),
 			)
 			continue
 		}
+
+		// A leaf reference (no name-keyed container, e.g. FunctionCatRef) can be reached from several
+		// source functions/applications, so the same category is merged more than once. Skip a child
+		// that is already present verbatim under the target - otherwise identical refs pile up.
+		if (await hasEquivalentChild(tx, target, sourceQuery, child)) continue
 
 		const clone = await cloneTree(tx, {
 			sourceQuery,
@@ -73,4 +80,30 @@ async function findChildByName(
 		}
 	}
 	return undefined
+}
+
+/**
+ * Whether `target` already holds a same-tag child structurally identical to `child` (a leaf
+ * reference). Uses the id-independent element signature, so a child cloned into `target` earlier
+ * (with a freshly minted uuid) still matches its source twin and is not cloned again.
+ */
+async function hasEquivalentChild(
+	tx: Core.Transaction<Config>,
+	target: Scl.Ref<Scl.ElementsOf>,
+	sourceQuery: Core.Query<Config>,
+	child: Scl.Ref<Scl.ElementsOf>,
+): Promise<boolean> {
+	const targetRecord = await tx.any.getRecord(target)
+	if (!targetRecord) return false
+
+	const childSignature = await elementSignature(sourceQuery, { ref: child })
+	for (const targetChildRef of targetRecord.children) {
+		if (targetChildRef.tagName !== child.tagName) continue
+		const targetChild = {
+			tagName: targetChildRef.tagName,
+			id: targetChildRef.id,
+		} as Scl.Ref<Scl.ElementsOf>
+		if ((await elementSignature(tx, { ref: targetChild })) === childSignature) return true
+	}
+	return false
 }
