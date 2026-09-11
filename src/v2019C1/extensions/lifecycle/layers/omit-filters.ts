@@ -12,3 +12,10 @@ export const ALWAYS_OMIT: OmitEntry<Config>[] = [
 	'GeneralEquipment',
 	'ConductingEquipment',
 ]
+
+/**
+ * Prune list for the **topology (SSD) extract** direction: drops the source's own provenance
+ * refs but KEEPS equipment — equipment is the topology layer's own content (unlike ASD/FSD,
+ * where it is out-of-layer noise).
+ */
+export const TOPOLOGY_EXTRACT_OMIT: OmitEntry<Config>[] = ['FunctionSclRef', 'ApplicationSclRef']
