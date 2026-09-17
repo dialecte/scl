@@ -1,13 +1,12 @@
 import { groupChanges } from './group'
+import { matchChild } from './match-child'
+import { collectUuids, indexByMatchKey } from './match-key'
+import { referenceIdentity, referenceNameIdentity } from './reference-match'
 import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import {
-	KEEP_ON_ORPHAN_REFS,
-	REFERENCE_TAG_NAMES,
-	UUID_REFERENCE_PAIRS,
-} from '@/v2019C1/constants/reference-pairs'
+import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
 
 import type {
 	AttributeChange,
@@ -171,10 +170,10 @@ async function diffMatched(
 	for (const sourceChild of sourceNode.tree) {
 		// a boundary tag is covered by another report - exclude its subtree
 		if (omit?.includes(sourceChild.tagName)) continue
-		const matched = await matchInstanceChild(sourceQuery, {
+		const matched = await matchChild(sourceQuery, {
 			targetQuery,
 			sourceChild,
-			instanceNode,
+			instanceParent: instanceNode,
 			index,
 			matchedInstanceIds,
 			refsAlwaysAdded,
@@ -254,171 +253,6 @@ async function diffMatched(
 		attributeChanges: attributeChanges.length > 0 ? attributeChanges : undefined,
 		children,
 	}
-}
-
-/**
- * Find the instance child that corresponds to a source child.
- *  - Identified elements match by `templateUuid` lineage (the source `uuid`).
- *  - A uuid-less REFERENCE (e.g. `FunctionRef`) matches by its reference IDENTITY — the
- *    target `*Uuid` it points to — never by tag position, so a template ref to a target the
- *    instance does not yet reference surfaces as a genuine `added`, and a ref whose target
- *    is unresolved falls back to positional pairing (preserving existing behaviour).
- *  - Any other uuid-less element (e.g. `FunctionRoleContent`) matches a same-tag sibling by
- *    position, so it is not reported as a spurious add.
- */
-async function matchInstanceChild(
-	sourceQuery: Core.Query<Config>,
-	params: {
-		targetQuery: Core.Query<Config>
-		sourceChild: AnyTreeRecord
-		instanceNode: AnyTreeRecord
-		index: Map<string, AnyTreeRecord>
-		matchedInstanceIds: ReadonlySet<string>
-		refsAlwaysAdded?: boolean
-	},
-): Promise<AnyTreeRecord | undefined> {
-	const { targetQuery, sourceChild, instanceNode, index, matchedInstanceIds } = params
-
-	const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
-	if (sourceUuid) {
-		// Template lineage is only valid within the same element type. A placeholder `templateUuid`
-		// smeared across unrelated tags (real .ssd files reuse one dummy value on Substation,
-		// FunctionCategory, AllocationRole, LNode...) can coincide with a source `uuid`; a cross-type
-		// hit is a collision, not a lineage, so require the matched node to share the source tag.
-		const matched = index.get(sourceUuid)
-		return matched && matched.tagName === sourceChild.tagName ? matched : undefined
-	}
-
-	// INSTANTIATE: a fresh instantiation creates its OWN per-instance refs, so never match a link to
-	// a prior instance's ref — surface it as `added` (the prior refs stay as kept context).
-	if (params.refsAlwaysAdded && REFERENCE_TAG_NAMES.has(sourceChild.tagName)) return undefined
-
-	const candidates = instanceNode.tree.filter(
-		(instanceChild) =>
-			instanceChild.tagName === sourceChild.tagName && !matchedInstanceIds.has(instanceChild.id),
-	)
-	if (candidates.length === 0) return undefined
-
-	if (REFERENCE_TAG_NAMES.has(sourceChild.tagName)) {
-		// The source ref's target uuid is already TEMPLATE space (do not normalize it — an
-		// extracted template may carry its own `templateUuid`). The instance ref's target uuid is
-		// mapped back to template space via its element's `templateUuid` so the two compare equal.
-		const sourceIdentity = await referenceIdentity(sourceQuery, sourceChild, {
-			mapToTemplate: false,
-		})
-		if (sourceIdentity === undefined) return candidates[0]
-		for (const candidate of candidates) {
-			const candidateIdentity = await referenceIdentity(targetQuery, candidate, {
-				mapToTemplate: true,
-			})
-			if (candidateIdentity === sourceIdentity) return candidate
-		}
-		// Fallback: the uuid round-trip fails when a project was authored with PLACEHOLDER
-		// `templateUuid`s that are not the source element's own `uuid` (real .ssd files reuse one
-		// templateUuid across elements). Match instead by the resolved TARGET NAME, which is stable
-		// across instantiate (a ref to "PIU" still resolves to an AllocationRole named "PIU").
-		const sourceNameIdentity = await referenceNameIdentity(sourceQuery, sourceChild)
-		if (sourceNameIdentity === undefined) return undefined
-		for (const candidate of candidates) {
-			const candidateNameIdentity = await referenceNameIdentity(targetQuery, candidate)
-			if (candidateNameIdentity === sourceNameIdentity) return candidate
-		}
-		return undefined
-	}
-
-	return candidates[0]
-}
-
-/**
- * The reference identity of a link element: the set of target `*Uuid` attributes it carries,
- * as a stable string. When `mapToTemplate` is set (the INSTANCE side), each target uuid is
- * resolved to its element's `templateUuid` so an instantiated (remapped) reference compares
- * equal to the template reference it came from. The SOURCE side passes the raw uuids, which are
- * already template space. Returns `undefined` when no uuid attribute is set (unresolved ref),
- * so matching falls back to position.
- */
-async function referenceIdentity(
-	query: Core.Query<Config>,
-	node: AnyTreeRecord,
-	options: { mapToTemplate: boolean },
-): Promise<string | undefined> {
-	const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS]
-	if (!pairs) return undefined
-	const parts: string[] = []
-	for (const pair of pairs) {
-		const uuidValue = await query.any.getAttribute(node, { name: pair.attribute.uuid })
-		if (!uuidValue) continue
-		const identity = options.mapToTemplate
-			? await toTemplateSpaceUuid(query, uuidValue, pair.target)
-			: uuidValue
-		parts.push(`${pair.attribute.uuid}=${identity}`)
-	}
-	return parts.length > 0 ? parts.sort().join('|') : undefined
-}
-
-/**
- * Resolve an instance target `uuid` to its template-space identity: the referenced element's
- * `templateUuid` if it is an instance, else the uuid itself (an external/unresolvable target).
- */
-async function toTemplateSpaceUuid(
-	query: Core.Query<Config>,
-	uuidValue: string,
-	targetTags: readonly string[],
-): Promise<string> {
-	for (const tagName of targetTags) {
-		const matches = await query.findByAttributes({
-			tagName: tagName as Parameters<typeof query.findByAttributes>[0]['tagName'],
-			attributes: { uuid: uuidValue } as Record<string, string>,
-		})
-		const target = matches[0]
-		if (target) {
-			const templateUuid = await query.any.getAttribute(target, { name: 'templateUuid' })
-			return templateUuid || uuidValue
-		}
-	}
-	return uuidValue
-}
-
-/**
- * Fallback identity for a reference node: the NAME of each resolved target element. Stable across
- * instantiate even when the project uses placeholder `templateUuid`s that are not the source
- * element's own `uuid` (so the uuid round-trip in {@link referenceIdentity} cannot bridge the two
- * sides). Undefined when no target resolves to a named element.
- */
-async function referenceNameIdentity(
-	query: Core.Query<Config>,
-	node: AnyTreeRecord,
-): Promise<string | undefined> {
-	const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS]
-	if (!pairs) return undefined
-	const parts: string[] = []
-	for (const pair of pairs) {
-		const uuidValue = await query.any.getAttribute(node, { name: pair.attribute.uuid })
-		if (!uuidValue) continue
-		const name = await resolveTargetName(query, uuidValue, pair.target)
-		if (name === undefined) continue
-		parts.push(`${pair.attribute.uuid}=${name}`)
-	}
-	return parts.length > 0 ? parts.sort().join('|') : undefined
-}
-
-async function resolveTargetName(
-	query: Core.Query<Config>,
-	uuidValue: string,
-	targetTags: readonly string[],
-): Promise<string | undefined> {
-	for (const tagName of targetTags) {
-		const matches = await query.findByAttributes({
-			tagName: tagName as Parameters<typeof query.findByAttributes>[0]['tagName'],
-			attributes: { uuid: uuidValue } as Record<string, string>,
-		})
-		const target = matches[0]
-		if (target) {
-			const name = await query.any.getAttribute(target, { name: 'name' })
-			return name || undefined
-		}
-	}
-	return undefined
 }
 
 function addedNode(node: AnyTreeRecord, omit?: readonly string[]): DiffNode {
@@ -511,27 +345,6 @@ async function computeAttributeChanges(
 		if (before !== after) changes.push({ name, before, after })
 	}
 	return changes
-}
-
-async function indexByMatchKey(
-	targetQuery: Core.Query<Config>,
-	params: { node: AnyTreeRecord; index: Map<string, AnyTreeRecord>; matchKey: MatchKey },
-): Promise<void> {
-	const { node, index, matchKey } = params
-	const key = await targetQuery.any.getAttribute(node, { name: matchKey })
-	if (key) index.set(key, node)
-	for (const child of node.tree)
-		await indexByMatchKey(targetQuery, { node: child, index, matchKey })
-}
-
-async function collectUuids(
-	sourceQuery: Core.Query<Config>,
-	params: { node: AnyTreeRecord; out: Set<string> },
-): Promise<void> {
-	const { node, out } = params
-	const uuid = await sourceQuery.any.getAttribute(node, { name: 'uuid' })
-	if (uuid) out.add(uuid)
-	for (const child of node.tree) await collectUuids(sourceQuery, { node: child, out })
 }
 
 /**

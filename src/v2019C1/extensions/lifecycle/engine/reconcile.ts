@@ -1,3 +1,5 @@
+import { matchChild } from './match-child'
+import { collectUuids, indexByMatchKey } from './match-key'
 import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
@@ -144,19 +146,15 @@ async function reconcileChildren(
 	for (const sourceChild of sourceNode.tree) {
 		// a boundary tag is owned by another pass (e.g. fn/app cascade) - leave it untouched
 		if (omit?.includes(sourceChild.tagName)) continue
-		const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
-		// Match by templateUuid lineage; fall back to a same-tag unmatched sibling
-		// for uuid-less elements (e.g. FunctionRoleContent) so they are reconciled
-		// in place, not re-added as duplicates.
-		const matched =
-			(sourceUuid ? index.get(sourceUuid) : undefined) ??
-			(sourceUuid
-				? undefined
-				: instanceParent.tree.find(
-						(instanceChild) =>
-							instanceChild.tagName === sourceChild.tagName &&
-							!matchedInstanceIds.has(instanceChild.id),
-					))
+		// The SAME matcher the diff (report) side uses, so apply pairs children identically: lineage
+		// with the cross-type guard, reference identity (uuid then name), then positional fallback.
+		const matched = await matchChild(sourceQuery, {
+			targetQuery: tx,
+			sourceChild,
+			instanceParent,
+			index,
+			matchedInstanceIds,
+		})
 
 		if (matched) {
 			matchedInstanceIds.add(matched.id)
@@ -335,24 +333,4 @@ async function updateMatchedAttributes(
 		// typed string-only, so cast the dynamic map (matches the repo's `as Record` pattern).
 		await tx.any.update(instanceRecord, { attributes: updates as Record<string, string> })
 	}
-}
-
-async function indexByMatchKey(
-	tx: Core.Transaction<Config>,
-	params: { node: AnyTreeRecord; index: Map<string, AnyTreeRecord>; matchKey: MatchKey },
-): Promise<void> {
-	const { node, index, matchKey } = params
-	const key = await tx.any.getAttribute(node, { name: matchKey })
-	if (key) index.set(key, node)
-	for (const child of node.tree) await indexByMatchKey(tx, { node: child, index, matchKey })
-}
-
-async function collectUuids(
-	sourceQuery: Core.Query<Config>,
-	params: { node: AnyTreeRecord; out: Set<string> },
-): Promise<void> {
-	const { node, out } = params
-	const uuid = await sourceQuery.any.getAttribute(node, { name: 'uuid' })
-	if (uuid) out.add(uuid)
-	for (const child of node.tree) await collectUuids(sourceQuery, { node: child, out })
 }
