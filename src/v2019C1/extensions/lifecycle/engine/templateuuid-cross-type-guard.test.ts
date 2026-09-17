@@ -23,11 +23,12 @@ const sourceXml = /* xml */ `
 		<Substation name="TEMPLATE" ${id}="sub-s">
 			<Private type="eIEC61850-6-100" ${id}="priv-s">
 				<eIEC61850-6-100:Application name="App" uuid="app-src" ${id}="app-s">
-					<eIEC61850-6-100:Function name="Fn" uuid="123e4567-e89b-12d3-a456-789012345678" ${id}="fn-s"/>
+					<Function name="Fn" uuid="123e4567-e89b-12d3-a456-789012345678" ${id}="fn-s"/>
 				</eIEC61850-6-100:Application>
 			</Private>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 // The instance carries NO Function; it has an AllocationRole whose templateUuid coincides with the
 // source Function's uuid (the shared placeholder). The source Function must surface as `added`, not
@@ -41,7 +42,8 @@ const instanceXml = /* xml */ `
 				</eIEC61850-6-100:Application>
 			</Private>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('engine.diff — templateUuid lineage match must agree on element type', () => {
 	it('classifies the source Function as added, not matched onto a same-value AllocationRole', async () => {

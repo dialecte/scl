@@ -1,3 +1,5 @@
+import { assertValidSclXml } from './assert-valid-scl-xml'
+
 import {
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 	CUSTOM_RECORD_ID_ATTRIBUTE_NAME,
@@ -26,14 +28,42 @@ export const XMLNS_SCL_NAMESPACE = `xmlns="${SCL_DIALECTE_CONFIG.namespaces.defa
 export const XMLNS_SCL_6_100_NAMESPACE = `xmlns:${SCL_DIALECTE_CONFIG.namespaces.v2019C1.prefix}="${SCL_DIALECTE_CONFIG.namespaces.v2019C1.uri}"`
 export const ALL_XMLNS_NAMESPACES = `${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${XMLNS_XSI_NAMESPACE}`
 export { CUSTOM_RECORD_ID_ATTRIBUTE, CUSTOM_RECORD_ID_ATTRIBUTE_NAME }
+export { assertValidSclXml } from './assert-valid-scl-xml'
 
 const SCL_EXTENSIONS = { base: SCL_EXTENSION_MODULES }
 
-export const runSclTestCases = createTestRunner<Config, SclModules>({
+const rawRunSclTestCases = createTestRunner<Config, SclModules>({
 	dialecteConfig: SCL_DIALECTE_CONFIG,
 	extensions: SCL_EXTENSIONS,
 	hooks: SCL_HOOKS,
 })
+
+/** Validate every case's `sourceXml`/`targetXml` namespaces up front, attributed to the case name. */
+function assertValidTestCaseXml(
+	testCases: Record<string, { sourceXml: string; targetXml?: string }>,
+) {
+	for (const [name, testCase] of Object.entries(testCases)) {
+		assertValidSclXml(testCase.sourceXml, `${name} › sourceXml`, { requireComplete: false })
+		if (testCase.targetXml)
+			assertValidSclXml(testCase.targetXml, `${name} › targetXml`, { requireComplete: false })
+	}
+}
+
+/**
+ * `createTestRunner`, wrapped so every registered case's XML is checked against the SCL schema's
+ * per-element namespaces before the suite runs (see {@link assertValidSclXml}).
+ */
+export const runSclTestCases: typeof rawRunSclTestCases = {
+	...rawRunSclTestCases,
+	withExport(params) {
+		assertValidTestCaseXml(params.testCases)
+		rawRunSclTestCases.withExport(params)
+	},
+	withoutExport(params) {
+		assertValidTestCaseXml(params.testCases)
+		rawRunSclTestCases.withoutExport(params)
+	},
+}
 
 export async function createSclTestProject(params: {
 	sourceXml: string
@@ -41,6 +71,8 @@ export async function createSclTestProject(params: {
 	dev?: { perf?: boolean }
 }) {
 	const { sourceXml, targetXml, dev } = params
+	assertValidSclXml(sourceXml, 'sourceXml', { requireComplete: false })
+	if (targetXml) assertValidSclXml(targetXml, 'targetXml', { requireComplete: false })
 
 	return createTestProject<Config, SclModules>({
 		sourceXml,

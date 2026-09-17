@@ -166,11 +166,17 @@ describe('extractElementTitle', () => {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<IED name="IED_A" ${id}="ied-a">
-						<Services ${id}="srv">
-							<GSESettings ${id}="gses">
-								<IEDName apRef="AP1" ${id}="iedname-1">P1</IEDName>
-							</GSESettings>
-						</Services>
+						<AccessPoint name="AP1" ${id}="ap">
+							<Server ${id}="srv">
+								<LDevice inst="LD0" ${id}="ld">
+									<LN0 lnClass="LLN0" inst="" lnType="T1" ${id}="ln0">
+										<GSEControl name="gse1" ${id}="gse">
+											<IEDName apRef="AP1" ${id}="iedname-1">P1</IEDName>
+										</GSEControl>
+									</LN0>
+								</LDevice>
+							</Server>
+						</AccessPoint>
 					</IED>
 				</SCL>
 			`,
