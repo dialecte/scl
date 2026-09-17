@@ -44,6 +44,8 @@
 		"lint:fix": "oxlint . --fix -D correctness --ignore-path .gitignore",
 		"format:check": "oxfmt --check",
 		"format:fix": "oxfmt",
+		"format:xml": "dialecte-xmlfmt 'src/**/*.test.ts'",
+		"format:xml:check": "dialecte-xmlfmt --check 'src/**/*.test.ts'",
 		"//====== TYPE PERF ======//": "",
 		"coverage:gen": "dialecte coverage",
 		"type-bench": "npm run coverage:gen && dialecte bench",
@@ -54,7 +56,7 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.4.12"
+		"@dialecte/core": "0.4.16"
 	},
 	"devDependencies": {
 		"@dialecte/cli": "0.0.2",
