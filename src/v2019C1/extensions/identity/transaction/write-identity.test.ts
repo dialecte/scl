@@ -98,6 +98,46 @@ describe('writeIdentity', () => {
 			mappings: [{ targetId: 'fn-1', tagName: 'Function', sourceAttributes: {} }],
 			expected: [{ tagName: 'Function', targetId: 'fn-1' }],
 		},
+
+		'preserve → lineage carried verbatim (neither stamped nor stripped)': {
+			sourceXml: functionDoc('fn-1', { templateUuid: 'carried-tpl' }),
+			mode: 'preserve',
+			mappings: [
+				{
+					targetId: 'fn-1',
+					tagName: 'Function',
+					sourceAttributes: { uuid: 'fn-src-uuid', templateUuid: 'carried-tpl' },
+				},
+			],
+			expected: [{ tagName: 'Function', targetId: 'fn-1', templateUuid: 'carried-tpl' }],
+		},
+
+		'preserve on a two-level element → templateUuid AND originUuid carried verbatim (no shift)': {
+			sourceXml: allocationRoleDoc('ar-1', {
+				templateUuid: 'carried-tpl',
+				originUuid: 'carried-origin',
+			}),
+			mode: 'preserve',
+			mappings: [
+				{
+					targetId: 'ar-1',
+					tagName: 'AllocationRole',
+					sourceAttributes: {
+						uuid: 'ar-src-uuid',
+						templateUuid: 'carried-tpl',
+						originUuid: 'carried-origin',
+					},
+				},
+			],
+			expected: [
+				{
+					tagName: 'AllocationRole',
+					targetId: 'ar-1',
+					templateUuid: 'carried-tpl',
+					originUuid: 'carried-origin',
+				},
+			],
+		},
 	}
 
 	async function act({
@@ -157,12 +197,17 @@ function functionDoc(functionId: string, lineage: { templateUuid?: string }): st
 	`
 }
 
-function allocationRoleDoc(allocationRoleId: string): string {
+function allocationRoleDoc(
+	allocationRoleId: string,
+	lineage: { templateUuid?: string; originUuid?: string } = {},
+): string {
+	const templateUuid = lineage.templateUuid ? `templateUuid="${lineage.templateUuid}"` : ''
+	const originUuid = lineage.originUuid ? `originUuid="${lineage.originUuid}"` : ''
 	return /* xml */ `
 		<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
 			<Substation ${id}="sub" name="S1">
 				<Private ${id}="sub-priv" type="eIEC61850-6-100">
-					<eIEC61850-6-100:AllocationRole ${id}="${allocationRoleId}" name="R1" uuid="fresh-uuid"/>
+					<eIEC61850-6-100:AllocationRole ${id}="${allocationRoleId}" name="R1" uuid="fresh-uuid" ${templateUuid} ${originUuid}/>
 				</Private>
 			</Substation>
 		</SCL>

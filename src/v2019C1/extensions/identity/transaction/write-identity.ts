@@ -1,3 +1,5 @@
+import { getAttributeRules } from '@dialecte/core/utils'
+
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 
 import type { IdentityMode } from './write-identity.types'
@@ -15,6 +17,9 @@ import type * as Core from '@dialecte/core'
  *   when the origin slot is free and the element type carries a two-level
  *   lineage). The instance `uuid` is already fresh from `deepClone`.
  * - `strip` (extract): drop `templateUuid` and `originUuid`, leaving a fresh template.
+ * - `preserve` (copy/paste): carry `templateUuid`/`originUuid` verbatim onto the fresh
+ *   instance uuid — the copy stays an instance of the SAME template. Written as a no-op
+ *   because the clone already copied the lineage attributes verbatim (callers pass `strip:false`).
  * - `keep` (fork): leave lineage untouched.
  */
 export async function writeIdentity(
@@ -25,7 +30,9 @@ export async function writeIdentity(
 	},
 ): Promise<void> {
 	const { mappings, mode } = params
-	if (mode === 'keep') return
+	// `keep` and `preserve` both leave lineage as the clone copied it; they diverge only in
+	// the post-step (`restoreClonedUuids` vs `applyUuidRemap`), owned by `finalizeClonedIdentity`.
+	if (mode === 'keep' || mode === 'preserve') return
 
 	for (const mapping of mappings) {
 		const updates = mode === 'strip' ? stripLineage() : stampLineage(mapping)
@@ -51,19 +58,16 @@ function stampLineage(mapping: Scl.CloneMapping): LineageUpdates {
 	const updates: LineageUpdates = {}
 	if (sourceUuid) updates.templateUuid = sourceUuid
 
-	const carriesOriginLineage = supportsOriginUuid(mapping.target.tagName)
+	const carriesOriginLineage = getAttributeRules({
+		dialecteConfig: SCL_DIALECTE_CONFIG,
+		tagName: mapping.target.tagName,
+		attributeName: 'originUuid',
+	}).isDefined
 	if (sourceTemplateUuid && !sourceOriginUuid && carriesOriginLineage) {
 		updates.originUuid = sourceTemplateUuid
 	}
 
 	return updates
-}
-
-/** Whether the element type's schema defines an `originUuid` attribute. */
-function supportsOriginUuid(tagName: string): boolean {
-	const attributes =
-		SCL_DIALECTE_CONFIG.attributes[tagName as keyof typeof SCL_DIALECTE_CONFIG.attributes]
-	return attributes ? 'originUuid' in attributes : false
 }
 
 /**
