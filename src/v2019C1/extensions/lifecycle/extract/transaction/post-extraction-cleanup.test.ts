@@ -156,7 +156,7 @@ describe('postExtractionCleanup', () => {
 					'//v2019C1:LNodeSpecNaming[@sIedName="None" and not(@sLdInst)]',
 				],
 			},
-			'LNode with missing IED + no LNodeSpecNaming → all binding attrs cleared': {
+			'LNode with missing IED + no LNodeSpecNaming → only binding-specific attrs cleared': {
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Header id="TestSCL"/>
@@ -169,8 +169,11 @@ describe('postExtractionCleanup', () => {
 						</Substation>
 					</SCL>
 				`,
+				// lnClass/lnInst are preserved: with no LNodeSpecNaming there is no backup
+				// of their pre-mapping specified values, and lnClass is XSD-required with
+				// no default, so it must never be cleared.
 				expectedQueries: [
-					'//default:LNode[@iedName="None" and not(@ldInst) and @lnClass="" and not(@lnInst) and not(@lnUuid)]',
+					'//default:LNode[@iedName="None" and not(@ldInst) and @lnClass="PTRC" and @lnInst="1" and not(@lnUuid)]',
 				],
 			},
 		}

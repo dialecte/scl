@@ -74,8 +74,10 @@ async function mappedIdentity(
  * unbound marker (`None`) with `ldInst` dropped; when an `LNodeSpecNaming` snapshot
  * exists, `prefix`/`lnClass`/`lnInst` are additionally restored from it (otherwise
  * they are left as-is — the hook has no specification to restore and must not strip
- * an LNode's required class). `templateUuid` is never touched — it is instantiation
- * provenance, independent of the binding state.
+ * an LNode's required class). `sLnClass` on the snapshot is itself optional, so when
+ * it isn't set, `lnClass` falls back to the LNode's own current value
+ * rather than being stripped — it is XSD-required with no default. `templateUuid` is
+ * never touched — it is instantiation provenance, independent of the binding state.
  */
 async function specificationIdentity(
 	query: Core.Query<Config>,
@@ -93,7 +95,7 @@ async function specificationIdentity(
 	return {
 		...cleared,
 		prefix: specAttrs.sPrefix,
-		lnClass: specAttrs.sLnClass,
+		lnClass: specAttrs.sLnClass || attributeValue(lnodeRecord, 'lnClass'),
 		lnInst: specAttrs.sLnInst,
 	}
 }

@@ -22,10 +22,10 @@ describe('updateRefPaths', () => {
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
-							<FunctionCategory ${id}="fcat1" name="Cat1">
-								<FunctionCatRef ${id}="ref1" function="Sub1/F1" functionUuid="uuid-f1" />
-							</FunctionCategory>
-							<Function ${id}="f1" name="F1" uuid="uuid-f1" />
+							<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="Cat1">
+								<eIEC61850-6-100:FunctionCatRef ${id}="ref1" function="Sub1/F1" functionUuid="uuid-f1"/>
+							</eIEC61850-6-100:FunctionCategory>
+							<Function ${id}="f1" name="F1" uuid="uuid-f1"/>
 						</Substation>
 					</SCL>
 				`,
@@ -42,12 +42,12 @@ describe('updateRefPaths', () => {
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
-							<FunctionCategory ${id}="fcat1" name="Cat1">
-								<FunctionCatRef ${id}="ref1" function="Sub1/F1" functionUuid="uuid-f1" />
-								<FunctionCatRef ${id}="ref2" function="Sub1/F2" functionUuid="uuid-f2" />
-							</FunctionCategory>
-							<Function ${id}="f1" name="F1" uuid="uuid-f1" />
-							<Function ${id}="f2" name="F2" uuid="uuid-f2" />
+							<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="Cat1">
+								<eIEC61850-6-100:FunctionCatRef ${id}="ref1" function="Sub1/F1" functionUuid="uuid-f1"/>
+								<eIEC61850-6-100:FunctionCatRef ${id}="ref2" function="Sub1/F2" functionUuid="uuid-f2"/>
+							</eIEC61850-6-100:FunctionCategory>
+							<Function ${id}="f1" name="F1" uuid="uuid-f1"/>
+							<Function ${id}="f2" name="F2" uuid="uuid-f2"/>
 						</Substation>
 					</SCL>
 				`,
@@ -70,13 +70,13 @@ describe('updateRefPaths', () => {
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
-								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1" />
+								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1"/>
 							</Function>
 							<Function ${id}="f2" name="F2">
 								<LNode ${id}="ln2" lnClass="XSWI" lnInst="1">
-									<LNodeInputs ${id}="lni1">
-										<SourceRef ${id}="sref1" source="Sub1/F1/XCBR1" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal" />
-									</LNodeInputs>
+									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+										<eIEC61850-6-100:SourceRef ${id}="sref1" source="Sub1/F1/XCBR1" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal"/>
+									</eIEC61850-6-100:LNodeInputs>
 								</LNode>
 							</Function>
 						</Substation>
@@ -96,13 +96,13 @@ describe('updateRefPaths', () => {
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
-								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1" />
+								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1"/>
 							</Function>
 							<Function ${id}="f2" name="F2">
 								<LNode ${id}="ln2" lnClass="XSWI" lnInst="1">
-									<LNodeInputs ${id}="lni1">
-										<SourceRef ${id}="sref1" source="Sub1/F1/XCBR1.Pos.stVal" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal" />
-									</LNodeInputs>
+									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+										<eIEC61850-6-100:SourceRef ${id}="sref1" source="Sub1/F1/XCBR1.Pos.stVal" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal"/>
+									</eIEC61850-6-100:LNodeInputs>
 								</LNode>
 							</Function>
 						</Substation>
@@ -128,7 +128,7 @@ describe('updateRefPaths', () => {
 									<LDevice ${id}="ld1" inst="LD0">
 										<LN ${id}="lnied1" lnClass="XCBR" inst="1">
 											<Inputs ${id}="inp1">
-												<ExtRef ${id}="extref1" intAddr="TrCmd.stVal" uuid="uuid-extref1" />
+												<ExtRef ${id}="extref1" intAddr="TrCmd.stVal" uuid="uuid-extref1"/>
 											</Inputs>
 										</LN>
 									</LDevice>
@@ -138,9 +138,9 @@ describe('updateRefPaths', () => {
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
 								<LNode ${id}="ln1" lnClass="XSWI" lnInst="1">
-									<LNodeInputs ${id}="lni1">
-										<SourceRef ${id}="sref1" extRefAddr="IED1/LD0/XCBR1.TrCmd.stVal" extRefUuid="uuid-extref1" />
-									</LNodeInputs>
+									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+										<eIEC61850-6-100:SourceRef ${id}="sref1" extRefAddr="IED1/LD0/XCBR1.TrCmd.stVal" extRefUuid="uuid-extref1"/>
+									</eIEC61850-6-100:LNodeInputs>
 								</LNode>
 							</Function>
 						</Substation>
@@ -166,12 +166,12 @@ describe('updateRefPaths', () => {
 						<Substation ${id}="sub1" name="Sub1">
 							<VoltageLevel ${id}="vl1" name="V1">
 								<Bay ${id}="bay1" name="B1">
-									<Function ${id}="f1" name="F1" uuid="uuid-f1" />
+									<Function ${id}="f1" name="F1" uuid="uuid-f1"/>
 								</Bay>
 							</VoltageLevel>
-							<FunctionCategory ${id}="fcat1" name="Cat1">
-								<FunctionCatRef ${id}="ref1" function="Sub1/V1/B1/F1" functionUuid="uuid-f1" />
-							</FunctionCategory>
+							<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="Cat1">
+								<eIEC61850-6-100:FunctionCatRef ${id}="ref1" function="Sub1/V1/B1/F1" functionUuid="uuid-f1"/>
+							</eIEC61850-6-100:FunctionCategory>
 						</Substation>
 					</SCL>
 				`,
@@ -189,13 +189,13 @@ describe('updateRefPaths', () => {
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
-								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1" />
+								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1"/>
 							</Function>
 							<Function ${id}="f2" name="F2">
 								<LNode ${id}="ln2" lnClass="XSWI" lnInst="1">
-									<LNodeInputs ${id}="lni1">
-										<SourceRef ${id}="sref1" source="Sub1/F1/XCBR1" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal" />
-									</LNodeInputs>
+									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+										<eIEC61850-6-100:SourceRef ${id}="sref1" source="Sub1/F1/XCBR1" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal"/>
+									</eIEC61850-6-100:LNodeInputs>
 								</LNode>
 							</Function>
 						</Substation>
@@ -221,13 +221,13 @@ describe('updateRefPaths', () => {
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
 								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1">
-									<LNodeInputs ${id}="lni1">
-										<SourceRef ${id}="sref1" uuid="uuid-sref1" input="TripCmd" source="Sub1/F1/XCBR1" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal" />
-									</LNodeInputs>
+									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+										<eIEC61850-6-100:SourceRef ${id}="sref1" uuid="uuid-sref1" input="TripCmd" source="Sub1/F1/XCBR1" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal"/>
+									</eIEC61850-6-100:LNodeInputs>
 								</LNode>
-								<BehaviorDescription ${id}="bd1" name="BD1">
-									<InputVar ${id}="ivar1" varName="ivar1" inputName="TripCmd" inputUuid="uuid-sref1" />
-								</BehaviorDescription>
+								<eIEC61850-6-100:BehaviorDescription ${id}="bd1" name="BD1">
+									<eIEC61850-6-100:InputVar ${id}="ivar1" varName="ivar1" inputName="TripCmd" inputUuid="uuid-sref1"/>
+								</eIEC61850-6-100:BehaviorDescription>
 							</Function>
 						</Substation>
 					</SCL>
@@ -251,13 +251,13 @@ describe('updateRefPaths', () => {
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
-								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1" />
+								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1"/>
 							</Function>
 							<Function ${id}="f2" name="F2">
 								<LNode ${id}="ln2" lnClass="XSWI" lnInst="1">
-									<LNodeInputs ${id}="lni1">
-										<SourceRef ${id}="sref1" source="Sub1/F1/XCBR1.Pos.stVal" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal" />
-									</LNodeInputs>
+									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+										<eIEC61850-6-100:SourceRef ${id}="sref1" source="Sub1/F1/XCBR1.Pos.stVal" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal"/>
+									</eIEC61850-6-100:LNodeInputs>
 								</LNode>
 							</Function>
 						</Substation>
@@ -280,13 +280,13 @@ describe('updateRefPaths', () => {
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
-								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1" />
+								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1"/>
 							</Function>
 							<Function ${id}="f2" name="F2">
 								<LNode ${id}="ln2" lnClass="XSWI" lnInst="1">
-									<LNodeInputs ${id}="lni1">
-										<SourceRef ${id}="sref1" source="Sub1/F1/XCBR1.Pos.stVal" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal" />
-									</LNodeInputs>
+									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+										<eIEC61850-6-100:SourceRef ${id}="sref1" source="Sub1/F1/XCBR1.Pos.stVal" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal"/>
+									</eIEC61850-6-100:LNodeInputs>
 								</LNode>
 							</Function>
 						</Substation>
@@ -307,21 +307,21 @@ describe('updateRefPaths', () => {
 			'companion — update ControlRef.controlledDoName → controlled qualifier rebuilt from companion':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root">
-						<Substation ${id}="sub1" name="Sub1">
-							<Function ${id}="f1" name="F1">
-								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1" />
-							</Function>
-							<Function ${id}="f2" name="F2">
-								<LNode ${id}="ln2" lnClass="CSWI" lnInst="1">
-									<LNodeOutputs ${id}="lno1">
-										<ControlRef ${id}="cref1" controlled="Sub1/F1/XCBR1.Pos" controlledLNodeUuid="uuid-ln1" controlledDoName="Pos" />
-									</LNodeOutputs>
-								</LNode>
-							</Function>
-						</Substation>
-					</SCL>
-				`,
+						<SCL ${ns} ${id}="root">
+							<Substation ${id}="sub1" name="Sub1">
+								<Function ${id}="f1" name="F1">
+									<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1"/>
+								</Function>
+								<Function ${id}="f2" name="F2">
+									<LNode ${id}="ln2" lnClass="CSWI" lnInst="1">
+										<eIEC61850-6-100:LNodeOutputs ${id}="lno1">
+											<eIEC61850-6-100:ControlRef ${id}="cref1" controlled="Sub1/F1/XCBR1.Pos" controlledLNodeUuid="uuid-ln1" controlledDoName="Pos"/>
+										</eIEC61850-6-100:LNodeOutputs>
+									</LNode>
+								</Function>
+							</Substation>
+						</SCL>
+					`,
 					act: async (document) => {
 						await document.transaction(async (tx) => {
 							await tx.update(
@@ -459,20 +459,20 @@ describe('updateRefPaths', () => {
 			'mapped-name — DAS: mapped parent DO with implementing DA equal to the specified name is omitted':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root">
-						<Substation ${id}="sub1" name="Sub1">
-							<Function ${id}="f1" name="F1">
-								<LNode ${id}="ln1" lnClass="MMXU" lnInst="1">
-									<Private ${id}="priv1" type="eIEC61850-6-100">
-										<eIEC61850-6-100:DOS ${id}="dos1" name="PhV" mappedLnUuid="ggio-uuid">
-											<eIEC61850-6-100:DAS ${id}="das1" name="stVal"/>
-										</eIEC61850-6-100:DOS>
-									</Private>
-								</LNode>
-							</Function>
-						</Substation>
-					</SCL>
-				`,
+						<SCL ${ns} ${id}="root">
+							<Substation ${id}="sub1" name="Sub1">
+								<Function ${id}="f1" name="F1">
+									<LNode ${id}="ln1" lnClass="MMXU" lnInst="1">
+										<Private ${id}="priv1" type="eIEC61850-6-100">
+											<eIEC61850-6-100:DOS ${id}="dos1" name="PhV" mappedLnUuid="ggio-uuid">
+												<eIEC61850-6-100:DAS ${id}="das1" name="stVal"/>
+											</eIEC61850-6-100:DOS>
+										</Private>
+									</LNode>
+								</Function>
+							</Substation>
+						</SCL>
+					`,
 					act: async (document) => {
 						await document.transaction(async (tx) => {
 							await tx.update(
@@ -590,14 +590,14 @@ describe('updateRefPaths', () => {
 							<AccessPoint ${id}="ap1" name="AP1">
 								<Server ${id}="srv1">
 									<LDevice ${id}="ld1" inst="CTRL">
-										<LN ${id}="lnied1" lnClass="CSWI" inst="2" prefix="CB" lnType="CSWI_0" templateUuid="cswi-tpl" uuid="ln-uuid" />
+										<LN ${id}="lnied1" lnClass="CSWI" inst="2" prefix="CB" lnType="CSWI_0" templateUuid="cswi-tpl" uuid="ln-uuid"/>
 									</LDevice>
 								</Server>
 							</AccessPoint>
 						</IED>
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
-								<LNode ${id}="lnode1" iedName="None" lnClass="CSWI" lnInst="1" prefix="" templateUuid="lnode-tpl" />
+								<LNode ${id}="lnode1" iedName="None" lnClass="CSWI" lnInst="1" prefix="" templateUuid="lnode-tpl"/>
 							</Function>
 						</Substation>
 					</SCL>
@@ -627,7 +627,7 @@ describe('updateRefPaths', () => {
 							<Function ${id}="f1" name="F1">
 								<LNode ${id}="lnode1" iedName="PIU" ldInst="CTRL" lnClass="CSWI" lnInst="2" prefix="CB" lnType="CSWI_0" lnUuid="ln-uuid" templateUuid="lnode-tpl">
 									<Private ${id}="priv1" type="eIEC61850-6-100">
-										<eIEC61850-6-100:LNodeSpecNaming ${id}="lns1" sIedName="None" sLnClass="CSWI" sLnInst="1" sPrefix="" />
+										<eIEC61850-6-100:LNodeSpecNaming ${id}="lns1" sIedName="None" sLnClass="CSWI" sLnInst="1" sPrefix=""/>
 									</Private>
 								</LNode>
 							</Function>
@@ -645,12 +645,40 @@ describe('updateRefPaths', () => {
 				unexpectedQueries: ['//default:LNode[@iedName="PIU"]', '//default:LNode[@lnInst="2"]'],
 			},
 
+			'lnode-binding — clear lnUuid, LNodeSpecNaming without sLnClass → lnClass kept from LNode': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation ${id}="sub1" name="Sub1">
+							<Function ${id}="f1" name="F1">
+								<LNode ${id}="lnode1" iedName="PIU" ldInst="CTRL" lnClass="CSWI" lnInst="2" prefix="CB" lnType="CSWI_0" lnUuid="ln-uuid" templateUuid="lnode-tpl">
+									<Private ${id}="priv1" type="eIEC61850-6-100">
+										<eIEC61850-6-100:LNodeSpecNaming ${id}="lns1" sIedName="None" sLnInst="1" sPrefix=""/>
+									</Private>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update({ tagName: 'LNode', id: 'lnode1' }, { attributes: { lnUuid: '' } })
+					})
+				},
+				// sLnClass is optional and absent here; lnClass is XSD-required with no
+				// default, so it must fall back to the LNode's own current value instead
+				// of being stripped.
+				expectedQueries: [
+					'//default:LNode[@iedName="None"][@lnClass="CSWI"][@lnInst="1"][@templateUuid="lnode-tpl"]',
+				],
+				unexpectedQueries: ['//default:LNode[@iedName="PIU"]', '//default:LNode[@lnInst="2"]'],
+			},
+
 			'lnode-binding — clear lnUuid without LNodeSpecNaming → iedName forced to None': {
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
-								<LNode ${id}="lnode1" iedName="PIU" ldInst="CTRL" lnClass="CSWI" lnInst="2" prefix="CB" lnUuid="ln-uuid" templateUuid="lnode-tpl" />
+								<LNode ${id}="lnode1" iedName="PIU" ldInst="CTRL" lnClass="CSWI" lnInst="2" prefix="CB" lnUuid="ln-uuid" templateUuid="lnode-tpl"/>
 							</Function>
 						</Substation>
 					</SCL>
@@ -675,7 +703,7 @@ describe('updateRefPaths', () => {
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
-								<LNode ${id}="lnode1" iedName="PIU" ldInst="CTRL" lnClass="CSWI" lnInst="2" prefix="CB" lnUuid="ln-uuid" templateUuid="lnode-tpl" />
+								<LNode ${id}="lnode1" iedName="PIU" ldInst="CTRL" lnClass="CSWI" lnInst="2" prefix="CB" lnUuid="ln-uuid" templateUuid="lnode-tpl"/>
 							</Function>
 						</Substation>
 					</SCL>

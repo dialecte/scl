@@ -114,7 +114,7 @@ describe('cleanOrphanedLNodeBindings', () => {
 			],
 		},
 
-		'LNode with missing IED + no LNodeSpecNaming → all binding attrs cleared': {
+		'LNode with missing IED + no LNodeSpecNaming → only binding-specific attrs cleared': {
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES}>
 					<Header id="TestSCL"/>
@@ -127,8 +127,11 @@ describe('cleanOrphanedLNodeBindings', () => {
 					</Substation>
 				</SCL>
 			`,
+			// lnClass/lnInst/prefix are preserved: with no LNodeSpecNaming there is no
+			// backup of their pre-mapping specified values, and lnClass is XSD-required
+			// with no default, so it must never be cleared.
 			expectedQueries: [
-				'//default:LNode[@iedName="None" and not(@ldInst) and @lnClass="" and not(@lnInst) and not(@prefix) and not(@lnUuid) and @templateUuid="tpl-2"]',
+				'//default:LNode[@iedName="None" and not(@ldInst) and @lnClass="PTRC" and @lnInst="1" and @prefix="PFX" and not(@lnUuid) and @templateUuid="tpl-2"]',
 			],
 			unexpectedQueries: ['//default:LNode[@iedName="GONE_IED"]'],
 		},

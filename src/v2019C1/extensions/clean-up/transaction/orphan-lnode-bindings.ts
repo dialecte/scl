@@ -15,8 +15,13 @@ import type * as Core from '@dialecte/core'
  *   auto-stamped on import; the cleanup makes the canonical marker explicit)
  * - locked + referenced IED present → skip (binding valid)
  * - locked + IED absent + LNodeSpecNaming child exists → restore lnClass/lnInst/prefix
- *   from spec naming, clear iedName/ldInst/lnUuid, reset spec naming sIedName/sLdInst
- * - locked + IED absent + no LNodeSpecNaming → clear all binding attrs
+ *   from spec naming (falling back to the LNode's current lnClass when sLnClass is
+ *   absent — lnClass is a required XSD attribute with no default, so it must never be
+ *   cleared), clear iedName/ldInst/lnUuid, reset spec naming sIedName/sLdInst
+ * - locked + IED absent + no LNodeSpecNaming → clear only the binding-specific attrs
+ *   (iedName/ldInst/lnUuid). lnClass/lnInst/prefix are left untouched: there is no
+ *   backup of their pre-mapping specified values to restore them to, and lnClass in
+ *   particular is required by the XSD (no default), so it can't be cleared
  *
  * `templateUuid` is preserved in every case: it records the template the LNode was
  * instantiated from (the key used to re-locate an implementing ICD), which is
@@ -55,6 +60,7 @@ async function resetLNodeBinding(
 		const sLnClass = await tx.getAttribute(lNodeSpecNaming, { name: 'sLnClass' })
 		const sLnInst = await tx.getAttribute(lNodeSpecNaming, { name: 'sLnInst' })
 		const sPrefix = await tx.getAttribute(lNodeSpecNaming, { name: 'sPrefix' })
+		const lnClass = await tx.getAttribute(lnode, { name: 'lnClass' })
 
 		await tx.update(lNodeSpecNaming, {
 			attributes: { sIedName: 'None', sLdInst: undefined },
@@ -65,7 +71,9 @@ async function resetLNodeBinding(
 				iedName: 'None',
 				ldInst: undefined,
 				lnUuid: undefined,
-				lnClass: sLnClass || undefined,
+				// sLnClass is optional; lnClass is required with no
+				// default, so fall back to the LNode's own value rather than clearing it.
+				lnClass: sLnClass || lnClass,
 				lnInst: sLnInst || undefined,
 				prefix: sPrefix || undefined,
 			},
@@ -76,9 +84,6 @@ async function resetLNodeBinding(
 				iedName: 'None',
 				ldInst: undefined,
 				lnUuid: undefined,
-				lnClass: undefined,
-				lnInst: undefined,
-				prefix: undefined,
 			},
 		})
 	}
