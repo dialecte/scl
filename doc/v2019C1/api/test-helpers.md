@@ -13,6 +13,7 @@ import {
 	createSclTestRecord,
 	assertExpectedElementQueries,
 	assertUnexpectedElementQueries,
+	assertValidSclXml,
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 } from '@dialecte/scl/v2019C1/test'
@@ -273,6 +274,26 @@ expectedQueries: ['//Substation[@name="S1"]']
 
 // ✓ correct
 expectedQueries: ['//default:Substation[@name="S1"]']
+```
+
+---
+
+## Test XML is validated against the schema
+
+`createSclTestProject` and `runSclTestCases` validate every fixture's `sourceXml` / `targetXml` against the SCL schema before the test runs (via `assertValidSclXml`), so an invalid snippet fails fast with a clear message instead of silently exercising a tree the engine misreads (element matching keys on the local tag name, so a wrong namespace would otherwise pass unnoticed).
+
+What is checked:
+
+- **element namespace** — each element sits in the namespace the schema declares for it **in its parent context**. SCL reuses local names across namespaces (e.g. `SclFileReference` is default-namespace under an IED but `eIEC61850-6-100` under a `FunctionSclRef`), so the check is context-aware. Writing a default-namespace element such as `Function` under the `eIEC61850-6-100:` prefix — or a 6-100 element such as `FunctionCatRef` in the default namespace — is rejected;
+- **containment** — each element is an allowed child of its parent;
+- **attributes** — every unprefixed attribute is a known attribute of its element. Namespaced attributes (`xmlns`, `xsi:`, and the dev-namespaced record id `dev:db-id`) are skipped.
+
+Not enforced (planned with the validation feature): required-attribute completeness — minimal fixtures legitimately omit e.g. the `<SCL>` `version` / `revision` / `release` — attribute value facets (uuid pattern, enums), and cross-element constraints (unique keys, keyref resolution). Pass `{ requireComplete: true }` to opt into the required-attribute check:
+
+```ts
+import { assertValidSclXml } from '@dialecte/scl/v2019C1/test'
+
+assertValidSclXml(xml, 'my snippet', { requireComplete: true })
 ```
 
 ---

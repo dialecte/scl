@@ -325,6 +325,16 @@ type ReportInstance = {
 
 Matched by `templateUuid`, same-space attribute compare. **Classify** decides the track: no instance = first-time instantiate = **fast** (headless); an existing instance with any change = **full** (needs decisions). This is the report a headless/review wrapper consumes to route fast vs full.
 
+### Child matching — one shared matcher
+
+`reconcile` (apply) and `diff` (report) pair a source child to its instance child through **one** shared matcher (`matchChild`), so the preview and the write always agree on which elements correspond:
+
+- **identified** elements match by `templateUuid` lineage, guarded to the same tag — a placeholder `templateUuid` reused across unrelated element types (see [`checkTemplateUuids`](#identity-integrity-checktemplateuuids)) never matches across types;
+- a uuid-less **reference** link (e.g. `FunctionRef`) matches by its reference identity — the target it points to, mapped back to template space — with a resolved-name fallback for placeholder-lineage projects, never by tag position;
+- anything else falls back to position.
+
+Because both sides share this matcher, `apply` can no longer pair a child differently from the `report` that gated it: the apply path carries the same cross-type guard and reference-identity matching as the report.
+
 ## Identity integrity — `checkTemplateUuids`
 
 `query.lifecycle.checkTemplateUuids()` is a generic, read-only check over the whole document. It

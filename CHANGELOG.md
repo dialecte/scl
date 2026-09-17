@@ -13,10 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Update a project from a newer SSD, with a preview.** A project can be reconciled against a revised SSD: the change preview lists, per application and function, what would be added or updated so you can accept, skip or edit each group before applying — the same merge-review used for functions and applications. Structural changes to the bay itself (its own attributes, bay type and equipment) are reconciled too and shown as their own group, matched to the project bay by its remembered template identity so a renamed bay still matches. New parts are instantiated, existing ones updated.
 - **Scope an update to one instance.** When a template has been used more than once, an update can be aimed at a single chosen copy (its structure, applications and functions) instead of every copy; left unset, it still updates them all.
 - **`preserve` identity mode.** A new clone-identity mode that keeps a fresh element identity while carrying the template lineage verbatim, so a copied element stays an instance of the same template — the primitive a future copy/paste builds on.
+- **Test fixtures are checked against the SCL schema.** `createSclTestProject` and `runSclTestCases` now validate each fixture's XML — element namespaces (context-aware: an element's namespace is read from its parent context, since SCL reuses local names across namespaces), containment, and known attributes — so an invalid snippet fails fast with a clear message instead of silently exercising a tree the engine misreads. Exposed as `assertValidSclXml` for ad-hoc use.
 
 ### Changed
 
 - **Element identity is resolved from the schema in one place.** How an element is identified — by `uuid` lineage, by an identity field like a data type's `id`, or by position — is now derived from the element definition (`identity.query.resolveIdentity`) and shared by every matcher, instead of each site guessing. A hand-authored file whose `templateUuid` lineage was filled with a placeholder value is reported by the existing template-uuid check rather than silently recovered by name.
+
+### Fixed
+
+- **Applying an update now pairs elements exactly as the preview does.** The change preview and the write share one element matcher, so applying can no longer match a child differently from the preview that gated it — the write carries the same cross-type template-lineage guard and reference-identity matching (a reference matches by what it points to, not by position) that the preview already used.
+- **Removing an IED no longer wipes an orphaned LNode's class.** Resetting an `LNode` binding after its IED disappears used to also clear `lnClass`/`lnInst`/`prefix` when there was no `LNodeSpecNaming` to restore from — `lnClass` has no schema default, so this left the LNode with an empty, invalid class and no way to recover it. Both the cleanup pass and the binding-reconcile hook now clear only the binding itself (`iedName`, `ldInst`, `lnUuid`) and leave the naming untouched when there's nothing to restore it from, and fall back to the LNode's own class when a present `LNodeSpecNaming` doesn't carry one either.
 
 ## [0.3.15] - 2026-09-11
 
