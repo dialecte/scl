@@ -4,7 +4,7 @@ description: Extract extension for @dialecte/scl v2019C1 — the FSD/ASD/SSD tem
 
 # Extract
 
-The `extract` verb copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.lifecycle.transplant.deep`) and the shared `layers/` take-over, adding three named extractors (`fsd`, `asd`, `ssd`) that produce template FSD/ASD/SSD documents. It also exposes the `ensureSubstationTemplateStructure` helper they use.
+The `extract` verb copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.lifecycle.transplant.deep`) and the shared `layers/` take-over, adding three named extractors (`fsd`, `asd`, `ssd`) that produce template FSD/ASD/SSD documents. It also exposes the `ensureSubstationTemplateStructure` helper `fsd`/`asd` use to seed their scaffold — `ssd` reproduces its own frame instead (see [below](#ssd)).
 
 ```ts
 // named extractors (compose the transplant engine + layers with extract policy)
@@ -90,11 +90,10 @@ tx.lifecycle.extract.ssd(params: {
 
 Steps:
 
-1. Ensure the TEMPLATE substation structure.
-2. Write the SSD history header (`fileType: 'SSD'`).
-3. Gather the scope's content via `cloneTopologyContent` (layers/topology): its Applications and the Functions they compose, any standalone Functions, and the top-level equipment (including `ConnectivityNode`, so the single-line diagram stays connected) — each with its type closure.
-4. Name the selected entrypoint as the reusable root and strip its `templateUuid`; the TEMPLATE ancestors are left untouched.
-5. Repoint cloned UUID references and run post-extraction clean-up.
+1. Write the SSD history header (`fileType: 'SSD'`).
+2. Gather the scope's content via `cloneTopologyContent` (layers/topology): it REPRODUCES the source's own structural frame above and at the scope — only the levels the scope actually has (`Substation`/`VoltageLevel`/`Bay`, each with its own `BayType`, equipment and connectivity, including `ConnectivityNode` so the single-line diagram stays connected) — then consumes the application/function layers for the Applications and the Functions they compose, plus any standalone Functions, each with its type closure. Several voltage levels/bays in the scope each get their own reproduced level, never collapsed together.
+3. TEMPLATE-name the reproduced ancestors above the selected entrypoint; the entrypoint itself keeps the source name and has its `templateUuid` stripped, becoming the reusable root.
+4. Repoint cloned UUID references and run post-extraction clean-up.
 
 Returns the warnings gathered while extracting — currently one entry when the source has `IED` / `Communication` sections, which are not yet carried into an SSD.
 
@@ -130,7 +129,9 @@ lifecycle/
   layers/                     per-layer take-over, shared by extract & instantiate
     function/                 clone-function (cloneFunction, cloneFunctionCategories)
     application/              clone-application
-    topology/                 root selection + cloneTopologyContent (SSD scope take-over)
+    topology/                 root selection + frame reproduction + cloneTopologyContent (SSD take-over)
+      ensure-topology-frame.ts    reproduces the structural frame by position (Substation/VL/Bay)
+      reconcile-topology-frame.ts reconciles the frame's own content onto an existing instance
   extract/transaction/        the extract operation (this extension)
     fsd.ts , asd.ts , ssd.ts  file-type extractors
     ensure-substation-structure.ts , post-extraction-cleanup.ts

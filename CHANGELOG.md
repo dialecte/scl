@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Added
+
+- **Instantiate an SSD into a project.** Bring an SSD's topology into a project: it recreates the substation / voltage-level / bay structure (with its bay type and equipment) where the target does not already have it — reusing the levels the target does provide — and places the applications, the functions they use and their data types at the right levels. By default each copy is a fresh, traceable instance (a new identity that remembers the template it came from); a "keep" mode instead adopts the SSD's own identities as the project base. Each instantiation records the source SSD once in the project header.
+- **Update a project from a newer SSD, with a preview.** A project can be reconciled against a revised SSD: the change preview lists, per application and function, what would be added or updated so you can accept, skip or edit each group before applying — the same merge-review used for functions and applications. Structural changes to the bay itself (its own attributes, bay type and equipment) are reconciled too and shown as their own group, matched to the project bay by its remembered template identity so a renamed bay still matches. New parts are instantiated, existing ones updated.
+- **Scope an update to one instance.** When a template has been used more than once, an update can be aimed at a single chosen copy (its structure, applications and functions) instead of every copy; left unset, it still updates them all.
+- **`preserve` identity mode.** A new clone-identity mode that keeps a fresh element identity while carrying the template lineage verbatim, so a copied element stays an instance of the same template — the primitive a future copy/paste builds on.
+
+### Changed
+
+- **Element identity is resolved from the schema in one place.** How an element is identified — by `uuid` lineage, by an identity field like a data type's `id`, or by position — is now derived from the element definition (`identity.query.resolveIdentity`) and shared by every matcher, instead of each site guessing. A hand-authored file whose `templateUuid` lineage was filled with a placeholder value is reported by the existing template-uuid check rather than silently recovered by name.
+
 ## [0.3.15] - 2026-09-11
 
 ### Added

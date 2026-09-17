@@ -53,3 +53,26 @@ await project.transaction(async (tx) => {
 `asd` is the exact application-layer counterpart of [`extract.asd`](./extract#asd): both compose the same `layers/application` take-over, differing only in direction (extract strips, instantiate stamps). SET policy (`ApplicationSclRef` provenance, assign-to-application) is applied by consumer hooks.
 
 Returns `{ applicationRef, composedFunctionRefs, recordMappings }` — the instantiated `Application`, its composed root Functions, and the full source→target `recordMappings`.
+
+## ssd
+
+`ssd({ sourceQuery, scopeRef?, targetParent, mode?, overrides?, keepNameTypesFrom? })` instantiates the process-section content an SSD carries — the **topology layer**, one level above `asd` — into a target project:
+
+1. `cloneTopologyContent` (`layers/topology`) REPRODUCES the source structural skeleton (`Substation`/`VoltageLevel`/`Bay` + their own `BayType`, equipment, connectivity) by name under `targetParent`, via `ensureTopologyFrame`: an ancestor level the target already provides is reused, the rest — the scope root and everything below it — is created. Multiple voltage levels/bays in the scope are each reproduced at their own level (never collapsed together). It then consumes the application/function layers to place each `Application` (with its composed Functions) and each standalone `Function`, under its name-correct reproduced level, together with the external cross-cutting [satellites](./update#satellites) applying to the scope;
+2. stamp instance lineage on every cloned element, in one of two identity modes:
+   - `mode: 'stamp-template'` (default) — bay-typical reuse: fresh `uuid` + `templateUuid` lineage, then a scoped-uniqueness [collision](./update#placement-collision-resolution) auto-resolved on each placed root (`Application` / standalone `Function`) at its own structural level, so instantiating the same SSD twice yields a second, distinct set of instances;
+   - `mode: 'keep'` — project base: adopt the SSD's own `uuid`s as-is (no re-stamp, no collision bump) — for the one-time case of turning an SSD into a project's starting content;
+3. record the instantiation **once**, at document level (`Header > SourceFiles`, via [`reference.writeProvenance`](./reference)) — not per element, since the whole scope came from one source file.
+
+The scope defaults to the SSD's instantiable root (`resolveInstantiableRoot` — the first named level down the `Substation → VoltageLevel → Bay` chain, below the `TEMPLATE`-named scaffolding levels).
+
+```ts
+await project.transaction(async (tx) => {
+	await tx.lifecycle.instantiate.ssd({
+		sourceQuery: ssd.query,
+		targetParent: { tagName: 'Bay', id: 'bay-1' },
+	})
+})
+```
+
+Returns `{ scopeRef, recordMappings }` — the SSD-side scope root that was instantiated, and the source→target `recordMappings` for the reproduced frame and placed fn/app content (the cross-cutting satellites are cloned separately and not included).

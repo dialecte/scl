@@ -27,7 +27,7 @@ query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor }) // -> DiffR
 tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, keepNameTypesFrom? }) // -> ApplyResult { report, instances }
 ```
 
-- `verb`: `'fsd'` (then `ref` is a `Function`) or `'asd'` (then `ref` is an `Application`) — the **layer**;
+- `verb`: `'fsd'` (then `ref` is a `Function`), `'asd'` (then `ref` is an `Application`), or `'ssd'` (then `ref` is the topology scope, `Substation`/`VoltageLevel`/`Bay` — see [the note below](#txlifecycleupdatessd)) — the **layer**;
 - `scenario`: `'instantiate'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`);
 - `anchor`: the target parent the instance lives under / is placed into.
 - `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template).
@@ -54,6 +54,11 @@ type AppliedInstances =
 			applications: Scl.Ref<'Application'>[]
 			functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
 	  }
+	| {
+			verb: 'ssd'
+			applications: Scl.Ref<'Application'>[]
+			functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
+	  }
 ```
 
 ### Scenario — instantiate vs template vs fork
@@ -72,7 +77,7 @@ The scenarios are **distinct operations**, chosen explicitly by the consumer —
 ### Decision groups (full track)
 
 `report` is a list of instances (`report.instances`), one {@link ReportInstance} per matched
-instance; each instance owns its accept/skip `groups` (07 §3.1). `allGroups(report)` flattens the
+instance; each instance owns its accept/skip `groups`. `allGroups(report)` flattens the
 groups across every instance. The user decides on a **group**, never an individual element — each
 group carries its primary change plus the companions that travel with it, so a partial, incoherent
 apply is impossible.
@@ -193,7 +198,7 @@ await prepared.commit() // or prepared.discard()
 
 ### Presentation scope
 
-`presentationScope(target)` is a small, layer-derived descriptor a UI can use to render the merge as a **structural tree**: where to root it, which top-level SCL sections are irrelevant to the layer, and which to include alongside the rooted subtree. For `fsd` / `asd` it roots at `Substation`, includes `DataTypeTemplates` (a sibling of `Substation` that the layer references), and omits `Communication` and `IED` (the IED layer will bring `IED` back into scope).
+`presentationScope(target)` is a small, layer-derived descriptor a UI can use to render the merge as a **structural tree**: where to root it, which top-level SCL sections are irrelevant to the layer, and which to include alongside the rooted subtree. For `fsd` / `asd` / `ssd` it roots at `Substation`, includes `DataTypeTemplates` (a sibling of `Substation` that the layer references), and omits `Communication` and `IED` (the IED layer will bring `IED` back into scope).
 
 ```ts
 import { presentationScope } from '@dialecte/scl/v2019C1'
@@ -224,7 +229,25 @@ This unifies instantiate and update — instantiation is the first-time case of 
 
 The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQuery, ref: applicationRef })`.
 
-> Cascade principle (applies to future update layers, e.g. SSD/topology): an update layer = reconcile its own subtree **+** for each referenced child-layer root, delegate to that child layer's update verb with the child's own resolved structural parent.
+> Cascade principle: an update layer = reconcile its own subtree **+** for each referenced child-layer root, delegate to that child layer's update verb with the child's own resolved structural parent. `update.ssd` below applies it one layer up.
+
+## `tx.lifecycle.update.ssd`
+
+`ssd({ sourceQuery, scopeRef?, targetParent, scenario, report, decisions, keepNameTypesFrom })` reconciles a project against a (possibly newer) SSD — the topology layer, cascading down to `asd`/`fsd`:
+
+- **first-time** — no scope primary (any `Application` or standalone `Function` under the scope) has an instance yet, or `scenario: 'instantiate'` — delegates whole to [`instantiate.ssd`](./instantiate#ssd), so the source is recorded **once** at document level, exactly like the direct verb (not scattered per primary);
+- **reconcile** — an instance exists:
+  1. **topology frame** — reconcile the scope's **own** structural content (`Substation`/`VoltageLevel`/`Bay` attributes, `BayType`, equipment) via `reconcileTopologyFrame`, matched to the instance by its stamped `templateUuid` lineage — rename-robust, so a renamed Bay still matches. The fn/app tags are a **boundary** here, excluded from this pass and left to the cascade below;
+  2. **application cascade** — each `Application` under the scope, via [`update.asd`](#txlifecycleupdateasd) (which itself cascades to its composed Functions);
+  3. **function cascade** — each standalone `Function` (not composed by any `Application`), via [`update.fsd`](#txlifecycleupdatefsd).
+
+A part added by the newer SSD is instantiated; an existing one is reconciled — never blindly re-added.
+
+The read-only counterpart is `doc.query.lifecycle.report({ verb: 'ssd', sourceQuery, anchor: targetParent })`, assembled the same way: the topology frame's own diff plus the union of the per-primary `reportAsd`/`reportFsd` reports, merged into one `DiffReport` so `report.groups` covers the whole scope and the fast/full classification holds across it.
+
+::: info `ref` is not the acted-upon scope
+For `verb: 'ssd'`, `report`/`apply` always resolve the acted-upon scope as the SSD's **instantiable root** (same resolution as [`instantiate.ssd`](./instantiate#ssd)). `ref` is carried on `LifecycleTarget` for typing/UI symmetry with `fsd`/`asd`, but is not consulted — the scope is always derived from `sourceQuery`, not from the caller's `ref`.
+:::
 
 ## Satellites
 
