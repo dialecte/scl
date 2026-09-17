@@ -8,7 +8,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
-import { findInstancesUnder } from '@/v2019C1/extensions/lifecycle/instance'
+import { findInstancesUnder, scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	fsd as instantiateFsd,
 	resolveTargetStructure,
@@ -35,8 +35,7 @@ import type * as Core from '@dialecte/core'
 /**
  * `update.fromFsd` — reconcile a project against a (possibly newer) FSD.
  *
- * Unifies instantiate and update (ENGINE.md §4, doc 02 §4: instantiate is the
- * first-time case of update):
+ * Unifies instantiate and update (instantiate is the first-time case of update):
  *  - no instance under `targetParent` -> instantiate fresh (`instantiate.fsd`);
  *  - one or more instances (elements whose `templateUuid` equals the source
  *    function's `uuid`) -> reconcile the updated template ONTO EACH.
@@ -59,19 +58,30 @@ export async function fsd(
 		decisions?: DecisionMap
 		/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */
 		keepNameTypesFrom?: KeepNameTypesFrom
+		/** Multi-instance anchor: scope to ONE target instance (or its subtree). Absent = all. */
+		targetInstance?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
-	const { sourceQuery, functionRef, targetParent, scenario, report, decisions, keepNameTypesFrom } =
-		params
+	const {
+		sourceQuery,
+		functionRef,
+		targetParent,
+		scenario,
+		report,
+		decisions,
+		keepNameTypesFrom,
+		targetInstance,
+	} = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	const matchKey = matchKeyForScenario(scenario)
 	const identityMode = identityModeForScenario(scenario)
 	// `instantiate` always places a NEW instance, so it never matches an existing one.
-	const instances =
+	const matched =
 		scenario === 'instantiate'
 			? []
 			: await findInstancesUnder(tx, { targetParent, tagName: 'Function', sourceUuid, matchKey })
+	const instances = await scopeToTargetInstance(tx, { instances: matched, targetInstance })
 
 	const addedGroups = report ? allGroups(report) : []
 

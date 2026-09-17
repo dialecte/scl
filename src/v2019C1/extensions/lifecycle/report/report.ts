@@ -1,5 +1,5 @@
 import { markPlacementConflicts } from './mark-placement-conflicts'
-import { reportAsd, reportFsd } from './query'
+import { reportAsd, reportFsd, reportSsd } from './query'
 
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
@@ -10,7 +10,7 @@ import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.type
 import type * as Core from '@dialecte/core'
 
 /**
- * `query.lifecycle.report` — the generic read-only classify surface (ENGINE.md §6).
+ * `query.lifecycle.report` — the generic read-only classify surface.
  *
  * Dispatches on `verb` to the per-layer report and returns a {@link DiffReport} (one
  * {@link ReportInstance} per instance). `report.needsDecisions` tells the consumer the
@@ -31,12 +31,23 @@ export async function report(
 					functionRef: target.ref,
 					targetParent: target.anchor,
 					scenario: target.scenario,
+					targetInstance: target.targetInstance,
 				})
-			: await reportAsd(query, {
-					sourceQuery: target.sourceQuery,
-					applicationRef: target.ref,
-					scenario: target.scenario,
-				})
+			: target.verb === 'ssd'
+				? await reportSsd(query, {
+						sourceQuery: target.sourceQuery,
+						// the SSD scope is the instantiable root (first named element below the TEMPLATE scaffolding), resolved
+						// from the source - not `target.ref`, which is only the coarse process-section anchor.
+						targetParent: target.anchor,
+						scenario: target.scenario,
+						targetInstance: target.targetInstance,
+					})
+				: await reportAsd(query, {
+						sourceQuery: target.sourceQuery,
+						applicationRef: target.ref,
+						scenario: target.scenario,
+						targetInstance: target.targetInstance,
+					})
 
 	for (const group of allGroups(report)) {
 		group.editableAttributes = editableAttributes(group.primary.tagName)

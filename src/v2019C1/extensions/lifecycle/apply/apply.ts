@@ -1,5 +1,9 @@
 import { allGroups, assertDecisionsCoherent } from '@/v2019C1/extensions/lifecycle/engine'
-import { asd as updateAsd, fsd as updateFsd } from '@/v2019C1/extensions/lifecycle/update'
+import {
+	asd as updateAsd,
+	fsd as updateFsd,
+	ssd as updateSsd,
+} from '@/v2019C1/extensions/lifecycle/update'
 
 import type { AppliedInstances, ApplyResult } from './apply.types'
 import type { Config } from '@/v2019C1/config'
@@ -11,7 +15,7 @@ import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/eng
 import type * as Core from '@dialecte/core'
 
 /**
- * `tx.lifecycle.apply` — the generic write surface (ENGINE.md §4/§6, 07 §4).
+ * `tx.lifecycle.apply` — the generic write surface.
  *
  * The consumer classifies first (`query.lifecycle.report`) and passes the
  * `report` in. The report + `decisions` gate what is written:
@@ -27,7 +31,7 @@ import type * as Core from '@dialecte/core'
  *    their companions (the gate is passed to the update verb, which threads it
  *    through reconcile and the ASD cascade). A group absent from the map defaults
  *    to accept. The engine rejects a decision set that accepts a group whose
- *    `dependsOn` parent is skipped (07 §4).
+ *    `dependsOn` parent is skipped.
  *
  * Returns `{ report, instances }` — the effective report plus the instance roots
  * the write produced/reconciled. Run inside `doc.prepare(tx => tx.lifecycle.apply(...))`
@@ -55,9 +59,9 @@ export async function apply(
 
 /** The empty instance set for a verb (the not-decided-yet track writes nothing). */
 function emptyInstances(verb: LifecycleTarget['verb']): AppliedInstances {
-	return verb === 'fsd'
-		? { verb: 'fsd', functions: [] }
-		: { verb: 'asd', applications: [], functions: [] }
+	if (verb === 'fsd') return { verb: 'fsd', functions: [] }
+	if (verb === 'ssd') return { verb: 'ssd', applications: [], functions: [] }
+	return { verb: 'asd', applications: [], functions: [] }
 }
 
 /**
@@ -78,17 +82,33 @@ async function runVerb(
 			functionRef: target.ref,
 			targetParent: target.anchor,
 			scenario: target.scenario,
+			targetInstance: target.targetInstance,
 			report,
 			decisions,
 			keepNameTypesFrom: target.keepNameTypesFrom,
 		})
 		return { verb: 'fsd', functions }
 	}
+	if (target.verb === 'ssd') {
+		const { applications, functions } = await updateSsd(tx, {
+			sourceQuery: target.sourceQuery,
+			// the SSD scope is the instantiable root (first named element below the TEMPLATE scaffolding), resolved from the
+			// source - not `target.ref`, which is only the coarse process-section anchor.
+			targetParent: target.anchor,
+			scenario: target.scenario,
+			targetInstance: target.targetInstance,
+			report,
+			decisions,
+			keepNameTypesFrom: target.keepNameTypesFrom,
+		})
+		return { verb: 'ssd', applications, functions }
+	}
 	const { applications, functions } = await updateAsd(tx, {
 		sourceQuery: target.sourceQuery,
 		applicationRef: target.ref,
 		targetParent: target.anchor,
 		scenario: target.scenario,
+		targetInstance: target.targetInstance,
 		report,
 		decisions,
 		keepNameTypesFrom: target.keepNameTypesFrom,

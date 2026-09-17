@@ -5,6 +5,7 @@ import { elementSignature } from '@/v2019C1/extensions/signature/query'
 import type { StripConfig } from './clone-tree.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
+import type { OmitEntry } from '@dialecte/core'
 
 /**
  * Merge the CHILDREN of a source element into an EXISTING target element, REUSING same-tag/same-name
@@ -15,6 +16,9 @@ import type * as Core from '@dialecte/core'
  * `SubCategory`) and, when a same-tag/same-name child already exists under the target, recurses into
  * it - so only the genuinely new leaves (references, unnamed content) are cloned. A source child with
  * no `name`, or with no matching twin, is cloned whole.
+ *
+ * `omit` (tag names) drops matching source children from the merge AND from the clones of new leaves,
+ * so a caller can merge an element's own content while leaving delegated children to another pass.
  */
 export async function mergeChildrenInto(
 	tx: Core.Transaction<Config>,
@@ -25,15 +29,18 @@ export async function mergeChildrenInto(
 		/** The existing target element the children are merged under. */
 		target: Scl.Ref<Scl.ElementsOf>
 		strip?: StripConfig | false
+		omit?: OmitEntry<Config>[]
 	},
 ): Promise<Scl.CloneMapping[]> {
-	const { sourceQuery, source, target, strip } = params
+	const { sourceQuery, source, target, strip, omit } = params
 
 	const sourceRecord = await sourceQuery.any.getRecord(source)
 	if (!sourceRecord) return []
 
 	const mappings: Scl.CloneMapping[] = []
 	for (const childRef of sourceRecord.children) {
+		if (isOmittedTag(omit, childRef.tagName)) continue
+
 		const child = { tagName: childRef.tagName, id: childRef.id } as Scl.Ref<Scl.ElementsOf>
 		const name = await sourceQuery.any.getAttribute(childRef, { name: 'name' })
 		const twin = name ? await findChildByName(tx, target, childRef.tagName, name) : undefined
@@ -41,7 +48,13 @@ export async function mergeChildrenInto(
 		if (twin) {
 			// A same-tag/same-name container already exists - merge INTO it rather than duplicate it.
 			mappings.push(
-				...(await mergeChildrenInto(tx, { sourceQuery, source: child, target: twin, strip })),
+				...(await mergeChildrenInto(tx, {
+					sourceQuery,
+					source: child,
+					target: twin,
+					strip,
+					omit,
+				})),
 			)
 			continue
 		}
@@ -55,11 +68,18 @@ export async function mergeChildrenInto(
 			sourceQuery,
 			ref: child,
 			targetParent: target,
+			...(omit ? { omit } : {}),
 			...(strip === undefined ? {} : { strip }),
 		})
 		if (clone) mappings.push(...clone.mappings)
 	}
 	return mappings
+}
+
+/** Whether `tagName` matches one of the `omit` entries (string form or single-key object form). */
+function isOmittedTag(omit: OmitEntry<Config>[] | undefined, tagName: string): boolean {
+	if (!omit) return false
+	return omit.some((entry) => (typeof entry === 'string' ? entry === tagName : tagName in entry))
 }
 
 /** The existing same-tag, same-name child under `target` (a shared container), if any. */

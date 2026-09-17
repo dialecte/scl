@@ -1,10 +1,11 @@
 import type { Scl, Config } from '@/v2019C1/config'
+import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 
 /** Which template layer the lifecycle surface operates on. */
-export type LifecycleVerb = 'fsd' | 'asd'
+export type LifecycleVerb = 'fsd' | 'asd' | 'ssd'
 
 /**
  * The two reconcile modes of the `Update` operation, distinguished by how the
@@ -46,6 +47,8 @@ export type LifecycleTarget =
 			anchor: Scl.Ref<Scl.ElementsOf>
 			/** Operation to perform. Defaults to `template`. */
 			scenario?: LifecycleScenario
+			/** Multi-instance anchor: scope to ONE target instance (or its subtree). Absent = all. */
+			targetInstance?: Scl.Ref<Scl.ElementsOf>
 	  }
 	| {
 			verb: 'asd'
@@ -56,6 +59,23 @@ export type LifecycleTarget =
 			anchor: Scl.Ref<Scl.ElementsOf>
 			/** Operation to perform. Defaults to `template`. */
 			scenario?: LifecycleScenario
+			/** Multi-instance anchor: scope to ONE target instance (or its subtree). Absent = all. */
+			targetInstance?: Scl.Ref<Scl.ElementsOf>
+	  }
+	| {
+			verb: 'ssd'
+			sourceQuery: Core.Query<Config>
+			/** The source SSD scope to reconcile (Substation / VoltageLevel / Bay). */
+			ref: Scl.Ref<TopologyStructuralTag>
+			/** Target parent the SSD content is placed under (e.g. a project Bay). */
+			anchor: Scl.Ref<Scl.ElementsOf>
+			/** Operation to perform. Defaults to `template`. */
+			scenario?: LifecycleScenario
+			/**
+			 * Multi-instance anchor: scope to ONE target instance (a specific placed Bay) — the frame,
+			 * its Applications and composed Functions all resolve under it. Absent = all instances.
+			 */
+			targetInstance?: Scl.Ref<Scl.ElementsOf>
 	  }
 
 /**

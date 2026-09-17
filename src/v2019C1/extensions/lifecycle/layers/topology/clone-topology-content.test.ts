@@ -2,7 +2,6 @@ import { cloneTopologyContent } from './clone-topology-content'
 
 import { describe } from 'vitest'
 
-import { ensureSubstationTemplateStructure } from '@/v2019C1/extensions/lifecycle/extract/transaction/ensure-substation-structure'
 import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
@@ -135,11 +134,11 @@ describe('cloneTopologyContent - composes the application layer into a self-cont
 		if (!target) throw new Error('target required')
 
 		await target.transaction(async (tx) => {
-			const structure = await ensureSubstationTemplateStructure(tx)
-			const mappings = await cloneTopologyContent(tx, {
+			const root = await tx.getRoot()
+			const { mappings } = await cloneTopologyContent(tx, {
 				sourceQuery: source.query,
 				scopeRef: bayRef,
-				structure,
+				targetParent: root,
 				omit: ['FunctionSclRef', 'ApplicationSclRef'],
 			})
 			await applyUuidRemap(tx, { mappings })

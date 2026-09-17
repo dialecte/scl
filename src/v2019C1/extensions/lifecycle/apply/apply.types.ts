@@ -14,6 +14,11 @@ export type AppliedInstances =
 			applications: Scl.Ref<'Application'>[]
 			functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
 	  }
+	| {
+			verb: 'ssd'
+			applications: Scl.Ref<'Application'>[]
+			functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
+	  }
 
 /**
  * The result of `tx.lifecycle.apply`: the effective `report` plus the instance

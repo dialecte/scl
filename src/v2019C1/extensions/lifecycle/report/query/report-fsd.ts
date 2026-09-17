@@ -2,7 +2,7 @@ import { reportFunction } from './report-function'
 import { buildReportInstance } from './report-instance'
 
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import { findInstancesUnder } from '@/v2019C1/extensions/lifecycle/instance'
+import { findInstancesUnder, scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -20,7 +20,7 @@ import type * as Core from '@dialecte/core'
  * the decision layer targets a subset (each instance owns its groups).
  *
  * A carried `FunctionCategory` satellite (outside the function subtree) travels
- * as a companion of the function's decision group (ENGINE.md §16).
+ * as a companion of the function's decision group.
  */
 export async function reportFsd(
 	query: Core.Query<Config>,
@@ -29,16 +29,18 @@ export async function reportFsd(
 		functionRef: Scl.Ref<'Function'>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		scenario?: LifecycleScenario
+		targetInstance?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<DiffReport> {
-	const { sourceQuery, functionRef, targetParent, scenario } = params
+	const { sourceQuery, functionRef, targetParent, scenario, targetInstance } = params
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	const matchKey = matchKeyForScenario(scenario)
 	// `instantiate` always places a NEW instance, so it never matches an existing one.
-	const instances =
+	const matched =
 		scenario === 'instantiate'
 			? []
 			: await findInstancesUnder(query, { targetParent, tagName: 'Function', sourceUuid, matchKey })
+	const instances = await scopeToTargetInstance(query, { instances: matched, targetInstance })
 
 	// no instance yet -> first-time = fast track
 	if (instances.length === 0) {

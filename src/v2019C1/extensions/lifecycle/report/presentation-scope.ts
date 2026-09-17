@@ -16,6 +16,7 @@ export function presentationScope(target: Pick<LifecycleTarget, 'verb'>): Presen
 	switch (target.verb) {
 		case 'fsd':
 		case 'asd':
+		case 'ssd':
 			return {
 				rootTag: 'Substation',
 				omit: ['Communication', 'IED'],

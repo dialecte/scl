@@ -9,8 +9,11 @@ import {
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
-import { collectComposedFunctionUuids } from '@/v2019C1/extensions/lifecycle/instance'
-import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
+import {
+	collectComposedFunctionUuids,
+	findInstancesByTemplateUuid,
+	scopeToTargetInstance,
+} from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	asd as instantiateAsd,
 	resolveTargetStructure,
@@ -39,7 +42,7 @@ import type * as Core from '@dialecte/core'
  * Two layers, in order:
  *  1. application layer — reconcile each `Application` subtree (roles, allocation
  *     refs, attributes);
- *  2. function-layer cascade (G2) — treat every composed Function the ASD
+ *  2. function-layer cascade — treat every composed Function the ASD
  *     references as an FSD to update and delegate to `update.fromFsd`
  *     (instantiate-or-reconcile), which fans out per composed-function instance.
  *     Verbs compose verbs: a function added by the newer ASD is instantiated, an
@@ -61,6 +64,8 @@ export async function asd(
 		decisions?: DecisionMap
 		/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */
 		keepNameTypesFrom?: KeepNameTypesFrom
+		/** Multi-instance anchor: scope to ONE target instance (or its subtree). Absent = all. */
+		targetInstance?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<{
 	applications: Scl.Ref<'Application'>[]
@@ -74,16 +79,18 @@ export async function asd(
 		report,
 		decisions,
 		keepNameTypesFrom,
+		targetInstance,
 	} = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	const matchKey = matchKeyForScenario(scenario)
 	const identityMode = identityModeForScenario(scenario)
 	// `instantiate` always places a NEW instance, so it never matches an existing one.
-	const instances =
+	const matched =
 		scenario === 'instantiate'
 			? []
 			: await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid, matchKey })
+	const instances = await scopeToTargetInstance(tx, { instances: matched, targetInstance })
 	const addedGroups = report ? allGroups(report) : []
 
 	if (instances.length === 0) {
@@ -176,6 +183,7 @@ export async function asd(
 		report,
 		decisions,
 		keepNameTypesFrom,
+		targetInstance,
 	})
 
 	return {
@@ -203,6 +211,7 @@ async function cascadeComposedFunctions(
 		report?: DiffReport
 		decisions?: DecisionMap
 		keepNameTypesFrom?: KeepNameTypesFrom
+		targetInstance?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
 	const {
@@ -213,6 +222,7 @@ async function cascadeComposedFunctions(
 		report,
 		decisions,
 		keepNameTypesFrom,
+		targetInstance,
 	} = params
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 	if (functionUuids.size === 0) return []
@@ -236,6 +246,7 @@ async function cascadeComposedFunctions(
 			report,
 			decisions,
 			keepNameTypesFrom,
+			targetInstance,
 		})
 		roots.push(...functionRoots)
 	}

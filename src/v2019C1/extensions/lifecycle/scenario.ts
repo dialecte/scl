@@ -1,5 +1,4 @@
 import type { LifecycleScenario } from './contract.types'
-import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 
 /**
  * How an instance element is matched to a source element during diff/reconcile:
@@ -22,6 +21,8 @@ export function matchKeyForScenario(scenario: LifecycleScenario | undefined): Ma
  * KEEPS identity (same-file revision — no re-stamp, no provenance); every other
  * scenario stamps template lineage onto a fresh instance.
  */
-export function identityModeForScenario(scenario: LifecycleScenario | undefined): IdentityMode {
+export function identityModeForScenario(
+	scenario: LifecycleScenario | undefined,
+): 'stamp-template' | 'keep' {
 	return scenario === 'fork' ? 'keep' : 'stamp-template'
 }

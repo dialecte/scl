@@ -4,8 +4,11 @@ import { buildReportInstance } from './report-instance'
 import { foldSatelliteCompanions } from './satellite-companions'
 
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import { collectComposedFunctionUuids } from '@/v2019C1/extensions/lifecycle/instance'
-import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
+import {
+	collectComposedFunctionUuids,
+	findInstancesByTemplateUuid,
+	scopeToTargetInstance,
+} from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
 
@@ -38,17 +41,22 @@ export async function reportAsd(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		scenario?: LifecycleScenario
+		targetInstance?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<DiffReport> {
-	const { sourceQuery, applicationRef, scenario } = params
+	const { sourceQuery, applicationRef, scenario, targetInstance } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	const matchKey = matchKeyForScenario(scenario)
 	// `instantiate` always places a NEW instance, so it never matches an existing one.
-	const applicationInstances =
+	const matchedApplications =
 		scenario === 'instantiate'
 			? []
 			: await findInstancesByTemplateUuid(query, { tagName: 'Application', sourceUuid, matchKey })
+	const applicationInstances = await scopeToTargetInstance(query, {
+		instances: matchedApplications,
+		targetInstance,
+	})
 
 	const reportInstances: ReportInstance[] = []
 	if (applicationInstances.length === 0) {
@@ -91,6 +99,7 @@ export async function reportAsd(
 		sourceQuery,
 		applicationRef,
 		scenario,
+		targetInstance,
 	})
 
 	return assembleReport([...reportInstances, ...functionInstances])
@@ -158,9 +167,10 @@ async function reportComposedFunctions(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		scenario?: LifecycleScenario
+		targetInstance?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<ReportInstance[]> {
-	const { sourceQuery, applicationRef, scenario } = params
+	const { sourceQuery, applicationRef, scenario, targetInstance } = params
 	const matchKey = matchKeyForScenario(scenario)
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 
@@ -174,7 +184,7 @@ async function reportComposedFunctions(
 
 		const functionRef = { tagName: 'Function', id: sourceFunction.id } as Scl.Ref<'Function'>
 		// `instantiate` always places NEW composed-function instances too.
-		const functionInstances =
+		const matchedFunctions =
 			scenario === 'instantiate'
 				? []
 				: await findInstancesByTemplateUuid(query, {
@@ -182,6 +192,10 @@ async function reportComposedFunctions(
 						sourceUuid: functionUuid,
 						matchKey,
 					})
+		const functionInstances = await scopeToTargetInstance(query, {
+			instances: matchedFunctions,
+			targetInstance,
+		})
 		if (functionInstances.length === 0) {
 			const instanceDiff = await reportFunction(query, {
 				sourceQuery,

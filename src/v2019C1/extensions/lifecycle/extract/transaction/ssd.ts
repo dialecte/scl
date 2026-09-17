@@ -1,6 +1,6 @@
-import { ensureSubstationTemplateStructure } from './ensure-substation-structure'
 import { postExtractionCleanup } from './post-extraction-cleanup'
 
+import { TEMPLATE_NAME, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { history } from '@/v2019C1/extensions/history'
 import { TOPOLOGY_EXTRACT_OMIT } from '@/v2019C1/extensions/lifecycle/layers/omit-filters'
 import { cloneTopologyContent } from '@/v2019C1/extensions/lifecycle/layers/topology'
@@ -12,10 +12,12 @@ import type * as Core from '@dialecte/core'
 /**
  * Extract a bay-typical (or wider process scope) from a project into a standalone SSD template.
  *
- * Mirrors `extract.asd`: seeds a TEMPLATE `Substation/VoltageLevel/Bay` scaffold, records an SSD
- * `Header`, then `cloneTopologyContent` gathers the scope's content by CONSUMING the application
- * layer (each `Application` + its composed `Function`s + type closure + satellites). uuid refs are
- * repointed and orphans cleaned up.
+ * Records an SSD `Header`, then `cloneTopologyContent` REPRODUCES the scope's structural frame
+ * (Substation/VoltageLevel/Bay + BayType + equipment) and CONSUMES the application layer (each
+ * `Application` + its composed `Function`s + type closure + satellites). The reproduced ancestors
+ * above the selected entrypoint are then TEMPLATE-named (the scaffolding marker: the first named
+ * level below the TEMPLATE-named ancestors is the instantiable root), the entrypoint keeps its name
+ * with `templateUuid` stripped, uuid refs are repointed and orphans cleaned up.
  */
 export async function ssd(
 	tx: Core.Transaction<Config>,
@@ -28,7 +30,7 @@ export async function ssd(
 	},
 ): Promise<{ warnings: string[] }> {
 	const { sourceQuery, scopeRef, tool, who, nameStructure } = params
-	const structure = await ensureSubstationTemplateStructure(tx)
+	const root = await tx.getRoot()
 
 	const scopeName = (await sourceQuery.getAttribute(scopeRef, { name: 'name' })) || 'Unnamed'
 
@@ -51,19 +53,26 @@ export async function ssd(
 		},
 	})
 
-	const mappings = await cloneTopologyContent(tx, {
+	const { mappings, frameIndex } = await cloneTopologyContent(tx, {
 		sourceQuery,
 		scopeRef,
-		structure,
+		targetParent: root,
 		omit: TOPOLOGY_EXTRACT_OMIT,
 	})
 
-	// the selected entrypoint is the named, reusable root - carry its source name and strip
-	// templateUuid so the export is a fresh template. Its TEMPLATE ancestors are left untouched.
-	const entryLevel = structure[scopeRef.tagName]
-	await tx.update({ tagName: scopeRef.tagName, id: entryLevel.id } as Scl.Ref<Scl.ElementsOf>, {
-		attributes: { name: scopeName, templateUuid: undefined },
-	})
+	// TEMPLATE-name the reproduced ancestors above the entrypoint; the entrypoint is the named,
+	// reusable root (templateUuid already stripped by the frame reproduction).
+	const ancestors = await sourceQuery.findAncestors(scopeRef, { stopAtTagName: 'Substation' })
+	for (const ancestor of ancestors) {
+		if (!(TOPOLOGY_STRUCTURAL_TAGS as readonly string[]).includes(ancestor.tagName)) continue
+		const target = ancestor.id ? frameIndex.get(ancestor.id) : undefined
+		if (target) await tx.update(target, { attributes: { name: TEMPLATE_NAME } })
+	}
+
+	const entryTarget = scopeRef.id ? frameIndex.get(scopeRef.id) : undefined
+	if (entryTarget) {
+		await tx.update(entryTarget, { attributes: { name: scopeName, templateUuid: undefined } })
+	}
 
 	// Repoint cloned uuid refs across ALL clones before cleanup reads them to detect orphans.
 	await applyUuidRemap(tx, { mappings })

@@ -19,3 +19,18 @@ export const TOPOLOGY_EQUIPMENT_TAGS = [
 	'GeneralEquipment',
 	'ConnectivityNode',
 ] as const
+
+/**
+ * Child element tags OWNED by the function/application layers (and the cross-cutting satellite
+ * passes), delegated OUT of the topology frame. The frame primitive omits these when carrying a
+ * structural element's own content, so the fn/app layers place their clones instead of the frame
+ * duplicating them.
+ */
+export const FRAME_OMIT_CHILD_TAGS = [
+	'Application',
+	'Function',
+	'FunctionCategory',
+	'AllocationRole',
+	'Variable',
+	'BehaviorDescription',
+] as const

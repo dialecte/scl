@@ -1,5 +1,7 @@
 export { fsd } from './fsd'
 export { asd } from './asd'
+export { ssd } from './ssd'
 export { resolveTargetStructure } from './resolve-target-structure'
 export type { FsdParams } from './fsd.types'
 export type { AsdParams } from './asd.types'
+export type { SsdParams } from './ssd.types'
