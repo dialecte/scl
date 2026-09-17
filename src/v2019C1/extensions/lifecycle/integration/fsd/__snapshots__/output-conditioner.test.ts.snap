@@ -3,28 +3,28 @@
 exports[`lifecycle integration — Output Conditioner FSD rev1 → rev2 (golden) > accept-all rev2 produces the expected instance 1`] = `
 "<?xml version="1.0" encoding="UTF-8"?>
 <SCL xmlns="http://www.iec.ch/61850/2003/SCL" release="5" revision="C" version="2007" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
-    <Substation name="S1" uuid="30">
+    <Substation name="S1" uuid="uuid-1">
         <Private type="eIEC61850-6-100">
-            <eIEC61850-6-100:FunctionCategory desc="rev2 category" name="PHYSICAL RESOURCE FCAT" templateUuid="ffbd5191-01b2-4ef4-9c75-c2ded5902381" uuid="14">
-                <eIEC61850-6-100:FunctionCatRef function="S1/V1/B1/Output Conditioner" functionUuid="1"/>
+            <eIEC61850-6-100:FunctionCategory desc="rev2 category" name="PHYSICAL RESOURCE FCAT" templateUuid="uuid-2" uuid="uuid-3">
+                <eIEC61850-6-100:FunctionCatRef function="S1/V1/B1/Output Conditioner" functionUuid="uuid-4"/>
             </eIEC61850-6-100:FunctionCategory>
         </Private>
-        <VoltageLevel name="V1" uuid="29">
-            <Bay name="B1" uuid="28">
-                <Function desc="rev2 function" name="Output Conditioner" templateUuid="5938b1b5-a55c-4b17-b95b-2ff28ba89fa3" uuid="1">
+        <VoltageLevel name="V1" uuid="uuid-5">
+            <Bay name="B1" uuid="uuid-6">
+                <Function desc="rev2 function" name="Output Conditioner" templateUuid="uuid-7" uuid="uuid-4">
                     <Private type="eIEC61850-6-100">
                         <eIEC61850-6-100:FunctionSclRef>
                             <eIEC61850-6-100:SclFileReference fileName="source" fileType="FSD" revision="" version=""/>
                         </eIEC61850-6-100:FunctionSclRef>
                     </Private>
-                    <LNode iedName="none" lnClass="LCBO" lnInst="1" lnType="LCBO_Type" templateUuid="lnode-src-uuid" uuid="3">
+                    <LNode iedName="none" lnClass="LCBO" lnInst="1" lnType="LCBO_Type" templateUuid="lnode-src-uuid" uuid="uuid-8">
                         <Private type="eIEC61850-6-100">
                             <eIEC61850-6-100:LNodeInputs>
-                                <eIEC61850-6-100:SourceRef input="Trip" pDA="stVal" pDO="TrCmd" pLN="XCBR" service="GOOSE" templateUuid="srcref-src-uuid" uuid="7"/>
+                                <eIEC61850-6-100:SourceRef input="Trip" pDA="stVal" pDO="TrCmd" pLN="XCBR" service="GOOSE" templateUuid="srcref-src-uuid" uuid="uuid-9"/>
                             </eIEC61850-6-100:LNodeInputs>
                         </Private>
                     </LNode>
-                    <LNode iedName="none" lnClass="LPDO" lnInst="1" templateUuid="21" uuid="23"/>
+                    <LNode iedName="none" lnClass="LPDO" lnInst="1" templateUuid="uuid-10" uuid="uuid-11"/>
                 </Function>
             </Bay>
         </VoltageLevel>

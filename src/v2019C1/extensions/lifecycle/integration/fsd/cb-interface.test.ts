@@ -1,4 +1,4 @@
-import { createMockRandomUUID } from '@dialecte/core/test'
+import { normalizeUuids } from '@dialecte/core/test'
 import { describe, expect, test } from 'vitest'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
@@ -69,7 +69,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -78,7 +79,8 @@ const targetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t"/>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 const skipAll =
 	() =>
@@ -174,15 +176,13 @@ describe('lifecycle integration — CB Interface FSD rev1 → rev2 (function + s
 })
 
 // Golden: freeze the full accept-all rev2 instance so any unintended structural
-// change is caught. Deterministic uuids via the counter mock (as runSclTestCases
-// does during act) keep the snapshot stable.
+// change is caught. `normalizeUuids` tokenizes the random uuids so the snapshot is
+// stable on structure + lineage without mocking `crypto.randomUUID`.
 describe('lifecycle integration — CB Interface FSD rev1 → rev2 (golden)', () => {
 	test('accept-all rev2 produces the expected instance', async () => {
 		const { project, source, target } = await createSclTestProject({ sourceXml, targetXml })
 		if (!target) throw new Error('target required')
 
-		const realRandomUUID = crypto.randomUUID
-		crypto.randomUUID = createMockRandomUUID()
 		try {
 			await target.document.transaction((tx) =>
 				instantiateFsd(tx, {
@@ -211,9 +211,8 @@ describe('lifecycle integration — CB Interface FSD rev1 → rev2 (golden)', ()
 			)
 
 			const xml = await target.document.query.getSnapshot({ as: 'xml' })
-			expect(xml).toMatchSnapshot()
+			expect(normalizeUuids(xml)).toMatchSnapshot()
 		} finally {
-			crypto.randomUUID = realRandomUUID
 			await project.destroy()
 		}
 	})

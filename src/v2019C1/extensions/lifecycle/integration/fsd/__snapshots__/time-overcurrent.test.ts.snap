@@ -3,17 +3,17 @@
 exports[`lifecycle integration — Time Overcurrent FSD rev1 → rev2 (golden) > accept-all rev2 produces the expected instance 1`] = `
 "<?xml version="1.0" encoding="UTF-8"?>
 <SCL xmlns="http://www.iec.ch/61850/2003/SCL" release="5" revision="C" version="2007" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
-    <Substation name="S1" uuid="24">
+    <Substation name="S1" uuid="uuid-1">
         <Private type="eIEC61850-6-100"/>
-        <VoltageLevel name="V1" uuid="23">
-            <Bay name="B1" uuid="22">
-                <Function desc="rev2 function" name="Time Overcurrent" templateUuid="1b67e1e0-e9a6-4e59-bb11-70188134d9a6" uuid="1">
+        <VoltageLevel name="V1" uuid="uuid-2">
+            <Bay name="B1" uuid="uuid-3">
+                <Function desc="rev2 function" name="Time Overcurrent" templateUuid="uuid-4" uuid="uuid-5">
                     <Private type="eIEC61850-6-100">
                         <eIEC61850-6-100:FunctionSclRef>
                             <eIEC61850-6-100:SclFileReference fileName="source" fileType="FSD" revision="" version=""/>
                         </eIEC61850-6-100:FunctionSclRef>
                     </Private>
-                    <LNode iedName="None" lnClass="PTOC" lnInst="1" lnType="PTOC_Type" templateUuid="lnode-src-uuid" uuid="3"/>
+                    <LNode iedName="None" lnClass="PTOC" lnInst="1" lnType="PTOC_Type" templateUuid="lnode-src-uuid" uuid="uuid-6"/>
                 </Function>
             </Bay>
         </VoltageLevel>
