@@ -1,11 +1,11 @@
 import { resolveTargetStructure } from './resolve-target-structure'
 
-import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
+import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { cloneFunctionCategories } from '@/v2019C1/extensions/lifecycle/layers/function'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
-import { applyUuidRemap, writeProvenance } from '@/v2019C1/extensions/reference/transaction'
+import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { FsdParams, FsdResult } from './fsd.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -73,14 +73,9 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 
 	const allMappings = [...recordMappings, ...categoryMappings, ...appliedMappings]
 
-	// Repoint cloned uuid refs (e.g. FunctionCatRef -> cloned Function) before lineage
-	// stamping and provenance read the cloned refs.
-	await applyUuidRemap(tx, { mappings: allMappings })
-
-	await writeIdentity(tx, {
-		mappings: allMappings,
-		mode: 'stamp-template',
-	})
+	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs
+	// (e.g. FunctionCatRef -> cloned Function) onto the fresh uuids.
+	await finalizeClonedIdentity(tx, { mappings: allMappings, mode: 'stamp-template' })
 
 	const rootMapping = recordMappings.find((mapping) => mapping.source.id === functionRef.id)
 	if (!rootMapping) {

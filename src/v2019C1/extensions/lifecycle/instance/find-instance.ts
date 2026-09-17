@@ -1,4 +1,10 @@
+import { getAttributeRules } from '@dialecte/core/utils'
+
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
+import { identityEquals, resolveIdentity } from '@/v2019C1/extensions/identity/query'
+
 import type { Scl, Config } from '@/v2019C1/config'
+import type { ElementIdentity } from '@/v2019C1/extensions/identity/query'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
@@ -86,8 +92,8 @@ export async function findInstanceByTemplateUuid(
 	params: {
 		tagName: Scl.ElementsOf
 		sourceUuid: string | undefined
-		sourceName?: string
 		matchKey?: MatchKey
+		sourceIdentity?: ElementIdentity
 	},
 ): Promise<AnyTrackedRecord | undefined> {
 	const [first] = await findInstancesByTemplateUuid(reader, params)
@@ -100,25 +106,27 @@ export async function findInstanceByTemplateUuid(
  * where there is no placement anchor (the ASD report/apply cascade), so several
  * instances of one template are enumerated and gated as a subset (multi-instance).
  *
- * `sourceName` opt-in fallback: when NO instance carries the source `uuid` as its
- * `templateUuid` — an externally-authored project whose `templateUuid` lineage is
- * broken (a placeholder value, not the source uuid, as real .ssd files reuse one
- * dummy across elements) — recognize the instance by `name` instead, but ONLY when
- * it is unambiguous (exactly one same-tag element of that name), so an unrelated
- * element is never adopted. Callers that omit `sourceName` keep the strict lineage
- * behaviour.
+ * Matching is schema-driven (`resolveIdentity`), no name fallback:
+ *  - **uuid-bearing** `tagName` → LINEAGE ONLY (`instance[matchKey] === sourceUuid`). A miss is a
+ *    miss; a same-name element sharing no lineage is never adopted (that was the scaffold-`TEMPLATE`
+ *    bug). A project whose lineage is a hand-authored placeholder is a data defect surfaced by the UI
+ *    `checkTemplateUuids` warning, not recovered here.
+ *  - **uuid-less** `tagName` with schema `identityFields` → matched by the `sourceIdentity` fields
+ *    tuple, unambiguous only (e.g. DataTypeTemplates types by `id`). Callers pass `sourceIdentity`
+ *    (from `resolveIdentity(sourceRecord)`) for these; uuid-bearing callers pass nothing.
  */
 export async function findInstancesByTemplateUuid(
 	reader: Reader,
 	params: {
 		tagName: Scl.ElementsOf
 		sourceUuid: string | undefined
-		sourceName?: string
 		/** Attribute matched against `sourceUuid`. Default `templateUuid`; `uuid` for fork. */
 		matchKey?: MatchKey
+		/** The source element's identity, required only for a uuid-less (fields-identified) tag. */
+		sourceIdentity?: ElementIdentity
 	},
 ): Promise<AnyTrackedRecord[]> {
-	const { tagName, sourceUuid, sourceName, matchKey = 'templateUuid' } = params
+	const { tagName, sourceUuid, matchKey = 'templateUuid', sourceIdentity } = params
 	const records = await reader.any.getRecordsByTagName(tagName)
 
 	const byLineage: AnyTrackedRecord[] = []
@@ -130,13 +138,56 @@ export async function findInstancesByTemplateUuid(
 		}
 	}
 	if (byLineage.length > 0) return byLineage
-	if (!sourceName) return []
 
-	const byName: AnyTrackedRecord[] = []
+	// uuid-bearing: lineage is the ONLY identity — no name fallback.
+	const carriesUuid = getAttributeRules({
+		dialecteConfig: SCL_DIALECTE_CONFIG,
+		tagName,
+		attributeName: 'uuid',
+	}).isDefined
+	if (carriesUuid) return []
+
+	// uuid-less: identify by the schema's identityFields (unambiguous match required).
+	if (sourceIdentity?.kind !== 'fields') return []
+	const byFields: AnyTrackedRecord[] = []
 	for (const record of records) {
-		if ((await reader.any.getAttribute(record, { name: 'name' })) === sourceName) {
-			byName.push(record)
-		}
+		if (identityEquals(await resolveIdentity(reader, record), sourceIdentity)) byFields.push(record)
 	}
-	return byName.length === 1 ? byName : []
+	return byFields.length === 1 ? byFields : []
+}
+
+/**
+ * Narrow a set of matched instances to those SCOPED to one specific target instance: the instance
+ * itself, or any instance structurally UNDER it. When `targetInstance` is undefined, every instance
+ * passes (the default — operate on ALL instances of the template, a template-rollout).
+ *
+ * This is the multi-instance anchor seam: a consumer names ONE target instance (e.g. a specific
+ * pasted Bay) and every enumeration point in the update/report verbs filters through here, so the
+ * frame, the applications and the composed functions all resolve under the chosen instance and no
+ * other. The containment predicate makes it uniform across layers — a Bay `targetInstance` scopes
+ * its descendant Applications/Functions; a Function/Application `targetInstance` scopes itself.
+ */
+export async function scopeToTargetInstance<GenericRecord extends { id: string; tagName: string }>(
+	reader: Reader,
+	params: {
+		instances: readonly GenericRecord[]
+		targetInstance: Scl.Ref<Scl.ElementsOf> | undefined
+	},
+): Promise<GenericRecord[]> {
+	const { instances, targetInstance } = params
+	if (!targetInstance) return [...instances]
+
+	const scoped: GenericRecord[] = []
+	for (const instance of instances) {
+		if (instance.id === targetInstance.id) {
+			scoped.push(instance)
+			continue
+		}
+		const ancestors = await reader.findAncestors({
+			tagName: instance.tagName,
+			id: instance.id,
+		} as Scl.Ref<Scl.ElementsOf>)
+		if (ancestors.some((ancestor) => ancestor.id === targetInstance.id)) scoped.push(instance)
+	}
+	return scoped
 }

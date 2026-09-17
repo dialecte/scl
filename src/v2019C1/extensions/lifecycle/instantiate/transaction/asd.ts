@@ -1,14 +1,14 @@
 import { resolveTargetStructure } from './resolve-target-structure'
 
-import { writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
+import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
 	findMissingReferencedRecords,
 	resolveStructureRef,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
-import { applyUuidRemap, writeProvenance } from '@/v2019C1/extensions/reference/transaction'
+import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { AsdParams, AsdResult } from './asd.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -63,10 +63,8 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 
 	const allMappings = [...mappings, ...appliedMappings]
 
-	// Repoint cloned uuid refs before lineage stamping and follow-up passes read them.
-	await applyUuidRemap(tx, { mappings: allMappings })
-
-	await writeIdentity(tx, { mappings: allMappings, mode: 'stamp-template' })
+	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs.
+	await finalizeClonedIdentity(tx, { mappings: allMappings, mode: 'stamp-template' })
 
 	// resolve a name collision for each placed composed Function at its own structural
 	// level (a repeated instantiate would otherwise duplicate a Function name in the Bay)

@@ -1,4 +1,4 @@
-import { restoreClonedUuids, writeIdentity } from '@/v2019C1/extensions/identity/transaction'
+import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import {
@@ -56,12 +56,11 @@ export async function reconcileSatellites(
 	} = params
 
 	for (const satelliteRef of satelliteRefs) {
-		const { uuid: sourceUuid, name: sourceName } = await sourceQuery.any.getAttributes(satelliteRef)
+		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
 
 		const instance = await findInstanceByTemplateUuid(tx, {
 			tagName: satelliteRef.tagName,
 			sourceUuid,
-			sourceName,
 			matchKey,
 		})
 
@@ -89,9 +88,7 @@ export async function reconcileSatellites(
 			strip: false,
 		})
 		if (clone) {
-			await writeIdentity(tx, { mappings: clone.mappings, mode: identityMode })
-			// fork keeps identity: converge the added satellite to its source uuid
-			if (identityMode === 'keep') await restoreClonedUuids(tx, { mappings: clone.mappings })
+			await finalizeClonedIdentity(tx, { mappings: clone.mappings, mode: identityMode })
 		}
 	}
 

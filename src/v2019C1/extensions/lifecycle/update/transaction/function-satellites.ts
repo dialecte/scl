@@ -1,4 +1,4 @@
-import { restoreClonedUuids, writeIdentity } from '@/v2019C1/extensions/identity/transaction'
+import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
@@ -17,7 +17,7 @@ import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
  * Reconcile each carried satellite (e.g. a `FunctionCategory`) of a function ONTO
- * its existing instance, gated by `accepted` (ENGINE.md §16). The satellite lives
+ * its existing instance, gated by `accepted`. The satellite lives
  * OUTSIDE the function subtree, so the function reconcile never reaches it; here
  * it is matched globally by `templateUuid` and reconciled in place. The write is
  * gated exactly like the function's: `reconcile` only touches records whose source
@@ -63,11 +63,10 @@ export async function reconcileCarriedSatellites(
 	const satellites = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
 	let hasMissing = false
 	for (const satelliteRef of satellites) {
-		const { uuid: sourceUuid, name: sourceName } = await sourceQuery.any.getAttributes(satelliteRef)
+		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
 		const instance = await findInstanceByTemplateUuid(tx, {
 			tagName: satelliteRef.tagName,
 			sourceUuid,
-			sourceName,
 			matchKey,
 		})
 		if (!instance) {
@@ -95,9 +94,7 @@ export async function reconcileCarriedSatellites(
 			structure,
 			stripCategoriesUuid: false,
 		})
-		await writeIdentity(tx, { mappings, mode: identityMode })
-		// fork keeps identity: converge the added satellite to its source uuid
-		if (identityMode === 'keep') await restoreClonedUuids(tx, { mappings })
+		await finalizeClonedIdentity(tx, { mappings, mode: identityMode })
 	}
 
 	// delete: an instance satellite whose template ELEMENT was retired from the source

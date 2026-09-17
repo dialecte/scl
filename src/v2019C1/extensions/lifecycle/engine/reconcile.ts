@@ -4,11 +4,10 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query'
-import { restoreClonedUuids, writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
+import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { LOCKED_LNODE_ATTRIBUTES } from '@/v2019C1/extensions/reference'
-import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { Config } from '@/v2019C1/config'
@@ -20,7 +19,7 @@ import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
 /**
- * Engine apply-core (ENGINE.md §3/§8): reconcile an updated template subtree
+ * Engine apply-core: reconcile an updated template subtree
  * (`sourceRootRef`) ONTO an existing instance (`instanceRootRef`) instead of
  * duplicating it. Elements match by `templateUuid` (= the source element's
  * `uuid`, immutable across template versions):
@@ -59,6 +58,12 @@ export async function reconcile(
 		matchKey?: MatchKey
 		/** Identity write mode for added elements. `stamp-template` (default) or `keep` (fork). */
 		identityMode?: IdentityMode
+		/**
+		 * Child tags to treat as BOUNDARIES: their subtrees are left untouched (not reconciled,
+		 * added, or deleted) because another pass owns them (e.g. the topology frame reconcile
+		 * delegates Application/Function to the fn/app cascade).
+		 */
+		omit?: readonly string[]
 	},
 ): Promise<void> {
 	const {
@@ -70,6 +75,7 @@ export async function reconcile(
 		keepNameTypesFrom,
 		matchKey = 'templateUuid',
 		identityMode = 'stamp-template',
+		omit,
 	} = params
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
@@ -100,10 +106,11 @@ export async function reconcile(
 		keepNameTypesFrom,
 		matchKey,
 		identityMode,
+		omit,
 	})
 
 	// removed from the template: delete instance elements whose lineage is gone
-	await deleteRemoved(tx, { instanceNode: instanceTree, sourceUuids, accepted, matchKey })
+	await deleteRemoved(tx, { instanceNode: instanceTree, sourceUuids, accepted, matchKey, omit })
 }
 
 async function reconcileChildren(
@@ -118,6 +125,7 @@ async function reconcileChildren(
 		keepNameTypesFrom: KeepNameTypesFrom | undefined
 		matchKey: MatchKey
 		identityMode: IdentityMode
+		omit: readonly string[] | undefined
 	},
 ): Promise<void> {
 	const {
@@ -130,9 +138,12 @@ async function reconcileChildren(
 		keepNameTypesFrom,
 		matchKey,
 		identityMode,
+		omit,
 	} = params
 	const matchedInstanceIds = new Set<string>()
 	for (const sourceChild of sourceNode.tree) {
+		// a boundary tag is owned by another pass (e.g. fn/app cascade) - leave it untouched
+		if (omit?.includes(sourceChild.tagName)) continue
 		const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
 		// Match by templateUuid lineage; fall back to a same-tag unmatched sibling
 		// for uuid-less elements (e.g. FunctionRoleContent) so they are reconciled
@@ -166,6 +177,7 @@ async function reconcileChildren(
 				keepNameTypesFrom,
 				matchKey,
 				identityMode,
+				omit,
 			})
 			continue
 		}
@@ -180,15 +192,9 @@ async function reconcileChildren(
 			strip: false,
 			withTypes: { keepNameFrom: keepNameTypesFrom },
 		})
-		await writeIdentity(tx, { mappings: recordMappings, mode: identityMode })
-		if (identityMode === 'keep') {
-			// fork keeps identity: converge the added element to the source revision's uuids (a
-			// fresh clone would otherwise diverge from the source, breaking a later fork/compare)
-			await restoreClonedUuids(tx, { mappings: recordMappings })
-		} else {
-			// template: repoint the added subtree's internal uuid refs onto the fresh instance uuids
-			await applyUuidRemap(tx, { mappings: recordMappings })
-		}
+		// stamp/preserve keep the fresh clone uuid + repoint refs; keep/fork converges to the
+		// source revision's uuids (no remap) — the shared finalization owns that split.
+		await finalizeClonedIdentity(tx, { mappings: recordMappings, mode: identityMode })
 
 		// validate the added element against its instance-parent context: apply any
 		// user edit then auto-resolve a name collision among siblings (schema constraint).
@@ -211,6 +217,8 @@ async function reconcileChildren(
 	// Identified removals (templateUuid lineage gone) are handled by `deleteRemoved`.
 	for (const instanceChild of instanceParent.tree) {
 		if (matchedInstanceIds.has(instanceChild.id)) continue
+		// a boundary tag is owned by another pass - never delete it here
+		if (omit?.includes(instanceChild.tagName)) continue
 		const templateUuid = await tx.any.getAttribute(instanceChild, { name: 'templateUuid' })
 		if (templateUuid) continue
 		if (
@@ -235,11 +243,19 @@ async function deleteRemoved(
 		sourceUuids: ReadonlySet<string>
 		accepted: AcceptedIds | undefined
 		matchKey: MatchKey
+		omit: readonly string[] | undefined
 	},
 ): Promise<void> {
-	const { instanceNode, sourceUuids, accepted, matchKey } = params
+	const { instanceNode, sourceUuids, accepted, matchKey, omit } = params
 	const toDelete: AnyTreeRecord[] = []
-	await collectRemoved(tx, { node: instanceNode, sourceUuids, accepted, matchKey, out: toDelete })
+	await collectRemoved(tx, {
+		node: instanceNode,
+		sourceUuids,
+		accepted,
+		matchKey,
+		omit,
+		out: toDelete,
+	})
 
 	for (const record of toDelete) {
 		// Idempotent: deleting a parent cascades its children, so a later child
@@ -256,10 +272,13 @@ async function collectRemoved(
 		sourceUuids: ReadonlySet<string>
 		accepted: AcceptedIds | undefined
 		matchKey: MatchKey
+		omit: readonly string[] | undefined
 		out: AnyTreeRecord[]
 	},
 ): Promise<void> {
-	const { node, sourceUuids, accepted, matchKey, out } = params
+	const { node, sourceUuids, accepted, matchKey, omit, out } = params
+	// a boundary subtree is owned by another pass - do not delete or descend into it
+	if (omit?.includes(node.tagName)) return
 	const lineage = await tx.any.getAttribute(node, { name: matchKey })
 	if (lineage && !sourceUuids.has(lineage)) {
 		// removed subtree = one atomic group; delete only if that group is accepted
@@ -267,7 +286,7 @@ async function collectRemoved(
 		return // its subtree cascades with it; do not descend
 	}
 	for (const child of node.tree) {
-		await collectRemoved(tx, { node: child, sourceUuids, accepted, matchKey, out })
+		await collectRemoved(tx, { node: child, sourceUuids, accepted, matchKey, omit, out })
 	}
 }
 

@@ -11,7 +11,7 @@ import type { AnyTreeRecord } from '@dialecte/core'
 
 /**
  * Fold each satellite's changes into the primary's decision group as read-only
- * COMPANIONS (ENGINE.md §16, G6). Generic over the layer: the caller resolves the
+ * COMPANIONS. Generic over the layer: the caller resolves the
  * satellite refs from the SOURCE (reverse-ref for the function's FunctionCategory,
  * outward-ref for the application's AllocationRole) and, for removal detection, the
  * matching refs from the TARGET instance (`instanceSatelliteRefs`, resolved with the
@@ -47,12 +47,11 @@ export async function foldSatelliteCompanions(
 	const group = report.groups.find((candidate) => candidate.primary.sourceRef?.id === primaryRef.id)
 
 	for (const satelliteRef of satelliteRefs) {
-		const { uuid: sourceUuid, name: sourceName } = await sourceQuery.any.getAttributes(satelliteRef)
+		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
 
 		const instance = await findInstanceByTemplateUuid(query, {
 			tagName: satelliteRef.tagName,
 			sourceUuid,
-			sourceName,
 		})
 		const satelliteReport = await diff({
 			sourceQuery,

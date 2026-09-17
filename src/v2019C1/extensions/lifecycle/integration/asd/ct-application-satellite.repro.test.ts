@@ -208,48 +208,11 @@ describe('repro — ASD application instantiate w/ FunctionCategory satellite (C
 		).toEqual([])
 	})
 
-	// SYMPTOM 3 (externally-authored project — real .ssd): the existing instance AllocationRole
-	// carries a PLACEHOLDER templateUuid that is NOT the source uuid (rev19.ssd smears one dummy
-	// across every element). Update must still RECOGNIZE it as the instance of the source
-	// satellite (by name within lineage) and reconcile in place — never add a DUPLICATE.
-	it('update apply recognizes an externally-authored instance (dummy templateUuid) — no duplicate', async () => {
-		const { source, target } = await instantiateInto()
-
-		// Simulate external authoring: overwrite the instance AllocationRole's templateUuid with the
-		// shared placeholder, breaking the uuid lineage the engine normally relies on.
-		await target.document.transaction(async (tx) => {
-			const roles = await tx.any.getRecordsByTagName('AllocationRole')
-			for (const role of roles) {
-				await tx.any.update(role, {
-					attributes: { templateUuid: '123e4567-e89b-12d3-a456-789012345678' },
-				})
-			}
-		})
-
-		const rep1 = await report(target.document.query, {
-			verb: 'asd',
-			sourceQuery: source.document.query,
-			ref: applicationRef,
-			anchor: bayRef,
-		})
-		await target.document.transaction(async (tx) => {
-			await apply(tx, {
-				verb: 'asd',
-				sourceQuery: source.document.query,
-				ref: applicationRef,
-				anchor: bayRef,
-				report: rep1,
-				decisions: new Map(),
-			})
-		})
-
-		const xml = (await target.document.query.getSnapshot({ as: 'xml' })) as string
-		const allocationRoles = xml.match(/<(?:[A-Za-z0-9.-]+:)?AllocationRole\b/g) ?? []
-		expect(
-			allocationRoles.length,
-			'externally-authored instance recognized by name — no duplicate AllocationRole',
-		).toBe(1)
-	})
+	// NOTE (2026-09-16): the two former "dummy templateUuid recognised by name" cases were removed with
+	// the universal schema-driven identity rework. Hand-authored placeholder templateUuids are a DATA
+	// defect surfaced by the UI `checkTemplateUuids` warning; the engine no longer name-recovers such
+	// instances (uuid-bearing elements match by lineage ONLY). Handling placeholders is a separate,
+	// deferred item — do NOT re-add a name fallback here.
 
 	// SYMPTOM (user repro): instantiate, edit ONE composed Function's `desc` on the instance, then
 	// update the ASD. Only that Function must report as modified; the Application (and everything
@@ -344,42 +307,6 @@ describe('repro — ASD application instantiate w/ FunctionCategory satellite (C
 		expect(outdated, 'only the edited Function outdated — no Application').toEqual([
 			'Function:CT_Fn',
 		])
-	})
-
-	// SYMPTOM (rev19): the shared AllocationRole is PRE-AUTHORED with a placeholder templateUuid (not
-	// the source uuid), so the REPORT cannot recognise it by lineage and falsely classifies it as an
-	// `added` satellite on EVERY Application instance. It must be recognised by name -> nothing added.
-	it('report recognises a pre-authored shared satellite by name (dummy templateUuid)', async () => {
-		const { source, target } = await instantiateInto()
-		await target.document.transaction(async (tx) => {
-			await instantiateAsd(tx, {
-				sourceQuery: source.document.query,
-				applicationRef,
-				targetParent: bayRef,
-			})
-		})
-		// simulate the pre-authored project: the shared AllocationRole carries a placeholder templateUuid
-		await target.document.transaction(async (tx) => {
-			for (const role of await tx.any.getRecordsByTagName('AllocationRole')) {
-				await tx.any.update(role, {
-					attributes: { templateUuid: '123e4567-e89b-12d3-a456-789012345678' },
-				})
-			}
-		})
-
-		const rep = await report(target.document.query, {
-			verb: 'asd',
-			sourceQuery: source.document.query,
-			ref: applicationRef,
-			anchor: bayRef,
-		})
-
-		const outdated = rep.instances
-			.filter((inst) => inst.rootRef && !inst.upToDate)
-			.map((inst) => `${inst.tree.tagName}:${inst.title}`)
-		expect(outdated, 'shared satellite recognised by name — no Application falsely added').toEqual(
-			[],
-		)
 	})
 
 	// PROVENANCE (genuine removal): the SOURCE satellite drops a reference whose target lineage IS in

@@ -50,7 +50,7 @@ const ENGINE_MANAGED_TAGS = new Set<string>([
 export type LeftoverRefPolicy = (instanceChild: AnyTreeRecord) => Promise<'keep' | 'removed'>
 
 /**
- * Engine diff (ENGINE.md §3): compares an (updated) template subtree against the
+ * Engine diff: compares an (updated) template subtree against the
  * existing instance, matched by `templateUuid` (= the source element's `uuid`),
  * and produces a structured `DiffReport`. This is the read-only "project then
  * diff" report — the same-space comparison the apply/reconcile step consumes.
@@ -91,11 +91,18 @@ export async function diff(params: {
 	refsAlwaysAdded?: boolean
 	/** How instance elements match source. `templateUuid` (default) or `uuid` (fork). */
 	matchKey?: MatchKey
+	/**
+	 * Child tags to treat as BOUNDARIES: their subtrees are excluded from the diff because another
+	 * report covers them (e.g. the topology frame report delegates Application/Function to the fn/app
+	 * per-primary reports).
+	 */
+	omit?: readonly string[]
 }): Promise<InstanceDiff> {
 	const { sourceQuery, targetQuery, sourceRootRef, instanceRootRef, keepLeftoverRefs } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 	const matchKey = params.matchKey ?? 'templateUuid'
+	const omit = params.omit
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	if (!sourceTree) throw new Error('diff: source subtree not found')
@@ -104,7 +111,7 @@ export async function diff(params: {
 
 	// no instance yet -> first-time instantiate: the whole template is added (fast)
 	if (!instanceTree) {
-		const root = addedNode(sourceTree)
+		const root = addedNode(sourceTree, omit)
 		return { root, groups: groupChanges(root), summary: summarize(root) }
 	}
 
@@ -124,6 +131,7 @@ export async function diff(params: {
 		leftoverRefPolicy,
 		refsAlwaysAdded,
 		matchKey,
+		omit,
 	})
 	const summary = summarize(root)
 	const groups = groupChanges(root, instanceTree.id)
@@ -142,12 +150,14 @@ async function diffMatched(
 		leftoverRefPolicy?: LeftoverRefPolicy
 		refsAlwaysAdded?: boolean
 		matchKey: MatchKey
+		omit?: readonly string[]
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
 		params
 	const leftoverRefPolicy = params.leftoverRefPolicy
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
+	const omit = params.omit
 	const attributeChanges = await computeAttributeChanges(sourceQuery, {
 		targetQuery,
 		sourceNode,
@@ -159,6 +169,8 @@ async function diffMatched(
 
 	// source children: matched -> recurse; unmatched -> added subtree
 	for (const sourceChild of sourceNode.tree) {
+		// a boundary tag is covered by another report - exclude its subtree
+		if (omit?.includes(sourceChild.tagName)) continue
 		const matched = await matchInstanceChild(sourceQuery, {
 			targetQuery,
 			sourceChild,
@@ -180,10 +192,11 @@ async function diffMatched(
 					leftoverRefPolicy,
 					refsAlwaysAdded,
 					matchKey,
+					omit,
 				}),
 			)
 		} else {
-			children.push(addedNode(sourceChild))
+			children.push(addedNode(sourceChild, omit))
 		}
 	}
 
@@ -205,6 +218,8 @@ async function diffMatched(
 	const sourceRefIdentities = await collectSourceRefIdentities(sourceQuery, sourceNode)
 	for (const instanceChild of instanceNode.tree) {
 		if (matchedInstanceIds.has(instanceChild.id)) continue
+		// a boundary tag is covered by another report - never flag it here
+		if (omit?.includes(instanceChild.tagName)) continue
 		const lineage = await targetQuery.any.getAttribute(instanceChild, { name: matchKey })
 		if (lineage) {
 			if (!sourceUuids.has(lineage)) children.push(removedNode(instanceChild))
@@ -406,8 +421,10 @@ async function resolveTargetName(
 	return undefined
 }
 
-function addedNode(node: AnyTreeRecord): DiffNode {
-	const children: DiffNode[] = node.tree.map((child) => addedNode(child))
+function addedNode(node: AnyTreeRecord, omit?: readonly string[]): DiffNode {
+	const children: DiffNode[] = node.tree
+		.filter((child) => !omit?.includes(child.tagName))
+		.map((child) => addedNode(child, omit))
 	return { change: 'added', tagName: node.tagName, sourceRef: toRef(node), children }
 }
 
