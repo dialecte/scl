@@ -44,7 +44,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 // Same as `sourceXml` but the template Function carries a `desc` — so an instance
 // gets it on instantiate and a later template that DROPS it must clear it on reconcile.
@@ -67,7 +68,8 @@ const sourceWithDescXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -76,7 +78,8 @@ const targetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t1"/>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('update.fsd (engine: instantiate-or-reconcile)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {

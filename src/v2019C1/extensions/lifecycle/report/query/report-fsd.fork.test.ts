@@ -38,7 +38,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 // FSD revision 1 (target): identical element `uuid`s (fork matches by uuid), `desc="rev1"`,
 // and NO `templateUuid` anywhere (a pure template file).
@@ -61,7 +62,8 @@ const targetXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-t"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 describe('reportFsd — fork (same-file revision preview)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {

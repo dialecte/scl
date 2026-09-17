@@ -42,7 +42,8 @@ describe('SPIKE: project-then-diff premise (lifecycle engine go/no-go)', () => {
 							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 						</DOType>
 					</DataTypeTemplates>
-				</SCL>`,
+				</SCL>
+			`,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="scd">
 					<Substation name="S1" ${id}="sub-t">
@@ -51,7 +52,8 @@ describe('SPIKE: project-then-diff premise (lifecycle engine go/no-go)', () => {
 							<Bay name="B2" ${id}="bay-t2"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expectedQueries: [
 				// v1 instance in B1 and v2 projection in B2 are BOTH lineage-aligned
 				'//default:Bay[@name="B1"]/default:Function[@name="Prot"][@templateUuid="fn-src-uuid"]',

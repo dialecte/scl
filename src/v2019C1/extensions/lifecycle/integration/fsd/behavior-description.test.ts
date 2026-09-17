@@ -49,7 +49,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -58,7 +59,8 @@ const targetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t1"/>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 const skipAll =
 	() =>

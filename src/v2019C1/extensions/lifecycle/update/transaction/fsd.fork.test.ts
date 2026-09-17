@@ -38,7 +38,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 // FSD revision 1 (target): the prior revision of the SAME file — identical element
 // `uuid`s (fork matches by uuid, not templateUuid), `desc="rev1"`, an extra XCBR
@@ -63,7 +64,8 @@ const targetXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-t"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 // FSD revision 2 that ADDS a new LNode (XCBR, uuid `lnode-new-uuid`) not present in rev1.
 const addSourceXml = /* xml */ `
 	<SCL ${ns} ${id}="fsd-v2-add">
@@ -85,7 +87,8 @@ const addSourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-gs"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 // FSD revision 1 (target of the add case): only the CSWI LNode, same uuids, no templateUuid.
 const addTargetXml = /* xml */ `
@@ -107,7 +110,8 @@ const addTargetXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-gt"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 describe('update.fsd — fork (same-file revision, keep identity)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'fork reconciles the same-uuid revision in place: keep identity, no templateUuid, delete removed':

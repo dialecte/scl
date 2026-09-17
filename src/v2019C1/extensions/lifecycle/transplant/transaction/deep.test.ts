@@ -24,34 +24,36 @@ describe('import.deep', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'imports a Function subtree and its type closure into the target parent': {
 			sourceXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-1">
-				<Substation name="S1" ${id}="sub-1">
-					<VoltageLevel name="V1" ${id}="vl-1">
-						<Bay name="B1" ${id}="bay-1">
-							<Function name="Prot" ${id}="fn-1">
-								<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-1"/>
-							</Function>
-						</Bay>
-					</VoltageLevel>
-				</Substation>
-				<DataTypeTemplates ${id}="dtt-1">
-					<LNodeType id="CSWI_Type" lnClass="CSWI" ${id}="lnt-1">
-						<DO name="Pos" type="DPC_Type" ${id}="do-1"/>
-					</LNodeType>
-					<DOType id="DPC_Type" cdc="DPC" ${id}="dot-1">
-						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-1"/>
-					</DOType>
-				</DataTypeTemplates>
-			</SCL>`,
+				<SCL ${ns} ${id}="scl-1">
+					<Substation name="S1" ${id}="sub-1">
+						<VoltageLevel name="V1" ${id}="vl-1">
+							<Bay name="B1" ${id}="bay-1">
+								<Function name="Prot" ${id}="fn-1">
+									<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-1"/>
+								</Function>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+					<DataTypeTemplates ${id}="dtt-1">
+						<LNodeType id="CSWI_Type" lnClass="CSWI" ${id}="lnt-1">
+							<DO name="Pos" type="DPC_Type" ${id}="do-1"/>
+						</LNodeType>
+						<DOType id="DPC_Type" cdc="DPC" ${id}="dot-1">
+							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-1"/>
+						</DOType>
+					</DataTypeTemplates>
+				</SCL>
+			`,
 			targetXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-t">
-				<Substation name="S1" ${id}="sub-t">
-					<VoltageLevel name="V1" ${id}="vl-t">
-						<!-- empty bay, awaiting the imported Function: -->
-						<Bay name="B1" ${id}="bay-t"/>
-					</VoltageLevel>
-				</Substation>
-			</SCL>`,
+				<SCL ${ns} ${id}="scl-t">
+					<Substation name="S1" ${id}="sub-t">
+						<VoltageLevel name="V1" ${id}="vl-t">
+							<!-- empty bay, awaiting the imported Function: -->
+							<Bay name="B1" ${id}="bay-t"/>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
 			ref: { tagName: 'Function', id: 'fn-1' },
 			targetParent: { tagName: 'Bay', id: 'bay-t' },
 			expectedQueries: [
@@ -63,21 +65,23 @@ describe('import.deep', () => {
 
 		'merges a cloned Private into an existing same-type Private instead of duplicating it': {
 			sourceXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-1">
-				<Substation name="TEMPLATE" ${id}="sub-1">
-					<Private type="eIEC61850-6-100" ${id}="src-priv">
-						<eIEC61850-6-100:FunctionCategory ${id}="src-cat" name="SRC_CAT" uuid="src-cat-uuid"/>
-					</Private>
-				</Substation>
-			</SCL>`,
+				<SCL ${ns} ${id}="scl-1">
+					<Substation name="TEMPLATE" ${id}="sub-1">
+						<Private type="eIEC61850-6-100" ${id}="src-priv">
+							<eIEC61850-6-100:FunctionCategory ${id}="src-cat" name="SRC_CAT" uuid="src-cat-uuid"/>
+						</Private>
+					</Substation>
+				</SCL>
+			`,
 			targetXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-t">
-				<Substation name="S1" ${id}="sub-t">
-					<Private type="eIEC61850-6-100" ${id}="tgt-priv">
-						<eIEC61850-6-100:FunctionCategory ${id}="tgt-cat" name="EXISTING_CAT" uuid="existing-cat-uuid"/>
-					</Private>
-				</Substation>
-			</SCL>`,
+				<SCL ${ns} ${id}="scl-t">
+					<Substation name="S1" ${id}="sub-t">
+						<Private type="eIEC61850-6-100" ${id}="tgt-priv">
+							<eIEC61850-6-100:FunctionCategory ${id}="tgt-cat" name="EXISTING_CAT" uuid="existing-cat-uuid"/>
+						</Private>
+					</Substation>
+				</SCL>
+			`,
 			ref: { tagName: 'Private', id: 'src-priv' },
 			targetParent: { tagName: 'Substation', id: 'sub-t' },
 			expectedQueries: [
@@ -92,27 +96,27 @@ describe('import.deep', () => {
 		},
 		'imports an IED subtree with LN0 and its dependent type closure': {
 			sourceXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-1">
-				<IED name="VENDOR_A" ${id}="ied-1">
-					<AccessPoint name="P1" ${id}="ap-1">
-						<Server ${id}="srv-1">
-							<LDevice inst="LD0" ${id}="ld-1">
-								<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-1"/>
-							</LDevice>
-						</Server>
-					</AccessPoint>
-				</IED>
-				<DataTypeTemplates ${id}="dtt-1">
-					<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-0">
-						<DO name="Mod" type="LLN0_ENC_Type" ${id}="do-0"/>
-					</LNodeType>
-					<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-0">
-						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
-					</DOType>
-				</DataTypeTemplates>
-			</SCL>`,
-			targetXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-t"/>`,
+				<SCL ${ns} ${id}="scl-1">
+					<IED name="VENDOR_A" ${id}="ied-1">
+						<AccessPoint name="P1" ${id}="ap-1">
+							<Server ${id}="srv-1">
+								<LDevice inst="LD0" ${id}="ld-1">
+									<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-1"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+					<DataTypeTemplates ${id}="dtt-1">
+						<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-0">
+							<DO name="Mod" type="LLN0_ENC_Type" ${id}="do-0"/>
+						</LNodeType>
+						<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-0">
+							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
+						</DOType>
+					</DataTypeTemplates>
+				</SCL>
+			`,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-t"/>`,
 			ref: { tagName: 'IED', id: 'ied-1' },
 			targetParent: { tagName: 'SCL', id: 'scl-t' },
 			expectedQueries: [
@@ -123,48 +127,50 @@ describe('import.deep', () => {
 		},
 		'forks an LN0-owned type on id collision and repoints the cloned LN0 lnType': {
 			sourceXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-1">
-				<IED name="VENDOR_A" ${id}="ied-1">
-					<AccessPoint name="P1" ${id}="ap-1">
-						<Server ${id}="srv-1">
-							<LDevice inst="LD0" ${id}="ld-1">
-								<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-1"/>
-							</LDevice>
-						</Server>
-					</AccessPoint>
-				</IED>
-				<DataTypeTemplates ${id}="dtt-1">
-					<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-0">
-						<DO name="Mod" type="LLN0_ENC_Type" ${id}="do-0"/>
-					</LNodeType>
-					<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-0">
-						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
-					</DOType>
-				</DataTypeTemplates>
-			</SCL>`,
+				<SCL ${ns} ${id}="scl-1">
+					<IED name="VENDOR_A" ${id}="ied-1">
+						<AccessPoint name="P1" ${id}="ap-1">
+							<Server ${id}="srv-1">
+								<LDevice inst="LD0" ${id}="ld-1">
+									<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-1"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+					<DataTypeTemplates ${id}="dtt-1">
+						<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-0">
+							<DO name="Mod" type="LLN0_ENC_Type" ${id}="do-0"/>
+						</LNodeType>
+						<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-0">
+							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
+						</DOType>
+					</DataTypeTemplates>
+				</SCL>
+			`,
 			targetXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-t">
-				<!-- a pre-existing LN0 keeps the colliding target type alive, so the
+				<SCL ${ns} ${id}="scl-t">
+					<!-- a pre-existing LN0 keeps the colliding target type alive, so the
 				     source type must fork under a hashed id instead of reclaiming it: -->
-				<IED name="TARGET" ${id}="ied-t">
-					<AccessPoint name="P1" ${id}="ap-t">
-						<Server ${id}="srv-t">
-							<LDevice inst="LD0" ${id}="ld-t">
-								<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-keep"/>
-							</LDevice>
-						</Server>
-					</AccessPoint>
-				</IED>
-				<DataTypeTemplates ${id}="dtt-t">
-					<!-- same id, different content → source type must fork: -->
-					<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-t">
-						<DO name="Beh" type="LLN0_ENC_Type" ${id}="do-t"/>
-					</LNodeType>
-					<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-t">
-						<DA name="stVal" bType="INT32" fc="ST" ${id}="da-t"/>
-					</DOType>
-				</DataTypeTemplates>
-			</SCL>`,
+					<IED name="TARGET" ${id}="ied-t">
+						<AccessPoint name="P1" ${id}="ap-t">
+							<Server ${id}="srv-t">
+								<LDevice inst="LD0" ${id}="ld-t">
+									<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-keep"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+					<DataTypeTemplates ${id}="dtt-t">
+						<!-- same id, different content → source type must fork: -->
+						<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-t">
+							<DO name="Beh" type="LLN0_ENC_Type" ${id}="do-t"/>
+						</LNodeType>
+						<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-t">
+							<DA name="stVal" bType="INT32" fc="ST" ${id}="da-t"/>
+						</DOType>
+					</DataTypeTemplates>
+				</SCL>
+			`,
 			ref: { tagName: 'IED', id: 'ied-1' },
 			targetParent: { tagName: 'SCL', id: 'scl-t' },
 			expectedQueries: [
@@ -182,46 +188,48 @@ describe('import.deep', () => {
 		},
 		'keepNameFrom source → deep forwards it so the reused type adopts the incoming id': {
 			sourceXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-1">
-				<IED name="VENDOR_A" ${id}="ied-1">
-					<AccessPoint name="P1" ${id}="ap-1">
-						<Server ${id}="srv-1">
-							<LDevice inst="LD0" ${id}="ld-1">
-								<LN0 lnClass="LLN0" inst="" lnType="LLN0_ICD" ${id}="ln0-1"/>
-							</LDevice>
-						</Server>
-					</AccessPoint>
-				</IED>
-				<DataTypeTemplates ${id}="dtt-1">
-					<LNodeType id="LLN0_ICD" lnClass="LLN0" ${id}="lnt-0">
-						<DO name="Mod" type="LLN0_ENC_ICD" ${id}="do-0"/>
-					</LNodeType>
-					<DOType id="LLN0_ENC_ICD" cdc="ENC" ${id}="dot-0">
-						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
-					</DOType>
-				</DataTypeTemplates>
-			</SCL>`,
+				<SCL ${ns} ${id}="scl-1">
+					<IED name="VENDOR_A" ${id}="ied-1">
+						<AccessPoint name="P1" ${id}="ap-1">
+							<Server ${id}="srv-1">
+								<LDevice inst="LD0" ${id}="ld-1">
+									<LN0 lnClass="LLN0" inst="" lnType="LLN0_ICD" ${id}="ln0-1"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+					<DataTypeTemplates ${id}="dtt-1">
+						<LNodeType id="LLN0_ICD" lnClass="LLN0" ${id}="lnt-0">
+							<DO name="Mod" type="LLN0_ENC_ICD" ${id}="do-0"/>
+						</LNodeType>
+						<DOType id="LLN0_ENC_ICD" cdc="ENC" ${id}="dot-0">
+							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
+						</DOType>
+					</DataTypeTemplates>
+				</SCL>
+			`,
 			targetXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-t">
-				<IED name="TARGET" ${id}="ied-t">
-					<AccessPoint name="P1" ${id}="ap-t">
-						<Server ${id}="srv-t">
-							<LDevice inst="LD0" ${id}="ld-t">
-								<LN0 lnClass="LLN0" inst="" lnType="LLN0_SSD" ${id}="ln0-keep"/>
-							</LDevice>
-						</Server>
-					</AccessPoint>
-				</IED>
-				<DataTypeTemplates ${id}="dtt-t">
-					<!-- structurally equal to the source type, different id: -->
-					<LNodeType id="LLN0_SSD" lnClass="LLN0" ${id}="lnt-t">
-						<DO name="Mod" type="LLN0_ENC_SSD" ${id}="do-t"/>
-					</LNodeType>
-					<DOType id="LLN0_ENC_SSD" cdc="ENC" ${id}="dot-t">
-						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-t"/>
-					</DOType>
-				</DataTypeTemplates>
-			</SCL>`,
+				<SCL ${ns} ${id}="scl-t">
+					<IED name="TARGET" ${id}="ied-t">
+						<AccessPoint name="P1" ${id}="ap-t">
+							<Server ${id}="srv-t">
+								<LDevice inst="LD0" ${id}="ld-t">
+									<LN0 lnClass="LLN0" inst="" lnType="LLN0_SSD" ${id}="ln0-keep"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+					<DataTypeTemplates ${id}="dtt-t">
+						<!-- structurally equal to the source type, different id: -->
+						<LNodeType id="LLN0_SSD" lnClass="LLN0" ${id}="lnt-t">
+							<DO name="Mod" type="LLN0_ENC_SSD" ${id}="do-t"/>
+						</LNodeType>
+						<DOType id="LLN0_ENC_SSD" cdc="ENC" ${id}="dot-t">
+							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-t"/>
+						</DOType>
+					</DataTypeTemplates>
+				</SCL>
+			`,
 			ref: { tagName: 'IED', id: 'ied-1' },
 			targetParent: { tagName: 'SCL', id: 'scl-t' },
 			keepNameFrom: 'source',
@@ -241,34 +249,34 @@ describe('import.deep', () => {
 		},
 		'preserves text-only, empty-flag and namespaced vendor Private on IED clone': {
 			sourceXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-1">
-				<IED name="VENDOR_A" ${id}="ied-1">
-					<Private type="Siemens-MasterId" ${id}="priv-master">23a3beb5-7342-4114-b042-6fb04f2312d2</Private>
-					<Private type="eIEC61850-6-100" ${id}="priv-ssd">
-						<eIEC61850-6-100:SsdReference desc="SET_Sample1" version="0" revision="14" ${id}="ssd-ref"/>
-					</Private>
-					<Private type="Siemens-IsSiprotec5IED" ${id}="priv-flag"/>
-					<AccessPoint name="P1" ${id}="ap-1">
-						<Server ${id}="srv-1">
-							<LDevice inst="LD0" ${id}="ld-1">
-								<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-1">
-									<Private type="Siemens-MasterId" ${id}="priv-ln0">2189c448-8f8a-439e-b3cb-9e87608463d6</Private>
-								</LN0>
-							</LDevice>
-						</Server>
-					</AccessPoint>
-				</IED>
-				<DataTypeTemplates ${id}="dtt-1">
-					<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-0">
-						<DO name="Mod" type="LLN0_ENC_Type" ${id}="do-0"/>
-					</LNodeType>
-					<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-0">
-						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
-					</DOType>
-				</DataTypeTemplates>
-			</SCL>`,
-			targetXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-t"/>`,
+				<SCL ${ns} ${id}="scl-1">
+					<IED name="VENDOR_A" ${id}="ied-1">
+						<Private type="Siemens-MasterId" ${id}="priv-master">23a3beb5-7342-4114-b042-6fb04f2312d2</Private>
+						<Private type="eIEC61850-6-100" ${id}="priv-ssd">
+							<eIEC61850-6-100:SsdReference desc="SET_Sample1" version="0" revision="14" ${id}="ssd-ref"/>
+						</Private>
+						<Private type="Siemens-IsSiprotec5IED" ${id}="priv-flag"/>
+						<AccessPoint name="P1" ${id}="ap-1">
+							<Server ${id}="srv-1">
+								<LDevice inst="LD0" ${id}="ld-1">
+									<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="ln0-1">
+										<Private type="Siemens-MasterId" ${id}="priv-ln0">2189c448-8f8a-439e-b3cb-9e87608463d6</Private>
+									</LN0>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+					<DataTypeTemplates ${id}="dtt-1">
+						<LNodeType id="LLN0_Type" lnClass="LLN0" ${id}="lnt-0">
+							<DO name="Mod" type="LLN0_ENC_Type" ${id}="do-0"/>
+						</LNodeType>
+						<DOType id="LLN0_ENC_Type" cdc="ENC" ${id}="dot-0">
+							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-0"/>
+						</DOType>
+					</DataTypeTemplates>
+				</SCL>
+			`,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-t"/>`,
 			ref: { tagName: 'IED', id: 'ied-1' },
 			targetParent: { tagName: 'SCL', id: 'scl-t' },
 			expectedQueries: [

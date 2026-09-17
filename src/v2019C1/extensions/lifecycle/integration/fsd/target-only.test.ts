@@ -38,7 +38,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -47,7 +48,8 @@ const targetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t1"/>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 // An author-added element (no source lineage) is a TARGET-ONLY change: it must be
 // PRESERVED by default (its own decision group defaults to skip), and only DELETED

@@ -53,7 +53,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -62,7 +63,8 @@ const targetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t"/>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 /** Depth-first search for a changed node of the given tag anywhere in a companion subtree. */
 function findInTree(node: DiffNode, predicate: (node: DiffNode) => boolean): DiffNode | undefined {

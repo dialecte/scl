@@ -36,7 +36,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -45,7 +46,8 @@ const targetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t"/>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('apply — returns { report, instances }', () => {
 	it('fsd instantiate: returns the placed Function root', async () => {
@@ -96,7 +98,8 @@ describe('apply — keepNameTypesFrom threads to the type import', () => {
 					<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 				</DOType>
 			</DataTypeTemplates>
-		</SCL>`
+		</SCL>
+	`
 	// target already holds a structurally-equal type under a different id (CSWI_SSD).
 	const dedupTargetXml = /* xml */ `
 		<SCL ${ns} ${id}="scd">
@@ -113,7 +116,8 @@ describe('apply — keepNameTypesFrom threads to the type import', () => {
 					<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-t"/>
 				</DOType>
 			</DataTypeTemplates>
-		</SCL>`
+		</SCL>
+	`
 
 	async function instantiate(
 		keepNameTypesFrom: 'source' | 'target' | undefined,

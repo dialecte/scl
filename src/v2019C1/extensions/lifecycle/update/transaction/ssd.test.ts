@@ -45,7 +45,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -55,7 +56,8 @@ const targetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t"/>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('update.ssd (cascade to update.asd / update.fsd)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -177,7 +179,8 @@ describe('update.ssd - reconciles the topology frame own content', () => {
 					<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-f"/>
 				</DOType>
 			</DataTypeTemplates>
-		</SCL>`
+		</SCL>
+	`
 
 	const frameTargetXml = /* xml */ `
 		<SCL ${ns} ${id}="scd-f">
@@ -185,7 +188,8 @@ describe('update.ssd - reconciles the topology frame own content', () => {
 			<Substation name="S1" ${id}="sub-tf">
 				<VoltageLevel name="V1" ${id}="vl-tf"/>
 			</Substation>
-		</SCL>`
+		</SCL>
+	`
 
 	const frameScope = { tagName: 'Bay', id: 'bay-f' } as Scl.Ref<'Bay'>
 	const targetVl = { tagName: 'VoltageLevel', id: 'vl-tf' } as Scl.Ref<'VoltageLevel'>
@@ -265,7 +269,8 @@ describe('update.ssd - reconciles the frame onto ALL instances of a bay-typical'
 					<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-m"/>
 				</DOType>
 			</DataTypeTemplates>
-		</SCL>`
+		</SCL>
+	`
 
 	const multiTargetXml = /* xml */ `
 		<SCL ${ns} ${id}="scd-m">
@@ -274,7 +279,8 @@ describe('update.ssd - reconciles the frame onto ALL instances of a bay-typical'
 				<VoltageLevel name="VA" ${id}="vl-a"/>
 				<VoltageLevel name="VB" ${id}="vl-b"/>
 			</Substation>
-		</SCL>`
+		</SCL>
+	`
 
 	const multiScope = { tagName: 'Bay', id: 'bay-m' } as Scl.Ref<'Bay'>
 	const vlA = { tagName: 'VoltageLevel', id: 'vl-a' } as Scl.Ref<'VoltageLevel'>
@@ -351,7 +357,8 @@ describe('update.ssd - targetInstance scopes the update to one bay instance', ()
 					</Bay>
 				</VoltageLevel>
 			</Substation>
-		</SCL>`
+		</SCL>
+	`
 
 	const multiTargetXml = /* xml */ `
 		<SCL ${ns} ${id}="scd-t">
@@ -360,7 +367,8 @@ describe('update.ssd - targetInstance scopes the update to one bay instance', ()
 				<VoltageLevel name="VA" ${id}="vl-ta"/>
 				<VoltageLevel name="VB" ${id}="vl-tb"/>
 			</Substation>
-		</SCL>`
+		</SCL>
+	`
 
 	const tScope = { tagName: 'Bay', id: 'bay-ti' } as Scl.Ref<'Bay'>
 	const tVlA = { tagName: 'VoltageLevel', id: 'vl-ta' } as Scl.Ref<'VoltageLevel'>

@@ -48,7 +48,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 // FSD revision 1 (target): the prior revision — the Function only, no SubFunction. Same
 // element uuids where shared, no templateUuid (a pure template file).
@@ -71,7 +72,8 @@ const targetXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-t"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 describe('update.fsd — fork adds a SourceRef bound to a newly-added LNode (identity coherence)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {

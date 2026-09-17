@@ -47,7 +47,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-1"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 // A Bay carries equipment and a ConnectivityNode (topology connectivity referenced by equipment
 // Terminals). Both are the topology layer's own content and must be gathered.
@@ -63,7 +64,8 @@ const connectivitySourceXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 // A Bay carries its own equipment and a standalone Function (not reached through any Application).
 // Both are the topology layer's own content and must be gathered.
@@ -87,7 +89,8 @@ const equipmentSourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-2"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 describe('cloneTopologyContent - composes the application layer into a self-contained topology', () => {
 	const testCases: SclTest.TestCases<TestCase> = {

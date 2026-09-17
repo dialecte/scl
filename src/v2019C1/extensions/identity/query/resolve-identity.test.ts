@@ -25,7 +25,8 @@ const doc = /* xml */ `
 		<DataTypeTemplates ${id}="dtt">
 			<DOType id="DPC_Type" cdc="DPC" ${id}="dot"/>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 describe('resolveIdentity (query-based)', () => {
 	it('uuid-bearing element → uuid identity (name ignored even when an identityField)', async () => {

@@ -46,7 +46,8 @@ const sourceXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -55,7 +56,8 @@ const targetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t"/>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 const skipAll =
 	() =>

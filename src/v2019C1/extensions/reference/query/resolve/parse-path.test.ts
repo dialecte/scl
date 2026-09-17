@@ -377,33 +377,33 @@ describe('reference-parsing', () => {
 			'ControlRef.extCtrlAddr with IED-relative path, iedName on parent LNode → extCtrlUuid populated via fallback':
 				{
 					sourceXml: /* xml */ `
-				<SCL ${ALL_XMLNS_NAMESPACES}>
-					<Substation name="S1">
-						<Bay name="B1">
-							<LNode iedName="IED1" ldInst="LD1" lnClass="XCBR" lnInst="1">
-								<Private type="eIEC61850-6-100">
-									<eIEC61850-6-100:LNodeOutputs>
-										<eIEC61850-6-100:ControlRef output="TripCmd" extCtrlAddr="LD1/XCBR1.Pos" />
-									</eIEC61850-6-100:LNodeOutputs>
-								</Private>
-							</LNode>
-						</Bay>
-					</Substation>
-					<IED name="IED1">
-						<AccessPoint name="AP1">
-							<Server>
-								<LDevice inst="LD1">
-									<LN prefix="" lnClass="XCBR" inst="1">
-										<Inputs>
-											<ExtCtrl intAddr="Pos" uuid="extctrl-pos-uuid" />
-										</Inputs>
-									</LN>
-								</LDevice>
-							</Server>
-						</AccessPoint>
-					</IED>
-				</SCL>
-			`,
+						<SCL ${ALL_XMLNS_NAMESPACES}>
+							<Substation name="S1">
+								<Bay name="B1">
+									<LNode iedName="IED1" ldInst="LD1" lnClass="XCBR" lnInst="1">
+										<Private type="eIEC61850-6-100">
+											<eIEC61850-6-100:LNodeOutputs>
+												<eIEC61850-6-100:ControlRef output="TripCmd" extCtrlAddr="LD1/XCBR1.Pos" />
+											</eIEC61850-6-100:LNodeOutputs>
+										</Private>
+									</LNode>
+								</Bay>
+							</Substation>
+							<IED name="IED1">
+								<AccessPoint name="AP1">
+									<Server>
+										<LDevice inst="LD1">
+											<LN prefix="" lnClass="XCBR" inst="1">
+												<Inputs>
+													<ExtCtrl intAddr="Pos" uuid="extctrl-pos-uuid" />
+												</Inputs>
+											</LN>
+										</LDevice>
+									</Server>
+								</AccessPoint>
+							</IED>
+						</SCL>
+					`,
 					expectedQueries: [
 						'//v2019C1:ControlRef[@extCtrlAddr="LD1/XCBR1.Pos" and @extCtrlUuid="extctrl-pos-uuid"]',
 					],
@@ -411,33 +411,33 @@ describe('reference-parsing', () => {
 			'SourceRef.extRefAddr with IED-relative path, iedName on parent LNode → extRefUuid populated via fallback':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ALL_XMLNS_NAMESPACES}>
-						<Substation name="S1">
-							<Bay name="B1">
-								<LNode iedName="PIU" ldInst="CB_Function" lnClass="LCBO" lnInst="1">
-									<Private type="eIEC61850-6-100">
-										<eIEC61850-6-100:LNodeInputs>
-											<eIEC61850-6-100:SourceRef input="Trip" extRefAddr="CB_Function/LCBO1.TrCmd.stVal" />
-										</eIEC61850-6-100:LNodeInputs>
-									</Private>
-								</LNode>
-							</Bay>
-						</Substation>
-						<IED name="PIU">
-							<AccessPoint name="AP1">
-								<Server>
-									<LDevice inst="CB_Function">
-										<LN prefix="" lnClass="LCBO" inst="1">
-											<Inputs>
-												<ExtRef intAddr="TrCmd.stVal" uuid="extref-trcmd-uuid" />
-											</Inputs>
-										</LN>
-									</LDevice>
-								</Server>
-							</AccessPoint>
-						</IED>
-					</SCL>
-				`,
+						<SCL ${ALL_XMLNS_NAMESPACES}>
+							<Substation name="S1">
+								<Bay name="B1">
+									<LNode iedName="PIU" ldInst="CB_Function" lnClass="LCBO" lnInst="1">
+										<Private type="eIEC61850-6-100">
+											<eIEC61850-6-100:LNodeInputs>
+												<eIEC61850-6-100:SourceRef input="Trip" extRefAddr="CB_Function/LCBO1.TrCmd.stVal" />
+											</eIEC61850-6-100:LNodeInputs>
+										</Private>
+									</LNode>
+								</Bay>
+							</Substation>
+							<IED name="PIU">
+								<AccessPoint name="AP1">
+									<Server>
+										<LDevice inst="CB_Function">
+											<LN prefix="" lnClass="LCBO" inst="1">
+												<Inputs>
+													<ExtRef intAddr="TrCmd.stVal" uuid="extref-trcmd-uuid" />
+												</Inputs>
+											</LN>
+										</LDevice>
+									</Server>
+								</AccessPoint>
+							</IED>
+						</SCL>
+					`,
 					expectedQueries: [
 						'//v2019C1:SourceRef[@extRefAddr="CB_Function/LCBO1.TrCmd.stVal" and @extRefUuid="extref-trcmd-uuid"]',
 					],

@@ -44,7 +44,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 // ASD rev1 (target): identical uuids, no templateUuid, `type="DCS"`, `desc="rev1"`.
 const targetXml = /* xml */ `
@@ -75,7 +76,8 @@ const targetXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-t"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 describe('reportAsd — fork (same-file revision preview, both layers)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {

@@ -27,7 +27,8 @@ describe('checkTemplateUuids — flags illegitimate cross-type templateUuid reus
 					</Private>
 					<VoltageLevel name="V1" uuid="vl" templateUuid="${DUMMY}" ${id}="vl"/>
 				</Substation>
-			</SCL>`
+			</SCL>
+		`
 		const { source } = await createSclTestProject({ sourceXml: xml })
 
 		const warnings = await checkTemplateUuids(source.document.query)
@@ -50,7 +51,8 @@ describe('checkTemplateUuids — flags illegitimate cross-type templateUuid reus
 						<eIEC61850-6-100:AllocationRole name="PIU" uuid="piu2" templateUuid="tpl-ar" ${id}="ar2"/>
 					</Private>
 				</Substation>
-			</SCL>`
+			</SCL>
+		`
 		const { source } = await createSclTestProject({ sourceXml: xml })
 
 		expect(await checkTemplateUuids(source.document.query)).toEqual([])
@@ -65,7 +67,8 @@ describe('checkTemplateUuids — duplicate instance uuid', () => {
 					<VoltageLevel name="V1" uuid="dup" ${id}="vl1"/>
 					<VoltageLevel name="V2" uuid="dup" ${id}="vl2"/>
 				</Substation>
-			</SCL>`
+			</SCL>
+		`
 		const { source } = await createSclTestProject({ sourceXml: xml })
 
 		const dup = (await checkTemplateUuids(source.document.query)).filter(
@@ -84,7 +87,8 @@ describe('checkTemplateUuids — duplicate instance uuid', () => {
 					<VoltageLevel name="V1" uuid="v1" ${id}="vl1"/>
 					<VoltageLevel name="V2" uuid="v2" ${id}="vl2"/>
 				</Substation>
-			</SCL>`
+			</SCL>
+		`
 		const { source } = await createSclTestProject({ sourceXml: xml })
 
 		const dup = (await checkTemplateUuids(source.document.query)).filter(
@@ -103,7 +107,8 @@ describe('checkTemplateUuids — templateUuid type mismatch', () => {
 						<eIEC61850-6-100:AllocationRole name="PIU" uuid="ar" templateUuid="X" ${id}="arole"/>
 					</Private>
 				</Substation>
-			</SCL>`
+			</SCL>
+		`
 		const { source } = await createSclTestProject({ sourceXml: xml })
 
 		const mismatch = (await checkTemplateUuids(source.document.query)).filter(
@@ -122,7 +127,8 @@ describe('checkTemplateUuids — templateUuid type mismatch', () => {
 					<VoltageLevel name="TEMPLATE" uuid="X" ${id}="tpl"/>
 					<VoltageLevel name="V1" uuid="v1" templateUuid="X" ${id}="inst"/>
 				</Substation>
-			</SCL>`
+			</SCL>
+		`
 		const { source } = await createSclTestProject({ sourceXml: xml })
 
 		const mismatch = (await checkTemplateUuids(source.document.query)).filter(

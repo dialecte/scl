@@ -45,7 +45,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-1"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 describe('extract.ssd', () => {
 	const testCases: SclTest.TestCases<TestCase> = {

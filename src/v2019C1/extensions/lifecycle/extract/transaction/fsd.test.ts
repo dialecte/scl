@@ -10,9 +10,7 @@ import type { SclTest } from '@/v2019C1/test'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-const emptyTargetXml = /* xml */ `
-	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>
-`
+const emptyTargetXml = /* xml */ `<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>`
 
 describe('fsd', () => {
 	// ── FunctionCategory uuid remapping across deepClone ──────────────────
@@ -30,24 +28,24 @@ describe('fsd', () => {
 			'FunctionCatRef referencing SubFunction uuid → remapped to new Function uuid, FunctionCategory preserved':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
-						<Substation ${id}="sub1" name="TEMPLATE">
-							<VoltageLevel ${id}="vl1" name="TEMPLATE">
-								<Bay ${id}="bay1" name="TEMPLATE"/>
-							</VoltageLevel>
-							<Private ${id}="cat-priv" type="eIEC61850-6-100">
-								<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="MMS CLIENTS">
-									<eIEC61850-6-100:SubCategory ${id}="scat1" name="HMI">
-										<eIEC61850-6-100:FunctionCatRef ${id}="fcref1" functionUuid="subf1-uuid"/>
-									</eIEC61850-6-100:SubCategory>
-								</eIEC61850-6-100:FunctionCategory>
-							</Private>
-							<Function ${id}="func1" name="HMI Function" uuid="func1-uuid">
-								<SubFunction ${id}="subf1" name="HMI" uuid="subf1-uuid"/>
-							</Function>
-						</Substation>
-					</SCL>
-				`,
+						<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+							<Substation ${id}="sub1" name="TEMPLATE">
+								<VoltageLevel ${id}="vl1" name="TEMPLATE">
+									<Bay ${id}="bay1" name="TEMPLATE"/>
+								</VoltageLevel>
+								<Private ${id}="cat-priv" type="eIEC61850-6-100">
+									<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="MMS CLIENTS">
+										<eIEC61850-6-100:SubCategory ${id}="scat1" name="HMI">
+											<eIEC61850-6-100:FunctionCatRef ${id}="fcref1" functionUuid="subf1-uuid"/>
+										</eIEC61850-6-100:SubCategory>
+									</eIEC61850-6-100:FunctionCategory>
+								</Private>
+								<Function ${id}="func1" name="HMI Function" uuid="func1-uuid">
+									<SubFunction ${id}="subf1" name="HMI" uuid="subf1-uuid"/>
+								</Function>
+							</Substation>
+						</SCL>
+					`,
 					targetXml: emptyTargetXml,
 					act: async (source, target) => {
 						await target.transaction(async (tx) => {
@@ -93,7 +91,9 @@ describe('fsd', () => {
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
 						<Substation ${id}="sub1" name="TEMPLATE">
-							<VoltageLevel ${id}="vl1" name="TEMPLATE"><Bay ${id}="bay1" name="TEMPLATE"/></VoltageLevel>
+							<VoltageLevel ${id}="vl1" name="TEMPLATE">
+								<Bay ${id}="bay1" name="TEMPLATE"/>
+							</VoltageLevel>
 							<Function ${id}="func1" name="Prot" uuid="fn-uuid" templateUuid="fn-tpl">
 								<SubFunction ${id}="subf1" name="Sub" uuid="sub-uuid" templateUuid="sub-tpl"/>
 							</Function>

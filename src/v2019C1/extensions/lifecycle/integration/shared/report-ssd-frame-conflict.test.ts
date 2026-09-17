@@ -29,7 +29,8 @@ const sourceXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -37,7 +38,8 @@ const targetXml = /* xml */ `
 		<Substation name="S1" ${id}="sub-t">
 			<VoltageLevel name="V1" ${id}="vl-t"/>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 

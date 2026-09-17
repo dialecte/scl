@@ -50,7 +50,8 @@ describe('instantiate.fsd', () => {
 							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 						</DOType>
 					</DataTypeTemplates>
-				</SCL>`,
+				</SCL>
+			`,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="scd">
 					<Substation name="S1" ${id}="sub-t">
@@ -58,7 +59,8 @@ describe('instantiate.fsd', () => {
 							<Bay name="B1" ${id}="bay-t"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			functionId: 'fn-1',
 			targetParentId: 'bay-t',
 			expectedQueries: [
@@ -98,7 +100,8 @@ describe('instantiate.fsd', () => {
 							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 						</DOType>
 					</DataTypeTemplates>
-				</SCL>`,
+				</SCL>
+			`,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="scd">
 					<Substation name="S1" ${id}="sub-t">
@@ -106,7 +109,8 @@ describe('instantiate.fsd', () => {
 							<Bay name="B1" ${id}="bay-t"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			functionId: 'fn-1',
 			targetParentId: 'bay-t',
 			expectedQueries: [
@@ -149,11 +153,13 @@ describe('instantiate.fsd', () => {
 							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 						</DOType>
 					</DataTypeTemplates>
-				</SCL>`,
+				</SCL>
+			`,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="scd">
 					<Substation name="S1" ${id}="sub-t"/>
-				</SCL>`,
+				</SCL>
+			`,
 			functionId: 'fn-1',
 			targetParentId: 'sub-t',
 			targetParentTag: 'Substation',
@@ -186,7 +192,8 @@ describe('instantiate.fsd', () => {
 							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 						</DOType>
 					</DataTypeTemplates>
-				</SCL>`,
+				</SCL>
+			`,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="scd">
 					<Substation name="S1" ${id}="sub-t">
@@ -196,7 +203,8 @@ describe('instantiate.fsd', () => {
 							</Bay>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			functionId: 'fn-1',
 			targetParentId: 'fn-t',
 			targetParentTag: 'Function',
@@ -221,7 +229,8 @@ describe('instantiate.fsd', () => {
 							</Bay>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="scd">
 					<Substation name="S1" ${id}="sub-t">
@@ -232,7 +241,8 @@ describe('instantiate.fsd', () => {
 							<Bay name="B1" ${id}="bay-t"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			functionId: 'fn-1',
 			targetParentId: 'bay-t',
 			expectedQueries: [
@@ -283,7 +293,8 @@ describe('instantiate.fsd return value', () => {
 					</Bay>
 				</VoltageLevel>
 			</Substation>
-		</SCL>`
+		</SCL>
+	`
 	const sourceXml = /* xml */ `
 		<SCL ${ns} ${id}="fsd">
 			<Substation name="TEMPLATE" ${id}="sub-s">
@@ -293,7 +304,8 @@ describe('instantiate.fsd return value', () => {
 					</Bay>
 				</VoltageLevel>
 			</Substation>
-		</SCL>`
+		</SCL>
+	`
 
 	const cases = [
 		{

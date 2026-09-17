@@ -45,7 +45,8 @@ const sourceXml = /* xml */ `
 				<LNode iedName="None" lnClass="CSWI" lnInst="1" uuid="ln-uuid" ${id}="lnode-1"/>
 			</Function>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('ensureTopologyFrame - reproduces the source topology frame by name (merge-by-name)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -86,7 +87,8 @@ describe('ensureTopologyFrame - reproduces the source topology frame by name (me
 							<Bay name="B0" ${id}="t-bay0"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expectedQueries: [
 				// the existing ancestors are REUSED as context (untouched)
 				'//default:Substation[@name="S1"][@desc="existing"]',

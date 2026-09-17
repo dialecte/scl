@@ -26,7 +26,8 @@ const ns = ALL_XMLNS_NAMESPACES
 const emptySubstationTarget = /* xml */ `
 	<SCL ${ns} ${id}="scl-t">
 		<Substation name="Sub1" ${id}="sub-t"/>
-	</SCL>`
+	</SCL>
+`
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	ref: { tagName: string; id: string }
@@ -37,15 +38,16 @@ describe('import.deep — uuid reference remapping', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'internal uuid ref → repointed to the clone (source uuid gone)': {
 			sourceXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-1">
-				<Substation name="Sub1" ${id}="sub-1">
-					<Function name="F1" ${id}="fn-1" uuid="uuid-f1">
-						<Private type="eIEC61850-6-100" ${id}="priv-1">
-							<eIEC61850-6-100:FunctionRef ${id}="fref-1" function="Sub1/F1" functionUuid="uuid-f1"/>
-						</Private>
-					</Function>
-				</Substation>
-			</SCL>`,
+				<SCL ${ns} ${id}="scl-1">
+					<Substation name="Sub1" ${id}="sub-1">
+						<Function name="F1" ${id}="fn-1" uuid="uuid-f1">
+							<Private type="eIEC61850-6-100" ${id}="priv-1">
+								<eIEC61850-6-100:FunctionRef ${id}="fref-1" function="Sub1/F1" functionUuid="uuid-f1"/>
+							</Private>
+						</Function>
+					</Substation>
+				</SCL>
+			`,
 			targetXml: emptySubstationTarget,
 			ref: { tagName: 'Function', id: 'fn-1' },
 			targetParent: { tagName: 'Substation', id: 'sub-t' },
@@ -58,16 +60,17 @@ describe('import.deep — uuid reference remapping', () => {
 
 		'external uuid ref → preserved (target not part of the clone)': {
 			sourceXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-1">
-				<Substation name="Sub1" ${id}="sub-1">
-					<Function name="F1" ${id}="fn-1" uuid="uuid-f1"/>
-					<Function name="F2" ${id}="fn-2" uuid="uuid-f2">
-						<Private type="eIEC61850-6-100" ${id}="priv-2">
-							<eIEC61850-6-100:FunctionRef ${id}="fref-2" function="Sub1/F1" functionUuid="uuid-f1"/>
-						</Private>
-					</Function>
-				</Substation>
-			</SCL>`,
+				<SCL ${ns} ${id}="scl-1">
+					<Substation name="Sub1" ${id}="sub-1">
+						<Function name="F1" ${id}="fn-1" uuid="uuid-f1"/>
+						<Function name="F2" ${id}="fn-2" uuid="uuid-f2">
+							<Private type="eIEC61850-6-100" ${id}="priv-2">
+								<eIEC61850-6-100:FunctionRef ${id}="fref-2" function="Sub1/F1" functionUuid="uuid-f1"/>
+							</Private>
+						</Function>
+					</Substation>
+				</SCL>
+			`,
 			targetXml: emptySubstationTarget,
 			// clone ONLY F2 — F1 (the ref target) stays in the source, uncloned
 			ref: { tagName: 'Function', id: 'fn-2' },

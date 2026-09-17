@@ -27,7 +27,8 @@ const sourceXml = /* xml */ `
 				</eIEC61850-6-100:AllocationRole>
 			</Private>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 // The instance `AllocationRole` matches the template (templateUuid) but already carries a
 // DIFFERENT author-referenced `FunctionRef` (functionUuid="fn-existing").
@@ -40,7 +41,8 @@ const targetXml = /* xml */ `
 				</eIEC61850-6-100:AllocationRole>
 			</Private>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('engine.diff — reference children match by reference identity, not tag position', () => {
 	it('reports a template FunctionRef to an unreferenced target as added, not unchanged', async () => {
@@ -81,7 +83,8 @@ describe('engine.diff — reference children match by reference identity, not ta
 						</Bay>
 					</VoltageLevel>
 				</Substation>
-			</SCL>`
+			</SCL>
+		`
 
 		const instanceXml = /* xml */ `
 			<SCL ${ns} ${id}="asd-tgt2">
@@ -97,7 +100,8 @@ describe('engine.diff — reference children match by reference identity, not ta
 						</Bay>
 					</VoltageLevel>
 				</Substation>
-			</SCL>`
+			</SCL>
+		`
 
 		const { source, target } = await createSclTestProject({
 			sourceXml: extractedSourceXml,

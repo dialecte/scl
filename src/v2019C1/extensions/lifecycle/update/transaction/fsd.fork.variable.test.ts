@@ -44,7 +44,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 // FSD rev1 (target): only the Prefix Variable, identical uuids, no templateUuid.
 const targetXml = /* xml */ `
@@ -71,7 +72,8 @@ const targetXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-t"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 describe('update.fsd — fork carries the cross-cutting Variable satellite keeping identity', () => {
 	const testCases: SclTest.TestCases<TestCase> = {

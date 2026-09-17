@@ -28,7 +28,8 @@ const sourceXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 const bayRef = { tagName: 'Bay', id: 'bay' } as Scl.Ref<'Bay'>
 

@@ -21,7 +21,8 @@ const targetXml = /* xml */ `
 			<DOType id="DPC_Type" cdc="DPC" ${id}="dot-t"/>
 			<DOType id="SPS_Type" cdc="SPS" ${id}="dot-t2"/>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 describe('findInstancesByTemplateUuid — schema-driven, no name fallback', () => {
 	it('uuid-bearing: a lineage miss is a miss (no name adoption)', async () => {

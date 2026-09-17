@@ -27,7 +27,8 @@ describe('resolveInstantiableRoot', () => {
 							<Bay name="MyBay" ${id}="bay-1"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expected: { tagName: 'Bay', id: 'bay-1' },
 		},
 
@@ -37,7 +38,8 @@ describe('resolveInstantiableRoot', () => {
 					<Substation name="S1" ${id}="sub-1">
 						<VoltageLevel name="V1" ${id}="vl-1"/>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expected: { tagName: 'Substation', id: 'sub-1' },
 		},
 
@@ -49,7 +51,8 @@ describe('resolveInstantiableRoot', () => {
 							<Bay name="B1" ${id}="bay-1"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expected: { tagName: 'VoltageLevel', id: 'vl-1' },
 		},
 
@@ -61,7 +64,8 @@ describe('resolveInstantiableRoot', () => {
 							<Bay name="TEMPLATE" ${id}="bay-1"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expected: { tagName: 'Bay', id: 'bay-1' },
 		},
 
@@ -69,13 +73,13 @@ describe('resolveInstantiableRoot', () => {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="scl-1">
 					<Substation name="TEMPLATE" ${id}="sub-1"/>
-				</SCL>`,
+				</SCL>
+			`,
 			expected: { tagName: 'Substation', id: 'sub-1' },
 		},
 
 		'no Substation -> undefined': {
-			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="scl-1"/>`,
+			sourceXml: /* xml */ `<SCL ${ns} ${id}="scl-1"/>`,
 			expected: undefined,
 		},
 	}

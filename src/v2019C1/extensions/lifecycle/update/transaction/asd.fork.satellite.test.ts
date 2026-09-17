@@ -43,7 +43,8 @@ const addSourceXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 // rev1 (target, ADD case): only HMI_PC, Application references only it.
 const addTargetXml = /* xml */ `
@@ -68,7 +69,8 @@ const addTargetXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 // rev2 (source, DELETE case): the AllocationRole and its reference are removed.
 const deleteSourceXml = /* xml */ `
@@ -89,7 +91,8 @@ const deleteSourceXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('update.asd — fork carries the AllocationRole satellite keeping identity', () => {
 	const testCases: SclTest.TestCases<TestCase> = {

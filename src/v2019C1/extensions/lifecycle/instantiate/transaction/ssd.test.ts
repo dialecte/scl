@@ -49,7 +49,8 @@ describe('instantiate.ssd', () => {
 								<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 							</DOType>
 						</DataTypeTemplates>
-					</SCL>`,
+					</SCL>
+				`,
 				targetXml: /* xml */ `
 					<SCL ${ns} ${id}="scd">
 						<Header id="proj" uuid="proj-uuid" ${id}="hdr-t"/>
@@ -58,7 +59,8 @@ describe('instantiate.ssd', () => {
 								<Bay name="B1" ${id}="bay-t"/>
 							</VoltageLevel>
 						</Substation>
-					</SCL>`,
+					</SCL>
+				`,
 				targetParentId: 'bay-t',
 				expectedQueries: [
 					// the Application is cloned and records its SSD counterpart as templateUuid
@@ -109,7 +111,8 @@ describe('instantiate.ssd', () => {
 								<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 							</DOType>
 						</DataTypeTemplates>
-					</SCL>`,
+					</SCL>
+				`,
 				targetXml: /* xml */ `
 					<SCL ${ns} ${id}="scd">
 						<Header id="proj" uuid="proj-uuid" ${id}="hdr-t"/>
@@ -118,7 +121,8 @@ describe('instantiate.ssd', () => {
 								<Bay name="B1" ${id}="bay-t"/>
 							</VoltageLevel>
 						</Substation>
-					</SCL>`,
+					</SCL>
+				`,
 				targetParentId: 'bay-t',
 				mode: 'keep',
 				expectedQueries: [
@@ -189,7 +193,8 @@ describe('instantiate.ssd - placement collision', () => {
 					<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 				</DOType>
 			</DataTypeTemplates>
-		</SCL>`
+		</SCL>
+	`
 
 	type CollisionCase = SclTest.BaseXmlTestCase & { targetXml: string }
 
@@ -200,12 +205,13 @@ describe('instantiate.ssd - placement collision', () => {
 			{
 				sourceXml: collisionSource,
 				targetXml: /* xml */ `
-				<SCL ${ns} ${id}="scd">
-					<Header id="proj" uuid="proj-uuid" ${id}="hdr-t"/>
-					<Substation name="S1" ${id}="sub-t">
-						<VoltageLevel name="V1" ${id}="vl-t"/>
-					</Substation>
-				</SCL>`,
+					<SCL ${ns} ${id}="scd">
+						<Header id="proj" uuid="proj-uuid" ${id}="hdr-t"/>
+						<Substation name="S1" ${id}="sub-t">
+							<VoltageLevel name="V1" ${id}="vl-t"/>
+						</Substation>
+					</SCL>
+				`,
 				expectedQueries: [
 					// two distinct bays: the second's colliding name is bumped
 					'//default:VoltageLevel[@name="V1"]/default:Bay[@name="B1"]',

@@ -34,7 +34,8 @@ describe('writeProvenance', () => {
 							</Bay>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 			expectedQueries: [
 				'//default:Function[@name="Prot"]//v2019C1:FunctionSclRef/v2019C1:SclFileReference[@fileType="FSD"][@fileUuid="doc-uuid"][@version="2"][@revision="B"]',
@@ -51,7 +52,8 @@ describe('writeProvenance', () => {
 							<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="app-uuid" ${ID}="app-1"/>
 						</Private>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			target: { anchor: 'application', rootTag: 'Application', rootId: 'app-1' },
 			expectedQueries: [
 				'//v2019C1:Application[@name="HMI"]//v2019C1:ApplicationSclRef/v2019C1:SclFileReference[@fileType="ASD"][@fileUuid="doc-uuid"][@version="3"][@revision="C"]',
@@ -64,7 +66,8 @@ describe('writeProvenance', () => {
 				<SCL ${ns} ${ID}="scl-1">
 					<Header id="proj" uuid="ssd-uuid" version="0" revision="14" ${ID}="hdr-1"/>
 					<Substation name="S1" ${ID}="sub-1"/>
-				</SCL>`,
+				</SCL>
+			`,
 			target: { anchor: 'document', fileType: 'SSD' },
 			expectedQueries: [
 				'//default:Header/default:SourceFiles/default:SclFileReference[@fileType="SSD"][@fileUuid="ssd-uuid"][@version="0"][@revision="14"]',
@@ -75,15 +78,16 @@ describe('writeProvenance', () => {
 		'no Header: required version/revision fall back to empty strings, optional fileUuid is omitted':
 			{
 				sourceXml: /* xml */ `
-				<SCL ${ns} ${ID}="scl-1">
-					<Substation name="S1" ${ID}="sub-1">
-						<VoltageLevel name="V1" ${ID}="vl-1">
-							<Bay name="B1" ${ID}="bay-1">
-								<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1"/>
-							</Bay>
-						</VoltageLevel>
-					</Substation>
-				</SCL>`,
+					<SCL ${ns} ${ID}="scl-1">
+						<Substation name="S1" ${ID}="sub-1">
+							<VoltageLevel name="V1" ${ID}="vl-1">
+								<Bay name="B1" ${ID}="bay-1">
+									<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1"/>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 				expectedQueries: [
 					'//default:Function[@name="Prot"]//v2019C1:FunctionSclRef/v2019C1:SclFileReference[@fileType="FSD"][@version=""][@revision=""]',
@@ -108,7 +112,8 @@ describe('writeProvenance', () => {
 							</Bay>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 			expectedQueries: [
 				// the preserved composition ref is untouched

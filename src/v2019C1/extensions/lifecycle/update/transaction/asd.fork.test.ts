@@ -45,7 +45,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 // ASD revision 1 (target): the prior revision of the SAME file — identical uuids, no
 // templateUuid, Application `type="DCS"`, Function `desc="rev1"`.
@@ -77,7 +78,8 @@ const targetXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-t"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 describe('update.asd — fork (same-file revision, keep identity, both layers)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {

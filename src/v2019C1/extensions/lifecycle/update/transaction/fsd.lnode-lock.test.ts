@@ -39,7 +39,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 // Target already holds a real IED "VENDOR_A" the instance LNode can be bound to.
 const targetXml = /* xml */ `
@@ -50,7 +51,8 @@ const targetXml = /* xml */ `
 			</VoltageLevel>
 		</Substation>
 		<IED name="VENDOR_A" manufacturer="SIEMENS" ${id}="ied-t"/>
-	</SCL>`
+	</SCL>
+`
 
 async function bindInstanceLnode(
 	tx: Scl.Transaction,

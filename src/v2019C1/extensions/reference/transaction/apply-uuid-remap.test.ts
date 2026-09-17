@@ -29,15 +29,16 @@ describe('applyUuidRemap', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'repoints a ref from the source uuid to the clone uuid': {
 			sourceXml: /* xml */ `
-			<SCL ${ns} ${id}="scl-1">
-				<Substation name="Sub1" ${id}="sub-1">
-					<Function name="F1" ${id}="fn-clone" uuid="new-uuid">
-						<Private type="eIEC61850-6-100" ${id}="priv-c">
-							<eIEC61850-6-100:FunctionRef ${id}="fref-clone" function="stale/path" functionUuid="src-uuid"/>
-						</Private>
-					</Function>
-				</Substation>
-			</SCL>`,
+				<SCL ${ns} ${id}="scl-1">
+					<Substation name="Sub1" ${id}="sub-1">
+						<Function name="F1" ${id}="fn-clone" uuid="new-uuid">
+							<Private type="eIEC61850-6-100" ${id}="priv-c">
+								<eIEC61850-6-100:FunctionRef ${id}="fref-clone" function="stale/path" functionUuid="src-uuid"/>
+							</Private>
+						</Function>
+					</Substation>
+				</SCL>
+			`,
 			mappings: [
 				{
 					source: {

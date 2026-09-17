@@ -10,9 +10,7 @@ import type { SclTest } from '@/v2019C1/test'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-const emptyTargetXml = /* xml */ `
-	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>
-`
+const emptyTargetXml = /* xml */ `<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>`
 
 describe('asd', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
@@ -136,41 +134,41 @@ describe('asd', () => {
 			'Application without SignalRole children → extraction succeeds, no LNodeInputRef/LNodeOutputRef':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
-						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub1-uuid">
-							<VoltageLevel ${id}="vl1" name="TEMPLATE" uuid="vl1-uuid">
-								<Bay ${id}="bay1" name="TEMPLATE" uuid="bay1-uuid"/>
-							</VoltageLevel>
-							<Private ${id}="sub-priv" type="eIEC61850-6-100">
-								<eIEC61850-6-100:Application ${id}="app1" name="SimpleApp" type="DCS" uuid="app1-uuid">
-									<eIEC61850-6-100:FunctionRole ${id}="fr1" name="APPLICATION ROOT" uuid="fr1-uuid">
-										<eIEC61850-6-100:FunctionRoleContent ${id}="frc1">
-											<eIEC61850-6-100:FunctionRef ${id}="fref1" function="TEMPLATE/SimpleFunc" functionUuid="func-uuid"/>
-										</eIEC61850-6-100:FunctionRoleContent>
-									</eIEC61850-6-100:FunctionRole>
-								</eIEC61850-6-100:Application>
-							</Private>
-							<Function ${id}="func1" name="SimpleFunc" uuid="func-uuid">
-								<LNode ${id}="lnode1" iedName="None" lnType="ELIA_IHMI" uuid="lnode-uuid">
-									<Private ${id}="lnode-priv" type="eIEC61850-6-100">
-										<eIEC61850-6-100:LNodeSpecNaming ${id}="lnsn1" sIedName="IED" sLdInst="LD" sLnClass="IHMI" sLnInst="1"/>
-									</Private>
-								</LNode>
-							</Function>
-						</Substation>
-						<DataTypeTemplates ${id}="dtt">
-							<LNodeType ${id}="lnt1" id="ELIA_IHMI" lnClass="IHMI">
-								<DO ${id}="do1" name="Mod" type="ELIA_ENC_Mod"/>
-							</LNodeType>
-							<DOType ${id}="dot1" id="ELIA_ENC_Mod" cdc="ENC">
-								<DA ${id}="da1" bType="Enum" name="stVal" type="ELIA_BehaviourModeKind" fc="ST"/>
-							</DOType>
-							<EnumType ${id}="et1" id="ELIA_BehaviourModeKind">
-								<EnumVal ${id}="ev1" ord="1">on</EnumVal>
-							</EnumType>
-						</DataTypeTemplates>
-					</SCL>
-				`,
+						<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+							<Substation ${id}="sub1" name="TEMPLATE" uuid="sub1-uuid">
+								<VoltageLevel ${id}="vl1" name="TEMPLATE" uuid="vl1-uuid">
+									<Bay ${id}="bay1" name="TEMPLATE" uuid="bay1-uuid"/>
+								</VoltageLevel>
+								<Private ${id}="sub-priv" type="eIEC61850-6-100">
+									<eIEC61850-6-100:Application ${id}="app1" name="SimpleApp" type="DCS" uuid="app1-uuid">
+										<eIEC61850-6-100:FunctionRole ${id}="fr1" name="APPLICATION ROOT" uuid="fr1-uuid">
+											<eIEC61850-6-100:FunctionRoleContent ${id}="frc1">
+												<eIEC61850-6-100:FunctionRef ${id}="fref1" function="TEMPLATE/SimpleFunc" functionUuid="func-uuid"/>
+											</eIEC61850-6-100:FunctionRoleContent>
+										</eIEC61850-6-100:FunctionRole>
+									</eIEC61850-6-100:Application>
+								</Private>
+								<Function ${id}="func1" name="SimpleFunc" uuid="func-uuid">
+									<LNode ${id}="lnode1" iedName="None" lnType="ELIA_IHMI" uuid="lnode-uuid">
+										<Private ${id}="lnode-priv" type="eIEC61850-6-100">
+											<eIEC61850-6-100:LNodeSpecNaming ${id}="lnsn1" sIedName="IED" sLdInst="LD" sLnClass="IHMI" sLnInst="1"/>
+										</Private>
+									</LNode>
+								</Function>
+							</Substation>
+							<DataTypeTemplates ${id}="dtt">
+								<LNodeType ${id}="lnt1" id="ELIA_IHMI" lnClass="IHMI">
+									<DO ${id}="do1" name="Mod" type="ELIA_ENC_Mod"/>
+								</LNodeType>
+								<DOType ${id}="dot1" id="ELIA_ENC_Mod" cdc="ENC">
+									<DA ${id}="da1" bType="Enum" name="stVal" type="ELIA_BehaviourModeKind" fc="ST"/>
+								</DOType>
+								<EnumType ${id}="et1" id="ELIA_BehaviourModeKind">
+									<EnumVal ${id}="ev1" ord="1">on</EnumVal>
+								</EnumType>
+							</DataTypeTemplates>
+						</SCL>
+					`,
 					targetXml: emptyTargetXml,
 					applicationId: 'app1',
 					expectedQueries: [

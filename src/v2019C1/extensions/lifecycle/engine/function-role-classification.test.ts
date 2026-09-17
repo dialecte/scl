@@ -33,7 +33,8 @@ const sourceXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 // The instance matches the template `Application` (templateUuid) and its `FunctionRole`,
 // PLUS carries an extra tool-generated `FunctionRole name="Measurement"` with no templateUuid.
@@ -53,7 +54,8 @@ const targetXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('engine.diff — FunctionRole is engine-managed grouping, never target-only', () => {
 	it('does not classify a lineage-less instance FunctionRole as a target-only change', async () => {

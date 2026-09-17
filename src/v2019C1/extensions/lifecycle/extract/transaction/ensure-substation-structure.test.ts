@@ -9,7 +9,11 @@ import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 describe('ensureSubstationStructure', () => {
 	const testCases: SclTest.TestCases = {
 		'empty SCL → TEMPLATE Substation/VoltageLevel/Bay created': {
-			sourceXml: /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES}><Header id="TestSCL"/></SCL>`,
+			sourceXml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES}>
+					<Header id="TestSCL"/>
+				</SCL>
+			`,
 			expectedQueries: [
 				'//default:Substation[@name="TEMPLATE"]/default:VoltageLevel[@name="TEMPLATE"]/default:Bay[@name="TEMPLATE"]',
 			],

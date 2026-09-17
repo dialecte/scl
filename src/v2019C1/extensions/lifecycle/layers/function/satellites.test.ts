@@ -33,7 +33,8 @@ describe('resolveFunctionSatellites (function-layer owns its satellites)', () =>
 							</Bay>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expectedTags: ['FunctionCategory'],
 		},
 
@@ -47,7 +48,8 @@ describe('resolveFunctionSatellites (function-layer owns its satellites)', () =>
 							</Bay>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expectedTags: [],
 		},
 	}

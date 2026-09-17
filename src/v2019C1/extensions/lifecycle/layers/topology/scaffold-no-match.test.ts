@@ -26,7 +26,8 @@ const sourceXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -38,7 +39,8 @@ const targetXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('topology frame — no name adoption of a scaffold TEMPLATE bay', () => {
 	it('reportTopologyFrame(template) returns no instance when only the name matches (no lineage)', async () => {

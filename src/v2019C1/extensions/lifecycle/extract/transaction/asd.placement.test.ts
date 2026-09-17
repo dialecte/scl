@@ -10,9 +10,7 @@ import type { SclTest } from '@/v2019C1/test'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-const emptyTargetXml = /* xml */ `
-	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>
-`
+const emptyTargetXml = /* xml */ `<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>`
 
 /**
  * Regression for #1796: satellites referenced from the Application (here the

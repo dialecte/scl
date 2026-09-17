@@ -81,7 +81,8 @@ const sourceXml = /* xml */ `
 				<DA name="instMag" bType="Struct" fc="MX" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 const emptyTargetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -90,7 +91,8 @@ const emptyTargetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t"/>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 async function instantiateInto(): Promise<{
 	source: Awaited<ReturnType<typeof createSclTestProject>>['source']

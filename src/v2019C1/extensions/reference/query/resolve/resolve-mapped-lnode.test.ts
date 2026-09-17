@@ -22,81 +22,85 @@ describe('resolveMappedLNode', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'mapped LNode → implementing LN': {
 			sourceXml: /* xml */ `
-			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
-				<Substation name="S1" ${ID}="sub-1">
-					<VoltageLevel name="V1" ${ID}="vl-1">
-						<Bay name="B1" ${ID}="bay-1">
-							<LNode iedName="IED1" ldInst="LD0" prefix="" lnClass="XCBR" lnInst="1" ${ID}="lnode-1"/>
-						</Bay>
-					</VoltageLevel>
-				</Substation>
-				<IED name="IED1" ${ID}="ied-1">
-					<AccessPoint name="AP1" ${ID}="ap-1">
-						<Server ${ID}="srv-1">
-							<LDevice inst="LD0" ${ID}="ld-1">
-								<LN lnClass="XCBR" inst="1" prefix="" ${ID}="ln-1"/>
-							</LDevice>
-						</Server>
-					</AccessPoint>
-				</IED>
-			</SCL>`,
+				<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+					<Substation name="S1" ${ID}="sub-1">
+						<VoltageLevel name="V1" ${ID}="vl-1">
+							<Bay name="B1" ${ID}="bay-1">
+								<LNode iedName="IED1" ldInst="LD0" prefix="" lnClass="XCBR" lnInst="1" ${ID}="lnode-1"/>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+					<IED name="IED1" ${ID}="ied-1">
+						<AccessPoint name="AP1" ${ID}="ap-1">
+							<Server ${ID}="srv-1">
+								<LDevice inst="LD0" ${ID}="ld-1">
+									<LN lnClass="XCBR" inst="1" prefix="" ${ID}="ln-1"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
 			lnodeId: 'lnode-1',
 			expected: { tagName: 'LN', id: 'ln-1' },
 		},
 
 		'mapped LNode with prefix → implementing LN': {
 			sourceXml: /* xml */ `
-			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
-				<Substation name="S1" ${ID}="sub-1">
-					<Bay name="B1" ${ID}="bay-1">
-						<LNode iedName="IED1" ldInst="CTRL" prefix="P" lnClass="CSWI" lnInst="2" ${ID}="lnode-1"/>
-					</Bay>
-				</Substation>
-				<IED name="IED1" ${ID}="ied-1">
-					<AccessPoint name="AP1" ${ID}="ap-1">
-						<Server ${ID}="srv-1">
-							<LDevice inst="CTRL" ${ID}="ld-1">
-								<LN lnClass="CSWI" inst="2" prefix="P" ${ID}="ln-1"/>
-							</LDevice>
-						</Server>
-					</AccessPoint>
-				</IED>
-			</SCL>`,
+				<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+					<Substation name="S1" ${ID}="sub-1">
+						<Bay name="B1" ${ID}="bay-1">
+							<LNode iedName="IED1" ldInst="CTRL" prefix="P" lnClass="CSWI" lnInst="2" ${ID}="lnode-1"/>
+						</Bay>
+					</Substation>
+					<IED name="IED1" ${ID}="ied-1">
+						<AccessPoint name="AP1" ${ID}="ap-1">
+							<Server ${ID}="srv-1">
+								<LDevice inst="CTRL" ${ID}="ld-1">
+									<LN lnClass="CSWI" inst="2" prefix="P" ${ID}="ln-1"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
 			lnodeId: 'lnode-1',
 			expected: { tagName: 'LN', id: 'ln-1' },
 		},
 
 		'unmapped LNode (iedName "None") → undefined': {
 			sourceXml: /* xml */ `
-			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
-				<Substation name="S1" ${ID}="sub-1">
-					<Bay name="B1" ${ID}="bay-1">
-						<LNode iedName="None" ldInst="" prefix="" lnClass="XCBR" lnInst="1" ${ID}="lnode-1"/>
-					</Bay>
-				</Substation>
-			</SCL>`,
+				<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+					<Substation name="S1" ${ID}="sub-1">
+						<Bay name="B1" ${ID}="bay-1">
+							<LNode iedName="None" ldInst="" prefix="" lnClass="XCBR" lnInst="1" ${ID}="lnode-1"/>
+						</Bay>
+					</Substation>
+				</SCL>
+			`,
 			lnodeId: 'lnode-1',
 			expected: null,
 		},
 
 		'mapped LNode pointing to missing LN → undefined': {
 			sourceXml: /* xml */ `
-			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
-				<Substation name="S1" ${ID}="sub-1">
-					<Bay name="B1" ${ID}="bay-1">
-						<LNode iedName="IED1" ldInst="LD0" prefix="" lnClass="XCBR" lnInst="9" ${ID}="lnode-1"/>
-					</Bay>
-				</Substation>
-				<IED name="IED1" ${ID}="ied-1">
-					<AccessPoint name="AP1" ${ID}="ap-1">
-						<Server ${ID}="srv-1">
-							<LDevice inst="LD0" ${ID}="ld-1">
-								<LN lnClass="XCBR" inst="1" prefix="" ${ID}="ln-1"/>
-							</LDevice>
-						</Server>
-					</AccessPoint>
-				</IED>
-			</SCL>`,
+				<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+					<Substation name="S1" ${ID}="sub-1">
+						<Bay name="B1" ${ID}="bay-1">
+							<LNode iedName="IED1" ldInst="LD0" prefix="" lnClass="XCBR" lnInst="9" ${ID}="lnode-1"/>
+						</Bay>
+					</Substation>
+					<IED name="IED1" ${ID}="ied-1">
+						<AccessPoint name="AP1" ${ID}="ap-1">
+							<Server ${ID}="srv-1">
+								<LDevice inst="LD0" ${ID}="ld-1">
+									<LN lnClass="XCBR" inst="1" prefix="" ${ID}="ln-1"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
 			lnodeId: 'lnode-1',
 			expected: null,
 		},

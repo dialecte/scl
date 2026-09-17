@@ -26,7 +26,8 @@ const sourceXml = /* xml */ `
 				</Bay>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 type TestCase = SclTest.BaseXmlTestCase
 

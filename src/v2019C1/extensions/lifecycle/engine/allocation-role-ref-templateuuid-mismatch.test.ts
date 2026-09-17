@@ -32,7 +32,8 @@ const sourceXml = /* xml */ `
 				</eIEC61850-6-100:AllocationRole>
 			</Private>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 // Instance: Application matches by templateUuid (app-src). Its AllocationRoleRef points to the
 // instance "PIU" (uuid PIU_AR) whose templateUuid is the PLACEHOLDER (123e4567), NOT piu-src.
@@ -48,7 +49,8 @@ const instanceXml = /* xml */ `
 				</eIEC61850-6-100:AllocationRole>
 			</Private>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('engine.diff — AllocationRoleRef survives when instance templateUuid != source uuid', () => {
 	it('does not falsely classify the AllocationRoleRef as removed (placeholder templateUuid project)', async () => {

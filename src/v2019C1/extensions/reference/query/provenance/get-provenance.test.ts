@@ -26,9 +26,7 @@ type TestCase = SclTest.BaseXmlTestCase & {
 describe('getProvenance', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'no SclFileReference → empty': {
-			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>
-			`,
+			sourceXml: /* xml */ `<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>`,
 			expected: [],
 		},
 

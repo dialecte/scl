@@ -37,7 +37,8 @@ describe('resolveAppliedSatellites (cross-cutting: applies to any element in the
 							</Bay>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expectedTags: ['Variable'],
 		},
 
@@ -57,7 +58,8 @@ describe('resolveAppliedSatellites (cross-cutting: applies to any element in the
 							</Bay>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expectedTags: [],
 		},
 
@@ -78,7 +80,8 @@ describe('resolveAppliedSatellites (cross-cutting: applies to any element in the
 							</Bay>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expectedTags: ['BehaviorDescription'],
 		},
 
@@ -96,7 +99,8 @@ describe('resolveAppliedSatellites (cross-cutting: applies to any element in the
 							<Bay name="TEMPLATE" ${id}="bay-s" uuid="bay-src-uuid"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expectedTags: ['Variable'],
 		},
 	}

@@ -47,7 +47,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 // The project already holds an instance of the Function (a prior instantiation of an
 // earlier revision, matched by `templateUuid`) but not yet the SubFunction the template
@@ -71,7 +72,8 @@ const targetXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-t"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 describe('update.fsd — template add repoints an internal ref to the fresh instance uuid', () => {
 	const testCases: SclTest.TestCases<TestCase> = {

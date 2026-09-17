@@ -41,7 +41,8 @@ const sourceXml = /* xml */ `
 				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -50,7 +51,8 @@ const targetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t"/>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('instantiate.fsd — carried Variable satellite', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -79,7 +81,8 @@ describe('instantiate.fsd — carried Variable satellite', () => {
 							<Bay name="B1" ${id}="bay-t"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			expectedQueries: [
 				// the instance function's application lands on the pre-existing Variable
 				'//v2019C1:Variable[@uuid="existing-var-uuid"]/v2019C1:VariableApplyTo',

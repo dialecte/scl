@@ -61,7 +61,8 @@ const sourceXml = /* xml */ `
 				<DA name="instMag" bType="Struct" fc="MX" ${id}="da-s"/>
 			</DOType>
 		</DataTypeTemplates>
-	</SCL>`
+	</SCL>
+`
 
 const emptyTargetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -70,7 +71,8 @@ const emptyTargetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t1"/>
 			</VoltageLevel>
 		</Substation>
-	</SCL>`
+	</SCL>
+`
 
 describe('repro — FunctionCategory satellite folding', () => {
 	// SYMPTOM 1 (first-time instantiate): the carried FunctionCategory satellite must be folded as a

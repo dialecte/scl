@@ -124,14 +124,14 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 			'FSD - Function with templateUuid, stripRootAttributes=[templateUuid] → root stripped, SubFunction untouched':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
-						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
-							<Function ${id}="func1" name="ProtFunc" uuid="func-uuid" templateUuid="tmpl-uuid">
-								<SubFunction ${id}="subfunc1" name="Sub" uuid="subfunc-uuid" templateUuid="sub-tmpl-uuid"/>
-							</Function>
-						</Substation>
-					</SCL>
-				`,
+						<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+							<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
+								<Function ${id}="func1" name="ProtFunc" uuid="func-uuid" templateUuid="tmpl-uuid">
+									<SubFunction ${id}="subfunc1" name="Sub" uuid="subfunc-uuid" templateUuid="sub-tmpl-uuid"/>
+								</Function>
+							</Substation>
+						</SCL>
+					`,
 					targetXml: emptyTargetXml,
 					functionRef: { tagName: 'Function', id: 'func1' } as Scl.Ref<'Function'>,
 					targetParentRef: { tagName: 'Substation', id: 'target-sub' } as Scl.Ref<'Substation'>,
@@ -327,19 +327,19 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 			'ASD - FunctionCategory with templateUuid and originUuid, stripCategories=false → all attributes preserved':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
-						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
-							<Private ${id}="sub-priv" type="eIEC61850-6-100">
-								<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="PROTECTION" uuid="fcat-uuid" templateUuid="tmpl-uuid" originUuid="origin-uuid">
-									<eIEC61850-6-100:SubCategory ${id}="scat1" name="PTOC" uuid="scat-uuid" templateUuid="sub-tmpl-uuid" originUuid="sub-origin-uuid">
-										<eIEC61850-6-100:FunctionCatRef ${id}="fcref1" function="TEMPLATE/ProtFunc" functionUuid="func-uuid"/>
-									</eIEC61850-6-100:SubCategory>
-								</eIEC61850-6-100:FunctionCategory>
-							</Private>
-							<Function ${id}="func1" name="ProtFunc" uuid="func-uuid"/>
-						</Substation>
-					</SCL>
-				`,
+						<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+							<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
+								<Private ${id}="sub-priv" type="eIEC61850-6-100">
+									<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="PROTECTION" uuid="fcat-uuid" templateUuid="tmpl-uuid" originUuid="origin-uuid">
+										<eIEC61850-6-100:SubCategory ${id}="scat1" name="PTOC" uuid="scat-uuid" templateUuid="sub-tmpl-uuid" originUuid="sub-origin-uuid">
+											<eIEC61850-6-100:FunctionCatRef ${id}="fcref1" function="TEMPLATE/ProtFunc" functionUuid="func-uuid"/>
+										</eIEC61850-6-100:SubCategory>
+									</eIEC61850-6-100:FunctionCategory>
+								</Private>
+								<Function ${id}="func1" name="ProtFunc" uuid="func-uuid"/>
+							</Substation>
+						</SCL>
+					`,
 					targetXml: emptyTargetXml,
 					functionRef: { tagName: 'Function', id: 'func1' } as Scl.Ref<'Function'>,
 					targetParentRef: { tagName: 'Substation', id: 'target-sub' } as Scl.Ref<'Substation'>,

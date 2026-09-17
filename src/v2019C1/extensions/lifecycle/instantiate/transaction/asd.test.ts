@@ -58,7 +58,8 @@ describe('instantiate.asd', () => {
 							<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
 						</DOType>
 					</DataTypeTemplates>
-				</SCL>`,
+				</SCL>
+			`,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="scd">
 					<Substation name="S1" ${id}="sub-t">
@@ -66,7 +67,8 @@ describe('instantiate.asd', () => {
 							<Bay name="B1" ${id}="bay-t"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			applicationId: 'app-s',
 			targetParentId: 'bay-t',
 			expectedQueries: [
@@ -112,7 +114,8 @@ describe('instantiate.asd', () => {
 							</Bay>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="scd">
 					<Substation name="S1" ${id}="sub-t">
@@ -120,7 +123,8 @@ describe('instantiate.asd', () => {
 							<Bay name="B1" ${id}="bay-t"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			applicationId: 'app-s',
 			targetParentId: 'bay-t',
 			expectedQueries: [
@@ -156,7 +160,8 @@ describe('instantiate.asd', () => {
 							</Bay>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="scd">
 					<Substation name="S1" ${id}="sub-t">
@@ -167,7 +172,8 @@ describe('instantiate.asd', () => {
 							<Bay name="B1" ${id}="bay-t"/>
 						</VoltageLevel>
 					</Substation>
-				</SCL>`,
+				</SCL>
+			`,
 			applicationId: 'app-s',
 			targetParentId: 'bay-t',
 			expectedQueries: [
@@ -229,13 +235,17 @@ describe('instantiate.asd return value', () => {
 						</Bay>
 					</VoltageLevel>
 				</Substation>
-			</SCL>`
+			</SCL>
+		`
 		const targetXml = /* xml */ `
 			<SCL ${ns} ${id}="scd">
 				<Substation name="S1" ${id}="sub-t">
-					<VoltageLevel name="V1" ${id}="vl-t"><Bay name="B1" ${id}="bay-t"/></VoltageLevel>
+					<VoltageLevel name="V1" ${id}="vl-t">
+						<Bay name="B1" ${id}="bay-t"/>
+					</VoltageLevel>
 				</Substation>
-			</SCL>`
+			</SCL>
+		`
 
 		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
 		if (!target) throw new Error('target required')
