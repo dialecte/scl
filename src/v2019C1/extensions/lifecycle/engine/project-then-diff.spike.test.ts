@@ -12,7 +12,7 @@ const ns = ALL_XMLNS_NAMESPACES
 const functionRef = { tagName: 'Function', id: 'fn-1' } as Scl.Ref<'Function'>
 
 /**
- * SPIKE (go / no-go for the lifecycle engine, ENGINE.md §8/§14) — kept as premise
+ * SPIKE (go / no-go for the lifecycle engine) — kept as premise
  * evidence. Validates "project then diff": a v2 projection placed beside the
  * existing v1 instance differs ONLY by the real change, both lineage-aligned by
  * `templateUuid` and both instance-space. The projection is played in a

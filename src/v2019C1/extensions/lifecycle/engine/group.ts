@@ -1,7 +1,7 @@
 import type { DecisionGroup, DiffNode } from './diff.types'
 
 /**
- * Group stage (ENGINE.md §8, 07 §3.1): fold the `DiffNode` change tree into
+ * Group stage: fold the `DiffNode` change tree into
  * accept/skip decision units.
  *
  * v1 rule (structural): each **topmost** changed node (its ancestors are all

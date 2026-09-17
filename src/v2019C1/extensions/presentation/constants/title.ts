@@ -93,7 +93,7 @@ export const TITLE_FIELDS_OVERRIDE: Partial<Record<string, TitleSpec>> = {
 		attributesFrom: 'SclFileReference',
 	},
 
-	// ── 90-30 LNode-family extensions ─────────────────────────────────
+	// ── LNode-family extensions ───────────────────────────────────────
 	LNodeSpecNaming: {
 		compact: '{sIedName}/{sLdInst}/{sPrefix}{sLnClass}{sLnInst}',
 	},
@@ -108,7 +108,7 @@ export const TITLE_FIELDS_OVERRIDE: Partial<Record<string, TitleSpec>> = {
 		full: '{resourceName}/{pLN}',
 	},
 
-	// ── 90-30 data-flow variables ─────────────────────────────────────
+	// ── data-flow variables ───────────────────────────────────────────
 	// Colon separator keeps the string trivially splittable for tooling.
 	InputVar: { compact: '{varName}:{inputName}' },
 	OutputVar: { compact: '{varName}:{outputName}' },

@@ -20,7 +20,7 @@ import type {
  * Creates SCL IO hooks for UUID reference resolution.
  * The import pipeline is two-pass:
  *
- * **Phase 1 — `beforeImportRecord`** (called once per record, in document order):
+ * **Pass 1 — `beforeImportRecord`** (called once per record, in document order):
  *
  * Records arrive already standardized, so any `uuid` enforced by
  * `afterStandardizedRecord` is already present — no need to ensure it here.
@@ -41,7 +41,7 @@ import type {
  *                         lookupKey: "S1/Bay1/VoltLevel1/Fn1" }]
  * ```
  *
- * **Phase 2 — `afterImport`** (called once, after all records):
+ * **Pass 2 — `afterImport`** (called once, after all records):
  *
  * Each pending resolution is looked up in `pathIndex`:
  * ```

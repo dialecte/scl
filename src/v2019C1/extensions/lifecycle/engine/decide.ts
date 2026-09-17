@@ -60,7 +60,7 @@ export function collisionOverrides(params: {
 }
 
 /**
- * Dependency guard (07 §4): reject a decision set that accepts a group whose
+ * Dependency guard: reject a decision set that accepts a group whose
  * `dependsOn` parent is skipped. Runs before any write.
  */
 export function assertDecisionsCoherent(params: {

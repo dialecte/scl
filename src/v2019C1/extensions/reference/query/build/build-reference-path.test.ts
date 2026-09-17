@@ -329,7 +329,7 @@ describe('buildReferencePath', () => {
 			expected: null,
 		},
 
-		// DOS/SDS mappedDoName is authored short-name documentation (90-30 §7.4),
+		// DOS/SDS mappedDoName is authored short-name documentation,
 		// never a generically rebuilt path — buildReferencePath must not touch it.
 		'mapped-data — DOS → LN → null (never rebuilt as a path)': {
 			sourceXml: /* xml */ `

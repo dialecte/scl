@@ -24,7 +24,7 @@ import { checkTemplateUuids } from './validate'
  *                   sourceQuery, ref, anchor })` returns a `DiffReport`
  *                   (fast/full classification) — nothing is written.
  *
- * Two-track surface (verb-agnostic, ENGINE.md §6): `query.lifecycle.report(...)`
+ * Two-track surface (verb-agnostic): `query.lifecycle.report(...)`
  * classifies, then `tx.lifecycle.apply(tx, { ..., report })` applies the fast
  * track headless (full track returns the report for decision review — nothing is
  * written until decisions come back).

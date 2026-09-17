@@ -9,7 +9,7 @@ import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
  * Fold a function's carried `FunctionCategory` satellites into its decision group
- * as read-only companions (ENGINE.md §16, G6). The function layer resolves its own
+ * as read-only companions. The function layer resolves its own
  * satellites (reverse-ref) from the SOURCE; the generic fold attaches them.
  *
  * When an `instance` exists, the SAME reverse-ref finder is run against it so a

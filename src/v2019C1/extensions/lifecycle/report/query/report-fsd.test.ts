@@ -93,7 +93,7 @@ describe('reportFsd (function layer + carried FunctionCategory satellite)', () =
 		expect(functionGroup).toBeDefined()
 
 		// the carried FunctionCategory change must travel as a companion of the
-		// function's decision group (G6), never its own card and never dropped.
+		// function's decision group, never its own card and never dropped.
 		const companionTags = functionGroup!.companions.map((node) => node.tagName)
 		expect(companionTags).toContain('FunctionCategory')
 	}

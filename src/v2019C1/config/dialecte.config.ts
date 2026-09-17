@@ -27,7 +27,7 @@ export const SCL_DATABASE_CONFIG = {
 		compoundIndexes: [['id', 'tagName']],
 		arrayIndexes: ['children.id', 'children.tagName'],
 	},
-	/** @deprecated - kept for old io/ pipeline until Phase 5 removes it */
+	/** @deprecated - kept for the old io/ pipeline until it is removed */
 	tables: {
 		xmlElements: {
 			name: 'sclElements',

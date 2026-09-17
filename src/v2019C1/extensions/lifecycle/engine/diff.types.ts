@@ -46,7 +46,7 @@ export type GroupConflict = {
 }
 
 /**
- * A decision unit for the full track (ENGINE.md §8, 07 §3.1). The user decides
+ * A decision unit for the full track. The user decides
  * on a GROUP, never on an individual element.
  *
  * - `primary` is the recognizable change ("add Function X").

@@ -10,7 +10,7 @@ import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
- * Function-layer report core (ENGINE.md §16, D-SAT-6): diff the function subtree,
+ * Function-layer report core: diff the function subtree,
  * then fold its satellites as companions of the function's decision group — both
  * the layer-owned `FunctionCategory` AND the CROSS-CUTTING satellites (e.g. a
  * `Variable`) that apply to any element in the subtree.

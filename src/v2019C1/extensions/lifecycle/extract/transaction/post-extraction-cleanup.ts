@@ -6,9 +6,9 @@ import type * as Core from '@dialecte/core'
 /**
  * Universal post-extraction cleanup run after cloning records into a target DB.
  *
- * Phase 1 — Remap: orphanUuidRefs (clear/delete refs whose target is absent)
- * Phase 2 — Resolve orphan LNodes: resetLNode (reset IED bindings)
- * Phase 3 — Prune: pruneEmptyContainers (empty Private elements + empty ref containers)
+ * 1. Remap: orphanUuidRefs (clear/delete refs whose target is absent)
+ * 2. Resolve orphan LNodes: resetLNode (reset IED bindings)
+ * 3. Prune: pruneEmptyContainers (empty Private elements + empty ref containers)
  *
  * Same function runs for all extraction scopes (FSD, ASD, ISD).
  * Behavior differs based on target DB content.

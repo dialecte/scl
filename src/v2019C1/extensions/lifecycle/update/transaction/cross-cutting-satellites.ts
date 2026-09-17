@@ -10,8 +10,8 @@ import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/
 import type * as Core from '@dialecte/core'
 
 /**
- * Carry the CROSS-CUTTING satellites (Variable / BehaviorDescription — 90-30
- * §12.1/§13.1) that apply to ANY element in the primary subtree, gated by
+ * Carry the CROSS-CUTTING satellites (Variable / BehaviorDescription) that apply
+ * to ANY element in the primary subtree, gated by
  * `accepted`. The single apply-side entry point every layer calls with its own
  * `primaryRef` (function, application, and future IED / topology) so the 3-way
  * add / reconcile-in-place / delete is uniform and impossible to forget.

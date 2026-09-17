@@ -146,7 +146,7 @@ describe('extractElementTitle', () => {
 			expectedTitle: '',
 		},
 
-		// ── text-content (Phase 2) ────────────────────────────────────
+		// ── text-content ─────────────────────────────────────────────
 		'Val with text content → record.value returned': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
@@ -178,7 +178,7 @@ describe('extractElementTitle', () => {
 			expectedTitle: 'P1',
 		},
 
-		// ── mode option (Phase 1) ─────────────────────────────────────
+		// ── mode option ──────────────────────────────────────────────
 		'LNode in full mode → iedName/ldInst/PXCBR1': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
@@ -196,7 +196,7 @@ describe('extractElementTitle', () => {
 			expectedTitle: 'IED_A/LD0/PXCBR1',
 		},
 
-		// ── simple *Ref (Phase 3) ───────────────────────────────
+		// ── simple *Ref ────────────────────────────────────────
 		'FunctionCatRef → function': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
@@ -209,7 +209,7 @@ describe('extractElementTitle', () => {
 			expectedTitle: 'Sub1/F1',
 		},
 
-		// ── composite (Phase 4) ─────────────────────────────────
+		// ── composite ──────────────────────────────────────────
 		'ApplicationSclRef → fileUuid/fileType/version.revision': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
@@ -224,7 +224,7 @@ describe('extractElementTitle', () => {
 			expectedTitle: 'ICD v1.A',
 		},
 
-		// ── 90-30 LNode family (Phase 5) ──────────────────────────────
+		// ── LNode family ─────────────────────────────────────────────
 		'LNodeSpecNaming → sIedName/sLdInst/sPrefix sLnClass sLnInst': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
@@ -252,7 +252,7 @@ describe('extractElementTitle', () => {
 			expectedTitle: 'XCBR(GOOSE)',
 		},
 
-		// ── 90-30 data-flow vars (Phase 6) ────────────────────────────
+		// ── data-flow vars ───────────────────────────────────────────
 		'InputVar → varName // inputName': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
@@ -298,7 +298,7 @@ describe('extractElementTitle', () => {
 			expectedTitle: 'Sub1/Bay1/XCBR/Pos.Oper',
 		},
 
-		// ── ExtRef compact (Phase 7) ──────────────────────────────────
+		// ── ExtRef compact ───────────────────────────────────────────
 		'ExtRef compact → iedName/ldInst/prefixlnClassinst.doName.daName': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
@@ -321,7 +321,7 @@ describe('extractElementTitle', () => {
 			expectedTitle: 'IED_B/LD1/PXCBR1.Pos.stVal',
 		},
 
-		// ── FCDA (Phase 7) ────────────────────────────────────────────
+		// ── FCDA ─────────────────────────────────────────────────────
 		'FCDA compact → ldInst/prefixlnClassinst.doName.daName': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
@@ -366,7 +366,7 @@ describe('extractElementTitle', () => {
 			expectedTitle: 'LD0/PXCBR1.Pos.stVal[ST]',
 		},
 
-		// ── Labels (Phase 9) ──────────────────────────────────────
+		// ── Labels ────────────────────────────────────────────────
 		'IED with Labels → labels map populated, title unchanged': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
