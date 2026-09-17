@@ -541,6 +541,66 @@ describe('importTypes', () => {
 			],
 			unexpectedQueries: ['//default:LNode[@iedName="VENDOR_A"][@lnType="PRJ_CSWI"]'],
 		},
+		// Two independently-authored files may reuse the same DataTypeTemplates `id` for DIFFERENT
+		// types. The SCL schema settles this with two separate constraints (verified against the XSDs):
+		// `LNodeTypeKey` keys an LNodeType by (id, lnClass) — so a different `lnClass` is a DIFFERENT
+		// type — while `uniqueDTT_ID` requires every `id` to be unique across the section. Merging must
+		// therefore FORK the incoming type under a fresh id (never merge onto, never emit a duplicate
+		// id). Here source and target share `id="SHARED_ID"` but differ only in `lnClass`.
+		'same id, different lnClass → forked as a distinct type, target untouched, no duplicate id': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">
+				<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="sub-1">
+					<VoltageLevel name="V1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="vl-1">
+						<Bay name="B1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="bay-1">
+							<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="SHARED_ID" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnode-1"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+				<DataTypeTemplates ${DTT}>
+					<LNodeType id="SHARED_ID" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-s">
+						<DO name="Pos" type="DPC_Type" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-s"/>
+					</LNodeType>
+					<DOType id="DPC_Type" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-s">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-s"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			targetXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-t">
+				<IED name="T1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ied-t">
+					<AccessPoint name="AP1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ap-t">
+						<Server ${CUSTOM_RECORD_ID_ATTRIBUTE}="srv-t">
+							<LDevice inst="LD0" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ld-t">
+								<!-- keeps the XCBR type alive (referenced by (lnType, lnClass)), so it is not reclaimed -->
+								<LN lnClass="XCBR" inst="1" lnType="SHARED_ID" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ln-t"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-t">
+					<LNodeType id="SHARED_ID" lnClass="XCBR" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-t">
+						<DO name="Pos" type="DPC_Type" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-t"/>
+					</LNodeType>
+					<DOType id="DPC_Type" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-t">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-t"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>`,
+			sourceRef: { tagName: 'LNode', id: 'lnode-1' },
+			// LNodeType forks (id taken by a different-lnClass type still in use); DOType is reused.
+			expectedStats: { forked: 1, reused: 1, preserved: 0, reclaimed: 0 },
+			expectedQueries: [
+				// the incoming CSWI type is minted under a fresh forked id — a genuinely distinct type
+				'//default:DataTypeTemplates/default:LNodeType[starts-with(@id, "PRJ_SHARED_ID")][@lnClass="CSWI"]',
+				// the target's own XCBR type keeps the shared id, untouched
+				'//default:DataTypeTemplates/default:LNodeType[@id="SHARED_ID"][@lnClass="XCBR"]',
+			],
+			unexpectedQueries: [
+				// the shared id is NEVER overwritten with (or duplicated as) the incoming CSWI type
+				'//default:DataTypeTemplates/default:LNodeType[@id="SHARED_ID"][@lnClass="CSWI"]',
+			],
+		},
 	}
 
 	async function act({
