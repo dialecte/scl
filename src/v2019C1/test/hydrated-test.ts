@@ -1,4 +1,4 @@
-import { assertValidSclXml } from './assert-valid-scl-xml'
+import { assertValidSclTestCases, assertValidSclXml } from './assert-valid-scl-xml'
 
 import {
 	CUSTOM_RECORD_ID_ATTRIBUTE,
@@ -38,29 +38,18 @@ const rawRunSclTestCases = createTestRunner<Config, SclModules>({
 	hooks: SCL_HOOKS,
 })
 
-/** Validate every case's `sourceXml`/`targetXml` namespaces up front, attributed to the case name. */
-function assertValidTestCaseXml(
-	testCases: Record<string, { sourceXml: string; targetXml?: string }>,
-) {
-	for (const [name, testCase] of Object.entries(testCases)) {
-		assertValidSclXml(testCase.sourceXml, `${name} › sourceXml`, { requireComplete: false })
-		if (testCase.targetXml)
-			assertValidSclXml(testCase.targetXml, `${name} › targetXml`, { requireComplete: false })
-	}
-}
-
 /**
- * `createTestRunner`, wrapped so every registered case's XML is checked against the SCL schema's
- * per-element namespaces before the suite runs (see {@link assertValidSclXml}).
+ * `createTestRunner`, wrapped so every registered case's XML is checked against the SCL schema
+ * before the suite runs — all invalid cases reported at once (see {@link assertValidSclTestCases}).
  */
 export const runSclTestCases: typeof rawRunSclTestCases = {
 	...rawRunSclTestCases,
 	withExport(params) {
-		assertValidTestCaseXml(params.testCases)
+		assertValidSclTestCases({ testCases: params.testCases })
 		rawRunSclTestCases.withExport(params)
 	},
 	withoutExport(params) {
-		assertValidTestCaseXml(params.testCases)
+		assertValidSclTestCases({ testCases: params.testCases })
 		rawRunSclTestCases.withoutExport(params)
 	},
 }
