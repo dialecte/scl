@@ -43,10 +43,7 @@ const targetXml = /* xml */ `
 
 type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 
-// Skipped: the instantiate frame-root preview group is intentionally not emitted (the consumer's
-// diff renderer can't render an added topology group — see report-topology-frame.ts). The apply-time
-// bump still runs. Un-skip when the preview group is re-enabled.
-describe.skip('lifecycle report — SSD frame-root placement conflict', () => {
+describe('lifecycle report — SSD frame-root placement conflict', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'a second instantiate of one bay-typical flags the frame-root name collision with B1_1': {
 			sourceXml,

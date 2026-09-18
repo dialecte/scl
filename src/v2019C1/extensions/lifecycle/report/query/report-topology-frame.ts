@@ -37,13 +37,28 @@ export async function reportTopologyFrame(
 	const { sourceQuery, scopeRef, scenario, targetInstance } = params
 	const matchKey = matchKeyForScenario(scenario)
 
-	// On instantiate the frame scope root is entirely ADDED; we do NOT surface it as its own
-	// report instance. The consumer's diff renderer snapshots each group, and an all-added
-	// topology group (rootRef undefined) breaks it (a MATCHED topology group on update renders
-	// fine). The apply-time collision bump (B1 -> B1_1) still runs — it is just not previewed.
-	// Re-enable (diff scope root with instanceRootRef=undefined + buildReportInstance(instance
-	// undefined)) once the consumer can render an added topology group.
-	if (scenario === 'instantiate') return []
+	// On instantiate the frame scope root is entirely ADDED: diff the source root against NO instance
+	// (instanceRootRef undefined) so the added frame (Substation/VoltageLevel/Bay attrs + equipment,
+	// fn/app omitted) surfaces as its own report instance with `rootRef` undefined. `apply` then fills
+	// each node's `appliedRef` (the placed TEMPLATE_1 element), so the consumer places the added frame
+	// on the NEW bay — not conflated with the existing same-named one.
+	if (scenario === 'instantiate') {
+		const instanceDiff = await diff({
+			sourceQuery,
+			targetQuery: query,
+			sourceRootRef: scopeRef,
+			instanceRootRef: undefined,
+			matchKey,
+			omit: FRAME_OMIT_CHILD_TAGS,
+		})
+		const reportInstance = await buildReportInstance(query, {
+			instanceDiff,
+			instance: undefined,
+			sourceQuery,
+			sourceRef: scopeRef,
+		})
+		return [reportInstance]
+	}
 
 	const { uuid } = await sourceQuery.getAttributes(scopeRef)
 	const matched = await findInstancesByTemplateUuid(query, {
