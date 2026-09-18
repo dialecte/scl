@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.3.17] - 2026-09-18
+
+### Changed
+
+- **A test suite's invalid fixtures are all reported at once.** `runSclTestCases` used to stop at the first invalid case, so fixing one snippet only revealed the next. It now checks every case up front and fails once, listing each invalid case by name with its `sourceXml` / `targetXml` violations.
+- **A misplaced XML declaration is explained.** A fixture whose `<?xml … ?>` follows the template literal's leading newline is malformed XML; the failure now says the declaration must be the very first characters and that an inline snippet can simply drop it, instead of relaying the parser's raw error.
+
+### Fixed
+
+- **Fixture validation no longer rejects vendor elements that share a name with an SCL element.** The check looked elements up by local name only, so vendor content under a `Private` — e.g. an `Address` in a vendor namespace carrying its own attributes — was validated as the SCL `Address` and failed on its namespace and every attribute. Elements in a namespace the SCL config does not declare are now left alone, matching how import already keeps them verbatim. Schema elements written in no namespace at all (an `<SCL>` root missing its `xmlns`) are still rejected.
+
 ## [0.3.16] - 2026-09-18
 
 ### Added

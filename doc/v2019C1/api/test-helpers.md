@@ -288,6 +288,16 @@ What is checked:
 - **containment** — each element is an allowed child of its parent;
 - **attributes** — every unprefixed attribute is a known attribute of its element. Namespaced attributes (`xmlns`, `xsi:`, and the dev-namespaced record id `dev:db-id`) are skipped.
 
+What is skipped:
+
+- **elements in a namespace the SCL config does not declare** — vendor content under a `Private`, even when its local name collides with a schema element (a vendor `Address`, `P`, `Val`…). Such an element is opaque: neither its namespace, its place under its parent, nor its attributes are checked, the same way import keeps it verbatim. A schema element nested inside it is still checked on its own namespace and attributes. An element in **no** namespace is not foreign — it is a schema element the snippet forgot to put in its namespace (typically an `<SCL>` root written without `${ALL_XMLNS_NAMESPACES}`), and is rejected;
+- **elements unknown to the schema** — bespoke content under a `Private`.
+
+How failures are reported:
+
+- `runSclTestCases` checks **every** case of the suite before it runs and fails once, listing the violations of all invalid cases, each attributed to its case name and to `sourceXml` / `targetXml` — a suite's fixtures are fixed in one round;
+- an XML declaration (`<?xml … ?>`) that is not the very first characters of the string is malformed XML. A template-literal snippet starts with a newline, so drop the declaration from inline fixtures — the message says so instead of relaying the parser's error.
+
 Not enforced (planned with the validation feature): required-attribute completeness — minimal fixtures legitimately omit e.g. the `<SCL>` `version` / `revision` / `release` — attribute value facets (uuid pattern, enums), and cross-element constraints (unique keys, keyref resolution). Pass `{ requireComplete: true }` to opt into the required-attribute check:
 
 ```ts
