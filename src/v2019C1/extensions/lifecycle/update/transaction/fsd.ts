@@ -2,9 +2,16 @@ import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reconcileCarriedSatellites } from './function-satellites'
 
 import {
+	annotateInstance,
+	mergeApplied,
+	sourceToTargetMap,
+} from '@/v2019C1/extensions/lifecycle/engine/correlate'
+import {
 	acceptedRefIds,
 	collisionOverrides,
+	firstTimeReportInstance,
 	groupsForInstance,
+	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
@@ -92,13 +99,17 @@ export async function fsd(
 			? collisionOverrides({ groups: addedGroups, decisions })
 			: undefined
 		if (gate && !gate.sourceIds.has(functionRef.id)) return []
-		const { functionRef: root } = await instantiateFsd(tx, {
+		const { functionRef: root, mappings } = await instantiateFsd(tx, {
 			sourceQuery,
 			functionRef,
 			targetParent,
 			overrides: gateOverrides,
 			keepNameTypesFrom,
 		})
+		// annotate the first-time instance's report nodes with what each source element became
+		const firstTime = firstTimeReportInstance(report, functionRef.id)
+		if (firstTime)
+			annotateInstance({ reportInstance: firstTime, added: sourceToTargetMap(mappings) })
 		return [root]
 	}
 
@@ -109,7 +120,7 @@ export async function fsd(
 			decisions,
 		})
 
-		await reconcile(tx, {
+		const reconcileMap = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: functionRef,
 			instanceRootRef: instance,
@@ -120,7 +131,7 @@ export async function fsd(
 			identityMode,
 		})
 		// carried satellites (e.g. FunctionCategory) travel with the function group
-		await reconcileCarriedSatellites(tx, {
+		const carriedMap = await reconcileCarriedSatellites(tx, {
 			sourceQuery,
 			functionRef,
 			instanceRef: instance,
@@ -130,7 +141,7 @@ export async function fsd(
 			identityMode,
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
-		await reconcileCrossCuttingSatellites(tx, {
+		const crossMap = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
 			primaryRef: functionRef,
 			instancePrimaryRef: { tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
@@ -139,6 +150,14 @@ export async function fsd(
 			matchKey,
 			identityMode,
 		})
+		// carry the report->applied correlation onto this instance's report nodes
+		const reportInstance = reportInstanceById(report, instance.id)
+		if (reportInstance) {
+			annotateInstance({
+				reportInstance,
+				added: mergeApplied(reconcileMap, carriedMap, crossMap),
+			})
+		}
 	}
 
 	return instances.map(

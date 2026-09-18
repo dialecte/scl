@@ -1,6 +1,10 @@
 import { asd as updateAsd } from './asd'
 import { fsd as updateFsd } from './fsd'
 
+import {
+	annotateInstance,
+	sourceToTargetMap,
+} from '@/v2019C1/extensions/lifecycle/engine/correlate'
 import { collisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
@@ -90,6 +94,12 @@ export async function ssd(
 			mode: identityModeForScenario(scenario),
 			overrides,
 		})
+		// first-time SSD clones the whole scope (frame + fn/app) in one pass; annotate every first-time
+		// report instance (frame, applications, standalone functions) from the shared map
+		const added = sourceToTargetMap(recordMappings)
+		for (const reportInstance of report?.instances ?? []) {
+			if (!reportInstance.rootRef) annotateInstance({ reportInstance, added })
+		}
 		return collectInstances(recordMappings)
 	}
 

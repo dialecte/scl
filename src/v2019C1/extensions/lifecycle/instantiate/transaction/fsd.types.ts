@@ -23,4 +23,10 @@ export type FsdResult = {
 	functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 	/** Full source-record -> target-record mapping for the cloned subtree. */
 	recordMappings: Scl.CloneMapping[]
+	/**
+	 * Every source->target mapping produced, including the carried satellites (FunctionCategory,
+	 * Variable, BehaviorDescription) that live outside the subtree — the full set the report→applied
+	 * correlation needs for a first-time instantiate (`sourceToTargetMap` over these).
+	 */
+	mappings: Scl.CloneMapping[]
 }

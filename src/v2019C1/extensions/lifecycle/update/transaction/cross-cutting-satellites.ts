@@ -8,6 +8,7 @@ import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.t
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
+import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
  * Carry the CROSS-CUTTING satellites (Variable / BehaviorDescription) that apply
@@ -31,7 +32,7 @@ export async function reconcileCrossCuttingSatellites(
 		matchKey?: MatchKey
 		identityMode?: IdentityMode
 	},
-): Promise<void> {
+): Promise<Map<string, AnyRefOrRecord>> {
 	const {
 		sourceQuery,
 		primaryRef,
@@ -47,7 +48,7 @@ export async function reconcileCrossCuttingSatellites(
 		? await resolveAppliedSatellites(tx, { primaryRef: instancePrimaryRef })
 		: []
 
-	await reconcileSatellites(tx, {
+	return reconcileSatellites(tx, {
 		sourceQuery,
 		satelliteRefs,
 		instanceSatelliteRefs,

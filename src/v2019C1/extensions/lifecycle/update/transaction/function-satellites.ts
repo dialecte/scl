@@ -49,7 +49,7 @@ export async function reconcileCarriedSatellites(
 		/** `stamp-template` (default) or `keep` (fork) identity for an added satellite. */
 		identityMode?: IdentityMode
 	},
-): Promise<void> {
+): Promise<Map<string, AnyRefOrRecord>> {
 	const {
 		sourceQuery,
 		functionRef,
@@ -59,6 +59,9 @@ export async function reconcileCarriedSatellites(
 		matchKey = 'templateUuid',
 		identityMode = 'stamp-template',
 	} = params
+
+	// source.id -> applied ref for every satellite element added here (see `annotateInstance`)
+	const added = new Map<string, AnyRefOrRecord>()
 
 	const satellites = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
 	let hasMissing = false
@@ -74,14 +77,16 @@ export async function reconcileCarriedSatellites(
 			continue
 		}
 
-		await reconcile(tx, {
+		for (const [source, target] of await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: satelliteRef,
 			instanceRootRef: instance,
 			accepted,
 			matchKey,
 			identityMode,
-		})
+		})) {
+			added.set(source, target)
+		}
 	}
 
 	// add newly-classified satellites (companions of the function group), gated by
@@ -95,6 +100,9 @@ export async function reconcileCarriedSatellites(
 			stripCategoriesUuid: false,
 		})
 		await finalizeClonedIdentity(tx, { mappings, mode: identityMode })
+		for (const mapping of mappings) {
+			if (mapping.source.id) added.set(mapping.source.id, mapping.target)
+		}
 	}
 
 	// delete: an instance satellite whose template ELEMENT was retired from the source
@@ -123,4 +131,6 @@ export async function reconcileCarriedSatellites(
 
 		await tx.delete(instanceSatelliteRef)
 	}
+
+	return added
 }

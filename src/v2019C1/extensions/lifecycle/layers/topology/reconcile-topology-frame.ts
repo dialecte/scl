@@ -1,8 +1,10 @@
 import { FRAME_OMIT_CHILD_TAGS } from '@/v2019C1/constants'
+import { annotateInstance } from '@/v2019C1/extensions/lifecycle/engine/correlate'
 import {
 	acceptedRefIds,
 	collisionOverrides,
 	groupsForInstance,
+	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import {
@@ -60,7 +62,7 @@ export async function reconcileTopologyFrame(
 			? collisionOverrides({ groups: instanceGroups, decisions })
 			: undefined
 
-		await reconcile(tx, {
+		const reconcileMap = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: scopeRef,
 			instanceRootRef: instance,
@@ -70,5 +72,9 @@ export async function reconcileTopologyFrame(
 			overrides,
 			omit: FRAME_OMIT_CHILD_TAGS,
 		})
+		// carry the report->applied correlation onto this frame instance's report nodes (fn/app tags
+		// are a boundary here — their instances are annotated by the fn/app cascade)
+		const reportInstance = reportInstanceById(report, instance.id)
+		if (reportInstance) annotateInstance({ reportInstance, added: reconcileMap })
 	}
 }

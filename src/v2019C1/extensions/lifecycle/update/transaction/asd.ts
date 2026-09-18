@@ -3,9 +3,15 @@ import { fsd as updateFsd } from './fsd'
 import { reconcileSatellites } from './satellite-reconcile'
 
 import {
+	annotateInstance,
+	mergeApplied,
+	sourceToTargetMap,
+} from '@/v2019C1/extensions/lifecycle/engine/correlate'
+import {
 	acceptedRefIds,
 	collisionOverrides,
 	groupsForInstance,
+	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
@@ -100,13 +106,23 @@ export async function asd(
 			? collisionOverrides({ groups: addedGroups, decisions })
 			: undefined
 		if (gate && !gate.sourceIds.has(applicationRef.id)) return { applications: [], functions: [] }
-		const { applicationRef: application, composedFunctionRefs } = await instantiateAsd(tx, {
+		const {
+			applicationRef: application,
+			composedFunctionRefs,
+			mappings,
+		} = await instantiateAsd(tx, {
 			sourceQuery,
 			applicationRef,
 			targetParent,
 			overrides: gateOverrides,
 			keepNameTypesFrom,
 		})
+		// first-time ASD clones the Application + composed Functions + satellites in one pass; annotate
+		// every first-time report instance (Application and each composed Function) from the shared map
+		const added = sourceToTargetMap(mappings)
+		for (const reportInstance of report?.instances ?? []) {
+			if (!reportInstance.rootRef) annotateInstance({ reportInstance, added })
+		}
 		return { applications: [application], functions: composedFunctionRefs }
 	}
 
@@ -142,7 +158,7 @@ export async function asd(
 		})
 
 		// 1. application layer
-		await reconcile(tx, {
+		const reconcileMap = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: applicationRef,
 			instanceRootRef: instance,
@@ -152,7 +168,7 @@ export async function asd(
 			matchKey,
 			identityMode,
 		})
-		await reconcileSatellites(tx, {
+		const satelliteMap = await reconcileSatellites(tx, {
 			sourceQuery,
 			satelliteRefs,
 			instanceSatelliteRefs,
@@ -163,7 +179,7 @@ export async function asd(
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
 		// in the Application subtree travel with the application group
-		await reconcileCrossCuttingSatellites(tx, {
+		const crossMap = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
 			primaryRef: applicationRef,
 			instancePrimaryRef: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
@@ -172,6 +188,15 @@ export async function asd(
 			matchKey,
 			identityMode,
 		})
+		// carry the report->applied correlation onto this Application instance's report nodes (the
+		// composed Functions are annotated by the FSD cascade below)
+		const reportInstance = reportInstanceById(report, instance.id)
+		if (reportInstance) {
+			annotateInstance({
+				reportInstance,
+				added: mergeApplied(reconcileMap, satelliteMap, crossMap),
+			})
+		}
 	}
 
 	// 2. function-layer cascade — updateFsd fans out per composed-function instance

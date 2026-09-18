@@ -100,5 +100,5 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		target: { anchor: 'function', root: instantiatedRef },
 	})
 
-	return { functionRef: instantiatedRef, recordMappings }
+	return { functionRef: instantiatedRef, recordMappings, mappings: allMappings }
 }

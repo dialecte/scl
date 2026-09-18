@@ -109,5 +109,6 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		applicationRef: rootMapping.target as Scl.Ref<'Application'>,
 		composedFunctionRefs: composedFunctionInstanceRefs,
 		recordMappings: mappings,
+		mappings: allMappings,
 	}
 }
