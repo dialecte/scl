@@ -61,6 +61,24 @@ type AppliedInstances =
 	  }
 ```
 
+Beyond the roots, `apply` **enriches the returned `report`**: it fills each `DiffNode`'s `appliedRef` —
+the element that node became in the applied document. It completes the source/instance/applied triple:
+an `added` node (and added companions) resolves to its freshly-created element, a `matched`/`modified`
+node to its own instance element, a `removed` node to nothing. A consumer relates the report to the
+result by reading the node (`node.appliedRef`) instead of re-deriving the report→document correlation
+structurally — which is how a merge-review decorates a snapshot of the applied document, and why two
+instances of one template never collide (each node carries its own `appliedRef`).
+
+```ts
+type DiffNode = {
+	change: 'added' | 'removed' | 'modified' | 'unchanged' | 'target-only'
+	sourceRef?: AnyRefOrRecord // template element (added / modified / unchanged)
+	instanceRef?: AnyRefOrRecord // existing element (removed / modified / unchanged)
+	appliedRef?: AnyRefOrRecord // what it became after apply (filled by apply; absent on a pure report)
+	// ...tagName, attributeChanges, children
+}
+```
+
 ### Scenario — instantiate vs template vs fork
 
 The scenarios are **distinct operations**, chosen explicitly by the consumer — dialecte does not infer one from the other (a same-version re-upload is a valid duplicate, so inference is unsafe). `template` and `fork` are the two modes of the **Update** action, distinguished by how the source relates to the target:
