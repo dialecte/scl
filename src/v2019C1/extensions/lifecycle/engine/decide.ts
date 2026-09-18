@@ -1,7 +1,14 @@
 import { invariant } from '@dialecte/core/utils'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
-import type { DecisionGroup, DecisionMap, DiffNode, DiffReport, GroupDecision } from './diff.types'
+import type {
+	DecisionGroup,
+	DecisionMap,
+	DiffNode,
+	DiffReport,
+	GroupDecision,
+	ReportInstance,
+} from './diff.types'
 
 /** The decision groups scoped to one instance root (empty when the instance is absent/up-to-date). */
 export function groupsForInstance(
@@ -9,6 +16,27 @@ export function groupsForInstance(
 	instanceId: string,
 ): DecisionGroup[] {
 	return report?.instances.find((instance) => instance.rootRef?.id === instanceId)?.groups ?? []
+}
+
+/** The report instance anchored to an EXISTING instance root (reconcile path). */
+export function reportInstanceById(
+	report: DiffReport | undefined,
+	instanceId: string,
+): ReportInstance | undefined {
+	return report?.instances.find((instance) => instance.rootRef?.id === instanceId)
+}
+
+/**
+ * The report instance for a FIRST-TIME instantiate: no `rootRef` yet, its diff tree rooted at the
+ * source element `sourceRootId`. Lets a verb annotate the added instance's nodes after the write.
+ */
+export function firstTimeReportInstance(
+	report: DiffReport | undefined,
+	sourceRootId: string,
+): ReportInstance | undefined {
+	return report?.instances.find(
+		(instance) => !instance.rootRef && instance.tree.sourceRef?.id === sourceRootId,
+	)
 }
 
 /** The action of a decision (absent -> accept; string or object form). */

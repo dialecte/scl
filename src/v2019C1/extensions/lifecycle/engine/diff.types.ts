@@ -15,6 +15,14 @@ export type DiffNode = {
 	sourceRef?: AnyRefOrRecord
 	/** Instance element — present for `removed` / `modified` / `unchanged`. */
 	instanceRef?: AnyRefOrRecord
+	/**
+	 * The element this node became in the APPLIED document, filled by `apply` on the report it
+	 * returns (undefined on a pure `report`). Completes the source/instance/applied triple: a
+	 * matched/modified node resolves to its `instanceRef` element, an `added` node (and added
+	 * companions) to its freshly-cloned element, a `removed` node to nothing. Lets a consumer relate
+	 * the report to the apply result by reading the node — no structural re-correlation.
+	 */
+	appliedRef?: AnyRefOrRecord
 	/** Attribute deltas — present for `modified`. */
 	attributeChanges?: AttributeChange[]
 	children: DiffNode[]

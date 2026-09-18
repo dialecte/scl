@@ -67,7 +67,7 @@ export async function reconcile(
 		 */
 		omit?: readonly string[]
 	},
-): Promise<void> {
+): Promise<Map<string, AnyRefOrRecord>> {
 	const {
 		sourceQuery,
 		sourceRootRef,
@@ -80,9 +80,14 @@ export async function reconcile(
 		omit,
 	} = params
 
+	// source record id -> the element it became in the applied doc, for every element this reconcile
+	// ADDS (root + descendants of each grafted subtree). Matched elements are updated in place, so the
+	// consumer already keys them by their own `instanceRef`; only additions need this join.
+	const added = new Map<string, AnyRefOrRecord>()
+
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	const instanceTree = await tx.any.getTree(instanceRootRef)
-	if (!sourceTree || !instanceTree) return
+	if (!sourceTree || !instanceTree) return added
 
 	const index = new Map<string, AnyTreeRecord>()
 	await indexByMatchKey(tx, { node: instanceTree, index, matchKey })
@@ -109,10 +114,13 @@ export async function reconcile(
 		matchKey,
 		identityMode,
 		omit,
+		added,
 	})
 
 	// removed from the template: delete instance elements whose lineage is gone
 	await deleteRemoved(tx, { instanceNode: instanceTree, sourceUuids, accepted, matchKey, omit })
+
+	return added
 }
 
 async function reconcileChildren(
@@ -128,6 +136,8 @@ async function reconcileChildren(
 		matchKey: MatchKey
 		identityMode: IdentityMode
 		omit: readonly string[] | undefined
+		/** Accumulates `source.id -> applied ref` for every element added below here (root + subtree). */
+		added: Map<string, AnyRefOrRecord>
 	},
 ): Promise<void> {
 	const {
@@ -141,6 +151,7 @@ async function reconcileChildren(
 		matchKey,
 		identityMode,
 		omit,
+		added,
 	} = params
 	const matchedInstanceIds = new Set<string>()
 	for (const sourceChild of sourceNode.tree) {
@@ -176,6 +187,7 @@ async function reconcileChildren(
 				matchKey,
 				identityMode,
 				omit,
+				added,
 			})
 			continue
 		}
@@ -190,6 +202,11 @@ async function reconcileChildren(
 			strip: false,
 			withTypes: { keepNameFrom: keepNameTypesFrom },
 		})
+		// record source -> applied for the whole grafted subtree (ids are stable; the collision
+		// bump below only edits the added root's name, never its id).
+		for (const mapping of recordMappings) {
+			if (mapping.source.id) added.set(mapping.source.id, mapping.target)
+		}
 		// stamp/preserve keep the fresh clone uuid + repoint refs; keep/fork converges to the
 		// source revision's uuids (no remap) — the shared finalization owns that split.
 		await finalizeClonedIdentity(tx, { mappings: recordMappings, mode: identityMode })
