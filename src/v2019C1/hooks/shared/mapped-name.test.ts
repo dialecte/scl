@@ -57,10 +57,7 @@ describe('mapped-name record hook', () => {
 
 	it('preserves a resolvable full ObjectReference below an unmapped LNode', async () => {
 		const { source } = await createSclTestProject({
-			sourceXml: xml(
-				false,
-				'mappedDoName="IED1/LD0/XCBR1.Health" mappedLnUuid="ln-uuid"',
-			),
+			sourceXml: xml(false, 'mappedDoName="IED1/LD0/XCBR1.Health" mappedLnUuid="ln-uuid"'),
 		})
 
 		await source.document.transaction((tx) =>

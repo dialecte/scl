@@ -1,3 +1,4 @@
+import { splitLnodeQualifier } from '../resolve/parse-path'
 import { buildElementPath } from './build-element-path'
 
 import { MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference/constants'
@@ -33,7 +34,25 @@ export async function computeMappedReferenceAttributes(
 	if (!spec) return null
 
 	const target = params.target ?? (await resolveExistingTarget(query, record))
-	if (!target || target.dataPath.length === 0) return null
+	if (!target || target.dataPath.length === 0) {
+		const mappedName = attribute(record, spec.path)
+		const mappedLnUuid = attribute(record, spec.uuid)
+		const specifiedName = attribute(record, 'name')
+		if (!mappedName || !mappedLnUuid || !specifiedName) return null
+
+		const { qualifier } = splitLnodeQualifier(mappedName)
+		const dataPath = (qualifier ?? mappedName)
+			.split('.')
+			.map((segment) => segment.trim())
+			.filter(Boolean)
+		if (dataPath.length === 0) return null
+
+		const implementedName = await documentationName(query, record, dataPath)
+		if (implementedName === specifiedName) {
+			return { mappedName: undefined, mappedLnUuid: undefined }
+		}
+		return { mappedName: implementedName, mappedLnUuid }
+	}
 
 	const ln = await query.getRecord(target.ln)
 	if (!ln || (ln.tagName !== 'LN' && ln.tagName !== 'LN0')) return null
@@ -107,6 +126,13 @@ async function documentationName(
 			resolvedParent &&
 			resolvedParent.dataPath.length === dataPath.length - 1 &&
 			resolvedParent.dataPath.every((segment, index) => segment === dataPath[index])
+		) {
+			return dataPath[dataPath.length - 1]
+		}
+		if (
+			parent.tagName === 'DOS' &&
+			dataPath.length === 2 &&
+			attribute(parent, 'name') === dataPath[0]
 		) {
 			return dataPath[dataPath.length - 1]
 		}
