@@ -214,7 +214,9 @@ Two path formats share this strategy:
 
 **Example (substation):** `SourceRef.source="S1/B1/PXCBR1.Pos.stVal"` → `lookupKey: "S1/B1/PXCBR1"` → populates `sourceLNodeUuid`.
 
-**Example (IEC 7-2):** `DOS.mappedDoName="PIU/CT_Function/I01ATCTR1.AmpSv"` → `lookupKey: "PIU/CT_Function/I01ATCTR1"` → populates `mappedLnUuid`.
+**Example (IEC 7-2):** `DOS.mappedDoName="PIU/CT_Function/I01ATCTR1.AmpSv"` → `lookupKey: "PIU/CT_Function/I01ATCTR1"` → resolves the LN and data path `AmpSv`. When the LN has a UUID, mapped-data writers persist it together with the mapped name; they never author an isolated `mappedLnUuid`.
+
+Use `resolveMappedData` for effective `DOS`/`SDS`/`DAS` resolution. It checks the current record, then the nearest mapped data ancestor, then the mapped `LNode` for UC1. A UUID-only record is unresolved because the LN UUID cannot identify the implementing DO/SDO/DA path.
 
 ### `ied-address` — 2 pairs
 

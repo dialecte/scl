@@ -1,77 +1,132 @@
-import { splitLnodeQualifier } from '../resolve/parse-path'
+import { buildElementPath } from './build-element-path'
 
 import { MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference/constants'
+import {
+	resolveMappedData,
+	resolveMappedLNode,
+	type MappedDataTarget,
+} from '@/v2019C1/extensions/reference/query/resolve'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
-/**
- * Compute a `DOS`/`SDS`/`DAS` mapped-name value in its documentation form: the
- * implementing short name, present only when it differs from the specified `name`,
- * otherwise omitted.
- *
- * The implementing element is authored on the record itself
- * (`mappedDoName`/`mappedDaName`), either already short or as a legacy full
- * ObjectReference (`IED/LD/LN.Pos[.stVal]`) collapsed to its short segment(s):
- * - DOS → the DO name; SDS → the SDO name: the last data segment.
- * - DAS → the DA name: the last data segment when the parent DO is mapped, but
- *   `DO.DA` (the implementing DO carried along) when the parent DO is NOT mapped,
- *   so the DA's data object stays documented.
- *
- * The caller applies this only when the DOS/SDS/DAS itself is mapped by uuid; the
- * fully-unmapped LNode case (a full IED ObjectReference) is left intact.
- *
- * @returns the short name to store, or `undefined` to omit (clear) the attribute.
- */
+export type ComputeMappedReferenceAttributesParams = {
+	record: Scl.RawRecord<Scl.ElementsOf>
+	target?: MappedDataTarget
+}
+
+export type MappedReferenceAttributes = {
+	mappedName?: string
+	mappedLnUuid?: string
+}
+
+type Query = Core.Query<Config> | Core.Transaction<Config>
+
+/** Compute the all-or-nothing persisted mapping documentation for DOS/SDS/DAS. */
+export async function computeMappedReferenceAttributes(
+	query: Query,
+	params: ComputeMappedReferenceAttributesParams,
+): Promise<MappedReferenceAttributes | null> {
+	const { record } = params
+	if (record.tagName !== 'DOS' && record.tagName !== 'SDS' && record.tagName !== 'DAS') return null
+	const spec = MAPPED_NAME_REFS.get(record.tagName)
+	if (!spec) return null
+
+	const target = params.target ?? (await resolveExistingTarget(query, record))
+	if (!target || target.dataPath.length === 0) return null
+
+	const ln = await query.getRecord(target.ln)
+	if (!ln || (ln.tagName !== 'LN' && ln.tagName !== 'LN0')) return null
+	const mappedLnUuid = attribute(ln, 'uuid')
+
+	const lnode = await findAncestorLNode(query, record)
+	const mappedLnodeLn = lnode ? await resolveMappedLNode(query, lnode) : undefined
+	if (!mappedLnodeLn) {
+		const lnPath = await buildElementPath(query as Core.Query<Config>, target.ln)
+		if (!lnPath) return null
+		return {
+			mappedName: `${lnPath.path}.${target.dataPath.join('.')}`,
+			mappedLnUuid,
+		}
+	}
+
+	const specifiedName = attribute(record, 'name')
+	if (!specifiedName) return null
+	const implementedName = await documentationName(query, record, target.dataPath)
+	if (implementedName === specifiedName) {
+		return { mappedName: undefined, mappedLnUuid: undefined }
+	}
+
+	return { mappedName: implementedName, mappedLnUuid }
+}
+
+/** @deprecated Use computeMappedReferenceAttributes to reconcile the complete pair. */
 export async function buildMappedName<GenericElement extends Scl.ElementsOf>(
 	query: Core.Query<Config>,
 	record: Scl.RawRecord<GenericElement>,
 ): Promise<string | undefined> {
-	const spec = MAPPED_NAME_REFS.get(record.tagName)
-	if (!spec) return undefined
-
-	const specifiedName = record.attributes.find((a) => a.name === 'name')?.value
-	if (!specifiedName) return undefined
-
-	const currentValue = record.attributes.find((a) => a.name === spec.path)?.value
-	const carryDataObject =
-		record.tagName === 'DAS' && !(await isParentDataObjectMapped(query, record))
-	const implementedName = extractName(currentValue, carryDataObject) ?? specifiedName
-
-	return implementedName === specifiedName ? undefined : implementedName
+	if (record.tagName !== 'DOS' && record.tagName !== 'SDS' && record.tagName !== 'DAS') {
+		return undefined
+	}
+	return (
+		await computeMappedReferenceAttributes(query, {
+			record: record as unknown as Scl.RawRecord<Scl.ElementsOf>,
+		})
+	)?.mappedName
 }
 
-/**
- * Extract the short name from a mapped-name value, tolerating both the conformant
- * short form and a legacy full ObjectReference (`IED/LD/LN.DO[.DA]`). Normally the
- * last data segment (the element's own name); when `carryDataObject` is set (an
- * unmapped parent DO), the whole `DO.DA` data chain is kept.
- */
-function extractName(value: string | undefined, carryDataObject: boolean): string | undefined {
-	if (!value) return undefined
-	const { path, qualifier } = splitLnodeQualifier(value)
-	const dataChain = qualifier ?? path
-	if (carryDataObject) return dataChain || undefined
-	const segments = dataChain.split('.')
-	return segments[segments.length - 1] || undefined
+async function resolveExistingTarget(
+	query: Query,
+	record: Scl.RawRecord<Scl.ElementsOf>,
+): Promise<MappedDataTarget | undefined> {
+	const resolved = await resolveMappedData(query, record as Scl.TrackedRecord<Scl.ElementsOf>)
+	if (!resolved) return undefined
+	return {
+		ln: { tagName: resolved.ln.tagName, id: resolved.ln.id },
+		dataPath: resolved.dataPath,
+	}
 }
 
-/**
- * Whether the nearest enclosing data object (`DOS`/`SDS`) of a `DAS` is itself
- * mapped by uuid. When it is, the DO context is already documented on the parent
- * and the DAS need only carry the DA name; when it is not, the DAS must carry the
- * implementing `DO.DA`.
- */
-async function isParentDataObjectMapped<GenericElement extends Scl.ElementsOf>(
-	query: Core.Query<Config>,
-	record: Scl.RawRecord<GenericElement>,
-): Promise<boolean> {
+async function documentationName(
+	query: Query,
+	record: Scl.RawRecord<Scl.ElementsOf>,
+	dataPath: readonly string[],
+): Promise<string> {
+	if (record.tagName !== 'DAS') return dataPath[dataPath.length - 1]
+
 	const ancestors = await query.findAncestors(record)
-	const parent = ancestors.find((a) => a.tagName === 'DOS' || a.tagName === 'SDS')
-	if (!parent) return false
-	const mappedLnUuid = await query.getAttribute(
-		{ tagName: parent.tagName, id: parent.id } as Scl.Ref<Scl.ElementsOf>,
-		{ name: 'mappedLnUuid' },
+	const parent = ancestors.find(
+		(ancestor) => ancestor.tagName === 'DOS' || ancestor.tagName === 'SDS',
 	)
-	return Boolean(mappedLnUuid)
+	if (parent) {
+		const resolvedParent = await resolveMappedData(
+			query,
+			parent as Scl.TrackedRecord<Scl.ElementsOf>,
+		)
+		if (
+			resolvedParent &&
+			resolvedParent.dataPath.length === dataPath.length - 1 &&
+			resolvedParent.dataPath.every((segment, index) => segment === dataPath[index])
+		) {
+			return dataPath[dataPath.length - 1]
+		}
+	}
+	return dataPath.join('.')
+}
+
+async function findAncestorLNode(
+	query: Query,
+	record: Scl.RawRecord<Scl.ElementsOf>,
+): Promise<Scl.TrackedRecord<'LNode'> | undefined> {
+	const ancestors = await query.findAncestors(record)
+	return ancestors.find((ancestor) => ancestor.tagName === 'LNode') as
+		| Scl.TrackedRecord<'LNode'>
+		| undefined
+}
+
+function attribute<GenericElement extends Scl.ElementsOf>(
+	record: Scl.RawRecord<GenericElement> | Scl.TrackedRecord<GenericElement>,
+	name: string,
+): string | undefined {
+	return record.attributes.find((attribute) => attribute.name === name)?.value
 }

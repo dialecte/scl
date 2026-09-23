@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Changed
+
+- `DOS`/`SDS`/`DAS` mapping documentation now treats `mappedDoName`/`mappedDaName` and `mappedLnUuid` as one policy-owned reference. UC1 name matches clear both attributes, deviations retain both halves when a UUID exists, and mappings below an unmapped LNode retain a full ObjectReference. New `resolveMappedData` and `computeMappedReferenceAttributes` APIs expose effective resolution and pair computation. Consumers must not use local `mappedLnUuid` presence as an “is mapped” flag.
+
 ## [0.3.17] - 2026-09-18
 
 ### Changed

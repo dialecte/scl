@@ -1,6 +1,11 @@
 export { buildElementPath } from './build-element-path'
 export { buildReferencePath } from './build-reference-path'
-export { buildMappedName } from './build-mapped-name'
+export {
+	buildMappedName,
+	computeMappedReferenceAttributes,
+	type ComputeMappedReferenceAttributesParams,
+	type MappedReferenceAttributes,
+} from './build-mapped-name'
 export { buildMappedLNodePath } from './build-mapped-lnode-path'
 export type { MappedLNodeAttributes } from './build-mapped-lnode-path'
 export type { ElementPath, PathSegmentWithRef } from './path-segment.types'
