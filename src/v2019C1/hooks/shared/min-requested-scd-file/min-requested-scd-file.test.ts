@@ -181,7 +181,7 @@ describe('MinRequestedSCDFile auto-sync', () => {
 			},
 			unexpectedQueries: ['//default:MinRequestedSCDFiles'],
 		},
-		'existing outdated entry → updated in place, hand-added attributes kept': {
+		'existing outdated entry → updated in place, unmanaged attributes untouched': {
 			sourceXml: buildXml({
 				minRequested: /* xml */ `
 					<MinRequestedSCDFiles ${id}="wrap1">
@@ -207,7 +207,7 @@ describe('MinRequestedSCDFile auto-sync', () => {
 			expectedQueries: [entryQuery('[@version="2"]'), entryQuery('[@desc="kept"]')],
 			unexpectedQueries: [entryQuery('[2]')],
 		},
-		'unmanaged sibling entry → only the matching entry is maintained': {
+		'surplus entries → collapsed onto the single managed entry': {
 			sourceXml: buildXml({
 				minRequested: /* xml */ `
 					<MinRequestedSCDFiles ${id}="wrap1">
@@ -237,10 +237,12 @@ describe('MinRequestedSCDFile auto-sync', () => {
 				})
 			},
 			expectedQueries: [
-				entryQuery('[@fileUuid="99999999-9999-9999-9999-999999999999"][@version="9"]'),
-				entryQuery(`[@fileUuid="${HEADER_UUID}"][@version="2"]`),
+				entryQuery(`[@fileUuid="${HEADER_UUID}"][@fileType="SCD"][@version="2"][@revision="A"]`),
 			],
-			unexpectedQueries: [entryQuery('[3]')],
+			unexpectedQueries: [
+				entryQuery('[2]'),
+				entryQuery('[@fileUuid="99999999-9999-9999-9999-999999999999"]'),
+			],
 		},
 		'Header without version/revision → empty values written': {
 			sourceXml: buildXml({

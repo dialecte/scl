@@ -23,11 +23,15 @@ export async function syncMinRequestedScdFile(params: {
 	const managed = await readManagedAttributes(query)
 
 	const wrapper = await query.getChild(ied, 'MinRequestedSCDFiles')
-	const entries = wrapper ? await query.getChildren(wrapper, 'MinRequestedSCDFile') : []
-	const entry = await selectManagedEntry({ query, entries, fileUuid: managed.fileUuid })
+	if (!wrapper) return createEntryOperations({ ied, wrapper: undefined, managed })
 
-	if (entry) return updateEntryOperations({ entry, managed })
-	return createEntryOperations({ ied, wrapper, managed })
+	const [entry, ...surplusEntries] = await query.getChildren(wrapper, 'MinRequestedSCDFile')
+	if (!entry) return createEntryOperations({ ied, wrapper, managed })
+
+	return [
+		...updateEntryOperations({ entry, managed }),
+		...removeSurplusEntryOperations({ wrapper, surplusEntries }),
+	]
 }
 
 async function readManagedAttributes(query: Core.Query<Config>): Promise<ManagedAttributes> {
@@ -46,18 +50,29 @@ function normalize(value: string | undefined): string {
 	return (value ?? '').trim()
 }
 
-async function selectManagedEntry(params: {
-	query: Core.Query<Config>
-	entries: Scl.TrackedRecord<'MinRequestedSCDFile'>[]
-	fileUuid: string
-}): Promise<Scl.TrackedRecord<'MinRequestedSCDFile'> | undefined> {
-	const { query, entries, fileUuid } = params
+/** Drop every entry past the first one, and unlink them from the wrapper in the same breath. */
+function removeSurplusEntryOperations(params: {
+	wrapper: Scl.TrackedRecord<'MinRequestedSCDFiles'>
+	surplusEntries: Scl.TrackedRecord<'MinRequestedSCDFile'>[]
+}): Scl.Operation[] {
+	const { wrapper, surplusEntries } = params
+	if (surplusEntries.length === 0) return []
 
-	for (const entry of entries) {
-		if ((await query.getAttribute(entry, { name: 'fileUuid' })) === fileUuid) return entry
+	const surplusIds = new Set(surplusEntries.map((entry) => entry.id))
+	const wrapperRecord = toRawRecord(wrapper)
+	const updatedWrapper: Scl.RawRecord<'MinRequestedSCDFiles'> = {
+		...wrapperRecord,
+		children: wrapperRecord.children.filter((child) => !surplusIds.has(child.id)),
 	}
 
-	return entries[0]
+	return [
+		...surplusEntries.map((entry) => ({
+			status: 'deleted' as const,
+			oldRecord: widen(toRawRecord(entry)),
+			newRecord: undefined,
+		})),
+		{ status: 'updated', oldRecord: widen(wrapperRecord), newRecord: widen(updatedWrapper) },
+	]
 }
 
 function updateEntryOperations(params: {
