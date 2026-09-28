@@ -1,3 +1,4 @@
+import { syncMinRequestedScdFileOnUpdate } from './min-requested-scd-file'
 import { updateRefPaths } from './ref-paths'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -12,5 +13,8 @@ export async function afterUpdated<GenericElement extends Scl.ElementsOf>(params
 	newRecord: Scl.RawRecord<GenericElement>
 	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
-	return updateRefPaths(params)
+	const refPathOps = await updateRefPaths(params)
+	const minRequestedScdFileOps = await syncMinRequestedScdFileOnUpdate(params)
+
+	return [...refPathOps, ...minRequestedScdFileOps]
 }
