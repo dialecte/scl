@@ -20,6 +20,48 @@ export function updatedOperation(
 	}
 }
 
+/**
+ * Read an attribute from a record snapshot. Only for a state `query` can no longer reach, such as
+ * the `oldRecord` of an update hook; read the current state through `query.getAttribute`.
+ */
+export function readSnapshotAttribute(params: {
+	record: Scl.RawRecord<Scl.ElementsOf>
+	name: string
+}): string | undefined {
+	const { record, name } = params
+	return record.attributes.find((attribute) => attribute.name === name)?.value
+}
+
+/** Whether any of the named attributes differs between two snapshots of one record. */
+export function hasAttributeChange(params: {
+	oldRecord: Scl.RawRecord<Scl.ElementsOf>
+	newRecord: Scl.RawRecord<Scl.ElementsOf>
+	names: readonly string[]
+}): boolean {
+	const { oldRecord, newRecord, names } = params
+	return names.some(
+		(name) =>
+			readSnapshotAttribute({ record: oldRecord, name }) !==
+			readSnapshotAttribute({ record: newRecord, name }),
+	)
+}
+
+/** Names of the attributes whose value differs between two snapshots of one record. */
+export function changedAttributeNames(params: {
+	oldRecord: Scl.RawRecord<Scl.ElementsOf>
+	newRecord: Scl.RawRecord<Scl.ElementsOf>
+}): string[] {
+	const { oldRecord, newRecord } = params
+	const names = new Set(
+		[...oldRecord.attributes, ...newRecord.attributes].map((attribute) => attribute.name),
+	)
+	return [...names].filter(
+		(name) =>
+			readSnapshotAttribute({ record: oldRecord, name }) !==
+			readSnapshotAttribute({ record: newRecord, name }),
+	)
+}
+
 /** Upsert (replace-or-append) an attribute value on a plain attribute list. */
 export function upsertAttribute(
 	attributes: AttributeList,
