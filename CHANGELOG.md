@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.4.0] - 2026-09-29
+
+### Added
+
+- The definition describes types and structure: `type` on attributes and text, `contentModel`, `nillable`, `anyNamespace`, text `default` / `fixed`.
+- The attributes of an element as declared under each parent: `Scl.AttributesOf<'P', 'Address'>`.
+
+### Changed
+
+- Requires `@dialecte/core` 0.5.1.
+- The SCL fixture validator (`assertValidSclXml`, `assertValidSclTestCases`) is the shared one from `@dialecte/core/test`; same names, same behaviour.
+- Uuid-less `DA`, `SDO`, `*Parameters`, `InputVar` and `OutputVar` are matched by their identifying fields instead of their position.
+
+### Removed
+
+- `children.choices` from the definition: read the `choice` nodes of `contentModel`.
+
+### Fixed
+
+- Identity fields match the schema's keys: `AccessPoint`, `Server`, `DataTypeTemplates` and `History` no longer borrow their descendants', and elements keyed through a wildcard now carry their `name`, `id` or `varName`.
+- `P` follows the declaration of its parent: `Address` and `PhysConn` each keep their own `type` values.
+- An element's title never falls back to its uuid.
+
 ## [0.3.17] - 2026-09-18
 
 ### Changed
