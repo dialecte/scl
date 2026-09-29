@@ -1,5 +1,7 @@
 import { cleanOrphanedRefs } from './orphaned-refs'
 
+import { captureAffectedIedsBeforeDelete } from '@/v2019C1/hooks/shared/min-requested-scd-file/deleted-owners'
+
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -11,5 +13,6 @@ export async function beforeDelete<GenericElement extends Scl.ElementsOf>(params
 	record: Scl.RawRecord<GenericElement>
 	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
+	await captureAffectedIedsBeforeDelete(params)
 	return cleanOrphanedRefs(params)
 }

@@ -40,7 +40,14 @@ const communication = /* xml */ `
 	</Communication>
 `
 
-function buildXml(params: { header?: string; minRequested?: string } = {}): string {
+function buildXml(
+	params: {
+		header?: string
+		minRequested?: string
+		otherConnectedAp?: string
+		otherIed?: string
+	} = {},
+): string {
 	const header =
 		params.header ??
 		`<Header ${id}="header" id="Project" uuid="${HEADER_UUID}" version="2" revision="A" />`
@@ -49,11 +56,12 @@ function buildXml(params: { header?: string; minRequested?: string } = {}): stri
 		<SCL ${ns} ${id}="root">
 			${header}
 			<Substation ${id}="sub1" name="Sub1" />
-			${communication}
+			${communication.replace('</SubNetwork>', `${params.otherConnectedAp ?? ''}</SubNetwork>`)}
 			<IED ${id}="ied1" name="IED1">
 				${params.minRequested ?? ''}
 				${iedBody}
 			</IED>
+			${params.otherIed ?? ''}
 		</SCL>
 	`
 }
@@ -266,5 +274,167 @@ describe('MinRequestedSCDFile auto-sync', () => {
 			await testCase.act(source)
 			return { assertOn: 'source' }
 		},
+	})
+
+	describe('deletion triggers', () => {
+		const staleEntry = /* xml */ `
+			<MinRequestedSCDFiles ${id}="wrap1">
+				<MinRequestedSCDFile ${id}="entry1" fileType="SCD" fileUuid="${HEADER_UUID}" version="1" revision="A" desc="kept" />
+			</MinRequestedSCDFiles>
+		`
+
+		const deletionCases: SclTest.TestCases<TestCase> = {
+			'DataSet deleted → entry created after removal': {
+				sourceXml: baseXml,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'DataSet', id: 'ds1' })
+					})
+				},
+				expectedQueries: syncedEntryQueries,
+				unexpectedQueries: ['//default:DataSet[@name="DS1"]'],
+			},
+			'ExtRef deleted → existing entry updated in place': {
+				sourceXml: buildXml({
+					minRequested: staleEntry,
+				}).replace(
+					`<Inputs ${id}="inputs1" />`,
+					`<Inputs ${id}="inputs1"><ExtRef ${id}="ext1" intAddr="A" /></Inputs>`,
+				),
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'ExtRef', id: 'ext1' })
+					})
+				},
+				expectedQueries: [
+					entryQuery('[@version="2"][@desc="kept"]'),
+					entryQuery(`[@fileUuid="${HEADER_UUID}"]`),
+				],
+				unexpectedQueries: ['//default:ExtRef', entryQuery('[2]')],
+			},
+			'DAI Val deleted → entry created': {
+				sourceXml: baseXml.replace(
+					`<DAI ${id}="dai1" name="stVal" />`,
+					`<DAI ${id}="dai1" name="stVal"><Val ${id}="val1">true</Val></DAI>`,
+				),
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'Val', id: 'val1' })
+					})
+				},
+				expectedQueries: syncedEntryQueries,
+				unexpectedQueries: ['//default:DAI/default:Val'],
+			},
+			'LN0 deleted with control block and DataSet → entry created once': {
+				sourceXml: baseXml.replace(
+					`<DataSet ${id}="ds1" name="DS1" />`,
+					`<DataSet ${id}="ds1" name="DS1" /><ReportControl ${id}="rc1" name="RP1" confRev="1" />`,
+				),
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'LN0', id: 'ln0' })
+					})
+				},
+				expectedQueries: syncedEntryQueries,
+				unexpectedQueries: ['//default:LN0', entryQuery('[2]')],
+			},
+			'communication P deleted → entry created': {
+				sourceXml: baseXml,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'P', id: 'p1' })
+					})
+				},
+				expectedQueries: syncedEntryQueries,
+				unexpectedQueries: ['//default:P[@type="IP"]'],
+			},
+			'ConnectedAP deleted → entry created from its old iedName': {
+				sourceXml: baseXml,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'ConnectedAP', id: 'cap1' })
+					})
+				},
+				expectedQueries: syncedEntryQueries,
+				unexpectedQueries: ['//default:ConnectedAP[@iedName="IED1"]'],
+			},
+			'SubNetwork deleted with two ConnectedAPs → both IEDs synced': {
+				sourceXml: buildXml({
+					otherConnectedAp: `<ConnectedAP ${id}="cap2" iedName="IED2" apName="AP2" />`,
+					otherIed: `<IED ${id}="ied2" name="IED2"><AccessPoint ${id}="ap2" name="AP2" /></IED>`,
+				}),
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'SubNetwork', id: 'sn1' })
+					})
+				},
+				expectedQueries: [
+					`//default:IED[@name="IED1"]/default:MinRequestedSCDFiles/default:MinRequestedSCDFile[@fileUuid="${HEADER_UUID}"]`,
+					`//default:IED[@name="IED2"]/default:MinRequestedSCDFiles/default:MinRequestedSCDFile[@fileUuid="${HEADER_UUID}"]`,
+				],
+				unexpectedQueries: ['//default:SubNetwork'],
+			},
+			'unrelated subtree deleted → outdated entry untouched': {
+				sourceXml: buildXml({ minRequested: staleEntry }),
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'Substation', id: 'sub1' })
+					})
+				},
+				expectedQueries: [entryQuery('[@version="1"][@desc="kept"]')],
+				unexpectedQueries: [entryQuery('[@version="2"]')],
+			},
+			'IED deleted → no managed entry created for deleted IED': {
+				sourceXml: baseXml,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'IED', id: 'ied1' })
+					})
+				},
+				unexpectedQueries: ['//default:IED', '//default:MinRequestedSCDFiles'],
+			},
+			'Header without uuid → standardized uuid used on delete': {
+				sourceXml: buildXml({
+					header: `<Header ${id}="header" id="Project" version="2" revision="A" />`,
+				}),
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'DataSet', id: 'ds1' })
+					})
+				},
+				expectedQueries: [
+					'//default:Header[@uuid]',
+					'//default:IED/default:MinRequestedSCDFiles/default:MinRequestedSCDFile[@fileUuid = /default:SCL/default:Header/@uuid]',
+				],
+			},
+			'Header without version/revision → empty values written on delete': {
+				sourceXml: buildXml({
+					header: `<Header ${id}="header" id="Project" uuid="${HEADER_UUID}" />`,
+				}),
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'DataSet', id: 'ds1' })
+					})
+				},
+				expectedQueries: [entryQuery('[@version=""][@revision=""]')],
+			},
+			'no Header → preserve empty fileUuid on delete': {
+				sourceXml: buildXml({ header: '' }),
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'DataSet', id: 'ds1' })
+					})
+				},
+				expectedQueries: [entryQuery('[@fileUuid=""]')],
+			},
+		}
+
+		runSclTestCases.withExport({
+			testCases: deletionCases,
+			act: async ({ source, testCase }) => {
+				await testCase.act(source)
+				return { assertOn: 'source' }
+			},
+		})
 	})
 })
