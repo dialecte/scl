@@ -1,6 +1,6 @@
 {
 	"name": "@dialecte/scl",
-	"version": "0.3.17",
+	"version": "0.4.0",
 	"description": "Dialecte - SCL (Substation Configuration Language) sdk",
 	"license": "MIT",
 	"repository": {
@@ -38,7 +38,7 @@
 		"test": "vitest",
 		"//====== CHECK ======//": "",
 		"check": "run-p type-check type-check:test lint:check format:check",
-		"type-check": "tsc --noEmit",
+		"type-check": "tsc -p tsconfig.build.json --noEmit",
 		"type-check:test": "tsc -p tsconfig.vitest.json --noEmit",
 		"lint:check": "oxlint",
 		"lint:fix": "oxlint . --fix -D correctness --ignore-path .gitignore",
@@ -56,10 +56,10 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.4.16"
+		"@dialecte/core": "0.5.1"
 	},
 	"devDependencies": {
-		"@dialecte/cli": "0.0.2",
+		"@dialecte/cli": "0.0.3",
 		"@tsconfig/node24": "^24.0.4",
 		"@types/node": "^24.12.4",
 		"@typescript/native": "npm:typescript@^7.0.2",

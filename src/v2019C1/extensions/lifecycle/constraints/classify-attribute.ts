@@ -46,7 +46,7 @@ export function isEditableMode(
  * and reference attributes are omitted (nothing to show as editable).
  */
 export function editableAttributes(tag: string): EditableAttribute[] {
-	const attrs = Object.keys((ATTRIBUTES as Record<string, object>)[tag] ?? {})
+	const attrs = Object.keys((ATTRIBUTES.byTag as Record<string, object>)[tag] ?? {})
 	const out: EditableAttribute[] = []
 	for (const attr of attrs) {
 		const mode = classifyAttribute(tag, attr)

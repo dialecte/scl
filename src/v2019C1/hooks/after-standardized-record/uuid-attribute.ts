@@ -11,11 +11,11 @@ export function enforceUuidAttribute<GenericElement extends Scl.ElementsOf>(para
 	record: Scl.RawRecord<GenericElement>
 }): Scl.RawRecord<GenericElement> {
 	const { record } = params
-	const { tagName, attributes } = record
+	const { attributes } = record
 
 	const uuidRules = getAttributeRules({
 		dialecteConfig: SCL_DIALECTE_CONFIG,
-		tagName,
+		record,
 		attributeName: 'uuid',
 	})
 	if (!uuidRules.isDefined) return record

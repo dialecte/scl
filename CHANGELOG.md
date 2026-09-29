@@ -11,6 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **An IED's `MinRequestedSCDFile` is now maintained for you.** Changing an IED in a way that requires its configuration to be uploaded again — a control block or data set, an `ExtRef`, a `DAI` value, its access points in the communication section, or the IED's own name — records the current SCD `Header`'s `uuid`, `version` and `revision` on that IED, creating the `MinRequestedSCDFiles` wrapper and its entry the first time and updating it in place afterwards. The write happens in the same transaction as the change that caused it, so the two always land together. The entry is owned by the tooling: an IED keeps **exactly one**, and any further entry an incoming file brought along is removed on the next change. Attributes that cannot be derived from the `Header` (`fileName`, `when`, `desc`) are left as they are, and a `Header` without `version`/`revision` writes those as empty rather than failing. Changes outside that list leave the entry alone. Removing an element does not yet trigger the update — that follows once an `afterDeleted` hook exists.
 
+## [0.4.0] - 2026-09-29
+
+### Added
+
+- The definition describes types and structure: `type` on attributes and text, `contentModel`, `nillable`, `anyNamespace`, text `default` / `fixed`.
+- The attributes of an element as declared under each parent: `Scl.AttributesOf<'P', 'Address'>`.
+
+### Changed
+
+- Requires `@dialecte/core` 0.5.1.
+- The SCL fixture validator (`assertValidSclXml`, `assertValidSclTestCases`) is the shared one from `@dialecte/core/test`; same names, same behaviour.
+- Uuid-less `DA`, `SDO`, `*Parameters`, `InputVar` and `OutputVar` are matched by their identifying fields instead of their position.
+
+### Removed
+
+- `children.choices` from the definition: read the `choice` nodes of `contentModel`.
+
+### Fixed
+
+- Identity fields match the schema's keys: `AccessPoint`, `Server`, `DataTypeTemplates` and `History` no longer borrow their descendants', and elements keyed through a wildcard now carry their `name`, `id` or `varName`.
+- `P` follows the declaration of its parent: `Address` and `PhysConn` each keep their own `type` values.
+- An element's title never falls back to its uuid.
+
 ## [0.3.17] - 2026-09-18
 
 ### Changed

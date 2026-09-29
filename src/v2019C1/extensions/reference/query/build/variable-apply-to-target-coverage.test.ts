@@ -15,7 +15,7 @@ import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants
  */
 describe('VariableApplyTo target coverage — every uuid-bearing element is classified', () => {
 	const attrsOf = (element: string): string[] => {
-		const attrs = (ATTRIBUTES as Record<string, unknown>)[element]
+		const attrs = (ATTRIBUTES.byTag as Record<string, unknown>)[element]
 		return Array.isArray(attrs) ? (attrs as string[]) : Object.keys((attrs as object) ?? {})
 	}
 
