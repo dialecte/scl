@@ -4076,6 +4076,10 @@ export type AttributesP = {
 		| 'IPv6-IGMPv3Src'
 		| 'IP-IGMPv3Src'
 		| 'IP-ClassOfTraffic'
+		| 'Type'
+		| 'Plug'
+		| 'Cable'
+		| 'Port'
 		| (string & {})
 	'xsi:type'?:
 		| 'tP_APPID'
@@ -4108,6 +4112,44 @@ export type AttributesP = {
 		| 'tP_VLAN-ID'
 		| 'tP_VLAN-PRIORITY'
 		| (string & {})
+}
+
+export type AttributesPInAddress = {
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInPhysConn = {
+	type: 'Type' | 'Plug' | 'Cable' | 'Port' | (string & {})
 }
 
 export type AttributesPhysConn = {
@@ -4976,6 +5018,920 @@ export type AttributesMap = {
 }
 
 export type AttributesOf<T extends AvailableElement> = AttributesMap[T]
+
+/**
+ * The attributes of a child AS DECLARED UNDER each parent. An element declared once has the
+ * same type under every parent; a homonym has the type of its declaration under each. Read
+ * through the dialecte's `AttributesOf<Element, Parent>`; the constant `ATTRIBUTES.byParent`
+ * is checked against this map.
+ */
+export type AttributesByParent = {
+	AccessPoint: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Server: AttributesServer
+		LN: AttributesLN
+		ServerAt: AttributesServerAt
+		Services: AttributesServices
+		GOOSESecurity: AttributesGOOSESecurity
+		SMVSecurity: AttributesSMVSecurity
+		Labels: AttributesLabels
+	}
+	Address: {
+		P: AttributesPInAddress
+	}
+	AllocationRole: {
+		Text: AttributesText
+		FunctionRef: AttributesFunctionRef
+	}
+	AllocationRoleRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+	}
+	AnalogueWiringParameters: {
+		Text: AttributesText
+	}
+	AnalogueWiringParametersRef: {
+		Text: AttributesText
+	}
+	Application: {
+		Text: AttributesText
+		FunctionRole: AttributesFunctionRole
+		FunctionalVariant: AttributesFunctionalVariant
+		FunctionalVariantGroup: AttributesFunctionalVariantGroup
+		AllocationRoleRef: AttributesAllocationRoleRef
+		ApplicationSclRef: AttributesApplicationSclRef
+	}
+	ApplicationSclRef: {
+		Text: AttributesText
+		SclFileReference: AttributesSclFileReference
+	}
+	BDA: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Val: AttributesVal
+		Labels: AttributesLabels
+	}
+	Bay: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		PowerTransformer: AttributesPowerTransformer
+		GeneralEquipment: AttributesGeneralEquipment
+		ConductingEquipment: AttributesConductingEquipment
+		ConnectivityNode: AttributesConnectivityNode
+		Function: AttributesFunction
+		AllocationRole: AttributesAllocationRole
+		Application: AttributesApplication
+		BehaviorDescription: AttributesBehaviorDescription
+		FunctionCategory: AttributesFunctionCategory
+		ProcessResources: AttributesProcessResources
+		Variable: AttributesVariable
+	}
+	BehaviorDescription: {
+		Text: AttributesText
+		InputVar: AttributesInputVar
+		OutputVar: AttributesOutputVar
+		BehaviorReference: AttributesBehaviorReference
+	}
+	BehaviorDescriptionRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+		InputVarRef: AttributesInputVarRef
+		OutputVarRef: AttributesOutputVarRef
+	}
+	BehaviorReference: {
+		Text: AttributesText
+	}
+	BinaryWiringParameters: {
+		Text: AttributesText
+	}
+	BinaryWiringParametersRef: {
+		Text: AttributesText
+	}
+	CheckoutID: {
+		SubCheckoutID: AttributesSubCheckoutID
+	}
+	ClientServices: {
+		TimeSyncProt: AttributesTimeSyncProt
+		GOOSEMcSecurity: AttributesGOOSEMcSecurity
+		SVMcSecurity: AttributesSVMcSecurity
+		Security: AttributesSecurity
+	}
+	Communication: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		SubNetwork: AttributesSubNetwork
+	}
+	CommunicationServiceSpecifications: {
+		Text: AttributesText
+		GooseParameters: AttributesGooseParameters
+		SMVParameters: AttributesSMVParameters
+		ReportParameters: AttributesReportParameters
+	}
+	ConductingEquipment: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		Terminal: AttributesTerminal
+		SubEquipment: AttributesSubEquipment
+		EqFunction: AttributesEqFunction
+		ProcessResources: AttributesProcessResources
+		Variable: AttributesVariable
+	}
+	ConnectedAP: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Address: AttributesAddress
+		GSE: AttributesGSE
+		SMV: AttributesSMV
+		PhysConn: AttributesPhysConn
+	}
+	ConnectivityNode: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		ProcessResources: AttributesProcessResources
+	}
+	ControlRef: {
+		Text: AttributesText
+		BinaryWiringParametersRef: AttributesBinaryWiringParametersRef
+		AnalogueWiringParametersRef: AttributesAnalogueWiringParametersRef
+	}
+	ControllingLNode: {
+		Text: AttributesText
+		BinaryWiringParametersRef: AttributesBinaryWiringParametersRef
+		AnalogueWiringParametersRef: AttributesAnalogueWiringParametersRef
+	}
+	DA: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Val: AttributesVal
+		Labels: AttributesLabels
+		ProtNs: AttributesProtNs
+	}
+	DAI: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Val: AttributesVal
+		Labels: AttributesLabels
+	}
+	DAS: {
+		Text: AttributesText
+		SubscriberLNode: AttributesSubscriberLNode
+		ControllingLNode: AttributesControllingLNode
+		ProcessEcho: AttributesProcessEcho
+		LogParametersRef: AttributesLogParametersRef
+		Val: AttributesVal
+		Labels: AttributesLabels
+	}
+	DAType: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		BDA: AttributesBDA
+		ProtNs: AttributesProtNs
+		Labels: AttributesLabels
+	}
+	DO: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+	}
+	DOI: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		SDI: AttributesSDI
+		DAI: AttributesDAI
+		Labels: AttributesLabels
+	}
+	DOS: {
+		Text: AttributesText
+		SDS: AttributesSDS
+		DAS: AttributesDAS
+		SubscriberLNode: AttributesSubscriberLNode
+		ControllingLNode: AttributesControllingLNode
+		ProcessEcho: AttributesProcessEcho
+		LogParametersRef: AttributesLogParametersRef
+		Labels: AttributesLabels
+	}
+	DOType: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		SDO: AttributesSDO
+		DA: AttributesDA
+		Labels: AttributesLabels
+	}
+	DataSet: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		FCDA: AttributesFCDA
+	}
+	DataTypeTemplates: {
+		LNodeType: AttributesLNodeType
+		DOType: AttributesDOType
+		DAType: AttributesDAType
+		EnumType: AttributesEnumType
+	}
+	EnumType: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		EnumVal: AttributesEnumVal
+	}
+	EqFunction: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		GeneralEquipment: AttributesGeneralEquipment
+		EqSubFunction: AttributesEqSubFunction
+		BehaviorDescription: AttributesBehaviorDescription
+		FunctionSclRef: AttributesFunctionSclRef
+		PowerSystemRelations: AttributesPowerSystemRelations
+		ProcessResources: AttributesProcessResources
+		Variable: AttributesVariable
+	}
+	EqSubFunction: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		GeneralEquipment: AttributesGeneralEquipment
+		EqSubFunction: AttributesEqSubFunction
+		BehaviorDescription: AttributesBehaviorDescription
+		FunctionSclRef: AttributesFunctionSclRef
+		PowerSystemRelations: AttributesPowerSystemRelations
+		ProcessResources: AttributesProcessResources
+		Variable: AttributesVariable
+	}
+	ExtCtrl: {
+		Text: AttributesText
+		Private: AttributesPrivate
+	}
+	ExtRef: {
+		Text: AttributesText
+		Private: AttributesPrivate
+	}
+	Function: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		SubFunction: AttributesSubFunction
+		GeneralEquipment: AttributesGeneralEquipment
+		ConductingEquipment: AttributesConductingEquipment
+		BehaviorDescription: AttributesBehaviorDescription
+		FunctionSclRef: AttributesFunctionSclRef
+		PowerSystemRelations: AttributesPowerSystemRelations
+		ProcessResources: AttributesProcessResources
+		Variable: AttributesVariable
+	}
+	FunctionCatRef: {
+		Text: AttributesText
+	}
+	FunctionCategory: {
+		Text: AttributesText
+		SubCategory: AttributesSubCategory
+		FunctionCatRef: AttributesFunctionCatRef
+	}
+	FunctionCategoryRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+	}
+	FunctionRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+		SignalRole: AttributesSignalRole
+	}
+	FunctionRole: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+		FunctionRoleContent: AttributesFunctionRoleContent
+	}
+	FunctionRoleContent: {
+		Text: AttributesText
+		FunctionRef: AttributesFunctionRef
+		BehaviorDescriptionRef: AttributesBehaviorDescriptionRef
+		ProcessResourceRef: AttributesProcessResourceRef
+		VariableRef: AttributesVariableRef
+		FunctionCategoryRef: AttributesFunctionCategoryRef
+		PowerSystemRelationRef: AttributesPowerSystemRelationRef
+	}
+	FunctionSclRef: {
+		Text: AttributesText
+		SclFileReference: AttributesSclFileReference
+	}
+	FunctionTemplate: {
+		Text: AttributesText
+		LNode: AttributesLNode
+		SubFunctionTemplate: AttributesSubFunctionTemplate
+		GeneralEquipment: AttributesGeneralEquipment
+		ConductingEquipment: AttributesConductingEquipment
+	}
+	FunctionalSubVariant: {
+		Text: AttributesText
+		FunctionalSubVariant: AttributesFunctionalSubVariant
+		VariableRef: AttributesVariableRef
+	}
+	FunctionalVariant: {
+		Text: AttributesText
+		FunctionalSubVariant: AttributesFunctionalSubVariant
+		VariableRef: AttributesVariableRef
+	}
+	FunctionalVariantGroup: {
+		Text: AttributesText
+		FunctionalVariant: AttributesFunctionalVariant
+	}
+	FunctionalVariantRef: {
+		Text: AttributesText
+	}
+	GOOSESecurity: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		Subject: AttributesSubject
+		IssuerName: AttributesIssuerName
+	}
+	GSE: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Address: AttributesAddress
+		MinTime: AttributesMinTime
+		MaxTime: AttributesMaxTime
+	}
+	GSEControl: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		IEDName: AttributesIEDName
+		Protocol: AttributesProtocol
+	}
+	GSESettings: {
+		McSecurity: AttributesMcSecurity
+	}
+	GeneralEquipment: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		EqFunction: AttributesEqFunction
+		ProcessResources: AttributesProcessResources
+		Variable: AttributesVariable
+	}
+	GooseParameters: {
+		Text: AttributesText
+		L2CommParameters: AttributesL2CommParameters
+		L3IPv4CommParameters: AttributesL3IPv4CommParameters
+		L3IPv6CommParameters: AttributesL3IPv6CommParameters
+	}
+	GooseParametersRef: {
+		Text: AttributesText
+	}
+	Header: {
+		Text: AttributesText
+		History: AttributesHistory
+		SourceFiles: AttributesSourceFiles
+	}
+	History: {
+		Hitem: AttributesHitem
+	}
+	Hitem: {
+		SourceFiles: AttributesSourceFiles
+	}
+	IED: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Services: AttributesServices
+		AccessPoint: AttributesAccessPoint
+		KDC: AttributesKDC
+		IEDSourceFiles: AttributesIEDSourceFiles
+		MinRequestedSCDFiles: AttributesMinRequestedSCDFiles
+		Labels: AttributesLabels
+		CheckoutID: AttributesCheckoutID
+	}
+	IEDSourceFiles: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		SclFileReference: AttributesSclFileReference
+	}
+	InputVar: {
+		Text: AttributesText
+	}
+	InputVarRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+	}
+	Inputs: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		ExtRef: AttributesExtRef
+	}
+	L2CommParameters: {
+		Text: AttributesText
+	}
+	L3IPv4CommParameters: {
+		Text: AttributesText
+	}
+	L3IPv6CommParameters: {
+		Text: AttributesText
+	}
+	LDevice: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		LN0: AttributesLN0
+		LN: AttributesLN
+		AccessControl: AttributesAccessControl
+		Labels: AttributesLabels
+	}
+	LN: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		DataSet: AttributesDataSet
+		ReportControl: AttributesReportControl
+		LogControl: AttributesLogControl
+		DOI: AttributesDOI
+		Inputs: AttributesInputs
+		Outputs: AttributesOutputs
+		Log: AttributesLog
+		Labels: AttributesLabels
+	}
+	LN0: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		DataSet: AttributesDataSet
+		ReportControl: AttributesReportControl
+		LogControl: AttributesLogControl
+		DOI: AttributesDOI
+		Inputs: AttributesInputs
+		Outputs: AttributesOutputs
+		Log: AttributesLog
+		Labels: AttributesLabels
+		GSEControl: AttributesGSEControl
+		SampledValueControl: AttributesSampledValueControl
+		SettingControl: AttributesSettingControl
+	}
+	LNode: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		BehaviorDescription: AttributesBehaviorDescription
+		DOS: AttributesDOS
+		LNodeInputs: AttributesLNodeInputs
+		LNodeOutputs: AttributesLNodeOutputs
+		LNodeSpecNaming: AttributesLNodeSpecNaming
+	}
+	LNodeDataRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+	}
+	LNodeInputRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+	}
+	LNodeInputs: {
+		Text: AttributesText
+		SourceRef: AttributesSourceRef
+	}
+	LNodeOutputRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+	}
+	LNodeOutputs: {
+		Text: AttributesText
+		ControlRef: AttributesControlRef
+	}
+	LNodeSpecNaming: {
+		Text: AttributesText
+	}
+	LNodeType: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		DO: AttributesDO
+		Labels: AttributesLabels
+	}
+	Labels: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Label: AttributesLabel
+	}
+	Line: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		GeneralEquipment: AttributesGeneralEquipment
+		Function: AttributesFunction
+		Voltage: AttributesVoltage
+		ConductingEquipment: AttributesConductingEquipment
+		ConnectivityNode: AttributesConnectivityNode
+		AllocationRole: AttributesAllocationRole
+		Application: AttributesApplication
+		BehaviorDescription: AttributesBehaviorDescription
+		FunctionCategory: AttributesFunctionCategory
+		ProcessResources: AttributesProcessResources
+		Variable: AttributesVariable
+	}
+	Log: {
+		Text: AttributesText
+		Private: AttributesPrivate
+	}
+	LogControl: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		TrgOps: AttributesTrgOps
+	}
+	LogParameters: {
+		Text: AttributesText
+	}
+	LogParametersRef: {
+		Text: AttributesText
+	}
+	MinRequestedSCDFiles: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		MinRequestedSCDFile: AttributesMinRequestedSCDFile
+	}
+	NeutralPoint: {
+		Text: AttributesText
+		Private: AttributesPrivate
+	}
+	OutputVar: {
+		Text: AttributesText
+	}
+	OutputVarRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+	}
+	Outputs: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		ExtCtrl: AttributesExtCtrl
+	}
+	PhysConn: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		P: AttributesPInPhysConn
+	}
+	PowerSystemRelation: {
+		Text: AttributesText
+	}
+	PowerSystemRelationRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+	}
+	PowerSystemRelations: {
+		Text: AttributesText
+		PowerSystemRelation: AttributesPowerSystemRelation
+	}
+	PowerTransformer: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		TransformerWinding: AttributesTransformerWinding
+		SubEquipment: AttributesSubEquipment
+		EqFunction: AttributesEqFunction
+	}
+	Process: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		GeneralEquipment: AttributesGeneralEquipment
+		Function: AttributesFunction
+		ConductingEquipment: AttributesConductingEquipment
+		Substation: AttributesSubstation
+		Line: AttributesLine
+		Process: AttributesProcess
+		AllocationRole: AttributesAllocationRole
+		Application: AttributesApplication
+		BehaviorDescription: AttributesBehaviorDescription
+		FunctionCategory: AttributesFunctionCategory
+		ProcessResources: AttributesProcessResources
+		Variable: AttributesVariable
+	}
+	ProcessEcho: {
+		Text: AttributesText
+	}
+	ProcessResource: {
+		Text: AttributesText
+		Resource: AttributesResource
+	}
+	ProcessResourceRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+	}
+	ProcessResources: {
+		Text: AttributesText
+		ProcessResource: AttributesProcessResource
+	}
+	Project: {
+		Text: AttributesText
+		ProjectProcessReference: AttributesProjectProcessReference
+	}
+	ProjectProcessReference: {
+		Text: AttributesText
+	}
+	ReportControl: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		TrgOps: AttributesTrgOps
+		OptFields: AttributesOptFields
+		RptEnabled: AttributesRptEnabled
+	}
+	ReportParameters: {
+		Text: AttributesText
+	}
+	ReportParametersRef: {
+		Text: AttributesText
+	}
+	RptEnabled: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		ClientLN: AttributesClientLN
+	}
+	SCL: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Header: AttributesHeader
+		Substation: AttributesSubstation
+		Communication: AttributesCommunication
+		IED: AttributesIED
+		DataTypeTemplates: AttributesDataTypeTemplates
+		Line: AttributesLine
+		Process: AttributesProcess
+		BayType: AttributesBayType
+		FunctionTemplate: AttributesFunctionTemplate
+		Project: AttributesProject
+		ServiceSpecifications: AttributesServiceSpecifications
+	}
+	SDI: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		SDI: AttributesSDI
+		DAI: AttributesDAI
+		Labels: AttributesLabels
+	}
+	SDO: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+	}
+	SDS: {
+		Text: AttributesText
+		SDS: AttributesSDS
+		DAS: AttributesDAS
+		SubscriberLNode: AttributesSubscriberLNode
+		ControllingLNode: AttributesControllingLNode
+		ProcessEcho: AttributesProcessEcho
+		LogParametersRef: AttributesLogParametersRef
+		Labels: AttributesLabels
+	}
+	SMV: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Address: AttributesAddress
+	}
+	SMVParameters: {
+		Text: AttributesText
+		L2CommParameters: AttributesL2CommParameters
+		L3IPv4CommParameters: AttributesL3IPv4CommParameters
+		L3IPv6CommParameters: AttributesL3IPv6CommParameters
+	}
+	SMVParametersRef: {
+		Text: AttributesText
+	}
+	SMVSecurity: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		Subject: AttributesSubject
+		IssuerName: AttributesIssuerName
+	}
+	SMVSettings: {
+		SmpRate: AttributesSmpRate
+		SamplesPerSec: AttributesSamplesPerSec
+		SecPerSamples: AttributesSecPerSamples
+		McSecurity: AttributesMcSecurity
+	}
+	SampledValueControl: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		IEDName: AttributesIEDName
+		SmvOpts: AttributesSmvOpts
+		Protocol: AttributesProtocol
+	}
+	SclFileReference: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		SubCheckoutID: AttributesSubCheckoutID
+	}
+	Server: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Authentication: AttributesAuthentication
+		LDevice: AttributesLDevice
+		Association: AttributesAssociation
+	}
+	ServerAt: {
+		Text: AttributesText
+		Private: AttributesPrivate
+	}
+	ServiceSpecifications: {
+		Text: AttributesText
+		GooseParameters: AttributesGooseParameters
+		SMVParameters: AttributesSMVParameters
+		ReportParameters: AttributesReportParameters
+		BinaryWiringParameters: AttributesBinaryWiringParameters
+		AnalogueWiringParameters: AttributesAnalogueWiringParameters
+		LogParameters: AttributesLogParameters
+	}
+	Services: {
+		DynAssociation: AttributesDynAssociation
+		SettingGroups: AttributesSettingGroups
+		GetDirectory: AttributesGetDirectory
+		GetDataObjectDefinition: AttributesGetDataObjectDefinition
+		DataObjectDirectory: AttributesDataObjectDirectory
+		GetDataSetValue: AttributesGetDataSetValue
+		SetDataSetValue: AttributesSetDataSetValue
+		DataSetDirectory: AttributesDataSetDirectory
+		ConfDataSet: AttributesConfDataSet
+		DynDataSet: AttributesDynDataSet
+		ReadWrite: AttributesReadWrite
+		TimerActivatedControl: AttributesTimerActivatedControl
+		ConfReportControl: AttributesConfReportControl
+		GetCBValues: AttributesGetCBValues
+		ConfLogControl: AttributesConfLogControl
+		ReportSettings: AttributesReportSettings
+		LogSettings: AttributesLogSettings
+		GSESettings: AttributesGSESettings
+		SMVSettings: AttributesSMVSettings
+		GSEDir: AttributesGSEDir
+		GOOSE: AttributesGOOSE
+		GSSE: AttributesGSSE
+		SMVsc: AttributesSMVsc
+		FileHandling: AttributesFileHandling
+		ConfLNs: AttributesConfLNs
+		ClientServices: AttributesClientServices
+		ConfLdName: AttributesConfLdName
+		SupSubscription: AttributesSupSubscription
+		ConfSigRef: AttributesConfSigRef
+		ValueHandling: AttributesValueHandling
+		RedProt: AttributesRedProt
+		TimeSyncProt: AttributesTimeSyncProt
+		CommProt: AttributesCommProt
+		SCSM: AttributesSCSM
+		Security: AttributesSecurity
+		MultiAPPerSubNet: AttributesMultiAPPerSubNet
+	}
+	SettingControl: {
+		Text: AttributesText
+		Private: AttributesPrivate
+	}
+	SettingGroups: {
+		SGEdit: AttributesSGEdit
+		ConfSG: AttributesConfSG
+	}
+	SignalRole: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+		LNodeInputRef: AttributesLNodeInputRef
+		LNodeOutputRef: AttributesLNodeOutputRef
+		LNodeDataRef: AttributesLNodeDataRef
+	}
+	SourceFiles: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		SclFileReference: AttributesSclFileReference
+	}
+	SourceRef: {
+		Text: AttributesText
+		GooseParametersRef: AttributesGooseParametersRef
+		SMVParametersRef: AttributesSMVParametersRef
+		ReportParametersRef: AttributesReportParametersRef
+		BinaryWiringParametersRef: AttributesBinaryWiringParametersRef
+		AnalogueWiringParametersRef: AttributesAnalogueWiringParametersRef
+	}
+	SubCategory: {
+		Text: AttributesText
+		SubCategory: AttributesSubCategory
+		FunctionCatRef: AttributesFunctionCatRef
+	}
+	SubCheckoutID: {
+		SubCheckoutID: AttributesSubCheckoutID
+	}
+	SubEquipment: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		EqFunction: AttributesEqFunction
+	}
+	SubFunction: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		GeneralEquipment: AttributesGeneralEquipment
+		ConductingEquipment: AttributesConductingEquipment
+		SubFunction: AttributesSubFunction
+		BehaviorDescription: AttributesBehaviorDescription
+		FunctionSclRef: AttributesFunctionSclRef
+		PowerSystemRelations: AttributesPowerSystemRelations
+		ProcessResources: AttributesProcessResources
+		Variable: AttributesVariable
+	}
+	SubFunctionTemplate: {
+		Text: AttributesText
+		LNode: AttributesLNode
+		GeneralEquipment: AttributesGeneralEquipment
+		ConductingEquipment: AttributesConductingEquipment
+		SubFunctionTemplate: AttributesSubFunctionTemplate
+	}
+	SubNetwork: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		BitRate: AttributesBitRate
+		ConnectedAP: AttributesConnectedAP
+		CommunicationServiceSpecifications: AttributesCommunicationServiceSpecifications
+	}
+	SubscriberLNode: {
+		Text: AttributesText
+		GooseParametersRef: AttributesGooseParametersRef
+		SMVParametersRef: AttributesSMVParametersRef
+		ReportParametersRef: AttributesReportParametersRef
+		BinaryWiringParametersRef: AttributesBinaryWiringParametersRef
+	}
+	Substation: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		PowerTransformer: AttributesPowerTransformer
+		GeneralEquipment: AttributesGeneralEquipment
+		VoltageLevel: AttributesVoltageLevel
+		Function: AttributesFunction
+		AllocationRole: AttributesAllocationRole
+		Application: AttributesApplication
+		BehaviorDescription: AttributesBehaviorDescription
+		FunctionCategory: AttributesFunctionCategory
+		ProcessResources: AttributesProcessResources
+		Variable: AttributesVariable
+	}
+	TapChanger: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		SubEquipment: AttributesSubEquipment
+		EqFunction: AttributesEqFunction
+	}
+	Terminal: {
+		Text: AttributesText
+		Private: AttributesPrivate
+	}
+	TransformerWinding: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		Terminal: AttributesTerminal
+		SubEquipment: AttributesSubEquipment
+		TapChanger: AttributesTapChanger
+		NeutralPoint: AttributesNeutralPoint
+		EqFunction: AttributesEqFunction
+	}
+	Variable: {
+		Text: AttributesText
+		VariableApplyTo: AttributesVariableApplyTo
+	}
+	VariableApplyTo: {
+		Text: AttributesText
+	}
+	VariableRef: {
+		Text: AttributesText
+		FunctionalVariantRef: AttributesFunctionalVariantRef
+	}
+	VoltageLevel: {
+		Text: AttributesText
+		Private: AttributesPrivate
+		Labels: AttributesLabels
+		LNode: AttributesLNode
+		PowerTransformer: AttributesPowerTransformer
+		GeneralEquipment: AttributesGeneralEquipment
+		Voltage: AttributesVoltage
+		Bay: AttributesBay
+		Function: AttributesFunction
+		AllocationRole: AttributesAllocationRole
+		Application: AttributesApplication
+		BehaviorDescription: AttributesBehaviorDescription
+		FunctionCategory: AttributesFunctionCategory
+		ProcessResources: AttributesProcessResources
+		Variable: AttributesVariable
+	}
+}
 
 export type RequiredAttributeNames<T extends AvailableElement> =
 	(typeof REQUIRED_ATTRIBUTES)[T][number]

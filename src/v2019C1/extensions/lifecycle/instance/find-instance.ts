@@ -1,5 +1,3 @@
-import { getAttributeRules } from '@dialecte/core/utils'
-
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 import { identityEquals, resolveIdentity } from '@/v2019C1/extensions/identity/query'
 
@@ -140,11 +138,8 @@ export async function findInstancesByTemplateUuid(
 	if (byLineage.length > 0) return byLineage
 
 	// uuid-bearing: lineage is the ONLY identity — no name fallback.
-	const carriesUuid = getAttributeRules({
-		dialecteConfig: SCL_DIALECTE_CONFIG,
-		tagName,
-		attributeName: 'uuid',
-	}).isDefined
+	// asked of the tag, not of one record: the tag-level definition, the union of its declarations
+	const carriesUuid = 'uuid' in SCL_DIALECTE_CONFIG.definition[tagName].attributes.details
 	if (carriesUuid) return []
 
 	// uuid-less: identify by the schema's identityFields (unambiguous match required).

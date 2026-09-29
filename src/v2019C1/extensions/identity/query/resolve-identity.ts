@@ -1,6 +1,3 @@
-import { getAttributeRules } from '@dialecte/core/utils'
-
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 import { getIdentityFields } from '@/v2019C1/extensions/lifecycle/constraints/identity-fields'
 
 import type { ElementIdentity } from './resolve-identity.types'
@@ -11,9 +8,10 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
 
 /**
  * Resolve an element's identity from the schema (does it carry a `uuid`, else its `identityFields`),
- * reading its attributes through Dialecte's own `getAttributes`. `name` is never used: it appears in
- * `identityFields` only for uuid-bearing hybrids (e.g. `Substation`), which resolve at the `uuid`
- * branch; every uuid-less tag's `identityFields` are structural (`id`/`lnClass`/`inst`/...).
+ * reading its attributes through Dialecte's own `getAttributes`. A uuid-bearing tag (`Substation`,
+ * `Bay`, `Function`, ...) resolves at the `uuid` branch whatever its `identityFields` say; a uuid-less
+ * tag resolves by the fields its schema keys name (`id`/`lnClass`/`inst`/..., and `name` where the
+ * schema makes it unique among siblings, e.g. `DA`/`SDO` in a type).
  */
 export async function resolveIdentity(
 	query: Reader,
@@ -21,11 +19,9 @@ export async function resolveIdentity(
 ): Promise<ElementIdentity> {
 	const { tagName } = ref
 
-	const carriesUuid = getAttributeRules({
-		dialecteConfig: SCL_DIALECTE_CONFIG,
-		tagName,
-		attributeName: 'uuid',
-	}).isDefined
+	// the definition where the element sits: a ref is resolved to its record first
+	const definition = await query.any.getDefinition(ref)
+	const carriesUuid = definition?.attributes.details.uuid !== undefined
 	if (carriesUuid) {
 		const { uuid } = await query.any.getAttributes(ref)
 		return { kind: 'uuid', uuid: uuid || undefined }

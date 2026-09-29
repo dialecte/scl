@@ -7,12 +7,33 @@ export const DEFINITION = {
 		parents: ['LDevice'],
 		attributes: {
 			sequence: [],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {},
 		},
 		children: {
 			sequence: [],
 			any: true,
 			details: {},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					particles: [
+						{
+							kind: 'any',
+							namespace: ['##other'],
+							processContents: 'lax',
+							minOccurs: 1,
+							maxOccurs: 1,
+						},
+					],
+				},
+			],
 		},
 		textContent: {},
 	},
@@ -22,29 +43,26 @@ export const DEFINITION = {
 		parents: ['IED'],
 		attributes: {
 			sequence: ['clock', 'desc', 'kdc', 'name', 'router', 'templateUuid', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				clock: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				kdc: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				clock: { type: { builtin: 'boolean' }, default: 'false' },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				kdc: { type: { builtin: 'boolean' }, default: 'false' },
 				name: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32 },
 				},
-				router: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				router: { type: { builtin: 'boolean' }, default: 'false' },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
-			identityFields: ['inst', 'name'],
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -146,7 +164,50 @@ export const DEFINITION = {
 					],
 				},
 			},
-			choices: [{ options: ['LN', 'Server', 'ServerAt'], maxOccurs: 1 }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'choice',
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'Server', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'LN', minOccurs: 1 },
+								{ kind: 'element', name: 'ServerAt', minOccurs: 1, maxOccurs: 1 },
+							],
+						},
+						{ kind: 'element', name: 'Services', maxOccurs: 1 },
+						{ kind: 'element', name: 'GOOSESecurity', maxOccurs: 7 },
+						{ kind: 'element', name: 'SMVSecurity', maxOccurs: 7 },
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -172,8 +233,106 @@ export const DEFINITION = {
 		children: {
 			sequence: ['P'],
 			details: {
-				P: { required: true, minOccurs: 1 },
+				P: {
+					required: true,
+					minOccurs: 1,
+					attributes: {
+						sequence: ['type'],
+						details: {
+							type: {
+								type: {
+									union: [
+										{
+											builtin: 'Name',
+											facets: {
+												enumeration: [
+													'IP',
+													'IP-SUBNET',
+													'IP-GATEWAY',
+													'OSI-NSAP',
+													'OSI-TSEL',
+													'OSI-SSEL',
+													'OSI-PSEL',
+													'OSI-AP-Title',
+													'OSI-AP-Invoke',
+													'OSI-AE-Qualifier',
+													'OSI-AE-Invoke',
+													'MAC-Address',
+													'APPID',
+													'VLAN-PRIORITY',
+													'VLAN-ID',
+													'SNTP-Port',
+													'MMS-Port',
+													'DNSName',
+													'IPv6FlowLabel',
+													'IPv6ClassOfTraffic',
+													'C37-118-IP-Port',
+													'IP-UDP-PORT',
+													'IP-TCP-PORT',
+													'IPv6',
+													'IPv6-SUBNET',
+													'IPv6-GATEWAY',
+													'IPv6-IGMPv3Src',
+													'IP-IGMPv3Src',
+													'IP-ClassOfTraffic',
+												],
+											},
+										},
+										{ builtin: 'normalizedString', facets: { pattern: ['[A-Z][0-9A-Za-z\\-]*'] } },
+									],
+								},
+								required: true,
+								facets: {
+									enumeration: [
+										'IP',
+										'IP-SUBNET',
+										'IP-GATEWAY',
+										'OSI-NSAP',
+										'OSI-TSEL',
+										'OSI-SSEL',
+										'OSI-PSEL',
+										'OSI-AP-Title',
+										'OSI-AP-Invoke',
+										'OSI-AE-Qualifier',
+										'OSI-AE-Invoke',
+										'MAC-Address',
+										'APPID',
+										'VLAN-PRIORITY',
+										'VLAN-ID',
+										'SNTP-Port',
+										'MMS-Port',
+										'DNSName',
+										'IPv6FlowLabel',
+										'IPv6ClassOfTraffic',
+										'C37-118-IP-Port',
+										'IP-UDP-PORT',
+										'IP-TCP-PORT',
+										'IPv6',
+										'IPv6-SUBNET',
+										'IPv6-GATEWAY',
+										'IPv6-IGMPv3Src',
+										'IP-IGMPv3Src',
+										'IP-ClassOfTraffic',
+									],
+									pattern: ['[A-Z][0-9A-Za-z\\-]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
+								},
+							},
+						},
+						identityFields: ['type'],
+					},
+					children: {
+						sequence: [],
+						details: {},
+					},
+					textContent: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
+				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [{ kind: 'element', name: 'P', minOccurs: 1 }],
 		},
 	},
 	AllocationRole: {
@@ -185,27 +344,19 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'name', 'originUuid', 'templateUuid', 'uuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'FunctionRef'],
@@ -217,7 +368,30 @@ export const DEFINITION = {
 				},
 				FunctionRef: {},
 			},
-			choices: [{ options: ['FunctionRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionRef' }] },
+			],
 		},
 	},
 	AllocationRoleRef: {
@@ -228,14 +402,14 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['allocationRole', 'allocationRoleUuid', 'desc'],
 			details: {
-				allocationRole: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
-				allocationRoleUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+				allocationRole: {
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['.+(/.+)*'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				allocationRoleUuid: {
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
+				},
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -248,7 +422,37 @@ export const DEFINITION = {
 				},
 				FunctionalVariantRef: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+			],
 		},
 	},
 	AnalogueWiringParameters: {
@@ -258,16 +462,18 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'dsgInp', 'fctInp', 'id', 'inpNam', 'inpRef'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				dsgInp: { facets: { whiteSpace: 'replace' } },
-				fctInp: { facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				dsgInp: { type: { builtin: 'normalizedString' } },
+				fctInp: { type: { builtin: 'normalizedString' } },
 				id: {
+					type: { builtin: 'token' },
 					required: true,
-					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
 				},
-				inpNam: { facets: { whiteSpace: 'replace' } },
-				inpRef: { facets: { whiteSpace: 'replace' } },
+				inpNam: { type: { builtin: 'normalizedString' } },
+				inpRef: { type: { builtin: 'normalizedString' } },
 			},
+			identityFields: ['id'],
 		},
 		children: {
 			sequence: ['Text'],
@@ -278,6 +484,43 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+											],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	AnalogueWiringParametersRef: {
@@ -289,8 +532,8 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'id'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				id: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				id: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 			},
 		},
 		children: {
@@ -303,6 +546,29 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	Application: {
 		tag: 'Application',
@@ -313,30 +579,23 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'name', 'originUuid', 'templateUuid', 'type', 'uuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				type: {
-					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
+					type: { builtin: 'token' },
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -371,6 +630,41 @@ export const DEFINITION = {
 				ApplicationSclRef: { maxOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'FunctionRole', minOccurs: 1 },
+						{ kind: 'element', name: 'FunctionalVariant' },
+						{ kind: 'element', name: 'FunctionalVariantGroup' },
+						{ kind: 'element', name: 'AllocationRoleRef' },
+						{ kind: 'element', name: 'ApplicationSclRef', maxOccurs: 1 },
+					],
+				},
+			],
+		},
 	},
 	ApplicationSclRef: {
 		tag: 'ApplicationSclRef',
@@ -395,6 +689,28 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+						{ kind: 'element', name: 'Text', maxOccurs: 1 },
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'SclFileReference', maxOccurs: 1 }],
+				},
+			],
+		},
 	},
 	Association: {
 		tag: 'Association',
@@ -416,14 +732,17 @@ export const DEFINITION = {
 			],
 			details: {
 				apRef: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32 },
 				},
 				associationID: {
-					facets: { pattern: ['[0-9A-Za-z]+'], minLength: 1, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[0-9A-Za-z]+'], minLength: 1 },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				iedName: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: [
@@ -437,22 +756,281 @@ export const DEFINITION = {
 							'[A-Za-z_:][-.:0-9A-Z_a-z]*',
 						],
 						maxLength: 64,
-						whiteSpace: 'collapse',
 					},
 				},
 				initiator: {
+					type: { builtin: 'token' },
 					default: 'client',
-					facets: { enumeration: ['client', 'server'], whiteSpace: 'collapse' },
+					facets: { enumeration: ['client', 'server'] },
 				},
 				kind: {
+					type: { builtin: 'token' },
 					required: true,
-					facets: { enumeration: ['pre-established', 'predefined'], whiteSpace: 'collapse' },
+					facets: { enumeration: ['pre-established', 'predefined'] },
 				},
 				ldInst: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				lnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -638,22 +1216,25 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
 				lnInst: {
+					type: {
+						union: [
+							{ builtin: 'normalizedString', facets: { pattern: ['[0-9]{1,12}'] } },
+							{ builtin: 'normalizedString', facets: { maxLength: 0 } },
+						],
+					},
 					required: true,
-					facets: { pattern: ['[0-9]{1,12}'], maxLength: 0, whiteSpace: 'replace' },
+					facets: { pattern: ['[0-9]{1,12}'], maxLength: 0 },
 				},
 				lnUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				prefix: {
+					type: { builtin: 'normalizedString' },
 					default: '',
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
 			},
 			identityFields: ['associationID'],
@@ -670,11 +1251,11 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['certificate', 'none', 'password', 'strong', 'weak'],
 			details: {
-				certificate: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				none: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				password: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				strong: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				weak: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				certificate: { type: { builtin: 'boolean' }, default: 'false' },
+				none: { type: { builtin: 'boolean' }, default: 'true' },
+				password: { type: { builtin: 'boolean' }, default: 'false' },
+				strong: { type: { builtin: 'boolean' }, default: 'false' },
+				weak: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -688,8 +1269,11 @@ export const DEFINITION = {
 		parents: ['DAType'],
 		attributes: {
 			sequence: ['bType', 'count', 'desc', 'name', 'sAddr', 'type', 'valImport', 'valKind'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				bType: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						enumeration: [
@@ -733,10 +1317,43 @@ export const DEFINITION = {
 							'Octet16',
 						],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 				count: {
+					type: {
+						union: [
+							{ builtin: 'unsignedInt' },
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: [
+												'T',
+												'Test',
+												'Check',
+												'SIUnit',
+												'Oper',
+												'SBO',
+												'SBOw',
+												'Cancel',
+												'Addr',
+												'PRIORITY',
+												'VID',
+												'APPID',
+												'TransportInUse',
+												'IPClassOfTraffic',
+												'IPv6FlowLabel',
+												'IPAddressLength',
+												'IPAddress',
+											],
+										},
+									},
+									{ builtin: 'Name', facets: { pattern: ['[a-z][0-9A-Za-z]*'], maxLength: 60 } },
+								],
+							},
+						],
+					},
 					default: '0',
 					facets: {
 						enumeration: [
@@ -762,11 +1379,39 @@ export const DEFINITION = {
 						maxLength: 60,
 						minInclusive: 0,
 						maxInclusive: 4294967295,
-						whiteSpace: 'collapse',
 					},
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				name: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									enumeration: [
+										'T',
+										'Test',
+										'Check',
+										'SIUnit',
+										'Oper',
+										'SBO',
+										'SBOw',
+										'Cancel',
+										'Addr',
+										'PRIORITY',
+										'VID',
+										'APPID',
+										'TransportInUse',
+										'IPClassOfTraffic',
+										'IPv6FlowLabel',
+										'IPAddressLength',
+										'IPAddress',
+									],
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['[a-z][0-9A-Za-z]*'], maxLength: 60 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -790,18 +1435,17 @@ export const DEFINITION = {
 						],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*', '[a-z][0-9A-Za-z]*'],
 						maxLength: 60,
-						whiteSpace: 'collapse',
 					},
 				},
-				sAddr: { facets: { maxLength: 255, whiteSpace: 'replace' } },
-				type: { facets: { whiteSpace: 'replace' } },
-				valImport: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				sAddr: { type: { builtin: 'normalizedString' }, facets: { maxLength: 255 } },
+				type: { type: { builtin: 'normalizedString' } },
+				valImport: { type: { builtin: 'boolean' }, default: 'false' },
 				valKind: {
+					type: { builtin: 'Name' },
 					default: 'Set',
 					facets: {
 						enumeration: ['Spec', 'Conf', 'RO', 'Set'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 			},
@@ -830,6 +1474,46 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+										{ kind: 'element', name: 'Private' },
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'Val' },
+								{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	Bay: {
 		tag: 'Bay',
@@ -837,22 +1521,19 @@ export const DEFINITION = {
 		parents: ['VoltageLevel'],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -1006,6 +1687,82 @@ export const DEFINITION = {
 				Variable: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [
+														{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+														{ kind: 'element', name: 'Text', maxOccurs: 1 },
+														{ kind: 'element', name: 'Private' },
+													],
+												},
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+												},
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'LNode' }],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'PowerTransformer' },
+								{ kind: 'element', name: 'GeneralEquipment' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'ConductingEquipment' },
+						{ kind: 'element', name: 'ConnectivityNode' },
+						{ kind: 'element', name: 'Function' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -1040,7 +1797,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
-		textContent: { facets: { whiteSpace: 'replace' } },
+		textContent: { type: { builtin: 'normalizedString' } },
 	},
 	BehaviorDescription: {
 		tag: 'BehaviorDescription',
@@ -1072,37 +1829,34 @@ export const DEFINITION = {
 				'uuid',
 			],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				fileReference: { facets: { whiteSpace: 'collapse' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				fileReference: { type: { builtin: 'anyURI' } },
 				format: {
-					facets: {
-						enumeration: ['IEC 61131', 'Textual', 'Graphic'],
-						maxLength: 64,
-						whiteSpace: 'replace',
+					type: {
+						union: [
+							{
+								builtin: 'normalizedString',
+								facets: { enumeration: ['IEC 61131', 'Textual', 'Graphic'] },
+							},
+							{ builtin: 'normalizedString', facets: { maxLength: 64 } },
+						],
 					},
+					facets: { enumeration: ['IEC 61131', 'Textual', 'Graphic'], maxLength: 64 },
 				},
-				isSimulation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				isSpecification: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				isSimulation: { type: { builtin: 'boolean' }, default: 'false' },
+				isSpecification: { type: { builtin: 'boolean' }, default: 'true' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'InputVar', 'OutputVar', 'BehaviorReference'],
@@ -1116,6 +1870,39 @@ export const DEFINITION = {
 				OutputVar: {},
 				BehaviorReference: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'InputVar' },
+						{ kind: 'element', name: 'OutputVar' },
+						{ kind: 'element', name: 'BehaviorReference' },
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -1134,14 +1921,14 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['behaviorDescription', 'behaviorDescriptionUuid', 'desc'],
 			details: {
-				behaviorDescription: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
-				behaviorDescriptionUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+				behaviorDescription: {
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['.+(/.+)*'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				behaviorDescriptionUuid: {
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
+				},
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -1156,9 +1943,43 @@ export const DEFINITION = {
 				InputVarRef: {},
 				OutputVarRef: {},
 			},
-			choices: [
-				{ options: ['FunctionalVariantRef'] },
-				{ options: ['InputVarRef', 'OutputVarRef'] },
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+				{
+					kind: 'choice',
+					particles: [
+						{ kind: 'element', name: 'InputVarRef' },
+						{ kind: 'element', name: 'OutputVarRef' },
+					],
+				},
 			],
 		},
 	},
@@ -1171,14 +1992,14 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['behaviorReference', 'behaviorUuid', 'desc'],
 			details: {
-				behaviorReference: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
-				behaviorUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+				behaviorReference: {
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['.+(/.+)*'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				behaviorUuid: {
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
+				},
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -1190,6 +2011,29 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	BinaryWiringParameters: {
@@ -1213,48 +2057,48 @@ export const DEFINITION = {
 				'vInOn',
 			],
 			details: {
-				debTm: { facets: { whiteSpace: 'collapse' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				fastOutput: { facets: { whiteSpace: 'collapse' } },
+				debTm: { type: { builtin: 'integer' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				fastOutput: { type: { builtin: 'boolean' } },
 				id: {
+					type: { builtin: 'token' },
 					required: true,
-					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
 				},
-				inpNam: { facets: { whiteSpace: 'replace' } },
-				inpRef: { facets: { whiteSpace: 'replace' } },
-				outNam: { facets: { whiteSpace: 'replace' } },
+				inpNam: { type: { builtin: 'normalizedString' } },
+				inpRef: { type: { builtin: 'normalizedString' } },
+				outNam: { type: { builtin: 'normalizedString' } },
 				outOffDl: {
+					type: { builtin: 'float' },
 					facets: {
 						pattern: ['(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?|INF|-INF|NaN'],
-						whiteSpace: 'collapse',
 					},
 				},
 				outOnDl: {
+					type: { builtin: 'float' },
 					facets: {
 						pattern: ['(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?|INF|-INF|NaN'],
-						whiteSpace: 'collapse',
 					},
 				},
-				outRef: { facets: { whiteSpace: 'replace' } },
+				outRef: { type: { builtin: 'normalizedString' } },
 				outTyp: {
-					facets: {
-						enumeration: ['Normally open', 'Normally closed', 'Change over'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { enumeration: ['Normally open', 'Normally closed', 'Change over'] },
 				},
 				vInOff: {
+					type: { builtin: 'float' },
 					facets: {
 						pattern: ['(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?|INF|-INF|NaN'],
-						whiteSpace: 'collapse',
 					},
 				},
 				vInOn: {
+					type: { builtin: 'float' },
 					facets: {
 						pattern: ['(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?|INF|-INF|NaN'],
-						whiteSpace: 'collapse',
 					},
 				},
 			},
+			identityFields: ['id'],
 		},
 		children: {
 			sequence: ['Text'],
@@ -1265,6 +2109,43 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+											],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	BinaryWiringParametersRef: {
@@ -1276,8 +2157,8 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'id'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				id: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				id: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 			},
 		},
 		children: {
@@ -1290,6 +2171,29 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	BitRate: {
 		tag: 'BitRate',
@@ -1299,6 +2203,7 @@ export const DEFINITION = {
 			sequence: ['multiplier', 'unit'],
 			details: {
 				multiplier: {
+					type: { builtin: 'normalizedString' },
 					fixed: 'M',
 					facets: {
 						enumeration: [
@@ -1324,17 +2229,16 @@ export const DEFINITION = {
 							'Z',
 							'Y',
 						],
-						whiteSpace: 'replace',
 					},
 				},
-				unit: { fixed: 'b/s', facets: { whiteSpace: 'replace' } },
+				unit: { type: { builtin: 'normalizedString' }, fixed: 'b/s' },
 			},
 		},
 		children: {
 			sequence: [],
 			details: {},
 		},
-		textContent: { facets: { whiteSpace: 'collapse' } },
+		textContent: { type: { builtin: 'decimal' } },
 	},
 	CheckoutID: {
 		tag: 'CheckoutID',
@@ -1354,28 +2258,38 @@ export const DEFINITION = {
 				'version',
 				'when',
 			],
+			any: true,
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				engRight: { facets: { enumeration: ['full', 'fix', 'dataflow'], whiteSpace: 'replace' } },
-				fileName: { facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				engRight: {
+					type: { builtin: 'normalizedString' },
+					facets: { enumeration: ['full', 'fix', 'dataflow'] },
+				},
+				fileName: { type: { builtin: 'normalizedString' } },
 				fileType: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: { enumeration: ['ICD', 'IID', 'CID', 'SSD', 'SCD', 'SED'] },
+							},
+							{ builtin: 'normalizedString', facets: { pattern: ['[A-Z]{3}'] } },
+						],
+						facets: { enumeration: ['SED', 'SCC'] },
+					},
 					required: true,
 					facets: {
 						enumeration: ['SED', 'SCC', 'ICD', 'IID', 'CID', 'SSD', 'SCD'],
 						pattern: ['[A-Z]{3}', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'replace',
 					},
 				},
 				fileUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				headerId: { facets: { whiteSpace: 'replace' } },
-				revision: { required: true, facets: { whiteSpace: 'replace' } },
-				version: { required: true, facets: { whiteSpace: 'replace' } },
-				when: { facets: { whiteSpace: 'replace' } },
+				headerId: { type: { builtin: 'normalizedString' } },
+				revision: { type: { builtin: 'normalizedString' }, required: true },
+				version: { type: { builtin: 'normalizedString' }, required: true },
+				when: { type: { builtin: 'normalizedString' } },
 			},
 		},
 		children: {
@@ -1383,6 +2297,12 @@ export const DEFINITION = {
 			details: {
 				SubCheckoutID: { maxOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [{ kind: 'element', name: 'SubCheckoutID', maxOccurs: 1 }],
 		},
 	},
 	ClientLN: {
@@ -1393,11 +2313,13 @@ export const DEFINITION = {
 			sequence: ['apRef', 'desc', 'iedName', 'ldInst', 'lnClass', 'lnInst', 'lnUuid', 'prefix'],
 			details: {
 				apRef: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32 },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				iedName: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: [
@@ -1411,14 +2333,271 @@ export const DEFINITION = {
 							'[A-Za-z_:][-.:0-9A-Z_a-z]*',
 						],
 						maxLength: 64,
-						whiteSpace: 'collapse',
 					},
 				},
 				ldInst: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				lnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -1604,22 +2783,25 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
 				lnInst: {
+					type: {
+						union: [
+							{ builtin: 'normalizedString', facets: { pattern: ['[0-9]{1,12}'] } },
+							{ builtin: 'normalizedString', facets: { maxLength: 0 } },
+						],
+					},
 					required: true,
-					facets: { pattern: ['[0-9]{1,12}'], maxLength: 0, whiteSpace: 'replace' },
+					facets: { pattern: ['[0-9]{1,12}'], maxLength: 0 },
 				},
 				lnUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				prefix: {
+					type: { builtin: 'normalizedString' },
 					default: '',
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
 			},
 		},
@@ -1651,25 +2833,33 @@ export const DEFINITION = {
 				'unbufReport',
 			],
 			details: {
-				acceptServerInitiatedAssociation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				bufReport: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				goose: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				gsse: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				acceptServerInitiatedAssociation: { type: { builtin: 'boolean' }, default: 'false' },
+				bufReport: { type: { builtin: 'boolean' }, default: 'false' },
+				goose: { type: { builtin: 'boolean' }, default: 'false' },
+				gsse: { type: { builtin: 'boolean' }, default: 'false' },
 				maxAttributes: {
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
-				maxGOOSE: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				maxGOOSE: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 				maxReports: {
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
-				maxSMV: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
-				noIctBinding: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				rGOOSE: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				rSV: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				readLog: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				supportsLdName: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sv: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				unbufReport: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				maxSMV: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
+				noIctBinding: { type: { builtin: 'boolean' }, default: 'false' },
+				rGOOSE: { type: { builtin: 'boolean' }, default: 'false' },
+				rSV: { type: { builtin: 'boolean' }, default: 'false' },
+				readLog: { type: { builtin: 'boolean' }, default: 'false' },
+				supportsLdName: { type: { builtin: 'boolean' }, default: 'false' },
+				sv: { type: { builtin: 'boolean' }, default: 'false' },
+				unbufReport: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -1681,6 +2871,17 @@ export const DEFINITION = {
 				Security: { maxOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{ kind: 'element', name: 'TimeSyncProt', maxOccurs: 1 },
+				{ kind: 'element', name: 'GOOSEMcSecurity', maxOccurs: 1 },
+				{ kind: 'element', name: 'SVMcSecurity', maxOccurs: 1 },
+				{ kind: 'element', name: 'Security', maxOccurs: 1 },
+			],
+		},
 	},
 	CommProt: {
 		tag: 'CommProt',
@@ -1689,7 +2890,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['ipv6'],
 			details: {
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				ipv6: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -1703,8 +2904,10 @@ export const DEFINITION = {
 		parents: ['SCL'],
 		attributes: {
 			sequence: ['desc'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -1730,6 +2933,36 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'SubNetwork', minOccurs: 1 }],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -1748,7 +2981,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -1763,7 +2996,37 @@ export const DEFINITION = {
 				SMVParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				ReportParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
-			choices: [{ options: ['GooseParameters', 'ReportParameters', 'SMVParameters'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'choice',
+					particles: [
+						{ kind: 'element', name: 'GooseParameters', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'SMVParameters', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'ReportParameters', minOccurs: 1, maxOccurs: 1 },
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -1788,16 +3051,53 @@ export const DEFINITION = {
 		],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'type', 'uuid', 'virtual'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				type: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									enumeration: [
+										'CBR',
+										'DIS',
+										'VTR',
+										'CTR',
+										'GEN',
+										'CAP',
+										'REA',
+										'CON',
+										'MOT',
+										'EFN',
+										'PSH',
+										'BAT',
+										'BSH',
+										'CAB',
+										'GIL',
+										'LIN',
+										'RES',
+										'RRC',
+										'SAR',
+										'TCF',
+										'TCR',
+										'IFL',
+										'FAN',
+										'SCR',
+										'SMC',
+										'PMP',
+									],
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['E[A-Z]*'], minLength: 3 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -1830,17 +3130,14 @@ export const DEFINITION = {
 						],
 						pattern: ['E[A-Z]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						minLength: 3,
-						whiteSpace: 'collapse',
 					},
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				virtual: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				virtual: { type: { builtin: 'boolean' }, default: 'false' },
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -1922,6 +3219,85 @@ export const DEFINITION = {
 				Variable: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [
+														{
+															kind: 'sequence',
+															minOccurs: 1,
+															maxOccurs: 1,
+															particles: [
+																{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+																{ kind: 'element', name: 'Text', maxOccurs: 1 },
+																{ kind: 'element', name: 'Private' },
+															],
+														},
+														{
+															kind: 'sequence',
+															minOccurs: 1,
+															maxOccurs: 1,
+															particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+														},
+													],
+												},
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [{ kind: 'element', name: 'LNode' }],
+												},
+											],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'Terminal', maxOccurs: 2 },
+								{ kind: 'element', name: 'SubEquipment' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'EqFunction' }],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -1954,18 +3330,15 @@ export const DEFINITION = {
 			sequence: ['max', 'maxAttributes', 'modify'],
 			details: {
 				max: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 				maxAttributes: {
-					facets: {
-						minInclusive: 0,
-						maxInclusive: 4294967295,
-						minExclusive: 0,
-						whiteSpace: 'collapse',
-					},
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295, minExclusive: 0 },
 				},
-				modify: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				modify: { type: { builtin: 'boolean' }, default: 'true' },
 			},
 		},
 		children: {
@@ -1980,8 +3353,8 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['fixLnInst', 'fixPrefix'],
 			details: {
-				fixLnInst: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				fixPrefix: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				fixLnInst: { type: { builtin: 'boolean' }, default: 'false' },
+				fixPrefix: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -2009,17 +3382,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -2039,13 +3412,9 @@ export const DEFINITION = {
 			sequence: ['max'],
 			details: {
 				max: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: {
-						minInclusive: 0,
-						maxInclusive: 4294967295,
-						minExclusive: 0,
-						whiteSpace: 'collapse',
-					},
+					facets: { minInclusive: 0, maxInclusive: 4294967295, minExclusive: 0 },
 				},
 			},
 		},
@@ -2061,20 +3430,24 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['bufConf', 'bufMode', 'max', 'maxBuf'],
 			details: {
-				bufConf: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				bufConf: { type: { builtin: 'boolean' }, default: 'false' },
 				bufMode: {
+					type: { builtin: 'Name' },
 					default: 'both',
 					facets: {
 						enumeration: ['unbuffered', 'buffered', 'both'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 				max: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
-				maxBuf: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				maxBuf: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 			},
 		},
 		children: {
@@ -2089,7 +3462,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['resvTms'],
 			details: {
-				resvTms: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				resvTms: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -2105,13 +3478,9 @@ export const DEFINITION = {
 			sequence: ['max'],
 			details: {
 				max: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: {
-						minInclusive: 0,
-						maxInclusive: 4294967295,
-						minExclusive: 0,
-						whiteSpace: 'collapse',
-					},
+					facets: { minInclusive: 0, maxInclusive: 4294967295, minExclusive: 0 },
 				},
 			},
 		},
@@ -2126,19 +3495,20 @@ export const DEFINITION = {
 		parents: ['SubNetwork'],
 		attributes: {
 			sequence: ['apName', 'apUuid', 'desc', 'iedName', 'redProt'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				apName: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32 },
 				},
 				apUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				iedName: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: [
@@ -2152,14 +3522,13 @@ export const DEFINITION = {
 							'[A-Za-z_:][-.:0-9A-Z_a-z]*',
 						],
 						maxLength: 64,
-						whiteSpace: 'collapse',
 					},
 				},
 				redProt: {
+					type: { builtin: 'Name' },
 					facets: {
 						enumeration: ['none', 'hsr', 'prp', 'rstp'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 			},
@@ -2185,6 +3554,41 @@ export const DEFINITION = {
 					],
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'Address', maxOccurs: 1 },
+						{ kind: 'element', name: 'GSE' },
+						{ kind: 'element', name: 'SMV' },
+						{ kind: 'element', name: 'PhysConn' },
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -2213,24 +3617,24 @@ export const DEFINITION = {
 		parents: ['Bay', 'Line'],
 		attributes: {
 			sequence: ['desc', 'name', 'pathName', 'templateUuid', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
-				pathName: { required: true, facets: { pattern: ['.+/.+(/.+)*'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
+				pathName: {
+					type: { builtin: 'normalizedString' },
+					required: true,
+					facets: { pattern: ['.+/.+(/.+)*'] },
+				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
-			identityFields: ['pathName'],
+			identityFields: ['name', 'pathName'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Labels', 'LNode', 'ProcessResources'],
@@ -2255,6 +3659,49 @@ export const DEFINITION = {
 				LNode: {},
 				ProcessResources: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+										{ kind: 'element', name: 'Private' },
+									],
+								},
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'LNode' }],
+						},
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -2295,55 +3742,35 @@ export const DEFINITION = {
 				'uuid',
 			],
 			details: {
-				controlled: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				controlled: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				controlledDoName: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
 				controlledLNodeUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				extCtrlAddr: { facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				extCtrlAddr: { type: { builtin: 'normalizedString' } },
 				extCtrlUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				output: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
-				outputInst: { default: '1', facets: { minInclusive: 1, whiteSpace: 'collapse' } },
-				pDO: { facets: { whiteSpace: 'replace' } },
-				pLN: { facets: { whiteSpace: 'replace' } },
-				resourceName: { facets: { whiteSpace: 'replace' } },
+				output: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
+				outputInst: { type: { builtin: 'integer' }, default: '1', facets: { minInclusive: 1 } },
+				pDO: { type: { builtin: 'normalizedString' } },
+				pLN: { type: { builtin: 'normalizedString' } },
+				resourceName: { type: { builtin: 'normalizedString' } },
 				resourceUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['output', 'outputInst'],
@@ -2359,8 +3786,43 @@ export const DEFINITION = {
 				BinaryWiringParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				AnalogueWiringParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
-			choices: [
-				{ options: ['AnalogueWiringParametersRef', 'BinaryWiringParametersRef'], maxOccurs: 1 },
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+					],
+				},
+				{
+					kind: 'choice',
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'BinaryWiringParametersRef', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'AnalogueWiringParametersRef', minOccurs: 1, maxOccurs: 1 },
+					],
+				},
 			],
 		},
 	},
@@ -2371,15 +3833,16 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'outputName', 'pLN', 'resourceName', 'resourceUuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				outputName: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
-				pLN: { facets: { whiteSpace: 'replace' } },
-				resourceName: { facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				outputName: {
+					type: { builtin: 'normalizedString' },
+					required: true,
+					facets: { minLength: 1 },
+				},
+				pLN: { type: { builtin: 'normalizedString' } },
+				resourceName: { type: { builtin: 'normalizedString' } },
 				resourceUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -2394,8 +3857,36 @@ export const DEFINITION = {
 				BinaryWiringParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				AnalogueWiringParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
-			choices: [
-				{ options: ['AnalogueWiringParametersRef', 'BinaryWiringParametersRef'], maxOccurs: 1 },
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'choice',
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'BinaryWiringParametersRef', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'AnalogueWiringParametersRef', minOccurs: 1, maxOccurs: 1 },
+					],
+				},
 			],
 		},
 	},
@@ -2418,8 +3909,11 @@ export const DEFINITION = {
 				'valImport',
 				'valKind',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				bType: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						enumeration: [
@@ -2463,10 +3957,43 @@ export const DEFINITION = {
 							'Octet16',
 						],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 				count: {
+					type: {
+						union: [
+							{ builtin: 'unsignedInt' },
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: [
+												'T',
+												'Test',
+												'Check',
+												'SIUnit',
+												'Oper',
+												'SBO',
+												'SBOw',
+												'Cancel',
+												'Addr',
+												'PRIORITY',
+												'VID',
+												'APPID',
+												'TransportInUse',
+												'IPClassOfTraffic',
+												'IPv6FlowLabel',
+												'IPAddressLength',
+												'IPAddress',
+											],
+										},
+									},
+									{ builtin: 'Name', facets: { pattern: ['[a-z][0-9A-Za-z]*'], maxLength: 60 } },
+								],
+							},
+						],
+					},
 					default: '0',
 					facets: {
 						enumeration: [
@@ -2492,13 +4019,37 @@ export const DEFINITION = {
 						maxLength: 60,
 						minInclusive: 0,
 						maxInclusive: 4294967295,
-						whiteSpace: 'collapse',
 					},
 				},
-				dchg: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				dupd: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				dchg: { type: { builtin: 'boolean' }, default: 'false' },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				dupd: { type: { builtin: 'boolean' }, default: 'false' },
 				fc: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									enumeration: [
+										'ST',
+										'MX',
+										'CO',
+										'SP',
+										'SG',
+										'SE',
+										'SV',
+										'CF',
+										'DC',
+										'EX',
+										'SR',
+										'BL',
+										'OR',
+									],
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], minLength: 1, maxLength: 2 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -2519,10 +4070,38 @@ export const DEFINITION = {
 						pattern: ['[A-Z]+', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						minLength: 1,
 						maxLength: 2,
-						whiteSpace: 'collapse',
 					},
 				},
 				name: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									enumeration: [
+										'T',
+										'Test',
+										'Check',
+										'SIUnit',
+										'Oper',
+										'SBO',
+										'SBOw',
+										'Cancel',
+										'Addr',
+										'PRIORITY',
+										'VID',
+										'APPID',
+										'TransportInUse',
+										'IPClassOfTraffic',
+										'IPv6FlowLabel',
+										'IPAddressLength',
+										'IPAddress',
+									],
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['[a-z][0-9A-Za-z]*'], maxLength: 60 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -2546,22 +4125,22 @@ export const DEFINITION = {
 						],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*', '[a-z][0-9A-Za-z]*'],
 						maxLength: 60,
-						whiteSpace: 'collapse',
 					},
 				},
-				qchg: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sAddr: { facets: { maxLength: 255, whiteSpace: 'replace' } },
-				type: { facets: { whiteSpace: 'replace' } },
-				valImport: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				qchg: { type: { builtin: 'boolean' }, default: 'false' },
+				sAddr: { type: { builtin: 'normalizedString' }, facets: { maxLength: 255 } },
+				type: { type: { builtin: 'normalizedString' } },
+				valImport: { type: { builtin: 'boolean' }, default: 'false' },
 				valKind: {
+					type: { builtin: 'Name' },
 					default: 'Set',
 					facets: {
 						enumeration: ['Spec', 'Conf', 'RO', 'Set'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Val', 'Labels', 'ProtNs'],
@@ -2587,6 +4166,52 @@ export const DEFINITION = {
 				ProtNs: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+										{ kind: 'element', name: 'Private' },
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'Val' },
+								{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'ProtNs' }],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -2605,10 +4230,44 @@ export const DEFINITION = {
 		parents: ['SDI', 'DOI'],
 		attributes: {
 			sequence: ['desc', 'ix', 'name', 'sAddr', 'valImport', 'valKind'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				ix: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				ix: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 				name: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									enumeration: [
+										'T',
+										'Test',
+										'Check',
+										'SIUnit',
+										'Oper',
+										'SBO',
+										'SBOw',
+										'Cancel',
+										'Addr',
+										'PRIORITY',
+										'VID',
+										'APPID',
+										'TransportInUse',
+										'IPClassOfTraffic',
+										'IPv6FlowLabel',
+										'IPAddressLength',
+										'IPAddress',
+									],
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['[a-z][0-9A-Za-z]*'], maxLength: 60 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -2632,16 +4291,15 @@ export const DEFINITION = {
 						],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*', '[a-z][0-9A-Za-z]*'],
 						maxLength: 60,
-						whiteSpace: 'collapse',
 					},
 				},
-				sAddr: { facets: { maxLength: 255, whiteSpace: 'replace' } },
-				valImport: { facets: { whiteSpace: 'collapse' } },
+				sAddr: { type: { builtin: 'normalizedString' }, facets: { maxLength: 255 } },
+				valImport: { type: { builtin: 'boolean' } },
 				valKind: {
+					type: { builtin: 'Name' },
 					facets: {
 						enumeration: ['Spec', 'Conf', 'RO', 'Set'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 			},
@@ -2670,6 +4328,39 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'Val' },
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+					],
+				},
+			],
+		},
 	},
 	DAS: {
 		tag: 'DAS',
@@ -2679,23 +4370,52 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'ix', 'mappedDaName', 'mappedLnUuid', 'name', 'valImport', 'valKind'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				ix: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				ix: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 				mappedDaName: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'(([A-Za-z][0-9A-Za-z_]{0,63})/([A-Za-z][0-9A-Za-z_]{0,63})/((LLN0|([A-Za-z][0-9A-Za-z_]{0,10})?[A-Z]{4}[0-9]{1,12}))\\.)?([A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?)\\.([a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?(\\.[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?)*)',
 						],
-						whiteSpace: 'replace',
 					},
 				},
 				mappedLnUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				name: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									enumeration: [
+										'T',
+										'Test',
+										'Check',
+										'SIUnit',
+										'Oper',
+										'SBO',
+										'SBOw',
+										'Cancel',
+										'Addr',
+										'PRIORITY',
+										'VID',
+										'APPID',
+										'TransportInUse',
+										'IPClassOfTraffic',
+										'IPv6FlowLabel',
+										'IPAddressLength',
+										'IPAddress',
+									],
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['[a-z][0-9A-Za-z]*'], maxLength: 60 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -2719,15 +4439,14 @@ export const DEFINITION = {
 						],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*', '[a-z][0-9A-Za-z]*'],
 						maxLength: 60,
-						whiteSpace: 'collapse',
 					},
 				},
-				valImport: { facets: { whiteSpace: 'collapse' } },
+				valImport: { type: { builtin: 'boolean' } },
 				valKind: {
+					type: { builtin: 'Name' },
 					facets: {
 						enumeration: ['Spec', 'Conf', 'RO', 'Set'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 			},
@@ -2775,15 +4494,37 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
-			choices: [
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
 				{
-					options: [
-						'ControllingLNode',
-						'Labels',
-						'LogParametersRef',
-						'ProcessEcho',
-						'SubscriberLNode',
-						'Val',
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'choice',
+					particles: [
+						{ kind: 'element', name: 'SubscriberLNode', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'ControllingLNode', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'ProcessEcho', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'LogParametersRef', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'Val', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
 					],
 				},
 			],
@@ -2795,13 +4536,16 @@ export const DEFINITION = {
 		parents: ['DataTypeTemplates'],
 		attributes: {
 			sequence: ['desc', 'id', 'iedType'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				id: {
+					type: { builtin: 'token' },
 					required: true,
-					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
 				},
-				iedType: { default: '', facets: { whiteSpace: 'replace' } },
+				iedType: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 			identityFields: ['id'],
 		},
@@ -2829,6 +4573,40 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'BDA', minOccurs: 1 },
+						{ kind: 'element', name: 'ProtNs' },
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -2853,19 +4631,18 @@ export const DEFINITION = {
 		parents: ['LNodeType'],
 		attributes: {
 			sequence: ['accessControl', 'desc', 'name', 'transient', 'type'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				accessControl: { facets: { whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				accessControl: { type: { builtin: 'normalizedString' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				name: {
+					type: { builtin: 'Name' },
 					required: true,
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						maxLength: 12,
-						whiteSpace: 'collapse',
-					},
+					facets: { pattern: ['[A-Z][0-9A-Za-z]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'], maxLength: 12 },
 				},
-				transient: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				type: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				transient: { type: { builtin: 'boolean' }, default: 'false' },
+				type: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 			},
 			identityFields: ['name'],
 		},
@@ -2891,6 +4668,36 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+				},
+			],
+		},
 	},
 	DOI: {
 		tag: 'DOI',
@@ -2898,17 +4705,19 @@ export const DEFINITION = {
 		parents: ['LN0', 'LN'],
 		attributes: {
 			sequence: ['accessControl', 'desc', 'ix', 'name'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				accessControl: { facets: { whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				ix: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				accessControl: { type: { builtin: 'normalizedString' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				ix: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 				name: {
+					type: { builtin: 'Name' },
 					required: true,
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						maxLength: 12,
-						whiteSpace: 'collapse',
-					},
+					facets: { pattern: ['[A-Z][0-9A-Za-z]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'], maxLength: 12 },
 				},
 			},
 			identityFields: ['name'],
@@ -2954,7 +4763,45 @@ export const DEFINITION = {
 					],
 				},
 			},
-			choices: [{ options: ['DAI', 'SDI'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'choice',
+							particles: [
+								{ kind: 'element', name: 'SDI', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'DAI', minOccurs: 1, maxOccurs: 1 },
+							],
+						},
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -2979,28 +4826,22 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'mappedDoName', 'mappedLnUuid', 'name'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				mappedDoName: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'(([A-Za-z][0-9A-Za-z_]{0,63})/([A-Za-z][0-9A-Za-z_]{0,63})/((LLN0|([A-Za-z][0-9A-Za-z_]{0,10})?[A-Z]{4}[0-9]{1,12}))\\.)?([A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?)',
 						],
-						whiteSpace: 'replace',
 					},
 				},
 				mappedLnUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				name: {
+					type: { builtin: 'Name' },
 					required: true,
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						maxLength: 12,
-						whiteSpace: 'collapse',
-					},
+					facets: { pattern: ['[A-Z][0-9A-Za-z]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'], maxLength: 12 },
 				},
 			},
 		},
@@ -3061,15 +4902,45 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
-			choices: [
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
 				{
-					options: [
-						'ControllingLNode',
-						'DAS',
-						'LogParametersRef',
-						'ProcessEcho',
-						'SDS',
-						'SubscriberLNode',
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'choice',
+							particles: [
+								{ kind: 'element', name: 'SDS', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'DAS', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'SubscriberLNode', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'ControllingLNode', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'ProcessEcho', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'LogParametersRef', minOccurs: 1, maxOccurs: 1 },
+							],
+						},
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
 					],
 				},
 			],
@@ -3095,8 +4966,75 @@ export const DEFINITION = {
 		parents: ['DataTypeTemplates'],
 		attributes: {
 			sequence: ['cdc', 'desc', 'id', 'iedType'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				cdc: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									enumeration: [
+										'SPS',
+										'DPS',
+										'INS',
+										'ENS',
+										'ACT',
+										'ACD',
+										'SEC',
+										'BCR',
+										'HST',
+										'VSS',
+										'MV',
+										'CMV',
+										'SAV',
+										'WYE',
+										'DEL',
+										'SEQ',
+										'HMV',
+										'HWYE',
+										'HDEL',
+										'SPC',
+										'DPC',
+										'INC',
+										'ENC',
+										'BSC',
+										'ISC',
+										'APC',
+										'BAC',
+										'SPG',
+										'ING',
+										'ENG',
+										'ORG',
+										'TSG',
+										'CUG',
+										'VSG',
+										'ASG',
+										'CURVE',
+										'CSG',
+										'DPL',
+										'LPL',
+										'CSD',
+										'CST',
+										'BTS',
+										'UTS',
+										'LTS',
+										'GTS',
+										'MTS',
+										'NTS',
+										'STS',
+										'CTS',
+										'OTS',
+										'VSD',
+										'ORS',
+										'TCS',
+									],
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Za-z]+'], minLength: 1, maxLength: 5 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -3157,15 +5095,15 @@ export const DEFINITION = {
 						pattern: ['[A-Za-z]+', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						minLength: 1,
 						maxLength: 5,
-						whiteSpace: 'collapse',
 					},
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				id: {
+					type: { builtin: 'token' },
 					required: true,
-					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
 				},
-				iedType: { default: '', facets: { whiteSpace: 'replace' } },
+				iedType: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 			identityFields: ['id'],
 		},
@@ -3207,7 +5145,45 @@ export const DEFINITION = {
 					],
 				},
 			},
-			choices: [{ options: ['DA', 'SDO'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'choice',
+							particles: [
+								{ kind: 'element', name: 'SDO', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'DA', minOccurs: 1, maxOccurs: 1 },
+							],
+						},
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -3238,17 +5214,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -3266,27 +5242,23 @@ export const DEFINITION = {
 		parents: ['LN0', 'LN'],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				name: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -3299,7 +5271,35 @@ export const DEFINITION = {
 				Private: {},
 				FCDA: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
-			choices: [{ options: ['FCDA'], minOccurs: 1 }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'choice',
+					minOccurs: 1,
+					particles: [{ kind: 'element', name: 'FCDA', minOccurs: 1, maxOccurs: 1 }],
+				},
+			],
 		},
 	},
 	DataSetDirectory: {
@@ -3322,17 +5322,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -3351,7 +5351,6 @@ export const DEFINITION = {
 		attributes: {
 			sequence: [],
 			details: {},
-			identityFields: ['id', 'lnClass'],
 		},
 		children: {
 			sequence: ['LNodeType', 'DOType', 'DAType', 'EnumType'],
@@ -3416,6 +5415,17 @@ export const DEFINITION = {
 					],
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{ kind: 'element', name: 'LNodeType', minOccurs: 1 },
+				{ kind: 'element', name: 'DOType', minOccurs: 1 },
+				{ kind: 'element', name: 'DAType' },
+				{ kind: 'element', name: 'EnumType' },
+			],
 		},
 		constraints: [
 			{
@@ -3496,7 +5506,10 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['max'],
 			details: {
-				max: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				max: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 			},
 		},
 		children: {
@@ -3512,18 +5525,15 @@ export const DEFINITION = {
 			sequence: ['max', 'maxAttributes', 'modify', 'xsi:type'],
 			details: {
 				max: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 				maxAttributes: {
-					facets: {
-						minInclusive: 0,
-						maxInclusive: 4294967295,
-						minExclusive: 0,
-						whiteSpace: 'collapse',
-					},
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295, minExclusive: 0 },
 				},
-				modify: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				modify: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tServiceForConfDataSet'] },
@@ -3541,11 +5551,14 @@ export const DEFINITION = {
 		parents: ['DataTypeTemplates'],
 		attributes: {
 			sequence: ['desc', 'id'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				id: {
+					type: { builtin: 'token' },
 					required: true,
-					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
 				},
 			},
 			identityFields: ['id'],
@@ -3558,6 +5571,36 @@ export const DEFINITION = {
 				Private: {},
 				EnumVal: { required: true, minOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'EnumVal', minOccurs: 1 }],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -3581,10 +5624,11 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'ord'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				ord: {
+					type: { builtin: 'int' },
 					required: true,
-					facets: { minInclusive: -2147483648, maxInclusive: 2147483647, whiteSpace: 'collapse' },
+					facets: { minInclusive: -2147483648, maxInclusive: 2147483647 },
 				},
 			},
 			identityFields: ['ord'],
@@ -3594,7 +5638,8 @@ export const DEFINITION = {
 			details: {},
 		},
 		textContent: {
-			facets: { pattern: ['[\\x00-\\x7f\\x80-\\xff]*'], maxLength: 127, whiteSpace: 'replace' },
+			type: { builtin: 'normalizedString' },
+			facets: { pattern: ['[\\x00-\\x7f\\x80-\\xff]*'], maxLength: 127 },
 		},
 	},
 	EqFunction: {
@@ -3610,21 +5655,17 @@ export const DEFINITION = {
 		],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'type', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				type: { facets: { whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' } },
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -3712,6 +5753,72 @@ export const DEFINITION = {
 				ProcessResources: {},
 				Variable: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [
+														{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+														{ kind: 'element', name: 'Text', maxOccurs: 1 },
+														{ kind: 'element', name: 'Private' },
+													],
+												},
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+												},
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'LNode' }],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'GeneralEquipment' },
+								{ kind: 'element', name: 'EqSubFunction' },
+							],
+						},
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -3740,21 +5847,17 @@ export const DEFINITION = {
 		parents: ['EqFunction', 'EqSubFunction'],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'type', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				type: { facets: { whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' } },
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -3842,6 +5945,72 @@ export const DEFINITION = {
 				ProcessResources: {},
 				Variable: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [
+														{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+														{ kind: 'element', name: 'Text', maxOccurs: 1 },
+														{ kind: 'element', name: 'Private' },
+													],
+												},
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+												},
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'LNode' }],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'GeneralEquipment' },
+								{ kind: 'element', name: 'EqSubFunction' },
+							],
+						},
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -3887,26 +6056,49 @@ export const DEFINITION = {
 				'templateUuid',
 				'uuid',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				apRef: {
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32 },
 				},
 				checkInterlock: {
+					type: { builtin: 'normalizedString' },
 					default: 'true',
-					facets: { enumeration: ['true', 'false', 'conserve'], whiteSpace: 'replace' },
+					facets: { enumeration: ['true', 'false', 'conserve'] },
 				},
 				checkSynchrocheck: {
+					type: { builtin: 'normalizedString' },
 					default: 'true',
-					facets: { enumeration: ['true', 'false', 'conserve'], whiteSpace: 'replace' },
+					facets: { enumeration: ['true', 'false', 'conserve'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				doName: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
 				iedName: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									pattern: [
+										'[A-Za-z][0-9A-Za-z_]{0,2}',
+										'[A-Za-z][0-9A-Za-z_]{4,63}',
+										'[A-MO-Za-z][0-9A-Za-z_]{3}',
+										'N[0-9A-Za-np-z_][0-9A-Za-z_]{2}',
+										'No[0-9A-Za-mo-z_][0-9A-Za-z_]',
+										'Non[0-9A-Za-df-z_]',
+										'[A-Za-z][0-9A-Za-z_]*',
+									],
+									maxLength: 64,
+								},
+							},
+							{ builtin: 'normalizedString', facets: { pattern: ['@'] } },
+						],
+					},
 					facets: {
 						pattern: [
 							'[A-Za-z][0-9A-Za-z_]{0,2}',
@@ -3920,14 +6112,271 @@ export const DEFINITION = {
 							'[A-Za-z_:][-.:0-9A-Z_a-z]*',
 						],
 						maxLength: 64,
-						whiteSpace: 'replace',
 					},
 				},
-				intAddr: { facets: { whiteSpace: 'replace' } },
+				intAddr: { type: { builtin: 'normalizedString' } },
 				ldInst: {
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				lnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					facets: {
 						enumeration: [
 							'LLN0',
@@ -4112,23 +6561,274 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
-				lnInst: { facets: { pattern: ['[0-9]{1,12}'], whiteSpace: 'replace' } },
+				lnInst: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9]{1,12}'] } },
 				lnUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				pDO: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
 				pLN: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					facets: {
 						enumeration: [
 							'LLN0',
@@ -4313,23 +7013,17 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
 				prefix: {
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -4340,6 +7034,30 @@ export const DEFINITION = {
 				Text: { maxOccurs: 1 },
 				Private: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	ExtRef: {
@@ -4372,23 +7090,43 @@ export const DEFINITION = {
 				'templateUuid',
 				'uuid',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				daName: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?(\\.[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?)*',
 						],
-						whiteSpace: 'replace',
 					},
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				doName: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
 				iedName: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									pattern: [
+										'[A-Za-z][0-9A-Za-z_]{0,2}',
+										'[A-Za-z][0-9A-Za-z_]{4,63}',
+										'[A-MO-Za-z][0-9A-Za-z_]{3}',
+										'N[0-9A-Za-np-z_][0-9A-Za-z_]{2}',
+										'No[0-9A-Za-mo-z_][0-9A-Za-z_]',
+										'Non[0-9A-Za-df-z_]',
+										'[A-Za-z][0-9A-Za-z_]*',
+									],
+									maxLength: 64,
+								},
+							},
+							{ builtin: 'normalizedString', facets: { pattern: ['@'] } },
+						],
+					},
 					facets: {
 						pattern: [
 							'[A-Za-z][0-9A-Za-z_]{0,2}',
@@ -4402,14 +7140,271 @@ export const DEFINITION = {
 							'[A-Za-z_:][-.:0-9A-Z_a-z]*',
 						],
 						maxLength: 64,
-						whiteSpace: 'replace',
 					},
 				},
-				intAddr: { facets: { whiteSpace: 'replace' } },
+				intAddr: { type: { builtin: 'normalizedString' } },
 				ldInst: {
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				lnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					facets: {
 						enumeration: [
 							'LLN0',
@@ -4594,31 +7589,282 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
-				lnInst: { facets: { pattern: ['[0-9]{1,12}'], whiteSpace: 'replace' } },
+				lnInst: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9]{1,12}'] } },
 				lnUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				pDA: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?(\\.[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?)*',
 						],
-						whiteSpace: 'replace',
 					},
 				},
 				pDO: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
 				pLN: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					facets: {
 						enumeration: [
 							'LLN0',
@@ -4803,43 +8049,298 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
 				pServT: {
+					type: { builtin: 'Name' },
 					facets: {
 						enumeration: ['Poll', 'Report', 'GOOSE', 'SMV'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 				prefix: {
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
 				serviceType: {
+					type: { builtin: 'Name' },
 					facets: {
 						enumeration: ['Poll', 'Report', 'GOOSE', 'SMV'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 				srcCBName: {
+					type: { builtin: 'Name' },
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
 				srcCBUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				srcLDInst: {
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				srcLNClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					facets: {
 						enumeration: [
 							'LLN0',
@@ -5024,24 +8525,18 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
-				srcLNInst: { facets: { pattern: ['[0-9]{1,12}'], whiteSpace: 'replace' } },
+				srcLNInst: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9]{1,12}'] } },
 				srcPrefix: {
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -5053,6 +8548,30 @@ export const DEFINITION = {
 				Private: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	FCDA: {
 		tag: 'FCDA',
@@ -5062,20 +8581,43 @@ export const DEFINITION = {
 			sequence: ['daName', 'doName', 'fc', 'ix', 'ldInst', 'lnClass', 'lnInst', 'lnUuid', 'prefix'],
 			details: {
 				daName: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?(\\.[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?)*',
 						],
-						whiteSpace: 'replace',
 					},
 				},
 				doName: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
 				fc: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									enumeration: [
+										'ST',
+										'MX',
+										'CO',
+										'SP',
+										'SG',
+										'SE',
+										'SV',
+										'CF',
+										'DC',
+										'EX',
+										'SR',
+										'BL',
+										'OR',
+									],
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], minLength: 1, maxLength: 2 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -5096,14 +8638,274 @@ export const DEFINITION = {
 						pattern: ['[A-Z]+', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						minLength: 1,
 						maxLength: 2,
-						whiteSpace: 'collapse',
 					},
 				},
-				ix: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				ix: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 				ldInst: {
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				lnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					facets: {
 						enumeration: [
 							'LLN0',
@@ -5288,19 +9090,16 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
-				lnInst: { facets: { pattern: ['[0-9]{1,12}'], whiteSpace: 'replace' } },
+				lnInst: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9]{1,12}'] } },
 				lnUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				prefix: {
+					type: { builtin: 'normalizedString' },
 					default: '',
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
 			},
 		},
@@ -5316,9 +9115,9 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['ftp', 'ftps', 'mms'],
 			details: {
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				ftp: { type: { builtin: 'boolean' }, default: 'false' },
+				ftps: { type: { builtin: 'boolean' }, default: 'false' },
+				mms: { type: { builtin: 'boolean' }, default: 'true' },
 			},
 		},
 		children: {
@@ -5332,23 +9131,20 @@ export const DEFINITION = {
 		parents: ['Bay', 'VoltageLevel', 'Substation', 'Line', 'Process'],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'type', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				type: { facets: { whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' } },
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -5460,6 +9256,66 @@ export const DEFINITION = {
 				Variable: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+												{ kind: 'element', name: 'Private' },
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+										},
+									],
+								},
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [{ kind: 'element', name: 'LNode' }],
+								},
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'SubFunction' },
+						{ kind: 'element', name: 'GeneralEquipment' },
+						{ kind: 'element', name: 'ConductingEquipment' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -5489,12 +9345,9 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['function', 'functionUuid'],
 			details: {
-				function: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				function: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				functionUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -5508,6 +9361,22 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+						{ kind: 'element', name: 'Text', maxOccurs: 1 },
+					],
+				},
+			],
+		},
 	},
 	FunctionCategory: {
 		tag: 'FunctionCategory',
@@ -5518,27 +9387,19 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'name', 'originUuid', 'templateUuid', 'uuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'SubCategory', 'FunctionCatRef'],
@@ -5552,6 +9413,38 @@ export const DEFINITION = {
 				FunctionCatRef: { required: true, minOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'SubCategory' },
+						{ kind: 'element', name: 'FunctionCatRef', minOccurs: 1 },
+					],
+				},
+			],
+		},
 	},
 	FunctionCategoryRef: {
 		tag: 'FunctionCategoryRef',
@@ -5561,13 +9454,13 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'functionCategory', 'functionCategoryUuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				functionCategory: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				functionCategory: {
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['.+(/.+)*'] },
+				},
 				functionCategoryUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -5581,7 +9474,37 @@ export const DEFINITION = {
 				},
 				FunctionalVariantRef: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+			],
 		},
 	},
 	FunctionRef: {
@@ -5592,13 +9515,10 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'function', 'functionUuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				function: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				function: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				functionUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -5613,7 +9533,43 @@ export const DEFINITION = {
 				FunctionalVariantRef: {},
 				SignalRole: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'SignalRole' }],
+				},
+			],
 		},
 	},
 	FunctionRole: {
@@ -5635,31 +9591,23 @@ export const DEFINITION = {
 			],
 			details: {
 				cardinality: {
+					type: { builtin: 'normalizedString' },
 					default: '1..1',
-					facets: { enumeration: ['0..1', '1..1', '0..n', '1..n'], whiteSpace: 'replace' },
+					facets: { enumeration: ['0..1', '1..1', '0..n', '1..n'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				max: { facets: { minInclusive: 2, whiteSpace: 'collapse' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				max: { type: { builtin: 'integer' }, facets: { minInclusive: 2 } },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				selector: { facets: { whiteSpace: 'replace' } },
+				selector: { type: { builtin: 'normalizedString' } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				type: { facets: { whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' } },
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -5674,9 +9622,50 @@ export const DEFINITION = {
 				FunctionalVariantRef: {},
 				FunctionRoleContent: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
-			choices: [
-				{ options: ['FunctionalVariantRef'] },
-				{ options: ['FunctionRoleContent'], minOccurs: 1 },
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'choice',
+							minOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'FunctionRoleContent', minOccurs: 1, maxOccurs: 1 },
+							],
+						},
+					],
+				},
 			],
 		},
 		constraints: [
@@ -5697,7 +9686,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['roleInst'],
 			details: {
-				roleInst: { default: '1', facets: { minInclusive: 1, whiteSpace: 'collapse' } },
+				roleInst: { type: { builtin: 'integer' }, default: '1', facets: { minInclusive: 1 } },
 			},
 			identityFields: ['roleInst'],
 		},
@@ -5724,15 +9713,37 @@ export const DEFINITION = {
 				FunctionCategoryRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				PowerSystemRelationRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
-			choices: [
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
 				{
-					options: [
-						'BehaviorDescriptionRef',
-						'FunctionCategoryRef',
-						'FunctionRef',
-						'PowerSystemRelationRef',
-						'ProcessResourceRef',
-						'VariableRef',
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+						{ kind: 'element', name: 'Text', maxOccurs: 1 },
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'choice',
+							particles: [
+								{ kind: 'element', name: 'FunctionRef', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'BehaviorDescriptionRef', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'ProcessResourceRef', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'VariableRef', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'FunctionCategoryRef', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'PowerSystemRelationRef', minOccurs: 1, maxOccurs: 1 },
+							],
+						},
 					],
 				},
 			],
@@ -5762,6 +9773,28 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+						{ kind: 'element', name: 'Text', maxOccurs: 1 },
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'SclFileReference', maxOccurs: 1 }],
+				},
+			],
+		},
 	},
 	FunctionTemplate: {
 		tag: 'FunctionTemplate',
@@ -5772,26 +9805,17 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'name', 'originUuid', 'templateUuid', 'type', 'uuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				type: { facets: { whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' } },
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -5879,6 +9903,52 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'LNode' }],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'SubFunctionTemplate' },
+						{ kind: 'element', name: 'GeneralEquipment' },
+						{ kind: 'element', name: 'ConductingEquipment' },
+					],
+				},
+			],
+		},
 	},
 	FunctionalSubVariant: {
 		tag: 'FunctionalSubVariant',
@@ -5888,26 +9958,17 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'isBaseline', 'name', 'originUuid', 'templateUuid', 'uuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				isBaseline: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				isBaseline: { type: { builtin: 'boolean' }, default: 'false' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -5922,7 +9983,43 @@ export const DEFINITION = {
 				FunctionalSubVariant: {},
 				VariableRef: {},
 			},
-			choices: [{ options: ['FunctionalSubVariant', 'VariableRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{
+							kind: 'choice',
+							particles: [
+								{ kind: 'element', name: 'FunctionalSubVariant' },
+								{ kind: 'element', name: 'VariableRef' },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	FunctionalVariant: {
@@ -5933,26 +10030,17 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'isBaseline', 'name', 'originUuid', 'templateUuid', 'uuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				isBaseline: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				isBaseline: { type: { builtin: 'boolean' }, default: 'false' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -5967,7 +10055,43 @@ export const DEFINITION = {
 				FunctionalSubVariant: {},
 				VariableRef: {},
 			},
-			choices: [{ options: ['FunctionalSubVariant', 'VariableRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{
+							kind: 'choice',
+							particles: [
+								{ kind: 'element', name: 'FunctionalSubVariant' },
+								{ kind: 'element', name: 'VariableRef' },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	FunctionalVariantGroup: {
@@ -5978,25 +10102,16 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'name', 'originUuid', 'templateUuid', 'uuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -6010,6 +10125,35 @@ export const DEFINITION = {
 				},
 				FunctionalVariant: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'FunctionalVariant' }],
+				},
+			],
 		},
 	},
 	FunctionalVariantRef: {
@@ -6035,17 +10179,11 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['functionalVariant', 'functionalVariantUuid', 'update'],
 			details: {
-				functionalVariant: { facets: { minLength: 1, whiteSpace: 'replace' } },
+				functionalVariant: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
 				functionalVariantUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				update: {
-					default: 'add',
-					facets: { enumeration: ['add', 'remove'], whiteSpace: 'preserve' },
-				},
+				update: { default: 'add', facets: { enumeration: ['add', 'remove'] } },
 			},
 		},
 		children: {
@@ -6058,6 +10196,22 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+						{ kind: 'element', name: 'Text', maxOccurs: 1 },
+					],
+				},
+			],
+		},
 	},
 	GOOSE: {
 		tag: 'GOOSE',
@@ -6066,13 +10220,14 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['fixedOffs', 'goose', 'max', 'rGOOSE'],
 			details: {
-				fixedOffs: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				goose: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				fixedOffs: { type: { builtin: 'boolean' }, default: 'false' },
+				goose: { type: { builtin: 'boolean' }, default: 'true' },
 				max: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
-				rGOOSE: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				rGOOSE: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -6087,8 +10242,8 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['encryption', 'signature'],
 			details: {
-				encryption: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				signature: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				encryption: { type: { builtin: 'boolean' }, default: 'false' },
+				signature: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -6102,27 +10257,25 @@ export const DEFINITION = {
 		parents: ['AccessPoint'],
 		attributes: {
 			sequence: ['desc', 'name', 'serialNumber', 'templateUuid', 'uuid', 'xferNumber'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				serialNumber: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[0-9]+'], minLength: 1, whiteSpace: 'replace' },
+					facets: { pattern: ['[0-9]+'], minLength: 1 },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				xferNumber: {
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 			},
 		},
@@ -6150,6 +10303,45 @@ export const DEFINITION = {
 				IssuerName: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'Subject', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'IssuerName', minOccurs: 1, maxOccurs: 1 },
+					],
+				},
+			],
+		},
 	},
 	GSE: {
 		tag: 'GSE',
@@ -6157,25 +10349,25 @@ export const DEFINITION = {
 		parents: ['ConnectedAP'],
 		attributes: {
 			sequence: ['cbName', 'cbUuid', 'desc', 'ldInst'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				cbName: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
 				cbUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				ldInst: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 			},
 			identityFields: ['cbName', 'ldInst'],
@@ -6190,6 +10382,52 @@ export const DEFINITION = {
 				MinTime: { maxOccurs: 1 },
 				MaxTime: { maxOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+										{ kind: 'element', name: 'Private' },
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'Address', maxOccurs: 1 }],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'MinTime', maxOccurs: 1 },
+						{ kind: 'element', name: 'MaxTime', maxOccurs: 1 },
+					],
+				},
+			],
 		},
 	},
 	GSEControl: {
@@ -6209,55 +10447,50 @@ export const DEFINITION = {
 				'type',
 				'uuid',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				appID: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[ -~]*'], minLength: 1, maxLength: 129, whiteSpace: 'replace' },
+					facets: { pattern: ['[ -~]*'], minLength: 1, maxLength: 129 },
 				},
-				confRev: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				confRev: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 				datSet: {
+					type: { builtin: 'Name' },
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				fixedOffs: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				fixedOffs: { type: { builtin: 'boolean' }, default: 'false' },
 				name: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
 				securityEnable: {
+					type: { builtin: 'normalizedString' },
 					default: 'None',
-					facets: {
-						enumeration: ['None', 'Signature', 'SignatureAndEncryption'],
-						whiteSpace: 'replace',
-					},
+					facets: { enumeration: ['None', 'Signature', 'SignatureAndEncryption'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				type: {
+					type: { builtin: 'Name' },
 					default: 'GOOSE',
-					facets: {
-						enumeration: ['GSSE', 'GOOSE'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['GSSE', 'GOOSE'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -6271,6 +10504,56 @@ export const DEFINITION = {
 				IEDName: {},
 				Protocol: { maxOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+												{ kind: 'element', name: 'Private' },
+											],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'IEDName' }],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'Protocol', maxOccurs: 1 }],
+				},
+			],
 		},
 	},
 	GSEDir: {
@@ -6293,17 +10576,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -6323,38 +10606,26 @@ export const DEFINITION = {
 			sequence: ['appID', 'cbName', 'datSet', 'dataLabel', 'kdaParticipant'],
 			details: {
 				appID: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				cbName: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				datSet: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				dataLabel: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
-				kdaParticipant: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				kdaParticipant: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -6362,6 +10633,12 @@ export const DEFINITION = {
 			details: {
 				McSecurity: { maxOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [{ kind: 'element', name: 'McSecurity', maxOccurs: 1 }],
 		},
 	},
 	GSSE: {
@@ -6386,13 +10663,12 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				bufConf: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				bufConf: { default: 'false' },
 				bufMode: {
 					default: 'both',
 					facets: {
 						enumeration: ['unbuffered', 'buffered', 'both'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 				delivery: {
@@ -6400,29 +10676,22 @@ export const DEFINITION = {
 					facets: {
 						enumeration: ['unicast', 'multicast', 'both'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
-				deliveryConf: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				fixedOffs: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				goose: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				deliveryConf: { default: 'false' },
+				fixedOffs: { default: 'false' },
+				goose: { default: 'true' },
 				max: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
-				maxAttributes: {
-					facets: {
-						minInclusive: 0,
-						maxInclusive: 4294967295,
-						minExclusive: 0,
-						whiteSpace: 'collapse',
-					},
-				},
-				maxBuf: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
-				modify: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				rGOOSE: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				rSV: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sv: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				maxAttributes: { facets: { minInclusive: 0, maxInclusive: 4294967295, minExclusive: 0 } },
+				maxBuf: { facets: { minInclusive: 0, maxInclusive: 4294967295 } },
+				modify: { default: 'true' },
+				rGOOSE: { default: 'false' },
+				rSV: { default: 'false' },
+				sv: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: {
@@ -6461,32 +10730,37 @@ export const DEFINITION = {
 		],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'type', 'uuid', 'virtual'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				type: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: { enumeration: ['AXN', 'BAT', 'MOT', 'FAN', 'FIL', 'PMP', 'TNK', 'VLV'] },
+							},
+							{ builtin: 'Name', facets: { pattern: ['E[A-Z]*'], minLength: 3 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: ['AXN', 'BAT', 'MOT', 'FAN', 'FIL', 'PMP', 'TNK', 'VLV'],
 						pattern: ['E[A-Z]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						minLength: 3,
-						whiteSpace: 'collapse',
 					},
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				virtual: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				virtual: { type: { builtin: 'boolean' }, default: 'false' },
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -6543,6 +10817,69 @@ export const DEFINITION = {
 				Variable: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [
+														{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+														{ kind: 'element', name: 'Text', maxOccurs: 1 },
+														{ kind: 'element', name: 'Private' },
+													],
+												},
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+												},
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'LNode' }],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'EqFunction' }],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -6584,17 +10921,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -6626,17 +10963,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -6668,17 +11005,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -6710,17 +11047,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -6739,18 +11076,20 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['cbName', 'desc', 'dsName', 'goId', 'id', 'maxTime', 'minTime', 'securityEnabled'],
 			details: {
-				cbName: { facets: { whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				dsName: { facets: { whiteSpace: 'replace' } },
-				goId: { facets: { whiteSpace: 'replace' } },
+				cbName: { type: { builtin: 'normalizedString' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				dsName: { type: { builtin: 'normalizedString' } },
+				goId: { type: { builtin: 'normalizedString' } },
 				id: {
+					type: { builtin: 'token' },
 					required: true,
-					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
 				},
-				maxTime: { facets: { whiteSpace: 'collapse' } },
-				minTime: { facets: { whiteSpace: 'collapse' } },
-				securityEnabled: { facets: { whiteSpace: 'collapse' } },
+				maxTime: { type: { builtin: 'decimal' } },
+				minTime: { type: { builtin: 'decimal' } },
+				securityEnabled: { type: { builtin: 'boolean' } },
 			},
+			identityFields: ['id'],
 		},
 		children: {
 			sequence: ['Text', 'L2CommParameters', 'L3IPv4CommParameters', 'L3IPv6CommParameters'],
@@ -6764,10 +11103,50 @@ export const DEFINITION = {
 				L3IPv4CommParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				L3IPv6CommParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
-			choices: [
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
 				{
-					options: ['L2CommParameters', 'L3IPv4CommParameters', 'L3IPv6CommParameters'],
+					kind: 'sequence',
+					minOccurs: 1,
 					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+											],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				{
+					kind: 'choice',
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'L2CommParameters', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'L3IPv4CommParameters', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'L3IPv6CommParameters', minOccurs: 1, maxOccurs: 1 },
+					],
 				},
 			],
 		},
@@ -6781,8 +11160,8 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'id'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				id: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				id: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 			},
 		},
 		children: {
@@ -6794,6 +11173,29 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	Header: {
@@ -6813,38 +11215,38 @@ export const DEFINITION = {
 			],
 			details: {
 				baseUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				fileType: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: { enumeration: ['ICD', 'IID', 'CID', 'SSD', 'SCD', 'SED'] },
+							},
+							{ builtin: 'normalizedString', facets: { pattern: ['[A-Z]{3}'] } },
+						],
+					},
 					facets: {
 						enumeration: ['ICD', 'IID', 'CID', 'SSD', 'SCD', 'SED'],
 						pattern: ['[A-Z]{3}', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'replace',
 					},
 				},
-				id: { required: true, facets: { whiteSpace: 'replace' } },
+				id: { type: { builtin: 'normalizedString' }, required: true },
 				nameStructure: {
+					type: { builtin: 'Name' },
 					default: 'IEDName',
-					facets: {
-						enumeration: ['IEDName'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['IEDName'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
-				revision: { default: '', facets: { whiteSpace: 'replace' } },
-				toolID: { facets: { whiteSpace: 'replace' } },
+				revision: { type: { builtin: 'normalizedString' }, default: '' },
+				toolID: { type: { builtin: 'normalizedString' } },
 				uuid: {
 					required: true,
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				version: { facets: { whiteSpace: 'replace' } },
+				version: { type: { builtin: 'normalizedString' } },
 			},
+			identityFields: ['uuid'],
 		},
 		children: {
 			sequence: ['Text', 'History', 'SourceFiles'],
@@ -6853,6 +11255,16 @@ export const DEFINITION = {
 				History: { maxOccurs: 1 },
 				SourceFiles: { maxOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{ kind: 'element', name: 'Text', maxOccurs: 1 },
+				{ kind: 'element', name: 'History', maxOccurs: 1 },
+				{ kind: 'element', name: 'SourceFiles', maxOccurs: 1 },
+			],
 		},
 		constraints: [
 			{
@@ -6880,13 +11292,18 @@ export const DEFINITION = {
 		attributes: {
 			sequence: [],
 			details: {},
-			identityFields: ['revision', 'version'],
 		},
 		children: {
 			sequence: ['Hitem'],
 			details: {
 				Hitem: { required: true, minOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [{ kind: 'element', name: 'Hitem', minOccurs: 1 }],
 		},
 	},
 	Hitem: {
@@ -6895,13 +11312,15 @@ export const DEFINITION = {
 		parents: ['History'],
 		attributes: {
 			sequence: ['revision', 'version', 'what', 'when', 'who', 'why'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				revision: { required: true, facets: { whiteSpace: 'replace' } },
-				version: { required: true, facets: { whiteSpace: 'replace' } },
-				what: { facets: { whiteSpace: 'replace' } },
-				when: { required: true, facets: { whiteSpace: 'replace' } },
-				who: { facets: { whiteSpace: 'replace' } },
-				why: { facets: { whiteSpace: 'replace' } },
+				revision: { type: { builtin: 'normalizedString' }, required: true },
+				version: { type: { builtin: 'normalizedString' }, required: true },
+				what: { type: { builtin: 'normalizedString' } },
+				when: { type: { builtin: 'normalizedString' }, required: true },
+				who: { type: { builtin: 'normalizedString' } },
+				why: { type: { builtin: 'normalizedString' } },
 			},
 			identityFields: ['revision', 'version'],
 		},
@@ -6911,6 +11330,31 @@ export const DEFINITION = {
 			details: {
 				SourceFiles: { maxOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					particles: [
+						{
+							kind: 'any',
+							namespace: ['##other'],
+							processContents: 'lax',
+							minOccurs: 1,
+							maxOccurs: 1,
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'SourceFiles', maxOccurs: 1 }],
+				},
+			],
 		},
 		textContent: {},
 	},
@@ -6933,15 +11377,19 @@ export const DEFINITION = {
 				'type',
 				'uuid',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				configVersion: { facets: { whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				configVersion: { type: { builtin: 'normalizedString' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				engRight: {
+					type: { builtin: 'normalizedString' },
 					default: 'full',
-					facets: { enumeration: ['full', 'fix', 'dataflow'], whiteSpace: 'replace' },
+					facets: { enumeration: ['full', 'fix', 'dataflow'] },
 				},
-				manufacturer: { facets: { whiteSpace: 'replace' } },
+				manufacturer: { type: { builtin: 'normalizedString' } },
 				name: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: [
@@ -6955,34 +11403,30 @@ export const DEFINITION = {
 							'[A-Za-z_:][-.:0-9A-Z_a-z]*',
 						],
 						maxLength: 64,
-						whiteSpace: 'collapse',
 					},
 				},
 				originalSclRelease: {
+					type: { builtin: 'unsignedByte' },
 					default: '1',
-					facets: { minInclusive: 0, maxInclusive: 255, minExclusive: 0, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 255, minExclusive: 0 },
 				},
 				originalSclRevision: {
+					type: { builtin: 'Name' },
 					default: 'A',
-					facets: { pattern: ['[A-Z]', '[A-Za-z_:][-.:0-9A-Z_a-z]*'], whiteSpace: 'collapse' },
+					facets: { pattern: ['[A-Z]', '[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				originalSclVersion: {
+					type: { builtin: 'normalizedString' },
 					default: '2003',
-					facets: { pattern: ['2[0-2][0-9]{2}'], minLength: 1, whiteSpace: 'replace' },
+					facets: { pattern: ['2[0-2][0-9]{2}'], minLength: 1 },
 				},
-				owner: { facets: { whiteSpace: 'replace' } },
+				owner: { type: { builtin: 'normalizedString' } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				type: { facets: { whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' } },
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -7049,6 +11493,43 @@ export const DEFINITION = {
 				},
 				CheckoutID: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'Services', maxOccurs: 1 },
+						{ kind: 'element', name: 'AccessPoint', minOccurs: 1 },
+						{ kind: 'element', name: 'KDC' },
+						{ kind: 'element', name: 'IEDSourceFiles', maxOccurs: 1 },
+						{ kind: 'element', name: 'MinRequestedSCDFiles', maxOccurs: 1 },
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -7131,25 +11612,278 @@ export const DEFINITION = {
 			sequence: ['apRef', 'apUuid', 'ldInst', 'ldUuid', 'lnClass', 'lnInst', 'lnUuid', 'prefix'],
 			details: {
 				apRef: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32 },
 				},
 				apUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				ldInst: {
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				ldUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				lnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					facets: {
 						enumeration: [
 							'LLN0',
@@ -7334,18 +12068,15 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
-				lnInst: { facets: { pattern: ['[0-9]{1,12}'], whiteSpace: 'replace' } },
+				lnInst: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9]{1,12}'] } },
 				lnUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				prefix: {
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
 			},
 		},
@@ -7354,6 +12085,7 @@ export const DEFINITION = {
 			details: {},
 		},
 		textContent: {
+			type: { builtin: 'Name' },
 			facets: {
 				pattern: [
 					'[A-Za-z][0-9A-Za-z_]{0,2}',
@@ -7366,7 +12098,6 @@ export const DEFINITION = {
 					'[A-Za-z_:][-.:0-9A-Z_a-z]*',
 				],
 				maxLength: 64,
-				whiteSpace: 'collapse',
 			},
 		},
 	},
@@ -7376,6 +12107,8 @@ export const DEFINITION = {
 		parents: ['IED'],
 		attributes: {
 			sequence: [],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {},
 		},
 		children: {
@@ -7386,6 +12119,29 @@ export const DEFINITION = {
 				Private: {},
 				SclFileReference: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+						{ kind: 'element', name: 'Text', maxOccurs: 1 },
+						{ kind: 'element', name: 'Private' },
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'SclFileReference' }],
+				},
+			],
 		},
 	},
 	InputVar: {
@@ -7407,37 +12163,30 @@ export const DEFINITION = {
 			],
 			details: {
 				daName: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?(\\.[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?)*',
 						],
-						whiteSpace: 'replace',
 					},
 				},
-				dataName: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				dataName: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				doName: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
-				inputName: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				inputName: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				inputUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				lnodeUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				value: { facets: { minLength: 1, whiteSpace: 'replace' } },
-				varName: { required: true, facets: { whiteSpace: 'replace' } },
+				value: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
+				varName: { type: { builtin: 'normalizedString' }, required: true },
 			},
+			identityFields: ['varName'],
 		},
 		children: {
 			sequence: ['Text'],
@@ -7449,6 +12198,36 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	InputVarRef: {
 		tag: 'InputVarRef',
@@ -7458,14 +12237,11 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'value', 'variable', 'variableUuid', 'xsi:type'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				value: { facets: { whiteSpace: 'replace' } },
-				variable: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				value: { type: { builtin: 'normalizedString' } },
+				variable: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				variableUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
@@ -7483,7 +12259,37 @@ export const DEFINITION = {
 				},
 				FunctionalVariantRef: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+			],
 		},
 	},
 	Inputs: {
@@ -7492,8 +12298,10 @@ export const DEFINITION = {
 		parents: ['LN0', 'LN'],
 		attributes: {
 			sequence: ['desc'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -7505,6 +12313,36 @@ export const DEFINITION = {
 				ExtRef: { required: true, minOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'ExtRef', minOccurs: 1 }],
+				},
+			],
+		},
 	},
 	IssuerName: {
 		tag: 'IssuerName',
@@ -7514,10 +12352,15 @@ export const DEFINITION = {
 			sequence: ['commonName', 'idHierarchy'],
 			details: {
 				commonName: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['none', 'CN=.+'], minLength: 4, whiteSpace: 'replace' },
+					facets: { pattern: ['none', 'CN=.+'], minLength: 4 },
 				},
-				idHierarchy: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				idHierarchy: {
+					type: { builtin: 'normalizedString' },
+					required: true,
+					facets: { minLength: 1 },
+				},
 			},
 		},
 		children: {
@@ -7533,16 +12376,15 @@ export const DEFINITION = {
 			sequence: ['apName', 'apUuid', 'iedName'],
 			details: {
 				apName: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32 },
 				},
 				apUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				iedName: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: [
@@ -7556,7 +12398,6 @@ export const DEFINITION = {
 							'[A-Za-z_:][-.:0-9A-Z_a-z]*',
 						],
 						maxLength: 64,
-						whiteSpace: 'collapse',
 					},
 				},
 			},
@@ -7573,18 +12414,18 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['appId', 'desc', 'macAddr', 'vlanId', 'vlanPriority'],
 			details: {
-				appId: { facets: { pattern: ['[0-9A-F]{4}'], whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				appId: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9A-F]{4}'] } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				macAddr: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'[0-9A-F]{2}\\-[0-9A-F]{2}\\-[0-9A-F]{2}\\-[0-9A-F]{2}\\-[0-9A-F]{2}\\-[0-9A-F]{2}',
 						],
-						whiteSpace: 'replace',
 					},
 				},
-				vlanId: { facets: { pattern: ['[0-9A-F]{3}'], whiteSpace: 'replace' } },
-				vlanPriority: { facets: { pattern: ['[0-7]'], whiteSpace: 'replace' } },
+				vlanId: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9A-F]{3}'] } },
+				vlanPriority: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-7]'] } },
 			},
 		},
 		children: {
@@ -7596,6 +12437,36 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	L3IPv4CommParameters: {
@@ -7606,25 +12477,25 @@ export const DEFINITION = {
 			sequence: ['IPv4', 'IPv4-IGMPv3Src', 'appId', 'desc', 'vlanId', 'vlanPriority'],
 			details: {
 				IPv4: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])',
 						],
-						whiteSpace: 'replace',
 					},
 				},
 				'IPv4-IGMPv3Src': {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])',
 						],
-						whiteSpace: 'replace',
 					},
 				},
-				appId: { facets: { pattern: ['[0-9A-F]{4}'], whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				vlanId: { facets: { pattern: ['[0-9A-F]{3}'], whiteSpace: 'replace' } },
-				vlanPriority: { facets: { pattern: ['[0-7]'], whiteSpace: 'replace' } },
+				appId: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9A-F]{4}'] } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				vlanId: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9A-F]{3}'] } },
+				vlanPriority: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-7]'] } },
 			},
 		},
 		children: {
@@ -7636,6 +12507,36 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	L3IPv6CommParameters: {
@@ -7645,14 +12546,18 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['IPv6', 'IPv6-IGMPv3Src', 'appId', 'desc', 'vlanId', 'vlanPriority'],
 			details: {
-				IPv6: { facets: { pattern: ['([0-9a-f]{1,4}:){7}[0-9a-f]{1,4}'], whiteSpace: 'replace' } },
-				'IPv6-IGMPv3Src': {
-					facets: { pattern: ['([0-9a-f]{1,4}:){7}[0-9a-f]{1,4}'], whiteSpace: 'replace' },
+				IPv6: {
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['([0-9a-f]{1,4}:){7}[0-9a-f]{1,4}'] },
 				},
-				appId: { facets: { pattern: ['[0-9A-F]{4}'], whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				vlanId: { facets: { pattern: ['[0-9A-F]{3}'], whiteSpace: 'replace' } },
-				vlanPriority: { facets: { pattern: ['[0-7]'], whiteSpace: 'replace' } },
+				'IPv6-IGMPv3Src': {
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['([0-9a-f]{1,4}:){7}[0-9a-f]{1,4}'] },
+				},
+				appId: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9A-F]{4}'] } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				vlanId: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9A-F]{3}'] } },
+				vlanPriority: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-7]'] } },
 			},
 		},
 		children: {
@@ -7665,6 +12570,36 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	LDevice: {
 		tag: 'LDevice',
@@ -7672,26 +12607,24 @@ export const DEFINITION = {
 		parents: ['Server'],
 		attributes: {
 			sequence: ['desc', 'inst', 'ldName', 'templateUuid', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				inst: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				ldName: {
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['inst'],
@@ -7844,6 +12777,41 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'LN0', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'LN' },
+						{ kind: 'element', name: 'AccessControl', maxOccurs: 1 },
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -7863,10 +12831,273 @@ export const DEFINITION = {
 		parents: ['LDevice', 'AccessPoint'],
 		attributes: {
 			sequence: ['desc', 'inst', 'lnClass', 'lnType', 'prefix', 'templateUuid', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				inst: { required: true, facets: { pattern: ['[0-9]{1,12}'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				inst: {
+					type: { builtin: 'normalizedString' },
+					required: true,
+					facets: { pattern: ['[0-9]{1,12}'] },
+				},
 				lnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -8052,25 +13283,19 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
-				lnType: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				lnType: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				prefix: {
+					type: { builtin: 'normalizedString' },
 					default: '',
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['inst', 'lnClass', 'prefix'],
@@ -8130,6 +13355,52 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+										{ kind: 'element', name: 'Private' },
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'DataSet' },
+								{ kind: 'element', name: 'ReportControl' },
+								{ kind: 'element', name: 'LogControl' },
+								{ kind: 'element', name: 'DOI' },
+								{ kind: 'element', name: 'Inputs', maxOccurs: 1 },
+								{ kind: 'element', name: 'Outputs', maxOccurs: 1 },
+								{ kind: 'element', name: 'Log' },
+								{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -8183,10 +13454,269 @@ export const DEFINITION = {
 		parents: ['LDevice'],
 		attributes: {
 			sequence: ['desc', 'inst', 'lnClass', 'lnType', 'templateUuid', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				inst: { required: true, fixed: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				inst: { type: { builtin: 'normalizedString' }, required: true, fixed: '' },
 				lnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					required: true,
 					fixed: 'LLN0',
 					facets: {
@@ -8373,21 +13903,14 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
-				lnType: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				lnType: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -8451,6 +13974,69 @@ export const DEFINITION = {
 				SampledValueControl: {},
 				SettingControl: { maxOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+												{ kind: 'element', name: 'Private' },
+											],
+										},
+									],
+								},
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'element', name: 'DataSet' },
+										{ kind: 'element', name: 'ReportControl' },
+										{ kind: 'element', name: 'LogControl' },
+										{ kind: 'element', name: 'DOI' },
+										{ kind: 'element', name: 'Inputs', maxOccurs: 1 },
+										{ kind: 'element', name: 'Outputs', maxOccurs: 1 },
+										{ kind: 'element', name: 'Log' },
+										{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'GSEControl' },
+								{ kind: 'element', name: 'SampledValueControl' },
+								{ kind: 'element', name: 'SettingControl', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -8561,9 +14147,31 @@ export const DEFINITION = {
 				'templateUuid',
 				'uuid',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				iedName: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									pattern: [
+										'[A-Za-z][0-9A-Za-z_]{0,2}',
+										'[A-Za-z][0-9A-Za-z_]{4,63}',
+										'[A-MO-Za-z][0-9A-Za-z_]{3}',
+										'N[0-9A-Za-np-z_][0-9A-Za-z_]{2}',
+										'No[0-9A-Za-mo-z_][0-9A-Za-z_]',
+										'Non[0-9A-Za-df-z_]',
+										'[A-Za-z][0-9A-Za-z_]*',
+									],
+									maxLength: 64,
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['None', '[A-Za-z][0-9A-Za-z_]*'] } },
+						],
+					},
 					default: 'None',
 					facets: {
 						pattern: [
@@ -8578,14 +14186,279 @@ export const DEFINITION = {
 							'[A-Za-z_:][-.:0-9A-Z_a-z]*',
 						],
 						maxLength: 64,
-						whiteSpace: 'collapse',
 					},
 				},
 				ldInst: {
+					type: {
+						union: [
+							{
+								builtin: 'normalizedString',
+								facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
+							},
+							{ builtin: 'normalizedString', facets: { maxLength: 0 } },
+						],
+					},
 					default: '',
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				lnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -8771,35 +14644,32 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
 				lnInst: {
-					default: '',
-					facets: { pattern: ['[0-9]{1,12}'], maxLength: 0, whiteSpace: 'replace' },
-				},
-				lnType: { facets: { minLength: 1, whiteSpace: 'replace' } },
-				lnUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
+					type: {
+						union: [
+							{ builtin: 'normalizedString', facets: { pattern: ['[0-9]{1,12}'] } },
+							{ builtin: 'normalizedString', facets: { maxLength: 0 } },
+						],
 					},
+					default: '',
+					facets: { pattern: ['[0-9]{1,12}'], maxLength: 0 },
+				},
+				lnType: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
+				lnUuid: {
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				prefix: {
+					type: { builtin: 'normalizedString' },
 					default: '',
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['iedName', 'ldInst', 'lnClass', 'lnInst', 'prefix'],
@@ -8840,6 +14710,36 @@ export const DEFINITION = {
 				LNodeSpecNaming: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+				},
+			],
+		},
 	},
 	LNodeDataRef: {
 		tag: 'LNodeDataRef',
@@ -8850,26 +14750,21 @@ export const DEFINITION = {
 			sequence: ['daName', 'data', 'desc', 'doName', 'lnodeUuid'],
 			details: {
 				daName: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?(\\.[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?)*',
 						],
-						whiteSpace: 'replace',
 					},
 				},
-				data: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				data: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				doName: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
 				lnodeUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -8883,7 +14778,37 @@ export const DEFINITION = {
 				},
 				FunctionalVariantRef: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+			],
 		},
 	},
 	LNodeInputRef: {
@@ -8894,13 +14819,10 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'sourceRef', 'sourceRefUuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				sourceRef: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				sourceRef: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				sourceRefUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -8914,7 +14836,37 @@ export const DEFINITION = {
 				},
 				FunctionalVariantRef: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+			],
 		},
 	},
 	LNodeInputs: {
@@ -8925,7 +14877,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -8938,6 +14890,35 @@ export const DEFINITION = {
 				},
 				SourceRef: { required: true, minOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'SourceRef', minOccurs: 1 }],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -8960,14 +14941,11 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['controlRef', 'controlRefUuid', 'desc'],
 			details: {
-				controlRef: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				controlRef: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				controlRefUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -8980,7 +14958,37 @@ export const DEFINITION = {
 				},
 				FunctionalVariantRef: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+			],
 		},
 	},
 	LNodeOutputs: {
@@ -8991,7 +14999,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -9004,6 +15012,35 @@ export const DEFINITION = {
 				},
 				ControlRef: { required: true, minOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'ControlRef', minOccurs: 1 }],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -9026,6 +15063,26 @@ export const DEFINITION = {
 			sequence: ['sIedName', 'sLdInst', 'sLnClass', 'sLnInst', 'sPrefix'],
 			details: {
 				sIedName: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									pattern: [
+										'[A-Za-z][0-9A-Za-z_]{0,2}',
+										'[A-Za-z][0-9A-Za-z_]{4,63}',
+										'[A-MO-Za-z][0-9A-Za-z_]{3}',
+										'N[0-9A-Za-np-z_][0-9A-Za-z_]{2}',
+										'No[0-9A-Za-mo-z_][0-9A-Za-z_]',
+										'Non[0-9A-Za-df-z_]',
+										'[A-Za-z][0-9A-Za-z_]*',
+									],
+									maxLength: 64,
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['None', '[A-Za-z][0-9A-Za-z_]*'] } },
+						],
+					},
 					facets: {
 						pattern: [
 							'[A-Za-z][0-9A-Za-z_]{0,2}',
@@ -9039,13 +15096,270 @@ export const DEFINITION = {
 							'[A-Za-z_:][-.:0-9A-Z_a-z]*',
 						],
 						maxLength: 64,
-						whiteSpace: 'collapse',
 					},
 				},
 				sLdInst: {
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				sLnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					facets: {
 						enumeration: [
 							'LLN0',
@@ -9230,12 +15544,12 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
-				sLnInst: { facets: { pattern: ['[0-9]{1,12}'], whiteSpace: 'replace' } },
+				sLnInst: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9]{1,12}'] } },
 				sPrefix: {
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
 			},
 		},
@@ -9249,6 +15563,22 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+						{ kind: 'element', name: 'Text', maxOccurs: 1 },
+					],
+				},
+			],
+		},
 	},
 	LNodeType: {
 		tag: 'LNodeType',
@@ -9256,14 +15586,274 @@ export const DEFINITION = {
 		parents: ['DataTypeTemplates'],
 		attributes: {
 			sequence: ['desc', 'id', 'iedType', 'lnClass'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				id: {
+					type: { builtin: 'token' },
 					required: true,
-					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
 				},
-				iedType: { default: '', facets: { whiteSpace: 'replace' } },
+				iedType: { type: { builtin: 'normalizedString' }, default: '' },
 				lnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -9449,7 +16039,6 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
 			},
@@ -9478,6 +16067,39 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'DO', minOccurs: 1 },
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -9494,10 +16116,14 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['id', 'lang'],
 			details: {
-				id: { facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' } },
+				id: {
+					type: { builtin: 'token' },
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
+				},
 				lang: {
+					type: { builtin: 'language' },
 					required: true,
-					facets: { pattern: ['[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*'], whiteSpace: 'collapse' },
+					facets: { pattern: ['[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*'] },
 				},
 			},
 			identityFields: ['id', 'lang'],
@@ -9506,7 +16132,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
-		textContent: { facets: { whiteSpace: 'replace' } },
+		textContent: { type: { builtin: 'normalizedString' } },
 	},
 	Labels: {
 		tag: 'Labels',
@@ -9553,8 +16179,10 @@ export const DEFINITION = {
 		],
 		attributes: {
 			sequence: ['desc'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -9565,6 +16193,36 @@ export const DEFINITION = {
 				Private: {},
 				Label: { required: true, minOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'Label', minOccurs: 1 }],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -9584,25 +16242,22 @@ export const DEFINITION = {
 		parents: ['SCL', 'Process'],
 		attributes: {
 			sequence: ['desc', 'name', 'nomFreq', 'numPhases', 'templateUuid', 'type', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
-				nomFreq: { facets: { minInclusive: 0, whiteSpace: 'collapse' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
+				nomFreq: { type: { builtin: 'decimal' }, facets: { minInclusive: 0 } },
 				numPhases: {
-					facets: { minInclusive: 0, maxInclusive: 255, minExclusive: 0, whiteSpace: 'collapse' },
+					type: { builtin: 'unsignedByte' },
+					facets: { minInclusive: 0, maxInclusive: 255, minExclusive: 0 },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				type: { facets: { minLength: 1, whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -9699,6 +16354,82 @@ export const DEFINITION = {
 				Variable: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [
+														{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+														{ kind: 'element', name: 'Text', maxOccurs: 1 },
+														{ kind: 'element', name: 'Private' },
+													],
+												},
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+												},
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'LNode' }],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'GeneralEquipment' },
+								{ kind: 'element', name: 'Function' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'Voltage', maxOccurs: 1 },
+						{ kind: 'element', name: 'ConductingEquipment', minOccurs: 1 },
+						{ kind: 'element', name: 'ConnectivityNode' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -9726,13 +16457,15 @@ export const DEFINITION = {
 		parents: ['LN0', 'LN'],
 		attributes: {
 			sequence: ['desc', 'name'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				name: {
+					type: { builtin: 'Name' },
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
 			},
@@ -9745,6 +16478,30 @@ export const DEFINITION = {
 				Text: { maxOccurs: 1 },
 				Private: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	LogControl: {
@@ -9768,27 +16525,289 @@ export const DEFINITION = {
 				'templateUuid',
 				'uuid',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				bufTime: {
+					type: { builtin: 'unsignedInt' },
 					default: '0',
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 				datSet: {
+					type: { builtin: 'Name' },
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				intgPd: {
+					type: { builtin: 'unsignedInt' },
 					default: '0',
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 				ldInst: {
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				lnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					default: 'LLN0',
 					facets: {
 						enumeration: [
@@ -9974,43 +16993,37 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
-				lnInst: { facets: { pattern: ['[0-9]{1,12}'], whiteSpace: 'replace' } },
-				logEna: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				lnInst: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9]{1,12}'] } },
+				logEna: { type: { builtin: 'boolean' }, default: 'true' },
 				logName: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
 				name: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
 				prefix: {
+					type: { builtin: 'normalizedString' },
 					default: '',
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
-				reasonCode: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				reasonCode: { type: { builtin: 'boolean' }, default: 'true' },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -10023,6 +17036,50 @@ export const DEFINITION = {
 				Private: {},
 				TrgOps: { maxOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+												{ kind: 'element', name: 'Private' },
+											],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'TrgOps', maxOccurs: 1 }],
+						},
+					],
+				},
+			],
 		},
 	},
 	LogParameters: {
@@ -10045,19 +17102,281 @@ export const DEFINITION = {
 				'reasonCode',
 			],
 			details: {
-				cbName: { facets: { whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				dsName: { facets: { whiteSpace: 'replace' } },
+				cbName: { type: { builtin: 'normalizedString' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				dsName: { type: { builtin: 'normalizedString' } },
 				id: {
+					type: { builtin: 'token' },
 					required: true,
-					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
 				},
-				intgPd: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
-				logEna: { facets: { whiteSpace: 'collapse' } },
+				intgPd: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
+				logEna: { type: { builtin: 'boolean' } },
 				logLdInst: {
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 				logLnClass: {
+					type: {
+						union: [
+							{
+								union: [
+									{
+										builtin: 'Name',
+										facets: {
+											enumeration: ['LLN0', 'LPHD', 'LCCH', 'LGOS', 'LSVS', 'LTIM', 'LTMS', 'LTRK'],
+											pattern: ['L[A-Z]*', 'LLN0'],
+											length: 4,
+										},
+									},
+									{
+										union: [
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['ANCR', 'ARCO', 'ARIS', 'ATCC', 'AVCO'],
+													pattern: ['A[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['CALH', 'CCGR', 'CILO', 'CPOW', 'CSWI', 'CSYN'],
+													pattern: ['C[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'FCNT',
+														'FCSD',
+														'FFIL',
+														'FLIM',
+														'FPID',
+														'FRMP',
+														'FSPT',
+														'FXOT',
+														'FXUT',
+													],
+													pattern: ['F[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['GAPC', 'GGIO', 'GLOG', 'GSAL'],
+													pattern: ['G[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['IARC', 'IHMI', 'ISAF', 'ITCI', 'ITMI', 'ITPC'],
+													pattern: ['I[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['KFAN', 'KFIL', 'KPMP', 'KTNK', 'KVLV'],
+													pattern: ['K[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'MDIF',
+														'MENV',
+														'MFLK',
+														'MHAI',
+														'MHAN',
+														'MHYD',
+														'MMDC',
+														'MMET',
+														'MMTN',
+														'MMTR',
+														'MMXN',
+														'MMXU',
+														'MSQI',
+														'MSTA',
+													],
+													pattern: ['M[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'PDIF',
+														'PDIR',
+														'PDIS',
+														'PDOP',
+														'PDUP',
+														'PFRC',
+														'PHAR',
+														'PHIZ',
+														'PIOC',
+														'PMRI',
+														'PMSS',
+														'POPF',
+														'PPAM',
+														'PRTR',
+														'PSCH',
+														'PSDE',
+														'PTEF',
+														'PTHF',
+														'PTOC',
+														'PTOF',
+														'PTOV',
+														'PTRC',
+														'PTTR',
+														'PTUC',
+														'PTUF',
+														'PTUV',
+														'PUPF',
+														'PVOC',
+														'PVPH',
+														'PZSU',
+													],
+													pattern: ['P[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['QFVR', 'QITR', 'QIUB', 'QVTR', 'QVUB', 'QVVR'],
+													pattern: ['Q[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'RADR',
+														'RBDR',
+														'RBRF',
+														'RDIR',
+														'RDRE',
+														'RDRS',
+														'RFLO',
+														'RMXU',
+														'RPSB',
+														'RREC',
+														'RSYN',
+													],
+													pattern: ['R[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'SARC',
+														'SCBR',
+														'SIMG',
+														'SIML',
+														'SLTC',
+														'SOPM',
+														'SPDC',
+														'SPTR',
+														'SSWI',
+														'STMP',
+														'SVBR',
+													],
+													pattern: ['S[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'TANG',
+														'TAXD',
+														'TCTR',
+														'TDST',
+														'TFLW',
+														'TFRQ',
+														'TGSN',
+														'THUM',
+														'TLVL',
+														'TMGF',
+														'TMVM',
+														'TPOS',
+														'TPRS',
+														'TRTN',
+														'TSND',
+														'TTMP',
+														'TTNS',
+														'TVBR',
+														'TVTR',
+														'TWPH',
+													],
+													pattern: ['T[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: { enumeration: ['XCBR', 'XSWI'], pattern: ['X[A-Z]*'], length: 4 },
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: ['YEFN', 'YLTC', 'YPSH', 'YPTR'],
+													pattern: ['Y[A-Z]*'],
+													length: 4,
+												},
+											},
+											{
+												builtin: 'Name',
+												facets: {
+													enumeration: [
+														'ZAXN',
+														'ZBAT',
+														'ZBSH',
+														'ZCAB',
+														'ZCAP',
+														'ZCON',
+														'ZGEN',
+														'ZGIL',
+														'ZLIN',
+														'ZMOT',
+														'ZREA',
+														'ZRES',
+														'ZRRC',
+														'ZSAR',
+														'ZSCR',
+														'ZSMC',
+														'ZTCF',
+														'ZTCR',
+													],
+													pattern: ['Z[A-Z]*'],
+													length: 4,
+												},
+											},
+										],
+									},
+								],
+							},
+							{ builtin: 'Name', facets: { pattern: ['[A-Z]+'], length: 4 } },
+						],
+					},
 					facets: {
 						enumeration: [
 							'LLN0',
@@ -10242,22 +17561,23 @@ export const DEFINITION = {
 							'Z[A-Z]*',
 						],
 						length: 4,
-						whiteSpace: 'collapse',
 					},
 				},
-				logLnInst: { facets: { pattern: ['[0-9]{1,12}'], whiteSpace: 'replace' } },
+				logLnInst: { type: { builtin: 'normalizedString' }, facets: { pattern: ['[0-9]{1,12}'] } },
 				logName: {
+					type: { builtin: 'Name' },
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
 				logPrefix: {
-					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Za-z][0-9A-Za-z_]*', ''], maxLength: 11 },
 				},
-				reasonCode: { facets: { whiteSpace: 'collapse' } },
+				reasonCode: { type: { builtin: 'boolean' } },
 			},
+			identityFields: ['id'],
 		},
 		children: {
 			sequence: ['Text'],
@@ -10268,6 +17588,43 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+											],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	LogParametersRef: {
@@ -10279,8 +17636,8 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'id'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				id: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				id: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 			},
 		},
 		children: {
@@ -10293,6 +17650,29 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	LogSettings: {
 		tag: 'LogSettings',
@@ -10302,44 +17682,29 @@ export const DEFINITION = {
 			sequence: ['cbName', 'datSet', 'intgPd', 'logEna', 'trgOps'],
 			details: {
 				cbName: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				datSet: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				intgPd: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				logEna: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				trgOps: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 			},
 		},
@@ -10356,6 +17721,7 @@ export const DEFINITION = {
 			sequence: ['multiplier', 'unit'],
 			details: {
 				multiplier: {
+					type: { builtin: 'normalizedString' },
 					fixed: 'm',
 					facets: {
 						enumeration: [
@@ -10381,17 +17747,16 @@ export const DEFINITION = {
 							'Z',
 							'Y',
 						],
-						whiteSpace: 'replace',
 					},
 				},
-				unit: { fixed: 's', facets: { whiteSpace: 'collapse' } },
+				unit: { type: { builtin: 'token' }, fixed: 's' },
 			},
 		},
 		children: {
 			sequence: [],
 			details: {},
 		},
-		textContent: { facets: { whiteSpace: 'collapse' } },
+		textContent: { type: { builtin: 'decimal' } },
 	},
 	McSecurity: {
 		tag: 'McSecurity',
@@ -10400,8 +17765,8 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['encryption', 'signature'],
 			details: {
-				encryption: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				signature: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				encryption: { type: { builtin: 'boolean' }, default: 'false' },
+				signature: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -10415,26 +17780,33 @@ export const DEFINITION = {
 		parents: ['MinRequestedSCDFiles'],
 		attributes: {
 			sequence: ['desc', 'fileName', 'fileType', 'fileUuid', 'revision', 'version', 'when'],
+			any: true,
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				fileName: { facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				fileName: { type: { builtin: 'normalizedString' } },
 				fileType: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: { enumeration: ['ICD', 'IID', 'CID', 'SSD', 'SCD', 'SED'] },
+							},
+							{ builtin: 'normalizedString', facets: { pattern: ['[A-Z]{3}'] } },
+						],
+						facets: { enumeration: ['SCD'] },
+					},
 					required: true,
 					facets: {
 						enumeration: ['SCD', 'ICD', 'IID', 'CID', 'SSD', 'SED'],
 						pattern: ['[A-Z]{3}', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'replace',
 					},
 				},
 				fileUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				revision: { required: true, facets: { whiteSpace: 'replace' } },
-				version: { required: true, facets: { whiteSpace: 'replace' } },
-				when: { facets: { whiteSpace: 'replace' } },
+				revision: { type: { builtin: 'normalizedString' }, required: true },
+				version: { type: { builtin: 'normalizedString' }, required: true },
+				when: { type: { builtin: 'normalizedString' } },
 			},
 			identityFields: ['fileUuid'],
 		},
@@ -10449,6 +17821,8 @@ export const DEFINITION = {
 		parents: ['IED'],
 		attributes: {
 			sequence: [],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {},
 		},
 		children: {
@@ -10459,6 +17833,29 @@ export const DEFINITION = {
 				Private: {},
 				MinRequestedSCDFile: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+						{ kind: 'element', name: 'Text', maxOccurs: 1 },
+						{ kind: 'element', name: 'Private' },
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'MinRequestedSCDFile' }],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -10477,6 +17874,7 @@ export const DEFINITION = {
 			sequence: ['multiplier', 'unit'],
 			details: {
 				multiplier: {
+					type: { builtin: 'normalizedString' },
 					fixed: 'm',
 					facets: {
 						enumeration: [
@@ -10502,17 +17900,16 @@ export const DEFINITION = {
 							'Z',
 							'Y',
 						],
-						whiteSpace: 'replace',
 					},
 				},
-				unit: { fixed: 's', facets: { whiteSpace: 'collapse' } },
+				unit: { type: { builtin: 'token' }, fixed: 's' },
 			},
 		},
 		children: {
 			sequence: [],
 			details: {},
 		},
-		textContent: { facets: { whiteSpace: 'collapse' } },
+		textContent: { type: { builtin: 'decimal' } },
 	},
 	MultiAPPerSubNet: {
 		tag: 'MultiAPPerSubNet',
@@ -10534,17 +17931,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -10573,25 +17970,29 @@ export const DEFINITION = {
 				'substationName',
 				'voltageLevelName',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				bayName: { facets: { minLength: 1, whiteSpace: 'replace' } },
-				cNodeName: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				bayName: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
+				cNodeName: {
+					type: { builtin: 'normalizedString' },
+					required: true,
+					facets: { minLength: 1 },
+				},
 				cNodeUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				connectivityNode: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['.+/.+(/.+)*'], whiteSpace: 'replace' },
+					facets: { pattern: ['.+/.+(/.+)*'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				lineName: { facets: { minLength: 1, whiteSpace: 'replace' } },
-				name: { default: '', facets: { whiteSpace: 'replace' } },
-				processName: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
-				substationName: { facets: { minLength: 1, whiteSpace: 'replace' } },
-				voltageLevelName: { facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				lineName: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
+				name: { type: { builtin: 'normalizedString' }, default: '' },
+				processName: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
+				substationName: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
+				voltageLevelName: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
 			},
 		},
 		children: {
@@ -10601,6 +18002,30 @@ export const DEFINITION = {
 				Text: { maxOccurs: 1 },
 				Private: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	OptFields: {
@@ -10619,14 +18044,14 @@ export const DEFINITION = {
 				'timeStamp',
 			],
 			details: {
-				bufOvfl: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				configRef: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				dataRef: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				dataSet: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				entryID: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				reasonCode: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				seqNum: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				timeStamp: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				bufOvfl: { type: { builtin: 'boolean' }, default: 'true' },
+				configRef: { type: { builtin: 'boolean' }, default: 'false' },
+				dataRef: { type: { builtin: 'boolean' }, default: 'false' },
+				dataSet: { type: { builtin: 'boolean' }, default: 'false' },
+				entryID: { type: { builtin: 'boolean' }, default: 'false' },
+				reasonCode: { type: { builtin: 'boolean' }, default: 'false' },
+				seqNum: { type: { builtin: 'boolean' }, default: 'false' },
+				timeStamp: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -10653,37 +18078,30 @@ export const DEFINITION = {
 			],
 			details: {
 				daName: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?(\\.[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?)*',
 						],
-						whiteSpace: 'replace',
 					},
 				},
-				dataName: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				dataName: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				doName: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
 				lnodeUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				outputName: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				outputName: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				outputUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				value: { facets: { minLength: 1, whiteSpace: 'replace' } },
-				varName: { required: true, facets: { whiteSpace: 'replace' } },
+				value: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
+				varName: { type: { builtin: 'normalizedString' }, required: true },
 			},
+			identityFields: ['varName'],
 		},
 		children: {
 			sequence: ['Text'],
@@ -10695,6 +18113,36 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	OutputVarRef: {
 		tag: 'OutputVarRef',
@@ -10704,14 +18152,11 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'value', 'variable', 'variableUuid', 'xsi:type'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				value: { facets: { whiteSpace: 'replace' } },
-				variable: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				value: { type: { builtin: 'normalizedString' } },
+				variable: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				variableUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
@@ -10729,7 +18174,37 @@ export const DEFINITION = {
 				},
 				FunctionalVariantRef: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+			],
 		},
 	},
 	Outputs: {
@@ -10738,8 +18213,10 @@ export const DEFINITION = {
 		parents: ['LN0', 'LN'],
 		attributes: {
 			sequence: ['desc'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -10751,6 +18228,36 @@ export const DEFINITION = {
 				ExtCtrl: { required: true, minOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'ExtCtrl', minOccurs: 1 }],
+				},
+			],
+		},
 	},
 	P: {
 		tag: 'P',
@@ -10760,6 +18267,49 @@ export const DEFINITION = {
 			sequence: ['type', 'xsi:type'],
 			details: {
 				type: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									enumeration: [
+										'IP',
+										'IP-SUBNET',
+										'IP-GATEWAY',
+										'OSI-NSAP',
+										'OSI-TSEL',
+										'OSI-SSEL',
+										'OSI-PSEL',
+										'OSI-AP-Title',
+										'OSI-AP-Invoke',
+										'OSI-AE-Qualifier',
+										'OSI-AE-Invoke',
+										'MAC-Address',
+										'APPID',
+										'VLAN-PRIORITY',
+										'VLAN-ID',
+										'SNTP-Port',
+										'MMS-Port',
+										'DNSName',
+										'IPv6FlowLabel',
+										'IPv6ClassOfTraffic',
+										'C37-118-IP-Port',
+										'IP-UDP-PORT',
+										'IP-TCP-PORT',
+										'IPv6',
+										'IPv6-SUBNET',
+										'IPv6-GATEWAY',
+										'IPv6-IGMPv3Src',
+										'IP-IGMPv3Src',
+										'IP-ClassOfTraffic',
+									],
+								},
+							},
+							{ builtin: 'normalizedString', facets: { pattern: ['[A-Z][0-9A-Za-z\\-]*'] } },
+							{ builtin: 'Name', facets: { enumeration: ['Type', 'Plug', 'Cable', 'Port'] } },
+							{ builtin: 'normalizedString', facets: { pattern: ['[A-Z][0-9A-Za-z\\-]*'] } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -10792,9 +18342,12 @@ export const DEFINITION = {
 							'IPv6-IGMPv3Src',
 							'IP-IGMPv3Src',
 							'IP-ClassOfTraffic',
+							'Type',
+							'Plug',
+							'Cable',
+							'Port',
 						],
 						pattern: ['[A-Z][0-9A-Za-z\\-]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'replace',
 					},
 				},
 				'xsi:type': {
@@ -10840,7 +18393,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
-		textContent: { facets: { minLength: 1, whiteSpace: 'replace' } },
+		textContent: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
 	},
 	PhysConn: {
 		tag: 'PhysConn',
@@ -10848,15 +18401,19 @@ export const DEFINITION = {
 		parents: ['ConnectedAP'],
 		attributes: {
 			sequence: ['desc', 'type'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				type: {
-					required: true,
-					facets: {
-						enumeration: ['Connection', 'RedConn'],
-						pattern: ['[A-Z][0-9A-Za-z\\-]*'],
-						whiteSpace: 'replace',
+					type: {
+						union: [
+							{ builtin: 'normalizedString', facets: { enumeration: ['Connection', 'RedConn'] } },
+							{ builtin: 'normalizedString', facets: { pattern: ['[A-Z][0-9A-Za-z\\-]*'] } },
+						],
 					},
+					required: true,
+					facets: { enumeration: ['Connection', 'RedConn'], pattern: ['[A-Z][0-9A-Za-z\\-]*'] },
 				},
 			},
 		},
@@ -10866,8 +18423,63 @@ export const DEFINITION = {
 			details: {
 				Text: { maxOccurs: 1 },
 				Private: {},
-				P: {},
+				P: {
+					attributes: {
+						sequence: ['type'],
+						details: {
+							type: {
+								type: {
+									union: [
+										{ builtin: 'Name', facets: { enumeration: ['Type', 'Plug', 'Cable', 'Port'] } },
+										{ builtin: 'normalizedString', facets: { pattern: ['[A-Z][0-9A-Za-z\\-]*'] } },
+									],
+								},
+								required: true,
+								facets: {
+									enumeration: ['Type', 'Plug', 'Cable', 'Port'],
+									pattern: ['[A-Z][0-9A-Za-z\\-]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
+								},
+							},
+						},
+						identityFields: ['type'],
+					},
+					children: {
+						sequence: [],
+						details: {},
+					},
+					textContent: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
+				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'P' }],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -10894,33 +18506,21 @@ export const DEFINITION = {
 				'uuid',
 			],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				relation: { facets: { whiteSpace: 'replace' } },
+				relation: { type: { builtin: 'normalizedString' } },
 				relationUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				selector: { facets: { whiteSpace: 'replace' } },
+				selector: { type: { builtin: 'normalizedString' } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -10935,6 +18535,29 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	PowerSystemRelationRef: {
 		tag: 'PowerSystemRelationRef',
@@ -10944,13 +18567,13 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'powerSystemRelation', 'powerSystemRelationUuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				powerSystemRelation: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				powerSystemRelation: {
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['.+(/.+)*'] },
+				},
 				powerSystemRelationUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -10964,7 +18587,37 @@ export const DEFINITION = {
 				},
 				FunctionalVariantRef: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+			],
 		},
 	},
 	PowerSystemRelations: {
@@ -10976,7 +18629,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -10989,6 +18642,35 @@ export const DEFINITION = {
 				},
 				PowerSystemRelation: { required: true, minOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'PowerSystemRelation', minOccurs: 1 }],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -11005,32 +18687,26 @@ export const DEFINITION = {
 		parents: ['Substation', 'VoltageLevel', 'Bay'],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'type', 'uuid', 'virtual'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				type: {
+					type: { builtin: 'Name' },
 					required: true,
 					fixed: 'PTR',
-					facets: {
-						enumeration: ['PTR'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['PTR'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				virtual: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				virtual: { type: { builtin: 'boolean' }, default: 'false' },
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -11135,6 +18811,73 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [
+														{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+														{ kind: 'element', name: 'Text', maxOccurs: 1 },
+														{ kind: 'element', name: 'Private' },
+													],
+												},
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+												},
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'LNode' }],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'TransformerWinding', minOccurs: 1 },
+						{ kind: 'element', name: 'SubEquipment' },
+						{ kind: 'element', name: 'EqFunction' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -11226,15 +18969,36 @@ export const DEFINITION = {
 		],
 		attributes: {
 			sequence: ['source', 'type'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				source: { facets: { whiteSpace: 'collapse' } },
-				type: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				source: { type: { builtin: 'anyURI' } },
+				type: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 			},
 		},
 		children: {
 			sequence: [],
 			any: true,
 			details: {},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					particles: [
+						{
+							kind: 'any',
+							namespace: ['##other'],
+							processContents: 'lax',
+							minOccurs: 1,
+							maxOccurs: 1,
+						},
+					],
+				},
+			],
 		},
 		textContent: {},
 	},
@@ -11244,21 +19008,17 @@ export const DEFINITION = {
 		parents: ['SCL', 'Process'],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'type', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				type: { facets: { minLength: 1, whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -11399,6 +19159,83 @@ export const DEFINITION = {
 				Variable: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [
+														{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+														{ kind: 'element', name: 'Text', maxOccurs: 1 },
+														{ kind: 'element', name: 'Private' },
+													],
+												},
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+												},
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'LNode' }],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'GeneralEquipment' },
+								{ kind: 'element', name: 'Function' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'ConductingEquipment' },
+						{ kind: 'element', name: 'Substation' },
+						{ kind: 'element', name: 'Line' },
+						{ kind: 'element', name: 'Process' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -11428,27 +19265,22 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'source', 'sourceDaName', 'sourceDoName', 'sourceLNodeUuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				source: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				source: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				sourceDaName: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?(\\.[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?)*',
 						],
-						whiteSpace: 'replace',
 					},
 				},
 				sourceDoName: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
 				sourceLNodeUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -11461,6 +19293,29 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	ProcessResource: {
@@ -11480,30 +19335,22 @@ export const DEFINITION = {
 			],
 			details: {
 				cardinality: {
+					type: { builtin: 'normalizedString' },
 					default: '1..1',
-					facets: { enumeration: ['0..1', '1..1', '0..n', '1..n'], whiteSpace: 'replace' },
+					facets: { enumeration: ['0..1', '1..1', '0..n', '1..n'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				max: { facets: { minInclusive: 2, whiteSpace: 'collapse' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				max: { type: { builtin: 'integer' }, facets: { minInclusive: 2 } },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				selector: { facets: { whiteSpace: 'replace' } },
+				selector: { type: { builtin: 'normalizedString' } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -11518,6 +19365,35 @@ export const DEFINITION = {
 				},
 				Resource: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'Resource' }],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -11536,13 +19412,13 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'processResource', 'processResourceUuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				processResource: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				processResource: {
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['.+(/.+)*'] },
+				},
 				processResourceUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -11556,7 +19432,37 @@ export const DEFINITION = {
 				},
 				FunctionalVariantRef: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+			],
 		},
 	},
 	ProcessResources: {
@@ -11581,7 +19487,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -11606,6 +19512,35 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'ProcessResource', minOccurs: 1 }],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -11624,13 +19559,10 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'name', 'uuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -11645,6 +19577,35 @@ export const DEFINITION = {
 				ProjectProcessReference: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'ProjectProcessReference' }],
+				},
+			],
+		},
 	},
 	ProjectProcessReference: {
 		tag: 'ProjectProcessReference',
@@ -11654,13 +19615,13 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'processReference', 'processUuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				processReference: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				processReference: {
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['.+(/.+)*'] },
+				},
 				processUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -11674,6 +19635,29 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	ProtNs: {
 		tag: 'ProtNs',
@@ -11682,7 +19666,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['type'],
 			details: {
-				type: { default: '8-MMS', facets: { minLength: 1, whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' }, default: '8-MMS', facets: { minLength: 1 } },
 			},
 			identityFields: ['type'],
 		},
@@ -11690,7 +19674,10 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
-		textContent: { facets: { pattern: ['[ -~]+:20\\d\\d[A-Z]?'], whiteSpace: 'replace' } },
+		textContent: {
+			type: { builtin: 'normalizedString' },
+			facets: { pattern: ['[ -~]+:20\\d\\d[A-Z]?'] },
+		},
 	},
 	Protocol: {
 		tag: 'Protocol',
@@ -11699,14 +19686,14 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['mustUnderstand'],
 			details: {
-				mustUnderstand: { required: true, fixed: 'true', facets: { whiteSpace: 'collapse' } },
+				mustUnderstand: { type: { builtin: 'boolean' }, required: true, fixed: 'true' },
 			},
 		},
 		children: {
 			sequence: [],
 			details: {},
 		},
-		textContent: { facets: { whiteSpace: 'replace' } },
+		textContent: { fixed: 'R-GOOSE', type: { builtin: 'normalizedString' } },
 	},
 	ReadWrite: {
 		tag: 'ReadWrite',
@@ -11728,17 +19715,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -11757,9 +19744,9 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['hsr', 'prp', 'rstp'],
 			details: {
-				hsr: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				prp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				rstp: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				hsr: { type: { builtin: 'boolean' }, default: 'false' },
+				prp: { type: { builtin: 'boolean' }, default: 'false' },
+				rstp: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -11785,51 +19772,51 @@ export const DEFINITION = {
 				'templateUuid',
 				'uuid',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				bufTime: {
+					type: { builtin: 'unsignedInt' },
 					default: '0',
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
-				buffered: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				buffered: { type: { builtin: 'boolean' }, default: 'false' },
 				confRev: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 				datSet: {
+					type: { builtin: 'Name' },
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				indexed: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				indexed: { type: { builtin: 'boolean' }, default: 'true' },
 				intgPd: {
+					type: { builtin: 'unsignedInt' },
 					default: '0',
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 				name: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
 				rptID: {
-					facets: { pattern: ['[ -~]*'], minLength: 1, maxLength: 129, whiteSpace: 'replace' },
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[ -~]*'], minLength: 1, maxLength: 129 },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -11845,6 +19832,59 @@ export const DEFINITION = {
 				RptEnabled: { maxOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+												{ kind: 'element', name: 'Private' },
+											],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'TrgOps', maxOccurs: 1 }],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'OptFields', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'RptEnabled', maxOccurs: 1 },
+					],
+				},
+			],
+		},
 	},
 	ReportParameters: {
 		tag: 'ReportParameters',
@@ -11853,17 +19893,25 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['bufTime', 'buffered', 'cbName', 'desc', 'dsName', 'id', 'intgPd'],
 			details: {
-				bufTime: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
-				buffered: { facets: { whiteSpace: 'collapse' } },
-				cbName: { facets: { whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				dsName: { facets: { whiteSpace: 'replace' } },
-				id: {
-					required: true,
-					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
+				bufTime: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
-				intgPd: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				buffered: { type: { builtin: 'boolean' } },
+				cbName: { type: { builtin: 'normalizedString' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				dsName: { type: { builtin: 'normalizedString' } },
+				id: {
+					type: { builtin: 'token' },
+					required: true,
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
+				},
+				intgPd: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 			},
+			identityFields: ['id'],
 		},
 		children: {
 			sequence: ['Text'],
@@ -11874,6 +19922,43 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+											],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	ReportParametersRef: {
@@ -11885,8 +19970,8 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'id'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				id: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				id: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 			},
 		},
 		children: {
@@ -11898,6 +19983,29 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	ReportSettings: {
@@ -11918,62 +20026,41 @@ export const DEFINITION = {
 			],
 			details: {
 				bufTime: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				cbName: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				datSet: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				intgPd: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				optFields: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
-				owner: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				resvTms: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				owner: { type: { builtin: 'boolean' }, default: 'false' },
+				resvTms: { type: { builtin: 'boolean' }, default: 'false' },
 				rptID: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				trgOps: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 			},
 		},
@@ -11990,13 +20077,10 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['resInst', 'source', 'sourceUuid'],
 			details: {
-				resInst: { default: '1', facets: { minInclusive: 1, whiteSpace: 'collapse' } },
-				source: { facets: { whiteSpace: 'replace' } },
+				resInst: { type: { builtin: 'integer' }, default: '1', facets: { minInclusive: 1 } },
+				source: { type: { builtin: 'normalizedString' } },
 				sourceUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['resInst'],
@@ -12005,7 +20089,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
-		textContent: { facets: { whiteSpace: 'replace' } },
+		textContent: { type: { builtin: 'normalizedString' } },
 	},
 	RptEnabled: {
 		tag: 'RptEnabled',
@@ -12013,16 +20097,14 @@ export const DEFINITION = {
 		parents: ['ReportControl'],
 		attributes: {
 			sequence: ['desc', 'max'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				max: {
+					type: { builtin: 'unsignedInt' },
 					default: '1',
-					facets: {
-						minInclusive: 0,
-						maxInclusive: 4294967295,
-						minExclusive: 0,
-						whiteSpace: 'collapse',
-					},
+					facets: { minInclusive: 0, maxInclusive: 4294967295, minExclusive: 0 },
 				},
 			},
 		},
@@ -12034,6 +20116,36 @@ export const DEFINITION = {
 				Private: {},
 				ClientLN: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'ClientLN' }],
+				},
+			],
 		},
 	},
 	SCL: {
@@ -12049,36 +20161,41 @@ export const DEFINITION = {
 				'revision',
 				'version',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				'eIEC61850-6-100:release': {
 					fixed: '1',
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
-					facets: { minInclusive: 0, maxInclusive: 255, minExclusive: 0, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 255, minExclusive: 0 },
 				},
 				'eIEC61850-6-100:revision': {
 					fixed: 'C',
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
-					facets: { pattern: ['[A-Z]', '[A-Za-z_:][-.:0-9A-Z_a-z]*'], whiteSpace: 'collapse' },
+					facets: { pattern: ['[A-Z]', '[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				'eIEC61850-6-100:version': {
 					fixed: '2019',
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
-					facets: { pattern: ['2[0-2][0-9]{2}'], minLength: 1, whiteSpace: 'replace' },
+					facets: { pattern: ['2[0-2][0-9]{2}'], minLength: 1 },
 				},
 				release: {
+					type: { builtin: 'unsignedByte' },
 					required: true,
 					fixed: '5',
-					facets: { minInclusive: 0, maxInclusive: 255, minExclusive: 0, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 255, minExclusive: 0 },
 				},
 				revision: {
+					type: { builtin: 'Name' },
 					required: true,
 					fixed: 'C',
-					facets: { pattern: ['[A-Z]', '[A-Za-z_:][-.:0-9A-Z_a-z]*'], whiteSpace: 'collapse' },
+					facets: { pattern: ['[A-Z]', '[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				version: {
+					type: { builtin: 'normalizedString' },
 					required: true,
 					fixed: '2007',
-					facets: { pattern: ['2[0-2][0-9]{2}'], minLength: 1, whiteSpace: 'replace' },
+					facets: { pattern: ['2[0-2][0-9]{2}'], minLength: 1 },
 				},
 			},
 		},
@@ -12356,6 +20473,37 @@ export const DEFINITION = {
 				ServiceSpecifications: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+						{ kind: 'element', name: 'Text', maxOccurs: 1 },
+						{ kind: 'element', name: 'Private' },
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'Header', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'Substation' },
+						{ kind: 'element', name: 'Communication', maxOccurs: 1 },
+						{ kind: 'element', name: 'IED' },
+						{ kind: 'element', name: 'DataTypeTemplates', maxOccurs: 1 },
+						{ kind: 'element', name: 'Line' },
+						{ kind: 'element', name: 'Process' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'key',
@@ -12493,9 +20641,9 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['iec61850_8_1', 'iec61850_8_2', 'serverAssociationInitiation'],
 			details: {
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				iec61850_8_1: { type: { builtin: 'boolean' }, default: 'true' },
+				iec61850_8_2: { type: { builtin: 'boolean' }, default: 'false' },
+				serverAssociationInitiation: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -12509,10 +20657,44 @@ export const DEFINITION = {
 		parents: ['DOI', 'SDI'],
 		attributes: {
 			sequence: ['desc', 'ix', 'name', 'sAddr'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				ix: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				ix: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 				name: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									enumeration: [
+										'T',
+										'Test',
+										'Check',
+										'SIUnit',
+										'Oper',
+										'SBO',
+										'SBOw',
+										'Cancel',
+										'Addr',
+										'PRIORITY',
+										'VID',
+										'APPID',
+										'TransportInUse',
+										'IPClassOfTraffic',
+										'IPv6FlowLabel',
+										'IPAddressLength',
+										'IPAddress',
+									],
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['[a-z][0-9A-Za-z]*'], maxLength: 60 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -12536,10 +20718,9 @@ export const DEFINITION = {
 						],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*', '[a-z][0-9A-Za-z]*'],
 						maxLength: 60,
-						whiteSpace: 'collapse',
 					},
 				},
-				sAddr: { facets: { maxLength: 255, whiteSpace: 'replace' } },
+				sAddr: { type: { builtin: 'normalizedString' }, facets: { maxLength: 255 } },
 			},
 			identityFields: ['ix', 'name'],
 		},
@@ -12566,7 +20747,45 @@ export const DEFINITION = {
 					],
 				},
 			},
-			choices: [{ options: ['DAI', 'SDI'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'choice',
+							particles: [
+								{ kind: 'element', name: 'SDI', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'DAI', minOccurs: 1, maxOccurs: 1 },
+							],
+						},
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
+					],
+				},
+			],
 		},
 		constraints: [
 			{
@@ -12589,28 +20808,36 @@ export const DEFINITION = {
 		parents: ['DOType'],
 		attributes: {
 			sequence: ['count', 'desc', 'name', 'type'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				count: {
+					type: {
+						union: [
+							{ builtin: 'unsignedInt' },
+							{ builtin: 'Name', facets: { pattern: ['[a-z][0-9A-Za-z]*'] } },
+						],
+					},
 					default: '0',
 					facets: {
 						pattern: ['[a-z][0-9A-Za-z]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						minInclusive: 0,
 						maxInclusive: 4294967295,
-						whiteSpace: 'collapse',
 					},
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				name: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: ['[a-z][0-9A-Za-z]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						minLength: 1,
 						maxLength: 60,
-						whiteSpace: 'collapse',
 					},
 				},
-				type: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Labels'],
@@ -12634,6 +20861,36 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+				},
+			],
+		},
 	},
 	SDS: {
 		tag: 'SDS',
@@ -12643,23 +20900,52 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'ix', 'mappedDoName', 'mappedLnUuid', 'name'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				ix: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				ix: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 				mappedDoName: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'(([A-Za-z][0-9A-Za-z_]{0,63})/([A-Za-z][0-9A-Za-z_]{0,63})/((LLN0|([A-Za-z][0-9A-Za-z_]{0,10})?[A-Z]{4}[0-9]{1,12}))\\.)?([A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?)',
 						],
-						whiteSpace: 'replace',
 					},
 				},
 				mappedLnUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				name: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: {
+									enumeration: [
+										'T',
+										'Test',
+										'Check',
+										'SIUnit',
+										'Oper',
+										'SBO',
+										'SBOw',
+										'Cancel',
+										'Addr',
+										'PRIORITY',
+										'VID',
+										'APPID',
+										'TransportInUse',
+										'IPClassOfTraffic',
+										'IPv6FlowLabel',
+										'IPAddressLength',
+										'IPAddress',
+									],
+								},
+							},
+							{ builtin: 'Name', facets: { pattern: ['[a-z][0-9A-Za-z]*'], maxLength: 60 } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: [
@@ -12683,7 +20969,6 @@ export const DEFINITION = {
 						],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*', '[a-z][0-9A-Za-z]*'],
 						maxLength: 60,
-						whiteSpace: 'collapse',
 					},
 				},
 			},
@@ -12728,15 +21013,45 @@ export const DEFINITION = {
 					namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
 				},
 			},
-			choices: [
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
 				{
-					options: [
-						'ControllingLNode',
-						'DAS',
-						'LogParametersRef',
-						'ProcessEcho',
-						'SDS',
-						'SubscriberLNode',
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'choice',
+							particles: [
+								{ kind: 'element', name: 'SDS', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'DAS', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'SubscriberLNode', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'ControllingLNode', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'ProcessEcho', minOccurs: 1, maxOccurs: 1 },
+								{ kind: 'element', name: 'LogParametersRef', minOccurs: 1, maxOccurs: 1 },
+							],
+						},
+						{ kind: 'element', name: 'Labels', maxOccurs: 1 },
 					],
 				},
 			],
@@ -12763,7 +21078,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['resvTms'],
 			details: {
-				resvTms: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				resvTms: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -12777,25 +21092,25 @@ export const DEFINITION = {
 		parents: ['ConnectedAP'],
 		attributes: {
 			sequence: ['cbName', 'cbUuid', 'desc', 'ldInst'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				cbName: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
 				cbUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				ldInst: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 64 },
 				},
 			},
 			identityFields: ['cbName', 'ldInst'],
@@ -12808,6 +21123,43 @@ export const DEFINITION = {
 				Private: {},
 				Address: { maxOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+										{ kind: 'element', name: 'Private' },
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'Address', maxOccurs: 1 }],
+						},
+					],
+				},
+			],
 		},
 	},
 	SMVParameters: {
@@ -12828,25 +21180,31 @@ export const DEFINITION = {
 				'smvId',
 			],
 			details: {
-				cbName: { facets: { whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				dsName: { facets: { whiteSpace: 'replace' } },
+				cbName: { type: { builtin: 'normalizedString' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				dsName: { type: { builtin: 'normalizedString' } },
 				id: {
+					type: { builtin: 'token' },
 					required: true,
-					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255, whiteSpace: 'collapse' },
+					facets: { pattern: ['\\S+'], minLength: 1, maxLength: 255 },
 				},
-				multicast: { facets: { whiteSpace: 'collapse' } },
-				nofASDU: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
-				securityEnabled: { facets: { whiteSpace: 'collapse' } },
+				multicast: { type: { builtin: 'boolean' } },
+				nofASDU: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
+				securityEnabled: { type: { builtin: 'boolean' } },
 				smpMod: {
-					facets: {
-						enumeration: ['SmpPerPeriod', 'SmpPerSec', 'SecPerSmp'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { enumeration: ['SmpPerPeriod', 'SmpPerSec', 'SecPerSmp'] },
 				},
-				smpRate: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
-				smvId: { facets: { whiteSpace: 'replace' } },
+				smpRate: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
+				smvId: { type: { builtin: 'normalizedString' } },
 			},
+			identityFields: ['id'],
 		},
 		children: {
 			sequence: ['Text', 'L2CommParameters', 'L3IPv4CommParameters', 'L3IPv6CommParameters'],
@@ -12860,10 +21218,50 @@ export const DEFINITION = {
 				L3IPv4CommParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				L3IPv6CommParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
-			choices: [
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
 				{
-					options: ['L2CommParameters', 'L3IPv4CommParameters', 'L3IPv6CommParameters'],
+					kind: 'sequence',
+					minOccurs: 1,
 					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+											],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				{
+					kind: 'choice',
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'L2CommParameters', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'L3IPv4CommParameters', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'L3IPv6CommParameters', minOccurs: 1, maxOccurs: 1 },
+					],
 				},
 			],
 		},
@@ -12877,8 +21275,8 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'id'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				id: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				id: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 			},
 		},
 		children: {
@@ -12891,6 +21289,29 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	SMVSecurity: {
 		tag: 'SMVSecurity',
@@ -12898,27 +21319,25 @@ export const DEFINITION = {
 		parents: ['AccessPoint'],
 		attributes: {
 			sequence: ['desc', 'name', 'serialNumber', 'templateUuid', 'uuid', 'xferNumber'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				serialNumber: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[0-9]+'], minLength: 1, whiteSpace: 'replace' },
+					facets: { pattern: ['[0-9]+'], minLength: 1 },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				xferNumber: {
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 			},
 		},
@@ -12946,6 +21365,45 @@ export const DEFINITION = {
 				IssuerName: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'Subject', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'IssuerName', minOccurs: 1, maxOccurs: 1 },
+					],
+				},
+			],
+		},
 	},
 	SMVSettings: {
 		tag: 'SMVSettings',
@@ -12966,57 +21424,39 @@ export const DEFINITION = {
 			],
 			details: {
 				cbName: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				datSet: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
-				kdaParticipant: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				kdaParticipant: { type: { builtin: 'boolean' }, default: 'false' },
 				nofASDU: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				optFields: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
-				pdcTimeStamp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				samplesPerSec: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				pdcTimeStamp: { type: { builtin: 'boolean' }, default: 'false' },
+				samplesPerSec: { type: { builtin: 'boolean' }, default: 'false' },
 				smpRate: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				svID: {
+					type: { builtin: 'Name' },
 					default: 'Fix',
-					facets: {
-						enumeration: ['Dyn', 'Conf', 'Fix'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['Dyn', 'Conf', 'Fix'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
-				synchSrcId: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				synchSrcId: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -13027,7 +21467,23 @@ export const DEFINITION = {
 				SecPerSamples: { required: true, minOccurs: 1, maxOccurs: 1 },
 				McSecurity: { maxOccurs: 1 },
 			},
-			choices: [{ options: ['SamplesPerSec', 'SecPerSamples', 'SmpRate'], minOccurs: 1 }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'choice',
+					minOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'SmpRate', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'SamplesPerSec', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'SecPerSamples', minOccurs: 1, maxOccurs: 1 },
+					],
+				},
+				{ kind: 'element', name: 'McSecurity', maxOccurs: 1 },
+			],
 		},
 	},
 	SMVsc: {
@@ -13038,20 +21494,21 @@ export const DEFINITION = {
 			sequence: ['delivery', 'deliveryConf', 'max', 'rSV', 'sv'],
 			details: {
 				delivery: {
+					type: { builtin: 'Name' },
 					default: 'multicast',
 					facets: {
 						enumeration: ['unicast', 'multicast', 'both'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
-				deliveryConf: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				deliveryConf: { type: { builtin: 'boolean' }, default: 'false' },
 				max: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
-				rSV: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sv: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				rSV: { type: { builtin: 'boolean' }, default: 'false' },
+				sv: { type: { builtin: 'boolean' }, default: 'true' },
 			},
 		},
 		children: {
@@ -13066,8 +21523,8 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['encryption', 'signature'],
 			details: {
-				encryption: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				signature: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				encryption: { type: { builtin: 'boolean' }, default: 'false' },
+				signature: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -13094,62 +21551,60 @@ export const DEFINITION = {
 				'templateUuid',
 				'uuid',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				confRev: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				confRev: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 				datSet: {
+					type: { builtin: 'Name' },
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				multicast: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				multicast: { type: { builtin: 'boolean' }, default: 'true' },
 				name: {
+					type: { builtin: 'Name' },
 					required: true,
 					facets: {
 						pattern: ['[A-Za-z][0-9A-Za-z_]*', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
 						maxLength: 32,
-						whiteSpace: 'collapse',
 					},
 				},
 				nofASDU: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 				securityEnable: {
+					type: { builtin: 'normalizedString' },
 					default: 'None',
-					facets: {
-						enumeration: ['None', 'Signature', 'SignatureAndEncryption'],
-						whiteSpace: 'replace',
-					},
+					facets: { enumeration: ['None', 'Signature', 'SignatureAndEncryption'] },
 				},
 				smpMod: {
+					type: { builtin: 'normalizedString' },
 					default: 'SmpPerPeriod',
-					facets: {
-						enumeration: ['SmpPerPeriod', 'SmpPerSec', 'SecPerSmp'],
-						whiteSpace: 'replace',
-					},
+					facets: { enumeration: ['SmpPerPeriod', 'SmpPerSec', 'SecPerSmp'] },
 				},
 				smpRate: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 				smvID: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[ -~]*'], minLength: 1, maxLength: 129, whiteSpace: 'replace' },
+					facets: { pattern: ['[ -~]*'], minLength: 1, maxLength: 129 },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -13165,6 +21620,59 @@ export const DEFINITION = {
 				Protocol: { maxOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+												{ kind: 'element', name: 'Private' },
+											],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'IEDName' }],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'SmvOpts', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'Protocol', maxOccurs: 1 },
+					],
+				},
+			],
+		},
 	},
 	SamplesPerSec: {
 		tag: 'SamplesPerSec',
@@ -13179,12 +21687,8 @@ export const DEFINITION = {
 			details: {},
 		},
 		textContent: {
-			facets: {
-				minInclusive: 0,
-				maxInclusive: 4294967295,
-				minExclusive: 0,
-				whiteSpace: 'collapse',
-			},
+			type: { builtin: 'unsignedInt' },
+			facets: { minInclusive: 0, maxInclusive: 4294967295, minExclusive: 0 },
 		},
 	},
 	SclFileReference: {
@@ -13204,28 +21708,35 @@ export const DEFINITION = {
 				'when',
 				'xsi:type',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				engRight: { facets: { enumeration: ['full', 'fix', 'dataflow'], whiteSpace: 'replace' } },
-				fileName: { facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				engRight: { facets: { enumeration: ['full', 'fix', 'dataflow'] } },
+				fileName: { type: { builtin: 'normalizedString' } },
 				fileType: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: { enumeration: ['ICD', 'IID', 'CID', 'SSD', 'SCD', 'SED'] },
+							},
+							{ builtin: 'normalizedString', facets: { pattern: ['[A-Z]{3}'] } },
+						],
+					},
 					required: true,
 					facets: {
 						enumeration: ['ICD', 'IID', 'CID', 'SSD', 'SCD', 'SED'],
 						pattern: ['[A-Z]{3}', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'replace',
 					},
 				},
 				fileUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				headerId: { facets: { whiteSpace: 'replace' } },
-				revision: { required: true, facets: { whiteSpace: 'replace' } },
-				version: { required: true, facets: { whiteSpace: 'replace' } },
-				when: { facets: { whiteSpace: 'replace' } },
+				headerId: {},
+				revision: { type: { builtin: 'normalizedString' }, required: true },
+				version: { type: { builtin: 'normalizedString' }, required: true },
+				when: { type: { builtin: 'normalizedString' } },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: {
@@ -13243,6 +21754,30 @@ export const DEFINITION = {
 				SubCheckoutID: { maxOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	SecPerSamples: {
 		tag: 'SecPerSamples',
@@ -13257,12 +21792,8 @@ export const DEFINITION = {
 			details: {},
 		},
 		textContent: {
-			facets: {
-				minInclusive: 0,
-				maxInclusive: 4294967295,
-				minExclusive: 0,
-				whiteSpace: 'collapse',
-			},
+			type: { builtin: 'unsignedInt' },
+			facets: { minInclusive: 0, maxInclusive: 4294967295, minExclusive: 0 },
 		},
 	},
 	Security: {
@@ -13272,8 +21803,8 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['ACSEAuthentication', 'E2ESecurity'],
 			details: {
-				ACSEAuthentication: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				E2ESecurity: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				ACSEAuthentication: { type: { builtin: 'boolean' }, default: 'false' },
+				E2ESecurity: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -13287,14 +21818,16 @@ export const DEFINITION = {
 		parents: ['AccessPoint'],
 		attributes: {
 			sequence: ['desc', 'timeout'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				timeout: {
+					type: { builtin: 'unsignedInt' },
 					default: '30',
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 			},
-			identityFields: ['inst'],
 		},
 		children: {
 			sequence: ['Text', 'Private', 'Authentication', 'LDevice', 'Association'],
@@ -13322,6 +21855,40 @@ export const DEFINITION = {
 				Association: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'Authentication', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'LDevice', minOccurs: 1 },
+						{ kind: 'element', name: 'Association' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -13337,18 +21904,18 @@ export const DEFINITION = {
 		parents: ['AccessPoint'],
 		attributes: {
 			sequence: ['apName', 'apUuid', 'desc'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				apName: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32, whiteSpace: 'replace' },
+					facets: { pattern: ['[A-Za-z0-9][0-9A-Za-z_]*'], maxLength: 32 },
 				},
 				apUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -13358,6 +21925,30 @@ export const DEFINITION = {
 				Text: { maxOccurs: 1 },
 				Private: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	ServiceSpecifications: {
@@ -13369,7 +21960,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 			},
 		},
 		children: {
@@ -13395,15 +21986,37 @@ export const DEFINITION = {
 				AnalogueWiringParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 				LogParameters: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
-			choices: [
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
 				{
-					options: [
-						'AnalogueWiringParameters',
-						'BinaryWiringParameters',
-						'GooseParameters',
-						'LogParameters',
-						'ReportParameters',
-						'SMVParameters',
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'choice',
+					particles: [
+						{ kind: 'element', name: 'GooseParameters', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'SMVParameters', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'ReportParameters', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'BinaryWiringParameters', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'AnalogueWiringParameters', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'LogParameters', minOccurs: 1, maxOccurs: 1 },
 					],
 				},
 			],
@@ -13425,11 +22038,9 @@ export const DEFINITION = {
 			sequence: ['nameLength'],
 			details: {
 				nameLength: {
+					type: { builtin: 'token' },
 					default: '32',
-					facets: {
-						pattern: ['32', '64', '6[5-9]', '[7-9]\\d', '[1-9]\\d\\d+'],
-						whiteSpace: 'collapse',
-					},
+					facets: { pattern: ['32', '64', '6[5-9]', '[7-9]\\d', '[1-9]\\d\\d+'] },
 				},
 			},
 		},
@@ -13511,6 +22122,49 @@ export const DEFINITION = {
 				MultiAPPerSubNet: { maxOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'all',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{ kind: 'element', name: 'DynAssociation', maxOccurs: 1 },
+				{ kind: 'element', name: 'SettingGroups', maxOccurs: 1 },
+				{ kind: 'element', name: 'GetDirectory', maxOccurs: 1 },
+				{ kind: 'element', name: 'GetDataObjectDefinition', maxOccurs: 1 },
+				{ kind: 'element', name: 'DataObjectDirectory', maxOccurs: 1 },
+				{ kind: 'element', name: 'GetDataSetValue', maxOccurs: 1 },
+				{ kind: 'element', name: 'SetDataSetValue', maxOccurs: 1 },
+				{ kind: 'element', name: 'DataSetDirectory', maxOccurs: 1 },
+				{ kind: 'element', name: 'ConfDataSet', maxOccurs: 1 },
+				{ kind: 'element', name: 'DynDataSet', maxOccurs: 1 },
+				{ kind: 'element', name: 'ReadWrite', maxOccurs: 1 },
+				{ kind: 'element', name: 'TimerActivatedControl', maxOccurs: 1 },
+				{ kind: 'element', name: 'ConfReportControl', maxOccurs: 1 },
+				{ kind: 'element', name: 'GetCBValues', maxOccurs: 1 },
+				{ kind: 'element', name: 'ConfLogControl', maxOccurs: 1 },
+				{ kind: 'element', name: 'ReportSettings', maxOccurs: 1 },
+				{ kind: 'element', name: 'LogSettings', maxOccurs: 1 },
+				{ kind: 'element', name: 'GSESettings', maxOccurs: 1 },
+				{ kind: 'element', name: 'SMVSettings', maxOccurs: 1 },
+				{ kind: 'element', name: 'GSEDir', maxOccurs: 1 },
+				{ kind: 'element', name: 'GOOSE', maxOccurs: 1 },
+				{ kind: 'element', name: 'GSSE', maxOccurs: 1 },
+				{ kind: 'element', name: 'SMVsc', maxOccurs: 1 },
+				{ kind: 'element', name: 'FileHandling', maxOccurs: 1 },
+				{ kind: 'element', name: 'ConfLNs', maxOccurs: 1 },
+				{ kind: 'element', name: 'ClientServices', maxOccurs: 1 },
+				{ kind: 'element', name: 'ConfLdName', maxOccurs: 1 },
+				{ kind: 'element', name: 'SupSubscription', maxOccurs: 1 },
+				{ kind: 'element', name: 'ConfSigRef', maxOccurs: 1 },
+				{ kind: 'element', name: 'ValueHandling', maxOccurs: 1 },
+				{ kind: 'element', name: 'RedProt', maxOccurs: 1 },
+				{ kind: 'element', name: 'TimeSyncProt', maxOccurs: 1 },
+				{ kind: 'element', name: 'CommProt', maxOccurs: 1 },
+				{ kind: 'element', name: 'SCSM', maxOccurs: 1 },
+				{ kind: 'element', name: 'Security', maxOccurs: 1 },
+				{ kind: 'element', name: 'MultiAPPerSubNet', maxOccurs: 1 },
+			],
+		},
 	},
 	SetDataSetValue: {
 		tag: 'SetDataSetValue',
@@ -13532,17 +22186,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -13560,17 +22214,24 @@ export const DEFINITION = {
 		parents: ['LN0'],
 		attributes: {
 			sequence: ['actSG', 'desc', 'numOfSGs', 'resvTms'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
 				actSG: {
+					type: { builtin: 'unsignedInt' },
 					default: '1',
-					facets: { minInclusive: 1, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 1, maxInclusive: 4294967295 },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				numOfSGs: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 1, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 1, maxInclusive: 4294967295 },
 				},
-				resvTms: { facets: { minInclusive: 0, maxInclusive: 65535, whiteSpace: 'collapse' } },
+				resvTms: {
+					type: { builtin: 'unsignedShort' },
+					facets: { minInclusive: 0, maxInclusive: 65535 },
+				},
 			},
 		},
 		children: {
@@ -13580,6 +22241,30 @@ export const DEFINITION = {
 				Text: { maxOccurs: 1 },
 				Private: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	SettingGroups: {
@@ -13597,6 +22282,15 @@ export const DEFINITION = {
 				ConfSG: { maxOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'all',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{ kind: 'element', name: 'SGEdit', maxOccurs: 1 },
+				{ kind: 'element', name: 'ConfSG', maxOccurs: 1 },
+			],
+		},
 	},
 	SignalRole: {
 		tag: 'SignalRole',
@@ -13607,25 +22301,16 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'name', 'originUuid', 'templateUuid', 'uuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -13642,7 +22327,47 @@ export const DEFINITION = {
 				LNodeOutputRef: {},
 				LNodeDataRef: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'LNodeInputRef' },
+						{ kind: 'element', name: 'LNodeOutputRef' },
+						{ kind: 'element', name: 'LNodeDataRef' },
+					],
+				},
+			],
 		},
 	},
 	SmpRate: {
@@ -13658,12 +22383,8 @@ export const DEFINITION = {
 			details: {},
 		},
 		textContent: {
-			facets: {
-				minInclusive: 0,
-				maxInclusive: 4294967295,
-				minExclusive: 0,
-				whiteSpace: 'collapse',
-			},
+			type: { builtin: 'unsignedInt' },
+			facets: { minInclusive: 0, maxInclusive: 4294967295, minExclusive: 0 },
 		},
 	},
 	SmvOpts: {
@@ -13682,14 +22403,14 @@ export const DEFINITION = {
 				'timestamp',
 			],
 			details: {
-				dataSet: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				refreshTime: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sampleMode: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sampleRate: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sampleSynchronized: { fixed: 'true', facets: { whiteSpace: 'collapse' } },
-				security: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				synchSourceId: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				timestamp: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				dataSet: { type: { builtin: 'boolean' }, default: 'false' },
+				refreshTime: { type: { builtin: 'boolean' }, default: 'false' },
+				sampleMode: { type: { builtin: 'boolean' }, default: 'false' },
+				sampleRate: { type: { builtin: 'boolean' }, default: 'false' },
+				sampleSynchronized: { type: { builtin: 'boolean' }, fixed: 'true' },
+				security: { type: { builtin: 'boolean' }, default: 'false' },
+				synchSourceId: { type: { builtin: 'boolean' }, default: 'false' },
+				timestamp: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -13703,6 +22424,8 @@ export const DEFINITION = {
 		parents: ['Hitem', 'Header'],
 		attributes: {
 			sequence: [],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {},
 		},
 		children: {
@@ -13713,6 +22436,29 @@ export const DEFINITION = {
 				Private: {},
 				SclFileReference: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+						{ kind: 'element', name: 'Text', maxOccurs: 1 },
+						{ kind: 'element', name: 'Private' },
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'SclFileReference' }],
+				},
+			],
 		},
 	},
 	SourceRef: {
@@ -13742,71 +22488,56 @@ export const DEFINITION = {
 				'uuid',
 			],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				extRefAddr: { facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				extRefAddr: { type: { builtin: 'normalizedString' } },
 				extRefUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				input: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
-				inputInst: { default: '1', facets: { minInclusive: 1, whiteSpace: 'collapse' } },
+				input: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
+				inputInst: { type: { builtin: 'integer' }, default: '1', facets: { minInclusive: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				pDA: { facets: { whiteSpace: 'replace' } },
-				pDO: { facets: { whiteSpace: 'replace' } },
-				pLN: { facets: { whiteSpace: 'replace' } },
-				resourceName: { facets: { whiteSpace: 'replace' } },
+				pDA: { type: { builtin: 'normalizedString' } },
+				pDO: { type: { builtin: 'normalizedString' } },
+				pLN: { type: { builtin: 'normalizedString' } },
+				resourceName: { type: { builtin: 'normalizedString' } },
 				resourceUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				service: {
+					type: {
+						union: [
+							{ builtin: 'Name', facets: { enumeration: ['Poll', 'Report', 'GOOSE', 'SMV'] } },
+							{ builtin: 'Name', facets: { enumeration: ['Wired', 'Internal'] } },
+						],
+					},
 					facets: {
 						enumeration: ['Poll', 'Report', 'GOOSE', 'SMV', 'Wired', 'Internal'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
-				source: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				source: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				sourceDaName: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?(\\.[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?)*',
 						],
-						whiteSpace: 'replace',
 					},
 				},
 				sourceDoName: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
 				sourceLNodeUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['input', 'inputInst', 'pDA'],
@@ -13832,16 +22563,52 @@ export const DEFINITION = {
 				BinaryWiringParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				AnalogueWiringParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
-			choices: [
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
 				{
-					options: [
-						'AnalogueWiringParametersRef',
-						'BinaryWiringParametersRef',
-						'GooseParametersRef',
-						'ReportParametersRef',
-						'SMVParametersRef',
-					],
+					kind: 'sequence',
+					minOccurs: 1,
 					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+											],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				{
+					kind: 'choice',
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'GooseParametersRef', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'SMVParametersRef', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'ReportParametersRef', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'BinaryWiringParametersRef', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'AnalogueWiringParametersRef', minOccurs: 1, maxOccurs: 1 },
+					],
 				},
 			],
 		},
@@ -13854,25 +22621,16 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'name', 'originUuid', 'templateUuid', 'uuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -13887,6 +22645,38 @@ export const DEFINITION = {
 				SubCategory: {},
 				FunctionCatRef: { required: true, minOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'SubCategory' },
+						{ kind: 'element', name: 'FunctionCatRef', minOccurs: 1 },
+					],
+				},
+			],
 		},
 	},
 	SubCheckoutID: {
@@ -13907,28 +22697,38 @@ export const DEFINITION = {
 				'version',
 				'when',
 			],
+			any: true,
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				engRight: { facets: { enumeration: ['full', 'fix', 'dataflow'], whiteSpace: 'replace' } },
-				fileName: { facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				engRight: {
+					type: { builtin: 'normalizedString' },
+					facets: { enumeration: ['full', 'fix', 'dataflow'] },
+				},
+				fileName: { type: { builtin: 'normalizedString' } },
 				fileType: {
+					type: {
+						union: [
+							{
+								builtin: 'Name',
+								facets: { enumeration: ['ICD', 'IID', 'CID', 'SSD', 'SCD', 'SED'] },
+							},
+							{ builtin: 'normalizedString', facets: { pattern: ['[A-Z]{3}'] } },
+						],
+						facets: { enumeration: ['SED', 'SCC'] },
+					},
 					required: true,
 					facets: {
 						enumeration: ['SED', 'SCC', 'ICD', 'IID', 'CID', 'SSD', 'SCD'],
 						pattern: ['[A-Z]{3}', '[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'replace',
 					},
 				},
 				fileUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				headerId: { facets: { whiteSpace: 'replace' } },
-				revision: { required: true, facets: { whiteSpace: 'replace' } },
-				version: { required: true, facets: { whiteSpace: 'replace' } },
-				when: { facets: { whiteSpace: 'replace' } },
+				headerId: { type: { builtin: 'normalizedString' } },
+				revision: { type: { builtin: 'normalizedString' }, required: true },
+				version: { type: { builtin: 'normalizedString' }, required: true },
+				when: { type: { builtin: 'normalizedString' } },
 			},
 		},
 		children: {
@@ -13937,6 +22737,12 @@ export const DEFINITION = {
 				SubCheckoutID: { maxOccurs: 1 },
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [{ kind: 'element', name: 'SubCheckoutID', maxOccurs: 1 }],
+		},
 	},
 	SubEquipment: {
 		tag: 'SubEquipment',
@@ -13944,30 +22750,26 @@ export const DEFINITION = {
 		parents: ['TransformerWinding', 'TapChanger', 'PowerTransformer', 'ConductingEquipment'],
 		attributes: {
 			sequence: ['desc', 'name', 'phase', 'templateUuid', 'uuid', 'virtual'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				phase: {
+					type: { builtin: 'Name' },
 					default: 'none',
 					facets: {
 						enumeration: ['A', 'B', 'C', 'N', 'all', 'none', 'AB', 'BC', 'CA'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				virtual: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				virtual: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 			identityFields: ['name'],
 		},
@@ -14016,6 +22818,62 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+												{ kind: 'element', name: 'Private' },
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+										},
+									],
+								},
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [{ kind: 'element', name: 'LNode' }],
+								},
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'EqFunction' }],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -14043,23 +22901,20 @@ export const DEFINITION = {
 		parents: ['Function', 'SubFunction'],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'type', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				type: { facets: { whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' } },
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -14168,6 +23023,66 @@ export const DEFINITION = {
 				Variable: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+												{ kind: 'element', name: 'Private' },
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+										},
+									],
+								},
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [{ kind: 'element', name: 'LNode' }],
+								},
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'GeneralEquipment' },
+						{ kind: 'element', name: 'ConductingEquipment' },
+						{ kind: 'element', name: 'SubFunction' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -14196,28 +23111,20 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'name', 'originUuid', 'templateUuid', 'type', 'uuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				type: { facets: { whiteSpace: 'replace' } },
+				type: { type: { builtin: 'normalizedString' } },
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'LNode', 'GeneralEquipment', 'ConductingEquipment', 'SubFunctionTemplate'],
@@ -14300,6 +23207,52 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+										{ kind: 'element', name: 'Text', maxOccurs: 1 },
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'LNode' }],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'GeneralEquipment' },
+						{ kind: 'element', name: 'ConductingEquipment' },
+						{ kind: 'element', name: 'SubFunctionTemplate' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -14327,21 +23280,25 @@ export const DEFINITION = {
 		parents: ['Communication'],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'type', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				type: { facets: { enumeration: ['8-MMS', '8-XMPP'], minLength: 1, whiteSpace: 'replace' } },
-				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
+				type: {
+					type: {
+						union: [
+							{ builtin: 'normalizedString', facets: { enumeration: ['8-MMS', '8-XMPP'] } },
+							{ builtin: 'normalizedString', facets: { minLength: 1 } },
+						],
 					},
+					facets: { enumeration: ['8-MMS', '8-XMPP'], minLength: 1 },
+				},
+				uuid: {
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -14401,6 +23358,45 @@ export const DEFINITION = {
 				CommunicationServiceSpecifications: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'BitRate', maxOccurs: 1 },
+						{ kind: 'element', name: 'ConnectedAP', minOccurs: 1 },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -14421,10 +23417,15 @@ export const DEFINITION = {
 			sequence: ['commonName', 'idHierarchy'],
 			details: {
 				commonName: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['none', 'CN=.+'], minLength: 4, whiteSpace: 'replace' },
+					facets: { pattern: ['none', 'CN=.+'], minLength: 4 },
 				},
-				idHierarchy: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				idHierarchy: {
+					type: { builtin: 'normalizedString' },
+					required: true,
+					facets: { minLength: 1 },
+				},
 			},
 		},
 		children: {
@@ -14439,21 +23440,27 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'inputName', 'pLN', 'resourceName', 'resourceUuid', 'service'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				inputName: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
-				pLN: { facets: { whiteSpace: 'replace' } },
-				resourceName: { facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				inputName: {
+					type: { builtin: 'normalizedString' },
+					required: true,
+					facets: { minLength: 1 },
+				},
+				pLN: { type: { builtin: 'normalizedString' } },
+				resourceName: { type: { builtin: 'normalizedString' } },
 				resourceUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				service: {
+					type: {
+						union: [
+							{ builtin: 'Name', facets: { enumeration: ['Poll', 'Report', 'GOOSE', 'SMV'] } },
+							{ builtin: 'Name', facets: { enumeration: ['Wired', 'Internal'] } },
+						],
+					},
 					facets: {
 						enumeration: ['Poll', 'Report', 'GOOSE', 'SMV', 'Wired', 'Internal'],
 						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
 					},
 				},
 			},
@@ -14477,15 +23484,37 @@ export const DEFINITION = {
 				ReportParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 				BinaryWiringParametersRef: { required: true, minOccurs: 1, maxOccurs: 1 },
 			},
-			choices: [
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
 				{
-					options: [
-						'BinaryWiringParametersRef',
-						'GooseParametersRef',
-						'ReportParametersRef',
-						'SMVParametersRef',
-					],
+					kind: 'sequence',
+					minOccurs: 1,
 					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'choice',
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'GooseParametersRef', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'SMVParametersRef', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'ReportParametersRef', minOccurs: 1, maxOccurs: 1 },
+						{ kind: 'element', name: 'BinaryWiringParametersRef', minOccurs: 1, maxOccurs: 1 },
+					],
 				},
 			],
 		},
@@ -14496,20 +23525,16 @@ export const DEFINITION = {
 		parents: ['SCL', 'Process'],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 			identityFields: ['name'],
@@ -14648,6 +23673,81 @@ export const DEFINITION = {
 				Variable: {},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [
+														{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+														{ kind: 'element', name: 'Text', maxOccurs: 1 },
+														{ kind: 'element', name: 'Private' },
+													],
+												},
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+												},
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'LNode' }],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'PowerTransformer' },
+								{ kind: 'element', name: 'GeneralEquipment' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'VoltageLevel', minOccurs: 1 },
+						{ kind: 'element', name: 'Function' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -14677,12 +23777,14 @@ export const DEFINITION = {
 			sequence: ['maxGo', 'maxSv'],
 			details: {
 				maxGo: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 				maxSv: {
+					type: { builtin: 'unsignedInt' },
 					required: true,
-					facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
 				},
 			},
 		},
@@ -14697,27 +23799,24 @@ export const DEFINITION = {
 		parents: ['TransformerWinding'],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'type', 'uuid', 'virtual'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				type: {
+					type: { builtin: 'Name' },
 					required: true,
 					fixed: 'LTC',
-					facets: { pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'], whiteSpace: 'collapse' },
+					facets: { pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				virtual: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				virtual: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 			identityFields: ['name'],
 		},
@@ -14788,6 +23887,65 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+												{ kind: 'element', name: 'Private' },
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+										},
+									],
+								},
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [{ kind: 'element', name: 'LNode' }],
+								},
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'SubEquipment' },
+						{ kind: 'element', name: 'EqFunction' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -14826,25 +23984,29 @@ export const DEFINITION = {
 				'substationName',
 				'voltageLevelName',
 			],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				bayName: { facets: { minLength: 1, whiteSpace: 'replace' } },
-				cNodeName: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				bayName: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
+				cNodeName: {
+					type: { builtin: 'normalizedString' },
+					required: true,
+					facets: { minLength: 1 },
+				},
 				cNodeUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				connectivityNode: {
+					type: { builtin: 'normalizedString' },
 					required: true,
-					facets: { pattern: ['.+/.+(/.+)*'], whiteSpace: 'replace' },
+					facets: { pattern: ['.+/.+(/.+)*'] },
 				},
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				lineName: { facets: { minLength: 1, whiteSpace: 'replace' } },
-				name: { default: '', facets: { whiteSpace: 'replace' } },
-				processName: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
-				substationName: { facets: { minLength: 1, whiteSpace: 'replace' } },
-				voltageLevelName: { facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				lineName: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
+				name: { type: { builtin: 'normalizedString' }, default: '' },
+				processName: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
+				substationName: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
+				voltageLevelName: { type: { builtin: 'normalizedString' }, facets: { minLength: 1 } },
 			},
 		},
 		children: {
@@ -14854,6 +24016,30 @@ export const DEFINITION = {
 				Text: { maxOccurs: 1 },
 				Private: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+								{ kind: 'element', name: 'Private' },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	Text: {
@@ -14995,14 +24181,35 @@ export const DEFINITION = {
 		],
 		attributes: {
 			sequence: ['source'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				source: { facets: { whiteSpace: 'collapse' } },
+				source: { type: { builtin: 'anyURI' } },
 			},
 		},
 		children: {
 			sequence: [],
 			any: true,
 			details: {},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					particles: [
+						{
+							kind: 'any',
+							namespace: ['##other'],
+							processContents: 'lax',
+							minOccurs: 1,
+							maxOccurs: 1,
+						},
+					],
+				},
+			],
 		},
 		textContent: {},
 	},
@@ -15013,10 +24220,10 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['c37_238', 'iec61850_9_3', 'other', 'sntp'],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { type: { builtin: 'boolean' }, default: 'false' },
+				iec61850_9_3: { type: { builtin: 'boolean' }, default: 'false' },
+				other: { type: { builtin: 'boolean' }, default: 'false' },
+				sntp: { type: { builtin: 'boolean' }, default: 'true' },
 			},
 		},
 		children: {
@@ -15044,17 +24251,17 @@ export const DEFINITION = {
 				'xsi:type',
 			],
 			details: {
-				c37_238: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftp: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ftps: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_1: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				iec61850_8_2: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				iec61850_9_3: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				ipv6: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				mms: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				other: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				serverAssociationInitiation: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				sntp: { default: 'true', facets: { whiteSpace: 'collapse' } },
+				c37_238: { default: 'false' },
+				ftp: { default: 'false' },
+				ftps: { default: 'false' },
+				iec61850_8_1: { default: 'true' },
+				iec61850_8_2: { default: 'false' },
+				iec61850_9_3: { default: 'false' },
+				ipv6: { default: 'false' },
+				mms: { default: 'true' },
+				other: { default: 'false' },
+				serverAssociationInitiation: { default: 'false' },
+				sntp: { default: 'true' },
 				'xsi:type': {
 					namespace: { prefix: 'xsi', uri: 'http://www.w3.org/2001/XMLSchema-instance' },
 					facets: { enumeration: ['tCommProt', 'tFileHandling', 'tSCSM', 'tTimeSyncProt'] },
@@ -15072,32 +24279,26 @@ export const DEFINITION = {
 		parents: ['PowerTransformer'],
 		attributes: {
 			sequence: ['desc', 'name', 'templateUuid', 'type', 'uuid', 'virtual'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				type: {
+					type: { builtin: 'Name' },
 					required: true,
 					fixed: 'PTW',
-					facets: {
-						enumeration: ['PTW'],
-						pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'],
-						whiteSpace: 'collapse',
-					},
+					facets: { enumeration: ['PTW'], pattern: ['[A-Za-z_:][-.:0-9A-Z_a-z]*'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				virtual: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				virtual: { type: { builtin: 'boolean' }, default: 'false' },
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -15201,6 +24402,89 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [
+														{
+															kind: 'sequence',
+															minOccurs: 1,
+															maxOccurs: 1,
+															particles: [
+																{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+																{ kind: 'element', name: 'Text', maxOccurs: 1 },
+																{ kind: 'element', name: 'Private' },
+															],
+														},
+														{
+															kind: 'sequence',
+															minOccurs: 1,
+															maxOccurs: 1,
+															particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+														},
+													],
+												},
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [{ kind: 'element', name: 'LNode' }],
+												},
+											],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'Terminal', maxOccurs: 2 },
+								{ kind: 'element', name: 'SubEquipment' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'TapChanger', maxOccurs: 1 },
+						{ kind: 'element', name: 'NeutralPoint', maxOccurs: 1 },
+						{ kind: 'element', name: 'EqFunction' },
+					],
+				},
+			],
+		},
 		constraints: [
 			{
 				kind: 'unique',
@@ -15233,11 +24517,11 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['dchg', 'dupd', 'gi', 'period', 'qchg'],
 			details: {
-				dchg: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				dupd: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				gi: { default: 'true', facets: { whiteSpace: 'collapse' } },
-				period: { default: 'false', facets: { whiteSpace: 'collapse' } },
-				qchg: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				dchg: { type: { builtin: 'boolean' }, default: 'false' },
+				dupd: { type: { builtin: 'boolean' }, default: 'false' },
+				gi: { type: { builtin: 'boolean' }, default: 'true' },
+				period: { type: { builtin: 'boolean' }, default: 'false' },
+				qchg: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -15252,14 +24536,17 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['sGroup'],
 			details: {
-				sGroup: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				sGroup: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 			},
 		},
 		children: {
 			sequence: [],
 			details: {},
 		},
-		textContent: { facets: { whiteSpace: 'replace' } },
+		textContent: { type: { builtin: 'normalizedString' } },
 	},
 	ValueHandling: {
 		tag: 'ValueHandling',
@@ -15268,7 +24555,7 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['setToRO'],
 			details: {
-				setToRO: { default: 'false', facets: { whiteSpace: 'collapse' } },
+				setToRO: { type: { builtin: 'boolean' }, default: 'false' },
 			},
 		},
 		children: {
@@ -15297,28 +24584,20 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'name', 'originUuid', 'templateUuid', 'uuid', 'value'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true },
 				originUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				value: { facets: { whiteSpace: 'replace' } },
+				value: { type: { builtin: 'normalizedString' } },
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: ['Text', 'VariableApplyTo'],
@@ -15330,6 +24609,35 @@ export const DEFINITION = {
 				},
 				VariableApplyTo: { required: true, minOccurs: 1 },
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [{ kind: 'element', name: 'VariableApplyTo', minOccurs: 1 }],
+				},
+			],
 		},
 	},
 	VariableApplyTo: {
@@ -15349,32 +24657,30 @@ export const DEFINITION = {
 				'sGroup',
 			],
 			details: {
-				attribute: { facets: { whiteSpace: 'replace' } },
+				attribute: { type: { builtin: 'normalizedString' } },
 				daName: {
+					type: { builtin: 'normalizedString' },
 					facets: {
 						pattern: [
 							'[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?(\\.[a-zA-Z][a-zA-Z0-9]*(\\([0-9]+\\))?)*',
 						],
-						whiteSpace: 'replace',
 					},
 				},
-				defaultValue: { facets: { whiteSpace: 'replace' } },
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
+				defaultValue: { type: { builtin: 'normalizedString' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
 				doName: {
-					facets: {
-						pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'],
-						whiteSpace: 'replace',
-					},
+					type: { builtin: 'normalizedString' },
+					facets: { pattern: ['[A-Z][0-9A-Za-z]{0,11}(\\.[a-z][0-9A-Za-z]*(\\([0-9]+\\))?)?'] },
 				},
-				element: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				element: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				elementUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
-				format: { facets: { whiteSpace: 'replace' } },
-				sGroup: { facets: { minInclusive: 0, maxInclusive: 4294967295, whiteSpace: 'collapse' } },
+				format: { type: { builtin: 'normalizedString' } },
+				sGroup: {
+					type: { builtin: 'unsignedInt' },
+					facets: { minInclusive: 0, maxInclusive: 4294967295 },
+				},
 			},
 		},
 		children: {
@@ -15387,6 +24693,29 @@ export const DEFINITION = {
 				},
 			},
 		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+								{ kind: 'element', name: 'Text', maxOccurs: 1 },
+							],
+						},
+					],
+				},
+			],
+		},
 	},
 	VariableRef: {
 		tag: 'VariableRef',
@@ -15396,14 +24725,11 @@ export const DEFINITION = {
 		attributes: {
 			sequence: ['desc', 'value', 'variable', 'variableUuid'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				value: { facets: { whiteSpace: 'replace' } },
-				variable: { facets: { pattern: ['.+(/.+)*'], whiteSpace: 'replace' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				value: { type: { builtin: 'normalizedString' } },
+				variable: { type: { builtin: 'normalizedString' }, facets: { pattern: ['.+(/.+)*'] } },
 				variableUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
 		},
@@ -15417,7 +24743,44 @@ export const DEFINITION = {
 				},
 				FunctionalVariantRef: {},
 			},
-			choices: [{ options: ['FunctionalVariantRef'] }],
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+												{ kind: 'element', name: 'Text', maxOccurs: 1 },
+											],
+										},
+									],
+								},
+								{ kind: 'choice', particles: [{ kind: 'element', name: 'FunctionalVariantRef' }] },
+							],
+						},
+					],
+				},
+			],
 		},
 	},
 	Voltage: {
@@ -15428,6 +24791,7 @@ export const DEFINITION = {
 			sequence: ['multiplier', 'unit'],
 			details: {
 				multiplier: {
+					type: { builtin: 'normalizedString' },
 					default: '',
 					facets: {
 						enumeration: [
@@ -15453,17 +24817,16 @@ export const DEFINITION = {
 							'Z',
 							'Y',
 						],
-						whiteSpace: 'replace',
 					},
 				},
-				unit: { required: true, fixed: 'V', facets: { whiteSpace: 'collapse' } },
+				unit: { type: { builtin: 'token' }, required: true, fixed: 'V' },
 			},
 		},
 		children: {
 			sequence: [],
 			details: {},
 		},
-		textContent: { facets: { whiteSpace: 'collapse' } },
+		textContent: { type: { builtin: 'decimal' } },
 	},
 	VoltageLevel: {
 		tag: 'VoltageLevel',
@@ -15471,26 +24834,24 @@ export const DEFINITION = {
 		parents: ['Substation'],
 		attributes: {
 			sequence: ['desc', 'name', 'nomFreq', 'numPhases', 'templateUuid', 'uuid'],
+			any: true,
+			anyNamespace: ['##other'],
 			details: {
-				desc: { default: '', facets: { whiteSpace: 'replace' } },
-				name: { required: true, facets: { minLength: 1, whiteSpace: 'replace' } },
-				nomFreq: { facets: { minInclusive: 0, whiteSpace: 'collapse' } },
+				desc: { type: { builtin: 'normalizedString' }, default: '' },
+				name: { type: { builtin: 'normalizedString' }, required: true, facets: { minLength: 1 } },
+				nomFreq: { type: { builtin: 'decimal' }, facets: { minInclusive: 0 } },
 				numPhases: {
-					facets: { minInclusive: 0, maxInclusive: 255, minExclusive: 0, whiteSpace: 'collapse' },
+					type: { builtin: 'unsignedByte' },
+					facets: { minInclusive: 0, maxInclusive: 255, minExclusive: 0 },
 				},
 				templateUuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 				uuid: {
-					facets: {
-						pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'],
-						whiteSpace: 'preserve',
-					},
+					facets: { pattern: ['[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'] },
 				},
 			},
+			identityFields: ['name'],
 		},
 		children: {
 			sequence: [
@@ -15627,6 +24988,82 @@ export const DEFINITION = {
 				ProcessResources: {},
 				Variable: {},
 			},
+		},
+		contentModel: {
+			kind: 'sequence',
+			minOccurs: 1,
+			maxOccurs: 1,
+			particles: [
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{
+									kind: 'sequence',
+									minOccurs: 1,
+									maxOccurs: 1,
+									particles: [
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [
+														{ kind: 'any', namespace: ['##other'], processContents: 'lax' },
+														{ kind: 'element', name: 'Text', maxOccurs: 1 },
+														{ kind: 'element', name: 'Private' },
+													],
+												},
+												{
+													kind: 'sequence',
+													minOccurs: 1,
+													maxOccurs: 1,
+													particles: [{ kind: 'element', name: 'Labels', maxOccurs: 1 }],
+												},
+											],
+										},
+										{
+											kind: 'sequence',
+											minOccurs: 1,
+											maxOccurs: 1,
+											particles: [{ kind: 'element', name: 'LNode' }],
+										},
+									],
+								},
+							],
+						},
+						{
+							kind: 'sequence',
+							minOccurs: 1,
+							maxOccurs: 1,
+							particles: [
+								{ kind: 'element', name: 'PowerTransformer' },
+								{ kind: 'element', name: 'GeneralEquipment' },
+							],
+						},
+					],
+				},
+				{
+					kind: 'sequence',
+					minOccurs: 1,
+					maxOccurs: 1,
+					particles: [
+						{ kind: 'element', name: 'Voltage', maxOccurs: 1 },
+						{ kind: 'element', name: 'Bay', minOccurs: 1 },
+						{ kind: 'element', name: 'Function' },
+					],
+				},
+			],
 		},
 		constraints: [
 			{

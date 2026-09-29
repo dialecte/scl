@@ -35,11 +35,11 @@ export async function writeIdentity(
 	if (mode === 'keep' || mode === 'preserve') return
 
 	for (const mapping of mappings) {
-		const updates = mode === 'strip' ? stripLineage() : stampLineage(mapping)
-		if (Object.keys(updates).length === 0) continue
-
 		const target = await tx.getRecord(mapping.target)
 		if (!target) continue
+
+		const updates = mode === 'strip' ? stripLineage() : stampLineage({ mapping, target })
+		if (Object.keys(updates).length === 0) continue
 		await tx.update(target, { attributes: updates })
 	}
 }
@@ -50,7 +50,12 @@ function stripLineage(): LineageUpdates {
 	return { templateUuid: undefined, originUuid: undefined }
 }
 
-function stampLineage(mapping: Scl.CloneMapping): LineageUpdates {
+function stampLineage(params: {
+	mapping: Scl.CloneMapping
+	/** The target record: its parent says which declaration of the element applies. */
+	target: Core.AnyTrackedRecord
+}): LineageUpdates {
+	const { mapping, target } = params
 	const sourceUuid = readAttribute(mapping.source.attributes, 'uuid')
 	const sourceTemplateUuid = readAttribute(mapping.source.attributes, 'templateUuid')
 	const sourceOriginUuid = readAttribute(mapping.source.attributes, 'originUuid')
@@ -60,7 +65,7 @@ function stampLineage(mapping: Scl.CloneMapping): LineageUpdates {
 
 	const carriesOriginLineage = getAttributeRules({
 		dialecteConfig: SCL_DIALECTE_CONFIG,
-		tagName: mapping.target.tagName,
+		record: target,
 		attributeName: 'originUuid',
 	}).isDefined
 	if (sourceTemplateUuid && !sourceOriginUuid && carriesOriginLineage) {

@@ -23,12 +23,15 @@ export namespace Scl {
 	// DEFINITION
 	export type ElementsOf = Core.ElementsOf<Config>
 	export type Ref<GenericElement extends ElementsOf> = Core.Ref<Config, GenericElement>
-	export type AttributesValueObjectOf<GenericElement extends ElementsOf> =
-		Core.AttributesValueObjectOf<Config, GenericElement>
-	export type AttributesOf<GenericElement extends ElementsOf> = Core.AttributesOf<
-		Config,
-		GenericElement
-	>
+	/** The attributes of an element: by tag, or as declared under `GenericParent` when one is named. */
+	export type AttributesValueObjectOf<
+		GenericElement extends ElementsOf,
+		GenericParent extends ElementsOf = never,
+	> = Core.AttributesValueObjectOf<Config, GenericElement, GenericParent>
+	export type AttributesOf<
+		GenericElement extends ElementsOf,
+		GenericParent extends ElementsOf = never,
+	> = Core.AttributesOf<Config, GenericElement, GenericParent>
 	export type FullAttributeObjectOf<GenericElement extends ElementsOf> = Core.FullAttributeObjectOf<
 		Config,
 		GenericElement
