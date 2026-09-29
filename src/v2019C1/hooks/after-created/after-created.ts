@@ -1,4 +1,4 @@
-import { syncMinRequestedScdFileOnCreate } from './min-requested-scd-file'
+import { reconcileMinRequestedScdFileOnCreate } from './min-requested-scd-file'
 import { wrapWithPrivateElementIfNeeded } from './private-wrapper'
 import { setRefPaths } from './ref-paths'
 
@@ -17,7 +17,7 @@ export async function afterCreated<
 
 	const privateOps = await wrapWithPrivateElementIfNeeded({ childRecord, parentRecord, query })
 	const refPathOps = await setRefPaths({ childRecord, query })
-	const minRequestedScdFileOps = await syncMinRequestedScdFileOnCreate({ childRecord, query })
+	const minRequestedScdFileOps = await reconcileMinRequestedScdFileOnCreate(query, { childRecord })
 
 	return [...privateOps, ...refPathOps, ...minRequestedScdFileOps]
 }
