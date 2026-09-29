@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.4.1] - 2026-09-29
+
 ### Added
 
-- **An IED's `MinRequestedSCDFile` is now maintained for you.** Changing an IED in a way that requires its configuration to be uploaded again — a control block or data set, an `ExtRef`, a `DAI` value, its access points in the communication section, or the IED's own name — records the current SCD `Header`'s `uuid`, `version` and `revision` on that IED, creating the `MinRequestedSCDFiles` wrapper and its entry the first time and updating it in place afterwards. The write happens in the same transaction as the change that caused it, so the two always land together. The entry is owned by the tooling: an IED keeps **exactly one**, and any further entry an incoming file brought along is removed on the next change. Attributes that cannot be derived from the `Header` (`fileName`, `when`, `desc`) are left as they are, and a `Header` without `version`/`revision` writes those as empty rather than failing. Changes outside that list leave the entry alone. Removing an element does not yet trigger the update — that follows once an `afterDeleted` hook exists.
+- Automatically sync each IED's single `MinRequestedSCDFile` from the SCD Header when control blocks, datasets, `ExtRef`, `DAI` values, communication settings, or IED names change. Creation, updates, and deletions happen in the same transaction; network reassignment updates both IEDs. Preserve user attributes, remove extra entries, and use empty values for missing Header version/revision.
 
 ## [0.4.0] - 2026-09-29
 
