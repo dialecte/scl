@@ -559,6 +559,17 @@ describe('extractElementTitle', () => {
 			expectedTitle: 'IED_B/LD1/PXCBR1.Pos.stVal/gcb01',
 		},
 
+		// ── lineage is identity, never a title ───────────────────────
+		'Header, identified by its uuid alone → the tag, not the uuid': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Header id="doc" uuid="7b7a2b1e-0f4d-4b3a-9a1e-0f4d4b3a9a1e" ${id}="hdr"/>
+				</SCL>
+			`,
+			ref: { tagName: 'Header', id: 'hdr' },
+			expectedTitle: 'Header',
+		},
+
 		// ── Revised spec: FunctionRef prefix ──────────────────────────
 		'FunctionRef → fn:function': {
 			sourceXml: /* xml */ `

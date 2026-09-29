@@ -1,5 +1,5 @@
 export { classifyAttribute, editableAttributes, isEditableMode } from './classify-attribute'
-export { EDITABLE_MODES } from './classify-attribute.constants'
+export { EDITABLE_MODES, LINEAGE } from './classify-attribute.constants'
 export { getIdentityFields } from './identity-fields'
 export { findConstraintViolation } from './find-constraint-violation'
 export { findConstraintViolations } from './find-constraint-violations'

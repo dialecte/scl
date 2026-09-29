@@ -1,6 +1,7 @@
 import { TITLE_FIELDS_OVERRIDE } from '../constants/title'
 
 import { DEFINITION } from '@/v2019C1/definition'
+import { LINEAGE } from '@/v2019C1/extensions/lifecycle/constraints'
 
 import type { ConditionalTitle, TitleSpec } from '../constants/title.types'
 import type {
@@ -24,7 +25,7 @@ import type { AnyRefOrRecord } from '@dialecte/core'
  * Resolution precedence for the title (first non-empty wins):
  * 1. `TITLE_FIELDS_OVERRIDE` spec for the tag (compact or full).
  * 2. `record.value` (XML text body) - handles BayType, IEDName, Val, etc.
- * 3. `DEFINITION.identityFields` fallback (name > id > first).
+ * 3. `DEFINITION.identityFields` fallback (name > id > first), lineage attributes left out.
  * 4. tagName.
  */
 export function extractElementTitle(
@@ -83,11 +84,12 @@ function resolveTitle(input: {
 	const text = (value ?? '').trim()
 	if (text) return text
 
-	// 3. identityFields fallback
+	// 3. identityFields fallback - lineage attributes identify, a uuid is never a title
 	const definition = DEFINITION[tag as keyof typeof DEFINITION]
-	const identityFields = (definition?.attributes as { identityFields?: string[] } | undefined)
-		?.identityFields
-	const preferred = identityFields?.find((f) => f === 'name' || f === 'id') ?? identityFields?.[0]
+	const identityFields = (
+		(definition?.attributes as { identityFields?: string[] } | undefined)?.identityFields ?? []
+	).filter((f) => !LINEAGE.has(f))
+	const preferred = identityFields.find((f) => f === 'name' || f === 'id') ?? identityFields[0]
 	if (preferred && attributes[preferred]) return attributes[preferred]
 
 	// 4. tagName
