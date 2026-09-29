@@ -1,6 +1,6 @@
 import {
-	resolveOwningIed,
-	syncMinRequestedScdFile,
+	resolveAffectedIeds,
+	syncMinRequestedScdFiles,
 } from '@/v2019C1/hooks/shared/min-requested-scd-file'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -14,8 +14,6 @@ export async function syncMinRequestedScdFileOnCreate<
 }): Promise<Scl.Operation[]> {
 	const { childRecord, query } = params
 
-	const iedRef = await resolveOwningIed({ record: childRecord, query })
-	if (!iedRef) return []
-
-	return syncMinRequestedScdFile({ iedRef, query })
+	const iedRefs = await resolveAffectedIeds({ record: childRecord, query })
+	return syncMinRequestedScdFiles({ iedRefs, query })
 }

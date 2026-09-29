@@ -11,6 +11,21 @@ const MANAGED_ATTRIBUTE_NAMES = ['fileType', 'fileUuid', 'revision', 'version'] 
 type ManagedAttributeName = (typeof MANAGED_ATTRIBUTE_NAMES)[number]
 type ManagedAttributes = Record<ManagedAttributeName, string>
 
+export async function syncMinRequestedScdFiles(params: {
+	iedRefs: Scl.Ref<'IED'>[]
+	query: Core.Query<Config>
+}): Promise<Scl.Operation[]> {
+	const { iedRefs, query } = params
+	const operations: Scl.Operation[] = []
+	const seen = new Set<string>()
+	for (const iedRef of iedRefs) {
+		if (seen.has(iedRef.id)) continue
+		seen.add(iedRef.id)
+		operations.push(...(await syncMinRequestedScdFile({ iedRef, query })))
+	}
+	return operations
+}
+
 export async function syncMinRequestedScdFile(params: {
 	iedRef: Scl.Ref<'IED'>
 	query: Core.Query<Config>

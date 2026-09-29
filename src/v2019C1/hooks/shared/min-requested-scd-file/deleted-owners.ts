@@ -1,5 +1,5 @@
-import { resolveOwningIed } from './resolve-owning-ied'
-import { syncMinRequestedScdFile } from './sync-min-requested-scd-file'
+import { resolveAffectedIeds } from './resolve-owning-ied'
+import { syncMinRequestedScdFiles } from './sync-min-requested-scd-file'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -15,8 +15,8 @@ export async function captureAffectedIedsBeforeDelete<
 	async function visit<Element extends Scl.ElementsOf>(
 		current: Scl.RawRecord<Element>,
 	): Promise<void> {
-		const owner = await resolveOwningIed({ record: current, query })
-		if (owner) owners.set(owner.id, owner)
+		const affected = await resolveAffectedIeds({ record: current, query })
+		for (const owner of affected) owners.set(owner.id, owner)
 
 		for (const childRef of current.children) {
 			const child = await query.getRecord(childRef)
@@ -39,9 +39,5 @@ export async function syncMinRequestedScdFileOnDelete<
 	ownersByDeletedRecord.delete(record)
 	if (!owners) return []
 
-	const operations: Scl.Operation[] = []
-	for (const iedRef of owners) {
-		operations.push(...(await syncMinRequestedScdFile({ iedRef, query })))
-	}
-	return operations
+	return syncMinRequestedScdFiles({ iedRefs: owners, query })
 }

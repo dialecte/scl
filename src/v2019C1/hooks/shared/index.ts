@@ -3,4 +3,8 @@ export { reconcileMappedName } from './mapped-name'
 export { reconcileReferrerRefPaths } from './ref-path-rebuild'
 export { reconcileLNodeBinding } from './lnode-binding'
 export { updatedOperation, upsertAttribute } from './record-ops'
-export { resolveOwningIed, syncMinRequestedScdFile } from './min-requested-scd-file'
+export {
+	resolveAffectedIeds,
+	resolveIedByName,
+	syncMinRequestedScdFiles,
+} from './min-requested-scd-file'

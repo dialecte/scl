@@ -1,6 +1,7 @@
 import {
-	resolveOwningIed,
-	syncMinRequestedScdFile,
+	resolveAffectedIeds,
+	resolveIedByName,
+	syncMinRequestedScdFiles,
 } from '@/v2019C1/hooks/shared/min-requested-scd-file'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -15,13 +16,28 @@ export async function syncMinRequestedScdFileOnUpdate<
 }): Promise<Scl.Operation[]> {
 	const { oldRecord, newRecord, query } = params
 
-	const iedRef =
-		(newRecord.tagName as string) === 'IED'
-			? iedRefOnNameChange({ oldRecord, newRecord })
-			: await resolveOwningIed({ record: newRecord, query })
-	if (!iedRef) return []
+	const tagName = newRecord.tagName as string
+	if (
+		tagName === 'SubNetwork' &&
+		attributeValue(oldRecord, 'name') === attributeValue(newRecord, 'name') &&
+		attributeValue(oldRecord, 'type') === attributeValue(newRecord, 'type')
+	)
+		return []
 
-	return syncMinRequestedScdFile({ iedRef, query })
+	if (tagName === 'IED') {
+		const iedRef = iedRefOnNameChange({ oldRecord, newRecord })
+		return syncMinRequestedScdFiles({ iedRefs: iedRef ? [iedRef] : [], query })
+	}
+
+	const iedRefs = await resolveAffectedIeds({ record: newRecord, query })
+	if (
+		tagName === 'ConnectedAP' &&
+		attributeValue(oldRecord, 'iedName') !== attributeValue(newRecord, 'iedName')
+	) {
+		const oldIed = await resolveIedByName({ iedName: attributeValue(oldRecord, 'iedName'), query })
+		if (oldIed) iedRefs.push(oldIed)
+	}
+	return syncMinRequestedScdFiles({ iedRefs, query })
 }
 
 function iedRefOnNameChange<GenericElement extends Scl.ElementsOf>(params: {
