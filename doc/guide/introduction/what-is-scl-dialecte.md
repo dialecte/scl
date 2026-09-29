@@ -59,11 +59,15 @@ Hooks enforce SCL-specific invariants automatically — no application code need
 
 **Transaction hooks:**
 
-| Hook                      | Trigger                                               | What it does                                                                                                                         |
-| ------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `afterStandardizedRecord` | Every record entry point (create/clone/update/import) | Generates a fresh `uuid` on any element that supports it but lacks one (fill-only)                                                   |
-| `beforeClone`             | Before cloning a subtree                              | Strips `uuid` attributes (clones get fresh identifiers); skips only truly-empty `<Private>` wrappers (no children, value, or `type`) |
-| `afterCreated`            | After a child element is added                        | Wraps elements from a non-default namespace inside a `<Private>` container, as required by SCL                                       |
+| Hook                      | Trigger                                               | What it does                                                                                                                                                   |
+| ------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `afterStandardizedRecord` | Every record entry point (create/clone/update/import) | Generates a fresh `uuid` on any element that supports it but lacks one (fill-only)                                                                             |
+| `beforeClone`             | Before cloning a subtree                              | Strips `uuid` attributes (clones get fresh identifiers); skips only truly-empty `<Private>` wrappers (no children, value, or `type`)                           |
+| `afterCreated`            | After a child element is added                        | Wraps elements from a non-default namespace inside a `<Private>` container, as required by SCL; keeps the IED's minimum requested SCD file current (see below) |
+| `afterUpdated`            | After an element is updated                           | Keeps references in agreement with their target; keeps the IED's minimum requested SCD file current (see below)                                                |
+| `beforeDelete`            | Before an element and its subtree are deleted         | Cleans references to the deleted subtree; keeps the IED's minimum requested SCD file current (see below)                                                       |
+
+**Minimum requested SCD file.** When a change affects an IED's configuration (control blocks and their settings, data sets, `ExtRef`, `DAI` values, the IED's own attributes, or its communication: `ConnectedAP`, addresses, `GSE`/`SMV`, `SubNetwork` settings and communication service specifications), the IED's `MinRequestedSCDFiles` gets an entry for the current SCD in the same transaction: `fileUuid` from the `Header` uuid, with its `version` and `revision`. Entries of other projects are kept, and a project is listed once: when an IED is cloned or an entry added for a project already listed, the entries are merged and hand-set `fileName`, `when` and `desc` are kept. An update counts when it changes an element's text or any attribute other than `desc` and the lineage uuids. A missing `Header` version or revision is written as an empty value; nothing is written when the `Header` has no uuid.
 
 **IO hooks (import pipeline):**
 

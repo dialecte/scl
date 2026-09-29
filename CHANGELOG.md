@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Automatically sync each IED's single `MinRequestedSCDFile` from the SCD Header when control blocks, datasets, `ExtRef`, `DAI` values, communication settings, or IED names change. Creation, updates, and deletions happen in the same transaction; network reassignment updates both IEDs. Preserve user attributes, remove extra entries, and use empty values for missing Header version/revision.
+- Automatically keep each IED's `MinRequestedSCDFile` for the current SCD in sync with the Header when control blocks, datasets, `ExtRef`, `DAI` values, communication settings, or IED attributes change (description-only updates excepted). Creation, updates, and deletions happen in the same transaction; network reassignment updates both IEDs. Entries of other projects are kept and each project is listed once: cloning an IED or adding an entry for an already listed project merges them, keeping hand-set `fileName`, `when` and `desc`. Missing Header version/revision become empty values; nothing is written without a Header uuid.
 
 ## [0.4.0] - 2026-09-29
 
