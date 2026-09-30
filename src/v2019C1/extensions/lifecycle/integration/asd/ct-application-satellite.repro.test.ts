@@ -29,28 +29,28 @@ const sourceXml = /* xml */ `
 				<eIEC61850-6-100:Application name="CT_App" type="HV_Interface" uuid="app-src" ${id}="app-s">
 					<eIEC61850-6-100:FunctionRole name="APPLICATION ROOT" uuid="fr-root-src" ${id}="fr-root-s">
 						<eIEC61850-6-100:FunctionRoleContent ${id}="frc-root-s">
-							<eIEC61850-6-100:FunctionRef function="TEMPLATE/CT_Fn" functionUuid="fn-src" ${id}="fref-fn-s"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn" functionUuid="fn-src" ${id}="fref-fn-s"/>
 						</eIEC61850-6-100:FunctionRoleContent>
 					</eIEC61850-6-100:FunctionRole>
 					<eIEC61850-6-100:FunctionRole name="MEASUREMENT" uuid="fr-meas-src" ${id}="fr-meas-s">
 						<eIEC61850-6-100:FunctionRoleContent ${id}="frc-meas-s">
-							<eIEC61850-6-100:FunctionRef function="TEMPLATE/PhsA" functionUuid="sfa-src" ${id}="fref-a-s"/>
-							<eIEC61850-6-100:FunctionRef function="TEMPLATE/PhsB" functionUuid="sfb-src" ${id}="fref-b-s"/>
-							<eIEC61850-6-100:FunctionRef function="TEMPLATE/PhsC" functionUuid="sfc-src" ${id}="fref-c-s"/>
-							<eIEC61850-6-100:FunctionRef function="TEMPLATE/N" functionUuid="sfn-src" ${id}="fref-n-s"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/PhsA" functionUuid="sfa-src" ${id}="fref-a-s"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/PhsB" functionUuid="sfb-src" ${id}="fref-b-s"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/PhsC" functionUuid="sfc-src" ${id}="fref-c-s"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/N" functionUuid="sfn-src" ${id}="fref-n-s"/>
 						</eIEC61850-6-100:FunctionRoleContent>
 					</eIEC61850-6-100:FunctionRole>
 					<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/PIU" allocationRoleUuid="ar-src" ${id}="arref-s"/>
 				</eIEC61850-6-100:Application>
 				<eIEC61850-6-100:AllocationRole name="PIU" uuid="ar-src" ${id}="ar-s">
-					<eIEC61850-6-100:FunctionRef function="TEMPLATE/CT_Fn" functionUuid="fn-src" ${id}="ar-fref-s"/>
+					<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn" functionUuid="fn-src" ${id}="ar-fref-s"/>
 				</eIEC61850-6-100:AllocationRole>
 				<eIEC61850-6-100:FunctionCategory name="Measurement" uuid="cat-src" ${id}="cat-s">
 					<eIEC61850-6-100:SubCategory name="Current" uuid="subcat-src" ${id}="subcat-s">
-						<eIEC61850-6-100:FunctionCatRef functionUuid="sfa-src" function="TEMPLATE/CT_Fn/PhsA" ${id}="cref-a-s"/>
-						<eIEC61850-6-100:FunctionCatRef functionUuid="sfb-src" function="TEMPLATE/CT_Fn/PhsB" ${id}="cref-b-s"/>
-						<eIEC61850-6-100:FunctionCatRef functionUuid="sfc-src" function="TEMPLATE/CT_Fn/PhsC" ${id}="cref-c-s"/>
-						<eIEC61850-6-100:FunctionCatRef functionUuid="sfn-src" function="TEMPLATE/CT_Fn/N" ${id}="cref-n-s"/>
+						<eIEC61850-6-100:FunctionCatRef functionUuid="sfa-src" function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/PhsA" ${id}="cref-a-s"/>
+						<eIEC61850-6-100:FunctionCatRef functionUuid="sfb-src" function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/PhsB" ${id}="cref-b-s"/>
+						<eIEC61850-6-100:FunctionCatRef functionUuid="sfc-src" function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/PhsC" ${id}="cref-c-s"/>
+						<eIEC61850-6-100:FunctionCatRef functionUuid="sfn-src" function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/N" ${id}="cref-n-s"/>
 					</eIEC61850-6-100:SubCategory>
 				</eIEC61850-6-100:FunctionCategory>
 			</Private>

@@ -27,7 +27,7 @@ const sourceXml = /* xml */ `
 			<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 				<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" uuid="cat-src-uuid" ${id}="cat-s">
 					<eIEC61850-6-100:SubCategory name="CURRENT" uuid="subcat-src-uuid" desc="rev1 sub" ${id}="subcat-s">
-						<eIEC61850-6-100:FunctionCatRef functionUuid="fn-src-uuid" function="TEMPLATE/Prot" ${id}="catref-s"/>
+						<eIEC61850-6-100:FunctionCatRef functionUuid="fn-src-uuid" function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" ${id}="catref-s"/>
 					</eIEC61850-6-100:SubCategory>
 				</eIEC61850-6-100:FunctionCategory>
 			</Private>

@@ -424,6 +424,7 @@ describe('updateRefPaths', () => {
 			},
 
 			'mapped-name — DAS: mapped parent DO → writes only the differing short DA name': {
+				allowIncoherentReferences: 'the mapped logical node lives in an IED the fixture leaves out',
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
@@ -458,6 +459,8 @@ describe('updateRefPaths', () => {
 
 			'mapped-name — DAS: mapped parent DO with implementing DA equal to the specified name is omitted':
 				{
+					allowIncoherentReferences:
+						'the mapped logical node lives in an IED the fixture leaves out',
 					sourceXml: /* xml */ `
 						<SCL ${ns} ${id}="root">
 							<Substation ${id}="sub1" name="Sub1">

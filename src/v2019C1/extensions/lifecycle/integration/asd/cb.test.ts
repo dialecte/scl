@@ -54,20 +54,20 @@ const sourceXml = /* xml */ `
 		<Substation name="TEMPLATE" ${id}="sub-s">
 			<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 				<eIEC61850-6-100:FunctionCategory name="INTERFACE FCAT" uuid="${FCAT_UUID}" desc="rev1 category" ${id}="fcat-s">
-					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/CB Interface" functionUuid="${FN_UUID}" ${id}="fcatref-s"/>
+					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/TEMPLATE/TEMPLATE/CB Interface" functionUuid="${FN_UUID}" ${id}="fcatref-s"/>
 				</eIEC61850-6-100:FunctionCategory>
 			</Private>
 			<VoltageLevel name="TEMPLATE" ${id}="vl-s">
 				<Bay name="TEMPLATE" ${id}="bay-s">
 					<Private type="eIEC61850-6-100" ${id}="bay-priv-s">
 						<eIEC61850-6-100:AllocationRole name="P1" uuid="${P1_AR}" desc="rev1 role" ${id}="ar-p1-s">
-							<eIEC61850-6-100:FunctionRef function="TEMPLATE/CB Interface" functionUuid="${FN_UUID}" ${id}="ar-fnref-s"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/CB Interface" functionUuid="${FN_UUID}" ${id}="ar-fnref-s"/>
 						</eIEC61850-6-100:AllocationRole>
 						<eIEC61850-6-100:Application desc="rev1 app" name="CB" uuid="${APP_UUID}" ${id}="app-s">
-							<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/P1" allocationRoleUuid="${P1_AR}" ${id}="ar-ref-s"/>
+							<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/TEMPLATE/TEMPLATE/P1" allocationRoleUuid="${P1_AR}" ${id}="ar-ref-s"/>
 							<eIEC61850-6-100:FunctionRole name="INTERFACE" uuid="fr-src-uuid" ${id}="fr-s">
 								<eIEC61850-6-100:FunctionRoleContent ${id}="frc-s">
-									<eIEC61850-6-100:FunctionRef function="TEMPLATE/CB Interface" functionUuid="${FN_UUID}" ${id}="app-fnref-s"/>
+									<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/CB Interface" functionUuid="${FN_UUID}" ${id}="app-fnref-s"/>
 									<eIEC61850-6-100:FunctionCategoryRef functionCategory="TEMPLATE/INTERFACE FCAT" functionCategoryUuid="${FCAT_UUID}" ${id}="fcatref2-s"/>
 								</eIEC61850-6-100:FunctionRoleContent>
 							</eIEC61850-6-100:FunctionRole>

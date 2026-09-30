@@ -33,7 +33,7 @@ describe('buildReferencePath', () => {
 										<eIEC61850-6-100:LNodeOutputs>
 											<eIEC61850-6-100:ControlRef output="Trip" ${ID}="ctrl-1">
 												<eIEC61850-6-100:FunctionRef
-											function=""
+											function="S1/V1/B1/Protection"
 											functionUuid="func-uuid"
 											${ID}="fref-1"/>
 											</eIEC61850-6-100:ControlRef>
@@ -58,7 +58,7 @@ describe('buildReferencePath', () => {
 							<Bay name="B1" ${ID}="bay-1">
 								<Function name="Prot" uuid="fn-uuid" ${ID}="func-1">
 									<eIEC61850-6-100:FunctionCategoryRef
-									functionCategory=""
+									functionCategory="DistProt"
 									functionCategoryUuid="cat-uuid"
 									${ID}="fcr-1"/>
 								</Function>
@@ -191,7 +191,6 @@ describe('buildReferencePath', () => {
 												inputName=""
 												inputUuid="sr-uuid"
 												dataName=""
-												lnodeUuid=""
 												${ID}="iv-1"/>
 												</eIEC61850-6-100:BehaviorDescription>
 											</eIEC61850-6-100:SourceRef>
@@ -223,7 +222,6 @@ describe('buildReferencePath', () => {
 												outputName=""
 												outputUuid="cr-uuid"
 												dataName=""
-												lnodeUuid=""
 												${ID}="ov-1"/>
 												</eIEC61850-6-100:BehaviorDescription>
 											</eIEC61850-6-100:ControlRef>
@@ -311,6 +309,8 @@ describe('buildReferencePath', () => {
 		},
 
 		'VariableApplyTo → a segment-less target (LNodeType) → null (path left untouched)': {
+			allowIncoherentReferences:
+				'the target type carries no uuid; the test hands the target in directly',
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
 					<Substation name="S1" ${ID}="sub-1">

@@ -28,6 +28,7 @@ describe('postExtractionCleanup', () => {
 				expectedQueries: ['//v2019C1:FunctionRef[@functionUuid="func-uuid-1"]'],
 			},
 			'FunctionRef with missing target → deleted': {
+				allowIncoherentReferences: 'the reference pointing at nothing is what the clean-up handles',
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Header id="TestSCL"/>
@@ -41,6 +42,7 @@ describe('postExtractionCleanup', () => {
 				unexpectedQueries: ['//v2019C1:FunctionRef[@functionUuid="orphan-uuid"]'],
 			},
 			'SourceRef (keep-on-orphan) with missing target → attrs cleared, element kept': {
+				allowIncoherentReferences: 'the reference pointing at nothing is what the clean-up handles',
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Header id="TestSCL"/>
@@ -60,6 +62,7 @@ describe('postExtractionCleanup', () => {
 				unexpectedQueries: ['//v2019C1:SourceRef[@sourceLNodeUuid="missing-uuid"]'],
 			},
 			'multi-ref element: one valid + one orphan → orphan attr cleared, element kept': {
+				allowIncoherentReferences: 'the reference pointing at nothing is what the clean-up handles',
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Header id="TestSCL"/>
@@ -243,6 +246,7 @@ describe('postExtractionCleanup', () => {
 	describe('pruneEmptyPrivateElements', () => {
 		const testCases: SclTest.TestCases = {
 			'Private with only orphaned ref → Private container deleted': {
+				allowIncoherentReferences: 'the reference pointing at nothing is what the clean-up handles',
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Header id="TestSCL"/>
@@ -259,6 +263,7 @@ describe('postExtractionCleanup', () => {
 				],
 			},
 			'Private with one orphaned + one valid ref → Private kept': {
+				allowIncoherentReferences: 'the reference pointing at nothing is what the clean-up handles',
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Header id="TestSCL"/>

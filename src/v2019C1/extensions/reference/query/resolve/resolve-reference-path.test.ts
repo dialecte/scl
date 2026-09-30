@@ -411,6 +411,7 @@ describe('resolve', () => {
 		},
 
 		'uuid — stale uuid (target deleted) falls back to path → undefined': {
+			allowIncoherentReferences: 'the stale uuid is the situation under test',
 			sourceXml: `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
 				<Substation name="S1" ${ID}="sub-1">

@@ -23,7 +23,7 @@ const sourceXml = /* xml */ `
 				<eIEC61850-6-100:Application name="HMI" type="DCS2" uuid="app-src-uuid" ${id}="app-s">
 					<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="fr-s">
 						<eIEC61850-6-100:FunctionRoleContent ${id}="frc-s">
-							<eIEC61850-6-100:FunctionRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-s"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-s"/>
 						</eIEC61850-6-100:FunctionRoleContent>
 					</eIEC61850-6-100:FunctionRole>
 				</eIEC61850-6-100:Application>
@@ -55,7 +55,7 @@ const targetXml = /* xml */ `
 				<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="app-src-uuid" ${id}="app-t">
 					<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="fr-t">
 						<eIEC61850-6-100:FunctionRoleContent ${id}="frc-t">
-							<eIEC61850-6-100:FunctionRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-t"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-t"/>
 						</eIEC61850-6-100:FunctionRoleContent>
 					</eIEC61850-6-100:FunctionRole>
 				</eIEC61850-6-100:Application>

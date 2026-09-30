@@ -206,7 +206,8 @@ describe('extractElementTitle', () => {
 		'FunctionCatRef → function': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
-					<Substation name="S1" ${id}="s1">
+					<Substation name="Sub1" ${id}="s1">
+						<Function name="F1" uuid="u1" ${id}="f1"/>
 						<eIEC61850-6-100:FunctionCatRef function="Sub1/F1" functionUuid="u1" ${id}="fcr1"/>
 					</Substation>
 				</SCL>
@@ -574,7 +575,8 @@ describe('extractElementTitle', () => {
 		'FunctionRef → fn:function': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
-					<Substation name="S1" ${id}="s1">
+					<Substation name="Sub1" ${id}="s1">
+						<Function name="F2" uuid="u2" ${id}="f2"/>
 						<eIEC61850-6-100:FunctionRef function="Sub1/F2" functionUuid="u2" ${id}="fr1"/>
 					</Substation>
 				</SCL>

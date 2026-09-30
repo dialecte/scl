@@ -28,6 +28,8 @@ type TestCase = SclTest.BaseXmlTestCase & {
 describe('applyUuidRemap', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'repoints a ref from the source uuid to the clone uuid': {
+			allowIncoherentReferences:
+				'a freshly cloned reference still carries the uuid of the document it was cloned from',
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="scl-1">
 					<Substation name="Sub1" ${id}="sub-1">
