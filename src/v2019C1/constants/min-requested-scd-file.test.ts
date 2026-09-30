@@ -42,7 +42,7 @@ describe('MinRequestedSCDFile constants', () => {
 		},
 		'ConnectedAP → itself and its schema descendants, descriptive tags left out': {
 			tags: MIN_REQUESTED_SCD_CONNECTED_AP_TRIGGER_TAGS,
-			expected: ['Address', 'ConnectedAP', 'GSE', 'MaxTime', 'MinTime', 'P', 'PhysConn', 'SMV'],
+			expected: ['Address', 'ConnectedAP', 'GSE', 'MaxTime', 'MinTime', 'P', 'SMV'],
 		},
 		'SubNetwork → its own settings, without the ConnectedAP subtree': {
 			tags: MIN_REQUESTED_SCD_SUBNETWORK_TRIGGER_TAGS,

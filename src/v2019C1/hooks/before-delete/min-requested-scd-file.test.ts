@@ -17,7 +17,14 @@ const twoIedsOnOneSubNetwork = /* xml */ `
 		<Communication ${id}="communication">
 			<SubNetwork ${id}="station-bus" name="StationBus" type="8-MMS">
 				<ConnectedAP ${id}="protection-connected-ap" iedName="Protection" apName="AP1" />
-				<ConnectedAP ${id}="control-connected-ap" iedName="Control" apName="AP1" />
+				<ConnectedAP ${id}="control-connected-ap" iedName="Control" apName="AP1">
+					<Address ${id}="control-address">
+						<P ${id}="control-ip" type="IP">10.0.0.1</P>
+					</Address>
+					<PhysConn ${id}="control-physical" type="Connection">
+						<P ${id}="control-port" type="Port">1</P>
+					</PhysConn>
+				</ConnectedAP>
 			</SubNetwork>
 		</Communication>
 		<IED ${id}="protection" name="Protection">
@@ -98,6 +105,34 @@ describe('beforeDelete — MinRequestedSCDFile', () => {
 			act: async (document) => {
 				await document.transaction(async (tx) => {
 					await tx.delete({ tagName: 'ConnectedAP', id: 'control-connected-ap' })
+				})
+			},
+			expectedQueries: [projectEntryOf('Control')],
+			unexpectedQueries: ['//default:IED[@name="Protection"]/default:MinRequestedSCDFiles'],
+		},
+		'PhysConn deleted → no entry written': {
+			sourceXml: twoIedsOnOneSubNetwork,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.delete({ tagName: 'PhysConn', id: 'control-physical' })
+				})
+			},
+			unexpectedQueries: ['//default:MinRequestedSCDFiles'],
+		},
+		'PhysConn P deleted → no entry written': {
+			sourceXml: twoIedsOnOneSubNetwork,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.delete({ tagName: 'P', id: 'control-port' })
+				})
+			},
+			unexpectedQueries: ['//default:MinRequestedSCDFiles'],
+		},
+		'Address P deleted → connected IED synced': {
+			sourceXml: twoIedsOnOneSubNetwork,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.delete({ tagName: 'P', id: 'control-ip' })
 				})
 			},
 			expectedQueries: [projectEntryOf('Control')],

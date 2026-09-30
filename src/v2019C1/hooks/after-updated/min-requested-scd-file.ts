@@ -1,6 +1,9 @@
 import { widen } from '@dialecte/core/helpers'
 
-import { MIN_REQUESTED_SCD_DESCRIPTIVE_ATTRIBUTES } from '@/v2019C1/constants'
+import {
+	MIN_REQUESTED_SCD_DESCRIPTIVE_ATTRIBUTES,
+	MIN_REQUESTED_SCD_IED_IGNORED_ATTRIBUTES,
+} from '@/v2019C1/constants'
 import { LINEAGE } from '@/v2019C1/extensions/lifecycle/constraints'
 import {
 	changedAttributeNames,
@@ -16,14 +19,8 @@ import type * as Core from '@dialecte/core'
 
 /**
  * Sync the IEDs affected by an updated trigger, or by an updated IED itself, to the current SCD.
- * The update counts when it changes the element's text or any attribute other than lineage and
- * descriptive ones; reassigning a `ConnectedAP` to another IED syncs both the former and the new
- * IED.
- *
- * @stopgap Stamps at edit time with the Header version current during the edit, so the entry is one
- * version behind when the version is bumped after editing. Remove once a Header version change
- * stamps the IEDs changed since the previous version change (needs the store to list the records
- * changed since then).
+ * The update counts when it changes the element's text or a relevant attribute;
+ * reassigning a `ConnectedAP` to another IED syncs both the former and the new IED.
  */
 export async function syncMinRequestedScdFileOnUpdate<GenericElement extends Scl.ElementsOf>(
 	query: Core.Query<Config>,
@@ -64,6 +61,9 @@ function isConfigurationChange(params: {
 	if (oldRecord.value !== newRecord.value) return true
 
 	return changedAttributeNames({ oldRecord, newRecord }).some(
-		(name) => !LINEAGE.has(name) && !MIN_REQUESTED_SCD_DESCRIPTIVE_ATTRIBUTES.has(name),
+		(name) =>
+			!LINEAGE.has(name) &&
+			!MIN_REQUESTED_SCD_DESCRIPTIVE_ATTRIBUTES.has(name) &&
+			(newRecord.tagName !== 'IED' || !MIN_REQUESTED_SCD_IED_IGNORED_ATTRIBUTES.has(name)),
 	)
 }

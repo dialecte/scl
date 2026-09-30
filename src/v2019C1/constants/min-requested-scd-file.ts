@@ -42,9 +42,10 @@ export const MIN_REQUESTED_SCD_IED_TRIGGER_TAGS: ReadonlySet<string> = expandTri
 	roots: MIN_REQUESTED_SCD_IED_TRIGGER_ROOTS,
 })
 
-/** `ConnectedAP` and its schema descendants: communication attached to a single IED. */
+/** `ConnectedAP` settings attached to a single IED, excluding physical connections. */
 export const MIN_REQUESTED_SCD_CONNECTED_AP_TRIGGER_TAGS: ReadonlySet<string> = expandTriggerTags({
 	roots: ['ConnectedAP'],
+	excluded: new Set([...MIN_REQUESTED_SCD_DESCRIPTIVE_TAGS, 'PhysConn']),
 })
 
 /**
@@ -53,7 +54,7 @@ export const MIN_REQUESTED_SCD_CONNECTED_AP_TRIGGER_TAGS: ReadonlySet<string> = 
  */
 export const MIN_REQUESTED_SCD_SUBNETWORK_TRIGGER_TAGS: ReadonlySet<string> = expandTriggerTags({
 	roots: ['SubNetwork'],
-	excluded: MIN_REQUESTED_SCD_CONNECTED_AP_TRIGGER_TAGS,
+	excluded: expandTriggerTags({ roots: ['ConnectedAP'] }),
 })
 
 /**
@@ -61,6 +62,11 @@ export const MIN_REQUESTED_SCD_SUBNETWORK_TRIGGER_TAGS: ReadonlySet<string> = ex
  * Every other attribute or text update of a trigger counts.
  */
 export const MIN_REQUESTED_SCD_DESCRIPTIVE_ATTRIBUTES: ReadonlySet<string> = new Set(['desc'])
+
+export const MIN_REQUESTED_SCD_IED_IGNORED_ATTRIBUTES: ReadonlySet<string> = new Set([
+	'engRight',
+	'owner',
+])
 
 /**
  * Entry attributes a user may set by hand, carried over when two entries of one project merge:

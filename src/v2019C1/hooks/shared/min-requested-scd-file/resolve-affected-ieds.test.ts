@@ -22,6 +22,9 @@ const sourceXml = /* xml */ `
 					<Address ${id}="protection-address">
 						<P ${id}="protection-ip" type="IP">10.0.0.1</P>
 					</Address>
+					<PhysConn ${id}="protection-physical" type="Connection">
+						<P ${id}="protection-port" type="Port">1</P>
+					</PhysConn>
 				</ConnectedAP>
 				<ConnectedAP ${id}="protection-second-ap" iedName="Protection" apName="AP2" />
 				<ConnectedAP ${id}="control-ap" iedName="Control" apName="AP1" />
@@ -80,6 +83,16 @@ describe('resolveAffectedIeds', () => {
 			sourceXml,
 			record: { tagName: 'P', id: 'protection-ip' },
 			expectedIedIds: ['protection'],
+		},
+		'PhysConn under a ConnectedAP → no IED': {
+			sourceXml,
+			record: { tagName: 'PhysConn', id: 'protection-physical' },
+			expectedIedIds: [],
+		},
+		'P under a PhysConn → no IED': {
+			sourceXml,
+			record: { tagName: 'P', id: 'protection-port' },
+			expectedIedIds: [],
 		},
 		'ConnectedAP naming no IED → no IED': {
 			sourceXml,

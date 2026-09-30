@@ -67,6 +67,84 @@ describe('afterCreated — MinRequestedSCDFile', () => {
 			},
 			unexpectedQueries: ['//default:MinRequestedSCDFiles'],
 		},
+		'PhysConn created → no entry written': {
+			sourceXml: `
+				<SCL ${ns} ${id}="root">
+					<Header ${id}="header" id="Project" uuid="${projectUuid}" version="2" revision="B" />
+					<Communication ${id}="communication">
+						<SubNetwork ${id}="network" name="StationBus" type="8-MMS">
+							<ConnectedAP ${id}="connected-ap" iedName="Protection" apName="AP1" />
+						</SubNetwork>
+					</Communication>
+					<IED ${id}="protection" name="Protection">
+						<AccessPoint ${id}="access-point" name="AP1" />
+					</IED>
+				</SCL>
+			`,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.addChild(
+						{ tagName: 'ConnectedAP', id: 'connected-ap' },
+						{ tagName: 'PhysConn', attributes: { type: 'Connection' } },
+					)
+				})
+			},
+			unexpectedQueries: ['//default:MinRequestedSCDFiles'],
+		},
+		'P added under PhysConn → no entry written': {
+			sourceXml: `
+				<SCL ${ns} ${id}="root">
+					<Header ${id}="header" id="Project" uuid="${projectUuid}" version="2" revision="B" />
+					<Communication ${id}="communication">
+						<SubNetwork ${id}="network" name="StationBus" type="8-MMS">
+							<ConnectedAP ${id}="connected-ap" iedName="Protection" apName="AP1">
+								<PhysConn ${id}="physical" type="Connection" />
+							</ConnectedAP>
+						</SubNetwork>
+					</Communication>
+					<IED ${id}="protection" name="Protection">
+						<AccessPoint ${id}="access-point" name="AP1" />
+					</IED>
+				</SCL>
+			`,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.addChild(
+						{ tagName: 'PhysConn', id: 'physical' },
+						{ tagName: 'P', attributes: { type: 'Port' }, value: '1' },
+					)
+				})
+			},
+			unexpectedQueries: ['//default:MinRequestedSCDFiles'],
+		},
+		'P added under Address → connected IED synced': {
+			sourceXml: `
+				<SCL ${ns} ${id}="root">
+					<Header ${id}="header" id="Project" uuid="${projectUuid}" version="2" revision="B" />
+					<Communication ${id}="communication">
+						<SubNetwork ${id}="network" name="StationBus" type="8-MMS">
+							<ConnectedAP ${id}="connected-ap" iedName="Protection" apName="AP1">
+								<Address ${id}="address" />
+							</ConnectedAP>
+						</SubNetwork>
+					</Communication>
+					<IED ${id}="protection" name="Protection">
+						<AccessPoint ${id}="access-point" name="AP1" />
+					</IED>
+				</SCL>
+			`,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.addChild(
+						{ tagName: 'Address', id: 'address' },
+						{ tagName: 'P', attributes: { type: 'IP' }, value: '10.0.0.1' },
+					)
+				})
+			},
+			expectedQueries: [
+				`//default:IED[@name="Protection"]/default:MinRequestedSCDFiles/default:MinRequestedSCDFile[@fileUuid="${projectUuid}"][@version="2"][@revision="B"]`,
+			],
+		},
 
 		'IED listing the project cloned in → one wrapper, project entry synced with its file name': {
 			sourceXml: /* xml */ `

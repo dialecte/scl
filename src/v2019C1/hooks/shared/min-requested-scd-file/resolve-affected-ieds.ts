@@ -26,6 +26,10 @@ export async function resolveAffectedIeds(
 	}
 
 	if (MIN_REQUESTED_SCD_CONNECTED_AP_TRIGGER_TAGS.has(tagName)) {
+		if (tagName === 'P') {
+			const ancestors = await query.findAncestors(record, { stopAtTagName: 'ConnectedAP' })
+			if (ancestors.some((ancestor) => ancestor.tagName === 'PhysConn')) return []
+		}
 		const ied = await resolveConnectedApIed(query, { record })
 		return ied ? [ied] : []
 	}

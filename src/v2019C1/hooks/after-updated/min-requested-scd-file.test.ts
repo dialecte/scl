@@ -16,10 +16,14 @@ const twoIedsOnOneSubNetwork = /* xml */ `
 		<Header ${id}="header" id="Project" uuid="${projectUuid}" version="2" revision="B" />
 		<Communication ${id}="communication">
 			<SubNetwork ${id}="station-bus" name="StationBus" type="8-MMS">
+				<BitRate ${id}="station-bus-bitrate" unit="b/s" multiplier="M">100</BitRate>
 				<ConnectedAP ${id}="protection-connected-ap" iedName="Protection" apName="AP1">
 					<Address ${id}="protection-address">
 						<P ${id}="protection-ip" type="IP">10.0.0.1</P>
 					</Address>
+					<PhysConn ${id}="protection-physical" type="Connection">
+						<P ${id}="protection-port" type="Port">1</P>
+					</PhysConn>
 				</ConnectedAP>
 				<ConnectedAP ${id}="control-connected-ap" iedName="Control" apName="AP1" />
 			</SubNetwork>
@@ -94,6 +98,31 @@ describe('afterUpdated — MinRequestedSCDFile', () => {
 			expectedQueries: [projectEntryOf('Control')],
 			unexpectedQueries: ['//default:IED[@name="Protection"]/default:MinRequestedSCDFiles'],
 		},
+		'IED engRight and owner updated → no entry written': {
+			sourceXml: twoIedsOnOneSubNetwork,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.update(
+						{ tagName: 'IED', id: 'control' },
+						{ attributes: { engRight: 'full', owner: 'Engineering' } },
+					)
+				})
+			},
+			unexpectedQueries: ['//default:MinRequestedSCDFiles'],
+		},
+		'IED owner and manufacturer updated together → that IED synced': {
+			sourceXml: twoIedsOnOneSubNetwork,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.update(
+						{ tagName: 'IED', id: 'control' },
+						{ attributes: { owner: 'Engineering', manufacturer: 'Vendor' } },
+					)
+				})
+			},
+			expectedQueries: [projectEntryOf('Control')],
+			unexpectedQueries: ['//default:IED[@name="Protection"]/default:MinRequestedSCDFiles'],
+		},
 
 		'DataSet description updated → descriptive only, no entry written': {
 			sourceXml: twoIedsOnOneSubNetwork,
@@ -117,6 +146,27 @@ describe('afterUpdated — MinRequestedSCDFile', () => {
 			},
 			expectedQueries: [projectEntryOf('Protection')],
 			unexpectedQueries: ['//default:IED[@name="Control"]/default:MinRequestedSCDFiles'],
+		},
+		'PhysConn updated → no entry written': {
+			sourceXml: twoIedsOnOneSubNetwork,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.update(
+						{ tagName: 'PhysConn', id: 'protection-physical' },
+						{ attributes: { type: 'RedConn' } },
+					)
+				})
+			},
+			unexpectedQueries: ['//default:MinRequestedSCDFiles'],
+		},
+		'PhysConn P updated → no entry written': {
+			sourceXml: twoIedsOnOneSubNetwork,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.update({ tagName: 'P', id: 'protection-port' }, { value: '2' })
+				})
+			},
+			unexpectedQueries: ['//default:MinRequestedSCDFiles'],
 		},
 
 		'IED description updated → not a trigger, no entry written': {
@@ -143,6 +193,31 @@ describe('afterUpdated — MinRequestedSCDFile', () => {
 				})
 			},
 			expectedQueries: [projectEntryOf('Protection'), projectEntryOf('Control')],
+		},
+		'SubNetwork BitRate updated → every attached IED synced': {
+			sourceXml: twoIedsOnOneSubNetwork,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.update({ tagName: 'BitRate', id: 'station-bus-bitrate' }, { value: '1000' })
+				})
+			},
+			expectedQueries: [projectEntryOf('Protection'), projectEntryOf('Control')],
+		},
+		'edit followed by Header version change → entry keeps version at edit time': {
+			sourceXml: twoIedsOnOneSubNetwork,
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.update(
+						{ tagName: 'DAI', id: 'protection-mod-stval' },
+						{ attributes: { valKind: 'Set' } },
+					)
+					await tx.update({ tagName: 'Header', id: 'header' }, { attributes: { version: '3' } })
+				})
+			},
+			expectedQueries: [projectEntryOf('Protection'), '//default:Header[@version="3"]'],
+			unexpectedQueries: [
+				'//default:IED[@name="Protection"]/default:MinRequestedSCDFiles/default:MinRequestedSCDFile[@version="3"]',
+			],
 		},
 
 		'SubNetwork description updated → not a trigger, no entry written': {
