@@ -107,7 +107,6 @@ describe('lifecycle report — placement-conflict classification', () => {
 		if (testCase.expectedNameConflict) {
 			expect(nameAttr?.conflict).toBe(true)
 			expect(nameAttr?.suggestedValue).toBe(testCase.expectedNameConflict.suggestedValue)
-			expect(appGroup?.conflict).toBeUndefined() // resolvable, not identity-locked
 		} else {
 			expect(nameAttr?.conflict).toBeUndefined()
 		}

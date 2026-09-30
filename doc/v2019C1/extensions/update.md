@@ -157,21 +157,17 @@ collides is still bumped. Only attributes listed in the group's `editableAttribu
 
 #### Conflict classification at report time (`instantiate`)
 
-`report` classifies placement collisions **before** apply so the UI can surface them. It is generic over
-any scoped-uniqueness constraint and any field combination (a constraint may span several fields), and
-scenario-aware. For each placed group primary it partitions the violated constraint's `fields` into
-**editable** (`rename`/`free`) vs **identity**:
+`report` flags the placement collisions the engine resolves by itself **before** apply, so the UI can
+surface them. It is generic over any scoped-uniqueness constraint and any field combination (a constraint
+may span several fields), and scenario-aware. For each placed group primary it looks at the violated
+constraint's `fields`: when at least one is **editable** (`rename`/`free`) the engine can make a distinct
+copy, and the report flags that field on the group's `editableAttributes` with `conflict: true` and the
+collision-free `suggestedValue` (the UI pre-fills it; the user may override). No decision is required.
 
-- **resolvable** — at least one field is editable: the engine can make a distinct copy. The report flags
-  that field on the group's `editableAttributes` with `conflict: true` and the collision-free
-  `suggestedValue` (the UI pre-fills it; the user may override). No decision is required.
-- **identity-locked** — every field is identity (none editable): the primary is identity-equal to an
-  existing element and cannot be duplicated. The report sets `group.conflict = { fields, adoptTargetId }`
-  and `needsDecisions: true`, so the user chooses **skip** (leave the existing element) or **adopt**
-  (reconcile the template onto `adoptTargetId` — i.e. update that existing element in place). Adopt is a
-  non-destructive reconcile, never a delete + recreate.
+A collision whose key fields are all identity cannot be resolved by changing a value and is not flagged.
+Every element a verb places as a group primary today is keyed by its `name`, so this does not occur.
 
-`template`/`fork` never classify a conflict: an identity match there is the **reconcile target**, not a collision.
+`template`/`fork` never flag a collision: an identity match there is the **reconcile target**.
 
 ```ts
 type EditableAttribute = {
@@ -181,12 +177,9 @@ type EditableAttribute = {
 	suggestedValue?: string // the collision-free value it proposes (resolvable case)
 }
 
-type GroupConflict = { fields: string[]; adoptTargetId: string } // identity-locked
-
 type DecisionGroup = {
 	// …
 	editableAttributes?: EditableAttribute[]
-	conflict?: GroupConflict // identity-locked collision → skip | adopt
 }
 ```
 

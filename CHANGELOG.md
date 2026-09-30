@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Test fixtures are checked for coherent references.** `runSclTestCases` and `createSclTestProject` now also verify, for every reference carrying a uuid, that the uuid is carried by an element of the same document that the reference can point at and, for plain name-path references, that the written path is the path of that element. A fixture that could not occur in a real file fails up front, with the path to write, instead of exercising reference handling on impossible data. A case that needs an incoherent reference says why with `allowIncoherentReferences: '<reason>'` and is left unchecked. `assertCoherentSclReferences` is exported for ad-hoc use.
 
+### Removed
+
+- `DecisionGroup.conflict` and the `GroupConflict` type. The report set them for a placement collision whose key fields are all identity and documented a "skip or adopt" decision, but `apply` never read the field and no placed element can reach that case: every group primary is keyed by its name. The per-attribute `conflict` / `suggestedValue` on `editableAttributes` is unchanged.
+
 ### Changed
 
 - The check is on for every consumer of `@dialecte/scl/v2019C1/test`: a test suite whose fixtures write a wrong path or a uuid that points at nothing now fails until the fixture is corrected or the case opts out.

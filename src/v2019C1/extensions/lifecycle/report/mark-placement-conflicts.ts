@@ -13,16 +13,14 @@ import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.type
 import type * as Core from '@dialecte/core'
 
 /**
- * Classify placement collisions for an `instantiate` report and record them on the
- * groups (generic over any scoped-uniqueness constraint, any field combination):
+ * Flag the placement collisions of an `instantiate` report that the engine resolves by
+ * itself (generic over any scoped-uniqueness constraint, any field combination): when the
+ * violated constraint has an editable field (`rename`/`free`) the engine can make a
+ * distinct copy, so that editable attribute is flagged with the collision-free
+ * `suggestedValue` (the UI shows it; the user may override). No gate.
  *
- *  - **resolvable** — the violated constraint has an editable field (`rename`/`free`):
- *    the engine can make a distinct copy. Flag that editable attribute with the
- *    collision-free `suggestedValue` (the UI shows it; the user may override). No gate.
- *  - **identity-locked** — every field is identity (non-editable): the primary is
- *    identity-equal to an existing element and cannot be duplicated. Record
- *    `group.conflict = { fields, adoptTargetId }` and set `needsDecisions` so the user
- *    chooses skip (leave existing) or adopt (reconcile onto it).
+ * A collision whose key fields are all identity cannot be resolved by changing a value; it
+ * is left unflagged here.
  *
  * `update` never calls this: an identity match there is the reconcile target, not a
  * conflict. The placement parent is taken from an existing instance (same template),
@@ -84,23 +82,19 @@ export async function markPlacementConflicts(
 			isEditableMode(classifyAttribute(tagName, field)),
 		)
 
-		if (editableField) {
-			// resolvable: surface the auto-resolved value on the editable attribute
-			const suggestedValue = await resolveUniqueValue(query, {
-				parentRef,
-				childTag: tagName,
-				candidate,
-				attr: editableField,
-			})
-			const editable = group.editableAttributes?.find((entry) => entry.attr === editableField)
-			if (editable) {
-				editable.conflict = true
-				editable.suggestedValue = suggestedValue
-			}
-		} else {
-			// identity-locked: cannot duplicate — needs a skip/adopt decision
-			group.conflict = { fields: violation.fields, adoptTargetId: violation.offendingId }
-			report.needsDecisions = true
+		if (!editableField) continue
+
+		// resolvable: surface the auto-resolved value on the editable attribute
+		const suggestedValue = await resolveUniqueValue(query, {
+			parentRef,
+			childTag: tagName,
+			candidate,
+			attr: editableField,
+		})
+		const editable = group.editableAttributes?.find((entry) => entry.attr === editableField)
+		if (editable) {
+			editable.conflict = true
+			editable.suggestedValue = suggestedValue
 		}
 	}
 }

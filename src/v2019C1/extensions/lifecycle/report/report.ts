@@ -53,7 +53,7 @@ export async function report(
 		group.editableAttributes = editableAttributes(group.primary.tagName)
 	}
 
-	// flag placement collisions (resolvable auto-value or identity-locked skip/adopt)
+	// flag the placement collisions the engine resolves by itself (auto-value on an editable field)
 	await markPlacementConflicts(query, target, report)
 
 	return report

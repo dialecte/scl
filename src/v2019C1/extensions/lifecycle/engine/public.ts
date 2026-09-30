@@ -9,6 +9,5 @@ export type {
 	DiffNode,
 	DiffReport,
 	DiffSummary,
-	GroupConflict,
 	GroupDecision,
 } from './diff.types'
