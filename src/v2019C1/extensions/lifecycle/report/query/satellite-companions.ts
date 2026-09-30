@@ -2,12 +2,13 @@ import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
+import { findMappingPolicy, resolveMapping } from '@/v2019C1/extensions/lifecycle/mapping'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LeftoverRefPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
-import type { AnyTreeRecord } from '@dialecte/core'
+import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 
 /**
  * Fold each satellite's changes into the primary's decision group as read-only
@@ -49,15 +50,18 @@ export async function foldSatelliteCompanions(
 	for (const satelliteRef of satelliteRefs) {
 		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
 
-		const instance = await findInstanceByTemplateUuid(query, {
-			tagName: satelliteRef.tagName,
+		const { target: instance, projectOwned } = await findSatelliteTarget(query, {
+			sourceQuery,
+			satelliteRef,
 			sourceUuid,
+			firstTime: instanceScopeId === undefined,
 		})
 		const satelliteReport = await diff({
 			sourceQuery,
 			targetQuery: query,
 			sourceRootRef: satelliteRef,
 			instanceRootRef: instance,
+			instanceRootIsProjectOwned: projectOwned,
 			// Shared/catalog satellite: its extra reference children belong to OTHER primaries/
 			// instances; a scoped single-primary update must not flag them as removed.
 			keepLeftoverRefs: true,
@@ -114,6 +118,36 @@ export async function foldSatelliteCompanions(
 	}
 
 	return report
+}
+
+/**
+ * The project element a source satellite is diffed against. A first-time placement of a shared
+ * element resolves it through its mapping, exactly as the apply does — the element found is then
+ * the project's own (`projectOwned`), only receiving what the source contributes. Anything else is
+ * found by its template lineage and is an instance of the source.
+ */
+async function findSatelliteTarget(
+	query: Core.Query<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		satelliteRef: Scl.Ref<Scl.ElementsOf>
+		sourceUuid: string | undefined
+		firstTime: boolean
+	},
+): Promise<{ target: AnyTrackedRecord | undefined; projectOwned: boolean }> {
+	const { sourceQuery, satelliteRef, sourceUuid, firstTime } = params
+
+	const policy = findMappingPolicy(satelliteRef.tagName)
+	if (firstTime && policy) {
+		const mapping = await resolveMapping(query, { sourceQuery, sourceRef: satelliteRef, policy })
+		return { target: mapping.existing, projectOwned: true }
+	}
+
+	const target = await findInstanceByTemplateUuid(query, {
+		tagName: satelliteRef.tagName,
+		sourceUuid,
+	})
+	return { target, projectOwned: false }
 }
 
 /**

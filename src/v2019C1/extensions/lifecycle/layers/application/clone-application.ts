@@ -2,6 +2,7 @@ import {
 	cloneFunction,
 	cloneFunctionCategories,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
+import { findMappingPolicy, resolveMapping } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	addChildrenTo,
 	cloneAllReferencedTargets,
@@ -81,11 +82,11 @@ export async function cloneApplicationContent(
 	// Each is placed by mirroring its source hierarchy (under its owning function when it
 	// has one), not flattened to Substation.
 	//
-	// AllocationRole is a name-keyed shared catalog: an incoming role whose name already
-	// exists in the target is MAPPED onto the existing one (its FunctionRef allocations are
-	// added there) rather than cloned as a duplicate; the Application's AllocationRoleRef is
-	// repointed to the existing role after the Application tree is cloned (step 5).
-	const roleReuse = await reuseAllocationRolesByName(tx, { sourceQuery, applicationRef })
+	// AllocationRole is a SHARED element: an incoming role that maps onto a role of the target
+	// (see `resolveMapping`) is not cloned — its FunctionRef allocations are added to that role,
+	// and the Application's AllocationRoleRef is repointed to it after the Application tree is
+	// cloned (step 5). A role with nothing to map onto is cloned like any referenced target.
+	const roleReuse = await mapAllocationRoles(tx, { sourceQuery, applicationRef })
 	for (const reuse of roleReuse) cloneIndex.set(reuse.sourceId, reuse.existingRef)
 
 	const REFS_ALREADY_HANDLED = new Set(['FunctionRef', 'FunctionCategoryRef'])
@@ -136,12 +137,12 @@ type AllocationRoleReuse = {
 }
 
 /**
- * Map each AllocationRole referenced by the Application onto an existing same-name role
- * in the target (name-keyed shared catalog): the source role's `FunctionRef` allocations
- * are added to the existing role, and the reuse is recorded so the caller can (a) skip
- * cloning a duplicate and (b) repoint the Application's `AllocationRoleRef`.
+ * Map each AllocationRole referenced by the Application onto the target role its mapping
+ * resolves to, when there is one: the source role's `FunctionRef` allocations are added to
+ * that role, and the reuse is recorded so the caller can (a) skip cloning a duplicate and
+ * (b) repoint the Application's `AllocationRoleRef`.
  */
-async function reuseAllocationRolesByName(
+async function mapAllocationRoles(
 	tx: Core.Transaction<Config>,
 	params: { sourceQuery: Core.Query<Config>; applicationRef: Scl.Ref<'Application'> },
 ): Promise<AllocationRoleReuse[]> {
@@ -150,6 +151,9 @@ async function reuseAllocationRolesByName(
 	const { AllocationRoleRef: refs = [] } = await sourceQuery.findDescendants(applicationRef, {
 		collect: 'AllocationRoleRef',
 	})
+
+	const policy = findMappingPolicy('AllocationRole')
+	if (!policy) return []
 
 	const reuse: AllocationRoleReuse[] = []
 	const seen = new Set<string>()
@@ -163,13 +167,12 @@ async function reuseAllocationRolesByName(
 			attributes: { uuid: roleUuid },
 		})
 		if (!sourceRole) continue
-		const name = sourceRole.attributes.find((a) => a.name === 'name')?.value
-		if (!name) continue
-
-		const [existing] = await tx.findByAttributes({
-			tagName: 'AllocationRole',
-			attributes: { name },
+		const mapping = await resolveMapping(tx, {
+			sourceQuery,
+			sourceRef: { tagName: 'AllocationRole', id: sourceRole.id },
+			policy,
 		})
+		const existing = mapping.existing
 		if (!existing) continue
 		const existingUuid = existing.attributes.find((a) => a.name === 'uuid')?.value
 		if (!existingUuid) continue

@@ -91,6 +91,12 @@ export async function diff(params: {
 	/** How instance elements match source. `templateUuid` (default) or `uuid` (fork). */
 	matchKey?: MatchKey
 	/**
+	 * The instance root is an element of the PROJECT that the source root is mapped onto (a shared
+	 * element such as an `AllocationRole`), not an instance of it: its own attributes belong to the
+	 * project and are not compared. Only what the source contributes below it is diffed.
+	 */
+	instanceRootIsProjectOwned?: boolean
+	/**
 	 * Child tags to treat as BOUNDARIES: their subtrees are excluded from the diff because another
 	 * report covers them (e.g. the topology frame report delegates Application/Function to the fn/app
 	 * per-primary reports).
@@ -131,6 +137,7 @@ export async function diff(params: {
 		refsAlwaysAdded,
 		matchKey,
 		omit,
+		skipOwnAttributes: params.instanceRootIsProjectOwned ?? false,
 	})
 	const summary = summarize(root)
 	const groups = groupChanges(root, instanceTree.id)
@@ -150,6 +157,8 @@ async function diffMatched(
 		refsAlwaysAdded?: boolean
 		matchKey: MatchKey
 		omit?: readonly string[]
+		/** Leave this node's own attributes uncompared (its descendants are compared as usual). */
+		skipOwnAttributes?: boolean
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
@@ -157,11 +166,9 @@ async function diffMatched(
 	const leftoverRefPolicy = params.leftoverRefPolicy
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 	const omit = params.omit
-	const attributeChanges = await computeAttributeChanges(sourceQuery, {
-		targetQuery,
-		sourceNode,
-		instanceNode,
-	})
+	const attributeChanges = params.skipOwnAttributes
+		? []
+		: await computeAttributeChanges(sourceQuery, { targetQuery, sourceNode, instanceNode })
 
 	const children: DiffNode[] = []
 	const matchedInstanceIds = new Set<string>()
