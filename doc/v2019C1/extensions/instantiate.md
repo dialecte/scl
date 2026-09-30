@@ -40,6 +40,14 @@ Returns `{ functionRef, recordMappings }` — the instantiated root (retagged to
 2. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its ASD counterpart as its `templateUuid` while receiving a fresh `uuid`;
 3. validate the placed `Application` and each composed Function against their parent context and auto-resolve a scoped-uniqueness [collision](./update#placement-collision-resolution) on their `name`, each at its own structural level.
 
+### Shared elements are mapped, not copied
+
+An `AllocationRole` is an element the project holds once and several applications refer to. A role the ASD brings is **mapped** onto the project's role when the project has exactly one role of that name: it is not cloned, its function references are added to the project role, and the application's `AllocationRoleRef` points at it. The project role keeps its own attributes and receives no `templateUuid` — it is not an instance of the template's role.
+
+With no role of that name, or with several (none is picked), the role is created like any cloned element, and a name already taken at its level is bumped to a free one.
+
+`report` resolves the mapping the same way, so the review shows the role as a companion matched onto the project role, with only the contributed references added.
+
 ```ts
 await project.transaction(async (tx) => {
 	await tx.lifecycle.instantiate.asd({
