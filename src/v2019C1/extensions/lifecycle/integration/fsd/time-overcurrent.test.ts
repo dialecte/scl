@@ -143,7 +143,7 @@ describe('lifecycle integration — Time Overcurrent FSD rev1 → rev2 (satellit
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 
@@ -182,7 +182,7 @@ describe('lifecycle integration — Time Overcurrent FSD rev1 → rev2 (golden)'
 					ref: functionRef,
 					anchor: bayRef,
 					report: rep,
-					decisions: new Map(),
+					resolution: { decisions: new Map() },
 				}),
 			)
 

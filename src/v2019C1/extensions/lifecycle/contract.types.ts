@@ -79,19 +79,25 @@ export type LifecycleTarget =
 	  }
 
 /**
+ * What the consumer resolved, handed to the lifecycle surface as ONE object:
+ *  - `decisions` — accept / skip (and edited values) per decision group;
+ *  - `keepNameTypesFrom` — on a type dedup, which side's id/name the surviving type keeps
+ *    (forwarded to `importTypes`; default `'target'`, the destination authority).
+ */
+export type Resolution = {
+	decisions?: DecisionMap
+	keepNameTypesFrom?: KeepNameTypesFrom
+}
+
+/**
  * `apply` inputs: the target plus the `report` produced by `report` (the
  * consumer classifies first, then applies). The report gates the track.
  *
- * `decisions` drives the full track: absent -> the caller has not decided yet
- * (apply writes nothing and returns the report); present -> apply the accepted
+ * `resolution.decisions` drives the full track: absent -> the caller has not decided
+ * yet (apply writes nothing and returns the report); present -> apply the accepted
  * groups only (a group absent from the map defaults to accept).
  */
 export type LifecycleApplyParams = LifecycleTarget & {
 	report: DiffReport
-	decisions?: DecisionMap
-	/**
-	 * On a type dedup during apply, which side's id/name the surviving type keeps.
-	 * Forwarded to `importTypes`. Default `'target'` (destination authority).
-	 */
-	keepNameTypesFrom?: KeepNameTypesFrom
+	resolution?: Resolution
 }

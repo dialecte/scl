@@ -120,7 +120,7 @@ describe('lifecycle.apply — carried Variable applying to the Application (cros
 				ref: applicationRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 

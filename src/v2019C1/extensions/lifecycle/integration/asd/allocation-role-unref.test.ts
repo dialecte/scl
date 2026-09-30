@@ -120,7 +120,7 @@ describe('lifecycle.apply — dropping an AllocationRoleRef link (catalog Alloca
 				ref: applicationRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 

@@ -132,7 +132,7 @@ describe('lifecycle.apply — decision-gated ASD (both layers)', () => {
 				ref: applicationRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`lifecycle.apply` takes what the consumer resolved as one `resolution` object.** `decisions` and `keepNameTypesFrom` move from the top level of the parameters into `resolution: { decisions?, keepNameTypesFrom? }`. Breaking for callers: `apply(tx, { ...target, report, decisions })` becomes `apply(tx, { ...target, report, resolution: { decisions } })`. The `Resolution` type is exported.
 - **Several project roles with the name of an incoming `AllocationRole`: none is picked.** Apply used to take the first one it found. The role is now created, and a name already taken at its level is bumped to a free one, like any placed element.
 - The check is on for every consumer of `@dialecte/scl/v2019C1/test`: a test suite whose fixtures write a wrong path or a uuid that points at nothing now fails until the fixture is corrected or the case opts out.
 

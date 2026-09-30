@@ -168,7 +168,7 @@ describe('lifecycle scenario — multi-instance ASD update (Part C, Phase B)', (
 				ref: applicationRef,
 				anchor: bayRef,
 				report: rep,
-				decisions,
+				resolution: { decisions },
 			})
 		})
 

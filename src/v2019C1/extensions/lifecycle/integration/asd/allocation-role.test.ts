@@ -119,7 +119,7 @@ describe('lifecycle.apply — carried AllocationRole (application-layer satellit
 				ref: applicationRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 

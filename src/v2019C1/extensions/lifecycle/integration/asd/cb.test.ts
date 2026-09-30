@@ -212,7 +212,7 @@ describe('lifecycle integration — CB ASD rev1 → rev2 (application + satellit
 				ref: applicationRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 
@@ -253,7 +253,7 @@ describe('lifecycle integration — CB ASD rev1 → rev2 (golden)', () => {
 					ref: applicationRef,
 					anchor: bayRef,
 					report: rep,
-					decisions: new Map(),
+					resolution: { decisions: new Map() },
 				}),
 			)
 

@@ -144,7 +144,7 @@ describe('apply — appliedRef correlation on the report', () => {
 				anchor: bayRef,
 				report: rep,
 				// a reconcile with changes needs decisions; an empty map accepts everything
-				decisions: new Map(),
+				resolution: { decisions: new Map() },
 			})
 		})
 
@@ -292,7 +292,7 @@ describe('apply — SSD frame appliedRef lands on the NEW bay, not the existing 
 				ref: bayScope,
 				anchor: targetVl,
 				report: rep,
-				decisions: new Map(),
+				resolution: { decisions: new Map() },
 			})
 		})
 

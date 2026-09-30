@@ -19,6 +19,7 @@ export type { AttributeEditability, EditableAttribute } from './constraints/publ
 
 export type {
 	LifecycleApplyParams,
+	Resolution,
 	LifecycleScenario,
 	LifecycleTarget,
 	LifecycleVerb,

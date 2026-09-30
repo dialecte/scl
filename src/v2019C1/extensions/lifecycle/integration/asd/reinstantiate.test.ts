@@ -126,7 +126,7 @@ describe('lifecycle scenario — re-apply an ASD (instantiate vs update)', () =>
 				ref: applicationRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: new Map(),
+				resolution: { decisions: new Map() },
 			})
 		})
 

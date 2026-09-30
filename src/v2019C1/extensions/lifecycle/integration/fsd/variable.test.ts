@@ -122,7 +122,7 @@ describe('lifecycle.apply — carried Variable (cross-cutting satellite)', () =>
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 

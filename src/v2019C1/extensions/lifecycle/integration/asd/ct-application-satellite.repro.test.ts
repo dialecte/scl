@@ -185,7 +185,7 @@ describe('repro — ASD application instantiate w/ FunctionCategory satellite (C
 				ref: applicationRef,
 				anchor: bayRef,
 				report: rep1,
-				decisions: new Map(),
+				resolution: { decisions: new Map() },
 			})
 		})
 

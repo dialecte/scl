@@ -130,7 +130,7 @@ describe('lifecycle.apply — adding a ref into an already-existing FunctionCate
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 

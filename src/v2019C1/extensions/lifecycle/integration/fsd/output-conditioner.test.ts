@@ -164,7 +164,7 @@ describe('lifecycle integration — Output Conditioner FSD rev1 → rev2 (open S
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 
@@ -203,7 +203,7 @@ describe('lifecycle integration — Output Conditioner FSD rev1 → rev2 (golden
 					ref: functionRef,
 					anchor: bayRef,
 					report: rep,
-					decisions: new Map(),
+					resolution: { decisions: new Map() },
 				}),
 			)
 

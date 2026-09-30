@@ -24,13 +24,15 @@ The verb-agnostic surface is the recommended consumer entry point. **Dialecte de
 
 ```ts
 query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor }) // -> DiffReport { instances, needsDecisions, summary }
-tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, keepNameTypesFrom? }) // -> ApplyResult { report, instances }
+tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, resolution? }) // -> ApplyResult { report, instances }
 ```
 
 - `verb`: `'fsd'` (then `ref` is a `Function`), `'asd'` (then `ref` is an `Application`), or `'ssd'` (then `ref` is the topology scope, `Substation`/`VoltageLevel`/`Bay` — see [the note below](#txlifecycleupdatessd)) — the **layer**;
 - `scenario`: `'instantiate'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`);
 - `anchor`: the target parent the instance lives under / is placed into.
-- `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template).
+- `resolution`: what the consumer resolved, as one object — `{ decisions?, keepNameTypesFrom? }`:
+  - `decisions`: accept / skip (and edited values) per decision group — see [Decision groups](#decision-groups-full-track);
+  - `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template).
 
 ### Apply result
 
@@ -119,7 +121,7 @@ type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 
 Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: `reconcile` never overwrites them, even when a UI-instructed edit lists them. The binding is the lock (`dataModel.isLNodeLocked`); a dangling binding stays locked until orphan cleanup resolves it.
 
-`apply` takes `decisions: Map<groupId, GroupDecision>` where a decision is either a plain
+`apply` takes `resolution.decisions: Map<groupId, GroupDecision>` where a decision is either a plain
 accept/skip or an object carrying **edited values** for the group's `editableAttributes`:
 
 ```ts
@@ -203,7 +205,9 @@ if (report.needsDecisions) {
 	// accept/skip choices, and any edited values, into `decisions`
 }
 
-const prepared = await doc.prepare((tx) => tx.lifecycle.apply(tx, { ...target, report, decisions }))
+const prepared = await doc.prepare((tx) =>
+	tx.lifecycle.apply(tx, { ...target, report, resolution: { decisions } }),
+)
 await prepared.commit() // or prepared.discard()
 ```
 

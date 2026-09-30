@@ -155,7 +155,11 @@ describe('shared-element mapping — the report says what apply does', () => {
 		const reportedOnto = roleCompanion?.instanceRef?.id
 
 		await target.transaction(async (tx) => {
-			await apply(tx, { ...lifecycleTarget, report: reported, decisions: new Map() })
+			await apply(tx, {
+				...lifecycleTarget,
+				report: reported,
+				resolution: { decisions: new Map() },
+			})
 		})
 
 		// what apply did: the role the instantiated Application now references

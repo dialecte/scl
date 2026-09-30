@@ -41,7 +41,8 @@ export async function apply(
 	tx: Core.Transaction<Config>,
 	params: LifecycleApplyParams,
 ): Promise<ApplyResult> {
-	const { report, decisions } = params
+	const { report } = params
+	const decisions = params.resolution?.decisions
 
 	// No decisions supplied: fast track applies headless; full track waits for a human.
 	if (!decisions) {
@@ -85,7 +86,7 @@ async function runVerb(
 			targetInstance: target.targetInstance,
 			report,
 			decisions,
-			keepNameTypesFrom: target.keepNameTypesFrom,
+			keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 		})
 		return { verb: 'fsd', functions }
 	}
@@ -99,7 +100,7 @@ async function runVerb(
 			targetInstance: target.targetInstance,
 			report,
 			decisions,
-			keepNameTypesFrom: target.keepNameTypesFrom,
+			keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 		})
 		return { verb: 'ssd', applications, functions }
 	}
@@ -111,7 +112,7 @@ async function runVerb(
 		targetInstance: target.targetInstance,
 		report,
 		decisions,
-		keepNameTypesFrom: target.keepNameTypesFrom,
+		keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 	})
 	return { verb: 'asd', applications, functions }
 }

@@ -143,7 +143,7 @@ describe('apply — keepNameTypesFrom threads to the type import', () => {
 				anchor: bayRef,
 				scenario: 'instantiate',
 				report: rep,
-				keepNameTypesFrom,
+				resolution: { keepNameTypesFrom },
 			})
 		})
 

@@ -121,7 +121,7 @@ describe('lifecycle.apply — removing a no-longer-referenced AllocationRole (ap
 				ref: applicationRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 

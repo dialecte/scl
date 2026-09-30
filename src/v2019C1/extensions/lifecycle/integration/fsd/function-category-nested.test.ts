@@ -124,7 +124,7 @@ describe('lifecycle.apply — nested change inside a FunctionCategory satellite'
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 
