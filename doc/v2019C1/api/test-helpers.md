@@ -14,6 +14,7 @@ import {
 	assertExpectedElementQueries,
 	assertUnexpectedElementQueries,
 	assertValidSclXml,
+	assertCoherentSclReferences,
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 } from '@dialecte/scl/v2019C1/test'
@@ -304,6 +305,53 @@ Not enforced (planned with the validation feature): required-attribute completen
 import { assertValidSclXml } from '@dialecte/scl/v2019C1/test'
 
 assertValidSclXml(xml, 'my snippet', { requireComplete: true })
+```
+
+## Test XML is checked for coherent references
+
+`createSclTestProject` and `runSclTestCases` also check that the references written in a fixture are ones a real file could contain, right after the schema check and before the test runs. A fixture that writes a path no element has, or a uuid nothing carries, otherwise exercises reference handling on data that cannot occur.
+
+What is checked, for every reference that carries a uuid (`functionUuid`, `allocationRoleUuid`, `sourceLNodeUuid`, …):
+
+- **empty** — the uuid attribute is an empty string;
+- **dangling** — no element of the same document carries that uuid;
+- **wrong-target** — the uuid is carried by an element the reference cannot point at (a `FunctionRef` whose `functionUuid` is the uuid of an `AllocationRole`);
+- **path** — the written path is not the path of the element the uuid points at. The message gives the path to write:
+
+```
+my case › sourceXml: incoherent references:
+  [path] <FunctionRef> function="TEMPLATE/Prot" is not the path of the element functionUuid="fn-uuid" points at, which is "TEMPLATE/TEMPLATE/TEMPLATE/Prot"
+```
+
+What is left alone:
+
+- **a reference written by path only**, with no uuid attribute;
+- **the path of a data or signal reference** — a path that carries a data qualifier or addresses a dataflow input or output (`SourceRef`, `ControlRef`, `LNodeInputRef`, `LNodeOutputRef`, `DOS` / `SDS` / `DAS` mappings, …). Their uuid is still checked;
+- **elements in a namespace the SCL config does not declare**, as for the schema check.
+
+Like the schema check, `runSclTestCases` checks every case of the suite first and fails once, listing every incoherent reference under its case name and `sourceXml` / `targetXml`.
+
+### A case that needs an incoherent reference
+
+A test about an orphan to clean up, or a stale uuid, needs the very thing the check rejects. Such a case says why, and its fixtures are then left unchecked:
+
+```ts
+const testCases: SclTest.TestCases<TestCase> = {
+	'FunctionRef with missing target → deleted': {
+		allowIncoherentReferences: 'the reference pointing at nothing is what the clean-up handles',
+		sourceXml: /* xml */ `…`,
+	},
+}
+```
+
+`createSclTestProject` takes the same `allowIncoherentReferences` parameter. When the target was only left out of the fixture, add it rather than opting out.
+
+`assertCoherentSclReferences` is exported for ad-hoc use:
+
+```ts
+import { assertCoherentSclReferences } from '@dialecte/scl/v2019C1/test'
+
+assertCoherentSclReferences({ xml, label: 'my snippet' })
 ```
 
 ---
