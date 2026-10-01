@@ -19,6 +19,7 @@ export type { AttributeEditability, EditableAttribute } from './constraints/publ
 
 export type {
 	LifecycleApplyParams,
+	LifecycleReportParams,
 	Resolution,
 	LifecycleScenario,
 	LifecycleTarget,
@@ -26,6 +27,14 @@ export type {
 } from './contract.types'
 
 export type { AppliedInstances, ApplyResult } from './apply'
+
+export type {
+	DecisionMapping,
+	MappingCandidate,
+	MappingDecisionMap,
+	MappingReason,
+	ReportMapping,
+} from './mapping'
 
 export { presentationScope } from './report/public'
 export type { PresentationScope } from './report/public'

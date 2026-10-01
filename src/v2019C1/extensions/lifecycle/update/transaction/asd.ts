@@ -35,6 +35,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { MappingDecisionMap } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -72,6 +73,8 @@ export async function asd(
 		keepNameTypesFrom?: KeepNameTypesFrom
 		/** Multi-instance anchor: scope to ONE target instance (or its subtree). Absent = all. */
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		/** The consumer's choices for the shared elements the application refers to. */
+		mappingDecisions?: MappingDecisionMap
 	},
 ): Promise<{
 	applications: Scl.Ref<'Application'>[]
@@ -116,6 +119,7 @@ export async function asd(
 			targetParent,
 			overrides: gateOverrides,
 			keepNameTypesFrom,
+			mappingDecisions: params.mappingDecisions,
 		})
 		// first-time ASD clones the Application + composed Functions + satellites in one pass; annotate
 		// every first-time report instance (Application and each composed Function) from the shared map

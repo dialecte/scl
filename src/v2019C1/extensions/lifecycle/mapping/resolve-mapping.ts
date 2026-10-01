@@ -1,4 +1,4 @@
-import type { MappingPolicy, ResolvedMapping } from './mapping.types'
+import type { DecisionMapping, MappingPolicy, ResolvedMapping } from './mapping.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -9,8 +9,9 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  * Decide where a shared source element lands in the project — the ONE answer the report and the
  * apply both read, so the review shows what is applied.
  *
- * The project element carrying the same key (its name) is the one the source element stands for.
- * With none, a new element is created; with several, none is picked and a new one is created too.
+ * The consumer's choice wins. Without one, the project element carrying the same key (its name)
+ * is the one the source element stands for. With none, a new element is created; with several,
+ * none is picked and a new one is created too.
  */
 export async function resolveMapping(
 	reader: Reader,
@@ -18,9 +19,17 @@ export async function resolveMapping(
 		sourceQuery: Core.Query<Config>
 		sourceRef: Scl.Ref<Scl.ElementsOf>
 		policy: MappingPolicy
+		/** The consumer's choice for this source element, when it made one. */
+		decision?: DecisionMapping
 	},
 ): Promise<ResolvedMapping> {
-	const { sourceQuery, sourceRef, policy } = params
+	const { sourceQuery, sourceRef, policy, decision } = params
+
+	if (decision && 'existing' in decision) {
+		const existing = await reader.any.getRecord(decision.existing)
+		return { existing, reason: 'decision', ambiguous: false }
+	}
+	if (decision) return { reason: 'decision', ambiguous: false }
 
 	const key = await sourceQuery.any.getAttribute(sourceRef, { name: policy.key })
 	if (!key) return { reason: 'none', ambiguous: false }

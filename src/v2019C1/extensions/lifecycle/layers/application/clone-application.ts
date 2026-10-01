@@ -14,6 +14,7 @@ import {
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type { MappingDecisionMap } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
@@ -36,9 +37,12 @@ export async function cloneApplicationContent(
 		/** Child tags to drop from clones. Extract prunes (ALWAYS_OMIT); instantiate omits nothing. */
 		omit?: OmitEntry<Config>[]
 		keepNameTypesFrom?: KeepNameTypesFrom
+		/** The consumer's choices for the shared elements the application refers to. */
+		mappingDecisions?: MappingDecisionMap
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const { sourceQuery, applicationRef, structure, omit, keepNameTypesFrom } = params
+	const mappingDecisions = params.mappingDecisions
 
 	// Source record id -> cloned target ref, accumulated as functions are cloned, so
 	// step 3's satellites can be placed back under their owning function.
@@ -86,7 +90,11 @@ export async function cloneApplicationContent(
 	// (see `resolveMapping`) is not cloned — its FunctionRef allocations are added to that role,
 	// and the Application's AllocationRoleRef is repointed to it after the Application tree is
 	// cloned (step 5). A role with nothing to map onto is cloned like any referenced target.
-	const roleReuse = await mapAllocationRoles(tx, { sourceQuery, applicationRef })
+	const roleReuse = await mapAllocationRoles(tx, {
+		sourceQuery,
+		applicationRef,
+		mappingDecisions,
+	})
 	for (const reuse of roleReuse) cloneIndex.set(reuse.sourceId, reuse.existingRef)
 
 	const REFS_ALREADY_HANDLED = new Set(['FunctionRef', 'FunctionCategoryRef'])
@@ -144,9 +152,13 @@ type AllocationRoleReuse = {
  */
 async function mapAllocationRoles(
 	tx: Core.Transaction<Config>,
-	params: { sourceQuery: Core.Query<Config>; applicationRef: Scl.Ref<'Application'> },
+	params: {
+		sourceQuery: Core.Query<Config>
+		applicationRef: Scl.Ref<'Application'>
+		mappingDecisions?: MappingDecisionMap
+	},
 ): Promise<AllocationRoleReuse[]> {
-	const { sourceQuery, applicationRef } = params
+	const { sourceQuery, applicationRef, mappingDecisions } = params
 
 	const { AllocationRoleRef: refs = [] } = await sourceQuery.findDescendants(applicationRef, {
 		collect: 'AllocationRoleRef',
@@ -171,6 +183,7 @@ async function mapAllocationRoles(
 			sourceQuery,
 			sourceRef: { tagName: 'AllocationRole', id: sourceRole.id },
 			policy,
+			decision: mappingDecisions?.get(sourceRole.id),
 		})
 		const existing = mapping.existing
 		if (!existing) continue

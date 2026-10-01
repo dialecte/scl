@@ -36,6 +36,7 @@ export async function buildReportInstance(
 			upToDate,
 			tree: instanceDiff.root,
 			groups: instanceDiff.groups,
+			mappings: instanceDiff.mappings ?? [],
 		}
 	}
 
@@ -49,5 +50,6 @@ export async function buildReportInstance(
 		upToDate,
 		tree: instanceDiff.root,
 		groups: instanceDiff.groups,
+		mappings: instanceDiff.mappings ?? [],
 	}
 }

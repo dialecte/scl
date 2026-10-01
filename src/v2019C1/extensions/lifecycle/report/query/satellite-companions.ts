@@ -2,11 +2,16 @@ import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
-import { findMappingPolicy, resolveMapping } from '@/v2019C1/extensions/lifecycle/mapping'
+import {
+	describeMapping,
+	findMappingPolicy,
+	resolveMapping,
+} from '@/v2019C1/extensions/lifecycle/mapping'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LeftoverRefPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { MappingDecisionMap, ReportMapping } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -40,6 +45,10 @@ export async function foldSatelliteCompanions(
 		instanceScopeId?: string
 		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
 		refsAlwaysAdded?: boolean
+		/** The consumer's choices for shared satellites, by source record id. */
+		mappingDecisions?: MappingDecisionMap
+		/** The project element the template is placed under. */
+		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
@@ -50,12 +59,19 @@ export async function foldSatelliteCompanions(
 	for (const satelliteRef of satelliteRefs) {
 		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
 
-		const { target: instance, projectOwned } = await findSatelliteTarget(query, {
+		const {
+			target: instance,
+			projectOwned,
+			mapping,
+		} = await findSatelliteTarget(query, {
 			sourceQuery,
 			satelliteRef,
 			sourceUuid,
 			firstTime: instanceScopeId === undefined,
+			mappingDecisions: params.mappingDecisions,
+			anchor: params.anchor,
 		})
+		if (mapping) report.mappings = [...(report.mappings ?? []), mapping]
 		const satelliteReport = await diff({
 			sourceQuery,
 			targetQuery: query,
@@ -133,14 +149,31 @@ async function findSatelliteTarget(
 		satelliteRef: Scl.Ref<Scl.ElementsOf>
 		sourceUuid: string | undefined
 		firstTime: boolean
+		mappingDecisions?: MappingDecisionMap
+		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
-): Promise<{ target: AnyTrackedRecord | undefined; projectOwned: boolean }> {
+): Promise<{
+	target: AnyTrackedRecord | undefined
+	projectOwned: boolean
+	mapping?: ReportMapping
+}> {
 	const { sourceQuery, satelliteRef, sourceUuid, firstTime } = params
 
 	const policy = findMappingPolicy(satelliteRef.tagName)
-	if (firstTime && policy) {
-		const mapping = await resolveMapping(query, { sourceQuery, sourceRef: satelliteRef, policy })
-		return { target: mapping.existing, projectOwned: true }
+	const satelliteId = satelliteRef.id
+	if (firstTime && policy && satelliteId) {
+		const sourceRef = { ...satelliteRef, id: satelliteId }
+		const decision = params.mappingDecisions?.get(satelliteId)
+		const resolved = await resolveMapping(query, { sourceQuery, sourceRef, policy, decision })
+		const mapping = await describeMapping(query, {
+			sourceQuery,
+			sourceRef,
+			policy,
+			resolved,
+			decision,
+			anchor: params.anchor,
+		})
+		return { target: resolved.existing, projectOwned: true, mapping }
 	}
 
 	const target = await findInstanceByTemplateUuid(query, {

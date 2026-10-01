@@ -8,6 +8,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
 
+import type { ReportMapping } from '../mapping/mapping.types'
 import type {
 	AttributeChange,
 	DecisionGroup,
@@ -380,7 +381,19 @@ export function assembleReport(instances: ReportInstance[]): DiffReport {
 			(instance) => instance.rootRef !== undefined && instance.groups.length > 0,
 		),
 		summary,
+		mappings: collectMappings(instances),
 	}
+}
+
+/** Every mapping of the reported instances, once per shared source element. */
+function collectMappings(instances: readonly ReportInstance[]): ReportMapping[] {
+	const mappingsBySourceId = new Map<string, ReportMapping>()
+	for (const instance of instances) {
+		for (const mapping of instance.mappings) {
+			if (!mappingsBySourceId.has(mapping.id)) mappingsBySourceId.set(mapping.id, mapping)
+		}
+	}
+	return [...mappingsBySourceId.values()]
 }
 
 /** Every decision group across all instances — the flat surface the decision engine consumes. */

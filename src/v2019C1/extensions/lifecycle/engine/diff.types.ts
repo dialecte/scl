@@ -1,4 +1,5 @@
 import type { EditableAttribute } from '../constraints'
+import type { ReportMapping } from '../mapping/mapping.types'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
 /** How a diffed element changed between the (updated) template and the instance. */
@@ -40,6 +41,8 @@ export type InstanceDiff = {
 	root: DiffNode
 	groups: DecisionGroup[]
 	summary: DiffSummary
+	/** Where the shared source elements this instance refers to land in the project. */
+	mappings?: ReportMapping[]
 }
 
 /**
@@ -91,6 +94,8 @@ export type ReportInstance = {
 	tree: DiffNode
 	/** The change tree folded into accept/skip units for this instance. */
 	groups: DecisionGroup[]
+	/** Where the shared source elements this instance refers to land in the project. */
+	mappings: ReportMapping[]
 }
 
 export type DiffReport = {
@@ -102,6 +107,8 @@ export type DiffReport = {
 	 */
 	needsDecisions: boolean
 	summary: DiffSummary
+	/** Where each shared source element lands in the project — one entry per source element. */
+	mappings: ReportMapping[]
 }
 
 /**

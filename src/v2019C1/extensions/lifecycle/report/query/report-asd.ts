@@ -19,6 +19,7 @@ import type {
 	InstanceDiff,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { MappingDecisionMap } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -42,9 +43,13 @@ export async function reportAsd(
 		applicationRef: Scl.Ref<'Application'>
 		scenario?: LifecycleScenario
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		/** The consumer's choices for the shared elements the application refers to. */
+		mappingDecisions?: MappingDecisionMap
+		/** The project element the application is placed under. */
+		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<DiffReport> {
-	const { sourceQuery, applicationRef, scenario, targetInstance } = params
+	const { sourceQuery, applicationRef, scenario, targetInstance, mappingDecisions, anchor } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	const matchKey = matchKeyForScenario(scenario)
@@ -66,6 +71,8 @@ export async function reportAsd(
 			instance: undefined,
 			refsAlwaysAdded: scenario === 'instantiate',
 			matchKey,
+			mappingDecisions,
+			anchor,
 		})
 		reportInstances.push(
 			await buildReportInstance(query, {
@@ -114,6 +121,8 @@ async function reportApplicationInstance(
 		instance: AnyTrackedRecord | undefined
 		refsAlwaysAdded?: boolean
 		matchKey?: MatchKey
+		mappingDecisions?: MappingDecisionMap
+		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
@@ -143,6 +152,8 @@ async function reportApplicationInstance(
 		report: applicationReport,
 		instanceScopeId: instance?.id,
 		refsAlwaysAdded,
+		mappingDecisions: params.mappingDecisions,
+		anchor: params.anchor,
 	})
 
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element

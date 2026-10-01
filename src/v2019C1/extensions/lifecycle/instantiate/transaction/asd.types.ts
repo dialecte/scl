@@ -1,6 +1,7 @@
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { MappingDecisionMap } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 export type AsdParams = {
@@ -13,6 +14,8 @@ export type AsdParams = {
 	overrides?: CollisionOverrides
 	/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */
 	keepNameTypesFrom?: KeepNameTypesFrom
+	/** The consumer's choices for the shared elements the application refers to. */
+	mappingDecisions?: MappingDecisionMap
 }
 
 export type AsdResult = {

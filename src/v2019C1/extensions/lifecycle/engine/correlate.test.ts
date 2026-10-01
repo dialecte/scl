@@ -20,6 +20,7 @@ const instance = (tree: DiffNode, groups: ReportInstance['groups'] = []): Report
 	upToDate: false,
 	tree,
 	groups,
+	mappings: [],
 })
 
 describe('sourceToTargetMap', () => {

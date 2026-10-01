@@ -1,4 +1,5 @@
 import { allGroups, assertDecisionsCoherent } from '@/v2019C1/extensions/lifecycle/engine'
+import { assertMappingsCoherent } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	asd as updateAsd,
 	fsd as updateFsd,
@@ -43,6 +44,10 @@ export async function apply(
 ): Promise<ApplyResult> {
 	const { report } = params
 	const decisions = params.resolution?.decisions
+
+	// mapping choices the report cannot honour are refused before any write
+	const mappingDecisions = params.resolution?.mappings
+	if (mappingDecisions) assertMappingsCoherent({ mappings: report.mappings, mappingDecisions })
 
 	// No decisions supplied: fast track applies headless; full track waits for a human.
 	if (!decisions) {
@@ -113,6 +118,7 @@ async function runVerb(
 		report,
 		decisions,
 		keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
+		mappingDecisions: target.resolution?.mappings,
 	})
 	return { verb: 'asd', applications, functions }
 }

@@ -3,9 +3,10 @@ import { reportAsd, reportFsd, reportSsd } from './query'
 
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { assertMappingsCoherent } from '@/v2019C1/extensions/lifecycle/mapping'
 
 import type { Config } from '@/v2019C1/config'
-import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { LifecycleReportParams } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 
@@ -22,7 +23,7 @@ import type * as Core from '@dialecte/core'
  */
 export async function report(
 	query: Core.Query<Config>,
-	target: LifecycleTarget,
+	target: LifecycleReportParams,
 ): Promise<DiffReport> {
 	const report =
 		target.verb === 'fsd'
@@ -47,6 +48,8 @@ export async function report(
 						applicationRef: target.ref,
 						scenario: target.scenario,
 						targetInstance: target.targetInstance,
+						mappingDecisions: target.resolution?.mappings,
+						anchor: target.anchor,
 					})
 
 	for (const group of allGroups(report)) {
@@ -55,6 +58,10 @@ export async function report(
 
 	// flag the placement collisions the engine resolves by itself (auto-value on an editable field)
 	await markPlacementConflicts(query, target, report)
+
+	// the report was derived from the consumer's mapping choices: refuse the ones it cannot honour
+	const mappingDecisions = target.resolution?.mappings
+	if (mappingDecisions) assertMappingsCoherent({ mappings: report.mappings, mappingDecisions })
 
 	return report
 }

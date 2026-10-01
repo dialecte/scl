@@ -34,6 +34,7 @@ import type * as Core from '@dialecte/core'
  */
 export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Promise<AsdResult> {
 	const { sourceQuery, applicationRef, targetParent, overrides, keepNameTypesFrom } = params
+	const mappingDecisions = params.mappingDecisions
 
 	const structure = await resolveTargetStructure(tx, targetParent)
 
@@ -51,6 +52,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		applicationRef,
 		structure,
 		keepNameTypesFrom,
+		mappingDecisions,
 	})
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) applying to
@@ -89,7 +91,13 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 			id: mapping.source.id,
 		} as Scl.Ref<Scl.ElementsOf>
 		const sharedElementParent = await resolveStructureRef(sourceQuery, sourceRef, structure)
-		await resolvePlacementCollision(tx, { ref: mapping.target, parentRef: sharedElementParent })
+		const decision = mappingDecisions?.get(mapping.source.id)
+		const chosenName = decision && 'create' in decision ? decision.create.name : undefined
+		await resolvePlacementCollision(tx, {
+			ref: mapping.target,
+			parentRef: sharedElementParent,
+			overrides: chosenName ? { name: chosenName } : undefined,
+		})
 	}
 
 	const rootMapping = mappings.find((mapping) => mapping.source.id === applicationRef.id)
