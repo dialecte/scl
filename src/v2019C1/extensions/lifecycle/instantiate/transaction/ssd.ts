@@ -100,5 +100,5 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	// One document-level provenance link back to the source SSD.
 	await writeProvenance(tx, { sourceQuery, target: { anchor: 'document', fileType: 'SSD' } })
 
-	return { scopeRef: root, recordMappings: contentMappings }
+	return { scopeRef: root, cloneMappings: allMappings }
 }

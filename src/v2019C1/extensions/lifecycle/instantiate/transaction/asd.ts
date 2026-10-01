@@ -28,8 +28,8 @@ import type * as Core from '@dialecte/core'
  * the ASD) is written on the cloned root by `reference.writeProvenance`; SET policy
  * (naming, assign-to-application) is applied by consumer hooks, not here.
  *
- * Returns the instantiated Application ref, its composed Function roots, and the full
- * source -> clone mappings, so a consumer can drive follow-up rules against the fresh
+ * Returns the instantiated Application ref, its composed Function roots, and the clone
+ * mappings of everything the operation cloned, so a consumer can drive follow-up rules against the fresh
  * instance without re-querying by templateUuid.
  */
 export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Promise<AsdResult> {
@@ -47,7 +47,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		targetTagName: 'Function',
 	})
 
-	const { cloneMappings, redirectMappings } = await cloneApplicationContent(tx, {
+	const { cloneMappings: contentMappings, redirectMappings } = await cloneApplicationContent(tx, {
 		sourceQuery,
 		applicationRef,
 		structure,
@@ -64,7 +64,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		strip: false,
 	})
 
-	const allMappings = [...cloneMappings, ...appliedMappings]
+	const allMappings = [...contentMappings, ...appliedMappings]
 
 	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs.
 	await finalizeClonedIdentity(tx, {
@@ -76,7 +76,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	// resolve a name collision for each placed composed Function at its own structural
 	// level (a repeated instantiate would otherwise duplicate a Function name in the Bay)
 	for (const functionRef of composedFunctionRefs) {
-		const functionMapping = cloneMappings.find((mapping) => mapping.source.id === functionRef.id)
+		const functionMapping = contentMappings.find((mapping) => mapping.source.id === functionRef.id)
 		if (!functionMapping) continue
 		const functionParent = await resolveStructureRef(sourceQuery, functionRef, structure)
 		await resolvePlacementCollision(tx, {
@@ -88,7 +88,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 
 	// a shared element created here (no project element to map onto) is validated against its
 	// structural level too: a name already taken there is bumped to a free one
-	for (const mapping of cloneMappings) {
+	for (const mapping of contentMappings) {
 		if (!mapping.source.id || !findMappingPolicy(mapping.source.tagName)) continue
 		const sourceRef = {
 			tagName: mapping.source.tagName,
@@ -104,7 +104,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		})
 	}
 
-	const rootMapping = cloneMappings.find((mapping) => mapping.source.id === applicationRef.id)
+	const rootMapping = contentMappings.find((mapping) => mapping.source.id === applicationRef.id)
 	if (!rootMapping) {
 		throw new Error(`instantiate.asd: cloned Application not found for ${applicationRef.id}`)
 	}
@@ -126,7 +126,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	const composedFunctionInstanceRefs = composedFunctionRefs
 		.map(
 			(functionRef) =>
-				cloneMappings.find((mapping) => mapping.source.id === functionRef.id)?.target,
+				contentMappings.find((mapping) => mapping.source.id === functionRef.id)?.target,
 		)
 		.filter((target): target is Scl.Ref<Scl.ElementsOf> => Boolean(target)) as (
 		| Scl.Ref<'Function'>
@@ -136,7 +136,6 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	return {
 		applicationRef: rootMapping.target as Scl.Ref<'Application'>,
 		composedFunctionRefs: composedFunctionInstanceRefs,
-		recordMappings: cloneMappings,
 		cloneMappings: allMappings,
 	}
 }

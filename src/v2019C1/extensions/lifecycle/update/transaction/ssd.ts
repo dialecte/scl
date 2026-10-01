@@ -90,7 +90,7 @@ export async function ssd(
 		const overrides = decisions
 			? collisionOverrides({ groups: report ? allGroups(report) : [], decisions })
 			: undefined
-		const { recordMappings } = await instantiateSsd(tx, {
+		const { cloneMappings } = await instantiateSsd(tx, {
 			sourceQuery,
 			scopeRef: root,
 			targetParent,
@@ -100,11 +100,11 @@ export async function ssd(
 		})
 		// first-time SSD clones the whole scope (frame + fn/app) in one pass; annotate every first-time
 		// report instance (frame, applications, standalone functions) from the shared map
-		const added = sourceToTargetMap(recordMappings)
+		const added = sourceToTargetMap(cloneMappings)
 		for (const reportInstance of report?.instances ?? []) {
 			if (!reportInstance.rootRef) annotateInstance({ reportInstance, added })
 		}
-		return collectInstances(recordMappings)
+		return collectInstances(cloneMappings)
 	}
 
 	const applications: Scl.Ref<'Application'>[] = []
@@ -193,11 +193,11 @@ async function hasAnyInstance(
 }
 
 /** The instantiated Application / Function roots, read off the clone mappings by tag. */
-function collectInstances(recordMappings: readonly Scl.CloneMapping[]): UpdateSsdResult {
+function collectInstances(cloneMappings: readonly Scl.CloneMapping[]): UpdateSsdResult {
 	const applications: Scl.Ref<'Application'>[] = []
 	const functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[] = []
 
-	for (const mapping of recordMappings) {
+	for (const mapping of cloneMappings) {
 		if (mapping.target.tagName === 'Application') {
 			applications.push(mapping.target as Scl.Ref<'Application'>)
 		} else if (mapping.target.tagName === 'Function' || mapping.target.tagName === 'SubFunction') {

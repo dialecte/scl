@@ -30,7 +30,7 @@ await project.transaction(async (tx) => {
 
 The clone's uuid references are repointed by [`reference.applyUuidRemap`](./reference#applyuuidremap) over the recipe's combined clone mappings — deep clone itself is purely structural. SET-specific policy — naming conventions, file-reference provenance, application assignment — is applied by consumer-registered hooks, not by the operation.
 
-Returns `{ functionRef, recordMappings }` — the instantiated root (retagged to `SubFunction` when placed under a `(Sub)Function`) and the full source→target `recordMappings`, so a caller can act on the placed function without re-querying by `templateUuid`.
+Returns `{ functionRef, cloneMappings }` — the instantiated root (retagged to `SubFunction` when placed under a `(Sub)Function`) and `cloneMappings`: each source record and the copy made of it, for everything the operation cloned (the function subtree and the categories, variables and behaviour descriptions carried with it), so a caller can act on the placed function without re-querying by `templateUuid`.
 
 ## asd
 
@@ -60,7 +60,7 @@ await project.transaction(async (tx) => {
 
 `asd` is the exact application-layer counterpart of [`extract.asd`](./extract#asd): both compose the same `layers/application` take-over, differing only in direction (extract strips, instantiate stamps). SET policy (`ApplicationSclRef` provenance, assign-to-application) is applied by consumer hooks.
 
-Returns `{ applicationRef, composedFunctionRefs, recordMappings }` — the instantiated `Application`, its composed root Functions, and the full source→target `recordMappings`.
+Returns `{ applicationRef, composedFunctionRefs, cloneMappings }` — the instantiated `Application`, its composed root Functions, and `cloneMappings`: each source record and the copy made of it, for everything the operation cloned (a shared element mapped onto a project element is not cloned, so it has no entry).
 
 ## ssd
 
@@ -83,4 +83,4 @@ await project.transaction(async (tx) => {
 })
 ```
 
-Returns `{ scopeRef, recordMappings }` — the SSD-side scope root that was instantiated, and the source→target `recordMappings` for the reproduced frame and placed fn/app content (the cross-cutting satellites are cloned separately and not included).
+Returns `{ scopeRef, cloneMappings }` — the SSD-side scope root that was instantiated, and `cloneMappings`: each source record and the copy made of it, for everything the operation cloned (the reproduced frame, the placed fn/app content and the cross-cutting satellites carried with them).

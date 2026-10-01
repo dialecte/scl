@@ -29,8 +29,8 @@ import type * as Core from '@dialecte/core'
  * the FSD) is written on the cloned root by `reference.writeProvenance`; SET
  * policy (naming, application assignment) is applied by consumer hooks, not here.
  *
- * Returns the instantiated root ref (retagged if applicable) and the full
- * source -> clone record mappings, so a consumer can drive follow-up rules
+ * Returns the instantiated root ref (retagged if applicable) and the clone mappings of
+ * everything the operation cloned, so a consumer can drive follow-up rules
  * against the fresh instance without re-querying by templateUuid.
  */
 export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Promise<FsdResult> {
@@ -42,7 +42,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 			? ({ from: 'Function', to: 'SubFunction' } as const)
 			: undefined
 
-	const { recordMappings } = await deep(tx, {
+	const { cloneMappings: functionMappings } = await deep(tx, {
 		sourceQuery,
 		ref: functionRef,
 		targetParent,
@@ -71,13 +71,13 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		strip: false,
 	})
 
-	const allMappings = [...recordMappings, ...categoryMappings, ...appliedMappings]
+	const allMappings = [...functionMappings, ...categoryMappings, ...appliedMappings]
 
 	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs
 	// (e.g. FunctionCatRef -> cloned Function) onto the fresh uuids.
 	await finalizeClonedIdentity(tx, { cloneMappings: allMappings, mode: 'stamp-template' })
 
-	const rootMapping = recordMappings.find((mapping) => mapping.source.id === functionRef.id)
+	const rootMapping = functionMappings.find((mapping) => mapping.source.id === functionRef.id)
 	if (!rootMapping) {
 		throw new Error(
 			`instantiate.fsd: cloned root not found for ${functionRef.tagName}#${functionRef.id}`,
@@ -100,5 +100,5 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		target: { anchor: 'function', root: instantiatedRef },
 	})
 
-	return { functionRef: instantiatedRef, recordMappings, cloneMappings: allMappings }
+	return { functionRef: instantiatedRef, cloneMappings: allMappings }
 }

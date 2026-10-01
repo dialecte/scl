@@ -24,6 +24,9 @@ export type SsdParams = {
 export type SsdResult = {
 	/** The SSD scope root that was instantiated (source-side ref). */
 	scopeRef: Scl.Ref<TopologyStructuralTag>
-	/** Full source-record -> target-record mapping for the cloned content. */
-	recordMappings: Scl.CloneMapping[]
+	/**
+	 * Each source record and the copy made of it, for everything the operation cloned: the reproduced
+	 * frame, the placed Functions and Applications, and the cross-cutting satellites carried with them.
+	 */
+	cloneMappings: Scl.CloneMapping[]
 }

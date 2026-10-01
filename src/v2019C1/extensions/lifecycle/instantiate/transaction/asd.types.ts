@@ -23,12 +23,10 @@ export type AsdResult = {
 	applicationRef: Scl.Ref<'Application'>
 	/** The instantiated composed Function roots (referenced by the Application). */
 	composedFunctionRefs: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
-	/** Full source-record -> target-record mapping for the cloned content. */
-	recordMappings: Scl.CloneMapping[]
 	/**
-	 * Every source->target mapping produced, including the cross-cutting satellites that live outside
-	 * the Application subtree — the full set the report→applied correlation needs for a first-time
-	 * instantiate (`sourceToTargetMap` over these).
+	 * Each source record and the copy made of it, for everything the operation cloned: the
+	 * Application, its composed Functions, their categories, the shared elements created for it and
+	 * the cross-cutting satellites that live outside the Application subtree.
 	 */
 	cloneMappings: Scl.CloneMapping[]
 }

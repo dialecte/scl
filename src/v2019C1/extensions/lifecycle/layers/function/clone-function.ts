@@ -53,7 +53,7 @@ export async function cloneFunction(
 	// satellites (FunctionCategory, ProcessResource, etc.) are placed at their source
 	// hierarchy level by the recipe. The returned mappings let the recipe resolve those
 	// placements against the cloned function subtree.
-	const { recordMappings } = await deepExtract(tx, {
+	const { cloneMappings } = await deepExtract(tx, {
 		sourceQuery,
 		ref: functionRef,
 		targetParent: targetParentRef,
@@ -63,7 +63,7 @@ export async function cloneFunction(
 		withTypes: { keepNameFrom: keepNameTypesFrom },
 	})
 
-	return recordMappings
+	return cloneMappings
 }
 
 /**

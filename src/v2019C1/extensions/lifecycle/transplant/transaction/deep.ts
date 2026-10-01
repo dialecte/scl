@@ -26,7 +26,7 @@ import type * as Core from '@dialecte/core'
  * Reference rewiring is the caller's responsibility (recipes place same-domain
  * satellites by ancestry; cross-domain/lineage rewiring is plan-driven). Uuid
  * references inside the clone are repointed by the caller via `reference.applyUuidRemap`
- * over the returned `recordMappings`.
+ * over the returned `cloneMappings`.
  */
 export async function deep(
 	tx: Core.Transaction<Config>,
@@ -77,14 +77,14 @@ export async function deep(
 			const result = await importTypes(tx, {
 				sourceQuery,
 				records,
-				cloneMappings: cloneMappings,
+				cloneMappings,
 				keepNameTypesFrom,
 			})
 			typeIdRemap = result.idRemap
 		}
 	}
 
-	return { record, typeIdRemap, recordMappings: cloneMappings }
+	return { record, typeIdRemap, cloneMappings }
 }
 
 /**

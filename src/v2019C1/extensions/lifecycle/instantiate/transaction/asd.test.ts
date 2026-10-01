@@ -261,6 +261,6 @@ describe('instantiate.asd return value', () => {
 
 		expect(result?.applicationRef.tagName).toBe('Application')
 		expect(result?.composedFunctionRefs.length).toBe(1)
-		expect(result?.recordMappings.some((m) => m.source.id === 'app-s')).toBe(true)
+		expect(result?.cloneMappings.some((m) => m.source.id === 'app-s')).toBe(true)
 	})
 })

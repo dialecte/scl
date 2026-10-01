@@ -339,6 +339,6 @@ describe('instantiate.fsd return value', () => {
 		})
 
 		expect(result?.functionRef.tagName).toBe(testCase.expectedTag)
-		expect(result?.recordMappings.some((m) => m.source.id === 'fn-1')).toBe(true)
+		expect(result?.cloneMappings.some((m) => m.source.id === 'fn-1')).toBe(true)
 	})
 })

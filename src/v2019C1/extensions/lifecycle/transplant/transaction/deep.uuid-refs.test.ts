@@ -89,14 +89,14 @@ describe('import.deep — uuid reference remapping', () => {
 		if (!target) throw new Error('target required')
 
 		await target.transaction(async (tx) => {
-			const { recordMappings } = await deep(tx, {
+			const { cloneMappings } = await deep(tx, {
 				sourceQuery: source.query,
 				ref: testCase.ref as Scl.Ref<Scl.ElementsOf>,
 				targetParent: testCase.targetParent as Scl.Ref<Scl.ElementsOf>,
 				withTypes: false,
 			})
 			// caller owns uuid rewiring (deep is a faithful subtree copy)
-			await applyUuidRemap(tx, { cloneMappings: recordMappings })
+			await applyUuidRemap(tx, { cloneMappings })
 		})
 
 		return { assertOn: 'target' }

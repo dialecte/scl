@@ -195,7 +195,7 @@ async function reconcileChildren(
 		// add a new template element (with its subtree/companions via deep)
 		if (accepted && !accepted.sourceIds.has(sourceChild.id)) continue
 
-		const { recordMappings } = await deep(tx, {
+		const { cloneMappings } = await deep(tx, {
 			sourceQuery,
 			ref: toRef(sourceChild) as unknown as Scl.Ref<Scl.ElementsOf>,
 			targetParent: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,
@@ -204,17 +204,17 @@ async function reconcileChildren(
 		})
 		// record source -> applied for the whole grafted subtree (ids are stable; the collision
 		// bump below only edits the added root's name, never its id).
-		for (const mapping of recordMappings) {
+		for (const mapping of cloneMappings) {
 			if (mapping.source.id) added.set(mapping.source.id, mapping.target)
 		}
 		// stamp/preserve keep the fresh clone uuid + repoint refs; keep/fork converges to the
 		// source revision's uuids (no remap) — the shared finalization owns that split.
-		await finalizeClonedIdentity(tx, { cloneMappings: recordMappings, mode: identityMode })
+		await finalizeClonedIdentity(tx, { cloneMappings, mode: identityMode })
 
 		// validate the added element against its instance-parent context: apply any
 		// user edit then auto-resolve a name collision among siblings (schema constraint).
 		// Fork keeps identity (same-file revision) — no re-stamp, no collision bump.
-		const addRoot = recordMappings.find((mapping) => mapping.source.id === sourceChild.id)
+		const addRoot = cloneMappings.find((mapping) => mapping.source.id === sourceChild.id)
 		if (addRoot && identityMode !== 'keep') {
 			await resolvePlacementCollision(tx, {
 				ref: addRoot.target,

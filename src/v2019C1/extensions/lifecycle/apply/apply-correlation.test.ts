@@ -2,6 +2,7 @@ import { apply } from './apply'
 
 import { describe, expect, it } from 'vitest'
 
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { ssd as instantiateSsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import {
@@ -305,5 +306,71 @@ describe('apply — SSD frame appliedRef lands on the NEW bay, not the existing 
 		const allBayIds = (await target.document.query.getRecordsByTagName('Bay')).map((r) => r.id)
 		expect(allBayIds).toContain(newBayId) // it IS a real bay in the applied doc
 		expect(allBayIds.length).toBe(2) // seeded + new
+	})
+})
+
+describe('apply — SSD appliedRef covers the elements carried from outside the scope', () => {
+	const bayScope = { tagName: 'Bay', id: 'bay-s' } as Scl.Ref<'Bay'>
+	const targetVl = { tagName: 'VoltageLevel', id: 'vl-t' } as Scl.Ref<'VoltageLevel'>
+
+	// a bay whose function is annotated by a Variable declared at Substation level, outside the bay
+	const ssdSource = /* xml */ `
+		<SCL ${ns} ${id}="ssd">
+			<Header id="ssd-header" uuid="ssd-doc-uuid" version="0" revision="1" ${id}="hdr-s"/>
+			<Substation name="TEMPLATE" ${id}="sub-s">
+				<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
+					<eIEC61850-6-100:Variable name="VXCBR" uuid="var-src-uuid" ${id}="var-s">
+						<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/B1/Prot" elementUuid="fn-src-uuid" ${id}="vapp-s"/>
+					</eIEC61850-6-100:Variable>
+				</Private>
+				<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+					<Bay name="B1" ${id}="bay-s">
+						<Function name="Prot" ${id}="fn-1" uuid="fn-src-uuid"/>
+					</Bay>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+	const ssdTarget = /* xml */ `
+		<SCL ${ns} ${id}="scd">
+			<Header id="proj" uuid="proj-uuid" ${id}="hdr-t"/>
+			<Substation name="S1" ${id}="sub-t">
+				<VoltageLevel name="V1" ${id}="vl-t"/>
+			</Substation>
+		</SCL>
+	`
+
+	it('first-time instantiate: the Variable carried with a function resolves to its clone', async () => {
+		const { source, target } = await createSclTestProject({
+			sourceXml: ssdSource,
+			targetXml: ssdTarget,
+		})
+		if (!target) throw new Error('target required')
+
+		const rep = await report(target.document.query, {
+			verb: 'ssd',
+			sourceQuery: source.document.query,
+			ref: bayScope,
+			anchor: targetVl,
+		})
+		await target.document.transaction(async (tx) => {
+			await apply(tx, {
+				verb: 'ssd',
+				sourceQuery: source.document.query,
+				ref: bayScope,
+				anchor: targetVl,
+				report: rep,
+			})
+		})
+
+		const variableCompanion = allGroups(rep)
+			.flatMap((group) => group.companions)
+			.find((companion) => companion.tagName === 'Variable')
+		expect(variableCompanion).toBeDefined()
+
+		const variableIds = (await target.document.query.getRecordsByTagName('Variable')).map(
+			(record) => record.id,
+		)
+		expect(variableIds).toContain(variableCompanion!.appliedRef?.id)
 	})
 })
