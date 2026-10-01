@@ -2,6 +2,7 @@ export { assertMappingsCoherent } from './assert-mappings-coherent'
 export { describeMapping } from './describe-mapping'
 export { findMappingPolicy } from './mapping-policies'
 export { resolveMapping } from './resolve-mapping'
+export { resolveSatelliteMappings, toRedirectMappings } from './resolve-satellite-mappings'
 export type {
 	DecisionMapping,
 	DecisionMappings,
@@ -10,4 +11,5 @@ export type {
 	MappingReason,
 	ReportMapping,
 	ResolvedMapping,
+	ResolvedMappings,
 } from './mapping.types'

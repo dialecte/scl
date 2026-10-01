@@ -84,6 +84,8 @@ export async function reconcileCarriedSatellites(
 			accepted,
 			matchKey,
 			identityMode,
+			// a category classifies other functions too: their references are not this template's to drop
+			keepLeftoverRefs: true,
 		})
 		added.push(...reconcileMappings)
 	}

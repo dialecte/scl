@@ -18,6 +18,8 @@ export type RepointAddedReferencesParams = {
 export type InstanceAdditions = {
 	instanceRootRef: AnyRefOrRecord
 	cloneMappings: Scl.CloneMapping[]
+	/** Source elements mapped onto elements the instance already holds. */
+	redirectMappings?: readonly RedirectMapping[]
 }
 
 export type FindInstanceCounterpartParams = {

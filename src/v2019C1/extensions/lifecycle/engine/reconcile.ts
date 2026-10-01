@@ -1,5 +1,6 @@
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
+import { indexRedirectedSourceUuids } from './reference-match'
 import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
@@ -12,11 +13,13 @@ import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { LOCKED_LNODE_ATTRIBUTES } from '@/v2019C1/extensions/reference'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
+import type { RedirectedSourceUuids } from './reference-match'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -66,6 +69,23 @@ export async function reconcile(
 		 * delegates Application/Function to the fn/app cascade).
 		 */
 		omit?: readonly string[]
+		/**
+		 * Source elements mapped onto elements the project already holds: a reference of the instance
+		 * to such a project element is the template's reference to the source element.
+		 */
+		redirectMappings?: readonly RedirectMapping[]
+		/**
+		 * The instance root is an element of the PROJECT that the source root is mapped onto (a shared
+		 * element such as an `AllocationRole`), not an instance of it: its own attributes are never
+		 * written. Only what the source contributes below it is reconciled.
+		 */
+		instanceRootIsProjectOwned?: boolean
+		/**
+		 * Never remove a reference child implicitly. Set for a SHARED element, whose other reference
+		 * children belong to other primaries, other instances or the project itself: one is removed
+		 * only when its removal was reported and accepted.
+		 */
+		keepLeftoverRefs?: boolean
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -79,6 +99,7 @@ export async function reconcile(
 		identityMode = 'stamp-template',
 		omit,
 	} = params
+	const keepLeftoverRefs = params.keepLeftoverRefs ?? false
 
 	// each source record this reconcile ADDS and the copy made of it (root + descendants of each
 	// grafted subtree). Matched elements are updated in place, so the consumer already keys them by
@@ -95,14 +116,18 @@ export async function reconcile(
 	const sourceUuids = new Set<string>()
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
 
+	const redirectedSourceUuids = await indexRedirectedSourceUuids(tx, params.redirectMappings)
+
 	// root + descendants: update matched in place, add new
-	await updateMatchedAttributes(tx, {
-		sourceQuery,
-		instanceRecord: instanceTree,
-		sourceNode: sourceTree,
-		accepted,
-		overrides,
-	})
+	if (!params.instanceRootIsProjectOwned) {
+		await updateMatchedAttributes(tx, {
+			sourceQuery,
+			instanceRecord: instanceTree,
+			sourceNode: sourceTree,
+			accepted,
+			overrides,
+		})
+	}
 	await reconcileChildren(tx, {
 		sourceQuery,
 		sourceNode: sourceTree,
@@ -115,6 +140,8 @@ export async function reconcile(
 		identityMode,
 		omit,
 		added,
+		redirectedSourceUuids,
+		keepLeftoverRefs,
 	})
 
 	// removed from the template: delete instance elements whose lineage is gone
@@ -138,6 +165,8 @@ async function reconcileChildren(
 		omit: readonly string[] | undefined
 		/** Accumulates the clone mappings of every element added below here (root + subtree). */
 		added: Scl.CloneMapping[]
+		redirectedSourceUuids: RedirectedSourceUuids
+		keepLeftoverRefs: boolean
 	},
 ): Promise<void> {
 	const {
@@ -152,6 +181,8 @@ async function reconcileChildren(
 		identityMode,
 		omit,
 		added,
+		redirectedSourceUuids,
+		keepLeftoverRefs,
 	} = params
 	const matchedInstanceIds = new Set<string>()
 	for (const sourceChild of sourceNode.tree) {
@@ -165,6 +196,7 @@ async function reconcileChildren(
 			instanceParent,
 			index,
 			matchedInstanceIds,
+			redirectedSourceUuids,
 		})
 
 		if (matched) {
@@ -188,6 +220,8 @@ async function reconcileChildren(
 				identityMode,
 				omit,
 				added,
+				redirectedSourceUuids,
+				keepLeftoverRefs,
 			})
 			continue
 		}
@@ -238,6 +272,8 @@ async function reconcileChildren(
 			REFERENCE_TAG_NAMES.has(instanceChild.tagName) &&
 			!KEEP_ON_ORPHAN_REFS.has(instanceChild.tagName)
 		) {
+			// a shared element's other links are not this template's to drop: explicit accept only
+			if (keepLeftoverRefs && !accepted) continue
 			if (accepted && !accepted.instanceIds.has(instanceChild.id)) continue
 		} else {
 			// never remove an author addition implicitly — require an explicit accept

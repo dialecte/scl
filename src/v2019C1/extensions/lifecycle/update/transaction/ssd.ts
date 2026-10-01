@@ -134,6 +134,7 @@ export async function ssd(
 			decisions,
 			keepNameTypesFrom,
 			targetInstance,
+			decisionMappings: params.decisionMappings,
 		})
 		applications.push(...result.applications)
 		functions.push(...result.functions)

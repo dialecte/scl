@@ -1,7 +1,11 @@
 import { groupChanges } from './group'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
-import { referenceIdentity, referenceNameIdentity } from './reference-match'
+import {
+	indexRedirectedSourceUuids,
+	referenceIdentity,
+	referenceNameIdentity,
+} from './reference-match'
 import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
@@ -18,8 +22,10 @@ import type {
 	InstanceDiff,
 	ReportInstance,
 } from './diff.types'
+import type { RedirectedSourceUuids } from './reference-match'
 import type { Config } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -98,6 +104,11 @@ export async function diff(params: {
 	 */
 	instanceRootIsProjectOwned?: boolean
 	/**
+	 * Source elements mapped onto elements the project already holds: a reference of the instance to
+	 * such a project element is the template's reference to the source element.
+	 */
+	redirectMappings?: readonly RedirectMapping[]
+	/**
 	 * Child tags to treat as BOUNDARIES: their subtrees are excluded from the diff because another
 	 * report covers them (e.g. the topology frame report delegates Application/Function to the fn/app
 	 * per-primary reports).
@@ -127,6 +138,11 @@ export async function diff(params: {
 	const sourceUuids = new Set<string>()
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
 
+	const redirectedSourceUuids = await indexRedirectedSourceUuids(
+		targetQuery,
+		params.redirectMappings,
+	)
+
 	const root = await diffMatched(sourceQuery, {
 		targetQuery,
 		sourceNode: sourceTree,
@@ -139,6 +155,7 @@ export async function diff(params: {
 		matchKey,
 		omit,
 		skipOwnAttributes: params.instanceRootIsProjectOwned ?? false,
+		redirectedSourceUuids,
 	})
 	const summary = summarize(root)
 	const groups = groupChanges(root, instanceTree.id)
@@ -160,6 +177,7 @@ async function diffMatched(
 		omit?: readonly string[]
 		/** Leave this node's own attributes uncompared (its descendants are compared as usual). */
 		skipOwnAttributes?: boolean
+		redirectedSourceUuids?: RedirectedSourceUuids
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
@@ -185,6 +203,7 @@ async function diffMatched(
 			index,
 			matchedInstanceIds,
 			refsAlwaysAdded,
+			redirectedSourceUuids: params.redirectedSourceUuids,
 		})
 		if (matched) {
 			matchedInstanceIds.add(matched.id)
@@ -200,6 +219,7 @@ async function diffMatched(
 					refsAlwaysAdded,
 					matchKey,
 					omit,
+					redirectedSourceUuids: params.redirectedSourceUuids,
 				}),
 			)
 		} else {

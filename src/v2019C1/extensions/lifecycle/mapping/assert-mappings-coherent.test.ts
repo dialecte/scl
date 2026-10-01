@@ -18,6 +18,7 @@ function reportedMapping(overrides: Partial<ReportMapping> = {}): ReportMapping 
 		reason: 'name',
 		ambiguous: false,
 		selectable: true,
+		locked: false,
 		candidates: [
 			{ ref: otherProjectRole, title: 'Gateway', path: 'S1/Gateway' },
 			{ ref: projectRole, title: 'HMI_PC', path: 'S1/HMI_PC' },
@@ -58,6 +59,11 @@ describe('assertMappingsCoherent', () => {
 			reportMappings: [reportedMapping({ selectable: false })],
 			chosen: [['role-s', { create: {} }]],
 			expectedRejection: 'cannot be chosen',
+		},
+		'a choice for an element the instance being updated already carries a mapping for → rejected': {
+			reportMappings: [reportedMapping({ reason: 'lineage', locked: true })],
+			chosen: [['role-s', { existing: otherProjectRole }]],
+			expectedRejection: 'the instance already carries the mapping',
 		},
 		'no choice → accepted': {
 			reportMappings: [reportedMapping()],

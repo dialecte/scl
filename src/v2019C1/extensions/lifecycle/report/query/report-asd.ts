@@ -10,6 +10,10 @@ import {
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
+import {
+	resolveSatelliteMappings,
+	toRedirectMappings,
+} from '@/v2019C1/extensions/lifecycle/mapping'
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -90,6 +94,8 @@ export async function reportAsd(
 				instance,
 				refsAlwaysAdded: scenario === 'instantiate',
 				matchKey,
+				decisionMappings,
+				anchor,
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
@@ -128,14 +134,6 @@ async function reportApplicationInstance(
 	const { sourceQuery, applicationRef, instance } = params
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 
-	const applicationReport = await diff({
-		sourceQuery,
-		targetQuery: query,
-		sourceRootRef: applicationRef,
-		instanceRootRef: instance,
-		matchKey: params.matchKey,
-	})
-
 	// application-layer satellites (e.g. a referenced AllocationRole) travel with
 	// the application's decision group
 	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
@@ -144,6 +142,31 @@ async function reportApplicationInstance(
 				applicationRef: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
 			})
 		: []
+
+	// where the shared ones land is resolved FIRST: the application's references to an element of
+	// the project a source element is mapped onto are the template's references to that element
+	const resolvedMappings = await resolveSatelliteMappings(query, {
+		sourceQuery,
+		satelliteRefs,
+		instanceSatelliteRefs,
+		decisionMappings: params.decisionMappings,
+		matchKey: params.matchKey,
+	})
+	const redirectMappings = await toRedirectMappings({
+		sourceQuery,
+		satelliteRefs,
+		resolvedMappings,
+	})
+
+	const applicationReport = await diff({
+		sourceQuery,
+		targetQuery: query,
+		sourceRootRef: applicationRef,
+		instanceRootRef: instance,
+		matchKey: params.matchKey,
+		redirectMappings,
+	})
+
 	await foldSatelliteCompanions(query, {
 		sourceQuery,
 		primaryRef: applicationRef,
@@ -154,6 +177,8 @@ async function reportApplicationInstance(
 		refsAlwaysAdded,
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
+		matchKey: params.matchKey,
+		resolvedMappings,
 	})
 
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element

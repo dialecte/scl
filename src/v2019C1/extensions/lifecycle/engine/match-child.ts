@@ -2,6 +2,7 @@ import { referenceIdentity, referenceNameIdentity } from './reference-match'
 
 import { REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
 
+import type { RedirectedSourceUuids } from './reference-match'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
@@ -19,7 +20,9 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  *  - A uuid-less **REFERENCE** (e.g. `FunctionRef`) matches by its reference IDENTITY — the target
  *    `*Uuid` it points to, mapped back to template space — never by tag position; with a name-space
  *    fallback for projects authored with placeholder `templateUuid`s. `refsAlwaysAdded` forces a fresh
- *    instantiation's refs to surface as `added` instead of matching a prior instance's ref.
+ *    instantiation's refs to surface as `added` instead of matching a prior instance's ref. A reference
+ *    to a project element a source element was mapped onto reads as a reference to that source element
+ *    (`redirectedSourceUuids`), whatever the two are named.
  *  - Any other uuid-less element (e.g. `FunctionRoleContent`) matches a same-tag sibling by position.
  *
  * The source side reads raw identities; the candidate (target) side is normalized to template space —
@@ -34,6 +37,7 @@ export async function matchChild(
 		index: Map<string, AnyTreeRecord>
 		matchedInstanceIds: ReadonlySet<string>
 		refsAlwaysAdded?: boolean
+		redirectedSourceUuids?: RedirectedSourceUuids
 	},
 ): Promise<AnyTreeRecord | undefined> {
 	const { targetQuery, sourceChild, instanceParent, index, matchedInstanceIds } = params
@@ -66,6 +70,7 @@ export async function matchChild(
 		for (const candidate of candidates) {
 			const candidateIdentity = await referenceIdentity(targetQuery, candidate, {
 				mapToTemplate: true,
+				redirectedSourceUuids: params.redirectedSourceUuids,
 			})
 			if (candidateIdentity === sourceIdentity) return candidate
 		}

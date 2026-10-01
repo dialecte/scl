@@ -57,8 +57,25 @@ const projectXml = /* xml */ `
 	</SCL>
 `
 
+// A project that already holds the typical's role — the very same element, renamed since.
+const projectWithSameRoleXml = /* xml */ `
+	<SCL ${ns} ${id}="scd">
+		<Header id="project" uuid="project-uuid" ${id}="header-t"/>
+		<Substation name="S1" ${id}="substation-t">
+			<Private type="eIEC61850-6-100" ${id}="private-t">
+				<eIEC61850-6-100:AllocationRole name="Workstation" uuid="role-source-uuid" ${id}="same-role-t"/>
+			</Private>
+			<VoltageLevel name="V1" ${id}="voltage-level-t">
+				<Bay name="B1" ${id}="bay-t"/>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
+	/** `instantiate` unless the SSD is taken as a newer revision of the project itself. */
+	scenario?: 'fork'
 	chosen?: [string, DecisionMapping][]
 	expected: {
 		/** Where the report says the source role lands. */
@@ -102,6 +119,17 @@ describe('shared-element mapping — an SSD carrying an application', () => {
 				roleNames: ['Gateway', 'HMI_PC', 'HMI_PC'],
 			},
 		},
+		'a revision of the project itself, whose role the project holds under another name → listed and mapped onto that very element':
+			{
+				sourceXml,
+				targetXml: projectWithSameRoleXml,
+				scenario: 'fork',
+				expected: {
+					mapping: { existing: { tagName: 'AllocationRole', id: 'same-role-t' } },
+					rolePath: 'S1/Workstation',
+					roleNames: ['Workstation'],
+				},
+			},
 	}
 
 	async function act({ testCase, source, target }: SclTest.ActParams<TestCase>): Promise<void> {
@@ -109,7 +137,7 @@ describe('shared-element mapping — an SSD carrying an application', () => {
 
 		const lifecycleTarget = {
 			verb: 'ssd' as const,
-			scenario: 'instantiate' as const,
+			scenario: testCase.scenario ?? ('instantiate' as const),
 			sourceQuery: source.query,
 			ref: substationRef,
 			anchor: bayRef,
@@ -133,7 +161,11 @@ describe('shared-element mapping — an SSD carrying an application', () => {
 
 		const [applicationInstance] = await target.query.findByAttributes({
 			tagName: 'Application',
-			attributes: { templateUuid: 'application-source-uuid' },
+			// a fork keeps the source's identity; an instantiate records it as lineage
+			attributes:
+				testCase.scenario === 'fork'
+					? { uuid: 'application-source-uuid' }
+					: { templateUuid: 'application-source-uuid' },
 		})
 		const { AllocationRoleRef: roleReferences = [] } = await target.query.findDescendants(
 			{ tagName: 'Application', id: applicationInstance.id },

@@ -26,6 +26,10 @@ import {
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
+	resolveSatelliteMappings,
+	toRedirectMappings,
+} from '@/v2019C1/extensions/lifecycle/mapping'
+import {
 	identityModeForScenario,
 	matchKeyForScenario,
 } from '@/v2019C1/extensions/lifecycle/scenario'
@@ -164,6 +168,22 @@ export async function asd(
 			applicationRef: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
 		})
 
+		// where the shared satellites land — the answer the report read. Resolved before the
+		// application reconcile: its references to a project element a source element is mapped
+		// onto are the template's references to that element.
+		const resolvedMappings = await resolveSatelliteMappings(tx, {
+			sourceQuery,
+			satelliteRefs,
+			instanceSatelliteRefs,
+			decisionMappings: params.decisionMappings,
+			matchKey,
+		})
+		const redirectMappings = await toRedirectMappings({
+			sourceQuery,
+			satelliteRefs,
+			resolvedMappings,
+		})
+
 		// 1. application layer
 		const reconcileMappings = await reconcile(tx, {
 			sourceQuery,
@@ -174,6 +194,7 @@ export async function asd(
 			keepNameTypesFrom,
 			matchKey,
 			identityMode,
+			redirectMappings,
 		})
 		const satelliteMappings = await reconcileSatellites(tx, {
 			sourceQuery,
@@ -183,6 +204,8 @@ export async function asd(
 			accepted,
 			matchKey,
 			identityMode,
+			resolvedMappings,
+			decisionMappings: params.decisionMappings,
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
 		// in the Application subtree travel with the application group
@@ -198,7 +221,7 @@ export async function asd(
 		// carry the report->applied correlation onto this Application instance's report nodes (the
 		// composed Functions are annotated by the FSD cascade below)
 		const addedMappings = [...reconcileMappings, ...satelliteMappings, ...crossMappings]
-		additions.push({ instanceRootRef: instance, cloneMappings: addedMappings })
+		additions.push({ instanceRootRef: instance, cloneMappings: addedMappings, redirectMappings })
 		const reportInstance = reportInstanceById(report, instance.id)
 		if (reportInstance) {
 			annotateInstance({ reportInstance, added: sourceToTargetMap(addedMappings) })
@@ -219,8 +242,8 @@ export async function asd(
 
 	// 3. the references each instance gained now have every target they can point at: the
 	// satellites added above and the composed functions the cascade placed
-	for (const { instanceRootRef, cloneMappings } of additions) {
-		await repointAddedReferences(tx, { cloneMappings, instanceRootRef, matchKey })
+	for (const { instanceRootRef, cloneMappings, redirectMappings } of additions) {
+		await repointAddedReferences(tx, { cloneMappings, instanceRootRef, matchKey, redirectMappings })
 	}
 
 	return {

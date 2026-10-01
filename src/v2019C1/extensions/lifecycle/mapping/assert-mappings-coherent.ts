@@ -22,6 +22,10 @@ export function assertMappingsCoherent(params: {
 			detail: `mapping choice for "${sourceId}": the mapping of <${mapping.tagName}> cannot be chosen`,
 		})
 
+		invariant(!mapping.locked, {
+			detail: `mapping choice for "${sourceId}": the instance already carries the mapping of this <${mapping.tagName}>`,
+		})
+
 		if (!('existing' in decision)) continue
 		const chosen = decision.existing
 		const isCandidate = mapping.candidates.some(

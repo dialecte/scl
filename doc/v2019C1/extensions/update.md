@@ -144,17 +144,18 @@ type ReportMapping = {
 	id: string // record id of the SOURCE element — the key of a choice made for it
 	tagName: string
 	mapping: DecisionMapping // where it lands, as resolved
-	reason: 'decision' | 'name' | 'none'
+	reason: 'decision' | 'lineage' | 'name' | 'none'
 	ambiguous: boolean // several project elements qualified equally: none was picked
-	selectable: boolean // the consumer may choose another mapping
+	selectable: boolean // the consumer may choose another mapping for an element of this kind
+	locked: boolean // the instance being updated already carries this mapping: shown, not changeable
 	candidates: { ref; title: string; path: string }[]
 }
 
 type DecisionMapping = { existing: Ref } | { create: { name?: string } }
 ```
 
-- **Resolved by default**: the project element of the same name when there is exactly one (`reason: 'name'`); a new element when there is none (`'none'`) or several (`'name'`, `ambiguous: true` — none is picked).
-- **`candidates`**: every project element of that tag, listed from the placement outwards — the anchor's own level, each level above it, then the rest of the project.
+- **Resolved by default**, first answer wins: the one project element created from this source element by an earlier placement, whatever it is named now (`reason: 'lineage'`); else the project element of the same name when there is exactly one (`'name'`); else a new element (`'none'`). Where several elements qualify equally, none is picked and a new element is created (`ambiguous: true`).
+- **`candidates`**: every project element of that tag, listed from the placement outwards — the anchor's own level, each level above it, then the rest of the project. For a `locked` mapping, the one element it is mapped onto.
 - **A new element** carries the name `apply` will give it: the source name, or the name the consumer asked for, made free at the level it lands on (`HMI_PC` → `HMI_PC_1`).
 
 To change a mapping, pass the choice and ask for the report again; then apply with the same `resolution`:
@@ -175,11 +176,26 @@ await doc.prepare((tx) =>
 )
 ```
 
-A choice the report cannot honour is refused, by `report` and by `apply`: a source element the template does not bring, a project element that is not among the candidates, or a mapping that is not `selectable`.
+A choice the report cannot honour is refused, by `report` and by `apply`: a source element the template does not bring, a project element that is not among the candidates, a mapping that is not `selectable`, or one that is `locked`.
 
 The element a source element is mapped onto stays the project's: its own attributes are neither compared nor written, it receives no `templateUuid`, and only what the source contributes below it (an `AllocationRole`'s function references) is added. The references to it follow (`AllocationRoleRef` uuid and path).
 
-Mappings are resolved on a first-time placement of an application — directly (`verb: 'asd'`) or carried by an SSD (`verb: 'ssd'`, every application of the instantiated scope).
+Mappings are resolved for an application — placed directly (`verb: 'asd'`) or carried by an SSD (`verb: 'ssd'`, every application of the scope) — on its first placement and on every update of it.
+
+#### On an update
+
+An update finds, for each instance, the project element that instance already holds for a shared source element, and keeps it: the mapping is listed with `reason: 'lineage'` and `locked: true`. Nothing is written in the file to remember a mapping; it is read from what the placement wrote, strongest evidence first:
+
+1. the element was created from the source element (it carries its lineage) — it is an instance of it, reconciled in full, attributes included;
+2. the element holds a reference to the project element standing for one the source element refers to (the function references a mapped `AllocationRole` was given) — so a role the project's author renamed since is still found;
+3. the element has the same name;
+4. it is the only element the instance holds, for the only shared element the template brings.
+
+A step pairs a source element with a project element only when neither has another possibility. An element found by 2–4 is the project's own: only what the source contributes below it is added, reconciled or removed; its own attributes and its other children are left alone, and it is never deleted by an update.
+
+A shared element the template brings that the instance holds nothing for (a role added by a newer template version) is resolved as on a first placement, and the consumer may choose. When the instance does hold elements that could stand for it but nothing tells which — two mapped roles with no function reference, both renamed since — none is guessed: the element is listed as new with `ambiguous: true`, and the consumer maps it.
+
+Both `report` and `apply` read this one answer, so an update no longer creates a second element beside the one the instantiate mapped.
 
 ### Multiple instances of one template
 

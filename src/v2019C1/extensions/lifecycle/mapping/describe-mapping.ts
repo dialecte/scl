@@ -36,19 +36,25 @@ export async function describeMapping(
 ): Promise<ReportMapping> {
 	const { sourceQuery, sourceRef, policy, resolved, decision, anchor } = params
 
-	const candidates = await listCandidates(query, { policy, anchor })
 	const shared = {
 		id: sourceRef.id,
 		tagName: policy.tagName,
 		reason: resolved.reason,
 		ambiguous: resolved.ambiguous,
 		selectable: policy.selectable,
-		candidates,
+		locked: resolved.locked,
 	}
 
 	if (resolved.existing) {
-		return { ...shared, mapping: { existing: toRef(resolved.existing) as Scl.Ref<Scl.ElementsOf> } }
+		const existingRef = toRef(resolved.existing) as Scl.Ref<Scl.ElementsOf>
+		// a locked mapping is not a choice: the one element listed is the one it is mapped onto
+		const candidates = resolved.locked
+			? [await describeCandidate(query, existingRef)]
+			: await listCandidates(query, { policy, anchor })
+		return { ...shared, candidates, mapping: { existing: existingRef } }
 	}
+
+	const candidates = await listCandidates(query, { policy, anchor })
 
 	const sourceName = await sourceQuery.any.getAttribute(sourceRef, { name: policy.key })
 	const requestedName = decision && 'create' in decision ? decision.create.name : undefined
@@ -59,7 +65,7 @@ export async function describeMapping(
 		anchor,
 		name: requestedName ?? sourceName,
 	})
-	return { ...shared, mapping: { create: { name } } }
+	return { ...shared, candidates, mapping: { create: { name } } }
 }
 
 /** `name`, or the first free variant of it, at the level a created element lands on. */
@@ -103,14 +109,23 @@ async function listCandidates(
 	const ranked: { candidate: MappingCandidate; distance: number }[] = []
 	for (const record of records) {
 		const ref = toRef(record) as Scl.Ref<Scl.ElementsOf>
-		const title = await extractElementTitle(query, ref)
-		const elementPath = await buildElementPath(query, ref)
+		const candidate = await describeCandidate(query, ref)
 		const ancestors = await query.any.findAncestors(ref)
 		const distance = distanceFromAnchor({ anchorChainIds, ancestorIds: ancestors.map(idOf) })
-		ranked.push({ candidate: { ref, title, path: elementPath?.path ?? '' }, distance })
+		ranked.push({ candidate, distance })
 	}
 
 	return ranked.sort(byDistanceThenPath).map((entry) => entry.candidate)
+}
+
+/** A project element as the report lists it: its title and where it sits. */
+async function describeCandidate(
+	query: Core.Query<Config>,
+	ref: Scl.Ref<Scl.ElementsOf>,
+): Promise<MappingCandidate> {
+	const title = await extractElementTitle(query, ref)
+	const elementPath = await buildElementPath(query, ref)
+	return { ref, title, path: elementPath?.path ?? '' }
 }
 
 /** The anchor's id then each of its ancestors', nearest first. */
