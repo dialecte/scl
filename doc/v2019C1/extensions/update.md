@@ -23,15 +23,16 @@ The `reconcile` / `diff` primitives below (in `extensions/lifecycle/engine`) are
 The verb-agnostic surface is the recommended consumer entry point. **Dialecte decides the track**, the consumer never picks it: ask for a report, then apply.
 
 ```ts
-query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor }) // -> DiffReport { instances, needsDecisions, summary }
+query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor, resolution? }) // -> DiffReport { instances, needsDecisions, summary, mappings }
 tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, resolution? }) // -> ApplyResult { report, instances }
 ```
 
 - `verb`: `'fsd'` (then `ref` is a `Function`), `'asd'` (then `ref` is an `Application`), or `'ssd'` (then `ref` is the topology scope, `Substation`/`VoltageLevel`/`Bay` — see [the note below](#txlifecycleupdatessd)) — the **layer**;
 - `scenario`: `'instantiate'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`);
 - `anchor`: the target parent the instance lives under / is placed into.
-- `resolution`: what the consumer resolved, as one object — `{ decisions?, keepNameTypesFrom? }`:
+- `resolution`: what the consumer resolved, as one object — `{ decisions?, mappings?, keepNameTypesFrom? }`. `apply` reads all of it; `report` reads `mappings`, so the report is re-derived from the consumer's choices and shows their consequence:
   - `decisions`: accept / skip (and edited values) per decision group — see [Decision groups](#decision-groups-full-track);
+  - `mappings`: where a shared element lands, per source element — see [Shared-element mappings](#shared-element-mappings);
   - `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template).
 
 ### Apply result
@@ -133,6 +134,45 @@ A group absent from the map defaults to its `suggestedAction` — `accept` for m
 empty map applies everything), but `skip` for a `target-only` group, so an author-added element is
 kept unless the user explicitly opts into removing it. The engine rejects a set that accepts a group
 whose `dependsOn` parent is skipped.
+
+### Shared-element mappings
+
+Some elements are held once by the project and referred to by several applications — an `AllocationRole` is one. A template that brings such an element does not necessarily copy it: it **maps** it onto an element of the project, or creates a new one. `report` lists that decision for every shared element the template brings, and the consumer may change it.
+
+```ts
+type ReportMapping = {
+	id: string // record id of the SOURCE element — the key of a choice made for it
+	tagName: string
+	mapping: DecisionMapping // where it lands, as resolved
+	reason: 'decision' | 'name' | 'none'
+	ambiguous: boolean // several project elements qualified equally: none was picked
+	selectable: boolean // the consumer may choose another mapping
+	candidates: { ref; title: string; path: string }[]
+}
+
+type DecisionMapping = { existing: Ref } | { create: { name?: string } }
+```
+
+- **Resolved by default**: the project element of the same name when there is exactly one (`reason: 'name'`); a new element when there is none (`'none'`) or several (`'name'`, `ambiguous: true` — none is picked).
+- **`candidates`**: every project element of that tag, listed from the placement outwards — the anchor's own level, each level above it, then the rest of the project.
+- **A new element** carries the name `apply` will give it: the source name, or the name the consumer asked for, made free at the level it lands on (`HMI_PC` → `HMI_PC_1`).
+
+To change a mapping, pass the choice and ask for the report again; then apply with the same `resolution`:
+
+```ts
+const mappings = new Map([[roleMapping.id, { existing: roleMapping.candidates[0].ref }]])
+const report = await doc.query.lifecycle.report({ ...target, resolution: { mappings } })
+// report.mappings and the review tree now show the role matched onto that element
+await doc.prepare((tx) =>
+	tx.lifecycle.apply(tx, { ...target, report, resolution: { decisions, mappings } }),
+)
+```
+
+A choice the report cannot honour is refused, by `report` and by `apply`: a source element the template does not bring, a project element that is not among the candidates, or a mapping that is not `selectable`.
+
+The element a source element is mapped onto stays the project's: its own attributes are neither compared nor written, it receives no `templateUuid`, and only what the source contributes below it (an `AllocationRole`'s function references) is added. The references to it follow (`AllocationRoleRef` uuid and path).
+
+Mappings are resolved on a first-time placement of an application (`verb: 'asd'`).
 
 ### Multiple instances of one template
 

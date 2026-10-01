@@ -46,7 +46,7 @@ An `AllocationRole` is an element the project holds once and several application
 
 With no role of that name, or with several (none is picked), the role is created like any cloned element, and a name already taken at its level is bumped to a free one.
 
-`report` resolves the mapping the same way, so the review shows the role as a companion matched onto the project role, with only the contributed references added.
+`report` resolves the mapping the same way, so the review shows the role as a companion matched onto the project role, with only the contributed references added. It also lists the mapping, with every project role as a candidate, and the consumer may choose another one or a new role — see [Shared-element mappings](./update#shared-element-mappings).
 
 ```ts
 await project.transaction(async (tx) => {
