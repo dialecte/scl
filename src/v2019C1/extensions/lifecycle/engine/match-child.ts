@@ -25,6 +25,10 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  *    (`redirectedSourceUuids`), whatever the two are named.
  *  - Any other uuid-less element (e.g. `FunctionRoleContent`) matches a same-tag sibling by position.
  *
+ * Inside an element of the PROJECT a source element is mapped onto (`matchContainersByName`), an
+ * identified container with no lineage counterpart lands on the same-tag child of the same name —
+ * the project's own container, the one the layer merge pours into on a first placement.
+ *
  * The source side reads raw identities; the candidate (target) side is normalized to template space —
  * that role split is internal here, so callers never pass a space/`mapToTemplate` flag.
  */
@@ -38,6 +42,7 @@ export async function matchChild(
 		matchedInstanceIds: ReadonlySet<string>
 		refsAlwaysAdded?: boolean
 		redirectedSourceUuids?: RedirectedSourceUuids
+		matchContainersByName?: boolean
 	},
 ): Promise<AnyTreeRecord | undefined> {
 	const { targetQuery, sourceChild, instanceParent, index, matchedInstanceIds } = params
@@ -46,7 +51,14 @@ export async function matchChild(
 	const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
 	if (sourceUuid) {
 		const matched = index.get(sourceUuid)
-		return matched && matched.tagName === sourceChild.tagName ? matched : undefined
+		if (matched && matched.tagName === sourceChild.tagName) return matched
+		if (!params.matchContainersByName) return undefined
+		return findSameNameChild(sourceQuery, {
+			targetQuery,
+			sourceChild,
+			instanceParent,
+			matchedInstanceIds,
+		})
 	}
 
 	// INSTANTIATE: a fresh instantiation creates its OWN per-instance refs, so never match a link to a
@@ -87,4 +99,28 @@ export async function matchChild(
 	}
 
 	return candidates[0]
+}
+
+/** The not-yet-matched child of `instanceParent` with the tag and the name of `sourceChild`. */
+async function findSameNameChild(
+	sourceQuery: Reader,
+	params: {
+		targetQuery: Reader
+		sourceChild: AnyTreeRecord
+		instanceParent: AnyTreeRecord
+		matchedInstanceIds: ReadonlySet<string>
+	},
+): Promise<AnyTreeRecord | undefined> {
+	const { targetQuery, sourceChild, instanceParent, matchedInstanceIds } = params
+
+	const name = await sourceQuery.any.getAttribute(sourceChild, { name: 'name' })
+	if (!name) return undefined
+
+	for (const instanceChild of instanceParent.tree) {
+		if (instanceChild.tagName !== sourceChild.tagName) continue
+		if (matchedInstanceIds.has(instanceChild.id)) continue
+		const instanceName = await targetQuery.any.getAttribute(instanceChild, { name: 'name' })
+		if (instanceName === name) return instanceChild
+	}
+	return undefined
 }

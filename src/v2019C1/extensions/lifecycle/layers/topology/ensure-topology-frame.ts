@@ -82,7 +82,7 @@ export async function ensureTopologyFrame(
 			target,
 			omit: ownContentOmit,
 		})
-		cloneMappings.push(...ownContent)
+		cloneMappings.push(...ownContent.cloneMappings)
 	}
 
 	const structure = await resolveFrameStructure(tx, sourceQuery, scopeRef, frameIndex)

@@ -33,6 +33,7 @@ export async function report(
 					targetParent: target.anchor,
 					scenario: target.scenario,
 					targetInstance: target.targetInstance,
+					decisionMappings: target.resolution?.mappings,
 				})
 			: target.verb === 'ssd'
 				? await reportSsd(query, {

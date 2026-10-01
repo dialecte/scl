@@ -150,6 +150,7 @@ export async function ssd(
 			decisions,
 			keepNameTypesFrom,
 			targetInstance,
+			decisionMappings: params.decisionMappings,
 		})
 		functions.push(...updated)
 	}

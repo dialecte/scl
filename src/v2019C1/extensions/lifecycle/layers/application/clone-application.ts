@@ -74,15 +74,21 @@ export async function cloneApplicationContent(
 		}
 	}
 
-	// 2. FunctionCategories: clone at source-side structural level
+	// 2. FunctionCategories: mapped onto the target's, or cloned at source-side structural level.
+	// A category classifying several of the functions is placed once.
+	const placedCategories = new Map<string, Scl.Ref<'FunctionCategory'>>()
+	const categoryRedirectMappings: RedirectMapping[] = []
 	for (const ref of missingFunctions) {
-		const categoryMappings = await cloneFunctionCategories(tx, {
+		const categories = await cloneFunctionCategories(tx, {
 			sourceQuery,
 			functionRef: ref,
 			structure,
 			stripCategoriesUuid: false,
+			decisionMappings,
+			placedCategories,
 		})
-		allMappings.push(...categoryMappings)
+		allMappings.push(...categories.cloneMappings)
+		categoryRedirectMappings.push(...categories.redirectMappings)
 	}
 
 	// 3. All other referenced targets - derived from UUID_REFERENCE_PAIRS and DESCENDANTS.
@@ -128,10 +134,11 @@ export async function cloneApplicationContent(
 
 	// References to a mapped role still carry the source uuid: the caller's remap repoints them
 	// through `redirectMappings` (the role itself was not cloned, so no clone mapping covers it).
-	const redirectMappings: RedirectMapping[] = roleReuse.map((reuse) => ({
+	const roleRedirectMappings: RedirectMapping[] = roleReuse.map((reuse) => ({
 		sourceUuid: reuse.sourceUuid,
 		target: reuse.existingRef,
 	}))
+	const redirectMappings = [...categoryRedirectMappings, ...roleRedirectMappings]
 
 	return { cloneMappings: allMappings, redirectMappings }
 }

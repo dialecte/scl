@@ -5,6 +5,7 @@ import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
@@ -30,6 +31,10 @@ export async function reportFunction(
 		refsAlwaysAdded?: boolean
 		/** How the instance matches source. `templateUuid` (default) or `uuid` (fork). */
 		matchKey?: MatchKey
+		/** The consumer's choices for the shared elements the function is classified by. */
+		decisionMappings?: DecisionMappings
+		/** The project element the function is placed under. */
+		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
@@ -52,6 +57,9 @@ export async function reportFunction(
 		instance,
 		report,
 		refsAlwaysAdded,
+		decisionMappings: params.decisionMappings,
+		anchor: params.anchor,
+		matchKey: params.matchKey,
 	})
 	return foldCrossCuttingSatellites(query, {
 		sourceQuery,

@@ -47,13 +47,28 @@ export async function findWithdrawnContributions(
 	for (const leftElement of leftElements) {
 		const tree = await reader.any.getTree(leftElement)
 		if (!tree) continue
-		for (const child of tree.tree) {
-			if (!REFERENCE_TAG_NAMES.has(child.tagName)) continue
-			if (await pointsIntoInstance(reader, { reference: child, instanceScope }))
-				withdrawn.push(child)
-		}
+		await collectContributions(reader, { node: tree, instanceScope, withdrawn })
 	}
 	return withdrawn
+}
+
+/**
+ * The references below `node` pointing into the instance, at any depth: a category nests its
+ * references in sub-categories.
+ */
+async function collectContributions(
+	reader: MappingReader,
+	params: { node: AnyTreeRecord; instanceScope: ReadonlySet<string>; withdrawn: AnyTreeRecord[] },
+): Promise<void> {
+	const { node, instanceScope, withdrawn } = params
+	for (const child of node.tree) {
+		if (!REFERENCE_TAG_NAMES.has(child.tagName)) {
+			await collectContributions(reader, { node: child, instanceScope, withdrawn })
+			continue
+		}
+		const isContribution = await pointsIntoInstance(reader, { reference: child, instanceScope })
+		if (isContribution) withdrawn.push(child)
+	}
 }
 
 /** Whether a reference points at an element of the instance. */

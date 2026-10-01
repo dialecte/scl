@@ -1,3 +1,4 @@
+import { findMappingPolicy, resolveMapping } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	deep as deepExtract,
 	cloneTree,
@@ -6,10 +7,15 @@ import {
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { reference } from '@/v2019C1/extensions/reference'
 
+import type {
+	CloneFunctionCategoriesParams,
+	CloneFunctionCategoriesResult,
+} from './clone-function.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
-import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+import type { DecisionMapping, MappingPolicy } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
 
@@ -67,41 +73,56 @@ export async function cloneFunction(
 }
 
 /**
- * Clones FunctionCategory trees that reference the given function (or its SubFunctions).
- * Each category is placed at its source-side structural level in the TEMPLATE structure.
+ * Places the FunctionCategory trees that reference the given function (or its SubFunctions).
+ *
+ * A category is a SHARED element: where it lands is the answer of its mapping (`resolveMapping`,
+ * the one the report reads too). Mapped onto a category the target already holds, it is not
+ * cloned: its referencing children (FunctionCatRef, SubCategory) are merged into that category,
+ * reusing same-name nested containers instead of duplicating them. With nothing to map onto, it is
+ * cloned at its source-side structural level.
+ *
  * UUID remapping (FunctionCatRef -> the cloned Function) is the caller's responsibility via
- * `reference.applyUuidRemap` over the combined function + category mappings.
+ * `reference.applyUuidRemap` over the combined function + category mappings, with the returned
+ * redirect mappings: a reference to a category (or sub-category) that was not cloned is a
+ * reference to the one it landed on.
  */
 export async function cloneFunctionCategories(
 	tx: Core.Transaction<Config>,
-	params: {
-		sourceQuery: Core.Query<Config>
-		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
-		structure: TargetStructure
-		stripCategoriesUuid?: boolean
-	},
-): Promise<Scl.CloneMapping[]> {
+	params: CloneFunctionCategoriesParams,
+): Promise<CloneFunctionCategoriesResult> {
 	const { sourceQuery, functionRef, structure, stripCategoriesUuid = true } = params
+	// a category classifying several functions of one operation is placed once
+	const placedCategories = params.placedCategories ?? new Map<string, Scl.Ref<'FunctionCategory'>>()
 
 	const categoryIds = await collectReferencedCategoryIds(sourceQuery, functionRef)
+	const policy = findMappingPolicy('FunctionCategory')
 
 	const cloneMappings: Scl.CloneMapping[] = []
+	const redirectMappings: RedirectMapping[] = []
 	for (const categoryId of categoryIds) {
 		const categoryRef: Scl.Ref<'FunctionCategory'> = { tagName: 'FunctionCategory', id: categoryId }
 
-		// A same-name category already in the target IS the catalog entry (categories are
-		// name-keyed). Do NOT skip - that would drop this function's classification. Merge the
-		// category's referencing children (FunctionCatRef, SubCategory) into it, reusing same-name
-		// nested containers instead of duplicating them.
-		const existing = await findExistingCategoryByName(tx, sourceQuery, categoryId)
+		const existing =
+			placedCategories.get(categoryId) ??
+			(await findMappedCategory(tx, {
+				sourceQuery,
+				categoryRef,
+				policy,
+				decision: params.decisionMappings?.get(categoryId),
+			}))
 		if (existing) {
-			const addedMappings = await mergeChildrenInto(tx, {
+			// Do NOT skip - that would drop this function's classification.
+			const merged = await mergeChildrenInto(tx, {
 				sourceQuery,
 				source: categoryRef,
 				target: existing,
 				strip: false,
 			})
-			cloneMappings.push(...addedMappings)
+			cloneMappings.push(...merged.cloneMappings)
+			redirectMappings.push(...merged.redirectMappings)
+			const sourceUuid = await sourceQuery.getAttribute(categoryRef, { name: 'uuid' })
+			if (sourceUuid) redirectMappings.push({ sourceUuid, target: existing })
+			placedCategories.set(categoryId, existing)
 			continue
 		}
 
@@ -113,10 +134,12 @@ export async function cloneFunctionCategories(
 			targetParent,
 			...(stripCategoriesUuid ? {} : { strip: false as const }),
 		})
-		if (clone) cloneMappings.push(...clone.mappings)
+		if (!clone) continue
+		cloneMappings.push(...clone.mappings)
+		placedCategories.set(categoryId, { tagName: 'FunctionCategory', id: clone.record.id })
 	}
 
-	return cloneMappings
+	return { cloneMappings, redirectMappings }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -158,24 +181,24 @@ async function findRefsForFunctionTree(
 	return results
 }
 
-/** The existing target FunctionCategory sharing the source category's name (categories are name-keyed). */
-async function findExistingCategoryByName(
+/** The category of the target a source category is mapped onto — none when it is to be created. */
+async function findMappedCategory(
 	tx: Core.Transaction<Config>,
-	sourceQuery: Core.Query<Config>,
-	categoryId: string,
+	params: {
+		sourceQuery: Core.Query<Config>
+		categoryRef: Scl.Ref<'FunctionCategory'>
+		policy: MappingPolicy | undefined
+		decision: DecisionMapping | undefined
+	},
 ): Promise<Scl.Ref<'FunctionCategory'> | undefined> {
-	const sourceCat = await sourceQuery.getRecord({
-		tagName: 'FunctionCategory' as const,
-		id: categoryId,
-	})
-	if (!sourceCat) return undefined
+	const { sourceQuery, categoryRef, policy, decision } = params
+	if (!policy) return undefined
 
-	const name = await sourceQuery.getAttribute(sourceCat, { name: 'name' })
-	if (!name) return undefined
-
-	const [existing] = await tx.findByAttributes({
-		tagName: 'FunctionCategory',
-		attributes: { name },
+	const { existing } = await resolveMapping(tx, {
+		sourceQuery,
+		sourceRef: categoryRef,
+		policy,
+		decision,
 	})
 	return existing ? { tagName: 'FunctionCategory', id: existing.id } : undefined
 }

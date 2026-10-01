@@ -92,19 +92,23 @@ export async function cloneTopologyContent(
 	}
 
 	// 2. Standalone Functions under the scope not already pulled in by an Application.
+	// A category classifying several of them is placed once.
+	const placedCategories = new Map<string, Scl.Ref<'FunctionCategory'>>()
 	for (const functionRef of await functionsUnderScope(sourceQuery, scopeRef)) {
 		if (clonedSourceIds.has(functionRef.id)) continue
 		const structure = await resolveFrameStructure(tx, sourceQuery, functionRef, frameIndex)
 		const targetParentRef = await resolveStructureRef(sourceQuery, functionRef, structure)
 		record(await cloneFunction(tx, { sourceQuery, functionRef, targetParentRef, omit }))
-		record(
-			await cloneFunctionCategories(tx, {
-				sourceQuery,
-				functionRef,
-				structure,
-				stripCategoriesUuid: false,
-			}),
-		)
+		const categories = await cloneFunctionCategories(tx, {
+			sourceQuery,
+			functionRef,
+			structure,
+			stripCategoriesUuid: false,
+			decisionMappings,
+			placedCategories,
+		})
+		record(categories.cloneMappings)
+		redirectMappings.push(...categories.redirectMappings)
 		placedRoots.push(functionRef)
 	}
 

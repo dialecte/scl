@@ -13,7 +13,7 @@ Access via `tx.lifecycle.instantiate` inside a `doc.transaction()` callback.
 `fsd({ sourceQuery, functionRef, targetParent })` instantiates the content an FSD carries into a target document:
 
 1. clone the function subtree and its content-addressed type closure under `targetParent` (via [`transplant.deep`](./transplant));
-2. clone the `FunctionCategory` classification that references the function, placed at its structural level in the target project — the target Substation/VoltageLevel/Bay structure is resolved from `targetParent` (which may be a `Bay`, `VoltageLevel`, or `Substation`);
+2. place the `FunctionCategory` classification that references the function: mapped onto the category the project already holds (see [Shared elements are mapped, not copied](#shared-elements-are-mapped-not-copied)), else cloned at its structural level in the target project — the target Substation/VoltageLevel/Bay structure is resolved from `targetParent` (which may be a `Bay`, `VoltageLevel`, or `Substation`);
 3. clone the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to any element in the function subtree, each at its own structural level;
 4. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its FSD counterpart as its `templateUuid` while receiving a fresh `uuid`;
 5. validate the placed function against its parent context and auto-resolve a scoped-uniqueness [collision](./update#placement-collision-resolution) on its `name` (e.g. instantiating the same template twice under one Bay yields `Prot` then `Prot_1`).
@@ -47,6 +47,8 @@ An `AllocationRole` is an element the project holds once and several application
 With no role of that name, or with several (none is picked), the role is created like any cloned element, and a name already taken at its level is bumped to a free one.
 
 A role the project holds because an earlier placement of the same template created it comes first: it is the one proposed, even when it was renamed since.
+
+A `FunctionCategory` follows the same rule, for a function, an application's composed functions and an SSD alike: mapped onto the project's category of that name, its classifications (`FunctionCatRef`) are added to it — inside the project's `SubCategory` of the same name when the source nests them — and an application's `FunctionCategoryRef` points at the project's category or sub-category.
 
 `report` resolves the mapping the same way, so the review shows the role as a companion matched onto the project role, with only the contributed references added. It also lists the mapping, with every project role as a candidate, and the consumer may choose another one or a new role — see [Shared-element mappings](./update#shared-element-mappings).
 

@@ -41,13 +41,13 @@ export async function cloneAppliedSatellites(
 	for (const satelliteRef of satellites) {
 		const existing = await findExistingSatelliteByName(tx, sourceQuery, satelliteRef)
 		if (existing) {
-			const addedMappings = await mergeChildrenInto(tx, {
+			const merged = await mergeChildrenInto(tx, {
 				sourceQuery,
 				source: satelliteRef,
 				target: existing,
 				strip: false,
 			})
-			cloneMappings.push(...addedMappings)
+			cloneMappings.push(...merged.cloneMappings)
 			continue
 		}
 

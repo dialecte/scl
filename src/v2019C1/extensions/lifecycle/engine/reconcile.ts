@@ -77,7 +77,9 @@ export async function reconcile(
 		/**
 		 * The instance root is an element of the PROJECT that the source root is mapped onto (a shared
 		 * element such as an `AllocationRole`), not an instance of it: its own attributes are never
-		 * written. Only what the source contributes below it is reconciled.
+		 * written. Only what the source contributes below it is reconciled: a named container lands on
+		 * the project's container of the same name (whose attributes are the project's too), and
+		 * nothing the element holds besides is removed.
 		 */
 		instanceRootIsProjectOwned?: boolean
 		/**
@@ -100,6 +102,7 @@ export async function reconcile(
 		omit,
 	} = params
 	const keepLeftoverRefs = params.keepLeftoverRefs ?? false
+	const withinProjectOwned = params.instanceRootIsProjectOwned ?? false
 
 	// each source record this reconcile ADDS and the copy made of it (root + descendants of each
 	// grafted subtree). Matched elements are updated in place, so the consumer already keys them by
@@ -119,7 +122,7 @@ export async function reconcile(
 	const redirectedSourceUuids = await indexRedirectedSourceUuids(tx, params.redirectMappings)
 
 	// root + descendants: update matched in place, add new
-	if (!params.instanceRootIsProjectOwned) {
+	if (!withinProjectOwned) {
 		await updateMatchedAttributes(tx, {
 			sourceQuery,
 			instanceRecord: instanceTree,
@@ -142,10 +145,14 @@ export async function reconcile(
 		added,
 		redirectedSourceUuids,
 		keepLeftoverRefs,
+		withinProjectOwned,
 	})
 
-	// removed from the template: delete instance elements whose lineage is gone
-	await deleteRemoved(tx, { instanceNode: instanceTree, sourceUuids, accepted, matchKey, omit })
+	// removed from the template: delete instance elements whose lineage is gone. In a project-owned
+	// element, an identified child the source does not know is another template's or the project's.
+	if (!withinProjectOwned) {
+		await deleteRemoved(tx, { instanceNode: instanceTree, sourceUuids, accepted, matchKey, omit })
+	}
 
 	return added
 }
@@ -167,6 +174,8 @@ async function reconcileChildren(
 		added: Scl.CloneMapping[]
 		redirectedSourceUuids: RedirectedSourceUuids
 		keepLeftoverRefs: boolean
+		/** The children sit in an element of the project a source element is mapped onto. */
+		withinProjectOwned: boolean
 	},
 ): Promise<void> {
 	const {
@@ -183,6 +192,7 @@ async function reconcileChildren(
 		added,
 		redirectedSourceUuids,
 		keepLeftoverRefs,
+		withinProjectOwned,
 	} = params
 	const matchedInstanceIds = new Set<string>()
 	for (const sourceChild of sourceNode.tree) {
@@ -197,17 +207,25 @@ async function reconcileChildren(
 			index,
 			matchedInstanceIds,
 			redirectedSourceUuids,
+			matchContainersByName: withinProjectOwned,
 		})
 
 		if (matched) {
 			matchedInstanceIds.add(matched.id)
-			await updateMatchedAttributes(tx, {
-				sourceQuery,
-				instanceRecord: matched,
-				sourceNode: sourceChild,
-				accepted,
-				overrides,
-			})
+			// a container found by its name is the project's own: its attributes are not written
+			const isProjectContainer =
+				withinProjectOwned &&
+				!REFERENCE_TAG_NAMES.has(sourceChild.tagName) &&
+				!(await carriesLineageOf(tx, { sourceQuery, sourceNode: sourceChild, matched, matchKey }))
+			if (!isProjectContainer) {
+				await updateMatchedAttributes(tx, {
+					sourceQuery,
+					instanceRecord: matched,
+					sourceNode: sourceChild,
+					accepted,
+					overrides,
+				})
+			}
 			await reconcileChildren(tx, {
 				sourceQuery,
 				sourceNode: sourceChild,
@@ -222,6 +240,7 @@ async function reconcileChildren(
 				added,
 				redirectedSourceUuids,
 				keepLeftoverRefs,
+				withinProjectOwned,
 			})
 			continue
 		}
@@ -283,6 +302,23 @@ async function reconcileChildren(
 		const live = await tx.any.getRecord(instanceChild)
 		if (live) await tx.any.delete(instanceChild)
 	}
+}
+
+/** Whether an instance element was created from a source element: it carries its uuid as lineage. */
+async function carriesLineageOf(
+	tx: Core.Transaction<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		sourceNode: AnyTreeRecord
+		matched: AnyTreeRecord
+		matchKey: MatchKey
+	},
+): Promise<boolean> {
+	const { sourceQuery, sourceNode, matched, matchKey } = params
+	const sourceUuid = await sourceQuery.any.getAttribute(sourceNode, { name: 'uuid' })
+	if (!sourceUuid) return false
+	const lineage = await tx.any.getAttribute(matched, { name: matchKey })
+	return lineage === sourceUuid
 }
 
 async function deleteRemoved(

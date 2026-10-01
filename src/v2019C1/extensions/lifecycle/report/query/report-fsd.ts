@@ -8,6 +8,7 @@ import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -30,9 +31,12 @@ export async function reportFsd(
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		scenario?: LifecycleScenario
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		/** The consumer's choices for the shared elements the function is classified by. */
+		decisionMappings?: DecisionMappings
 	},
 ): Promise<DiffReport> {
-	const { sourceQuery, functionRef, targetParent, scenario, targetInstance } = params
+	const { sourceQuery, functionRef, targetParent, scenario, targetInstance, decisionMappings } =
+		params
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	const matchKey = matchKeyForScenario(scenario)
 	// `instantiate` always places a NEW instance, so it never matches an existing one.
@@ -50,6 +54,8 @@ export async function reportFsd(
 			instance: undefined,
 			refsAlwaysAdded: scenario === 'instantiate',
 			matchKey,
+			decisionMappings,
+			anchor: targetParent,
 		})
 		return assembleReport([
 			await buildReportInstance(query, {
@@ -69,6 +75,8 @@ export async function reportFsd(
 			instance,
 			refsAlwaysAdded: scenario === 'instantiate',
 			matchKey,
+			decisionMappings,
+			anchor: targetParent,
 		})
 		reportInstances.push(
 			await buildReportInstance(query, {

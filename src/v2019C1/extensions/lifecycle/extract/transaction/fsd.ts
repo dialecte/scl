@@ -55,7 +55,7 @@ export async function fsd(
 		stripRootAttributes: ['templateUuid'],
 	})
 
-	const categoryMappings = await cloneFunctionCategories(tx, {
+	const { cloneMappings: categoryMappings, redirectMappings } = await cloneFunctionCategories(tx, {
 		sourceQuery,
 		functionRef,
 		structure,
@@ -63,7 +63,10 @@ export async function fsd(
 
 	// Repoint cloned uuid refs (e.g. FunctionCatRef -> the cloned Function) across ALL
 	// clones of this operation, before cleanup reads those refs to detect orphans.
-	await applyUuidRemap(tx, { cloneMappings: [...functionMappings, ...categoryMappings] })
+	await applyUuidRemap(tx, {
+		cloneMappings: [...functionMappings, ...categoryMappings],
+		redirectMappings,
+	})
 
 	await postExtractionCleanup(tx)
 }

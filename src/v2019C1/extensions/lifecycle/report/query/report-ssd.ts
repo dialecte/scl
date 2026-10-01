@@ -76,6 +76,7 @@ export async function reportSsd(
 			targetParent,
 			scenario,
 			targetInstance,
+			decisionMappings,
 		})
 		instances.push(...report.instances)
 	}

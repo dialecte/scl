@@ -4,6 +4,8 @@ import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
@@ -26,6 +28,12 @@ export async function foldCarriedSatellites(
 		report: InstanceDiff
 		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
 		refsAlwaysAdded?: boolean
+		/** The consumer's choices for the shared elements the function is classified by. */
+		decisionMappings?: DecisionMappings
+		/** The project element the function is placed under. */
+		anchor?: Scl.Ref<Scl.ElementsOf>
+		/** How an instance element carries its source element's uuid. Default `templateUuid`. */
+		matchKey?: MatchKey
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance, report } = params
@@ -43,5 +51,11 @@ export async function foldCarriedSatellites(
 		report,
 		instanceScopeId: instance?.id,
 		refsAlwaysAdded: params.refsAlwaysAdded ?? false,
+		decisionMappings: params.decisionMappings,
+		anchor: params.anchor,
+		matchKey: params.matchKey,
+		instancePrimaryRef: instance
+			? ({ tagName: instance.tagName, id: instance.id } as Scl.Ref<Scl.ElementsOf>)
+			: undefined,
 	})
 }

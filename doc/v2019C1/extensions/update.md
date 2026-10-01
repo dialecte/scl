@@ -137,7 +137,7 @@ whose `dependsOn` parent is skipped.
 
 ### Shared-element mappings
 
-Some elements are held once by the project and referred to by several applications — an `AllocationRole` is one. A template that brings such an element does not necessarily copy it: it **maps** it onto an element of the project, or creates a new one. `report` lists that decision for every shared element the template brings, and the consumer may change it.
+Some elements are held once by the project and shared — an `AllocationRole` several applications refer to, a `FunctionCategory` classifying several functions. A template that brings such an element does not necessarily copy it: it **maps** it onto an element of the project, or creates a new one. `report` lists that decision for every shared element the template brings, and the consumer may change it.
 
 ```ts
 type ReportMapping = {
@@ -178,9 +178,11 @@ await doc.prepare((tx) =>
 
 A choice the report cannot honour is refused, by `report` and by `apply`: a source element the template does not bring, a project element that is not among the candidates, a mapping that is not `selectable`, or one that is `locked`.
 
-The element a source element is mapped onto stays the project's: its own attributes are neither compared nor written, it receives no `templateUuid`, and only what the source contributes below it (an `AllocationRole`'s function references) is added. The references to it follow (`AllocationRoleRef` uuid and path).
+The element a source element is mapped onto stays the project's: its own attributes are neither compared nor written, it receives no `templateUuid`, and only what the source contributes below it (an `AllocationRole`'s function references, a `FunctionCategory`'s classifications) is added. The references to it follow (`AllocationRoleRef`, `FunctionCategoryRef`: uuid and path).
 
-Mappings are resolved for an application — placed directly (`verb: 'asd'`) or carried by an SSD (`verb: 'ssd'`, every application of the scope) — on its first placement and on every update of it.
+Inside such an element, a named container the source brings (a `SubCategory`) lands on the container the project element already has: the one created from it by an earlier placement, else the one of the same name — which is the project's too, so its attributes are left alone. A container with no counterpart is added. What the project element holds besides is neither announced nor touched.
+
+Mappings are resolved for every verb — a function's categories (`verb: 'fsd'`, and the functions an application composes or an SSD carries), an application's roles (`verb: 'asd'`, or carried by an SSD) — on a first placement and on every update.
 
 #### On an update
 

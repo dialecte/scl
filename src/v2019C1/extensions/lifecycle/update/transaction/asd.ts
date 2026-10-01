@@ -254,6 +254,7 @@ export async function asd(
 		decisions,
 		keepNameTypesFrom,
 		targetInstance,
+		decisionMappings: params.decisionMappings,
 	})
 
 	// 3. the references each instance gained now have every target they can point at: the
@@ -288,6 +289,7 @@ async function cascadeComposedFunctions(
 		decisions?: DecisionMap
 		keepNameTypesFrom?: KeepNameTypesFrom
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		decisionMappings?: DecisionMappings
 	},
 ): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
 	const {
@@ -323,6 +325,7 @@ async function cascadeComposedFunctions(
 			decisions,
 			keepNameTypesFrom,
 			targetInstance,
+			decisionMappings: params.decisionMappings,
 		})
 		roots.push(...functionRoots)
 	}

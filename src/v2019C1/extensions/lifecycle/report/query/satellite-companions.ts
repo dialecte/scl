@@ -116,6 +116,8 @@ export async function foldSatelliteCompanions(
 			sourceRootRef: satelliteRef,
 			instanceRootRef: instance,
 			instanceRootIsProjectOwned: projectOwned,
+			// a first placement only contributes to an element the project already holds
+			contributeOnly: firstTime,
 			// Shared/catalog satellite: its extra reference children belong to OTHER primaries/
 			// instances; a scoped single-primary update must not flag them as removed.
 			keepLeftoverRefs: true,

@@ -1,3 +1,4 @@
+import { nameCreatedSharedElements } from './name-created-shared-elements'
 import { resolveTargetStructure } from './resolve-target-structure'
 
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
@@ -55,11 +56,12 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	// function; clone it at its structural level in the target project. The target
 	// structure is resolved from `targetParent` (Bay / VoltageLevel / Substation).
 	const structure = await resolveTargetStructure(tx, targetParent)
-	const categoryMappings = await cloneFunctionCategories(tx, {
+	const { cloneMappings: categoryMappings, redirectMappings } = await cloneFunctionCategories(tx, {
 		sourceQuery,
 		functionRef,
 		structure,
 		stripCategoriesUuid: false,
+		decisionMappings: params.decisionMappings,
 	})
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) that apply
@@ -75,7 +77,19 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 
 	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs
 	// (e.g. FunctionCatRef -> cloned Function) onto the fresh uuids.
-	await finalizeClonedIdentity(tx, { cloneMappings: allMappings, mode: 'stamp-template' })
+	await finalizeClonedIdentity(tx, {
+		cloneMappings: allMappings,
+		mode: 'stamp-template',
+		redirectMappings,
+	})
+
+	// a category created here (no project category to map onto) is named at its structural level
+	await nameCreatedSharedElements(tx, {
+		sourceQuery,
+		cloneMappings: categoryMappings,
+		structure,
+		decisionMappings: params.decisionMappings,
+	})
 
 	const rootMapping = functionMappings.find((mapping) => mapping.source.id === functionRef.id)
 	if (!rootMapping) {

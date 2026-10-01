@@ -93,6 +93,7 @@ async function runVerb(
 			report,
 			decisions,
 			keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
+			decisionMappings: target.resolution?.mappings,
 		})
 		return { verb: 'fsd', functions }
 	}

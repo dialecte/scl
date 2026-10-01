@@ -3,7 +3,9 @@ import { cloneTree } from './clone-tree'
 import { elementSignature } from '@/v2019C1/extensions/signature/query'
 
 import type { StripConfig } from './clone-tree.types'
+import type { MergeChildrenResult } from './merge-children-into.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
 
@@ -13,12 +15,18 @@ import type { OmitEntry } from '@dialecte/core'
  *
  * Generic, element-agnostic counterpart of {@link addChildrenTo}: where `addChildrenTo` pours every
  * source child in as a fresh clone, this walks name-keyed containers (e.g. `FunctionCategory` ->
- * `SubCategory`) and, when a same-tag/same-name child already exists under the target, recurses into
- * it - so only the genuinely new leaves (references, unnamed content) are cloned. A source child with
- * no `name`, or with no matching twin, is cloned whole.
+ * `SubCategory`) and, when the target already holds the twin of a source child, recurses into it -
+ * so only the genuinely new leaves (references, unnamed content) are cloned. The twin is the
+ * same-tag child created from that source child (it carries its uuid as `templateUuid`, whatever
+ * it is named now), else the same-tag child of the same name - the rule the lifecycle matcher
+ * (`matchChild`) applies inside an element the source is mapped onto, so the report and the write
+ * pair containers alike. A source child with no twin is cloned whole.
  *
  * `omit` (tag names) drops matching source children from the merge AND from the clones of new leaves,
  * so a caller can merge an element's own content while leaving delegated children to another pass.
+ *
+ * Returns the clone mappings of what was cloned, and a redirect mapping for every source container
+ * that landed on a twin: a reference to that source container is a reference to its twin.
  */
 export async function mergeChildrenInto(
 	tx: Core.Transaction<Config>,
@@ -31,31 +39,34 @@ export async function mergeChildrenInto(
 		strip?: StripConfig | false
 		omit?: OmitEntry<Config>[]
 	},
-): Promise<Scl.CloneMapping[]> {
+): Promise<MergeChildrenResult> {
 	const { sourceQuery, source, target, strip, omit } = params
 
-	const sourceRecord = await sourceQuery.any.getRecord(source)
-	if (!sourceRecord) return []
-
 	const cloneMappings: Scl.CloneMapping[] = []
+	const redirectMappings: RedirectMapping[] = []
+
+	const sourceRecord = await sourceQuery.any.getRecord(source)
+	if (!sourceRecord) return { cloneMappings, redirectMappings }
+
 	for (const childRef of sourceRecord.children) {
 		if (isOmittedTag(omit, childRef.tagName)) continue
 
 		const child = { tagName: childRef.tagName, id: childRef.id } as Scl.Ref<Scl.ElementsOf>
-		const name = await sourceQuery.any.getAttribute(childRef, { name: 'name' })
-		const twin = name ? await findChildByName(tx, target, childRef.tagName, name) : undefined
+		const twin = await findTwin(tx, { sourceQuery, target, child })
 
 		if (twin) {
-			// A same-tag/same-name container already exists - merge INTO it rather than duplicate it.
-			cloneMappings.push(
-				...(await mergeChildrenInto(tx, {
-					sourceQuery,
-					source: child,
-					target: twin,
-					strip,
-					omit,
-				})),
-			)
+			// The container already exists - merge INTO it rather than duplicate it.
+			const sourceUuid = await sourceQuery.any.getAttribute(child, { name: 'uuid' })
+			if (sourceUuid) redirectMappings.push({ sourceUuid, target: twin })
+			const merged = await mergeChildrenInto(tx, {
+				sourceQuery,
+				source: child,
+				target: twin,
+				strip,
+				omit,
+			})
+			cloneMappings.push(...merged.cloneMappings)
+			redirectMappings.push(...merged.redirectMappings)
 			continue
 		}
 
@@ -73,7 +84,7 @@ export async function mergeChildrenInto(
 		})
 		if (clone) cloneMappings.push(...clone.mappings)
 	}
-	return cloneMappings
+	return { cloneMappings, redirectMappings }
 }
 
 /** Whether `tagName` matches one of the `omit` entries (string form or single-key object form). */
@@ -82,24 +93,43 @@ function isOmittedTag(omit: OmitEntry<Config>[] | undefined, tagName: string): b
 	return omit.some((entry) => (typeof entry === 'string' ? entry === tagName : tagName in entry))
 }
 
-/** The existing same-tag, same-name child under `target` (a shared container), if any. */
-async function findChildByName(
+/**
+ * The child of `target` a source child lands in: the same-tag child created from it, else the
+ * same-tag child of the same name.
+ */
+async function findTwin(
 	tx: Core.Transaction<Config>,
-	target: Scl.Ref<Scl.ElementsOf>,
-	tagName: string,
-	name: string,
+	params: {
+		sourceQuery: Core.Query<Config>
+		target: Scl.Ref<Scl.ElementsOf>
+		child: Scl.Ref<Scl.ElementsOf>
+	},
 ): Promise<Scl.Ref<Scl.ElementsOf> | undefined> {
+	const { sourceQuery, target, child } = params
+
 	const targetRecord = await tx.any.getRecord(target)
 	if (!targetRecord) return undefined
+	const siblings = targetRecord.children.filter((childRef) => childRef.tagName === child.tagName)
 
-	for (const childRef of targetRecord.children) {
-		if (childRef.tagName !== tagName) continue
-		const childName = await tx.any.getAttribute(childRef, { name: 'name' })
-		if (childName === name) {
-			return { tagName: childRef.tagName, id: childRef.id } as Scl.Ref<Scl.ElementsOf>
+	const uuid = await sourceQuery.any.getAttribute(child, { name: 'uuid' })
+	if (uuid) {
+		for (const sibling of siblings) {
+			const lineage = await tx.any.getAttribute(sibling, { name: 'templateUuid' })
+			if (lineage === uuid) return toChildRef(sibling)
 		}
 	}
+
+	const name = await sourceQuery.any.getAttribute(child, { name: 'name' })
+	if (!name) return undefined
+	for (const sibling of siblings) {
+		const siblingName = await tx.any.getAttribute(sibling, { name: 'name' })
+		if (siblingName === name) return toChildRef(sibling)
+	}
 	return undefined
+}
+
+function toChildRef(childRef: { tagName: string; id: string }): Scl.Ref<Scl.ElementsOf> {
+	return { tagName: childRef.tagName, id: childRef.id } as Scl.Ref<Scl.ElementsOf>
 }
 
 /**

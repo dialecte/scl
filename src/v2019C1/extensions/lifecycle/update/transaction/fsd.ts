@@ -37,6 +37,7 @@ import type {
 	DecisionMap,
 	DiffReport,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -67,6 +68,8 @@ export async function fsd(
 		keepNameTypesFrom?: KeepNameTypesFrom
 		/** Multi-instance anchor: scope to ONE target instance (or its subtree). Absent = all. */
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		/** The consumer's choices for the shared elements the function is classified by. */
+		decisionMappings?: DecisionMappings
 	},
 ): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
 	const {
@@ -105,6 +108,7 @@ export async function fsd(
 			targetParent,
 			overrides: gateOverrides,
 			keepNameTypesFrom,
+			decisionMappings: params.decisionMappings,
 		})
 		// annotate the first-time instance's report nodes with what each source element became
 		const firstTime = firstTimeReportInstance(report, functionRef.id)
@@ -139,6 +143,7 @@ export async function fsd(
 			accepted: instanceAccepted,
 			matchKey,
 			identityMode,
+			decisionMappings: params.decisionMappings,
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
 		const crossMappings = await reconcileCrossCuttingSatellites(tx, {

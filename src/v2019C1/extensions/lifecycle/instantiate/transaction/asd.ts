@@ -1,10 +1,10 @@
+import { nameCreatedSharedElements } from './name-created-shared-elements'
 import { resolveTargetStructure } from './resolve-target-structure'
 
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
-import { findMappingPolicy } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	findMissingReferencedRecords,
 	resolveStructureRef,
@@ -86,23 +86,13 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		})
 	}
 
-	// a shared element created here (no project element to map onto) is validated against its
-	// structural level too: a name already taken there is bumped to a free one
-	for (const mapping of contentMappings) {
-		if (!mapping.source.id || !findMappingPolicy(mapping.source.tagName)) continue
-		const sourceRef = {
-			tagName: mapping.source.tagName,
-			id: mapping.source.id,
-		} as Scl.Ref<Scl.ElementsOf>
-		const sharedElementParent = await resolveStructureRef(sourceQuery, sourceRef, structure)
-		const decision = decisionMappings?.get(mapping.source.id)
-		const chosenName = decision && 'create' in decision ? decision.create.name : undefined
-		await resolvePlacementCollision(tx, {
-			ref: mapping.target,
-			parentRef: sharedElementParent,
-			overrides: chosenName ? { name: chosenName } : undefined,
-		})
-	}
+	// a shared element created here (no project element to map onto) is named at its structural level
+	await nameCreatedSharedElements(tx, {
+		sourceQuery,
+		cloneMappings: contentMappings,
+		structure,
+		decisionMappings,
+	})
 
 	const rootMapping = contentMappings.find((mapping) => mapping.source.id === applicationRef.id)
 	if (!rootMapping) {

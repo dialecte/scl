@@ -113,6 +113,8 @@ export async function reportAsd(
 		applicationRef,
 		scenario,
 		targetInstance,
+		decisionMappings,
+		anchor,
 	})
 
 	return assembleReport([...reportInstances, ...functionInstances])
@@ -207,9 +209,11 @@ async function reportComposedFunctions(
 		applicationRef: Scl.Ref<'Application'>
 		scenario?: LifecycleScenario
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		decisionMappings?: DecisionMappings
+		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<ReportInstance[]> {
-	const { sourceQuery, applicationRef, scenario, targetInstance } = params
+	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings, anchor } = params
 	const matchKey = matchKeyForScenario(scenario)
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 
@@ -242,6 +246,8 @@ async function reportComposedFunctions(
 				instance: undefined,
 				refsAlwaysAdded: scenario === 'instantiate',
 				matchKey,
+				decisionMappings,
+				anchor,
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
@@ -260,6 +266,8 @@ async function reportComposedFunctions(
 				instance: functionInstance,
 				refsAlwaysAdded: scenario === 'instantiate',
 				matchKey,
+				decisionMappings,
+				anchor,
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
