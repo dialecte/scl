@@ -17,6 +17,7 @@ buildElementPath     <->  resolveElementPath    (element <-> canonical path stri
 buildReferencePath   <->  resolveReferencePath   (REF attr value <-> target record)
                           findRefsPointingTo     (reverse: target -> all REF records)
 buildMappedLNodePath <->  resolveMappedLNode     (mapped LNode <-> implementing LN)
+                          resolveMappedData      (DOS/SDS/DAS -> implementing LN + data path)
 ```
 
 | Function               | Direction | Input                                | Output                                                   | Use when                                                      |
@@ -28,6 +29,7 @@ buildMappedLNodePath <->  resolveMappedLNode     (mapped LNode <-> implementing 
 | `findRefsPointingTo`   | reverse   | target ref + optional container      | `ResolvedReference[]`                                    | find all REF records pointing to a given element              |
 | `buildMappedLNodePath` | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode` |
 | `resolveMappedLNode`   | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`       |
+| `resolveMappedData`    | read      | `DOS`/`SDS`/`DAS` ref                | `MappedData` (`LN` ref + data path + origin)             | finding the data that implements a specified data object      |
 
 ### Name distinctions
 
@@ -139,7 +141,7 @@ Derives the resolution strategy from `UUID_REFERENCE_PAIRS` using the reference 
 Element-specific behaviour:
 
 - **lnode** refs (`SourceRef`, `ControlRef`, `ProcessEcho`, `LNodeDataRef`): the DO/DA qualifier is taken from the companion `*DoName`/`*DaName` attributes when the stored path already carries one; a path that stops at the LN level stays companions-only.
-- **mapped-name** refs (`DOS`/`SDS`/`DAS`): returns `null` — `mappedDoName`/`mappedDaName` is authored documentation produced by the hooks (see [Automatic coherence](#automatic-coherence-record-hooks)), not a rebuildable path.
+- **mapped data** (`DOS`/`SDS`/`DAS`): returns `null` — `mappedDoName`/`mappedDaName` is a data path inside the logical node named by `mappedLnUuid`, not a path to the target element. The hooks store it (see [Automatic coherence](#automatic-coherence-record-hooks)); read it with [`resolveMappedData`](#resolvemappeddata).
 
 ---
 
@@ -218,6 +220,52 @@ Reads `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` from the LNode, composes th
 
 ---
 
+## resolveMappedData
+
+The data that implements a `DOS` / `SDS` / `DAS`: the `LN` (or `LN0`) of an IED and the path to the data inside it.
+
+```ts
+reference.query.resolveMappedData(
+  query: Scl.Query | Scl.Transaction,
+  params: { reference: Scl.Ref<'DOS' | 'SDS' | 'DAS'> },
+): Promise<MappedData | undefined>
+
+type MappedData = {
+  ln: Scl.Ref<'LN' | 'LN0'>
+  dataPath: readonly string[] // one segment per DO / SDO / DA / BDA, an array element as `name(n)`
+  origin: 'own' | 'default'
+}
+```
+
+A record that names nothing follows its **default**: its parent `DOS`/`SDS` extended by its own name, or for a `DOS` the logical node its `LNode` is mapped to (`lnUuid`, else the identity it names) and its own name. Only a record that is implemented elsewhere carries `mappedDoName`/`mappedDaName` and `mappedLnUuid`; the name is the path from that logical node, always starting at the data object (`Health`, `PhV.phsB`, `Ind2.stVal`).
+
+```xml
+<LNode iedName="VENDOR" ldInst="LD0" lnClass="PTOC" lnInst="1" lnUuid="ptoc1-uuid">
+  <Private type="eIEC61850-6-100">
+    <eIEC61850-6-100:DOS name="Op"/>                                                   <!-- PTOC1, Op            (default) -->
+    <eIEC61850-6-100:DOS name="Mod" mappedDoName="Health" mappedLnUuid="ptoc1-uuid">  <!-- PTOC1, Health        (own)     -->
+      <eIEC61850-6-100:DAS name="ctlModel"/>                                           <!-- PTOC1, Health.ctlModel (default) -->
+    </eIEC61850-6-100:DOS>
+    <eIEC61850-6-100:DOS name="Str">
+      <eIEC61850-6-100:DAS name="general" mappedDaName="Ind1.stVal" mappedLnUuid="ggio1-uuid"/> <!-- GGIO1, Ind1.stVal (own) -->
+    </eIEC61850-6-100:DOS>
+  </Private>
+</LNode>
+```
+
+Other stored forms are read as well; the import and the hooks store them in canonical form:
+
+| Stored                                                                 | Read as                                              |
+| ---------------------------------------------------------------------- | ---------------------------------------------------- |
+| `mappedLnUuid` + path                                                  | that logical node, that path                         |
+| `mappedLnUuid` + absolute reference                                    | that logical node, the data part of the reference    |
+| `mappedLnUuid` only                                                    | that logical node, the default data path             |
+| path only                                                              | the logical node the `LNode` is mapped to, that path |
+| absolute reference only                                                | the logical node found by path, the data part        |
+| a logical node absent from the file, or no `LNode` mapping and no name | `undefined`                                          |
+
+---
+
 ## resolveReferencePath
 
 Resolves a REF record's path attribute to the target record. Inverse of `buildReferencePath`.
@@ -243,6 +291,8 @@ const result = await reference.query.resolveReferencePath(query, sourceRefRecord
 const result = await reference.query.resolveReferencePath(query, inputVarRecord, 'inputName')
 // -> { record: <SourceRef input="Operate"> }
 ```
+
+For a `DOS`/`SDS`/`DAS` it answers with [`resolveMappedData`](#resolvemappeddata): `record` is the implementing `LN`/`LN0` and `qualifier` the data path, also when the record names nothing and follows its default.
 
 ### Resolution strategy
 
@@ -313,6 +363,10 @@ Discovery keys on the target's **uuid**, regardless of whether the ref's textual
 A `Variable` may apply to **any** SCL element, so `VariableApplyTo`'s target set in `UUID_REFERENCE_PAIRS` is the full element set — `findRefsPointingTo` finds a `Variable` pointing at any target tag, not a hand-picked subset.
 :::
 
+### Logical node targets
+
+For an `LN` / `LN0` target the result also lists the `DOS` / `SDS` / `DAS` it implements by default: they carry no `mappedLnUuid`, but follow it through the `LNode` mapped to it (by `lnUuid` or by identity) or through a parent `DOS` / `SDS` whose own pair names it. Records with their own pair are found by their uuid as any reference. See [`resolveMappedData`](#resolvemappeddata).
+
 ### Type-id targets
 
 `findRefsPointingTo` also resolves **DataTypeTemplates type references**, which are addressed by `id` (not `uuid`). When `target.tagName` is `LNodeType`, `DOType`, `DAType` or `EnumType`, it consults `TYPE_ID_REFERENCE_PAIRS` instead and returns the `lnType` / `type` referrers (`LN`, `LN0`, `LNode`, `DO`, `SDO`, `DA`, `BDA`) pointing at that type id.
@@ -353,6 +407,31 @@ The anchor is the nearest ancestor of the reference whose tag matches one of the
 ## Transaction methods
 
 Access via `tx.reference` inside a `doc.transaction()` callback.
+
+### `setMappedData`
+
+States which data implements a `DOS` / `SDS` / `DAS` and returns what was stored. The writer gives the intent; scl decides the attributes.
+
+```ts
+reference.transaction.setMappedData(
+  tx: Scl.Transaction,
+  params: {
+    reference: Scl.Ref<'DOS' | 'SDS' | 'DAS'>
+    implementation?: { ln: Scl.Ref<'LN' | 'LN0'>; dataPath: readonly string[] } // omit: follow the default
+  },
+): Promise<{ kind: 'stored' | 'default' | 'inexpressible' }>
+```
+
+```ts
+await tx.reference.setMappedData({
+	reference: { tagName: 'DOS', id: 'dos-mod' },
+	implementation: { ln: { tagName: 'LN', id: 'ptoc1' }, dataPath: ['Health'] },
+})
+// -> { kind: 'stored' }: <DOS name="Mod" mappedDoName="Health" mappedLnUuid="ptoc1-uuid"/>
+```
+
+- `default`: the implementation is the record's default (or none was given); the record carries neither attribute.
+- `inexpressible`: the schema has no value for that path on this record (an `SDS` standing for an attribute structure, a second sub data object level); nothing is written. Document the deviation on the `DAS` below, whose path can go down to any attribute.
 
 ### `applyTypeIdRemap`
 
@@ -436,12 +515,12 @@ Path format requires context not available during streaming. These pairs are rec
 
 Reference coherence is an invariant that `@dialecte/scl` maintains for you: the record-lifecycle hooks (`afterCreated`, `afterUpdated`, `beforeDelete`) keep a reference's derived attributes in agreement with its stable identity as a side effect of every mutation. You set the stable half; dialecte derives the rest.
 
-| On mutation of…                                             | dialecte keeps in agreement                    | Rule                                                                                                                                                                                                                                                                                                                                                          |
-| ----------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| any reference                                               | path attribute ↔ companion uuid                | path rebuilt from the target on create, on target rename, and cleaned up on delete                                                                                                                                                                                                                                                                            |
-| `DOS`/`SDS`/`DAS`                                           | `mappedDoName` / `mappedDaName`                | the implementing short name, present only when it differs from the specified `name`; a `DAS` under an unmapped parent DO carries `DO.DA`                                                                                                                                                                                                                      |
-| `SourceRef` / `ControlRef` / `ProcessEcho` / `LNodeDataRef` | path qualifier ↔ companion `*DoName`/`*DaName` | editing a companion DO/DA name rebuilds the path qualifier                                                                                                                                                                                                                                                                                                    |
-| `LNode`                                                     | identity ↔ `lnUuid`                            | setting `lnUuid` stamps `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` from the target `LN`; clearing it restores the specification identity from `LNodeSpecNaming` (`lnType` stays the specification type). `templateUuid` is left untouched — it records the template the `LNode` was instantiated from, owned by the instantiate lifecycle, not by binding |
+| On mutation of…                                             | dialecte keeps in agreement                      | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| any reference                                               | path attribute ↔ companion uuid                  | path rebuilt from the target on create, on target rename, and cleaned up on delete                                                                                                                                                                                                                                                                                                                                                  |
+| `DOS`/`SDS`/`DAS`                                           | `mappedDoName` / `mappedDaName` ↔ `mappedLnUuid` | stored together or not at all: nothing when the record is implemented by its default, otherwise the path from the implementing logical node with that node's uuid (an absolute reference or a uuid alone is completed). A change to an `LNode` mapping or to a parent's mapping re-stores the records below it; one whose implementation became the default loses both attributes. A path the schema cannot hold is left as written |
+| `SourceRef` / `ControlRef` / `ProcessEcho` / `LNodeDataRef` | path qualifier ↔ companion `*DoName`/`*DaName`   | editing a companion DO/DA name rebuilds the path qualifier                                                                                                                                                                                                                                                                                                                                                                          |
+| `LNode`                                                     | identity ↔ `lnUuid`                              | setting `lnUuid` stamps `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` from the target `LN`; clearing it restores the specification identity from `LNodeSpecNaming` (`lnType` stays the specification type). `templateUuid` is left untouched — it records the template the `LNode` was instantiated from, owned by the instantiate lifecycle, not by binding                                                                       |
 
 Because these run as hooks, a tool never has to compute the derived half — setting the uuid, the companion names or `lnUuid` is enough, and the matching path, short name or identity is filled in the same transaction.
 
