@@ -223,6 +223,26 @@ describe('mapped data attributes on create and update', () => {
 			expectedQueries: ['//v2019C1:DAS[@name="q"][not(@mappedDaName)][not(@mappedLnUuid)]'],
 		},
 
+		'DOS paired in PTOC1, its DAS set to GGIO1 -> each keeps its own pair': {
+			sourceXml: mappedLNode(/* xml */ `
+				<eIEC61850-6-100:DOS ${id}="dos-str" name="Str" mappedDoName="Str2" mappedLnUuid="ptoc1-uuid">
+					<eIEC61850-6-100:DAS ${id}="das-general" name="general"/>
+				</eIEC61850-6-100:DOS>
+			`),
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					await tx.update(
+						{ tagName: 'DAS', id: 'das-general' },
+						{ attributes: { mappedDaName: 'Ind1.stVal', mappedLnUuid: 'ggio1-uuid' } },
+					)
+				})
+			},
+			expectedQueries: [
+				'//v2019C1:DOS[@name="Str"][@mappedDoName="Str2"][@mappedLnUuid="ptoc1-uuid"]',
+				'//v2019C1:DAS[@name="general"][@mappedDaName="Ind1.stVal"][@mappedLnUuid="ggio1-uuid"]',
+			],
+		},
+
 		'LNode not mapped, DAS set to another logical node -> the path from that node, not absolute': {
 			sourceXml: unmappedLNode(/* xml */ `
 				<eIEC61850-6-100:DOS ${id}="dos-op" name="Op">
