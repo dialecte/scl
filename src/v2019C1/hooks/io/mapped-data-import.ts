@@ -1,6 +1,7 @@
 import { MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference/constants'
 import { buildMappedDataAttributes } from '@/v2019C1/extensions/reference/query/build/build-mapped-data-attributes'
 import { buildMappedLNodePath } from '@/v2019C1/extensions/reference/query/build/build-mapped-lnode-path'
+import { splitLnodeQualifier } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { resolveMappedDataFrom } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-data-from'
 
 import type {
@@ -102,6 +103,14 @@ export function createMappedDataImport(): MappedDataImport {
 				continue
 			}
 
+			// The uuid wins; an absolute name pointing at another logical node is reported.
+			if (node.mappedName?.includes('/') && node.mappedLnUuid) {
+				const namedLn = findLnByPath(splitLnodeQualifier(node.mappedName).path)
+				if (namedLn && namedLn !== node.mappedLnUuid) {
+					warnings.push(incoherentWarning({ recordId, node, attributeNames }))
+				}
+			}
+
 			const attributes = buildMappedDataAttributes({
 				tagName: node.tagName,
 				implementation: {
@@ -154,6 +163,25 @@ function unresolvedWarning(params: {
 			uuidAttribute: attributeNames.uuid,
 			pathValue: node.mappedName ?? node.mappedLnUuid ?? '',
 			triedKeys: [],
+		},
+	}
+}
+
+function incoherentWarning(params: {
+	recordId: string
+	node: ImportedMappedDataNode
+	attributeNames: { path: string; uuid: string }
+}): ImportWarning {
+	const { recordId, node, attributeNames } = params
+	return {
+		type: 'incoherent-reference',
+		recordId,
+		details: {
+			elementTag: node.tagName,
+			pathAttribute: attributeNames.path,
+			pathValue: node.mappedName,
+			uuidAttribute: attributeNames.uuid,
+			uuidValue: node.mappedLnUuid,
 		},
 	}
 }

@@ -255,14 +255,14 @@ A record that names nothing follows its **default**: its parent `DOS`/`SDS` exte
 
 Other stored forms are read as well; the import and the hooks store them in canonical form:
 
-| Stored                                                                 | Read as                                              |
-| ---------------------------------------------------------------------- | ---------------------------------------------------- |
-| `mappedLnUuid` + path                                                  | that logical node, that path                         |
-| `mappedLnUuid` + absolute reference                                    | that logical node, the data part of the reference    |
-| `mappedLnUuid` only                                                    | that logical node, the default data path             |
-| path only                                                              | the logical node the `LNode` is mapped to, that path |
-| absolute reference only                                                | the logical node found by path, the data part        |
-| a logical node absent from the file, or no `LNode` mapping and no name | `undefined`                                          |
+| Stored                                                                 | Read as                                                                                                                                  |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `mappedLnUuid` + path                                                  | that logical node, that path                                                                                                             |
+| `mappedLnUuid` + absolute reference                                    | that logical node, the data part of the reference; the import warns `incoherent-reference` when the reference names another logical node |
+| `mappedLnUuid` only                                                    | that logical node, the default data path                                                                                                 |
+| path only                                                              | the logical node the `LNode` is mapped to, that path                                                                                     |
+| absolute reference only                                                | the logical node found by path, the data part                                                                                            |
+| a logical node absent from the file, or no `LNode` mapping and no name | `undefined`                                                                                                                              |
 
 ---
 
