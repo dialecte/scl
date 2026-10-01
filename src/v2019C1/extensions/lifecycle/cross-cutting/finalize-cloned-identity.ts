@@ -25,7 +25,7 @@ import type * as Core from '@dialecte/core'
 export async function finalizeClonedIdentity(
 	tx: Core.Transaction<Config>,
 	params: {
-		mappings: readonly Scl.CloneMapping[]
+		cloneMappings: readonly Scl.CloneMapping[]
 		mode: IdentityMode
 		/**
 		 * Source elements mapped onto elements the target already holds (nothing cloned for them):
@@ -35,20 +35,20 @@ export async function finalizeClonedIdentity(
 		redirectMappings?: readonly RedirectMapping[]
 	},
 ): Promise<void> {
-	const { mappings, mode, redirectMappings } = params
+	const { cloneMappings, mode, redirectMappings } = params
 
-	await writeIdentity(tx, { mappings, mode })
+	await writeIdentity(tx, { cloneMappings, mode })
 
 	switch (mode) {
 		case 'keep':
-			await restoreClonedUuids(tx, { mappings })
+			await restoreClonedUuids(tx, { cloneMappings })
 			// refs were copied in source space; only the redirected ones need repointing
-			if (redirectMappings?.length) await applyUuidRemap(tx, { mappings, redirectMappings })
+			if (redirectMappings?.length) await applyUuidRemap(tx, { cloneMappings, redirectMappings })
 			return
 		case 'strip':
 		case 'stamp-template':
 		case 'preserve':
-			await applyUuidRemap(tx, { mappings, redirectMappings })
+			await applyUuidRemap(tx, { cloneMappings, redirectMappings })
 			return
 		default:
 			return assertExhaustive(mode)

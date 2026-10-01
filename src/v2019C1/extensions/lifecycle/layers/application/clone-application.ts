@@ -61,15 +61,15 @@ export async function cloneApplicationContent(
 	})
 	for (const ref of missingFunctions) {
 		const targetParentRef = await resolveStructureRef(sourceQuery, ref, structure)
-		const mappings = await cloneFunction(tx, {
+		const cloneMappings = await cloneFunction(tx, {
 			sourceQuery,
 			functionRef: ref,
 			targetParentRef,
 			omit,
 			keepNameTypesFrom,
 		})
-		allMappings.push(...mappings)
-		for (const mapping of mappings) {
+		allMappings.push(...cloneMappings)
+		for (const mapping of cloneMappings) {
 			if (mapping.source.id) cloneIndex.set(mapping.source.id, mapping.target)
 		}
 	}
@@ -129,7 +129,7 @@ export async function cloneApplicationContent(
 		target: reuse.existingRef,
 	}))
 
-	return { mappings: allMappings, redirectMappings }
+	return { cloneMappings: allMappings, redirectMappings }
 }
 
 type AllocationRoleReuse = {

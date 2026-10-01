@@ -335,15 +335,21 @@ describe('shared-element mapping — the report lists where each shared element 
 			ref: applicationRef,
 			anchor: bayRef,
 		}
-		const mappings = new Map(testCase.chosen ?? [])
+		const decisionMappings = new Map(testCase.chosen ?? [])
 
 		if (testCase.expectedRejection) {
-			const refused = report(target.query, { ...lifecycleTarget, resolution: { mappings } })
+			const refused = report(target.query, {
+				...lifecycleTarget,
+				resolution: { mappings: decisionMappings },
+			})
 			await expect(refused).rejects.toThrow(testCase.expectedRejection)
 			return
 		}
 
-		const reported = await report(target.query, { ...lifecycleTarget, resolution: { mappings } })
+		const reported = await report(target.query, {
+			...lifecycleTarget,
+			resolution: { mappings: decisionMappings },
+		})
 		expect(reported.mappings).toEqual(testCase.expectedMappings)
 
 		const expectedApplied = testCase.expectedApplied
@@ -358,7 +364,7 @@ describe('shared-element mapping — the report lists where each shared element 
 			await apply(tx, {
 				...lifecycleTarget,
 				report: reported,
-				resolution: { decisions: new Map(), mappings },
+				resolution: { decisions: new Map(), mappings: decisionMappings },
 			})
 		})
 

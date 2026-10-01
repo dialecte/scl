@@ -37,7 +37,7 @@ function captureErrorMessage(run: () => void): string {
 
 describe('assertMappingsCoherent', () => {
 	type TestCase = SclTest.BaseTestCase & {
-		mappings: ReportMapping[]
+		reportMappings: ReportMapping[]
 		chosen: [string, DecisionMapping][]
 		/** A fragment of the rejection — empty when the choices are accepted. */
 		expectedRejection: string
@@ -45,32 +45,32 @@ describe('assertMappingsCoherent', () => {
 
 	const testCases: Record<string, TestCase> = {
 		'a choice for an element the report does not list → rejected, naming it': {
-			mappings: [reportedMapping()],
+			reportMappings: [reportedMapping()],
 			chosen: [['unknown-s', { create: {} }]],
 			expectedRejection: 'no shared element "unknown-s"',
 		},
 		'a project element that is not among the candidates → rejected, naming it': {
-			mappings: [reportedMapping()],
+			reportMappings: [reportedMapping()],
 			chosen: [['role-s', { existing: { tagName: 'Bay', id: 'bay-t' } }]],
 			expectedRejection: '<Bay> "bay-t" is not a candidate',
 		},
 		"a choice for an element whose mapping is not the consumer's to change → rejected": {
-			mappings: [reportedMapping({ selectable: false })],
+			reportMappings: [reportedMapping({ selectable: false })],
 			chosen: [['role-s', { create: {} }]],
 			expectedRejection: 'cannot be chosen',
 		},
 		'no choice → accepted': {
-			mappings: [reportedMapping()],
+			reportMappings: [reportedMapping()],
 			chosen: [],
 			expectedRejection: '',
 		},
 		'another candidate of the project → accepted': {
-			mappings: [reportedMapping()],
+			reportMappings: [reportedMapping()],
 			chosen: [['role-s', { existing: otherProjectRole }]],
 			expectedRejection: '',
 		},
 		'a new element, named or not → accepted': {
-			mappings: [reportedMapping()],
+			reportMappings: [reportedMapping()],
 			chosen: [['role-s', { create: { name: 'HMI_Bay7' } }]],
 			expectedRejection: '',
 		},
@@ -79,7 +79,7 @@ describe('assertMappingsCoherent', () => {
 	function act(testCase: TestCase) {
 		const message = captureErrorMessage(() =>
 			assertMappingsCoherent({
-				mappings: testCase.mappings,
+				reportMappings: testCase.reportMappings,
 				decisionMappings: new Map(testCase.chosen),
 			}),
 		)

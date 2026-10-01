@@ -138,13 +138,13 @@ describe('cloneTopologyContent - composes the application layer into a self-cont
 
 		await target.transaction(async (tx) => {
 			const root = await tx.getRoot()
-			const { mappings } = await cloneTopologyContent(tx, {
+			const { cloneMappings } = await cloneTopologyContent(tx, {
 				sourceQuery: source.query,
 				scopeRef: bayRef,
 				targetParent: root,
 				omit: ['FunctionSclRef', 'ApplicationSclRef'],
 			})
-			await applyUuidRemap(tx, { mappings })
+			await applyUuidRemap(tx, { cloneMappings })
 		})
 
 		return { assertOn: 'target' }

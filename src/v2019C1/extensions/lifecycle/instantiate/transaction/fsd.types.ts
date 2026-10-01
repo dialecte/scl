@@ -28,5 +28,5 @@ export type FsdResult = {
 	 * Variable, BehaviorDescription) that live outside the subtree — the full set the report→applied
 	 * correlation needs for a first-time instantiate (`sourceToTargetMap` over these).
 	 */
-	mappings: Scl.CloneMapping[]
+	cloneMappings: Scl.CloneMapping[]
 }

@@ -7,13 +7,13 @@ import type { DecisionMappings, ReportMapping } from './mapping.types'
  * was derived from) and before any write.
  */
 export function assertMappingsCoherent(params: {
-	mappings: readonly ReportMapping[]
+	reportMappings: readonly ReportMapping[]
 	decisionMappings: DecisionMappings
 }): void {
-	const { mappings, decisionMappings } = params
+	const { reportMappings, decisionMappings } = params
 
 	for (const [sourceId, decision] of decisionMappings) {
-		const mapping = mappings.find((reported) => reported.id === sourceId)
+		const mapping = reportMappings.find((reported) => reported.id === sourceId)
 		invariant(mapping, {
 			detail: `mapping choice for "${sourceId}": the report lists no shared element "${sourceId}"`,
 		})

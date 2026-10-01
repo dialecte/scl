@@ -47,7 +47,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		targetTagName: 'Function',
 	})
 
-	const { mappings, redirectMappings } = await cloneApplicationContent(tx, {
+	const { cloneMappings, redirectMappings } = await cloneApplicationContent(tx, {
 		sourceQuery,
 		applicationRef,
 		structure,
@@ -64,11 +64,11 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		strip: false,
 	})
 
-	const allMappings = [...mappings, ...appliedMappings]
+	const allMappings = [...cloneMappings, ...appliedMappings]
 
 	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs.
 	await finalizeClonedIdentity(tx, {
-		mappings: allMappings,
+		cloneMappings: allMappings,
 		mode: 'stamp-template',
 		redirectMappings,
 	})
@@ -76,7 +76,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	// resolve a name collision for each placed composed Function at its own structural
 	// level (a repeated instantiate would otherwise duplicate a Function name in the Bay)
 	for (const functionRef of composedFunctionRefs) {
-		const functionMapping = mappings.find((mapping) => mapping.source.id === functionRef.id)
+		const functionMapping = cloneMappings.find((mapping) => mapping.source.id === functionRef.id)
 		if (!functionMapping) continue
 		const functionParent = await resolveStructureRef(sourceQuery, functionRef, structure)
 		await resolvePlacementCollision(tx, {
@@ -88,7 +88,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 
 	// a shared element created here (no project element to map onto) is validated against its
 	// structural level too: a name already taken there is bumped to a free one
-	for (const mapping of mappings) {
+	for (const mapping of cloneMappings) {
 		if (!mapping.source.id || !findMappingPolicy(mapping.source.tagName)) continue
 		const sourceRef = {
 			tagName: mapping.source.tagName,
@@ -104,7 +104,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		})
 	}
 
-	const rootMapping = mappings.find((mapping) => mapping.source.id === applicationRef.id)
+	const rootMapping = cloneMappings.find((mapping) => mapping.source.id === applicationRef.id)
 	if (!rootMapping) {
 		throw new Error(`instantiate.asd: cloned Application not found for ${applicationRef.id}`)
 	}
@@ -124,7 +124,10 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	})
 
 	const composedFunctionInstanceRefs = composedFunctionRefs
-		.map((functionRef) => mappings.find((mapping) => mapping.source.id === functionRef.id)?.target)
+		.map(
+			(functionRef) =>
+				cloneMappings.find((mapping) => mapping.source.id === functionRef.id)?.target,
+		)
 		.filter((target): target is Scl.Ref<Scl.ElementsOf> => Boolean(target)) as (
 		| Scl.Ref<'Function'>
 		| Scl.Ref<'SubFunction'>
@@ -133,7 +136,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	return {
 		applicationRef: rootMapping.target as Scl.Ref<'Application'>,
 		composedFunctionRefs: composedFunctionInstanceRefs,
-		recordMappings: mappings,
-		mappings: allMappings,
+		recordMappings: cloneMappings,
+		cloneMappings: allMappings,
 	}
 }

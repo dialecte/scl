@@ -99,7 +99,7 @@ export async function fsd(
 			? collisionOverrides({ groups: addedGroups, decisions })
 			: undefined
 		if (gate && !gate.sourceIds.has(functionRef.id)) return []
-		const { functionRef: root, mappings } = await instantiateFsd(tx, {
+		const { functionRef: root, cloneMappings } = await instantiateFsd(tx, {
 			sourceQuery,
 			functionRef,
 			targetParent,
@@ -109,7 +109,7 @@ export async function fsd(
 		// annotate the first-time instance's report nodes with what each source element became
 		const firstTime = firstTimeReportInstance(report, functionRef.id)
 		if (firstTime)
-			annotateInstance({ reportInstance: firstTime, added: sourceToTargetMap(mappings) })
+			annotateInstance({ reportInstance: firstTime, added: sourceToTargetMap(cloneMappings) })
 		return [root]
 	}
 

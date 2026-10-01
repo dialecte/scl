@@ -50,20 +50,20 @@ export async function cloneTopologyContent(
 ): Promise<CloneTopologyContentResult> {
 	const { sourceQuery, scopeRef, targetParent, omit, decisionMappings } = params
 
-	const { frameIndex, mappings: frameMappings } = await ensureTopologyFrame(tx, {
+	const { frameIndex, cloneMappings: frameMappings } = await ensureTopologyFrame(tx, {
 		sourceQuery,
 		scopeRef,
 		targetParent,
 		omit,
 	})
 
-	const mappings: Scl.CloneMapping[] = [...frameMappings]
+	const cloneMappings: Scl.CloneMapping[] = [...frameMappings]
 	const placedRoots: Scl.Ref<Scl.ElementsOf>[] = []
 	const redirectMappings: RedirectMapping[] = []
 	const clonedSourceIds = new Set<string>()
 	function record(added: Scl.CloneMapping[]): void {
 		for (const mapping of added) {
-			mappings.push(mapping)
+			cloneMappings.push(mapping)
 			if (mapping.source.id) clonedSourceIds.add(mapping.source.id)
 		}
 	}
@@ -86,7 +86,7 @@ export async function cloneTopologyContent(
 			omit,
 			decisionMappings,
 		})
-		record(applicationContent.mappings)
+		record(applicationContent.cloneMappings)
 		redirectMappings.push(...applicationContent.redirectMappings)
 		placedRoots.push(applicationRef, ...composedFunctions)
 	}
@@ -108,5 +108,5 @@ export async function cloneTopologyContent(
 		placedRoots.push(functionRef)
 	}
 
-	return { mappings, placedRoots, frameIndex, redirectMappings }
+	return { cloneMappings, placedRoots, frameIndex, redirectMappings }
 }

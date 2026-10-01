@@ -63,7 +63,7 @@ export async function fsd(
 
 	// Repoint cloned uuid refs (e.g. FunctionCatRef -> the cloned Function) across ALL
 	// clones of this operation, before cleanup reads those refs to detect orphans.
-	await applyUuidRemap(tx, { mappings: [...functionMappings, ...categoryMappings] })
+	await applyUuidRemap(tx, { cloneMappings: [...functionMappings, ...categoryMappings] })
 
 	await postExtractionCleanup(tx)
 }

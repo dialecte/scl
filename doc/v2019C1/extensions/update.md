@@ -160,11 +160,18 @@ type DecisionMapping = { existing: Ref } | { create: { name?: string } }
 To change a mapping, pass the choice and ask for the report again; then apply with the same `resolution`:
 
 ```ts
-const mappings = new Map([[roleMapping.id, { existing: roleMapping.candidates[0].ref }]])
-const report = await doc.query.lifecycle.report({ ...target, resolution: { mappings } })
+const decisionMappings = new Map([[roleMapping.id, { existing: roleMapping.candidates[0].ref }]])
+const report = await doc.query.lifecycle.report({
+	...target,
+	resolution: { mappings: decisionMappings },
+})
 // report.mappings and the review tree now show the role matched onto that element
 await doc.prepare((tx) =>
-	tx.lifecycle.apply(tx, { ...target, report, resolution: { decisions, mappings } }),
+	tx.lifecycle.apply(tx, {
+		...target,
+		report,
+		resolution: { decisions, mappings: decisionMappings },
+	}),
 )
 ```
 

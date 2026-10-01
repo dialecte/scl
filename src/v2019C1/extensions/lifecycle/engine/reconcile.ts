@@ -209,7 +209,7 @@ async function reconcileChildren(
 		}
 		// stamp/preserve keep the fresh clone uuid + repoint refs; keep/fork converges to the
 		// source revision's uuids (no remap) — the shared finalization owns that split.
-		await finalizeClonedIdentity(tx, { mappings: recordMappings, mode: identityMode })
+		await finalizeClonedIdentity(tx, { cloneMappings: recordMappings, mode: identityMode })
 
 		// validate the added element against its instance-parent context: apply any
 		// user edit then auto-resolve a name collision among siblings (schema constraint).

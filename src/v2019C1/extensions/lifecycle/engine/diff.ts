@@ -381,12 +381,12 @@ export function assembleReport(instances: ReportInstance[]): DiffReport {
 			(instance) => instance.rootRef !== undefined && instance.groups.length > 0,
 		),
 		summary,
-		mappings: collectMappings(instances),
+		mappings: collectReportMappings(instances),
 	}
 }
 
 /** Every mapping of the reported instances, once per shared source element. */
-function collectMappings(instances: readonly ReportInstance[]): ReportMapping[] {
+function collectReportMappings(instances: readonly ReportInstance[]): ReportMapping[] {
 	const mappingsBySourceId = new Map<string, ReportMapping>()
 	for (const instance of instances) {
 		for (const mapping of instance.mappings) {

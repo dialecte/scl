@@ -75,7 +75,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 
 	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs
 	// (e.g. FunctionCatRef -> cloned Function) onto the fresh uuids.
-	await finalizeClonedIdentity(tx, { mappings: allMappings, mode: 'stamp-template' })
+	await finalizeClonedIdentity(tx, { cloneMappings: allMappings, mode: 'stamp-template' })
 
 	const rootMapping = recordMappings.find((mapping) => mapping.source.id === functionRef.id)
 	if (!rootMapping) {
@@ -100,5 +100,5 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		target: { anchor: 'function', root: instantiatedRef },
 	})
 
-	return { functionRef: instantiatedRef, recordMappings, mappings: allMappings }
+	return { functionRef: instantiatedRef, recordMappings, cloneMappings: allMappings }
 }

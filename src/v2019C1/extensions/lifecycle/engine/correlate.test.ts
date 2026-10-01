@@ -25,11 +25,11 @@ const instance = (tree: DiffNode, groups: ReportInstance['groups'] = []): Report
 
 describe('sourceToTargetMap', () => {
 	it('maps each source id to its target ref', () => {
-		const mappings = [
+		const cloneMappings = [
 			{ source: { ...ref('Function', 's1'), attributes: [] }, target: ref('Function', 'a1') },
 			{ source: { ...ref('LNode', 's2'), attributes: [] }, target: ref('LNode', 'a2') },
 		] as unknown as Parameters<typeof sourceToTargetMap>[0]
-		const map = sourceToTargetMap(mappings)
+		const map = sourceToTargetMap(cloneMappings)
 		expect(map.get('s1')).toEqual(ref('Function', 'a1'))
 		expect(map.get('s2')).toEqual(ref('LNode', 'a2'))
 	})

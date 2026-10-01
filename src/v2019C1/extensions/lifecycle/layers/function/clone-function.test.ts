@@ -69,7 +69,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 				stripCategoriesUuid: testCase.stripCategoriesUuid,
 			})
 			// caller owns uuid rewiring across the function + category clones
-			await applyUuidRemap(tx, { mappings: [...functionMappings, ...categoryMappings] })
+			await applyUuidRemap(tx, { cloneMappings: [...functionMappings, ...categoryMappings] })
 		})
 		return { assertOn: 'target' }
 	}

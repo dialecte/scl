@@ -19,5 +19,5 @@ export type EnsureTopologyFrameResult = {
 	/** Source structural element id -> its reproduced target ref (multi-bay-safe placement). */
 	frameIndex: Map<string, Scl.Ref<Scl.ElementsOf>>
 	/** Source -> target mappings for every reproduced structural element and its own-content clones. */
-	mappings: Scl.CloneMapping[]
+	cloneMappings: Scl.CloneMapping[]
 }

@@ -49,9 +49,9 @@ export async function deep(
 	})
 
 	let record: Scl.RawRecord<Scl.ElementsOf>
-	let mappings: Scl.CloneMapping[]
+	let cloneMappings: Scl.CloneMapping[]
 	if (mergeTarget) {
-		mappings = await addChildrenTo(tx, {
+		cloneMappings = await addChildrenTo(tx, {
 			sourceQuery,
 			source: ref,
 			target: mergeTarget,
@@ -66,7 +66,7 @@ export async function deep(
 		if (!clone)
 			throw new Error(`transplant.deep: source element not found: ${ref.tagName}#${ref.id}`)
 		record = clone.record
-		mappings = clone.mappings
+		cloneMappings = clone.mappings
 	}
 
 	let typeIdRemap = new Map<string, string>()
@@ -77,14 +77,14 @@ export async function deep(
 			const result = await importTypes(tx, {
 				sourceQuery,
 				records,
-				cloneMappings: mappings,
+				cloneMappings: cloneMappings,
 				keepNameTypesFrom,
 			})
 			typeIdRemap = result.idRemap
 		}
 	}
 
-	return { record, typeIdRemap, recordMappings: mappings }
+	return { record, typeIdRemap, recordMappings: cloneMappings }
 }
 
 /**

@@ -47,7 +47,8 @@ export async function apply(
 
 	// mapping choices the report cannot honour are refused before any write
 	const decisionMappings = params.resolution?.mappings
-	if (decisionMappings) assertMappingsCoherent({ mappings: report.mappings, decisionMappings })
+	if (decisionMappings)
+		assertMappingsCoherent({ reportMappings: report.mappings, decisionMappings })
 
 	// No decisions supplied: fast track applies headless; full track waits for a human.
 	if (!decisions) {

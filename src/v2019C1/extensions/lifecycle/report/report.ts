@@ -62,7 +62,8 @@ export async function report(
 
 	// the report was derived from the consumer's mapping choices: refuse the ones it cannot honour
 	const decisionMappings = target.resolution?.mappings
-	if (decisionMappings) assertMappingsCoherent({ mappings: report.mappings, decisionMappings })
+	if (decisionMappings)
+		assertMappingsCoherent({ reportMappings: report.mappings, decisionMappings })
 
 	return report
 }

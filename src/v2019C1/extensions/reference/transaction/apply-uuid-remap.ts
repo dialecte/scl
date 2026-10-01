@@ -11,7 +11,7 @@ import type * as Core from '@dialecte/core'
  * identities and recompute their path attributes. Counterpart of
  * {@link applyTypeIdRemap} for the uuid reference system (`UUID_REFERENCE_PAIRS`).
  *
- * Caller-owned, single pass: given the complete `mappings` of an operation, it
+ * Caller-owned, single pass: given the complete `cloneMappings` of an operation, it
  * builds the source-uuid -> target-uuid map once and rewrites every cloned
  * ref-holder. A ref whose target is part of the mappings, or of the redirect mappings (a source
  * element mapped onto an element the target already holds), is repointed; a ref pointing
@@ -25,18 +25,18 @@ import type * as Core from '@dialecte/core'
 export async function applyUuidRemap(
 	tx: Core.Transaction<Config>,
 	params: {
-		mappings: readonly Scl.CloneMapping[]
+		cloneMappings: readonly Scl.CloneMapping[]
 		/** Source elements mapped onto existing target elements instead of being cloned. */
 		redirectMappings?: readonly RedirectMapping[]
 	},
 ): Promise<void> {
-	const { mappings, redirectMappings = [] } = params
-	if (mappings.length === 0) return
+	const { cloneMappings, redirectMappings = [] } = params
+	if (cloneMappings.length === 0) return
 
 	// 1. Complete uuid maps from the clone mappings and the redirect mappings — one pass.
 	const uuidMap = new Map<string, string>() // source uuid -> target uuid
 	const uuidToRef = new Map<string, { tagName: string; id: string }>() // target uuid -> ref
-	for (const { source, target } of mappings) {
+	for (const { source, target } of cloneMappings) {
 		const sourceUuid = source.attributes.find((attribute) => attribute.name === 'uuid')?.value
 		if (!sourceUuid) continue
 		const targetRecord = await tx.getRecord(target)
@@ -59,7 +59,7 @@ export async function applyUuidRemap(
 	if (uuidMap.size === 0) return
 
 	// 2. Repoint each cloned ref-holder's uuid attrs and recompute its paths.
-	for (const { target } of mappings) {
+	for (const { target } of cloneMappings) {
 		if (!(target.tagName in UUID_REFERENCE_PAIRS)) continue
 		const refRecord = await tx.getRecord(target)
 		if (!refRecord) continue

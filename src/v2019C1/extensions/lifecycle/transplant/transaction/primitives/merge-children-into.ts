@@ -37,7 +37,7 @@ export async function mergeChildrenInto(
 	const sourceRecord = await sourceQuery.any.getRecord(source)
 	if (!sourceRecord) return []
 
-	const mappings: Scl.CloneMapping[] = []
+	const cloneMappings: Scl.CloneMapping[] = []
 	for (const childRef of sourceRecord.children) {
 		if (isOmittedTag(omit, childRef.tagName)) continue
 
@@ -47,7 +47,7 @@ export async function mergeChildrenInto(
 
 		if (twin) {
 			// A same-tag/same-name container already exists - merge INTO it rather than duplicate it.
-			mappings.push(
+			cloneMappings.push(
 				...(await mergeChildrenInto(tx, {
 					sourceQuery,
 					source: child,
@@ -71,9 +71,9 @@ export async function mergeChildrenInto(
 			...(omit ? { omit } : {}),
 			...(strip === undefined ? {} : { strip }),
 		})
-		if (clone) mappings.push(...clone.mappings)
+		if (clone) cloneMappings.push(...clone.mappings)
 	}
-	return mappings
+	return cloneMappings
 }
 
 /** Whether `tagName` matches one of the `omit` entries (string form or single-key object form). */

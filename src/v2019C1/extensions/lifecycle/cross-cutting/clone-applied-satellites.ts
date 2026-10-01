@@ -37,7 +37,7 @@ export async function cloneAppliedSatellites(
 
 	const satellites = await resolveAppliedSatellites(sourceQuery, { primaryRef })
 
-	const mappings: Scl.CloneMapping[] = []
+	const cloneMappings: Scl.CloneMapping[] = []
 	for (const satelliteRef of satellites) {
 		const existing = await findExistingSatelliteByName(tx, sourceQuery, satelliteRef)
 		if (existing) {
@@ -47,7 +47,7 @@ export async function cloneAppliedSatellites(
 				target: existing,
 				strip: false,
 			})
-			mappings.push(...addedMappings)
+			cloneMappings.push(...addedMappings)
 			continue
 		}
 
@@ -58,9 +58,9 @@ export async function cloneAppliedSatellites(
 			targetParent,
 			...(strip ? {} : { strip: false as const }),
 		})
-		if (clone) mappings.push(...clone.mappings)
+		if (clone) cloneMappings.push(...clone.mappings)
 	}
-	return mappings
+	return cloneMappings
 }
 
 /** The existing same-tag, same-name satellite in the target (shared entity), if any. */

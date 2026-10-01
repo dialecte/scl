@@ -94,7 +94,7 @@ export async function reconcileSatellites(
 			strip: false,
 		})
 		if (clone) {
-			await finalizeClonedIdentity(tx, { mappings: clone.mappings, mode: identityMode })
+			await finalizeClonedIdentity(tx, { cloneMappings: clone.mappings, mode: identityMode })
 			for (const mapping of clone.mappings) {
 				if (mapping.source.id) added.set(mapping.source.id, mapping.target)
 			}

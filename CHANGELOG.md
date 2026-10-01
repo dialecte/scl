@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Clone mappings are named `cloneMappings` everywhere.** The `mappings` parameter of `identity.transaction.writeIdentity`, `identity.transaction.restoreClonedUuids` and `reference.transaction.applyUuidRemap` is now `cloneMappings`, and so is the `mappings` field of the results of `instantiate.fsd` and `instantiate.asd` (`recordMappings` is unchanged). Breaking for callers: rename the key. The engine now tells four kinds apart by name — `cloneMappings` (a source record and its copy), the `mappings` of a report and of a `resolution` (where a shared element lands, as resolved and as chosen) and `redirectMappings` (references repointed to an existing element).
 - `reference.transaction.applyUuidRemap` also takes `redirectMappings` — source elements mapped onto elements the target already holds — and repoints the references to them like the cloned ones; the application clone no longer repoints role references by hand.
 - **`lifecycle.report` takes the same `resolution` object as `apply`** (optional), and every `DiffReport` and `ReportInstance` carries `mappings`.
 - **`lifecycle.apply` takes what the consumer resolved as one `resolution` object.** `decisions` and `keepNameTypesFrom` move from the top level of the parameters into `resolution: { decisions?, keepNameTypesFrom? }`. Breaking for callers: `apply(tx, { ...target, report, decisions })` becomes `apply(tx, { ...target, report, resolution: { decisions } })`. The `Resolution` type is exported.

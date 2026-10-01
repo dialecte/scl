@@ -25,16 +25,16 @@ import type * as Core from '@dialecte/core'
 export async function writeIdentity(
 	tx: Core.Transaction<Config>,
 	params: {
-		mappings: readonly Scl.CloneMapping[]
+		cloneMappings: readonly Scl.CloneMapping[]
 		mode: IdentityMode
 	},
 ): Promise<void> {
-	const { mappings, mode } = params
+	const { cloneMappings, mode } = params
 	// `keep` and `preserve` both leave lineage as the clone copied it; they diverge only in
 	// the post-step (`restoreClonedUuids` vs `applyUuidRemap`), owned by `finalizeClonedIdentity`.
 	if (mode === 'keep' || mode === 'preserve') return
 
-	for (const mapping of mappings) {
+	for (const mapping of cloneMappings) {
 		const target = await tx.getRecord(mapping.target)
 		if (!target) continue
 

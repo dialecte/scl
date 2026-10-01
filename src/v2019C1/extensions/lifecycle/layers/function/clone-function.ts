@@ -85,7 +85,7 @@ export async function cloneFunctionCategories(
 
 	const categoryIds = await collectReferencedCategoryIds(sourceQuery, functionRef)
 
-	const mappings: Scl.CloneMapping[] = []
+	const cloneMappings: Scl.CloneMapping[] = []
 	for (const categoryId of categoryIds) {
 		const categoryRef: Scl.Ref<'FunctionCategory'> = { tagName: 'FunctionCategory', id: categoryId }
 
@@ -101,7 +101,7 @@ export async function cloneFunctionCategories(
 				target: existing,
 				strip: false,
 			})
-			mappings.push(...addedMappings)
+			cloneMappings.push(...addedMappings)
 			continue
 		}
 
@@ -113,10 +113,10 @@ export async function cloneFunctionCategories(
 			targetParent,
 			...(stripCategoriesUuid ? {} : { strip: false as const }),
 		})
-		if (clone) mappings.push(...clone.mappings)
+		if (clone) cloneMappings.push(...clone.mappings)
 	}
 
-	return mappings
+	return cloneMappings
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

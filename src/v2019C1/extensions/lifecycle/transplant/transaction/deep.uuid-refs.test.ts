@@ -96,7 +96,7 @@ describe('import.deep — uuid reference remapping', () => {
 				withTypes: false,
 			})
 			// caller owns uuid rewiring (deep is a faithful subtree copy)
-			await applyUuidRemap(tx, { mappings: recordMappings })
+			await applyUuidRemap(tx, { cloneMappings: recordMappings })
 		})
 
 		return { assertOn: 'target' }

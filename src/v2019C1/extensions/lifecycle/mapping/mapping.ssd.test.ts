@@ -113,9 +113,12 @@ describe('shared-element mapping — an SSD carrying an application', () => {
 			ref: substationRef,
 			anchor: bayRef,
 		}
-		const mappings = new Map(testCase.chosen ?? [])
+		const decisionMappings = new Map(testCase.chosen ?? [])
 
-		const reported = await report(target.query, { ...lifecycleTarget, resolution: { mappings } })
+		const reported = await report(target.query, {
+			...lifecycleTarget,
+			resolution: { mappings: decisionMappings },
+		})
 		const roleMapping = reported.mappings.find((mapping) => mapping.id === 'role-s')
 		expect(roleMapping?.mapping, 'report').toEqual(testCase.expected.mapping)
 
@@ -123,7 +126,7 @@ describe('shared-element mapping — an SSD carrying an application', () => {
 			await apply(tx, {
 				...lifecycleTarget,
 				report: reported,
-				resolution: { decisions: new Map(), mappings },
+				resolution: { decisions: new Map(), mappings: decisionMappings },
 			})
 		})
 

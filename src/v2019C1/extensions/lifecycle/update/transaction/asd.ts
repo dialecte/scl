@@ -112,7 +112,7 @@ export async function asd(
 		const {
 			applicationRef: application,
 			composedFunctionRefs,
-			mappings,
+			cloneMappings,
 		} = await instantiateAsd(tx, {
 			sourceQuery,
 			applicationRef,
@@ -123,7 +123,7 @@ export async function asd(
 		})
 		// first-time ASD clones the Application + composed Functions + satellites in one pass; annotate
 		// every first-time report instance (Application and each composed Function) from the shared map
-		const added = sourceToTargetMap(mappings)
+		const added = sourceToTargetMap(cloneMappings)
 		for (const reportInstance of report?.instances ?? []) {
 			if (!reportInstance.rootRef) annotateInstance({ reportInstance, added })
 		}

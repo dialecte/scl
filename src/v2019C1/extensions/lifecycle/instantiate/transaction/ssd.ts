@@ -35,7 +35,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	if (!root) throw new Error('instantiate.ssd: no instantiable root found in the SSD')
 
 	const {
-		mappings: contentMappings,
+		cloneMappings: contentMappings,
 		placedRoots,
 		frameIndex,
 		redirectMappings,
@@ -59,7 +59,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	const allMappings = [...contentMappings, ...appliedMappings]
 
 	// Stamp/keep lineage + fix up refs (remap for stamp, restore for keep) in one seam.
-	await finalizeClonedIdentity(tx, { mappings: allMappings, mode, redirectMappings })
+	await finalizeClonedIdentity(tx, { cloneMappings: allMappings, mode, redirectMappings })
 
 	if (mode !== 'keep') {
 		// resolve a name collision on the CREATED frame scope root itself (instantiating one

@@ -14,11 +14,11 @@ import type * as Core from '@dialecte/core'
  */
 export async function restoreClonedUuids(
 	tx: Core.Transaction<Config>,
-	params: { mappings: readonly Scl.CloneMapping[] },
+	params: { cloneMappings: readonly Scl.CloneMapping[] },
 ): Promise<void> {
-	const { mappings } = params
+	const { cloneMappings } = params
 
-	for (const mapping of mappings) {
+	for (const mapping of cloneMappings) {
 		const sourceUuid = readAttribute(mapping.source.attributes, 'uuid')
 		if (!sourceUuid) continue
 		const target = await tx.getRecord(mapping.target)

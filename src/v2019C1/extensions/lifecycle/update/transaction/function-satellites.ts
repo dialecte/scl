@@ -93,14 +93,14 @@ export async function reconcileCarriedSatellites(
 	// the group's acceptance; cloneFunctionCategories is idempotent on already-cloned.
 	if (hasMissing && (!accepted || accepted.sourceIds.has(functionRef.id))) {
 		const structure = await resolveTargetStructure(tx, targetParent)
-		const mappings = await cloneFunctionCategories(tx, {
+		const cloneMappings = await cloneFunctionCategories(tx, {
 			sourceQuery,
 			functionRef,
 			structure,
 			stripCategoriesUuid: false,
 		})
-		await finalizeClonedIdentity(tx, { mappings, mode: identityMode })
-		for (const mapping of mappings) {
+		await finalizeClonedIdentity(tx, { cloneMappings, mode: identityMode })
+		for (const mapping of cloneMappings) {
 			if (mapping.source.id) added.set(mapping.source.id, mapping.target)
 		}
 	}

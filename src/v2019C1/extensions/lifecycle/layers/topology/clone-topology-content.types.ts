@@ -3,7 +3,7 @@ import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction
 
 export type CloneTopologyContentResult = {
 	/** All source -> target clone mappings for the gathered content (frame + fn/app). */
-	mappings: Scl.CloneMapping[]
+	cloneMappings: Scl.CloneMapping[]
 	/**
 	 * Source refs of the top-level placed elements (Applications, their composed Functions,
 	 * standalone Functions) - the elements a caller runs placement-collision on. The structural

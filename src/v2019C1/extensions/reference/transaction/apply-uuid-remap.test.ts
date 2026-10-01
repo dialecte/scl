@@ -23,7 +23,7 @@ const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
 type TestCase = SclTest.BaseXmlTestCase & {
-	mappings: Scl.CloneMapping[]
+	cloneMappings: Scl.CloneMapping[]
 	/** Source elements mapped onto an element the document already holds (nothing cloned for them). */
 	redirectMappings?: RedirectMapping[]
 }
@@ -44,7 +44,7 @@ describe('applyUuidRemap', () => {
 					</Substation>
 				</SCL>
 			`,
-			mappings: [
+			cloneMappings: [
 				{
 					source: {
 						tagName: 'Function',
@@ -81,7 +81,7 @@ describe('applyUuidRemap', () => {
 					</Substation>
 				</SCL>
 			`,
-				mappings: [
+				cloneMappings: [
 					{
 						source: {
 							tagName: 'AllocationRoleRef',
@@ -112,7 +112,7 @@ describe('applyUuidRemap', () => {
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		await source.transaction(async (tx) => {
 			await applyUuidRemap(tx, {
-				mappings: testCase.mappings,
+				cloneMappings: testCase.cloneMappings,
 				redirectMappings: testCase.redirectMappings,
 			})
 		})

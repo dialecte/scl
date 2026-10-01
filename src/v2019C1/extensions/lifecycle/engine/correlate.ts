@@ -20,10 +20,10 @@ export function mergeApplied(
  * is what keeps two instances of the same template distinct.
  */
 export function sourceToTargetMap(
-	mappings: readonly Scl.CloneMapping[],
+	cloneMappings: readonly Scl.CloneMapping[],
 ): Map<string, AnyRefOrRecord> {
 	const map = new Map<string, AnyRefOrRecord>()
-	for (const mapping of mappings) {
+	for (const mapping of cloneMappings) {
 		if (mapping.source.id) map.set(mapping.source.id, mapping.target)
 	}
 	return map

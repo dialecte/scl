@@ -46,7 +46,7 @@ export async function ensureTopologyFrame(
 
 	const frameIndex = new Map<string, Scl.Ref<Scl.ElementsOf>>()
 	const createdIds = new Set<string>()
-	const mappings: Scl.CloneMapping[] = []
+	const cloneMappings: Scl.CloneMapping[] = []
 
 	// 1. Resolve each structural level: reuse an ancestor the target already provides, else create.
 	for (const source of frameElements) {
@@ -64,7 +64,7 @@ export async function ensureTopologyFrame(
 		createdIds.add(source.id)
 		const sourceRecord = await sourceQuery.any.getRecord(source)
 		if (sourceRecord) {
-			mappings.push({ source: sourceRecord as unknown as Scl.CloneMapping['source'], target })
+			cloneMappings.push({ source: sourceRecord as unknown as Scl.CloneMapping['source'], target })
 		}
 	}
 
@@ -82,11 +82,11 @@ export async function ensureTopologyFrame(
 			target,
 			omit: ownContentOmit,
 		})
-		mappings.push(...ownContent)
+		cloneMappings.push(...ownContent)
 	}
 
 	const structure = await resolveFrameStructure(tx, sourceQuery, scopeRef, frameIndex)
-	return { structure, frameIndex, mappings }
+	return { structure, frameIndex, cloneMappings }
 }
 
 /** The ids of the scope root's STRICT structural ancestors (the reusable target context). */

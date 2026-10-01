@@ -28,7 +28,7 @@ type Expected = {
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	mode: IdentityMode
-	mappings: MappingSpec[]
+	cloneMappings: MappingSpec[]
 	expected: Expected[]
 }
 
@@ -37,14 +37,16 @@ describe('writeIdentity', () => {
 		'keep → lineage untouched': {
 			sourceXml: functionDoc('fn-1', { templateUuid: 'orig-tpl' }),
 			mode: 'keep',
-			mappings: [{ targetId: 'fn-1', tagName: 'Function', sourceAttributes: { uuid: 'src-uuid' } }],
+			cloneMappings: [
+				{ targetId: 'fn-1', tagName: 'Function', sourceAttributes: { uuid: 'src-uuid' } },
+			],
 			expected: [{ tagName: 'Function', targetId: 'fn-1', templateUuid: 'orig-tpl' }],
 		},
 
 		'stamp-template on a single-level element (Function) → templateUuid set, no originUuid': {
 			sourceXml: functionDoc('fn-1', {}),
 			mode: 'stamp-template',
-			mappings: [
+			cloneMappings: [
 				{
 					targetId: 'fn-1',
 					tagName: 'Function',
@@ -58,7 +60,7 @@ describe('writeIdentity', () => {
 			{
 				sourceXml: allocationRoleDoc('ar-1'),
 				mode: 'stamp-template',
-				mappings: [
+				cloneMappings: [
 					{
 						targetId: 'ar-1',
 						tagName: 'AllocationRole',
@@ -78,7 +80,7 @@ describe('writeIdentity', () => {
 		'stamp-template when source already has originUuid → no origin shift': {
 			sourceXml: allocationRoleDoc('ar-1'),
 			mode: 'stamp-template',
-			mappings: [
+			cloneMappings: [
 				{
 					targetId: 'ar-1',
 					tagName: 'AllocationRole',
@@ -95,14 +97,14 @@ describe('writeIdentity', () => {
 		'strip → templateUuid removed': {
 			sourceXml: functionDoc('fn-1', { templateUuid: 'tpl' }),
 			mode: 'strip',
-			mappings: [{ targetId: 'fn-1', tagName: 'Function', sourceAttributes: {} }],
+			cloneMappings: [{ targetId: 'fn-1', tagName: 'Function', sourceAttributes: {} }],
 			expected: [{ tagName: 'Function', targetId: 'fn-1' }],
 		},
 
 		'preserve → lineage carried verbatim (neither stamped nor stripped)': {
 			sourceXml: functionDoc('fn-1', { templateUuid: 'carried-tpl' }),
 			mode: 'preserve',
-			mappings: [
+			cloneMappings: [
 				{
 					targetId: 'fn-1',
 					tagName: 'Function',
@@ -118,7 +120,7 @@ describe('writeIdentity', () => {
 				originUuid: 'carried-origin',
 			}),
 			mode: 'preserve',
-			mappings: [
+			cloneMappings: [
 				{
 					targetId: 'ar-1',
 					tagName: 'AllocationRole',
@@ -144,7 +146,7 @@ describe('writeIdentity', () => {
 		testCase,
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		const mappings = testCase.mappings.map((mapping) => ({
+		const cloneMappings = testCase.cloneMappings.map((mapping) => ({
 			source: {
 				tagName: mapping.tagName,
 				id: `src-${mapping.targetId}`,
@@ -154,7 +156,7 @@ describe('writeIdentity', () => {
 		})) as unknown as Scl.CloneMapping[]
 
 		await source.transaction(async (tx) => {
-			await writeIdentity(tx, { mappings, mode: testCase.mode })
+			await writeIdentity(tx, { cloneMappings, mode: testCase.mode })
 		})
 
 		for (const expected of testCase.expected) {
