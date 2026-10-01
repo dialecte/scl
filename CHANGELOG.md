@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Fixed
+
+- `MinRequestedSCDFile` titles show the SCD version when available, falling back to the revision instead of the file UUID.
+
 ## [0.4.1] - 2026-09-29
 
 ### Added

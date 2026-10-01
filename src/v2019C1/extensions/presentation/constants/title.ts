@@ -50,6 +50,12 @@ export const TITLE_FIELDS_OVERRIDE: Partial<Record<string, TitleSpec>> = {
 	Resource: { compact: ['resInst'] },
 	Hitem: { compact: ['version', 'revision'], separator: '.' },
 	History: { compact: ['version', 'revision'], separator: '.' },
+	MinRequestedSCDFile: {
+		compact: [
+			{ whenPresent: 'version', template: '{version}' },
+			{ whenPresent: 'revision', template: '{revision}' },
+		],
+	},
 
 	// ── Composite data-flow (extension namespace) ─────────────────────
 	// Brackets denote instance index; slashes denote path segments.

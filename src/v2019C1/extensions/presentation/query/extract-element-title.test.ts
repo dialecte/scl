@@ -216,6 +216,32 @@ describe('extractElementTitle', () => {
 		},
 
 		// ── composite ──────────────────────────────────────────
+		'MinRequestedSCDFile with version and revision → raw version': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<IED name="IED_A" ${id}="ied-a">
+						<MinRequestedSCDFiles ${id}="requested-files">
+							<MinRequestedSCDFile fileType="SCD" fileUuid="file-uuid" version="2" revision="A" ${id}="min-requested-scd"/>
+						</MinRequestedSCDFiles>
+					</IED>
+				</SCL>
+			`,
+			ref: { tagName: 'MinRequestedSCDFile', id: 'min-requested-scd' },
+			expectedTitle: '2',
+		},
+		'MinRequestedSCDFile without version → raw revision': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<IED name="IED_A" ${id}="ied-a">
+						<MinRequestedSCDFiles ${id}="requested-files">
+							<MinRequestedSCDFile fileType="SCD" fileUuid="file-uuid" version="" revision="A" ${id}="min-requested-scd"/>
+						</MinRequestedSCDFiles>
+					</IED>
+				</SCL>
+			`,
+			ref: { tagName: 'MinRequestedSCDFile', id: 'min-requested-scd' },
+			expectedTitle: 'A',
+		},
 		'ApplicationSclRef → fileUuid/fileType/version.revision': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
