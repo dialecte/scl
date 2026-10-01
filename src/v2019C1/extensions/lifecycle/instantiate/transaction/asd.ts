@@ -57,20 +57,20 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) applying to
 	// any element in the Application subtree travel with it
-	const appliedMappings = await cloneAppliedSatellites(tx, {
+	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: applicationRef,
 		structure,
 		strip: false,
 	})
 
-	const allMappings = [...contentMappings, ...appliedMappings]
+	const allMappings = [...contentMappings, ...applied.cloneMappings]
 
 	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs.
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
 		mode: 'stamp-template',
-		redirectMappings,
+		redirectMappings: [...redirectMappings, ...applied.redirectMappings],
 	})
 
 	// resolve a name collision for each placed composed Function at its own structural
@@ -89,7 +89,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	// a shared element created here (no project element to map onto) is named at its structural level
 	await nameCreatedSharedElements(tx, {
 		sourceQuery,
-		cloneMappings: contentMappings,
+		cloneMappings: allMappings,
 		structure,
 		decisionMappings,
 	})

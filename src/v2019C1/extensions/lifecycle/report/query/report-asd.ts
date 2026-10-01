@@ -196,6 +196,8 @@ async function reportApplicationInstance(
 			: undefined,
 		report: applicationReport,
 		refsAlwaysAdded,
+		anchor: params.anchor,
+		matchKey: params.matchKey,
 	})
 
 	return applicationReport

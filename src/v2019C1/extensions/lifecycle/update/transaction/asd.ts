@@ -225,7 +225,7 @@ export async function asd(
 		}
 		// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
 		// in the Application subtree travel with the application group
-		const crossMappings = await reconcileCrossCuttingSatellites(tx, {
+		const cross = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
 			primaryRef: applicationRef,
 			instancePrimaryRef: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
@@ -236,8 +236,12 @@ export async function asd(
 		})
 		// carry the report->applied correlation onto this Application instance's report nodes (the
 		// composed Functions are annotated by the FSD cascade below)
-		const addedMappings = [...reconcileMappings, ...satelliteMappings, ...crossMappings]
-		additions.push({ instanceRootRef: instance, cloneMappings: addedMappings, redirectMappings })
+		const addedMappings = [...reconcileMappings, ...satelliteMappings, ...cross.cloneMappings]
+		additions.push({
+			instanceRootRef: instance,
+			cloneMappings: addedMappings,
+			redirectMappings: [...redirectMappings, ...cross.redirectMappings],
+		})
 		const reportInstance = reportInstanceById(report, instance.id)
 		if (reportInstance) {
 			annotateInstance({ reportInstance, added: sourceToTargetMap(addedMappings) })

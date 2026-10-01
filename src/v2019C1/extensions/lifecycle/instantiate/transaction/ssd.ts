@@ -49,17 +49,21 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	// External cross-cutting satellites (Variable / BehaviorDescription) applying to any
 	// element in the scope subtree travel with it, placed at the scope's reproduced level.
 	const scopeStructure = await resolveFrameStructure(tx, sourceQuery, root, frameIndex)
-	const appliedMappings = await cloneAppliedSatellites(tx, {
+	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: root,
 		structure: scopeStructure,
 		strip: false,
 	})
 
-	const allMappings = [...contentMappings, ...appliedMappings]
+	const allMappings = [...contentMappings, ...applied.cloneMappings]
 
 	// Stamp/keep lineage + fix up refs (remap for stamp, restore for keep) in one seam.
-	await finalizeClonedIdentity(tx, { cloneMappings: allMappings, mode, redirectMappings })
+	await finalizeClonedIdentity(tx, {
+		cloneMappings: allMappings,
+		mode,
+		redirectMappings: [...redirectMappings, ...applied.redirectMappings],
+	})
 
 	if (mode !== 'keep') {
 		// resolve a name collision on the CREATED frame scope root itself (instantiating one

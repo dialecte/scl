@@ -146,7 +146,7 @@ export async function fsd(
 			decisionMappings: params.decisionMappings,
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
-		const crossMappings = await reconcileCrossCuttingSatellites(tx, {
+		const cross = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
 			primaryRef: functionRef,
 			instancePrimaryRef: { tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
@@ -156,13 +156,14 @@ export async function fsd(
 			identityMode,
 		})
 		// carry the report->applied correlation onto this instance's report nodes
-		const addedMappings = [...reconcileMappings, ...carriedMappings, ...crossMappings]
+		const addedMappings = [...reconcileMappings, ...carriedMappings, ...cross.cloneMappings]
 		// the references this instance gained may point outside the subtree they were added with:
 		// at another element added here, or at an element the instance already holds
 		await repointAddedReferences(tx, {
 			cloneMappings: addedMappings,
 			instanceRootRef: instance,
 			matchKey,
+			redirectMappings: cross.redirectMappings,
 		})
 		const reportInstance = reportInstanceById(report, instance.id)
 		if (reportInstance) {

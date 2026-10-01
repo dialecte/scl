@@ -137,7 +137,7 @@ whose `dependsOn` parent is skipped.
 
 ### Shared-element mappings
 
-Some elements are held once by the project and shared — an `AllocationRole` several applications refer to, a `FunctionCategory` classifying several functions. A template that brings such an element does not necessarily copy it: it **maps** it onto an element of the project, or creates a new one. `report` lists that decision for every shared element the template brings, and the consumer may change it.
+Some elements are held once by the project and shared — an `AllocationRole` several applications refer to, a `FunctionCategory` classifying several functions, a `Variable` or a `BehaviorDescription` applying to several elements. A template that brings such an element does not necessarily copy it: it **maps** it onto an element of the project, or creates a new one. `report` lists that decision for every shared element the template brings, and the consumer may change it.
 
 ```ts
 type ReportMapping = {
@@ -176,13 +176,15 @@ await doc.prepare((tx) =>
 )
 ```
 
+The mapping of a `Variable` or a `BehaviorDescription` is resolved and listed like the others, with `selectable: false`: it is shown, not chosen.
+
 A choice the report cannot honour is refused, by `report` and by `apply`: a source element the template does not bring, a project element that is not among the candidates, a mapping that is not `selectable`, or one that is `locked`.
 
 The element a source element is mapped onto stays the project's: its own attributes are neither compared nor written, it receives no `templateUuid`, and only what the source contributes below it (an `AllocationRole`'s function references, a `FunctionCategory`'s classifications) is added. The references to it follow (`AllocationRoleRef`, `FunctionCategoryRef`: uuid and path).
 
 Inside such an element, a named container the source brings (a `SubCategory`) lands on the container the project element already has: the one created from it by an earlier placement, else the one of the same name — which is the project's too, so its attributes are left alone. A container with no counterpart is added. What the project element holds besides is neither announced nor touched.
 
-Mappings are resolved for every verb — a function's categories (`verb: 'fsd'`, and the functions an application composes or an SSD carries), an application's roles (`verb: 'asd'`, or carried by an SSD) — on a first placement and on every update.
+Mappings are resolved for every verb — a function's categories (`verb: 'fsd'`, and the functions an application composes or an SSD carries), an application's roles (`verb: 'asd'`, or carried by an SSD), the variables and behaviour descriptions applying to any of them — on a first placement and on every update.
 
 #### On an update
 
@@ -360,10 +362,10 @@ On `scenario: 'instantiate'`, a shared satellite container may already exist (a 
 
 ### On `apply` / `update` — a 3-way merge
 
-For each satellite the update verb does one of:
+Every satellite tag is a shared element: where a source satellite lands is the answer of its [mapping](#shared-element-mappings), read by the report and by the apply. For each satellite the update verb does one of:
 
-- **add** — the newer template references a satellite the target lacks → clone it at its structural level and stamp instance lineage (so a newly-referenced `AllocationRole` / `Variable` travels on update, not only on first-time instantiate);
-- **reconcile in place** — an existing instance satellite → reconcile its changed attributes onto it;
+- **add** — the newer template references a satellite the instance holds nothing for, and its mapping resolves to a new element → clone it at its structural level and stamp instance lineage (so a newly-referenced `AllocationRole` / `Variable` travels on update, not only on first-time instantiate);
+- **reconcile in place** — the element the instance holds for it → reconcile it: in full when it was created from the template, only what the source contributes below it when it is the project's own;
 - **delete** — the satellite **element** was removed from the template → delete the instance, **guarded** by a whole-document last-referrer check so a satellite still referenced by another primary is kept.
 
 ::: warning Catalog persistence — un-referencing is not deletion

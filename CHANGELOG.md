@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Variables and behaviour descriptions are listed in `mappings`.** Where a `Variable` or a `BehaviorDescription` lands is resolved by the same rules and listed with `selectable: false` — shown, not chosen.
 - **Function categories are mapped like roles.** `lifecycle.report` lists a `FunctionCategory` the template brings in `mappings` — for a function, an application's composed functions and an SSD — with the project category it lands on or the new one, and the consumer chooses with `resolution.mappings`. Inside a category of the project, a `SubCategory` lands on the project's sub-category of the same name.
 - **An update keeps the mappings an instantiate made.** For each instance, `report` and `apply` find the project element it already holds for a shared source element — from the element's lineage, from the references the mapping gave it, from its name, or because it is the only one — and keep it: the mapping is listed with `reason: 'lineage'` and the new `locked: true`. A project element a role was mapped onto only receives what the template contributes; its own attributes and children are left alone and it is never deleted. A shared element the instance holds nothing for is resolved as on a first placement and can be chosen; one that cannot be told apart is listed with `ambiguous: true` instead of being guessed.
 - **A shared element the template drops takes back what the instance gave.** The project element it was mapped onto stays, with its own attributes and children; the references the instance had contributed to it are announced as removed and removed when accepted.
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **One `cloneMappings` per result; `recordMappings` is gone.** `transplant.deep`, `instantiate.fsd`, `instantiate.asd` and `instantiate.ssd` each return a single `cloneMappings`: every source record the operation cloned and the copy made of it. `instantiate.fsd` and `instantiate.asd` used to return two lists (`recordMappings` for the subtree, `cloneMappings` for everything), and `instantiate.ssd` returned only the partial one. Breaking for callers: read `cloneMappings` instead of `recordMappings`; on `instantiate.ssd` the list now also holds the variables and behaviour descriptions carried with the scope.
+- **Several project variables or behaviour descriptions with the name of an incoming one: none is picked**, as for roles and categories; the element is created under a free name.
 - **Several project categories with the name of an incoming `FunctionCategory`: none is picked.** The first one found used to receive the classification. The category is now created, under a free name, and listed with `ambiguous: true`.
 - `lifecycle.transplant` `mergeChildrenInto` returns `{ cloneMappings, redirectMappings }` (was the clone mappings alone), and finds the twin of a source container by its lineage before its name.
 - **`ReportMapping` has a required `locked` field and `MappingReason` gains `'lineage'`.** A choice for a locked mapping is refused by `report` and `apply`.
@@ -36,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **`report.mappings` lists the mapping still to decide.** With several instances of one template, an instance that already carries the mapping of a shared element hid the same element still to be mapped for another instance, and a choice made for it was refused.
+- **An update applied without decisions no longer duplicates a `Variable` or a `BehaviorDescription` that had landed on an element of the project.** The update looked for it by template lineage only and cloned a second one of the same name.
+- **A `VariableRef` / `BehaviorDescriptionRef` to a variable or behaviour description that landed on the project's points at it**, instead of keeping the template's uuid and path.
 - **The review shows a `FunctionCategory` the project already holds as matched, with the classification it gains.** The report announced the category as new while apply added the reference to the project's category of that name; both now read one answer, sub-categories included.
 - **Updating a function no longer adds a second classification to a project category.** When the function's category had landed on a category of the project, every update added one more `FunctionCatRef` to it while the review announced nothing.
 - **An application's `FunctionCategoryRef` points at the project's category.** When the category it selects landed on a category or sub-category of the project, the reference kept the template's uuid and path.

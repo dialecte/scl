@@ -4,6 +4,7 @@ import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-c
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -26,6 +27,10 @@ export async function foldCrossCuttingSatellites(
 		report: InstanceDiff
 		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
 		refsAlwaysAdded?: boolean
+		/** The project element the primary is placed under. */
+		anchor?: Scl.Ref<Scl.ElementsOf>
+		/** How an instance element carries its source element's uuid. Default `templateUuid`. */
+		matchKey?: MatchKey
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, instancePrimaryRef, report } = params
@@ -43,5 +48,8 @@ export async function foldCrossCuttingSatellites(
 		report,
 		instanceScopeId: instancePrimaryRef?.id,
 		refsAlwaysAdded: params.refsAlwaysAdded ?? false,
+		anchor: params.anchor,
+		matchKey: params.matchKey,
+		instancePrimaryRef,
 	})
 }

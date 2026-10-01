@@ -69,5 +69,7 @@ export async function reportFunction(
 			: undefined,
 		report: withLayerSatellites,
 		refsAlwaysAdded,
+		anchor: params.anchor,
+		matchKey: params.matchKey,
 	})
 }

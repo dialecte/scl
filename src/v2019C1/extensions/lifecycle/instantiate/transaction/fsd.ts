@@ -66,27 +66,27 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) that apply
 	// to any element in the function subtree also travel with it
-	const appliedMappings = await cloneAppliedSatellites(tx, {
+	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: functionRef,
 		structure,
 		strip: false,
 	})
 
-	const allMappings = [...functionMappings, ...categoryMappings, ...appliedMappings]
+	const allMappings = [...functionMappings, ...categoryMappings, ...applied.cloneMappings]
 
 	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs
 	// (e.g. FunctionCatRef -> cloned Function) onto the fresh uuids.
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
 		mode: 'stamp-template',
-		redirectMappings,
+		redirectMappings: [...redirectMappings, ...applied.redirectMappings],
 	})
 
-	// a category created here (no project category to map onto) is named at its structural level
+	// a shared element created here (no project element to map onto) is named at its structural level
 	await nameCreatedSharedElements(tx, {
 		sourceQuery,
-		cloneMappings: categoryMappings,
+		cloneMappings: [...categoryMappings, ...applied.cloneMappings],
 		structure,
 		decisionMappings: params.decisionMappings,
 	})

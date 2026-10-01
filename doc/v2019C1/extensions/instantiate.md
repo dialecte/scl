@@ -14,7 +14,7 @@ Access via `tx.lifecycle.instantiate` inside a `doc.transaction()` callback.
 
 1. clone the function subtree and its content-addressed type closure under `targetParent` (via [`transplant.deep`](./transplant));
 2. place the `FunctionCategory` classification that references the function: mapped onto the category the project already holds (see [Shared elements are mapped, not copied](#shared-elements-are-mapped-not-copied)), else cloned at its structural level in the target project — the target Substation/VoltageLevel/Bay structure is resolved from `targetParent` (which may be a `Bay`, `VoltageLevel`, or `Substation`);
-3. clone the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to any element in the function subtree, each at its own structural level;
+3. place the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to any element in the function subtree: mapped onto the project's element of that name, else cloned at its own structural level;
 4. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its FSD counterpart as its `templateUuid` while receiving a fresh `uuid`;
 5. validate the placed function against its parent context and auto-resolve a scoped-uniqueness [collision](./update#placement-collision-resolution) on its `name` (e.g. instantiating the same template twice under one Bay yields `Prot` then `Prot_1`).
 
@@ -47,6 +47,8 @@ An `AllocationRole` is an element the project holds once and several application
 With no role of that name, or with several (none is picked), the role is created like any cloned element, and a name already taken at its level is bumped to a free one.
 
 A role the project holds because an earlier placement of the same template created it comes first: it is the one proposed, even when it was renamed since.
+
+A `Variable` and a `BehaviorDescription` follow it too, except that where they land is listed and not chosen (`selectable: false`): what they apply to (`VariableApplyTo`, `InputVar` / `OutputVar`) is added to the project's element, and a reference to them (`VariableRef`, `BehaviorDescriptionRef`) points at it.
 
 A `FunctionCategory` follows the same rule, for a function, an application's composed functions and an SSD alike: mapped onto the project's category of that name, its classifications (`FunctionCatRef`) are added to it — inside the project's `SubCategory` of the same name when the source nests them — and an application's `FunctionCategoryRef` points at the project's category or sub-category.
 
