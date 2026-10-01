@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The function allocations added to a project `AllocationRole` point at the instantiated functions.** When an incoming role landed on a role of the project, the `FunctionRef`s added to that role kept the template's function uuid and path — references to nothing in the project. They are now repointed like every other cloned reference.
 - **A first-time SSD apply correlates the variables and behaviour descriptions it carried.** Their report nodes had no `appliedRef` after `apply`, because the correlation read a list that left them out; function and application instantiates were not affected.
 - **The review of a first-time application instantiate shows an `AllocationRole` that lands on an existing role of the project as such.** The report used to announce the role as added while apply added its allocations to the project role of the same name. Both now read one answer: the role appears as a companion matched onto the project role, with only the contributed function references added, and the project role's own attributes are neither compared nor written.
 

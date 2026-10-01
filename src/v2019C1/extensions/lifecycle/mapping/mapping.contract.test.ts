@@ -4,6 +4,7 @@ import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import { collectReferenceViolations } from '@/v2019C1/test/assert-coherent-scl-references'
 
 import type { DecisionMapping, ReportMapping } from './mapping.types'
 import type { Scl } from '@/v2019C1/config'
@@ -391,6 +392,10 @@ describe('shared-element mapping — the report lists where each shared element 
 			roleNames.push(name ?? '')
 		}
 		expect(roleNames.sort(), 'apply').toEqual(expectedApplied.roleNames)
+
+		// whatever the role landed on, every reference of the project points at a project element
+		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
+		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

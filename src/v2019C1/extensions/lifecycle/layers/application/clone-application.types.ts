@@ -7,3 +7,12 @@ export type CloneApplicationContentResult = {
 	/** Shared elements mapped onto elements the target already holds (nothing cloned for them). */
 	redirectMappings: RedirectMapping[]
 }
+
+/** A source AllocationRole that landed on a role the target already holds. */
+export type AllocationRoleReuse = {
+	sourceId: string
+	sourceUuid: string
+	existingRef: Scl.Ref<'AllocationRole'>
+	/** The source role's children cloned under the existing role. */
+	contributedMappings: Scl.CloneMapping[]
+}

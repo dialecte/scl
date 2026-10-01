@@ -4,6 +4,7 @@ import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import { collectReferenceViolations } from '@/v2019C1/test/assert-coherent-scl-references'
 
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
@@ -197,6 +198,10 @@ describe('shared-element mapping — the report says what apply does', () => {
 		)
 		expect(appliedOnto, 'apply').toBe(testCase.expected.mappedOnto)
 		expect(roleNames.sort()).toEqual(testCase.expected.roleNames)
+
+		// whatever the role landed on, every reference of the project points at a project element
+		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
+		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

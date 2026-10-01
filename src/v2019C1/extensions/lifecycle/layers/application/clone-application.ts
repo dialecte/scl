@@ -12,7 +12,7 @@ import {
 	createAncestryResolver,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
-import type { CloneApplicationContentResult } from './clone-application.types'
+import type { AllocationRoleReuse, CloneApplicationContentResult } from './clone-application.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -98,7 +98,11 @@ export async function cloneApplicationContent(
 		applicationRef,
 		decisionMappings,
 	})
-	for (const reuse of roleReuse) cloneIndex.set(reuse.sourceId, reuse.existingRef)
+	for (const reuse of roleReuse) {
+		cloneIndex.set(reuse.sourceId, reuse.existingRef)
+		// the allocations added to the role are clones like any other: the caller's remap repoints them
+		allMappings.push(...reuse.contributedMappings)
+	}
 
 	const REFS_ALREADY_HANDLED = new Set(['FunctionRef', 'FunctionCategoryRef'])
 	const referencedMappings = await cloneAllReferencedTargets(tx, {
@@ -130,12 +134,6 @@ export async function cloneApplicationContent(
 	}))
 
 	return { cloneMappings: allMappings, redirectMappings }
-}
-
-type AllocationRoleReuse = {
-	sourceId: string
-	sourceUuid: string
-	existingRef: Scl.Ref<'AllocationRole'>
 }
 
 /**
@@ -183,14 +181,14 @@ async function mapAllocationRoles(
 		if (!existing) continue
 
 		const existingRef: Scl.Ref<'AllocationRole'> = { tagName: 'AllocationRole', id: existing.id }
-		await addChildrenTo(tx, {
+		const contributedMappings = await addChildrenTo(tx, {
 			sourceQuery,
 			source: { tagName: 'AllocationRole', id: sourceRole.id },
 			target: existingRef,
 			strip: false,
 		})
 
-		reuse.push({ sourceId: sourceRole.id, sourceUuid: roleUuid, existingRef })
+		reuse.push({ sourceId: sourceRole.id, sourceUuid: roleUuid, existingRef, contributedMappings })
 	}
 	return reuse
 }

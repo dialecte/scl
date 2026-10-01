@@ -3,6 +3,7 @@ import { describe, expect } from 'vitest'
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import { collectReferenceViolations } from '@/v2019C1/test/assert-coherent-scl-references'
 
 import type { DecisionMapping } from './mapping.types'
 import type { Scl } from '@/v2019C1/config'
@@ -148,6 +149,10 @@ describe('shared-element mapping — an SSD carrying an application', () => {
 			roleNames.push(name ?? '')
 		}
 		expect(roleNames.sort(), 'apply').toEqual(testCase.expected.roleNames)
+
+		// whatever the role landed on, every reference of the project points at a project element
+		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
+		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
