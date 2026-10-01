@@ -1,3 +1,5 @@
+import { toRef } from '@dialecte/core/helpers'
+
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
@@ -5,12 +7,13 @@ import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/insta
 import {
 	describeMapping,
 	findMappingPolicy,
+	findWithdrawnContributions,
 	resolveSatelliteMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LeftoverRefPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DiffNode, InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type {
 	DecisionMappings,
 	ReportMapping,
@@ -61,6 +64,11 @@ export async function foldSatelliteCompanions(
 		matchKey?: MatchKey
 		/** Where the shared satellites land, when the caller already resolved it. */
 		resolvedMappings?: ResolvedMappings
+		/**
+		 * The instance being updated, for the layer that owns shared satellites: what the instance
+		 * gave to a project element the template no longer brings anything for is then announced.
+		 */
+		instancePrimaryRef?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
@@ -161,6 +169,27 @@ export async function foldSatelliteCompanions(
 				instanceRef,
 				children: [],
 			})
+		}
+	}
+
+	// what this instance gave to a project element the template no longer brings anything for
+	// stands for nothing any more: announced as removed, the element itself stays
+	if (params.instancePrimaryRef) {
+		const withdrawnContributions = await findWithdrawnContributions(query, {
+			instancePrimaryRef: params.instancePrimaryRef,
+			instanceSatelliteRefs: instanceSatelliteRefs ?? [],
+			resolvedMappings,
+			matchKey: params.matchKey,
+		})
+		for (const contribution of withdrawnContributions) {
+			const removed: DiffNode = {
+				change: 'removed',
+				tagName: contribution.tagName,
+				instanceRef: toRef(contribution),
+				children: [],
+			}
+			if (group) group.companions.push(removed)
+			else report.groups.push(...groupChanges(removed, instanceScopeId))
 		}
 	}
 

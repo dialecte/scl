@@ -179,6 +179,9 @@ async function reportApplicationInstance(
 		anchor: params.anchor,
 		matchKey: params.matchKey,
 		resolvedMappings,
+		instancePrimaryRef: instance
+			? ({ tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>)
+			: undefined,
 	})
 
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element

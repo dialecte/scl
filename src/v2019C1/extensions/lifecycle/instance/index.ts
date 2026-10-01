@@ -6,3 +6,4 @@ export {
 	findInstanceUnder,
 	scopeToTargetInstance,
 } from './find-instance'
+export { collectInstanceScope } from './instance-scope'

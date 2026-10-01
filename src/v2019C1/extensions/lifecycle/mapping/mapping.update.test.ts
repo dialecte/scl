@@ -177,11 +177,13 @@ type TestCase = SclTest.BaseXmlTestCase & {
 		announcedNewRoles: number
 		/** How many allocations of the source role the report announces as new. */
 		announcedNewAllocations: number
+		/** How many allocations the report announces as removed from a role — none when left out. */
+		announcedRemovedAllocations?: number
 		/** Names of every AllocationRole of the project once updated. */
 		roleNames: string[]
 		/** The roles the Application refers to once updated, by path. */
 		applicationRoles: string[]
-		/** The description of the role the Application refers to, once updated. */
+		/** The description of the role the Application refers to (the project's own when it refers to none), once updated. */
 		roleDescription: string | undefined
 		/** The functions that role allocates once updated, by path. */
 		roleAllocations: string[]
@@ -281,6 +283,43 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 					applicationRoles: ['S1/HMI_PC'],
 					roleDescription: 'Operator workstation',
 					roleAllocations: ['S1/V1/B1/Ctrl', 'S1/V1/B1/Local', 'S1/V1/B1/Prot'],
+				},
+			},
+		'the template role drops its allocation → it is removed from the project role, whose own allocation stays':
+			{
+				sourceXml,
+				targetXml: projectXml,
+				editTemplate: async (tx) => {
+					await tx.delete({ tagName: 'FunctionRef', id: 'role-function-ref-s' })
+				},
+				expected: {
+					mappings: [lockedOntoProjectRole],
+					announcedNewRoles: 0,
+					announcedNewAllocations: 0,
+					announcedRemovedAllocations: 1,
+					roleNames: ['HMI_PC'],
+					applicationRoles: ['S1/HMI_PC'],
+					roleDescription: 'Operator workstation',
+					roleAllocations: ['S1/V1/B1/Local'],
+				},
+			},
+		'the template drops the role altogether → the project role stays, without what this instance had given it':
+			{
+				sourceXml,
+				targetXml: projectXml,
+				editTemplate: async (tx) => {
+					await tx.delete({ tagName: 'AllocationRoleRef', id: 'role-ref-s' })
+					await tx.delete(sourceRoleRef)
+				},
+				expected: {
+					mappings: [],
+					announcedNewRoles: 0,
+					announcedNewAllocations: 0,
+					announcedRemovedAllocations: 1,
+					roleNames: ['HMI_PC'],
+					applicationRoles: [],
+					roleDescription: 'Operator workstation',
+					roleAllocations: ['S1/V1/B1/Local'],
 				},
 			},
 		'the role was created by the instantiate → the update finds it by its lineage and reconciles it in full, description included':
@@ -573,6 +612,13 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 		)
 		expect(announcedNewAllocations.length, 'report').toBe(testCase.expected.announcedNewAllocations)
 
+		const announcedRemovedAllocations = announced.filter(
+			(node) => node.tagName === 'FunctionRef' && node.change === 'removed',
+		)
+		expect(announcedRemovedAllocations.length, 'report').toBe(
+			testCase.expected.announcedRemovedAllocations ?? 0,
+		)
+
 		await target.transaction(async (tx) => {
 			await apply(tx, {
 				...updateTarget,
@@ -606,9 +652,10 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 		}
 		expect(applicationRoles.sort(), 'apply').toEqual(testCase.expected.applicationRoles)
 
-		const referencedRoleUuid = await target.query.getAttribute(roleReferences[0], {
-			name: 'allocationRoleUuid',
-		})
+		// the role the Application refers to — the project's own role once it refers to none
+		const referencedRoleUuid = roleReferences[0]
+			? await target.query.getAttribute(roleReferences[0], { name: 'allocationRoleUuid' })
+			: await target.query.getAttribute(projectRoleRef, { name: 'uuid' })
 		const [referencedRole] = await target.query.findByAttributes({
 			tagName: 'AllocationRole',
 			attributes: { uuid: referencedRoleUuid },

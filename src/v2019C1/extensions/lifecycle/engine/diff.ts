@@ -405,12 +405,18 @@ export function assembleReport(instances: ReportInstance[]): DiffReport {
 	}
 }
 
-/** Every mapping of the reported instances, once per shared source element. */
+/**
+ * Every mapping of the reported instances, once per shared source element. A choice is made per
+ * source element and reaches every instance that has yet to be given a mapping for it: when one
+ * instance already carries its mapping (locked) and another does not, the one still to decide is
+ * the one listed. The mapping each instance carries is on the instance itself.
+ */
 function collectReportMappings(instances: readonly ReportInstance[]): ReportMapping[] {
 	const mappingsBySourceId = new Map<string, ReportMapping>()
 	for (const instance of instances) {
 		for (const mapping of instance.mappings) {
-			if (!mappingsBySourceId.has(mapping.id)) mappingsBySourceId.set(mapping.id, mapping)
+			const listed = mappingsBySourceId.get(mapping.id)
+			if (!listed || (listed.locked && !mapping.locked)) mappingsBySourceId.set(mapping.id, mapping)
 		}
 	}
 	return [...mappingsBySourceId.values()]

@@ -26,6 +26,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
+	findWithdrawnContributions,
 	resolveSatelliteMappings,
 	toRedirectMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -184,6 +185,15 @@ export async function asd(
 			resolvedMappings,
 		})
 
+		// what the instance gave to a project element the template no longer brings anything for —
+		// read from the instance as it is before the reconcile below changes its references
+		const withdrawnContributions = await findWithdrawnContributions(tx, {
+			instancePrimaryRef: instance,
+			instanceSatelliteRefs,
+			resolvedMappings,
+			matchKey,
+		})
+
 		// 1. application layer
 		const reconcileMappings = await reconcile(tx, {
 			sourceQuery,
@@ -207,6 +217,12 @@ export async function asd(
 			resolvedMappings,
 			decisionMappings: params.decisionMappings,
 		})
+		for (const contribution of withdrawnContributions) {
+			// gated on the removal the report announced for it
+			if (accepted && !accepted.instanceIds.has(contribution.id)) continue
+			const live = await tx.any.getRecord(contribution)
+			if (live) await tx.any.delete(contribution)
+		}
 		// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
 		// in the Application subtree travel with the application group
 		const crossMappings = await reconcileCrossCuttingSatellites(tx, {

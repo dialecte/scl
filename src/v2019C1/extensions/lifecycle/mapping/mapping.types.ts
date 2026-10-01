@@ -1,7 +1,7 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
-import type { AnyTrackedRecord } from '@dialecte/core'
+import type { AnyRefOrRecord, AnyTrackedRecord } from '@dialecte/core'
 
 /** A read surface shared by the report (Query) and the apply (Transaction). */
 export type MappingReader = Core.Query<Config> | Core.Transaction<Config>
@@ -65,6 +65,16 @@ export type ResolveSatelliteMappingsParams = {
 	instanceSatelliteRefs?: readonly Scl.Ref<Scl.ElementsOf>[]
 	/** The consumer's choices, by source record id. */
 	decisionMappings?: DecisionMappings
+	matchKey?: MatchKey
+}
+
+export type FindWithdrawnContributionsParams = {
+	/** The instance being updated. */
+	instancePrimaryRef: AnyRefOrRecord
+	/** The project elements carried with the instance, as they were before the update. */
+	instanceSatelliteRefs: readonly Scl.Ref<Scl.ElementsOf>[]
+	/** Where the shared source elements of the template land for this instance. */
+	resolvedMappings: ResolvedMappings
 	matchKey?: MatchKey
 }
 

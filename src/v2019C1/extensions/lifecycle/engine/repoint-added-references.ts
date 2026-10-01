@@ -1,4 +1,5 @@
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { collectInstanceScope } from '@/v2019C1/extensions/lifecycle/instance'
 import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 
 import type {
@@ -8,7 +9,7 @@ import type {
 import type { Config, Scl } from '@/v2019C1/config'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
-import type { AnyRefOrRecord, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
+import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
  * Repoint the references an update ADDED to one instance onto the elements of the project.
@@ -99,43 +100,6 @@ async function findInstanceCounterpart(
 	const instanceScope = await resolveInstanceScope()
 	const inInstance = candidates.filter((candidate) => instanceScope.has(candidate.id))
 	return inInstance.length === 1 ? inInstance[0] : undefined
-}
-
-/**
- * The record ids of the elements that belong to an instance: the elements of its subtree and the
- * elements its references point at.
- */
-async function collectInstanceScope(
-	tx: Core.Transaction<Config>,
-	instanceRootRef: AnyRefOrRecord,
-): Promise<Set<string>> {
-	const scope = new Set<string>()
-	const instanceTree = await tx.any.getTree(instanceRootRef)
-	if (instanceTree) await collectNodeScope(tx, { node: instanceTree, scope })
-	return scope
-}
-
-async function collectNodeScope(
-	tx: Core.Transaction<Config>,
-	params: { node: AnyTreeRecord; scope: Set<string> },
-): Promise<void> {
-	const { node, scope } = params
-	scope.add(node.id)
-
-	const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS] ?? []
-	for (const pair of pairs) {
-		const referencedUuid = await tx.any.getAttribute(node, { name: pair.attribute.uuid })
-		if (!referencedUuid) continue
-		for (const tagName of pair.target) {
-			const referenced = await tx.any.findByAttributes({
-				tagName: tagName as Scl.ElementsOf,
-				attributes: { uuid: referencedUuid },
-			})
-			for (const record of referenced) scope.add(record.id)
-		}
-	}
-
-	for (const child of node.tree) await collectNodeScope(tx, { node: child, scope })
 }
 
 function readAttribute(
