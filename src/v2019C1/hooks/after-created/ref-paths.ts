@@ -5,7 +5,7 @@ import { PAIRS_BY_REF } from '@/v2019C1/extensions/reference'
 import { buildReferencePath } from '@/v2019C1/extensions/reference/query/build'
 import {
 	getRefEntriesForTarget,
-	reconcileMappedName,
+	reconcileMappedData,
 	updateRefsForEntry,
 } from '@/v2019C1/hooks/shared'
 
@@ -33,7 +33,7 @@ export async function setRefPaths<GenericElement extends Scl.ElementsOf>(params:
 	const asRef = await setRefPathOnCreatedRef({ childRecord, query })
 	const asTarget = await setRefPathsOnCreatedTarget({ childRecord, query })
 
-	const mappedNameOp = await reconcileMappedName(query, widen(childRecord))
+	const mappedNameOp = await reconcileMappedData(query, { record: widen(childRecord) })
 	const asMappedName = mappedNameOp ? [mappedNameOp] : []
 
 	return [...asRef, ...asTarget, ...asMappedName]

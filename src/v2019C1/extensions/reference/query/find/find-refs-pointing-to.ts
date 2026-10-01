@@ -1,3 +1,5 @@
+import { findMappedDataFollowingLn } from './find-mapped-data-following-ln'
+
 import { isElementOf } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG, Scl, Config } from '@/v2019C1/config'
@@ -21,6 +23,9 @@ import type * as Core from '@dialecte/core'
  * - **type-id refs** (`TYPE_ID_REFERENCE_PAIRS`) — when the target is a
  *   DataTypeTemplates type (LNodeType/DOType/DAType/EnumType), matched on the
  *   target `id` (`lnType`, `DO.type`, `DA.type`, …).
+ *
+ * For an `LN` / `LN0` target, the `DOS` / `SDS` / `DAS` it implements by default (they
+ * carry no `mappedLnUuid`) are included too.
  */
 export async function findRefsPointingTo(
 	query: Core.Query<Config>,
@@ -38,7 +43,20 @@ export async function findRefsPointingTo(
 		return findTypeIdReferrers(query, targetRecord, containerTagName)
 	}
 
-	return findUuidReferrers(query, targetRecord, containerTagName)
+	const uuidReferrers = await findUuidReferrers(query, targetRecord, containerTagName)
+	if (targetRecord.tagName !== 'LN' && targetRecord.tagName !== 'LN0') return uuidReferrers
+
+	const following = await findMappedDataFollowingLn(query, {
+		ln: targetRecord as Scl.TrackedRecord<'LN' | 'LN0'>,
+	})
+	const defaultReferrers: ResolvedReference[] = []
+	for (const ref of following) {
+		const container = containerTagName
+			? await findAncestorByTagName(query, ref, containerTagName)
+			: undefined
+		defaultReferrers.push({ ref, container })
+	}
+	return [...uuidReferrers, ...defaultReferrers]
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

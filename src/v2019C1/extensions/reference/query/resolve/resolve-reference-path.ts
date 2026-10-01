@@ -1,11 +1,12 @@
 import { getPathSegment } from '../build/path-segment'
 import { parseReferencePath, parsePathSegments, splitLnodeQualifier } from './parse-path'
+import { resolveMappedData } from './resolve-mapped-data'
 
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DEFINITION } from '@/v2019C1/definition'
-import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
+import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
 
 import type { PathSegment } from '../build/path-segment.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -41,6 +42,20 @@ export async function resolveReferencePath(
 ): Promise<ResolveResult | undefined> {
 	const pair = findReferencePair(record.tagName, pathAttribute)
 	if (!pair) return undefined
+
+	// A DOS / SDS / DAS is implemented even when it names nothing: it follows its default.
+	if (MAPPED_NAME_REFS.has(record.tagName)) {
+		const mappedData = await resolveMappedData(query, {
+			reference: { tagName: record.tagName, id: record.id } as Scl.Ref<'DOS' | 'SDS' | 'DAS'>,
+		})
+		if (!mappedData) return undefined
+		const ln = await query.getRecord(mappedData.ln)
+		if (!ln) return undefined
+		return {
+			record: ln as Scl.TrackedRecord<Scl.ElementsOf>,
+			qualifier: mappedData.dataPath.join('.'),
+		}
+	}
 
 	const pathValue = record.attributes.find((a) => a.name === pathAttribute)?.value
 	if (!pathValue) return undefined
