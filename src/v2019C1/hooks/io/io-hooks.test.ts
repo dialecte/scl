@@ -101,6 +101,44 @@ describe('createSclIoHooks', () => {
 		})
 	})
 
+	it('DOS with another DO name under a mapped LNode → uuid added, no warning', async () => {
+		const hooks = createSclIoHooks()
+		const lnode = makeRecord('LNode', { lnClass: 'PTOC', lnInst: '1', lnUuid: 'ptoc1-uuid' })
+		const dos = makeRecord('DOS', { name: 'Mod', mappedDoName: 'Health' })
+
+		hooks.beforeImportRecord!({ record: dos, ancestry: [lnode] })
+		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
+		hooks.beforeImportRecord!({ record: makeRecord('LN', { uuid: 'ptoc1-uuid' }), ancestry: [] })
+
+		const result = await hooks.afterImport!()
+		expect(result.warnings ?? []).toEqual([])
+		expect(result.updates).toEqual([
+			{
+				recordId: dos.id,
+				attributes: [
+					{ name: 'mappedDoName', value: 'Health' },
+					{ name: 'mappedLnUuid', value: 'ptoc1-uuid' },
+				],
+			},
+		])
+	})
+
+	it('DOS with an absolute reference to a logical node absent from the file → unresolved warning', async () => {
+		const hooks = createSclIoHooks()
+		const lnode = makeRecord('LNode', { lnClass: 'PTOC', lnInst: '1', lnUuid: 'ptoc1-uuid' })
+		const dos = makeRecord('DOS', { name: 'Op', mappedDoName: 'OTHER/LD0/GGIO9.Ind2' })
+
+		hooks.beforeImportRecord!({ record: dos, ancestry: [lnode] })
+		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
+		hooks.beforeImportRecord!({ record: makeRecord('LN', { uuid: 'ptoc1-uuid' }), ancestry: [] })
+
+		const result = await hooks.afterImport!()
+		expect(result.updates ?? []).toEqual([])
+		expect(
+			result.warnings?.map((warning) => ({ type: warning.type, recordId: warning.recordId })),
+		).toEqual([{ type: 'unresolved-reference', recordId: dos.id }])
+	})
+
 	it('Function indexed before FunctionRef → FunctionRef resolved with functionUuid', async () => {
 		const hooks = createSclIoHooks()
 		const refRecord = makeRecord('FunctionRef', { function: 'F1' })

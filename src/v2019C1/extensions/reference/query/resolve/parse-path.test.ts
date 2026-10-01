@@ -213,7 +213,7 @@ describe('reference-parsing', () => {
 
 	describe('IEC 7-2 ObjectReference (lnode strategy)', () => {
 		const testCases: SclTest.TestCases = {
-			'DOS.mappedDoName referencing IED LN → mappedLnUuid populated': {
+			'DOS.mappedDoName referencing IED LN → mappedLnUuid paired, name from the logical node': {
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
@@ -238,11 +238,9 @@ describe('reference-parsing', () => {
 						</IED>
 					</SCL>
 				`,
-				expectedQueries: [
-					'//v2019C1:DOS[@mappedDoName="IED1/LD1/XCBR1.Pos" and @mappedLnUuid="ied-xcbr-uuid"]',
-				],
+				expectedQueries: ['//v2019C1:DOS[@mappedDoName="Pos" and @mappedLnUuid="ied-xcbr-uuid"]'],
 			},
-			'DAS.mappedDaName referencing IED LN → mappedLnUuid populated': {
+			'DAS.mappedDaName referencing IED LN → mappedLnUuid paired, name from the logical node': {
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
@@ -268,11 +266,12 @@ describe('reference-parsing', () => {
 					</SCL>
 				`,
 				expectedQueries: [
-					'//v2019C1:DAS[@mappedDaName="IED1/LD1/XCBR1.Pos.stVal" and @mappedLnUuid="ied-xcbr-uuid"]',
+					'//v2019C1:DAS[@mappedDaName="Pos.stVal" and @mappedLnUuid="ied-xcbr-uuid"]',
 				],
 			},
-			'DOS.mappedDoName through transparent AccessPoint → mappedLnUuid populated': {
-				sourceXml: /* xml */ `
+			'DOS.mappedDoName through transparent AccessPoint → mappedLnUuid paired, name from the logical node':
+				{
+					sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Bay name="B1">
@@ -294,10 +293,8 @@ describe('reference-parsing', () => {
 						</IED>
 					</SCL>
 				`,
-				expectedQueries: [
-					'//v2019C1:DOS[@mappedDoName="PIU/CT_Function/I01ATCTR1.AmpSv" and @mappedLnUuid="tctr-uuid"]',
-				],
-			},
+					expectedQueries: ['//v2019C1:DOS[@mappedDoName="AmpSv" and @mappedLnUuid="tctr-uuid"]'],
+				},
 		}
 
 		runSclTestCases.withExport({
