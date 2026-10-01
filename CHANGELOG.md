@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `reference.query.resolveMappedData({ reference })`: the logical node and data path that implement a `DOS` / `SDS` / `DAS`, also when the record names nothing and follows its default (its parent data, or the logical node its `LNode` is mapped to, with its own name).
 
-- `reference.transaction.setMappedData({ reference, implementation })`: state which data implements a `DOS` / `SDS` / `DAS`; scl stores the attributes and returns `stored`, `default` or `inexpressible` (nothing written when the schema cannot hold the path on that record).
+- `tx.reference.setMappedData({ reference, implementation })`: state which data implements a `DOS` / `SDS` / `DAS`; scl stores the attributes and returns `stored`, `default` or `inexpressible` (nothing written when the schema cannot hold the path on that record).
 
 ### Changed
 

@@ -413,13 +413,10 @@ Access via `tx.reference` inside a `doc.transaction()` callback.
 States which data implements a `DOS` / `SDS` / `DAS` and returns what was stored. The writer gives the intent; scl decides the attributes.
 
 ```ts
-reference.transaction.setMappedData(
-  tx: Scl.Transaction,
-  params: {
-    reference: Scl.Ref<'DOS' | 'SDS' | 'DAS'>
-    implementation?: { ln: Scl.Ref<'LN' | 'LN0'>; dataPath: readonly string[] } // omit: follow the default
-  },
-): Promise<{ kind: 'stored' | 'default' | 'inexpressible' }>
+tx.reference.setMappedData(params: {
+  reference: Scl.Ref<'DOS' | 'SDS' | 'DAS'>
+  implementation?: { ln: Scl.Ref<'LN' | 'LN0'>; dataPath: readonly string[] } // omit: follow the default
+}): Promise<{ kind: 'stored' | 'default' | 'inexpressible' }>
 ```
 
 ```ts
