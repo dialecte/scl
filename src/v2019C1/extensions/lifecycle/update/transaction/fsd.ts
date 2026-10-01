@@ -3,7 +3,6 @@ import { reconcileCarriedSatellites } from './function-satellites'
 
 import {
 	annotateInstance,
-	mergeApplied,
 	sourceToTargetMap,
 } from '@/v2019C1/extensions/lifecycle/engine/correlate'
 import {
@@ -15,6 +14,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
+import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import { findInstancesUnder, scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	fsd as instantiateFsd,
@@ -120,7 +120,7 @@ export async function fsd(
 			decisions,
 		})
 
-		const reconcileMap = await reconcile(tx, {
+		const reconcileMappings = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: functionRef,
 			instanceRootRef: instance,
@@ -131,7 +131,7 @@ export async function fsd(
 			identityMode,
 		})
 		// carried satellites (e.g. FunctionCategory) travel with the function group
-		const carriedMap = await reconcileCarriedSatellites(tx, {
+		const carriedMappings = await reconcileCarriedSatellites(tx, {
 			sourceQuery,
 			functionRef,
 			instanceRef: instance,
@@ -141,7 +141,7 @@ export async function fsd(
 			identityMode,
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
-		const crossMap = await reconcileCrossCuttingSatellites(tx, {
+		const crossMappings = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
 			primaryRef: functionRef,
 			instancePrimaryRef: { tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
@@ -151,12 +151,17 @@ export async function fsd(
 			identityMode,
 		})
 		// carry the report->applied correlation onto this instance's report nodes
+		const addedMappings = [...reconcileMappings, ...carriedMappings, ...crossMappings]
+		// the references this instance gained may point outside the subtree they were added with:
+		// at another element added here, or at an element the instance already holds
+		await repointAddedReferences(tx, {
+			cloneMappings: addedMappings,
+			instanceRootRef: instance,
+			matchKey,
+		})
 		const reportInstance = reportInstanceById(report, instance.id)
 		if (reportInstance) {
-			annotateInstance({
-				reportInstance,
-				added: mergeApplied(reconcileMap, carriedMap, crossMap),
-			})
+			annotateInstance({ reportInstance, added: sourceToTargetMap(addedMappings) })
 		}
 	}
 

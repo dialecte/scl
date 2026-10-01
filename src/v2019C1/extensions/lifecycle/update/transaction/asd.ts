@@ -4,7 +4,6 @@ import { reconcileSatellites } from './satellite-reconcile'
 
 import {
 	annotateInstance,
-	mergeApplied,
 	sourceToTargetMap,
 } from '@/v2019C1/extensions/lifecycle/engine/correlate'
 import {
@@ -15,6 +14,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
+import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import {
 	collectComposedFunctionUuids,
 	findInstancesByTemplateUuid,
@@ -35,6 +35,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
@@ -138,6 +139,8 @@ export async function asd(
 	// from the returned `applications` — otherwise a consumer's post-apply policy
 	// would run against instances the user chose to skip.
 	const writtenInstances: Scl.Ref<'Application'>[] = []
+	// what the update added to each instance, repointed once the composed functions exist (below)
+	const additions: InstanceAdditions[] = []
 
 	for (const instance of instances) {
 		// gate THIS instance by only its own groups (source ids are unique within one instance)
@@ -162,7 +165,7 @@ export async function asd(
 		})
 
 		// 1. application layer
-		const reconcileMap = await reconcile(tx, {
+		const reconcileMappings = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: applicationRef,
 			instanceRootRef: instance,
@@ -172,7 +175,7 @@ export async function asd(
 			matchKey,
 			identityMode,
 		})
-		const satelliteMap = await reconcileSatellites(tx, {
+		const satelliteMappings = await reconcileSatellites(tx, {
 			sourceQuery,
 			satelliteRefs,
 			instanceSatelliteRefs,
@@ -183,7 +186,7 @@ export async function asd(
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
 		// in the Application subtree travel with the application group
-		const crossMap = await reconcileCrossCuttingSatellites(tx, {
+		const crossMappings = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
 			primaryRef: applicationRef,
 			instancePrimaryRef: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
@@ -194,12 +197,11 @@ export async function asd(
 		})
 		// carry the report->applied correlation onto this Application instance's report nodes (the
 		// composed Functions are annotated by the FSD cascade below)
+		const addedMappings = [...reconcileMappings, ...satelliteMappings, ...crossMappings]
+		additions.push({ instanceRootRef: instance, cloneMappings: addedMappings })
 		const reportInstance = reportInstanceById(report, instance.id)
 		if (reportInstance) {
-			annotateInstance({
-				reportInstance,
-				added: mergeApplied(reconcileMap, satelliteMap, crossMap),
-			})
+			annotateInstance({ reportInstance, added: sourceToTargetMap(addedMappings) })
 		}
 	}
 
@@ -214,6 +216,12 @@ export async function asd(
 		keepNameTypesFrom,
 		targetInstance,
 	})
+
+	// 3. the references each instance gained now have every target they can point at: the
+	// satellites added above and the composed functions the cascade placed
+	for (const { instanceRootRef, cloneMappings } of additions) {
+		await repointAddedReferences(tx, { cloneMappings, instanceRootRef, matchKey })
+	}
 
 	return {
 		applications: writtenInstances,

@@ -462,3 +462,123 @@ describe('update.ssd - fork keeps identity', () => {
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+// Equipment a newer revision adds to a bay may refer to an element the bay already holds (here an
+// LNode of the bay's function): the reference must point at the element of ITS OWN bay.
+describe('update.ssd - a reference added with the frame points at the element of its own bay', () => {
+	const referenceSourceXml = /* xml */ `
+		<SCL ${ns} ${id}="ssd-r">
+			<Header id="ssd-header-r" uuid="ssd-r-uuid" version="0" revision="1" ${id}="hdr-r"/>
+			<Substation name="TEMPLATE" ${id}="sub-r">
+				<VoltageLevel name="TEMPLATE" ${id}="vl-r">
+					<Bay name="B1" ${id}="bay-r">
+						<ConductingEquipment name="QA1" type="CBR" ${id}="ce-r"/>
+						<Function name="Prot" uuid="fn-r-uuid" ${id}="fn-r">
+							<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" uuid="lnode-r-uuid" ${id}="lnode-r"/>
+						</Function>
+					</Bay>
+				</VoltageLevel>
+			</Substation>
+			<DataTypeTemplates ${id}="dtt-r">
+				<LNodeType id="CSWI_Type" lnClass="CSWI" ${id}="lnt-r">
+					<DO name="Pos" type="DPC_Type" ${id}="do-r"/>
+				</LNodeType>
+				<DOType id="DPC_Type" cdc="DPC" ${id}="dot-r">
+					<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-r"/>
+				</DOType>
+			</DataTypeTemplates>
+		</SCL>
+	`
+
+	const referenceTargetXml = /* xml */ `
+		<SCL ${ns} ${id}="scd-r">
+			<Header id="proj-r" uuid="proj-r-uuid" ${id}="hdr-tr"/>
+			<Substation name="S1" ${id}="sub-tr">
+				<VoltageLevel name="VA" ${id}="vl-ra"/>
+				<VoltageLevel name="VB" ${id}="vl-rb"/>
+			</Substation>
+		</SCL>
+	`
+
+	const referenceScope = { tagName: 'Bay', id: 'bay-r' } as Scl.Ref<'Bay'>
+	const equipmentRef = {
+		tagName: 'ConductingEquipment',
+		id: 'ce-r',
+	} as Scl.Ref<'ConductingEquipment'>
+	const voltageLevelA = { tagName: 'VoltageLevel', id: 'vl-ra' } as Scl.Ref<'VoltageLevel'>
+	const voltageLevelB = { tagName: 'VoltageLevel', id: 'vl-rb' } as Scl.Ref<'VoltageLevel'>
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'the equipment of each bay gains a function fed by the LNode of that bay': {
+			sourceXml: referenceSourceXml,
+			targetXml: referenceTargetXml,
+			expectedQueries: [
+				'//default:VoltageLevel[@name="VA"]/default:Bay//v2019C1:SourceRef[@sourceLNodeUuid = //default:VoltageLevel[@name="VA"]/default:Bay/default:Function/default:LNode/@uuid]',
+				'//default:VoltageLevel[@name="VB"]/default:Bay//v2019C1:SourceRef[@sourceLNodeUuid = //default:VoltageLevel[@name="VB"]/default:Bay/default:Function/default:LNode/@uuid]',
+			],
+			unexpectedQueries: ['//v2019C1:SourceRef[@sourceLNodeUuid="lnode-r-uuid"]'],
+		},
+	}
+
+	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+
+		// 1. the same bay-typical under two VoltageLevels
+		await target.transaction(async (tx) => {
+			await instantiateSsd(tx, {
+				sourceQuery: source.query,
+				scopeRef: referenceScope,
+				targetParent: voltageLevelA,
+			})
+			await instantiateSsd(tx, {
+				sourceQuery: source.query,
+				scopeRef: referenceScope,
+				targetParent: voltageLevelB,
+			})
+		})
+
+		// 2. a newer revision gives the equipment a function whose LNode is fed by the bay function's LNode
+		await source.transaction(async (tx) => {
+			const equipmentFunction = await tx.addChild(equipmentRef, {
+				tagName: 'EqFunction',
+				attributes: { name: 'Switch', uuid: 'eq-function-r-uuid' },
+			})
+			const logicalNode = await tx.addChild(equipmentFunction, {
+				tagName: 'LNode',
+				attributes: {
+					iedName: 'None',
+					lnClass: 'XCBR',
+					lnInst: '1',
+					lnType: 'CSWI_Type',
+					uuid: 'eq-lnode-r-uuid',
+				},
+			})
+			const inputs = await tx.addChild(logicalNode, { tagName: 'LNodeInputs', attributes: {} })
+			await tx.addChild(inputs, {
+				tagName: 'SourceRef',
+				attributes: {
+					input: 'Position',
+					source: 'TEMPLATE/TEMPLATE/B1/Prot/CSWI1',
+					sourceLNodeUuid: 'lnode-r-uuid',
+					sourceDoName: 'Pos',
+					sourceDaName: 'stVal',
+					uuid: 'source-ref-r-uuid',
+				},
+			})
+		})
+
+		// 3. reconcile the project against the newer SSD (headless: no gate)
+		await target.transaction(async (tx) => {
+			await updateSsd(tx, {
+				sourceQuery: source.query,
+				scopeRef: referenceScope,
+				targetParent: voltageLevelA,
+				scenario: 'template',
+			})
+		})
+
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})

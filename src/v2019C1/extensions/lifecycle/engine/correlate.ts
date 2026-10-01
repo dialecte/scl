@@ -5,19 +5,11 @@ import type { AnyRefOrRecord } from '@dialecte/core'
 /** A source record id → the element it became in the applied document. */
 export type AppliedTargets = ReadonlyMap<string, AnyRefOrRecord>
 
-/** Merge several `source.id → applied ref` maps (later wins) into one. */
-export function mergeApplied(
-	...maps: ReadonlyMap<string, AnyRefOrRecord>[]
-): Map<string, AnyRefOrRecord> {
-	const out = new Map<string, AnyRefOrRecord>()
-	for (const map of maps) for (const [source, target] of map) out.set(source, target)
-	return out
-}
-
 /**
- * Build a `source.id → target ref` map from one clone's mappings. Within a single clone each source
- * element is cloned once, so the map is unambiguous; the per-instance assembly (one map per instance)
- * is what keeps two instances of the same template distinct.
+ * Build a `source.id → target ref` map from the clone mappings of ONE instance (a first-time clone,
+ * or everything an update added to it). Within one instance each source element is cloned once, so
+ * the map is unambiguous; the per-instance assembly (one map per instance) is what keeps two
+ * instances of the same template distinct.
  */
 export function sourceToTargetMap(
 	cloneMappings: readonly Scl.CloneMapping[],

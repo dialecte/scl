@@ -364,6 +364,14 @@ The update verbs are built on two engine primitives in `extensions/lifecycle/eng
 
 Because the instance is already in instance-space, comparing template to instance is clean once identity and the project-owned `name` are excluded — no attribute-suppression heuristics.
 
+`reconcile` returns the clone mappings of what it added (each source record and the copy made of it).
+
+#### References added by an update
+
+An element the update adds may refer to an element outside the subtree it was added with: a function the same update instantiates, a satellite it creates, or an element the instance already holds. Once everything the update adds to an instance exists, the update verbs repoint those references (`repointAddedReferences`): the uuid is replaced by the uuid of the project element and the path is rebuilt, exactly as on a first instantiate.
+
+The project element is the one carrying the source element's lineage. When the template was instantiated several times, several elements carry it: the one the instance contains or already refers to is taken, so each instance points at its own elements. A reference that cannot be told apart is left untouched.
+
 ### diff — report + classify
 
 `diff({ sourceQuery, targetQuery, sourceRootRef, instanceRootRef })` is a **pure query** that produces a `DiffReport` without mutating:

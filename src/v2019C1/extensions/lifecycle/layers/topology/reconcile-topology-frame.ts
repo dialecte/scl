@@ -1,5 +1,8 @@
 import { FRAME_OMIT_CHILD_TAGS } from '@/v2019C1/constants'
-import { annotateInstance } from '@/v2019C1/extensions/lifecycle/engine/correlate'
+import {
+	annotateInstance,
+	sourceToTargetMap,
+} from '@/v2019C1/extensions/lifecycle/engine/correlate'
 import {
 	acceptedRefIds,
 	collisionOverrides,
@@ -16,6 +19,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 
@@ -43,7 +47,7 @@ export async function reconcileTopologyFrame(
 		/** Multi-instance anchor: reconcile only the frame instance that IS the target (or under it). */
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
 	},
-): Promise<void> {
+): Promise<InstanceAdditions[]> {
 	const { sourceQuery, scopeRef, matchKey, identityMode, report, decisions, targetInstance } =
 		params
 
@@ -55,6 +59,10 @@ export async function reconcileTopologyFrame(
 	})
 	const instances = await scopeToTargetInstance(tx, { instances: matched, targetInstance })
 
+	// what was added to each frame instance: its references are repointed by the caller once the
+	// fn/app cascade has placed everything they can point at
+	const additions: InstanceAdditions[] = []
+
 	for (const instance of instances) {
 		const instanceGroups = groupsForInstance(report, instance.id)
 		const accepted = decisions ? acceptedRefIds({ groups: instanceGroups, decisions }) : undefined
@@ -62,7 +70,7 @@ export async function reconcileTopologyFrame(
 			? collisionOverrides({ groups: instanceGroups, decisions })
 			: undefined
 
-		const reconcileMap = await reconcile(tx, {
+		const reconcileMappings = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: scopeRef,
 			instanceRootRef: instance,
@@ -75,6 +83,11 @@ export async function reconcileTopologyFrame(
 		// carry the report->applied correlation onto this frame instance's report nodes (fn/app tags
 		// are a boundary here — their instances are annotated by the fn/app cascade)
 		const reportInstance = reportInstanceById(report, instance.id)
-		if (reportInstance) annotateInstance({ reportInstance, added: reconcileMap })
+		additions.push({ instanceRootRef: instance, cloneMappings: reconcileMappings })
+		if (reportInstance) {
+			annotateInstance({ reportInstance, added: sourceToTargetMap(reconcileMappings) })
+		}
 	}
+
+	return additions
 }

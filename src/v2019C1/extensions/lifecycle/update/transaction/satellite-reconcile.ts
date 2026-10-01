@@ -13,7 +13,6 @@ import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.t
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
-import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
  * Reconcile each satellite against the target, gated by `accepted`. Generic over
@@ -45,7 +44,7 @@ export async function reconcileSatellites(
 		/** `stamp-template` (default) or `keep` (fork) identity for an added satellite. */
 		identityMode?: IdentityMode
 	},
-): Promise<Map<string, AnyRefOrRecord>> {
+): Promise<Scl.CloneMapping[]> {
 	const {
 		sourceQuery,
 		satelliteRefs,
@@ -56,8 +55,8 @@ export async function reconcileSatellites(
 		identityMode = 'stamp-template',
 	} = params
 
-	// source.id -> applied ref for every satellite element added/reconciled here (see `annotateInstance`)
-	const added = new Map<string, AnyRefOrRecord>()
+	// the clone mappings of every satellite element added here (see `annotateInstance`)
+	const added: Scl.CloneMapping[] = []
 
 	for (const satelliteRef of satelliteRefs) {
 		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
@@ -69,16 +68,15 @@ export async function reconcileSatellites(
 		})
 
 		if (instance) {
-			for (const [source, target] of await reconcile(tx, {
+			const reconcileMappings = await reconcile(tx, {
 				sourceQuery,
 				sourceRootRef: satelliteRef,
 				instanceRootRef: instance,
 				accepted,
 				matchKey,
 				identityMode,
-			})) {
-				added.set(source, target)
-			}
+			})
+			added.push(...reconcileMappings)
 			continue
 		}
 
@@ -95,9 +93,7 @@ export async function reconcileSatellites(
 		})
 		if (clone) {
 			await finalizeClonedIdentity(tx, { cloneMappings: clone.mappings, mode: identityMode })
-			for (const mapping of clone.mappings) {
-				if (mapping.source.id) added.set(mapping.source.id, mapping.target)
-			}
+			added.push(...clone.mappings)
 		}
 	}
 

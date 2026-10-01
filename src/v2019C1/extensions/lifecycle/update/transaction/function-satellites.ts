@@ -49,7 +49,7 @@ export async function reconcileCarriedSatellites(
 		/** `stamp-template` (default) or `keep` (fork) identity for an added satellite. */
 		identityMode?: IdentityMode
 	},
-): Promise<Map<string, AnyRefOrRecord>> {
+): Promise<Scl.CloneMapping[]> {
 	const {
 		sourceQuery,
 		functionRef,
@@ -60,8 +60,8 @@ export async function reconcileCarriedSatellites(
 		identityMode = 'stamp-template',
 	} = params
 
-	// source.id -> applied ref for every satellite element added here (see `annotateInstance`)
-	const added = new Map<string, AnyRefOrRecord>()
+	// the clone mappings of every satellite element added here (see `annotateInstance`)
+	const added: Scl.CloneMapping[] = []
 
 	const satellites = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
 	let hasMissing = false
@@ -77,16 +77,15 @@ export async function reconcileCarriedSatellites(
 			continue
 		}
 
-		for (const [source, target] of await reconcile(tx, {
+		const reconcileMappings = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: satelliteRef,
 			instanceRootRef: instance,
 			accepted,
 			matchKey,
 			identityMode,
-		})) {
-			added.set(source, target)
-		}
+		})
+		added.push(...reconcileMappings)
 	}
 
 	// add newly-classified satellites (companions of the function group), gated by
@@ -100,9 +99,7 @@ export async function reconcileCarriedSatellites(
 			stripCategoriesUuid: false,
 		})
 		await finalizeClonedIdentity(tx, { cloneMappings, mode: identityMode })
-		for (const mapping of cloneMappings) {
-			if (mapping.source.id) added.set(mapping.source.id, mapping.target)
-		}
+		added.push(...cloneMappings)
 	}
 
 	// delete: an instance satellite whose template ELEMENT was retired from the source

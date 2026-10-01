@@ -7,6 +7,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/engine/correlate'
 import { collisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import { ssd as instantiateSsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import {
@@ -113,7 +114,7 @@ export async function ssd(
 	// reconcile the topology frame's OWN content (BayType/equipment/attrs) before the fn/app
 	// cascade; the fn/app tags are a boundary, so the cascade below owns them. Each frame
 	// instance is gated by ONLY its own decision groups (from report.ssd) in the full track.
-	await reconcileTopologyFrame(tx, {
+	const frameAdditions = await reconcileTopologyFrame(tx, {
 		sourceQuery,
 		scopeRef: root,
 		matchKey,
@@ -150,6 +151,11 @@ export async function ssd(
 			targetInstance,
 		})
 		functions.push(...updated)
+	}
+
+	// the references the frame gained can point at anything the cascade placed above
+	for (const { instanceRootRef, cloneMappings } of frameAdditions) {
+		await repointAddedReferences(tx, { cloneMappings, instanceRootRef, matchKey })
 	}
 
 	return { applications, functions }
