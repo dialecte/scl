@@ -1,6 +1,6 @@
 import { invariant } from '@dialecte/core/utils'
 
-import type { MappingDecisionMap, ReportMapping } from './mapping.types'
+import type { DecisionMappings, ReportMapping } from './mapping.types'
 
 /**
  * Reject a set of mapping choices the report cannot honour. Runs on the report (the choices it
@@ -8,11 +8,11 @@ import type { MappingDecisionMap, ReportMapping } from './mapping.types'
  */
 export function assertMappingsCoherent(params: {
 	mappings: readonly ReportMapping[]
-	mappingDecisions: MappingDecisionMap
+	decisionMappings: DecisionMappings
 }): void {
-	const { mappings, mappingDecisions } = params
+	const { mappings, decisionMappings } = params
 
-	for (const [sourceId, decision] of mappingDecisions) {
+	for (const [sourceId, decision] of decisionMappings) {
 		const mapping = mappings.find((reported) => reported.id === sourceId)
 		invariant(mapping, {
 			detail: `mapping choice for "${sourceId}": the report lists no shared element "${sourceId}"`,

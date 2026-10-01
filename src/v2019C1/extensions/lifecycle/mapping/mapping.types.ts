@@ -37,7 +37,7 @@ export type MappingCandidate = {
 export type DecisionMapping = { existing: Scl.Ref<Scl.ElementsOf> } | { create: { name?: string } }
 
 /** The consumer's choices, keyed by the record id of the source element. */
-export type MappingDecisionMap = ReadonlyMap<string, DecisionMapping>
+export type DecisionMappings = ReadonlyMap<string, DecisionMapping>
 
 /** What the report says about one shared source element. */
 export type ReportMapping = {

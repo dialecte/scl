@@ -46,8 +46,8 @@ export async function apply(
 	const decisions = params.resolution?.decisions
 
 	// mapping choices the report cannot honour are refused before any write
-	const mappingDecisions = params.resolution?.mappings
-	if (mappingDecisions) assertMappingsCoherent({ mappings: report.mappings, mappingDecisions })
+	const decisionMappings = params.resolution?.mappings
+	if (decisionMappings) assertMappingsCoherent({ mappings: report.mappings, decisionMappings })
 
 	// No decisions supplied: fast track applies headless; full track waits for a human.
 	if (!decisions) {
@@ -106,6 +106,7 @@ async function runVerb(
 			report,
 			decisions,
 			keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
+			decisionMappings: target.resolution?.mappings,
 		})
 		return { verb: 'ssd', applications, functions }
 	}
@@ -118,7 +119,7 @@ async function runVerb(
 		report,
 		decisions,
 		keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
-		mappingDecisions: target.resolution?.mappings,
+		decisionMappings: target.resolution?.mappings,
 	})
 	return { verb: 'asd', applications, functions }
 }

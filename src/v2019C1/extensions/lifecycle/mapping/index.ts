@@ -4,7 +4,7 @@ export { findMappingPolicy } from './mapping-policies'
 export { resolveMapping } from './resolve-mapping'
 export type {
 	DecisionMapping,
-	MappingDecisionMap,
+	DecisionMappings,
 	MappingCandidate,
 	MappingPolicy,
 	MappingReason,

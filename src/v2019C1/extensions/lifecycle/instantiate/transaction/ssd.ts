@@ -29,6 +29,7 @@ import type * as Core from '@dialecte/core'
  */
 export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Promise<SsdResult> {
 	const { sourceQuery, scopeRef, targetParent, mode = 'stamp-template', overrides } = params
+	const decisionMappings = params.decisionMappings
 
 	const root = scopeRef ?? (await resolveInstantiableRoot(sourceQuery))
 	if (!root) throw new Error('instantiate.ssd: no instantiable root found in the SSD')
@@ -37,10 +38,12 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		mappings: contentMappings,
 		placedRoots,
 		frameIndex,
+		redirectMappings,
 	} = await cloneTopologyContent(tx, {
 		sourceQuery,
 		scopeRef: root,
 		targetParent,
+		decisionMappings,
 	})
 
 	// External cross-cutting satellites (Variable / BehaviorDescription) applying to any
@@ -56,7 +59,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	const allMappings = [...contentMappings, ...appliedMappings]
 
 	// Stamp/keep lineage + fix up refs (remap for stamp, restore for keep) in one seam.
-	await finalizeClonedIdentity(tx, { mappings: allMappings, mode })
+	await finalizeClonedIdentity(tx, { mappings: allMappings, mode, redirectMappings })
 
 	if (mode !== 'keep') {
 		// resolve a name collision on the CREATED frame scope root itself (instantiating one

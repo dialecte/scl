@@ -172,7 +172,7 @@ A choice the report cannot honour is refused, by `report` and by `apply`: a sour
 
 The element a source element is mapped onto stays the project's: its own attributes are neither compared nor written, it receives no `templateUuid`, and only what the source contributes below it (an `AllocationRole`'s function references) is added. The references to it follow (`AllocationRoleRef` uuid and path).
 
-Mappings are resolved on a first-time placement of an application (`verb: 'asd'`).
+Mappings are resolved on a first-time placement of an application — directly (`verb: 'asd'`) or carried by an SSD (`verb: 'ssd'`, every application of the instantiated scope).
 
 ### Multiple instances of one template
 

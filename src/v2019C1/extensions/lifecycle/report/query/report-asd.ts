@@ -19,7 +19,7 @@ import type {
 	InstanceDiff,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { MappingDecisionMap } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -44,12 +44,12 @@ export async function reportAsd(
 		scenario?: LifecycleScenario
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
 		/** The consumer's choices for the shared elements the application refers to. */
-		mappingDecisions?: MappingDecisionMap
+		decisionMappings?: DecisionMappings
 		/** The project element the application is placed under. */
 		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<DiffReport> {
-	const { sourceQuery, applicationRef, scenario, targetInstance, mappingDecisions, anchor } = params
+	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings, anchor } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	const matchKey = matchKeyForScenario(scenario)
@@ -71,7 +71,7 @@ export async function reportAsd(
 			instance: undefined,
 			refsAlwaysAdded: scenario === 'instantiate',
 			matchKey,
-			mappingDecisions,
+			decisionMappings,
 			anchor,
 		})
 		reportInstances.push(
@@ -121,7 +121,7 @@ async function reportApplicationInstance(
 		instance: AnyTrackedRecord | undefined
 		refsAlwaysAdded?: boolean
 		matchKey?: MatchKey
-		mappingDecisions?: MappingDecisionMap
+		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<InstanceDiff> {
@@ -152,7 +152,7 @@ async function reportApplicationInstance(
 		report: applicationReport,
 		instanceScopeId: instance?.id,
 		refsAlwaysAdded,
-		mappingDecisions: params.mappingDecisions,
+		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
 	})
 

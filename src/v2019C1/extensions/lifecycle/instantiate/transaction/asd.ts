@@ -34,7 +34,7 @@ import type * as Core from '@dialecte/core'
  */
 export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Promise<AsdResult> {
 	const { sourceQuery, applicationRef, targetParent, overrides, keepNameTypesFrom } = params
-	const mappingDecisions = params.mappingDecisions
+	const decisionMappings = params.decisionMappings
 
 	const structure = await resolveTargetStructure(tx, targetParent)
 
@@ -47,12 +47,12 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		targetTagName: 'Function',
 	})
 
-	const mappings = await cloneApplicationContent(tx, {
+	const { mappings, redirectMappings } = await cloneApplicationContent(tx, {
 		sourceQuery,
 		applicationRef,
 		structure,
 		keepNameTypesFrom,
-		mappingDecisions,
+		decisionMappings,
 	})
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) applying to
@@ -67,7 +67,11 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	const allMappings = [...mappings, ...appliedMappings]
 
 	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs.
-	await finalizeClonedIdentity(tx, { mappings: allMappings, mode: 'stamp-template' })
+	await finalizeClonedIdentity(tx, {
+		mappings: allMappings,
+		mode: 'stamp-template',
+		redirectMappings,
+	})
 
 	// resolve a name collision for each placed composed Function at its own structural
 	// level (a repeated instantiate would otherwise duplicate a Function name in the Bay)
@@ -91,7 +95,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 			id: mapping.source.id,
 		} as Scl.Ref<Scl.ElementsOf>
 		const sharedElementParent = await resolveStructureRef(sourceQuery, sourceRef, structure)
-		const decision = mappingDecisions?.get(mapping.source.id)
+		const decision = decisionMappings?.get(mapping.source.id)
 		const chosenName = decision && 'create' in decision ? decision.create.name : undefined
 		await resolvePlacementCollision(tx, {
 			ref: mapping.target,

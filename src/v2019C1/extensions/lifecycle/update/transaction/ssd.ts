@@ -24,6 +24,7 @@ import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 
@@ -57,6 +58,8 @@ export async function ssd(
 		keepNameTypesFrom?: KeepNameTypesFrom
 		/** Multi-instance anchor: scope to ONE placed Bay (frame + fn/app under it). Absent = all. */
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		/** The consumer's choices for the shared elements the applications refer to. */
+		decisionMappings?: DecisionMappings
 	},
 ): Promise<UpdateSsdResult> {
 	const {
@@ -93,6 +96,7 @@ export async function ssd(
 			targetParent,
 			mode: identityModeForScenario(scenario),
 			overrides,
+			decisionMappings: params.decisionMappings,
 		})
 		// first-time SSD clones the whole scope (frame + fn/app) in one pass; annotate every first-time
 		// report instance (frame, applications, standalone functions) from the shared map

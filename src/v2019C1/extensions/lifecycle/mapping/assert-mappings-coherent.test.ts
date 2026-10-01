@@ -80,7 +80,7 @@ describe('assertMappingsCoherent', () => {
 		const message = captureErrorMessage(() =>
 			assertMappingsCoherent({
 				mappings: testCase.mappings,
-				mappingDecisions: new Map(testCase.chosen),
+				decisionMappings: new Map(testCase.chosen),
 			}),
 		)
 		if (testCase.expectedRejection === '') expect(message).toBe('')

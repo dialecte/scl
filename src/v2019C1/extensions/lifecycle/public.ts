@@ -31,7 +31,7 @@ export type { AppliedInstances, ApplyResult } from './apply'
 export type {
 	DecisionMapping,
 	MappingCandidate,
-	MappingDecisionMap,
+	DecisionMappings,
 	MappingReason,
 	ReportMapping,
 } from './mapping'

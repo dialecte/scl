@@ -2,6 +2,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 export type SsdParams = {
@@ -16,6 +17,8 @@ export type SsdParams = {
 	overrides?: CollisionOverrides
 	/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */
 	keepNameTypesFrom?: KeepNameTypesFrom
+	/** The consumer's choices for the shared elements the applications refer to. */
+	decisionMappings?: DecisionMappings
 }
 
 export type SsdResult = {

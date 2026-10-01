@@ -14,6 +14,8 @@ import {
 import type { CloneTopologyContentResult } from './clone-topology-content.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
 
@@ -42,9 +44,11 @@ export async function cloneTopologyContent(
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		/** Child tags to drop from clones (extract prunes provenance refs). */
 		omit?: OmitEntry<Config>[]
+		/** The consumer's choices for the shared elements the applications refer to. */
+		decisionMappings?: DecisionMappings
 	},
 ): Promise<CloneTopologyContentResult> {
-	const { sourceQuery, scopeRef, targetParent, omit } = params
+	const { sourceQuery, scopeRef, targetParent, omit, decisionMappings } = params
 
 	const { frameIndex, mappings: frameMappings } = await ensureTopologyFrame(tx, {
 		sourceQuery,
@@ -55,6 +59,7 @@ export async function cloneTopologyContent(
 
 	const mappings: Scl.CloneMapping[] = [...frameMappings]
 	const placedRoots: Scl.Ref<Scl.ElementsOf>[] = []
+	const redirectMappings: RedirectMapping[] = []
 	const clonedSourceIds = new Set<string>()
 	function record(added: Scl.CloneMapping[]): void {
 		for (const mapping of added) {
@@ -74,7 +79,15 @@ export async function cloneTopologyContent(
 			targetTagName: 'Function',
 		})
 		const structure = await resolveFrameStructure(tx, sourceQuery, applicationRef, frameIndex)
-		record(await cloneApplicationContent(tx, { sourceQuery, applicationRef, structure, omit }))
+		const applicationContent = await cloneApplicationContent(tx, {
+			sourceQuery,
+			applicationRef,
+			structure,
+			omit,
+			decisionMappings,
+		})
+		record(applicationContent.mappings)
+		redirectMappings.push(...applicationContent.redirectMappings)
 		placedRoots.push(applicationRef, ...composedFunctions)
 	}
 
@@ -95,5 +108,5 @@ export async function cloneTopologyContent(
 		placedRoots.push(functionRef)
 	}
 
-	return { mappings, placedRoots, frameIndex }
+	return { mappings, placedRoots, frameIndex, redirectMappings }
 }

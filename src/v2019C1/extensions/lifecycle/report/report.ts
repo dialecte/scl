@@ -42,13 +42,14 @@ export async function report(
 						targetParent: target.anchor,
 						scenario: target.scenario,
 						targetInstance: target.targetInstance,
+						decisionMappings: target.resolution?.mappings,
 					})
 				: await reportAsd(query, {
 						sourceQuery: target.sourceQuery,
 						applicationRef: target.ref,
 						scenario: target.scenario,
 						targetInstance: target.targetInstance,
-						mappingDecisions: target.resolution?.mappings,
+						decisionMappings: target.resolution?.mappings,
 						anchor: target.anchor,
 					})
 
@@ -60,8 +61,8 @@ export async function report(
 	await markPlacementConflicts(query, target, report)
 
 	// the report was derived from the consumer's mapping choices: refuse the ones it cannot honour
-	const mappingDecisions = target.resolution?.mappings
-	if (mappingDecisions) assertMappingsCoherent({ mappings: report.mappings, mappingDecisions })
+	const decisionMappings = target.resolution?.mappings
+	if (decisionMappings) assertMappingsCoherent({ mappings: report.mappings, decisionMappings })
 
 	return report
 }

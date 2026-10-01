@@ -2,6 +2,7 @@ import { buildReferencePath } from '../query/build'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 
+import type { RedirectMapping } from './apply-uuid-remap.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -12,8 +13,9 @@ import type * as Core from '@dialecte/core'
  *
  * Caller-owned, single pass: given the complete `mappings` of an operation, it
  * builds the source-uuid -> target-uuid map once and rewrites every cloned
- * ref-holder. A ref whose target is part of the mappings is repointed; a ref
- * pointing outside them keeps its source uuid. Run it once per operation, with
+ * ref-holder. A ref whose target is part of the mappings, or of the redirect mappings (a source
+ * element mapped onto an element the target already holds), is repointed; a ref pointing
+ * outside them keeps its source uuid. Run it once per operation, with
  * ALL of that operation's clone mappings, BEFORE any pass that reads cloned ref
  * uuids (orphan cleanup, identity restore).
  *
@@ -22,17 +24,30 @@ import type * as Core from '@dialecte/core'
  */
 export async function applyUuidRemap(
 	tx: Core.Transaction<Config>,
-	params: { mappings: readonly Scl.CloneMapping[] },
+	params: {
+		mappings: readonly Scl.CloneMapping[]
+		/** Source elements mapped onto existing target elements instead of being cloned. */
+		redirectMappings?: readonly RedirectMapping[]
+	},
 ): Promise<void> {
-	const { mappings } = params
+	const { mappings, redirectMappings = [] } = params
 	if (mappings.length === 0) return
 
-	// 1. Complete uuid maps from the clone mappings — one pass.
+	// 1. Complete uuid maps from the clone mappings and the redirect mappings — one pass.
 	const uuidMap = new Map<string, string>() // source uuid -> target uuid
 	const uuidToRef = new Map<string, { tagName: string; id: string }>() // target uuid -> ref
 	for (const { source, target } of mappings) {
 		const sourceUuid = source.attributes.find((attribute) => attribute.name === 'uuid')?.value
 		if (!sourceUuid) continue
+		const targetRecord = await tx.getRecord(target)
+		const targetUuid = targetRecord?.attributes.find(
+			(attribute) => attribute.name === 'uuid',
+		)?.value
+		if (!targetUuid) continue
+		uuidMap.set(sourceUuid, targetUuid)
+		uuidToRef.set(targetUuid, { tagName: targetRecord.tagName, id: targetRecord.id })
+	}
+	for (const { sourceUuid, target } of redirectMappings) {
 		const targetRecord = await tx.getRecord(target)
 		const targetUuid = targetRecord?.attributes.find(
 			(attribute) => attribute.name === 'uuid',

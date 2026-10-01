@@ -11,7 +11,7 @@ import {
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LeftoverRefPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { MappingDecisionMap, ReportMapping } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { DecisionMappings, ReportMapping } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -46,7 +46,7 @@ export async function foldSatelliteCompanions(
 		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
 		refsAlwaysAdded?: boolean
 		/** The consumer's choices for shared satellites, by source record id. */
-		mappingDecisions?: MappingDecisionMap
+		decisionMappings?: DecisionMappings
 		/** The project element the template is placed under. */
 		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
@@ -68,7 +68,7 @@ export async function foldSatelliteCompanions(
 			satelliteRef,
 			sourceUuid,
 			firstTime: instanceScopeId === undefined,
-			mappingDecisions: params.mappingDecisions,
+			decisionMappings: params.decisionMappings,
 			anchor: params.anchor,
 		})
 		if (mapping) report.mappings = [...(report.mappings ?? []), mapping]
@@ -149,7 +149,7 @@ async function findSatelliteTarget(
 		satelliteRef: Scl.Ref<Scl.ElementsOf>
 		sourceUuid: string | undefined
 		firstTime: boolean
-		mappingDecisions?: MappingDecisionMap
+		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<{
@@ -163,7 +163,7 @@ async function findSatelliteTarget(
 	const satelliteId = satelliteRef.id
 	if (firstTime && policy && satelliteId) {
 		const sourceRef = { ...satelliteRef, id: satelliteId }
-		const decision = params.mappingDecisions?.get(satelliteId)
+		const decision = params.decisionMappings?.get(satelliteId)
 		const resolved = await resolveMapping(query, { sourceQuery, sourceRef, policy, decision })
 		const mapping = await describeMapping(query, {
 			sourceQuery,

@@ -2,7 +2,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { MappingDecisionMap } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
 import type * as Core from '@dialecte/core'
 
 /** Which template layer the lifecycle surface operates on. */
@@ -89,7 +89,7 @@ export type LifecycleTarget =
  */
 export type Resolution = {
 	decisions?: DecisionMap
-	mappings?: MappingDecisionMap
+	mappings?: DecisionMappings
 	keepNameTypesFrom?: KeepNameTypesFrom
 }
 

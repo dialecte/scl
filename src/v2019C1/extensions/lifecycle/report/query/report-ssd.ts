@@ -12,6 +12,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -31,9 +32,11 @@ export async function reportSsd(
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		scenario?: LifecycleScenario
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		/** The consumer's choices for the shared elements the applications refer to. */
+		decisionMappings?: DecisionMappings
 	},
 ): Promise<DiffReport> {
-	const { sourceQuery, scopeRef, targetParent, scenario, targetInstance } = params
+	const { sourceQuery, scopeRef, targetParent, scenario, targetInstance, decisionMappings } = params
 
 	const root = scopeRef ?? (await resolveInstantiableRoot(sourceQuery))
 	if (!root) return assembleReport([])
@@ -56,7 +59,14 @@ export async function reportSsd(
 	instances.push(...frameInstances)
 
 	for (const applicationRef of applications) {
-		const report = await reportAsd(query, { sourceQuery, applicationRef, scenario, targetInstance })
+		const report = await reportAsd(query, {
+			sourceQuery,
+			applicationRef,
+			scenario,
+			targetInstance,
+			decisionMappings,
+			anchor: targetParent,
+		})
 		instances.push(...report.instances)
 	}
 	for (const functionRef of standaloneFunctions) {
