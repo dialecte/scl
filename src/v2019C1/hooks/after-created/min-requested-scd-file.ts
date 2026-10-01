@@ -31,6 +31,7 @@ export async function reconcileMinRequestedScdFileOnCreate<GenericElement extend
 		return foldCreatedEntry(query, { entryId: record.id })
 	}
 
+	// @stopgap Edit-time stamping, see syncMinRequestedScdFileOnUpdate. The two merges above stay.
 	const iedRefs = await resolveAffectedIeds(query, { record })
 	return syncMinRequestedScdFiles(query, { iedRefs })
 }

@@ -21,6 +21,11 @@ import type * as Core from '@dialecte/core'
  * Sync the IEDs affected by an updated trigger, or by an updated IED itself, to the current SCD.
  * The update counts when it changes the element's text or a relevant attribute;
  * reassigning a `ConnectedAP` to another IED syncs both the former and the new IED.
+ *
+ * @stopgap Stamps at edit time with the Header version current during the edit, so the entry is one
+ * version behind when the version is bumped after editing. Remove once a Header version change
+ * stamps the IEDs changed since the previous version change (needs the store to list the records
+ * changed since then).
  */
 export async function syncMinRequestedScdFileOnUpdate<GenericElement extends Scl.ElementsOf>(
 	query: Core.Query<Config>,

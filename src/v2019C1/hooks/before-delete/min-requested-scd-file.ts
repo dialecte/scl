@@ -16,6 +16,11 @@ import type * as Core from '@dialecte/core'
  * Runs before the deletion, while the subtree is still readable. The sync only reads the `Header`
  * and the IED's own `MinRequestedSCDFiles`, which the deletion leaves intact, so its result is the
  * same as after the deletion. Deleting an IED itself syncs nothing.
+ *
+ * @stopgap Stamps at edit time with the Header version current during the edit, so the entry is one
+ * version behind when the version is bumped after editing. Remove once a Header version change
+ * stamps the IEDs changed since the previous version change (needs the store to list the records
+ * changed since then).
  */
 export async function syncMinRequestedScdFileOnDelete<GenericElement extends Scl.ElementsOf>(
 	query: Core.Query<Config>,
