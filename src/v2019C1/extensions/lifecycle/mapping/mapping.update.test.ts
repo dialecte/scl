@@ -112,6 +112,23 @@ const bareRoleSourceXml = sourceXml.replace(
 	`<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="role-source-uuid" ${id}="role-s"/>`,
 )
 
+// The same template, whose Application does not refer to the role "BAY_CTRL" yet.
+const secondRoleUnusedSourceXml = twoBareRolesSourceXml.replace(
+	/<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE\/BAY_CTRL"[^>]*\/>/,
+	'',
+)
+
+/** The Application of the template starts referring to the role "BAY_CTRL". */
+const referSecondRole = async (tx: Scl.Transaction): Promise<void> => {
+	await tx.addChild(applicationRef, {
+		tagName: 'AllocationRoleRef',
+		attributes: {
+			allocationRole: 'TEMPLATE/BAY_CTRL',
+			allocationRoleUuid: 'control-role-source-uuid',
+		},
+	})
+}
+
 // A project holding both roles.
 const twoRolesProjectXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -528,6 +545,113 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 				roleAllocations: [],
 			},
 		},
+		'the instance holds one renamed role, the template refers to a second one since → the consumer maps the first onto the held role: the second is new, no longer undecided':
+			{
+				sourceXml: secondRoleUnusedSourceXml,
+				targetXml: twoRolesProjectXml,
+				editProject: renameBothProjectRoles,
+				editTemplate: referSecondRole,
+				chosenAtUpdate: [['role-s', { existing: projectRoleRef }]],
+				expected: {
+					mappings: [
+						{
+							id: 'role-s',
+							tagName: 'AllocationRole',
+							mapping: { existing: projectRoleRef },
+							reason: 'decision',
+							ambiguous: false,
+							selectable: true,
+							locked: false,
+							candidates: renamedProjectRoles,
+						},
+						{
+							id: 'control-role-s',
+							tagName: 'AllocationRole',
+							mapping: { create: { name: 'BAY_CTRL' } },
+							reason: 'none',
+							ambiguous: false,
+							selectable: true,
+							locked: false,
+							candidates: renamedProjectRoles,
+						},
+					],
+					announcedNewRoles: 1,
+					announcedNewAllocations: 0,
+					roleNames: ['BAY_CTRL', 'Controller', 'Workstation'],
+					applicationRoles: ['S1/BAY_CTRL', 'S1/Workstation'],
+					roleDescription: undefined,
+					roleAllocations: [],
+				},
+			},
+		'… or the consumer has the second one created → the first is the only one left for the held role: mapped there, locked':
+			{
+				sourceXml: secondRoleUnusedSourceXml,
+				targetXml: twoRolesProjectXml,
+				editProject: renameBothProjectRoles,
+				editTemplate: referSecondRole,
+				chosenAtUpdate: [['control-role-s', { create: {} }]],
+				expected: {
+					mappings: [
+						{
+							...lockedOntoProjectRole,
+							candidates: [{ ref: projectRoleRef, title: 'Workstation', path: 'S1/Workstation' }],
+						},
+						{
+							id: 'control-role-s',
+							tagName: 'AllocationRole',
+							mapping: { create: { name: 'BAY_CTRL' } },
+							reason: 'decision',
+							ambiguous: false,
+							selectable: true,
+							locked: false,
+							candidates: renamedProjectRoles,
+						},
+					],
+					announcedNewRoles: 1,
+					announcedNewAllocations: 0,
+					roleNames: ['BAY_CTRL', 'Controller', 'Workstation'],
+					applicationRoles: ['S1/BAY_CTRL', 'S1/Workstation'],
+					roleDescription: undefined,
+					roleAllocations: [],
+				},
+			},
+		'… and with no choice at all → both are listed as new, flagged ambiguous: the instance lets go of the role it held':
+			{
+				sourceXml: secondRoleUnusedSourceXml,
+				targetXml: twoRolesProjectXml,
+				editProject: renameBothProjectRoles,
+				editTemplate: referSecondRole,
+				expected: {
+					mappings: [
+						{
+							id: 'role-s',
+							tagName: 'AllocationRole',
+							mapping: { create: { name: 'HMI_PC' } },
+							reason: 'none',
+							ambiguous: true,
+							selectable: true,
+							locked: false,
+							candidates: renamedProjectRoles,
+						},
+						{
+							id: 'control-role-s',
+							tagName: 'AllocationRole',
+							mapping: { create: { name: 'BAY_CTRL' } },
+							reason: 'none',
+							ambiguous: true,
+							selectable: true,
+							locked: false,
+							candidates: renamedProjectRoles,
+						},
+					],
+					announcedNewRoles: 2,
+					announcedNewAllocations: 0,
+					roleNames: ['BAY_CTRL', 'Controller', 'HMI_PC', 'Workstation'],
+					applicationRoles: ['S1/BAY_CTRL', 'S1/HMI_PC'],
+					roleDescription: undefined,
+					roleAllocations: [],
+				},
+			},
 	}
 
 	async function act({ testCase, source, target }: SclTest.ActParams<TestCase>): Promise<void> {

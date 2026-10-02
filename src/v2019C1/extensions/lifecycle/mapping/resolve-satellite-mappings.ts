@@ -5,7 +5,10 @@ import { resolveMapping } from './resolve-mapping'
 import { toRef } from '@dialecte/core/helpers'
 
 import type {
+	DecisionMappings,
+	InstanceSatellitePairing,
 	MappingReader,
+	PairInstanceSatellitesParams,
 	ResolvedMapping,
 	ResolvedMappings,
 	ResolveSatelliteMappingsParams,
@@ -22,7 +25,9 @@ import type * as Core from '@dialecte/core'
  *
  * A shared element the instance being updated already holds an element for keeps that mapping
  * (`locked`, see {@link pairInstanceSatellites}). Any other — every one of them on a first
- * placement — is resolved by {@link resolveMapping}. Elements whose tag declares no mapping
+ * placement — is resolved by {@link resolveMapping}; where the instance holds an element that
+ * could stand for it and nothing tells whether it does, it is flagged `ambiguous` until the
+ * consumer's choices settle it. Elements whose tag declares no mapping
  * policy are not shared elements and are left out.
  */
 export async function resolveSatelliteMappings(
@@ -46,10 +51,11 @@ export async function resolveSatelliteMappings(
 		if (instanceId) storedInstanceRefs.push({ ...instanceRef, id: instanceId })
 	}
 
-	const { pairs, undecidedSourceIds } = await pairInstanceSatellites(reader, {
+	const { pairs, undecidedSourceIds } = await pairWithDecisions(reader, {
 		sourceQuery,
 		sourceSatellites,
 		instanceSatelliteRefs: storedInstanceRefs,
+		decisionMappings,
 		matchKey,
 	})
 
@@ -81,6 +87,52 @@ export async function resolveSatelliteMappings(
 		})
 	}
 	return resolvedMappings
+}
+
+/**
+ * Pair the shared source elements with the elements the instance holds, the consumer's choices
+ * taken into account: a choice made for an element nothing could pair settles it, so what is left
+ * is paired again without it — nor the element of the instance it was mapped onto. A pairing the
+ * instance carries without any choice is never undone by one.
+ */
+async function pairWithDecisions(
+	reader: MappingReader,
+	params: PairInstanceSatellitesParams & { decisionMappings?: DecisionMappings },
+): Promise<InstanceSatellitePairing> {
+	const { sourceSatellites, instanceSatelliteRefs, decisionMappings, ...pairingParams } = params
+
+	const carried = await pairInstanceSatellites(reader, {
+		...pairingParams,
+		sourceSatellites,
+		instanceSatelliteRefs,
+	})
+
+	const decidedSourceIds = new Set<string>()
+	const chosenInstanceIds = new Set<string>()
+	for (const sourceId of carried.undecidedSourceIds) {
+		const decision = decisionMappings?.get(sourceId)
+		if (!decision) continue
+		decidedSourceIds.add(sourceId)
+		if ('existing' in decision && decision.existing.id) chosenInstanceIds.add(decision.existing.id)
+	}
+	if (decidedSourceIds.size === 0) return carried
+
+	const pairedInstanceIds = new Set([...carried.pairs.values()].map((pair) => pair.existing.id))
+	const settled = await pairInstanceSatellites(reader, {
+		...pairingParams,
+		sourceSatellites: sourceSatellites.filter(
+			(source) => !carried.pairs.has(source.ref.id) && !decidedSourceIds.has(source.ref.id),
+		),
+		instanceSatelliteRefs: instanceSatelliteRefs.filter(
+			(instanceRef) =>
+				!pairedInstanceIds.has(instanceRef.id) && !chosenInstanceIds.has(instanceRef.id),
+		),
+	})
+
+	return {
+		pairs: new Map([...carried.pairs, ...settled.pairs]),
+		undecidedSourceIds: settled.undecidedSourceIds,
+	}
 }
 
 /**

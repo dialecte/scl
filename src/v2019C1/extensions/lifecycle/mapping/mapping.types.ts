@@ -33,7 +33,11 @@ export type ResolvedMapping = {
 	/** The project element the source element maps onto. Absent: a new element is created. */
 	existing?: AnyTrackedRecord
 	reason: MappingReason
-	/** Several project elements qualified equally, so none was picked. */
+	/**
+	 * Nothing was picked although something qualified: several project elements qualified equally,
+	 * or the instance being updated holds an element that could stand for this one and nothing
+	 * tells whether it does.
+	 */
 	ambiguous: boolean
 	/** The instance being updated already carries this mapping: it is not the consumer's to change. */
 	locked: boolean
@@ -128,7 +132,11 @@ export type ReportMapping = {
 	tagName: string
 	mapping: DecisionMapping
 	reason: MappingReason
-	/** Several project elements qualified equally, so none was picked. */
+	/**
+	 * Nothing was picked although something qualified: several project elements qualified equally
+	 * (`reason` tells how) or — with the reason `none` — the instance being updated holds an element
+	 * that could stand for this one and nothing tells whether it does.
+	 */
 	ambiguous: boolean
 	/** The consumer may choose another mapping for an element of this kind. */
 	selectable: boolean
