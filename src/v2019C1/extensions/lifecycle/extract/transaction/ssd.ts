@@ -53,7 +53,7 @@ export async function ssd(
 		},
 	})
 
-	const { mappings, frameIndex } = await cloneTopologyContent(tx, {
+	const { cloneMappings, frameIndex, redirectMappings } = await cloneTopologyContent(tx, {
 		sourceQuery,
 		scopeRef,
 		targetParent: root,
@@ -75,7 +75,7 @@ export async function ssd(
 	}
 
 	// Repoint cloned uuid refs across ALL clones before cleanup reads them to detect orphans.
-	await applyUuidRemap(tx, { mappings })
+	await applyUuidRemap(tx, { cloneMappings, redirectMappings })
 
 	await postExtractionCleanup(tx)
 

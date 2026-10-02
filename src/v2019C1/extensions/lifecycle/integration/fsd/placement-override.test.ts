@@ -102,7 +102,7 @@ describe('lifecycle scenario — instantiate.fsd applies user edits via decision
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions,
+				resolution: { decisions },
 			})
 		})
 

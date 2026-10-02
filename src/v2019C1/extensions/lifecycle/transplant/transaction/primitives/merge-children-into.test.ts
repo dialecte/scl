@@ -49,6 +49,7 @@ describe('mergeChildrenInto - recursive name-keyed container reuse', () => {
 								</eIEC61850-6-100:SubCategory>
 							</eIEC61850-6-100:FunctionCategory>
 						</Private>
+						<Function ${id}="fn-cb1" name="Circuit Breaker_1" uuid="cb1-uuid"/>
 					</Substation>
 				</SCL>
 			`,
@@ -62,6 +63,7 @@ describe('mergeChildrenInto - recursive name-keyed container reuse', () => {
 								</eIEC61850-6-100:SubCategory>
 							</eIEC61850-6-100:FunctionCategory>
 						</Private>
+						<Function ${id}="fn-cb" name="Circuit Breaker" uuid="cb-uuid"/>
 					</Substation>
 				</SCL>
 			`,
@@ -90,6 +92,7 @@ describe('mergeChildrenInto - recursive name-keyed container reuse', () => {
 								<eIEC61850-6-100:FunctionCatRef ${id}="fcref-src" function="TEMPLATE/Measurement Function" functionUuid="meas-uuid"/>
 							</eIEC61850-6-100:FunctionCategory>
 						</Private>
+						<Function ${id}="fn-meas" name="Measurement Function" uuid="meas-uuid"/>
 					</Substation>
 				</SCL>
 			`,
@@ -101,6 +104,7 @@ describe('mergeChildrenInto - recursive name-keyed container reuse', () => {
 								<eIEC61850-6-100:FunctionCatRef ${id}="fcref-tgt" function="TEMPLATE/Measurement Function" functionUuid="meas-uuid"/>
 							</eIEC61850-6-100:FunctionCategory>
 						</Private>
+						<Function ${id}="fn-meas" name="Measurement Function" uuid="meas-uuid"/>
 					</Substation>
 				</SCL>
 			`,

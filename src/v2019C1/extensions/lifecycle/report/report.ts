@@ -3,9 +3,10 @@ import { reportAsd, reportFsd, reportSsd } from './query'
 
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { assertMappingsCoherent } from '@/v2019C1/extensions/lifecycle/mapping'
 
 import type { Config } from '@/v2019C1/config'
-import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { LifecycleReportParams } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
 
@@ -22,7 +23,7 @@ import type * as Core from '@dialecte/core'
  */
 export async function report(
 	query: Core.Query<Config>,
-	target: LifecycleTarget,
+	target: LifecycleReportParams,
 ): Promise<DiffReport> {
 	const report =
 		target.verb === 'fsd'
@@ -32,6 +33,8 @@ export async function report(
 					targetParent: target.anchor,
 					scenario: target.scenario,
 					targetInstance: target.targetInstance,
+					decisionMappings: target.resolution?.mappings,
+					resolvePlacement: true,
 				})
 			: target.verb === 'ssd'
 				? await reportSsd(query, {
@@ -41,20 +44,29 @@ export async function report(
 						targetParent: target.anchor,
 						scenario: target.scenario,
 						targetInstance: target.targetInstance,
+						decisionMappings: target.resolution?.mappings,
 					})
 				: await reportAsd(query, {
 						sourceQuery: target.sourceQuery,
 						applicationRef: target.ref,
 						scenario: target.scenario,
 						targetInstance: target.targetInstance,
+						decisionMappings: target.resolution?.mappings,
+						anchor: target.anchor,
+						resolvePlacement: true,
 					})
 
 	for (const group of allGroups(report)) {
 		group.editableAttributes = editableAttributes(group.primary.tagName)
 	}
 
-	// flag placement collisions (resolvable auto-value or identity-locked skip/adopt)
+	// flag the placement collisions the engine resolves by itself (auto-value on an editable field)
 	await markPlacementConflicts(query, target, report)
+
+	// the report was derived from the consumer's mapping choices: refuse the ones it cannot honour
+	const decisionMappings = target.resolution?.mappings
+	if (decisionMappings)
+		assertMappingsCoherent({ reportMappings: report.mappings, decisionMappings })
 
 	return report
 }

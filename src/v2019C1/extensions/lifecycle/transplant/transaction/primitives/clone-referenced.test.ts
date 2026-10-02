@@ -150,6 +150,7 @@ describe('cloneReferencedRecords', () => {
 									<eIEC61850-6-100:AllocationRoleRef ${id}="arref1" allocationRole="TEMPLATE/HMI_PC" allocationRoleUuid="ar1-uuid"/>
 								</eIEC61850-6-100:Application>
 							</Private>
+							<Function ${id}="func1" name="Func" uuid="func-uuid"/>
 						</Substation>
 					</SCL>
 				`,

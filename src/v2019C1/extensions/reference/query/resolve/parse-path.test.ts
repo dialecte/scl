@@ -99,6 +99,8 @@ describe('reference-parsing', () => {
 				],
 			},
 			'FunctionCatRef with functionUuid already present → existing value preserved': {
+				allowIncoherentReferences:
+					'a uuid that disagrees with the path is the situation under test',
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">

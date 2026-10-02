@@ -141,7 +141,7 @@ describe('lifecycle scenario — reconcile resolves a added element name collisi
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions,
+				resolution: { decisions },
 			})
 		})
 

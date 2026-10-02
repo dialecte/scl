@@ -32,6 +32,7 @@ describe('pruneEmptyContainers', () => {
 								<eIEC61850-6-100:FunctionCatRef function="S1/Prot" functionUuid="func-uuid-1"/>
 							</eIEC61850-6-100:FunctionCategory>
 						</Private>
+						<Function name="Prot" uuid="func-uuid-1"/>
 					</Substation>
 				</SCL>
 			`,
@@ -74,6 +75,7 @@ describe('pruneEmptyContainers', () => {
 						<Private type="eIEC61850-6-100">
 							<eIEC61850-6-100:FunctionRef function="S1/Prot" functionUuid="func-uuid-1"/>
 						</Private>
+						<Function name="Prot" uuid="func-uuid-1"/>
 					</Substation>
 				</SCL>
 			`,
@@ -89,6 +91,7 @@ describe('pruneEmptyContainers', () => {
 							<eIEC61850-6-100:FunctionCategory name="Empty"/>
 							<eIEC61850-6-100:FunctionRef function="S1/Prot" functionUuid="func-uuid-1"/>
 						</Private>
+						<Function name="Prot" uuid="func-uuid-1"/>
 					</Substation>
 				</SCL>
 			`,

@@ -12,8 +12,11 @@ import {
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { CloneTopologyContentResult } from './clone-topology-content.types'
+import type { PlacementLevel } from './resolve-placement-mappings.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
 
@@ -42,23 +45,30 @@ export async function cloneTopologyContent(
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		/** Child tags to drop from clones (extract prunes provenance refs). */
 		omit?: OmitEntry<Config>[]
+		/** The consumer's choices for the shared elements the applications refer to. */
+		decisionMappings?: DecisionMappings
+		/** Where each structural level lands, as resolved for a placement. */
+		placementLevels?: readonly PlacementLevel[]
 	},
 ): Promise<CloneTopologyContentResult> {
-	const { sourceQuery, scopeRef, targetParent, omit } = params
+	const { sourceQuery, scopeRef, targetParent, omit, decisionMappings, placementLevels } = params
 
-	const { frameIndex, mappings: frameMappings } = await ensureTopologyFrame(tx, {
+	const frame = await ensureTopologyFrame(tx, {
 		sourceQuery,
 		scopeRef,
 		targetParent,
 		omit,
+		placementLevels,
 	})
+	const { frameIndex } = frame
 
-	const mappings: Scl.CloneMapping[] = [...frameMappings]
+	const cloneMappings: Scl.CloneMapping[] = [...frame.cloneMappings]
 	const placedRoots: Scl.Ref<Scl.ElementsOf>[] = []
+	const redirectMappings: RedirectMapping[] = [...frame.redirectMappings]
 	const clonedSourceIds = new Set<string>()
 	function record(added: Scl.CloneMapping[]): void {
 		for (const mapping of added) {
-			mappings.push(mapping)
+			cloneMappings.push(mapping)
 			if (mapping.source.id) clonedSourceIds.add(mapping.source.id)
 		}
 	}
@@ -74,26 +84,38 @@ export async function cloneTopologyContent(
 			targetTagName: 'Function',
 		})
 		const structure = await resolveFrameStructure(tx, sourceQuery, applicationRef, frameIndex)
-		record(await cloneApplicationContent(tx, { sourceQuery, applicationRef, structure, omit }))
+		const applicationContent = await cloneApplicationContent(tx, {
+			sourceQuery,
+			applicationRef,
+			structure,
+			omit,
+			decisionMappings,
+		})
+		record(applicationContent.cloneMappings)
+		redirectMappings.push(...applicationContent.redirectMappings)
 		placedRoots.push(applicationRef, ...composedFunctions)
 	}
 
 	// 2. Standalone Functions under the scope not already pulled in by an Application.
+	// A category classifying several of them is placed once.
+	const placedCategories = new Map<string, Scl.Ref<'FunctionCategory'>>()
 	for (const functionRef of await functionsUnderScope(sourceQuery, scopeRef)) {
 		if (clonedSourceIds.has(functionRef.id)) continue
 		const structure = await resolveFrameStructure(tx, sourceQuery, functionRef, frameIndex)
 		const targetParentRef = await resolveStructureRef(sourceQuery, functionRef, structure)
 		record(await cloneFunction(tx, { sourceQuery, functionRef, targetParentRef, omit }))
-		record(
-			await cloneFunctionCategories(tx, {
-				sourceQuery,
-				functionRef,
-				structure,
-				stripCategoriesUuid: false,
-			}),
-		)
+		const categories = await cloneFunctionCategories(tx, {
+			sourceQuery,
+			functionRef,
+			structure,
+			stripCategoriesUuid: false,
+			decisionMappings,
+			placedCategories,
+		})
+		record(categories.cloneMappings)
+		redirectMappings.push(...categories.redirectMappings)
 		placedRoots.push(functionRef)
 	}
 
-	return { mappings, placedRoots, frameIndex }
+	return { cloneMappings, placedRoots, frameIndex, redirectMappings }
 }

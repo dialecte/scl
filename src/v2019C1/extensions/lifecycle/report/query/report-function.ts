@@ -2,9 +2,12 @@ import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
 import { foldCarriedSatellites } from './report-function-satellites'
 
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { foreignScopeResolver } from '@/v2019C1/extensions/lifecycle/instance'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
@@ -24,12 +27,16 @@ export async function reportFunction(
 	query: Core.Query<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
-		functionRef: Scl.Ref<'Function'>
+		functionRef: FsdFunctionRef
 		instance: AnyRefOrRecord | undefined
 		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
 		refsAlwaysAdded?: boolean
 		/** How the instance matches source. `templateUuid` (default) or `uuid` (fork). */
 		matchKey?: MatchKey
+		/** The consumer's choices for the shared elements the function is classified by. */
+		decisionMappings?: DecisionMappings
+		/** The project element the function is placed under. */
+		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
@@ -46,12 +53,26 @@ export async function reportFunction(
 	// so they must be folded as `added` companions too — otherwise the merge-review
 	// hides them when context is off. The folds no-op their instance side when
 	// `instance`/`instancePrimaryRef` is undefined.
+	// an element the instances share (a category) holds one reference per instance: this one is
+	// compared with its own
+	const sourceUuid = await sourceQuery.getAttribute(functionRef, { name: 'uuid' })
+	const resolveForeignScope = instance
+		? foreignScopeResolver(query, {
+				instanceRootRef: instance,
+				sourceUuid,
+				matchKey: params.matchKey,
+			})
+		: undefined
 	const withLayerSatellites = await foldCarriedSatellites(query, {
 		sourceQuery,
 		functionRef,
 		instance,
 		report,
 		refsAlwaysAdded,
+		decisionMappings: params.decisionMappings,
+		anchor: params.anchor,
+		matchKey: params.matchKey,
+		resolveForeignScope,
 	})
 	return foldCrossCuttingSatellites(query, {
 		sourceQuery,
@@ -61,5 +82,8 @@ export async function reportFunction(
 			: undefined,
 		report: withLayerSatellites,
 		refsAlwaysAdded,
+		anchor: params.anchor,
+		matchKey: params.matchKey,
+		resolveForeignScope,
 	})
 }

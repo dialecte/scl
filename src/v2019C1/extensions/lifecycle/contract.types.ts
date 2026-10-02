@@ -2,6 +2,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
 import type * as Core from '@dialecte/core'
 
 /** Which template layer the lifecycle surface operates on. */
@@ -33,6 +34,15 @@ export type UpdateMode = 'template' | 'fork'
 export type LifecycleScenario = 'instantiate' | UpdateMode
 
 /**
+ * The function an FSD carries: a `Function` placed at a level of the template, or a
+ * `FunctionTemplate` — a function with no parent level, which is instantiated as a function too.
+ */
+export type FsdFunctionRef = Scl.Ref<'Function'> | Scl.Ref<'FunctionTemplate'>
+
+/** A function of a source file the function layer reads: any of the forms a template gives it. */
+export type SourceFunctionRef = FsdFunctionRef | Scl.Ref<'SubFunction'>
+
+/**
  * What to reconcile and where — the uniform `{ verb, sourceQuery, ref, anchor }`
  * descriptor shared by `report` (read-only classify) and `apply` (write).
  * Discriminated on `verb` so `ref` narrows to the right element type.
@@ -41,8 +51,8 @@ export type LifecycleTarget =
 	| {
 			verb: 'fsd'
 			sourceQuery: Core.Query<Config>
-			/** The source (template) Function to reconcile. */
-			ref: Scl.Ref<'Function'>
+			/** The source (template) function to reconcile. */
+			ref: FsdFunctionRef
 			/** Target parent the instance lives under / is placed into. */
 			anchor: Scl.Ref<Scl.ElementsOf>
 			/** Operation to perform. Defaults to `template`. */
@@ -79,19 +89,36 @@ export type LifecycleTarget =
 	  }
 
 /**
+ * What the consumer resolved, handed to the lifecycle surface as ONE object:
+ *  - `decisions` — accept / skip (and edited values) per decision group;
+ *  - `mappings` — where a shared source element lands, per source element, when the consumer
+ *    chose otherwise than the report resolved;
+ *  - `keepNameTypesFrom` — on a type dedup, which side's id/name the surviving type keeps
+ *    (forwarded to `importTypes`; default `'target'`, the destination authority).
+ */
+export type Resolution = {
+	decisions?: DecisionMap
+	mappings?: DecisionMappings
+	keepNameTypesFrom?: KeepNameTypesFrom
+}
+
+/**
+ * `report` inputs: the target, and what the consumer already resolved. The report is
+ * re-derived from it, so it shows the consequence of each choice.
+ */
+export type LifecycleReportParams = LifecycleTarget & {
+	resolution?: Resolution
+}
+
+/**
  * `apply` inputs: the target plus the `report` produced by `report` (the
  * consumer classifies first, then applies). The report gates the track.
  *
- * `decisions` drives the full track: absent -> the caller has not decided yet
- * (apply writes nothing and returns the report); present -> apply the accepted
+ * `resolution.decisions` drives the full track: absent -> the caller has not decided
+ * yet (apply writes nothing and returns the report); present -> apply the accepted
  * groups only (a group absent from the map defaults to accept).
  */
 export type LifecycleApplyParams = LifecycleTarget & {
 	report: DiffReport
-	decisions?: DecisionMap
-	/**
-	 * On a type dedup during apply, which side's id/name the surviving type keeps.
-	 * Forwarded to `importTypes`. Default `'target'` (destination authority).
-	 */
-	keepNameTypesFrom?: KeepNameTypesFrom
+	resolution?: Resolution
 }

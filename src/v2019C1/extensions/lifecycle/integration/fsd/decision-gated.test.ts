@@ -161,7 +161,7 @@ describe('lifecycle.apply — decision-gated (full track)', () => {
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 

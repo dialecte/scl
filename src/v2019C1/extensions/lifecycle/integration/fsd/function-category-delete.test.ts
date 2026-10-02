@@ -29,7 +29,7 @@ const sourceXml = /* xml */ `
 		<Substation name="TEMPLATE" ${id}="sub-s">
 			<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 				<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" uuid="fcat-src-uuid" ${id}="fcat-s">
-					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="fcatref-s"/>
+					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="fcatref-s"/>
 				</eIEC61850-6-100:FunctionCategory>
 			</Private>
 			<VoltageLevel name="TEMPLATE" ${id}="vl-s">
@@ -113,7 +113,7 @@ describe('lifecycle.apply — removing a retired FunctionCategory (function-laye
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 

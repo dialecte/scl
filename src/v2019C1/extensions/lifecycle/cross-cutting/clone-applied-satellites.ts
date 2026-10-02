@@ -1,53 +1,58 @@
 import { resolveAppliedSatellites } from './applied-satellites'
 
+import { findMappingPolicy, resolveMapping } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	cloneTree,
 	mergeChildrenInto,
 	resolveStructureRef,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
+import type {
+	CloneAppliedSatellitesParams,
+	CloneAppliedSatellitesResult,
+} from './clone-applied-satellites.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 
 /**
- * Clones the external CROSS-CUTTING satellites (e.g. `Variable`,
- * `BehaviorDescription`) that apply to any element in the primary subtree, each
- * placed at its source structural level. Tag-agnostic: whatever
- * `resolveAppliedSatellites` returns is cloned by its own tag. Satellites living
+ * Places the external CROSS-CUTTING satellites (e.g. `Variable`,
+ * `BehaviorDescription`) that apply to any element in the primary subtree. Tag-agnostic: whatever
+ * `resolveAppliedSatellites` returns is placed by its own tag. Satellites living
  * inside the subtree are cloned by `deep`, not here (the resolver excludes them).
- * UUID remapping is the caller's responsibility via `reference.applyUuidRemap`; the caller stamps lineage
- * via `writeIdentity`.
  *
- * A satellite whose same-tag/same-name twin already exists in the target IS that
- * shared entity: its referencing children (`VariableApplyTo`, `InputVar`/`OutputVar`,
- * ...) are ADDED to the existing satellite rather than the whole thing being skipped -
- * skipping would drop the application to the newly-instantiated element.
+ * Each is a SHARED element: where it lands is the answer of its mapping (`resolveMapping`, the one
+ * the report reads too). Mapped onto an element the target already holds, it is not cloned: its
+ * referencing children (`VariableApplyTo`, `InputVar`/`OutputVar`, ...) are merged into that
+ * element - skipping it would drop the application to the newly-placed element. With nothing to
+ * map onto, it is cloned at its source structural level.
+ *
+ * UUID remapping is the caller's responsibility via `reference.applyUuidRemap`, over the returned
+ * clone mappings and redirect mappings; the caller stamps lineage via `writeIdentity`.
  */
 export async function cloneAppliedSatellites(
 	tx: Core.Transaction<Config>,
-	params: {
-		sourceQuery: Core.Query<Config>
-		primaryRef: Scl.Ref<Scl.ElementsOf>
-		structure: TargetStructure
-		strip?: boolean
-	},
-): Promise<Scl.CloneMapping[]> {
+	params: CloneAppliedSatellitesParams,
+): Promise<CloneAppliedSatellitesResult> {
 	const { sourceQuery, primaryRef, structure, strip = true } = params
 
 	const satellites = await resolveAppliedSatellites(sourceQuery, { primaryRef })
 
-	const mappings: Scl.CloneMapping[] = []
+	const cloneMappings: Scl.CloneMapping[] = []
+	const redirectMappings: RedirectMapping[] = []
 	for (const satelliteRef of satellites) {
-		const existing = await findExistingSatelliteByName(tx, sourceQuery, satelliteRef)
+		const existing = await findMappedSatellite(tx, { sourceQuery, satelliteRef })
 		if (existing) {
-			const addedMappings = await mergeChildrenInto(tx, {
+			const merged = await mergeChildrenInto(tx, {
 				sourceQuery,
 				source: satelliteRef,
 				target: existing,
 				strip: false,
 			})
-			mappings.push(...addedMappings)
+			cloneMappings.push(...merged.cloneMappings)
+			redirectMappings.push(...merged.redirectMappings)
+			const sourceUuid = await sourceQuery.any.getAttribute(satelliteRef, { name: 'uuid' })
+			if (sourceUuid) redirectMappings.push({ sourceUuid, target: existing })
 			continue
 		}
 
@@ -58,27 +63,22 @@ export async function cloneAppliedSatellites(
 			targetParent,
 			...(strip ? {} : { strip: false as const }),
 		})
-		if (clone) mappings.push(...clone.mappings)
+		if (clone) cloneMappings.push(...clone.mappings)
 	}
-	return mappings
+	return { cloneMappings, redirectMappings }
 }
 
-/** The existing same-tag, same-name satellite in the target (shared entity), if any. */
-async function findExistingSatelliteByName(
+/** The element of the target a source satellite is mapped onto — none when it is to be created. */
+async function findMappedSatellite(
 	tx: Core.Transaction<Config>,
-	sourceQuery: Core.Query<Config>,
-	satelliteRef: Scl.Ref<Scl.ElementsOf>,
+	params: { sourceQuery: Core.Query<Config>; satelliteRef: Scl.Ref<Scl.ElementsOf> },
 ): Promise<Scl.Ref<Scl.ElementsOf> | undefined> {
-	const source = await sourceQuery.any.getRecord(satelliteRef)
-	if (!source) return undefined
+	const { sourceQuery, satelliteRef } = params
 
-	const name = await sourceQuery.any.getAttribute(source, { name: 'name' })
-	if (!name) return undefined
+	const policy = findMappingPolicy(satelliteRef.tagName)
+	if (!policy) return undefined
 
-	const [existing] = await tx.any.findByAttributes({
-		tagName: satelliteRef.tagName,
-		attributes: { name },
-	})
+	const { existing } = await resolveMapping(tx, { sourceQuery, sourceRef: satelliteRef, policy })
 	return existing
 		? ({ tagName: satelliteRef.tagName, id: existing.id } as Scl.Ref<Scl.ElementsOf>)
 		: undefined

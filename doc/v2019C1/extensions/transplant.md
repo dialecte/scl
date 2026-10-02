@@ -21,7 +21,7 @@ Access via `tx.lifecycle.transplant` inside a `doc.transaction()` callback. `dee
 1. **subtree clone** — clones the element under `targetParent` (with optional `omit` / `strip` / `retagRoot`).
 2. **content-addressed type closure** (`withTypes`, default `true`) — reconciles the `LNode`/`LN`/`LN0` type closure via `dataModel.importTypes` and repoints the cloned instances' `lnType` through the clone mappings. Pass `withTypes: { keepNameFrom: 'source' | 'target' }` to choose which side keeps the type name on a dedup (`'target'` default = destination is the naming authority); `withTypes: false` skips the closure for a bare subtree copy.
 
-`deep` is a **faithful** subtree copy: it does _not_ follow forward uuid references, reset IED bindings, strip template attributes, or clean up orphans. Reference rewiring and identity stamping are the caller's responsibility (see [extract](./extract), [instantiate](./instantiate) and [identity](./identity)). It returns the full `recordMappings` (source → clone for every node) so callers can locate any cloned node in the target.
+`deep` is a **faithful** subtree copy: it does _not_ follow forward uuid references, reset IED bindings, strip template attributes, or clean up orphans. Reference rewiring and identity stamping are the caller's responsibility (see [extract](./extract), [instantiate](./instantiate) and [identity](./identity)). It returns the full `cloneMappings` (source → clone for every node) so callers can locate any cloned node in the target.
 
 ```ts
 tx.lifecycle.transplant.deep(params: {
@@ -35,7 +35,7 @@ tx.lifecycle.transplant.deep(params: {
 }): Promise<{
   record: Scl.RawRecord<Scl.ElementsOf>    // cloned root
   typeIdRemap: Map<string, string>         // source type id → reconciled target type id (DataTypeTemplates)
-  recordMappings: Scl.CloneMapping[]       // source record → target record, for the whole cloned subtree
+  cloneMappings: Scl.CloneMapping[]        // source record → target record, for the whole cloned subtree
 }>
 ```
 

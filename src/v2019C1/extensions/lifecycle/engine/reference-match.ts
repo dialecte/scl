@@ -1,8 +1,16 @@
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
+
+/**
+ * For each project element a source element was mapped onto: the project element's `uuid` -> the
+ * source element's `uuid`. Such an element carries no lineage (it is the project's own), so this
+ * is what tells a reference to it from the template reference it stands for.
+ */
+export type RedirectedSourceUuids = ReadonlyMap<string, string>
 
 /** A read surface shared by the diff (Query) and reconcile (Transaction) sides. */
 type Reader = Core.Query<Config> | Core.Transaction<Config>
@@ -11,14 +19,16 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  * The reference identity of a link element: the set of target `*Uuid` attributes it carries, as a
  * stable string. When `mapToTemplate` is set (the INSTANCE/target side), each target uuid is resolved
  * to its element's `templateUuid` so an instantiated (remapped) reference compares equal to the
- * template reference it came from. The SOURCE side passes the raw uuids, which are already template
- * space. Returns `undefined` when no uuid attribute is set (unresolved ref), so matching falls back to
- * position. Lineage-aware by design — this is a matching helper, not an agnostic identity read.
+ * template reference it came from. A target the source element was MAPPED onto carries no lineage:
+ * `redirectedSourceUuids` gives the source element it stands for. The SOURCE side passes the raw
+ * uuids, which are already template space. Returns `undefined` when no uuid attribute is set
+ * (unresolved ref), so matching falls back to position. Lineage-aware by design — this is a matching
+ * helper, not an agnostic identity read.
  */
 export async function referenceIdentity(
 	query: Reader,
 	node: AnyTreeRecord,
-	options: { mapToTemplate: boolean },
+	options: { mapToTemplate: boolean; redirectedSourceUuids?: RedirectedSourceUuids },
 ): Promise<string | undefined> {
 	const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS]
 	if (!pairs) return undefined
@@ -27,7 +37,8 @@ export async function referenceIdentity(
 		const uuidValue = await query.any.getAttribute(node, { name: pair.attribute.uuid })
 		if (!uuidValue) continue
 		const identity = options.mapToTemplate
-			? await toTemplateSpaceUuid(query, uuidValue, pair.target)
+			? (options.redirectedSourceUuids?.get(uuidValue) ??
+				(await toTemplateSpaceUuid(query, uuidValue, pair.target)))
 			: uuidValue
 		parts.push(`${pair.attribute.uuid}=${identity}`)
 	}
@@ -97,4 +108,22 @@ async function resolveTargetName(
 		}
 	}
 	return undefined
+}
+
+/**
+ * Index redirect mappings for the matcher: the `uuid` of each project element mapped onto -> the
+ * `uuid` of the source element it stands for.
+ */
+export async function indexRedirectedSourceUuids(
+	query: Reader,
+	redirectMappings: readonly RedirectMapping[] | undefined,
+): Promise<RedirectedSourceUuids> {
+	const redirectedSourceUuids = new Map<string, string>()
+	for (const { sourceUuid, target } of redirectMappings ?? []) {
+		const targetUuid = await query.any.getAttribute(target as Scl.Ref<Scl.ElementsOf>, {
+			name: 'uuid',
+		})
+		if (targetUuid) redirectedSourceUuids.set(targetUuid, sourceUuid)
+	}
+	return redirectedSourceUuids
 }

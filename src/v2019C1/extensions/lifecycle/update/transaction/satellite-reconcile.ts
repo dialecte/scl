@@ -1,6 +1,12 @@
+import { toRef } from '@dialecte/core/helpers'
+
+import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
-import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
+import {
+	collectForeignReferenceIds,
+	findInstanceByTemplateUuid,
+} from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	cloneTree,
 	resolveStructureRef,
@@ -10,19 +16,23 @@ import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type { DecisionMappings, ResolvedMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
-import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
  * Reconcile each satellite against the target, gated by `accepted`. Generic over
  * the layer: the caller resolves the SOURCE satellite refs and, for removal
  * detection, the TARGET instance refs (`instanceSatelliteRefs`, resolved with the
  * same finder against the instance primary BEFORE the primary reconcile runs, since
- * that reconcile may drop the referring ref). Three cases, matched by `templateUuid`:
- *  - an EXISTING instance -> reconcile-in-place (`engine.reconcile`);
- *  - NO instance yet -> ADD it (clone at source structural level + stamp lineage),
+ * that reconcile may drop the referring ref). A shared element lands where its mapping resolved
+ * (`resolvedMappings`, the answer the report read too); any other satellite is matched by
+ * `templateUuid`. Three cases:
+ *  - an EXISTING element -> reconcile-in-place (`engine.reconcile`); when it is the project's
+ *    own (a shared element mapped onto it), only what the source contributes below it;
+ *  - NOTHING yet -> ADD it (clone at source structural level + stamp lineage),
  *    so a newly-referenced satellite travels on update, not only first-time instantiate;
  *  - a TARGET instance the source no longer references -> DELETE it (the coupling
  *    invariant: it rides the primary group), guarded by a whole-target-doc
@@ -44,8 +54,17 @@ export async function reconcileSatellites(
 		matchKey?: MatchKey
 		/** `stamp-template` (default) or `keep` (fork) identity for an added satellite. */
 		identityMode?: IdentityMode
+		/** Where the shared satellites land, by source record id. */
+		resolvedMappings?: ResolvedMappings
+		/** The consumer's choices for the shared satellites, by source record id. */
+		decisionMappings?: DecisionMappings
+		/**
+		 * What belongs to the other instances of the template the satellites are reconciled for: a
+		 * shared satellite's references to it are theirs, not this instance's.
+		 */
+		resolveForeignScope?: ResolveForeignScope
 	},
-): Promise<Map<string, AnyRefOrRecord>> {
+): Promise<Scl.CloneMapping[]> {
 	const {
 		sourceQuery,
 		satelliteRefs,
@@ -54,31 +73,49 @@ export async function reconcileSatellites(
 		accepted,
 		matchKey = 'templateUuid',
 		identityMode = 'stamp-template',
+		resolvedMappings,
+		decisionMappings,
 	} = params
 
-	// source.id -> applied ref for every satellite element added/reconciled here (see `annotateInstance`)
-	const added = new Map<string, AnyRefOrRecord>()
+	// project elements a source satellite lands on: in use by the template, never deleted below
+	const mappedOntoIds = new Set<string>()
+	for (const resolved of resolvedMappings?.values() ?? []) {
+		if (resolved.existing) mappedOntoIds.add(resolved.existing.id)
+	}
+
+	// the clone mappings of every satellite element added here (see `annotateInstance`)
+	const added: Scl.CloneMapping[] = []
 
 	for (const satelliteRef of satelliteRefs) {
 		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
 
-		const instance = await findInstanceByTemplateUuid(tx, {
-			tagName: satelliteRef.tagName,
-			sourceUuid,
-			matchKey,
-		})
+		const resolved = satelliteRef.id ? resolvedMappings?.get(satelliteRef.id) : undefined
+		const instance = resolved
+			? resolved.existing
+			: await findInstanceByTemplateUuid(tx, {
+					tagName: satelliteRef.tagName,
+					sourceUuid,
+					matchKey,
+				})
 
 		if (instance) {
-			for (const [source, target] of await reconcile(tx, {
+			const foreignScope = await params.resolveForeignScope?.()
+			const foreignInstanceIds = await collectForeignReferenceIds(tx, {
+				sharedRootRef: instance,
+				foreignScope: foreignScope ?? new Set(),
+			})
+			const reconcileMappings = await reconcile(tx, {
 				sourceQuery,
 				sourceRootRef: satelliteRef,
 				instanceRootRef: instance,
 				accepted,
 				matchKey,
 				identityMode,
-			})) {
-				added.set(source, target)
-			}
+				instanceRootIsProjectOwned: resolved?.projectOwned ?? false,
+				keepLeftoverRefs: true,
+				foreignInstanceIds,
+			})
+			added.push(...reconcileMappings)
 			continue
 		}
 
@@ -93,11 +130,20 @@ export async function reconcileSatellites(
 			targetParent,
 			strip: false,
 		})
-		if (clone) {
-			await finalizeClonedIdentity(tx, { mappings: clone.mappings, mode: identityMode })
-			for (const mapping of clone.mappings) {
-				if (mapping.source.id) added.set(mapping.source.id, mapping.target)
-			}
+		if (!clone) continue
+		await finalizeClonedIdentity(tx, { cloneMappings: clone.mappings, mode: identityMode })
+		added.push(...clone.mappings)
+
+		// a shared element created here is validated against its structural level: the chosen
+		// name is applied, and a name already taken there is bumped to a free one
+		if (resolved && identityMode !== 'keep') {
+			const decision = satelliteRef.id ? decisionMappings?.get(satelliteRef.id) : undefined
+			const chosenName = decision && 'create' in decision ? decision.create.name : undefined
+			await resolvePlacementCollision(tx, {
+				ref: toRef(clone.record) as Scl.Ref<Scl.ElementsOf>,
+				parentRef: targetParent,
+				overrides: chosenName ? { name: chosenName } : undefined,
+			})
 		}
 	}
 
@@ -106,6 +152,7 @@ export async function reconcileSatellites(
 	// BehaviorDescription) persist when merely un-referenced, so the
 	// trigger is source-element non-existence, NOT a dropped link.
 	for (const instanceRef of instanceSatelliteRefs ?? []) {
+		if (instanceRef.id && mappedOntoIds.has(instanceRef.id)) continue
 		const lineage = await tx.any.getAttribute(instanceRef, { name: matchKey })
 		if (!lineage) continue
 

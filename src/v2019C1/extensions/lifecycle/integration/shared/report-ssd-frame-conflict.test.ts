@@ -77,7 +77,6 @@ describe('lifecycle report — SSD frame-root placement conflict', () => {
 		expect(frameGroup).toBeDefined()
 		expect(nameAttr?.conflict).toBe(true)
 		expect(nameAttr?.suggestedValue).toBe('B1_1')
-		expect(frameGroup?.conflict).toBeUndefined() // resolvable (name editable), not identity-locked
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

@@ -21,10 +21,10 @@ const sourceXml = /* xml */ `
 		<Substation name="TEMPLATE" ${id}="sub-s">
 			<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 				<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" desc="rev2 category" uuid="cat-src-uuid" ${id}="cat-s">
-					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="catref-s"/>
+					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="catref-s"/>
 				</eIEC61850-6-100:FunctionCategory>
 				<eIEC61850-6-100:FunctionCategory name="PROTECTION" desc="added in rev2" uuid="cat2-src-uuid" ${id}="cat2-s">
-					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="catref2-s"/>
+					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="catref2-s"/>
 				</eIEC61850-6-100:FunctionCategory>
 			</Private>
 			<VoltageLevel name="TEMPLATE" ${id}="vl-s">
@@ -52,7 +52,7 @@ const targetXml = /* xml */ `
 		<Substation name="TEMPLATE" ${id}="sub-t">
 			<Private type="eIEC61850-6-100" ${id}="sub-priv-t">
 				<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" desc="rev1 category" uuid="cat-src-uuid" ${id}="cat-t">
-					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="catref-t"/>
+					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="catref-t"/>
 				</eIEC61850-6-100:FunctionCategory>
 			</Private>
 			<VoltageLevel name="TEMPLATE" ${id}="vl-t">

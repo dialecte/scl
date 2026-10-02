@@ -341,6 +341,7 @@ describe('resolveMappedData', () => {
 		},
 
 		'DOS whose mappedLnUuid names a logical node absent from the file -> no implementation': {
+			allowIncoherentReferences: 'the dangling mappedLnUuid is the case under test',
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub" name="S1">

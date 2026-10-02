@@ -123,7 +123,7 @@ describe('lifecycle.apply — carried BehaviorDescription (cross-cutting satelli
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 

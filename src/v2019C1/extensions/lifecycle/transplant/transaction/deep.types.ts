@@ -35,6 +35,6 @@ export type ImportDeepResult = {
 	record: Scl.RawRecord<Scl.ElementsOf>
 	/** source type id -> reconciled target type id, from the data-model type reconciliation. */
 	typeIdRemap: Map<string, string>
-	/** Full source-record -> target-record structural mapping for the cloned subtree. */
-	recordMappings: Scl.CloneMapping[]
+	/** Each source record and the copy made of it, for the whole cloned subtree. */
+	cloneMappings: Scl.CloneMapping[]
 }

@@ -1,5 +1,10 @@
 import { stripAttributes } from '@dialecte/core/helpers'
 
+import {
+	holdsTemplateOnlyElement,
+	toInstanceTree,
+} from '@/v2019C1/extensions/lifecycle/engine/instance-tag'
+
 import type { StripConfig, RetagRootConfig } from './clone-tree.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -11,7 +16,8 @@ const DEFAULT_STRIP: StripConfig = {
 }
 
 /**
- * Clone pipeline: getTree -> optional retag root tagName -> strip -> deepClone.
+ * Clone pipeline: getTree -> template-only elements as what they are instantiated as -> optional
+ * retag root tagName -> strip -> deepClone.
  * UUID remapping is the caller's responsibility via `reference.applyUuidRemap` over the returned mappings.
  *
  * By default strips `templateUuid` and `originUuid` from the entire tree.
@@ -41,8 +47,16 @@ export async function cloneTree(
 	const tree = await sourceQuery.getTree(ref, { omit, unwrap: [] })
 	if (!tree) return undefined
 
+	// a subtree holding template-only elements (a function template) is cloned as what it is
+	// instantiated as: a function, in the namespace of a function
+	const instantiable = holdsTemplateOnlyElement(tree)
+		? toInstanceTree({ tree, parentTagName: targetParent.tagName })
+		: tree
+
 	const retagged =
-		retagRoot && tree.tagName === retagRoot.from ? { ...tree, tagName: retagRoot.to } : tree
+		retagRoot && instantiable.tagName === retagRoot.from
+			? { ...instantiable, tagName: retagRoot.to }
+			: instantiable
 
 	let result = retagged
 	if (strip) {

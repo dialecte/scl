@@ -456,11 +456,12 @@ await doc.transaction(async (tx) => {
 
 ### `applyUuidRemap`
 
-Repoints the **uuid** reference attributes of freshly cloned elements onto their clones and recomputes the reference paths, in one pass. Takes the source→target `mappings` a clone produced (`CloneMapping[]`); for each cloned element it rewrites every uuid-ref attribute (from `UUID_REFERENCE_PAIRS`) whose value matches a cloned source uuid to the target's uuid, then rebuilds the companion path.
+Repoints the **uuid** reference attributes of freshly cloned elements onto their clones and recomputes the reference paths, in one pass. Takes the source→target `cloneMappings` a clone produced (`CloneMapping[]`); for each cloned element it rewrites every uuid-ref attribute (from `UUID_REFERENCE_PAIRS`) whose value matches a cloned source uuid to the target's uuid, then rebuilds the companion path. Optional `redirectMappings` name source elements that were not cloned because they map onto an element the target already holds: references to them are repointed to that element the same way.
 
 ```ts
 tx.reference.applyUuidRemap(params: {
-  mappings: CloneMapping<Config>[]
+  cloneMappings: CloneMapping<Config>[]
+  redirectMappings?: { sourceUuid: string; target: Ref }[]
 }): Promise<void>
 ```
 

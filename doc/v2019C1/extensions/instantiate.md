@@ -13,8 +13,8 @@ Access via `tx.lifecycle.instantiate` inside a `doc.transaction()` callback.
 `fsd({ sourceQuery, functionRef, targetParent })` instantiates the content an FSD carries into a target document:
 
 1. clone the function subtree and its content-addressed type closure under `targetParent` (via [`transplant.deep`](./transplant));
-2. clone the `FunctionCategory` classification that references the function, placed at its structural level in the target project — the target Substation/VoltageLevel/Bay structure is resolved from `targetParent` (which may be a `Bay`, `VoltageLevel`, or `Substation`);
-3. clone the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to any element in the function subtree, each at its own structural level;
+2. place the `FunctionCategory` classification that references the function: mapped onto the category the project already holds (see [Shared elements are mapped, not copied](#shared-elements-are-mapped-not-copied)), else cloned at its structural level in the target project — the target Substation/VoltageLevel/Bay structure is resolved from `targetParent` (which may be a `Bay`, `VoltageLevel`, or `Substation`);
+3. place the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to any element in the function subtree: mapped onto the project's element of that name, else cloned at its own structural level;
 4. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its FSD counterpart as its `templateUuid` while receiving a fresh `uuid`;
 5. validate the placed function against its parent context and auto-resolve a scoped-uniqueness [collision](./update#placement-collision-resolution) on its `name` (e.g. instantiating the same template twice under one Bay yields `Prot` then `Prot_1`).
 
@@ -30,7 +30,7 @@ await project.transaction(async (tx) => {
 
 The clone's uuid references are repointed by [`reference.applyUuidRemap`](./reference#applyuuidremap) over the recipe's combined clone mappings — deep clone itself is purely structural. SET-specific policy — naming conventions, file-reference provenance, application assignment — is applied by consumer-registered hooks, not by the operation.
 
-Returns `{ functionRef, recordMappings }` — the instantiated root (retagged to `SubFunction` when placed under a `(Sub)Function`) and the full source→target `recordMappings`, so a caller can act on the placed function without re-querying by `templateUuid`.
+Returns `{ functionRef, cloneMappings }` — the instantiated root (retagged to `SubFunction` when placed under a `(Sub)Function`) and `cloneMappings`: each source record and the copy made of it, for everything the operation cloned (the function subtree and the categories, variables and behaviour descriptions carried with it), so a caller can act on the placed function without re-querying by `templateUuid`.
 
 ## asd
 
@@ -39,6 +39,20 @@ Returns `{ functionRef, recordMappings }` — the instantiated root (retagged to
 1. clone the `Application` and its composed Functions, categories and satellites (`AllocationRole`, dataflow refs, …) with their type closure, under the structure resolved from `targetParent` (via the shared `layers/application` take-over, built on [`transplant.deep`](./transplant)), together with the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to the Application or its content;
 2. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its ASD counterpart as its `templateUuid` while receiving a fresh `uuid`;
 3. validate the placed `Application` and each composed Function against their parent context and auto-resolve a scoped-uniqueness [collision](./update#placement-collision-resolution) on their `name`, each at its own structural level.
+
+### Shared elements are mapped, not copied
+
+An `AllocationRole` is an element the project holds once and several applications refer to. A role the ASD brings is **mapped** onto the project's role when the project has exactly one role of that name: it is not cloned, its function references are added to the project role, and the application's `AllocationRoleRef` points at it. The project role keeps its own attributes and receives no `templateUuid` — it is not an instance of the template's role.
+
+With no role of that name, or with several (none is picked), the role is created like any cloned element, and a name already taken at its level is bumped to a free one.
+
+A role the project holds because an earlier placement of the same template created it comes first: it is the one proposed, even when it was renamed since.
+
+A `Variable` and a `BehaviorDescription` follow it too, except that where they land is listed and not chosen (`selectable: false`): what they apply to (`VariableApplyTo`, `InputVar` / `OutputVar`) is added to the project's element, and a reference to them (`VariableRef`, `BehaviorDescriptionRef`) points at it.
+
+A `FunctionCategory` follows the same rule, for a function, an application's composed functions and an SSD alike: mapped onto the project's category of that name, its classifications (`FunctionCatRef`) are added to it — inside the project's `SubCategory` of the same name when the source nests them — and an application's `FunctionCategoryRef` points at the project's category or sub-category.
+
+`report` resolves the mapping the same way, so the review shows the role as a companion matched onto the project role, with only the contributed references added. It also lists the mapping, with every project role as a candidate, and the consumer may choose another one or a new role — see [Shared-element mappings](./update#shared-element-mappings).
 
 ```ts
 await project.transaction(async (tx) => {
@@ -52,7 +66,7 @@ await project.transaction(async (tx) => {
 
 `asd` is the exact application-layer counterpart of [`extract.asd`](./extract#asd): both compose the same `layers/application` take-over, differing only in direction (extract strips, instantiate stamps). SET policy (`ApplicationSclRef` provenance, assign-to-application) is applied by consumer hooks.
 
-Returns `{ applicationRef, composedFunctionRefs, recordMappings }` — the instantiated `Application`, its composed root Functions, and the full source→target `recordMappings`.
+Returns `{ applicationRef, composedFunctionRefs, cloneMappings }` — the instantiated `Application`, its composed root Functions, and `cloneMappings`: each source record and the copy made of it, for everything the operation cloned (a shared element mapped onto a project element is not cloned, so it has no entry).
 
 ## ssd
 
@@ -75,4 +89,4 @@ await project.transaction(async (tx) => {
 })
 ```
 
-Returns `{ scopeRef, recordMappings }` — the SSD-side scope root that was instantiated, and the source→target `recordMappings` for the reproduced frame and placed fn/app content (the cross-cutting satellites are cloned separately and not included).
+Returns `{ scopeRef, cloneMappings }` — the SSD-side scope root that was instantiated, and `cloneMappings`: each source record and the copy made of it, for everything the operation cloned (the reproduced frame, the placed fn/app content and the cross-cutting satellites carried with them).

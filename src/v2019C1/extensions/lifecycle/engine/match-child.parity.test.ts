@@ -98,9 +98,10 @@ describe('engine — diff (report) and reconcile (apply) pair children identical
 				<Substation name="TEMPLATE" ${id}="sub-s">
 					<Private type="eIEC61850-6-100">
 						<eIEC61850-6-100:AllocationRole name="PIU" uuid="ar-src" ${id}="ar-s">
-							<eIEC61850-6-100:FunctionRef function="New_Fn" functionUuid="fn-new" ${id}="fref-s"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/New_Fn" functionUuid="fn-new" ${id}="fref-s"/>
 						</eIEC61850-6-100:AllocationRole>
 					</Private>
+					<Function name="New_Fn" uuid="fn-new" ${id}="fn-new-s"/>
 				</Substation>
 			</SCL>
 		`
@@ -109,9 +110,10 @@ describe('engine — diff (report) and reconcile (apply) pair children identical
 				<Substation name="S1" ${id}="sub-t">
 					<Private type="eIEC61850-6-100">
 						<eIEC61850-6-100:AllocationRole name="PIU" uuid="ar-i" templateUuid="ar-src" ${id}="ar-i">
-							<eIEC61850-6-100:FunctionRef function="Existing_Fn" functionUuid="fn-existing" ${id}="fref-i"/>
+							<eIEC61850-6-100:FunctionRef function="S1/Existing_Fn" functionUuid="fn-existing" ${id}="fref-i"/>
 						</eIEC61850-6-100:AllocationRole>
 					</Private>
+					<Function name="Existing_Fn" uuid="fn-existing" ${id}="fn-existing-t"/>
 				</Substation>
 			</SCL>
 		`

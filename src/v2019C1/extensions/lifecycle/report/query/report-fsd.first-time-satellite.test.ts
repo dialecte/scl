@@ -27,7 +27,7 @@ const sourceXml = /* xml */ `
 		<Substation name="TEMPLATE" ${id}="sub-s">
 			<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 				<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" uuid="cat-src-uuid" ${id}="cat-s">
-					<eIEC61850-6-100:FunctionCatRef functionUuid="fn-src-uuid" function="TEMPLATE/Prot" ${id}="catref-s"/>
+					<eIEC61850-6-100:FunctionCatRef functionUuid="fn-src-uuid" function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" ${id}="catref-s"/>
 				</eIEC61850-6-100:FunctionCategory>
 			</Private>
 			<VoltageLevel name="TEMPLATE" ${id}="vl-s">

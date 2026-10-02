@@ -31,6 +31,7 @@ const sourceXml = /* xml */ `
 					<eIEC61850-6-100:FunctionRef function="TEMPLATE/CT_Fn" functionUuid="fn-src" ${id}="ar-fref-s"/>
 				</eIEC61850-6-100:AllocationRole>
 			</Private>
+			<Function name="CT_Fn" uuid="fn-src" ${id}="fn-s"/>
 		</Substation>
 	</SCL>
 `
@@ -48,6 +49,7 @@ const instanceXml = /* xml */ `
 					<eIEC61850-6-100:FunctionRef function="S1/CT_Fn" functionUuid="fn-inst" ${id}="ar-fref-i"/>
 				</eIEC61850-6-100:AllocationRole>
 			</Private>
+			<Function name="CT_Fn" uuid="fn-inst" templateUuid="fn-src" ${id}="fn-i"/>
 		</Substation>
 	</SCL>
 `

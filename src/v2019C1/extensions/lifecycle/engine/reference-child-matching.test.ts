@@ -23,9 +23,10 @@ const sourceXml = /* xml */ `
 		<Substation name="TEMPLATE" ${id}="sub-s">
 			<Private type="eIEC61850-6-100">
 				<eIEC61850-6-100:AllocationRole name="PIU" uuid="ar-src" ${id}="ar-s">
-					<eIEC61850-6-100:FunctionRef function="Current Transformer_Fn" functionUuid="fn-new" ${id}="fref-s"/>
+					<eIEC61850-6-100:FunctionRef function="TEMPLATE/Current Transformer_Fn" functionUuid="fn-new" ${id}="fref-s"/>
 				</eIEC61850-6-100:AllocationRole>
 			</Private>
+			<Function name="Current Transformer_Fn" uuid="fn-new" ${id}="fn-new-s"/>
 		</Substation>
 	</SCL>
 `
@@ -37,9 +38,10 @@ const targetXml = /* xml */ `
 		<Substation name="S1" ${id}="sub-t">
 			<Private type="eIEC61850-6-100">
 				<eIEC61850-6-100:AllocationRole name="PIU" uuid="ar-i" templateUuid="ar-src" ${id}="ar-i">
-					<eIEC61850-6-100:FunctionRef function="CB Interface" functionUuid="fn-existing" ${id}="fref-i"/>
+					<eIEC61850-6-100:FunctionRef function="S1/CB Interface" functionUuid="fn-existing" ${id}="fref-i"/>
 				</eIEC61850-6-100:AllocationRole>
 			</Private>
+			<Function name="CB Interface" uuid="fn-existing" ${id}="fn-existing-t"/>
 		</Substation>
 	</SCL>
 `
@@ -74,7 +76,7 @@ describe('engine.diff — reference children match by reference identity, not ta
 				<Substation name="TEMPLATE" ${id}="sub-s2">
 					<Private type="eIEC61850-6-100">
 						<eIEC61850-6-100:AllocationRole name="PIU" uuid="ar-src2" ${id}="ar-s2">
-							<eIEC61850-6-100:FunctionRef function="Prot" functionUuid="fn-src2" ${id}="fref-s2"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src2" ${id}="fref-s2"/>
 						</eIEC61850-6-100:AllocationRole>
 					</Private>
 					<VoltageLevel name="TEMPLATE" ${id}="vl-s2">
@@ -91,7 +93,7 @@ describe('engine.diff — reference children match by reference identity, not ta
 				<Substation name="S1" ${id}="sub-t2">
 					<Private type="eIEC61850-6-100">
 						<eIEC61850-6-100:AllocationRole name="PIU" uuid="ar-inst2" templateUuid="ar-src2" ${id}="ar-i2">
-							<eIEC61850-6-100:FunctionRef function="Prot" functionUuid="fn-inst2" ${id}="fref-i2"/>
+							<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot" functionUuid="fn-inst2" ${id}="fref-i2"/>
 						</eIEC61850-6-100:AllocationRole>
 					</Private>
 					<VoltageLevel name="V1" ${id}="vl-t2">

@@ -3,7 +3,6 @@ import { reconcileCarriedSatellites } from './function-satellites'
 
 import {
 	annotateInstance,
-	mergeApplied,
 	sourceToTargetMap,
 } from '@/v2019C1/extensions/lifecycle/engine/correlate'
 import {
@@ -15,7 +14,12 @@ import {
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
-import { findInstancesUnder, scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
+import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
+import {
+	findInstancesUnder,
+	foreignScopeResolver,
+	scopeToTargetInstance,
+} from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	fsd as instantiateFsd,
 	resolveTargetStructure,
@@ -27,6 +31,7 @@ import {
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
 	AcceptedIds,
@@ -37,6 +42,7 @@ import type {
 	DecisionMap,
 	DiffReport,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -56,7 +62,7 @@ export async function fsd(
 	tx: Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
-		functionRef: Scl.Ref<'Function'>
+		functionRef: FsdFunctionRef
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		/** `instantiate` forces a fresh instance; `template` (default) reconciles. */
 		scenario?: LifecycleScenario
@@ -67,6 +73,10 @@ export async function fsd(
 		keepNameTypesFrom?: KeepNameTypesFrom
 		/** Multi-instance anchor: scope to ONE target instance (or its subtree). Absent = all. */
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		/** The consumer's choices for the shared elements the function is classified by. */
+		decisionMappings?: DecisionMappings
+		/** The function is placed by this operation alone (an FSD): see `instantiate.fsd`. */
+		resolvePlacement?: boolean
 	},
 ): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
 	const {
@@ -99,17 +109,19 @@ export async function fsd(
 			? collisionOverrides({ groups: addedGroups, decisions })
 			: undefined
 		if (gate && !gate.sourceIds.has(functionRef.id)) return []
-		const { functionRef: root, mappings } = await instantiateFsd(tx, {
+		const { functionRef: root, cloneMappings } = await instantiateFsd(tx, {
 			sourceQuery,
 			functionRef,
 			targetParent,
 			overrides: gateOverrides,
 			keepNameTypesFrom,
+			decisionMappings: params.decisionMappings,
+			resolvePlacement: params.resolvePlacement,
 		})
 		// annotate the first-time instance's report nodes with what each source element became
 		const firstTime = firstTimeReportInstance(report, functionRef.id)
 		if (firstTime)
-			annotateInstance({ reportInstance: firstTime, added: sourceToTargetMap(mappings) })
+			annotateInstance({ reportInstance: firstTime, added: sourceToTargetMap(cloneMappings) })
 		return [root]
 	}
 
@@ -120,7 +132,7 @@ export async function fsd(
 			decisions,
 		})
 
-		const reconcileMap = await reconcile(tx, {
+		const reconcileMappings = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: functionRef,
 			instanceRootRef: instance,
@@ -130,8 +142,15 @@ export async function fsd(
 			matchKey,
 			identityMode,
 		})
+		// an element the instances share (a category) holds one reference per instance: this one
+		// reconciles its own, as the project stands once the earlier instances are updated
+		const resolveForeignScope = foreignScopeResolver(tx, {
+			instanceRootRef: instance,
+			sourceUuid,
+			matchKey,
+		})
 		// carried satellites (e.g. FunctionCategory) travel with the function group
-		const carriedMap = await reconcileCarriedSatellites(tx, {
+		const carriedMappings = await reconcileCarriedSatellites(tx, {
 			sourceQuery,
 			functionRef,
 			instanceRef: instance,
@@ -139,9 +158,11 @@ export async function fsd(
 			accepted: instanceAccepted,
 			matchKey,
 			identityMode,
+			decisionMappings: params.decisionMappings,
+			resolveForeignScope,
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
-		const crossMap = await reconcileCrossCuttingSatellites(tx, {
+		const cross = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
 			primaryRef: functionRef,
 			instancePrimaryRef: { tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
@@ -149,14 +170,21 @@ export async function fsd(
 			accepted: instanceAccepted,
 			matchKey,
 			identityMode,
+			resolveForeignScope,
 		})
 		// carry the report->applied correlation onto this instance's report nodes
+		const addedMappings = [...reconcileMappings, ...carriedMappings, ...cross.cloneMappings]
+		// the references this instance gained may point outside the subtree they were added with:
+		// at another element added here, or at an element the instance already holds
+		await repointAddedReferences(tx, {
+			cloneMappings: addedMappings,
+			instanceRootRef: instance,
+			matchKey,
+			redirectMappings: cross.redirectMappings,
+		})
 		const reportInstance = reportInstanceById(report, instance.id)
 		if (reportInstance) {
-			annotateInstance({
-				reportInstance,
-				added: mergeApplied(reconcileMap, carriedMap, crossMap),
-			})
+			annotateInstance({ reportInstance, added: sourceToTargetMap(addedMappings) })
 		}
 	}
 

@@ -167,7 +167,7 @@ describe('lifecycle scenario — multi-instance same template at one level (coll
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions,
+				resolution: { decisions },
 			})
 		})
 

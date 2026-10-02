@@ -1,46 +1,42 @@
-import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
-import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
-import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
+import { reconcileSatellites } from './satellite-reconcile'
+
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers/function'
 import {
-	cloneFunctionCategories,
-	resolveFunctionSatellites,
-} from '@/v2019C1/extensions/lifecycle/layers/function'
-import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
+	findWithdrawnContributions,
+	resolveSatelliteMappings,
+} from '@/v2019C1/extensions/lifecycle/mapping'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
+import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
- * Reconcile each carried satellite (e.g. a `FunctionCategory`) of a function ONTO
- * its existing instance, gated by `accepted`. The satellite lives
- * OUTSIDE the function subtree, so the function reconcile never reaches it; here
- * it is matched globally by `templateUuid` and reconciled in place. The write is
- * gated exactly like the function's: `reconcile` only touches records whose source
- * id is in `accepted`, so the satellite travels iff its function group is accepted
- * (its report companion contributed that id).
+ * Reconcile the satellites carried by a function (its `FunctionCategory` classification) for one
+ * instance of it, gated by `accepted`. They live OUTSIDE the function subtree, so the function
+ * reconcile never reaches them.
  *
- * A satellite the updated template ADDS (no instance yet — a newly-classified
- * function) is added via the clone path (`cloneFunctionCategories` +
- * `writeIdentity`, mirroring `instantiate.fsd`), gated by the function group's
- * acceptance.
+ * The function layer finds its satellites on both sides — in the source, and those the instance is
+ * classified by — and resolves where each source one lands (`resolveSatelliteMappings`, the answer
+ * the report read too). The generic satellite reconcile then does the rest: reconcile in place
+ * (only the contributed children when the category is the project's own), add a category the
+ * updated template newly classifies the function by, delete one the template retired (guarded by
+ * a last-referrer check, so a category still classifying another function is kept).
  *
- * A satellite the template RETIRED (its element no longer in the source, matched
- * against the `instance`'s satellites) is DELETED — the coupling invariant: it
- * rides the function group (gated by `accepted.instanceIds`), guarded by a
- * whole-target-doc last-referrer check so a category still referenced by ANOTHER
- * function is kept (shared-satellite safety). Catalog persistence:
- * the trigger is source-element non-existence, NOT a dropped link.
+ * What the instance gave to a project category the template no longer classifies it by is removed
+ * with the removal the report announced.
  */
 export async function reconcileCarriedSatellites(
 	tx: Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
-		functionRef: Scl.Ref<'Function'>
+		functionRef: FsdFunctionRef
 		instanceRef: AnyRefOrRecord
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		accepted?: AcceptedIds
@@ -48,8 +44,12 @@ export async function reconcileCarriedSatellites(
 		matchKey?: MatchKey
 		/** `stamp-template` (default) or `keep` (fork) identity for an added satellite. */
 		identityMode?: IdentityMode
+		/** The consumer's choices for the shared elements the function is classified by. */
+		decisionMappings?: DecisionMappings
+		/** What belongs to the other instances of the function. */
+		resolveForeignScope?: ResolveForeignScope
 	},
-): Promise<Map<string, AnyRefOrRecord>> {
+): Promise<Scl.CloneMapping[]> {
 	const {
 		sourceQuery,
 		functionRef,
@@ -58,78 +58,53 @@ export async function reconcileCarriedSatellites(
 		accepted,
 		matchKey = 'templateUuid',
 		identityMode = 'stamp-template',
+		decisionMappings,
 	} = params
 
-	// source.id -> applied ref for every satellite element added here (see `annotateInstance`)
-	const added = new Map<string, AnyRefOrRecord>()
+	// the instance may have been placed as a SubFunction: keep the tag it carries
+	const instancePrimaryRef = {
+		tagName: instanceRef.tagName,
+		id: instanceRef.id,
+	} as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 
-	const satellites = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
-	let hasMissing = false
-	for (const satelliteRef of satellites) {
-		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
-		const instance = await findInstanceByTemplateUuid(tx, {
-			tagName: satelliteRef.tagName,
-			sourceUuid,
-			matchKey,
-		})
-		if (!instance) {
-			hasMissing = true
-			continue
-		}
-
-		for (const [source, target] of await reconcile(tx, {
-			sourceQuery,
-			sourceRootRef: satelliteRef,
-			instanceRootRef: instance,
-			accepted,
-			matchKey,
-			identityMode,
-		})) {
-			added.set(source, target)
-		}
-	}
-
-	// add newly-classified satellites (companions of the function group), gated by
-	// the group's acceptance; cloneFunctionCategories is idempotent on already-cloned.
-	if (hasMissing && (!accepted || accepted.sourceIds.has(functionRef.id))) {
-		const structure = await resolveTargetStructure(tx, targetParent)
-		const mappings = await cloneFunctionCategories(tx, {
-			sourceQuery,
-			functionRef,
-			structure,
-			stripCategoriesUuid: false,
-		})
-		await finalizeClonedIdentity(tx, { mappings, mode: identityMode })
-		for (const mapping of mappings) {
-			if (mapping.source.id) added.set(mapping.source.id, mapping.target)
-		}
-	}
-
-	// delete: an instance satellite whose template ELEMENT was retired from the source
-	// (its uuid no longer exists there). Resolved against the instance's own satellites
-	// so a dropped FunctionCatRef doesn't hide it. Gated on the removal companion's
-	// acceptance; guarded by a last-referrer check (kept if any other function refs it).
-	const instanceSatellites = await resolveFunctionSatellites(tx, {
-		primaryRef: { tagName: 'Function', id: instanceRef.id } as Scl.Ref<'Function'>,
+	const satelliteRefs = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
+	const instanceSatelliteRefs = await resolveFunctionSatellites(tx, {
+		primaryRef: instancePrimaryRef,
 	})
-	for (const instanceSatelliteRef of instanceSatellites) {
-		const lineage = await tx.any.getAttribute(instanceSatelliteRef, { name: matchKey })
-		if (!lineage) continue
 
-		const [stillInSource] = await sourceQuery.any.findByAttributes({
-			tagName: instanceSatelliteRef.tagName,
-			attributes: { uuid: lineage },
-		})
-		if (stillInSource) continue
+	const resolvedMappings = await resolveSatelliteMappings(tx, {
+		sourceQuery,
+		satelliteRefs,
+		instanceSatelliteRefs,
+		decisionMappings,
+		matchKey,
+	})
+	const withdrawnContributions = await findWithdrawnContributions(tx, {
+		instancePrimaryRef,
+		instanceSatelliteRefs,
+		resolvedMappings,
+		matchKey,
+	})
 
-		if (accepted && instanceSatelliteRef.id && !accepted.instanceIds.has(instanceSatelliteRef.id)) {
-			continue
-		}
+	const structure = await resolveTargetStructure(tx, targetParent)
+	const added = await reconcileSatellites(tx, {
+		sourceQuery,
+		satelliteRefs,
+		instanceSatelliteRefs,
+		structure,
+		accepted,
+		matchKey,
+		identityMode,
+		resolvedMappings,
+		decisionMappings,
+		resolveForeignScope: params.resolveForeignScope,
+	})
 
-		const referrers = await findRefsPointingTo(tx, { target: instanceSatelliteRef })
-		if (referrers.length > 0) continue
-
-		await tx.delete(instanceSatelliteRef)
+	for (const contribution of withdrawnContributions) {
+		// gated on the removal the report announced for it
+		if (accepted && !accepted.instanceIds.has(contribution.id)) continue
+		const live = await tx.any.getRecord(contribution)
+		if (live) await tx.any.delete(contribution)
 	}
 
 	return added

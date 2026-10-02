@@ -1,3 +1,7 @@
+import {
+	assertCoherentSclReferences,
+	assertCoherentSclReferencesTestCases,
+} from './assert-coherent-scl-references'
 import { assertValidSclTestCases, assertValidSclXml } from './assert-valid-scl-xml'
 
 import {
@@ -28,6 +32,7 @@ export const XMLNS_SCL_NAMESPACE = `xmlns="${SCL_DIALECTE_CONFIG.namespaces.defa
 export const XMLNS_SCL_6_100_NAMESPACE = `xmlns:${SCL_DIALECTE_CONFIG.namespaces.v2019C1.prefix}="${SCL_DIALECTE_CONFIG.namespaces.v2019C1.uri}"`
 export const ALL_XMLNS_NAMESPACES = `${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${XMLNS_XSI_NAMESPACE}`
 export { CUSTOM_RECORD_ID_ATTRIBUTE, CUSTOM_RECORD_ID_ATTRIBUTE_NAME }
+export { assertCoherentSclReferences } from './assert-coherent-scl-references'
 export { assertValidSclXml } from './assert-valid-scl-xml'
 
 const SCL_EXTENSIONS = { base: SCL_EXTENSION_MODULES }
@@ -39,17 +44,20 @@ const rawRunSclTestCases = createTestRunner<Config, SclModules>({
 })
 
 /**
- * `createTestRunner`, wrapped so every registered case's XML is checked against the SCL schema
- * before the suite runs — all invalid cases reported at once (see {@link assertValidSclTestCases}).
+ * `createTestRunner`, wrapped so every registered case's XML is checked before the suite runs —
+ * against the SCL schema (see {@link assertValidSclTestCases}), then for coherent references
+ * (see {@link assertCoherentSclReferencesTestCases}). All failing cases are reported at once.
  */
 export const runSclTestCases: typeof rawRunSclTestCases = {
 	...rawRunSclTestCases,
 	withExport(params) {
 		assertValidSclTestCases({ testCases: params.testCases })
+		assertCoherentSclReferencesTestCases({ testCases: params.testCases })
 		rawRunSclTestCases.withExport(params)
 	},
 	withoutExport(params) {
 		assertValidSclTestCases({ testCases: params.testCases })
+		assertCoherentSclReferencesTestCases({ testCases: params.testCases })
 		rawRunSclTestCases.withoutExport(params)
 	},
 }
@@ -58,10 +66,16 @@ export async function createSclTestProject(params: {
 	sourceXml: string
 	targetXml?: string
 	dev?: { perf?: boolean }
+	/** The reason the fixtures NEED an incoherent reference; they are then left unchecked. */
+	allowIncoherentReferences?: string
 }) {
-	const { sourceXml, targetXml, dev } = params
+	const { sourceXml, targetXml, dev, allowIncoherentReferences } = params
 	assertValidSclXml(sourceXml, 'sourceXml', { requireComplete: false })
 	if (targetXml) assertValidSclXml(targetXml, 'targetXml', { requireComplete: false })
+	if (!allowIncoherentReferences) {
+		assertCoherentSclReferences({ xml: sourceXml, label: 'sourceXml' })
+		if (targetXml) assertCoherentSclReferences({ xml: targetXml, label: 'targetXml' })
+	}
 
 	return createTestProject<Config, SclModules>({
 		sourceXml,

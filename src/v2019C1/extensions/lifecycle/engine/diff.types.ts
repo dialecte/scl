@@ -1,4 +1,6 @@
 import type { EditableAttribute } from '../constraints'
+import type { OffLevel } from '../layers/topology/resolve-primary-placement.types'
+import type { ReportMapping } from '../mapping/mapping.types'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
 /** How a diffed element changed between the (updated) template and the instance. */
@@ -40,17 +42,8 @@ export type InstanceDiff = {
 	root: DiffNode
 	groups: DecisionGroup[]
 	summary: DiffSummary
-}
-
-/**
- * An identity-locked placement collision on a decision group's primary: every field
- * of the violated uniqueness constraint is identity (none editable), so the engine
- * cannot differentiate a copy. `adoptTargetId` is the existing element the primary is
- * identity-equal to (the reconcile target when the user chooses to adopt).
- */
-export type GroupConflict = {
-	fields: string[]
-	adoptTargetId: string
+	/** Where the shared source elements this instance refers to land in the project. */
+	mappings?: ReportMapping[]
 }
 
 /**
@@ -81,16 +74,6 @@ export type DecisionGroup = {
 	 * report surface tags it.
 	 */
 	editableAttributes?: EditableAttribute[]
-	/**
-	 * Set at report time when placing the primary would violate a scoped-uniqueness
-	 * constraint whose fields are ALL identity (non-editable) — the engine cannot make
-	 * a distinct copy, so `instantiate` cannot duplicate it. The group then needs a
-	 * decision: `skip` (leave the existing element) or `accept` = **adopt** (reconcile
-	 * the template onto `adoptTargetId`, i.e. update that existing element in place).
-	 * Omitted when there is no collision or the collision is resolvable (an editable
-	 * field is bumped instead — see {@link EditableAttribute.conflict}).
-	 */
-	conflict?: GroupConflict
 }
 
 /**
@@ -112,6 +95,8 @@ export type ReportInstance = {
 	tree: DiffNode
 	/** The change tree folded into accept/skip units for this instance. */
 	groups: DecisionGroup[]
+	/** Where the shared source elements this instance refers to land in the project. */
+	mappings: ReportMapping[]
 }
 
 export type DiffReport = {
@@ -123,6 +108,13 @@ export type DiffReport = {
 	 */
 	needsDecisions: boolean
 	summary: DiffSummary
+	/** Where each shared source element lands in the project — one entry per source element. */
+	mappings: ReportMapping[]
+	/**
+	 * Set when the consumer started from a level ABOVE the one the template was made for: its content
+	 * cannot stay there and lands below, on the levels its placement mappings say.
+	 */
+	offLevel?: OffLevel
 }
 
 /**

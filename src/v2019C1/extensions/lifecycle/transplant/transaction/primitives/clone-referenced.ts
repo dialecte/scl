@@ -111,13 +111,13 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 		alreadyCloned,
 	})
 
-	const mappings: Scl.CloneMapping[] = []
+	const cloneMappings: Scl.CloneMapping[] = []
 	for (const ref of missing) {
 		const targetParent = await resolveTargetParent(ref)
 		const clone = await cloneTree(tx, { sourceQuery, ref, targetParent, omit })
-		if (clone) mappings.push(...clone.mappings)
+		if (clone) cloneMappings.push(...clone.mappings)
 	}
-	return mappings
+	return cloneMappings
 }
 
 // ── Config-driven bulk clone ─────────────────────────────────────────────────
@@ -176,7 +176,7 @@ export async function cloneAllReferencedTargets(
 
 	const cloneRefs = cloneReferencedRecords as CloneRefsFn
 
-	const mappings: Scl.CloneMapping[] = []
+	const cloneMappings: Scl.CloneMapping[] = []
 	for (const refTagName of refTags) {
 		for (const pair of UUID_REFERENCE_PAIRS[refTagName]) {
 			for (const targetTagName of pair.target) {
@@ -189,9 +189,9 @@ export async function cloneAllReferencedTargets(
 					alreadyCloned,
 					omit,
 				})
-				mappings.push(...cloned)
+				cloneMappings.push(...cloned)
 			}
 		}
 	}
-	return mappings
+	return cloneMappings
 }

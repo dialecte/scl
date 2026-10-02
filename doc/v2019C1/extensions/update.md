@@ -23,14 +23,17 @@ The `reconcile` / `diff` primitives below (in `extensions/lifecycle/engine`) are
 The verb-agnostic surface is the recommended consumer entry point. **Dialecte decides the track**, the consumer never picks it: ask for a report, then apply.
 
 ```ts
-query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor }) // -> DiffReport { instances, needsDecisions, summary }
-tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, keepNameTypesFrom? }) // -> ApplyResult { report, instances }
+query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor, resolution? }) // -> DiffReport { instances, needsDecisions, summary, mappings }
+tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, resolution? }) // -> ApplyResult { report, instances }
 ```
 
 - `verb`: `'fsd'` (then `ref` is a `Function`), `'asd'` (then `ref` is an `Application`), or `'ssd'` (then `ref` is the topology scope, `Substation`/`VoltageLevel`/`Bay` — see [the note below](#txlifecycleupdatessd)) — the **layer**;
 - `scenario`: `'instantiate'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`);
 - `anchor`: the target parent the instance lives under / is placed into.
-- `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template).
+- `resolution`: what the consumer resolved, as one object — `{ decisions?, mappings?, keepNameTypesFrom? }`. `apply` reads all of it; `report` reads `mappings`, so the report is re-derived from the consumer's choices and shows their consequence:
+  - `decisions`: accept / skip (and edited values) per decision group — see [Decision groups](#decision-groups-full-track);
+  - `mappings`: where a shared element lands, per source element — see [Shared-element mappings](#shared-element-mappings);
+  - `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template).
 
 ### Apply result
 
@@ -119,7 +122,7 @@ type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 
 Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: `reconcile` never overwrites them, even when a UI-instructed edit lists them. The binding is the lock (`dataModel.isLNodeLocked`); a dangling binding stays locked until orphan cleanup resolves it.
 
-`apply` takes `decisions: Map<groupId, GroupDecision>` where a decision is either a plain
+`apply` takes `resolution.decisions: Map<groupId, GroupDecision>` where a decision is either a plain
 accept/skip or an object carrying **edited values** for the group's `editableAttributes`:
 
 ```ts
@@ -132,6 +135,76 @@ empty map applies everything), but `skip` for a `target-only` group, so an autho
 kept unless the user explicitly opts into removing it. The engine rejects a set that accepts a group
 whose `dependsOn` parent is skipped.
 
+### Shared-element mappings
+
+Some elements are held once by the project and shared — an `AllocationRole` several applications refer to, a `FunctionCategory` classifying several functions, a `Variable` or a `BehaviorDescription` applying to several elements. A template that brings such an element does not necessarily copy it: it **maps** it onto an element of the project, or creates a new one. `report` lists that decision for every shared element the template brings, and the consumer may change it.
+
+```ts
+type ReportMapping = {
+	id: string // record id of the SOURCE element — the key of a choice made for it
+	tagName: string
+	mapping: DecisionMapping // where it lands, as resolved
+	reason: 'decision' | 'lineage' | 'name' | 'none'
+	ambiguous: boolean // several project elements qualified equally: none was picked
+	selectable: boolean // the consumer may choose another mapping for an element of this kind
+	locked: boolean // the instance being updated already carries this mapping: shown, not changeable
+	candidates: { ref; title: string; path: string }[]
+}
+
+type DecisionMapping = { existing: Ref } | { create: { name?: string } }
+```
+
+- **Resolved by default**, first answer wins: the one project element created from this source element by an earlier placement, whatever it is named now (`reason: 'lineage'`); else the project element of the same name when there is exactly one (`'name'`); else a new element (`'none'`). Where several elements qualify equally, none is picked and a new element is created (`ambiguous: true`).
+- **`candidates`**: every project element of that tag, listed from the placement outwards — the anchor's own level, each level above it, then the rest of the project. For a `locked` mapping, the one element it is mapped onto.
+- **A new element** carries the name `apply` will give it: the source name, or the name the consumer asked for, made free at the level it lands on (`HMI_PC` → `HMI_PC_1`).
+
+To change a mapping, pass the choice and ask for the report again; then apply with the same `resolution`:
+
+```ts
+const decisionMappings = new Map([[roleMapping.id, { existing: roleMapping.candidates[0].ref }]])
+const report = await doc.query.lifecycle.report({
+	...target,
+	resolution: { mappings: decisionMappings },
+})
+// report.mappings and the review tree now show the role matched onto that element
+await doc.prepare((tx) =>
+	tx.lifecycle.apply(tx, {
+		...target,
+		report,
+		resolution: { decisions, mappings: decisionMappings },
+	}),
+)
+```
+
+The mapping of a `Variable` or a `BehaviorDescription` is resolved and listed like the others, with `selectable: false`: it is shown, not chosen.
+
+A choice the report cannot honour is refused, by `report` and by `apply`: a source element the template does not bring, a project element that is not among the candidates, a mapping that is not `selectable`, or one that is `locked`.
+
+The element a source element is mapped onto stays the project's: its own attributes are neither compared nor written, it receives no `templateUuid`, and only what the source contributes below it (an `AllocationRole`'s function references, a `FunctionCategory`'s classifications) is added. The references to it follow (`AllocationRoleRef`, `FunctionCategoryRef`: uuid and path).
+
+Inside such an element, a named container the source brings (a `SubCategory`) lands on the container the project element already has: the one created from it by an earlier placement, else the one of the same name — which is the project's too, so its attributes are left alone. A container with no counterpart is added. What the project element holds besides is neither announced nor touched.
+
+Mappings are resolved for every verb — a function's categories (`verb: 'fsd'`, and the functions an application composes or an SSD carries), an application's roles (`verb: 'asd'`, or carried by an SSD), the variables and behaviour descriptions applying to any of them — on a first placement and on every update.
+
+#### On an update
+
+An update finds, for each instance, the project element that instance already holds for a shared source element, and keeps it: the mapping is listed with `reason: 'lineage'` and `locked: true`. Nothing is written in the file to remember a mapping; it is read from what the placement wrote, strongest evidence first:
+
+1. the element was created from the source element (it carries its lineage) — it is an instance of it, reconciled in full, attributes included;
+2. the element holds a reference to the project element standing for one the source element refers to (the function references a mapped `AllocationRole` was given) — so a role the project's author renamed since is still found;
+3. the element has the same name;
+4. it is the only element the instance holds, for the only shared element the template brings.
+
+A step pairs a source element with a project element only when neither has another possibility. An element found by 2–4 is the project's own: only what the source contributes below it is added, reconciled or removed; its own attributes and its other children are left alone, and it is never deleted by an update.
+
+When the template drops a shared element altogether, the project element it was mapped onto stays too. What the instance had given it — its references pointing at an element of that instance — is announced as removed and removed when accepted; the references it holds for the project or for other instances are not touched.
+
+A shared element the template brings that the instance holds nothing for (a role added by a newer template version) is resolved as on a first placement, and the consumer may choose. When the instance does hold elements that could stand for it but nothing tells which — two mapped roles with no function reference, both renamed since — none is guessed: the element is listed as new with `ambiguous: true`, and the consumer maps it.
+
+Both `report` and `apply` read this one answer, so an update no longer creates a second element beside the one the instantiate mapped.
+
+With several instances of one template, each instance has its own `mappings`. `report.mappings` lists each shared source element once: the mapping still to decide when an instance has yet to be given one (a choice reaches every such instance), else the mapping the instances carry.
+
 ### Multiple instances of one template
 
 Several instances of one template may live under one anchor (each with a unique instance `uuid`,
@@ -143,6 +216,20 @@ The decision map is the selector: accept the groups of the instances you want an
 update a **subset** (e.g. 2 of 4). `apply` reconciles each instance independently, gated by only its
 own groups. A UI iterates `report.instances`, labels each section with the instance `title`, and keys
 the `decisions` map by `group.id` (already scoped per instance, so globally unique).
+
+#### What the instances share
+
+Instances of one template may share an element — an `AllocationRole`, a `FunctionCategory`, a
+`Variable` — each giving it its **own** reference children (one `FunctionRef` per instance, each to
+that instance's function). `report` and `apply` compare each instance with its own references only:
+a reference to an element another instance holds is that instance's, never the counterpart of one
+of this instance's. So when the shared element of the template gains a reference, every instance
+contributes its own — the report lists it as added for each instance, and `apply` adds one per
+instance, each pointing at the element of that instance.
+
+One limit: a function or an application the template **gains** is placed once per instance by
+`apply`, but listed once in the report (one first-time instance), so it is accepted or skipped for
+all instances together.
 
 ### Placement collision resolution
 
@@ -157,21 +244,17 @@ collides is still bumped. Only attributes listed in the group's `editableAttribu
 
 #### Conflict classification at report time (`instantiate`)
 
-`report` classifies placement collisions **before** apply so the UI can surface them. It is generic over
-any scoped-uniqueness constraint and any field combination (a constraint may span several fields), and
-scenario-aware. For each placed group primary it partitions the violated constraint's `fields` into
-**editable** (`rename`/`free`) vs **identity**:
+`report` flags the placement collisions the engine resolves by itself **before** apply, so the UI can
+surface them. It is generic over any scoped-uniqueness constraint and any field combination (a constraint
+may span several fields), and scenario-aware. For each placed group primary it looks at the violated
+constraint's `fields`: when at least one is **editable** (`rename`/`free`) the engine can make a distinct
+copy, and the report flags that field on the group's `editableAttributes` with `conflict: true` and the
+collision-free `suggestedValue` (the UI pre-fills it; the user may override). No decision is required.
 
-- **resolvable** — at least one field is editable: the engine can make a distinct copy. The report flags
-  that field on the group's `editableAttributes` with `conflict: true` and the collision-free
-  `suggestedValue` (the UI pre-fills it; the user may override). No decision is required.
-- **identity-locked** — every field is identity (none editable): the primary is identity-equal to an
-  existing element and cannot be duplicated. The report sets `group.conflict = { fields, adoptTargetId }`
-  and `needsDecisions: true`, so the user chooses **skip** (leave the existing element) or **adopt**
-  (reconcile the template onto `adoptTargetId` — i.e. update that existing element in place). Adopt is a
-  non-destructive reconcile, never a delete + recreate.
+A collision whose key fields are all identity cannot be resolved by changing a value and is not flagged.
+Every element a verb places as a group primary today is keyed by its `name`, so this does not occur.
 
-`template`/`fork` never classify a conflict: an identity match there is the **reconcile target**, not a collision.
+`template`/`fork` never flag a collision: an identity match there is the **reconcile target**.
 
 ```ts
 type EditableAttribute = {
@@ -181,12 +264,9 @@ type EditableAttribute = {
 	suggestedValue?: string // the collision-free value it proposes (resolvable case)
 }
 
-type GroupConflict = { fields: string[]; adoptTargetId: string } // identity-locked
-
 type DecisionGroup = {
 	// …
 	editableAttributes?: EditableAttribute[]
-	conflict?: GroupConflict // identity-locked collision → skip | adopt
 }
 ```
 
@@ -210,7 +290,9 @@ if (report.needsDecisions) {
 	// accept/skip choices, and any edited values, into `decisions`
 }
 
-const prepared = await doc.prepare((tx) => tx.lifecycle.apply(tx, { ...target, report, decisions }))
+const prepared = await doc.prepare((tx) =>
+	tx.lifecycle.apply(tx, { ...target, report, resolution: { decisions } }),
+)
 await prepared.commit() // or prepared.discard()
 ```
 
@@ -243,7 +325,10 @@ This unifies instantiate and update — instantiation is the first-time case of 
 `asd({ sourceQuery, applicationRef, targetParent })` reconciles a project against a (possibly newer) ASD — the same engine one layer up, proving `engine.reconcile` is layer-agnostic. It runs two layers in order:
 
 1. **application layer** — reconcile the `Application` subtree (roles, allocation refs, attributes);
-2. **function-layer cascade** — _verbs compose verbs_: treat every composed Function the ASD references as an FSD to update and delegate to `tx.lifecycle.update.fsd`. A function **added** by the newer ASD is instantiated; an existing one is reconciled. Each function is placed at its **own** resolved structural level (via `resolveTargetStructure` + `resolveStructureRef`, exactly like [`instantiate.asd`](./instantiate#asd)), not blindly under the ASD anchor.
+2. **function-layer cascade** — _verbs compose verbs_: treat every composed Function the ASD references as an FSD to update and delegate to `tx.lifecycle.update.fsd`, **per instance of the application**:
+   - the functions an instance refers to are its own: each is reconciled where it sits, whichever bay that is — not only those under the ASD anchor;
+   - a function **added** by the newer ASD is new to every instance: each instance the update writes to gets its own, on the level that instance lives on (the bay of its other functions), and its new references point at it. A function of that lineage already standing there on its own, belonging to no instance, is taken instead of a new one;
+   - a function that belongs to no instance is reconciled when it sits where the consumer started.
 
 The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQuery, ref: applicationRef })`.
 
@@ -294,10 +379,10 @@ On `scenario: 'instantiate'`, a shared satellite container may already exist (a 
 
 ### On `apply` / `update` — a 3-way merge
 
-For each satellite the update verb does one of:
+Every satellite tag is a shared element: where a source satellite lands is the answer of its [mapping](#shared-element-mappings), read by the report and by the apply. For each satellite the update verb does one of:
 
-- **add** — the newer template references a satellite the target lacks → clone it at its structural level and stamp instance lineage (so a newly-referenced `AllocationRole` / `Variable` travels on update, not only on first-time instantiate);
-- **reconcile in place** — an existing instance satellite → reconcile its changed attributes onto it;
+- **add** — the newer template references a satellite the instance holds nothing for, and its mapping resolves to a new element → clone it at its structural level and stamp instance lineage (so a newly-referenced `AllocationRole` / `Variable` travels on update, not only on first-time instantiate);
+- **reconcile in place** — the element the instance holds for it → reconcile it: in full when it was created from the template, only what the source contributes below it when it is the project's own;
 - **delete** — the satellite **element** was removed from the template → delete the instance, **guarded** by a whole-document last-referrer check so a satellite still referenced by another primary is kept.
 
 ::: warning Catalog persistence — un-referencing is not deletion
@@ -319,6 +404,14 @@ The update verbs are built on two engine primitives in `extensions/lifecycle/eng
 - instance element with **no** template lineage that the pipeline did not create (an author-added element such as a `DOS`/`DAS` added to an `LNode` after instantiation) → **target-only**: reported as its own decision group defaulting to keep, preserved by default and deleted only when that group is explicitly accepted. Pipeline-created naming/provenance (`LNodeSpecNaming`, `FunctionSclRef`, …) is excluded and the transparent `Private` wrapper is unwrapped.
 
 Because the instance is already in instance-space, comparing template to instance is clean once identity and the project-owned `name` are excluded — no attribute-suppression heuristics.
+
+`reconcile` returns the clone mappings of what it added (each source record and the copy made of it).
+
+#### References added by an update
+
+An element the update adds may refer to an element outside the subtree it was added with: a function the same update instantiates, a satellite it creates, or an element the instance already holds. Once everything the update adds to an instance exists, the update verbs repoint those references (`repointAddedReferences`): the uuid is replaced by the uuid of the project element and the path is rebuilt, exactly as on a first instantiate.
+
+The project element is the one carrying the source element's lineage. When the template was instantiated several times, several elements carry it: the one the instance contains or already refers to is taken, so each instance points at its own elements. A reference that cannot be told apart is left untouched.
 
 ### diff — report + classify
 

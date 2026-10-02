@@ -27,10 +27,10 @@ const sourceXml = /* xml */ `
 			<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 				<eIEC61850-6-100:FunctionCategory name="Measurement" uuid="cat-src" ${id}="cat-s">
 					<eIEC61850-6-100:SubCategory name="Current" uuid="subcat-src" ${id}="subcat-s">
-						<eIEC61850-6-100:FunctionCatRef functionUuid="sfa-src" function="TEMPLATE/CT_Fn/PhsA" ${id}="ref-a"/>
-						<eIEC61850-6-100:FunctionCatRef functionUuid="sfb-src" function="TEMPLATE/CT_Fn/PhsB" ${id}="ref-b"/>
-						<eIEC61850-6-100:FunctionCatRef functionUuid="sfc-src" function="TEMPLATE/CT_Fn/PhsC" ${id}="ref-c"/>
-						<eIEC61850-6-100:FunctionCatRef functionUuid="sfn-src" function="TEMPLATE/CT_Fn/N" ${id}="ref-n"/>
+						<eIEC61850-6-100:FunctionCatRef functionUuid="sfa-src" function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/PhsA" ${id}="ref-a"/>
+						<eIEC61850-6-100:FunctionCatRef functionUuid="sfb-src" function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/PhsB" ${id}="ref-b"/>
+						<eIEC61850-6-100:FunctionCatRef functionUuid="sfc-src" function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/PhsC" ${id}="ref-c"/>
+						<eIEC61850-6-100:FunctionCatRef functionUuid="sfn-src" function="TEMPLATE/TEMPLATE/TEMPLATE/CT_Fn/N" ${id}="ref-n"/>
 					</eIEC61850-6-100:SubCategory>
 				</eIEC61850-6-100:FunctionCategory>
 			</Private>

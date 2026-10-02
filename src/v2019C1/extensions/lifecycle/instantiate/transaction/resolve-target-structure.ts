@@ -20,7 +20,7 @@ import type * as Core from '@dialecte/core'
  * (a satellite scoped to it) get a clear failure from `resolveStructureRef`.
  */
 export async function resolveTargetStructure(
-	tx: Core.Transaction<Config>,
+	tx: Core.Query<Config> | Core.Transaction<Config>,
 	targetParent: Scl.Ref<Scl.ElementsOf>,
 ): Promise<TargetStructure> {
 	const parent = await tx.getRecord(targetParent)

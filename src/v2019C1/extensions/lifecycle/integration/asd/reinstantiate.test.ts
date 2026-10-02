@@ -28,7 +28,7 @@ const sourceXml = /* xml */ `
 				<eIEC61850-6-100:Application name="HMI" type="DCS" desc="v1" uuid="app-src-uuid" ${id}="app-s">
 					<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="fr-s">
 						<eIEC61850-6-100:FunctionRoleContent ${id}="frc-s">
-							<eIEC61850-6-100:FunctionRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-s"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-s"/>
 						</eIEC61850-6-100:FunctionRoleContent>
 					</eIEC61850-6-100:FunctionRole>
 				</eIEC61850-6-100:Application>
@@ -126,7 +126,7 @@ describe('lifecycle scenario — re-apply an ASD (instantiate vs update)', () =>
 				ref: applicationRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: new Map(),
+				resolution: { decisions: new Map() },
 			})
 		})
 

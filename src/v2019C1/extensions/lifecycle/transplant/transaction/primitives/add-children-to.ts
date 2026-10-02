@@ -31,7 +31,7 @@ export async function addChildrenTo(
 	const sourceRecord = await sourceQuery.any.getRecord(source)
 	if (!sourceRecord) return []
 
-	const mappings: Scl.CloneMapping[] = []
+	const cloneMappings: Scl.CloneMapping[] = []
 	for (const childRef of sourceRecord.children) {
 		const clone = await cloneTree(tx, {
 			sourceQuery,
@@ -40,7 +40,7 @@ export async function addChildrenTo(
 			omit,
 			...(strip === undefined ? {} : { strip }),
 		})
-		if (clone) mappings.push(...clone.mappings)
+		if (clone) cloneMappings.push(...clone.mappings)
 	}
-	return mappings
+	return cloneMappings
 }

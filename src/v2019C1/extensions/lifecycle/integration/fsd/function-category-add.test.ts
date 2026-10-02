@@ -128,7 +128,7 @@ describe('lifecycle.apply — adding a newly-classified FunctionCategory (full t
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 

@@ -1,5 +1,7 @@
+import type { PlacementLevel } from './resolve-placement-mappings.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
 
@@ -11,6 +13,11 @@ export type EnsureTopologyFrameParams = {
 	targetParent: Scl.Ref<Scl.ElementsOf>
 	/** Extra child tags to drop from the frame's own-content clones (e.g. extract prunes provenance). */
 	omit?: OmitEntry<Config>[]
+	/**
+	 * Where each structural level lands, as resolved for a placement. Absent: the levels above the
+	 * scope root are those of `targetParent` where it has them, every other level is created.
+	 */
+	placementLevels?: readonly PlacementLevel[]
 }
 
 export type EnsureTopologyFrameResult = {
@@ -19,5 +26,10 @@ export type EnsureTopologyFrameResult = {
 	/** Source structural element id -> its reproduced target ref (multi-bay-safe placement). */
 	frameIndex: Map<string, Scl.Ref<Scl.ElementsOf>>
 	/** Source -> target mappings for every reproduced structural element and its own-content clones. */
-	mappings: Scl.CloneMapping[]
+	cloneMappings: Scl.CloneMapping[]
+	/**
+	 * The source elements that landed on an element the target already holds — a level, or what a
+	 * level holds: a reference to such a source element is a reference to that target element.
+	 */
+	redirectMappings: RedirectMapping[]
 }

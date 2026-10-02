@@ -40,7 +40,7 @@ export async function asd(
 		},
 	})
 
-	const mappings = await cloneApplicationContent(tx, {
+	const { cloneMappings, redirectMappings } = await cloneApplicationContent(tx, {
 		sourceQuery,
 		applicationRef,
 		structure,
@@ -49,7 +49,7 @@ export async function asd(
 
 	// Repoint cloned uuid refs across ALL clones of this operation, before cleanup
 	// reads those refs to detect orphans.
-	await applyUuidRemap(tx, { mappings })
+	await applyUuidRemap(tx, { cloneMappings, redirectMappings })
 
 	await postExtractionCleanup(tx)
 }

@@ -47,7 +47,7 @@ const sourceXml = /* xml */ `
 		<Substation name="TEMPLATE" ${id}="sub-s">
 			<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 				<eIEC61850-6-100:FunctionCategory name="INTERFACE FCAT" uuid="${FCAT_UUID}" desc="rev1 category" ${id}="fcat-s">
-					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/CB Interface" functionUuid="${FN_UUID}" ${id}="fcatref-s"/>
+					<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/TEMPLATE/TEMPLATE/CB Interface" functionUuid="${FN_UUID}" ${id}="fcatref-s"/>
 				</eIEC61850-6-100:FunctionCategory>
 				<eIEC61850-6-100:Variable name="Prefix" value="rev1val" uuid="var-src-uuid" ${id}="var-s">
 					<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/CB Interface/CSWI1" elementUuid="lnode-src-uuid" ${id}="vat-s"/>
@@ -165,7 +165,7 @@ describe('lifecycle integration — CB Interface FSD rev1 → rev2 (function + s
 				ref: functionRef,
 				anchor: bayRef,
 				report: rep,
-				decisions: testCase.decide(allGroups(rep)),
+				resolution: { decisions: testCase.decide(allGroups(rep)) },
 			})
 		})
 
@@ -206,7 +206,7 @@ describe('lifecycle integration — CB Interface FSD rev1 → rev2 (golden)', ()
 					ref: functionRef,
 					anchor: bayRef,
 					report: rep,
-					decisions: new Map(),
+					resolution: { decisions: new Map() },
 				}),
 			)
 

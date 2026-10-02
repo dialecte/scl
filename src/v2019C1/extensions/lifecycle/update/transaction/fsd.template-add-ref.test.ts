@@ -75,8 +75,46 @@ const targetXml = /* xml */ `
 	</SCL>
 `
 
+// Template revision that ADDS an LNode whose SourceRef binds to an LNode the instance ALREADY holds
+// (outside the added subtree): the ref must be repointed onto that instance LNode's uuid.
+const sourceWithRefToExistingXml = /* xml */ `
+	<SCL ${ns} ${id}="fsd">
+		<Substation name="TEMPLATE" ${id}="sub-s">
+			<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+				<Bay name="TEMPLATE" ${id}="bay-s">
+					<Function name="Prot" ${id}="fn-1" uuid="fn-src-uuid">
+						<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-1" uuid="lnode-src-uuid"/>
+						<LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="CSWI_Type" ${id}="lnode-b" uuid="lnode-b-uuid">
+							<Private type="eIEC61850-6-100" ${id}="lnode-b-priv">
+								<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+									<eIEC61850-6-100:SourceRef input="Position" source="TEMPLATE/Prot/CSWI1" sourceLNodeUuid="lnode-src-uuid" sourceDoName="Pos" sourceDaName="stVal" uuid="sref-uuid" ${id}="sref"/>
+								</eIEC61850-6-100:LNodeInputs>
+							</Private>
+						</LNode>
+					</Function>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+		<DataTypeTemplates ${id}="dtt-s">
+			<LNodeType id="CSWI_Type" lnClass="CSWI" ${id}="lnt-s">
+				<DO name="Pos" type="DPC_Type" ${id}="do-s"/>
+			</LNodeType>
+			<DOType id="DPC_Type" cdc="DPC" ${id}="dot-s">
+				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="da-s"/>
+			</DOType>
+		</DataTypeTemplates>
+	</SCL>
+`
+
 describe('update.fsd — template add repoints an internal ref to the fresh instance uuid', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
+		'the added SourceRef to an LNode the instance already holds is repointed to that instance LNode':
+			{
+				sourceXml: sourceWithRefToExistingXml,
+				targetXml,
+				expectedQueries: ['//v2019C1:SourceRef[@sourceLNodeUuid="inst-lnode-uuid"]'],
+				unexpectedQueries: ['//v2019C1:SourceRef[@sourceLNodeUuid="lnode-src-uuid"]'],
+			},
 		'the added SourceRef is remapped to the added LNode fresh uuid, not left at the source uuid': {
 			sourceXml,
 			targetXml,

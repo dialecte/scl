@@ -30,12 +30,12 @@ const sourceXml = /* xml */ `
 				<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="app-src-uuid" ${id}="app-s">
 					<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="fr-s">
 						<eIEC61850-6-100:FunctionRoleContent ${id}="frc-s">
-							<eIEC61850-6-100:FunctionRef function="TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-s"/>
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-s"/>
 						</eIEC61850-6-100:FunctionRoleContent>
 					</eIEC61850-6-100:FunctionRole>
 				</eIEC61850-6-100:Application>
 				<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" uuid="cat-src-uuid" ${id}="cat-s">
-					<eIEC61850-6-100:FunctionCatRef functionUuid="fn-src-uuid" function="TEMPLATE/Prot" ${id}="catref-s"/>
+					<eIEC61850-6-100:FunctionCatRef functionUuid="fn-src-uuid" function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" ${id}="catref-s"/>
 				</eIEC61850-6-100:FunctionCategory>
 			</Private>
 			<VoltageLevel name="TEMPLATE" ${id}="vl-s">

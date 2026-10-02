@@ -1,13 +1,19 @@
 import { groupChanges } from './group'
+import { instanceTagOf } from './instance-tag'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
-import { referenceIdentity, referenceNameIdentity } from './reference-match'
+import {
+	indexRedirectedSourceUuids,
+	referenceIdentity,
+	referenceNameIdentity,
+} from './reference-match'
 import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
 
+import type { ReportMapping } from '../mapping/mapping.types'
 import type {
 	AttributeChange,
 	DecisionGroup,
@@ -17,8 +23,11 @@ import type {
 	InstanceDiff,
 	ReportInstance,
 } from './diff.types'
+import type { PinnedMatches } from './match-child'
+import type { RedirectedSourceUuids } from './reference-match'
 import type { Config } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -91,6 +100,34 @@ export async function diff(params: {
 	/** How instance elements match source. `templateUuid` (default) or `uuid` (fork). */
 	matchKey?: MatchKey
 	/**
+	 * The instance root is an element of the PROJECT that the source root is mapped onto (a shared
+	 * element such as an `AllocationRole`), not an instance of it: its own attributes belong to the
+	 * project and are not compared. Only what the source contributes below it is diffed: a named
+	 * container lands on the project's container of the same name (whose attributes are the
+	 * project's too), and what the element holds besides is neither a removal nor an addition.
+	 */
+	instanceRootIsProjectOwned?: boolean
+	/**
+	 * A FIRST placement onto an element the project already holds: nothing it holds is rewritten,
+	 * whoever created it — the attributes of every container below it are left uncompared too.
+	 */
+	contributeOnly?: boolean
+	/**
+	 * Source elements mapped onto elements the project already holds: a reference of the instance to
+	 * such a project element is the template's reference to the source element.
+	 */
+	redirectMappings?: readonly RedirectMapping[]
+	/**
+	 * Source elements below the root whose counterpart is decided elsewhere (a structural level lands
+	 * where its placement mapping says): matched to that element, or new, whatever the instance holds.
+	 */
+	pinnedMatches?: PinnedMatches
+	/**
+	 * Reference children of the instance root's subtree that belong to ANOTHER instance of the same
+	 * template (a shared element holds one reference per instance): never matched to a source child.
+	 */
+	foreignInstanceIds?: ReadonlySet<string>
+	/**
 	 * Child tags to treat as BOUNDARIES: their subtrees are excluded from the diff because another
 	 * report covers them (e.g. the topology frame report delegates Application/Function to the fn/app
 	 * per-primary reports).
@@ -120,6 +157,11 @@ export async function diff(params: {
 	const sourceUuids = new Set<string>()
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
 
+	const redirectedSourceUuids = await indexRedirectedSourceUuids(
+		targetQuery,
+		params.redirectMappings,
+	)
+
 	const root = await diffMatched(sourceQuery, {
 		targetQuery,
 		sourceNode: sourceTree,
@@ -131,6 +173,12 @@ export async function diff(params: {
 		refsAlwaysAdded,
 		matchKey,
 		omit,
+		skipOwnAttributes: params.instanceRootIsProjectOwned ?? false,
+		withinProjectOwned: params.instanceRootIsProjectOwned ?? false,
+		contributeOnly: params.contributeOnly ?? false,
+		redirectedSourceUuids,
+		pinnedMatches: params.pinnedMatches,
+		foreignInstanceIds: params.foreignInstanceIds,
 	})
 	const summary = summarize(root)
 	const groups = groupChanges(root, instanceTree.id)
@@ -150,6 +198,15 @@ async function diffMatched(
 		refsAlwaysAdded?: boolean
 		matchKey: MatchKey
 		omit?: readonly string[]
+		/** Leave this node's own attributes uncompared. */
+		skipOwnAttributes?: boolean
+		/** The node sits in an element of the project a source element is mapped onto. */
+		withinProjectOwned?: boolean
+		/** First placement: no container of the subtree has its attributes compared. */
+		contributeOnly?: boolean
+		redirectedSourceUuids?: RedirectedSourceUuids
+		pinnedMatches?: PinnedMatches
+		foreignInstanceIds?: ReadonlySet<string>
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
@@ -157,11 +214,11 @@ async function diffMatched(
 	const leftoverRefPolicy = params.leftoverRefPolicy
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 	const omit = params.omit
-	const attributeChanges = await computeAttributeChanges(sourceQuery, {
-		targetQuery,
-		sourceNode,
-		instanceNode,
-	})
+	const withinProjectOwned = params.withinProjectOwned ?? false
+	const contributeOnly = params.contributeOnly ?? false
+	const attributeChanges = params.skipOwnAttributes
+		? []
+		: await computeAttributeChanges(sourceQuery, { targetQuery, sourceNode, instanceNode })
 
 	const children: DiffNode[] = []
 	const matchedInstanceIds = new Set<string>()
@@ -177,9 +234,24 @@ async function diffMatched(
 			index,
 			matchedInstanceIds,
 			refsAlwaysAdded,
+			redirectedSourceUuids: params.redirectedSourceUuids,
+			matchContainersByName: withinProjectOwned,
+			pinnedMatches: params.pinnedMatches,
+			foreignInstanceIds: params.foreignInstanceIds,
 		})
 		if (matched) {
 			matchedInstanceIds.add(matched.id)
+			// a container found by its name is the project's own; on a first placement none is rewritten
+			const skipChildAttributes =
+				withinProjectOwned &&
+				!REFERENCE_TAG_NAMES.has(sourceChild.tagName) &&
+				(contributeOnly ||
+					!(await carriesLineageOf(sourceQuery, {
+						targetQuery,
+						sourceNode: sourceChild,
+						instanceNode: matched,
+						matchKey,
+					})))
 			children.push(
 				await diffMatched(sourceQuery, {
 					targetQuery,
@@ -192,6 +264,12 @@ async function diffMatched(
 					refsAlwaysAdded,
 					matchKey,
 					omit,
+					redirectedSourceUuids: params.redirectedSourceUuids,
+					pinnedMatches: params.pinnedMatches,
+					foreignInstanceIds: params.foreignInstanceIds,
+					skipOwnAttributes: skipChildAttributes,
+					withinProjectOwned,
+					contributeOnly,
 				}),
 			)
 		} else {
@@ -221,7 +299,10 @@ async function diffMatched(
 		if (omit?.includes(instanceChild.tagName)) continue
 		const lineage = await targetQuery.any.getAttribute(instanceChild, { name: matchKey })
 		if (lineage) {
-			if (!sourceUuids.has(lineage)) children.push(removedNode(instanceChild))
+			// in a project-owned element, an identified child the source does not know is another
+			// template's or the project's: not this template's to remove
+			if (!sourceUuids.has(lineage) && !withinProjectOwned)
+				children.push(removedNode(instanceChild))
 			continue
 		}
 		if (
@@ -242,12 +323,14 @@ async function diffMatched(
 			}
 			continue
 		}
+		// what a project-owned element holds besides is the project's: not an author addition to an instance
+		if (withinProjectOwned) continue
 		pushInstanceOnly(instanceChild, children)
 	}
 
 	return {
 		change: attributeChanges.length > 0 ? 'modified' : 'unchanged',
-		tagName: sourceNode.tagName,
+		tagName: instanceTagOf(sourceNode.tagName),
 		sourceRef: toRef(sourceNode),
 		instanceRef: toRef(instanceNode),
 		attributeChanges: attributeChanges.length > 0 ? attributeChanges : undefined,
@@ -259,7 +342,8 @@ function addedNode(node: AnyTreeRecord, omit?: readonly string[]): DiffNode {
 	const children: DiffNode[] = node.tree
 		.filter((child) => !omit?.includes(child.tagName))
 		.map((child) => addedNode(child, omit))
-	return { change: 'added', tagName: node.tagName, sourceRef: toRef(node), children }
+	// the report speaks of what the project will hold: a template-only element as what it becomes
+	return { change: 'added', tagName: instanceTagOf(node.tagName), sourceRef: toRef(node), children }
 }
 
 function removedNode(node: AnyTreeRecord): DiffNode {
@@ -373,7 +457,42 @@ export function assembleReport(instances: ReportInstance[]): DiffReport {
 			(instance) => instance.rootRef !== undefined && instance.groups.length > 0,
 		),
 		summary,
+		mappings: collectReportMappings(instances),
 	}
+}
+
+/**
+ * Every mapping of the reported instances, once per shared source element. A choice is made per
+ * source element and reaches every instance that has yet to be given a mapping for it: when one
+ * instance already carries its mapping (locked) and another does not, the one still to decide is
+ * the one listed. The mapping each instance carries is on the instance itself.
+ */
+function collectReportMappings(instances: readonly ReportInstance[]): ReportMapping[] {
+	const mappingsBySourceId = new Map<string, ReportMapping>()
+	for (const instance of instances) {
+		for (const mapping of instance.mappings) {
+			const listed = mappingsBySourceId.get(mapping.id)
+			if (!listed || (listed.locked && !mapping.locked)) mappingsBySourceId.set(mapping.id, mapping)
+		}
+	}
+	return [...mappingsBySourceId.values()]
+}
+
+/** Whether an instance element was created from a source element: it carries its uuid as lineage. */
+async function carriesLineageOf(
+	sourceQuery: Core.Query<Config>,
+	params: {
+		targetQuery: Core.Query<Config>
+		sourceNode: AnyTreeRecord
+		instanceNode: AnyTreeRecord
+		matchKey: MatchKey
+	},
+): Promise<boolean> {
+	const { targetQuery, sourceNode, instanceNode, matchKey } = params
+	const sourceUuid = await sourceQuery.any.getAttribute(sourceNode, { name: 'uuid' })
+	if (!sourceUuid) return false
+	const lineage = await targetQuery.any.getAttribute(instanceNode, { name: matchKey })
+	return lineage === sourceUuid
 }
 
 /** Every decision group across all instances — the flat surface the decision engine consumes. */

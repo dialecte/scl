@@ -62,14 +62,17 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 				stripRootAttributes: testCase.stripRootAttributes,
 			})
 			const structure = await buildTemplateStructure(tx)
-			const categoryMappings = await cloneFunctionCategories(tx, {
+			const categories = await cloneFunctionCategories(tx, {
 				sourceQuery: source.query,
 				functionRef: testCase.functionRef,
 				structure,
 				stripCategoriesUuid: testCase.stripCategoriesUuid,
 			})
 			// caller owns uuid rewiring across the function + category clones
-			await applyUuidRemap(tx, { mappings: [...functionMappings, ...categoryMappings] })
+			await applyUuidRemap(tx, {
+				cloneMappings: [...functionMappings, ...categories.cloneMappings],
+				redirectMappings: categories.redirectMappings,
+			})
 		})
 		return { assertOn: 'target' }
 	}

@@ -2,9 +2,11 @@ import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constr
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import {
+	assertPlacementDecided,
 	cloneTopologyContent,
 	resolveFrameStructure,
 	resolveInstantiableRoot,
+	resolvePlacementMappings,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
@@ -29,41 +31,61 @@ import type * as Core from '@dialecte/core'
  */
 export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Promise<SsdResult> {
 	const { sourceQuery, scopeRef, targetParent, mode = 'stamp-template', overrides } = params
+	const decisionMappings = params.decisionMappings
 
 	const root = scopeRef ?? (await resolveInstantiableRoot(sourceQuery))
 	if (!root) throw new Error('instantiate.ssd: no instantiable root found in the SSD')
 
+	// where each level of the template lands — the answer the report listed
+	const placementLevels = await resolvePlacementMappings(tx, {
+		sourceQuery,
+		scopeRef: root,
+		anchor: targetParent,
+		decisionMappings,
+	})
+
+	assertPlacementDecided({ placementLevels, operation: 'instantiate.ssd' })
+
 	const {
-		mappings: contentMappings,
+		cloneMappings: contentMappings,
 		placedRoots,
 		frameIndex,
+		redirectMappings,
 	} = await cloneTopologyContent(tx, {
 		sourceQuery,
 		scopeRef: root,
 		targetParent,
+		decisionMappings,
+		placementLevels,
 	})
 
 	// External cross-cutting satellites (Variable / BehaviorDescription) applying to any
 	// element in the scope subtree travel with it, placed at the scope's reproduced level.
 	const scopeStructure = await resolveFrameStructure(tx, sourceQuery, root, frameIndex)
-	const appliedMappings = await cloneAppliedSatellites(tx, {
+	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: root,
 		structure: scopeStructure,
 		strip: false,
 	})
 
-	const allMappings = [...contentMappings, ...appliedMappings]
+	const allMappings = [...contentMappings, ...applied.cloneMappings]
 
 	// Stamp/keep lineage + fix up refs (remap for stamp, restore for keep) in one seam.
-	await finalizeClonedIdentity(tx, { mappings: allMappings, mode })
+	await finalizeClonedIdentity(tx, {
+		cloneMappings: allMappings,
+		mode,
+		redirectMappings: [...redirectMappings, ...applied.redirectMappings],
+	})
 
 	if (mode !== 'keep') {
 		// resolve a name collision on the CREATED frame scope root itself (instantiating one
 		// bay-typical twice under a VoltageLevel yields two distinct bays -> bump B1 to B1_1). The
 		// scope root's structural parent is its reproduced ancestor level (the SCL root for a
 		// Substation root, which has no structural ancestor). Fork/keep preserves identity, no bump.
-		const rootTarget = frameIndex.get(root.id)
+		// a root mapped onto an element of the project is that element: it keeps its name
+		const rootLevel = placementLevels.find((level) => level.sourceRef.id === root.id)
+		const rootTarget = rootLevel?.resolved.existing ? undefined : frameIndex.get(root.id)
 		if (rootTarget) {
 			const rootParent =
 				root.tagName === 'Substation'
@@ -97,5 +119,5 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	// One document-level provenance link back to the source SSD.
 	await writeProvenance(tx, { sourceQuery, target: { anchor: 'document', fileType: 'SSD' } })
 
-	return { scopeRef: root, recordMappings: contentMappings }
+	return { scopeRef: root, cloneMappings: allMappings }
 }

@@ -3,7 +3,11 @@ import { foldSatelliteCompanions } from './satellite-companions'
 import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers/function'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
@@ -21,11 +25,19 @@ export async function foldCarriedSatellites(
 	query: Core.Query<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
-		functionRef: Scl.Ref<'Function'>
+		functionRef: FsdFunctionRef
 		instance: AnyRefOrRecord | undefined
 		report: InstanceDiff
 		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
 		refsAlwaysAdded?: boolean
+		/** The consumer's choices for the shared elements the function is classified by. */
+		decisionMappings?: DecisionMappings
+		/** The project element the function is placed under. */
+		anchor?: Scl.Ref<Scl.ElementsOf>
+		/** How an instance element carries its source element's uuid. Default `templateUuid`. */
+		matchKey?: MatchKey
+		/** What belongs to the other instances of the function. */
+		resolveForeignScope?: ResolveForeignScope
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance, report } = params
@@ -43,5 +55,12 @@ export async function foldCarriedSatellites(
 		report,
 		instanceScopeId: instance?.id,
 		refsAlwaysAdded: params.refsAlwaysAdded ?? false,
+		decisionMappings: params.decisionMappings,
+		anchor: params.anchor,
+		matchKey: params.matchKey,
+		instancePrimaryRef: instance
+			? ({ tagName: instance.tagName, id: instance.id } as Scl.Ref<Scl.ElementsOf>)
+			: undefined,
+		resolveForeignScope: params.resolveForeignScope,
 	})
 }

@@ -1,4 +1,5 @@
 import { allGroups, assertDecisionsCoherent } from '@/v2019C1/extensions/lifecycle/engine'
+import { assertMappingsCoherent } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	asd as updateAsd,
 	fsd as updateFsd,
@@ -41,7 +42,13 @@ export async function apply(
 	tx: Core.Transaction<Config>,
 	params: LifecycleApplyParams,
 ): Promise<ApplyResult> {
-	const { report, decisions } = params
+	const { report } = params
+	const decisions = params.resolution?.decisions
+
+	// mapping choices the report cannot honour are refused before any write
+	const decisionMappings = params.resolution?.mappings
+	if (decisionMappings)
+		assertMappingsCoherent({ reportMappings: report.mappings, decisionMappings })
 
 	// No decisions supplied: fast track applies headless; full track waits for a human.
 	if (!decisions) {
@@ -85,7 +92,9 @@ async function runVerb(
 			targetInstance: target.targetInstance,
 			report,
 			decisions,
-			keepNameTypesFrom: target.keepNameTypesFrom,
+			keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
+			decisionMappings: target.resolution?.mappings,
+			resolvePlacement: true,
 		})
 		return { verb: 'fsd', functions }
 	}
@@ -99,7 +108,8 @@ async function runVerb(
 			targetInstance: target.targetInstance,
 			report,
 			decisions,
-			keepNameTypesFrom: target.keepNameTypesFrom,
+			keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
+			decisionMappings: target.resolution?.mappings,
 		})
 		return { verb: 'ssd', applications, functions }
 	}
@@ -111,7 +121,9 @@ async function runVerb(
 		targetInstance: target.targetInstance,
 		report,
 		decisions,
-		keepNameTypesFrom: target.keepNameTypesFrom,
+		keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
+		decisionMappings: target.resolution?.mappings,
+		resolvePlacement: true,
 	})
 	return { verb: 'asd', applications, functions }
 }

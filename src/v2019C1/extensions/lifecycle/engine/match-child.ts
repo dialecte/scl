@@ -1,13 +1,21 @@
+import { instanceTagOf } from './instance-tag'
 import { referenceIdentity, referenceNameIdentity } from './reference-match'
 
 import { REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
 
+import type { RedirectedSourceUuids } from './reference-match'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
 
 /** A read surface shared by the diff (Query) and reconcile (Transaction) sides. */
 type Reader = Core.Query<Config> | Core.Transaction<Config>
+
+/**
+ * Source children whose counterpart is decided elsewhere, by source record id: the record id of the
+ * instance child each lands on, or `undefined` for a child that is new whatever the instance holds.
+ */
+export type PinnedMatches = ReadonlyMap<string, string | undefined>
 
 /**
  * Find the instance child that corresponds to a source child — the ONE matcher shared by the diff
@@ -19,8 +27,21 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  *  - A uuid-less **REFERENCE** (e.g. `FunctionRef`) matches by its reference IDENTITY — the target
  *    `*Uuid` it points to, mapped back to template space — never by tag position; with a name-space
  *    fallback for projects authored with placeholder `templateUuid`s. `refsAlwaysAdded` forces a fresh
- *    instantiation's refs to surface as `added` instead of matching a prior instance's ref.
+ *    instantiation's refs to surface as `added` instead of matching a prior instance's ref. A reference
+ *    to a project element a source element was mapped onto reads as a reference to that source element
+ *    (`redirectedSourceUuids`), whatever the two are named.
  *  - Any other uuid-less element (e.g. `FunctionRoleContent`) matches a same-tag sibling by position.
+ *
+ * Inside an element of the PROJECT a source element is mapped onto (`matchContainersByName`), an
+ * identified container with no lineage counterpart lands on the same-tag child of the same name —
+ * the project's own container, the one the layer merge pours into on a first placement.
+ *
+ * A child whose counterpart was decided elsewhere (`pinnedMatches` — a structural level, which lands
+ * where its placement mapping says) is not matched by any of these rules.
+ *
+ * In an element several instances of one template share, each instance has its own reference
+ * children: those of another instance (`foreignInstanceIds`) are never the counterpart of a child of
+ * this one, however alike they read once brought back to template space.
  *
  * The source side reads raw identities; the candidate (target) side is normalized to template space —
  * that role split is internal here, so callers never pass a space/`mapToTemplate` flag.
@@ -34,15 +55,37 @@ export async function matchChild(
 		index: Map<string, AnyTreeRecord>
 		matchedInstanceIds: ReadonlySet<string>
 		refsAlwaysAdded?: boolean
+		redirectedSourceUuids?: RedirectedSourceUuids
+		matchContainersByName?: boolean
+		pinnedMatches?: PinnedMatches
+		foreignInstanceIds?: ReadonlySet<string>
 	},
 ): Promise<AnyTreeRecord | undefined> {
 	const { targetQuery, sourceChild, instanceParent, index, matchedInstanceIds } = params
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 
+	// where this child lands was decided elsewhere: it is that element, or a new one
+	if (params.pinnedMatches?.has(sourceChild.id)) {
+		const instanceId = params.pinnedMatches.get(sourceChild.id)
+		return instanceId
+			? instanceParent.tree.find((instanceChild) => instanceChild.id === instanceId)
+			: undefined
+	}
+
+	// a template-only element (a subfunction template) is matched as the element it becomes
+	const instanceTag = instanceTagOf(sourceChild.tagName)
+
 	const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
 	if (sourceUuid) {
 		const matched = index.get(sourceUuid)
-		return matched && matched.tagName === sourceChild.tagName ? matched : undefined
+		if (matched && matched.tagName === instanceTag) return matched
+		if (!params.matchContainersByName) return undefined
+		return findSameNameChild(sourceQuery, {
+			targetQuery,
+			sourceChild,
+			instanceParent,
+			matchedInstanceIds,
+		})
 	}
 
 	// INSTANTIATE: a fresh instantiation creates its OWN per-instance refs, so never match a link to a
@@ -51,7 +94,9 @@ export async function matchChild(
 
 	const candidates = instanceParent.tree.filter(
 		(instanceChild) =>
-			instanceChild.tagName === sourceChild.tagName && !matchedInstanceIds.has(instanceChild.id),
+			instanceChild.tagName === instanceTag &&
+			!matchedInstanceIds.has(instanceChild.id) &&
+			!params.foreignInstanceIds?.has(instanceChild.id),
 	)
 	if (candidates.length === 0) return undefined
 
@@ -66,6 +111,7 @@ export async function matchChild(
 		for (const candidate of candidates) {
 			const candidateIdentity = await referenceIdentity(targetQuery, candidate, {
 				mapToTemplate: true,
+				redirectedSourceUuids: params.redirectedSourceUuids,
 			})
 			if (candidateIdentity === sourceIdentity) return candidate
 		}
@@ -82,4 +128,28 @@ export async function matchChild(
 	}
 
 	return candidates[0]
+}
+
+/** The not-yet-matched child of `instanceParent` with the tag and the name of `sourceChild`. */
+async function findSameNameChild(
+	sourceQuery: Reader,
+	params: {
+		targetQuery: Reader
+		sourceChild: AnyTreeRecord
+		instanceParent: AnyTreeRecord
+		matchedInstanceIds: ReadonlySet<string>
+	},
+): Promise<AnyTreeRecord | undefined> {
+	const { targetQuery, sourceChild, instanceParent, matchedInstanceIds } = params
+
+	const name = await sourceQuery.any.getAttribute(sourceChild, { name: 'name' })
+	if (!name) return undefined
+
+	for (const instanceChild of instanceParent.tree) {
+		if (instanceChild.tagName !== instanceTagOf(sourceChild.tagName)) continue
+		if (matchedInstanceIds.has(instanceChild.id)) continue
+		const instanceName = await targetQuery.any.getAttribute(instanceChild, { name: 'name' })
+		if (instanceName === name) return instanceChild
+	}
+	return undefined
 }

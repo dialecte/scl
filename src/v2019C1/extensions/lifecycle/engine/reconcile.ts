@@ -1,5 +1,6 @@
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
+import { indexRedirectedSourceUuids } from './reference-match'
 import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
@@ -12,11 +13,14 @@ import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { LOCKED_LNODE_ATTRIBUTES } from '@/v2019C1/extensions/reference'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
+import type { PinnedMatches } from './match-child'
+import type { RedirectedSourceUuids } from './reference-match'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -66,8 +70,37 @@ export async function reconcile(
 		 * delegates Application/Function to the fn/app cascade).
 		 */
 		omit?: readonly string[]
+		/**
+		 * Source elements mapped onto elements the project already holds: a reference of the instance
+		 * to such a project element is the template's reference to the source element.
+		 */
+		redirectMappings?: readonly RedirectMapping[]
+		/**
+		 * The instance root is an element of the PROJECT that the source root is mapped onto (a shared
+		 * element such as an `AllocationRole`), not an instance of it: its own attributes are never
+		 * written. Only what the source contributes below it is reconciled: a named container lands on
+		 * the project's container of the same name (whose attributes are the project's too), and
+		 * nothing the element holds besides is removed.
+		 */
+		instanceRootIsProjectOwned?: boolean
+		/**
+		 * Never remove a reference child implicitly. Set for a SHARED element, whose other reference
+		 * children belong to other primaries, other instances or the project itself: one is removed
+		 * only when its removal was reported and accepted.
+		 */
+		keepLeftoverRefs?: boolean
+		/**
+		 * Source elements below the root whose counterpart is decided elsewhere (a structural level
+		 * stands on the level its instance holds for it): matched to that element, or new.
+		 */
+		pinnedMatches?: PinnedMatches
+		/**
+		 * Reference children of the instance root's subtree that belong to ANOTHER instance of the same
+		 * template (a shared element holds one reference per instance): never matched to a source child.
+		 */
+		foreignInstanceIds?: ReadonlySet<string>
 	},
-): Promise<Map<string, AnyRefOrRecord>> {
+): Promise<Scl.CloneMapping[]> {
 	const {
 		sourceQuery,
 		sourceRootRef,
@@ -79,11 +112,13 @@ export async function reconcile(
 		identityMode = 'stamp-template',
 		omit,
 	} = params
+	const keepLeftoverRefs = params.keepLeftoverRefs ?? false
+	const withinProjectOwned = params.instanceRootIsProjectOwned ?? false
 
-	// source record id -> the element it became in the applied doc, for every element this reconcile
-	// ADDS (root + descendants of each grafted subtree). Matched elements are updated in place, so the
-	// consumer already keys them by their own `instanceRef`; only additions need this join.
-	const added = new Map<string, AnyRefOrRecord>()
+	// each source record this reconcile ADDS and the copy made of it (root + descendants of each
+	// grafted subtree). Matched elements are updated in place, so the consumer already keys them by
+	// their own `instanceRef`; only additions are clones.
+	const added: Scl.CloneMapping[] = []
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	const instanceTree = await tx.any.getTree(instanceRootRef)
@@ -95,14 +130,18 @@ export async function reconcile(
 	const sourceUuids = new Set<string>()
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
 
+	const redirectedSourceUuids = await indexRedirectedSourceUuids(tx, params.redirectMappings)
+
 	// root + descendants: update matched in place, add new
-	await updateMatchedAttributes(tx, {
-		sourceQuery,
-		instanceRecord: instanceTree,
-		sourceNode: sourceTree,
-		accepted,
-		overrides,
-	})
+	if (!withinProjectOwned) {
+		await updateMatchedAttributes(tx, {
+			sourceQuery,
+			instanceRecord: instanceTree,
+			sourceNode: sourceTree,
+			accepted,
+			overrides,
+		})
+	}
 	await reconcileChildren(tx, {
 		sourceQuery,
 		sourceNode: sourceTree,
@@ -115,10 +154,18 @@ export async function reconcile(
 		identityMode,
 		omit,
 		added,
+		redirectedSourceUuids,
+		keepLeftoverRefs,
+		withinProjectOwned,
+		pinnedMatches: params.pinnedMatches,
+		foreignInstanceIds: params.foreignInstanceIds,
 	})
 
-	// removed from the template: delete instance elements whose lineage is gone
-	await deleteRemoved(tx, { instanceNode: instanceTree, sourceUuids, accepted, matchKey, omit })
+	// removed from the template: delete instance elements whose lineage is gone. In a project-owned
+	// element, an identified child the source does not know is another template's or the project's.
+	if (!withinProjectOwned) {
+		await deleteRemoved(tx, { instanceNode: instanceTree, sourceUuids, accepted, matchKey, omit })
+	}
 
 	return added
 }
@@ -136,8 +183,14 @@ async function reconcileChildren(
 		matchKey: MatchKey
 		identityMode: IdentityMode
 		omit: readonly string[] | undefined
-		/** Accumulates `source.id -> applied ref` for every element added below here (root + subtree). */
-		added: Map<string, AnyRefOrRecord>
+		/** Accumulates the clone mappings of every element added below here (root + subtree). */
+		added: Scl.CloneMapping[]
+		redirectedSourceUuids: RedirectedSourceUuids
+		keepLeftoverRefs: boolean
+		/** The children sit in an element of the project a source element is mapped onto. */
+		withinProjectOwned: boolean
+		pinnedMatches?: PinnedMatches
+		foreignInstanceIds?: ReadonlySet<string>
 	},
 ): Promise<void> {
 	const {
@@ -152,6 +205,9 @@ async function reconcileChildren(
 		identityMode,
 		omit,
 		added,
+		redirectedSourceUuids,
+		keepLeftoverRefs,
+		withinProjectOwned,
 	} = params
 	const matchedInstanceIds = new Set<string>()
 	for (const sourceChild of sourceNode.tree) {
@@ -165,17 +221,28 @@ async function reconcileChildren(
 			instanceParent,
 			index,
 			matchedInstanceIds,
+			redirectedSourceUuids,
+			matchContainersByName: withinProjectOwned,
+			pinnedMatches: params.pinnedMatches,
+			foreignInstanceIds: params.foreignInstanceIds,
 		})
 
 		if (matched) {
 			matchedInstanceIds.add(matched.id)
-			await updateMatchedAttributes(tx, {
-				sourceQuery,
-				instanceRecord: matched,
-				sourceNode: sourceChild,
-				accepted,
-				overrides,
-			})
+			// a container found by its name is the project's own: its attributes are not written
+			const isProjectContainer =
+				withinProjectOwned &&
+				!REFERENCE_TAG_NAMES.has(sourceChild.tagName) &&
+				!(await carriesLineageOf(tx, { sourceQuery, sourceNode: sourceChild, matched, matchKey }))
+			if (!isProjectContainer) {
+				await updateMatchedAttributes(tx, {
+					sourceQuery,
+					instanceRecord: matched,
+					sourceNode: sourceChild,
+					accepted,
+					overrides,
+				})
+			}
 			await reconcileChildren(tx, {
 				sourceQuery,
 				sourceNode: sourceChild,
@@ -188,6 +255,11 @@ async function reconcileChildren(
 				identityMode,
 				omit,
 				added,
+				redirectedSourceUuids,
+				keepLeftoverRefs,
+				withinProjectOwned,
+				pinnedMatches: params.pinnedMatches,
+				foreignInstanceIds: params.foreignInstanceIds,
 			})
 			continue
 		}
@@ -195,26 +267,24 @@ async function reconcileChildren(
 		// add a new template element (with its subtree/companions via deep)
 		if (accepted && !accepted.sourceIds.has(sourceChild.id)) continue
 
-		const { recordMappings } = await deep(tx, {
+		const { cloneMappings } = await deep(tx, {
 			sourceQuery,
 			ref: toRef(sourceChild) as unknown as Scl.Ref<Scl.ElementsOf>,
 			targetParent: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,
 			strip: false,
 			withTypes: { keepNameFrom: keepNameTypesFrom },
 		})
-		// record source -> applied for the whole grafted subtree (ids are stable; the collision
+		// keep the clone mappings of the whole grafted subtree (ids are stable; the collision
 		// bump below only edits the added root's name, never its id).
-		for (const mapping of recordMappings) {
-			if (mapping.source.id) added.set(mapping.source.id, mapping.target)
-		}
+		added.push(...cloneMappings)
 		// stamp/preserve keep the fresh clone uuid + repoint refs; keep/fork converges to the
 		// source revision's uuids (no remap) — the shared finalization owns that split.
-		await finalizeClonedIdentity(tx, { mappings: recordMappings, mode: identityMode })
+		await finalizeClonedIdentity(tx, { cloneMappings, mode: identityMode })
 
 		// validate the added element against its instance-parent context: apply any
 		// user edit then auto-resolve a name collision among siblings (schema constraint).
 		// Fork keeps identity (same-file revision) — no re-stamp, no collision bump.
-		const addRoot = recordMappings.find((mapping) => mapping.source.id === sourceChild.id)
+		const addRoot = cloneMappings.find((mapping) => mapping.source.id === sourceChild.id)
 		if (addRoot && identityMode !== 'keep') {
 			await resolvePlacementCollision(tx, {
 				ref: addRoot.target,
@@ -240,6 +310,8 @@ async function reconcileChildren(
 			REFERENCE_TAG_NAMES.has(instanceChild.tagName) &&
 			!KEEP_ON_ORPHAN_REFS.has(instanceChild.tagName)
 		) {
+			// a shared element's other links are not this template's to drop: explicit accept only
+			if (keepLeftoverRefs && !accepted) continue
 			if (accepted && !accepted.instanceIds.has(instanceChild.id)) continue
 		} else {
 			// never remove an author addition implicitly — require an explicit accept
@@ -249,6 +321,23 @@ async function reconcileChildren(
 		const live = await tx.any.getRecord(instanceChild)
 		if (live) await tx.any.delete(instanceChild)
 	}
+}
+
+/** Whether an instance element was created from a source element: it carries its uuid as lineage. */
+async function carriesLineageOf(
+	tx: Core.Transaction<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		sourceNode: AnyTreeRecord
+		matched: AnyTreeRecord
+		matchKey: MatchKey
+	},
+): Promise<boolean> {
+	const { sourceQuery, sourceNode, matched, matchKey } = params
+	const sourceUuid = await sourceQuery.any.getAttribute(sourceNode, { name: 'uuid' })
+	if (!sourceUuid) return false
+	const lineage = await tx.any.getAttribute(matched, { name: matchKey })
+	return lineage === sourceUuid
 }
 
 async function deleteRemoved(

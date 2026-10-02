@@ -3,6 +3,7 @@ import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -23,20 +24,31 @@ import type * as Core from '@dialecte/core'
  */
 export async function finalizeClonedIdentity(
 	tx: Core.Transaction<Config>,
-	params: { mappings: readonly Scl.CloneMapping[]; mode: IdentityMode },
+	params: {
+		cloneMappings: readonly Scl.CloneMapping[]
+		mode: IdentityMode
+		/**
+		 * Source elements mapped onto elements the target already holds (nothing cloned for them):
+		 * references to them are repointed, but no lineage is written on the target element — it
+		 * is the target's own, not an instance of the source.
+		 */
+		redirectMappings?: readonly RedirectMapping[]
+	},
 ): Promise<void> {
-	const { mappings, mode } = params
+	const { cloneMappings, mode, redirectMappings } = params
 
-	await writeIdentity(tx, { mappings, mode })
+	await writeIdentity(tx, { cloneMappings, mode })
 
 	switch (mode) {
 		case 'keep':
-			await restoreClonedUuids(tx, { mappings })
+			await restoreClonedUuids(tx, { cloneMappings })
+			// refs were copied in source space; only the redirected ones need repointing
+			if (redirectMappings?.length) await applyUuidRemap(tx, { cloneMappings, redirectMappings })
 			return
 		case 'strip':
 		case 'stamp-template':
 		case 'preserve':
-			await applyUuidRemap(tx, { mappings })
+			await applyUuidRemap(tx, { cloneMappings, redirectMappings })
 			return
 		default:
 			return assertExhaustive(mode)

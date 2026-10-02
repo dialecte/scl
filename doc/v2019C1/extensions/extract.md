@@ -156,6 +156,6 @@ import type {
 | Type               | Description                                                                            |
 | ------------------ | -------------------------------------------------------------------------------------- |
 | `ImportDeepParams` | Parameters of `deep` (source, refs, `withTypes`, `omit` / `strip` / `retagRoot`).      |
-| `ImportDeepResult` | Result of `deep` (`record`, `typeIdRemap`, `recordMappings`).                          |
+| `ImportDeepResult` | Result of `deep` (`record`, `typeIdRemap`, `cloneMappings`).                           |
 | `StripConfig`      | Attribute-stripping policy — `{ scope: 'root' \| 'tree'; attributes: string[] }`.      |
 | `RetagRootConfig`  | Direction-neutral root tagName retag — `{ from: Scl.ElementsOf; to: Scl.ElementsOf }`. |

@@ -28,6 +28,7 @@ describe('cleanOrphanedUuidRefs', () => {
 		},
 
 		'FunctionRef with missing target → deleted': {
+			allowIncoherentReferences: 'the reference pointing at nothing is what the clean-up handles',
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES}>
 					<Header id="TestSCL"/>
@@ -62,6 +63,7 @@ describe('cleanOrphanedUuidRefs', () => {
 		// ── keep-on-orphan ──────────────────────────────────────────
 
 		'SourceRef with missing target → attrs cleared, element kept': {
+			allowIncoherentReferences: 'the reference pointing at nothing is what the clean-up handles',
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES}>
 					<Header id="TestSCL"/>
@@ -94,6 +96,7 @@ describe('cleanOrphanedUuidRefs', () => {
 		// ── companion attrs ─────────────────────────────────────────
 
 		'ControlRef with orphan controlledLNodeUuid → uuid + path + companion cleared': {
+			allowIncoherentReferences: 'the reference pointing at nothing is what the clean-up handles',
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES}>
 					<Header id="TestSCL"/>
@@ -125,6 +128,7 @@ describe('cleanOrphanedUuidRefs', () => {
 		// ── multi-ref ───────────────────────────────────────────────
 
 		'ControlRef with one valid + one orphan pair → orphan pair cleared, valid pair kept': {
+			allowIncoherentReferences: 'the reference pointing at nothing is what the clean-up handles',
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES}>
 					<Header id="TestSCL"/>

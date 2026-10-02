@@ -115,7 +115,7 @@ async function updateAndSerialize(
 			ref: functionRef,
 			anchor: bayRef,
 			report: rep,
-			decisions: decide(allGroups(rep)),
+			resolution: { decisions: decide(allGroups(rep)) },
 		})
 	})
 	return (await targetDoc.query.getSnapshot({ as: 'xml' })) as string

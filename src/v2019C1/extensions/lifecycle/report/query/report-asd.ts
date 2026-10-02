@@ -6,10 +6,21 @@ import { foldSatelliteCompanions } from './satellite-companions'
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import {
 	collectComposedFunctionUuids,
+	collectForeignScopes,
 	findInstancesByTemplateUuid,
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
+import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
+import {
+	describePlacementMappings,
+	findLanding,
+	resolvePrimaryPlacement,
+} from '@/v2019C1/extensions/lifecycle/layers/topology'
+import {
+	resolveSatelliteMappings,
+	toRedirectMappings,
+} from '@/v2019C1/extensions/lifecycle/mapping'
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -19,6 +30,7 @@ import type {
 	InstanceDiff,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -42,9 +54,20 @@ export async function reportAsd(
 		applicationRef: Scl.Ref<'Application'>
 		scenario?: LifecycleScenario
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		/** The consumer's choices for the shared elements the application refers to. */
+		decisionMappings?: DecisionMappings
+		/** The project element the application is placed under. */
+		anchor?: Scl.Ref<Scl.ElementsOf>
+		/**
+		 * The application is placed by this operation alone (an ASD): started above a level the
+		 * application or one of its functions was made for, each lands on the level its template says.
+		 * Left out when the caller already resolved where they land (a topology scope placing its own
+		 * applications).
+		 */
+		resolvePlacement?: boolean
 	},
 ): Promise<DiffReport> {
-	const { sourceQuery, applicationRef, scenario, targetInstance } = params
+	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	const matchKey = matchKeyForScenario(scenario)
@@ -58,24 +81,52 @@ export async function reportAsd(
 		targetInstance,
 	})
 
+	// a first placement: where the application and its functions land is where the consumer
+	// started, or — started above a level one of them was made for — the levels their template says
+	const firstPlacement = applicationInstances.length === 0
+	const placement =
+		firstPlacement && params.resolvePlacement && params.anchor
+			? await resolvePrimaryPlacement(query, {
+					sourceQuery,
+					primaryRefs: [
+						applicationRef,
+						...(await findComposedFunctionRefs(sourceQuery, applicationRef)),
+					],
+					anchor: params.anchor,
+					decisionMappings,
+				})
+			: { levels: [] }
+	const deepestLevel = placement.levels.at(-1)
+	const anchor =
+		(deepestLevel &&
+			findLanding({ placementLevels: placement.levels, levelId: deepestLevel.sourceRef.id })) ||
+		params.anchor
+
 	const reportInstances: ReportInstance[] = []
-	if (applicationInstances.length === 0) {
+	if (firstPlacement) {
 		const instanceDiff = await reportApplicationInstance(query, {
 			sourceQuery,
 			applicationRef,
 			instance: undefined,
 			refsAlwaysAdded: scenario === 'instantiate',
 			matchKey,
+			decisionMappings,
+			anchor,
 		})
-		reportInstances.push(
-			await buildReportInstance(query, {
-				instanceDiff,
-				instance: undefined,
-				sourceQuery,
-				sourceRef: applicationRef,
-			}),
-		)
+		const reportInstance = await buildReportInstance(query, {
+			instanceDiff,
+			instance: undefined,
+			sourceQuery,
+			sourceRef: applicationRef,
+		})
+		// the levels are listed first, the shared elements follow
+		const placementMappings = await describePlacementMappings(query, { levels: placement.levels })
+		reportInstance.mappings = [...placementMappings, ...reportInstance.mappings]
+		reportInstances.push(reportInstance)
 	} else {
+		// an element the instances share (a role) holds one reference per instance: each instance
+		// is compared with its own
+		const foreignScopes = await collectForeignScopes(query, { instances: matchedApplications })
 		for (const instance of applicationInstances) {
 			const instanceDiff = await reportApplicationInstance(query, {
 				sourceQuery,
@@ -83,6 +134,9 @@ export async function reportAsd(
 				instance,
 				refsAlwaysAdded: scenario === 'instantiate',
 				matchKey,
+				decisionMappings,
+				anchor,
+				foreignScope: foreignScopes.get(instance.id),
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
@@ -100,9 +154,15 @@ export async function reportAsd(
 		applicationRef,
 		scenario,
 		targetInstance,
+		decisionMappings,
+		anchor,
 	})
 
-	return assembleReport([...reportInstances, ...functionInstances])
+	const report = assembleReport([...reportInstances, ...functionInstances])
+	report.offLevel = placement.offLevel
+	// a level nothing is decided for is the consumer's to choose before anything is written
+	if (placement.levels.some((level) => level.undecided)) report.needsDecisions = true
+	return report
 }
 
 /** Diff one Application instance and fold its (layer + cross-cutting) satellites. */
@@ -114,18 +174,14 @@ async function reportApplicationInstance(
 		instance: AnyTrackedRecord | undefined
 		refsAlwaysAdded?: boolean
 		matchKey?: MatchKey
+		decisionMappings?: DecisionMappings
+		anchor?: Scl.Ref<Scl.ElementsOf>
+		/** What belongs to the other instances of the application. */
+		foreignScope?: ReadonlySet<string>
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
-
-	const applicationReport = await diff({
-		sourceQuery,
-		targetQuery: query,
-		sourceRootRef: applicationRef,
-		instanceRootRef: instance,
-		matchKey: params.matchKey,
-	})
 
 	// application-layer satellites (e.g. a referenced AllocationRole) travel with
 	// the application's decision group
@@ -135,6 +191,35 @@ async function reportApplicationInstance(
 				applicationRef: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
 			})
 		: []
+
+	// where the shared ones land is resolved FIRST: the application's references to an element of
+	// the project a source element is mapped onto are the template's references to that element
+	const resolvedMappings = await resolveSatelliteMappings(query, {
+		sourceQuery,
+		satelliteRefs,
+		instanceSatelliteRefs,
+		decisionMappings: params.decisionMappings,
+		matchKey: params.matchKey,
+	})
+	const redirectMappings = await toRedirectMappings({
+		sourceQuery,
+		satelliteRefs,
+		resolvedMappings,
+	})
+
+	const applicationReport = await diff({
+		sourceQuery,
+		targetQuery: query,
+		sourceRootRef: applicationRef,
+		instanceRootRef: instance,
+		matchKey: params.matchKey,
+		redirectMappings,
+	})
+
+	async function resolveForeignScope(): Promise<ReadonlySet<string>> {
+		return params.foreignScope ?? new Set()
+	}
+
 	await foldSatelliteCompanions(query, {
 		sourceQuery,
 		primaryRef: applicationRef,
@@ -143,6 +228,14 @@ async function reportApplicationInstance(
 		report: applicationReport,
 		instanceScopeId: instance?.id,
 		refsAlwaysAdded,
+		decisionMappings: params.decisionMappings,
+		anchor: params.anchor,
+		matchKey: params.matchKey,
+		resolvedMappings,
+		instancePrimaryRef: instance
+			? ({ tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>)
+			: undefined,
+		resolveForeignScope,
 	})
 
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
@@ -155,6 +248,9 @@ async function reportApplicationInstance(
 			: undefined,
 		report: applicationReport,
 		refsAlwaysAdded,
+		anchor: params.anchor,
+		matchKey: params.matchKey,
+		resolveForeignScope,
 	})
 
 	return applicationReport
@@ -168,9 +264,11 @@ async function reportComposedFunctions(
 		applicationRef: Scl.Ref<'Application'>
 		scenario?: LifecycleScenario
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		decisionMappings?: DecisionMappings
+		anchor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<ReportInstance[]> {
-	const { sourceQuery, applicationRef, scenario, targetInstance } = params
+	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings, anchor } = params
 	const matchKey = matchKeyForScenario(scenario)
 	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
 
@@ -203,6 +301,8 @@ async function reportComposedFunctions(
 				instance: undefined,
 				refsAlwaysAdded: scenario === 'instantiate',
 				matchKey,
+				decisionMappings,
+				anchor,
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
@@ -221,6 +321,8 @@ async function reportComposedFunctions(
 				instance: functionInstance,
 				refsAlwaysAdded: scenario === 'instantiate',
 				matchKey,
+				decisionMappings,
+				anchor,
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {

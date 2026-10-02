@@ -1,13 +1,32 @@
+import { toRef } from '@dialecte/core/helpers'
+
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
-import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
+import {
+	collectForeignReferenceIds,
+	findInstanceByTemplateUuid,
+} from '@/v2019C1/extensions/lifecycle/instance'
+import {
+	describeMapping,
+	findMappingPolicy,
+	findWithdrawnContributions,
+	resolveSatelliteMappings,
+} from '@/v2019C1/extensions/lifecycle/mapping'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LeftoverRefPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DiffNode, InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type {
+	DecisionMappings,
+	ReportMapping,
+	ResolvedMapping,
+	ResolvedMappings,
+} from '@/v2019C1/extensions/lifecycle/mapping'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
-import type { AnyTreeRecord } from '@dialecte/core'
+import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 
 /**
  * Fold each satellite's changes into the primary's decision group as read-only
@@ -19,8 +38,10 @@ import type { AnyTreeRecord } from '@dialecte/core'
  *
  * Three companion kinds, all riding the primary's group (coupling invariant - never
  * independently decidable):
- *  - added / modified: a source satellite diffed against its instance (matched by
- *    `templateUuid`); a not-yet-instantiated one surfaces all-added;
+ *  - added / modified: a source satellite diffed against the project element it lands on — for a
+ *    shared element, the one its mapping resolves to (`resolveSatelliteMappings`, the answer the
+ *    apply reads too); for any other, its instance (matched by `templateUuid`). One with nothing
+ *    to land on surfaces all-added;
  *  - removed: a TARGET instance satellite whose `templateUuid` the source no longer
  *    references -> folded as a `removed` companion so accepting the primary deletes it.
  *
@@ -39,25 +60,78 @@ export async function foldSatelliteCompanions(
 		instanceScopeId?: string
 		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
 		refsAlwaysAdded?: boolean
+		/** The consumer's choices for shared satellites, by source record id. */
+		decisionMappings?: DecisionMappings
+		/** The project element the template is placed under. */
+		anchor?: Scl.Ref<Scl.ElementsOf>
+		/** How an instance element carries its source element's uuid. Default `templateUuid`. */
+		matchKey?: MatchKey
+		/** Where the shared satellites land, when the caller already resolved it. */
+		resolvedMappings?: ResolvedMappings
+		/**
+		 * The instance being updated, for the layer that owns shared satellites: what the instance
+		 * gave to a project element the template no longer brings anything for is then announced.
+		 */
+		instancePrimaryRef?: Scl.Ref<Scl.ElementsOf>
+		/**
+		 * What belongs to the other instances of the template the satellites are folded for: a shared
+		 * satellite's references to it are theirs, not this instance's.
+		 */
+		resolveForeignScope?: ResolveForeignScope
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
 		params
+	const firstTime = instanceScopeId === undefined
 
 	const group = report.groups.find((candidate) => candidate.primary.sourceRef?.id === primaryRef.id)
+
+	const resolvedMappings =
+		params.resolvedMappings ??
+		(await resolveSatelliteMappings(query, {
+			sourceQuery,
+			satelliteRefs,
+			instanceSatelliteRefs: firstTime ? [] : instanceSatelliteRefs,
+			decisionMappings: params.decisionMappings,
+			matchKey: params.matchKey,
+		}))
+	// project elements a source satellite lands on: in use by the template, never a removal
+	const mappedOntoIds = new Set<string>()
+	for (const resolved of resolvedMappings.values()) {
+		if (resolved.existing) mappedOntoIds.add(resolved.existing.id)
+	}
 
 	for (const satelliteRef of satelliteRefs) {
 		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
 
-		const instance = await findInstanceByTemplateUuid(query, {
-			tagName: satelliteRef.tagName,
+		const {
+			target: instance,
+			projectOwned,
+			mapping,
+		} = await findSatelliteTarget(query, {
+			sourceQuery,
+			satelliteRef,
 			sourceUuid,
+			firstTime,
+			resolved: satelliteRef.id ? resolvedMappings.get(satelliteRef.id) : undefined,
+			decisionMappings: params.decisionMappings,
+			anchor: params.anchor,
+			matchKey: params.matchKey,
 		})
+		if (mapping) report.mappings = [...(report.mappings ?? []), mapping]
+		const foreignScope = instance ? await params.resolveForeignScope?.() : undefined
+		const foreignInstanceIds =
+			instance && foreignScope
+				? await collectForeignReferenceIds(query, { sharedRootRef: instance, foreignScope })
+				: undefined
 		const satelliteReport = await diff({
 			sourceQuery,
 			targetQuery: query,
 			sourceRootRef: satelliteRef,
 			instanceRootRef: instance,
+			instanceRootIsProjectOwned: projectOwned,
+			// a first placement only contributes to an element the project already holds
+			contributeOnly: firstTime,
 			// Shared/catalog satellite: its extra reference children belong to OTHER primaries/
 			// instances; a scoped single-primary update must not flag them as removed.
 			keepLeftoverRefs: true,
@@ -68,6 +142,7 @@ export async function foldSatelliteCompanions(
 			// per-instance refs are genuinely new — classify them added instead of lineage-matching a
 			// prior instance's refs (which would report a no-op while apply still merges 4 more in).
 			refsAlwaysAdded: params.refsAlwaysAdded ?? false,
+			foreignInstanceIds,
 		})
 		const changed =
 			satelliteReport.summary.added +
@@ -97,6 +172,7 @@ export async function foldSatelliteCompanions(
 	// when merely un-referenced, so the trigger is source-element non-existence, NOT a link drop.
 	if (group) {
 		for (const instanceRef of instanceSatelliteRefs ?? []) {
+			if (instanceRef.id && mappedOntoIds.has(instanceRef.id)) continue
 			const { templateUuid } = await query.any.getAttributes(instanceRef)
 			if (!templateUuid) continue
 			const [stillInSource] = await sourceQuery.any.findByAttributes({
@@ -113,7 +189,80 @@ export async function foldSatelliteCompanions(
 		}
 	}
 
+	// what this instance gave to a project element the template no longer brings anything for
+	// stands for nothing any more: announced as removed, the element itself stays
+	if (params.instancePrimaryRef) {
+		const withdrawnContributions = await findWithdrawnContributions(query, {
+			instancePrimaryRef: params.instancePrimaryRef,
+			instanceSatelliteRefs: instanceSatelliteRefs ?? [],
+			resolvedMappings,
+			matchKey: params.matchKey,
+		})
+		for (const contribution of withdrawnContributions) {
+			const removed: DiffNode = {
+				change: 'removed',
+				tagName: contribution.tagName,
+				instanceRef: toRef(contribution),
+				children: [],
+			}
+			if (group) group.companions.push(removed)
+			else report.groups.push(...groupChanges(removed, instanceScopeId))
+		}
+	}
+
 	return report
+}
+
+/**
+ * The project element a source satellite is diffed against. A shared element lands where its
+ * mapping resolves, exactly as the apply does. On a first placement the element found is only
+ * contributed to, whoever owns it; on an update, an element the project owns (`projectOwned`)
+ * only receives what the source contributes, and an instance of the source is compared in full.
+ * Anything that is not a shared element is found by its template lineage.
+ */
+async function findSatelliteTarget(
+	query: Core.Query<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		satelliteRef: Scl.Ref<Scl.ElementsOf>
+		sourceUuid: string | undefined
+		firstTime: boolean
+		resolved: ResolvedMapping | undefined
+		decisionMappings?: DecisionMappings
+		anchor?: Scl.Ref<Scl.ElementsOf>
+		matchKey?: MatchKey
+	},
+): Promise<{
+	target: AnyTrackedRecord | undefined
+	projectOwned: boolean
+	mapping?: ReportMapping
+}> {
+	const { sourceQuery, satelliteRef, sourceUuid, firstTime, resolved } = params
+
+	const policy = findMappingPolicy(satelliteRef.tagName)
+	const satelliteId = satelliteRef.id
+	if (resolved && policy && satelliteId) {
+		const mapping = await describeMapping(query, {
+			sourceQuery,
+			sourceRef: { ...satelliteRef, id: satelliteId },
+			policy,
+			resolved,
+			decision: params.decisionMappings?.get(satelliteId),
+			anchor: params.anchor,
+		})
+		return {
+			target: resolved.existing,
+			projectOwned: firstTime || resolved.projectOwned,
+			mapping,
+		}
+	}
+
+	const target = await findInstanceByTemplateUuid(query, {
+		tagName: satelliteRef.tagName,
+		sourceUuid,
+		matchKey: params.matchKey,
+	})
+	return { target, projectOwned: false }
 }
 
 /**

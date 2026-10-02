@@ -10,7 +10,7 @@ Helpers for instance-lineage identity (`uuid` / `templateUuid` / `originUuid`): 
 
 Access via `tx.identity` inside a `doc.transaction()` callback.
 
-`writeIdentity({ mappings, mode })` walks the clone `mappings` — each carries the source record's original attributes, so no cross-document query is needed — and writes lineage onto every target according to `mode`:
+`writeIdentity({ cloneMappings, mode })` walks the `cloneMappings` — each carries the source record's original attributes, so no cross-document query is needed — and writes lineage onto every target according to `mode`:
 
 | mode             | direction                                | effect                                                                                                                                                                                                                                                |
 | ---------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -23,11 +23,11 @@ Whether an element carries `originUuid` is read from the dialect definition, so 
 
 ```ts
 await doc.transaction(async (tx) => {
-	await tx.identity.writeIdentity({ mappings, mode: 'stamp-template' })
+	await tx.identity.writeIdentity({ cloneMappings, mode: 'stamp-template' })
 })
 ```
 
-The `mappings` are the `CloneMapping[]` produced by a `deepClone` (or the extract / instantiate operations), so `writeIdentity` runs as a post-clone pass.
+The `cloneMappings` are the `CloneMapping[]` produced by a `deepClone` (or the extract / instantiate operations), so `writeIdentity` runs as a post-clone pass.
 
 ## resolveIdentity
 

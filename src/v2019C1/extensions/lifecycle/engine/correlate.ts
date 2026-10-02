@@ -5,25 +5,17 @@ import type { AnyRefOrRecord } from '@dialecte/core'
 /** A source record id → the element it became in the applied document. */
 export type AppliedTargets = ReadonlyMap<string, AnyRefOrRecord>
 
-/** Merge several `source.id → applied ref` maps (later wins) into one. */
-export function mergeApplied(
-	...maps: ReadonlyMap<string, AnyRefOrRecord>[]
-): Map<string, AnyRefOrRecord> {
-	const out = new Map<string, AnyRefOrRecord>()
-	for (const map of maps) for (const [source, target] of map) out.set(source, target)
-	return out
-}
-
 /**
- * Build a `source.id → target ref` map from one clone's mappings. Within a single clone each source
- * element is cloned once, so the map is unambiguous; the per-instance assembly (one map per instance)
- * is what keeps two instances of the same template distinct.
+ * Build a `source.id → target ref` map from the clone mappings of ONE instance (a first-time clone,
+ * or everything an update added to it). Within one instance each source element is cloned once, so
+ * the map is unambiguous; the per-instance assembly (one map per instance) is what keeps two
+ * instances of the same template distinct.
  */
 export function sourceToTargetMap(
-	mappings: readonly Scl.CloneMapping[],
+	cloneMappings: readonly Scl.CloneMapping[],
 ): Map<string, AnyRefOrRecord> {
 	const map = new Map<string, AnyRefOrRecord>()
-	for (const mapping of mappings) {
+	for (const mapping of cloneMappings) {
 		if (mapping.source.id) map.set(mapping.source.id, mapping.target)
 	}
 	return map
@@ -38,7 +30,7 @@ export function sourceToTargetMap(
  *  - otherwise an `added` node → its freshly-cloned element via `added` (keyed by `sourceRef.id`).
  *
  * External satellite companions live OUTSIDE `tree`, so each group's companion subtrees are walked
- * too. Distinct `DiffNode` objects mean two instances of one template annotate independently — the
+ * too. Each mapping the instance carries gets its `appliedRef` the same way. Distinct `DiffNode` objects mean two instances of one template annotate independently — the
  * disambiguation a global `source.id` map could not provide.
  */
 export function annotateInstance(params: {
@@ -49,6 +41,15 @@ export function annotateInstance(params: {
 	annotateNode({ node: reportInstance.tree, added })
 	for (const group of reportInstance.groups) {
 		for (const companion of group.companions) annotateNode({ node: companion, added })
+	}
+	// a mapping says where a source element lands: on the element it is mapped onto, or on the one
+	// created for it
+	for (const mapping of reportInstance.mappings) {
+		const applied =
+			mapping.mapping && 'existing' in mapping.mapping
+				? mapping.mapping.existing
+				: added.get(mapping.id)
+		if (applied) mapping.appliedRef = applied
 	}
 }
 
