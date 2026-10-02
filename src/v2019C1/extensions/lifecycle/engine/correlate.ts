@@ -30,7 +30,7 @@ export function sourceToTargetMap(
  *  - otherwise an `added` node → its freshly-cloned element via `added` (keyed by `sourceRef.id`).
  *
  * External satellite companions live OUTSIDE `tree`, so each group's companion subtrees are walked
- * too. Distinct `DiffNode` objects mean two instances of one template annotate independently — the
+ * too. Each mapping the instance carries gets its `appliedRef` the same way. Distinct `DiffNode` objects mean two instances of one template annotate independently — the
  * disambiguation a global `source.id` map could not provide.
  */
 export function annotateInstance(params: {
@@ -41,6 +41,15 @@ export function annotateInstance(params: {
 	annotateNode({ node: reportInstance.tree, added })
 	for (const group of reportInstance.groups) {
 		for (const companion of group.companions) annotateNode({ node: companion, added })
+	}
+	// a mapping says where a source element lands: on the element it is mapped onto, or on the one
+	// created for it
+	for (const mapping of reportInstance.mappings) {
+		const applied =
+			mapping.mapping && 'existing' in mapping.mapping
+				? mapping.mapping.existing
+				: added.get(mapping.id)
+		if (applied) mapping.appliedRef = applied
 	}
 }
 

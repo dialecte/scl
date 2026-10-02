@@ -702,7 +702,7 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 		const reportedMappings = updateReport.mappings.map((mapping) => ({
 			...mapping,
 			mapping:
-				'existing' in mapping.mapping
+				mapping.mapping && 'existing' in mapping.mapping
 					? { existing: nameCreated(mapping.mapping.existing) }
 					: mapping.mapping,
 			candidates: mapping.candidates.map((candidate) => ({

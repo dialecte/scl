@@ -24,9 +24,11 @@ export type MappingPolicy = {
  *  - `lineage` — the project already holds the element standing for it: the one this instance was
  *    given by an earlier placement, or the one element created from it;
  *  - `name` — exactly one project element shares its key;
+ *  - `anchor` — a level of the project the consumer started from;
+ *  - `only` — the only such level there is, below the one above;
  *  - `none` — nothing to map onto, it is created.
  */
-export type MappingReason = 'decision' | 'lineage' | 'name' | 'none'
+export type MappingReason = 'decision' | 'lineage' | 'name' | 'anchor' | 'only' | 'none'
 
 /** Where a shared source element lands in the project. */
 export type ResolvedMapping = {
@@ -130,7 +132,12 @@ export type ReportMapping = {
 	/** Record id of the source element; the key of a choice made for it. */
 	id: string
 	tagName: string
-	mapping: DecisionMapping
+	/**
+	 * Where it lands. Absent: nothing is decided — several elements qualify and none is picked for
+	 * the consumer (a structural level), or it follows from a mapping that is not decided yet. The
+	 * report then asks for a decision and `apply` refuses until the consumer chose.
+	 */
+	mapping?: DecisionMapping
 	reason: MappingReason
 	/**
 	 * Nothing was picked although something qualified: several project elements qualified equally
@@ -147,4 +154,15 @@ export type ReportMapping = {
 	 * it is mapped onto.
 	 */
 	candidates: MappingCandidate[]
+	/**
+	 * The id of the mapping this one depends on — the level above, for a structural level: what it
+	 * can be mapped onto follows from where that one lands.
+	 */
+	dependsOn?: string
+	/**
+	 * The element this source element became in the APPLIED document, filled by `apply` on the
+	 * report it returns (undefined on a pure `report`): the element created for it, or the one it is
+	 * mapped onto. Lets a consumer show an element created for a mapping as new.
+	 */
+	appliedRef?: AnyRefOrRecord
 }

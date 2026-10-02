@@ -16,7 +16,9 @@ export type EditableAttribute = {
 	/**
 	 * Set at report time when placing this element would collide on this field and the
 	 * engine auto-resolved it. `suggestedValue` is the collision-free value the engine
-	 * proposes (the user may keep or override it).
+	 * proposes (the user may keep or override it). For a structural level to create it is the
+	 * name its placement mapping carries — `conflict` then tells the engine changed it, as opposed
+	 * to the consumer having chosen it.
 	 */
 	conflict?: boolean
 	suggestedValue?: string

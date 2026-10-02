@@ -119,7 +119,7 @@ async function listCandidates(
 }
 
 /** A project element as the report lists it: its title and where it sits. */
-async function describeCandidate(
+export async function describeCandidate(
 	query: Core.Query<Config>,
 	ref: Scl.Ref<Scl.ElementsOf>,
 ): Promise<MappingCandidate> {

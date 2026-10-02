@@ -8,9 +8,12 @@ import type {
 	EnsureTopologyFrameParams,
 	EnsureTopologyFrameResult,
 } from './ensure-topology-frame.types'
+import type { PlacementLevel } from './resolve-placement-mappings.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
+import type { AnyTrackedRecord } from '@dialecte/core'
 
 const STRUCTURAL_TAGS: readonly string[] = TOPOLOGY_STRUCTURAL_TAGS
 // A created frame element is a NEW element: drop the source `uuid` (the enforce hook mints a fresh
@@ -25,11 +28,12 @@ const FRAME_OWN_CONTENT_OMIT = [...TOPOLOGY_STRUCTURAL_TAGS, ...FRAME_OMIT_CHILD
  * Reproduce the source topology frame into the target, keyed by structural POSITION (never by name).
  *
  * The topology layer OWNS its structural frame (Substation/VoltageLevel/Bay + their `Private`/BayType,
- * equipment, connectivity). Ancestors ABOVE the scope root are the target CONTEXT: reused from
- * `targetParent`'s existing chain where present, created from source where absent (so an empty target
- * gets the whole chain). The scope root and its structural DESCENDANTS are always CREATED from source
- * with their own content, OMITTING the delegated fn/app children (the fn/app layers place those), and
- * stamped by the caller so a later update can match them by `templateUuid`.
+ * equipment, connectivity). Each level lands where `placementLevels` says: on an element of the
+ * target, left as it is, or created from source with its own content, OMITTING the delegated fn/app
+ * children (the fn/app layers place those), and stamped by the caller so a later update can match it
+ * by `templateUuid`. Without `placementLevels`, the levels ABOVE the scope root are reused from
+ * `targetParent`'s existing chain where present and every other level is created (so an empty
+ * target gets the whole chain).
  *
  * Returns a `frameIndex` (source structural id -> target ref) so callers place fn/app content under
  * the correct target level even across multiple bays.
@@ -40,57 +44,119 @@ export async function ensureTopologyFrame(
 ): Promise<EnsureTopologyFrameResult> {
 	const { sourceQuery, scopeRef, targetParent, omit } = params
 
-	const frameElements = await collectFrameElements(sourceQuery, scopeRef)
-	const ancestorIds = await strictAncestorIds(sourceQuery, scopeRef)
-	const context = await resolveTargetAncestors(tx, targetParent)
+	const levels =
+		params.placementLevels ??
+		(await reuseTargetAncestors(tx, { sourceQuery, scopeRef, targetParent }))
 
 	const frameIndex = new Map<string, Scl.Ref<Scl.ElementsOf>>()
 	const createdIds = new Set<string>()
+	const mappedUnitIds = new Set<string>()
 	const cloneMappings: Scl.CloneMapping[] = []
+	const redirectMappings: RedirectMapping[] = []
 
-	// 1. Resolve each structural level: reuse an ancestor the target already provides, else create.
-	for (const source of frameElements) {
-		if (!source.id) continue
+	// 1. Each structural level lands where it was resolved: on an element of the target, or created.
+	for (const level of levels) {
+		const { sourceRef, parentSourceId, resolved, createName } = level
 
-		const reused = ancestorIds.has(source.id) && context[source.tagName as keyof TargetStructure]
-		if (reused) {
-			frameIndex.set(source.id, toRef(reused) as Scl.Ref<Scl.ElementsOf>)
+		if (resolved.existing) {
+			const existingRef = toRef(resolved.existing) as Scl.Ref<Scl.ElementsOf>
+			frameIndex.set(sourceRef.id, existingRef)
+			if (!level.context) mappedUnitIds.add(sourceRef.id)
+			const sourceUuid = await sourceQuery.any.getAttribute(sourceRef, { name: 'uuid' })
+			if (sourceUuid) redirectMappings.push({ sourceUuid, target: existingRef })
 			continue
 		}
 
-		const parentTarget = await resolveParentTarget(sourceQuery, source, frameIndex, targetParent)
-		const target = await createStructural(tx, { sourceQuery, source, parentTarget })
-		frameIndex.set(source.id, target)
-		createdIds.add(source.id)
-		const sourceRecord = await sourceQuery.any.getRecord(source)
+		const parentTarget =
+			(parentSourceId && frameIndex.get(parentSourceId)) || level.parentTarget || targetParent
+		const target = await createStructural(tx, {
+			sourceQuery,
+			source: sourceRef,
+			parentTarget,
+			name: createName,
+		})
+		frameIndex.set(sourceRef.id, target)
+		createdIds.add(sourceRef.id)
+		const sourceRecord = await sourceQuery.any.getRecord(sourceRef)
 		if (sourceRecord) {
 			cloneMappings.push({ source: sourceRecord as unknown as Scl.CloneMapping['source'], target })
 		}
 	}
 
-	// 2. Merge OWN content (Private/BayType, equipment, connectivity) into the CREATED levels only,
-	// omitting the structural children (walked in step 1) and the delegated fn/app children. Reused
-	// ancestor levels are the target's own structure and are left untouched.
+	// 2. Merge OWN content (Private/BayType, equipment, connectivity) into the levels the source
+	// gives content to, omitting the structural children (walked in step 1) and the delegated fn/app
+	// children: a CREATED level receives it all; a level of the unit mapped onto an element of the
+	// target receives what that element lacks — what it holds is left as it is. A context level is
+	// the target's own structure and is left untouched.
 	const ownContentOmit = omit ? [...FRAME_OWN_CONTENT_OMIT, ...omit] : FRAME_OWN_CONTENT_OMIT
-	for (const source of frameElements) {
-		if (!source.id || !createdIds.has(source.id)) continue
-		const target = frameIndex.get(source.id)
+	for (const { sourceRef } of levels) {
+		if (!createdIds.has(sourceRef.id) && !mappedUnitIds.has(sourceRef.id)) continue
+		const target = frameIndex.get(sourceRef.id)
 		if (!target) continue
 		const ownContent = await mergeChildrenInto(tx, {
 			sourceQuery,
-			source,
+			source: sourceRef,
 			target,
 			omit: ownContentOmit,
 		})
 		cloneMappings.push(...ownContent.cloneMappings)
+		redirectMappings.push(...ownContent.redirectMappings)
 	}
 
 	const structure = await resolveFrameStructure(tx, sourceQuery, scopeRef, frameIndex)
-	return { structure, frameIndex, cloneMappings }
+	return { structure, frameIndex, cloneMappings, redirectMappings }
+}
+
+/**
+ * Where each level lands when no placement was resolved: a level above the scope root is the one
+ * `targetParent`'s own chain has, where it has one; every other level is created as the source
+ * names it.
+ */
+async function reuseTargetAncestors(
+	tx: Core.Transaction<Config>,
+	params: Pick<EnsureTopologyFrameParams, 'sourceQuery' | 'scopeRef' | 'targetParent'>,
+): Promise<PlacementLevel[]> {
+	const { sourceQuery, scopeRef, targetParent } = params
+
+	const frameElements = await collectFrameElements(sourceQuery, scopeRef)
+	const ancestorIds = await strictAncestorIds(sourceQuery, scopeRef)
+	const context = await resolveTargetAncestors(tx, targetParent)
+
+	const levels: PlacementLevel[] = []
+	for (const frameElement of frameElements) {
+		const sourceId = frameElement.id
+		if (!sourceId) continue
+		const sourceRef = { ...frameElement, id: sourceId }
+
+		const sourceAncestors = await sourceQuery.findAncestors(sourceRef, {
+			stopAtTagName: 'Substation',
+		})
+		const parentLevel = sourceAncestors
+			.map((ancestor) => levels.find((level) => level.sourceRef.id === ancestor.id))
+			.find((level) => level !== undefined)
+
+		const reused = ancestorIds.has(sourceId)
+			? context[sourceRef.tagName as keyof TargetStructure]
+			: undefined
+		levels.push({
+			sourceRef,
+			parentSourceId: parentLevel?.sourceRef.id,
+			context: ancestorIds.has(sourceId),
+			undecided: false,
+			resolved: {
+				existing: reused as AnyTrackedRecord | undefined,
+				reason: 'none',
+				ambiguous: false,
+				locked: false,
+				projectOwned: reused !== undefined,
+			},
+		})
+	}
+	return levels
 }
 
 /** The ids of the scope root's STRICT structural ancestors (the reusable target context). */
-async function strictAncestorIds(
+export async function strictAncestorIds(
 	sourceQuery: Core.Query<Config>,
 	scopeRef: Scl.Ref<Scl.ElementsOf>,
 ): Promise<Set<string>> {
@@ -126,7 +192,7 @@ async function resolveTargetAncestors(
  * The structural elements of the scope, ordered top-down: the scope's structural ancestors, the scope
  * root, then its structural descendants (outermost tag first, so a parent always precedes its child).
  */
-async function collectFrameElements(
+export async function collectFrameElements(
 	sourceQuery: Core.Query<Config>,
 	scopeRef: Scl.Ref<Scl.ElementsOf>,
 ): Promise<Scl.Ref<Scl.ElementsOf>[]> {
@@ -159,21 +225,6 @@ async function collectFrameElements(
 	return result
 }
 
-/** The reproduced target ref of `source`'s nearest structural ancestor, else `targetParent`. */
-async function resolveParentTarget(
-	sourceQuery: Core.Query<Config>,
-	source: Scl.Ref<Scl.ElementsOf>,
-	frameIndex: ReadonlyMap<string, Scl.Ref<Scl.ElementsOf>>,
-	targetParent: Scl.Ref<Scl.ElementsOf>,
-): Promise<Scl.Ref<Scl.ElementsOf>> {
-	const ancestors = await sourceQuery.findAncestors(source, { stopAtTagName: 'Substation' })
-	for (const ancestor of ancestors) {
-		const target = ancestor.id ? frameIndex.get(ancestor.id) : undefined
-		if (target) return target
-	}
-	return targetParent
-}
-
 /**
  * Create a fresh target structural element from `source`, carrying its own attributes minus
  * identity (`uuid`/lineage). Always CREATES a distinct element (never reuse-matches an existing
@@ -187,15 +238,18 @@ async function createStructural(
 		sourceQuery: Core.Query<Config>
 		source: Scl.Ref<Scl.ElementsOf>
 		parentTarget: Scl.Ref<Scl.ElementsOf>
+		/** The name to create it under — its own when left out. */
+		name?: string
 	},
 ): Promise<Scl.Ref<Scl.ElementsOf>> {
-	const { sourceQuery, source, parentTarget } = params
+	const { sourceQuery, source, parentTarget, name } = params
 
 	const attributes = await sourceQuery.any.getAttributes(source)
 	const cleanAttributes: Record<string, string> = {}
 	for (const [key, value] of Object.entries(attributes)) {
 		if (!CREATE_STRIP_ATTRIBUTES.includes(key)) cleanAttributes[key] = value
 	}
+	if (name) cleanAttributes.name = name
 
 	const created = await tx.any.addChild(parentTarget, {
 		tagName: source.tagName,

@@ -13,6 +13,7 @@ import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { LOCKED_LNODE_ATTRIBUTES } from '@/v2019C1/extensions/reference'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
+import type { PinnedMatches } from './match-child'
 import type { RedirectedSourceUuids } from './reference-match'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
@@ -88,6 +89,11 @@ export async function reconcile(
 		 * only when its removal was reported and accepted.
 		 */
 		keepLeftoverRefs?: boolean
+		/**
+		 * Source elements below the root whose counterpart is decided elsewhere (a structural level
+		 * stands on the level its instance holds for it): matched to that element, or new.
+		 */
+		pinnedMatches?: PinnedMatches
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -146,6 +152,7 @@ export async function reconcile(
 		redirectedSourceUuids,
 		keepLeftoverRefs,
 		withinProjectOwned,
+		pinnedMatches: params.pinnedMatches,
 	})
 
 	// removed from the template: delete instance elements whose lineage is gone. In a project-owned
@@ -176,6 +183,7 @@ async function reconcileChildren(
 		keepLeftoverRefs: boolean
 		/** The children sit in an element of the project a source element is mapped onto. */
 		withinProjectOwned: boolean
+		pinnedMatches?: PinnedMatches
 	},
 ): Promise<void> {
 	const {
@@ -208,6 +216,7 @@ async function reconcileChildren(
 			matchedInstanceIds,
 			redirectedSourceUuids,
 			matchContainersByName: withinProjectOwned,
+			pinnedMatches: params.pinnedMatches,
 		})
 
 		if (matched) {
@@ -241,6 +250,7 @@ async function reconcileChildren(
 				redirectedSourceUuids,
 				keepLeftoverRefs,
 				withinProjectOwned,
+				pinnedMatches: params.pinnedMatches,
 			})
 			continue
 		}

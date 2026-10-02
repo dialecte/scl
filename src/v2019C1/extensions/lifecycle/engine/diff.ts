@@ -22,6 +22,7 @@ import type {
 	InstanceDiff,
 	ReportInstance,
 } from './diff.types'
+import type { PinnedMatches } from './match-child'
 import type { RedirectedSourceUuids } from './reference-match'
 import type { Config } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
@@ -116,6 +117,11 @@ export async function diff(params: {
 	 */
 	redirectMappings?: readonly RedirectMapping[]
 	/**
+	 * Source elements below the root whose counterpart is decided elsewhere (a structural level lands
+	 * where its placement mapping says): matched to that element, or new, whatever the instance holds.
+	 */
+	pinnedMatches?: PinnedMatches
+	/**
 	 * Child tags to treat as BOUNDARIES: their subtrees are excluded from the diff because another
 	 * report covers them (e.g. the topology frame report delegates Application/Function to the fn/app
 	 * per-primary reports).
@@ -165,6 +171,7 @@ export async function diff(params: {
 		withinProjectOwned: params.instanceRootIsProjectOwned ?? false,
 		contributeOnly: params.contributeOnly ?? false,
 		redirectedSourceUuids,
+		pinnedMatches: params.pinnedMatches,
 	})
 	const summary = summarize(root)
 	const groups = groupChanges(root, instanceTree.id)
@@ -191,6 +198,7 @@ async function diffMatched(
 		/** First placement: no container of the subtree has its attributes compared. */
 		contributeOnly?: boolean
 		redirectedSourceUuids?: RedirectedSourceUuids
+		pinnedMatches?: PinnedMatches
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
@@ -220,6 +228,7 @@ async function diffMatched(
 			refsAlwaysAdded,
 			redirectedSourceUuids: params.redirectedSourceUuids,
 			matchContainersByName: withinProjectOwned,
+			pinnedMatches: params.pinnedMatches,
 		})
 		if (matched) {
 			matchedInstanceIds.add(matched.id)
@@ -247,6 +256,7 @@ async function diffMatched(
 					matchKey,
 					omit,
 					redirectedSourceUuids: params.redirectedSourceUuids,
+					pinnedMatches: params.pinnedMatches,
 					skipOwnAttributes: skipChildAttributes,
 					withinProjectOwned,
 					contributeOnly,

@@ -11,6 +11,12 @@ import type { AnyTreeRecord } from '@dialecte/core'
 type Reader = Core.Query<Config> | Core.Transaction<Config>
 
 /**
+ * Source children whose counterpart is decided elsewhere, by source record id: the record id of the
+ * instance child each lands on, or `undefined` for a child that is new whatever the instance holds.
+ */
+export type PinnedMatches = ReadonlyMap<string, string | undefined>
+
+/**
  * Find the instance child that corresponds to a source child — the ONE matcher shared by the diff
  * (report) and reconcile (apply) sides, so both pair children identically:
  *  - **Identified** elements match by `templateUuid` lineage (the source `uuid`) via `index`, guarded
@@ -29,6 +35,9 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  * identified container with no lineage counterpart lands on the same-tag child of the same name —
  * the project's own container, the one the layer merge pours into on a first placement.
  *
+ * A child whose counterpart was decided elsewhere (`pinnedMatches` — a structural level, which lands
+ * where its placement mapping says) is not matched by any of these rules.
+ *
  * The source side reads raw identities; the candidate (target) side is normalized to template space —
  * that role split is internal here, so callers never pass a space/`mapToTemplate` flag.
  */
@@ -43,10 +52,19 @@ export async function matchChild(
 		refsAlwaysAdded?: boolean
 		redirectedSourceUuids?: RedirectedSourceUuids
 		matchContainersByName?: boolean
+		pinnedMatches?: PinnedMatches
 	},
 ): Promise<AnyTreeRecord | undefined> {
 	const { targetQuery, sourceChild, instanceParent, index, matchedInstanceIds } = params
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
+
+	// where this child lands was decided elsewhere: it is that element, or a new one
+	if (params.pinnedMatches?.has(sourceChild.id)) {
+		const instanceId = params.pinnedMatches.get(sourceChild.id)
+		return instanceId
+			? instanceParent.tree.find((instanceChild) => instanceChild.id === instanceId)
+			: undefined
+	}
 
 	const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
 	if (sourceUuid) {

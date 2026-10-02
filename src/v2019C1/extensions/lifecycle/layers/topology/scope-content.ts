@@ -1,8 +1,12 @@
-import { collectComposedFunctionUuids } from '@/v2019C1/extensions/lifecycle/instance'
+import {
+	collectComposedFunctionUuids,
+	findInstancesByTemplateUuid,
+} from '@/v2019C1/extensions/lifecycle/instance'
 
 import type { TopologyReconcilables } from './scope-content.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 
 /** Applications whose structural ancestry includes `scopeRef` (Substation / VoltageLevel / Bay). */
@@ -65,4 +69,32 @@ export async function resolveTopologyReconcilables(
 	}
 
 	return { applications, standaloneFunctions }
+}
+
+/**
+ * Whether the project already holds an instance of any primary of a topology scope (by lineage).
+ * With none, reconciling the scope is a first placement, whatever operation was asked for.
+ */
+export async function hasScopeInstance(
+	reader: Core.Query<Config> | Core.Transaction<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		applicationRefs: readonly Scl.Ref<'Application'>[]
+		standaloneFunctions: readonly Scl.Ref<'Function'>[]
+		matchKey: MatchKey
+	},
+): Promise<boolean> {
+	const { sourceQuery, applicationRefs, standaloneFunctions, matchKey } = params
+
+	for (const primaryRef of [...applicationRefs, ...standaloneFunctions]) {
+		const { uuid } = await sourceQuery.any.getAttributes(primaryRef)
+		if (!uuid) continue
+		const instances = await findInstancesByTemplateUuid(reader, {
+			tagName: primaryRef.tagName,
+			sourceUuid: uuid,
+			matchKey,
+		})
+		if (instances.length > 0) return true
+	}
+	return false
 }

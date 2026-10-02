@@ -1,3 +1,5 @@
+import { invariant } from '@dialecte/core/utils'
+
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
@@ -5,6 +7,7 @@ import {
 	cloneTopologyContent,
 	resolveFrameStructure,
 	resolveInstantiableRoot,
+	resolvePlacementMappings,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
@@ -34,6 +37,19 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	const root = scopeRef ?? (await resolveInstantiableRoot(sourceQuery))
 	if (!root) throw new Error('instantiate.ssd: no instantiable root found in the SSD')
 
+	// where each level of the template lands — the answer the report listed
+	const placementLevels = await resolvePlacementMappings(tx, {
+		sourceQuery,
+		scopeRef: root,
+		anchor: targetParent,
+		decisionMappings,
+	})
+
+	const undecided = placementLevels.find((level) => level.undecided && level.resolved.ambiguous)
+	invariant(!undecided, {
+		detail: `instantiate.ssd: where the <${undecided?.sourceRef.tagName}> of the template lands is not decided: several elements of the project qualify, choose one or have a new one created`,
+	})
+
 	const {
 		cloneMappings: contentMappings,
 		placedRoots,
@@ -44,6 +60,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		scopeRef: root,
 		targetParent,
 		decisionMappings,
+		placementLevels,
 	})
 
 	// External cross-cutting satellites (Variable / BehaviorDescription) applying to any
@@ -70,7 +87,9 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		// bay-typical twice under a VoltageLevel yields two distinct bays -> bump B1 to B1_1). The
 		// scope root's structural parent is its reproduced ancestor level (the SCL root for a
 		// Substation root, which has no structural ancestor). Fork/keep preserves identity, no bump.
-		const rootTarget = frameIndex.get(root.id)
+		// a root mapped onto an element of the project is that element: it keeps its name
+		const rootLevel = placementLevels.find((level) => level.sourceRef.id === root.id)
+		const rootTarget = rootLevel?.resolved.existing ? undefined : frameIndex.get(root.id)
 		if (rootTarget) {
 			const rootParent =
 				root.tagName === 'Substation'
