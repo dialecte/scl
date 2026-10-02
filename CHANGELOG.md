@@ -10,13 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `reference.query.resolveMappedData({ reference })`: the logical node and data path that implement a `DOS` / `SDS` / `DAS`, also when the record names nothing and follows its default (its parent data, or the logical node its `LNode` is mapped to, with its own name).
-
 - `tx.reference.setMappedData({ reference, implementation })`: state which data implements a `DOS` / `SDS` / `DAS`; scl stores the attributes and returns `stored`, `default` or `inexpressible` (nothing written when the schema cannot hold the path on that record).
 
 ### Changed
 
 - Requires `@dialecte/core` 0.5.2.
-
 - **Breaking:** a `DOS` / `SDS` / `DAS` carries `mappedDoName` / `mappedDaName` and `mappedLnUuid` together or not at all. Nothing is stored when the record is implemented by its default; otherwise the name is the path from the implementing logical node, always starting at the data object (`Health`, `PhV.phsB`, `Ind2.stVal`, never `stVal` alone), with that logical node's uuid, also when only the logical node differs. The hooks complete an absolute reference or a uuid alone, remove a pair that repeats the default, and re-store the records below an `LNode` or a parent data whose mapping changes. A path the schema cannot hold is left as written. `mappedLnUuid` no longer means "is mapped": read the implementation with `resolveMappedData`.
 - Importing a file stores `DOS` / `SDS` / `DAS` mapped data in the same form: an absolute reference becomes the path from its logical node with that node's uuid, a uuid alone gets its name, a name alone gets its uuid, and a pair that repeats the default is removed. A name without uuid under a mapped `LNode` no longer raises an unresolved-reference warning; an absolute reference to a logical node absent from the file still does. An absolute name whose logical node differs from its `mappedLnUuid` keeps the uuid's logical node and raises an `incoherent-reference` warning.
 - `findRefsPointingTo` on an `LN` / `LN0` also returns the `DOS` / `SDS` / `DAS` it implements by default (no `mappedLnUuid` on the record).
@@ -25,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - **Breaking:** `reference.query.buildMappedName`. Read the implementation with `resolveMappedData`; write the pair and the hooks store it.
+
+## [0.4.2] - 2026-10-2
+
+### Fixed
+
+- `MinRequestedSCDFile` titles show `version.revision` when available, omitting empty values instead of showing the file UUID.
 
 ## [0.4.1] - 2026-09-29
 

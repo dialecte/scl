@@ -216,6 +216,45 @@ describe('extractElementTitle', () => {
 		},
 
 		// ── composite ──────────────────────────────────────────
+		'MinRequestedSCDFile with version and revision → version.revision': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<IED name="IED_A" ${id}="ied-a">
+						<MinRequestedSCDFiles ${id}="requested-files">
+							<MinRequestedSCDFile fileType="SCD" fileUuid="file-uuid" version="2" revision="A" ${id}="min-requested-scd"/>
+						</MinRequestedSCDFiles>
+					</IED>
+				</SCL>
+			`,
+			ref: { tagName: 'MinRequestedSCDFile', id: 'min-requested-scd' },
+			expectedTitle: '2.A',
+		},
+		'MinRequestedSCDFile without version → raw revision': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<IED name="IED_A" ${id}="ied-a">
+						<MinRequestedSCDFiles ${id}="requested-files">
+							<MinRequestedSCDFile fileType="SCD" fileUuid="file-uuid" version="" revision="A" ${id}="min-requested-scd"/>
+						</MinRequestedSCDFiles>
+					</IED>
+				</SCL>
+			`,
+			ref: { tagName: 'MinRequestedSCDFile', id: 'min-requested-scd' },
+			expectedTitle: 'A',
+		},
+		'MinRequestedSCDFile without revision → raw version': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<IED name="IED_A" ${id}="ied-a">
+						<MinRequestedSCDFiles ${id}="requested-files">
+							<MinRequestedSCDFile fileType="SCD" fileUuid="file-uuid" version="2" revision="" ${id}="min-requested-scd"/>
+						</MinRequestedSCDFiles>
+					</IED>
+				</SCL>
+			`,
+			ref: { tagName: 'MinRequestedSCDFile', id: 'min-requested-scd' },
+			expectedTitle: '2',
+		},
 		'ApplicationSclRef → fileUuid/fileType/version.revision': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
