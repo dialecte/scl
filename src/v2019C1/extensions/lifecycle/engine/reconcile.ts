@@ -94,6 +94,11 @@ export async function reconcile(
 		 * stands on the level its instance holds for it): matched to that element, or new.
 		 */
 		pinnedMatches?: PinnedMatches
+		/**
+		 * Reference children of the instance root's subtree that belong to ANOTHER instance of the same
+		 * template (a shared element holds one reference per instance): never matched to a source child.
+		 */
+		foreignInstanceIds?: ReadonlySet<string>
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -153,6 +158,7 @@ export async function reconcile(
 		keepLeftoverRefs,
 		withinProjectOwned,
 		pinnedMatches: params.pinnedMatches,
+		foreignInstanceIds: params.foreignInstanceIds,
 	})
 
 	// removed from the template: delete instance elements whose lineage is gone. In a project-owned
@@ -184,6 +190,7 @@ async function reconcileChildren(
 		/** The children sit in an element of the project a source element is mapped onto. */
 		withinProjectOwned: boolean
 		pinnedMatches?: PinnedMatches
+		foreignInstanceIds?: ReadonlySet<string>
 	},
 ): Promise<void> {
 	const {
@@ -217,6 +224,7 @@ async function reconcileChildren(
 			redirectedSourceUuids,
 			matchContainersByName: withinProjectOwned,
 			pinnedMatches: params.pinnedMatches,
+			foreignInstanceIds: params.foreignInstanceIds,
 		})
 
 		if (matched) {
@@ -251,6 +259,7 @@ async function reconcileChildren(
 				keepLeftoverRefs,
 				withinProjectOwned,
 				pinnedMatches: params.pinnedMatches,
+				foreignInstanceIds: params.foreignInstanceIds,
 			})
 			continue
 		}

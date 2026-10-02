@@ -15,7 +15,11 @@ import {
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
-import { findInstancesUnder, scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
+import {
+	findInstancesUnder,
+	foreignScopeResolver,
+	scopeToTargetInstance,
+} from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	fsd as instantiateFsd,
 	resolveTargetStructure,
@@ -138,6 +142,13 @@ export async function fsd(
 			matchKey,
 			identityMode,
 		})
+		// an element the instances share (a category) holds one reference per instance: this one
+		// reconciles its own, as the project stands once the earlier instances are updated
+		const resolveForeignScope = foreignScopeResolver(tx, {
+			instanceRootRef: instance,
+			sourceUuid,
+			matchKey,
+		})
 		// carried satellites (e.g. FunctionCategory) travel with the function group
 		const carriedMappings = await reconcileCarriedSatellites(tx, {
 			sourceQuery,
@@ -148,6 +159,7 @@ export async function fsd(
 			matchKey,
 			identityMode,
 			decisionMappings: params.decisionMappings,
+			resolveForeignScope,
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
 		const cross = await reconcileCrossCuttingSatellites(tx, {
@@ -158,6 +170,7 @@ export async function fsd(
 			accepted: instanceAccepted,
 			matchKey,
 			identityMode,
+			resolveForeignScope,
 		})
 		// carry the report->applied correlation onto this instance's report nodes
 		const addedMappings = [...reconcileMappings, ...carriedMappings, ...cross.cloneMappings]

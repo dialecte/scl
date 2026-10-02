@@ -3,7 +3,10 @@ import { toRef } from '@dialecte/core/helpers'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
-import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
+import {
+	collectForeignReferenceIds,
+	findInstanceByTemplateUuid,
+} from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	describeMapping,
 	findMappingPolicy,
@@ -14,6 +17,7 @@ import {
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LeftoverRefPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import type { DiffNode, InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type {
 	DecisionMappings,
 	ReportMapping,
@@ -69,6 +73,11 @@ export async function foldSatelliteCompanions(
 		 * gave to a project element the template no longer brings anything for is then announced.
 		 */
 		instancePrimaryRef?: Scl.Ref<Scl.ElementsOf>
+		/**
+		 * What belongs to the other instances of the template the satellites are folded for: a shared
+		 * satellite's references to it are theirs, not this instance's.
+		 */
+		resolveForeignScope?: ResolveForeignScope
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
@@ -110,6 +119,11 @@ export async function foldSatelliteCompanions(
 			matchKey: params.matchKey,
 		})
 		if (mapping) report.mappings = [...(report.mappings ?? []), mapping]
+		const foreignScope = instance ? await params.resolveForeignScope?.() : undefined
+		const foreignInstanceIds =
+			instance && foreignScope
+				? await collectForeignReferenceIds(query, { sharedRootRef: instance, foreignScope })
+				: undefined
 		const satelliteReport = await diff({
 			sourceQuery,
 			targetQuery: query,
@@ -128,6 +142,7 @@ export async function foldSatelliteCompanions(
 			// per-instance refs are genuinely new — classify them added instead of lineage-matching a
 			// prior instance's refs (which would report a no-op while apply still merges 4 more in).
 			refsAlwaysAdded: params.refsAlwaysAdded ?? false,
+			foreignInstanceIds,
 		})
 		const changed =
 			satelliteReport.summary.added +

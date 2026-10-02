@@ -3,7 +3,10 @@ import { toRef } from '@dialecte/core/helpers'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
-import { findInstanceByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
+import {
+	collectForeignReferenceIds,
+	findInstanceByTemplateUuid,
+} from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	cloneTree,
 	resolveStructureRef,
@@ -13,6 +16,7 @@ import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings, ResolvedMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -54,6 +58,11 @@ export async function reconcileSatellites(
 		resolvedMappings?: ResolvedMappings
 		/** The consumer's choices for the shared satellites, by source record id. */
 		decisionMappings?: DecisionMappings
+		/**
+		 * What belongs to the other instances of the template the satellites are reconciled for: a
+		 * shared satellite's references to it are theirs, not this instance's.
+		 */
+		resolveForeignScope?: ResolveForeignScope
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -90,6 +99,11 @@ export async function reconcileSatellites(
 				})
 
 		if (instance) {
+			const foreignScope = await params.resolveForeignScope?.()
+			const foreignInstanceIds = await collectForeignReferenceIds(tx, {
+				sharedRootRef: instance,
+				foreignScope: foreignScope ?? new Set(),
+			})
 			const reconcileMappings = await reconcile(tx, {
 				sourceQuery,
 				sourceRootRef: satelliteRef,
@@ -99,6 +113,7 @@ export async function reconcileSatellites(
 				identityMode,
 				instanceRootIsProjectOwned: resolved?.projectOwned ?? false,
 				keepLeftoverRefs: true,
+				foreignInstanceIds,
 			})
 			added.push(...reconcileMappings)
 			continue

@@ -1,7 +1,7 @@
 import { findMappingPolicy } from './mapping-policies'
 
-import { REFERENCE_TAG_NAMES, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
-import { collectInstanceScope } from '@/v2019C1/extensions/lifecycle/instance'
+import { REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
+import { collectInstanceScope, pointsInto } from '@/v2019C1/extensions/lifecycle/instance'
 
 import type { FindWithdrawnContributionsParams, MappingReader } from './mapping.types'
 import type { Scl } from '@/v2019C1/config'
@@ -66,29 +66,7 @@ async function collectContributions(
 			await collectContributions(reader, { node: child, instanceScope, withdrawn })
 			continue
 		}
-		const isContribution = await pointsIntoInstance(reader, { reference: child, instanceScope })
+		const isContribution = await pointsInto(reader, { reference: child, scope: instanceScope })
 		if (isContribution) withdrawn.push(child)
 	}
-}
-
-/** Whether a reference points at an element of the instance. */
-async function pointsIntoInstance(
-	reader: MappingReader,
-	params: { reference: AnyTreeRecord; instanceScope: ReadonlySet<string> },
-): Promise<boolean> {
-	const { reference, instanceScope } = params
-
-	const pairs = UUID_REFERENCE_PAIRS[reference.tagName as keyof typeof UUID_REFERENCE_PAIRS] ?? []
-	for (const pair of pairs) {
-		const referencedUuid = await reader.any.getAttribute(reference, { name: pair.attribute.uuid })
-		if (!referencedUuid) continue
-		for (const tagName of pair.target) {
-			const referenced = await reader.any.findByAttributes({
-				tagName: tagName as Scl.ElementsOf,
-				attributes: { uuid: referencedUuid },
-			})
-			if (referenced.some((record) => instanceScope.has(record.id))) return true
-		}
-	}
-	return false
 }

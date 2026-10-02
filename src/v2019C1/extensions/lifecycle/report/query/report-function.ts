@@ -2,6 +2,7 @@ import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
 import { foldCarriedSatellites } from './report-function-satellites'
 
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { foreignScopeResolver } from '@/v2019C1/extensions/lifecycle/instance'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -52,6 +53,16 @@ export async function reportFunction(
 	// so they must be folded as `added` companions too — otherwise the merge-review
 	// hides them when context is off. The folds no-op their instance side when
 	// `instance`/`instancePrimaryRef` is undefined.
+	// an element the instances share (a category) holds one reference per instance: this one is
+	// compared with its own
+	const sourceUuid = await sourceQuery.getAttribute(functionRef, { name: 'uuid' })
+	const resolveForeignScope = instance
+		? foreignScopeResolver(query, {
+				instanceRootRef: instance,
+				sourceUuid,
+				matchKey: params.matchKey,
+			})
+		: undefined
 	const withLayerSatellites = await foldCarriedSatellites(query, {
 		sourceQuery,
 		functionRef,
@@ -61,6 +72,7 @@ export async function reportFunction(
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
 		matchKey: params.matchKey,
+		resolveForeignScope,
 	})
 	return foldCrossCuttingSatellites(query, {
 		sourceQuery,
@@ -72,5 +84,6 @@ export async function reportFunction(
 		refsAlwaysAdded,
 		anchor: params.anchor,
 		matchKey: params.matchKey,
+		resolveForeignScope,
 	})
 }

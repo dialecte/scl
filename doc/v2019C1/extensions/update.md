@@ -217,6 +217,20 @@ update a **subset** (e.g. 2 of 4). `apply` reconciles each instance independentl
 own groups. A UI iterates `report.instances`, labels each section with the instance `title`, and keys
 the `decisions` map by `group.id` (already scoped per instance, so globally unique).
 
+#### What the instances share
+
+Instances of one template may share an element — an `AllocationRole`, a `FunctionCategory`, a
+`Variable` — each giving it its **own** reference children (one `FunctionRef` per instance, each to
+that instance's function). `report` and `apply` compare each instance with its own references only:
+a reference to an element another instance holds is that instance's, never the counterpart of one
+of this instance's. So when the shared element of the template gains a reference, every instance
+contributes its own — the report lists it as added for each instance, and `apply` adds one per
+instance, each pointing at the element of that instance.
+
+One limit: a function or an application the template **gains** is placed once per instance by
+`apply`, but listed once in the report (one first-time instance), so it is accepted or skipped for
+all instances together.
+
 ### Placement collision resolution
 
 When a group is accepted and its primary is **placed** (a first-time instantiate, a composed function,
@@ -311,7 +325,10 @@ This unifies instantiate and update — instantiation is the first-time case of 
 `asd({ sourceQuery, applicationRef, targetParent })` reconciles a project against a (possibly newer) ASD — the same engine one layer up, proving `engine.reconcile` is layer-agnostic. It runs two layers in order:
 
 1. **application layer** — reconcile the `Application` subtree (roles, allocation refs, attributes);
-2. **function-layer cascade** — _verbs compose verbs_: treat every composed Function the ASD references as an FSD to update and delegate to `tx.lifecycle.update.fsd`. A function **added** by the newer ASD is instantiated; an existing one is reconciled. Each function is placed at its **own** resolved structural level (via `resolveTargetStructure` + `resolveStructureRef`, exactly like [`instantiate.asd`](./instantiate#asd)), not blindly under the ASD anchor.
+2. **function-layer cascade** — _verbs compose verbs_: treat every composed Function the ASD references as an FSD to update and delegate to `tx.lifecycle.update.fsd`, **per instance of the application**:
+   - the functions an instance refers to are its own: each is reconciled where it sits, whichever bay that is — not only those under the ASD anchor;
+   - a function **added** by the newer ASD is new to every instance: each instance the update writes to gets its own, on the level that instance lives on (the bay of its other functions), and its new references point at it. A function of that lineage already standing there on its own, belonging to no instance, is taken instead of a new one;
+   - a function that belongs to no instance is reconciled when it sits where the consumer started.
 
 The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQuery, ref: applicationRef })`.
 

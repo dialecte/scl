@@ -123,6 +123,11 @@ export async function diff(params: {
 	 */
 	pinnedMatches?: PinnedMatches
 	/**
+	 * Reference children of the instance root's subtree that belong to ANOTHER instance of the same
+	 * template (a shared element holds one reference per instance): never matched to a source child.
+	 */
+	foreignInstanceIds?: ReadonlySet<string>
+	/**
 	 * Child tags to treat as BOUNDARIES: their subtrees are excluded from the diff because another
 	 * report covers them (e.g. the topology frame report delegates Application/Function to the fn/app
 	 * per-primary reports).
@@ -173,6 +178,7 @@ export async function diff(params: {
 		contributeOnly: params.contributeOnly ?? false,
 		redirectedSourceUuids,
 		pinnedMatches: params.pinnedMatches,
+		foreignInstanceIds: params.foreignInstanceIds,
 	})
 	const summary = summarize(root)
 	const groups = groupChanges(root, instanceTree.id)
@@ -200,6 +206,7 @@ async function diffMatched(
 		contributeOnly?: boolean
 		redirectedSourceUuids?: RedirectedSourceUuids
 		pinnedMatches?: PinnedMatches
+		foreignInstanceIds?: ReadonlySet<string>
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
@@ -230,6 +237,7 @@ async function diffMatched(
 			redirectedSourceUuids: params.redirectedSourceUuids,
 			matchContainersByName: withinProjectOwned,
 			pinnedMatches: params.pinnedMatches,
+			foreignInstanceIds: params.foreignInstanceIds,
 		})
 		if (matched) {
 			matchedInstanceIds.add(matched.id)
@@ -258,6 +266,7 @@ async function diffMatched(
 					omit,
 					redirectedSourceUuids: params.redirectedSourceUuids,
 					pinnedMatches: params.pinnedMatches,
+					foreignInstanceIds: params.foreignInstanceIds,
 					skipOwnAttributes: skipChildAttributes,
 					withinProjectOwned,
 					contributeOnly,

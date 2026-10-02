@@ -5,6 +5,7 @@ import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers
 import type { Config, Scl } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
@@ -35,6 +36,8 @@ export async function foldCarriedSatellites(
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		/** How an instance element carries its source element's uuid. Default `templateUuid`. */
 		matchKey?: MatchKey
+		/** What belongs to the other instances of the function. */
+		resolveForeignScope?: ResolveForeignScope
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance, report } = params
@@ -58,5 +61,6 @@ export async function foldCarriedSatellites(
 		instancePrimaryRef: instance
 			? ({ tagName: instance.tagName, id: instance.id } as Scl.Ref<Scl.ElementsOf>)
 			: undefined,
+		resolveForeignScope: params.resolveForeignScope,
 	})
 }

@@ -1,5 +1,5 @@
+import { cascadeComposedFunctions } from './cascade-composed-functions'
 import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
-import { fsd as updateFsd } from './fsd'
 import { reconcileSatellites } from './satellite-reconcile'
 
 import {
@@ -16,7 +16,7 @@ import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import {
-	collectComposedFunctionUuids,
+	collectForeignScopes,
 	findInstancesByTemplateUuid,
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
@@ -34,8 +34,8 @@ import {
 	identityModeForScenario,
 	matchKeyForScenario,
 } from '@/v2019C1/extensions/lifecycle/scenario'
-import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
+import type { ApplicationInstance } from './cascade-composed-functions.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -57,9 +57,9 @@ import type * as Core from '@dialecte/core'
  *     refs, attributes);
  *  2. function-layer cascade — treat every composed Function the ASD
  *     references as an FSD to update and delegate to `update.fromFsd`
- *     (instantiate-or-reconcile), which fans out per composed-function instance.
- *     Verbs compose verbs: a function added by the newer ASD is instantiated, an
- *     existing one is reconciled.
+ *     (instantiate-or-reconcile), per instance of the application
+ *     ({@link cascadeComposedFunctions}). Verbs compose verbs: a function added by
+ *     the newer ASD is instantiated for each instance, an existing one is reconciled.
  *
  * `report` + `decisions` gate every write: each Application instance is gated by
  * ONLY its own groups (partitioned by `instanceScopeId`) so the user can update a
@@ -149,6 +149,13 @@ export async function asd(
 	const writtenInstances: Scl.Ref<'Application'>[] = []
 	// what the update added to each instance, repointed once the composed functions exist (below)
 	const additions: InstanceAdditions[] = []
+	// every instance the update went through, for the function-layer cascade
+	const applicationInstances: ApplicationInstance[] = []
+	// what belongs to the other instances of the application: an element the instances share (a
+	// role) holds one reference per instance, and each instance reconciles its own
+	const foreignScopes = await collectForeignScopes(tx, { instances: matched })
+	// what this update already added for an earlier instance: that instance's too
+	const addedForEarlierInstances = new Set<string>()
 
 	for (const instance of instances) {
 		// gate THIS instance by only its own groups (source ids are unique within one instance)
@@ -164,6 +171,7 @@ export async function asd(
 		if (wasWritten) {
 			writtenInstances.push({ tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>)
 		}
+		applicationInstances.push({ instance, written: wasWritten })
 
 		// application-layer satellites (e.g. a referenced AllocationRole) travel with the
 		// application group. Resolve the instance-side satellites BEFORE the reconcile below
@@ -209,6 +217,13 @@ export async function asd(
 			identityMode,
 			redirectMappings,
 		})
+		const foreignScope = new Set([
+			...(foreignScopes.get(instance.id) ?? []),
+			...addedForEarlierInstances,
+		])
+		async function resolveForeignScope(): Promise<ReadonlySet<string>> {
+			return foreignScope
+		}
 		const satelliteMappings = await reconcileSatellites(tx, {
 			sourceQuery,
 			satelliteRefs,
@@ -219,6 +234,7 @@ export async function asd(
 			identityMode,
 			resolvedMappings,
 			decisionMappings: params.decisionMappings,
+			resolveForeignScope,
 		})
 		for (const contribution of withdrawnContributions) {
 			// gated on the removal the report announced for it
@@ -236,10 +252,14 @@ export async function asd(
 			accepted,
 			matchKey,
 			identityMode,
+			resolveForeignScope,
 		})
 		// carry the report->applied correlation onto this Application instance's report nodes (the
 		// composed Functions are annotated by the FSD cascade below)
 		const addedMappings = [...reconcileMappings, ...satelliteMappings, ...cross.cloneMappings]
+		for (const { target } of addedMappings) {
+			if (target.id) addedForEarlierInstances.add(target.id)
+		}
 		additions.push({
 			instanceRootRef: instance,
 			cloneMappings: addedMappings,
@@ -252,10 +272,11 @@ export async function asd(
 	}
 
 	// 2. function-layer cascade — updateFsd fans out per composed-function instance
-	const functions = await cascadeComposedFunctions(tx, {
+	const cascade = await cascadeComposedFunctions(tx, {
 		sourceQuery,
 		applicationRef,
 		targetParent,
+		applicationInstances,
 		scenario,
 		report,
 		decisions,
@@ -265,76 +286,20 @@ export async function asd(
 	})
 
 	// 3. the references each instance gained now have every target they can point at: the
-	// satellites added above and the composed functions the cascade placed
+	// satellites added above and the composed functions the cascade placed — for a function the
+	// template gained, the one placed for that instance
 	for (const { instanceRootRef, cloneMappings, redirectMappings } of additions) {
-		await repointAddedReferences(tx, { cloneMappings, instanceRootRef, matchKey, redirectMappings })
+		const gainedFunctions = cascade.redirectMappings.get(instanceRootRef.id ?? '') ?? []
+		await repointAddedReferences(tx, {
+			cloneMappings,
+			instanceRootRef,
+			matchKey,
+			redirectMappings: [...(redirectMappings ?? []), ...gainedFunctions],
+		})
 	}
 
 	return {
 		applications: writtenInstances,
-		functions,
+		functions: cascade.functions,
 	}
-}
-
-/**
- * Function-layer cascade: treat every composed Function the ASD references as an
- * FSD to update and delegate to `update.fromFsd` (instantiate-or-reconcile).
- *
- * Each function is placed at its own mirrored structural level (resolved exactly
- * like `instantiate.asd`, via `resolveTargetStructure` + `resolveStructureRef`) —
- * not blindly under the ASD's `targetParent` — so a function that lives under a
- * different Substation/VoltageLevel/Bay than the anchor is found/placed correctly.
- */
-async function cascadeComposedFunctions(
-	tx: Core.Transaction<Config>,
-	params: {
-		sourceQuery: Core.Query<Config>
-		applicationRef: Scl.Ref<'Application'>
-		targetParent: Scl.Ref<Scl.ElementsOf>
-		scenario?: LifecycleScenario
-		report?: DiffReport
-		decisions?: DecisionMap
-		keepNameTypesFrom?: KeepNameTypesFrom
-		targetInstance?: Scl.Ref<Scl.ElementsOf>
-		decisionMappings?: DecisionMappings
-	},
-): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
-	const {
-		sourceQuery,
-		applicationRef,
-		targetParent,
-		scenario,
-		report,
-		decisions,
-		keepNameTypesFrom,
-		targetInstance,
-	} = params
-	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
-	if (functionUuids.size === 0) return []
-
-	const structure = await resolveTargetStructure(tx, targetParent)
-
-	const roots: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[] = []
-	for (const functionUuid of functionUuids) {
-		const [sourceFunction] = await sourceQuery.any.findByAttributes({
-			tagName: 'Function',
-			attributes: { uuid: functionUuid },
-		})
-		if (!sourceFunction) continue
-		const functionRef = { tagName: 'Function', id: sourceFunction.id } as Scl.Ref<'Function'>
-		const functionTargetParent = await resolveStructureRef(sourceQuery, functionRef, structure)
-		const functionRoots = await updateFsd(tx, {
-			sourceQuery,
-			functionRef,
-			targetParent: functionTargetParent,
-			scenario,
-			report,
-			decisions,
-			keepNameTypesFrom,
-			targetInstance,
-			decisionMappings: params.decisionMappings,
-		})
-		roots.push(...functionRoots)
-	}
-	return roots
 }

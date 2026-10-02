@@ -11,6 +11,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
@@ -45,6 +46,8 @@ export async function reconcileCarriedSatellites(
 		identityMode?: IdentityMode
 		/** The consumer's choices for the shared elements the function is classified by. */
 		decisionMappings?: DecisionMappings
+		/** What belongs to the other instances of the function. */
+		resolveForeignScope?: ResolveForeignScope
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -94,6 +97,7 @@ export async function reconcileCarriedSatellites(
 		identityMode,
 		resolvedMappings,
 		decisionMappings,
+		resolveForeignScope: params.resolveForeignScope,
 	})
 
 	for (const contribution of withdrawnContributions) {

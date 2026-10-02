@@ -11,6 +11,7 @@ import type { ReconcileCrossCuttingSatellitesResult } from './cross-cutting-sate
 import type { Config, Scl } from '@/v2019C1/config'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
@@ -41,6 +42,8 @@ export async function reconcileCrossCuttingSatellites(
 		accepted?: AcceptedIds
 		matchKey?: MatchKey
 		identityMode?: IdentityMode
+		/** What belongs to the other instances of the primary's template. */
+		resolveForeignScope?: ResolveForeignScope
 	},
 ): Promise<ReconcileCrossCuttingSatellitesResult> {
 	const {
@@ -87,6 +90,7 @@ export async function reconcileCrossCuttingSatellites(
 		matchKey,
 		identityMode,
 		resolvedMappings,
+		resolveForeignScope: params.resolveForeignScope,
 	})
 
 	for (const contribution of withdrawnContributions) {

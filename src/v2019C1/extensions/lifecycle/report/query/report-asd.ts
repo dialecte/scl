@@ -6,6 +6,7 @@ import { foldSatelliteCompanions } from './satellite-companions'
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import {
 	collectComposedFunctionUuids,
+	collectForeignScopes,
 	findInstancesByTemplateUuid,
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
@@ -123,6 +124,9 @@ export async function reportAsd(
 		reportInstance.mappings = [...placementMappings, ...reportInstance.mappings]
 		reportInstances.push(reportInstance)
 	} else {
+		// an element the instances share (a role) holds one reference per instance: each instance
+		// is compared with its own
+		const foreignScopes = await collectForeignScopes(query, { instances: matchedApplications })
 		for (const instance of applicationInstances) {
 			const instanceDiff = await reportApplicationInstance(query, {
 				sourceQuery,
@@ -132,6 +136,7 @@ export async function reportAsd(
 				matchKey,
 				decisionMappings,
 				anchor,
+				foreignScope: foreignScopes.get(instance.id),
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
@@ -171,6 +176,8 @@ async function reportApplicationInstance(
 		matchKey?: MatchKey
 		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
+		/** What belongs to the other instances of the application. */
+		foreignScope?: ReadonlySet<string>
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
@@ -209,6 +216,10 @@ async function reportApplicationInstance(
 		redirectMappings,
 	})
 
+	async function resolveForeignScope(): Promise<ReadonlySet<string>> {
+		return params.foreignScope ?? new Set()
+	}
+
 	await foldSatelliteCompanions(query, {
 		sourceQuery,
 		primaryRef: applicationRef,
@@ -224,6 +235,7 @@ async function reportApplicationInstance(
 		instancePrimaryRef: instance
 			? ({ tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>)
 			: undefined,
+		resolveForeignScope,
 	})
 
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
@@ -238,6 +250,7 @@ async function reportApplicationInstance(
 		refsAlwaysAdded,
 		anchor: params.anchor,
 		matchKey: params.matchKey,
+		resolveForeignScope,
 	})
 
 	return applicationReport

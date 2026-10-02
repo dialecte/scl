@@ -39,6 +39,10 @@ export type PinnedMatches = ReadonlyMap<string, string | undefined>
  * A child whose counterpart was decided elsewhere (`pinnedMatches` — a structural level, which lands
  * where its placement mapping says) is not matched by any of these rules.
  *
+ * In an element several instances of one template share, each instance has its own reference
+ * children: those of another instance (`foreignInstanceIds`) are never the counterpart of a child of
+ * this one, however alike they read once brought back to template space.
+ *
  * The source side reads raw identities; the candidate (target) side is normalized to template space —
  * that role split is internal here, so callers never pass a space/`mapToTemplate` flag.
  */
@@ -54,6 +58,7 @@ export async function matchChild(
 		redirectedSourceUuids?: RedirectedSourceUuids
 		matchContainersByName?: boolean
 		pinnedMatches?: PinnedMatches
+		foreignInstanceIds?: ReadonlySet<string>
 	},
 ): Promise<AnyTreeRecord | undefined> {
 	const { targetQuery, sourceChild, instanceParent, index, matchedInstanceIds } = params
@@ -89,7 +94,9 @@ export async function matchChild(
 
 	const candidates = instanceParent.tree.filter(
 		(instanceChild) =>
-			instanceChild.tagName === instanceTag && !matchedInstanceIds.has(instanceChild.id),
+			instanceChild.tagName === instanceTag &&
+			!matchedInstanceIds.has(instanceChild.id) &&
+			!params.foreignInstanceIds?.has(instanceChild.id),
 	)
 	if (candidates.length === 0) return undefined
 

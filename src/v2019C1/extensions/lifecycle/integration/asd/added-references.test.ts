@@ -163,6 +163,34 @@ describe('lifecycle.apply — the references an update adds point at the element
 					'//v2019C1:Application[v2019C1:FunctionRole[@name="BACKUP"]//v2019C1:FunctionRef/@functionUuid != v2019C1:FunctionRole[@name="ROOT"]//v2019C1:FunctionRef/@functionUuid]',
 				],
 			},
+		'two instances of the template, and the template gains a function and a reference to it → each instance gets its own function, in its own bay, and points at it':
+			{
+				sourceXml,
+				targetXml: twoBaysProjectXml,
+				anchors: [bayRef, secondBayRef],
+				mutate: async (tx) => {
+					await tx.addChild(sourceBayRef, {
+						tagName: 'Function',
+						attributes: { name: 'Ctrl', uuid: 'control-source-uuid' },
+					})
+					await tx.addChild(functionRoleContentRef, {
+						tagName: 'FunctionRef',
+						attributes: {
+							function: 'TEMPLATE/TEMPLATE/TEMPLATE/Ctrl',
+							functionUuid: 'control-source-uuid',
+						},
+					})
+				},
+				expectedQueries: [
+					'//v2019C1:FunctionRoleContent/v2019C1:FunctionRef[@function="S1/V1/B1/Ctrl"][@functionUuid = //default:Bay[@name="B1"]/default:Function[@templateUuid="control-source-uuid"]/@uuid]',
+					'//v2019C1:FunctionRoleContent/v2019C1:FunctionRef[@function="S1/V1/B2/Ctrl"][@functionUuid = //default:Bay[@name="B2"]/default:Function[@templateUuid="control-source-uuid"]/@uuid]',
+				],
+				unexpectedQueries: [
+					// one function per instance, none shared
+					'//default:Bay[count(default:Function[@templateUuid="control-source-uuid"]) != 1]',
+					'//v2019C1:Application[count(.//v2019C1:FunctionRef[@functionUuid = //default:Function[@templateUuid="control-source-uuid"]/@uuid]) != 1]',
+				],
+			},
 	}
 
 	async function act({

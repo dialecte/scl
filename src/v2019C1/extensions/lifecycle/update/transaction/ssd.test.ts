@@ -582,3 +582,114 @@ describe('update.ssd - a reference added with the frame points at the element of
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+// An application of a bay typical placed in several bays lives in each of them: a function its
+// template gains belongs in the bay of each instance, not only where the update was started.
+describe('update.ssd - a function the application of a bay typical gains is placed in each bay', () => {
+	const typicalSourceXml = /* xml */ `
+		<SCL ${ns} ${id}="ssd-g">
+			<Header id="ssd-header-g" uuid="ssd-g-uuid" version="0" revision="1" ${id}="header-g"/>
+			<Substation name="TEMPLATE" ${id}="substation-g">
+				<VoltageLevel name="TEMPLATE" ${id}="voltage-level-g">
+					<Bay name="B1" ${id}="bay-g">
+						<Private type="eIEC61850-6-100" ${id}="bay-private-g">
+							<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="application-g-uuid" ${id}="application-g">
+								<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="function-role-g">
+									<eIEC61850-6-100:FunctionRoleContent ${id}="function-role-content-g">
+										<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/B1/Prot" functionUuid="protection-g-uuid" ${id}="protection-ref-g"/>
+										<!-- gained by the update: <FunctionRef function="TEMPLATE/TEMPLATE/B1/Ctrl"/> -->
+									</eIEC61850-6-100:FunctionRoleContent>
+								</eIEC61850-6-100:FunctionRole>
+							</eIEC61850-6-100:Application>
+						</Private>
+						<Function name="Prot" uuid="protection-g-uuid" ${id}="protection-g"/>
+						<!-- gained by the update: <Function name="Ctrl"/> -->
+					</Bay>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+
+	const twoVoltageLevelsXml = /* xml */ `
+		<SCL ${ns} ${id}="scd-g">
+			<Header id="project-g" uuid="project-g-uuid" ${id}="header-tg"/>
+			<Substation name="S1" ${id}="substation-tg">
+				<VoltageLevel name="VA" ${id}="voltage-level-a"/>
+				<VoltageLevel name="VB" ${id}="voltage-level-b"/>
+			</Substation>
+		</SCL>
+	`
+
+	const typicalRef = { tagName: 'Bay', id: 'bay-g' } as Scl.Ref<'Bay'>
+	const voltageLevelA = {
+		tagName: 'VoltageLevel',
+		id: 'voltage-level-a',
+	} as Scl.Ref<'VoltageLevel'>
+	const voltageLevelB = {
+		tagName: 'VoltageLevel',
+		id: 'voltage-level-b',
+	} as Scl.Ref<'VoltageLevel'>
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'the typical is placed in two voltage levels, and its application gains a function → each bay gets the function, each application points at the one of its bay':
+			{
+				sourceXml: typicalSourceXml,
+				targetXml: twoVoltageLevelsXml,
+				expectedQueries: [
+					'//default:VoltageLevel[@name="VA"]/default:Bay//v2019C1:FunctionRef[@function="S1/VA/B1/Ctrl"][@functionUuid = //default:VoltageLevel[@name="VA"]/default:Bay/default:Function[@name="Ctrl"]/@uuid]',
+					'//default:VoltageLevel[@name="VB"]/default:Bay//v2019C1:FunctionRef[@function="S1/VB/B1/Ctrl"][@functionUuid = //default:VoltageLevel[@name="VB"]/default:Bay/default:Function[@name="Ctrl"]/@uuid]',
+				],
+				unexpectedQueries: [
+					'//default:Bay[count(default:Function[@templateUuid="control-g-uuid"]) != 1]',
+				],
+			},
+	}
+
+	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+
+		await target.transaction(async (tx) => {
+			await instantiateSsd(tx, {
+				sourceQuery: source.query,
+				scopeRef: typicalRef,
+				targetParent: voltageLevelA,
+			})
+			await instantiateSsd(tx, {
+				sourceQuery: source.query,
+				scopeRef: typicalRef,
+				targetParent: voltageLevelB,
+			})
+		})
+
+		await source.transaction(async (tx) => {
+			await tx.addChild(typicalRef, {
+				tagName: 'Function',
+				attributes: { name: 'Ctrl', uuid: 'control-g-uuid' },
+			})
+			await tx.addChild(
+				{
+					tagName: 'FunctionRoleContent',
+					id: 'function-role-content-g',
+				} as Scl.Ref<'FunctionRoleContent'>,
+				{
+					tagName: 'FunctionRef',
+					attributes: { function: 'TEMPLATE/TEMPLATE/B1/Ctrl', functionUuid: 'control-g-uuid' },
+				},
+			)
+		})
+
+		// the update is started from the first voltage level
+		await target.transaction(async (tx) => {
+			await updateSsd(tx, {
+				sourceQuery: source.query,
+				scopeRef: typicalRef,
+				targetParent: voltageLevelA,
+				scenario: 'template',
+			})
+		})
+
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})

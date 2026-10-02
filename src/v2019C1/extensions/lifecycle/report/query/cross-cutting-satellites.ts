@@ -4,6 +4,7 @@ import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-c
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 
@@ -31,6 +32,8 @@ export async function foldCrossCuttingSatellites(
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		/** How an instance element carries its source element's uuid. Default `templateUuid`. */
 		matchKey?: MatchKey
+		/** What belongs to the other instances of the primary's template. */
+		resolveForeignScope?: ResolveForeignScope
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, instancePrimaryRef, report } = params
@@ -51,5 +54,6 @@ export async function foldCrossCuttingSatellites(
 		anchor: params.anchor,
 		matchKey: params.matchKey,
 		instancePrimaryRef,
+		resolveForeignScope: params.resolveForeignScope,
 	})
 }

@@ -10,6 +10,7 @@ export { assertPlacementDecided, findLanding } from './placement-landing'
 export { describeHeldPlacement, describePlacementMappings } from './describe-placement-mappings'
 export { findFrameInstances } from './find-frame-instances'
 export { resolveInstanceLevels, toPinnedMatches } from './resolve-instance-levels'
+export { findHeldLevel, resolveHeldLevels } from './resolve-held-levels'
 export type { TopologyReconcilables } from './scope-content.types'
 export type {
 	EnsureTopologyFrameParams,
@@ -18,5 +19,6 @@ export type {
 export type { PlacementLevel } from './resolve-placement-mappings.types'
 export type { FrameInstance } from './find-frame-instances.types'
 export type { InstanceLevels } from './resolve-instance-levels.types'
+export type { HeldLevels, InstanceCounterpart } from './resolve-held-levels.types'
 export type { OffLevel, PrimaryPlacement } from './resolve-primary-placement.types'
 export type { PrimaryLanding } from './land-primaries.types'
