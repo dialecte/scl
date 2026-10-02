@@ -2,7 +2,7 @@ import { collectFrameElements, strictAncestorIds } from './ensure-topology-frame
 
 import { toRef } from '@dialecte/core/helpers'
 
-import { TEMPLATE_NAME } from '@/v2019C1/constants'
+import { TEMPLATE_NAME, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { resolveUniqueValue } from '@/v2019C1/extensions/lifecycle/constraints'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/resolve-target-structure'
 
@@ -20,6 +20,8 @@ import type {
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
+
+const STRUCTURAL_TAGS: readonly string[] = TOPOLOGY_STRUCTURAL_TAGS
 
 /** A level as resolved on its own, before it is placed among the others. */
 type ResolvedLevel = Omit<PlacementLevel, 'context' | 'parentSourceId'>
@@ -44,6 +46,9 @@ type ResolveLevelParams = {
  *
  * The unit to instantiate and the levels below it are created, under a name free where they
  * land, unless the consumer chose an element of the project.
+ *
+ * The scope may also be a primary sitting below the levels (the function of an FSD): the levels
+ * above it are then all context, and it is no level itself.
  */
 export async function resolvePlacementMappings(
 	reader: MappingReader,
@@ -59,7 +64,8 @@ export async function resolvePlacementMappings(
 	const levels: PlacementLevel[] = []
 	for (const frameElement of frameElements) {
 		const sourceId = frameElement.id
-		if (!sourceId) continue
+		// the scope may be a primary placed below the levels (a function): it is no level itself
+		if (!sourceId || !STRUCTURAL_TAGS.includes(frameElement.tagName)) continue
 		const sourceRef: StoredRef = { ...frameElement, id: sourceId }
 
 		const parentLevel = await findParentLevel({ sourceQuery, sourceRef, levels })

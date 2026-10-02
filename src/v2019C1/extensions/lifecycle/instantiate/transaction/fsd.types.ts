@@ -17,6 +17,12 @@ export type FsdParams = {
 	keepNameTypesFrom?: KeepNameTypesFrom
 	/** The consumer's choices for the shared elements the function is classified by. */
 	decisionMappings?: DecisionMappings
+	/**
+	 * The function is placed by this operation alone (an FSD): `targetParent` is where the consumer
+	 * started, and started above the level the function was made for, it lands on the level its
+	 * template says. Left out when the caller already resolved where it lands.
+	 */
+	resolvePlacement?: boolean
 }
 
 export type FsdResult = {

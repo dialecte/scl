@@ -71,6 +71,8 @@ export async function fsd(
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
 		/** The consumer's choices for the shared elements the function is classified by. */
 		decisionMappings?: DecisionMappings
+		/** The function is placed by this operation alone (an FSD): see `instantiate.fsd`. */
+		resolvePlacement?: boolean
 	},
 ): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
 	const {
@@ -110,6 +112,7 @@ export async function fsd(
 			overrides: gateOverrides,
 			keepNameTypesFrom,
 			decisionMappings: params.decisionMappings,
+			resolvePlacement: params.resolvePlacement,
 		})
 		// annotate the first-time instance's report nodes with what each source element became
 		const firstTime = firstTimeReportInstance(report, functionRef.id)

@@ -5,11 +5,13 @@ import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constr
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { cloneFunctionCategories } from '@/v2019C1/extensions/lifecycle/layers/function'
+import { landPrimaries } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { FsdParams, FsdResult } from './fsd.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -35,7 +37,14 @@ import type * as Core from '@dialecte/core'
  * against the fresh instance without re-querying by templateUuid.
  */
 export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Promise<FsdResult> {
-	const { sourceQuery, functionRef, targetParent, overrides, keepNameTypesFrom } = params
+	const { sourceQuery, functionRef, overrides, keepNameTypesFrom } = params
+
+	// where the function lands: where the consumer started, or — started above the level the
+	// function was made for — on the level its template says, the missing levels created
+	const landing = params.resolvePlacement
+		? await landOnTemplateLevel(tx, params)
+		: { targetParent: params.targetParent, cloneMappings: [], redirectMappings: [] }
+	const { targetParent } = landing
 
 	// A function placed under a (Sub)Function is, per schema, a SubFunction.
 	const retagRoot =
@@ -73,14 +82,23 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		strip: false,
 	})
 
-	const allMappings = [...functionMappings, ...categoryMappings, ...applied.cloneMappings]
+	const allMappings = [
+		...landing.cloneMappings,
+		...functionMappings,
+		...categoryMappings,
+		...applied.cloneMappings,
+	]
 
 	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs
 	// (e.g. FunctionCatRef -> cloned Function) onto the fresh uuids.
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
 		mode: 'stamp-template',
-		redirectMappings: [...redirectMappings, ...applied.redirectMappings],
+		redirectMappings: [
+			...landing.redirectMappings,
+			...redirectMappings,
+			...applied.redirectMappings,
+		],
 	})
 
 	// a shared element created here (no project element to map onto) is named at its structural level
@@ -115,4 +133,35 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	})
 
 	return { functionRef: instantiatedRef, cloneMappings: allMappings }
+}
+
+/**
+ * Resolve where an FSD's function lands. Started at or below the level it was made for, it lands
+ * where the consumer started. Started above it, it lands on the level its template says
+ * ({@link landPrimaries}).
+ */
+async function landOnTemplateLevel(
+	tx: Core.Transaction<Config>,
+	params: FsdParams,
+): Promise<{
+	targetParent: Scl.Ref<Scl.ElementsOf>
+	cloneMappings: Scl.CloneMapping[]
+	redirectMappings: RedirectMapping[]
+}> {
+	const { sourceQuery, functionRef, targetParent, decisionMappings } = params
+
+	const landing = await landPrimaries(tx, {
+		sourceQuery,
+		primaryRefs: [functionRef],
+		anchor: targetParent,
+		decisionMappings,
+		operation: 'instantiate.fsd',
+	})
+	if (!landing) return { targetParent, cloneMappings: [], redirectMappings: [] }
+
+	return {
+		targetParent: landing.frameIndex.get(landing.deepestLevelId) ?? targetParent,
+		cloneMappings: landing.cloneMappings,
+		redirectMappings: landing.redirectMappings,
+	}
 }

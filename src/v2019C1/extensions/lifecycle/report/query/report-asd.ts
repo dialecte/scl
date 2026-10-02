@@ -9,7 +9,13 @@ import {
 	findInstancesByTemplateUuid,
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
+import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
+import {
+	describePlacementMappings,
+	findLanding,
+	resolvePrimaryPlacement,
+} from '@/v2019C1/extensions/lifecycle/layers/topology'
 import {
 	resolveSatelliteMappings,
 	toRedirectMappings,
@@ -51,9 +57,16 @@ export async function reportAsd(
 		decisionMappings?: DecisionMappings
 		/** The project element the application is placed under. */
 		anchor?: Scl.Ref<Scl.ElementsOf>
+		/**
+		 * The application is placed by this operation alone (an ASD): started above a level the
+		 * application or one of its functions was made for, each lands on the level its template says.
+		 * Left out when the caller already resolved where they land (a topology scope placing its own
+		 * applications).
+		 */
+		resolvePlacement?: boolean
 	},
 ): Promise<DiffReport> {
-	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings, anchor } = params
+	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	const matchKey = matchKeyForScenario(scenario)
@@ -67,8 +80,29 @@ export async function reportAsd(
 		targetInstance,
 	})
 
+	// a first placement: where the application and its functions land is where the consumer
+	// started, or — started above a level one of them was made for — the levels their template says
+	const firstPlacement = applicationInstances.length === 0
+	const placement =
+		firstPlacement && params.resolvePlacement && params.anchor
+			? await resolvePrimaryPlacement(query, {
+					sourceQuery,
+					primaryRefs: [
+						applicationRef,
+						...(await findComposedFunctionRefs(sourceQuery, applicationRef)),
+					],
+					anchor: params.anchor,
+					decisionMappings,
+				})
+			: { levels: [] }
+	const deepestLevel = placement.levels.at(-1)
+	const anchor =
+		(deepestLevel &&
+			findLanding({ placementLevels: placement.levels, levelId: deepestLevel.sourceRef.id })) ||
+		params.anchor
+
 	const reportInstances: ReportInstance[] = []
-	if (applicationInstances.length === 0) {
+	if (firstPlacement) {
 		const instanceDiff = await reportApplicationInstance(query, {
 			sourceQuery,
 			applicationRef,
@@ -78,14 +112,16 @@ export async function reportAsd(
 			decisionMappings,
 			anchor,
 		})
-		reportInstances.push(
-			await buildReportInstance(query, {
-				instanceDiff,
-				instance: undefined,
-				sourceQuery,
-				sourceRef: applicationRef,
-			}),
-		)
+		const reportInstance = await buildReportInstance(query, {
+			instanceDiff,
+			instance: undefined,
+			sourceQuery,
+			sourceRef: applicationRef,
+		})
+		// the levels are listed first, the shared elements follow
+		const placementMappings = await describePlacementMappings(query, { levels: placement.levels })
+		reportInstance.mappings = [...placementMappings, ...reportInstance.mappings]
+		reportInstances.push(reportInstance)
 	} else {
 		for (const instance of applicationInstances) {
 			const instanceDiff = await reportApplicationInstance(query, {
@@ -117,7 +153,11 @@ export async function reportAsd(
 		anchor,
 	})
 
-	return assembleReport([...reportInstances, ...functionInstances])
+	const report = assembleReport([...reportInstances, ...functionInstances])
+	report.offLevel = placement.offLevel
+	// a level nothing is decided for is the consumer's to choose before anything is written
+	if (placement.levels.some((level) => level.undecided)) report.needsDecisions = true
+	return report
 }
 
 /** Diff one Application instance and fold its (layer + cross-cutting) satellites. */

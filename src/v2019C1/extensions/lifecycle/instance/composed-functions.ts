@@ -29,3 +29,21 @@ async function walk(
 	}
 	for (const child of node.tree) await walk(sourceQuery, child, out)
 }
+
+/** The source Functions an Application composes, each found by the `functionUuid` it refers to. */
+export async function findComposedFunctionRefs(
+	sourceQuery: Core.Query<Config>,
+	applicationRef: Scl.Ref<'Application'>,
+): Promise<Scl.Ref<'Function'>[]> {
+	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
+
+	const functionRefs: Scl.Ref<'Function'>[] = []
+	for (const functionUuid of functionUuids) {
+		const [sourceFunction] = await sourceQuery.any.findByAttributes({
+			tagName: 'Function',
+			attributes: { uuid: functionUuid },
+		})
+		if (sourceFunction) functionRefs.push({ tagName: 'Function', id: sourceFunction.id })
+	}
+	return functionRefs
+}

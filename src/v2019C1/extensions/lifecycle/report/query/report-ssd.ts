@@ -8,6 +8,7 @@ import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import {
 	describeHeldPlacement,
 	describePlacementMappings,
+	findLanding,
 	hasScopeInstance,
 	resolveInstantiableRoot,
 	resolvePlacementMappings,
@@ -19,7 +20,6 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { PlacementLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
@@ -121,7 +121,7 @@ export async function reportSsd(
 
 	// the primaries are reported from where the template lands: the deepest level of the project
 	// its unit sits on or below — the element the consumer started from when there is none
-	const landing = findLanding({ placementLevels, rootId: root.id }) ?? targetParent
+	const landing = findLanding({ placementLevels, levelId: root.id }) ?? targetParent
 
 	for (const applicationRef of applications) {
 		const report = await reportAsd(query, {
@@ -150,24 +150,4 @@ export async function reportSsd(
 	// a level nothing is decided for is the consumer's to choose before anything is written
 	if (placementLevels.some((level) => level.undecided)) report.needsDecisions = true
 	return report
-}
-
-/**
- * The deepest element of the project on the chain the unit lands on: the unit itself when it is
- * mapped onto one, else the nearest level above it that is.
- */
-function findLanding(params: {
-	placementLevels: readonly PlacementLevel[]
-	rootId: string
-}): Scl.Ref<Scl.ElementsOf> | undefined {
-	const { placementLevels, rootId } = params
-
-	let levelId: string | undefined = rootId
-	while (levelId) {
-		const level = placementLevels.find((candidate) => candidate.sourceRef.id === levelId)
-		if (!level) return undefined
-		if (level.resolved.existing) return toRef(level.resolved.existing) as Scl.Ref<Scl.ElementsOf>
-		levelId = level.parentSourceId
-	}
-	return undefined
 }

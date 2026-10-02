@@ -3,6 +3,11 @@ import { buildReportInstance } from './report-instance'
 
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { findInstancesUnder, scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
+import {
+	describePlacementMappings,
+	findLanding,
+	resolvePrimaryPlacement,
+} from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -34,6 +39,12 @@ export async function reportFsd(
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
 		/** The consumer's choices for the shared elements the function is classified by. */
 		decisionMappings?: DecisionMappings
+		/**
+		 * The function is placed by this operation alone (an FSD): started above the level it was made
+		 * for, it lands on the level its template says. Left out when the caller already resolved
+		 * where it lands (an application or a topology scope placing its own functions).
+		 */
+		resolvePlacement?: boolean
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, functionRef, targetParent, scenario, targetInstance, decisionMappings } =
@@ -49,6 +60,22 @@ export async function reportFsd(
 
 	// no instance yet -> first-time = fast track
 	if (instances.length === 0) {
+		// where the function lands: where the consumer started, or — started above the level the
+		// function was made for — on the level its template says
+		const placement = params.resolvePlacement
+			? await resolvePrimaryPlacement(query, {
+					sourceQuery,
+					primaryRefs: [functionRef],
+					anchor: targetParent,
+					decisionMappings,
+				})
+			: { levels: [] }
+		const templateLevel = placement.levels.at(-1)
+		const landing =
+			(templateLevel &&
+				findLanding({ placementLevels: placement.levels, levelId: templateLevel.sourceRef.id })) ||
+			targetParent
+
 		const instanceDiff = await reportFunction(query, {
 			sourceQuery,
 			functionRef,
@@ -56,16 +83,23 @@ export async function reportFsd(
 			refsAlwaysAdded: scenario === 'instantiate',
 			matchKey,
 			decisionMappings,
-			anchor: targetParent,
+			anchor: landing,
 		})
-		return assembleReport([
-			await buildReportInstance(query, {
-				instanceDiff,
-				instance: undefined,
-				sourceQuery,
-				sourceRef: functionRef,
-			}),
-		])
+		const reportInstance = await buildReportInstance(query, {
+			instanceDiff,
+			instance: undefined,
+			sourceQuery,
+			sourceRef: functionRef,
+		})
+		// the levels are listed first, the shared elements follow
+		const placementMappings = await describePlacementMappings(query, { levels: placement.levels })
+		reportInstance.mappings = [...placementMappings, ...reportInstance.mappings]
+
+		const report = assembleReport([reportInstance])
+		report.offLevel = placement.offLevel
+		// a level nothing is decided for is the consumer's to choose before anything is written
+		if (placement.levels.some((level) => level.undecided)) report.needsDecisions = true
+		return report
 	}
 
 	const reportInstances: ReportInstance[] = []

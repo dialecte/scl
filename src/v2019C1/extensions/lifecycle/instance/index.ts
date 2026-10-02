@@ -1,4 +1,4 @@
-export { collectComposedFunctionUuids } from './composed-functions'
+export { collectComposedFunctionUuids, findComposedFunctionRefs } from './composed-functions'
 export {
 	findInstanceByTemplateUuid,
 	findInstancesByTemplateUuid,

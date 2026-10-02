@@ -4,7 +4,9 @@ import { resolveTargetStructure } from './resolve-target-structure'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
+import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
+import { landPrimaries } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import {
 	findMissingReferencedRecords,
 	resolveStructureRef,
@@ -36,8 +38,6 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 	const { sourceQuery, applicationRef, targetParent, overrides, keepNameTypesFrom } = params
 	const decisionMappings = params.decisionMappings
 
-	const structure = await resolveTargetStructure(tx, targetParent)
-
 	// capture the composed Function source refs BEFORE cloning (they are "missing" only
 	// until placed) so their clones can be collision-checked at their structural level
 	const composedFunctionRefs = await findMissingReferencedRecords(tx, {
@@ -46,6 +46,22 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		refTagName: 'FunctionRef',
 		targetTagName: 'Function',
 	})
+
+	// where the application and its functions land: on the levels of where the consumer started, or
+	// — started above a level one of them was made for — on the levels their template says
+	const landing = params.resolvePlacement
+		? await landPrimaries(tx, {
+				sourceQuery,
+				primaryRefs: [
+					applicationRef,
+					...(await findComposedFunctionRefs(sourceQuery, applicationRef)),
+				],
+				anchor: targetParent,
+				decisionMappings,
+				operation: 'instantiate.asd',
+			})
+		: undefined
+	const structure = landing?.structure ?? (await resolveTargetStructure(tx, targetParent))
 
 	const { cloneMappings: contentMappings, redirectMappings } = await cloneApplicationContent(tx, {
 		sourceQuery,
@@ -64,13 +80,21 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		strip: false,
 	})
 
-	const allMappings = [...contentMappings, ...applied.cloneMappings]
+	const allMappings = [
+		...(landing?.cloneMappings ?? []),
+		...contentMappings,
+		...applied.cloneMappings,
+	]
 
 	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs.
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
 		mode: 'stamp-template',
-		redirectMappings: [...redirectMappings, ...applied.redirectMappings],
+		redirectMappings: [
+			...(landing?.redirectMappings ?? []),
+			...redirectMappings,
+			...applied.redirectMappings,
+		],
 	})
 
 	// resolve a name collision for each placed composed Function at its own structural

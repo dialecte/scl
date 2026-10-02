@@ -81,6 +81,8 @@ export async function asd(
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
 		/** The consumer's choices for the shared elements the application refers to. */
 		decisionMappings?: DecisionMappings
+		/** The application is placed by this operation alone (an ASD): see `instantiate.asd`. */
+		resolvePlacement?: boolean
 	},
 ): Promise<{
 	applications: Scl.Ref<'Application'>[]
@@ -126,6 +128,7 @@ export async function asd(
 			overrides: gateOverrides,
 			keepNameTypesFrom,
 			decisionMappings: params.decisionMappings,
+			resolvePlacement: params.resolvePlacement,
 		})
 		// first-time ASD clones the Application + composed Functions + satellites in one pass; annotate
 		// every first-time report instance (Application and each composed Function) from the shared map

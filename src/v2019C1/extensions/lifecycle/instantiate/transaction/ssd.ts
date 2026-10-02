@@ -1,9 +1,8 @@
-import { invariant } from '@dialecte/core/utils'
-
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import {
+	assertPlacementDecided,
 	cloneTopologyContent,
 	resolveFrameStructure,
 	resolveInstantiableRoot,
@@ -45,10 +44,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		decisionMappings,
 	})
 
-	const undecided = placementLevels.find((level) => level.undecided && level.resolved.ambiguous)
-	invariant(!undecided, {
-		detail: `instantiate.ssd: where the <${undecided?.sourceRef.tagName}> of the template lands is not decided: several elements of the project qualify, choose one or have a new one created`,
-	})
+	assertPlacementDecided({ placementLevels, operation: 'instantiate.ssd' })
 
 	const {
 		cloneMappings: contentMappings,

@@ -16,6 +16,13 @@ export type AsdParams = {
 	keepNameTypesFrom?: KeepNameTypesFrom
 	/** The consumer's choices for the shared elements the application refers to. */
 	decisionMappings?: DecisionMappings
+	/**
+	 * The application is placed by this operation alone (an ASD): `targetParent` is where the
+	 * consumer started, and started above a level the application or one of its functions was made
+	 * for, each lands on the level its template says. Left out when the caller already resolved
+	 * where they land.
+	 */
+	resolvePlacement?: boolean
 }
 
 export type AsdResult = {

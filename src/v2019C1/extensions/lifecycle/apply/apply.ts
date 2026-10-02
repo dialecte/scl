@@ -94,6 +94,7 @@ async function runVerb(
 			decisions,
 			keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 			decisionMappings: target.resolution?.mappings,
+			resolvePlacement: true,
 		})
 		return { verb: 'fsd', functions }
 	}
@@ -122,6 +123,7 @@ async function runVerb(
 		decisions,
 		keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 		decisionMappings: target.resolution?.mappings,
+		resolvePlacement: true,
 	})
 	return { verb: 'asd', applications, functions }
 }

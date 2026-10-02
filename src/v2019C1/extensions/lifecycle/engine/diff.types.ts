@@ -1,4 +1,5 @@
 import type { EditableAttribute } from '../constraints'
+import type { OffLevel } from '../layers/topology/resolve-primary-placement.types'
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
@@ -109,6 +110,11 @@ export type DiffReport = {
 	summary: DiffSummary
 	/** Where each shared source element lands in the project — one entry per source element. */
 	mappings: ReportMapping[]
+	/**
+	 * Set when the consumer started from a level ABOVE the one the template was made for: its content
+	 * cannot stay there and lands below, on the levels its placement mappings say.
+	 */
+	offLevel?: OffLevel
 }
 
 /**

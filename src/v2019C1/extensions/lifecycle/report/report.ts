@@ -34,6 +34,7 @@ export async function report(
 					scenario: target.scenario,
 					targetInstance: target.targetInstance,
 					decisionMappings: target.resolution?.mappings,
+					resolvePlacement: true,
 				})
 			: target.verb === 'ssd'
 				? await reportSsd(query, {
@@ -52,6 +53,7 @@ export async function report(
 						targetInstance: target.targetInstance,
 						decisionMappings: target.resolution?.mappings,
 						anchor: target.anchor,
+						resolvePlacement: true,
 					})
 
 	for (const group of allGroups(report)) {
