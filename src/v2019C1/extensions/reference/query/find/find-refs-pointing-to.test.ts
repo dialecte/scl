@@ -133,6 +133,82 @@ describe('findRefsPointingTo', () => {
 		},
 	}
 
+	testCases['LN target → the DOS/SDS/DAS it implements, by their own pair and by their default'] = {
+		sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<Substation ${id}="sub" name="S1">
+					<Function ${id}="fn" name="F1">
+						<LNode ${id}="lnode-ptoc" iedName="VENDOR" ldInst="LD0" lnClass="PTOC" lnInst="1" lnUuid="ptoc1-uuid">
+							<Private ${id}="priv-ptoc" type="eIEC61850-6-100">
+								<eIEC61850-6-100:DOS ${id}="dos-op" name="Op"/>
+								<eIEC61850-6-100:DOS ${id}="dos-mod" name="Mod" mappedDoName="Health" mappedLnUuid="ptoc1-uuid">
+									<eIEC61850-6-100:DAS ${id}="das-ctl" name="ctlModel"/>
+								</eIEC61850-6-100:DOS>
+								<eIEC61850-6-100:DOS ${id}="dos-str" name="Str" mappedDoName="Ind1" mappedLnUuid="ggio1-uuid">
+									<eIEC61850-6-100:DAS ${id}="das-general" name="general"/>
+								</eIEC61850-6-100:DOS>
+							</Private>
+						</LNode>
+						<LNode ${id}="lnode-ggio" iedName="VENDOR" ldInst="LD0" lnClass="GGIO" lnInst="1" lnUuid="ggio1-uuid">
+							<Private ${id}="priv-ggio" type="eIEC61850-6-100">
+								<eIEC61850-6-100:DOS ${id}="dos-beh" name="Beh" mappedDoName="Beh" mappedLnUuid="ptoc1-uuid">
+									<eIEC61850-6-100:DAS ${id}="das-beh-stval" name="stVal"/>
+								</eIEC61850-6-100:DOS>
+								<eIEC61850-6-100:DOS ${id}="dos-ind" name="Ind1"/>
+							</Private>
+						</LNode>
+					</Function>
+				</Substation>
+				<IED ${id}="ied" name="VENDOR">
+					<AccessPoint ${id}="ap" name="AP1">
+						<Server ${id}="srv">
+							<LDevice ${id}="ld" inst="LD0">
+								<LN ${id}="ptoc1" lnClass="PTOC" inst="1" lnType="PTOC_T" uuid="ptoc1-uuid"/>
+								<LN ${id}="ggio1" lnClass="GGIO" inst="1" lnType="GGIO_T" uuid="ggio1-uuid"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+			</SCL>
+		`,
+		target: { tagName: 'LN', id: 'ptoc1' },
+		expectedReferrers: [
+			{ tagName: 'DOS', id: 'dos-op' },
+			{ tagName: 'DOS', id: 'dos-mod' },
+			{ tagName: 'DAS', id: 'das-ctl' },
+			{ tagName: 'DOS', id: 'dos-beh' },
+			{ tagName: 'DAS', id: 'das-beh-stval' },
+		],
+	}
+
+	testCases['LN target, LNode mapped by identity only → the DOS following it'] = {
+		sourceXml: /* xml */ `
+			<SCL ${ns} ${id}="scl-1">
+				<Substation ${id}="sub" name="S1">
+					<Function ${id}="fn" name="F1">
+						<!-- no lnUuid -->
+						<LNode ${id}="lnode-ptoc" iedName="VENDOR" ldInst="LD0" lnClass="PTOC" lnInst="1">
+							<Private ${id}="priv-ptoc" type="eIEC61850-6-100">
+								<eIEC61850-6-100:DOS ${id}="dos-op" name="Op"/>
+							</Private>
+						</LNode>
+					</Function>
+				</Substation>
+				<IED ${id}="ied" name="VENDOR">
+					<AccessPoint ${id}="ap" name="AP1">
+						<Server ${id}="srv">
+							<LDevice ${id}="ld" inst="LD0">
+								<LN ${id}="ptoc1" lnClass="PTOC" inst="1" lnType="PTOC_T" uuid="ptoc1-uuid"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+			</SCL>
+		`,
+		target: { tagName: 'LN', id: 'ptoc1' },
+		expectedReferrers: [{ tagName: 'DOS', id: 'dos-op' }],
+	}
+
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		act: async ({ source, testCase }) => {

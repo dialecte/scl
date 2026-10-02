@@ -3,9 +3,10 @@ import {
 	TARGET_ELEMENT_TYPES,
 	UUID_REFERENCE_PAIRS,
 } from '@/v2019C1/constants'
-import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
+import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
+import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
 
 import type { PendingResolution, UnsupportedXPathWarning } from './io-hooks.types'
 import type {
@@ -64,6 +65,7 @@ export function createSclIoHooks(): IOHooks {
 	const pathIndex: Map<Path, Uuid> = new Map()
 	const pendingResolutions: PendingResolution[] = []
 	const xpathWarnings: UnsupportedXPathWarning[] = []
+	let mappedDataImport = createMappedDataImport()
 
 	const beforeImportRecord = (params: {
 		record: AnyRawRecord
@@ -71,6 +73,7 @@ export function createSclIoHooks(): IOHooks {
 	}): void => {
 		const { record, ancestry } = params
 		const { tagName } = record
+		mappedDataImport.collect({ record, ancestry })
 
 		// The record is already standardized, so afterStandardizedRecord has
 		// enforced a uuid where the element supports one — just read it.
@@ -85,6 +88,8 @@ export function createSclIoHooks(): IOHooks {
 
 		const hasReferences = REFERENCE_TAG_NAMES.has(tagName)
 		if (!hasReferences) return
+		// DOS / SDS / DAS mapped data is resolved by its own rules once the pass is over.
+		if (MAPPED_NAME_REFS.has(tagName)) return
 
 		// Collect pending resolutions for elements with reference pairs
 		const pairs = UUID_REFERENCE_PAIRS[tagName as keyof typeof UUID_REFERENCE_PAIRS]
@@ -161,6 +166,11 @@ export function createSclIoHooks(): IOHooks {
 				attributes: [{ name: pending.uuidAttributeName, value: resolvedUuid }],
 			})
 		}
+
+		const mappedData = await mappedDataImport.resolve({ pathIndex })
+		updates.push(...mappedData.updates)
+		warnings.push(...mappedData.warnings)
+		mappedDataImport = createMappedDataImport()
 
 		pathIndex.clear()
 		pendingResolutions.length = 0

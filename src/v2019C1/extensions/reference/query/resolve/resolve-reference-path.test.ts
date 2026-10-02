@@ -426,6 +426,34 @@ describe('resolve', () => {
 			pathAttribute: 'function',
 			expected: null,
 		},
+
+		'mapped data — DOS without attributes under a mapped LNode → implementing LN, its data path': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Function name="F1" ${ID}="fn-1">
+						<LNode iedName="VENDOR" ldInst="LD0" lnClass="PTOC" lnInst="1" lnUuid="ptoc1-uuid" ${ID}="lnode-1">
+							<Private type="eIEC61850-6-100" ${ID}="priv-1">
+								<eIEC61850-6-100:DOS name="Op" ${ID}="dos-1"/>
+							</Private>
+						</LNode>
+					</Function>
+				</Substation>
+				<IED name="VENDOR" ${ID}="ied-1">
+					<AccessPoint name="AP1" ${ID}="ap-1">
+						<Server ${ID}="srv-1">
+							<LDevice inst="LD0" ${ID}="ld-1">
+								<LN lnClass="PTOC" inst="1" lnType="PTOC_T" uuid="ptoc1-uuid" ${ID}="ln-1"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+			</SCL>`,
+			refId: 'dos-1',
+			refTagName: 'DOS',
+			pathAttribute: 'mappedDoName',
+			expected: { tagName: 'LN', id: 'ln-1', qualifier: 'Op' },
+		},
 	}
 
 	async function act({

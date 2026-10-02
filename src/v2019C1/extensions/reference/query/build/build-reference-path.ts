@@ -38,10 +38,9 @@ export async function buildReferencePath(
 ): Promise<string | null> {
 	const { reference, target } = params
 
-	// DOS/SDS/DAS `mappedDoName`/`mappedDaName` is authored short-name mapping
-	// documentation, not a rebuildable ObjectReference. Never regenerate it here —
-	// that would re-expand it into a full path and break rename/clone cascades. Its
-	// value is produced by `buildMappedName` (dispatched from the create/update hook).
+	// DOS/SDS/DAS `mappedDoName`/`mappedDaName` is a data path inside the logical node
+	// named by `mappedLnUuid`, not a path to the target element. The create/update hooks
+	// store it; never rebuild it here.
 	if (MAPPED_NAME_REFS.has(reference.tagName)) return null
 
 	const pair = findPair(reference.tagName, target.tagName)

@@ -1,10 +1,15 @@
 import { widen } from '@dialecte/core/helpers'
 
-import { PATH_CONTRIBUTING_ATTRIBUTES } from '@/v2019C1/extensions/reference'
+import {
+	MAPPED_DATA_DEFAULT_ATTRIBUTES,
+	PATH_CONTRIBUTING_ATTRIBUTES,
+} from '@/v2019C1/extensions/reference'
 import {
 	getRefEntriesForTarget,
+	hasAttributeChange,
 	reconcileLNodeBinding,
-	reconcileMappedName,
+	reconcileMappedData,
+	reconcileMappedDataBelow,
 	reconcileReferrerRefPaths,
 	updateRefsForEntry,
 } from '@/v2019C1/hooks/shared'
@@ -20,8 +25,9 @@ import type * as Core from '@dialecte/core'
  * rebuilds ref paths for all descendant targets (e.g. renaming a Bay updates
  * FunctionRef paths that pass through it).
  *
- * When the updated record is itself a mapped-name referrer (`DOS`/`SDS`/`DAS`),
- * re-normalizes its `mappedDoName`/`mappedDaName` to the short-name form. When it
+ * When the updated record is a `DOS`/`SDS`/`DAS`, stores its implementation in canonical
+ * form; when an `LNode` or a `DOS`/`SDS` change moves the default of the data below it, does
+ * the same for every record below that names its implementation. When it
  * is any other referrer whose binding attributes (target uuid or companion DO/DA
  * names) changed, rebuilds its own path so name and uuid references stay in
  * agreement (the referrer-side counterpart of the after-created hook).
@@ -37,8 +43,20 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 	const previous = widen(oldRecord)
 	const current = widen(newRecord)
 
-	const mappedNameOp = await reconcileMappedName(query, current)
-	if (mappedNameOp) operations.push(mappedNameOp)
+	const mappedDataOp = await reconcileMappedData(query, { record: current })
+	if (mappedDataOp) operations.push(mappedDataOp)
+
+	const mappedDataDefaultAttributes = MAPPED_DATA_DEFAULT_ATTRIBUTES.get(current.tagName)
+	if (
+		mappedDataDefaultAttributes &&
+		hasAttributeChange({
+			oldRecord: previous,
+			newRecord: current,
+			names: mappedDataDefaultAttributes,
+		})
+	) {
+		operations.push(...(await reconcileMappedDataBelow(query, { record: current })))
+	}
 
 	const lnodeBindingOp = await reconcileLNodeBinding({
 		oldRecord: previous,

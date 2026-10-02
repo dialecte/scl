@@ -1,4 +1,5 @@
 export * from './constants'
 export type * from './constants'
 export * from './guards'
-export type { ResolvedReference } from './query'
+export type { MappedData, ResolvedReference, ResolveMappedDataParams } from './query'
+export type { SetMappedDataParams, SetMappedDataResult } from './transaction'

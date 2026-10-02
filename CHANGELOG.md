@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.5.0] - 2026-10-02
+
+### Added
+
+- `resolveMappedData` tells which logical node and data path implement a `DOS`, `SDS` or `DAS`, also when it follows its default.
+- `tx.reference.setMappedData` states which data implements a `DOS`, `SDS` or `DAS` and reports whether it was stored, is the default, or cannot be stored.
+- Importing a file warns (`incoherent-reference`) when a mapped name and its `mappedLnUuid` point at different logical nodes; the uuid wins.
+
+### Changed
+
+- Requires `@dialecte/core` 0.5.2.
+- **Breaking:** a `DOS`, `SDS` or `DAS` stores `mappedDoName` / `mappedDaName` and `mappedLnUuid` together, and only when it is not implemented by its default; `mappedLnUuid` alone no longer means "mapped".
+- A mapped name is always the path from its logical node, starting at the data object (`Ind2.stVal`, never `stVal`).
+- Remapping an `LNode` or a parent `DOS` / `SDS` updates the mapped data below it.
+- Imported files get their mapped data in the same form, and a short mapped name under a mapped `LNode` no longer raises an unresolved-reference warning.
+- `findRefsPointingTo` on a logical node also lists the `DOS`, `SDS` and `DAS` that follow it by default.
+- `resolveReferencePath` answers for a `DOS`, `SDS` or `DAS` even when it stores nothing.
+
+### Removed
+
+- **Breaking:** `buildMappedName`; read with `resolveMappedData`, write with `setMappedData`.
+
 ## [0.4.2] - 2026-10-2
 
 ### Fixed

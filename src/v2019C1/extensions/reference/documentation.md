@@ -214,7 +214,7 @@ Two path formats share this strategy:
 
 **Example (substation):** `SourceRef.source="S1/B1/PXCBR1.Pos.stVal"` → `lookupKey: "S1/B1/PXCBR1"` → populates `sourceLNodeUuid`.
 
-**Example (IEC 7-2):** `DOS.mappedDoName="PIU/CT_Function/I01ATCTR1.AmpSv"` → `lookupKey: "PIU/CT_Function/I01ATCTR1"` → populates `mappedLnUuid`.
+`DOS` / `SDS` / `DAS` (`mappedDoName` / `mappedDaName`) are not resolved by this generic pass: the import stores them in canonical form with the mapped data rules (an absolute reference `PIU/CT_Function/I01ATCTR1.AmpSv` becomes `AmpSv` with the uuid of `I01ATCTR1`; a pair that repeats the default is removed). See `resolveMappedData`.
 
 ### `ied-address` — 2 pairs
 

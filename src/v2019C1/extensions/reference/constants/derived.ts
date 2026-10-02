@@ -48,11 +48,11 @@ export const ALL_RESOLUTIONS = [...RESOLVABLE_RESOLUTIONS, RESOLUTION_TYPE.unsup
 export const PAIRS_BY_REF = buildPairsByRefMap(UUID_REFERENCE_PAIRS)
 
 /**
- * Refs whose path attribute is a "mapped name" documentation value — the short
- * DO/SDO/DA name present ONLY when it differs from the specified `name`, NOT a
- * rebuildable ObjectReference. Maps ref tag → its `{ path, uuid }` attribute
- * names. Derived from UUID_REFERENCE_PAIRS so DOS/SDS (`mappedDoName`) and DAS
- * (`mappedDaName`) stay in one source.
+ * Refs whose path attribute is a mapped data path: the path to the implementing data inside
+ * the logical node named by the uuid attribute, stored only when the record is not
+ * implemented by its default. Not a rebuildable path to the target element. Maps ref tag →
+ * its `{ path, uuid }` attribute names. Derived from UUID_REFERENCE_PAIRS so DOS/SDS
+ * (`mappedDoName`) and DAS (`mappedDaName`) stay in one source.
  */
 export const MAPPED_NAME_REFS: ReadonlyMap<string, { path: string; uuid: string }> = new Map(
 	Object.entries(UUID_REFERENCE_PAIRS).flatMap(([refTag, pairs]) =>
@@ -62,6 +62,35 @@ export const MAPPED_NAME_REFS: ReadonlyMap<string, { path: string; uuid: string 
 			)
 			.map((pair) => [refTag, { path: pair.attribute.path, uuid: pair.attribute.uuid }] as const),
 	),
+)
+
+/**
+ * Per tag, the attributes whose change moves the default implementation of the `DOS` / `SDS` /
+ * `DAS` below a record: the `LNode` identity and its `lnUuid` (the logical node it is mapped
+ * to), and a parent data's name, array index and own mapped attributes.
+ */
+export const MAPPED_DATA_DEFAULT_ATTRIBUTES: ReadonlyMap<string, readonly string[]> =
+	buildMappedDataDefaultAttributes()
+
+/**
+ * The schema patterns of each mapped-name attribute (`mappedDoName` / `mappedDaName`), per
+ * ref tag, each anchored to the whole value. A value must match all of them; a data path that
+ * does not cannot be stored. Read from the definition.
+ */
+export const MAPPED_NAME_PATTERNS: ReadonlyMap<string, readonly RegExp[]> = new Map(
+	[...MAPPED_NAME_REFS].map(([refTag, attributeNames]) => {
+		const definition = DEFINITION as Record<
+			string,
+			{
+				attributes?: {
+					details?: Record<string, { facets?: { pattern?: readonly string[] } }>
+				}
+			}
+		>
+		const patterns =
+			definition[refTag]?.attributes?.details?.[attributeNames.path]?.facets?.pattern ?? []
+		return [refTag, patterns.map((pattern) => new RegExp(`^(?:${pattern})$`))] as const
+	}),
 )
 
 /**
@@ -104,3 +133,17 @@ export const LOCKED_LNODE_ATTRIBUTES: ReadonlySet<string> = new Set<string>([
 		?.attributes?.identityFields ?? []),
 	...(TYPE_ID_REF_ATTRIBUTES.get('LNode') ?? []),
 ])
+
+function buildMappedDataDefaultAttributes(): Map<string, readonly string[]> {
+	const lnodeIdentity =
+		(DEFINITION as Record<string, { attributes?: { identityFields?: readonly string[] } }>).LNode
+			?.attributes?.identityFields ?? []
+	const entries: [string, readonly string[]][] = [['LNode', [...lnodeIdentity, 'lnUuid']]]
+	for (const tagName of ['DOS', 'SDS']) {
+		const attributeNames = MAPPED_NAME_REFS.get(tagName)
+		if (attributeNames) {
+			entries.push([tagName, ['name', 'ix', attributeNames.path, attributeNames.uuid]])
+		}
+	}
+	return new Map(entries)
+}
