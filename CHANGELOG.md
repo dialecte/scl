@@ -7,22 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.5.0] - 2026-10-02
+
 ### Added
 
-- `reference.query.resolveMappedData({ reference })`: the logical node and data path that implement a `DOS` / `SDS` / `DAS`, also when the record names nothing and follows its default (its parent data, or the logical node its `LNode` is mapped to, with its own name).
-- `tx.reference.setMappedData({ reference, implementation })`: state which data implements a `DOS` / `SDS` / `DAS`; scl stores the attributes and returns `stored`, `default` or `inexpressible` (nothing written when the schema cannot hold the path on that record).
+- `resolveMappedData` tells which logical node and data path implement a `DOS`, `SDS` or `DAS`, also when it follows its default.
+- `tx.reference.setMappedData` states which data implements a `DOS`, `SDS` or `DAS` and reports whether it was stored, is the default, or cannot be stored.
+- Importing a file warns (`incoherent-reference`) when a mapped name and its `mappedLnUuid` point at different logical nodes; the uuid wins.
 
 ### Changed
 
 - Requires `@dialecte/core` 0.5.2.
-- **Breaking:** a `DOS` / `SDS` / `DAS` carries `mappedDoName` / `mappedDaName` and `mappedLnUuid` together or not at all. Nothing is stored when the record is implemented by its default; otherwise the name is the path from the implementing logical node, always starting at the data object (`Health`, `PhV.phsB`, `Ind2.stVal`, never `stVal` alone), with that logical node's uuid, also when only the logical node differs. The hooks complete an absolute reference or a uuid alone, remove a pair that repeats the default, and re-store the records below an `LNode` or a parent data whose mapping changes. A path the schema cannot hold is left as written. `mappedLnUuid` no longer means "is mapped": read the implementation with `resolveMappedData`.
-- Importing a file stores `DOS` / `SDS` / `DAS` mapped data in the same form: an absolute reference becomes the path from its logical node with that node's uuid, a uuid alone gets its name, a name alone gets its uuid, and a pair that repeats the default is removed. A name without uuid under a mapped `LNode` no longer raises an unresolved-reference warning; an absolute reference to a logical node absent from the file still does. An absolute name whose logical node differs from its `mappedLnUuid` keeps the uuid's logical node and raises an `incoherent-reference` warning.
-- `findRefsPointingTo` on an `LN` / `LN0` also returns the `DOS` / `SDS` / `DAS` it implements by default (no `mappedLnUuid` on the record).
-- `resolveReferencePath` on a `DOS` / `SDS` / `DAS` returns its implementing logical node with the data path as qualifier, also when the record names nothing.
+- **Breaking:** a `DOS`, `SDS` or `DAS` stores `mappedDoName` / `mappedDaName` and `mappedLnUuid` together, and only when it is not implemented by its default; `mappedLnUuid` alone no longer means "mapped".
+- A mapped name is always the path from its logical node, starting at the data object (`Ind2.stVal`, never `stVal`).
+- Remapping an `LNode` or a parent `DOS` / `SDS` updates the mapped data below it.
+- Imported files get their mapped data in the same form, and a short mapped name under a mapped `LNode` no longer raises an unresolved-reference warning.
+- `findRefsPointingTo` on a logical node also lists the `DOS`, `SDS` and `DAS` that follow it by default.
+- `resolveReferencePath` answers for a `DOS`, `SDS` or `DAS` even when it stores nothing.
 
 ### Removed
 
-- **Breaking:** `reference.query.buildMappedName`. Read the implementation with `resolveMappedData`; write the pair and the hooks store it.
+- **Breaking:** `buildMappedName`; read with `resolveMappedData`, write with `setMappedData`.
 
 ## [0.4.2] - 2026-10-2
 
