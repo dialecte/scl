@@ -6,6 +6,7 @@ import { findInstancesUnder, scopeToTargetInstance } from '@/v2019C1/extensions/
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
 
 import type { Scl, Config } from '@/v2019C1/config'
+import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -27,7 +28,7 @@ export async function reportFsd(
 	query: Core.Query<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
-		functionRef: Scl.Ref<'Function'>
+		functionRef: FsdFunctionRef
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		scenario?: LifecycleScenario
 		targetInstance?: Scl.Ref<Scl.ElementsOf>

@@ -34,6 +34,15 @@ export type UpdateMode = 'template' | 'fork'
 export type LifecycleScenario = 'instantiate' | UpdateMode
 
 /**
+ * The function an FSD carries: a `Function` placed at a level of the template, or a
+ * `FunctionTemplate` — a function with no parent level, which is instantiated as a function too.
+ */
+export type FsdFunctionRef = Scl.Ref<'Function'> | Scl.Ref<'FunctionTemplate'>
+
+/** A function of a source file the function layer reads: any of the forms a template gives it. */
+export type SourceFunctionRef = FsdFunctionRef | Scl.Ref<'SubFunction'>
+
+/**
  * What to reconcile and where — the uniform `{ verb, sourceQuery, ref, anchor }`
  * descriptor shared by `report` (read-only classify) and `apply` (write).
  * Discriminated on `verb` so `ref` narrows to the right element type.
@@ -42,8 +51,8 @@ export type LifecycleTarget =
 	| {
 			verb: 'fsd'
 			sourceQuery: Core.Query<Config>
-			/** The source (template) Function to reconcile. */
-			ref: Scl.Ref<'Function'>
+			/** The source (template) function to reconcile. */
+			ref: FsdFunctionRef
 			/** Target parent the instance lives under / is placed into. */
 			anchor: Scl.Ref<Scl.ElementsOf>
 			/** Operation to perform. Defaults to `template`. */

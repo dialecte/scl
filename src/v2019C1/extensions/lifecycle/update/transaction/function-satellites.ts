@@ -9,6 +9,7 @@ import {
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
+import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
@@ -34,7 +35,7 @@ export async function reconcileCarriedSatellites(
 	tx: Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
-		functionRef: Scl.Ref<'Function'>
+		functionRef: FsdFunctionRef
 		instanceRef: AnyRefOrRecord
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		accepted?: AcceptedIds

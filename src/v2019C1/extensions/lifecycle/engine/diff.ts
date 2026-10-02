@@ -1,4 +1,5 @@
 import { groupChanges } from './group'
+import { instanceTagOf } from './instance-tag'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
 import {
@@ -320,7 +321,7 @@ async function diffMatched(
 
 	return {
 		change: attributeChanges.length > 0 ? 'modified' : 'unchanged',
-		tagName: sourceNode.tagName,
+		tagName: instanceTagOf(sourceNode.tagName),
 		sourceRef: toRef(sourceNode),
 		instanceRef: toRef(instanceNode),
 		attributeChanges: attributeChanges.length > 0 ? attributeChanges : undefined,
@@ -332,7 +333,8 @@ function addedNode(node: AnyTreeRecord, omit?: readonly string[]): DiffNode {
 	const children: DiffNode[] = node.tree
 		.filter((child) => !omit?.includes(child.tagName))
 		.map((child) => addedNode(child, omit))
-	return { change: 'added', tagName: node.tagName, sourceRef: toRef(node), children }
+	// the report speaks of what the project will hold: a template-only element as what it becomes
+	return { change: 'added', tagName: instanceTagOf(node.tagName), sourceRef: toRef(node), children }
 }
 
 function removedNode(node: AnyTreeRecord): DiffNode {

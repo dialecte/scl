@@ -13,6 +13,7 @@ import type {
 } from './clone-function.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type { SourceFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMapping, MappingPolicy } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -146,7 +147,7 @@ export async function cloneFunctionCategories(
 
 async function collectReferencedCategoryIds(
 	sourceQuery: Core.Query<Config>,
-	functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
+	functionRef: SourceFunctionRef,
 ): Promise<Set<string>> {
 	const refs = await findRefsForFunctionTree(sourceQuery, functionRef)
 
@@ -159,7 +160,7 @@ async function collectReferencedCategoryIds(
 
 async function findRefsForFunctionTree(
 	sourceQuery: Core.Query<Config>,
-	functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
+	functionRef: SourceFunctionRef,
 ): Promise<ResolvedReference[]> {
 	const results = await reference.query.findRefsPointingTo(sourceQuery, {
 		target: functionRef,

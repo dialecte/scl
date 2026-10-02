@@ -1,13 +1,14 @@
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type { SourceFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 export type FsdParams = {
 	sourceQuery: Core.Query<Config>
-	/** The Function (or SubFunction) carried by the FSD to instantiate. */
-	functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
+	/** The function carried by the FSD to instantiate: a Function, a SubFunction or a FunctionTemplate. */
+	functionRef: SourceFunctionRef
 	/** Target parent the function is instantiated under (e.g. a project Bay). */
 	targetParent: Scl.Ref<Scl.ElementsOf>
 	/** User-edited values per source element id (full track); drives collision override. */

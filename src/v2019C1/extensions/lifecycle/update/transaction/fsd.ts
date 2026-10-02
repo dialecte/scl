@@ -27,6 +27,7 @@ import {
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
 	AcceptedIds,
@@ -57,7 +58,7 @@ export async function fsd(
 	tx: Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
-		functionRef: Scl.Ref<'Function'>
+		functionRef: FsdFunctionRef
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		/** `instantiate` forces a fresh instance; `template` (default) reconciles. */
 		scenario?: LifecycleScenario

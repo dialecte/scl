@@ -1,3 +1,4 @@
+import { instanceTagOf } from './instance-tag'
 import { referenceIdentity, referenceNameIdentity } from './reference-match'
 
 import { REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
@@ -66,10 +67,13 @@ export async function matchChild(
 			: undefined
 	}
 
+	// a template-only element (a subfunction template) is matched as the element it becomes
+	const instanceTag = instanceTagOf(sourceChild.tagName)
+
 	const sourceUuid = await sourceQuery.any.getAttribute(sourceChild, { name: 'uuid' })
 	if (sourceUuid) {
 		const matched = index.get(sourceUuid)
-		if (matched && matched.tagName === sourceChild.tagName) return matched
+		if (matched && matched.tagName === instanceTag) return matched
 		if (!params.matchContainersByName) return undefined
 		return findSameNameChild(sourceQuery, {
 			targetQuery,
@@ -85,7 +89,7 @@ export async function matchChild(
 
 	const candidates = instanceParent.tree.filter(
 		(instanceChild) =>
-			instanceChild.tagName === sourceChild.tagName && !matchedInstanceIds.has(instanceChild.id),
+			instanceChild.tagName === instanceTag && !matchedInstanceIds.has(instanceChild.id),
 	)
 	if (candidates.length === 0) return undefined
 
@@ -135,7 +139,7 @@ async function findSameNameChild(
 	if (!name) return undefined
 
 	for (const instanceChild of instanceParent.tree) {
-		if (instanceChild.tagName !== sourceChild.tagName) continue
+		if (instanceChild.tagName !== instanceTagOf(sourceChild.tagName)) continue
 		if (matchedInstanceIds.has(instanceChild.id)) continue
 		const instanceName = await targetQuery.any.getAttribute(instanceChild, { name: 'name' })
 		if (instanceName === name) return instanceChild

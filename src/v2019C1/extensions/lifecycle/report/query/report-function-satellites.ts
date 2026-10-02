@@ -3,6 +3,7 @@ import { foldSatelliteCompanions } from './satellite-companions'
 import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers/function'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
@@ -23,7 +24,7 @@ export async function foldCarriedSatellites(
 	query: Core.Query<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
-		functionRef: Scl.Ref<'Function'>
+		functionRef: FsdFunctionRef
 		instance: AnyRefOrRecord | undefined
 		report: InstanceDiff
 		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */

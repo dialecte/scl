@@ -5,6 +5,7 @@ import { toRef } from '@dialecte/core/helpers'
 import { reference } from '@/v2019C1/extensions/reference'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { SourceFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -15,7 +16,7 @@ import type * as Core from '@dialecte/core'
  */
 export async function resolveFunctionSatellites(
 	query: Core.Query<Config>,
-	params: { primaryRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'> },
+	params: { primaryRef: SourceFunctionRef },
 ): Promise<Scl.Ref<Scl.ElementsOf>[]> {
 	const { primaryRef } = params
 

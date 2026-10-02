@@ -1,4 +1,5 @@
 import type { Config, Scl } from '@/v2019C1/config'
+import type { SourceFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -6,7 +7,7 @@ import type * as Core from '@dialecte/core'
 
 export type CloneFunctionCategoriesParams = {
 	sourceQuery: Core.Query<Config>
-	functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
+	functionRef: SourceFunctionRef
 	structure: TargetStructure
 	stripCategoriesUuid?: boolean
 	/** The consumer's choices for the categories, by source record id. */
