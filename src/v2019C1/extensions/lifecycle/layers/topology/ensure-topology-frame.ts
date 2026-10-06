@@ -3,6 +3,7 @@ import { mergeChildrenInto } from '../../transplant/transaction/primitives/merge
 import { toRef } from '@dialecte/core/helpers'
 
 import { FRAME_OMIT_CHILD_TAGS, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
+import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 
 import type {
 	EnsureTopologyFrameParams,
@@ -75,6 +76,9 @@ export async function ensureTopologyFrame(
 			parentTarget,
 			name: createName,
 		})
+		// a level placed where it was resolved is created under the name asked for, made free there
+		if (params.placementLevels)
+			await resolvePlacementCollision(tx, { ref: target, parentRef: parentTarget })
 		frameIndex.set(sourceRef.id, target)
 		createdIds.add(sourceRef.id)
 		const sourceRecord = await sourceQuery.any.getRecord(sourceRef)

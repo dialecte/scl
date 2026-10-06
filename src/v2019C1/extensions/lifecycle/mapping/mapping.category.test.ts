@@ -252,20 +252,21 @@ describe('shared-element mapping — a function category', () => {
 					classifiedUnder: [],
 				},
 			},
-		'… and the consumer has a new one created → both sides create it under a free name': {
-			sourceXml,
-			targetXml: projectWithTwoCategoriesXml,
-			chosen: [['category-s', { create: {} }]],
-			expected: {
-				mapping: { create: { name: 'MEASUREMENT_1' } },
-				reason: 'decision',
-				ambiguous: false,
-				announcedNew: { FunctionCategory: 1, SubCategory: 0, FunctionCatRef: 1 },
-				categoryNames: ['MEASUREMENT', 'MEASUREMENT', 'MEASUREMENT_1'],
-				subCategories: 0,
-				classifiedUnder: ['MEASUREMENT_1'],
+		'… and the consumer has a new one created → the report asks for its name, apply creates it under a free one':
+			{
+				sourceXml,
+				targetXml: projectWithTwoCategoriesXml,
+				chosen: [['category-s', { create: {} }]],
+				expected: {
+					mapping: { create: { name: 'MEASUREMENT' } },
+					reason: 'decision',
+					ambiguous: false,
+					announcedNew: { FunctionCategory: 1, SubCategory: 0, FunctionCatRef: 1 },
+					categoryNames: ['MEASUREMENT', 'MEASUREMENT', 'MEASUREMENT_1'],
+					subCategories: 0,
+					classifiedUnder: ['MEASUREMENT_1'],
+				},
 			},
-		},
 		'the consumer picks another category of the project → report and apply both map onto that one':
 			{
 				sourceXml,
@@ -282,13 +283,13 @@ describe('shared-element mapping — a function category', () => {
 					projectCategoryClassifies: ['S1/V1/B1/Local'],
 				},
 			},
-		'the consumer wants a new category although one of that name exists → both create it, under a free name':
+		'the consumer wants a new category although one of that name exists → the report asks for its name, apply creates it under a free one':
 			{
 				sourceXml,
 				targetXml: projectXml,
 				chosen: [['category-s', { create: {} }]],
 				expected: {
-					mapping: { create: { name: 'MEASUREMENT_1' } },
+					mapping: { create: { name: 'MEASUREMENT' } },
 					reason: 'decision',
 					ambiguous: false,
 					announcedNew: { FunctionCategory: 1, SubCategory: 0, FunctionCatRef: 1 },

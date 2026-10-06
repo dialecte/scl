@@ -145,7 +145,6 @@ type ReportMapping = {
 	tagName: string
 	kind: 'level' | 'shared' // a structural level of the template, or a shared element
 	mapping?: DecisionMapping // where it lands, as resolved — absent: the consumer has to choose
-	collision?: MappingCollision // the value asked for an element to create was taken: what became of it
 	projectOwned?: true // it lands on an element the project owns (reused, not an instance of the source element)
 	parentPath?: string // for an element to create: the path of the element it is created under
 	reason: 'decision' | 'lineage' | 'name' | 'anchor' | 'only' | 'none'
@@ -158,15 +157,11 @@ type ReportMapping = {
 }
 
 type DecisionMapping = { existing: Ref } | { create: { name?: string } }
-
-type MappingCollision =
-	| { status: 'resolved'; attr: string; from: string; to: string }
-	| { status: 'unresolvable'; violation: ConstraintViolation }
 ```
 
 - **Resolved by default**, first answer wins: the one project element created from this source element by an earlier placement, whatever it is named now (`reason: 'lineage'`); else the project element of the same name when there is exactly one (`'name'`); else a new element (`'none'`). Where several elements qualify equally, none is picked (`ambiguous: true`): the mapping is left **undecided** — `mapping` is absent, the report sets `needsDecisions`, and `apply` refuses until the consumer passed a choice, an existing element or `{ create: {} }`. An element whose mapping cannot be chosen (`selectable: false`) is created under a free name instead.
 - **`candidates`**: every project element of that tag, listed from the placement outwards — the anchor's own level, each level above it, then the rest of the project. For a `locked` mapping, the one element it is mapped onto.
-- **A new element** carries the name `apply` will give it: the source name, or the name the consumer asked for, made free where it lands — against the project and against the elements the same report already creates there (`HMI_PC` → `HMI_PC_1`). When the name asked for was not free, `collision` says so: `{ status: 'resolved', attr: 'name', from: 'HMI_PC', to: 'HMI_PC_1' }`. It is the outcome of the schema's uniqueness rule for that element, the same one a placed element goes through ([placement collision resolution](#placement-collision-resolution)), so it is not tied to `name`; `unresolvable` is reserved for a key no value can be changed on. `parentPath` tells where the element is created.
+- **A new element** carries the name asked for: the one the consumer chose, else the source name. The report does not predict the name written: `apply` makes it free where the element lands ([placement collision resolution](#placement-collision-resolution)), and the consumer's own step may change it again. What was written is read at the element the mapping leads to once applied (`appliedRef`, on the report `apply` returns — in a preview, on the prepared document). `parentPath` tells where the element is created, as asked for.
 
 To change a mapping, pass the choice and ask for the report again; then apply with the same `resolution`:
 
@@ -222,7 +217,7 @@ The structural levels of a template (`Substation`, `VoltageLevel`, `Bay`) are li
 - a level the anchor's own chain holds lands there (`reason: 'anchor'`);
 - else the only such level below the one above (`'only'`);
 - else, with several, **none is picked**: `mapping` is absent, `needsDecisions` is set and `apply` refuses until the consumer chose — a level that follows from an undecided one is undecided too;
-- else it is created: under the name the consumer asked for, else its own, a level named `TEMPLATE` being named after its kind — made free where it lands (`collision` tells when the name was taken), with `parentPath` the path it is created under, whether that parent exists in the project or is created by the same placement.
+- else it is created: under the name the consumer asked for, else its own, a level named `TEMPLATE` being named after its kind — `apply` makes it free where it lands — with `parentPath` the path it is created under, as asked for, whether that parent exists in the project or is created by the same placement. The name written is read at the mapping's `appliedRef`.
 
 A level the template names (the unit to instantiate and what is below it) is created unless the consumer maps it onto a level of the project, which then receives the content it lacks and keeps what it holds (`projectOwned: true`). Changing where a level lands changes the candidates of the levels below it.
 
@@ -310,31 +305,17 @@ await doc.prepare((tx) =>
 - After the step, an application or function the apply placed or reconciled and the step renamed is made
   unique again: a name the step gives that is taken where the element sits is numbered all the same.
 
-#### Conflict classification at report time (`instantiate`)
+#### The names written are read from the outcome
 
-`report` flags the placement collisions the engine resolves by itself **before** apply, so the UI can
-surface them. It is generic over any scoped-uniqueness constraint and any field combination (a constraint
-may span several fields), and scenario-aware. For each placed group primary it looks at the violated
-constraint's `fields`: when at least one is **editable** (`rename`/`free`) the engine can make a distinct
-copy, and the report flags that field on the group's `editableAttributes` with `conflict: true` and the
-collision-free `suggestedValue` (the UI pre-fills it; the user may override). No decision is required.
-
-A collision whose key fields are all identity cannot be resolved by changing a value and is not flagged.
-Every element a verb places as a group primary today is keyed by its `name`, so this does not occur.
-
-`template`/`fork` never flag a collision: an identity match there is the **reconcile target**.
+`report` says what is asked for, not what will be written: a name taken where an element lands is made
+free by `apply`, and the consumer's own step may rename it after that. A consumer showing the final
+names previews the apply (`doc.prepare`) and reads them at the elements the report leads to — a node's
+or a mapping's `appliedRef`. The group's `editableAttributes` only say what the user may edit:
 
 ```ts
 type EditableAttribute = {
 	attr: string
 	mode: 'rename' | 'free'
-	conflict?: boolean // engine auto-resolved a placement collision on this field
-	suggestedValue?: string // the collision-free value it proposes (resolvable case)
-}
-
-type DecisionGroup = {
-	// …
-	editableAttributes?: EditableAttribute[]
 }
 ```
 

@@ -27,23 +27,17 @@ export async function resolveUniqueValue(
 		candidate: Record<string, string | undefined>
 		attr: string
 		excludeId?: string
-		/**
-		 * Values already given to elements that do not exist yet (a report describing several
-		 * elements to create): taken too, as they will be once those elements are created.
-		 */
-		claimed?: ReadonlySet<string>
 	},
 ): Promise<string> {
-	const { parentRef, childTag, candidate, attr, excludeId, claimed } = params
+	const { parentRef, childTag, candidate, attr, excludeId } = params
 	const base = candidate[attr] ?? ''
 
 	const asIs = await findConstraintViolation(query, { parentRef, childTag, candidate, excludeId })
-	if (!asIs && !claimed?.has(base)) return base
+	if (!asIs) return base
 
 	const { stem, next } = splitNumber(base)
 	for (let attempt = next; attempt < next + MAX_ATTEMPTS; attempt++) {
 		const value = `${stem}_${attempt}`
-		if (claimed?.has(value)) continue
 		const trial = { ...candidate, [attr]: value }
 		const violation = await findConstraintViolation(query, {
 			parentRef,

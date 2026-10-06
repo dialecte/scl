@@ -66,12 +66,10 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	expectedRejection?: string
 	expectedMappings: ReportMapping[]
 	/**
-	 * Only the names the report gives the roles to create, in report order, and the names apply
-	 * gives them - the rest of the mappings is not checked.
+	 * Only the names of the roles to create, in report order: the one the report asks for, and the
+	 * one apply writes, read at the element each mapping lands on - the rest is not checked.
 	 */
-	expectedNames?: string[]
-	/** With `expectedNames`: what the report says of each name the engine had to change. */
-	expectedCollisions?: ReportMapping['collision'][]
+	expectedNames?: { reported: string[]; applied: string[] }
 	/** A fragment of the refusal when apply is run on the report as it is. */
 	expectedApplyRefusal?: string
 	expectedNeedsDecisions?: boolean
@@ -141,7 +139,7 @@ describe('shared-element mapping — the report lists where each shared element 
 				roleNames: ['Gateway', 'HMI_PC'],
 			},
 		},
-		'the consumer wants a new role although one of that name exists → both create it, under a free name':
+		'the consumer wants a new role although one of that name exists → the report asks for its name, apply creates it under a free one':
 			{
 				sourceXml,
 				targetXml: projectXml,
@@ -151,9 +149,7 @@ describe('shared-element mapping — the report lists where each shared element 
 						id: 'role-s',
 						tagName: 'AllocationRole',
 						kind: 'shared',
-						mapping: { create: { name: 'HMI_PC_1' } },
-						// a role of that name exists: the new one is created beside it, under the next free name
-						collision: { status: 'resolved', attr: 'name', from: 'HMI_PC', to: 'HMI_PC_1' },
+						mapping: { create: { name: 'HMI_PC' } },
 						parentPath: 'S1',
 						reason: 'decision',
 						ambiguous: false,
@@ -192,7 +188,7 @@ describe('shared-element mapping — the report lists where each shared element 
 				roleNames: ['Gateway', 'HMI_Bay7', 'HMI_PC'],
 			},
 		},
-		'the consumer names the new role with a name already taken → both create it under the next free one':
+		'the consumer names the new role with a name already taken → the report asks for that name, apply creates it under the next free one':
 			{
 				sourceXml,
 				targetXml: projectXml,
@@ -202,9 +198,7 @@ describe('shared-element mapping — the report lists where each shared element 
 						id: 'role-s',
 						tagName: 'AllocationRole',
 						kind: 'shared',
-						mapping: { create: { name: 'Gateway_1' } },
-						// the name asked for is taken: the report says what it became
-						collision: { status: 'resolved', attr: 'name', from: 'Gateway', to: 'Gateway_1' },
+						mapping: { create: { name: 'Gateway' } },
 						parentPath: 'S1',
 						reason: 'decision',
 						ambiguous: false,
@@ -219,7 +213,7 @@ describe('shared-element mapping — the report lists where each shared element 
 					roleNames: ['Gateway', 'Gateway_1', 'HMI_PC'],
 				},
 			},
-		'two roles of the template, both to create under one name → the second is reported under the free name apply gives it':
+		'two roles of the template, both to create under one name → the report asks for it twice, apply gives the second the next free one':
 			{
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="asd">
@@ -254,11 +248,7 @@ describe('shared-element mapping — the report lists where each shared element 
 					['role-s', { create: { name: 'Station' } }],
 					['rtu-s', { create: { name: 'Station' } }],
 				],
-				expectedNames: ['Station', 'Station_1'],
-				expectedCollisions: [
-					undefined,
-					{ status: 'resolved', attr: 'name', from: 'Station', to: 'Station_1' },
-				],
+				expectedNames: { reported: ['Station', 'Station'], applied: ['Station', 'Station_1'] },
 				expectedMappings: [],
 			},
 		'a choice for an element the template does not bring → refused': {
@@ -439,33 +429,28 @@ describe('shared-element mapping — the report lists where each shared element 
 			const reportedNames = reported.mappings.map(
 				(mapping) => mapping.mapping && 'create' in mapping.mapping && mapping.mapping.create.name,
 			)
-			expect(reportedNames, 'report').toEqual(testCase.expectedNames)
-			if (testCase.expectedCollisions) {
-				const reportedCollisions = reported.mappings.map((mapping) => mapping.collision)
-				expect(reportedCollisions, 'report').toEqual(testCase.expectedCollisions)
-			}
+			expect(reportedNames, 'report').toEqual(testCase.expectedNames.reported)
+			let applied = reported
 			await target.transaction(async (tx) => {
-				await apply(tx, {
+				const result = await apply(tx, {
 					...lifecycleTarget,
 					report: reported,
 					resolution: { decisions: new Map(), mappings: decisionMappings },
 				})
+				applied = result.report
 			})
-			// each row says the name apply gives that very role
-			for (const mapping of reported.mappings) {
-				const sourceUuid = await source.query.getAttribute(
-					{ tagName: 'AllocationRole', id: mapping.id } as Scl.Ref<'AllocationRole'>,
-					{ name: 'uuid' },
+			// the name apply writes is read where each mapping landed
+			const appliedNames: (string | undefined)[] = []
+			for (const mapping of applied.mappings) {
+				appliedNames.push(
+					mapping.appliedRef
+						? await target.query.getAttribute(mapping.appliedRef as Scl.Ref<'AllocationRole'>, {
+								name: 'name',
+							})
+						: undefined,
 				)
-				const [created] = await target.query.findByAttributes({
-					tagName: 'AllocationRole',
-					attributes: { templateUuid: sourceUuid ?? '' },
-				})
-				const appliedName = await target.query.getAttribute(created, { name: 'name' })
-				const reportedName =
-					mapping.mapping && 'create' in mapping.mapping ? mapping.mapping.create.name : undefined
-				expect(appliedName, `apply, ${mapping.id}`).toBe(reportedName)
 			}
+			expect(appliedNames, 'apply').toEqual(testCase.expectedNames.applied)
 			return
 		}
 		expect(reported.mappings).toEqual(testCase.expectedMappings)

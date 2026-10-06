@@ -3,9 +3,7 @@ import { collectFrameElements, strictAncestorIds } from './ensure-topology-frame
 import { toRef } from '@dialecte/core/helpers'
 
 import { TEMPLATE_NAME, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
-import { resolveUniqueValue } from '@/v2019C1/extensions/lifecycle/constraints'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/resolve-target-structure'
-import { describeCollision } from '@/v2019C1/extensions/lifecycle/mapping/describe-mapping'
 
 import type {
 	PlacementLevel,
@@ -123,7 +121,7 @@ async function resolveContextLevel(
 
 	const chosen = await resolveChosenLevel(reader, params)
 	if (chosen) return chosen
-	if (decision || !parentTarget) return createdLevel(reader, { ...params, ambiguous: false })
+	if (decision || !parentTarget) return createdLevel({ ...params, ambiguous: false })
 
 	const siblings = await reader.any.getChildren(parentTarget, sourceRef.tagName)
 
@@ -135,7 +133,7 @@ async function resolveContextLevel(
 		return existingLevel({ ...params, existing: siblings[0], reason: 'only' })
 	}
 	if (siblings.length > 1) return undecidedLevel({ sourceRef, parentTarget, ambiguous: true })
-	return createdLevel(reader, { ...params, ambiguous: false })
+	return createdLevel({ ...params, ambiguous: false })
 }
 
 /** The unit to instantiate, or a level below it: created unless the consumer chose otherwise. */
@@ -145,7 +143,7 @@ async function resolveUnitLevel(
 ): Promise<ResolvedLevel> {
 	const chosen = await resolveChosenLevel(reader, params)
 	if (chosen) return chosen
-	return createdLevel(reader, { ...params, ambiguous: false })
+	return createdLevel({ ...params, ambiguous: false })
 }
 
 /** The element of the project the consumer chose for a level, when it chose one. */
@@ -200,10 +198,9 @@ function undecidedLevel(params: {
 
 /**
  * A level to create, under the name the consumer asked for, else its own — a `TEMPLATE` level has
- * none, it is named after its kind — made free below the element it lands under.
+ * none, it is named after its kind. Apply makes it free below the element it lands under.
  */
 async function createdLevel(
-	reader: MappingReader,
 	params: ResolveLevelParams & { ambiguous: boolean },
 ): Promise<ResolvedLevel> {
 	const { sourceQuery, sourceRef, parentTarget, decision, ambiguous } = params
@@ -211,16 +208,7 @@ async function createdLevel(
 	const requestedName = decision && 'create' in decision ? decision.create.name : undefined
 	const sourceName = await sourceQuery.any.getAttribute(sourceRef, { name: 'name' })
 	const ownName = sourceName === TEMPLATE_NAME ? sourceRef.tagName : sourceName
-	const name = requestedName ?? ownName ?? sourceRef.tagName
-
-	const createName = parentTarget
-		? await resolveUniqueValue(reader as Core.Query<Config>, {
-				parentRef: parentTarget,
-				childTag: sourceRef.tagName,
-				candidate: { name },
-				attr: 'name',
-			})
-		: name
+	const createName = requestedName ?? ownName ?? sourceRef.tagName
 
 	return {
 		sourceRef,
@@ -233,7 +221,6 @@ async function createdLevel(
 			undecided: false,
 		},
 		createName,
-		collision: describeCollision({ attr: 'name', asked: name, given: createName }),
 		undecided: false,
 	}
 }

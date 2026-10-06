@@ -160,8 +160,8 @@ const voltageLevelTypicalLevels: ReportMapping[] = [
 		id: 'voltage-level-s',
 		tagName: 'VoltageLevel',
 		kind: 'level',
-		mapping: { create: { name: 'E1_1' } },
-		collision: { status: 'resolved', attr: 'name', from: 'E1', to: 'E1_1' },
+		// the name asked for: apply gives the next free one, `E1_1`
+		mapping: { create: { name: 'E1' } },
 		parentPath: 'S1',
 		reason: 'none',
 		ambiguous: false,
@@ -175,8 +175,8 @@ const voltageLevelTypicalLevels: ReportMapping[] = [
 		tagName: 'Bay',
 		kind: 'level',
 		mapping: { create: { name: 'Q1' } },
-		// under the voltage level this placement creates
-		parentPath: 'S1/E1_1',
+		// under the voltage level this placement creates, as asked for
+		parentPath: 'S1/E1',
 		reason: 'none',
 		ambiguous: false,
 		selectable: true,
@@ -288,11 +288,6 @@ type TestCase = SclTest.BaseXmlTestCase & {
 		 * an apply without decisions writes nothing and an apply without that choice is refused.
 		 */
 		undecided?: string
-		/**
-		 * What the report says of the name of the placed unit, the one the review lets the consumer
-		 * edit: whether the engine had to change it, and to what — not looked at when left out.
-		 */
-		unitName?: { conflict: boolean; suggestedValue: string | undefined }
 	}
 }
 
@@ -476,7 +471,7 @@ describe('placement mapping — where the levels of an SSD land', () => {
 				functions: ['S1/110kV/Feeder/Prot'],
 			},
 		},
-		'the voltage level already has a bay of that name → the bay is created under the next free name':
+		'the voltage level already has a bay of that name → the report asks for its name, apply creates it under the next free one':
 			{
 				sourceXml: bayTypicalXml.replaceAll('Feeder', 'B1'),
 				targetXml: projectXml,
@@ -487,10 +482,10 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						fromTheClickedVoltageLevel[1],
 						{
 							...fromTheClickedVoltageLevel[2],
-							mapping: { create: { name: 'B1_1' } },
-							collision: { status: 'resolved', attr: 'name', from: 'B1', to: 'B1_1' },
+							mapping: { create: { name: 'B1' } },
 						},
 					],
+					createdLevels: ['S1/V1/B1_1'],
 					bays: ['S1/V1/B1', 'S1/V1/B1_1'],
 					functions: ['S1/V1/B1_1/Prot'],
 				},
@@ -525,7 +520,7 @@ describe('placement mapping — where the levels of an SSD land', () => {
 					bayDescription: 'Project bay',
 				},
 			},
-		'a voltage level typical, the project holds a voltage level and a bay of those names → both are created, under free names':
+		'a voltage level typical, the project holds a voltage level and a bay of those names → the report asks for their names, apply creates the voltage level under a free one':
 			{
 				sourceXml: voltageLevelTypicalXml,
 				targetXml: sameNamesProjectXml,
@@ -533,11 +528,12 @@ describe('placement mapping — where the levels of an SSD land', () => {
 				expected: {
 					placement: voltageLevelTypicalLevels,
 					frame: ['added VoltageLevel E1', 'added Bay Q1'],
+					createdLevels: ['S1/E1_1', 'S1/E1_1/Q1'],
 					bays: ['S1/E1/Q1', 'S1/E1_1/Q1'],
 					functions: ['S1/E1_1/Q1/Prot'],
 				},
 			},
-		'… the consumer maps the voltage level onto the project one → its bay is still a new bay, under a free name':
+		'… the consumer maps the voltage level onto the project one → its bay is still a new bay, created under a free name':
 			{
 				sourceXml: voltageLevelTypicalXml,
 				targetXml: sameNamesProjectXml,
@@ -549,20 +545,19 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						{
 							...voltageLevelTypicalLevels[1],
 							mapping: { existing: voltageLevelRef },
-							collision: undefined,
 							projectOwned: true,
 							parentPath: undefined,
 							reason: 'decision',
 						},
 						{
 							...voltageLevelTypicalLevels[2],
-							mapping: { create: { name: 'Q1_1' } },
-							collision: { status: 'resolved', attr: 'name', from: 'Q1', to: 'Q1_1' },
+							mapping: { create: { name: 'Q1' } },
 							parentPath: 'S1/E1',
 							candidates: [sameNameBay],
 						},
 					],
 					frame: ['unchanged VoltageLevel E1 = S1/E1', 'added Bay Q1'],
+					createdLevels: ['S1/E1/Q1_1'],
 					bays: ['S1/E1/Q1', 'S1/E1/Q1_1'],
 					functions: ['S1/E1/Q1_1/Prot'],
 					bayDescription: 'Project bay',
@@ -583,7 +578,6 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						{
 							...voltageLevelTypicalLevels[1],
 							mapping: { existing: voltageLevelRef },
-							collision: undefined,
 							projectOwned: true,
 							parentPath: undefined,
 							reason: 'decision',
@@ -603,7 +597,7 @@ describe('placement mapping — where the levels of an SSD land', () => {
 					bayDescription: 'Project bay',
 				},
 			},
-		'the typical is placed a second time beside its first bay → the bay is created under the next free name, said to be changed by the engine':
+		'the typical is placed a second time beside its first bay → the report asks for its name, apply creates it under the next free one':
 			{
 				sourceXml: bayTypicalXml,
 				targetXml: placedOnceXml,
@@ -614,38 +608,34 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						{ ...fromTheClickedVoltageLevel[1], candidates: [voltageLevel, secondVoltageLevel] },
 						{
 							...fromTheClickedVoltageLevel[2],
-							mapping: { create: { name: 'Feeder_1' } },
-							collision: { status: 'resolved', attr: 'name', from: 'Feeder', to: 'Feeder_1' },
 							candidates: [placedBay],
 						},
 					],
-					unitName: { conflict: true, suggestedValue: 'Feeder_1' },
+					createdLevels: ['S1/V1/Feeder_1'],
 					bays: ['S1/V1/Feeder', 'S1/V1/Feeder_1'],
 					functions: ['S1/V1/Feeder/Prot', 'S1/V1/Feeder_1/Prot'],
 				},
 			},
-		'… the consumer names the second bay → created under that name, which the engine did not change':
-			{
-				sourceXml: bayTypicalXml,
-				targetXml: placedOnceXml,
-				anchor: voltageLevelRef,
-				chosen: [['bay-s', { create: { name: 'Q01' } }]],
-				expected: {
-					placement: [
-						fromTheClickedVoltageLevel[0],
-						{ ...fromTheClickedVoltageLevel[1], candidates: [voltageLevel, secondVoltageLevel] },
-						{
-							...fromTheClickedVoltageLevel[2],
-							mapping: { create: { name: 'Q01' } },
-							reason: 'decision',
-							candidates: [placedBay],
-						},
-					],
-					unitName: { conflict: false, suggestedValue: 'Q01' },
-					bays: ['S1/V1/Feeder', 'S1/V1/Q01'],
-					functions: ['S1/V1/Feeder/Prot', 'S1/V1/Q01/Prot'],
-				},
+		'… the consumer names the second bay → created under that name': {
+			sourceXml: bayTypicalXml,
+			targetXml: placedOnceXml,
+			anchor: voltageLevelRef,
+			chosen: [['bay-s', { create: { name: 'Q01' } }]],
+			expected: {
+				placement: [
+					fromTheClickedVoltageLevel[0],
+					{ ...fromTheClickedVoltageLevel[1], candidates: [voltageLevel, secondVoltageLevel] },
+					{
+						...fromTheClickedVoltageLevel[2],
+						mapping: { create: { name: 'Q01' } },
+						reason: 'decision',
+						candidates: [placedBay],
+					},
+				],
+				bays: ['S1/V1/Feeder', 'S1/V1/Q01'],
+				functions: ['S1/V1/Feeder/Prot', 'S1/V1/Q01/Prot'],
 			},
+		},
 		'… the consumer names the second bay, then renames it in the review → the review has the last word':
 			{
 				sourceXml: bayTypicalXml,
@@ -685,7 +675,6 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						},
 						{ ...fromTheClickedVoltageLevel[2], parentPath: 'S1/V2', candidates: [] },
 					],
-					unitName: { conflict: false, suggestedValue: 'Feeder' },
 					bays: ['S1/V1/Feeder', 'S1/V2/Feeder'],
 					functions: ['S1/V1/Feeder/Prot', 'S1/V2/Feeder/Prot'],
 				},
@@ -733,17 +722,6 @@ describe('placement mapping — where the levels of an SSD land', () => {
 		expect(placement, 'report').toEqual(testCase.expected.placement)
 		// a first placement asks for no decision, wherever its levels land — unless one is not decided
 		expect(lifecycleReport.needsDecisions, 'report').toBe(testCase.expected.undecided !== undefined)
-
-		if (testCase.expected.unitName) {
-			const unitGroup = allGroups(lifecycleReport).find((group) =>
-				STRUCTURAL_TAGS.includes(group.primary.tagName),
-			)
-			const name = unitGroup?.editableAttributes?.find((editable) => editable.attr === 'name')
-			expect(
-				{ conflict: name?.conflict ?? false, suggestedValue: name?.suggestedValue },
-				'report',
-			).toEqual(testCase.expected.unitName)
-		}
 
 		if (testCase.expected.frame) {
 			const frameInstances = lifecycleReport.instances.filter((instance) =>
@@ -880,7 +858,6 @@ function heldLevel(
 	return {
 		...level,
 		mapping: { existing: candidate.ref },
-		collision: undefined,
 		projectOwned: createdByTemplate ? undefined : true,
 		parentPath: undefined,
 		reason: 'lineage',

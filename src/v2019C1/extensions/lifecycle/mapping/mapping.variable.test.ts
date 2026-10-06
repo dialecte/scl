@@ -155,12 +155,12 @@ describe('shared-element mapping — a variable applying to a function', () => {
 				applications: ['VXCBR -> Prot'],
 			},
 		},
-		'two variables of that name in the project → neither is picked, both sides create it under a free name':
+		'two variables of that name in the project → neither is picked, the report asks for its name, apply creates it under a free one':
 			{
 				sourceXml,
 				targetXml: projectWithTwoVariablesXml,
 				expected: {
-					mapping: { create: { name: 'VXCBR_1' } },
+					mapping: { create: { name: 'VXCBR' } },
 					reason: 'name',
 					ambiguous: true,
 					locked: false,

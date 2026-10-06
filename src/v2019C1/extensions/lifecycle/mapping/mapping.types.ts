@@ -1,5 +1,4 @@
 import type { Config, Scl } from '@/v2019C1/config'
-import type { PlacementResolution } from '@/v2019C1/extensions/lifecycle/constraints/resolve-placement-collision.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTrackedRecord } from '@dialecte/core'
@@ -129,24 +128,12 @@ export type MappingCandidate = {
 }
 
 /**
- * What one pass over a report shares between the elements it describes:
- *  - the candidates already listed, by tag and anchor — every shared element of a kind is offered
- *    the same project elements;
- *  - the values already given to elements to create, by the place and the attribute they are
- *    unique on — the next element created there cannot take them, exactly as on apply, which
- *    creates them one after the other.
+ * What one pass over a report shares between the elements it describes: the candidates already
+ * listed, by tag and anchor — every shared element of a kind is offered the same project elements.
  */
 export type ReportPass = {
 	candidates: Map<string, MappingCandidate[]>
-	claimedValues: Map<string, Set<string>>
 }
-
-/**
- * What the engine did with a value asked for an element to create that was not free where the
- * element lands: the value it was given instead — or, for a key no value can be changed on, the
- * violation left to the consumer.
- */
-export type MappingCollision = Exclude<PlacementResolution, { status: 'ok' }>
 
 /** Where one shared source element lands: an element of the project, or a new one. */
 export type DecisionMapping = { existing: Scl.Ref<Scl.ElementsOf> } | { create: { name?: string } }
@@ -172,11 +159,6 @@ export type ReportMapping = {
 	 * a decision and `apply` refuses until the consumer chose.
 	 */
 	mapping?: DecisionMapping
-	/**
-	 * For an element to create: the value asked for (the consumer's, else the template's) was not
-	 * free where it lands, and what became of it. `mapping.create.name` is the value given.
-	 */
-	collision?: MappingCollision
 	/**
 	 * Set when it lands on an element the project owns — reused, not an instance of the source
 	 * element: that element keeps its own attributes and only gains what the source contributes.

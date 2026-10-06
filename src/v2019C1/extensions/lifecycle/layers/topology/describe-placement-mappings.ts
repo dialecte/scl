@@ -45,7 +45,6 @@ export async function describePlacementMappings(
 			kind: 'level',
 			// nothing is decided for the level: it is the consumer's to choose
 			...(level.undecided ? {} : { mapping: landing }),
-			...(created && level.collision ? { collision: level.collision } : {}),
 			...(resolved.existing && resolved.projectOwned ? { projectOwned: true as const } : {}),
 			...(created && parentPath ? { parentPath } : {}),
 			reason: resolved.reason,

@@ -1,4 +1,3 @@
-import { markPlacementConflicts } from './mark-placement-conflicts'
 import { reportAsd, reportFsd, reportSsd } from './query'
 
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
@@ -68,9 +67,6 @@ export async function report(
 
 	// a mapping nothing is decided for is the consumer's to choose before anything is written
 	if (report.mappings.some((mapping) => !mapping.mapping)) report.needsDecisions = true
-
-	// flag the placement collisions the engine resolves by itself (auto-value on an editable field)
-	await markPlacementConflicts(query, target, report)
 
 	// the report was derived from the consumer's mapping choices: refuse the ones it cannot honour
 	const decisionMappings = target.resolution?.mappings

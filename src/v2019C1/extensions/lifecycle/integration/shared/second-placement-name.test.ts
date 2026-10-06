@@ -1,18 +1,17 @@
 import { describe, expect } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SclTest } from '@/v2019C1/test'
 
-// Placement-conflict classification on the report (scenario = instantiate):
-//  - resolvable collision (Application name) -> the `name` editable attribute is flagged
-//    with the engine's collision-free suggestedValue; no gate needed.
-//  - update never flags (an identity match is the reconcile target).
+// The name of an element placed a second time: the report carries the template's, apply writes the
+// next free one, and the report's node leads to the element written - where a consumer reads the
+// name the project ends with.
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -64,52 +63,67 @@ const targetXml = /* xml */ `
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
-	scenario: LifecycleScenario
-	/** expected `name` conflict on the Application group (undefined = none flagged) */
-	expectedNameConflict?: { suggestedValue: string }
+	/** How many instances the project holds already. */
+	placedBefore: number
+	expected: {
+		/** The name apply writes, read at the element the report's Application node leads to. */
+		applied: string
+	}
 }
 
-describe('lifecycle report — placement-conflict classification', () => {
+describe('lifecycle — the name an application is placed under', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'instantiate flags a resolvable Application name collision with a suggested value': {
+		'placed for the first time → its own name': {
 			sourceXml,
 			targetXml,
-			scenario: 'instantiate',
-			expectedNameConflict: { suggestedValue: 'HMI_1' },
+			placedBefore: 0,
+			expected: { applied: 'HMI' },
 		},
-		'update does not flag a conflict (identity match is the reconcile target)': {
+		'placed again beside the first → the next free name, read where the report leads': {
 			sourceXml,
 			targetXml,
-			scenario: 'template',
-			expectedNameConflict: undefined,
+			placedBefore: 1,
+			expected: { applied: 'HMI_1' },
 		},
 	}
 
 	async function act({ testCase, source, target }: SclTest.ActParams<TestCase>): Promise<void> {
 		if (!target) throw new Error('target required')
 
-		// seed one existing instance so a re-application collides on the Application name
-		await target.transaction(async (tx) => {
-			await instantiateAsd(tx, { sourceQuery: source.query, applicationRef, targetParent: bayRef })
-		})
+		for (let placed = 0; placed < testCase.placedBefore; placed++) {
+			await target.transaction(async (tx) => {
+				await instantiateAsd(tx, {
+					sourceQuery: source.query,
+					applicationRef,
+					targetParent: bayRef,
+				})
+			})
+		}
 
-		const rep = await report(target.query, {
-			verb: 'asd',
-			scenario: testCase.scenario,
+		const lifecycleTarget = {
+			verb: 'asd' as const,
+			scenario: 'instantiate' as const,
 			sourceQuery: source.query,
 			ref: applicationRef,
 			anchor: bayRef,
+		}
+		const lifecycleReport = await report(target.query, lifecycleTarget)
+		await target.transaction(async (tx) => {
+			await apply(tx, {
+				...lifecycleTarget,
+				report: lifecycleReport,
+				resolution: { decisions: new Map() },
+			})
 		})
 
-		const appGroup = allGroups(rep).find((group) => group.primary.tagName === 'Application')
-		const nameAttr = appGroup?.editableAttributes?.find((entry) => entry.attr === 'name')
-
-		if (testCase.expectedNameConflict) {
-			expect(nameAttr?.conflict).toBe(true)
-			expect(nameAttr?.suggestedValue).toBe(testCase.expectedNameConflict.suggestedValue)
-		} else {
-			expect(nameAttr?.conflict).toBeUndefined()
-		}
+		// the report carries what the template asks for; what is written is read where it leads
+		const node = allGroups(lifecycleReport).find(
+			(group) => group.primary.tagName === 'Application',
+		)?.primary
+		const appliedName = node?.appliedRef
+			? await target.query.getAttribute(node.appliedRef as Scl.Ref<'Application'>, { name: 'name' })
+			: undefined
+		expect(appliedName, 'apply').toBe(testCase.expected.applied)
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

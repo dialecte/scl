@@ -1,6 +1,5 @@
 import { toRef } from '@dialecte/core/helpers'
 
-import { resolveUniqueValue } from '@/v2019C1/extensions/lifecycle/constraints'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/resolve-target-structure'
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
@@ -9,7 +8,6 @@ import { buildElementPath } from '@/v2019C1/extensions/reference/query/build'
 import type {
 	DecisionMapping,
 	MappingCandidate,
-	MappingCollision,
 	MappingPolicy,
 	ReportMapping,
 	ReportPass,
@@ -20,14 +18,14 @@ import type * as Core from '@dialecte/core'
 
 /** What one pass over a report shares between the elements it describes — empty to start with. */
 export function createReportPass(): ReportPass {
-	return { candidates: new Map(), claimedValues: new Map() }
+	return { candidates: new Map() }
 }
 
 /**
  * What the report says about one shared source element: where it lands (as resolved), why,
  * and every project element it could be mapped onto instead. For an element to create, the
- * name is the one apply will give it: the requested name, made free at the level it lands on —
- * against the project and against the elements the same report already creates there.
+ * name is the one asked for — the consumer's, else the template's: apply makes it free where the
+ * element lands, and what it wrote is read at the mapping's `appliedRef`.
  */
 export async function describeMapping(
 	query: Core.Query<Config>,
@@ -77,92 +75,31 @@ export async function describeMapping(
 
 	const sourceName = await sourceQuery.any.getAttribute(sourceRef, { name: policy.key })
 	const requestedName = decision && 'create' in decision ? decision.create.name : undefined
-	const landing = await describeLanding(query, {
-		sourceQuery,
-		sourceRef,
-		policy,
-		anchor,
-		name: requestedName ?? sourceName,
-		pass,
-	})
+	const parentPath = await describeParentPath(query, { sourceQuery, sourceRef, anchor })
 	return {
 		...shared,
 		candidates,
-		mapping: { create: { name: landing.name } },
-		...(landing.collision ? { collision: landing.collision } : {}),
-		...(landing.parentPath ? { parentPath: landing.parentPath } : {}),
+		mapping: { create: { name: requestedName ?? sourceName } },
+		...(parentPath ? { parentPath } : {}),
 	}
 }
 
-/**
- * Where a created element lands: the project element it is created under, and `name` or the
- * first free variant of it there — with what became of `name` when it was not free.
- */
-async function describeLanding(
+/** The path of the project element a created element lands under. */
+async function describeParentPath(
 	query: Core.Query<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
 		sourceRef: Scl.Ref<Scl.ElementsOf>
-		policy: MappingPolicy
 		anchor?: Scl.Ref<Scl.ElementsOf>
-		name: string | undefined
-		pass: ReportPass
 	},
-): Promise<{ name: string | undefined; parentPath?: string; collision?: MappingCollision }> {
-	const { sourceQuery, sourceRef, policy, anchor, name, pass } = params
-	if (!anchor) return { name }
+): Promise<string | undefined> {
+	const { sourceQuery, sourceRef, anchor } = params
+	if (!anchor) return undefined
 
 	const structure = await resolveTargetStructure(query, anchor)
 	const parentRef = await resolveStructureRef(sourceQuery, sourceRef, structure)
 	const parentElementPath = await buildElementPath(query, parentRef)
-	const parentPath = parentElementPath?.path || undefined
-	if (!name) return { name, parentPath }
-
-	const claimed = claimedValuesAt({
-		pass,
-		parentRef,
-		childTag: policy.tagName,
-		attr: policy.key,
-	})
-	const freeName = await resolveUniqueValue(query, {
-		parentRef,
-		childTag: policy.tagName,
-		candidate: { [policy.key]: name },
-		attr: policy.key,
-		claimed,
-	})
-	claimed.add(freeName)
-
-	const collision = describeCollision({ attr: policy.key, asked: name, given: freeName })
-	return { name: freeName, parentPath, collision }
-}
-
-/**
- * The values the report already gave to elements of a tag to create under one element, for the
- * attribute they are unique on.
- */
-export function claimedValuesAt(params: {
-	pass: ReportPass
-	parentRef: Scl.Ref<Scl.ElementsOf>
-	childTag: string
-	attr: string
-}): Set<string> {
-	const { pass, parentRef, childTag, attr } = params
-
-	const place = `${parentRef.tagName}|${parentRef.id}|${childTag}|${attr}`
-	const claimed = pass.claimedValues.get(place) ?? new Set<string>()
-	pass.claimedValues.set(place, claimed)
-	return claimed
-}
-
-/** What became of a value asked for an element to create — nothing to say when it was free. */
-export function describeCollision(params: {
-	attr: string
-	asked: string
-	given: string
-}): MappingCollision | undefined {
-	const { attr, asked, given } = params
-	return asked === given ? undefined : { status: 'resolved', attr, from: asked, to: given }
+	return parentElementPath?.path || undefined
 }
 
 /**

@@ -9,7 +9,6 @@ export type {
 	DecisionMapping,
 	DecisionMappings,
 	MappingCandidate,
-	MappingCollision,
 	MappingKind,
 	MappingPolicy,
 	MappingReason,
