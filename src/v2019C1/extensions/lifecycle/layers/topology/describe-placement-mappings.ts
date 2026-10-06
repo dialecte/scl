@@ -4,6 +4,7 @@ import { resolveInstanceLevels } from './resolve-instance-levels'
 import { toRef } from '@dialecte/core/helpers'
 
 import { describeCandidate } from '@/v2019C1/extensions/lifecycle/mapping/describe-mapping'
+import { buildElementPath } from '@/v2019C1/extensions/reference/query/build'
 
 import type { PlacementLevel } from './resolve-placement-mappings.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -24,19 +25,29 @@ export async function describePlacementMappings(
 	params: { levels: readonly PlacementLevel[] },
 ): Promise<ReportMapping[]> {
 	const reportMappings: ReportMapping[] = []
+	// where each level lands, by source record id: an element of the project, or one created here
+	const landingPaths = new Map<string, string>()
 	for (const level of params.levels) {
 		const { sourceRef, parentSourceId, resolved, createName } = level
 
 		const candidates = await listLevelCandidates(query, level)
+		const parentPath = await describeParentPath(query, { level, landingPaths })
+		const landingPath = await describeLandingPath(query, { level, parentPath })
+		if (landingPath) landingPaths.set(sourceRef.id, landingPath)
 		const landing = resolved.existing
 			? { existing: toRef(resolved.existing) as Scl.Ref<Scl.ElementsOf> }
 			: { create: { name: createName } }
+		const created = !level.undecided && !resolved.existing
 
 		reportMappings.push({
 			id: sourceRef.id,
 			tagName: sourceRef.tagName,
+			kind: 'level',
 			// nothing is decided for the level: it is the consumer's to choose
 			...(level.undecided ? {} : { mapping: landing }),
+			...(created && level.collision ? { collision: level.collision } : {}),
+			...(resolved.existing && resolved.projectOwned ? { projectOwned: true as const } : {}),
+			...(created && parentPath ? { parentPath } : {}),
 			reason: resolved.reason,
 			ambiguous: resolved.ambiguous,
 			selectable: true,
@@ -46,6 +57,40 @@ export async function describePlacementMappings(
 		})
 	}
 	return reportMappings
+}
+
+/**
+ * The path of the element a level lands under: the project element the level above lands on, or
+ * the one created for it by this very placement.
+ */
+async function describeParentPath(
+	query: Core.Query<Config>,
+	params: { level: PlacementLevel; landingPaths: ReadonlyMap<string, string> },
+): Promise<string | undefined> {
+	const { level, landingPaths } = params
+
+	if (!level.parentTarget) {
+		return level.parentSourceId ? landingPaths.get(level.parentSourceId) : undefined
+	}
+	const parentElementPath = await buildElementPath(query, level.parentTarget)
+	return parentElementPath?.path || undefined
+}
+
+/** The path of the element a level lands on, once decided: the project's, or the one to create. */
+async function describeLandingPath(
+	query: Core.Query<Config>,
+	params: { level: PlacementLevel; parentPath: string | undefined },
+): Promise<string | undefined> {
+	const { level, parentPath } = params
+	if (level.undecided) return undefined
+
+	if (level.resolved.existing) {
+		const existingRef = toRef(level.resolved.existing) as Scl.Ref<Scl.ElementsOf>
+		const elementPath = await buildElementPath(query, existingRef)
+		return elementPath?.path || undefined
+	}
+	if (!level.createName) return undefined
+	return parentPath ? `${parentPath}/${level.createName}` : level.createName
 }
 
 /** The elements of the project a level could land on: its kind, below where the level above lands. */
@@ -118,10 +163,18 @@ export async function describeHeldPlacement(
 			reportMappings.some((listed) => listed.id === ancestor.id),
 		)
 		const candidate = await describeCandidate(query, held)
+		const projectOwned = await isProjectOwned(query, {
+			sourceQuery,
+			held,
+			sourceRef: frameElement,
+			matchKey,
+		})
 		reportMappings.push({
 			id: sourceId,
 			tagName: frameElement.tagName,
+			kind: 'level',
 			mapping: { existing: held },
+			...(projectOwned ? { projectOwned: true as const } : {}),
 			reason: 'lineage',
 			ambiguous: false,
 			selectable: true,
@@ -131,4 +184,20 @@ export async function describeHeldPlacement(
 		})
 	}
 	return reportMappings
+}
+
+/** A held level is the project's own unless it was created from the source level (its lineage). */
+async function isProjectOwned(
+	query: Core.Query<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		held: Scl.Ref<Scl.ElementsOf>
+		sourceRef: Scl.Ref<Scl.ElementsOf>
+		matchKey?: MatchKey
+	},
+): Promise<boolean> {
+	const { sourceQuery, held, sourceRef, matchKey = 'templateUuid' } = params
+	const sourceUuid = await sourceQuery.any.getAttribute(sourceRef, { name: 'uuid' })
+	const lineage = await query.any.getAttribute(held, { name: matchKey })
+	return !sourceUuid || lineage !== sourceUuid
 }

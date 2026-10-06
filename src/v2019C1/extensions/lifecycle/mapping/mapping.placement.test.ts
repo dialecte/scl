@@ -147,7 +147,9 @@ const voltageLevelTypicalLevels: ReportMapping[] = [
 	{
 		id: 'substation-s',
 		tagName: 'Substation',
+		kind: 'level',
 		mapping: { existing: substationRef },
+		projectOwned: true,
 		reason: 'anchor',
 		ambiguous: false,
 		selectable: true,
@@ -157,7 +159,10 @@ const voltageLevelTypicalLevels: ReportMapping[] = [
 	{
 		id: 'voltage-level-s',
 		tagName: 'VoltageLevel',
+		kind: 'level',
 		mapping: { create: { name: 'E1_1' } },
+		collision: { status: 'resolved', attr: 'name', from: 'E1', to: 'E1_1' },
+		parentPath: 'S1',
 		reason: 'none',
 		ambiguous: false,
 		selectable: true,
@@ -168,7 +173,10 @@ const voltageLevelTypicalLevels: ReportMapping[] = [
 	{
 		id: 'bay-s',
 		tagName: 'Bay',
+		kind: 'level',
 		mapping: { create: { name: 'Q1' } },
+		// under the voltage level this placement creates
+		parentPath: 'S1/E1_1',
 		reason: 'none',
 		ambiguous: false,
 		selectable: true,
@@ -199,7 +207,9 @@ const fromTheClickedVoltageLevel: ReportMapping[] = [
 	{
 		id: 'substation-s',
 		tagName: 'Substation',
+		kind: 'level',
 		mapping: { existing: substationRef },
+		projectOwned: true,
 		reason: 'anchor',
 		ambiguous: false,
 		selectable: true,
@@ -209,7 +219,9 @@ const fromTheClickedVoltageLevel: ReportMapping[] = [
 	{
 		id: 'voltage-level-s',
 		tagName: 'VoltageLevel',
+		kind: 'level',
 		mapping: { existing: voltageLevelRef },
+		projectOwned: true,
 		reason: 'anchor',
 		ambiguous: false,
 		selectable: true,
@@ -220,7 +232,9 @@ const fromTheClickedVoltageLevel: ReportMapping[] = [
 	{
 		id: 'bay-s',
 		tagName: 'Bay',
+		kind: 'level',
 		mapping: { create: { name: 'Feeder' } },
+		parentPath: 'S1/V1',
 		reason: 'none',
 		ambiguous: false,
 		selectable: true,
@@ -335,12 +349,18 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						{
 							...fromTheClickedVoltageLevel[1],
 							mapping: undefined,
+							projectOwned: undefined,
 							reason: 'none',
 							ambiguous: true,
 							candidates: [voltageLevel, secondVoltageLevel],
 						},
 						// where the bay lands follows from the voltage level: not known yet
-						{ ...fromTheClickedVoltageLevel[2], mapping: undefined, candidates: [] },
+						{
+							...fromTheClickedVoltageLevel[2],
+							mapping: undefined,
+							parentPath: undefined,
+							candidates: [],
+						},
 					],
 					undecided: 'VoltageLevel',
 					bays: ['S1/V1/B1'],
@@ -359,10 +379,12 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						{
 							...fromTheClickedVoltageLevel[1],
 							mapping: { create: { name: 'VoltageLevel' } },
+							projectOwned: undefined,
+							parentPath: 'S1',
 							reason: 'decision',
 							candidates: [voltageLevel, secondVoltageLevel],
 						},
-						{ ...fromTheClickedVoltageLevel[2], candidates: [] },
+						{ ...fromTheClickedVoltageLevel[2], parentPath: 'S1/VoltageLevel', candidates: [] },
 					],
 					bays: ['S1/V1/B1', 'S1/VoltageLevel/Feeder'],
 					functions: ['S1/VoltageLevel/Feeder/Prot'],
@@ -382,7 +404,7 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						reason: 'decision',
 						candidates: [voltageLevel, secondVoltageLevel],
 					},
-					{ ...fromTheClickedVoltageLevel[2], candidates: [] },
+					{ ...fromTheClickedVoltageLevel[2], parentPath: 'S1/V2', candidates: [] },
 				],
 				bays: ['S1/V1/B1', 'S1/V2/Feeder'],
 				functions: ['S1/V2/Feeder/Prot'],
@@ -403,7 +425,7 @@ describe('placement mapping — where the levels of an SSD land', () => {
 							reason: 'decision',
 							candidates: [voltageLevel, secondVoltageLevel],
 						},
-						{ ...fromTheClickedVoltageLevel[2], candidates: [] },
+						{ ...fromTheClickedVoltageLevel[2], parentPath: 'S1/V2', candidates: [] },
 					],
 					bays: ['S1/V1/B1', 'S1/V2/Feeder'],
 					functions: ['S1/V2/Feeder/Prot'],
@@ -420,10 +442,12 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						{
 							...fromTheClickedVoltageLevel[1],
 							mapping: { create: { name: 'VoltageLevel' } },
+							projectOwned: undefined,
+							parentPath: 'S1',
 							reason: 'none',
 							candidates: [],
 						},
-						{ ...fromTheClickedVoltageLevel[2], candidates: [] },
+						{ ...fromTheClickedVoltageLevel[2], parentPath: 'S1/VoltageLevel', candidates: [] },
 					],
 					bays: ['S1/VoltageLevel/Feeder'],
 					functions: ['S1/VoltageLevel/Feeder/Prot'],
@@ -441,10 +465,12 @@ describe('placement mapping — where the levels of an SSD land', () => {
 					{
 						...fromTheClickedVoltageLevel[1],
 						mapping: { create: { name: '110kV' } },
+						projectOwned: undefined,
+						parentPath: 'S1',
 						reason: 'decision',
 						candidates: [],
 					},
-					{ ...fromTheClickedVoltageLevel[2], candidates: [] },
+					{ ...fromTheClickedVoltageLevel[2], parentPath: 'S1/110kV', candidates: [] },
 				],
 				bays: ['S1/110kV/Feeder'],
 				functions: ['S1/110kV/Feeder/Prot'],
@@ -459,7 +485,11 @@ describe('placement mapping — where the levels of an SSD land', () => {
 					placement: [
 						fromTheClickedVoltageLevel[0],
 						fromTheClickedVoltageLevel[1],
-						{ ...fromTheClickedVoltageLevel[2], mapping: { create: { name: 'B1_1' } } },
+						{
+							...fromTheClickedVoltageLevel[2],
+							mapping: { create: { name: 'B1_1' } },
+							collision: { status: 'resolved', attr: 'name', from: 'B1', to: 'B1_1' },
+						},
 					],
 					bays: ['S1/V1/B1', 'S1/V1/B1_1'],
 					functions: ['S1/V1/B1_1/Prot'],
@@ -478,6 +508,8 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						{
 							...fromTheClickedVoltageLevel[2],
 							mapping: { existing: bayRef },
+							projectOwned: true,
+							parentPath: undefined,
 							reason: 'decision',
 						},
 					],
@@ -517,11 +549,16 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						{
 							...voltageLevelTypicalLevels[1],
 							mapping: { existing: voltageLevelRef },
+							collision: undefined,
+							projectOwned: true,
+							parentPath: undefined,
 							reason: 'decision',
 						},
 						{
 							...voltageLevelTypicalLevels[2],
 							mapping: { create: { name: 'Q1_1' } },
+							collision: { status: 'resolved', attr: 'name', from: 'Q1', to: 'Q1_1' },
+							parentPath: 'S1/E1',
 							candidates: [sameNameBay],
 						},
 					],
@@ -546,11 +583,16 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						{
 							...voltageLevelTypicalLevels[1],
 							mapping: { existing: voltageLevelRef },
+							collision: undefined,
+							projectOwned: true,
+							parentPath: undefined,
 							reason: 'decision',
 						},
 						{
 							...voltageLevelTypicalLevels[2],
 							mapping: { existing: bayRef },
+							projectOwned: true,
+							parentPath: undefined,
 							reason: 'decision',
 							candidates: [sameNameBay],
 						},
@@ -573,6 +615,7 @@ describe('placement mapping — where the levels of an SSD land', () => {
 						{
 							...fromTheClickedVoltageLevel[2],
 							mapping: { create: { name: 'Feeder_1' } },
+							collision: { status: 'resolved', attr: 'name', from: 'Feeder', to: 'Feeder_1' },
 							candidates: [placedBay],
 						},
 					],
@@ -640,7 +683,7 @@ describe('placement mapping — where the levels of an SSD land', () => {
 							reason: 'decision',
 							candidates: [voltageLevel, secondVoltageLevel],
 						},
-						{ ...fromTheClickedVoltageLevel[2], candidates: [] },
+						{ ...fromTheClickedVoltageLevel[2], parentPath: 'S1/V2', candidates: [] },
 					],
 					unitName: { conflict: false, suggestedValue: 'Feeder' },
 					bays: ['S1/V1/Feeder', 'S1/V2/Feeder'],
@@ -825,14 +868,21 @@ const gainDisconnector = async (tx: Scl.Transaction): Promise<void> => {
 	})
 }
 
-/** What an update lists for a level the instance already sits on. */
+/**
+ * What an update lists for a level the instance already sits on: the project's own level, unless the
+ * placement that came first created it from the template (`createdByTemplate`).
+ */
 function heldLevel(
 	level: ReportMapping,
 	candidate: { ref: Scl.Ref<Scl.ElementsOf>; title: string; path: string },
+	createdByTemplate = false,
 ): ReportMapping {
 	return {
 		...level,
 		mapping: { existing: candidate.ref },
+		collision: undefined,
+		projectOwned: createdByTemplate ? undefined : true,
+		parentPath: undefined,
 		reason: 'lineage',
 		locked: true,
 		candidates: [candidate],
@@ -918,11 +968,15 @@ describe('placement mapping — an update finds where the instance was placed', 
 					placement: [
 						heldLevel(fromTheClickedVoltageLevel[0], substation),
 						heldLevel(fromTheClickedVoltageLevel[1], voltageLevel),
-						heldLevel(fromTheClickedVoltageLevel[2], {
-							ref: createdBayRef,
-							title: 'Feeder',
-							path: 'S1/V1/Feeder',
-						}),
+						heldLevel(
+							fromTheClickedVoltageLevel[2],
+							{
+								ref: createdBayRef,
+								title: 'Feeder',
+								path: 'S1/V1/Feeder',
+							},
+							true,
+						),
 					],
 					frame: [
 						'unchanged Bay Feeder = S1/V1/Feeder',
@@ -947,11 +1001,15 @@ describe('placement mapping — an update finds where the instance was placed', 
 					placement: [
 						heldLevel(fromTheClickedVoltageLevel[0], substation),
 						heldLevel(fromTheClickedVoltageLevel[1], voltageLevel),
-						heldLevel(fromTheClickedVoltageLevel[2], {
-							ref: createdBayRef,
-							title: 'Feeder',
-							path: 'S1/V1/Feeder',
-						}),
+						heldLevel(
+							fromTheClickedVoltageLevel[2],
+							{
+								ref: createdBayRef,
+								title: 'Feeder',
+								path: 'S1/V1/Feeder',
+							},
+							true,
+						),
 					],
 					frame: [
 						'unchanged Bay Feeder = S1/V1/Feeder',

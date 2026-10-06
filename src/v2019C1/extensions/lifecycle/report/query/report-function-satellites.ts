@@ -6,7 +6,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
-import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
@@ -38,6 +38,8 @@ export async function foldCarriedSatellites(
 		matchKey?: MatchKey
 		/** What belongs to the other instances of the function. */
 		resolveForeignScope?: ResolveForeignScope
+		/** What the whole report already listed and named. */
+		pass?: ReportPass
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance, report } = params
@@ -48,6 +50,7 @@ export async function foldCarriedSatellites(
 			})
 		: []
 	return foldSatelliteCompanions(query, {
+		pass: params.pass,
 		sourceQuery,
 		primaryRef: functionRef,
 		satelliteRefs,

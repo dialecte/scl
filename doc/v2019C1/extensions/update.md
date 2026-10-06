@@ -143,20 +143,30 @@ Some elements are held once by the project and shared — an `AllocationRole` se
 type ReportMapping = {
 	id: string // record id of the SOURCE element — the key of a choice made for it
 	tagName: string
-	mapping: DecisionMapping // where it lands, as resolved
-	reason: 'decision' | 'lineage' | 'name' | 'none'
-	ambiguous: boolean // several project elements qualified equally: none was picked
+	kind: 'level' | 'shared' // a structural level of the template, or a shared element
+	mapping?: DecisionMapping // where it lands, as resolved — absent: the consumer has to choose
+	collision?: MappingCollision // the value asked for an element to create was taken: what became of it
+	projectOwned?: true // it lands on an element the project owns (reused, not an instance of the source element)
+	parentPath?: string // for an element to create: the path of the element it is created under
+	reason: 'decision' | 'lineage' | 'name' | 'anchor' | 'only' | 'none'
+	ambiguous: boolean // something qualified and nothing was picked
 	selectable: boolean // the consumer may choose another mapping for an element of this kind
 	locked: boolean // the instance being updated already carries this mapping: shown, not changeable
 	candidates: { ref; title: string; path: string }[]
+	dependsOn?: string // the mapping this one follows from (the level above)
+	appliedRef?: Ref // filled by `apply`: the element it became, or was mapped onto
 }
 
 type DecisionMapping = { existing: Ref } | { create: { name?: string } }
+
+type MappingCollision =
+	| { status: 'resolved'; attr: string; from: string; to: string }
+	| { status: 'unresolvable'; violation: ConstraintViolation }
 ```
 
-- **Resolved by default**, first answer wins: the one project element created from this source element by an earlier placement, whatever it is named now (`reason: 'lineage'`); else the project element of the same name when there is exactly one (`'name'`); else a new element (`'none'`). Where several elements qualify equally, none is picked and a new element is created (`ambiguous: true`).
+- **Resolved by default**, first answer wins: the one project element created from this source element by an earlier placement, whatever it is named now (`reason: 'lineage'`); else the project element of the same name when there is exactly one (`'name'`); else a new element (`'none'`). Where several elements qualify equally, none is picked (`ambiguous: true`): the mapping is left **undecided** — `mapping` is absent, the report sets `needsDecisions`, and `apply` refuses until the consumer passed a choice, an existing element or `{ create: {} }`. An element whose mapping cannot be chosen (`selectable: false`) is created under a free name instead.
 - **`candidates`**: every project element of that tag, listed from the placement outwards — the anchor's own level, each level above it, then the rest of the project. For a `locked` mapping, the one element it is mapped onto.
-- **A new element** carries the name `apply` will give it: the source name, or the name the consumer asked for, made free at the level it lands on (`HMI_PC` → `HMI_PC_1`).
+- **A new element** carries the name `apply` will give it: the source name, or the name the consumer asked for, made free where it lands — against the project and against the elements the same report already creates there (`HMI_PC` → `HMI_PC_1`). When the name asked for was not free, `collision` says so: `{ status: 'resolved', attr: 'name', from: 'HMI_PC', to: 'HMI_PC_1' }`. It is the outcome of the schema's uniqueness rule for that element, the same one a placed element goes through ([placement collision resolution](#placement-collision-resolution)), so it is not tied to `name`; `unresolvable` is reserved for a key no value can be changed on. `parentPath` tells where the element is created.
 
 To change a mapping, pass the choice and ask for the report again; then apply with the same `resolution`:
 
@@ -199,11 +209,26 @@ A step pairs a source element with a project element only when neither has anoth
 
 When the template drops a shared element altogether, the project element it was mapped onto stays too. What the instance had given it — its references pointing at an element of that instance — is announced as removed and removed when accepted; the references it holds for the project or for other instances are not touched.
 
-A shared element the template brings that the instance holds nothing for (a role added by a newer template version) is resolved as on a first placement, and the consumer may choose. When the instance does hold elements that could stand for it but nothing tells which — two mapped roles with no function reference, both renamed since — none is guessed: the element is listed as new with `ambiguous: true`, and the consumer maps it.
+A shared element the template brings that the instance holds nothing for (a role added by a newer template version) is resolved as on a first placement, and the consumer may choose. When the instance does hold elements that could stand for it but nothing tells which — two mapped roles with no function reference, both renamed since — none is guessed: the mapping is left undecided with `ambiguous: true` and `reason: 'none'`, and nothing is written until the consumer maps it (the instance keeps what it holds).
 
 Both `report` and `apply` read this one answer, so an update no longer creates a second element beside the one the instantiate mapped.
 
 With several instances of one template, each instance has its own `mappings`. `report.mappings` lists each shared source element once: the mapping still to decide when an instance has yet to be given one (a choice reaches every such instance), else the mapping the instances carry.
+
+### Where a template lands — the levels are mappings too
+
+The structural levels of a template (`Substation`, `VoltageLevel`, `Bay`) are listed in `report.mappings` with `kind: 'level'`, first and top-down, each with `dependsOn` (the level above) and, as `candidates`, the elements of the project below the one the level above lands on. The element the consumer starts from (`anchor`) is a suggestion, not the answer:
+
+- a level the anchor's own chain holds lands there (`reason: 'anchor'`);
+- else the only such level below the one above (`'only'`);
+- else, with several, **none is picked**: `mapping` is absent, `needsDecisions` is set and `apply` refuses until the consumer chose — a level that follows from an undecided one is undecided too;
+- else it is created: under the name the consumer asked for, else its own, a level named `TEMPLATE` being named after its kind — made free where it lands (`collision` tells when the name was taken), with `parentPath` the path it is created under, whether that parent exists in the project or is created by the same placement.
+
+A level the template names (the unit to instantiate and what is below it) is created unless the consumer maps it onto a level of the project, which then receives the content it lacks and keeps what it holds (`projectOwned: true`). Changing where a level lands changes the candidates of the levels below it.
+
+This holds for an SSD, and for an FSD or an ASD started **above** the level its function or application was made for: the template's levels are then listed and resolved the same way, the content lands on the level they say, and the report carries `offLevel: { templateLevel, startedFrom }`. Started at that level or below, nothing is listed and the content lands where the consumer started.
+
+On an update the levels an instance already stands on are listed `locked`, each on the level it was created from or mapped onto.
 
 ### Multiple instances of one template
 

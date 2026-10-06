@@ -69,6 +69,7 @@ export async function resolveSatelliteMappings(
 				ambiguous: false,
 				locked: true,
 				projectOwned: pair.projectOwned,
+				undecided: false,
 			})
 			continue
 		}
@@ -80,10 +81,12 @@ export async function resolveSatelliteMappings(
 			decision: decisionMappings?.get(ref.id),
 			matchKey,
 		})
+		// the instance holds an element for it, but nothing tells which: the consumer's to map
+		const heldUntold = !resolved.existing && undecidedSourceIds.has(ref.id)
 		resolvedMappings.set(ref.id, {
 			...resolved,
-			// the instance holds an element for it, but nothing tells which: the consumer's to map
-			ambiguous: resolved.ambiguous || (!resolved.existing && undecidedSourceIds.has(ref.id)),
+			ambiguous: resolved.ambiguous || heldUntold,
+			undecided: resolved.undecided || (heldUntold && policy.selectable),
 		})
 	}
 	return resolvedMappings

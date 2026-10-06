@@ -16,6 +16,7 @@ function reportedMapping(overrides: Partial<ReportMapping>): ReportMapping {
 	return {
 		id: 'role-s',
 		tagName: 'AllocationRole',
+		kind: 'shared',
 		mapping: { existing: projectRole },
 		reason: 'lineage',
 		ambiguous: false,

@@ -7,7 +7,7 @@ import { foreignScopeResolver } from '@/v2019C1/extensions/lifecycle/instance'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
@@ -37,6 +37,8 @@ export async function reportFunction(
 		decisionMappings?: DecisionMappings
 		/** The project element the function is placed under. */
 		anchor?: Scl.Ref<Scl.ElementsOf>
+		/** What the whole report already listed and named. */
+		pass?: ReportPass
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
@@ -64,6 +66,7 @@ export async function reportFunction(
 			})
 		: undefined
 	const withLayerSatellites = await foldCarriedSatellites(query, {
+		pass: params.pass,
 		sourceQuery,
 		functionRef,
 		instance,
@@ -75,6 +78,7 @@ export async function reportFunction(
 		resolveForeignScope,
 	})
 	return foldCrossCuttingSatellites(query, {
+		pass: params.pass,
 		sourceQuery,
 		primaryRef: functionRef,
 		instancePrimaryRef: instance

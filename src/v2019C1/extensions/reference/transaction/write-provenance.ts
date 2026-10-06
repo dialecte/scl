@@ -1,3 +1,7 @@
+import { throwDialecteError } from '@dialecte/core'
+
+import { SCL_ERRORS } from '@/v2019C1/errors'
+
 import type { ProvenanceTarget, SclFileType, WriteProvenanceParams } from './write-provenance.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -32,7 +36,9 @@ export async function writeProvenance(
 	if (target.anchor === 'document') {
 		const header = await tx.getRecord({ tagName: 'Header' })
 		if (!header) {
-			throw new Error('writeProvenance: document anchor requires a target Header')
+			throwDialecteError(SCL_ERRORS.TARGET_HEADER_MISSING, {
+				detail: 'writeProvenance: document anchor requires a target Header',
+			})
 		}
 		const sourceFiles = await tx.ensureChild(header, { tagName: 'SourceFiles' })
 		await tx.addChild(sourceFiles, { tagName: 'SclFileReference', attributes })

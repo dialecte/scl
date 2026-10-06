@@ -1,6 +1,8 @@
 import { nameCreatedSharedElements } from './name-created-shared-elements'
 import { resolveTargetStructure } from './resolve-target-structure'
 
+import { throwDialecteError } from '@dialecte/core'
+
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
@@ -111,9 +113,10 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 
 	const rootMapping = functionMappings.find((mapping) => mapping.source.id === functionRef.id)
 	if (!rootMapping) {
-		throw new Error(
-			`instantiate.fsd: cloned root not found for ${functionRef.tagName}#${functionRef.id}`,
-		)
+		throwDialecteError('ELEMENT_NOT_FOUND', {
+			detail: `instantiate.fsd: cloned root not found for ${functionRef.tagName}#${functionRef.id}`,
+			ref: functionRef,
+		})
 	}
 
 	// The placed root is a Function, or a SubFunction when `retagRoot` demoted it

@@ -1,3 +1,5 @@
+import { throwDialecteError } from '@dialecte/core'
+
 import { restoreClonedUuids, writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 
@@ -57,5 +59,7 @@ export async function finalizeClonedIdentity(
 
 /** Compile-time guard: a new `IdentityMode` cannot be added without choosing its post-step. */
 function assertExhaustive(mode: never): never {
-	throw new Error(`finalizeClonedIdentity: unhandled identity mode ${String(mode)}`)
+	throwDialecteError('ASSERTION_FAILED', {
+		detail: `finalizeClonedIdentity: unhandled identity mode ${String(mode)}`,
+	})
 }

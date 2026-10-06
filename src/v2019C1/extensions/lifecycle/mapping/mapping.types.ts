@@ -1,4 +1,5 @@
 import type { Config, Scl } from '@/v2019C1/config'
+import type { PlacementResolution } from '@/v2019C1/extensions/lifecycle/constraints/resolve-placement-collision.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTrackedRecord } from '@dialecte/core'
@@ -48,6 +49,12 @@ export type ResolvedMapping = {
 	 * it only receives what the source element contributes below it.
 	 */
 	projectOwned: boolean
+	/**
+	 * Nothing is decided: several project elements qualify, or the instance holds an element that
+	 * could stand for this one, and where it lands is the consumer's to choose. Nothing is written
+	 * until it chose. Never set for an element whose mapping the consumer cannot choose.
+	 */
+	undecided: boolean
 }
 
 /** Where each shared source element of one instance lands, by the record id of the source element. */
@@ -121,28 +128,71 @@ export type MappingCandidate = {
 	path: string
 }
 
+/**
+ * What one pass over a report shares between the elements it describes:
+ *  - the candidates already listed, by tag and anchor — every shared element of a kind is offered
+ *    the same project elements;
+ *  - the values already given to elements to create, by the place and the attribute they are
+ *    unique on — the next element created there cannot take them, exactly as on apply, which
+ *    creates them one after the other.
+ */
+export type ReportPass = {
+	candidates: Map<string, MappingCandidate[]>
+	claimedValues: Map<string, Set<string>>
+}
+
+/**
+ * What the engine did with a value asked for an element to create that was not free where the
+ * element lands: the value it was given instead — or, for a key no value can be changed on, the
+ * violation left to the consumer.
+ */
+export type MappingCollision = Exclude<PlacementResolution, { status: 'ok' }>
+
 /** Where one shared source element lands: an element of the project, or a new one. */
 export type DecisionMapping = { existing: Scl.Ref<Scl.ElementsOf> } | { create: { name?: string } }
 
 /** The consumer's choices, keyed by the record id of the source element. */
 export type DecisionMappings = ReadonlyMap<string, DecisionMapping>
 
-/** What the report says about one shared source element. */
+/**
+ * What a mapping is about: a structural `level` of the template (where its content is placed), or
+ * a `shared` element the project holds once and the template refers to.
+ */
+export type MappingKind = 'level' | 'shared'
+
+/** What the report says about one source element that lands on an element of the project. */
 export type ReportMapping = {
 	/** Record id of the source element; the key of a choice made for it. */
 	id: string
 	tagName: string
+	kind: MappingKind
 	/**
 	 * Where it lands. Absent: nothing is decided — several elements qualify and none is picked for
-	 * the consumer (a structural level), or it follows from a mapping that is not decided yet. The
-	 * report then asks for a decision and `apply` refuses until the consumer chose.
+	 * the consumer, or it follows from a mapping that is not decided yet. The report then asks for
+	 * a decision and `apply` refuses until the consumer chose.
 	 */
 	mapping?: DecisionMapping
+	/**
+	 * For an element to create: the value asked for (the consumer's, else the template's) was not
+	 * free where it lands, and what became of it. `mapping.create.name` is the value given.
+	 */
+	collision?: MappingCollision
+	/**
+	 * Set when it lands on an element the project owns — reused, not an instance of the source
+	 * element: that element keeps its own attributes and only gains what the source contributes.
+	 */
+	projectOwned?: true
+	/**
+	 * For an element to create: the path of the element it is created under — an element of the
+	 * project, or one this placement creates too.
+	 */
+	parentPath?: string
 	reason: MappingReason
 	/**
 	 * Nothing was picked although something qualified: several project elements qualified equally
 	 * (`reason` tells how) or — with the reason `none` — the instance being updated holds an element
-	 * that could stand for this one and nothing tells whether it does.
+	 * that could stand for this one and nothing tells whether it does. When the consumer may choose
+	 * (`selectable`), the mapping is then left undecided; otherwise a new element is created.
 	 */
 	ambiguous: boolean
 	/** The consumer may choose another mapping for an element of this kind. */

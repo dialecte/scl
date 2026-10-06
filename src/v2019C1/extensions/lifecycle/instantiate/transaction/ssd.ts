@@ -1,3 +1,6 @@
+import { throwDialecteError } from '@dialecte/core'
+
+import { SCL_ERRORS } from '@/v2019C1/errors'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
@@ -34,7 +37,11 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	const decisionMappings = params.decisionMappings
 
 	const root = scopeRef ?? (await resolveInstantiableRoot(sourceQuery))
-	if (!root) throw new Error('instantiate.ssd: no instantiable root found in the SSD')
+	if (!root) {
+		throwDialecteError(SCL_ERRORS.TEMPLATE_ROOT_NOT_FOUND, {
+			detail: 'instantiate.ssd: no instantiable root found in the SSD',
+		})
+	}
 
 	// where each level of the template lands — the answer the report listed
 	const placementLevels = await resolvePlacementMappings(tx, {

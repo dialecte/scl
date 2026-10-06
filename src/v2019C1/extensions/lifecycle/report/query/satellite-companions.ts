@@ -8,6 +8,7 @@ import {
 	findInstanceByTemplateUuid,
 } from '@/v2019C1/extensions/lifecycle/instance'
 import {
+	createReportPass,
 	describeMapping,
 	findMappingPolicy,
 	findWithdrawnContributions,
@@ -21,6 +22,7 @@ import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instanc
 import type {
 	DecisionMappings,
 	ReportMapping,
+	ReportPass,
 	ResolvedMapping,
 	ResolvedMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -78,6 +80,8 @@ export async function foldSatelliteCompanions(
 		 * satellite's references to it are theirs, not this instance's.
 		 */
 		resolveForeignScope?: ResolveForeignScope
+		/** What the whole report already listed and named, shared by every fold of that report. */
+		pass?: ReportPass
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
@@ -101,6 +105,8 @@ export async function foldSatelliteCompanions(
 		if (resolved.existing) mappedOntoIds.add(resolved.existing.id)
 	}
 
+	// what the report already listed and named: the caller's, else this fold's own
+	const pass = params.pass ?? createReportPass()
 	for (const satelliteRef of satelliteRefs) {
 		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
 
@@ -117,6 +123,7 @@ export async function foldSatelliteCompanions(
 			decisionMappings: params.decisionMappings,
 			anchor: params.anchor,
 			matchKey: params.matchKey,
+			pass,
 		})
 		if (mapping) report.mappings = [...(report.mappings ?? []), mapping]
 		const foreignScope = instance ? await params.resolveForeignScope?.() : undefined
@@ -231,6 +238,7 @@ async function findSatelliteTarget(
 		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		matchKey?: MatchKey
+		pass?: ReportPass
 	},
 ): Promise<{
 	target: AnyTrackedRecord | undefined
@@ -249,6 +257,7 @@ async function findSatelliteTarget(
 			resolved,
 			decision: params.decisionMappings?.get(satelliteId),
 			anchor: params.anchor,
+			pass: params.pass,
 		})
 		return {
 			target: resolved.existing,

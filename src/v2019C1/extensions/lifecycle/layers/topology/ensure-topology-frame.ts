@@ -148,6 +148,7 @@ async function reuseTargetAncestors(
 				reason: 'none',
 				ambiguous: false,
 				locked: false,
+				undecided: false,
 				projectOwned: reused !== undefined,
 			},
 		})

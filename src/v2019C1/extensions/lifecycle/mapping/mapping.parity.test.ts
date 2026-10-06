@@ -7,6 +7,7 @@ import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } fro
 import { collectReferenceViolations } from '@/v2019C1/test/assert-coherent-scl-references'
 
 import type { Scl } from '@/v2019C1/config'
+import type { DecisionMapping } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { SclTest } from '@/v2019C1/test'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -43,6 +44,8 @@ const sourceXml = /* xml */ `
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
+	/** The consumer's choices, by source record id. */
+	chosen?: [string, DecisionMapping][]
 	expected: {
 		/** Record id of the project role both the report and the apply map the source role onto. */
 		mappedOnto: string | undefined
@@ -90,7 +93,7 @@ describe('shared-element mapping — the report says what apply does', () => {
 			`,
 			expected: { mappedOnto: undefined, roleNames: ['Gateway', 'HMI_PC'] },
 		},
-		'two roles of that name in the project → neither is picked, both sides create it under a free name':
+		'two roles of that name in the project, the consumer has a new one created → both sides create it under a free name':
 			{
 				sourceXml,
 				targetXml: /* xml */ `
@@ -108,6 +111,8 @@ describe('shared-element mapping — the report says what apply does', () => {
 					</Substation>
 				</SCL>
 			`,
+				// with several of that name nothing is picked: where the role lands is the consumer's choice
+				chosen: [['role-s', { create: {} }]],
 				expected: { mappedOnto: undefined, roleNames: ['HMI_PC', 'HMI_PC', 'HMI_PC_1'] },
 			},
 		'the project role has its own description → mapped onto it, description kept and not announced as a change':
@@ -149,7 +154,11 @@ describe('shared-element mapping — the report says what apply does', () => {
 		}
 
 		// what the report says: the source role is a companion matched onto a project role, or not
-		const reported = await report(target.query, lifecycleTarget)
+		const decisionMappings = new Map(testCase.chosen ?? [])
+		const reported = await report(target.query, {
+			...lifecycleTarget,
+			resolution: { mappings: decisionMappings },
+		})
 		const roleCompanion = allGroups(reported)
 			.flatMap((group) => group.companions)
 			.find((companion) => companion.tagName === 'AllocationRole')
@@ -159,7 +168,7 @@ describe('shared-element mapping — the report says what apply does', () => {
 			await apply(tx, {
 				...lifecycleTarget,
 				report: reported,
-				resolution: { decisions: new Map() },
+				resolution: { decisions: new Map(), mappings: decisionMappings },
 			})
 		})
 

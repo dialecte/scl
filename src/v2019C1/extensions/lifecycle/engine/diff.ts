@@ -9,6 +9,7 @@ import {
 } from './reference-match'
 import { visibleAttributes } from './visible-attributes'
 
+import { throwDialecteError } from '@dialecte/core'
 import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
@@ -141,7 +142,9 @@ export async function diff(params: {
 	const omit = params.omit
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
-	if (!sourceTree) throw new Error('diff: source subtree not found')
+	if (!sourceTree) {
+		throwDialecteError('ELEMENT_NOT_FOUND', { detail: 'diff: source subtree not found' })
+	}
 
 	const instanceTree = instanceRootRef ? await targetQuery.any.getTree(instanceRootRef) : undefined
 

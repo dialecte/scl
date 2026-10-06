@@ -30,7 +30,7 @@ import type {
 	InstanceDiff,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -65,6 +65,8 @@ export async function reportAsd(
 		 * applications).
 		 */
 		resolvePlacement?: boolean
+		/** What the whole report already listed and named. */
+		pass?: ReportPass
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings } = params
@@ -105,6 +107,7 @@ export async function reportAsd(
 	const reportInstances: ReportInstance[] = []
 	if (firstPlacement) {
 		const instanceDiff = await reportApplicationInstance(query, {
+			pass: params.pass,
 			sourceQuery,
 			applicationRef,
 			instance: undefined,
@@ -129,6 +132,7 @@ export async function reportAsd(
 		const foreignScopes = await collectForeignScopes(query, { instances: matchedApplications })
 		for (const instance of applicationInstances) {
 			const instanceDiff = await reportApplicationInstance(query, {
+				pass: params.pass,
 				sourceQuery,
 				applicationRef,
 				instance,
@@ -150,6 +154,7 @@ export async function reportAsd(
 	}
 
 	const functionInstances = await reportComposedFunctions(query, {
+		pass: params.pass,
 		sourceQuery,
 		applicationRef,
 		scenario,
@@ -178,6 +183,8 @@ async function reportApplicationInstance(
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		/** What belongs to the other instances of the application. */
 		foreignScope?: ReadonlySet<string>
+		/** What the whole report already listed and named. */
+		pass?: ReportPass
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
@@ -221,6 +228,7 @@ async function reportApplicationInstance(
 	}
 
 	await foldSatelliteCompanions(query, {
+		pass: params.pass,
 		sourceQuery,
 		primaryRef: applicationRef,
 		satelliteRefs,
@@ -241,6 +249,7 @@ async function reportApplicationInstance(
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
 	// in the Application subtree travel with the application group
 	await foldCrossCuttingSatellites(query, {
+		pass: params.pass,
 		sourceQuery,
 		primaryRef: applicationRef,
 		instancePrimaryRef: instance
@@ -266,6 +275,8 @@ async function reportComposedFunctions(
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
 		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
+		/** What the whole report already listed and named. */
+		pass?: ReportPass
 	},
 ): Promise<ReportInstance[]> {
 	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings, anchor } = params
@@ -296,6 +307,7 @@ async function reportComposedFunctions(
 		})
 		if (functionInstances.length === 0) {
 			const instanceDiff = await reportFunction(query, {
+				pass: params.pass,
 				sourceQuery,
 				functionRef,
 				instance: undefined,
@@ -316,6 +328,7 @@ async function reportComposedFunctions(
 		}
 		for (const functionInstance of functionInstances) {
 			const instanceDiff = await reportFunction(query, {
+				pass: params.pass,
 				sourceQuery,
 				functionRef,
 				instance: functionInstance,

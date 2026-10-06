@@ -1,6 +1,8 @@
 import { toRef } from '@dialecte/core/helpers'
 import { invariant } from '@dialecte/core/utils'
 
+import { SCL_ERRORS } from '@/v2019C1/errors'
+
 import type { PlacementLevel } from './resolve-placement-mappings.types'
 import type { Scl } from '@/v2019C1/config'
 
@@ -35,6 +37,13 @@ export function assertPlacementDecided(params: {
 
 	const undecided = placementLevels.find((level) => level.undecided && level.resolved.ambiguous)
 	invariant(!undecided, {
+		key: SCL_ERRORS.MAPPING_UNDECIDED,
+		meta: {
+			sourceId: undecided?.sourceRef.id,
+			tagName: undecided?.sourceRef.tagName,
+			kind: 'level',
+			operation,
+		},
 		detail: `${operation}: where the <${undecided?.sourceRef.tagName}> of the template lands is not decided: several elements of the project qualify, choose one or have a new one created`,
 	})
 }

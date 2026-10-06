@@ -1,3 +1,4 @@
+import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
@@ -64,6 +65,16 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	/** A fragment of the refusal when the report rejects the choices; nothing else is then checked. */
 	expectedRejection?: string
 	expectedMappings: ReportMapping[]
+	/**
+	 * Only the names the report gives the roles to create, in report order, and the names apply
+	 * gives them - the rest of the mappings is not checked.
+	 */
+	expectedNames?: string[]
+	/** With `expectedNames`: what the report says of each name the engine had to change. */
+	expectedCollisions?: ReportMapping['collision'][]
+	/** A fragment of the refusal when apply is run on the report as it is. */
+	expectedApplyRefusal?: string
+	expectedNeedsDecisions?: boolean
 	/** Once applied — left out when the case only concerns the report. */
 	expectedApplied?: {
 		/** Record id of the project role the report folds the source role onto, if any. */
@@ -92,7 +103,10 @@ describe('shared-element mapping — the report lists where each shared element 
 					{
 						id: 'role-s',
 						tagName: 'AllocationRole',
+						kind: 'shared',
 						mapping: { existing: { tagName: 'AllocationRole', id: 'role-t' } },
+						// the role is the project's own: it is reused, not an instance of the template's
+						projectOwned: true,
 						reason: 'name',
 						ambiguous: false,
 						selectable: true,
@@ -110,7 +124,9 @@ describe('shared-element mapping — the report lists where each shared element 
 				{
 					id: 'role-s',
 					tagName: 'AllocationRole',
+					kind: 'shared',
 					mapping: { existing: { tagName: 'AllocationRole', id: 'gateway-t' } },
+					projectOwned: true,
 					reason: 'decision',
 					ambiguous: false,
 					selectable: true,
@@ -134,7 +150,11 @@ describe('shared-element mapping — the report lists where each shared element 
 					{
 						id: 'role-s',
 						tagName: 'AllocationRole',
+						kind: 'shared',
 						mapping: { create: { name: 'HMI_PC_1' } },
+						// a role of that name exists: the new one is created beside it, under the next free name
+						collision: { status: 'resolved', attr: 'name', from: 'HMI_PC', to: 'HMI_PC_1' },
+						parentPath: 'S1',
 						reason: 'decision',
 						ambiguous: false,
 						selectable: true,
@@ -156,7 +176,9 @@ describe('shared-element mapping — the report lists where each shared element 
 				{
 					id: 'role-s',
 					tagName: 'AllocationRole',
+					kind: 'shared',
 					mapping: { create: { name: 'HMI_Bay7' } },
+					parentPath: 'S1',
 					reason: 'decision',
 					ambiguous: false,
 					selectable: true,
@@ -179,7 +201,11 @@ describe('shared-element mapping — the report lists where each shared element 
 					{
 						id: 'role-s',
 						tagName: 'AllocationRole',
+						kind: 'shared',
 						mapping: { create: { name: 'Gateway_1' } },
+						// the name asked for is taken: the report says what it became
+						collision: { status: 'resolved', attr: 'name', from: 'Gateway', to: 'Gateway_1' },
+						parentPath: 'S1',
 						reason: 'decision',
 						ambiguous: false,
 						selectable: true,
@@ -192,6 +218,48 @@ describe('shared-element mapping — the report lists where each shared element 
 					rolePath: 'S1/Gateway_1',
 					roleNames: ['Gateway', 'Gateway_1', 'HMI_PC'],
 				},
+			},
+		'two roles of the template, both to create under one name → the second is reported under the free name apply gives it':
+			{
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="asd">
+						<Substation name="TEMPLATE" ${id}="substation-s">
+							<Private type="eIEC61850-6-100" ${id}="private-s">
+								<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="role-source-uuid" ${id}="role-s">
+									<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="function-source-uuid" ${id}="role-function-ref-s"/>
+								</eIEC61850-6-100:AllocationRole>
+								<eIEC61850-6-100:AllocationRole name="RTU" uuid="rtu-source-uuid" ${id}="rtu-s">
+									<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="function-source-uuid" ${id}="rtu-function-ref-s"/>
+								</eIEC61850-6-100:AllocationRole>
+								<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="application-source-uuid" ${id}="application-s">
+									<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="function-role-s">
+										<eIEC61850-6-100:FunctionRoleContent ${id}="function-role-content-s">
+											<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="function-source-uuid" ${id}="application-function-ref-s"/>
+										</eIEC61850-6-100:FunctionRoleContent>
+									</eIEC61850-6-100:FunctionRole>
+									<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/HMI_PC" allocationRoleUuid="role-source-uuid" ${id}="role-ref-s"/>
+									<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/RTU" allocationRoleUuid="rtu-source-uuid" ${id}="rtu-ref-s"/>
+								</eIEC61850-6-100:Application>
+							</Private>
+							<VoltageLevel name="TEMPLATE" ${id}="voltage-level-s">
+								<Bay name="TEMPLATE" ${id}="bay-s">
+									<Function name="Prot" uuid="function-source-uuid" ${id}="function-s"/>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				targetXml: projectXml,
+				chosen: [
+					['role-s', { create: { name: 'Station' } }],
+					['rtu-s', { create: { name: 'Station' } }],
+				],
+				expectedNames: ['Station', 'Station_1'],
+				expectedCollisions: [
+					undefined,
+					{ status: 'resolved', attr: 'name', from: 'Station', to: 'Station_1' },
+				],
+				expectedMappings: [],
 			},
 		'a choice for an element the template does not bring → refused': {
 			sourceXml,
@@ -219,7 +287,10 @@ describe('shared-element mapping — the report lists where each shared element 
 				{
 					id: 'role-s',
 					tagName: 'AllocationRole',
+					kind: 'shared',
 					mapping: { create: { name: 'HMI_PC' } },
+					// created at the level the template holds it on
+					parentPath: 'S1',
 					reason: 'none',
 					ambiguous: false,
 					selectable: true,
@@ -228,7 +299,7 @@ describe('shared-element mapping — the report lists where each shared element 
 				},
 			],
 		},
-		'two roles of that name in the project → listed as created under a free name, flagged ambiguous':
+		'two roles of that name in the project → nothing is picked: the consumer has to choose, apply refuses until then':
 			{
 				sourceXml,
 				targetXml: /* xml */ `
@@ -250,7 +321,8 @@ describe('shared-element mapping — the report lists where each shared element 
 					{
 						id: 'role-s',
 						tagName: 'AllocationRole',
-						mapping: { create: { name: 'HMI_PC_1' } },
+						kind: 'shared',
+						// no `mapping`: neither of the two is picked, and none is created behind the consumer's back
 						reason: 'name',
 						ambiguous: true,
 						selectable: true,
@@ -270,6 +342,8 @@ describe('shared-element mapping — the report lists where each shared element 
 						],
 					},
 				],
+				expectedNeedsDecisions: true,
+				expectedApplyRefusal: 'not decided',
 			},
 		'roles at several levels of the project → candidates listed from the placement outwards': {
 			sourceXml,
@@ -301,7 +375,9 @@ describe('shared-element mapping — the report lists where each shared element 
 				{
 					id: 'role-s',
 					tagName: 'AllocationRole',
+					kind: 'shared',
 					mapping: { create: { name: 'HMI_PC' } },
+					parentPath: 'S1',
 					reason: 'none',
 					ambiguous: false,
 					selectable: true,
@@ -359,7 +435,60 @@ describe('shared-element mapping — the report lists where each shared element 
 			...lifecycleTarget,
 			resolution: { mappings: decisionMappings },
 		})
+		if (testCase.expectedNames) {
+			const reportedNames = reported.mappings.map(
+				(mapping) => mapping.mapping && 'create' in mapping.mapping && mapping.mapping.create.name,
+			)
+			expect(reportedNames, 'report').toEqual(testCase.expectedNames)
+			if (testCase.expectedCollisions) {
+				const reportedCollisions = reported.mappings.map((mapping) => mapping.collision)
+				expect(reportedCollisions, 'report').toEqual(testCase.expectedCollisions)
+			}
+			await target.transaction(async (tx) => {
+				await apply(tx, {
+					...lifecycleTarget,
+					report: reported,
+					resolution: { decisions: new Map(), mappings: decisionMappings },
+				})
+			})
+			// each row says the name apply gives that very role
+			for (const mapping of reported.mappings) {
+				const sourceUuid = await source.query.getAttribute(
+					{ tagName: 'AllocationRole', id: mapping.id } as Scl.Ref<'AllocationRole'>,
+					{ name: 'uuid' },
+				)
+				const [created] = await target.query.findByAttributes({
+					tagName: 'AllocationRole',
+					attributes: { templateUuid: sourceUuid ?? '' },
+				})
+				const appliedName = await target.query.getAttribute(created, { name: 'name' })
+				const reportedName =
+					mapping.mapping && 'create' in mapping.mapping ? mapping.mapping.create.name : undefined
+				expect(appliedName, `apply, ${mapping.id}`).toBe(reportedName)
+			}
+			return
+		}
 		expect(reported.mappings).toEqual(testCase.expectedMappings)
+		if (testCase.expectedNeedsDecisions !== undefined) {
+			expect(reported.needsDecisions).toBe(testCase.expectedNeedsDecisions)
+		}
+		if (testCase.expectedApplyRefusal) {
+			const refused = target.transaction(async (tx) => {
+				await apply(tx, {
+					...lifecycleTarget,
+					report: reported,
+					resolution: { decisions: new Map(), mappings: decisionMappings },
+				})
+			})
+			await expect(refused).rejects.toThrow(testCase.expectedApplyRefusal)
+			// the refusal is identified by a key and says what it is about, as data
+			const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+			expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
+				key: 'MAPPING_UNDECIDED',
+				meta: { sourceId: 'role-s', tagName: 'AllocationRole', kind: 'shared' },
+			})
+			return
+		}
 
 		const expectedApplied = testCase.expectedApplied
 		if (!expectedApplied) return

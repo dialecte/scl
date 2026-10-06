@@ -3,7 +3,7 @@ import { reportAsd, reportFsd, reportSsd } from './query'
 
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import { assertMappingsCoherent } from '@/v2019C1/extensions/lifecycle/mapping'
+import { assertMappingsCoherent, createReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 
 import type { Config } from '@/v2019C1/config'
 import type { LifecycleReportParams } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -25,9 +25,13 @@ export async function report(
 	query: Core.Query<Config>,
 	target: LifecycleReportParams,
 ): Promise<DiffReport> {
+	// what the report lists and names is shared by all it describes: the names it gives to the
+	// elements to create are those apply gives them, one after the other
+	const pass = createReportPass()
 	const report =
 		target.verb === 'fsd'
 			? await reportFsd(query, {
+					pass,
 					sourceQuery: target.sourceQuery,
 					functionRef: target.ref,
 					targetParent: target.anchor,
@@ -38,6 +42,7 @@ export async function report(
 				})
 			: target.verb === 'ssd'
 				? await reportSsd(query, {
+						pass,
 						sourceQuery: target.sourceQuery,
 						// the SSD scope is the instantiable root (first named element below the TEMPLATE scaffolding), resolved
 						// from the source - not `target.ref`, which is only the coarse process-section anchor.
@@ -47,6 +52,7 @@ export async function report(
 						decisionMappings: target.resolution?.mappings,
 					})
 				: await reportAsd(query, {
+						pass,
 						sourceQuery: target.sourceQuery,
 						applicationRef: target.ref,
 						scenario: target.scenario,
@@ -59,6 +65,9 @@ export async function report(
 	for (const group of allGroups(report)) {
 		group.editableAttributes = editableAttributes(group.primary.tagName)
 	}
+
+	// a mapping nothing is decided for is the consumer's to choose before anything is written
+	if (report.mappings.some((mapping) => !mapping.mapping)) report.needsDecisions = true
 
 	// flag the placement collisions the engine resolves by itself (auto-value on an editable field)
 	await markPlacementConflicts(query, target, report)

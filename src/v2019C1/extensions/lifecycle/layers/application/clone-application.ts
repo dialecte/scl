@@ -2,7 +2,11 @@ import {
 	cloneFunction,
 	cloneFunctionCategories,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
-import { findMappingPolicy, resolveMapping } from '@/v2019C1/extensions/lifecycle/mapping'
+import {
+	assertMappingDecided,
+	findMappingPolicy,
+	resolveMapping,
+} from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	addChildrenTo,
 	cloneAllReferencedTargets,
@@ -183,6 +187,10 @@ async function mapAllocationRoles(
 			sourceRef: { tagName: 'AllocationRole', id: sourceRole.id },
 			policy,
 			decision: decisionMappings?.get(sourceRole.id),
+		})
+		assertMappingDecided({
+			sourceRef: { tagName: 'AllocationRole', id: sourceRole.id },
+			resolved: mapping,
 		})
 		const existing = mapping.existing
 		if (!existing) continue

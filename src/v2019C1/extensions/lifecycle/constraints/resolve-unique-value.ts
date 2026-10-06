@@ -1,5 +1,7 @@
 import { findConstraintViolation } from './find-constraint-violation'
 
+import { throwDialecteError } from '@dialecte/core'
+
 import type { CollisionDecorator } from './resolve-unique-value.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -26,16 +28,22 @@ export async function resolveUniqueValue(
 		attr: string
 		decorate?: CollisionDecorator
 		excludeId?: string
+		/**
+		 * Values already given to elements that do not exist yet (a report describing several
+		 * elements to create): taken too, as they will be once those elements are created.
+		 */
+		claimed?: ReadonlySet<string>
 	},
 ): Promise<string> {
-	const { parentRef, childTag, candidate, attr, decorate, excludeId } = params
+	const { parentRef, childTag, candidate, attr, decorate, excludeId, claimed } = params
 	const base = candidate[attr] ?? ''
 
 	const asIs = await findConstraintViolation(query, { parentRef, childTag, candidate, excludeId })
-	if (!asIs) return base
+	if (!asIs && !claimed?.has(base)) return base
 
 	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
 		const value = decorate ? decorate({ base, attempt, attr, childTag }) : `${base}_${attempt}`
+		if (claimed?.has(value)) continue
 		const trial = { ...candidate, [attr]: value }
 		const violation = await findConstraintViolation(query, {
 			parentRef,
@@ -46,7 +54,9 @@ export async function resolveUniqueValue(
 		if (!violation) return value
 	}
 
-	throw new Error(
-		`could not resolve a unique ${attr} for <${childTag}> under <${parentRef.tagName}> after ${MAX_ATTEMPTS} attempts`,
-	)
+	throwDialecteError('UNIQUE_CONSTRAINT_VIOLATION', {
+		detail: `could not resolve a unique ${attr} for <${childTag}> under <${parentRef.tagName}> after ${MAX_ATTEMPTS} attempts`,
+		ref: parentRef,
+		meta: { attr, childTag, value: base },
+	})
 }

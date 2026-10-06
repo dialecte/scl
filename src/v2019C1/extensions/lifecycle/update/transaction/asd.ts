@@ -26,6 +26,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
+	assertMappingsDecided,
 	findWithdrawnContributions,
 	resolveSatelliteMappings,
 	toRedirectMappings,
@@ -190,6 +191,8 @@ export async function asd(
 			decisionMappings: params.decisionMappings,
 			matchKey,
 		})
+		// a shared element nothing is decided for: nothing is written until the consumer chose
+		assertMappingsDecided({ satelliteRefs, resolvedMappings })
 		const redirectMappings = await toRedirectMappings({
 			sourceQuery,
 			satelliteRefs,

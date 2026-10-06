@@ -1,4 +1,8 @@
-import { findMappingPolicy, resolveMapping } from '@/v2019C1/extensions/lifecycle/mapping'
+import {
+	assertMappingDecided,
+	findMappingPolicy,
+	resolveMapping,
+} from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	deep as deepExtract,
 	cloneTree,
@@ -195,11 +199,18 @@ async function findMappedCategory(
 	const { sourceQuery, categoryRef, policy, decision } = params
 	if (!policy) return undefined
 
-	const { existing } = await resolveMapping(tx, {
+	const resolved = await resolveMapping(tx, {
 		sourceQuery,
 		sourceRef: categoryRef,
 		policy,
 		decision,
 	})
+	if (categoryRef.id) {
+		assertMappingDecided({
+			sourceRef: { tagName: 'FunctionCategory', id: categoryRef.id },
+			resolved,
+		})
+	}
+	const { existing } = resolved
 	return existing ? { tagName: 'FunctionCategory', id: existing.id } : undefined
 }

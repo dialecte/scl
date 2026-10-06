@@ -1,5 +1,7 @@
 import { invariant } from '@dialecte/core/utils'
 
+import { SCL_ERRORS } from '@/v2019C1/errors'
+
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type {
 	DecisionGroup,
@@ -100,6 +102,8 @@ export function assertDecisionsCoherent(params: {
 		if (!isAccepted({ group, decisions })) continue
 		for (const parentId of group.dependsOn) {
 			invariant(isAccepted({ group: groupById(groups, parentId) ?? group, decisions }), {
+				key: SCL_ERRORS.DECISION_DEPENDENCY_SKIPPED,
+				meta: { groupId: group.id, dependencyId: parentId },
 				detail: `decision accepts group "${group.id}" but its dependency "${parentId}" is skipped`,
 			})
 		}

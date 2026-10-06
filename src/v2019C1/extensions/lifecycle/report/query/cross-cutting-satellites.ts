@@ -5,6 +5,7 @@ import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-c
 import type { Config, Scl } from '@/v2019C1/config'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type { ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 
@@ -34,6 +35,8 @@ export async function foldCrossCuttingSatellites(
 		matchKey?: MatchKey
 		/** What belongs to the other instances of the primary's template. */
 		resolveForeignScope?: ResolveForeignScope
+		/** What the whole report already listed and named. */
+		pass?: ReportPass
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, instancePrimaryRef, report } = params
@@ -44,6 +47,7 @@ export async function foldCrossCuttingSatellites(
 		: []
 
 	return foldSatelliteCompanions(query, {
+		pass: params.pass,
 		sourceQuery,
 		primaryRef,
 		satelliteRefs,

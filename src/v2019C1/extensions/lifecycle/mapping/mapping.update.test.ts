@@ -194,6 +194,8 @@ type TestCase = SclTest.BaseXmlTestCase & {
 		announcedNewRoles: number
 		/** How many allocations of the source role the report announces as new. */
 		announcedNewAllocations: number
+		/** A fragment of the refusal when the update is applied on the report as it is; nothing else is then checked. */
+		applyRefusal?: string
 		/** How many allocations the report announces as removed from a role — none when left out. */
 		announcedRemovedAllocations?: number
 		/** Names of every AllocationRole of the project once updated. */
@@ -246,7 +248,9 @@ const allocateSecondFunction = async (tx: Scl.Transaction): Promise<void> => {
 const lockedOntoProjectRole: ReportMapping = {
 	id: 'role-s',
 	tagName: 'AllocationRole',
+	kind: 'shared',
 	mapping: { existing: projectRoleRef },
+	projectOwned: true,
 	reason: 'lineage',
 	ambiguous: false,
 	selectable: true,
@@ -352,6 +356,8 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 						{
 							...lockedOntoProjectRole,
 							mapping: { existing: createdRoleRef },
+							// created by the instantiate: the template's own role, not the project's
+							projectOwned: undefined,
 							candidates: [{ ref: createdRoleRef, title: 'HMI_PC', path: 'S1/HMI_PC' }],
 						},
 					],
@@ -378,6 +384,7 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 						{
 							id: 'role-s',
 							tagName: 'AllocationRole',
+							kind: 'shared',
 							mapping: { existing: createdRoleRef },
 							reason: 'lineage',
 							ambiguous: false,
@@ -428,6 +435,7 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 						{
 							...lockedOntoProjectRole,
 							mapping: { existing: projectControlRoleRef },
+							projectOwned: true,
 							candidates: [{ ref: projectControlRoleRef, title: 'BAY_CTRL', path: 'S1/BAY_CTRL' }],
 						},
 					],
@@ -455,6 +463,7 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 							...lockedOntoProjectRole,
 							id: 'control-role-s',
 							mapping: { existing: projectControlRoleRef },
+							projectOwned: true,
 							candidates: [
 								{ ref: projectControlRoleRef, title: 'Controller', path: 'S1/Controller' },
 							],
@@ -468,7 +477,7 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 					roleAllocations: ['S1/V1/B1/Prot'],
 				},
 			},
-		'two roles that allocate nothing, mapped onto project roles, both renamed since → nothing tells them apart: listed as new, flagged ambiguous, for the consumer to map':
+		'two roles that allocate nothing, mapped onto project roles, both renamed since → nothing tells them apart: neither is picked, the consumer has to map them, apply refuses until then':
 			{
 				sourceXml: twoBareRolesSourceXml,
 				targetXml: twoRolesProjectXml,
@@ -479,7 +488,8 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 						{
 							id: 'role-s',
 							tagName: 'AllocationRole',
-							mapping: { create: { name: 'HMI_PC' } },
+							kind: 'shared',
+							// no `mapping`: the instance holds a role that may be this one, nothing tells
 							reason: 'none',
 							ambiguous: true,
 							selectable: true,
@@ -489,7 +499,7 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 						{
 							id: 'control-role-s',
 							tagName: 'AllocationRole',
-							mapping: { create: { name: 'BAY_CTRL' } },
+							kind: 'shared',
 							reason: 'none',
 							ambiguous: true,
 							selectable: true,
@@ -499,8 +509,9 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 					],
 					announcedNewRoles: 2,
 					announcedNewAllocations: 0,
-					roleNames: ['BAY_CTRL', 'Controller', 'HMI_PC', 'Workstation'],
-					applicationRoles: ['S1/BAY_CTRL', 'S1/HMI_PC'],
+					applyRefusal: 'not decided',
+					roleNames: ['Controller', 'Workstation'],
+					applicationRoles: [],
 					roleDescription: undefined,
 					roleAllocations: [],
 				},
@@ -519,7 +530,9 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 					{
 						id: 'role-s',
 						tagName: 'AllocationRole',
+						kind: 'shared',
 						mapping: { existing: projectRoleRef },
+						projectOwned: true,
 						reason: 'decision',
 						ambiguous: false,
 						selectable: true,
@@ -529,7 +542,9 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 					{
 						id: 'control-role-s',
 						tagName: 'AllocationRole',
+						kind: 'shared',
 						mapping: { existing: projectControlRoleRef },
+						projectOwned: true,
 						reason: 'decision',
 						ambiguous: false,
 						selectable: true,
@@ -557,7 +572,9 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 						{
 							id: 'role-s',
 							tagName: 'AllocationRole',
+							kind: 'shared',
 							mapping: { existing: projectRoleRef },
+							projectOwned: true,
 							reason: 'decision',
 							ambiguous: false,
 							selectable: true,
@@ -567,7 +584,9 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 						{
 							id: 'control-role-s',
 							tagName: 'AllocationRole',
+							kind: 'shared',
 							mapping: { create: { name: 'BAY_CTRL' } },
+							parentPath: 'S1',
 							reason: 'none',
 							ambiguous: false,
 							selectable: true,
@@ -599,7 +618,9 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 						{
 							id: 'control-role-s',
 							tagName: 'AllocationRole',
+							kind: 'shared',
 							mapping: { create: { name: 'BAY_CTRL' } },
+							parentPath: 'S1',
 							reason: 'decision',
 							ambiguous: false,
 							selectable: true,
@@ -615,7 +636,7 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 					roleAllocations: [],
 				},
 			},
-		'… and with no choice at all → both are listed as new, flagged ambiguous: the instance lets go of the role it held':
+		'… and with no choice at all → neither is picked, apply refuses: the instance keeps the role it held':
 			{
 				sourceXml: secondRoleUnusedSourceXml,
 				targetXml: twoRolesProjectXml,
@@ -626,7 +647,8 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 						{
 							id: 'role-s',
 							tagName: 'AllocationRole',
-							mapping: { create: { name: 'HMI_PC' } },
+							kind: 'shared',
+							// no `mapping`: the instance holds a role that may be this one, nothing tells
 							reason: 'none',
 							ambiguous: true,
 							selectable: true,
@@ -636,7 +658,7 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 						{
 							id: 'control-role-s',
 							tagName: 'AllocationRole',
-							mapping: { create: { name: 'BAY_CTRL' } },
+							kind: 'shared',
 							reason: 'none',
 							ambiguous: true,
 							selectable: true,
@@ -646,8 +668,9 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 					],
 					announcedNewRoles: 2,
 					announcedNewAllocations: 0,
-					roleNames: ['BAY_CTRL', 'Controller', 'HMI_PC', 'Workstation'],
-					applicationRoles: ['S1/BAY_CTRL', 'S1/HMI_PC'],
+					applyRefusal: 'not decided',
+					roleNames: ['Controller', 'Workstation'],
+					applicationRoles: [],
 					roleDescription: undefined,
 					roleAllocations: [],
 				},
@@ -742,6 +765,19 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 		expect(announcedRemovedAllocations.length, 'report').toBe(
 			testCase.expected.announcedRemovedAllocations ?? 0,
 		)
+
+		if (testCase.expected.applyRefusal) {
+			expect(updateReport.needsDecisions, 'report').toBe(true)
+			const refused = target.transaction(async (tx) => {
+				await apply(tx, {
+					...updateTarget,
+					report: updateReport,
+					resolution: { decisions: new Map(), mappings: updateDecisionMappings },
+				})
+			})
+			await expect(refused).rejects.toThrow(testCase.expected.applyRefusal)
+			return
+		}
 
 		await target.transaction(async (tx) => {
 			await apply(tx, {

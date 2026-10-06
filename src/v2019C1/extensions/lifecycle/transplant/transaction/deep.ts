@@ -1,6 +1,8 @@
 import { addChildrenTo } from './primitives/add-children-to'
 import { cloneTree } from './primitives/clone-tree'
 
+import { throwDialecteError } from '@dialecte/core'
+
 import { importTypes } from '@/v2019C1/extensions/data-model/transaction'
 
 import type { ImportDeepParams, ImportDeepResult } from './deep.types'
@@ -59,12 +61,21 @@ export async function deep(
 			strip,
 		})
 		const existing = await tx.getRecord(mergeTarget)
-		if (!existing) throw new Error(`transplant.deep: merge target vanished: ${mergeTarget.id}`)
+		if (!existing) {
+			throwDialecteError('ELEMENT_NOT_FOUND', {
+				detail: `transplant.deep: merge target vanished: ${mergeTarget.id}`,
+				ref: mergeTarget,
+			})
+		}
 		record = existing as unknown as Scl.RawRecord<Scl.ElementsOf>
 	} else {
 		const clone = await cloneTree(tx, { sourceQuery, ref, targetParent, omit, strip, retagRoot })
-		if (!clone)
-			throw new Error(`transplant.deep: source element not found: ${ref.tagName}#${ref.id}`)
+		if (!clone) {
+			throwDialecteError('ELEMENT_NOT_FOUND', {
+				detail: `transplant.deep: source element not found: ${ref.tagName}#${ref.id}`,
+				ref,
+			})
+		}
 		record = clone.record
 		cloneMappings = clone.mappings
 	}

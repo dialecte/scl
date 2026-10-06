@@ -163,8 +163,10 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	/** The consumer's choices, by source record id. */
 	chosen?: [string, DecisionMapping][]
 	expected: {
-		/** Where the report says the source category lands. */
-		mapping: DecisionMapping
+		/** Where the report says the source category lands — nothing when it is the consumer's to choose. */
+		mapping: DecisionMapping | undefined
+		/** A fragment of the refusal when apply is run on the report as it is; nothing else is then checked. */
+		applyRefusal?: string
 		reason: MappingReason
 		ambiguous: boolean
 		/** What the report announces as new, by tag. */
@@ -235,20 +237,35 @@ describe('shared-element mapping — a function category', () => {
 				classifiedUnder: ['MEASUREMENT'],
 			},
 		},
-		'two categories of that name in the project → neither is picked, both sides create it under a free name':
+		'two categories of that name in the project → neither is picked: the consumer has to choose, apply refuses until then':
 			{
 				sourceXml,
 				targetXml: projectWithTwoCategoriesXml,
 				expected: {
-					mapping: { create: { name: 'MEASUREMENT_1' } },
+					mapping: undefined,
 					reason: 'name',
 					ambiguous: true,
+					applyRefusal: 'not decided',
 					announcedNew: { FunctionCategory: 1, SubCategory: 0, FunctionCatRef: 1 },
-					categoryNames: ['MEASUREMENT', 'MEASUREMENT', 'MEASUREMENT_1'],
+					categoryNames: ['MEASUREMENT', 'MEASUREMENT'],
 					subCategories: 0,
-					classifiedUnder: ['MEASUREMENT_1'],
+					classifiedUnder: [],
 				},
 			},
+		'… and the consumer has a new one created → both sides create it under a free name': {
+			sourceXml,
+			targetXml: projectWithTwoCategoriesXml,
+			chosen: [['category-s', { create: {} }]],
+			expected: {
+				mapping: { create: { name: 'MEASUREMENT_1' } },
+				reason: 'decision',
+				ambiguous: false,
+				announcedNew: { FunctionCategory: 1, SubCategory: 0, FunctionCatRef: 1 },
+				categoryNames: ['MEASUREMENT', 'MEASUREMENT', 'MEASUREMENT_1'],
+				subCategories: 0,
+				classifiedUnder: ['MEASUREMENT_1'],
+			},
+		},
 		'the consumer picks another category of the project → report and apply both map onto that one':
 			{
 				sourceXml,
@@ -337,6 +354,19 @@ describe('shared-element mapping — a function category', () => {
 			},
 			'report',
 		).toEqual(testCase.expected.announcedNew)
+
+		if (testCase.expected.applyRefusal) {
+			expect(reported.needsDecisions, 'report').toBe(true)
+			const refused = target.transaction(async (tx) => {
+				await apply(tx, {
+					...lifecycleTarget,
+					report: reported,
+					resolution: { decisions: new Map(), mappings: decisionMappings },
+				})
+			})
+			await expect(refused).rejects.toThrow(testCase.expected.applyRefusal)
+			return
+		}
 
 		await target.transaction(async (tx) => {
 			await apply(tx, {
@@ -778,8 +808,10 @@ const applicationRef = { tagName: 'Application', id: 'application-s' } as Scl.Re
 type ApplicationTestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	expected: {
-		/** Where the report says the source category lands. */
-		mapping: DecisionMapping
+		/** Where the report says the source category lands — nothing when it is the consumer's to choose. */
+		mapping: DecisionMapping | undefined
+		/** A fragment of the refusal when apply is run on the report as it is; nothing else is then checked. */
+		applyRefusal?: string
 		/** What the report announces as new, by tag. */
 		announcedNew: { FunctionCategory: number; FunctionCatRef: number }
 		/** Names of every FunctionCategory of the project, once applied. */

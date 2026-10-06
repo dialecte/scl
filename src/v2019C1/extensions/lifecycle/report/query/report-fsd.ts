@@ -14,7 +14,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -45,6 +45,8 @@ export async function reportFsd(
 		 * where it lands (an application or a topology scope placing its own functions).
 		 */
 		resolvePlacement?: boolean
+		/** What the whole report already listed and named. */
+		pass?: ReportPass
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, functionRef, targetParent, scenario, targetInstance, decisionMappings } =
@@ -77,6 +79,7 @@ export async function reportFsd(
 			targetParent
 
 		const instanceDiff = await reportFunction(query, {
+			pass: params.pass,
 			sourceQuery,
 			functionRef,
 			instance: undefined,
@@ -105,6 +108,7 @@ export async function reportFsd(
 	const reportInstances: ReportInstance[] = []
 	for (const instance of instances) {
 		const instanceDiff = await reportFunction(query, {
+			pass: params.pass,
 			sourceQuery,
 			functionRef,
 			instance,

@@ -3,6 +3,7 @@ import { reconcileSatellites } from './satellite-reconcile'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers/function'
 import {
+	assertMappingsDecided,
 	findWithdrawnContributions,
 	resolveSatelliteMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -79,6 +80,8 @@ export async function reconcileCarriedSatellites(
 		decisionMappings,
 		matchKey,
 	})
+	// a category nothing is decided for: nothing is written until the consumer chose
+	assertMappingsDecided({ satelliteRefs, resolvedMappings })
 	const withdrawnContributions = await findWithdrawnContributions(tx, {
 		instancePrimaryRef,
 		instanceSatelliteRefs,

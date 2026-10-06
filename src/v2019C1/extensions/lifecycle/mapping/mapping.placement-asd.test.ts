@@ -80,7 +80,9 @@ const onTheClickedSubstation = {
 	...shared,
 	id: 'substation-s',
 	tagName: 'Substation',
+	kind: 'level',
 	mapping: { existing: substationRef },
+	projectOwned: true,
 	reason: 'anchor',
 	candidates: [substation],
 }
@@ -88,12 +90,20 @@ const onTheClickedVoltageLevel = {
 	...shared,
 	id: 'voltage-level-s',
 	tagName: 'VoltageLevel',
+	kind: 'level',
 	mapping: { existing: voltageLevelRef },
+	projectOwned: true,
 	reason: 'anchor',
 	candidates: [voltageLevel],
 	dependsOn: 'substation-s',
 }
-const bayLevel = { ...shared, id: 'bay-s', tagName: 'Bay', dependsOn: 'voltage-level-s' }
+const bayLevel = {
+	...shared,
+	id: 'bay-s',
+	tagName: 'Bay',
+	kind: 'level',
+	dependsOn: 'voltage-level-s',
+}
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
@@ -135,7 +145,13 @@ describe('placement mapping — where the application of an ASD and its function
 					placement: [
 						onTheClickedSubstation,
 						onTheClickedVoltageLevel,
-						{ ...bayLevel, mapping: { existing: bayRef }, reason: 'only', candidates: [bay] },
+						{
+							...bayLevel,
+							mapping: { existing: bayRef },
+							projectOwned: true,
+							reason: 'only',
+							candidates: [bay],
+						},
 					],
 					offLevel: { templateLevel: 'Bay', startedFrom: 'VoltageLevel' },
 					functions: ['Function S1/V1/B1/Prot', 'Function S1/V1/Station'],
@@ -174,6 +190,7 @@ describe('placement mapping — where the application of an ASD and its function
 					{
 						...bayLevel,
 						mapping: { existing: secondBayRef },
+						projectOwned: true,
 						reason: 'decision',
 						candidates: [bay, secondBay],
 					},
@@ -190,7 +207,13 @@ describe('placement mapping — where the application of an ASD and its function
 				placement: [
 					onTheClickedSubstation,
 					onTheClickedVoltageLevel,
-					{ ...bayLevel, mapping: { create: { name: 'Bay' } }, reason: 'none', candidates: [] },
+					{
+						...bayLevel,
+						mapping: { create: { name: 'Bay' } },
+						parentPath: 'S1/V1',
+						reason: 'none',
+						candidates: [],
+					},
 				],
 				offLevel: { templateLevel: 'Bay', startedFrom: 'VoltageLevel' },
 				functions: ['Function S1/V1/Bay/Prot', 'Function S1/V1/Station'],
@@ -204,7 +227,13 @@ describe('placement mapping — where the application of an ASD and its function
 				placement: [
 					onTheClickedSubstation,
 					{ ...onTheClickedVoltageLevel, reason: 'only' },
-					{ ...bayLevel, mapping: { existing: bayRef }, reason: 'only', candidates: [bay] },
+					{
+						...bayLevel,
+						mapping: { existing: bayRef },
+						projectOwned: true,
+						reason: 'only',
+						candidates: [bay],
+					},
 				],
 				offLevel: { templateLevel: 'Bay', startedFrom: 'Substation' },
 				functions: ['Function S1/V1/B1/Prot', 'Function S1/V1/Station'],

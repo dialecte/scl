@@ -1,6 +1,7 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type {
 	DecisionMappings,
+	MappingCollision,
 	ResolvedMapping,
 	StoredRef,
 } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
@@ -28,6 +29,8 @@ export type PlacementLevel = {
 	resolved: ResolvedMapping
 	/** The name the level is created under, when it is created. */
 	createName?: string
+	/** What became of the name asked for the level, when it was taken where the level is created. */
+	collision?: MappingCollision
 	/**
 	 * Nothing is decided for the level: several levels of the project qualify and the consumer has to
 	 * choose, or the level above is itself not decided. Nothing can be placed until it is.

@@ -5,6 +5,7 @@ import { toRef } from '@dialecte/core/helpers'
 import { TEMPLATE_NAME, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { resolveUniqueValue } from '@/v2019C1/extensions/lifecycle/constraints'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/resolve-target-structure'
+import { describeCollision } from '@/v2019C1/extensions/lifecycle/mapping/describe-mapping'
 
 import type {
 	PlacementLevel,
@@ -167,7 +168,14 @@ function existingLevel(
 	return {
 		sourceRef,
 		parentTarget,
-		resolved: { existing, reason, ambiguous: false, locked: false, projectOwned: true },
+		resolved: {
+			existing,
+			reason,
+			ambiguous: false,
+			locked: false,
+			projectOwned: true,
+			undecided: false,
+		},
 		undecided: false,
 	}
 }
@@ -185,7 +193,7 @@ function undecidedLevel(params: {
 	return {
 		sourceRef,
 		parentTarget,
-		resolved: { reason: 'none', ambiguous, locked: false, projectOwned: false },
+		resolved: { reason: 'none', ambiguous, locked: false, projectOwned: false, undecided: true },
 		undecided: true,
 	}
 }
@@ -222,8 +230,10 @@ async function createdLevel(
 			ambiguous,
 			locked: false,
 			projectOwned: false,
+			undecided: false,
 		},
 		createName,
+		collision: describeCollision({ attr: 'name', asked: name, given: createName }),
 		undecided: false,
 	}
 }
