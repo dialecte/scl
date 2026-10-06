@@ -2,6 +2,10 @@ import { classifyAttribute } from './classify-attribute'
 import { findConstraintViolation } from './find-constraint-violation'
 import { resolveUniqueValue } from './resolve-unique-value'
 
+import { toRef } from '@dialecte/core/helpers'
+
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+
 import type { PlacementResolution } from './resolve-placement-collision.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -34,8 +38,7 @@ export async function resolvePlacementCollision(
 ): Promise<PlacementResolution> {
 	const { ref, overrides } = params
 
-	const parentRef =
-		params.parentRef ?? ((await tx.getRecord(ref))?.parent as Scl.Ref<Scl.ElementsOf> | undefined)
+	const parentRef = params.parentRef ?? (await findConstraintParent(tx, ref))
 	if (!parentRef) return { status: 'ok' }
 
 	let candidate: Record<string, string | undefined> = await tx.getAttributes(ref)
@@ -75,4 +78,20 @@ export async function resolvePlacementCollision(
 	})
 	if (to !== from) await tx.update(ref, { attributes: { [editableField]: to } })
 	return { status: 'resolved', attr: editableField, from, to }
+}
+
+/**
+ * The element whose uniqueness rules cover `ref`: its parent, or — when the parent is a wrapper
+ * the dialecte looks through (a Private) — that wrapper's own parent, and so on.
+ */
+async function findConstraintParent(
+	tx: Core.Transaction<Config>,
+	ref: Scl.Ref<Scl.ElementsOf>,
+): Promise<Scl.Ref<Scl.ElementsOf> | undefined> {
+	const transparentElements: readonly string[] = SCL_DIALECTE_CONFIG.transparentElements
+	let parent = (await tx.getRecord(ref))?.parent
+	while (parent && transparentElements.includes(parent.tagName)) {
+		parent = (await tx.getRecord(parent as Scl.Ref<Scl.ElementsOf>))?.parent
+	}
+	return parent ? (toRef(parent) as Scl.Ref<Scl.ElementsOf>) : undefined
 }

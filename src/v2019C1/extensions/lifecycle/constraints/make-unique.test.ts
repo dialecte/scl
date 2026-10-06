@@ -32,9 +32,30 @@ function bayWith(names: string[]): string {
 	`
 }
 
+/** A substation holding `names` as applications, in its Private; the last one is made unique. */
+function substationWith(names: string[]): string {
+	const applications = names
+		.map(
+			(name, index) =>
+				`<eIEC61850-6-100:Application name="${name}" uuid="application-${index}" ${id}="application-${index}"/>`,
+		)
+		.join('\n')
+	return /* xml */ `
+		<SCL ${ns} ${id}="root">
+			<Substation name="S1" ${id}="substation">
+				<Private type="eIEC61850-6-100" ${id}="private">
+					${applications}
+				</Private>
+			</Substation>
+		</SCL>
+	`
+}
+
 type TestCase = SclTest.BaseXmlTestCase & {
-	/** The record id of the function made unique. */
-	functionId: string
+	/** The element made unique. */
+	ref?: Scl.Ref<Scl.ElementsOf>
+	/** The record id of the function made unique (when no `ref`). */
+	functionId?: string
 	expected: PlacementResolution
 }
 
@@ -56,6 +77,13 @@ describe("makeUnique — an element gets a value free where it sits, in the engi
 			expectedQueries: ['//default:Bay/default:Function[@name="HMI_Fn_2"]'],
 			unexpectedQueries: ['//default:Bay/default:Function[@name="HMI_Fn_1_1"]'],
 		},
+		'an application named like another of its substation, both in its Private (a wrapper the uniqueness rule looks through) -> numbered _1':
+			{
+				sourceXml: substationWith(['HMI_App', 'HMI_App']),
+				ref: { tagName: 'Application', id: 'application-1' } as Scl.Ref<Scl.ElementsOf>,
+				expected: { status: 'resolved', attr: 'name', from: 'HMI_App', to: 'HMI_App_1' },
+				expectedQueries: ['//v2019C1:Application[@name="HMI_App_1"]'],
+			},
 		'a name free in its bay -> left as it is': {
 			sourceXml: bayWith(['Prot', 'HMI_Fn']),
 			functionId: 'function-1',
@@ -69,7 +97,8 @@ describe("makeUnique — an element gets a value free where it sits, in the engi
 		testCase,
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		const ref = { tagName: 'Function', id: testCase.functionId } as Scl.Ref<Scl.ElementsOf>
+		const ref =
+			testCase.ref ?? ({ tagName: 'Function', id: testCase.functionId } as Scl.Ref<Scl.ElementsOf>)
 		await source.transaction(async (tx) => {
 			const resolution = await makeUnique(tx, { ref })
 			expect(resolution).toEqual(testCase.expected)
