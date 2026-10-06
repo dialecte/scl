@@ -263,9 +263,41 @@ or a add onto an existing instance), the engine validates it against its parent 
 auto-resolves a scoped-uniqueness collision (e.g. two children with the same `name` under one Bay →
 `Prot` becomes `Prot_1`). Identity-only collisions are left untouched (never a silent delete + create).
 
-The engine always **owns uniqueness**. A `values` override lets the user set an editable field (typically
+The engine always **owns uniqueness**, in one format: a taken value is numbered `<value>_1`, `<value>_2`, …,
+and a value that already ends with a number gets the next free one instead of a second number (`Prot_1`
+taken → `Prot_2`, never `Prot_1_1`). A `values` override lets the user set an editable field (typically
 `name`): the user's value is applied first, then uniqueness is re-ensured — a user name that itself
-collides is still bumped. Only attributes listed in the group's `editableAttributes` are honoured.
+collides is still numbered. Only attributes listed in the group's `editableAttributes` are honoured.
+
+### The consumer's step after the apply — `resolution.afterApply`
+
+A consumer that names what it places its own way, or wires it to something the template does not know,
+does it in its own step, passed with what it resolved:
+
+```ts
+async function afterApply(tx: Scl.Transaction, { instances }: { instances: AppliedInstances }) {
+	for (const application of instances.verb === 'fsd' ? [] : instances.applications) {
+		const name = await tx.getAttribute(application, { name: 'name' })
+		await tx.update(application, { attributes: { name: `${name}_App` } })
+		await tx.lifecycle.makeUnique({ ref: application })
+	}
+}
+
+await doc.prepare((tx) =>
+	tx.lifecycle.apply({ ...target, report, resolution: { decisions, afterApply } }),
+)
+```
+
+- It runs **once**, after the whole apply, in the **same transaction**: what it writes is previewed
+  (`doc.prepare`) and committed with the rest, and a consumer calling `apply` without a review gets it too.
+  It receives the instances the apply placed or reconciled — only those it wrote. It does not run when
+  nothing is written (decisions still to take).
+- The engine knows nothing of what the step does. To tell a name apart from a taken one, the step calls
+  **`tx.lifecycle.makeUnique({ ref })`**: the element is made unique where it sits in the engine's format,
+  and the outcome is returned as data — `{ status: 'ok' }`, `{ status: 'resolved', attr, from, to }`, or
+  `{ status: 'unresolvable', violation }` when the key has no field that can be changed.
+- After the step, an application or function the apply placed or reconciled and the step renamed is made
+  unique again: a name the step gives that is taken where the element sits is numbered all the same.
 
 #### Conflict classification at report time (`instantiate`)
 

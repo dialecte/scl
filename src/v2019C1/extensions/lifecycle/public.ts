@@ -15,9 +15,16 @@ export type {
 	GroupDecision,
 } from './engine/public'
 
-export type { AttributeEditability, EditableAttribute } from './constraints/public'
+export type {
+	AttributeEditability,
+	ConstraintViolation,
+	EditableAttribute,
+	MakeUniqueParams,
+	PlacementResolution,
+} from './constraints/public'
 
 export type {
+	AfterApplyHook,
 	LifecycleApplyParams,
 	LifecycleReportParams,
 	Resolution,

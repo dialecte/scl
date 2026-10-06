@@ -9,7 +9,9 @@ import {
 	createSclTestProject,
 } from '@/v2019C1/test'
 
+import type { AppliedInstances } from './apply.types'
 import type { Scl } from '@/v2019C1/config'
+import type { Resolution } from '@/v2019C1/extensions/lifecycle/contract.types'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -165,3 +167,87 @@ describe('apply — keepNameTypesFrom threads to the type import', () => {
 		expect(ids).not.toContain('CSWI_ICD')
 	})
 })
+
+describe("apply — the consumer's afterApply hook", () => {
+	// the bay where the function is placed already holds a function named "Taken"
+	const takenTargetXml = targetXml.replace(
+		`<Bay name="B1" ${id}="bay-t"/>`,
+		`<Bay name="B1" ${id}="bay-t"><Function name="Taken" ${id}="taken-t" uuid="taken-uuid"/></Bay>`,
+	)
+
+	async function placeFunction(params: {
+		afterApply: NonNullable<Resolution['afterApply']>
+		needsDecisions?: boolean
+	}) {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml: takenTargetXml })
+		if (!target) throw new Error('target required')
+
+		const lifecycleTarget = {
+			verb: 'fsd' as const,
+			sourceQuery: source.document.query,
+			ref: functionRef,
+			anchor: bayRef,
+		}
+		const reported = await report(target.document.query, lifecycleTarget)
+		await target.document.transaction(async (tx) => {
+			await apply(tx, {
+				...lifecycleTarget,
+				report: params.needsDecisions ? { ...reported, needsDecisions: true } : reported,
+				resolution: { afterApply: params.afterApply },
+			})
+		})
+		return target.document.query
+	}
+
+	it('runs once after the apply, inside its transaction, with what was placed: what it writes is applied', async () => {
+		const calls: AppliedInstances[] = []
+		const query = await placeFunction({
+			afterApply: async (tx, { instances }) => {
+				calls.push(instances)
+				for (const placed of instances.verb === 'fsd' ? instances.functions : []) {
+					await tx.update(placed, { attributes: { desc: 'named by the consumer' } })
+				}
+			},
+		})
+
+		expect(calls).toHaveLength(1)
+		expect(calls[0]?.verb === 'fsd' && calls[0].functions).toHaveLength(1)
+		const [placed] = await query.findByAttributes({
+			tagName: 'Function',
+			attributes: { desc: 'named by the consumer' },
+		})
+		expect(placed).toBeDefined()
+	})
+
+	it('the hook names what was placed with a name taken where it sits → the engine numbers it', async () => {
+		const query = await placeFunction({
+			afterApply: async (tx, { instances }) => {
+				for (const placed of instances.verb === 'fsd' ? instances.functions : []) {
+					await tx.update(placed, { attributes: { name: 'Taken' } })
+				}
+			},
+		})
+
+		const names = await namesOfFunctions(query)
+		expect(names.sort()).toEqual(['Taken', 'Taken_1'])
+	})
+
+	it('nothing decided yet (nothing is written) → the hook does not run', async () => {
+		let called = false
+		await placeFunction({
+			needsDecisions: true,
+			afterApply: async () => {
+				called = true
+			},
+		})
+
+		expect(called).toBe(false)
+	})
+})
+
+async function namesOfFunctions(query: Scl.Query): Promise<string[]> {
+	const records = await query.getRecordsByTagName('Function')
+	return records
+		.map((record) => record.attributes.find((attribute) => attribute.name === 'name')?.value)
+		.filter((value): value is string => value !== undefined)
+}

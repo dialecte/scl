@@ -93,16 +93,16 @@ describe('findConstraintViolation + resolveUniqueValue', () => {
 			}),
 		).toBe('Fresh')
 
-		// resolve with a consumer decorator (affix scheme)
+		// resolve: a taken value that already ends with a number gets the next free number, never
+		// a second one ("Prot_1" taken -> "Prot_2", not "Prot_1_1")
 		expect(
 			await resolveUniqueValue(query, {
 				parentRef: bayRef,
 				childTag: 'Function',
-				candidate: { name: 'Prot' },
+				candidate: { name: 'Prot_1' },
 				attr: 'name',
-				decorate: ({ base, attempt }) => `${base}_Fn_${attempt}`,
 			}),
-		).toBe('Prot_Fn_1')
+		).toBe('Prot_2')
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

@@ -1,3 +1,4 @@
+import { makeUnique } from '@/v2019C1/extensions/lifecycle/constraints'
 import { allGroups, assertDecisionsCoherent } from '@/v2019C1/extensions/lifecycle/engine'
 import { assertMappingsCoherent } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
@@ -7,8 +8,9 @@ import {
 } from '@/v2019C1/extensions/lifecycle/update'
 
 import type { AppliedInstances, ApplyResult } from './apply.types'
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type {
+	AfterApplyHook,
 	LifecycleApplyParams,
 	LifecycleTarget,
 } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -51,17 +53,51 @@ export async function apply(
 		assertMappingsCoherent({ reportMappings: report.mappings, decisionMappings })
 
 	// No decisions supplied: fast track applies headless; full track waits for a human.
-	if (!decisions) {
-		if (report.needsDecisions) return { report, instances: emptyInstances(params.verb) } // not decided yet
-		const instances = await runVerb(tx, params, report, undefined) // fast track: no gate = apply all
-		return { report, instances }
+	if (!decisions && report.needsDecisions) {
+		return { report, instances: emptyInstances(params.verb) } // not decided yet: nothing is written
 	}
 
 	// Decisions supplied: honor gating AND user value edits — even on the fast track,
 	// a conflict-free instantiate can still carry edited editable attributes.
-	assertDecisionsCoherent({ groups: allGroups(report), decisions })
-	const instances = await runVerb(tx, params, report, decisions)
+	if (decisions) assertDecisionsCoherent({ groups: allGroups(report), decisions })
+	const instances = await runVerb(tx, params, report, decisions) // no decisions: no gate = apply all
+
+	// the consumer's own step, once everything is written, in the same transaction
+	const afterApply = params.resolution?.afterApply
+	if (afterApply) await runAfterApply(tx, { afterApply, instances })
+
 	return { report, instances }
+}
+
+/**
+ * Run the consumer's step, then make unique again what it renamed among the applications and
+ * functions the apply placed or reconciled: a name it gives that is taken where the element sits
+ * is numbered as the engine numbers its own. What it did not rename is left as it is.
+ */
+async function runAfterApply(
+	tx: Core.Transaction<Config>,
+	params: { afterApply: AfterApplyHook; instances: AppliedInstances },
+): Promise<void> {
+	const { afterApply, instances } = params
+	const roots: Scl.Ref<Scl.ElementsOf>[] =
+		instances.verb === 'fsd'
+			? instances.functions
+			: [...instances.applications, ...instances.functions]
+
+	const namesBefore: (string | undefined)[] = []
+	for (const root of roots) {
+		namesBefore.push(await tx.getAttribute(root, { name: 'name' }))
+	}
+
+	await afterApply(tx as Scl.Transaction, { instances })
+
+	for (const [index, root] of roots.entries()) {
+		// the consumer may have removed it
+		const record = await tx.getRecord(root)
+		if (!record) continue
+		const name = await tx.getAttribute(root, { name: 'name' })
+		if (name !== namesBefore[index]) await makeUnique(tx, { ref: root })
+	}
 }
 
 /** The empty instance set for a verb (the not-decided-yet track writes nothing). */

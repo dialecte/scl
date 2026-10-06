@@ -1,6 +1,7 @@
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type { AppliedInstances } from '@/v2019C1/extensions/lifecycle/apply/apply.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
 import type * as Core from '@dialecte/core'
@@ -94,13 +95,28 @@ export type LifecycleTarget =
  *  - `mappings` — where a shared source element lands, per source element, when the consumer
  *    chose otherwise than the report resolved;
  *  - `keepNameTypesFrom` — on a type dedup, which side's id/name the surviving type keeps
- *    (forwarded to `importTypes`; default `'target'`, the destination authority).
+ *    (forwarded to `importTypes`; default `'target'`, the destination authority);
+ *  - `afterApply` — the consumer's own step, run by `apply` once it wrote (see {@link AfterApplyHook}).
  */
 export type Resolution = {
 	decisions?: DecisionMap
 	mappings?: DecisionMappings
 	keepNameTypesFrom?: KeepNameTypesFrom
+	afterApply?: AfterApplyHook
 }
+
+/**
+ * A consumer's own step after the whole apply, in the same transaction: what it writes is
+ * applied, previewed and committed with the rest (a preview run with `doc.prepare` shows it). It
+ * receives what the apply placed or reconciled — only the instances it wrote — and decides by
+ * itself what to do with them (how to name them, what to wire them to). The engine knows nothing
+ * of it; to tell a name apart from a taken one it calls `tx.lifecycle.makeUnique`. Not run when
+ * nothing is written (decisions still to take).
+ */
+export type AfterApplyHook = (
+	tx: Scl.Transaction,
+	params: { instances: AppliedInstances },
+) => Promise<void>
 
 /**
  * `report` inputs: the target, and what the consumer already resolved. The report is

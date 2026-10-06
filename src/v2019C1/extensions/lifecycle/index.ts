@@ -1,4 +1,5 @@
 import { apply } from './apply'
+import { makeUnique } from './constraints'
 import * as extractTransaction from './extract'
 import * as instantiateTransaction from './instantiate'
 import { report } from './report'
@@ -20,6 +21,8 @@ import { checkTemplateUuids } from './validate'
  * - `transplant`  — generic clone engine (`tx.lifecycle.transplant.deep`).
  * - `update`      — instantiate-or-reconcile a project against a newer template
  *                   (`tx.lifecycle.update.fsd` / `.asd` apply the change).
+ * - `makeUnique`  — make an element unique where it sits, in the engine's one numbering
+ *                   (`tx.lifecycle.makeUnique`); what a consumer calls after naming an element.
  * - `report`      — read-only classify: `query.lifecycle.report({ verb,
  *                   sourceQuery, ref, anchor })` returns a `DiffReport`
  *                   (fast/full classification) — nothing is written.
@@ -40,5 +43,6 @@ export const lifecycle = {
 		transplant: { deep },
 		update: updateTransaction,
 		apply,
+		makeUnique,
 	},
 }

@@ -3,7 +3,6 @@ import { findConstraintViolation } from './find-constraint-violation'
 import { resolveUniqueValue } from './resolve-unique-value'
 
 import type { PlacementResolution } from './resolve-placement-collision.types'
-import type { CollisionDecorator } from './resolve-unique-value.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -30,11 +29,10 @@ export async function resolvePlacementCollision(
 	params: {
 		ref: Scl.Ref<Scl.ElementsOf>
 		parentRef?: Scl.Ref<Scl.ElementsOf>
-		decorate?: CollisionDecorator
 		overrides?: Record<string, string>
 	},
 ): Promise<PlacementResolution> {
-	const { ref, decorate, overrides } = params
+	const { ref, overrides } = params
 
 	const parentRef =
 		params.parentRef ?? ((await tx.getRecord(ref))?.parent as Scl.Ref<Scl.ElementsOf> | undefined)
@@ -74,7 +72,6 @@ export async function resolvePlacementCollision(
 		candidate,
 		attr: editableField,
 		excludeId: ref.id,
-		decorate,
 	})
 	if (to !== from) await tx.update(ref, { attributes: { [editableField]: to } })
 	return { status: 'resolved', attr: editableField, from, to }
