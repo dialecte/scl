@@ -193,9 +193,13 @@ describe('lifecycle scenario — an FSD whose function is a template with no par
 
 type UpdateTestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
+	/** The project element the consumer started from, both times — the bay when left out. */
+	anchor?: Scl.Ref<Scl.ElementsOf>
 	/** What the template's author changes between the instantiate and the update. */
 	editTemplate: (tx: Scl.Transaction) => Promise<void>
 	expected: {
+		/** What the template was placed as: a function, or a subfunction inside a function. */
+		placedAs: 'Function' | 'SubFunction'
 		/** What the update's report announces, logical nodes left out when unchanged. */
 		announced: string[]
 		/** The description of the placed function once updated. */
@@ -212,6 +216,7 @@ describe('lifecycle scenario — updating the instance of a function template', 
 			targetXml: projectXml,
 			editTemplate: async () => {},
 			expected: {
+				placedAs: 'Function',
 				announced: ['unchanged Function', 'unchanged SubFunction'],
 				description: 'v1',
 				subFunctionLNodes: ['PTRC'],
@@ -241,9 +246,25 @@ describe('lifecycle scenario — updating the instance of a function template', 
 					)
 				},
 				expected: {
+					placedAs: 'Function',
 					announced: ['modified Function', 'unchanged SubFunction', 'added LNode'],
 					description: 'v2',
 					subFunctionLNodes: ['PTOC', 'PTRC'],
+				},
+			},
+		'placed in a function, as a subfunction, the template is described anew → the subfunction is found by its lineage and updated, no second one':
+			{
+				sourceXml,
+				targetXml: projectXml,
+				anchor: localFunctionRef,
+				editTemplate: async (tx) => {
+					await tx.update(functionTemplateRef, { attributes: { desc: 'v2' } })
+				},
+				expected: {
+					placedAs: 'SubFunction',
+					announced: ['modified Function', 'unchanged SubFunction'],
+					description: 'v2',
+					subFunctionLNodes: ['PTRC'],
 				},
 			},
 	}
@@ -259,7 +280,7 @@ describe('lifecycle scenario — updating the instance of a function template', 
 			verb: 'fsd' as const,
 			sourceQuery: source.query,
 			ref: functionTemplateRef,
-			anchor: bayRef,
+			anchor: testCase.anchor ?? bayRef,
 		}
 
 		// 1. first instantiate
@@ -293,10 +314,16 @@ describe('lifecycle scenario — updating the instance of a function template', 
 
 		// one function was placed, and it is still the only one made from the template
 		const placed = await target.query.findByAttributes({
-			tagName: 'Function',
+			tagName: testCase.expected.placedAs,
 			attributes: { templateUuid: 'function-source-uuid' },
 		})
 		expect(placed.length, 'apply').toBe(1)
+		const otherKind = testCase.expected.placedAs === 'Function' ? 'SubFunction' : 'Function'
+		const placedAsOtherKind = await target.query.findByAttributes({
+			tagName: otherKind,
+			attributes: { templateUuid: 'function-source-uuid' },
+		})
+		expect(placedAsOtherKind, 'apply').toEqual([])
 		const description = await target.query.getAttribute(placed[0], { name: 'desc' })
 		expect(description, 'apply').toBe(testCase.expected.description)
 

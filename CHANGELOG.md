@@ -60,6 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An FSD placed inside a function is found again on update.** Placed under a function, the template's function is a subfunction; `report` and `apply` looked for a function there, did not find the instance and placed a second one. They now look for what the placement wrote (`SubFunction` under a function or a subfunction, else `Function`) and reconcile it.
+- **A shared element the template drops is removed even when nothing else changed.** A role, category, variable or behaviour description the placement created and the template no longer has was announced as removed only alongside a change of the element it belongs to; with that element unchanged, the report said nothing and `apply` kept it. Its removal is now a decision of its own.
 - **An application a substation template gains reaches every bay.** Updating a bay typical placed in several bays placed an application the typical gained in the first bay only; it is now placed in each.
 - **A function or an application placed as part of a larger template carries that template's provenance.** A function an application gained, and a primary a substation template gained, were given their own `FunctionSclRef` / `ApplicationSclRef` on update; they now carry none, as on a first placement.
 - **Two elements created under one name are reported under the names apply gives them.** When the consumer asked the same name for two shared elements of one kind created at the same place, the report listed that name for both while apply created the second under the next free one. The report now names each element with the rule apply uses, the names it already gave counting as taken.

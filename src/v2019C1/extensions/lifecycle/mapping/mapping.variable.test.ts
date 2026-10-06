@@ -100,17 +100,23 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	/**
 	 * After the instantiate, the instance is updated: `revised` — the template's function was revised
 	 * and the consumer accepts everything; `unchanged` — nothing changed, the report asks for no
-	 * decision and is applied as is.
+	 * decision and is applied as is; `dropped` — the template no longer has the variable and the
+	 * consumer accepts everything.
 	 */
-	thenUpdate?: 'revised' | 'unchanged'
+	thenUpdate?: 'revised' | 'unchanged' | 'dropped'
 	expected?: {
-		/** Where the last report (the update's when there is one) says the source variable lands. */
-		mapping: DecisionMapping
-		reason: MappingReason
-		ambiguous: boolean
-		locked: boolean
+		/**
+		 * Where the last report (the update's when there is one) says the source variable lands —
+		 * absent when the template no longer has it.
+		 */
+		mapping?: DecisionMapping
+		reason?: MappingReason
+		ambiguous?: boolean
+		locked?: boolean
 		/** How many variables and how many of their applications that report announces as new. */
 		announcedNew: { Variable: number; VariableApplyTo: number }
+		/** How many it announces as removed — none when left out. */
+		announcedRemoved?: { Variable: number; VariableApplyTo: number }
 		/** Names of every Variable of the project in the end. */
 		variableNames: string[]
 		/** What every variable of the project applies to in the end: `variable -> function`. */
@@ -223,6 +229,31 @@ describe('shared-element mapping — a variable applying to a function', () => {
 					projectVariableDescription: 'Project breaker variable',
 				},
 			},
+		'the variable was mapped onto a project variable, the template drops it → the project variable stays, without what this instance applied it to':
+			{
+				sourceXml,
+				targetXml: projectXml,
+				thenUpdate: 'dropped',
+				expected: {
+					announcedNew: { Variable: 0, VariableApplyTo: 0 },
+					announcedRemoved: { Variable: 0, VariableApplyTo: 1 },
+					variableNames: ['VXCBR'],
+					applications: ['VXCBR -> Local'],
+					projectVariableDescription: 'Project breaker variable',
+				},
+			},
+		'the variable was created by the instantiate, the template drops it → it is removed': {
+			sourceXml,
+			targetXml: projectWithoutVariableXml,
+			thenUpdate: 'dropped',
+			expected: {
+				announcedNew: { Variable: 0, VariableApplyTo: 0 },
+				// the variable goes with what it applies to
+				announcedRemoved: { Variable: 1, VariableApplyTo: 0 },
+				variableNames: [],
+				applications: [],
+			},
+		},
 	}
 
 	async function act({ testCase, source, target }: SclTest.ActParams<TestCase>): Promise<void> {
@@ -269,9 +300,14 @@ describe('shared-element mapping — a variable applying to a function', () => {
 					await tx.update(functionRef, { attributes: { desc: 'revision 2' } })
 				})
 			}
+			if (testCase.thenUpdate === 'dropped') {
+				await source.transaction(async (tx) => {
+					await tx.delete({ tagName: 'Variable', id: 'variable-s' })
+				})
+			}
 			lastReport = await report(target.query, lifecycleTarget)
 			const updateReport = lastReport
-			const resolution = testCase.thenUpdate === 'revised' ? { decisions: new Map() } : undefined
+			const resolution = testCase.thenUpdate === 'unchanged' ? undefined : { decisions: new Map() }
 			await target.transaction(async (tx) => {
 				await apply(tx, { ...lifecycleTarget, report: updateReport, resolution })
 			})
@@ -288,11 +324,13 @@ describe('shared-element mapping — a variable applying to a function', () => {
 					}
 				: reportedMapping
 		expect(namedMapping, 'report').toEqual(expected.mapping)
-		expect(variableMapping?.reason, 'report').toBe(expected.reason)
-		expect(variableMapping?.ambiguous, 'report').toBe(expected.ambiguous)
-		expect(variableMapping?.locked, 'report').toBe(expected.locked)
-		// where a variable lands is not the consumer's to choose
-		expect(variableMapping?.selectable, 'report').toBe(false)
+		if (variableMapping) {
+			expect(variableMapping.reason, 'report').toBe(expected.reason)
+			expect(variableMapping.ambiguous, 'report').toBe(expected.ambiguous)
+			expect(variableMapping.locked, 'report').toBe(expected.locked)
+			// where a variable lands is not the consumer's to choose
+			expect(variableMapping.selectable, 'report').toBe(false)
+		}
 
 		// a node may be reached through its own group and through its parent's: count it once
 		const announced = [
@@ -302,12 +340,19 @@ describe('shared-element mapping — a variable applying to a function', () => {
 				),
 			),
 		]
-		const countNew = (tagName: string): number =>
-			announced.filter((node) => node.tagName === tagName && node.change === 'added').length
+		const count = (tagName: string, change: 'added' | 'removed'): number =>
+			announced.filter((node) => node.tagName === tagName && node.change === change).length
 		expect(
-			{ Variable: countNew('Variable'), VariableApplyTo: countNew('VariableApplyTo') },
+			{ Variable: count('Variable', 'added'), VariableApplyTo: count('VariableApplyTo', 'added') },
 			'report',
 		).toEqual(expected.announcedNew)
+		expect(
+			{
+				Variable: count('Variable', 'removed'),
+				VariableApplyTo: count('VariableApplyTo', 'removed'),
+			},
+			'report',
+		).toEqual(expected.announcedRemoved ?? { Variable: 0, VariableApplyTo: 0 })
 
 		const variables = await target.query.getRecordsByTagName('Variable')
 		const variableNames: string[] = []
@@ -405,6 +450,12 @@ const behaviourProjectXml = /* xml */ `
 	</SCL>
 `
 
+// The same project without any behaviour description.
+const behaviourlessProjectXml = behaviourProjectXml.replace(
+	/<Private type="eIEC61850-6-100" [^>]*="private-t">[\s\S]*?<\/Private>/,
+	'',
+)
+
 const projectBehaviourRef = {
 	tagName: 'BehaviorDescription',
 	id: 'behaviour-t',
@@ -412,13 +463,18 @@ const projectBehaviourRef = {
 
 type BehaviourTestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
+	/** After the instantiate, the template no longer has the description; the update is accepted. */
+	thenDropped?: boolean
 	expected: {
-		/** Where the report says the source behaviour description lands. */
+		/** Where the instantiate's report says the source behaviour description lands. */
 		mapping: DecisionMapping
-		/** Names of every BehaviorDescription of the project, once applied. */
+		/** Names of every BehaviorDescription of the project in the end. */
 		behaviourNames: string[]
-		/** The functions whose logical node the project's own description documents, once applied. */
-		documents: string[]
+		/**
+		 * The functions whose logical node the project's own description documents in the end — left
+		 * out when the project has none.
+		 */
+		documents?: string[]
 	}
 }
 
@@ -434,6 +490,26 @@ describe('shared-element mapping — a behaviour description documenting a logic
 					documents: ['Local', 'Prot'],
 				},
 			},
+		'… and the template drops it → the project description stays, without what this instance gave it':
+			{
+				sourceXml: behaviourSourceXml,
+				targetXml: behaviourProjectXml,
+				thenDropped: true,
+				expected: {
+					mapping: { existing: projectBehaviourRef },
+					behaviourNames: ['BD1'],
+					documents: ['Local'],
+				},
+			},
+		'none in the project, the instantiate creates it, then the template drops it → it is removed': {
+			sourceXml: behaviourSourceXml,
+			targetXml: behaviourlessProjectXml,
+			thenDropped: true,
+			expected: {
+				mapping: { create: { name: 'BD1' } },
+				behaviourNames: [],
+			},
+		},
 	}
 
 	async function act({
@@ -460,6 +536,21 @@ describe('shared-element mapping — a behaviour description documenting a logic
 			await apply(tx, { ...lifecycleTarget, report: reported })
 		})
 
+		if (testCase.thenDropped) {
+			await source.transaction(async (tx) => {
+				await tx.delete({ tagName: 'BehaviorDescription', id: 'behaviour-s' })
+			})
+			const updateTarget = { ...lifecycleTarget, scenario: 'template' as const }
+			const updateReport = await report(target.query, updateTarget)
+			await target.transaction(async (tx) => {
+				await apply(tx, {
+					...updateTarget,
+					report: updateReport,
+					resolution: { decisions: new Map() },
+				})
+			})
+		}
+
 		const behaviours = await target.query.getRecordsByTagName('BehaviorDescription')
 		const behaviourNames: string[] = []
 		for (const behaviour of behaviours) {
@@ -467,6 +558,7 @@ describe('shared-element mapping — a behaviour description documenting a logic
 			behaviourNames.push(name ?? '')
 		}
 		expect(behaviourNames.sort(), 'apply').toEqual(testCase.expected.behaviourNames)
+		if (!testCase.expected.documents) return
 
 		const description = await target.query.getAttribute(projectBehaviourRef, { name: 'desc' })
 		expect(description, 'apply').toBe('Project behaviour')

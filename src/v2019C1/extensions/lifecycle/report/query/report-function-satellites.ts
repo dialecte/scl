@@ -1,5 +1,7 @@
 import { foldSatelliteCompanions } from './satellite-companions'
 
+import { toRef } from '@dialecte/core/helpers'
+
 import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers/function'
 
 import type { Config, Scl } from '@/v2019C1/config'
@@ -46,7 +48,7 @@ export async function foldCarriedSatellites(
 	const satelliteRefs = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
 	const instanceSatelliteRefs = instance
 		? await resolveFunctionSatellites(query, {
-				primaryRef: { tagName: 'Function', id: instance.id } as Scl.Ref<'Function'>,
+				primaryRef: toRef(instance) as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
 			})
 		: []
 	return foldSatelliteCompanions(query, {

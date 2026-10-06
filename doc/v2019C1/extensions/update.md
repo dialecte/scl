@@ -202,7 +202,7 @@ An update finds, for each instance, the project element that instance already ho
 
 A step pairs a source element with a project element only when neither has another possibility. An element found by 2–4 is the project's own: only what the source contributes below it is added, reconciled or removed; its own attributes and its other children are left alone, and it is never deleted by an update.
 
-When the template drops a shared element altogether, the project element it was mapped onto stays too. What the instance had given it — its references pointing at an element of that instance — is announced as removed and removed when accepted; the references it holds for the project or for other instances are not touched.
+When the template drops a shared element altogether, the project element it was mapped onto stays too. What the instance had given it — its references pointing at an element of that instance — is announced as removed and removed when accepted; the references it holds for the project or for other instances are not touched. A shared element the placement created (it carries the template's lineage) is removed as a whole: with the change of the element it belongs to, or as a decision of its own when that element is unchanged.
 
 A shared element the template brings that the instance holds nothing for (a role added by a newer template version) is resolved as on a first placement, and the consumer may choose. When the instance does hold elements that could stand for it but nothing tells which — two mapped roles with no function reference, both renamed since — none is guessed: the mapping is left undecided with `ambiguous: true` and `reason: 'none'`, and nothing is written until the consumer maps it (the instance keeps what it holds).
 

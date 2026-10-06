@@ -174,26 +174,27 @@ export async function foldSatelliteCompanions(
 		}
 	}
 
-	// removals ride the primary group (coupling invariant): a target instance satellite
-	// whose template ELEMENT was removed from the source. Catalog/shared satellites persist
-	// when merely un-referenced, so the trigger is source-element non-existence, NOT a link drop.
-	if (group) {
-		for (const instanceRef of instanceSatelliteRefs ?? []) {
-			if (instanceRef.id && mappedOntoIds.has(instanceRef.id)) continue
-			const { templateUuid } = await query.any.getAttributes(instanceRef)
-			if (!templateUuid) continue
-			const [stillInSource] = await sourceQuery.any.findByAttributes({
-				tagName: instanceRef.tagName,
-				attributes: { uuid: templateUuid },
-			})
-			if (stillInSource) continue
-			group.companions.push({
-				change: 'removed',
-				tagName: instanceRef.tagName,
-				instanceRef,
-				children: [],
-			})
+	// a target instance satellite whose template ELEMENT was removed from the source: removed with
+	// the primary's group (coupling invariant), or as a decision of its own when the primary is
+	// unchanged. Catalog/shared satellites persist when merely un-referenced, so the trigger is
+	// source-element non-existence, NOT a link drop.
+	for (const instanceRef of instanceSatelliteRefs ?? []) {
+		if (instanceRef.id && mappedOntoIds.has(instanceRef.id)) continue
+		const { templateUuid } = await query.any.getAttributes(instanceRef)
+		if (!templateUuid) continue
+		const [stillInSource] = await sourceQuery.any.findByAttributes({
+			tagName: instanceRef.tagName,
+			attributes: { uuid: templateUuid },
+		})
+		if (stillInSource) continue
+		const removed: DiffNode = {
+			change: 'removed',
+			tagName: instanceRef.tagName,
+			instanceRef,
+			children: [],
 		}
+		if (group) group.companions.push(removed)
+		else report.groups.push(...groupChanges(removed, instanceScopeId))
 	}
 
 	// what this instance gave to a project element the template no longer brings anything for

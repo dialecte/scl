@@ -1,6 +1,8 @@
 import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reconcileCarriedSatellites } from './function-satellites'
 
+import { toRef } from '@dialecte/core/helpers'
+
 import {
 	annotateInstance,
 	sourceToTargetMap,
@@ -24,6 +26,7 @@ import {
 	fsd as instantiateFsd,
 	resolveTargetStructure,
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { placedFunctionTag } from '@/v2019C1/extensions/lifecycle/layers/function'
 import {
 	identityModeForScenario,
 	matchKeyForScenario,
@@ -105,7 +108,12 @@ export async function fsd(
 	const matched =
 		scenario === 'instantiate'
 			? []
-			: await findInstancesUnder(tx, { targetParent, tagName: 'Function', sourceUuid, matchKey })
+			: await findInstancesUnder(tx, {
+					targetParent,
+					tagName: placedFunctionTag(targetParent),
+					sourceUuid,
+					matchKey,
+				})
 	const instances = await scopeToTargetInstance(tx, { instances: matched, targetInstance })
 
 	if (instances.length === 0) {
@@ -178,7 +186,7 @@ export async function fsd(
 		const cross = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
 			primaryRef: functionRef,
-			instancePrimaryRef: { tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
+			instancePrimaryRef: toRef(instance) as Scl.Ref<Scl.ElementsOf>,
 			structure,
 			accepted: instanceAccepted,
 			matchKey,
@@ -202,7 +210,7 @@ export async function fsd(
 	}
 
 	return instances.map(
-		(instance) => ({ tagName: 'Function', id: instance.id }) as Scl.Ref<'Function'>,
+		(instance) => toRef(instance) as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
 	)
 }
 

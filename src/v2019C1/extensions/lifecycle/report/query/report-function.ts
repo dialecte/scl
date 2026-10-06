@@ -1,6 +1,8 @@
 import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
 import { foldCarriedSatellites } from './report-function-satellites'
 
+import { toRef } from '@dialecte/core/helpers'
+
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { foreignScopeResolver } from '@/v2019C1/extensions/lifecycle/instance'
 
@@ -81,9 +83,7 @@ export async function reportFunction(
 		pass: params.pass,
 		sourceQuery,
 		primaryRef: functionRef,
-		instancePrimaryRef: instance
-			? ({ tagName: 'Function', id: instance.id } as Scl.Ref<Scl.ElementsOf>)
-			: undefined,
+		instancePrimaryRef: instance ? (toRef(instance) as Scl.Ref<Scl.ElementsOf>) : undefined,
 		report: withLayerSatellites,
 		refsAlwaysAdded,
 		anchor: params.anchor,

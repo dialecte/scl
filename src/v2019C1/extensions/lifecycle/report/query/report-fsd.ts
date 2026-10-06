@@ -3,6 +3,7 @@ import { buildReportInstance } from './report-instance'
 
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { findInstancesUnder, scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
+import { placedFunctionTag } from '@/v2019C1/extensions/lifecycle/layers/function'
 import {
 	describePlacementMappings,
 	findLanding,
@@ -57,7 +58,12 @@ export async function reportFsd(
 	const matched =
 		scenario === 'instantiate'
 			? []
-			: await findInstancesUnder(query, { targetParent, tagName: 'Function', sourceUuid, matchKey })
+			: await findInstancesUnder(query, {
+					targetParent,
+					tagName: placedFunctionTag(targetParent),
+					sourceUuid,
+					matchKey,
+				})
 	const instances = await scopeToTargetInstance(query, { instances: matched, targetInstance })
 
 	// no instance yet -> first-time = fast track

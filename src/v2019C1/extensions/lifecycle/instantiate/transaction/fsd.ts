@@ -6,7 +6,10 @@ import { throwDialecteError } from '@dialecte/core'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
-import { cloneFunctionCategories } from '@/v2019C1/extensions/lifecycle/layers/function'
+import {
+	cloneFunctionCategories,
+	placedFunctionTag,
+} from '@/v2019C1/extensions/lifecycle/layers/function'
 import { landPrimaries } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
@@ -50,7 +53,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 
 	// A function placed under a (Sub)Function is, per schema, a SubFunction.
 	const retagRoot =
-		targetParent.tagName === 'Function' || targetParent.tagName === 'SubFunction'
+		placedFunctionTag(targetParent) === 'SubFunction'
 			? ({ from: 'Function', to: 'SubFunction' } as const)
 			: undefined
 
