@@ -5,13 +5,16 @@ import { reportTopologyFrame } from './report-topology-frame'
 import { toRef } from '@dialecte/core/helpers'
 
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
 import {
 	describeHeldPlacement,
 	describePlacementMappings,
 	findLanding,
 	hasScopeInstance,
+	resolveInstanceLevelsList,
 	resolveInstantiableRoot,
 	resolvePlacementMappings,
+	resolvePrimaryParents,
 	resolveTopologyReconcilables,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
@@ -20,7 +23,9 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { InstanceLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -125,33 +130,94 @@ export async function reportSsd(
 	// its unit sits on or below — the element the consumer started from when there is none
 	const landing = findLanding({ placementLevels, levelId: root.id }) ?? targetParent
 
+	// on an update, a primary the template gained is placed in each instance of the unit that holds
+	// it: listed once per place, each decided on its own — as the apply places it
+	const instanceLevelsList = firstPlacement
+		? []
+		: await resolveInstanceLevelsList(query, {
+				sourceQuery,
+				scopeRef: root,
+				instances: frameInstances.flatMap((frameInstance) =>
+					frameInstance.rootRef ? [toRef(frameInstance.rootRef) as Scl.Ref<Scl.ElementsOf>] : [],
+				),
+				matchKey,
+			})
+
 	for (const applicationRef of applications) {
-		const report = await reportAsd(query, {
-			pass: params.pass,
+		const places = await findGainedPlaces(query, {
 			sourceQuery,
-			applicationRef,
-			scenario,
-			targetInstance,
-			decisionMappings,
+			primaryRef: applicationRef,
 			anchor: landing,
+			instanceLevelsList,
+			matchKey,
 		})
-		instances.push(...report.instances)
+		for (const placedFor of places ?? [undefined]) {
+			const report = await reportAsd(query, {
+				pass: params.pass,
+				sourceQuery,
+				applicationRef,
+				scenario: placedFor ? 'instantiate' : scenario,
+				targetInstance,
+				decisionMappings,
+				anchor: placedFor ?? landing,
+			})
+			instances.push(...placedInstances({ instances: report.instances, placedFor }))
+		}
 	}
 	for (const functionRef of standaloneFunctions) {
-		const report = await reportFsd(query, {
-			pass: params.pass,
+		const places = await findGainedPlaces(query, {
 			sourceQuery,
-			functionRef,
-			targetParent: landing,
-			scenario,
-			targetInstance,
-			decisionMappings,
+			primaryRef: functionRef,
+			anchor: landing,
+			instanceLevelsList,
+			matchKey,
 		})
-		instances.push(...report.instances)
+		for (const placedFor of places ?? [undefined]) {
+			const report = await reportFsd(query, {
+				pass: params.pass,
+				sourceQuery,
+				functionRef,
+				targetParent: placedFor ?? landing,
+				scenario: placedFor ? 'instantiate' : scenario,
+				targetInstance,
+				decisionMappings,
+			})
+			instances.push(...placedInstances({ instances: report.instances, placedFor }))
+		}
 	}
 
 	const report = assembleReport(instances)
 	// a level nothing is decided for is the consumer's to choose before anything is written
 	if (placementLevels.some((level) => level.undecided)) report.needsDecisions = true
 	return report
+}
+
+/**
+ * The places a primary the template gained is placed in, when there are several (one per instance
+ * of the unit that holds it). Nothing when it is held already or placed in one place only.
+ */
+async function findGainedPlaces(
+	query: Core.Query<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		primaryRef: Scl.Ref<'Application'> | Scl.Ref<'Function'>
+		anchor: Scl.Ref<Scl.ElementsOf>
+		instanceLevelsList: readonly InstanceLevels[]
+		matchKey: MatchKey
+	},
+): Promise<Scl.Ref<Scl.ElementsOf>[] | undefined> {
+	if (params.instanceLevelsList.length < 2) return undefined
+	const placement = await resolvePrimaryParents(query, params)
+	return placement.gained && placement.parents.length > 1 ? placement.parents : undefined
+}
+
+/** The instances of a report made for one place, each placed under it. */
+function placedInstances(params: {
+	instances: ReportInstance[]
+	placedFor: Scl.Ref<Scl.ElementsOf> | undefined
+}): ReportInstance[] {
+	const { instances, placedFor } = params
+	if (!placedFor) return instances
+	for (const instance of instances) placeFor({ instance, placedFor })
+	return instances
 }

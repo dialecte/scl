@@ -630,8 +630,13 @@ describe('update.ssd - a function the application of a bay typical gains is plac
 		id: 'voltage-level-b',
 	} as Scl.Ref<'VoltageLevel'>
 
-	const testCases: SclTest.TestCases<TestCase> = {
-		'the typical is placed in two voltage levels, and its application gains a function → each bay gets the function, each application points at the one of its bay':
+	type GainTestCase = TestCase & {
+		/** What the template gains: a function its application refers to (default), one it does not, or an application. */
+		gain?: 'function-of-application' | 'function' | 'application'
+	}
+
+	const testCases: SclTest.TestCases<GainTestCase> = {
+		'the typical is placed in two voltage levels, and its application gains a function → each bay gets the function, each application points at the one of its bay, and the function carries no provenance of its own':
 			{
 				sourceXml: typicalSourceXml,
 				targetXml: twoVoltageLevelsXml,
@@ -641,11 +646,38 @@ describe('update.ssd - a function the application of a bay typical gains is plac
 				],
 				unexpectedQueries: [
 					'//default:Bay[count(default:Function[@templateUuid="control-g-uuid"]) != 1]',
+					// placed as part of the substation template: its provenance is the document's
+					'//v2019C1:FunctionSclRef',
 				],
 			},
+		'the typical gains a function no application refers to → each bay gets it, without provenance of its own':
+			{
+				sourceXml: typicalSourceXml,
+				targetXml: twoVoltageLevelsXml,
+				gain: 'function',
+				expectedQueries: [
+					'//default:VoltageLevel[@name="VA"]/default:Bay/default:Function[@name="Ctrl"][@templateUuid="control-g-uuid"]',
+					'//default:VoltageLevel[@name="VB"]/default:Bay/default:Function[@name="Ctrl"][@templateUuid="control-g-uuid"]',
+				],
+				unexpectedQueries: ['//v2019C1:FunctionSclRef'],
+			},
+		'the typical gains an application → each bay gets it, without provenance of its own': {
+			sourceXml: typicalSourceXml,
+			targetXml: twoVoltageLevelsXml,
+			gain: 'application',
+			expectedQueries: [
+				'//default:VoltageLevel[@name="VA"]/default:Bay//v2019C1:Application[@name="Display"][@templateUuid="display-g-uuid"]',
+				'//default:VoltageLevel[@name="VB"]/default:Bay//v2019C1:Application[@name="Display"][@templateUuid="display-g-uuid"]',
+			],
+			unexpectedQueries: ['//v2019C1:ApplicationSclRef'],
+		},
 	}
 
-	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+	async function act({
+		testCase,
+		source,
+		target,
+	}: SclTest.ActParams<GainTestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 
 		await target.transaction(async (tx) => {
@@ -662,10 +694,18 @@ describe('update.ssd - a function the application of a bay typical gains is plac
 		})
 
 		await source.transaction(async (tx) => {
+			if (testCase.gain === 'application') {
+				await tx.addChild(typicalRef, {
+					tagName: 'Application',
+					attributes: { name: 'Display', type: 'DCS', uuid: 'display-g-uuid' },
+				})
+				return
+			}
 			await tx.addChild(typicalRef, {
 				tagName: 'Function',
 				attributes: { name: 'Ctrl', uuid: 'control-g-uuid' },
 			})
+			if (testCase.gain === 'function') return
 			await tx.addChild(
 				{
 					tagName: 'FunctionRoleContent',

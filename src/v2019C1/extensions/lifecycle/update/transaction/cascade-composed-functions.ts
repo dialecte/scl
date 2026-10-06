@@ -1,25 +1,23 @@
 import { fsd as updateFsd } from './fsd'
 
 import {
-	collectInstanceScope,
 	findComposedFunctionRefs,
 	findInstancesByTemplateUuid,
 	findInstancesUnder,
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
-import { findHeldLevel, resolveHeldLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import { resolveInstanceHoldings } from '@/v2019C1/extensions/lifecycle/layers/application'
+import { findHeldLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type {
-	ApplicationInstance,
 	CascadeComposedFunctionsParams,
 	ComposedFunctionsCascade,
-	InstanceHoldings,
 } from './cascade-composed-functions.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { InstanceCounterpart } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import type { InstanceHoldings } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
@@ -68,7 +66,7 @@ export async function cascadeComposedFunctions(
 		const instanceHoldings = await resolveInstanceHoldings(tx, {
 			sourceQuery,
 			applicationRef,
-			applicationInstance,
+			instance: applicationInstance.instance,
 			functionRefs,
 			heldFunctions,
 		})
@@ -124,6 +122,10 @@ export async function cascadeComposedFunctions(
 					targetParent: level,
 					// a fresh one, whatever another instance holds
 					scenario: 'instantiate',
+					// placed as part of the application template: its provenance is the application's
+					partOfTemplate: true,
+					// listed by the report once per instance of the application
+					placedFor: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
 					report: params.report,
 					decisions: params.decisions,
 					keepNameTypesFrom: params.keepNameTypesFrom,
@@ -161,47 +163,6 @@ export async function cascadeComposedFunctions(
 	}
 
 	return cascade
-}
-
-/** What one instance of the application holds: its own functions and the levels it lives on. */
-async function resolveInstanceHoldings(
-	tx: Core.Transaction<Config>,
-	params: {
-		sourceQuery: Core.Query<Config>
-		applicationRef: Scl.Ref<'Application'>
-		applicationInstance: ApplicationInstance
-		functionRefs: readonly Scl.Ref<'Function'>[]
-		/** Every function of the project carrying the lineage of a source function, by its record id. */
-		heldFunctions: ReadonlyMap<string, readonly AnyTrackedRecord[]>
-	},
-): Promise<InstanceHoldings> {
-	const { sourceQuery, applicationRef, applicationInstance, functionRefs, heldFunctions } = params
-	const { instance } = applicationInstance
-
-	// what tells the functions of this instance from another instance's: its references
-	const instanceScope = await collectInstanceScope(tx, instance)
-
-	const ownedFunctions = new Map<string, AnyTrackedRecord[]>()
-	const counterparts: InstanceCounterpart[] = []
-	for (const functionRef of functionRefs) {
-		const held = heldFunctions.get(functionRef.id) ?? []
-		const owned = held.filter((candidate) => instanceScope.has(candidate.id))
-		ownedFunctions.set(functionRef.id, owned)
-		for (const ownedFunction of owned) {
-			counterparts.push({
-				source: functionRef,
-				instance: { tagName: 'Function', id: ownedFunction.id } as Scl.Ref<Scl.ElementsOf>,
-			})
-		}
-	}
-	// its functions say where it lives; the application itself, for the levels they do not tell
-	counterparts.push({
-		source: applicationRef,
-		instance: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
-	})
-
-	const heldLevels = await resolveHeldLevels(tx, { sourceQuery, counterparts })
-	return { ownedFunctions, heldLevels }
 }
 
 /** Reconcile one function of the project against its source function, under the element it sits in. */

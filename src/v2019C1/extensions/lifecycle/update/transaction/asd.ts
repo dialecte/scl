@@ -9,10 +9,11 @@ import {
 import {
 	acceptedRefIds,
 	collisionOverrides,
+	firstTimeGroups,
+	firstTimeReportInstances,
 	groupsForInstance,
 	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
-import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import {
@@ -84,6 +85,8 @@ export async function asd(
 		decisionMappings?: DecisionMappings
 		/** The application is placed by this operation alone (an ASD): see `instantiate.asd`. */
 		resolvePlacement?: boolean
+		/** Placed as part of a larger template: see `instantiate.asd`. */
+		partOfTemplate?: boolean
 	},
 ): Promise<{
 	applications: Scl.Ref<'Application'>[]
@@ -109,13 +112,14 @@ export async function asd(
 			? []
 			: await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid, matchKey })
 	const instances = await scopeToTargetInstance(tx, { instances: matched, targetInstance })
-	const addedGroups = report ? allGroups(report) : []
 
 	if (instances.length === 0) {
-		// first-time = one added group; gate the whole instantiate on its acceptance
-		const gate = decisions ? acceptedRefIds({ groups: addedGroups, decisions }) : undefined
+		// first-time = one added group; gate the whole instantiate on its acceptance — the groups of
+		// this place when the report lists the placement per place
+		const placementGroups = firstTimeGroups(report, { placedFor: targetParent })
+		const gate = decisions ? acceptedRefIds({ groups: placementGroups, decisions }) : undefined
 		const gateOverrides = decisions
-			? collisionOverrides({ groups: addedGroups, decisions })
+			? collisionOverrides({ groups: placementGroups, decisions })
 			: undefined
 		if (gate && !gate.sourceIds.has(applicationRef.id)) return { applications: [], functions: [] }
 		const {
@@ -130,12 +134,13 @@ export async function asd(
 			keepNameTypesFrom,
 			decisionMappings: params.decisionMappings,
 			resolvePlacement: params.resolvePlacement,
+			partOfTemplate: params.partOfTemplate,
 		})
 		// first-time ASD clones the Application + composed Functions + satellites in one pass; annotate
 		// every first-time report instance (Application and each composed Function) from the shared map
 		const added = sourceToTargetMap(cloneMappings)
-		for (const reportInstance of report?.instances ?? []) {
-			if (!reportInstance.rootRef) annotateInstance({ reportInstance, added })
+		for (const reportInstance of firstTimeReportInstances(report, { placedFor: targetParent })) {
+			annotateInstance({ reportInstance, added })
 		}
 		return { applications: [application], functions: composedFunctionRefs }
 	}

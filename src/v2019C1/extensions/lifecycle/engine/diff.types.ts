@@ -85,6 +85,14 @@ export type DecisionGroup = {
 export type ReportInstance = {
 	/** The instance root record (`Application`/`Function`). Omitted for a first-time instantiate. */
 	rootRef?: AnyRefOrRecord
+	/**
+	 * A first placement made several times (a primary the template gained, placed for each instance of
+	 * the template): the project element this one is made for — the level it lands under (a primary of
+	 * a substation template), or the instance of the application it is placed for (a function the
+	 * application gained). Its groups are scoped to it, so each is decided on its own. Absent when the
+	 * placement is made once.
+	 */
+	placedFor?: AnyRefOrRecord
 	/** Human-readable title of the instance root (`extractElementTitle`). */
 	title: string
 	/** Recognised as an instantiation of the loaded template (provenance or `templateUuid` lineage). */

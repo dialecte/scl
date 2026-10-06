@@ -23,6 +23,11 @@ export type AsdParams = {
 	 * where they land.
 	 */
 	resolvePlacement?: boolean
+	/**
+	 * The application is placed as part of a larger template (a substation's): the provenance is that
+	 * template's, the application carries none of its own.
+	 */
+	partOfTemplate?: boolean
 }
 
 export type AsdResult = {

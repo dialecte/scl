@@ -8,11 +8,11 @@ import {
 import {
 	acceptedRefIds,
 	collisionOverrides,
+	firstTimeGroups,
 	firstTimeReportInstance,
 	groupsForInstance,
 	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
-import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import {
@@ -77,6 +77,14 @@ export async function fsd(
 		decisionMappings?: DecisionMappings
 		/** The function is placed by this operation alone (an FSD): see `instantiate.fsd`. */
 		resolvePlacement?: boolean
+		/** Placed as part of a larger template: see `instantiate.fsd`. */
+		partOfTemplate?: boolean
+		/**
+		 * What a first placement is made for, when the report lists it several times and not by where it
+		 * lands (a function an application gained, placed for one instance of the application).
+		 * Default: `targetParent`.
+		 */
+		placedFor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
 	const {
@@ -100,13 +108,14 @@ export async function fsd(
 			: await findInstancesUnder(tx, { targetParent, tagName: 'Function', sourceUuid, matchKey })
 	const instances = await scopeToTargetInstance(tx, { instances: matched, targetInstance })
 
-	const addedGroups = report ? allGroups(report) : []
-
 	if (instances.length === 0) {
-		// first-time = one added group; gate the whole instantiate on its acceptance
-		const gate = decisions ? acceptedRefIds({ groups: addedGroups, decisions }) : undefined
+		// first-time = one added group; gate the whole instantiate on its acceptance — the groups of
+		// this place when the report lists the placement per place
+		const placedFor = params.placedFor ?? targetParent
+		const placementGroups = firstTimeGroups(report, { placedFor })
+		const gate = decisions ? acceptedRefIds({ groups: placementGroups, decisions }) : undefined
 		const gateOverrides = decisions
-			? collisionOverrides({ groups: addedGroups, decisions })
+			? collisionOverrides({ groups: placementGroups, decisions })
 			: undefined
 		if (gate && !gate.sourceIds.has(functionRef.id)) return []
 		const { functionRef: root, cloneMappings } = await instantiateFsd(tx, {
@@ -117,9 +126,13 @@ export async function fsd(
 			keepNameTypesFrom,
 			decisionMappings: params.decisionMappings,
 			resolvePlacement: params.resolvePlacement,
+			partOfTemplate: params.partOfTemplate,
 		})
 		// annotate the first-time instance's report nodes with what each source element became
-		const firstTime = firstTimeReportInstance(report, functionRef.id)
+		const firstTime = firstTimeReportInstance(report, {
+			sourceRootId: functionRef.id,
+			placedFor,
+		})
 		if (firstTime)
 			annotateInstance({ reportInstance: firstTime, added: sourceToTargetMap(cloneMappings) })
 		return [root]

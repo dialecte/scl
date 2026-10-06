@@ -252,9 +252,20 @@ of this instance's. So when the shared element of the template gains a reference
 contributes its own — the report lists it as added for each instance, and `apply` adds one per
 instance, each pointing at the element of that instance.
 
-One limit: a function or an application the template **gains** is placed once per instance by
-`apply`, but listed once in the report (one first-time instance), so it is accepted or skipped for
-all instances together.
+#### What the template gains, with several instances
+
+A function or an application the template **gains** has no instance yet: `apply` places one for each
+instance of the template — a function an application gained in the bay of each instance of the
+application, a primary a substation template gained in each instance of the unit. The report lists
+it the same way: one first-time instance **per placement**, each with `placedFor` — the instance of
+the application it is placed for, or the level it lands under — and its own groups (their ids are
+scoped to it). Skip the groups of one placement to leave that instance without it; skip, with them,
+the groups of the instance that refers to it (the application's new reference) to leave that
+instance as it was. Placed once only (one instance), a first-time instance carries no `placedFor`.
+
+A function or an application placed as part of a larger template carries that template's provenance,
+not its own: a function an application gains gets no `FunctionSclRef`, a primary a substation
+template gains no `FunctionSclRef` / `ApplicationSclRef`.
 
 ### Placement collision resolution
 
@@ -483,6 +494,7 @@ type DiffReport = {
 
 type ReportInstance = {
 	rootRef?: AnyRefOrRecord // the instance root; omitted for a first-time instantiate
+	placedFor?: AnyRefOrRecord // a first placement made several times: what this one is made for
 	title: string // human label (e.g. "Prot" vs "Prot_1")
 	linked: boolean // recognised as an instantiation of the loaded template
 	upToDate: boolean // nothing to apply for this instance (no groups)

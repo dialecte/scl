@@ -1,4 +1,5 @@
-import type { DecisionGroup, DiffNode } from './diff.types'
+import type { DecisionGroup, DiffNode, ReportInstance } from './diff.types'
+import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
  * Group stage: fold the `DiffNode` change tree into
@@ -56,11 +57,31 @@ export function collectChangedDescendants(params: { node: DiffNode; out: DiffNod
 	}
 }
 
+/**
+ * Make a first-placement report instance one made for an element of the project: it says which, and
+ * its groups are scoped to it — the same template element placed twice yields two groups, decided
+ * apart.
+ */
+export function placeFor(params: { instance: ReportInstance; placedFor: AnyRefOrRecord }): void {
+	const { instance, placedFor } = params
+	const scopePrefix = placedFor.id
+	if (!scopePrefix) return
+	instance.placedFor = placedFor
+	for (const group of instance.groups) {
+		group.id = scopedId({ id: group.id, scopePrefix })
+		group.dependsOn = group.dependsOn.map((dependency) => scopedId({ id: dependency, scopePrefix }))
+	}
+}
+
 /** Stable, unique key for the primary — the ref that exists for its change kind. */
 function groupId(node: DiffNode, scopePrefix: string | undefined): string {
 	const ref = node.sourceRef ?? node.instanceRef
 	const base = ref ? `${ref.tagName}:${ref.id}` : node.tagName
 	// scope by the instance root so the SAME template element in two instances yields
 	// two distinct group ids (multi-instance targeting)
-	return scopePrefix ? `${scopePrefix}::${base}` : base
+	return scopePrefix ? scopedId({ id: base, scopePrefix }) : base
+}
+
+function scopedId(params: { id: string; scopePrefix: string }): string {
+	return `${params.scopePrefix}::${params.id}`
 }

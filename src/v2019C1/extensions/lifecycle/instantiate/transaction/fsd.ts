@@ -130,10 +130,13 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		parentRef: targetParent,
 		overrides: overrides?.get(functionRef.id),
 	})
-	await writeProvenance(tx, {
-		sourceQuery,
-		target: { anchor: 'function', root: instantiatedRef },
-	})
+	// a function placed as part of a larger template carries that template's provenance, not its own
+	if (!params.partOfTemplate) {
+		await writeProvenance(tx, {
+			sourceQuery,
+			target: { anchor: 'function', root: instantiatedRef },
+		})
+	}
 
 	return { functionRef: instantiatedRef, cloneMappings: allMappings }
 }

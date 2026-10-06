@@ -11,6 +11,7 @@ import type {
 	GroupDecision,
 	ReportInstance,
 } from './diff.types'
+import type { AnyRefOrRecord } from '@dialecte/core'
 
 /** The decision groups scoped to one instance root (empty when the instance is absent/up-to-date). */
 export function groupsForInstance(
@@ -29,16 +30,45 @@ export function reportInstanceById(
 }
 
 /**
+ * The report instances of a FIRST placement made for `placedFor`: those the report lists for it
+ * when it lists the placement several times, else those it lists once.
+ */
+export function firstTimeReportInstances(
+	report: DiffReport | undefined,
+	params: { placedFor?: AnyRefOrRecord },
+): ReportInstance[] {
+	const firstTime = report?.instances.filter((instance) => !instance.rootRef) ?? []
+	const placed = firstTime.filter(
+		(instance) => instance.placedFor && instance.placedFor.id === params.placedFor?.id,
+	)
+	return placed.length > 0 ? placed : firstTime.filter((instance) => !instance.placedFor)
+}
+
+/**
  * The report instance for a FIRST-TIME instantiate: no `rootRef` yet, its diff tree rooted at the
- * source element `sourceRootId`. Lets a verb annotate the added instance's nodes after the write.
+ * source element `sourceRootId` — the one for `placedFor` when the placement is listed several times.
+ * Lets a verb annotate the added instance's nodes after the write.
  */
 export function firstTimeReportInstance(
 	report: DiffReport | undefined,
-	sourceRootId: string,
+	params: { sourceRootId: string; placedFor?: AnyRefOrRecord },
 ): ReportInstance | undefined {
-	return report?.instances.find(
-		(instance) => !instance.rootRef && instance.tree.sourceRef?.id === sourceRootId,
+	return firstTimeReportInstances(report, params).find(
+		(instance) => instance.tree.sourceRef?.id === params.sourceRootId,
 	)
+}
+
+/**
+ * The groups that gate a FIRST placement made for `placedFor`: its own when the placement is listed
+ * several times, else every group of the report.
+ */
+export function firstTimeGroups(
+	report: DiffReport | undefined,
+	params: { placedFor?: AnyRefOrRecord },
+): DecisionGroup[] {
+	const placed = firstTimeReportInstances(report, params).filter((instance) => instance.placedFor)
+	if (placed.length > 0) return placed.flatMap((instance) => instance.groups)
+	return report ? report.instances.flatMap((instance) => instance.groups) : []
 }
 
 /** The action of a decision (absent -> accept; string or object form). */

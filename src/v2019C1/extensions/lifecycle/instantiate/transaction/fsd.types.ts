@@ -23,6 +23,11 @@ export type FsdParams = {
 	 * template says. Left out when the caller already resolved where it lands.
 	 */
 	resolvePlacement?: boolean
+	/**
+	 * The function is placed as part of a larger template (an application's, a substation's): the provenance is that
+	 * template's, the function carries none of its own.
+	 */
+	partOfTemplate?: boolean
 }
 
 export type FsdResult = {

@@ -141,7 +141,7 @@ describe('lifecycle.apply — an update reaches every instance of an application
 					'//default:Bay[@name="B2"]/default:Function[@name="Prot"]/default:SubFunction[@name="Trip"][@templateUuid="trip-source-uuid"]',
 				],
 			},
-		'two instances in the same bay, and the template gains a function and a reference to it → each instance gets its own function and points at it':
+		'two instances in the same bay, and the template gains a function and a reference to it → each instance gets its own function and points at it, the function without provenance of its own':
 			{
 				sourceXml,
 				targetXml: twoBaysProjectXml,
@@ -165,6 +165,8 @@ describe('lifecycle.apply — an update reaches every instance of an application
 					'//default:Bay[@name="B1"]/default:Function[@name="Ctrl_1"][@templateUuid="control-source-uuid"]',
 				],
 				unexpectedQueries: [
+					// placed as part of the application template: its provenance is the application's
+					'//v2019C1:FunctionSclRef',
 					// no function is shared by the two applications
 					'//v2019C1:Application[.//v2019C1:FunctionRef/@functionUuid = preceding::v2019C1:Application//v2019C1:FunctionRef/@functionUuid]',
 					// each application refers to one function of each kind

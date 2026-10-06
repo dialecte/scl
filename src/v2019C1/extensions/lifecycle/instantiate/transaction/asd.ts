@@ -132,10 +132,13 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		parentRef: applicationParent,
 		overrides: overrides?.get(applicationRef.id),
 	})
-	await writeProvenance(tx, {
-		sourceQuery,
-		target: { anchor: 'application', root: rootMapping.target as Scl.Ref<'Application'> },
-	})
+	// an application placed as part of a larger template carries that template's provenance, not its own
+	if (!params.partOfTemplate) {
+		await writeProvenance(tx, {
+			sourceQuery,
+			target: { anchor: 'application', root: rootMapping.target as Scl.Ref<'Application'> },
+		})
+	}
 
 	const composedFunctionInstanceRefs = composedFunctionRefs
 		.map(

@@ -10,16 +10,14 @@ import {
 import { collisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
-import {
-	findInstancesByTemplateUuid,
-	scopeToTargetInstance,
-} from '@/v2019C1/extensions/lifecycle/instance'
+import { scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
 import { ssd as instantiateSsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import {
 	findFrameInstances,
 	hasScopeInstance,
-	resolveInstanceLevels,
+	resolveInstanceLevelsList,
 	resolveInstantiableRoot,
+	resolvePrimaryParents,
 	reconcileTopologyFrame,
 	resolveTopologyReconcilables,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
@@ -33,9 +31,7 @@ import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { InstanceLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 
 type UpdateSsdResult = {
@@ -144,31 +140,30 @@ export async function ssd(
 		instances: frameInstances.map((frameInstance) => frameInstance.instance),
 		targetInstance,
 	})
-	const instanceLevelsList: InstanceLevels[] = []
-	for (const instance of scopedInstances) {
-		const instanceLevels = await resolveInstanceLevels(tx, {
-			sourceQuery,
-			scopeRef: root,
-			frameInstance: toRef(instance) as Scl.Ref<Scl.ElementsOf>,
-			matchKey,
-		})
-		instanceLevelsList.push(instanceLevels)
-	}
+	const instanceLevelsList = await resolveInstanceLevelsList(tx, {
+		sourceQuery,
+		scopeRef: root,
+		instances: scopedInstances.map((instance) => toRef(instance) as Scl.Ref<Scl.ElementsOf>),
+		matchKey,
+	})
 
 	for (const applicationRef of applicationRefs) {
-		const placementParents = await resolvePrimaryParents(tx, {
+		const placement = await resolvePrimaryParents(tx, {
 			sourceQuery,
 			primaryRef: applicationRef,
 			anchor: targetParent,
 			instanceLevelsList,
 			matchKey,
 		})
-		for (const placementParent of placementParents) {
+		for (const placementParent of placement.parents) {
 			const result = await updateAsd(tx, {
 				sourceQuery,
 				applicationRef,
 				targetParent: placementParent,
-				scenario,
+				// a gained application is a fresh one in each instance, whatever another instance holds
+				scenario: placement.gained ? 'instantiate' : scenario,
+				// placed as part of the substation template: its provenance is the document's
+				partOfTemplate: true,
 				report,
 				decisions,
 				keepNameTypesFrom,
@@ -181,19 +176,20 @@ export async function ssd(
 	}
 
 	for (const functionRef of standaloneFunctions) {
-		const placementParents = await resolvePrimaryParents(tx, {
+		const placement = await resolvePrimaryParents(tx, {
 			sourceQuery,
 			primaryRef: functionRef,
 			anchor: targetParent,
 			instanceLevelsList,
 			matchKey,
 		})
-		for (const placementParent of placementParents) {
+		for (const placementParent of placement.parents) {
 			const updated = await updateFsd(tx, {
 				sourceQuery,
 				functionRef,
 				targetParent: placementParent,
-				scenario,
+				scenario: placement.gained ? 'instantiate' : scenario,
+				partOfTemplate: true,
 				report,
 				decisions,
 				keepNameTypesFrom,
@@ -210,49 +206,6 @@ export async function ssd(
 	}
 
 	return { applications, functions }
-}
-
-/**
- * The elements of the project a primary of the scope is updated under.
- *
- * A primary the project already holds an instance of is reconciled where its instances are: under
- * the element the consumer started from. A primary the template GAINED has none: it is placed once
- * per instance of the unit, on the level that instance holds for the level the primary sits on in
- * the template — in the bay the instance lives in, not under the element the update was started
- * from. With no instance of the unit to tell, it falls back on that element.
- */
-async function resolvePrimaryParents(
-	tx: Core.Transaction<Config>,
-	params: {
-		sourceQuery: Core.Query<Config>
-		primaryRef: Scl.Ref<'Application'> | Scl.Ref<'Function'>
-		/** The element of the project the consumer started from. */
-		anchor: Scl.Ref<Scl.ElementsOf>
-		/** Where each instance of the unit lives, level by level. */
-		instanceLevelsList: readonly InstanceLevels[]
-		matchKey: MatchKey
-	},
-): Promise<Scl.Ref<Scl.ElementsOf>[]> {
-	const { sourceQuery, primaryRef, anchor, instanceLevelsList, matchKey } = params
-
-	const sourceUuid = await sourceQuery.any.getAttribute(primaryRef, { name: 'uuid' })
-	const held = await findInstancesByTemplateUuid(tx, {
-		tagName: primaryRef.tagName,
-		sourceUuid,
-		matchKey,
-	})
-	if (held.length > 0) return [anchor]
-
-	const sourceAncestors = await sourceQuery.findAncestors(primaryRef, {
-		stopAtTagName: 'Substation',
-	})
-	const instanceParents: Scl.Ref<Scl.ElementsOf>[] = []
-	for (const instanceLevels of instanceLevelsList) {
-		const sourceLevel = sourceAncestors.find((ancestor) => instanceLevels.has(ancestor.id))
-		const level = sourceLevel && instanceLevels.get(sourceLevel.id)
-		if (level) instanceParents.push(level)
-	}
-	return instanceParents.length > 0 ? instanceParents : [anchor]
 }
 
 /** The instantiated Application / Function roots, read off the clone mappings by tag. */
