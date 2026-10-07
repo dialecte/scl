@@ -1,8 +1,6 @@
 import { asd as updateAsd } from './asd'
 import { fsd as updateFsd } from './fsd'
 
-import { toRef } from '@dialecte/core/helpers'
-
 import {
 	annotateInstance,
 	sourceToTargetMap,
@@ -10,12 +8,9 @@ import {
 import { collisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
-import { scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
 import { ssd as instantiateSsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import {
-	findFrameInstances,
 	hasScopeInstance,
-	resolveInstanceLevelsList,
 	resolveInstantiableRoot,
 	resolvePrimaryParents,
 	reconcileTopologyFrame,
@@ -124,7 +119,7 @@ export async function ssd(
 	// reconcile the topology frame's OWN content (BayType/equipment/attrs) before the fn/app
 	// cascade; the fn/app tags are a boundary, so the cascade below owns them. Each frame
 	// instance is gated by ONLY its own decision groups (from report.ssd) in the full track.
-	const frameAdditions = await reconcileTopologyFrame(tx, {
+	const { additions: frameAdditions, instanceLevelsList } = await reconcileTopologyFrame(tx, {
 		sourceQuery,
 		scopeRef: root,
 		matchKey,
@@ -132,19 +127,7 @@ export async function ssd(
 		report,
 		decisions,
 		targetInstance,
-	})
-
-	// where each instance of the unit lives, once the frame reconcile has added the levels it gained
-	const frameInstances = await findFrameInstances(tx, { sourceQuery, scopeRef: root, matchKey })
-	const scopedInstances = await scopeToTargetInstance(tx, {
-		instances: frameInstances.map((frameInstance) => frameInstance.instance),
-		targetInstance,
-	})
-	const instanceLevelsList = await resolveInstanceLevelsList(tx, {
-		sourceQuery,
-		scopeRef: root,
-		instances: scopedInstances.map((instance) => toRef(instance) as Scl.Ref<Scl.ElementsOf>),
-		matchKey,
+		decisionMappings: params.decisionMappings,
 	})
 
 	for (const applicationRef of applicationRefs) {

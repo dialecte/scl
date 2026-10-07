@@ -48,7 +48,7 @@ export function annotateInstance(params: {
 		const applied =
 			mapping.mapping && 'existing' in mapping.mapping
 				? mapping.mapping.existing
-				: added.get(mapping.id)
+				: added.get(mapping.sourceId ?? mapping.id)
 		if (applied) mapping.appliedRef = applied
 	}
 }

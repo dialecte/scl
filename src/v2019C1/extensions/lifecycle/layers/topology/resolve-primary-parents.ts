@@ -1,11 +1,7 @@
-import { resolveInstanceLevels } from './resolve-instance-levels'
-
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 
-import type { InstanceLevels } from './resolve-instance-levels.types'
 import type { PrimaryParents, ResolvePrimaryParentsParams } from './resolve-primary-parents.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -42,24 +38,4 @@ export async function resolvePrimaryParents(
 		if (level) instanceParents.push(level)
 	}
 	return { parents: instanceParents.length > 0 ? instanceParents : [anchor], gained: true }
-}
-
-/** Where each instance of a topology unit lives, level by level — one entry per instance. */
-export async function resolveInstanceLevelsList(
-	query: Core.Query<Config>,
-	params: {
-		sourceQuery: Core.Query<Config>
-		scopeRef: Scl.Ref<Scl.ElementsOf>
-		instances: readonly Scl.Ref<Scl.ElementsOf>[]
-		matchKey: MatchKey
-	},
-): Promise<InstanceLevels[]> {
-	const { sourceQuery, scopeRef, instances, matchKey } = params
-	const instanceLevelsList: InstanceLevels[] = []
-	for (const frameInstance of instances) {
-		instanceLevelsList.push(
-			await resolveInstanceLevels(query, { sourceQuery, scopeRef, frameInstance, matchKey }),
-		)
-	}
-	return instanceLevelsList
 }

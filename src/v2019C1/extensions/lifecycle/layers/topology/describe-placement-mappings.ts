@@ -1,18 +1,15 @@
-import { collectFrameElements, strictAncestorIds } from './ensure-topology-frame'
-import { resolveInstanceLevels } from './resolve-instance-levels'
-
 import { toRef } from '@dialecte/core/helpers'
 
 import { describeCandidate } from '@/v2019C1/extensions/lifecycle/mapping/describe-mapping'
 import { buildElementPath } from '@/v2019C1/extensions/reference/query/build'
 
+import type { InstancePlacement } from './resolve-instance-levels.types'
 import type { PlacementLevel } from './resolve-placement-mappings.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type {
 	MappingCandidate,
 	ReportMapping,
 } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -116,87 +113,80 @@ function byPath(first: MappingCandidate, second: MappingCandidate): number {
 /**
  * What the report says about the levels an instance of the unit already sits on: where an earlier
  * placement put it. Each is listed as held — shown, not the consumer's to change. A level below
- * the unit the instance holds nothing for is new to it and is not listed.
+ * the unit the instance holds nothing for is new to it and is not listed (a level the template
+ * gained is the consumer's choice: {@link describeGainedLevels}).
  */
 export async function describeHeldPlacement(
 	query: Core.Query<Config>,
 	params: {
-		sourceQuery: Core.Query<Config>
-		/** The unit of the template: the first named level. */
-		scopeRef: Scl.Ref<Scl.ElementsOf>
-		/** The level of the project the instance of the unit sits on. */
-		frameInstance: Scl.Ref<Scl.ElementsOf>
-		matchKey?: MatchKey
+		/** Where each level of the unit stands for the instance, read once (`resolveInstanceLevels`). */
+		placement: InstancePlacement
 	},
 ): Promise<ReportMapping[]> {
-	const { sourceQuery, scopeRef, frameInstance, matchKey } = params
-
-	const frameElements = await collectFrameElements(sourceQuery, scopeRef)
-	const contextIds = await strictAncestorIds(sourceQuery, scopeRef)
-	const instanceAncestors = await query.findAncestors(frameInstance, {
-		stopAtTagName: 'Substation',
-	})
-	const instanceLevels = await resolveInstanceLevels(query, {
-		sourceQuery,
-		scopeRef,
-		frameInstance,
-		matchKey,
-	})
-
 	const reportMappings: ReportMapping[] = []
-	for (const frameElement of frameElements) {
-		const sourceId = frameElement.id
-		if (!sourceId) continue
-
-		// a level above the unit: the level of that kind the instance sits below
-		const contextLevel = instanceAncestors.find((level) => level.tagName === frameElement.tagName)
-		const held = contextIds.has(sourceId)
-			? contextLevel && (toRef(contextLevel) as Scl.Ref<Scl.ElementsOf>)
-			: instanceLevels.get(sourceId)
-		if (!held) continue
-
-		const sourceAncestors = await sourceQuery.findAncestors(frameElement, {
-			stopAtTagName: 'Substation',
-		})
-		const parent = sourceAncestors.find((ancestor) =>
-			reportMappings.some((listed) => listed.id === ancestor.id),
-		)
-		const candidate = await describeCandidate(query, held)
-		const projectOwned = await isProjectOwned(query, {
-			sourceQuery,
-			held,
-			sourceRef: frameElement,
-			matchKey,
-		})
+	for (const { sourceRef, level, parentSourceId, projectOwned } of params.placement.held) {
 		reportMappings.push({
-			id: sourceId,
-			tagName: frameElement.tagName,
+			id: sourceRef.id,
+			tagName: sourceRef.tagName,
 			kind: 'level',
-			mapping: { existing: held },
+			mapping: { existing: level },
 			...(projectOwned ? { projectOwned: true as const } : {}),
 			reason: 'lineage',
 			ambiguous: false,
 			selectable: true,
 			locked: true,
-			candidates: [candidate],
-			...(parent ? { dependsOn: parent.id } : {}),
+			candidates: [await describeCandidate(query, level)],
+			...(parentSourceId ? { dependsOn: parentSourceId } : {}),
 		})
 	}
 	return reportMappings
 }
 
-/** A held level is the project's own unless it was created from the source level (its lineage). */
-async function isProjectOwned(
+/**
+ * What the report says about the levels the template gained since an instance was placed: one
+ * choice per level, for that instance (`placedFor`, `id` scoped to it, `sourceId` the level) —
+ * created under the level the instance holds above it by default (`reason: 'none'`), or mapped onto
+ * one of the levels of that kind the project holds there and the instance does not.
+ */
+export async function describeGainedLevels(
 	query: Core.Query<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
-		held: Scl.Ref<Scl.ElementsOf>
-		sourceRef: Scl.Ref<Scl.ElementsOf>
-		matchKey?: MatchKey
+		/** The level of the project the instance of the unit sits on. */
+		frameInstance: Scl.Ref<Scl.ElementsOf>
+		/** Where each level of the unit stands for the instance, read once (`resolveInstanceLevels`). */
+		placement: InstancePlacement
 	},
-): Promise<boolean> {
-	const { sourceQuery, held, sourceRef, matchKey = 'templateUuid' } = params
-	const sourceUuid = await sourceQuery.any.getAttribute(sourceRef, { name: 'uuid' })
-	const lineage = await query.any.getAttribute(held, { name: matchKey })
-	return !sourceUuid || lineage !== sourceUuid
+): Promise<ReportMapping[]> {
+	const { gained, held } = params.placement
+	const heldLevelIds = new Set(held.map(({ level }) => level.id))
+
+	const reportMappings: ReportMapping[] = []
+	for (const { sourceRef, parentLevel, choiceKey, decision } of gained) {
+		const candidates: MappingCandidate[] = []
+		for (const sibling of await query.any.getChildren(parentLevel, sourceRef.tagName)) {
+			// a level the instance already stands on is not another level to land on
+			if (heldLevelIds.has(sibling.id)) continue
+			candidates.push(await describeCandidate(query, toRef(sibling) as Scl.Ref<Scl.ElementsOf>))
+		}
+		const sourceName = await params.sourceQuery.any.getAttribute(sourceRef, { name: 'name' })
+		const landing = decision ?? { create: { name: sourceName } }
+		const parentPath =
+			'create' in landing ? (await buildElementPath(query, parentLevel))?.path : undefined
+		reportMappings.push({
+			id: choiceKey,
+			sourceId: sourceRef.id,
+			placedFor: params.frameInstance,
+			tagName: sourceRef.tagName,
+			kind: 'level',
+			mapping: landing,
+			...(parentPath ? { parentPath } : {}),
+			reason: decision ? 'decision' : 'none',
+			ambiguous: false,
+			selectable: true,
+			locked: false,
+			candidates: candidates.sort(byPath),
+		})
+	}
+	return reportMappings
 }

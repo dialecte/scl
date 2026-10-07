@@ -7,11 +7,9 @@ import { toRef } from '@dialecte/core/helpers'
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
 import {
-	describeHeldPlacement,
 	describePlacementMappings,
 	findLanding,
 	hasScopeInstance,
-	resolveInstanceLevelsList,
 	resolveInstantiableRoot,
 	resolvePlacementMappings,
 	resolvePrimaryParents,
@@ -97,7 +95,9 @@ export async function reportSsd(
 		pinnedMatches.set(level.sourceRef.id, level.resolved.existing?.id)
 	}
 
-	const frameInstances = await reportTopologyFrame(query, {
+	// on an update, each instance lists the levels it sits on and those the template gained — read
+	// once per instance, with where each level stands for the primaries the template gained
+	const { instances: frameInstances, instanceLevelsList } = await reportTopologyFrame(query, {
 		sourceQuery,
 		scopeRef: root,
 		scenario,
@@ -105,6 +105,7 @@ export async function reportSsd(
 		targetInstance,
 		mappedOnto,
 		pinnedMatches,
+		decisionMappings,
 	})
 	instances.push(...frameInstances)
 
@@ -114,35 +115,12 @@ export async function reportSsd(
 		const placementMappings = await describePlacementMappings(query, { levels: placementLevels })
 		placedFrame.mappings = [...placementMappings, ...placedFrame.mappings]
 	}
-	// on an update, each instance lists the levels it already sits on
-	for (const frameInstance of frameInstances) {
-		if (firstPlacement || !frameInstance.rootRef) continue
-		const heldPlacement = await describeHeldPlacement(query, {
-			sourceQuery,
-			scopeRef: root,
-			frameInstance: toRef(frameInstance.rootRef) as Scl.Ref<Scl.ElementsOf>,
-			matchKey,
-		})
-		frameInstance.mappings = [...heldPlacement, ...frameInstance.mappings]
-	}
-
 	// the primaries are reported from where the template lands: the deepest level of the project
 	// its unit sits on or below — the element the consumer started from when there is none
 	const landing = findLanding({ placementLevels, levelId: root.id }) ?? targetParent
 
 	// on an update, a primary the template gained is placed in each instance of the unit that holds
 	// it: listed once per place, each decided on its own — as the apply places it
-	const instanceLevelsList = firstPlacement
-		? []
-		: await resolveInstanceLevelsList(query, {
-				sourceQuery,
-				scopeRef: root,
-				instances: frameInstances.flatMap((frameInstance) =>
-					frameInstance.rootRef ? [toRef(frameInstance.rootRef) as Scl.Ref<Scl.ElementsOf>] : [],
-				),
-				matchKey,
-			})
-
 	for (const applicationRef of applications) {
 		const places = await findGainedPlaces(query, {
 			sourceQuery,

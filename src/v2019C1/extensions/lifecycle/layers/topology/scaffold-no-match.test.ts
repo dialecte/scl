@@ -47,7 +47,7 @@ describe('topology frame — no name adoption of a scaffold TEMPLATE bay', () =>
 		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
 		if (!target) throw new Error('target required')
 
-		const frame = await reportTopologyFrame(target.document.query, {
+		const { instances: frame } = await reportTopologyFrame(target.document.query, {
 			sourceQuery: source.document.query,
 			scopeRef: { tagName: 'Bay', id: 'bay-s' } as Scl.Ref<'Bay'>,
 			scenario: 'template',

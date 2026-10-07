@@ -6,8 +6,11 @@ import { FRAME_OMIT_CHILD_TAGS } from '@/v2019C1/constants'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
 import {
+	describeGainedLevels,
+	describeHeldPlacement,
 	findFrameInstances,
 	resolveInstanceLevels,
+	resolveTemplateFrame,
 	toPinnedMatches,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
@@ -17,6 +20,8 @@ import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PinnedMatches } from '@/v2019C1/extensions/lifecycle/engine/match-child'
+import type { InstanceLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -31,6 +36,10 @@ import type * as Core from '@dialecte/core'
  * matching instance is diffed and returned as its own {@link ReportInstance}; each owns its groups so
  * the decision layer can target a subset. On a first placement the frame is reported as one added
  * instance, or against the element of the project its root is mapped onto.
+ *
+ * On an update, where each level of the unit stands is read once per instance and serves the diff,
+ * the levels listed as held, the levels the template gained (each the consumer's choice), and is
+ * returned for the primaries the template gained (`instanceLevelsList`).
  */
 export async function reportTopologyFrame(
 	query: Core.Query<Config>,
@@ -45,8 +54,10 @@ export async function reportTopologyFrame(
 		mappedOnto?: Scl.Ref<Scl.ElementsOf>
 		/** Where each level below the scope root lands, on a first placement. */
 		pinnedMatches?: PinnedMatches
+		/** The consumer's choices, among them where a level the template gained lands per instance. */
+		decisionMappings?: DecisionMappings
 	},
-): Promise<ReportInstance[]> {
+): Promise<{ instances: ReportInstance[]; instanceLevelsList: InstanceLevels[] }> {
 	const { sourceQuery, scopeRef, scenario, targetInstance, mappedOnto, pinnedMatches } = params
 	const matchKey = matchKeyForScenario(scenario)
 
@@ -75,7 +86,7 @@ export async function reportTopologyFrame(
 			sourceQuery,
 			sourceRef: scopeRef,
 		})
-		return [reportInstance]
+		return { instances: [reportInstance], instanceLevelsList: [] }
 	}
 
 	const frameInstances = await findFrameInstances(query, { sourceQuery, scopeRef, matchKey })
@@ -85,18 +96,24 @@ export async function reportTopologyFrame(
 	})
 
 	const reportInstances: ReportInstance[] = []
+	const instanceLevelsList: InstanceLevels[] = []
+	// the template's levels, read once for every instance
+	const templateFrame = await resolveTemplateFrame(sourceQuery, scopeRef)
 	for (const instance of instances) {
 		// a level of the project the unit was mapped onto only receives what the template gives it
 		const projectOwned = frameInstances.some(
 			(frameInstance) => frameInstance.instance.id === instance.id && frameInstance.projectOwned,
 		)
 		// each level below the unit stands on the level this instance holds for it, or is new to it
-		const instanceLevels = await resolveInstanceLevels(query, {
+		const frameInstance = toRef(instance) as Scl.Ref<Scl.ElementsOf>
+		const placement = await resolveInstanceLevels(query, {
 			sourceQuery,
-			scopeRef,
-			frameInstance: toRef(instance) as Scl.Ref<Scl.ElementsOf>,
+			templateFrame,
+			frameInstance,
 			matchKey,
+			decisionMappings: params.decisionMappings,
 		})
+		instanceLevelsList.push(placement.levels)
 		const instanceDiff = await diff({
 			sourceQuery,
 			targetQuery: query,
@@ -104,17 +121,20 @@ export async function reportTopologyFrame(
 			instanceRootRef: instance,
 			matchKey,
 			omit: FRAME_OMIT_CHILD_TAGS,
-			pinnedMatches: toPinnedMatches({ instanceLevels, scopeRef }),
+			pinnedMatches: toPinnedMatches({ instanceLevels: placement.levels, scopeRef }),
 			...(projectOwned ? { instanceRootIsProjectOwned: true } : {}),
 		})
-		reportInstances.push(
-			await buildReportInstance(query, {
-				instanceDiff,
-				instance,
-				sourceQuery,
-				sourceRef: scopeRef,
-			}),
-		)
+		const reportInstance = await buildReportInstance(query, {
+			instanceDiff,
+			instance,
+			sourceQuery,
+			sourceRef: scopeRef,
+		})
+		// the levels it already sits on (held), then the ones the template gained (the consumer's call)
+		const held = await describeHeldPlacement(query, { placement })
+		const gained = await describeGainedLevels(query, { sourceQuery, frameInstance, placement })
+		reportInstance.mappings = [...held, ...gained, ...reportInstance.mappings]
+		reportInstances.push(reportInstance)
 	}
-	return reportInstances
+	return { instances: reportInstances, instanceLevelsList }
 }

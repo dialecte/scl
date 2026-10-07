@@ -1118,8 +1118,9 @@ describe('placement mapping — an update finds where the instance was placed', 
 
 		// 3. the update
 		const updateReport = await report(target.query, { ...lifecycleTarget, scenario: 'template' })
+		// the levels the instance sits on; a level the template gains is a choice of its own (below)
 		const placement = updateReport.mappings
-			.filter((mapping) => STRUCTURAL_TAGS.includes(mapping.tagName))
+			.filter((mapping) => STRUCTURAL_TAGS.includes(mapping.tagName) && !mapping.placedFor)
 			.map((mapping) => ({
 				...mapping,
 				mapping:
@@ -1175,6 +1176,172 @@ describe('placement mapping — an update finds where the instance was placed', 
 			}
 			expect(functions.sort(), 'apply').toEqual(testCase.expected.functions)
 		}
+
+		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
+		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
+
+type GainedLevelTestCase = SclTest.BaseXmlTestCase & {
+	targetXml: string
+	/** What the user chooses at the update for the gained level — the default left as it is when absent. */
+	chosen?: DecisionMapping
+	expected: {
+		/** The gained levels the update's report lists: tag, name, for which instance, where, candidates. */
+		gained: string[]
+		/** Where the gained level landed, read on the report the apply returns. */
+		landedOn: string
+		bays: string[]
+		functions: string[]
+	}
+}
+
+describe('placement mapping — a level the template gains on an update is a choice', () => {
+	const ownBayRef = { tagName: 'Bay', id: 'own-bay-t' } as Scl.Ref<'Bay'>
+	const testCases: SclTest.TestCases<GainedLevelTestCase> = {
+		'its voltage level gains a bay, the project holds one of that name there → listed for the instance, created by default under a free name':
+			{
+				sourceXml: voltageLevelTypicalXml,
+				targetXml: sameNamesAndOwnBayProjectXml,
+				expected: {
+					gained: ['Bay Q2 for S1/E1 → new: Q2 in S1/E1 | candidates: Q2'],
+					landedOn: 'S1/E1/Q2_1',
+					bays: ['S1/E1/Q1', 'S1/E1/Q2', 'S1/E1/Q2_1'],
+					functions: ['S1/E1/Q1/Prot', 'S1/E1/Q2_1/Ctrl'],
+				},
+			},
+		'… the user maps it onto the project bay → its content lands there; the project bay keeps what it is':
+			{
+				sourceXml: voltageLevelTypicalXml,
+				targetXml: sameNamesAndOwnBayProjectXml,
+				chosen: { existing: ownBayRef },
+				expected: {
+					gained: ['Bay Q2 for S1/E1 → S1/E1/Q2 | candidates: Q2'],
+					landedOn: 'S1/E1/Q2',
+					bays: ['S1/E1/Q1', 'S1/E1/Q2'],
+					functions: ['S1/E1/Q1/Prot', 'S1/E1/Q2/Ctrl'],
+				},
+			},
+		'… the user names the new bay → created under that name': {
+			sourceXml: voltageLevelTypicalXml,
+			targetXml: sameNamesAndOwnBayProjectXml,
+			chosen: { create: { name: 'Q3' } },
+			expected: {
+				gained: ['Bay Q2 for S1/E1 → new: Q3 in S1/E1 | candidates: Q2'],
+				landedOn: 'S1/E1/Q3',
+				bays: ['S1/E1/Q1', 'S1/E1/Q2', 'S1/E1/Q3'],
+				functions: ['S1/E1/Q1/Prot', 'S1/E1/Q3/Ctrl'],
+			},
+		},
+	}
+
+	async function act({
+		testCase,
+		source,
+		target,
+	}: SclTest.ActParams<GainedLevelTestCase>): Promise<void> {
+		if (!target) throw new Error('target required')
+
+		const lifecycleTarget = {
+			verb: 'ssd' as const,
+			sourceQuery: source.query,
+			ref: sourceSubstationRef,
+			anchor: substationRef,
+		}
+		const pathOf = async (ref: Scl.Ref<Scl.ElementsOf>) =>
+			(await buildElementPath(target.query, ref))?.path ?? ''
+
+		// 1. placed on the project's voltage level and bay of the same names
+		const placedOnto = new Map<string, DecisionMapping>([
+			['voltage-level-s', { existing: voltageLevelRef }],
+			['bay-s', { existing: bayRef }],
+		])
+		const instantiateReport = await report(target.query, {
+			...lifecycleTarget,
+			scenario: 'instantiate',
+			resolution: { mappings: placedOnto },
+		})
+		await target.transaction(async (tx) => {
+			await apply(tx, {
+				...lifecycleTarget,
+				scenario: 'instantiate',
+				report: instantiateReport,
+				resolution: { decisions: new Map(), mappings: placedOnto },
+			})
+		})
+
+		// 2. the template's voltage level gains a bay "Q2" holding a function
+		await source.transaction(gainBay)
+
+		// 3. the update lists the gained bay for the instance, the user may choose where it lands
+		let updateReport = await report(target.query, { ...lifecycleTarget, scenario: 'template' })
+		const decisionMappings = new Map<string, DecisionMapping>()
+		const [row] = updateReport.mappings.filter(
+			(mapping) => mapping.kind === 'level' && mapping.placedFor,
+		)
+		if (row && testCase.chosen) {
+			decisionMappings.set(row.id, testCase.chosen)
+			updateReport = await report(target.query, {
+				...lifecycleTarget,
+				scenario: 'template',
+				resolution: { mappings: decisionMappings },
+			})
+		}
+		const gained: string[] = []
+		for (const mapping of updateReport.mappings) {
+			if (mapping.kind !== 'level' || !mapping.placedFor) continue
+			const name = await source.query.any.getAttribute(
+				{ tagName: mapping.tagName, id: mapping.sourceId ?? mapping.id } as Scl.Ref<Scl.ElementsOf>,
+				{ name: 'name' },
+			)
+			const lands = !mapping.mapping
+				? 'to choose'
+				: 'create' in mapping.mapping
+					? `new: ${mapping.mapping.create.name} in ${mapping.parentPath}`
+					: await pathOf(mapping.mapping.existing)
+			const forInstance = await pathOf(mapping.placedFor as Scl.Ref<Scl.ElementsOf>)
+			const candidates = mapping.candidates.map((candidate) => candidate.title).join(', ')
+			gained.push(
+				`${mapping.tagName} ${name} for ${forInstance} → ${lands} | candidates: ${candidates}`,
+			)
+		}
+		expect(gained, 'report').toEqual(testCase.expected.gained)
+
+		let appliedReport = updateReport
+		await target.transaction(async (tx) => {
+			const applied = await apply(tx, {
+				...lifecycleTarget,
+				scenario: 'template',
+				report: updateReport,
+				resolution: { decisions: new Map(), mappings: decisionMappings },
+			})
+			appliedReport = applied.report
+		})
+		const [landed] = appliedReport.mappings.filter(
+			(mapping) => mapping.kind === 'level' && mapping.placedFor,
+		)
+		const landedOn = landed?.appliedRef
+			? await pathOf(landed.appliedRef as Scl.Ref<Scl.ElementsOf>)
+			: undefined
+		expect(landedOn, 'apply').toBe(testCase.expected.landedOn)
+
+		const pathsOf = async (tagName: 'Bay' | 'Function') => {
+			const paths: string[] = []
+			for (const record of await target.query.getRecordsByTagName(tagName)) {
+				paths.push(await pathOf({ tagName, id: record.id } as Scl.Ref<Scl.ElementsOf>))
+			}
+			return paths.sort()
+		}
+		expect(await pathsOf('Bay'), 'apply').toEqual(testCase.expected.bays)
+		expect(await pathsOf('Function'), 'apply').toEqual(testCase.expected.functions)
+		// the project's own bay keeps what it is: its description, no lineage of the template
+		expect(await target.query.getAttribute(ownBayRef, { name: 'desc' }), 'apply').toBe(
+			'Project bay 2',
+		)
+		const ownLineage = await target.query.getAttribute(ownBayRef, { name: 'templateUuid' })
+		expect(ownLineage || undefined, 'apply').toBeUndefined()
 
 		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
 		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
