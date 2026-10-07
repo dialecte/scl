@@ -5,22 +5,22 @@ import { foldSatelliteCompanions } from './satellite-companions'
 
 import { toRef } from '@dialecte/core/helpers'
 
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
 import {
-	collectComposedFunctionUuids,
 	collectForeignScopes,
 	findInstancesByTemplateUuid,
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
 import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
 import {
+	composedFunctionChoiceKey,
 	resolveApplicationSatellites,
-	resolveInstanceHoldings,
+	resolveComposedFunctions,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
 	describePlacementMappings,
-	findHeldLevel,
 	findLanding,
 	resolvePrimaryPlacement,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
@@ -28,17 +28,26 @@ import {
 	resolveSatelliteMappings,
 	toRedirectMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
+import { describeCandidate } from '@/v2019C1/extensions/lifecycle/mapping/describe-mapping'
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
+import { buildElementPath } from '@/v2019C1/extensions/reference/query/build'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
+	DecisionGroup,
+	DiffNode,
 	DiffReport,
 	InstanceDiff,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { InstanceHoldings } from '@/v2019C1/extensions/lifecycle/layers/application'
-import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { ComposedFunctionChoice } from '@/v2019C1/extensions/lifecycle/layers/application'
+import type {
+	DecisionMappings,
+	MappingCandidate,
+	ReportMapping,
+	ReportPass,
+} from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -161,7 +170,7 @@ export async function reportAsd(
 		}
 	}
 
-	const functionInstances = await reportComposedFunctions(query, {
+	const composedFunctions = await reportComposedFunctions(query, {
 		pass: params.pass,
 		sourceQuery,
 		applicationRef,
@@ -172,7 +181,19 @@ export async function reportAsd(
 		anchor,
 	})
 
-	const report = assembleReport([...reportInstances, ...functionInstances])
+	await linkReferencesToPlacements(sourceQuery, {
+		applicationReports: reportInstances,
+		placements: composedFunctions.placements,
+	})
+	// which function an instance stands on, where several qualify: listed with that instance
+	for (const choice of composedFunctions.choices) {
+		const owner = reportInstances.find(
+			(reportInstance) => reportInstance.rootRef?.id === choice.placedFor?.id,
+		)
+		if (owner) owner.mappings = [...owner.mappings, choice]
+	}
+
+	const report = assembleReport([...reportInstances, ...composedFunctions.instances])
 	report.offLevel = placement.offLevel
 	// a level nothing is decided for is the consumer's to choose before anything is written
 	if (placement.levels.some((level) => level.undecided)) report.needsDecisions = true
@@ -274,7 +295,15 @@ async function reportApplicationInstance(
 	return applicationReport
 }
 
-/** One {@link ReportInstance} per composed Function INSTANCE (found globally by `templateUuid`). */
+/**
+ * One {@link ReportInstance} per function the update writes for what the application composes. On a
+ * first placement, each composed function is placed. Otherwise what stands for each function, per
+ * instance of the application, is the update's own answer ({@link resolveComposedFunctions}): a
+ * function an instance owns, takes, or no instance stands on where the consumer started is
+ * reconciled; a function placed for an instance is a first placement made for it — listed per
+ * instance when there are several. Where several functions qualify for an instance, which one it
+ * stands on is a choice listed for that instance (`choices`); nothing is placed for it until made.
+ */
 async function reportComposedFunctions(
 	query: Core.Query<Config>,
 	params: {
@@ -289,172 +318,214 @@ async function reportComposedFunctions(
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
 	},
-): Promise<ReportInstance[]> {
-	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings, anchor } = params
+): Promise<{ instances: ReportInstance[]; choices: ReportMapping[]; placements: Placement[] }> {
+	const { sourceQuery, applicationRef, applicationInstances, scenario, anchor } = params
 	const matchKey = matchKeyForScenario(scenario)
-	const functionUuids = await collectComposedFunctionUuids(sourceQuery, applicationRef)
-	// a function the template gained is placed for each instance of the application, in its bay
-	const gainedPlaces =
-		params.applicationInstances.length > 1
-			? createGainedPlaces(query, {
-					sourceQuery,
-					applicationRef,
-					applicationInstances: params.applicationInstances,
-					matchKey,
-				})
-			: undefined
 
 	const reportInstances: ReportInstance[] = []
-	for (const functionUuid of functionUuids) {
-		const [sourceFunction] = await sourceQuery.any.findByAttributes({
-			tagName: 'Function',
-			attributes: { uuid: functionUuid },
-		})
-		if (!sourceFunction) continue
+	if (applicationInstances.length === 0) {
+		for (const functionRef of await findComposedFunctionRefs(sourceQuery, applicationRef)) {
+			reportInstances.push(
+				await reportComposedFunction(query, {
+					...params,
+					functionRef,
+					instance: undefined,
+					refsAlwaysAdded: scenario === 'instantiate',
+				}),
+			)
+		}
+		return { instances: reportInstances, choices: [], placements: [] }
+	}
 
-		const functionRef = { tagName: 'Function', id: sourceFunction.id } as Scl.Ref<'Function'>
-		// `instantiate` always places NEW composed-function instances too.
-		const matchedFunctions =
-			scenario === 'instantiate'
-				? []
-				: await findInstancesByTemplateUuid(query, {
-						tagName: 'Function',
-						sourceUuid: functionUuid,
-						matchKey,
-					})
-		const functionInstances = await scopeToTargetInstance(query, {
-			instances: matchedFunctions,
-			targetInstance,
-		})
-		if (functionInstances.length === 0 && gainedPlaces) {
-			for (const { applicationInstance, level } of await gainedPlaces.of(functionRef)) {
-				const instanceDiff = await reportFunction(query, {
-					pass: params.pass,
-					sourceQuery,
+	const composedFunctions = await resolveComposedFunctions(query, {
+		sourceQuery,
+		applicationRef,
+		applicationInstances,
+		anchor,
+		matchKey,
+		decisionMappings: params.decisionMappings,
+	})
+	const choices: ReportMapping[] = []
+	const placements: Placement[] = []
+	for (const {
+		functionRef,
+		sourceUuid,
+		standings,
+		choices: instanceChoices,
+		atAnchor,
+	} of composedFunctions) {
+		for (const instance of applicationInstances) {
+			const choice = instanceChoices.get(instance.id)
+			if (choice) {
+				choices.push(
+					await describeComposedFunctionChoice(query, {
+						functionRef,
+						applicationInstance: instance,
+						choice,
+					}),
+				)
+			}
+		}
+		const reconciled = new Map<string, AnyTrackedRecord>()
+		for (const instance of applicationInstances) {
+			const standing = standings.get(instance.id)
+			if (!standing || standing.kind === 'undecided') continue
+			if (standing.kind === 'owned') {
+				for (const owned of standing.functions) reconciled.set(owned.id, owned)
+			} else if (standing.kind === 'taken') {
+				reconciled.set(standing.function.id, standing.function)
+			} else {
+				const reportInstance = await reportComposedFunction(query, {
+					...params,
 					functionRef,
 					instance: undefined,
 					refsAlwaysAdded: true,
-					matchKey,
-					decisionMappings,
-					anchor: level ?? anchor,
+					anchor: standing.level,
 				})
-				const reportInstance = await buildReportInstance(query, {
-					instanceDiff,
-					instance: undefined,
-					sourceQuery,
-					sourceRef: functionRef,
-				})
-				placeFor({ instance: reportInstance, placedFor: applicationInstance })
+				// placed for each instance of the application: listed, and decided, per instance
+				if (applicationInstances.length > 1)
+					placeFor({ instance: reportInstance, placedFor: instance })
 				reportInstances.push(reportInstance)
+				if (sourceUuid) {
+					placements.push({ applicationInstanceId: instance.id, sourceUuid, reportInstance })
+				}
 			}
-			continue
 		}
-		if (functionInstances.length === 0) {
-			const instanceDiff = await reportFunction(query, {
-				pass: params.pass,
-				sourceQuery,
-				functionRef,
-				instance: undefined,
-				refsAlwaysAdded: scenario === 'instantiate',
-				matchKey,
-				decisionMappings,
-				anchor,
-			})
+		for (const unowned of atAnchor) reconciled.set(unowned.id, unowned)
+
+		const scoped = await scopeToTargetInstance(query, {
+			instances: [...reconciled.values()],
+			targetInstance: params.targetInstance,
+		})
+		for (const functionInstance of scoped) {
 			reportInstances.push(
-				await buildReportInstance(query, {
-					instanceDiff,
-					instance: undefined,
-					sourceQuery,
-					sourceRef: functionRef,
-				}),
-			)
-			continue
-		}
-		for (const functionInstance of functionInstances) {
-			const instanceDiff = await reportFunction(query, {
-				pass: params.pass,
-				sourceQuery,
-				functionRef,
-				instance: functionInstance,
-				refsAlwaysAdded: scenario === 'instantiate',
-				matchKey,
-				decisionMappings,
-				anchor,
-			})
-			reportInstances.push(
-				await buildReportInstance(query, {
-					instanceDiff,
+				await reportComposedFunction(query, {
+					...params,
+					functionRef,
 					instance: functionInstance,
-					sourceQuery,
-					sourceRef: functionRef,
+					refsAlwaysAdded: scenario === 'instantiate',
 				}),
 			)
 		}
 	}
-	return reportInstances
+	return { instances: reportInstances, choices, placements }
+}
+
+/** A function placed for one instance of the application, by the update. */
+type Placement = {
+	applicationInstanceId: string
+	/** The uuid of the source function, the one the application's references carry. */
+	sourceUuid: string
+	reportInstance: ReportInstance
 }
 
 /**
- * Where a function the template gained is placed for each instance of the application: in the bay
- * that instance lives in, read from what it holds — each instance read once per report.
+ * A reference an instance of the application gains to a function placed for it depends on that
+ * placement: leaving the function out leaves the reference out, never a reference to nothing.
  */
-function createGainedPlaces(
+async function linkReferencesToPlacements(
+	sourceQuery: Core.Query<Config>,
+	params: { applicationReports: readonly ReportInstance[]; placements: readonly Placement[] },
+): Promise<void> {
+	for (const { applicationInstanceId, sourceUuid, reportInstance } of params.placements) {
+		const placementGroup =
+			reportInstance.groups.find((group) => group.primary === reportInstance.tree) ??
+			reportInstance.groups[0]
+		const applicationReport = params.applicationReports.find(
+			(report) => report.rootRef?.id === applicationInstanceId,
+		)
+		if (!placementGroup || !applicationReport) continue
+		for (const group of applicationReport.groups) {
+			if (group.dependsOn.includes(placementGroup.id)) continue
+			if (await addsReferenceTo(sourceQuery, { group, sourceUuid })) {
+				group.dependsOn.push(placementGroup.id)
+			}
+		}
+	}
+}
+
+/** Whether a group adds a reference carrying `sourceUuid` (a FunctionRef to that function). */
+async function addsReferenceTo(
+	sourceQuery: Core.Query<Config>,
+	params: { group: DecisionGroup; sourceUuid: string },
+): Promise<boolean> {
+	const { group, sourceUuid } = params
+	const pending: DiffNode[] = [group.primary, ...group.companions]
+	while (pending.length > 0) {
+		const node = pending.pop() as DiffNode
+		pending.push(...node.children)
+		if (node.change !== 'added' || !node.sourceRef) continue
+		const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS] ?? []
+		for (const pair of pairs) {
+			const referenced = await sourceQuery.any.getAttribute(node.sourceRef, {
+				name: pair.attribute.uuid,
+			})
+			if (referenced === sourceUuid) return true
+		}
+	}
+	return false
+}
+
+/**
+ * The choice of the function one instance of the application stands on, where several functions of
+ * that lineage no instance refers to qualify: one of them, or a new one placed where it lives.
+ */
+async function describeComposedFunctionChoice(
+	query: Core.Query<Config>,
+	params: {
+		functionRef: Scl.Ref<'Function'>
+		applicationInstance: AnyTrackedRecord
+		choice: ComposedFunctionChoice
+	},
+): Promise<ReportMapping> {
+	const { functionRef, applicationInstance, choice } = params
+	const candidates: MappingCandidate[] = []
+	for (const candidate of choice.candidates) {
+		candidates.push(await describeCandidate(query, toRef(candidate) as Scl.Ref<Scl.ElementsOf>))
+	}
+	const created = choice.decision && 'create' in choice.decision
+	const parentPath = created ? (await buildElementPath(query, choice.level))?.path : undefined
+	return {
+		id: composedFunctionChoiceKey({ applicationInstance, functionRef }),
+		sourceId: functionRef.id,
+		placedFor: toRef(applicationInstance),
+		tagName: functionRef.tagName,
+		kind: 'shared',
+		...(choice.decision ? { mapping: choice.decision } : {}),
+		...(parentPath ? { parentPath } : {}),
+		reason: choice.decision ? 'decision' : 'none',
+		ambiguous: true,
+		selectable: true,
+		locked: false,
+		candidates,
+	}
+}
+
+/** The report of one composed function: placed afresh (`instance` undefined) or reconciled. */
+async function reportComposedFunction(
 	query: Core.Query<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
-		applicationRef: Scl.Ref<'Application'>
-		applicationInstances: readonly AnyTrackedRecord[]
-		matchKey: MatchKey
+		functionRef: Scl.Ref<'Function'>
+		instance: AnyTrackedRecord | undefined
+		/** The function's references are new whatever the project holds (a function placed afresh). */
+		refsAlwaysAdded: boolean
+		scenario?: LifecycleScenario
+		decisionMappings?: DecisionMappings
+		anchor?: Scl.Ref<Scl.ElementsOf>
+		pass?: ReportPass
 	},
-): {
-	of: (
-		functionRef: Scl.Ref<'Function'>,
-	) => Promise<{ applicationInstance: Scl.Ref<'Application'>; level?: Scl.Ref<Scl.ElementsOf> }[]>
-} {
-	const { sourceQuery, applicationRef, applicationInstances, matchKey } = params
-	let holdings: Map<string, InstanceHoldings> | undefined
-
-	async function resolveHoldings(): Promise<Map<string, InstanceHoldings>> {
-		const functionRefs = await findComposedFunctionRefs(sourceQuery, applicationRef)
-		const heldFunctions = new Map<string, AnyTrackedRecord[]>()
-		for (const functionRef of functionRefs) {
-			const sourceUuid = await sourceQuery.getAttribute(functionRef, { name: 'uuid' })
-			heldFunctions.set(
-				functionRef.id,
-				await findInstancesByTemplateUuid(query, { tagName: 'Function', sourceUuid, matchKey }),
-			)
-		}
-		const resolved = new Map<string, InstanceHoldings>()
-		for (const instance of applicationInstances) {
-			resolved.set(
-				instance.id,
-				await resolveInstanceHoldings(query, {
-					sourceQuery,
-					applicationRef,
-					instance,
-					functionRefs,
-					heldFunctions,
-				}),
-			)
-		}
-		return resolved
-	}
-
-	async function of(functionRef: Scl.Ref<'Function'>) {
-		holdings ??= await resolveHoldings()
-		const places: {
-			applicationInstance: Scl.Ref<'Application'>
-			level?: Scl.Ref<Scl.ElementsOf>
-		}[] = []
-		for (const instance of applicationInstances) {
-			const heldLevels = holdings.get(instance.id)?.heldLevels
-			const level = heldLevels
-				? await findHeldLevel(sourceQuery, { sourceRef: functionRef, heldLevels })
-				: undefined
-			places.push({ applicationInstance: toRef(instance) as Scl.Ref<'Application'>, level })
-		}
-		return places
-	}
-
-	return { of }
+): Promise<ReportInstance> {
+	const { sourceQuery, functionRef, instance, scenario } = params
+	const instanceDiff = await reportFunction(query, {
+		pass: params.pass,
+		sourceQuery,
+		functionRef,
+		instance,
+		refsAlwaysAdded: params.refsAlwaysAdded,
+		matchKey: matchKeyForScenario(scenario),
+		decisionMappings: params.decisionMappings,
+		anchor: params.anchor,
+	})
+	return buildReportInstance(query, { instanceDiff, instance, sourceQuery, sourceRef: functionRef })
 }

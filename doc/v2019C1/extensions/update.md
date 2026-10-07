@@ -254,9 +254,19 @@ instance of the template — a function an application gained in the bay of each
 application, a primary a substation template gained in each instance of the unit. The report lists
 it the same way: one first-time instance **per placement**, each with `placedFor` — the instance of
 the application it is placed for, or the level it lands under — and its own groups (their ids are
-scoped to it). Skip the groups of one placement to leave that instance without it; skip, with them,
-the groups of the instance that refers to it (the application's new reference) to leave that
-instance as it was. Placed once only (one instance), a first-time instance carries no `placedFor`.
+scoped to it). The groups of the instance that refer to it (the application's new reference) list
+that placement in `dependsOn`: skipping the placement while accepting the reference is refused, so a
+reference never points at nothing — skip both to leave that instance as it was. Placed once only
+(one instance), a first-time instance carries no `placedFor`.
+
+Where an instance lives, a function of that lineage may already stand on its own (belonging to no
+instance): that one is taken for the instance, reconciled where it sits, and listed as such. When
+several qualify, nothing tells which one: `report.mappings` lists the choice for that instance — `id`
+scoped to it (`<application instance id>::<source function id>`), `sourceId` the source function,
+`placedFor` the application instance, `candidates` the functions that qualify — without a `mapping`,
+`needsDecisions` is set and `apply` refuses until the consumer passes `{ existing }` (one of them)
+or `{ create: {} }` (a new one, placed for that instance) under that `id` in `resolution.mappings`.
+The report and the update read one same answer for each function, per instance.
 
 A function or an application placed as part of a larger template carries that template's provenance,
 not its own: a function an application gains gets no `FunctionSclRef`, a primary a substation
@@ -376,7 +386,7 @@ This unifies instantiate and update — instantiation is the first-time case of 
 1. **application layer** — reconcile the `Application` subtree (roles, allocation refs, attributes);
 2. **function-layer cascade** — _verbs compose verbs_: treat every composed Function the ASD references as an FSD to update and delegate to `tx.lifecycle.update.fsd`, **per instance of the application**:
    - the functions an instance refers to are its own: each is reconciled where it sits, whichever bay that is — not only those under the ASD anchor;
-   - a function **added** by the newer ASD is new to every instance: each instance the update writes to gets its own, on the level that instance lives on (the bay of its other functions), and its new references point at it. A function of that lineage already standing there on its own, belonging to no instance, is taken instead of a new one;
+   - a function **added** by the newer ASD is new to every instance: each instance the update writes to gets its own, on the level that instance lives on (the bay of its other functions), and its new references point at it. A function of that lineage already standing there on its own, belonging to no instance, is taken instead of a new one; with several, the consumer chooses (see above);
    - a function that belongs to no instance is reconciled when it sits where the consumer started.
 
 The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQuery, ref: applicationRef })`.

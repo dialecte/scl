@@ -149,8 +149,19 @@ export type MappingKind = 'level' | 'shared'
 
 /** What the report says about one source element that lands on an element of the project. */
 export type ReportMapping = {
-	/** Record id of the source element; the key of a choice made for it. */
+	/**
+	 * The key of a choice made for it: the record id of the source element — or, for a mapping
+	 * decided for one element of the project (`placedFor`), that element's id and the source
+	 * element's (`<placedFor id>::<source id>`).
+	 */
 	id: string
+	/** Record id of the source element, when `id` is scoped to `placedFor`. */
+	sourceId?: string
+	/**
+	 * The element of the project this mapping is decided for, when the report lists it once per
+	 * such element (a function an application gained, for one instance of the application).
+	 */
+	placedFor?: AnyRefOrRecord
 	tagName: string
 	kind: MappingKind
 	/**

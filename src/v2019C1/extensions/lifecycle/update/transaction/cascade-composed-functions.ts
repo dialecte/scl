@@ -1,23 +1,18 @@
 import { fsd as updateFsd } from './fsd'
 
-import {
-	findComposedFunctionRefs,
-	findInstancesByTemplateUuid,
-	findInstancesUnder,
-	scopeToTargetInstance,
-} from '@/v2019C1/extensions/lifecycle/instance'
-import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
-import { resolveInstanceHoldings } from '@/v2019C1/extensions/lifecycle/layers/application'
-import { findHeldLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import { toRef } from '@dialecte/core/helpers'
+import { invariant } from '@dialecte/core/utils'
+
+import { SCL_ERRORS } from '@/v2019C1/errors'
+import { scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
+import { resolveComposedFunctions } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
-import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type {
 	CascadeComposedFunctionsParams,
 	ComposedFunctionsCascade,
 } from './cascade-composed-functions.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { InstanceHoldings } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
@@ -31,101 +26,63 @@ import type { AnyTrackedRecord } from '@dialecte/core'
  *  - a function the template gained is new to every instance: each instance the update writes to
  *    gets its own, on the level that instance lives on — in the bay of its other functions, not
  *    under the element the update was started from. A function of that lineage already there that
- *    belongs to no instance is taken instead of a new one;
+ *    belongs to no instance is taken instead of a new one; with several, the consumer chose;
  *  - a function that belongs to no instance is reconciled when it sits where the consumer started.
  *
- * The references an instance gained to such a function are repointed by the caller, from the
- * redirect mappings returned for that instance.
+ * What stands for each function, per instance, is {@link resolveComposedFunctions}: the answer the
+ * report announced. The references an instance gained to such a function are repointed by the
+ * caller, from the redirect mappings returned for that instance.
  */
 export async function cascadeComposedFunctions(
 	tx: Core.Transaction<Config>,
 	params: CascadeComposedFunctionsParams,
 ): Promise<ComposedFunctionsCascade> {
 	const { sourceQuery, applicationRef, targetParent, applicationInstances, targetInstance } = params
-	const matchKey = matchKeyForScenario(params.scenario)
 
 	const cascade: ComposedFunctionsCascade = { functions: [], redirectMappings: new Map() }
-	const functionRefs = await findComposedFunctionRefs(sourceQuery, applicationRef)
-	if (functionRefs.length === 0) return cascade
+	// what stands for each composed function, per instance: the answer the report announced
+	const composedFunctions = await resolveComposedFunctions(tx, {
+		sourceQuery,
+		applicationRef,
+		applicationInstances: applicationInstances.map(({ instance }) => instance),
+		anchor: targetParent,
+		matchKey: matchKeyForScenario(params.scenario),
+		decisionMappings: params.decisionMappings,
+	})
 
-	const sourceUuids = new Map<string, string | undefined>()
-	const heldFunctions = new Map<string, AnyTrackedRecord[]>()
-	for (const functionRef of functionRefs) {
-		const sourceUuid = await sourceQuery.getAttribute(functionRef, { name: 'uuid' })
-		const held = await findInstancesByTemplateUuid(tx, {
-			tagName: 'Function',
-			sourceUuid,
-			matchKey,
-		})
-		sourceUuids.set(functionRef.id, sourceUuid)
-		heldFunctions.set(functionRef.id, held)
-	}
-
-	const holdings = new Map<string, InstanceHoldings>()
-	for (const applicationInstance of applicationInstances) {
-		const instanceHoldings = await resolveInstanceHoldings(tx, {
-			sourceQuery,
-			applicationRef,
-			instance: applicationInstance.instance,
-			functionRefs,
-			heldFunctions,
-		})
-		holdings.set(applicationInstance.instance.id, instanceHoldings)
-	}
-
-	const anchorStructure = await resolveTargetStructure(tx, targetParent)
-
-	for (const functionRef of functionRefs) {
-		const sourceUuid = sourceUuids.get(functionRef.id)
-		// the functions of the project to reconcile, and those an instance already calls its own
+	for (const { functionRef, sourceUuid, standings, atAnchor } of composedFunctions) {
+		// the functions of the project to reconcile
 		const reconcilables = new Map<string, AnyTrackedRecord>()
-		const claimed = new Set<string>()
-		for (const instanceHoldings of holdings.values()) {
-			for (const owned of instanceHoldings.ownedFunctions.get(functionRef.id) ?? []) {
-				reconcilables.set(owned.id, owned)
-				claimed.add(owned.id)
-			}
-		}
-
-		const anchorLevel = await resolveStructureRef(sourceQuery, functionRef, anchorStructure)
-
-		// new to an instance: one per instance, on the level that instance lives on
 		for (const { instance, written } of applicationInstances) {
-			const instanceHoldings = holdings.get(instance.id)
-			if (!written || !instanceHoldings || !sourceUuid) continue
-			if ((instanceHoldings.ownedFunctions.get(functionRef.id) ?? []).length > 0) continue
-
-			const heldLevel = await findHeldLevel(sourceQuery, {
-				sourceRef: functionRef,
-				heldLevels: instanceHoldings.heldLevels,
+			const standing = standings.get(instance.id)
+			if (!standing) continue
+			if (standing.kind === 'owned') {
+				for (const owned of standing.functions) reconcilables.set(owned.id, owned)
+				continue
+			}
+			if (!written || !sourceUuid) continue
+			// several qualify where the instance lives: nothing is written until the consumer chose
+			invariant(standing.kind !== 'undecided', {
+				key: SCL_ERRORS.MAPPING_UNDECIDED,
+				meta: { sourceId: functionRef.id, tagName: functionRef.tagName, kind: 'shared' },
+				detail: `which <Function> "${functionRef.id}" the application instance "${instance.id}" stands on is not decided: several functions of that lineage qualify, choose one or have a new one placed`,
 			})
-			const level = heldLevel ?? anchorLevel
-			const there = await findInstancesUnder(tx, {
-				targetParent: level,
-				tagName: 'Function',
-				sourceUuid,
-				matchKey,
-			})
-			const free = there.filter((candidate) => !claimed.has(candidate.id))
-			// several qualify and nothing singles one out: none is taken, none is added
-			if (free.length > 1) continue
 
 			let standsFor: Scl.Ref<Scl.ElementsOf>
-			if (free.length === 1) {
-				reconcilables.set(free[0].id, free[0])
-				claimed.add(free[0].id)
-				standsFor = { tagName: 'Function', id: free[0].id } as Scl.Ref<Scl.ElementsOf>
+			if (standing.kind === 'taken') {
+				reconcilables.set(standing.function.id, standing.function)
+				standsFor = toRef(standing.function) as Scl.Ref<Scl.ElementsOf>
 			} else {
 				const [placed] = await updateFsd(tx, {
 					sourceQuery,
 					functionRef,
-					targetParent: level,
+					targetParent: standing.level,
 					// a fresh one, whatever another instance holds
 					scenario: 'instantiate',
 					// placed as part of the application template: its provenance is the application's
 					partOfTemplate: true,
 					// listed by the report once per instance of the application
-					placedFor: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
+					placedFor: toRef(instance) as Scl.Ref<Scl.ElementsOf>,
 					report: params.report,
 					decisions: params.decisions,
 					keepNameTypesFrom: params.keepNameTypesFrom,
@@ -134,23 +91,12 @@ export async function cascadeComposedFunctions(
 				if (!placed?.id) continue
 				cascade.functions.push(placed)
 				standsFor = placed
-				claimed.add(placed.id)
 			}
 			const instanceRedirects = cascade.redirectMappings.get(instance.id) ?? []
 			instanceRedirects.push({ sourceUuid, target: standsFor })
 			cascade.redirectMappings.set(instance.id, instanceRedirects)
 		}
-
-		// a function no instance calls its own, where the consumer started
-		const atAnchor = await findInstancesUnder(tx, {
-			targetParent: anchorLevel,
-			tagName: 'Function',
-			sourceUuid,
-			matchKey,
-		})
-		for (const candidate of atAnchor) {
-			if (!claimed.has(candidate.id)) reconcilables.set(candidate.id, candidate)
-		}
+		for (const unowned of atAnchor) reconcilables.set(unowned.id, unowned)
 
 		const scoped = await scopeToTargetInstance(tx, {
 			instances: [...reconcilables.values()],

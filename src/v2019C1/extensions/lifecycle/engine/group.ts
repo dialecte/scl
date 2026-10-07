@@ -82,6 +82,6 @@ function groupId(node: DiffNode, scopePrefix: string | undefined): string {
 	return scopePrefix ? scopedId({ id: base, scopePrefix }) : base
 }
 
-function scopedId(params: { id: string; scopePrefix: string }): string {
+export function scopedId(params: { id: string; scopePrefix: string }): string {
 	return `${params.scopePrefix}::${params.id}`
 }
