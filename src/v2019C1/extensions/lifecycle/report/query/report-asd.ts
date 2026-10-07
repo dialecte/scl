@@ -3,11 +3,12 @@ import { reportFunction } from './report-function'
 import { buildReportInstance } from './report-instance'
 import { foldSatelliteCompanions } from './satellite-companions'
 
-import { toRef } from '@dialecte/core/helpers'
-
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
+import {
+	describeStandingChoice,
+	linkReferencesToPlacements,
+} from '@/v2019C1/extensions/lifecycle/engine/standing'
 import {
 	collectForeignScopes,
 	findInstancesByTemplateUuid,
@@ -15,7 +16,6 @@ import {
 } from '@/v2019C1/extensions/lifecycle/instance'
 import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
 import {
-	composedFunctionChoiceKey,
 	resolveApplicationSatellites,
 	resolveComposedFunctions,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
@@ -28,23 +28,18 @@ import {
 	resolveSatelliteMappings,
 	toRedirectMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
-import { describeCandidate } from '@/v2019C1/extensions/lifecycle/mapping/describe-mapping'
 import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
-import { buildElementPath } from '@/v2019C1/extensions/reference/query/build'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
-	DecisionGroup,
-	DiffNode,
 	DiffReport,
 	InstanceDiff,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { ComposedFunctionChoice } from '@/v2019C1/extensions/lifecycle/layers/application'
+import type { StandingPlacement } from '@/v2019C1/extensions/lifecycle/engine/standing'
 import type {
 	DecisionMappings,
-	MappingCandidate,
 	ReportMapping,
 	ReportPass,
 } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -182,7 +177,7 @@ export async function reportAsd(
 	})
 
 	await linkReferencesToPlacements(sourceQuery, {
-		applicationReports: reportInstances,
+		referrers: reportInstances,
 		placements: composedFunctions.placements,
 	})
 	// which function an instance stands on, where several qualify: listed with that instance
@@ -318,7 +313,11 @@ async function reportComposedFunctions(
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
 	},
-): Promise<{ instances: ReportInstance[]; choices: ReportMapping[]; placements: Placement[] }> {
+): Promise<{
+	instances: ReportInstance[]
+	choices: ReportMapping[]
+	placements: StandingPlacement[]
+}> {
 	const { sourceQuery, applicationRef, applicationInstances, scenario, anchor } = params
 	const matchKey = matchKeyForScenario(scenario)
 
@@ -346,34 +345,21 @@ async function reportComposedFunctions(
 		decisionMappings: params.decisionMappings,
 	})
 	const choices: ReportMapping[] = []
-	const placements: Placement[] = []
-	for (const {
-		functionRef,
-		sourceUuid,
-		standings,
-		choices: instanceChoices,
-		atAnchor,
-	} of composedFunctions) {
+	const placements: StandingPlacement[] = []
+	for (const { child, standings, choices: instanceChoices, unclaimed } of composedFunctions) {
+		const functionRef = child.ref as Scl.Ref<'Function'>
 		for (const instance of applicationInstances) {
 			const choice = instanceChoices.get(instance.id)
-			if (choice) {
-				choices.push(
-					await describeComposedFunctionChoice(query, {
-						functionRef,
-						applicationInstance: instance,
-						choice,
-					}),
-				)
-			}
+			if (choice) choices.push(await describeStandingChoice(query, { child, instance, choice }))
 		}
 		const reconciled = new Map<string, AnyTrackedRecord>()
 		for (const instance of applicationInstances) {
 			const standing = standings.get(instance.id)
 			if (!standing || standing.kind === 'undecided') continue
 			if (standing.kind === 'owned') {
-				for (const owned of standing.functions) reconciled.set(owned.id, owned)
+				for (const owned of standing.elements) reconciled.set(owned.id, owned)
 			} else if (standing.kind === 'taken') {
-				reconciled.set(standing.function.id, standing.function)
+				reconciled.set(standing.element.id, standing.element)
 			} else {
 				const reportInstance = await reportComposedFunction(query, {
 					...params,
@@ -386,12 +372,12 @@ async function reportComposedFunctions(
 				if (applicationInstances.length > 1)
 					placeFor({ instance: reportInstance, placedFor: instance })
 				reportInstances.push(reportInstance)
-				if (sourceUuid) {
-					placements.push({ applicationInstanceId: instance.id, sourceUuid, reportInstance })
+				if (child.lineage) {
+					placements.push({ placedFor: instance.id, lineage: child.lineage, reportInstance })
 				}
 			}
 		}
-		for (const unowned of atAnchor) reconciled.set(unowned.id, unowned)
+		for (const unowned of unclaimed) reconciled.set(unowned.id, unowned)
 
 		const scoped = await scopeToTargetInstance(query, {
 			instances: [...reconciled.values()],
@@ -409,96 +395,6 @@ async function reportComposedFunctions(
 		}
 	}
 	return { instances: reportInstances, choices, placements }
-}
-
-/** A function placed for one instance of the application, by the update. */
-type Placement = {
-	applicationInstanceId: string
-	/** The uuid of the source function, the one the application's references carry. */
-	sourceUuid: string
-	reportInstance: ReportInstance
-}
-
-/**
- * A reference an instance of the application gains to a function placed for it depends on that
- * placement: leaving the function out leaves the reference out, never a reference to nothing.
- */
-async function linkReferencesToPlacements(
-	sourceQuery: Core.Query<Config>,
-	params: { applicationReports: readonly ReportInstance[]; placements: readonly Placement[] },
-): Promise<void> {
-	for (const { applicationInstanceId, sourceUuid, reportInstance } of params.placements) {
-		const placementGroup =
-			reportInstance.groups.find((group) => group.primary === reportInstance.tree) ??
-			reportInstance.groups[0]
-		const applicationReport = params.applicationReports.find(
-			(report) => report.rootRef?.id === applicationInstanceId,
-		)
-		if (!placementGroup || !applicationReport) continue
-		for (const group of applicationReport.groups) {
-			if (group.dependsOn.includes(placementGroup.id)) continue
-			if (await addsReferenceTo(sourceQuery, { group, sourceUuid })) {
-				group.dependsOn.push(placementGroup.id)
-			}
-		}
-	}
-}
-
-/** Whether a group adds a reference carrying `sourceUuid` (a FunctionRef to that function). */
-async function addsReferenceTo(
-	sourceQuery: Core.Query<Config>,
-	params: { group: DecisionGroup; sourceUuid: string },
-): Promise<boolean> {
-	const { group, sourceUuid } = params
-	const pending: DiffNode[] = [group.primary, ...group.companions]
-	while (pending.length > 0) {
-		const node = pending.pop() as DiffNode
-		pending.push(...node.children)
-		if (node.change !== 'added' || !node.sourceRef) continue
-		const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS] ?? []
-		for (const pair of pairs) {
-			const referenced = await sourceQuery.any.getAttribute(node.sourceRef, {
-				name: pair.attribute.uuid,
-			})
-			if (referenced === sourceUuid) return true
-		}
-	}
-	return false
-}
-
-/**
- * The choice of the function one instance of the application stands on, where several functions of
- * that lineage no instance refers to qualify: one of them, or a new one placed where it lives.
- */
-async function describeComposedFunctionChoice(
-	query: Core.Query<Config>,
-	params: {
-		functionRef: Scl.Ref<'Function'>
-		applicationInstance: AnyTrackedRecord
-		choice: ComposedFunctionChoice
-	},
-): Promise<ReportMapping> {
-	const { functionRef, applicationInstance, choice } = params
-	const candidates: MappingCandidate[] = []
-	for (const candidate of choice.candidates) {
-		candidates.push(await describeCandidate(query, toRef(candidate) as Scl.Ref<Scl.ElementsOf>))
-	}
-	const created = choice.decision && 'create' in choice.decision
-	const parentPath = created ? (await buildElementPath(query, choice.level))?.path : undefined
-	return {
-		id: composedFunctionChoiceKey({ applicationInstance, functionRef }),
-		sourceId: functionRef.id,
-		placedFor: toRef(applicationInstance),
-		tagName: functionRef.tagName,
-		kind: 'shared',
-		...(choice.decision ? { mapping: choice.decision } : {}),
-		...(parentPath ? { parentPath } : {}),
-		reason: choice.decision ? 'decision' : 'none',
-		ambiguous: true,
-		selectable: true,
-		locked: false,
-		candidates,
-	}
 }
 
 /** The report of one composed function: placed afresh (`instance` undefined) or reconciled. */

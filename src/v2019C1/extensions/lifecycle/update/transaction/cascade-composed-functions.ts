@@ -50,14 +50,16 @@ export async function cascadeComposedFunctions(
 		decisionMappings: params.decisionMappings,
 	})
 
-	for (const { functionRef, sourceUuid, standings, atAnchor } of composedFunctions) {
+	for (const { child, standings, unclaimed } of composedFunctions) {
+		const functionRef = child.ref as Scl.Ref<'Function'>
+		const sourceUuid = child.lineage
 		// the functions of the project to reconcile
 		const reconcilables = new Map<string, AnyTrackedRecord>()
 		for (const { instance, written } of applicationInstances) {
 			const standing = standings.get(instance.id)
 			if (!standing) continue
 			if (standing.kind === 'owned') {
-				for (const owned of standing.functions) reconcilables.set(owned.id, owned)
+				for (const owned of standing.elements) reconcilables.set(owned.id, owned)
 				continue
 			}
 			if (!written || !sourceUuid) continue
@@ -70,8 +72,8 @@ export async function cascadeComposedFunctions(
 
 			let standsFor: Scl.Ref<Scl.ElementsOf>
 			if (standing.kind === 'taken') {
-				reconcilables.set(standing.function.id, standing.function)
-				standsFor = toRef(standing.function) as Scl.Ref<Scl.ElementsOf>
+				reconcilables.set(standing.element.id, standing.element)
+				standsFor = toRef(standing.element) as Scl.Ref<Scl.ElementsOf>
 			} else {
 				const [placed] = await updateFsd(tx, {
 					sourceQuery,
@@ -96,7 +98,7 @@ export async function cascadeComposedFunctions(
 			instanceRedirects.push({ sourceUuid, target: standsFor })
 			cascade.redirectMappings.set(instance.id, instanceRedirects)
 		}
-		for (const unowned of atAnchor) reconcilables.set(unowned.id, unowned)
+		for (const unowned of unclaimed) reconcilables.set(unowned.id, unowned)
 
 		const scoped = await scopeToTargetInstance(tx, {
 			instances: [...reconcilables.values()],
