@@ -269,9 +269,12 @@ instance, each pointing at the element of that instance.
 A function or an application the template **gains** has no instance yet: `apply` places one for each
 instance of the template — a function an application gained in the bay of each instance of the
 application, a primary a substation template gained in each instance of the unit. The report lists
-it the same way: one first-time instance **per placement**, each with `placedFor` — the instance of
-the application it is placed for, or the level it lands under — and its own groups (their ids are
-scoped to it). The groups of the instance that refer to it (the application's new reference) list
+it the same way: one first-time instance **per placement**, each with `placedFor` — the instance it
+is placed for: the instance of the application, or the level the instance of the unit sits on (not
+the level it lands in, which the update may be creating: `placedFor` names the same element before
+and after the write) — and its own groups (their ids are scoped to it). A primary in a level the
+template gained depends, in each instance, on the group adding that level there: leave the bay out
+in one instance and what it holds is left out there only. The groups of the instance that refer to it (the application's new reference) list
 that placement in `dependsOn`: skipping the placement while accepting the reference is refused, so a
 reference never points at nothing — skip both to leave that instance as it was. Placed once only
 (one instance), a first-time instance carries no `placedFor`.

@@ -83,9 +83,9 @@ export async function fsd(
 		/** Placed as part of a larger template: see `instantiate.fsd`. */
 		partOfTemplate?: boolean
 		/**
-		 * What a first placement is made for, when the report lists it several times and not by where it
-		 * lands (a function an application gained, placed for one instance of the application).
-		 * Default: `targetParent`.
+		 * What a first placement is made for, when the report lists it once per instance: the instance
+		 * of the application that gained it, or the instance of the unit of a larger template (the
+		 * level it sits on) — the same before and after the write. Default: `targetParent`.
 		 */
 		placedFor?: Scl.Ref<Scl.ElementsOf>
 	},

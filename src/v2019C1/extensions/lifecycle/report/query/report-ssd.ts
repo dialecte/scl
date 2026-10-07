@@ -22,9 +22,11 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { InstanceLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import type {
+	PrimaryPlace,
+	ResolvePrimaryParentsParams,
+} from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -117,18 +119,20 @@ export async function reportSsd(
 	// its unit sits on or below — the element the consumer started from when there is none
 	const landing = findLanding({ placementLevels, levelId: root.id }) ?? targetParent
 
-	// on an update, a primary the template gained is placed in each instance of the unit that holds
-	// it: listed once per place, each decided on its own — as the apply places it
+	// on an update, a primary the template gained is placed in each instance of the unit: listed once
+	// per instance (for the level the instance sits on), each decided on its own — as the apply
+	// places it. Where its level is not written yet, it is reported from the level the instance sits on.
 	const primaryInstances: ReportInstance[] = []
 	for (const applicationRef of applications) {
-		const places = await findGainedPlaces(query, {
+		const places = await findPrimaryPlaces(query, {
 			sourceQuery,
 			primaryRef: applicationRef,
 			anchor: landing,
+			unitId: root.id,
 			instanceLevelsList,
 			matchKey,
 		})
-		for (const placedFor of places ?? [undefined]) {
+		for (const { parent, placedFor } of places) {
 			const report = await reportAsd(query, {
 				pass: params.pass,
 				sourceQuery,
@@ -136,25 +140,26 @@ export async function reportSsd(
 				scenario: placedFor ? 'instantiate' : scenario,
 				targetInstance,
 				decisionMappings,
-				anchor: placedFor ?? landing,
+				anchor: parent ?? placedFor ?? landing,
 			})
 			primaryInstances.push(...placedInstances({ instances: report.instances, placedFor }))
 		}
 	}
 	for (const functionRef of standaloneFunctions) {
-		const places = await findGainedPlaces(query, {
+		const places = await findPrimaryPlaces(query, {
 			sourceQuery,
 			primaryRef: functionRef,
 			anchor: landing,
+			unitId: root.id,
 			instanceLevelsList,
 			matchKey,
 		})
-		for (const placedFor of places ?? [undefined]) {
+		for (const { parent, placedFor } of places) {
 			const report = await reportFsd(query, {
 				pass: params.pass,
 				sourceQuery,
 				functionRef,
-				targetParent: placedFor ?? landing,
+				targetParent: parent ?? placedFor ?? landing,
 				scenario: placedFor ? 'instantiate' : scenario,
 				targetInstance,
 				decisionMappings,
@@ -164,12 +169,7 @@ export async function reportSsd(
 	}
 
 	// what lands in a level the placement adds goes with it, a reference with what it points at
-	for (const scope of listPlacementScopes({
-		firstPlacement,
-		frameInstances,
-		primaryInstances,
-		instanceLevelsList,
-	})) {
+	for (const scope of listPlacementScopes({ firstPlacement, frameInstances, primaryInstances })) {
 		await linkPlacementDependencies(sourceQuery, { instances: scope })
 	}
 
@@ -180,47 +180,44 @@ export async function reportSsd(
 }
 
 /**
- * The places a primary the template gained is placed in, when there are several (one per instance
- * of the unit that holds it). Nothing when it is held already or placed in one place only.
+ * Where a primary is reported: once, from where the template lands — unless the template gained it
+ * since its unit was placed: then from the level each instance holds for it, listed for each instance
+ * (`placedFor`, the level the instance sits on) when there are several.
  */
-async function findGainedPlaces(
+async function findPrimaryPlaces(
 	query: Core.Query<Config>,
-	params: {
-		sourceQuery: Core.Query<Config>
-		primaryRef: Scl.Ref<'Application'> | Scl.Ref<'Function'>
-		anchor: Scl.Ref<Scl.ElementsOf>
-		instanceLevelsList: readonly InstanceLevels[]
-		matchKey: MatchKey
-	},
-): Promise<Scl.Ref<Scl.ElementsOf>[] | undefined> {
-	if (params.instanceLevelsList.length < 2) return undefined
-	const placement = await resolvePrimaryParents(query, params)
-	return placement.gained && placement.parents.length > 1 ? placement.parents : undefined
+	params: ResolvePrimaryParentsParams,
+): Promise<PrimaryPlace[]> {
+	const once = [{ parent: params.anchor }]
+	if (params.instanceLevelsList.length === 0) return once
+
+	const { gained, places } = await resolvePrimaryParents(query, params)
+	if (!gained) return once
+	if (places.length > 1) return places
+	const [{ parent, placedFor }] = places
+	return [{ parent: parent ?? placedFor ?? params.anchor }]
 }
 
 /**
  * The report instances of each placement: on a first placement, all of them; on an update, each
- * instance of the unit with the primaries placed in it afresh — those listed for one of its levels,
- * and those listed once, which land in every instance.
+ * instance of the unit with the primaries placed in it afresh — those listed for it, and those
+ * listed once, which land in the one instance there is.
  */
 function listPlacementScopes(params: {
 	firstPlacement: boolean
 	frameInstances: readonly ReportInstance[]
 	primaryInstances: readonly ReportInstance[]
-	instanceLevelsList: readonly InstanceLevels[]
 }): ReportInstance[][] {
-	const { firstPlacement, frameInstances, primaryInstances, instanceLevelsList } = params
+	const { firstPlacement, frameInstances, primaryInstances } = params
 	if (firstPlacement) return [[...frameInstances, ...primaryInstances]]
 
 	const placed = primaryInstances.filter((instance) => !instance.rootRef)
-	return frameInstances.map((frameInstance, index) => {
-		const levelIds = new Set<string | undefined>([frameInstance.rootRef?.id])
-		for (const level of instanceLevelsList[index]?.values() ?? []) levelIds.add(level?.id)
-		return [
-			frameInstance,
-			...placed.filter((instance) => !instance.placedFor || levelIds.has(instance.placedFor.id)),
-		]
-	})
+	return frameInstances.map((frameInstance) => [
+		frameInstance,
+		...placed.filter(
+			(instance) => !instance.placedFor || instance.placedFor.id === frameInstance.rootRef?.id,
+		),
+	])
 }
 
 /** The instances of a report made for one place, each placed under it. */

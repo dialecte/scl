@@ -47,6 +47,8 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	refused?: boolean
 	/** How many times the typical is placed before the update (once by default). */
 	placements?: number
+	/** The instance (its voltage level, by name) the leave-out is made in — every instance by default. */
+	leftOutIn?: string
 }
 
 describe('update of a voltage-level typical — a gained bay left out takes the function it holds with it', () => {
@@ -85,6 +87,31 @@ describe('update of a voltage-level typical — a gained bay left out takes the 
 			placements: 2,
 			leftOut: ['coupler-s', 'control-s'],
 			unexpectedQueries: ['//default:Bay[@name="Coupler"]', '//default:Function[@name="Ctrl"]'],
+		},
+		'placed twice, the bay and its function left out in one instance → the other gets them': {
+			sourceXml,
+			targetXml: projectXml,
+			placements: 2,
+			leftOut: ['coupler-s', 'control-s'],
+			leftOutIn: 'E1_1',
+			expectedQueries: [
+				'//default:VoltageLevel[@name="E1"]/default:Bay[@name="Coupler"]/default:Function[@name="Ctrl"]',
+			],
+			unexpectedQueries: ['//default:VoltageLevel[@name="E1_1"]/default:Bay[@name="Coupler"]'],
+		},
+		'placed twice, the function left out in one instance → its bay is added without it': {
+			sourceXml,
+			targetXml: projectXml,
+			placements: 2,
+			leftOut: ['control-s'],
+			leftOutIn: 'E1',
+			expectedQueries: [
+				'//default:VoltageLevel[@name="E1"]/default:Bay[@name="Coupler"]',
+				'//default:VoltageLevel[@name="E1_1"]/default:Bay[@name="Coupler"]/default:Function[@name="Ctrl"]',
+			],
+			unexpectedQueries: [
+				'//default:VoltageLevel[@name="E1"]/default:Bay[@name="Coupler"]/default:Function',
+			],
 		},
 		'the function left out → the bay is added without it': {
 			sourceXml,
@@ -133,18 +160,31 @@ describe('update of a voltage-level typical — a gained bay left out takes the 
 			})
 		})
 
-		// 3. the update: the function depends on the bay it lands in
+		// 3. the update: in each instance, the function depends on the bay it lands in there — and
+		// only there
 		const updateReport = await report(target.query, { ...lifecycleTarget, scenario: 'template' })
-		const control = groupOf({ report: updateReport, sourceId: 'control-s' })
-		for (const coupler of groupsOf({ report: updateReport, sourceId: 'coupler-s' })) {
-			expect(control.dependsOn).toContain(coupler.id)
+		const controls = groupsOf({ report: updateReport, sourceId: 'control-s' })
+		const couplers = groupsOf({ report: updateReport, sourceId: 'coupler-s' })
+		expect(controls).toHaveLength(testCase.placements ?? 1)
+		for (const control of controls) {
+			const ownCouplers = couplers.filter(
+				(coupler) => controls.length === 1 || scopeOf(coupler.id) === scopeOf(control.id),
+			)
+			expect(control.dependsOn).toEqual(ownCouplers.map((coupler) => coupler.id))
 		}
 
+		const voltageLevels = await target.query.getRecordsByTagName('VoltageLevel')
+		const leftOutScope = voltageLevels.find((voltageLevel) =>
+			voltageLevel.attributes.some(
+				(attribute) => attribute.name === 'name' && attribute.value === testCase.leftOutIn,
+			),
+		)?.id
 		const leftOut = new Set(testCase.leftOut ?? [])
 		const decisions: DecisionMap = new Map()
 		for (const group of allGroups(updateReport)) {
 			const sourceId = group.primary.sourceRef?.id ?? ''
-			decisions.set(group.id, leftOut.has(sourceId) ? 'skip' : 'accept')
+			const inScope = !leftOutScope || scopeOf(group.id) === leftOutScope
+			decisions.set(group.id, leftOut.has(sourceId) && inScope ? 'skip' : 'accept')
 		}
 		const applied = target.transaction(async (tx) => {
 			await apply(tx, {
@@ -173,11 +213,7 @@ function groupsOf(params: { report: DiffReport; sourceId: string }) {
 	)
 }
 
-/** The group adding a source element. */
-function groupOf(params: { report: DiffReport; sourceId: string }) {
-	const group = allGroups(params.report).find(
-		(candidate) => candidate.primary.sourceRef?.id === params.sourceId,
-	)
-	if (!group) throw new Error(`no group adds ${params.sourceId}`)
-	return group
+/** The instance a group id is scoped to (`<instance id>::<…>`). */
+function scopeOf(groupId: string): string | undefined {
+	return groupId.includes('::') ? groupId.split('::')[0] : undefined
 }

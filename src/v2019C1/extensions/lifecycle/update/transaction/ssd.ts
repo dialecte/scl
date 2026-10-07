@@ -138,14 +138,18 @@ export async function ssd(
 			sourceQuery,
 			primaryRef: applicationRef,
 			anchor: targetParent,
+			unitId: root.id,
 			instanceLevelsList,
 			matchKey,
 		})
-		for (const placementParent of placement.parents) {
+		for (const { parent, placedFor } of placement.places) {
+			// its level was left out: so is it (the report made it depend on that level)
+			if (!parent) continue
 			const result = await updateAsd(tx, {
 				sourceQuery,
 				applicationRef,
-				targetParent: placementParent,
+				targetParent: parent,
+				placedFor,
 				// a gained application is a fresh one in each instance, whatever another instance holds
 				scenario: placement.gained ? 'instantiate' : scenario,
 				// placed as part of the substation template: its provenance is the document's
@@ -166,14 +170,17 @@ export async function ssd(
 			sourceQuery,
 			primaryRef: functionRef,
 			anchor: targetParent,
+			unitId: root.id,
 			instanceLevelsList,
 			matchKey,
 		})
-		for (const placementParent of placement.parents) {
+		for (const { parent, placedFor } of placement.places) {
+			if (!parent) continue
 			const updated = await updateFsd(tx, {
 				sourceQuery,
 				functionRef,
-				targetParent: placementParent,
+				targetParent: parent,
+				placedFor,
 				scenario: placement.gained ? 'instantiate' : scenario,
 				partOfTemplate: true,
 				report,

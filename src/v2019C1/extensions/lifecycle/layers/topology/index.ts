@@ -35,7 +35,11 @@ export type {
 	InstancePlacement,
 	TemplateFrame,
 } from './resolve-instance-levels.types'
-export type { PrimaryParents, ResolvePrimaryParentsParams } from './resolve-primary-parents.types'
+export type {
+	PrimaryParents,
+	PrimaryPlace,
+	ResolvePrimaryParentsParams,
+} from './resolve-primary-parents.types'
 export type { HeldLevels, InstanceCounterpart } from './resolve-held-levels.types'
 export type { OffLevel, PrimaryPlacement } from './resolve-primary-placement.types'
 export type { PrimaryLanding } from './land-primaries.types'

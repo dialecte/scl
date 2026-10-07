@@ -87,6 +87,12 @@ export async function asd(
 		resolvePlacement?: boolean
 		/** Placed as part of a larger template: see `instantiate.asd`. */
 		partOfTemplate?: boolean
+		/**
+		 * What a first placement is made for, when the report lists it once per instance of the unit
+		 * of a larger template: that instance (the level it sits on) — the same before and after the
+		 * write. Default: `targetParent`.
+		 */
+		placedFor?: Scl.Ref<Scl.ElementsOf>
 	},
 ): Promise<{
 	applications: Scl.Ref<'Application'>[]
@@ -117,7 +123,8 @@ export async function asd(
 		// a first placement writes what the consumer did not leave out — decided by the groups of
 		// this place when the report lists the placement per place. The report made the application
 		// depend on the functions it composes: left out, the kept ones are placed without it.
-		const placementGroups = firstTimeGroups(report, { placedFor: targetParent })
+		const placedFor = params.placedFor ?? targetParent
+		const placementGroups = firstTimeGroups(report, { placedFor })
 		const leftOut = decisions
 			? leftOutRefIds({ groups: placementGroups, decisions }).sourceIds
 			: undefined
@@ -146,7 +153,7 @@ export async function asd(
 		// first-time ASD clones the Application + composed Functions + satellites in one pass; annotate
 		// every first-time report instance (Application and each composed Function) from the shared map
 		const added = sourceToTargetMap(cloneMappings)
-		for (const reportInstance of firstTimeReportInstances(report, { placedFor: targetParent })) {
+		for (const reportInstance of firstTimeReportInstances(report, { placedFor })) {
 			annotateInstance({ reportInstance, added })
 		}
 		return { applications: application ? [application] : [], functions: composedFunctionRefs }
