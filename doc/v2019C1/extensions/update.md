@@ -135,6 +135,21 @@ empty map applies everything), but `skip` for a `target-only` group, so an autho
 kept unless the user explicitly opts into removing it. The engine rejects a set that accepts a group
 whose `dependsOn` parent is skipped.
 
+What a placement writes, the report says goes with it (`dependsOn`), on a first placement and for
+what an update places afresh:
+
+- **a level takes what it holds with it** — a group placing an element inside an element another
+  group adds (a function in a bay the placement creates) depends on that group;
+- **a reference goes with what it points at** — a group adding a reference to an element another
+  group places (an application referring to the functions it composes) depends on that group.
+
+Every leave-out is honoured: leave out a bay with what it holds and nothing of it is written — not
+even the provenance when nothing at all is left; leave out a function and the bay is placed without
+it; leave out an application and the functions it composes are placed without it. Leaving out a level
+or a function while keeping what depends on it is refused before anything is written. A consumer that
+leaves out a group leaves out what depends on it in the same move — the decisions it passes to
+`apply` are then the ones the preview shows.
+
 ### Shared-element mappings
 
 Some elements are held once by the project and shared — an `AllocationRole` several applications refer to, a `FunctionCategory` classifying several functions, a `Variable` or a `BehaviorDescription` applying to several elements. A template that brings such an element does not necessarily copy it: it **maps** it onto an element of the project, or creates a new one. `report` lists that decision for every shared element the template brings, and the consumer may change it.

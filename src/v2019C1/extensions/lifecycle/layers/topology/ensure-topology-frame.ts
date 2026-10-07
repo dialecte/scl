@@ -43,7 +43,7 @@ export async function ensureTopologyFrame(
 	tx: Core.Transaction<Config>,
 	params: EnsureTopologyFrameParams,
 ): Promise<EnsureTopologyFrameResult> {
-	const { sourceQuery, scopeRef, targetParent, omit } = params
+	const { sourceQuery, scopeRef, targetParent, omit, leftOut } = params
 
 	const levels =
 		params.placementLevels ??
@@ -54,6 +54,8 @@ export async function ensureTopologyFrame(
 	const mappedUnitIds = new Set<string>()
 	const cloneMappings: Scl.CloneMapping[] = []
 	const redirectMappings: RedirectMapping[] = []
+	// the levels above the unit are created for it only
+	const unitWritten = !leftOut?.has(scopeRef.id ?? '')
 
 	// 1. Each structural level lands where it was resolved: on an element of the target, or created.
 	for (const level of levels) {
@@ -67,6 +69,9 @@ export async function ensureTopologyFrame(
 			if (sourceUuid) redirectMappings.push({ sourceUuid, target: existingRef })
 			continue
 		}
+
+		// a level left out is not created, nor what it holds; the levels above the unit go with it
+		if (level.context ? !unitWritten : leftOut?.has(sourceRef.id)) continue
 
 		const parentTarget =
 			(parentSourceId && frameIndex.get(parentSourceId)) || level.parentTarget || targetParent
@@ -102,6 +107,7 @@ export async function ensureTopologyFrame(
 			source: sourceRef,
 			target,
 			omit: ownContentOmit,
+			leftOut,
 		})
 		cloneMappings.push(...ownContent.cloneMappings)
 		redirectMappings.push(...ownContent.redirectMappings)

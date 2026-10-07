@@ -5,7 +5,7 @@ import {
 	annotateInstance,
 	sourceToTargetMap,
 } from '@/v2019C1/extensions/lifecycle/engine/correlate'
-import { collisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import { collisionOverrides, leftOutRefIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import { ssd as instantiateSsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
@@ -93,9 +93,11 @@ export async function ssd(
 		}))
 
 	if (firstTime) {
-		const overrides = decisions
-			? collisionOverrides({ groups: report ? allGroups(report) : [], decisions })
-			: undefined
+		const groups = report ? allGroups(report) : []
+		const overrides = decisions ? collisionOverrides({ groups, decisions }) : undefined
+		// what the consumer left out is not placed; the report made what it holds and what refers to
+		// it depend on it, so the decisions leave those out too
+		const leftOut = decisions ? leftOutRefIds({ groups, decisions }).sourceIds : undefined
 		const { cloneMappings } = await instantiateSsd(tx, {
 			sourceQuery,
 			scopeRef: root,
@@ -103,8 +105,9 @@ export async function ssd(
 			mode: identityModeForScenario(scenario),
 			overrides,
 			decisionMappings: params.decisionMappings,
+			leftOut,
 		})
-		// first-time SSD clones the whole scope (frame + fn/app) in one pass; annotate every first-time
+		// first-time SSD clones the scope (frame + fn/app) in one pass; annotate every first-time
 		// report instance (frame, applications, standalone functions) from the shared map
 		const added = sourceToTargetMap(cloneMappings)
 		for (const reportInstance of report?.instances ?? []) {

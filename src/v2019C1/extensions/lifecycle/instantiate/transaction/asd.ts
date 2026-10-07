@@ -13,7 +13,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
-import type { AsdParams, AsdResult } from './asd.types'
+import type { AsdParams, AsdResult, PlaceApplicationParams, PlacedApplication } from './asd.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -35,8 +35,24 @@ import type * as Core from '@dialecte/core'
  * instance without re-querying by templateUuid.
  */
 export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Promise<AsdResult> {
+	const { applicationRef, ...placed } = await placeApplication(tx, params)
+	if (!applicationRef) {
+		throw new Error(`instantiate.asd: cloned Application not found for ${params.applicationRef.id}`)
+	}
+	return { applicationRef, ...placed }
+}
+
+/**
+ * Place an application of an ASD as {@link asd} does, leaving out what the consumer left out: the
+ * application left out, the functions it composes that are kept are placed without it — and
+ * without provenance, which is the application's.
+ */
+export async function placeApplication(
+	tx: Core.Transaction<Config>,
+	params: PlaceApplicationParams,
+): Promise<PlacedApplication> {
 	const { sourceQuery, applicationRef, targetParent, overrides, keepNameTypesFrom } = params
-	const decisionMappings = params.decisionMappings
+	const { decisionMappings, leftOut } = params
 
 	// capture the composed Function source refs BEFORE cloning (they are "missing" only
 	// until placed) so their clones can be collision-checked at their structural level
@@ -46,16 +62,17 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		refTagName: 'FunctionRef',
 		targetTagName: 'Function',
 	})
+	const placedPrimaryRefs = [
+		applicationRef,
+		...(await findComposedFunctionRefs(sourceQuery, applicationRef)),
+	].filter((ref) => !leftOut?.has(ref.id))
 
 	// where the application and its functions land: on the levels of where the consumer started, or
 	// — started above a level one of them was made for — on the levels their template says
 	const landing = params.resolvePlacement
 		? await landPrimaries(tx, {
 				sourceQuery,
-				primaryRefs: [
-					applicationRef,
-					...(await findComposedFunctionRefs(sourceQuery, applicationRef)),
-				],
+				primaryRefs: placedPrimaryRefs,
 				anchor: targetParent,
 				decisionMappings,
 				operation: 'instantiate.asd',
@@ -69,6 +86,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		structure,
 		keepNameTypesFrom,
 		decisionMappings,
+		leftOut,
 	})
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) applying to
@@ -78,6 +96,7 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		primaryRef: applicationRef,
 		structure,
 		strip: false,
+		leftOut,
 	})
 
 	const allMappings = [
@@ -118,9 +137,19 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 		decisionMappings,
 	})
 
+	const composedFunctionInstanceRefs = composedFunctionRefs
+		.map(
+			(functionRef) =>
+				contentMappings.find((mapping) => mapping.source.id === functionRef.id)?.target,
+		)
+		.filter((target): target is Scl.Ref<Scl.ElementsOf> => Boolean(target)) as (
+		| Scl.Ref<'Function'>
+		| Scl.Ref<'SubFunction'>
+	)[]
+
 	const rootMapping = contentMappings.find((mapping) => mapping.source.id === applicationRef.id)
 	if (!rootMapping) {
-		throw new Error(`instantiate.asd: cloned Application not found for ${applicationRef.id}`)
+		return { composedFunctionRefs: composedFunctionInstanceRefs, cloneMappings: allMappings }
 	}
 
 	// validate the placed application against its parent context (resolved at the
@@ -139,16 +168,6 @@ export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Prom
 			target: { anchor: 'application', root: rootMapping.target as Scl.Ref<'Application'> },
 		})
 	}
-
-	const composedFunctionInstanceRefs = composedFunctionRefs
-		.map(
-			(functionRef) =>
-				contentMappings.find((mapping) => mapping.source.id === functionRef.id)?.target,
-		)
-		.filter((target): target is Scl.Ref<Scl.ElementsOf> => Boolean(target)) as (
-		| Scl.Ref<'Function'>
-		| Scl.Ref<'SubFunction'>
-	)[]
 
 	return {
 		applicationRef: rootMapping.target as Scl.Ref<'Application'>,

@@ -1,6 +1,6 @@
 /**
- * The record ids reconcile is allowed to touch, derived from the accepted
- * groups. `sourceIds` gate updates/adds (matched by the source element);
+ * The record ids of a set of groups — the accepted ones: those reconcile is allowed to touch; the
+ * skipped ones: those a first placement leaves out. `sourceIds` gate updates/adds (matched by the source element);
  * `instanceIds` gate deletes (matched by the instance element).
  */
 export type AcceptedIds = {

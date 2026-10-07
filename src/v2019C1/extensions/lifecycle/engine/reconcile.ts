@@ -22,7 +22,7 @@ import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/wri
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
-import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
+import type { AnyRefOrRecord, AnyTreeRecord, OmitEntry } from '@dialecte/core'
 
 /**
  * Engine apply-core: reconcile an updated template subtree
@@ -264,13 +264,15 @@ async function reconcileChildren(
 			continue
 		}
 
-		// add a new template element (with its subtree/companions via deep)
+		// add a new template element (with its subtree/companions via deep) — up to the boundary tags,
+		// which their own pass places
 		if (accepted && !accepted.sourceIds.has(sourceChild.id)) continue
 
 		const { cloneMappings } = await deep(tx, {
 			sourceQuery,
 			ref: toRef(sourceChild) as unknown as Scl.Ref<Scl.ElementsOf>,
 			targetParent: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,
+			...(omit ? { omit: [...omit] as OmitEntry<Config>[] } : {}),
 			strip: false,
 			withTypes: { keepNameFrom: keepNameTypesFrom },
 		})

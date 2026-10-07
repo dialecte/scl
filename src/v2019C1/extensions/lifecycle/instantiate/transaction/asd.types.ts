@@ -30,6 +30,20 @@ export type AsdParams = {
 	partOfTemplate?: boolean
 }
 
+export type PlaceApplicationParams = AsdParams & {
+	/**
+	 * The source elements the consumer left out (record ids): the application, or functions it
+	 * composes. Left out, the application is not placed and the functions it composes that are kept
+	 * are placed without it.
+	 */
+	leftOut?: ReadonlySet<string>
+}
+
+/** What a placement of an application wrote: as {@link AsdResult}, the application unless left out. */
+export type PlacedApplication = Omit<AsdResult, 'applicationRef'> & {
+	applicationRef?: Scl.Ref<'Application'>
+}
+
 export type AsdResult = {
 	/** The instantiated Application in the target. */
 	applicationRef: Scl.Ref<'Application'>

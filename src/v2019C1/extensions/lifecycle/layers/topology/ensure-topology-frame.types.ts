@@ -18,6 +18,11 @@ export type EnsureTopologyFrameParams = {
 	 * scope root are those of `targetParent` where it has them, every other level is created.
 	 */
 	placementLevels?: readonly PlacementLevel[]
+	/**
+	 * The source elements the consumer left out (record ids): such a level, or such an element a
+	 * level holds, is not written — nor, for the unit, the levels above it.
+	 */
+	leftOut?: ReadonlySet<string>
 }
 
 export type EnsureTopologyFrameResult = {

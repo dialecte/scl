@@ -24,6 +24,7 @@ import type { OmitEntry } from '@dialecte/core'
  *
  * `omit` (tag names) drops matching source children from the merge AND from the clones of new leaves,
  * so a caller can merge an element's own content while leaving delegated children to another pass.
+ * `leftOut` names the new children the consumer left out: they are not cloned.
  *
  * Returns the clone mappings of what was cloned, and a redirect mapping for every source container
  * that landed on a twin: a reference to that source container is a reference to its twin.
@@ -38,9 +39,11 @@ export async function mergeChildrenInto(
 		target: Scl.Ref<Scl.ElementsOf>
 		strip?: StripConfig | false
 		omit?: OmitEntry<Config>[]
+		/** The source elements the consumer left out (record ids): such a child is not cloned. */
+		leftOut?: ReadonlySet<string>
 	},
 ): Promise<MergeChildrenResult> {
-	const { sourceQuery, source, target, strip, omit } = params
+	const { sourceQuery, source, target, strip, omit, leftOut } = params
 
 	const cloneMappings: Scl.CloneMapping[] = []
 	const redirectMappings: RedirectMapping[] = []
@@ -64,11 +67,15 @@ export async function mergeChildrenInto(
 				target: twin,
 				strip,
 				omit,
+				leftOut,
 			})
 			cloneMappings.push(...merged.cloneMappings)
 			redirectMappings.push(...merged.redirectMappings)
 			continue
 		}
+
+		// a child the consumer left out is not written
+		if (leftOut?.has(childRef.id)) continue
 
 		// A leaf reference (no name-keyed container, e.g. FunctionCatRef) can be reached from several
 		// source functions/applications, so the same category is merged more than once. Skip a child

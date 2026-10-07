@@ -33,7 +33,14 @@ import type * as Core from '@dialecte/core'
  * `Substation -> VoltageLevel -> Bay` chain).
  */
 export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Promise<SsdResult> {
-	const { sourceQuery, scopeRef, targetParent, mode = 'stamp-template', overrides } = params
+	const {
+		sourceQuery,
+		scopeRef,
+		targetParent,
+		mode = 'stamp-template',
+		overrides,
+		leftOut,
+	} = params
 	const decisionMappings = params.decisionMappings
 
 	const root = scopeRef ?? (await resolveInstantiableRoot(sourceQuery))
@@ -64,7 +71,10 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		targetParent,
 		decisionMappings,
 		placementLevels,
+		leftOut,
 	})
+	// the consumer left everything out: nothing is written, not even where it came from
+	if (leftOut?.size && contentMappings.length === 0) return { scopeRef: root, cloneMappings: [] }
 
 	// External cross-cutting satellites (Variable / BehaviorDescription) applying to any
 	// element in the scope subtree travel with it, placed at the scope's reproduced level.
@@ -74,6 +84,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		primaryRef: root,
 		structure: scopeStructure,
 		strip: false,
+		leftOut,
 	})
 
 	const allMappings = [...contentMappings, ...applied.cloneMappings]

@@ -30,6 +30,10 @@ import type { OmitEntry } from '@dialecte/core'
  *    application layer (Application + its composed `Function`s + type closure + satellites).
  * 3. **Standalone Functions** structurally under the scope that no Application already pulled in.
  *
+ * What the consumer left out (`leftOut`) is not placed: a level takes what it holds with it (the
+ * report makes what it holds depend on it), an application left out leaves the functions it
+ * composes to step 3.
+ *
  * Each fn/app is placed under its name-correct reproduced level (via the frame index), so multiple
  * bays never collapse. Direction-agnostic: returns the full `CloneMapping[]` plus the placed roots
  * and the frame index; the caller applies identity policy, `applyUuidRemap`, and placement-collision.
@@ -49,9 +53,13 @@ export async function cloneTopologyContent(
 		decisionMappings?: DecisionMappings
 		/** Where each structural level lands, as resolved for a placement. */
 		placementLevels?: readonly PlacementLevel[]
+		/** The source elements the consumer left out (record ids): a level, an application, a function. */
+		leftOut?: ReadonlySet<string>
 	},
 ): Promise<CloneTopologyContentResult> {
 	const { sourceQuery, scopeRef, targetParent, omit, decisionMappings, placementLevels } = params
+	const { leftOut } = params
+	const isLeftOut = (ref: Scl.Ref<Scl.ElementsOf>) => Boolean(leftOut?.has(ref.id ?? ''))
 
 	const frame = await ensureTopologyFrame(tx, {
 		sourceQuery,
@@ -59,6 +67,7 @@ export async function cloneTopologyContent(
 		targetParent,
 		omit,
 		placementLevels,
+		leftOut,
 	})
 	const { frameIndex } = frame
 
@@ -75,6 +84,8 @@ export async function cloneTopologyContent(
 
 	// 1. Applications - consume the application layer (brings their composed Functions).
 	for (const applicationRef of await applicationsUnderScope(sourceQuery, scopeRef)) {
+		// an application left out leaves the functions it composes to the step below
+		if (isLeftOut(applicationRef)) continue
 		// capture the composed Functions before cloning (they are "missing" only until placed) so
 		// each placed Function can be collision-checked at its structural level by the caller
 		const composedFunctions = await findMissingReferencedRecords(tx, {
@@ -90,6 +101,7 @@ export async function cloneTopologyContent(
 			structure,
 			omit,
 			decisionMappings,
+			leftOut,
 		})
 		record(applicationContent.cloneMappings)
 		redirectMappings.push(...applicationContent.redirectMappings)
@@ -100,7 +112,7 @@ export async function cloneTopologyContent(
 	// A category classifying several of them is placed once.
 	const placedCategories = new Map<string, Scl.Ref<'FunctionCategory'>>()
 	for (const functionRef of await functionsUnderScope(sourceQuery, scopeRef)) {
-		if (clonedSourceIds.has(functionRef.id)) continue
+		if (clonedSourceIds.has(functionRef.id) || isLeftOut(functionRef)) continue
 		const structure = await resolveFrameStructure(tx, sourceQuery, functionRef, frameIndex)
 		const targetParentRef = await resolveStructureRef(sourceQuery, functionRef, structure)
 		record(await cloneFunction(tx, { sourceQuery, functionRef, targetParentRef, omit }))

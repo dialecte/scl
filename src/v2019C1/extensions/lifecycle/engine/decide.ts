@@ -159,16 +159,30 @@ export function acceptedRefIds(params: {
 	decisions: DecisionMap
 }): AcceptedIds {
 	const { groups, decisions } = params
+	return collectGroupIds(groups.filter((group) => isAccepted({ group, decisions })))
+}
+
+/**
+ * The record ids of what the consumer left out: those of every skipped group's primary and
+ * companions, as {@link acceptedRefIds} reads them. A first placement writes everything else —
+ * including what the report does not list.
+ */
+export function leftOutRefIds(params: {
+	groups: DecisionGroup[]
+	decisions: DecisionMap
+}): AcceptedIds {
+	const { groups, decisions } = params
+	return collectGroupIds(groups.filter((group) => !isAccepted({ group, decisions })))
+}
+
+function collectGroupIds(groups: readonly DecisionGroup[]): AcceptedIds {
 	const sourceIds = new Set<string>()
 	const instanceIds = new Set<string>()
-
 	for (const group of groups) {
-		if (!isAccepted({ group, decisions })) continue
 		for (const node of [group.primary, ...group.companions]) {
 			collectNodeIds({ node, sourceIds, instanceIds })
 		}
 	}
-
 	return { sourceIds, instanceIds }
 }
 

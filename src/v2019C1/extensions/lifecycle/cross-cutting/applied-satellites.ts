@@ -17,9 +17,13 @@ import type { AnyTreeRecord } from '@dialecte/core'
  */
 export async function resolveAppliedSatellites(
 	query: Core.Query<Config>,
-	params: { primaryRef: Scl.Ref<Scl.ElementsOf> },
+	params: {
+		primaryRef: Scl.Ref<Scl.ElementsOf>
+		/** Elements left out of the subtree (record ids): a satellite applying to them only is not resolved. */
+		leftOut?: ReadonlySet<string>
+	},
 ): Promise<Scl.Ref<Scl.ElementsOf>[]> {
-	const { primaryRef } = params
+	const { primaryRef, leftOut } = params
 	const tree = await query.any.getTree(primaryRef)
 	if (!tree) return []
 
@@ -31,6 +35,7 @@ export async function resolveAppliedSatellites(
 	const satellites: Scl.Ref<Scl.ElementsOf>[] = []
 
 	for (const target of targets) {
+		if (leftOut?.has(target.id)) continue
 		for (const containerTag of CROSS_CUTTING_SATELLITE_CONTAINERS) {
 			const refs = await reference.query.findRefsPointingTo(query, {
 				target: toRef(target) as Scl.Ref<Scl.ElementsOf>,

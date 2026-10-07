@@ -12,19 +12,19 @@ import {
 	firstTimeGroups,
 	firstTimeReportInstances,
 	groupsForInstance,
+	leftOutRefIds,
 	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import {
 	collectForeignScopes,
+	findComposedFunctionRefs,
 	findInstancesByTemplateUuid,
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
-import {
-	asd as instantiateAsd,
-	resolveTargetStructure,
-} from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { placeApplication } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/asd'
 import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
 	assertMappingsDecided,
@@ -114,19 +114,25 @@ export async function asd(
 	const instances = await scopeToTargetInstance(tx, { instances: matched, targetInstance })
 
 	if (instances.length === 0) {
-		// first-time = one added group; gate the whole instantiate on its acceptance — the groups of
-		// this place when the report lists the placement per place
+		// a first placement writes what the consumer did not leave out — decided by the groups of
+		// this place when the report lists the placement per place. The report made the application
+		// depend on the functions it composes: left out, the kept ones are placed without it.
 		const placementGroups = firstTimeGroups(report, { placedFor: targetParent })
-		const gate = decisions ? acceptedRefIds({ groups: placementGroups, decisions }) : undefined
+		const leftOut = decisions
+			? leftOutRefIds({ groups: placementGroups, decisions }).sourceIds
+			: undefined
 		const gateOverrides = decisions
 			? collisionOverrides({ groups: placementGroups, decisions })
 			: undefined
-		if (gate && !gate.sourceIds.has(applicationRef.id)) return { applications: [], functions: [] }
+		const composedRefs = await findComposedFunctionRefs(sourceQuery, applicationRef)
+		if (leftOut && [applicationRef, ...composedRefs].every((ref) => leftOut.has(ref.id))) {
+			return { applications: [], functions: [] }
+		}
 		const {
 			applicationRef: application,
 			composedFunctionRefs,
 			cloneMappings,
-		} = await instantiateAsd(tx, {
+		} = await placeApplication(tx, {
 			sourceQuery,
 			applicationRef,
 			targetParent,
@@ -135,6 +141,7 @@ export async function asd(
 			decisionMappings: params.decisionMappings,
 			resolvePlacement: params.resolvePlacement,
 			partOfTemplate: params.partOfTemplate,
+			leftOut,
 		})
 		// first-time ASD clones the Application + composed Functions + satellites in one pass; annotate
 		// every first-time report instance (Application and each composed Function) from the shared map
@@ -142,7 +149,7 @@ export async function asd(
 		for (const reportInstance of firstTimeReportInstances(report, { placedFor: targetParent })) {
 			annotateInstance({ reportInstance, added })
 		}
-		return { applications: [application], functions: composedFunctionRefs }
+		return { applications: application ? [application] : [], functions: composedFunctionRefs }
 	}
 
 	const structure = await resolveTargetStructure(tx, targetParent)

@@ -85,7 +85,5 @@ export type ResolveStandingsParams = {
 export type StandingPlacement = {
 	/** The record id of the instance it is placed for. */
 	placedFor: string
-	/** The lineage the references to it carry. */
-	lineage: string
 	reportInstance: ReportInstance
 }

@@ -5,10 +5,8 @@ import { foldSatelliteCompanions } from './satellite-companions'
 
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
-import {
-	describeStandingChoice,
-	linkReferencesToPlacements,
-} from '@/v2019C1/extensions/lifecycle/engine/standing'
+import { linkPlacementDependencies } from '@/v2019C1/extensions/lifecycle/engine/link-placement-dependencies'
+import { describeStandingChoice } from '@/v2019C1/extensions/lifecycle/engine/standing'
 import {
 	collectForeignScopes,
 	findInstancesByTemplateUuid,
@@ -176,10 +174,17 @@ export async function reportAsd(
 		anchor,
 	})
 
-	await linkReferencesToPlacements(sourceQuery, {
-		referrers: reportInstances,
-		placements: composedFunctions.placements,
-	})
+	// what the groups of each placement depend on: on a first placement, the application on the
+	// functions it composes; on an update, what an instance gains on the functions placed for it
+	const placements = firstPlacement
+		? [[...reportInstances, ...composedFunctions.instances]]
+		: reportInstances.map((referrer) => [
+				referrer,
+				...composedFunctions.placements
+					.filter((placement) => placement.placedFor === referrer.rootRef?.id)
+					.map((placement) => placement.reportInstance),
+			])
+	for (const instances of placements) await linkPlacementDependencies(sourceQuery, { instances })
 	// which function an instance stands on, where several qualify: listed with that instance
 	for (const choice of composedFunctions.choices) {
 		const owner = reportInstances.find(
@@ -372,9 +377,7 @@ async function reportComposedFunctions(
 				if (applicationInstances.length > 1)
 					placeFor({ instance: reportInstance, placedFor: instance })
 				reportInstances.push(reportInstance)
-				if (child.lineage) {
-					placements.push({ placedFor: instance.id, lineage: child.lineage, reportInstance })
-				}
+				placements.push({ placedFor: instance.id, reportInstance })
 			}
 		}
 		for (const unowned of unclaimed) reconciled.set(unowned.id, unowned)

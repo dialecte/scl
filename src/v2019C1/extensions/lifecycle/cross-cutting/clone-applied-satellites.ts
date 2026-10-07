@@ -34,9 +34,9 @@ export async function cloneAppliedSatellites(
 	tx: Core.Transaction<Config>,
 	params: CloneAppliedSatellitesParams,
 ): Promise<CloneAppliedSatellitesResult> {
-	const { sourceQuery, primaryRef, structure, strip = true } = params
+	const { sourceQuery, primaryRef, structure, strip = true, leftOut } = params
 
-	const satellites = await resolveAppliedSatellites(sourceQuery, { primaryRef })
+	const satellites = await resolveAppliedSatellites(sourceQuery, { primaryRef, leftOut })
 
 	const cloneMappings: Scl.CloneMapping[] = []
 	const redirectMappings: RedirectMapping[] = []

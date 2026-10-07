@@ -46,9 +46,15 @@ export async function cloneApplicationContent(
 		keepNameTypesFrom?: KeepNameTypesFrom
 		/** The consumer's choices for the shared elements the application refers to. */
 		decisionMappings?: DecisionMappings
+		/**
+		 * The source elements the consumer left out (record ids): a function left out is not placed;
+		 * the application left out is not placed, nor what only it refers to — the functions it
+		 * composes that are kept are placed without it.
+		 */
+		leftOut?: ReadonlySet<string>
 	},
 ): Promise<CloneApplicationContentResult> {
-	const { sourceQuery, applicationRef, structure, omit, keepNameTypesFrom } = params
+	const { sourceQuery, applicationRef, structure, omit, keepNameTypesFrom, leftOut } = params
 	const decisionMappings = params.decisionMappings
 
 	// Source record id -> cloned target ref, accumulated as functions are cloned, so
@@ -57,12 +63,13 @@ export async function cloneApplicationContent(
 	const allMappings: Scl.CloneMapping[] = []
 
 	// 1. Functions: resolve structural parent per function, clone tree + data model
-	const missingFunctions = await findMissingReferencedRecords(tx, {
+	const composedFunctions = await findMissingReferencedRecords(tx, {
 		sourceQuery,
 		scopeRef: applicationRef,
 		refTagName: 'FunctionRef',
 		targetTagName: 'Function',
 	})
+	const missingFunctions = composedFunctions.filter((ref) => !leftOut?.has(ref.id))
 	for (const ref of missingFunctions) {
 		const targetParentRef = await resolveStructureRef(sourceQuery, ref, structure)
 		const cloneMappings = await cloneFunction(tx, {
@@ -94,6 +101,10 @@ export async function cloneApplicationContent(
 		allMappings.push(...categories.cloneMappings)
 		categoryRedirectMappings.push(...categories.redirectMappings)
 	}
+
+	// the application left out: its functions are placed without it, nothing it refers to is
+	const redirectMappings = [...categoryRedirectMappings]
+	if (leftOut?.has(applicationRef.id)) return { cloneMappings: allMappings, redirectMappings }
 
 	// 3. All other referenced targets - derived from UUID_REFERENCE_PAIRS and DESCENDANTS.
 	// Each is placed by mirroring its source hierarchy (under its owning function when it
@@ -142,7 +153,7 @@ export async function cloneApplicationContent(
 		sourceUuid: reuse.sourceUuid,
 		target: reuse.existingRef,
 	}))
-	const redirectMappings = [...categoryRedirectMappings, ...roleRedirectMappings]
+	redirectMappings.push(...roleRedirectMappings)
 
 	return { cloneMappings: allMappings, redirectMappings }
 }

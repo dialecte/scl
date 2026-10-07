@@ -8,6 +8,8 @@ export type CloneAppliedSatellitesParams = {
 	primaryRef: Scl.Ref<Scl.ElementsOf>
 	structure: TargetStructure
 	strip?: boolean
+	/** The source elements the consumer left out (record ids): a satellite applying to them only is not placed. */
+	leftOut?: ReadonlySet<string>
 }
 
 export type CloneAppliedSatellitesResult = {

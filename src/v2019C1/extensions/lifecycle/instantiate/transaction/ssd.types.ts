@@ -19,6 +19,11 @@ export type SsdParams = {
 	keepNameTypesFrom?: KeepNameTypesFrom
 	/** The consumer's choices for the shared elements the applications refer to. */
 	decisionMappings?: DecisionMappings
+	/**
+	 * The source elements the consumer left out (record ids): a level and what it holds, an
+	 * application, a function. Nothing left out: the whole scope is placed.
+	 */
+	leftOut?: ReadonlySet<string>
 }
 
 export type SsdResult = {

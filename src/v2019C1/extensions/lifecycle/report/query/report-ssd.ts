@@ -6,6 +6,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
+import { linkPlacementDependencies } from '@/v2019C1/extensions/lifecycle/engine/link-placement-dependencies'
 import {
 	describePlacementMappings,
 	findLanding,
@@ -59,8 +60,6 @@ export async function reportSsd(
 		root,
 	)
 
-	const instances: ReportInstance[] = []
-
 	// the topology frame's own structural changes (Bay attrs / BayType / equipment), fn/app excluded;
 	// one ReportInstance per bay when a bay-typical was instantiated more than once
 	// a first placement: asked for, or the project holds no instance of the scope yet
@@ -107,7 +106,6 @@ export async function reportSsd(
 		pinnedMatches,
 		decisionMappings,
 	})
-	instances.push(...frameInstances)
 
 	// the levels are listed first, the shared elements follow
 	const [placedFrame] = frameInstances
@@ -121,6 +119,7 @@ export async function reportSsd(
 
 	// on an update, a primary the template gained is placed in each instance of the unit that holds
 	// it: listed once per place, each decided on its own — as the apply places it
+	const primaryInstances: ReportInstance[] = []
 	for (const applicationRef of applications) {
 		const places = await findGainedPlaces(query, {
 			sourceQuery,
@@ -139,7 +138,7 @@ export async function reportSsd(
 				decisionMappings,
 				anchor: placedFor ?? landing,
 			})
-			instances.push(...placedInstances({ instances: report.instances, placedFor }))
+			primaryInstances.push(...placedInstances({ instances: report.instances, placedFor }))
 		}
 	}
 	for (const functionRef of standaloneFunctions) {
@@ -160,11 +159,21 @@ export async function reportSsd(
 				targetInstance,
 				decisionMappings,
 			})
-			instances.push(...placedInstances({ instances: report.instances, placedFor }))
+			primaryInstances.push(...placedInstances({ instances: report.instances, placedFor }))
 		}
 	}
 
-	const report = assembleReport(instances)
+	// what lands in a level the placement adds goes with it, a reference with what it points at
+	for (const scope of listPlacementScopes({
+		firstPlacement,
+		frameInstances,
+		primaryInstances,
+		instanceLevelsList,
+	})) {
+		await linkPlacementDependencies(sourceQuery, { instances: scope })
+	}
+
+	const report = assembleReport([...frameInstances, ...primaryInstances])
 	// a level nothing is decided for is the consumer's to choose before anything is written
 	if (placementLevels.some((level) => level.undecided)) report.needsDecisions = true
 	return report
@@ -187,6 +196,31 @@ async function findGainedPlaces(
 	if (params.instanceLevelsList.length < 2) return undefined
 	const placement = await resolvePrimaryParents(query, params)
 	return placement.gained && placement.parents.length > 1 ? placement.parents : undefined
+}
+
+/**
+ * The report instances of each placement: on a first placement, all of them; on an update, each
+ * instance of the unit with the primaries placed in it afresh — those listed for one of its levels,
+ * and those listed once, which land in every instance.
+ */
+function listPlacementScopes(params: {
+	firstPlacement: boolean
+	frameInstances: readonly ReportInstance[]
+	primaryInstances: readonly ReportInstance[]
+	instanceLevelsList: readonly InstanceLevels[]
+}): ReportInstance[][] {
+	const { firstPlacement, frameInstances, primaryInstances, instanceLevelsList } = params
+	if (firstPlacement) return [[...frameInstances, ...primaryInstances]]
+
+	const placed = primaryInstances.filter((instance) => !instance.rootRef)
+	return frameInstances.map((frameInstance, index) => {
+		const levelIds = new Set<string | undefined>([frameInstance.rootRef?.id])
+		for (const level of instanceLevelsList[index]?.values() ?? []) levelIds.add(level?.id)
+		return [
+			frameInstance,
+			...placed.filter((instance) => !instance.placedFor || levelIds.has(instance.placedFor.id)),
+		]
+	})
 }
 
 /** The instances of a report made for one place, each placed under it. */
