@@ -1,5 +1,9 @@
 import { makeUnique } from '@/v2019C1/extensions/lifecycle/constraints'
-import { allGroups, assertDecisionsCoherent } from '@/v2019C1/extensions/lifecycle/engine'
+import {
+	allGroups,
+	assertDecisionsCoherent,
+	clearAnnotations,
+} from '@/v2019C1/extensions/lifecycle/engine'
 import { assertMappingsCoherent } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	asd as updateAsd,
@@ -60,6 +64,8 @@ export async function apply(
 	// Decisions supplied: honor gating AND user value edits — even on the fast track,
 	// a conflict-free instantiate can still carry edited editable attributes.
 	if (decisions) assertDecisionsCoherent({ groups: allGroups(report), decisions })
+	// the report tells what THIS run places: what an earlier run placed is forgotten first
+	clearAnnotations({ report })
 	const instances = await runVerb(tx, params, report, decisions) // no decisions: no gate = apply all
 
 	// the consumer's own step, once everything is written, in the same transaction

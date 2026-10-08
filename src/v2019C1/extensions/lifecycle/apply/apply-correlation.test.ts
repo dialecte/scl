@@ -374,3 +374,65 @@ describe('apply — SSD appliedRef covers the elements carried from outside the 
 		expect(variableIds).toContain(variableCompanion!.appliedRef?.id)
 	})
 })
+
+describe('apply — the report describes the last run only', () => {
+	const bayScope = { tagName: 'Bay', id: 'bay-s' } as Scl.Ref<'Bay'>
+	const targetVl = { tagName: 'VoltageLevel', id: 'vl-t' } as Scl.Ref<'VoltageLevel'>
+
+	// a bay typical B1 with a function of its own
+	const ssdSource = /* xml */ `
+		<SCL ${ns} ${id}="ssd">
+			<Header id="ssd-header" uuid="ssd-doc-uuid" version="0" revision="1" ${id}="hdr-s"/>
+			<Substation name="TEMPLATE" ${id}="sub-s">
+				<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+					<Bay name="B1" uuid="bay-src-uuid" ${id}="bay-s">
+						<Function name="Prot" uuid="fn-src-uuid" ${id}="fn-s"/>
+					</Bay>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+	// a voltage level with no bay yet
+	const ssdTarget = /* xml */ `
+		<SCL ${ns} ${id}="scd">
+			<Header id="proj" uuid="proj-uuid" ${id}="hdr-t"/>
+			<Substation name="S1" ${id}="sub-t">
+				<VoltageLevel name="V1" ${id}="vl-t"/>
+			</Substation>
+		</SCL>
+	`
+
+	it('a run placing everything, then a run leaving the bay out → nothing of the bay is said to be placed', async () => {
+		const { source, target } = await createSclTestProject({
+			sourceXml: ssdSource,
+			targetXml: ssdTarget,
+		})
+		if (!target) throw new Error('target required')
+		const lifecycleTarget = {
+			verb: 'ssd' as const,
+			sourceQuery: source.document.query,
+			ref: bayScope,
+			anchor: targetVl,
+		}
+		const rep = await report(target.document.query, lifecycleTarget)
+
+		// the preview: everything accepted
+		const preview = await target.document.prepare(async (tx) => {
+			await apply(tx, { ...lifecycleTarget, report: rep })
+		})
+		preview.discard()
+
+		// the dry run: the bay left out with what it holds
+		const decisions = new Map(allGroups(rep).map((group) => [group.id, 'skip' as const]))
+		const dryRun = await target.document.prepare(async (tx) => {
+			await apply(tx, { ...lifecycleTarget, report: rep, resolution: { decisions } })
+		})
+		dryRun.discard()
+
+		const bayMapping = rep.mappings.find((mapping) => mapping.id === 'bay-s')
+		expect(bayMapping?.mapping).toEqual({ create: expect.anything() })
+		expect(bayMapping?.appliedRef).toBeUndefined()
+		const nodes = allGroups(rep).flatMap((group) => [group.primary, ...group.companions])
+		expect(nodes.map((node) => node.appliedRef)).toEqual(nodes.map(() => undefined))
+	})
+})

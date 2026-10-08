@@ -1,6 +1,7 @@
 export { diff, assembleReport, allGroups, collectTreeIds } from './diff'
 export { groupChanges, placeFor } from './group'
 export { reconcile } from './reconcile'
+export { clearAnnotations } from './correlate'
 export {
 	acceptedRefIds,
 	assertDecisionsCoherent,

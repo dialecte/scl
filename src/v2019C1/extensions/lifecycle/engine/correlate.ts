@@ -1,4 +1,4 @@
-import type { DiffNode, ReportInstance } from './diff.types'
+import type { DiffNode, DiffReport, ReportInstance } from './diff.types'
 import type { Scl } from '@/v2019C1/config'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
@@ -51,6 +51,30 @@ export function annotateInstance(params: {
 				: added.get(mapping.sourceId ?? mapping.id)
 		if (applied) mapping.appliedRef = applied
 	}
+}
+
+/**
+ * Forget what an earlier run of the same report placed: every node and every mapping loses its
+ * `appliedRef`. A report is applied more than once (a preview with everything accepted, a dry run
+ * with the decisions, the commit), and a run fills `appliedRef` only where it places something, so
+ * what one run leaves out would otherwise keep the element an earlier run placed for it.
+ */
+export function clearAnnotations(params: { report: DiffReport }): void {
+	const { report } = params
+	for (const reportInstance of report.instances) {
+		clearNode({ node: reportInstance.tree })
+		for (const group of reportInstance.groups) {
+			for (const companion of group.companions) clearNode({ node: companion })
+		}
+		for (const mapping of reportInstance.mappings) delete mapping.appliedRef
+	}
+	for (const mapping of report.mappings) delete mapping.appliedRef
+}
+
+function clearNode(params: { node: DiffNode }): void {
+	const { node } = params
+	delete node.appliedRef
+	for (const child of node.children) clearNode({ node: child })
 }
 
 function annotateNode(params: { node: DiffNode; added: AppliedTargets }): void {
