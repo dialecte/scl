@@ -153,6 +153,8 @@ describe('first placement of a bay typical — every leave-out is honoured, a le
 			...lifecycleTarget,
 			resolution: { mappings },
 		})
+		// a first placement reaches no instance of the template yet
+		expect(placementReport.templateInstances).toEqual([])
 
 		for (const [sourceId, dependencyIds] of Object.entries(testCase.expectedDependsOn ?? {})) {
 			const group = groupOf({ report: placementReport, sourceId })

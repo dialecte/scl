@@ -72,6 +72,10 @@ result by reading the node (`node.appliedRef`) instead of re-deriving the report
 structurally — which is how a merge-review decorates a snapshot of the applied document, and why two
 instances of one template never collide (each node carries its own `appliedRef`).
 
+The report tells what the **last** apply placed. One report is often applied more than once — a
+preview with everything accepted, a dry run with the decisions, the commit — so each apply first
+forgets every `appliedRef` an earlier run filled: a node or a mapping the run leaves out carries none.
+
 ```ts
 type DiffNode = {
 	change: 'added' | 'removed' | 'modified' | 'unchanged' | 'target-only'
@@ -248,6 +252,11 @@ Several instances of one template may live under one anchor (each with a unique 
 sharing one `templateUuid`). `report` enumerates **every** instance and returns one
 {@link ReportInstance} per instance in `report.instances`, each carrying its own `groups` and
 `title`. There is **one** report holding all instances.
+
+`report.instances` also lists what an instance holds that is reported on its own (the functions an
+application composes, the primaries a placed unit holds). `report.templateInstances` lists only the
+instances of the template itself that the report covers — what an update reaches: the applications
+of an ASD, the functions of an FSD, the placed units of an SSD. It is empty on a first placement.
 
 The decision map is the selector: accept the groups of the instances you want and skip the rest to
 update a **subset** (e.g. 2 of 4). `apply` reconciles each instance independently, gated by only its

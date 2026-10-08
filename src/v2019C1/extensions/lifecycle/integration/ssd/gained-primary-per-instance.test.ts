@@ -118,6 +118,11 @@ describe('update of a bay typical placed twice — what the typical gains is dec
 
 		// 3. the update: one first placement of "Ctrl" per bay, each with its own decision
 		const updateReport = await report(target.query, { ...lifecycleTarget, scenario: 'template' })
+		// the update reaches both placed bays, not the functions or applications they gain
+		expect(updateReport.templateInstances.map((instance) => instance.tagName)).toEqual([
+			'Bay',
+			'Bay',
+		])
 		const controlPlacements = updateReport.instances.filter(
 			(instance) => !instance.rootRef && instance.tree.tagName === gainedTag,
 		)

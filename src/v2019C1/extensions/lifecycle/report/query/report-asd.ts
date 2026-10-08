@@ -193,7 +193,10 @@ export async function reportAsd(
 		if (owner) owner.mappings = [...owner.mappings, choice]
 	}
 
-	const report = assembleReport([...reportInstances, ...composedFunctions.instances])
+	const report = assembleReport({
+		instances: [...reportInstances, ...composedFunctions.instances],
+		templateRoots: reportInstances,
+	})
 	report.offLevel = placement.offLevel
 	// a level nothing is decided for is the consumer's to choose before anything is written
 	if (placement.levels.some((level) => level.undecided)) report.needsDecisions = true

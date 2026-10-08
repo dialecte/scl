@@ -439,7 +439,12 @@ async function computeAttributeChanges(
  * {@link DiffReport}: `summary` sums every instance's primary tree and
  * `needsDecisions` is true when any instance has a decision group.
  */
-export function assembleReport(instances: ReportInstance[]): DiffReport {
+export function assembleReport(params: {
+	instances: ReportInstance[]
+	/** Among `instances`, those of the template itself — not the functions an application composes. */
+	templateRoots: ReportInstance[]
+}): DiffReport {
+	const { instances, templateRoots } = params
 	const summary = instances.reduce<DiffSummary>(
 		(acc, instance) => {
 			const instanceSummary = summarize(instance.tree)
@@ -461,6 +466,9 @@ export function assembleReport(instances: ReportInstance[]): DiffReport {
 		),
 		summary,
 		mappings: collectReportMappings(instances),
+		templateInstances: templateRoots.flatMap((instance) =>
+			instance.rootRef ? [instance.rootRef] : [],
+		),
 	}
 }
 

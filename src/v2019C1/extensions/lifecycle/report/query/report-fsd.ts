@@ -104,7 +104,7 @@ export async function reportFsd(
 		const placementMappings = await describePlacementMappings(query, { levels: placement.levels })
 		reportInstance.mappings = [...placementMappings, ...reportInstance.mappings]
 
-		const report = assembleReport([reportInstance])
+		const report = assembleReport({ instances: [reportInstance], templateRoots: [reportInstance] })
 		report.offLevel = placement.offLevel
 		// a level nothing is decided for is the consumer's to choose before anything is written
 		if (placement.levels.some((level) => level.undecided)) report.needsDecisions = true
@@ -132,5 +132,5 @@ export async function reportFsd(
 			}),
 		)
 	}
-	return assembleReport(reportInstances)
+	return assembleReport({ instances: reportInstances, templateRoots: reportInstances })
 }

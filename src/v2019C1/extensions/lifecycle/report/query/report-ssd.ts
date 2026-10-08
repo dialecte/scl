@@ -55,7 +55,7 @@ export async function reportSsd(
 	const { sourceQuery, scopeRef, targetParent, scenario, targetInstance, decisionMappings } = params
 
 	const root = scopeRef ?? (await resolveInstantiableRoot(sourceQuery))
-	if (!root) return assembleReport([])
+	if (!root) return assembleReport({ instances: [], templateRoots: [] })
 
 	const { applications, standaloneFunctions } = await resolveTopologyReconcilables(
 		sourceQuery,
@@ -173,7 +173,10 @@ export async function reportSsd(
 		await linkPlacementDependencies(sourceQuery, { instances: scope })
 	}
 
-	const report = assembleReport([...frameInstances, ...primaryInstances])
+	const report = assembleReport({
+		instances: [...frameInstances, ...primaryInstances],
+		templateRoots: frameInstances,
+	})
 	// a level nothing is decided for is the consumer's to choose before anything is written
 	if (placementLevels.some((level) => level.undecided)) report.needsDecisions = true
 	return report

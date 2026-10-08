@@ -119,6 +119,12 @@ export type DiffReport = {
 	/** Where each shared source element lands in the project — one entry per source element. */
 	mappings: ReportMapping[]
 	/**
+	 * The instances of the template already in the project that the report covers: what an update
+	 * reaches (an application, a function, a placed unit), not the functions an application composes.
+	 * None on a first placement.
+	 */
+	templateInstances: AnyRefOrRecord[]
+	/**
 	 * Set when the consumer started from a level ABOVE the one the template was made for: its content
 	 * cannot stay there and lands below, on the levels its placement mappings say.
 	 */

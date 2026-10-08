@@ -146,6 +146,11 @@ describe('lifecycle scenario — multi-instance ASD update (Part C, Phase B)', (
 
 		// one instance per root across both layers: 2 Applications + 2 composed Functions
 		expect(rep.instances).toHaveLength(4)
+		// the instances of the template the update reaches: the applications, not the functions they compose
+		expect(rep.templateInstances.map((instance) => instance.tagName)).toEqual([
+			'Application',
+			'Application',
+		])
 
 		const decisions = new Map<string, GroupDecision>()
 		if (testCase.mode === 'skip-all') {

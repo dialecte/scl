@@ -69,7 +69,8 @@ describe('assembleReport — the mappings of the report', () => {
 	}
 
 	runSclTestCases.generic(testCases, (testCase) => {
-		const report = assembleReport(testCase.instanceMappings.map(reportedInstance))
+		const instances = testCase.instanceMappings.map(reportedInstance)
+		const report = assembleReport({ instances, templateRoots: instances })
 
 		expect(report.mappings).toEqual(testCase.expected)
 	})
