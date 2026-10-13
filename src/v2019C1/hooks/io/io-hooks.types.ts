@@ -1,6 +1,6 @@
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
 import type { ElementPath, PathSegmentWithRef } from '@/v2019C1/extensions/reference/query/build'
-import type { ImportWarning } from '@dialecte/core'
+import type { AnyRawRecord, ImportWarning } from '@dialecte/core'
 
 export type PendingResolution = {
 	recordId: string
@@ -9,6 +9,18 @@ export type PendingResolution = {
 	pathValue: string
 	lookupKey: string
 	fallbackLookupKey?: string
+	/**
+	 * Set for a name local to a BehaviorDescription that points at a signal: once resolved, the
+	 * path is written again in the standard form when the file used another one.
+	 */
+	normalize?: Omit<PendingPathFill, 'recordId' | 'uuidValue'>
+}
+
+/** A signal (SourceRef / ControlRef) of the file: named once all its siblings are known. */
+export type CollectedSignal = {
+	record: AnyRawRecord
+	ancestry: readonly AnyRawRecord[]
+	uuid: string
 }
 
 /** A target element of the file, indexed by its uuid during the first pass. */

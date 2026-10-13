@@ -1,3 +1,4 @@
+import { buildElementPath } from '../build/build-element-path'
 import { getPathSegment } from '../build/path-segment'
 import { parseReferencePath, parsePathSegments, splitLnodeQualifier } from './parse-path'
 import { resolveMappedData } from './resolve-mapped-data'
@@ -7,6 +8,7 @@ import { toRawRecord } from '@dialecte/core/helpers'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DEFINITION } from '@/v2019C1/definition'
 import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
+import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
 
 import type { PathSegment } from '../build/path-segment.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -82,6 +84,19 @@ export async function resolveReferencePath(
 		ancestry,
 	)
 	if (!parsed) return undefined
+
+	// A signal (SourceRef / ControlRef) is named among its siblings and its name may hold dots:
+	// it is found by its whole path, never by splitting the path into segments.
+	if (pair.target.every((tagName) => SIGNAL_TAG_NAMES.has(tagName))) {
+		const signal = await findSignalByPath({
+			query,
+			targets: pair.target,
+			paths: [parsed.lookupKey, parsed.fallbackLookupKey].filter(
+				(path): path is string => path !== undefined,
+			),
+		})
+		return signal ? { record: signal, qualifier: parsed.qualifier } : undefined
+	}
 
 	const segments = parsePathSegments(parsed.lookupKey)
 	if (segments.length === 0) return undefined
@@ -252,6 +267,27 @@ async function findLnClassTarget(params: {
 
 		if (await matchesAncestry(query, record, expectedAncestry)) {
 			return record as Scl.TrackedRecord<Scl.ElementsOf>
+		}
+	}
+
+	return undefined
+}
+
+/** The signal whose path, built among its siblings, is one of `paths`. */
+async function findSignalByPath(params: {
+	query: Core.Query<Config> | Core.Transaction<Config>
+	targets: readonly string[]
+	paths: readonly string[]
+}): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
+	const { query, targets, paths } = params
+
+	for (const tagName of targets) {
+		const records = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
+		for (const record of records) {
+			const elementPath = await buildElementPath(query, record as Scl.Ref<Scl.ElementsOf>)
+			if (elementPath && paths.includes(elementPath.path)) {
+				return record as Scl.TrackedRecord<Scl.ElementsOf>
+			}
 		}
 	}
 

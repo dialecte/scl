@@ -4,12 +4,20 @@ import {
 	UUID_REFERENCE_PAIRS,
 } from '@/v2019C1/constants'
 import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
+import {
+	PATH_EXTRACTION_CONFIG,
+	SIGNAL_TAG_NAMES,
+} from '@/v2019C1/extensions/reference/constants/path-extraction'
 import { composeReferencePath } from '@/v2019C1/extensions/reference/query/build/compose-reference-path'
-import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
+import {
+	buildPathFromAncestry,
+	joinPathParts,
+} from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
 
 import type {
+	CollectedSignal,
 	IndexedTarget,
 	PendingPathFill,
 	PendingResolution,
@@ -73,6 +81,7 @@ export function createSclIoHooks(): IOHooks {
 	const pendingResolutions: PendingResolution[] = []
 	const targetsByUuid: Map<Uuid, IndexedTarget> = new Map()
 	const pendingPathFills: PendingPathFill[] = []
+	const collectedSignals: CollectedSignal[] = []
 	const xpathWarnings: UnsupportedXPathWarning[] = []
 	let mappedDataImport = createMappedDataImport()
 
@@ -89,8 +98,13 @@ export function createSclIoHooks(): IOHooks {
 		const uuid = record.attributes.find((attribute) => attribute.name === 'uuid')?.value
 
 		const isTargetElement = uuid && TARGET_ELEMENT_TYPES.has(tagName)
+		// A signal is named among its siblings, some of which may come later: it is indexed once
+		// the whole file is read.
+		if (isTargetElement && SIGNAL_TAG_NAMES.has(tagName)) {
+			collectedSignals.push({ record, ancestry: [...ancestry], uuid })
+		}
 		// Index target elements: build path → uuid mapping
-		if (isTargetElement) {
+		else if (isTargetElement) {
 			const elementPath = buildPathFromAncestry({ record, ancestry })
 			if (elementPath) {
 				pathIndex.set(elementPath.path, uuid)
@@ -153,6 +167,10 @@ export function createSclIoHooks(): IOHooks {
 				continue
 			}
 
+			const namesSignal =
+				pair.resolution === RESOLUTION_TYPE.behaviorDescription &&
+				pair.target.every((target) => SIGNAL_TAG_NAMES.has(target))
+
 			pendingResolutions.push({
 				recordId: record.id,
 				elementTag: tagName,
@@ -160,6 +178,13 @@ export function createSclIoHooks(): IOHooks {
 				pathValue,
 				lookupKey: parsed.lookupKey,
 				fallbackLookupKey: parsed.fallbackLookupKey,
+				normalize: namesSignal
+					? {
+							pair,
+							referenceAttributes: record.attributes,
+							behaviorContext: behaviorContextFromAncestry(ancestry),
+						}
+					: undefined,
 			})
 		}
 	}
@@ -167,6 +192,8 @@ export function createSclIoHooks(): IOHooks {
 	const afterImport = async (): Promise<AfterImportResult> => {
 		const updates: AfterImportResult['updates'] = []
 		const warnings: ImportWarning[] = [...xpathWarnings]
+
+		indexSignals({ signals: collectedSignals, pathIndex, targetsByUuid })
 
 		// A reference stored with its uuid only gets the path of the target the uuid names, composed
 		// like the record hooks compose it. A uuid naming no element of the file is left alone.
@@ -209,7 +236,10 @@ export function createSclIoHooks(): IOHooks {
 
 			updates.push({
 				recordId: pending.recordId,
-				attributes: [{ name: pending.uuidAttributeName, value: resolvedUuid }],
+				attributes: [
+					{ name: pending.uuidAttributeName, value: resolvedUuid },
+					...standardPathOf({ pending, target: targetsByUuid.get(resolvedUuid) }),
+				],
 			})
 		}
 
@@ -221,6 +251,7 @@ export function createSclIoHooks(): IOHooks {
 		pathIndex.clear()
 		pendingResolutions.length = 0
 		pendingPathFills.length = 0
+		collectedSignals.length = 0
 		targetsByUuid.clear()
 		xpathWarnings.length = 0
 
@@ -250,4 +281,74 @@ function behaviorContextFromAncestry(
 		ancestry: ancestry.slice(0, index),
 	})
 	return behaviorPath?.segments.slice(0, -1)
+}
+
+/**
+ * Index every signal under its path, named among its siblings. The name
+ * the engine wrote before the standard form (`Trip.general` for a unique input with a pDA,
+ * `Trip(2)` for a unique input of instance 2, `Trip` for instance 1 of several) is indexed too,
+ * unless it is the standard name of another signal, so a file written by an earlier version
+ * still resolves.
+ */
+function indexSignals(params: {
+	signals: readonly CollectedSignal[]
+	pathIndex: Map<string, string>
+	targetsByUuid: Map<string, IndexedTarget>
+}): void {
+	const { signals, pathIndex, targetsByUuid } = params
+
+	const siblingsByParent = new Map<string, AnyRawRecord[]>()
+	for (const { record } of signals) {
+		const parentId = record.parent?.id ?? ''
+		siblingsByParent.set(parentId, [...(siblingsByParent.get(parentId) ?? []), record])
+	}
+
+	const legacyPaths: [string, string][] = []
+	for (const { record, ancestry, uuid } of signals) {
+		const siblings = siblingsByParent.get(record.parent?.id ?? '') ?? [record]
+		const elementPath = buildPathFromAncestry({ record, ancestry, siblings })
+		if (!elementPath) continue
+		pathIndex.set(elementPath.path, uuid)
+		targetsByUuid.set(uuid, { tagName: record.tagName, path: elementPath })
+
+		const legacyName = legacySignalName(record)
+		const parentPath = elementPath.segments.slice(0, -1)
+		if (legacyName) {
+			legacyPaths.push([
+				parentPath.length > 0 ? `${joinPathParts(parentPath)}.${legacyName}` : legacyName,
+				uuid,
+			])
+		}
+	}
+	for (const [path, uuid] of legacyPaths) {
+		if (!pathIndex.has(path)) pathIndex.set(path, uuid)
+	}
+}
+
+/**
+ * The name the engine gave a signal before the standard form: decided by its own values, the
+ * instance when not 1, the data attribute when set.
+ */
+function legacySignalName(record: AnyRawRecord): string | undefined {
+	const strategy = PATH_EXTRACTION_CONFIG[record.tagName]
+	if (strategy?.type !== 'signal') return undefined
+	const read = (name: string) =>
+		record.attributes.find((attribute) => attribute.name === name)?.value
+	const name = read(strategy.name)
+	if (!name) return undefined
+	const instance = read(strategy.instance)
+	const data = strategy.data ? read(strategy.data) : undefined
+	return `${name}${instance && instance !== '1' ? `(${instance})` : ''}${data ? `.${data}` : ''}`
+}
+
+/** The standard path of a resolved name local to a BehaviorDescription, when the file wrote another. */
+function standardPathOf(params: {
+	pending: PendingResolution
+	target: IndexedTarget | undefined
+}): { name: string; value: string }[] {
+	const { pending, target } = params
+	if (!pending.normalize || !target) return []
+	const path = composeReferencePath({ ...pending.normalize, targetPath: target.path })
+	if (!path || path === pending.pathValue) return []
+	return [{ name: pending.normalize.pair.attribute.path, value: path }]
 }

@@ -275,21 +275,21 @@ describe('import of a reference holding its uuid only', () => {
 		'InputVar in a BehaviorDescription of the Function, inputUuid only → inputName "<LNode>.<input>" written on import':
 			{
 				sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root">
-					<Substation name="S1" ${id}="s1">
-						<Function name="F1" ${id}="f1">
-							<LNode lnClass="PTRC" lnInst="1" iedName="None" ${id}="owner">
-								<eIEC61850-6-100:LNodeInputs ${id}="inputs">
-									<eIEC61850-6-100:SourceRef input="Trip" uuid="uuid-target" ${id}="target"/>
-								</eIEC61850-6-100:LNodeInputs>
-							</LNode>
-							<eIEC61850-6-100:BehaviorDescription name="BD1" ${id}="bd1">
-								<eIEC61850-6-100:InputVar varName="trip" inputUuid="uuid-target" ${id}="ref"/>
-							</eIEC61850-6-100:BehaviorDescription>
-						</Function>
-					</Substation>
-				</SCL>
-			`,
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<Function name="F1" ${id}="f1">
+								<LNode lnClass="PTRC" lnInst="1" iedName="None" ${id}="owner">
+									<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+										<eIEC61850-6-100:SourceRef input="Trip" uuid="uuid-target" ${id}="target"/>
+									</eIEC61850-6-100:LNodeInputs>
+								</LNode>
+								<eIEC61850-6-100:BehaviorDescription name="BD1" ${id}="bd1">
+									<eIEC61850-6-100:InputVar varName="trip" inputUuid="uuid-target" ${id}="ref"/>
+								</eIEC61850-6-100:BehaviorDescription>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
 				expectedQueries: [
 					'//v2019C1:InputVar[@inputUuid="uuid-target" and @inputName="PTRC1.Trip"]',
 				],
@@ -307,6 +307,53 @@ describe('import of a reference holding its uuid only', () => {
 			`,
 			expectedQueries: ['//v2019C1:FunctionCatRef[@functionUuid="uuid-elsewhere"]'],
 			unexpectedQueries: ['//v2019C1:FunctionCatRef[@function]'],
+		},
+	}
+
+	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+})
+
+describe('import of a name an earlier version wrote', () => {
+	function withInputs(sourceRefs: string, inputName: string): string {
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation name="S1" ${id}="s1">
+					<Function name="F1" ${id}="f1">
+						<LNode lnClass="PTRC" lnInst="1" iedName="None" ${id}="owner">
+							<eIEC61850-6-100:LNodeInputs ${id}="inputs">${sourceRefs}</eIEC61850-6-100:LNodeInputs>
+							<eIEC61850-6-100:BehaviorDescription name="BD1" ${id}="bd1">
+								<eIEC61850-6-100:InputVar varName="v" inputName="${inputName}" ${id}="ref"/>
+							</eIEC61850-6-100:BehaviorDescription>
+						</LNode>
+					</Function>
+				</Substation>
+			</SCL>
+		`
+	}
+
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		'"Trip.general" for the only Trip input → resolved, written "Trip"': {
+			sourceXml: withInputs(
+				`<eIEC61850-6-100:SourceRef input="Trip" pDA="general" uuid="uuid-general" ${id}="sr-general"/>`,
+				'Trip.general',
+			),
+			expectedQueries: ['//v2019C1:InputVar[@inputUuid="uuid-general" and @inputName="Trip"]'],
+		},
+		'"Trip" for instance 1 of two → resolved, written "Trip(1)"': {
+			sourceXml: withInputs(
+				`<eIEC61850-6-100:SourceRef input="Trip" uuid="uuid-first" ${id}="sr-first"/>
+				<eIEC61850-6-100:SourceRef input="Trip" inputInst="2" uuid="uuid-second" ${id}="sr-second"/>`,
+				'Trip',
+			),
+			expectedQueries: ['//v2019C1:InputVar[@inputUuid="uuid-first" and @inputName="Trip(1)"]'],
+		},
+		'the standard "Trip(2)" → resolved, left as written': {
+			sourceXml: withInputs(
+				`<eIEC61850-6-100:SourceRef input="Trip" uuid="uuid-first" ${id}="sr-first"/>
+				<eIEC61850-6-100:SourceRef input="Trip" inputInst="2" uuid="uuid-second" ${id}="sr-second"/>`,
+				'Trip(2)',
+			),
+			expectedQueries: ['//v2019C1:InputVar[@inputUuid="uuid-second" and @inputName="Trip(2)"]'],
 		},
 	}
 

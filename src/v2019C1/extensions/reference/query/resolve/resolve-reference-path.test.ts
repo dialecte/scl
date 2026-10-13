@@ -301,6 +301,80 @@ describe('resolve', () => {
 
 		// ── UUID-based resolution (fast path) ────────────────────────────
 
+		'name — InputVar.inputName "Trip(1).general" without uuid → the SourceRef it names': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Function name="F1" ${ID}="f1">
+						<LNode lnClass="PTRC" lnInst="1" ${ID}="owner-lnode">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeInputs ${ID}="inputs-1">
+									<eIEC61850-6-100:SourceRef input="Trip" pDA="general" ${ID}="sr-3-general" />
+									<eIEC61850-6-100:SourceRef input="Trip" ${ID}="sr-1-plain" />
+									<eIEC61850-6-100:SourceRef input="Trip" pDA="q" ${ID}="sr-2-q" />
+								</eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
+									<eIEC61850-6-100:InputVar varName="x" inputName="Trip(1).general" ${ID}="iv-1" />
+								</eIEC61850-6-100:BehaviorDescription>
+							</Private>
+						</LNode>
+					</Function>
+				</Substation>
+			</SCL>`,
+			refId: 'iv-1',
+			refTagName: 'InputVar',
+			pathAttribute: 'inputName',
+			expected: { tagName: 'SourceRef', id: 'sr-3-general' },
+		},
+		'name — InputVar.inputName "PTRC1.Trip" from a BehaviorDescription of the Function → the SourceRef':
+			{
+				sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Function name="F1" ${ID}="f1">
+						<LNode lnClass="PTRC" lnInst="1" ${ID}="owner-lnode">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeInputs ${ID}="inputs-1">
+									<eIEC61850-6-100:SourceRef input="Trip" ${ID}="sr-trip" />
+								</eIEC61850-6-100:LNodeInputs>
+							</Private>
+						</LNode>
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
+								<eIEC61850-6-100:InputVar varName="x" inputName="PTRC1.Trip" ${ID}="iv-1" />
+							</eIEC61850-6-100:BehaviorDescription>
+						</Private>
+					</Function>
+				</Substation>
+			</SCL>`,
+				refId: 'iv-1',
+				refTagName: 'InputVar',
+				pathAttribute: 'inputName',
+				expected: { tagName: 'SourceRef', id: 'sr-trip' },
+			},
+		'name — InputVar.inputName of an input with a dot, "PTOC1.Op" → the SourceRef': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Function name="F1" ${ID}="f1">
+						<LNode lnClass="PTRC" lnInst="1" ${ID}="owner-lnode">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeInputs ${ID}="inputs-1">
+									<eIEC61850-6-100:SourceRef input="PTOC1.Op" ${ID}="sr-op" />
+								</eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
+									<eIEC61850-6-100:InputVar varName="x" inputName="PTOC1.Op" ${ID}="iv-1" />
+								</eIEC61850-6-100:BehaviorDescription>
+							</Private>
+						</LNode>
+					</Function>
+				</Substation>
+			</SCL>`,
+			refId: 'iv-1',
+			refTagName: 'InputVar',
+			pathAttribute: 'inputName',
+			expected: { tagName: 'SourceRef', id: 'sr-op' },
+		},
 		'uuid — direct: FunctionCatRef with functionUuid → Function': {
 			sourceXml: `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">

@@ -169,9 +169,14 @@ function parseBehaviorDescriptionPath(
 		return { lookupKey: contextPath, qualifier: pathValue }
 	}
 
+	// The name is local to the BehaviorDescription's parent: the signal's
+	// own name when that parent is its LNode (joined with "."), or the path from that parent down
+	// to the LNode, then the name (joined with "/"). The name is kept whole: it may hold dots.
 	if (pathAttrName === 'inputName' || pathAttrName === 'outputName') {
-		const cleanName = stripDisambiguation(pathValue)
-		return { lookupKey: `${contextPath}.${cleanName}` }
+		return {
+			lookupKey: `${contextPath}.${pathValue}`,
+			fallbackLookupKey: `${contextPath}/${pathValue}`,
+		}
 	}
 
 	return null
@@ -203,23 +208,6 @@ function findScopeContextPath(ancestry: readonly AnyRawRecord[]): string | null 
 
 	if (parts.length === 0) return null
 	return joinPathParts(parts)
-}
-
-/**
- * Strips disambiguation suffix and qualifier from an input/output name.
- *
- * Normalisation rules:
- * - Instance suffix: "Trip(2)" → "Trip"
- * - Qualifier suffix: "Trip.pDA" → "Trip"
- * - Both: "Trip(2).pDA" → "Trip"
- */
-export function stripDisambiguation(value: string): string {
-	const parenIndex = value.indexOf('(')
-	const dotIndex = value.indexOf('.')
-
-	if (parenIndex !== -1) return value.substring(0, parenIndex)
-	if (dotIndex !== -1) return value.substring(0, dotIndex)
-	return value
 }
 
 /**

@@ -49,13 +49,13 @@ async function walkSegments(params: {
 	const children = current.children ?? []
 	if (children.length === 0) return undefined
 
-	const childRecords = await query.getRecords(children)
-	const target = segments[index]
+	const childRecords = (await query.getRecords(children)).filter((child) => child !== undefined)
+	const siblings = childRecords.map(toRawRecord)
 
 	for (const child of childRecords) {
-		if (!child) continue
-
-		const seg = getPathSegment(toRawRecord(child))
+		// A signal is named among its siblings, and one segment of it may span several pieces of
+		// the parsed path (`Trip(1).general`, an input named `PTOC1.Op`).
+		const seg = getPathSegment(toRawRecord(child), siblings)
 
 		// Transparent element — look through its children
 		if (!seg) {
@@ -64,12 +64,36 @@ async function walkSegments(params: {
 			continue
 		}
 
-		if (seg.segment === target.segment && seg.separator === target.separator) {
-			const result = await walkSegments({ query, current: child, segments, index: index + 1 })
+		const consumed = matchSegment({ segment: seg, segments, index })
+		if (consumed > 0) {
+			const result = await walkSegments({
+				query,
+				current: child,
+				segments,
+				index: index + consumed,
+			})
 			if (result) return result
-			continue
 		}
 	}
 
 	return undefined
+}
+
+/** How many parsed pieces from `index` the element's segment spells out, 0 when it does not. */
+function matchSegment(params: {
+	segment: PathSegment
+	segments: readonly PathSegment[]
+	index: number
+}): number {
+	const { segment, segments, index } = params
+	const pieces = parsePathSegments(segment.segment)
+	const spelled = segments.slice(index, index + pieces.length)
+	if (pieces.length === 0 || spelled.length !== pieces.length) return 0
+	if (spelled[0].separator !== segment.separator) return 0
+	const matches = pieces.every(
+		(piece, offset) =>
+			spelled[offset].segment === piece.segment &&
+			(offset === 0 || spelled[offset].separator === piece.separator),
+	)
+	return matches ? pieces.length : 0
 }

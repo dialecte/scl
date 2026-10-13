@@ -36,6 +36,45 @@ describe('resolveByPath', () => {
 			expected: { tagName: 'ConductingEquipment', id: 'ce-1' },
 		},
 
+		'signal named among its siblings — "PTRC1.Trip(1).general" → that SourceRef': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Function name="F1" ${ID}="f1">
+						<LNode lnClass="PTRC" lnInst="1" ${ID}="lnode-1">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeInputs ${ID}="inputs-1">
+									<eIEC61850-6-100:SourceRef input="Trip" ${ID}="sr-1-plain"/>
+									<eIEC61850-6-100:SourceRef input="Trip" pDA="general" ${ID}="sr-2-general"/>
+								</eIEC61850-6-100:LNodeInputs>
+							</Private>
+						</LNode>
+					</Function>
+				</Substation>
+			</SCL>`,
+			path: 'S1/F1/PTRC1.Trip(1).general',
+			expected: { tagName: 'SourceRef', id: 'sr-2-general' },
+		},
+
+		'signal with a dot in its name — "PTRC1.PTOC1.Op" → that SourceRef': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Function name="F1" ${ID}="f1">
+						<LNode lnClass="PTRC" lnInst="1" ${ID}="lnode-1">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeInputs ${ID}="inputs-1">
+									<eIEC61850-6-100:SourceRef input="PTOC1.Op" ${ID}="sr-op"/>
+								</eIEC61850-6-100:LNodeInputs>
+							</Private>
+						</LNode>
+					</Function>
+				</Substation>
+			</SCL>`,
+			path: 'S1/F1/PTRC1.PTOC1.Op',
+			expected: { tagName: 'SourceRef', id: 'sr-op' },
+		},
+
 		'IED section — AccessPoint and Server transparent': {
 			sourceXml: `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
