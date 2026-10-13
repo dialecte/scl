@@ -40,7 +40,7 @@ export const UUID_REFERENCE_PAIRS = {
 	ControllingLNode: [
 		{
 			attribute: { path: 'resourceName', uuid: 'resourceUuid' },
-			resolution: 'direct',
+			resolution: 'ancestor-name',
 			target: ['ProcessResource'],
 			companions: [],
 		},
@@ -60,7 +60,7 @@ export const UUID_REFERENCE_PAIRS = {
 		},
 		{
 			attribute: { path: 'resourceName', uuid: 'resourceUuid' },
-			resolution: 'direct',
+			resolution: 'ancestor-name',
 			target: ['ProcessResource'],
 			companions: [],
 		},
@@ -270,7 +270,7 @@ export const UUID_REFERENCE_PAIRS = {
 		},
 		{
 			attribute: { path: 'resourceName', uuid: 'resourceUuid' },
-			resolution: 'direct',
+			resolution: 'ancestor-name',
 			target: ['ProcessResource'],
 			companions: [],
 		},
@@ -278,7 +278,7 @@ export const UUID_REFERENCE_PAIRS = {
 	SubscriberLNode: [
 		{
 			attribute: { path: 'resourceName', uuid: 'resourceUuid' },
-			resolution: 'direct',
+			resolution: 'ancestor-name',
 			target: ['ProcessResource'],
 			companions: [],
 		},

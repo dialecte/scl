@@ -16,8 +16,6 @@ const ns = ALL_XMLNS_NAMESPACES
  * One row per reference pair whose path form is settled. Not in this table:
  * - `DOS` / `SDS` / `DAS` `mappedDoName` / `mappedDaName`: stored in the mapped-data canonical
  *   form, see `reconcile-mapped-data.test.ts`.
- * - `resourceName` (SourceRef, ControlRef, SubscriberLNode, ControllingLNode): written today as
- *   the path of the ProcessResource, it is to become the bare ProcessResource name.
  * - `VariableApplyTo.element`: an XPath selector, never rebuilt as a name path.
  * - `LNodeInputRef.sourceRef`, `LNodeOutputRef.controlRef`, `LNodeDataRef.data`: written today
  *   from the root, they are to become a path relative to the Function.
@@ -297,6 +295,106 @@ describe('setRefPaths', () => {
 				referrer: { tagName: 'VariableRef', attributes: { variableUuid: 'uuid-target' } },
 				expectedQueries: [
 					'//v2019C1:VariableRef[@variableUuid="uuid-target" and @variable="S1/Var1"]',
+				],
+			},
+
+			// ── ancestor-name: the bare name of the ProcessResource, found upward ─────
+
+			'SourceRef with resourceUuid → resourceName written as the ProcessResource name': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<Function name="F1" ${id}="f1">
+								<eIEC61850-6-100:ProcessResources ${id}="prs">
+									<eIEC61850-6-100:ProcessResource name="PR1" uuid="uuid-target" ${id}="target"/>
+								</eIEC61850-6-100:ProcessResources>
+								<LNode lnClass="PTRC" lnInst="1" iedName="None" ${id}="owner">
+									<eIEC61850-6-100:LNodeInputs ${id}="parent"/>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				parent: { tagName: 'LNodeInputs', id: 'parent' },
+				referrer: {
+					tagName: 'SourceRef',
+					attributes: { input: 'Trip', resourceUuid: 'uuid-target' },
+				},
+				expectedQueries: [
+					'//v2019C1:SourceRef[@resourceUuid="uuid-target" and @resourceName="PR1"]',
+				],
+			},
+
+			'ControlRef with resourceUuid → resourceName written as the ProcessResource name': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<Function name="F1" ${id}="f1">
+								<eIEC61850-6-100:ProcessResources ${id}="prs">
+									<eIEC61850-6-100:ProcessResource name="PR1" uuid="uuid-target" ${id}="target"/>
+								</eIEC61850-6-100:ProcessResources>
+								<LNode lnClass="CSWI" lnInst="1" iedName="None" ${id}="owner">
+									<eIEC61850-6-100:LNodeOutputs ${id}="parent"/>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				parent: { tagName: 'LNodeOutputs', id: 'parent' },
+				referrer: {
+					tagName: 'ControlRef',
+					attributes: { output: 'Oper', resourceUuid: 'uuid-target' },
+				},
+				expectedQueries: [
+					'//v2019C1:ControlRef[@resourceUuid="uuid-target" and @resourceName="PR1"]',
+				],
+			},
+			'SubscriberLNode with resourceUuid → resourceName written as the ProcessResource name': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<Function name="F1" ${id}="f1">
+								<eIEC61850-6-100:ProcessResources ${id}="prs">
+									<eIEC61850-6-100:ProcessResource name="PR1" uuid="uuid-target" ${id}="target"/>
+								</eIEC61850-6-100:ProcessResources>
+								<LNode lnClass="CSWI" lnInst="1" iedName="None" ${id}="owner">
+									<eIEC61850-6-100:DOS name="Pos" ${id}="parent"/>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				parent: { tagName: 'DOS', id: 'parent' },
+				referrer: {
+					tagName: 'SubscriberLNode',
+					attributes: { pLN: 'XCBR', resourceUuid: 'uuid-target' },
+				},
+				expectedQueries: [
+					'//v2019C1:SubscriberLNode[@resourceUuid="uuid-target" and @resourceName="PR1"]',
+				],
+			},
+			'ControllingLNode with resourceUuid → resourceName written as the ProcessResource name': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<Function name="F1" ${id}="f1">
+								<eIEC61850-6-100:ProcessResources ${id}="prs">
+									<eIEC61850-6-100:ProcessResource name="PR1" uuid="uuid-target" ${id}="target"/>
+								</eIEC61850-6-100:ProcessResources>
+								<LNode lnClass="CSWI" lnInst="1" iedName="None" ${id}="owner">
+									<eIEC61850-6-100:DOS name="Pos" ${id}="parent"/>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				parent: { tagName: 'DOS', id: 'parent' },
+				referrer: {
+					tagName: 'ControllingLNode',
+					attributes: { pLN: 'CSWI', resourceUuid: 'uuid-target' },
+				},
+				expectedQueries: [
+					'//v2019C1:ControllingLNode[@resourceUuid="uuid-target" and @resourceName="PR1"]',
 				],
 			},
 

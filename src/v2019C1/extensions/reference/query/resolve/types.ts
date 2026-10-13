@@ -4,8 +4,8 @@
 export type ParsedReference = {
 	/** Key to look up in the path → UUID index */
 	lookupKey: string
-	/** Fallback key when primary lookup misses (e.g., IED-relative → full path) */
-	fallbackLookupKey?: string
+	/** Keys tried in order when the primary lookup misses (e.g. IED-relative → full path) */
+	fallbackLookupKeys?: readonly string[]
 	/** DO.SDO[.DA.BDA] chain extracted from LNodeSpecNaming paths */
 	qualifier?: string
 }

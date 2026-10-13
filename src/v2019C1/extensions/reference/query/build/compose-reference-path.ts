@@ -15,6 +15,7 @@ type AttributeList = ReferencePathParts['referenceAttributes']
  *
  * - `direct` / `ied-address` / `unsupported`: the target's path.
  * - `lnode`: the target's path, then the DO[.DA] of the companions (see below).
+ * - `ancestor-name`: the target's bare name (a ProcessResource named from a placeholder below it).
  * - `behavior-description`: the local path from the BehaviorDescription's parent down to the
  *   target, that parent left out (`Trip` from the LNode holding the input, `PTRC1.Trip` from its
  *   Function), then the companions' DO[.DA] for `dataName`; `null` when the target is not below
@@ -27,6 +28,10 @@ export function composeReferencePath(parts: ReferencePathParts): string | null {
 		if (!behaviorContext) return null
 		return composeBehaviorLocalPath({ pair, referenceAttributes, targetPath, behaviorContext })
 	}
+
+	// An id reference: the bare name of the target, which the reader looks up in its ancestors.
+	if (pair.resolution === RESOLUTION_TYPE.ancestorName)
+		return targetPath.segments.at(-1)?.segment ?? null
 
 	const basePath = targetPath.path
 	if (pair.resolution !== RESOLUTION_TYPE.lnode) return basePath

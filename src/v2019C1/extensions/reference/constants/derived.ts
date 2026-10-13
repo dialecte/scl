@@ -31,6 +31,7 @@ export const RESOLVABLE_RESOLUTIONS = [
 	RESOLUTION_TYPE.lnode,
 	RESOLUTION_TYPE.iedAddress,
 	RESOLUTION_TYPE.behaviorDescription,
+	RESOLUTION_TYPE.ancestorName,
 ] as const
 
 /**

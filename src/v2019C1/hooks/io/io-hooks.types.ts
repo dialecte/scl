@@ -8,7 +8,7 @@ export type PendingResolution = {
 	uuidAttributeName: string
 	pathValue: string
 	lookupKey: string
-	fallbackLookupKey?: string
+	fallbackLookupKeys?: readonly string[]
 	/**
 	 * Set for a name local to a BehaviorDescription that points at a signal: once resolved, the
 	 * path is written again in the standard form when the file used another one.

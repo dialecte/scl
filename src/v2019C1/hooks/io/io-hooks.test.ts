@@ -359,3 +359,47 @@ describe('import of a name an earlier version wrote', () => {
 
 	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
 })
+
+describe('import of a resourceName', () => {
+	function withResources(resourceName: string): string {
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation name="S1" ${id}="s1">
+					<Function name="F1" ${id}="f1">
+						<eIEC61850-6-100:ProcessResources ${id}="prs-f1">
+							<eIEC61850-6-100:ProcessResource name="PR1" uuid="uuid-function-pr" ${id}="pr-f1"/>
+						</eIEC61850-6-100:ProcessResources>
+						<SubFunction name="SF1" ${id}="sf1">
+							<eIEC61850-6-100:ProcessResources ${id}="prs-sf1">
+								<eIEC61850-6-100:ProcessResource name="PR1" uuid="uuid-nearest-pr" ${id}="pr-sf1"/>
+								<eIEC61850-6-100:ProcessResource name="PR2" uuid="uuid-other-pr" ${id}="pr2-sf1"/>
+							</eIEC61850-6-100:ProcessResources>
+							<LNode lnClass="PTRC" lnInst="1" iedName="None" ${id}="owner">
+								<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+									<eIEC61850-6-100:SourceRef input="Trip" resourceName="${resourceName}" ${id}="ref"/>
+								</eIEC61850-6-100:LNodeInputs>
+							</LNode>
+						</SubFunction>
+					</Function>
+				</Substation>
+			</SCL>
+		`
+	}
+
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		'a name a homonym higher up also has → the nearest ProcessResource': {
+			sourceXml: withResources('PR1'),
+			expectedQueries: [
+				'//v2019C1:SourceRef[@resourceUuid="uuid-nearest-pr" and @resourceName="PR1"]',
+			],
+		},
+		'the full path an earlier version wrote → resolved, written as the bare name': {
+			sourceXml: withResources('S1/F1/PR1'),
+			expectedQueries: [
+				'//v2019C1:SourceRef[@resourceUuid="uuid-function-pr" and @resourceName="PR1"]',
+			],
+		},
+	}
+
+	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+})

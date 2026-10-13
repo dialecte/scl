@@ -167,9 +167,12 @@ export function createSclIoHooks(): IOHooks {
 				continue
 			}
 
+			// Written again in the standard form once resolved: a name local to a BehaviorDescription
+			// that names a signal, and a ProcessResource named by its full path by an earlier version.
 			const namesSignal =
-				pair.resolution === RESOLUTION_TYPE.behaviorDescription &&
-				pair.target.every((target) => SIGNAL_TAG_NAMES.has(target))
+				(pair.resolution === RESOLUTION_TYPE.behaviorDescription &&
+					pair.target.every((target) => SIGNAL_TAG_NAMES.has(target))) ||
+				pair.resolution === RESOLUTION_TYPE.ancestorName
 
 			pendingResolutions.push({
 				recordId: record.id,
@@ -177,7 +180,7 @@ export function createSclIoHooks(): IOHooks {
 				uuidAttributeName: pair.attribute.uuid,
 				pathValue,
 				lookupKey: parsed.lookupKey,
-				fallbackLookupKey: parsed.fallbackLookupKey,
+				fallbackLookupKeys: parsed.fallbackLookupKeys,
 				normalize: namesSignal
 					? {
 							pair,
@@ -214,9 +217,10 @@ export function createSclIoHooks(): IOHooks {
 		}
 
 		for (const pending of pendingResolutions) {
-			const resolvedUuid =
-				pathIndex.get(pending.lookupKey) ??
-				(pending.fallbackLookupKey ? pathIndex.get(pending.fallbackLookupKey) : undefined)
+			const triedKeys = [pending.lookupKey, ...(pending.fallbackLookupKeys ?? [])]
+			const resolvedUuid = triedKeys
+				.map((key) => pathIndex.get(key))
+				.find((uuid) => uuid !== undefined)
 
 			if (!resolvedUuid) {
 				warnings.push({
@@ -226,9 +230,7 @@ export function createSclIoHooks(): IOHooks {
 						elementTag: pending.elementTag,
 						uuidAttribute: pending.uuidAttributeName,
 						pathValue: pending.pathValue,
-						triedKeys: pending.fallbackLookupKey
-							? [pending.lookupKey, pending.fallbackLookupKey]
-							: [pending.lookupKey],
+						triedKeys,
 					},
 				})
 				continue

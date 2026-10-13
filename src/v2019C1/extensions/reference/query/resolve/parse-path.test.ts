@@ -575,8 +575,9 @@ describe('reference-parsing', () => {
 					'//v2019C1:SourceRef[@source="S1/B1/XCBR1.Pos" and @sourceLNodeUuid="ln-xcbr-uuid" and @resourceUuid="pr-uuid"]',
 				],
 			},
-			'multiple different reference elements targeting same ProcessResource → all resolved': {
-				sourceXml: /* xml */ `
+			'two references to one ProcessResource, resourceName written as a path → both resolved, the name rewritten bare':
+				{
+					sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Substation name="S1">
 							<Private type="eIEC61850-6-100">
@@ -589,11 +590,11 @@ describe('reference-parsing', () => {
 						</Substation>
 					</SCL>
 				`,
-				expectedQueries: [
-					'//v2019C1:ProcessResourceRef[@processResource="S1/PR1" and @processResourceUuid="pr-uuid"]',
-					'//v2019C1:ControllingLNode[@resourceName="S1/PR1" and @resourceUuid="pr-uuid"]',
-				],
-			},
+					expectedQueries: [
+						'//v2019C1:ProcessResourceRef[@processResource="S1/PR1" and @processResourceUuid="pr-uuid"]',
+						'//v2019C1:ControllingLNode[@resourceName="PR1" and @resourceUuid="pr-uuid"]',
+					],
+				},
 		}
 
 		runSclTestCases.withExport({

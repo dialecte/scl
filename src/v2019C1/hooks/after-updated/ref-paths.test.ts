@@ -85,6 +85,61 @@ describe('updateRefPaths', () => {
 				unexpectedQueries: ['//v2019C1:FunctionCatRef[@function="Sub1/F1"]'],
 			},
 
+			// ── Strategy: ancestor-name ─────────────────────────────────────────
+
+			'ancestor-name — rename the ProcessResource → resourceName follows': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation ${id}="sub1" name="Sub1">
+							<Function ${id}="f1" name="F1">
+								<eIEC61850-6-100:ProcessResources ${id}="prs1">
+									<eIEC61850-6-100:ProcessResource ${id}="pr1" name="PR1" uuid="uuid-pr1"/>
+								</eIEC61850-6-100:ProcessResources>
+								<LNode ${id}="ln1" lnClass="PTRC" lnInst="1">
+									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+										<eIEC61850-6-100:SourceRef ${id}="sref1" input="Trip" resourceName="PR1" resourceUuid="uuid-pr1"/>
+									</eIEC61850-6-100:LNodeInputs>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update(
+							{ tagName: 'ProcessResource', id: 'pr1' },
+							{ attributes: { name: 'PR9' } },
+						)
+					})
+				},
+				expectedQueries: ['//v2019C1:SourceRef[@resourceUuid="uuid-pr1" and @resourceName="PR9"]'],
+			},
+
+			'ancestor-name — rename the Function holding it → resourceName untouched': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation ${id}="sub1" name="Sub1">
+							<Function ${id}="f1" name="F1">
+								<eIEC61850-6-100:ProcessResources ${id}="prs1">
+									<eIEC61850-6-100:ProcessResource ${id}="pr1" name="PR1" uuid="uuid-pr1"/>
+								</eIEC61850-6-100:ProcessResources>
+								<LNode ${id}="ln1" lnClass="PTRC" lnInst="1">
+									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+										<eIEC61850-6-100:SourceRef ${id}="sref1" input="Trip" resourceName="PR1" resourceUuid="uuid-pr1"/>
+									</eIEC61850-6-100:LNodeInputs>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update({ tagName: 'Function', id: 'f1' }, { attributes: { name: 'F9' } })
+					})
+				},
+				expectedQueries: ['//v2019C1:SourceRef[@resourceUuid="uuid-pr1" and @resourceName="PR1"]'],
+			},
+
 			// ── Strategy: lnode ─────────────────────────────────────────────────
 
 			'lnode — update LNode lnInst → SourceRef.source updated': {
@@ -240,21 +295,21 @@ describe('updateRefPaths', () => {
 			'behavior-description — BehaviorDescription under the Function, SourceRef.input updated → inputName "<LNode>.<input>" updated':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root">
-						<Substation ${id}="sub1" name="Sub1">
-							<Function ${id}="f1" name="F1">
-								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1">
-									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
-										<eIEC61850-6-100:SourceRef ${id}="sref1" uuid="uuid-sref1" input="TripCmd" source="Sub1/F1/XCBR1" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal"/>
-									</eIEC61850-6-100:LNodeInputs>
-								</LNode>
-								<eIEC61850-6-100:BehaviorDescription ${id}="bd1" name="BD1">
-									<eIEC61850-6-100:InputVar ${id}="ivar1" varName="ivar1" inputName="TripCmd" inputUuid="uuid-sref1"/>
-								</eIEC61850-6-100:BehaviorDescription>
-							</Function>
-						</Substation>
-					</SCL>
-				`,
+						<SCL ${ns} ${id}="root">
+							<Substation ${id}="sub1" name="Sub1">
+								<Function ${id}="f1" name="F1">
+									<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1">
+										<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+											<eIEC61850-6-100:SourceRef ${id}="sref1" uuid="uuid-sref1" input="TripCmd" source="Sub1/F1/XCBR1" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal"/>
+										</eIEC61850-6-100:LNodeInputs>
+									</LNode>
+									<eIEC61850-6-100:BehaviorDescription ${id}="bd1" name="BD1">
+										<eIEC61850-6-100:InputVar ${id}="ivar1" varName="ivar1" inputName="TripCmd" inputUuid="uuid-sref1"/>
+									</eIEC61850-6-100:BehaviorDescription>
+								</Function>
+							</Substation>
+						</SCL>
+					`,
 					act: async (document) => {
 						await document.transaction(async (tx) => {
 							await tx.update(

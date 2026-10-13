@@ -71,7 +71,8 @@ export async function resolveReferencePath(
 	let ancestry: AnyRawRecord[] | undefined
 	if (
 		pair.resolution === RESOLUTION_TYPE.behaviorDescription ||
-		pair.resolution === RESOLUTION_TYPE.iedAddress
+		pair.resolution === RESOLUTION_TYPE.iedAddress ||
+		pair.resolution === RESOLUTION_TYPE.ancestorName
 	) {
 		const ancestors = await query.findAncestors(record, { order: 'top-down' })
 		ancestry = ancestors.map((a) => toRawRecord(a) as AnyRawRecord)
@@ -91,28 +92,26 @@ export async function resolveReferencePath(
 		const signal = await findSignalByPath({
 			query,
 			targets: pair.target,
-			paths: [parsed.lookupKey, parsed.fallbackLookupKey].filter(
-				(path): path is string => path !== undefined,
-			),
+			paths: [parsed.lookupKey, ...(parsed.fallbackLookupKeys ?? [])],
 		})
 		return signal ? { record: signal, qualifier: parsed.qualifier } : undefined
 	}
 
-	const segments = parsePathSegments(parsed.lookupKey)
-	if (segments.length === 0) return undefined
+	// The keys in order: the first one naming an element wins (nearest scope first for a name).
+	for (const key of [parsed.lookupKey, ...(parsed.fallbackLookupKeys ?? [])]) {
+		const segments = parsePathSegments(key)
+		if (segments.length === 0) continue
 
-	const lastSegment = segments[segments.length - 1]
-	const expectedAncestry = segments.slice(0, -1)
+		const resolved = await findBySegmentAndAncestry({
+			query,
+			targets: pair.target,
+			segment: segments[segments.length - 1],
+			expectedAncestry: segments.slice(0, -1),
+		})
+		if (resolved) return { record: resolved, qualifier: parsed.qualifier }
+	}
 
-	const resolved = await findBySegmentAndAncestry({
-		query,
-		targets: pair.target,
-		segment: lastSegment,
-		expectedAncestry,
-	})
-
-	if (!resolved) return undefined
-	return { record: resolved, qualifier: parsed.qualifier }
+	return undefined
 }
 
 // ── Internal: reference pair lookup ──────────────────────────────────

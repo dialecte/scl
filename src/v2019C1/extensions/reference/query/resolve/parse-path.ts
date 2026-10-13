@@ -116,7 +116,39 @@ export function parseReferencePath(
 		return parseBehaviorDescriptionPath(pathAttribute, pathValue, ancestry)
 	}
 
+	if (resolution === RESOLUTION_TYPE.ancestorName) return parseAncestorNamePath(pathValue, ancestry)
+
 	return null
+}
+
+// ── ancestor-name strategy ───────────────────────────────────────────
+
+/**
+ * A bare name looked up in the referrer's ancestors, nearest first: one key per ancestor, the
+ * name below that ancestor's path. A value holding a "/" is the full path an earlier version
+ * wrote: it is tried first, as is.
+ */
+function parseAncestorNamePath(
+	pathValue: string,
+	ancestry?: readonly AnyRawRecord[],
+): ParsedReference | null {
+	if (!ancestry) return null
+
+	const keys = pathValue.includes('/') ? [pathValue] : []
+	for (let depth = ancestry.length; depth > 0; depth--) {
+		const scope = buildPathFromAncestors(ancestry.slice(0, depth))
+		keys.push(scope ? `${scope}/${pathValue}` : pathValue)
+	}
+
+	const [lookupKey, ...fallbackLookupKeys] = [...new Set(keys)]
+	return lookupKey ? { lookupKey, fallbackLookupKeys } : null
+}
+
+function buildPathFromAncestors(ancestors: readonly AnyRawRecord[]): string | null {
+	const parts = ancestors
+		.map((ancestor) => getPathSegment(ancestor))
+		.filter((segment): segment is PathSegment => segment !== null)
+	return parts.length > 0 ? joinPathParts(parts) : null
 }
 
 // ── lnode strategy ───────────────────────────────────────────────────
@@ -147,7 +179,7 @@ function parseIedAddressPath(
 	if (ancestry) {
 		const iedName = findIedNameFromAncestry(ancestry)
 		if (iedName) {
-			return { lookupKey: pathValue, fallbackLookupKey: `${iedName}/${pathValue}` }
+			return { lookupKey: pathValue, fallbackLookupKeys: [`${iedName}/${pathValue}`] }
 		}
 	}
 	return { lookupKey: pathValue }
@@ -175,7 +207,7 @@ function parseBehaviorDescriptionPath(
 	if (pathAttrName === 'inputName' || pathAttrName === 'outputName') {
 		return {
 			lookupKey: `${contextPath}.${pathValue}`,
-			fallbackLookupKey: `${contextPath}/${pathValue}`,
+			fallbackLookupKeys: [`${contextPath}/${pathValue}`],
 		}
 	}
 
