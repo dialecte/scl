@@ -7,8 +7,6 @@ import type { ReferencePathParts } from './compose-reference-path.types'
 import type { PathSegmentWithRef } from './path-segment.types'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
 
-type AttributeList = ReferencePathParts['referenceAttributes']
-
 /**
  * The path value a reference stores, from its parts. Pure: the record hooks gather the parts
  * through a query (`buildReferencePath`), the import hooks from the records they stream.
@@ -83,19 +81,22 @@ function localSegments(params: {
  * reflected in the path. `undefined` when no companion DO name is set.
  */
 function qualifierFromCompanions(
-	attributes: AttributeList,
+	attributes: ReferencePathParts['referenceAttributes'],
 	pair: ReferencePair,
 ): string | undefined {
 	const [doCompanion, daCompanion] = pair.companions
 	if (!doCompanion) return undefined
-	const doValue = attributes.find((a) => a.name === doCompanion.name)?.value
+	const doValue = attributes.find((attribute) => attribute.name === doCompanion.name)?.value
 	if (!doValue) return undefined
 	const daValue = daCompanion
-		? attributes.find((a) => a.name === daCompanion.name)?.value
+		? attributes.find((attribute) => attribute.name === daCompanion.name)?.value
 		: undefined
 	return daValue ? `${doValue}.${daValue}` : doValue
 }
 
-function currentPathValue(attributes: AttributeList, pair: ReferencePair): string | undefined {
-	return attributes.find((a) => a.name === pair.attribute.path)?.value
+function currentPathValue(
+	attributes: ReferencePathParts['referenceAttributes'],
+	pair: ReferencePair,
+): string | undefined {
+	return attributes.find((attribute) => attribute.name === pair.attribute.path)?.value
 }
