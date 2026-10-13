@@ -53,3 +53,5 @@ export type {
 	TemplateUuidWarningCode,
 	TemplateUuidWarningInfo,
 } from './validate'
+
+export type { IedClassification, IedClassificationBasis, IedKind } from './ied/public'

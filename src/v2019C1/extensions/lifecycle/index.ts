@@ -1,6 +1,7 @@
 import { apply } from './apply'
 import { makeUnique } from './constraints'
 import * as extractTransaction from './extract'
+import { classifyIeds } from './ied'
 import * as instantiateTransaction from './instantiate'
 import { report } from './report'
 import { deep } from './transplant'
@@ -23,6 +24,8 @@ import { checkTemplateUuids } from './validate'
  *                   (`tx.lifecycle.update.fsd` / `.asd` apply the change).
  * - `makeUnique`  — make an element unique where it sits, in the engine's one numbering
  *                   (`tx.lifecycle.makeUnique`); what a consumer calls after naming an element.
+ * - `classifyIeds` — read-only: every IED is a real device's IED or a specification IED
+ *                   (`query.lifecycle.classifyIeds()`).
  * - `report`      — read-only classify: `query.lifecycle.report({ verb,
  *                   sourceQuery, ref, anchor })` returns a `DiffReport`
  *                   (fast/full classification) — nothing is written.
@@ -36,6 +39,7 @@ export const lifecycle = {
 	query: {
 		report,
 		checkTemplateUuids,
+		classifyIeds,
 	},
 	transaction: {
 		extract: extractTransaction,
