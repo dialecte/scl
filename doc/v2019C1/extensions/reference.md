@@ -140,7 +140,8 @@ Derives the resolution strategy from `UUID_REFERENCE_PAIRS` using the reference 
 
 Element-specific behaviour:
 
-- **lnode** refs (`SourceRef`, `ControlRef`, `ProcessEcho`, `LNodeDataRef`): the DO/DA qualifier is taken from the companion `*DoName`/`*DaName` attributes when the stored path already carries one; a path that stops at the LN level stays companions-only.
+- **lnode** refs (`SourceRef`, `ControlRef`, `ProcessEcho`, `LNodeDataRef`): the DO/DA qualifier is taken from the companion `*DoName`/`*DaName` attributes when the stored path already carries one, or when the reference has no path yet; a stored path that stops at the LN level stays companions-only.
+- **behavior-description** refs (`InputVar`, `OutputVar`): a local path, from the parent of the `BehaviorDescription` down to the target, that parent left out (IEC TR 61850-90-30 Tables 37 / 38). `dataName` ends with the companion DO[.DA]: `Pos.stVal` when the target is the `LNode` holding the `BehaviorDescription`, `XCBR1.Pos.stVal` from its `Function`. `inputName` / `outputName`: `Trip` from the `LNode`, `XCBR1.Trip` from its `Function`. `null` when the target is not below that parent.
 - **mapped data** (`DOS`/`SDS`/`DAS`): returns `null` — `mappedDoName`/`mappedDaName` is a data path inside the logical node named by `mappedLnUuid`, not a path to the target element. The hooks store it (see [Automatic coherence](#automatic-coherence-record-hooks)); read it with [`resolveMappedData`](#resolvemappeddata).
 
 ---
@@ -501,7 +502,7 @@ Reference to `ExtRef`/`ExtCtrl` inside the IED section via `intAddr`. Supports f
 
 ### `behavior-description` -- 4 pairs
 
-References to `BehaviorDescription` elements by name. Only the target's name segment is used as the path value.
+`InputVar` / `OutputVar` references, local to the parent of their `BehaviorDescription` (see [buildReferencePath](#buildreferencepath)).
 
 ### `unsupported`
 
@@ -515,10 +516,12 @@ Reference coherence is an invariant that `@dialecte/scl` maintains for you: the 
 
 | On mutation of…                                             | dialecte keeps in agreement                      | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ----------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| any reference                                               | path attribute ↔ companion uuid                  | path rebuilt from the target on create, on target rename, and cleaned up on delete                                                                                                                                                                                                                                                                                                                                                  |
+| any reference                                               | path attribute ↔ companion uuid                  | path written from the target on create (a reference created with its uuid only gets its path), rebuilt on target rename (written when it was missing), cleaned up on delete                                                                                                                                                                                                                                                         |
 | `DOS`/`SDS`/`DAS`                                           | `mappedDoName` / `mappedDaName` ↔ `mappedLnUuid` | stored together or not at all: nothing when the record is implemented by its default, otherwise the path from the implementing logical node with that node's uuid (an absolute reference or a uuid alone is completed). A change to an `LNode` mapping or to a parent's mapping re-stores the records below it; one whose implementation became the default loses both attributes. A path the schema cannot hold is left as written |
 | `SourceRef` / `ControlRef` / `ProcessEcho` / `LNodeDataRef` | path qualifier ↔ companion `*DoName`/`*DaName`   | editing a companion DO/DA name rebuilds the path qualifier                                                                                                                                                                                                                                                                                                                                                                          |
 | `LNode`                                                     | identity ↔ `lnUuid`                              | setting `lnUuid` stamps `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` from the target `LN`; clearing it restores the specification identity from `LNodeSpecNaming` (`lnType` stays the specification type). `templateUuid` is left untouched — it records the template the `LNode` was instantiated from, owned by the instantiate lifecycle, not by binding                                                                       |
+
+On import, a reference that carries its uuid and no path (a file written by a tool that sets the uuid only) gets its path once the whole file is stored, built like on create; a uuid that names no element of the file leaves the reference without a path.
 
 Because these run as hooks, a tool never has to compute the derived half — setting the uuid, the companion names or `lnUuid` is enough, and the matching path, short name or identity is filled in the same transaction.
 

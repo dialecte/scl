@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Fixed
+
+- **A reference written with its uuid only now gets its path.** Creating a reference with only its uuid attribute (`functionUuid`, `sourceLNodeUuid`, ...) left the path attribute (`function`, `source`, ...) out, and a later rename of the target did not add it: a tool reading the paths saw no target. The path is now written on create, on the next rename of the target, and on import for a file that carries the uuid only (a uuid naming no element of the file leaves the reference as it is). A `SourceRef`, `ControlRef` or `ProcessEcho` path names the data of its companions (`S1/F1/XCBR1.Pos.stVal`).
+- **`InputVar` / `OutputVar` paths are local to their behaviour description.** `dataName` named the logical node (`XCBR1`) instead of the data (`Pos.stVal`), so a rename of that logical node overwrote a correct `dataName`. `dataName`, `inputName` and `outputName` are now the path from the parent of the `BehaviorDescription` down to the target (IEC TR 61850-90-30 Tables 37 / 38): `Pos.stVal` and `Trip` when it sits in the logical node, `XCBR1.Pos.stVal` and `XCBR1.Trip` when it sits in the function.
+
 ## [0.6.0] - 2026-10-08
 
 ### Added

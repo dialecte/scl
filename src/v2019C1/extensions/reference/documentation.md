@@ -154,6 +154,12 @@ No more streaming. Walk every pending resolution and hit the index:
 
 Bulk-write those attribute updates to IndexedDB. Clear `pathIndex` and `pendingResolutions`.
 
+The reverse direction runs in the same pass: a reference that arrived with its uuid and no path was queued in phase 1
+(`pendingPathFills`, with its own attributes and, for an `InputVar` / `OutputVar`, the path of its BehaviorDescription's
+parent), and every target was indexed by uuid with its path (`targetsByUuid`). Phase 2 composes each missing path with
+`composeReferencePath`, the same function `buildReferencePath` uses after reading the parts through a query, so an import
+reads nothing back from the store. A uuid naming no element of the file is left alone.
+
 ---
 
 Why two phases?
