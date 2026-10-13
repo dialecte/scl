@@ -2,6 +2,8 @@ import { buildPathFromAncestry, getPathSegment } from './path-segment'
 
 import { toRawRecord } from '@dialecte/core/helpers'
 
+import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
+
 import type { ElementPath } from './path-segment.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -30,9 +32,23 @@ export async function buildElementPath(
 	}
 
 	const ancestors = await query.findAncestors(ref, { order: 'top-down' })
+	const siblings = SIGNAL_TAG_NAMES.has(raw.tagName) ? await readSiblings(query, raw) : undefined
 
 	return buildPathFromAncestry({
 		record: raw,
 		ancestry: ancestors.map(toRawRecord),
+		siblings,
 	})
+}
+
+/** The children of the record's parent, the record included. */
+async function readSiblings(
+	query: Core.Query<Config>,
+	record: Core.AnyRawRecord,
+): Promise<Core.AnyRawRecord[]> {
+	if (!record.parent) return [record]
+	const parent = await query.getRecord(record.parent as Scl.Ref<Scl.ElementsOf>)
+	if (!parent) return [record]
+	const children = await query.getRecords(parent.children)
+	return children.filter((child) => child !== undefined).map(toRawRecord)
 }

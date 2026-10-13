@@ -12,6 +12,9 @@
  * IED section paths:     "IED1/LD0/XCBR1.TrCmd.stVal"
  */
 
+import { getAttributeRules } from '@dialecte/core/utils'
+
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
 
 import type {
@@ -20,7 +23,10 @@ import type {
 	ElementPath,
 	PathExtractor,
 } from './path-segment.types'
-import type { ExtractionStrategy } from '@/v2019C1/extensions/reference/constants/path-extraction'
+import type {
+	ExtractionStrategy,
+	SignalStrategy,
+} from '@/v2019C1/extensions/reference/constants/path-extraction'
 import type { AnyRawRecord } from '@dialecte/core'
 
 // ── Extractor builders ───────────────────────────────────────────────
@@ -49,27 +55,42 @@ function buildExtractor(strategy: ExtractionStrategy): PathExtractor {
 				const val = getAttribute(record, strategy.attr)
 				return val ? { segment: val, separator: strategy.separator } : null
 			}
-		case 'sourceRef':
-			return (record) => {
-				const input = getAttribute(record, 'input')
-				if (!input) return null
-				let segment = input
-				const inputInst = getAttribute(record, 'inputInst')
-				if (inputInst && inputInst !== '1') segment += `(${inputInst})`
-				const pDA = getAttribute(record, 'pDA')
-				if (pDA) segment += `.${pDA}`
-				return { segment, separator: '.' }
-			}
-		case 'controlRef':
-			return (record) => {
-				const output = getAttribute(record, 'output')
-				if (!output) return null
-				let segment = output
-				const outputInst = getAttribute(record, 'outputInst')
-				if (outputInst && outputInst !== '1') segment += `(${outputInst})`
-				return { segment, separator: '.' }
+		case 'signal':
+			return (record, siblings) => {
+				const segment = buildSignalName({ strategy, record, siblings: siblings ?? [record] })
+				return segment ? { segment, separator: '.' } : null
 			}
 	}
+}
+
+/**
+ * The name of a signal among its siblings: the plain name while no
+ * sibling of the same tag shares it; otherwise `name(instance)`, the instance read with its
+ * schema default, then `.data` when that attribute is set.
+ */
+function buildSignalName(params: {
+	strategy: SignalStrategy
+	record: AnyRawRecord
+	siblings: readonly AnyRawRecord[]
+}): string | null {
+	const { strategy, record, siblings } = params
+	const name = getAttribute(record, strategy.name)
+	if (!name) return null
+
+	const sharing = siblings.filter(
+		(sibling) =>
+			sibling.tagName === record.tagName && getAttribute(sibling, strategy.name) === name,
+	)
+	if (sharing.length <= 1) return name
+
+	const instance =
+		getAttribute(record, strategy.instance) ?? schemaDefault(record, strategy.instance)
+	const data = strategy.data ? getAttribute(record, strategy.data) : undefined
+	return `${name}${instance ? `(${instance})` : ''}${data ? `.${data}` : ''}`
+}
+
+function schemaDefault(record: AnyRawRecord, attributeName: string): string | undefined {
+	return getAttributeRules({ dialecteConfig: SCL_DIALECTE_CONFIG, record, attributeName }).default
 }
 
 const PATH_EXTRACTORS: Record<string, PathExtractor> = Object.fromEntries(
@@ -86,9 +107,12 @@ const PATH_EXTRACTORS: Record<string, PathExtractor> = Object.fromEntries(
  * Returns null for transparent containers (AccessPoint, Server) and
  * elements without identifiable attributes.
  */
-export function getPathSegment(record: AnyRawRecord): PathSegment | null {
+export function getPathSegment(
+	record: AnyRawRecord,
+	siblings?: readonly AnyRawRecord[],
+): PathSegment | null {
 	const extractor = PATH_EXTRACTORS[record.tagName]
-	if (extractor) return extractor(record)
+	if (extractor) return extractor(record, siblings)
 	return null
 }
 
@@ -110,8 +134,10 @@ export function getPathSegment(record: AnyRawRecord): PathSegment | null {
 export function buildPathFromAncestry(params: {
 	record: AnyRawRecord
 	ancestry: readonly AnyRawRecord[]
+	/** The children of the record's parent, itself included: read by a signal's name. */
+	siblings?: readonly AnyRawRecord[]
 }): ElementPath | null {
-	const { record, ancestry } = params
+	const { record, ancestry, siblings } = params
 	const parts: PathSegmentWithRef[] = []
 
 	for (const ancestor of ancestry) {
@@ -119,7 +145,7 @@ export function buildPathFromAncestry(params: {
 		if (seg) parts.push({ ...seg, ref: { tagName: ancestor.tagName, id: ancestor.id } })
 	}
 
-	const ownSeg = getPathSegment(record)
+	const ownSeg = getPathSegment(record, siblings)
 	if (ownSeg) parts.push({ ...ownSeg, ref: { tagName: record.tagName, id: record.id } })
 
 	if (parts.length === 0) return null

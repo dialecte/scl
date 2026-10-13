@@ -9,8 +9,23 @@ import type { AnyRawRecord } from '@dialecte/core'
 describe('getPathSegment', () => {
 	type TestCase = {
 		record: AnyRawRecord
+		/** The children of the record's parent, the record included (read by a signal's name). */
+		siblings?: AnyRawRecord[]
 		expected: { segment: string; separator: '/' | '.' } | null
 	}
+
+	const tripGeneral2 = createSclTestRecord({
+		record: { tagName: 'SourceRef', attributes: { input: 'Trip', inputInst: '2', pDA: 'general' } },
+	})
+	const tripDefault = createSclTestRecord({
+		record: { tagName: 'SourceRef', attributes: { input: 'Trip' } },
+	})
+	const tripCmd2 = createSclTestRecord({
+		record: { tagName: 'ControlRef', attributes: { output: 'TripCmd', outputInst: '2' } },
+	})
+	const tripCmd1 = createSclTestRecord({
+		record: { tagName: 'ControlRef', attributes: { output: 'TripCmd', outputInst: '1' } },
+	})
 
 	const testCases: Record<string, TestCase> = {
 		// Transparent elements
@@ -62,26 +77,27 @@ describe('getPathSegment', () => {
 			}),
 			expected: { segment: 'Trip', separator: '.' },
 		},
-		'SourceRef with inputInst != 1 → appends (inputInst)': {
+		'SourceRef unique in its LNode, inputInst 2 → plain input': {
 			record: createSclTestRecord({
 				record: { tagName: 'SourceRef', attributes: { input: 'Trip', inputInst: '2' } },
 			}),
-			expected: { segment: 'Trip(2)', separator: '.' },
+			expected: { segment: 'Trip', separator: '.' },
 		},
-		'SourceRef with pDA → appends .pDA': {
+		'SourceRef unique in its LNode, with a pDA → plain input': {
 			record: createSclTestRecord({
 				record: { tagName: 'SourceRef', attributes: { input: 'Trip', pDA: 'general' } },
 			}),
-			expected: { segment: 'Trip.general', separator: '.' },
+			expected: { segment: 'Trip', separator: '.' },
 		},
-		'SourceRef with inputInst != 1 and pDA → appends (inputInst).pDA': {
-			record: createSclTestRecord({
-				record: {
-					tagName: 'SourceRef',
-					attributes: { input: 'Trip', inputInst: '2', pDA: 'general' },
-				},
-			}),
+		'SourceRef sharing its input, inputInst 2 and pDA → input(inputInst).pDA': {
+			record: tripGeneral2,
+			siblings: [tripGeneral2, tripDefault],
 			expected: { segment: 'Trip(2).general', separator: '.' },
+		},
+		'SourceRef sharing its input, no inputInst → the schema default instance written': {
+			record: tripDefault,
+			siblings: [tripGeneral2, tripDefault],
+			expected: { segment: 'Trip(1)', separator: '.' },
 		},
 		'SourceRef with inputInst=1 (default) → no suffix': {
 			record: createSclTestRecord({
@@ -89,14 +105,14 @@ describe('getPathSegment', () => {
 			}),
 			expected: { segment: 'Trip', separator: '.' },
 		},
-		'SourceRef with inputInst=1 and pDA → appends .pDA only': {
+		'SourceRef unique in its LNode, inputInst 1 and pDA → plain input': {
 			record: createSclTestRecord({
 				record: {
 					tagName: 'SourceRef',
 					attributes: { input: 'Trip', inputInst: '1', pDA: 'general' },
 				},
 			}),
-			expected: { segment: 'Trip.general', separator: '.' },
+			expected: { segment: 'Trip', separator: '.' },
 		},
 		'SourceRef without input → no path segment': {
 			record: createSclTestRecord({ record: { tagName: 'SourceRef' } }),
@@ -108,10 +124,15 @@ describe('getPathSegment', () => {
 			}),
 			expected: { segment: 'TripCmd', separator: '.' },
 		},
-		'ControlRef with outputInst != 1 → appends (outputInst)': {
+		'ControlRef unique in its LNode, outputInst 2 → plain output': {
 			record: createSclTestRecord({
 				record: { tagName: 'ControlRef', attributes: { output: 'TripCmd', outputInst: '2' } },
 			}),
+			expected: { segment: 'TripCmd', separator: '.' },
+		},
+		'ControlRef sharing its output, outputInst 2 → output(outputInst)': {
+			record: tripCmd2,
+			siblings: [tripCmd1, tripCmd2],
 			expected: { segment: 'TripCmd(2)', separator: '.' },
 		},
 		'ControlRef with outputInst=1 (default) → no suffix': {
@@ -369,7 +390,7 @@ describe('getPathSegment', () => {
 
 	Object.entries(testCases).forEach(([desc, tc]) => {
 		it(desc, () => {
-			expect(getPathSegment(tc.record)).toEqual(tc.expected)
+			expect(getPathSegment(tc.record, tc.siblings)).toEqual(tc.expected)
 		})
 	})
 })

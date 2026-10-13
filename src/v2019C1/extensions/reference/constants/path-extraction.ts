@@ -10,8 +10,19 @@ export type ExtractionStrategy =
 	| { type: 'name'; separator?: '/' | '.' }
 	| { type: 'lnClass' }
 	| { type: 'attribute'; attr: string; separator: '/' | '.' }
-	| { type: 'sourceRef' }
-	| { type: 'controlRef' }
+	| SignalStrategy
+
+/**
+ * A signal of an LNode (`SourceRef`, `ControlRef`), named among the signals of that LNode: the plain
+ * `name` attribute while it is unique among its siblings; once it is not, `name(instance)`, then
+ * `.data` when that attribute is set. Its segment therefore depends on its siblings.
+ */
+export type SignalStrategy = {
+	type: 'signal'
+	name: string
+	instance: string
+	data?: string
+}
 
 export const PATH_EXTRACTION_CONFIG: Record<string, ExtractionStrategy> = {
 	// Transparent - do not contribute a path segment
@@ -39,8 +50,8 @@ export const PATH_EXTRACTION_CONFIG: Record<string, ExtractionStrategy> = {
 	ExtCtrl: { type: 'attribute', attr: 'intAddr', separator: '.' },
 
 	// Process section - named path contributors (targets of lnode / ied-address resolution)
-	SourceRef: { type: 'sourceRef' },
-	ControlRef: { type: 'controlRef' },
+	SourceRef: { type: 'signal', name: 'input', instance: 'inputInst', data: 'pDA' },
+	ControlRef: { type: 'signal', name: 'output', instance: 'outputInst' },
 
 	// Process section - data specifications (6-100, dot-separated)
 	DOS: { type: 'name', separator: '.' },
@@ -80,6 +91,13 @@ export const PATH_EXTRACTION_CONFIG: Record<string, ExtractionStrategy> = {
 	Process: { type: 'name' },
 }
 
+/** The tags whose path segment depends on their siblings (`signal` strategy). */
+export const SIGNAL_TAG_NAMES: ReadonlySet<string> = new Set(
+	Object.entries(PATH_EXTRACTION_CONFIG)
+		.filter(([, strategy]) => strategy.type === 'signal')
+		.map(([tagName]) => tagName),
+)
+
 const LNCLASS_ATTRIBUTES = ['lnClass', 'prefix', 'inst', 'lnInst'] as const
 
 /**
@@ -97,10 +115,8 @@ export const PATH_CONTRIBUTING_ATTRIBUTES: ReadonlySet<string> = new Set(
 				return [...LNCLASS_ATTRIBUTES]
 			case 'attribute':
 				return [strategy.attr]
-			case 'sourceRef':
-				return ['input', 'inputInst', 'pDA']
-			case 'controlRef':
-				return ['output', 'outputInst']
+			case 'signal':
+				return [strategy.name, strategy.instance, ...(strategy.data ? [strategy.data] : [])]
 		}
 	}),
 )

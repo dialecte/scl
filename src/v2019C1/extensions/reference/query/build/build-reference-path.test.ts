@@ -382,3 +382,140 @@ describe('buildReferencePath', () => {
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+/**
+ * The name of a SourceRef / ControlRef inside a path: the plain `input`
+ * while it is unique in its LNode; once it is not, `input(inputInst).pDA` (pDA when defined),
+ * the instance written even when it is the default 1. ControlRef: `output`, else
+ * `output(outputInst)`. Read here through the `inputName` / `outputName` a variable of a
+ * BehaviorDescription of that LNode stores.
+ */
+describe('buildReferencePath — SourceRef / ControlRef name', () => {
+	const ID = CUSTOM_RECORD_ID_ATTRIBUTE
+
+	type NameCase = SclTest.BaseXmlTestCase & {
+		reference: { tagName: 'InputVar' | 'OutputVar'; id: string }
+		target: { tagName: 'SourceRef' | 'ControlRef'; id: string }
+		expected: string | null
+	}
+
+	function withInputs(sourceRefs: string): string {
+		return /* xml */ `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Function name="F1" ${ID}="f1">
+						<LNode iedName="None" lnClass="PTRC" lnInst="1" ${ID}="lnode-1">
+							<eIEC61850-6-100:LNodeInputs ${ID}="inputs-1">
+								${sourceRefs}
+							</eIEC61850-6-100:LNodeInputs>
+							<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
+								<eIEC61850-6-100:InputVar varName="v" inputUuid="sr-uuid" ${ID}="var-1"/>
+							</eIEC61850-6-100:BehaviorDescription>
+						</LNode>
+					</Function>
+				</Substation>
+			</SCL>
+		`
+	}
+
+	const inputVar = { tagName: 'InputVar', id: 'var-1' } as const
+	const sourceRef = { tagName: 'SourceRef', id: 'sr-1' } as const
+
+	const testCases: SclTest.TestCases<NameCase> = {
+		'two SourceRefs share the input, they differ by pDA → "Trip(1).general"': {
+			sourceXml: withInputs(/* xml */ `
+				<eIEC61850-6-100:SourceRef input="Trip" pDA="general" uuid="sr-uuid" ${ID}="sr-1"/>
+				<eIEC61850-6-100:SourceRef input="Trip" pDA="q" ${ID}="sr-2"/>
+			`),
+			reference: inputVar,
+			target: sourceRef,
+			expected: 'Trip(1).general',
+		},
+		'the input is unique → "Trip"': {
+			sourceXml: withInputs(/* xml */ `
+				<eIEC61850-6-100:SourceRef input="Trip" uuid="sr-uuid" ${ID}="sr-1"/>
+			`),
+			reference: inputVar,
+			target: sourceRef,
+			expected: 'Trip',
+		},
+		'the input is unique and has a pDA → "Trip", the pDA left out': {
+			sourceXml: withInputs(/* xml */ `
+				<eIEC61850-6-100:SourceRef input="Trip" pDA="general" uuid="sr-uuid" ${ID}="sr-1"/>
+			`),
+			reference: inputVar,
+			target: sourceRef,
+			expected: 'Trip',
+		},
+		'the input is unique with instance 2 → "Trip", the instance left out': {
+			sourceXml: withInputs(/* xml */ `
+				<eIEC61850-6-100:SourceRef input="Trip" inputInst="2" uuid="sr-uuid" ${ID}="sr-1"/>
+			`),
+			reference: inputVar,
+			target: sourceRef,
+			expected: 'Trip',
+		},
+		'the input is instantiated twice, instance 1 → "Trip(1)", the default instance written': {
+			sourceXml: withInputs(/* xml */ `
+				<eIEC61850-6-100:SourceRef input="Trip" uuid="sr-uuid" ${ID}="sr-1"/>
+				<eIEC61850-6-100:SourceRef input="Trip" inputInst="2" ${ID}="sr-2"/>
+			`),
+			reference: inputVar,
+			target: sourceRef,
+			expected: 'Trip(1)',
+		},
+		'another input beside it → "Trip", uniqueness is per input': {
+			sourceXml: withInputs(/* xml */ `
+				<eIEC61850-6-100:SourceRef input="Trip" uuid="sr-uuid" ${ID}="sr-1"/>
+				<eIEC61850-6-100:SourceRef input="Block" ${ID}="sr-2"/>
+			`),
+			reference: inputVar,
+			target: sourceRef,
+			expected: 'Trip',
+		},
+		'an input with a dot in its name, unique → "PTOC1.Op"': {
+			sourceXml: withInputs(/* xml */ `
+				<eIEC61850-6-100:SourceRef input="PTOC1.Op" uuid="sr-uuid" ${ID}="sr-1"/>
+			`),
+			reference: inputVar,
+			target: sourceRef,
+			expected: 'PTOC1.Op',
+		},
+		'two ControlRefs share the output, instance 2 → "Oper(2)"': {
+			sourceXml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+					<Substation name="S1" ${ID}="sub-1">
+						<Function name="F1" ${ID}="f1">
+							<LNode iedName="None" lnClass="CSWI" lnInst="1" ${ID}="lnode-1">
+								<eIEC61850-6-100:LNodeOutputs ${ID}="outputs-1">
+									<eIEC61850-6-100:ControlRef output="Oper" ${ID}="cr-1"/>
+									<eIEC61850-6-100:ControlRef output="Oper" outputInst="2" uuid="cr-uuid" ${ID}="cr-2"/>
+								</eIEC61850-6-100:LNodeOutputs>
+								<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
+									<eIEC61850-6-100:OutputVar varName="v" outputUuid="cr-uuid" ${ID}="var-1"/>
+								</eIEC61850-6-100:BehaviorDescription>
+							</LNode>
+						</Function>
+					</Substation>
+				</SCL>
+			`,
+			reference: { tagName: 'OutputVar', id: 'var-1' },
+			target: { tagName: 'ControlRef', id: 'cr-2' },
+			expected: 'Oper(2)',
+		},
+	}
+
+	async function act({
+		testCase,
+		source,
+	}: SclTest.ActParams<NameCase>): Promise<SclTest.ActResult> {
+		const result = await buildReferencePath(source.query, {
+			reference: testCase.reference as never,
+			target: testCase.target as never,
+		})
+		expect(result).toBe(testCase.expected)
+		return { assertOn: 'source' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
