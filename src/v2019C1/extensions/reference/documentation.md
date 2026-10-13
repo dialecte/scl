@@ -169,7 +169,7 @@ Because XML can reference elements that appear later in the file — a FunctionR
 
 32 of 33 reference pairs are resolved. Each pair is assigned a `resolution` value in `UUID_REFERENCE_PAIRS`.
 
-### `direct` — 19 pairs
+### `direct` — 15 pairs
 
 The path attribute value is an exact match against a target element's computed path.
 
@@ -178,8 +178,6 @@ The path attribute value is an exact match against a target element's computed p
 | AllocationRoleRef       | `allocationRole`      | AllocationRole                                   |
 | BehaviorDescriptionRef  | `behaviorDescription` | BehaviorDescription                              |
 | BehaviorReference       | `behaviorReference`   | BehaviorDescription                              |
-| ControllingLNode        | `resourceName`        | ProcessResource                                  |
-| ControlRef              | `resourceName`        | ProcessResource                                  |
 | FunctionCategoryRef     | `functionCategory`    | FunctionCategory, SubCategory                    |
 | FunctionCatRef          | `function`            | Function, SubFunction                            |
 | FunctionRef             | `function`            | Function, SubFunction, EqFunction, EqSubFunction |
@@ -191,11 +189,13 @@ The path attribute value is an exact match against a target element's computed p
 | ProcessResourceRef      | `processResource`     | ProcessResource                                  |
 | ProjectProcessReference | `processReference`    | Process                                          |
 | Resource                | `source`              | Substation, Bay, Function, LNode, …              |
-| SourceRef               | `resourceName`        | ProcessResource                                  |
-| SubscriberLNode         | `resourceName`        | ProcessResource                                  |
 | VariableRef             | `variable`            | Variable                                         |
 
 **Example:** `FunctionRef.function="S1/V1/Protection"` → index lookup `"S1/V1/Protection"` → populates `functionUuid`.
+
+### `ancestor-name` — 4 pairs
+
+`resourceName` on SourceRef, ControlRef, SubscriberLNode, ControllingLNode: the bare name of a ProcessResource. `parseAncestorNamePath` yields one key per ancestor of the referrer, nearest first (`<ancestor path>/<name>`), the first one in the index wins; a value holding a `/` (a full path an earlier version wrote) is tried first and written again as the name once resolved.
 
 ### `lnode` — 7 pairs
 

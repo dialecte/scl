@@ -479,7 +479,7 @@ This replaces the former `afterDeepClone` core hook (removed): that hook's per-e
 
 All reference pairs are defined in `UUID_REFERENCE_PAIRS`. Each pair maps a REF element + path attribute to one or more target element types and a resolution strategy.
 
-### `direct` -- 19 pairs
+### `direct` -- 15 pairs
 
 Path attribute value is an exact match against the target's computed path.
 
@@ -502,6 +502,21 @@ The qualifier chain can be arbitrarily deep (e.g. `MMXU1.PhV.phsA.cVal.mag.f` --
 ### `ied-address` -- 2 pairs
 
 Reference to `ExtRef`/`ExtCtrl` inside the IED section via `intAddr`. Supports full path and IED-relative fallback.
+
+### `ancestor-name` -- 4 pairs
+
+`resourceName` on `SourceRef`, `ControlRef`, `SubscriberLNode`, `ControllingLNode`: the bare name of a `ProcessResource`, looked up in the referrer's ancestors, nearest first. A homonym higher up is not reached while a nearer one exists; renaming an ancestor leaves the name untouched.
+
+```xml
+<Function name="F1">
+	<ProcessResources><ProcessResource name="PR1" uuid="pr-1"/></ProcessResources>
+	<LNode lnClass="PTRC" lnInst="1">
+		<LNodeInputs><SourceRef input="Trip" resourceName="PR1" resourceUuid="pr-1"/></LNodeInputs>
+	</LNode>
+</Function>
+```
+
+On import, the full path an earlier version wrote (`S1/F1/PR1`) still resolves and is written again as the name.
 
 ### `behavior-description` -- 4 pairs
 

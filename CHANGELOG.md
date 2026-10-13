@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **A SourceRef or ControlRef is named among the signals of its LNode.** Inside a path (`InputVar.inputName`, `OutputVar.outputName`, a path through a signal), a SourceRef is its plain `input` while no other SourceRef of its LNode shares it, and `input(inputInst).pDA` once one does (the instance written even when it is `1`; ControlRef: `output(outputInst)`). The engine used to decide from the values alone: `Trip.general` for the only `Trip`, `Trip(2)` for the only one of instance 2, `Trip` for instance 1 of two. Adding, renaming or removing a SourceRef renames the references to the ones sharing its input. Breaking for stored names: on import the former names still resolve and are written again in the standard form.
+- **`resourceName` holds the bare name of the ProcessResource.** On SourceRef, ControlRef, SubscriberLNode and ControllingLNode it is the ProcessResource's name, looked up in the element's ancestors, nearest first, instead of its full path: renaming a Function or a Bay no longer touches it, and a homonym higher up is not reached while a nearer one exists. Breaking for stored values: on import a full path still resolves and is written again as the name.
 
 ### Fixed
 
