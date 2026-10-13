@@ -16,11 +16,11 @@ const ns = ALL_XMLNS_NAMESPACES
  * One row per reference pair whose path form is settled. Not in this table:
  * - `DOS` / `SDS` / `DAS` `mappedDoName` / `mappedDaName`: stored in the mapped-data canonical
  *   form, see `reconcile-mapped-data.test.ts`.
- * - `resourceName` (SourceRef, ControlRef, SubscriberLNode, ControllingLNode): the form changes
- *   to the bare ProcessResource name (REFERENCES_NAMES_STATES lot R5).
+ * - `resourceName` (SourceRef, ControlRef, SubscriberLNode, ControllingLNode): written today as
+ *   the path of the ProcessResource, it is to become the bare ProcessResource name.
  * - `VariableApplyTo.element`: an XPath selector, never rebuilt as a name path.
- * - `LNodeInputRef.sourceRef`, `LNodeOutputRef.controlRef`, `LNodeDataRef.data`: the form changes
- *   to a path relative to the Function (REFERENCES_NAMES_STATES lot R4).
+ * - `LNodeInputRef.sourceRef`, `LNodeOutputRef.controlRef`, `LNodeDataRef.data`: written today
+ *   from the root, they are to become a path relative to the Function.
  */
 describe('setRefPaths', () => {
 	describe('referrer created with its uuid only', () => {

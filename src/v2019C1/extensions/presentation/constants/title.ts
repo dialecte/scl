@@ -20,7 +20,7 @@
 //   - `[ix]` array index or instance number used as path qualifier.
 //   - (none) concatenation of attributes that form one identifier (PXCBR1).
 // We do not use `//` or other ad-hoc group separators; consistent `/` paths
-// match IEC 61850 reference syntax.
+// match the syntax of the reference paths this dialecte writes.
 //
 // Elements whose title lives in the XML text body (BayType, IEDName, Val)
 // need no override: the resolver falls through to `record.value` when the

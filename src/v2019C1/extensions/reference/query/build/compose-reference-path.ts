@@ -16,8 +16,9 @@ type AttributeList = ReferencePathParts['referenceAttributes']
  * - `direct` / `ied-address` / `unsupported`: the target's path.
  * - `lnode`: the target's path, then the DO[.DA] of the companions (see below).
  * - `behavior-description`: the local path from the BehaviorDescription's parent down to the
- *   target (90-30 Tables 37 / 38), then the companions' DO[.DA] for `dataName`; `null` when the
- *   target is not below that parent.
+ *   target, that parent left out (`Trip` from the LNode holding the input, `PTRC1.Trip` from its
+ *   Function), then the companions' DO[.DA] for `dataName`; `null` when the target is not below
+ *   that parent.
  */
 export function composeReferencePath(parts: ReferencePathParts): string | null {
 	const { pair, referenceAttributes, targetPath, behaviorContext } = parts

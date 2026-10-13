@@ -213,7 +213,7 @@ describe('reference-parsing', () => {
 		})
 	})
 
-	describe('IEC 7-2 ObjectReference (lnode strategy)', () => {
+	describe('IED object reference IED/LD/LN.DO.DA (lnode strategy)', () => {
 		const testCases: SclTest.TestCases = {
 			'DOS.mappedDoName referencing IED LN → mappedLnUuid paired, name from the logical node': {
 				sourceXml: /* xml */ `
