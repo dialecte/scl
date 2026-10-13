@@ -1,4 +1,5 @@
 import { afterCreated } from './after-created'
+import { afterDelete } from './after-delete'
 import { afterStandardizedRecord } from './after-standardized-record'
 import { afterUpdated } from './after-updated'
 import { beforeClone } from './before-clone'
@@ -15,6 +16,7 @@ export const HOOKS: Scl.TransactionHooks = {
 	afterCreated,
 	afterUpdated,
 	beforeDelete,
+	afterDelete,
 }
 
 // Re-exported so createSclProject can build fresh (stateful) io hooks per project.

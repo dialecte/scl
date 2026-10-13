@@ -11,3 +11,8 @@ export {
 	upsertAttribute,
 } from './record-ops'
 export * from './min-requested-scd-file'
+export {
+	reconcileSignalSiblingPaths,
+	signalName,
+	signalNamingAttributes,
+} from './signal-sibling-paths'
