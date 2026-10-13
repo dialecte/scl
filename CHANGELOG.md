@@ -7,8 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Added
+
+- **The state of an element, next to its title.** `info.of(ref).state`: a SourceRef / ControlRef is `{ binding: 'open' | 'connected', implemented }`, connected once its source (controlled data) is given by path or by uuid, implemented once the ExtRef / ExtCtrl is named, whether connected or not; an LNode is `{ locked }`, locked once an IED is assigned (`iedName` set and not `None`). An LNode also carries `mapping`: `unmapped`, `specification-ied` or `real-ied`, from the LN it is bound to (by `lnUuid`, else by its identity attributes) and the kind of the IED holding it. Other tags have no state. Types `ElementState`, `SignalState`, `LNodeState`, `LNodeMapping`, `ElementStateByTag`.
+- **`query.lifecycle.classifyIeds()`** tells, for every IED in document order, whether it is a real device's IED or a specification IED: implemented when an ICD or IID file is among its own source files, or when the document is an `.icd` file; any other IED is a specification IED, whatever its manufacturer or name. Types `IedClassification`, `IedKind`, `IedClassificationBasis`.
+
 ### Changed
 
+- **`presentation` is now `info`, one call for what an element shows.** `doc.query.info.of(ref, { mode?, withLabels? })` returns `{ title, state?, labels? }`, `ofEach(refs, options)` the same for several elements in their order. `extractElementTitle` is removed: `extractElementTitle(ref)` becomes `(await info.of(ref)).title`, and `withLabels: true` puts `labels` on the same object. Types `ElementInfo`, `InfoOptions`; `ElementTitle`, `ExtractElementTitleOptions`, `ExtractElementTitleOptionsWithLabels` removed.
+- **A SourceRef or ControlRef is titled by its name.** Compact: its name among the signals of its LNode (`Trip`, `Trip(1).general`, `Oper(2)`), without the service; whether it is connected is its state. Full: `name/pLN.pDO.pDA/source` (`name/pLN.pDO/controlled`).
 - **A SourceRef or ControlRef is named among the signals of its LNode.** Inside a path (`InputVar.inputName`, `OutputVar.outputName`, a path through a signal), a SourceRef is its plain `input` while no other SourceRef of its LNode shares it, and `input(inputInst).pDA` once one does (the instance written even when it is `1`; ControlRef: `output(outputInst)`). The engine used to decide from the values alone: `Trip.general` for the only `Trip`, `Trip(2)` for the only one of instance 2, `Trip` for instance 1 of two. Adding, renaming or removing a SourceRef renames the references to the ones sharing its input. Breaking for stored names: on import the former names still resolve and are written again in the standard form.
 - **`resourceName` holds the bare name of the ProcessResource.** On SourceRef, ControlRef, SubscriberLNode and ControllingLNode it is the ProcessResource's name, looked up in the element's ancestors, nearest first, instead of its full path: renaming a Function or a Bay no longer touches it, and a homonym higher up is not reached while a nearer one exists. Breaking for stored values: on import a full path still resolves and is written again as the name.
 

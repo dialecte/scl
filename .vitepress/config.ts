@@ -92,7 +92,7 @@ export default defineConfig({
 							],
 						},
 						{ text: 'Template', link: '/v2019C1/extensions/template' },
-						{ text: 'Presentation', link: '/v2019C1/extensions/presentation' },
+						{ text: 'Info', link: '/v2019C1/extensions/info' },
 						{ text: 'Clean Up', link: '/v2019C1/extensions/clean-up' },
 					],
 				},

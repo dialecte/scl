@@ -1,5 +1,5 @@
 ---
-description: Overview of SCL-specific extensions for @dialecte/scl v2019C1 -- history, dataModel, signature, reference, lifecycle, presentation and cleanUp.
+description: Overview of SCL-specific extensions for @dialecte/scl v2019C1 -- history, dataModel, signature, reference, lifecycle, info and cleanUp.
 ---
 
 # Extensions
@@ -10,15 +10,15 @@ For a full explanation of how extensions work, see the [Writing Extensions](http
 
 ## Registered modules
 
-| Module         | Access on `doc.query`        | Access on `tx`                                                                 | Reference                                                                                             |
-| -------------- | ---------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `cleanUp`      | -                            | `tx.cleanUp`                                                                   | [Clean-up](./clean-up)                                                                                |
-| `dataModel`    | `doc.query.dataModel`        | `tx.dataModel`                                                                 | [Data Model](./data-model)                                                                            |
-| `lifecycle`    | `doc.query.lifecycle.report` | `tx.lifecycle.extract` / `.instantiate` / `.transplant` / `.update` / `.apply` | [Extract](./extract) · [Instantiate](./instantiate) · [Transplant](./transplant) · [Update](./update) |
-| `history`      | `doc.query.history`          | `tx.history`                                                                   | [History](./history)                                                                                  |
-| `presentation` | `doc.query.presentation`     | -                                                                              | [Presentation](./presentation)                                                                        |
-| `reference`    | `doc.query.reference`        | `tx.reference`                                                                 | [Reference](./reference)                                                                              |
-| `signature`    | `doc.query.signature`        | -                                                                              | [Signature](./signature)                                                                              |
+| Module      | Access on `doc.query`                          | Access on `tx`                                                                 | Reference                                                                                             |
+| ----------- | ---------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `cleanUp`   | -                                              | `tx.cleanUp`                                                                   | [Clean-up](./clean-up)                                                                                |
+| `dataModel` | `doc.query.dataModel`                          | `tx.dataModel`                                                                 | [Data Model](./data-model)                                                                            |
+| `lifecycle` | `doc.query.lifecycle.report` / `.classifyIeds` | `tx.lifecycle.extract` / `.instantiate` / `.transplant` / `.update` / `.apply` | [Extract](./extract) · [Instantiate](./instantiate) · [Transplant](./transplant) · [Update](./update) |
+| `history`   | `doc.query.history`                            | `tx.history`                                                                   | [History](./history)                                                                                  |
+| `info`      | `doc.query.info`                               | -                                                                              | [Info](./info)                                                                                        |
+| `reference` | `doc.query.reference`                          | `tx.reference`                                                                 | [Reference](./reference)                                                                              |
+| `signature` | `doc.query.signature`                          | -                                                                              | [Signature](./signature)                                                                              |
 
 `lifecycle` is a single module whose transaction/query methods nest by verb, so the public surface is `tx.lifecycle.<verb>.<recipe>` (e.g. `tx.lifecycle.extract.fsd`, `tx.lifecycle.update.asd`). The verb-agnostic two-track surface — `doc.query.lifecycle.report({ verb, sourceQuery, ref, anchor })` then `tx.lifecycle.apply(tx, { ..., report })` — is the recommended consumer entry point (see [Update](./update#two-track-surface-report-apply)).
 
@@ -55,6 +55,15 @@ import {
 ```
 
 See each extension's exported surface: [reference](./reference#exported-constants), [signature](./signature#exported-constants--types), [data model](./data-model#exported-types), [transplant](./transplant).
+
+### `lifecycle.classifyIeds`
+
+```ts
+const classifications = await doc.query.lifecycle.classifyIeds()
+// [{ ied: { tagName: 'IED', id }, name, kind: 'implemented' | 'specification', basis }]
+```
+
+Every IED, in document order. An IED is a real device's IED (`implemented`) when an ICD or IID file is among its own source files (`IEDSourceFiles/SclFileReference`; a reference in the document header does not count, `basis: 'provenance'`), or when the document itself is an `.icd` file (`basis: 'icd-file'`). Any other IED is a specification IED (`basis: 'no-provenance'`). The manufacturer and the name play no part.
 
 ## Internal lifecycle building blocks
 
