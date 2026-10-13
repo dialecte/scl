@@ -53,24 +53,17 @@ export const TITLE_FIELDS_OVERRIDE: Partial<Record<string, TitleSpec>> = {
 	MinRequestedSCDFile: { compact: ['version', 'revision'], separator: '.' },
 
 	// ── Composite data-flow (extension namespace) ─────────────────────
-	// Brackets denote instance index; slashes denote path segments.
-	// Compact prefers the concrete binding (controlled/source), falling back to
-	// the pLN.pDO[.pDA] specification hint when the ref is still "open". Full
-	// mode shows both hint and binding. `output`/`input` are the mandatory
-	// identifiers.
+	// `signalName` is the name among the signals of the LNode (the plain input while
+	// unique, else input(inputInst).pDA), the one paths use. Whether the signal is
+	// open or connected is its state, not its title. Full mode adds the
+	// pLN.pDO[.pDA] hint and the binding.
 	ControlRef: {
-		compact: [
-			{ whenPresent: 'controlled', template: '{output}[{outputInst}]/{controlled}' },
-			{ template: '{output}[{outputInst}]/{pLN}.{pDO}' },
-		],
-		full: '{output}[{outputInst}]/{pLN}.{pDO}/{controlled}',
+		compact: '{signalName}',
+		full: '{signalName}/{pLN}.{pDO}/{controlled}',
 	},
 	SourceRef: {
-		compact: [
-			{ whenPresent: 'source', template: '{service}/{input}[{inputInst}]/{source}' },
-			{ template: '{service}/{input}[{inputInst}]/{pLN}.{pDO}.{pDA}' },
-		],
-		full: '{service}/{input}[{inputInst}]/{pLN}.{pDO}.{pDA}/{source}',
+		compact: '{signalName}',
+		full: '{signalName}/{pLN}.{pDO}.{pDA}/{source}',
 	},
 
 	// ── simple *Ref (single attribute) ──────────────────────────

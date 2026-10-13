@@ -1,14 +1,17 @@
+import { STATE_RULES } from '../constants/state'
 import { TITLE_FIELDS_OVERRIDE } from '../constants/title'
+import { createInfoContext } from './info-context'
+
+import { toRawRecord } from '@dialecte/core/helpers'
 
 import { DEFINITION } from '@/v2019C1/definition'
 import { LINEAGE } from '@/v2019C1/extensions/lifecycle/constraints'
+import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
+import { readSignalName } from '@/v2019C1/extensions/reference/query/build/signal-name'
 
 import type { ConditionalTitle, TitleSpec } from '../constants/title.types'
-import type {
-	ElementTitle,
-	ExtractElementTitleOptions,
-	ExtractElementTitleOptionsWithLabels,
-} from './extract-element-title.types'
+import type { InfoContext } from './info-context.types'
+import type { ElementInfo, InfoOptions } from './of.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
@@ -16,11 +19,8 @@ import type { AnyRefOrRecord } from '@dialecte/core'
 // ── Public API ───────────────────────────────────────────────────────
 
 /**
- * Query extension: extracts a human-readable title for an SCL element.
- *
- * Default returns the title string. Pass `{ withLabels: true }` to also
- * collect `<Labels>/<Label lang="...">` children (i18n labels); this
- * incurs extra child-record traversal so it is opt-in.
+ * Query extension: what a consumer shows and checks about an SCL element - its title, and its
+ * `<Labels>` when asked (`withLabels: true`, one more read per element).
  *
  * Resolution precedence for the title (first non-empty wins):
  * 1. `TITLE_FIELDS_OVERRIDE` spec for the tag (compact or full).
@@ -28,41 +28,71 @@ import type { AnyRefOrRecord } from '@dialecte/core'
  * 3. `DEFINITION.identityFields` fallback (name > id > first), lineage attributes left out.
  * 4. tagName.
  */
-export function extractElementTitle(
+export async function of<GenericElement extends string = string>(
 	query: Core.Query<Config>,
-	refOrRecord: AnyRefOrRecord,
-	options: ExtractElementTitleOptionsWithLabels,
-): Promise<ElementTitle>
-export function extractElementTitle(
-	query: Core.Query<Config>,
-	refOrRecord: AnyRefOrRecord,
-	options?: ExtractElementTitleOptions,
-): Promise<string>
-export async function extractElementTitle(
-	query: Core.Query<Config>,
-	refOrRecord: AnyRefOrRecord,
-	options: ExtractElementTitleOptions & { withLabels?: boolean } = {},
-): Promise<string | ElementTitle> {
+	refOrRecord: AnyRefOrRecord & { readonly tagName: GenericElement },
+	options: InfoOptions = {},
+): Promise<ElementInfo<GenericElement>> {
+	return describeElement({ query, refOrRecord, options, context: createInfoContext(query) })
+}
+
+/** `of`, with the document-wide facts of the call (`ofEach` shares one context). */
+export async function describeElement<GenericElement extends string = string>(params: {
+	query: Core.Query<Config>
+	refOrRecord: AnyRefOrRecord & { readonly tagName: GenericElement }
+	options: InfoOptions
+	context: InfoContext
+}): Promise<ElementInfo<GenericElement>> {
+	const { query, refOrRecord, options, context } = params
 	const record = await query.getRecord(refOrRecord as Scl.Ref<Scl.ElementsOf>)
-	if (!record) return options.withLabels ? { title: '', labels: {} } : ''
+	if (!record) return { title: '' }
 
 	const tag = record.tagName
 	const mode = options.mode ?? 'compact'
 	const attributes = await query.any.getAttributes(record)
 
 	const spec = TITLE_FIELDS_OVERRIDE[tag]
-	const specAttributes = spec?.attributesFrom
-		? await getChildAttributes(query, record, spec.attributesFrom)
-		: attributes
+	const specAttributes = await readSpecAttributes({ query, record, spec, attributes })
 
 	const title = resolveTitle({ tag, spec, mode, attributes, specAttributes, value: record.value })
-	if (!options.withLabels) return title
+	const state = await readState({ query, record, attributes, context })
+	const labels = options.withLabels ? await collectLabels(query, record) : undefined
 
-	const labels = await collectLabels(query, record)
-	return { title, labels }
+	return {
+		title,
+		...(state ? { state: state as ElementInfo<GenericElement>['state'] } : {}),
+		...(labels ? { labels } : {}),
+	}
 }
 
 // ── Internals ────────────────────────────────────────────────────────
+
+/**
+ * The attributes a title template reads: the element's own, or those of the child the spec
+ * names; a signal also gets its `signalName`, its name among the signals of its LNode.
+ */
+async function readSpecAttributes(params: {
+	query: Core.Query<Config>
+	record: Scl.TrackedRecord<Scl.ElementsOf>
+	spec: TitleSpec | undefined
+	attributes: Record<string, string>
+}): Promise<Record<string, string>> {
+	const { query, record, spec, attributes } = params
+	if (spec?.attributesFrom) return getChildAttributes(query, record, spec.attributesFrom)
+	if (!SIGNAL_TAG_NAMES.has(record.tagName)) return attributes
+	const signalName = await readSignalName(query, toRawRecord(record))
+	return { ...attributes, signalName: signalName ?? '' }
+}
+
+async function readState(params: {
+	query: Core.Query<Config>
+	record: Scl.TrackedRecord<Scl.ElementsOf>
+	attributes: Record<string, string>
+	context: InfoContext
+}): Promise<ElementInfo['state']> {
+	const rule = STATE_RULES[params.record.tagName as keyof typeof STATE_RULES]
+	return rule ? rule(params) : undefined
+}
 
 function resolveTitle(input: {
 	tag: string

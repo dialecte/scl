@@ -1,3 +1,4 @@
+import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -33,7 +34,7 @@ export async function resetLNodes(tx: Core.Transaction<Config>): Promise<void> {
 	for (const lnode of lnodes) {
 		if (!(await isLNodeLocked(tx, lnode))) {
 			// not bound — stamp the explicit 'None' marker (no-op if already stored).
-			await tx.update(lnode, { attributes: { iedName: 'None' } })
+			await tx.update(lnode, { attributes: { iedName: UNALLOCATED_IED_NAME } })
 			continue
 		}
 
@@ -63,12 +64,12 @@ async function resetLNodeBinding(
 		const lnClass = await tx.getAttribute(lnode, { name: 'lnClass' })
 
 		await tx.update(lNodeSpecNaming, {
-			attributes: { sIedName: 'None', sLdInst: undefined },
+			attributes: { sIedName: UNALLOCATED_IED_NAME, sLdInst: undefined },
 		})
 
 		await tx.update(lnode, {
 			attributes: {
-				iedName: 'None',
+				iedName: UNALLOCATED_IED_NAME,
 				ldInst: undefined,
 				lnUuid: undefined,
 				// sLnClass is optional; lnClass is required with no
@@ -81,7 +82,7 @@ async function resetLNodeBinding(
 	} else {
 		await tx.update(lnode, {
 			attributes: {
-				iedName: 'None',
+				iedName: UNALLOCATED_IED_NAME,
 				ldInst: undefined,
 				lnUuid: undefined,
 			},

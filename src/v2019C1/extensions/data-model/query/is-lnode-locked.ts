@@ -1,9 +1,8 @@
+import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
+
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
-
-/** The unbound `iedName` marker — an LNode not implemented in any IED. */
-const UNBOUND_IED_NAME = 'None'
 
 /**
  * Whether an `LNode` is **locked** — i.e. bound to an IED (implemented). An LNode
@@ -23,5 +22,5 @@ export async function isLNodeLocked(
 	ref: AnyRefOrRecord,
 ): Promise<boolean> {
 	const iedName = await query.any.getAttribute(ref, { name: 'iedName' })
-	return Boolean(iedName) && iedName !== UNBOUND_IED_NAME
+	return Boolean(iedName) && iedName !== UNALLOCATED_IED_NAME
 }

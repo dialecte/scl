@@ -1,6 +1,6 @@
 import { toRef } from '@dialecte/core/helpers'
 
-import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
+import { of } from '@/v2019C1/extensions/info/query'
 
 import type { Config } from '@/v2019C1/config'
 import type { InstanceDiff, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -31,7 +31,7 @@ export async function buildReportInstance(
 	if (!instance) {
 		return {
 			rootRef: undefined,
-			title: await extractElementTitle(sourceQuery, sourceRef),
+			title: (await of(sourceQuery, sourceRef)).title,
 			linked: false,
 			upToDate,
 			tree: instanceDiff.root,
@@ -45,7 +45,7 @@ export async function buildReportInstance(
 
 	return {
 		rootRef: toRef(instance),
-		title: await extractElementTitle(query, instance),
+		title: (await of(query, instance)).title,
 		linked,
 		upToDate,
 		tree: instanceDiff.root,

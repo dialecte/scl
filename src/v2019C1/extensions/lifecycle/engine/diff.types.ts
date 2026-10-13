@@ -61,7 +61,7 @@ export type DecisionGroup = {
 	/** Stable key of the primary; also the key in the `decisions` map. */
 	id: string
 	change: Exclude<DiffChange, 'unchanged'>
-	/** Coarse label (`"<change> <tag>"`); the UI enriches it via `extractElementTitle(primary.sourceRef ?? instanceRef)`. */
+	/** Coarse label (`"<change> <tag>"`); the UI enriches it via `info.of(primary.sourceRef ?? instanceRef)`. */
 	title: string
 	primary: DiffNode
 	companions: DiffNode[]
@@ -93,7 +93,7 @@ export type ReportInstance = {
 	 * placement is made once.
 	 */
 	placedFor?: AnyRefOrRecord
-	/** Human-readable title of the instance root (`extractElementTitle`). */
+	/** Human-readable title of the instance root (`info.of`). */
 	title: string
 	/** Recognised as an instantiation of the loaded template (provenance or `templateUuid` lineage). */
 	linked: boolean

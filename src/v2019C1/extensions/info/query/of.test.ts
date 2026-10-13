@@ -1,4 +1,4 @@
-import { extractElementTitle } from './extract-element-title'
+import { of } from './of'
 
 import { describe, expect } from 'vitest'
 
@@ -10,7 +10,7 @@ import type { SclTest } from '@/v2019C1/test'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-describe('extractElementTitle', () => {
+describe('of', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		ref: Scl.Ref<Scl.ElementsOf>
 		expectedTitle: string
@@ -474,7 +474,7 @@ describe('extractElementTitle', () => {
 
 		// ── Revised spec: composite refs (conditional compact) ────────
 		// ControlRef: prefer concrete `controlled`, fall back to pLN.pDO hint.
-		'ControlRef compact (connected) → output[outputInst]/controlled': {
+		'ControlRef compact (connected) → its output name, the binding left to the state': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
@@ -483,9 +483,9 @@ describe('extractElementTitle', () => {
 				</SCL>
 			`,
 			ref: { tagName: 'ControlRef', id: 'cref1' },
-			expectedTitle: 'CMD[1]/XCBR1',
+			expectedTitle: 'CMD',
 		},
-		'ControlRef compact (open) → output[outputInst]/pLN.pDO': {
+		'ControlRef compact (open) → its output name': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
@@ -494,9 +494,9 @@ describe('extractElementTitle', () => {
 				</SCL>
 			`,
 			ref: { tagName: 'ControlRef', id: 'cref-open' },
-			expectedTitle: 'CMD[1]/CSWI.Pos',
+			expectedTitle: 'CMD',
 		},
-		'ControlRef full → output[outputInst]/pLN.pDO/controlled': {
+		'ControlRef full → name/pLN.pDO/controlled': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
@@ -506,10 +506,10 @@ describe('extractElementTitle', () => {
 			`,
 			ref: { tagName: 'ControlRef', id: 'cref-full' },
 			mode: 'full',
-			expectedTitle: 'CMD[1]/CSWI.Pos/XCBR1',
+			expectedTitle: 'CMD/CSWI.Pos/XCBR1',
 		},
 		// SourceRef: prefer concrete `source`, fall back to pLN.pDO.pDA hint.
-		'SourceRef compact (connected) → service/input[inputInst]/source': {
+		'SourceRef compact (connected) → its input name, no service, the binding left to the state': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
@@ -518,9 +518,9 @@ describe('extractElementTitle', () => {
 				</SCL>
 			`,
 			ref: { tagName: 'SourceRef', id: 'sref1' },
-			expectedTitle: 'GOOSE/TripIn[2]/Trip.general',
+			expectedTitle: 'TripIn',
 		},
-		'SourceRef compact (open) → service/input[inputInst]/pLN.pDO.pDA': {
+		'SourceRef compact (open) → its input name': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
@@ -529,9 +529,9 @@ describe('extractElementTitle', () => {
 				</SCL>
 			`,
 			ref: { tagName: 'SourceRef', id: 'sref-open' },
-			expectedTitle: 'GOOSE/TripIn[2]/PTRC.Trip.general',
+			expectedTitle: 'TripIn',
 		},
-		'SourceRef full → service/input[inputInst]/pLN.pDO.pDA/source': {
+		'SourceRef full → name/pLN.pDO.pDA/source, no service': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
@@ -541,7 +541,7 @@ describe('extractElementTitle', () => {
 			`,
 			ref: { tagName: 'SourceRef', id: 'sref2' },
 			mode: 'full',
-			expectedTitle: 'GOOSE/TripIn[2]/PTRC.Trip.general/Trip.general',
+			expectedTitle: 'TripIn/PTRC.Trip.general/Trip.general',
 		},
 
 		// ── Revised spec: GSE/SMV full mode deferred (needs parent iedName) ─
@@ -628,19 +628,234 @@ describe('extractElementTitle', () => {
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		act: async ({ source, testCase }) => {
-			if (testCase.expectedLabels) {
-				const result = await extractElementTitle(source.query, testCase.ref, {
-					mode: testCase.mode,
-					withLabels: true,
-				})
-				expect(result.title).toBe(testCase.expectedTitle)
-				expect(result.labels).toEqual(testCase.expectedLabels)
-				return
-			}
-			const title = await extractElementTitle(source.query, testCase.ref, {
+			const result = await of(source.query, testCase.ref, {
 				mode: testCase.mode,
+				withLabels: Boolean(testCase.expectedLabels),
 			})
-			expect(title).toBe(testCase.expectedTitle)
+			expect(result.title).toBe(testCase.expectedTitle)
+			if (testCase.expectedLabels) expect(result.labels).toEqual(testCase.expectedLabels)
+		},
+	})
+})
+
+/**
+ * The state of an element, next to its title: a SourceRef / ControlRef is open or connected and
+ * implemented or not; an LNode is locked once an IED is assigned to it. A SourceRef / ControlRef
+ * is titled by its name among the signals of its LNode.
+ */
+describe('of — state and signal title', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		ref: Scl.Ref<Scl.ElementsOf>
+		expected: { title: string; state?: unknown }
+		mode?: 'compact' | 'full'
+	}
+
+	function lnodeWith(children: string, lnodeAttributes = 'iedName="None"'): string {
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation name="S1" ${id}="s1">
+					<Function name="F1" ${id}="f1">
+						<LNode lnClass="PTRC" lnInst="1" ${lnodeAttributes} ${id}="lnode">
+							${children}
+						</LNode>
+					</Function>
+				</Substation>
+			</SCL>
+		`
+	}
+
+	const sourceRef = { tagName: 'SourceRef', id: 'sr' } as const
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'SourceRef without source → open, not implemented, titled by its input': {
+			sourceXml: lnodeWith(
+				`<eIEC61850-6-100:LNodeInputs ${id}="in"><eIEC61850-6-100:SourceRef input="Trip" ${id}="sr"/></eIEC61850-6-100:LNodeInputs>`,
+			),
+			ref: sourceRef,
+			expected: { title: 'Trip', state: { binding: 'open', implemented: false } },
+		},
+		'SourceRef with a source path → connected': {
+			sourceXml: lnodeWith(
+				`<eIEC61850-6-100:LNodeInputs ${id}="in"><eIEC61850-6-100:SourceRef input="Trip" source="S1/F1/XCBR1.Pos.stVal" ${id}="sr"/></eIEC61850-6-100:LNodeInputs>`,
+			),
+			ref: sourceRef,
+			expected: { title: 'Trip', state: { binding: 'connected', implemented: false } },
+		},
+		'SourceRef with sourceLNodeUuid only → connected': {
+			allowIncoherentReferences:
+				'the uuid names an element of another file: the state reads its presence only',
+			sourceXml: lnodeWith(
+				`<eIEC61850-6-100:LNodeInputs ${id}="in"><eIEC61850-6-100:SourceRef input="Trip" sourceLNodeUuid="uuid-elsewhere" sourceDoName="Pos" ${id}="sr"/></eIEC61850-6-100:LNodeInputs>`,
+			),
+			ref: sourceRef,
+			expected: { title: 'Trip', state: { binding: 'connected', implemented: false } },
+		},
+		'SourceRef with an extRefAddr and no source → open and implemented': {
+			sourceXml: lnodeWith(
+				`<eIEC61850-6-100:LNodeInputs ${id}="in"><eIEC61850-6-100:SourceRef input="Trip" extRefAddr="LD0/PTRC1.Op" ${id}="sr"/></eIEC61850-6-100:LNodeInputs>`,
+			),
+			ref: sourceRef,
+			expected: { title: 'Trip', state: { binding: 'open', implemented: true } },
+		},
+		'two SourceRefs share the input → titled "Trip(1).general"': {
+			sourceXml: lnodeWith(
+				`<eIEC61850-6-100:LNodeInputs ${id}="in"><eIEC61850-6-100:SourceRef input="Trip" pDA="general" ${id}="sr"/><eIEC61850-6-100:SourceRef input="Trip" pDA="q" ${id}="sr-q"/></eIEC61850-6-100:LNodeInputs>`,
+			),
+			ref: sourceRef,
+			expected: { title: 'Trip(1).general', state: { binding: 'open', implemented: false } },
+		},
+		'SourceRef in full mode → name, hint and source': {
+			sourceXml: lnodeWith(
+				`<eIEC61850-6-100:LNodeInputs ${id}="in"><eIEC61850-6-100:SourceRef input="Trip" pLN="XCBR" pDO="Pos" pDA="stVal" source="S1/F1/XCBR1.Pos.stVal" ${id}="sr"/></eIEC61850-6-100:LNodeInputs>`,
+			),
+			ref: sourceRef,
+			mode: 'full',
+			expected: {
+				title: 'Trip/XCBR.Pos.stVal/S1/F1/XCBR1.Pos.stVal',
+				state: { binding: 'connected', implemented: false },
+			},
+		},
+		'ControlRef with controlled data and extCtrlUuid → connected and implemented': {
+			allowIncoherentReferences:
+				'the uuid names an element of another file: the state reads its presence only',
+			sourceXml: lnodeWith(
+				`<eIEC61850-6-100:LNodeOutputs ${id}="out"><eIEC61850-6-100:ControlRef output="Oper" controlled="S1/F1/XCBR1.Pos" extCtrlUuid="uuid-ctrl" ${id}="cr"/></eIEC61850-6-100:LNodeOutputs>`,
+			),
+			ref: { tagName: 'ControlRef', id: 'cr' },
+			expected: { title: 'Oper', state: { binding: 'connected', implemented: true } },
+		},
+		'LNode bound by lnUuid to an LN of an IED with an ICD source file → locked, mapped to a real IED':
+			{
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<Function name="F1" ${id}="f1">
+								<LNode lnClass="PTRC" lnInst="1" iedName="IED1" ldInst="LD0" lnUuid="uuid-ln" ${id}="lnode"/>
+							</Function>
+						</Substation>
+						<IED name="IED1" ${id}="ied1">
+							<IEDSourceFiles ${id}="isf">
+								<SclFileReference fileType="ICD" ${id}="sfr"/>
+							</IEDSourceFiles>
+							<AccessPoint name="AP1" ${id}="ap">
+								<Server ${id}="srv">
+									<Authentication ${id}="auth"/>
+									<LDevice inst="LD0" ${id}="ld0">
+										<LN0 lnClass="LLN0" inst="" lnType="T0" ${id}="ln0"/>
+										<LN lnClass="PTRC" inst="1" lnType="T1" uuid="uuid-ln" ${id}="ln"/>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+					</SCL>
+				`,
+				ref: { tagName: 'LNode', id: 'lnode' },
+				expected: { title: 'PTRC1', state: { locked: true, mapping: 'real-ied' } },
+			},
+		'LNode bound to an LN of an IED without source files → locked, mapped to a specification IED': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<Function name="F1" ${id}="f1">
+							<LNode lnClass="PTRC" lnInst="1" iedName="IED1" ldInst="LD0" lnUuid="uuid-ln" ${id}="lnode"/>
+						</Function>
+					</Substation>
+					<IED name="IED1" ${id}="ied1">
+						<AccessPoint name="AP1" ${id}="ap">
+							<Server ${id}="srv">
+								<Authentication ${id}="auth"/>
+								<LDevice inst="LD0" ${id}="ld0">
+									<LN0 lnClass="LLN0" inst="" lnType="T0" ${id}="ln0"/>
+									<LN lnClass="PTRC" inst="1" lnType="T1" uuid="uuid-ln" ${id}="ln"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
+			ref: { tagName: 'LNode', id: 'lnode' },
+			expected: { title: 'PTRC1', state: { locked: true, mapping: 'specification-ied' } },
+		},
+		'LNode whose lnUuid names no LN of the document → locked, unmapped, its names are not tried': {
+			allowIncoherentReferences: 'a binding to an LN the document lacks is what is under test',
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<Function name="F1" ${id}="f1">
+							<LNode lnClass="PTRC" lnInst="1" iedName="IED1" ldInst="LD0" lnUuid="uuid-gone" ${id}="lnode"/>
+						</Function>
+					</Substation>
+					<IED name="IED1" ${id}="ied1">
+						<IEDSourceFiles ${id}="isf">
+							<SclFileReference fileType="ICD" ${id}="sfr"/>
+						</IEDSourceFiles>
+						<AccessPoint name="AP1" ${id}="ap">
+							<Server ${id}="srv">
+								<Authentication ${id}="auth"/>
+								<LDevice inst="LD0" ${id}="ld0">
+									<LN0 lnClass="LLN0" inst="" lnType="T0" ${id}="ln0"/>
+									<LN lnClass="PTRC" inst="1" lnType="T1" uuid="uuid-ln" ${id}="ln"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
+			ref: { tagName: 'LNode', id: 'lnode' },
+			expected: { title: 'PTRC1', state: { locked: true, mapping: 'unmapped' } },
+		},
+		'LNode without lnUuid, its names naming an LN of a real IED → mapped to a real IED': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<Function name="F1" ${id}="f1">
+							<LNode lnClass="PTRC" lnInst="1" iedName="IED1" ldInst="LD0" ${id}="lnode"/>
+						</Function>
+					</Substation>
+					<IED name="IED1" ${id}="ied1">
+						<IEDSourceFiles ${id}="isf">
+							<SclFileReference fileType="ICD" ${id}="sfr"/>
+						</IEDSourceFiles>
+						<AccessPoint name="AP1" ${id}="ap">
+							<Server ${id}="srv">
+								<Authentication ${id}="auth"/>
+								<LDevice inst="LD0" ${id}="ld0">
+									<LN0 lnClass="LLN0" inst="" lnType="T0" ${id}="ln0"/>
+									<LN lnClass="PTRC" inst="1" lnType="T1" uuid="uuid-ln" ${id}="ln"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
+			ref: { tagName: 'LNode', id: 'lnode' },
+			expected: { title: 'PTRC1', state: { locked: true, mapping: 'real-ied' } },
+		},
+		'LNode assigned to an IED → locked': {
+			sourceXml: lnodeWith('', 'iedName="IED1" ldInst="LD0"'),
+			ref: { tagName: 'LNode', id: 'lnode' },
+			expected: { title: 'PTRC1', state: { locked: true, mapping: 'unmapped' } },
+		},
+		'LNode with iedName None → not locked': {
+			sourceXml: lnodeWith(''),
+			ref: { tagName: 'LNode', id: 'lnode' },
+			expected: { title: 'PTRC1', state: { locked: false, mapping: 'unmapped' } },
+		},
+		'Function → no state': {
+			sourceXml: lnodeWith(''),
+			ref: { tagName: 'Function', id: 'f1' },
+			expected: { title: 'F1', state: undefined },
+		},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		act: async ({ source, testCase }) => {
+			const result = await of(source.query, testCase.ref, { mode: testCase.mode })
+			expect({ title: result.title, state: result.state }).toEqual({
+				title: testCase.expected.title,
+				state: testCase.expected.state,
+			})
 		},
 	})
 })

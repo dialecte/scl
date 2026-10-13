@@ -1,12 +1,11 @@
 import { isElementOf } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
 import { updatedOperation, upsertAttribute } from '@/v2019C1/hooks/shared/record-ops'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
-
-const UNBOUND_IED_MARKER = 'None'
 
 /**
  * Keep an `LNode`'s implementation identity in agreement with its `lnUuid` as a
@@ -83,7 +82,7 @@ async function specificationIdentity(
 	query: Core.Query<Config>,
 	lnodeRecord: Scl.RawRecord<Scl.ElementsOf>,
 ): Promise<Record<string, string | undefined>> {
-	const cleared = { iedName: UNBOUND_IED_MARKER, ldInst: undefined }
+	const cleared = { iedName: UNALLOCATED_IED_NAME, ldInst: undefined }
 
 	const specNaming = await query.getChild(
 		{ tagName: 'LNode', id: lnodeRecord.id } as Scl.Ref<Scl.ElementsOf>,

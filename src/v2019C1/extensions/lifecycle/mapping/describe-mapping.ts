@@ -1,8 +1,8 @@
 import { toRef } from '@dialecte/core/helpers'
 
+import { of } from '@/v2019C1/extensions/info/query'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/resolve-target-structure'
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
-import { extractElementTitle } from '@/v2019C1/extensions/presentation/query'
 import { buildElementPath } from '@/v2019C1/extensions/reference/query/build'
 
 import type {
@@ -143,7 +143,7 @@ export async function describeCandidate(
 	query: Core.Query<Config>,
 	ref: Scl.Ref<Scl.ElementsOf>,
 ): Promise<MappingCandidate> {
-	const title = await extractElementTitle(query, ref)
+	const { title } = await of(query, ref)
 	const elementPath = await buildElementPath(query, ref)
 	return { ref, title, path: elementPath?.path ?? '' }
 }
