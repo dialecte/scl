@@ -206,7 +206,7 @@ Path to an LNode or IED LN, optionally followed by `.DO[.SDO…][.DA[.BDA…]]` 
 Two path formats share this strategy:
 
 - **Substation hierarchy** (`LNodeSpecNaming`): path from SCL root through Substation elements to an `LNode`
-- **IEC 7-2 ObjectReference**: `IEDName/LDeviceInst/LNRef.DO[.SDO][.DA]` — targets `LN`/`LN0` inside the IED section (AccessPoint and Server are transparent in the index)
+- **IED object reference**: `IEDName/LDeviceInst/LNRef.DO[.SDO][.DA]` — targets `LN`/`LN0` inside the IED section (AccessPoint and Server are transparent in the index)
 
 | Element      | Path attribute | Target  |
 | ------------ | -------------- | ------- |
@@ -253,7 +253,7 @@ References within a BehaviorDescription scope. Paths are local — relative to t
 
 **Context resolution:** `parseBehaviorDescriptionPath` walks ancestry backwards to find the nearest `BehaviorDescription`, then builds the path from all ancestors before it (e.g., `S1/B1/XCBR1`).
 
-**Disambiguation stripping:** `inputName` / `outputName` can carry instance suffixes `(N)` (e.g., `Trip(2)`) or DA qualifiers (e.g., `Trip.pDA`). `stripDisambiguation` removes these before lookup.
+**Names, not stripped:** `inputName` / `outputName` is kept whole (a name may be `Trip(1).general`, an input may be `PTOC1.Op`). The lookup key is the BehaviorDescription's parent path joined with `.` (the name of a signal of that LNode), the fallback joined with `/` (a path down to the LNode, then the name). Signals are indexed at the end of the pass, named among their siblings (`indexSignals`), with the names an earlier version wrote as extra keys.
 
 **Example:** `InputVar.inputName="Trip"` inside a BehaviorDescription under `S1/B1/XCBR1` → `lookupKey: "S1/B1/XCBR1.Trip"` → matches the indexed SourceRef → populates `inputUuid`.
 

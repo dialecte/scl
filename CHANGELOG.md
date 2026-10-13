@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Changed
+
+- **A SourceRef or ControlRef is named among the signals of its LNode.** Inside a path (`InputVar.inputName`, `OutputVar.outputName`, a path through a signal), a SourceRef is its plain `input` while no other SourceRef of its LNode shares it, and `input(inputInst).pDA` once one does (the instance written even when it is `1`; ControlRef: `output(outputInst)`). The engine used to decide from the values alone: `Trip.general` for the only `Trip`, `Trip(2)` for the only one of instance 2, `Trip` for instance 1 of two. Adding, renaming or removing a SourceRef renames the references to the ones sharing its input. Breaking for stored names: on import the former names still resolve and are written again in the standard form.
+
 ### Fixed
 
+- **A name with a qualifier resolves.** `inputName="Trip.general"`, `"Trip(2)"` or the name of an input holding a dot (`PTOC1.Op`) did not resolve on import nor through `resolveReferencePath` / `resolveElementPath`: the name was cut at its first `(` or `.`. It is now compared whole with the names built for the candidates, including from a BehaviorDescription of the Function (`PTRC1.Trip`).
 - **A reference written with its uuid only now gets its path.** Creating a reference with only its uuid attribute (`functionUuid`, `sourceLNodeUuid`, ...) left the path attribute (`function`, `source`, ...) out, and a later rename of the target did not add it: a tool reading the paths saw no target. The path is now written on create, on the next rename of the target, and on import for a file that carries the uuid only (a uuid naming no element of the file leaves the reference as it is). A `SourceRef`, `ControlRef` or `ProcessEcho` path names the data of its companions (`S1/F1/XCBR1.Pos.stVal`).
-- **`InputVar` / `OutputVar` paths are local to their behaviour description.** `dataName` named the logical node (`XCBR1`) instead of the data (`Pos.stVal`), so a rename of that logical node overwrote a correct `dataName`. `dataName`, `inputName` and `outputName` are now the path from the parent of the `BehaviorDescription` down to the target (IEC TR 61850-90-30 Tables 37 / 38): `Pos.stVal` and `Trip` when it sits in the logical node, `XCBR1.Pos.stVal` and `XCBR1.Trip` when it sits in the function.
+- **`InputVar` / `OutputVar` paths are local to their behaviour description.** `dataName` named the logical node (`XCBR1`) instead of the data (`Pos.stVal`), so a rename of that logical node overwrote a correct `dataName`. `dataName`, `inputName` and `outputName` are now the path from the parent of the `BehaviorDescription` down to the target: `Pos.stVal` and `Trip` when it sits in the logical node, `XCBR1.Pos.stVal` and `XCBR1.Trip` when it sits in the function.
 
 ## [0.6.0] - 2026-10-08
 
@@ -420,7 +425,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `presentation.extractElementTitle` accepts `{ mode?: 'compact' | 'full' }` (defaults to compact).
 - `presentation.extractElementTitle` overloaded: pass `{ withLabels: true }` to receive `{ title: string; labels: Record<string, string> }` with `<Labels>` collected; default call still returns `string` - no breaking change.
-- Title overrides for IEC 90-30 and core SCL elements: `ExtRef`, `FCDA`, `ConnectedAP`, `ControlRef`, `SourceRef`, `FunctionRef`, `ApplicationSclRef`, `LNodeSpecNaming`, `SubscriberLNode`, `ControllingLNode`, `InputVar`, `OutputVar`, and more.
+- Title overrides for `eIEC61850-6-100` namespace elements and core SCL elements: `ExtRef`, `FCDA`, `ConnectedAP`, `ControlRef`, `SourceRef`, `FunctionRef`, `ApplicationSclRef`, `LNodeSpecNaming`, `SubscriberLNode`, `ControllingLNode`, `InputVar`, `OutputVar`, and more.
 
 ## [0.2.10] - 2026-06-03
 

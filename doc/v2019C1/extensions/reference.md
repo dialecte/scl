@@ -83,26 +83,29 @@ Returns `null` if the record is not found. The path is built by concatenating ea
 
 Most elements contribute their `name` attribute as segment. Special cases:
 
-| Element    | Segment format                            | Example                   |
-| ---------- | ----------------------------------------- | ------------------------- |
-| LNode/LN   | `prefix` + `lnClass` + `inst`             | `PXCBR1`, `LLN0`          |
-| LDevice    | `inst` attribute                          | `LD0`                     |
-| SourceRef  | `input` + optional `(inputInst)` + `.pDA` | `Trip`, `Trip(2).general` |
-| ControlRef | `output` + optional `(outputInst)`        | `TripCmd`, `TripCmd(2)`   |
-| ExtRef     | `intAddr` attribute                       | `TrCmd.stVal`             |
+| Element    | Segment format                      | Example                   |
+| ---------- | ----------------------------------- | ------------------------- |
+| LNode/LN   | `prefix` + `lnClass` + `inst`       | `PXCBR1`, `LLN0`          |
+| LDevice    | `inst` attribute                    | `LD0`                     |
+| SourceRef  | named among its siblings, see below | `Trip`, `Trip(1).general` |
+| ControlRef | named among its siblings, see below | `TripCmd`, `TripCmd(2)`   |
+| ExtRef     | `intAddr` attribute                 | `TrCmd.stVal`             |
 
-**SourceRef/ControlRef disambiguation** (XSD identity constraints):
+**SourceRef/ControlRef names**: a signal is named among the SourceRefs (ControlRefs) of its LNode.
 
-- `(inputInst)` is appended when `inputInst` is present and != `"1"` (the XSD default)
-- `.pDA` is appended when `pDA` is non-empty
-- `(outputInst)` follows the same rule for ControlRef
+- While no other SourceRef of the LNode has the same `input`, the name is the plain `input`: no instance, no `pDA`.
+- Once one does, the name is `input(inputInst)`, then `.pDA` when `pDA` is set. The instance is written even when it is the schema default `1`.
+- ControlRef: `output`, or `output(outputInst)` once another ControlRef has the same `output`.
+- Adding, renaming or removing a SourceRef / ControlRef renames the references to the ones that share its name.
+- A name is read back by comparing it with the names built for the candidates, never by splitting it: an `input` may itself hold a dot (`PTOC1.Op`).
 
 ```ts
-// SourceRef with input="Trip", inputInst="1", pDA=""  ->  "Trip"
-// SourceRef with input="Trip", inputInst="2", pDA=""  ->  "Trip(2)"
-// SourceRef with input="Trip", inputInst="1", pDA="general"  ->  "Trip.general"
-// SourceRef with input="Trip", inputInst="2", pDA="general"  ->  "Trip(2).general"
+// Trip alone                          ->  "Trip"   (also with pDA="general", or inputInst="2")
+// Trip pDA="general" + Trip pDA="q"   ->  "Trip(1).general", "Trip(1).q"
+// Trip + Trip inputInst="2"           ->  "Trip(1)", "Trip(2)"
 ```
+
+On import, the names an earlier version wrote (`Trip.general` for the only `Trip`, `Trip(2)` for the only one of instance 2, `Trip` for instance 1 of several) still resolve, and an `InputVar` / `OutputVar` name is written again in the standard form.
 
 ---
 
@@ -141,7 +144,7 @@ Derives the resolution strategy from `UUID_REFERENCE_PAIRS` using the reference 
 Element-specific behaviour:
 
 - **lnode** refs (`SourceRef`, `ControlRef`, `ProcessEcho`, `LNodeDataRef`): the DO/DA qualifier is taken from the companion `*DoName`/`*DaName` attributes when the stored path already carries one, or when the reference has no path yet; a stored path that stops at the LN level stays companions-only.
-- **behavior-description** refs (`InputVar`, `OutputVar`): a local path, from the parent of the `BehaviorDescription` down to the target, that parent left out (IEC TR 61850-90-30 Tables 37 / 38). `dataName` ends with the companion DO[.DA]: `Pos.stVal` when the target is the `LNode` holding the `BehaviorDescription`, `XCBR1.Pos.stVal` from its `Function`. `inputName` / `outputName`: `Trip` from the `LNode`, `XCBR1.Trip` from its `Function`. `null` when the target is not below that parent.
+- **behavior-description** refs (`InputVar`, `OutputVar`): a local path, from the parent of the `BehaviorDescription` down to the target, that parent left out. `dataName` ends with the companion DO[.DA]: `Pos.stVal` when the target is the `LNode` holding the `BehaviorDescription`, `XCBR1.Pos.stVal` from its `Function`. `inputName` / `outputName`: `Trip` from the `LNode`, `XCBR1.Trip` from its `Function`. `null` when the target is not below that parent.
 - **mapped data** (`DOS`/`SDS`/`DAS`): returns `null` — `mappedDoName`/`mappedDaName` is a data path inside the logical node named by `mappedLnUuid`, not a path to the target element. The hooks store it (see [Automatic coherence](#automatic-coherence-record-hooks)); read it with [`resolveMappedData`](#resolvemappeddata).
 
 ---
