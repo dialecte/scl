@@ -4,11 +4,18 @@ import {
 	UUID_REFERENCE_PAIRS,
 } from '@/v2019C1/constants'
 import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
+import { composeReferencePath } from '@/v2019C1/extensions/reference/query/build/compose-reference-path'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
 
-import type { PendingResolution, UnsupportedXPathWarning } from './io-hooks.types'
+import type {
+	IndexedTarget,
+	PendingPathFill,
+	PendingResolution,
+	UnsupportedXPathWarning,
+} from './io-hooks.types'
+import type { PathSegmentWithRef } from '@/v2019C1/extensions/reference/query/build'
 import type {
 	AnyAttribute,
 	AnyRawRecord,
@@ -64,6 +71,8 @@ export function createSclIoHooks(): IOHooks {
 	type Uuid = string & {}
 	const pathIndex: Map<Path, Uuid> = new Map()
 	const pendingResolutions: PendingResolution[] = []
+	const targetsByUuid: Map<Uuid, IndexedTarget> = new Map()
+	const pendingPathFills: PendingPathFill[] = []
 	const xpathWarnings: UnsupportedXPathWarning[] = []
 	let mappedDataImport = createMappedDataImport()
 
@@ -83,7 +92,10 @@ export function createSclIoHooks(): IOHooks {
 		// Index target elements: build path → uuid mapping
 		if (isTargetElement) {
 			const elementPath = buildPathFromAncestry({ record, ancestry })
-			if (elementPath) pathIndex.set(elementPath.path, uuid)
+			if (elementPath) {
+				pathIndex.set(elementPath.path, uuid)
+				targetsByUuid.set(uuid, { tagName, path: elementPath })
+			}
 		}
 
 		const hasReferences = REFERENCE_TAG_NAMES.has(tagName)
@@ -98,13 +110,29 @@ export function createSclIoHooks(): IOHooks {
 				(attribute: AnyAttribute) => attribute.name === pair.attribute.path,
 			)?.value
 
-			if (!pathValue) continue
-
-			// Only resolve if uuid is not already set
 			const existingUuid = record.attributes.find(
 				(attribute: AnyAttribute) => attribute.name === pair.attribute.uuid,
 			)?.value
 
+			// A uuid without its path: the path is written once every target is stored. An XPath
+			// selector (`unsupported`) is never rebuilt as a name path.
+			if (!pathValue) {
+				if (existingUuid && pair.resolution !== RESOLUTION_TYPE.unsupported) {
+					pendingPathFills.push({
+						recordId: record.id,
+						pair,
+						uuidValue: existingUuid,
+						referenceAttributes: record.attributes,
+						behaviorContext:
+							pair.resolution === RESOLUTION_TYPE.behaviorDescription
+								? behaviorContextFromAncestry(ancestry)
+								: undefined,
+					})
+				}
+				continue
+			}
+
+			// Only resolve if uuid is not already set
 			if (existingUuid) continue
 
 			const parsed = parseReferencePath(pair.resolution, pair.attribute.path, pathValue, ancestry)
@@ -140,6 +168,24 @@ export function createSclIoHooks(): IOHooks {
 		const updates: AfterImportResult['updates'] = []
 		const warnings: ImportWarning[] = [...xpathWarnings]
 
+		// A reference stored with its uuid only gets the path of the target the uuid names, composed
+		// like the record hooks compose it. A uuid naming no element of the file is left alone.
+		for (const fill of pendingPathFills) {
+			const target = targetsByUuid.get(fill.uuidValue)
+			if (!target || !(fill.pair.target as readonly string[]).includes(target.tagName)) continue
+			const path = composeReferencePath({
+				pair: fill.pair,
+				referenceAttributes: fill.referenceAttributes,
+				targetPath: target.path,
+				behaviorContext: fill.behaviorContext,
+			})
+			if (!path) continue
+			updates.push({
+				recordId: fill.recordId,
+				attributes: [{ name: fill.pair.attribute.path, value: path }],
+			})
+		}
+
 		for (const pending of pendingResolutions) {
 			const resolvedUuid =
 				pathIndex.get(pending.lookupKey) ??
@@ -174,6 +220,8 @@ export function createSclIoHooks(): IOHooks {
 
 		pathIndex.clear()
 		pendingResolutions.length = 0
+		pendingPathFills.length = 0
+		targetsByUuid.clear()
 		xpathWarnings.length = 0
 
 		return {
@@ -186,4 +234,20 @@ export function createSclIoHooks(): IOHooks {
 		beforeImportRecord,
 		afterImport,
 	}
+}
+
+/**
+ * The path segments of the parent of the nearest BehaviorDescription in `ancestry` (the
+ * BehaviorDescription left out), as the record hooks read them through a query.
+ */
+function behaviorContextFromAncestry(
+	ancestry: readonly AnyRawRecord[],
+): PathSegmentWithRef[] | undefined {
+	const index = ancestry.findLastIndex((ancestor) => ancestor.tagName === 'BehaviorDescription')
+	if (index === -1) return undefined
+	const behaviorPath = buildPathFromAncestry({
+		record: ancestry[index],
+		ancestry: ancestry.slice(0, index),
+	})
+	return behaviorPath?.segments.slice(0, -1)
 }

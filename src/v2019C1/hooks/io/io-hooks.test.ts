@@ -3,8 +3,13 @@ import { createSclIoHooks } from './io-hooks'
 import { describe, it, expect } from 'vitest'
 
 import { Scl, SCL_NAMESPACES } from '@/v2019C1/config'
+import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
+import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 import type { AnyRawRecord } from '@dialecte/core'
+
+const id = CUSTOM_RECORD_ID_ATTRIBUTE
+const ns = ALL_XMLNS_NAMESPACES
 
 describe('createSclIoHooks', () => {
 	type TestCase = {
@@ -209,3 +214,101 @@ function makeRecord(tagName: string, attributes: Record<string, string> = {}): A
 		children: [],
 	}
 }
+
+describe('import of a reference holding its uuid only', () => {
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		'FunctionCatRef with functionUuid, no function path → path written on import': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<Function name="F1" uuid="uuid-target" ${id}="target"/>
+						<eIEC61850-6-100:FunctionCategory name="Cat1" ${id}="cat1">
+							<!-- no function path: a tool that writes the uuid only -->
+							<eIEC61850-6-100:FunctionCatRef functionUuid="uuid-target" ${id}="ref"/>
+						</eIEC61850-6-100:FunctionCategory>
+					</Substation>
+				</SCL>
+			`,
+			expectedQueries: [
+				'//v2019C1:FunctionCatRef[@functionUuid="uuid-target" and @function="S1/F1"]',
+			],
+		},
+		'SourceRef with sourceLNodeUuid + DO/DA, no source path → path with the data written on import':
+			{
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<Function name="F1" ${id}="f1">
+								<LNode lnClass="XCBR" lnInst="1" iedName="None" uuid="uuid-target" ${id}="target">
+									<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1" ${id}="spec"/>
+								</LNode>
+								<LNode lnClass="PTRC" lnInst="1" iedName="None" ${id}="owner">
+									<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+										<eIEC61850-6-100:SourceRef input="Pos" sourceLNodeUuid="uuid-target" sourceDoName="Pos" sourceDaName="stVal" ${id}="ref"/>
+									</eIEC61850-6-100:LNodeInputs>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				expectedQueries: [
+					'//v2019C1:SourceRef[@sourceLNodeUuid="uuid-target" and @source="S1/F1/XCBR1.Pos.stVal"]',
+				],
+			},
+		'InputVar with lnodeUuid of its LNode + DO/DA, no dataName → local data path written on import':
+			{
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<Function name="F1" ${id}="f1">
+								<LNode lnClass="XCBR" lnInst="1" iedName="None" uuid="uuid-target" ${id}="target">
+									<eIEC61850-6-100:BehaviorDescription name="BD1" ${id}="bd1">
+										<eIEC61850-6-100:InputVar varName="pos" lnodeUuid="uuid-target" doName="Pos" daName="stVal" ${id}="ref"/>
+									</eIEC61850-6-100:BehaviorDescription>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				expectedQueries: ['//v2019C1:InputVar[@lnodeUuid="uuid-target" and @dataName="Pos.stVal"]'],
+			},
+		'InputVar in a BehaviorDescription of the Function, inputUuid only → inputName "<LNode>.<input>" written on import':
+			{
+				sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<Function name="F1" ${id}="f1">
+							<LNode lnClass="PTRC" lnInst="1" iedName="None" ${id}="owner">
+								<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+									<eIEC61850-6-100:SourceRef input="Trip" uuid="uuid-target" ${id}="target"/>
+								</eIEC61850-6-100:LNodeInputs>
+							</LNode>
+							<eIEC61850-6-100:BehaviorDescription name="BD1" ${id}="bd1">
+								<eIEC61850-6-100:InputVar varName="trip" inputUuid="uuid-target" ${id}="ref"/>
+							</eIEC61850-6-100:BehaviorDescription>
+						</Function>
+					</Substation>
+				</SCL>
+			`,
+				expectedQueries: [
+					'//v2019C1:InputVar[@inputUuid="uuid-target" and @inputName="PTRC1.Trip"]',
+				],
+			},
+		'reference whose uuid names no element of the file → left without path': {
+			allowIncoherentReferences: 'a uuid naming an element of another file is what is under test',
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<eIEC61850-6-100:FunctionCategory name="Cat1" ${id}="cat1">
+							<eIEC61850-6-100:FunctionCatRef functionUuid="uuid-elsewhere" ${id}="ref"/>
+						</eIEC61850-6-100:FunctionCategory>
+					</Substation>
+				</SCL>
+			`,
+			expectedQueries: ['//v2019C1:FunctionCatRef[@functionUuid="uuid-elsewhere"]'],
+			unexpectedQueries: ['//v2019C1:FunctionCatRef[@function]'],
+		},
+	}
+
+	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+})
