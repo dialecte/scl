@@ -38,6 +38,28 @@ describe('updateRefPaths', () => {
 				unexpectedQueries: ['//v2019C1:FunctionCatRef[@function="Sub1/F1"]'],
 			},
 
+			'direct — ref holding the uuid only, target renamed → path written': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation ${id}="sub1" name="Sub1">
+							<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="Cat1">
+								<!-- no function path: written by a tool that set the uuid only -->
+								<eIEC61850-6-100:FunctionCatRef ${id}="ref1" functionUuid="uuid-f1"/>
+							</eIEC61850-6-100:FunctionCategory>
+							<Function ${id}="f1" name="F1" uuid="uuid-f1"/>
+						</Substation>
+					</SCL>
+				`,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update({ tagName: 'Function', id: 'f1' }, { attributes: { name: 'F1New' } })
+					})
+				},
+				expectedQueries: [
+					'//v2019C1:FunctionCatRef[@functionUuid="uuid-f1" and @function="Sub1/F1New"]',
+				],
+			},
+
 			'direct — uuid mismatch → only matching ref updated, other untouched': {
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">
@@ -215,8 +237,9 @@ describe('updateRefPaths', () => {
 
 			// ── Strategy: behavior-description ───────────────────────────────────
 
-			'behavior-description — update SourceRef.input → InputVar.inputName updated': {
-				sourceXml: /* xml */ `
+			'behavior-description — BehaviorDescription under the Function, SourceRef.input updated → inputName "<LNode>.<input>" updated':
+				{
+					sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
@@ -232,17 +255,19 @@ describe('updateRefPaths', () => {
 						</Substation>
 					</SCL>
 				`,
-				act: async (document) => {
-					await document.transaction(async (tx) => {
-						await tx.update(
-							{ tagName: 'SourceRef', id: 'sref1' },
-							{ attributes: { input: 'TripCmd2' } },
-						)
-					})
+					act: async (document) => {
+						await document.transaction(async (tx) => {
+							await tx.update(
+								{ tagName: 'SourceRef', id: 'sref1' },
+								{ attributes: { input: 'TripCmd2' } },
+							)
+						})
+					},
+					expectedQueries: [
+						'//v2019C1:InputVar[@inputUuid="uuid-sref1" and @inputName="XCBR1.TripCmd2"]',
+					],
+					unexpectedQueries: ['//v2019C1:InputVar[@inputName="TripCmd"]'],
 				},
-				expectedQueries: ['//v2019C1:InputVar[@inputName="TripCmd2"]'],
-				unexpectedQueries: ['//v2019C1:InputVar[@inputName="TripCmd"]'],
-			},
 
 			// ── Companion DO/DA ⇔ path qualifier coherence ───────────────────────
 

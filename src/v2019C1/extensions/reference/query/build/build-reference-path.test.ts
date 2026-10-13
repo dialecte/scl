@@ -185,16 +185,11 @@ describe('buildReferencePath', () => {
 								<LNode iedName="None" lnClass="XCBR" lnInst="1" prefix="" ${ID}="lnode-1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeInputs>
-											<eIEC61850-6-100:SourceRef input="Trip" uuid="sr-uuid" ${ID}="sr-1">
-												<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
-													<eIEC61850-6-100:InputVar
-												inputName=""
-												inputUuid="sr-uuid"
-												dataName=""
-												${ID}="iv-1"/>
-												</eIEC61850-6-100:BehaviorDescription>
-											</eIEC61850-6-100:SourceRef>
+											<eIEC61850-6-100:SourceRef input="Trip" uuid="sr-uuid" ${ID}="sr-1"/>
 										</eIEC61850-6-100:LNodeInputs>
+										<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
+											<eIEC61850-6-100:InputVar inputUuid="sr-uuid" ${ID}="iv-1"/>
+										</eIEC61850-6-100:BehaviorDescription>
 									</Private>
 								</LNode>
 							</Bay>
@@ -216,16 +211,11 @@ describe('buildReferencePath', () => {
 								<LNode iedName="None" lnClass="XCBR" lnInst="1" prefix="" ${ID}="lnode-1">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:LNodeOutputs>
-											<eIEC61850-6-100:ControlRef output="TrCmd" uuid="cr-uuid" ${ID}="cr-1">
-												<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
-													<eIEC61850-6-100:OutputVar
-												outputName=""
-												outputUuid="cr-uuid"
-												dataName=""
-												${ID}="ov-1"/>
-												</eIEC61850-6-100:BehaviorDescription>
-											</eIEC61850-6-100:ControlRef>
+											<eIEC61850-6-100:ControlRef output="TrCmd" uuid="cr-uuid" ${ID}="cr-1"/>
 										</eIEC61850-6-100:LNodeOutputs>
+										<eIEC61850-6-100:BehaviorDescription name="BD1" ${ID}="bd-1">
+											<eIEC61850-6-100:OutputVar outputUuid="cr-uuid" ${ID}="ov-1"/>
+										</eIEC61850-6-100:BehaviorDescription>
 									</Private>
 								</LNode>
 							</Bay>

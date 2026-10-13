@@ -6,7 +6,9 @@ import { buildReferencePath } from '@/v2019C1/extensions/reference/query/build'
 import {
 	getRefEntriesForTarget,
 	reconcileMappedData,
+	updatedOperation,
 	updateRefsForEntry,
+	upsertAttribute,
 } from '@/v2019C1/hooks/shared'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -87,18 +89,8 @@ async function resolveRefPair<GenericElement extends Scl.ElementsOf>(params: {
 	const newPathValue = await buildReferencePath(query, { reference, target })
 	if (!newPathValue) return null
 
-	const updatedAttributes = childRecord.attributes.map((a) =>
-		a.name === pair.pathAttr ? { ...a, value: newPathValue } : a,
-	)
-
-	return {
-		status: 'updated',
-		oldRecord: childRecord as unknown as Scl.RawRecord<Scl.ElementsOf>,
-		newRecord: {
-			...childRecord,
-			attributes: updatedAttributes,
-		} as unknown as Scl.RawRecord<Scl.ElementsOf>,
-	}
+	const record = widen(childRecord)
+	return updatedOperation(record, upsertAttribute(record.attributes, pair.pathAttr, newPathValue))
 }
 
 async function findTargetByUuid(params: {

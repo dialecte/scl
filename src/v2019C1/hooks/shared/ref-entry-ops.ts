@@ -6,6 +6,7 @@ import {
 	ALL_RESOLUTIONS,
 	RESOLUTION_TARGET_REFS,
 } from '@/v2019C1/extensions/reference'
+import { updatedOperation, upsertAttribute } from '@/v2019C1/hooks/shared/record-ops'
 
 import type { RefEntry } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
@@ -38,15 +39,10 @@ export async function updateRefsForEntry(params: {
 		)?.value
 		if (currentPath === newPath) continue
 
-		const updatedAttributes = refRecord.attributes.map((attribute) =>
-			attribute.name === entry.pathAttr ? { ...attribute, value: newPath } : attribute,
+		const record = toRawRecord(refRecord)
+		operations.push(
+			updatedOperation(record, upsertAttribute(record.attributes, entry.pathAttr, newPath)),
 		)
-
-		operations.push({
-			status: 'updated',
-			oldRecord: toRawRecord(refRecord),
-			newRecord: toRawRecord({ ...refRecord, attributes: updatedAttributes }),
-		})
 	}
 
 	return operations

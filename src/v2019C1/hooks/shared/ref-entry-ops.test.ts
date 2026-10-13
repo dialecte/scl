@@ -166,8 +166,9 @@ describe('ref-entry-ops', () => {
 				unexpectedQueries: ['//v2019C1:SourceRef[@source="Sub1/F1/XCBR1.Pos.stVal"]'],
 			},
 
-			'behavior-description — rename SourceRef.input → InputVar.inputName updated': {
-				sourceXml: /* xml */ `
+			'behavior-description — BehaviorDescription under the Function, SourceRef.input renamed → inputName "<LNode>.<input>" updated':
+				{
+					sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
 							<Function ${id}="f1" name="F1">
@@ -187,17 +188,19 @@ describe('ref-entry-ops', () => {
 						</Substation>
 					</SCL>
 				`,
-				act: async (document) => {
-					await document.transaction(async (tx) => {
-						await tx.update(
-							{ tagName: 'SourceRef', id: 'sref1' },
-							{ attributes: { input: 'TripCmd2' } },
-						)
-					})
+					act: async (document) => {
+						await document.transaction(async (tx) => {
+							await tx.update(
+								{ tagName: 'SourceRef', id: 'sref1' },
+								{ attributes: { input: 'TripCmd2' } },
+							)
+						})
+					},
+					expectedQueries: [
+						'//v2019C1:InputVar[@inputUuid="uuid-sref1" and @inputName="XCBR1.TripCmd2"]',
+					],
+					unexpectedQueries: ['//v2019C1:InputVar[@inputName="TripCmd"]'],
 				},
-				expectedQueries: ['//v2019C1:InputVar[@inputName="TripCmd2"]'],
-				unexpectedQueries: ['//v2019C1:InputVar[@inputName="TripCmd"]'],
-			},
 		}
 
 		runSclTestCases.withExport({

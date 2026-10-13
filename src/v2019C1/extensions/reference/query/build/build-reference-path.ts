@@ -1,14 +1,12 @@
-import { splitLnodeQualifier } from '../resolve/parse-path'
 import { buildElementPath } from './build-element-path'
-import { getPathSegment } from './path-segment'
-
-import { toRawRecord } from '@dialecte/core/helpers'
+import { composeReferencePath } from './compose-reference-path'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { RESOLUTION_TYPE, MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference'
+import { RESOLUTION_TYPE, MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference/constants'
 
+import type { PathSegmentWithRef } from './path-segment.types'
 import type { Scl, Config } from '@/v2019C1/config'
-import type { ResolutionType, ReferencePair } from '@/v2019C1/extensions/reference'
+import type { ReferencePair } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -16,8 +14,9 @@ import type * as Core from '@dialecte/core'
  * when pointing at a given target.
  *
  * Derives resolution strategy and path attribute from `UUID_REFERENCE_PAIRS`
- * using `reference.tagName` + `target.tagName`. For lnode resolution,
- * reads the REF's current path value to preserve the DO/DA qualifier.
+ * using `reference.tagName` + `target.tagName`, reads the parts through the query
+ * (the target's path, the reference's own attributes, the BehaviorDescription's
+ * parent), and composes them with `composeReferencePath`.
  *
  * `unsupported` marks a path we cannot *parse* (path -> target) during streaming
  * (e.g. `VariableApplyTo.element` may be an XPath). The reverse direction
@@ -46,62 +45,30 @@ export async function buildReferencePath(
 	const pair = findPair(reference.tagName, target.tagName)
 	if (!pair) return null
 
-	const resolution = pair.resolution as ResolutionType
+	const targetPath = await buildElementPath(query, target)
+	if (!targetPath) return null
 
-	if (resolution === RESOLUTION_TYPE.behaviorDescription) {
-		const record = await query.getRecord(target)
-		if (!record) return null
-		return getPathSegment(toRawRecord(record))?.segment ?? null
-	}
+	const referenceRecord = await query.getRecord(reference)
+	const behaviorContext =
+		pair.resolution === RESOLUTION_TYPE.behaviorDescription && referenceRecord?.parent
+			? await behaviorContextOf(query, referenceRecord.parent as Scl.Ref<Scl.ElementsOf>)
+			: undefined
 
-	const elementPath = await buildElementPath(query, target)
-	if (!elementPath) return null
-	const basePath = elementPath.path
-
-	if (resolution === RESOLUTION_TYPE.lnode) {
-		const refRecord = await query.getRecord(reference)
-		if (!refRecord) return basePath
-		// A path that stops at the LN level is a valid companions-only form (the
-		// DO/DA lives in the companion attributes); leave it at that level. Only when
-		// the path already carries a DO/DA qualifier do the companions drive its value.
-		const currentQualifier = currentPathQualifier(refRecord, pair)
-		if (!currentQualifier) return basePath
-		const qualifier = qualifierFromCompanions(refRecord, pair) ?? currentQualifier
-		return `${basePath}.${qualifier}`
-	}
-
-	// direct + unsupported: the plain name-path to the target.
-	return basePath
+	return composeReferencePath({
+		pair,
+		referenceAttributes: referenceRecord?.attributes ?? [],
+		targetPath,
+		behaviorContext,
+	})
 }
 
-/**
- * Build the DO[.DA] qualifier from the companion name attributes (the
- * authoritative expression of the DO/DA), so a rebind done by editing
- * `sourceDoName`/`sourceDaName` (or their peers) is reflected in the path.
- * Returns undefined when no companion DO name is set.
- */
-function qualifierFromCompanions(
-	record: { attributes: readonly { name: string; value: string }[] },
-	pair: ReferencePair,
-): string | undefined {
-	const [doCompanion, daCompanion] = pair.companions
-	if (!doCompanion) return undefined
-	const doValue = record.attributes.find((a) => a.name === doCompanion.name)?.value
-	if (!doValue) return undefined
-	const daValue = daCompanion
-		? record.attributes.find((a) => a.name === daCompanion.name)?.value
-		: undefined
-	return daValue ? `${doValue}.${daValue}` : doValue
-}
-
-/** The DO[.DA] qualifier currently embedded in the reference's own path value. */
-function currentPathQualifier(
-	record: { attributes: readonly { name: string; value: string }[] },
-	pair: ReferencePair,
-): string | undefined {
-	const currentValue = record.attributes.find((a) => a.name === pair.attribute.path)?.value
-	if (!currentValue) return undefined
-	return splitLnodeQualifier(currentValue).qualifier
+/** The path segments of the parent of a BehaviorDescription (the BehaviorDescription left out). */
+async function behaviorContextOf(
+	query: Core.Query<Config>,
+	behaviorDescription: Scl.Ref<Scl.ElementsOf>,
+): Promise<PathSegmentWithRef[] | undefined> {
+	const behaviorPath = await buildElementPath(query, behaviorDescription)
+	return behaviorPath?.segments.slice(0, -1)
 }
 
 function findPair(referenceTagName: string, targetTagName: string): ReferencePair | null {
