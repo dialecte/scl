@@ -1,7 +1,7 @@
 import { buildMappedLNodePath } from '../build/build-mapped-lnode-path'
 import { resolveElementPath } from './resolve-element-path'
 
-import type { MappedLNodeAttributes } from '../build/build-mapped-lnode-path'
+import type { MappedLNodeAttributes } from '../build/build-mapped-lnode-path.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 

@@ -441,6 +441,74 @@ describe('reference-parsing', () => {
 						'//v2019C1:SourceRef[@extRefAddr="CB_Function/LCBO1.TrCmd.stVal" and @extRefUuid="extref-trcmd-uuid"]',
 					],
 				},
+
+			'SourceRef.extRefAddr as the intAddr alone, in the LN the LNode is bound to → extRefUuid populated':
+				{
+					sourceXml: /* xml */ `
+						<SCL ${ALL_XMLNS_NAMESPACES}>
+							<Substation name="S1">
+								<Bay name="B1">
+									<LNode iedName="PIU" ldInst="CB_Function" lnClass="LCBO" lnInst="1">
+										<Private type="eIEC61850-6-100">
+											<eIEC61850-6-100:LNodeInputs>
+												<eIEC61850-6-100:SourceRef input="Trip" extRefAddr="TrCmd.stVal" />
+											</eIEC61850-6-100:LNodeInputs>
+										</Private>
+									</LNode>
+								</Bay>
+							</Substation>
+							<IED name="PIU">
+								<AccessPoint name="AP1">
+									<Server>
+										<LDevice inst="CB_Function">
+											<LN prefix="" lnClass="LCBO" inst="1">
+												<Inputs>
+													<ExtRef intAddr="TrCmd.stVal" uuid="extref-trcmd-uuid" />
+												</Inputs>
+											</LN>
+										</LDevice>
+									</Server>
+								</AccessPoint>
+							</IED>
+						</SCL>
+					`,
+					expectedQueries: [
+						'//v2019C1:SourceRef[@extRefAddr="TrCmd.stVal" and @extRefUuid="extref-trcmd-uuid"]',
+					],
+				},
+			'SourceRef.extRefAddr as the intAddr marked with "@" → extRefUuid populated': {
+				sourceXml: /* xml */ `
+						<SCL ${ALL_XMLNS_NAMESPACES}>
+							<Substation name="S1">
+								<Bay name="B1">
+									<LNode iedName="PIU" ldInst="CB_Function" lnClass="LCBO" lnInst="1">
+										<Private type="eIEC61850-6-100">
+											<eIEC61850-6-100:LNodeInputs>
+												<eIEC61850-6-100:SourceRef input="Trip" extRefAddr="@TrCmd.stVal" />
+											</eIEC61850-6-100:LNodeInputs>
+										</Private>
+									</LNode>
+								</Bay>
+							</Substation>
+							<IED name="PIU">
+								<AccessPoint name="AP1">
+									<Server>
+										<LDevice inst="CB_Function">
+											<LN prefix="" lnClass="LCBO" inst="1">
+												<Inputs>
+													<ExtRef intAddr="TrCmd.stVal" uuid="extref-trcmd-uuid" />
+												</Inputs>
+											</LN>
+										</LDevice>
+									</Server>
+								</AccessPoint>
+							</IED>
+						</SCL>
+					`,
+				expectedQueries: [
+					'//v2019C1:SourceRef[@extRefAddr="@TrCmd.stVal" and @extRefUuid="extref-trcmd-uuid"]',
+				],
+			},
 		}
 
 		runSclTestCases.withExport({

@@ -1,3 +1,4 @@
+import { buildMappedLNodePath } from '../build/build-mapped-lnode-path'
 import { getPathSegment, joinPathParts } from '../build/path-segment'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
@@ -121,7 +122,7 @@ export function parseReferencePath(params: {
 
 	if (resolution === RESOLUTION_TYPE.direct) return { lookupKey: pathValue }
 
-	if (resolution === RESOLUTION_TYPE.iedAddress) return parseIedAddressPath(pathValue, ancestry)
+	if (resolution === RESOLUTION_TYPE.iedAddress) return parseIedAddressPath({ pathValue, ancestry })
 
 	if (resolution === RESOLUTION_TYPE.lnode) return parseLnodePath(pathValue)
 
@@ -220,17 +221,33 @@ export function parseLnodePath(pathValue: string): ParsedReference {
 
 // ── ied-address strategy ─────────────────────────────────────────────
 
-function parseIedAddressPath(
-	pathValue: string,
-	ancestry?: readonly AnyRawRecord[],
-): ParsedReference {
-	if (ancestry) {
-		const iedName = findIedNameFromAncestry(ancestry)
-		if (iedName) {
-			return { lookupKey: pathValue, fallbackLookupKeys: [`${iedName}/${pathValue}`] }
-		}
-	}
-	return { lookupKey: pathValue }
+/**
+ * The address of the ExtRef / ExtCtrl implementing a signal, in one of its three forms: the full
+ * path (`IED/LD/LN.intAddr`); the path inside the IED of the LNode (`LD/LN.intAddr`); the `intAddr`
+ * alone (or marked `@intAddr`) when it sits in the LN implementing the LNode. Keys in that order.
+ */
+function parseIedAddressPath(params: {
+	pathValue: string
+	ancestry?: readonly AnyRawRecord[]
+}): ParsedReference {
+	const { pathValue, ancestry } = params
+	const lnode = ancestry?.findLast((ancestor) => ancestor.tagName === 'LNode')
+	if (!lnode) return { lookupKey: pathValue }
+
+	const intAddr = pathValue.startsWith('@') ? pathValue.slice(1) : undefined
+	const lnPath = buildMappedLNodePath(attributesOf(lnode))
+	const sameLnKey = lnPath ? `${lnPath}.${intAddr ?? pathValue}` : undefined
+	if (intAddr !== undefined) return { lookupKey: sameLnKey ?? intAddr }
+
+	const iedName = findIedNameFromAncestry(ancestry ?? [])
+	const keys = [iedName ? `${iedName}/${pathValue}` : undefined, sameLnKey].filter(
+		(key): key is string => key !== undefined,
+	)
+	return { lookupKey: pathValue, fallbackLookupKeys: keys }
+}
+
+function attributesOf(record: AnyRawRecord): Record<string, string> {
+	return Object.fromEntries(record.attributes.map((attribute) => [attribute.name, attribute.value]))
 }
 
 // ── behavior-description strategy ────────────────────────────────────

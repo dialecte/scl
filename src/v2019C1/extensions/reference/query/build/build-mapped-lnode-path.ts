@@ -1,3 +1,7 @@
+import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants/naming'
+
+import type { MappedLNodeAttributes } from './build-mapped-lnode-path.types'
+
 /**
  * Composes the canonical IED-section path of the `LN` that implements a mapped
  * `LNode`, from the LNode's implementation attributes
@@ -13,7 +17,7 @@
  */
 export function buildMappedLNodePath(attrs: MappedLNodeAttributes): string | null {
 	const iedName = attrs.iedName
-	if (!iedName || iedName === UNMAPPED_IED_NAME) return null
+	if (!iedName || iedName === UNALLOCATED_IED_NAME) return null
 
 	const ldInst = attrs.ldInst
 	const lnClass = attrs.lnClass
@@ -22,13 +26,3 @@ export function buildMappedLNodePath(attrs: MappedLNodeAttributes): string | nul
 	const lnSegment = `${attrs.prefix ?? ''}${lnClass}${attrs.lnInst ?? ''}`
 	return `${iedName}/${ldInst}/${lnSegment}`
 }
-
-export type MappedLNodeAttributes = {
-	iedName?: string
-	ldInst?: string
-	prefix?: string
-	lnClass?: string
-	lnInst?: string
-}
-
-const UNMAPPED_IED_NAME = 'None'

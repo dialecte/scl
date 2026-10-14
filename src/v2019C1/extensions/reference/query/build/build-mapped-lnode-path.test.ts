@@ -2,7 +2,7 @@ import { buildMappedLNodePath } from './build-mapped-lnode-path'
 
 import { describe, expect, test } from 'vitest'
 
-import type { MappedLNodeAttributes } from './build-mapped-lnode-path'
+import type { MappedLNodeAttributes } from './build-mapped-lnode-path.types'
 
 type TestCase = {
 	attrs: MappedLNodeAttributes
