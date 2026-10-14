@@ -17,7 +17,8 @@ import type * as Core from '@dialecte/core'
  *
  * Skips `unsupported` paths (e.g. `VariableApplyTo` XPaths), which must not be
  * regenerated as plain name-paths, and mapped-name refs (`DOS`/`SDS`/`DAS`), which
- * are reconciled separately.
+ * are reconciled separately. Every rebuilt path lands in one update of the record:
+ * an update per pair would each start from the same attributes and only the last would stay.
  */
 export async function reconcileReferrerRefPaths(params: {
 	oldRecord: Scl.RawRecord<Scl.ElementsOf>
@@ -30,14 +31,15 @@ export async function reconcileReferrerRefPaths(params: {
 	const pairs = UUID_REFERENCE_PAIRS[newRecord.tagName as keyof typeof UUID_REFERENCE_PAIRS]
 	if (!pairs) return []
 
-	const operations: Scl.Operation[] = []
+	let attributes: { name: string; value: string }[] = newRecord.attributes
 	for (const pair of pairs) {
 		if (pair.resolution === RESOLUTION_TYPE.unsupported) continue
 		if (!bindingAttrsChanged(oldRecord, newRecord, pair)) continue
-		const operation = await rebuildRefPath({ newRecord, pair, query })
-		if (operation) operations.push(operation)
+		const newPath = await rebuildRefPath({ newRecord, pair, query })
+		if (newPath) attributes = upsertAttribute(attributes, pair.attribute.path, newPath)
 	}
-	return operations
+	if (attributes === newRecord.attributes) return []
+	return [updatedOperation(newRecord, attributes)]
 }
 
 /** True when the pair's uuid attribute or any of its companion names changed. */
@@ -50,11 +52,12 @@ function bindingAttrsChanged(
 	return names.some((name) => attributeValue(oldRecord, name) !== attributeValue(newRecord, name))
 }
 
+/** The pair's path rebuilt from its target, or null when it cannot be built or is already up to date. */
 async function rebuildRefPath(params: {
 	newRecord: Scl.RawRecord<Scl.ElementsOf>
 	pair: ReferencePair
 	query: Core.Query<Config>
-}): Promise<Scl.Operation | null> {
+}): Promise<string | null> {
 	const { newRecord, pair, query } = params
 
 	const uuidValue = attributeValue(newRecord, pair.attribute.uuid)
@@ -69,8 +72,7 @@ async function rebuildRefPath(params: {
 
 	if (attributeValue(newRecord, pair.attribute.path) === newPath) return null
 
-	const attributes = upsertAttribute(newRecord.attributes, pair.attribute.path, newPath)
-	return updatedOperation(newRecord, attributes)
+	return newPath
 }
 
 async function findTargetByUuid(params: {

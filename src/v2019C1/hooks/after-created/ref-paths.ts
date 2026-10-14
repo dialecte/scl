@@ -47,6 +47,8 @@ export async function setRefPaths<GenericElement extends Scl.ElementsOf>(params:
  * The new element is a REF (e.g. FunctionCatRef).
  * If it carries a uuidAttr, look up the target element by UUID,
  * compute the path from the target's ancestry, set the pathAttr.
+ * Every pair's path lands in one update of the record: an update per pair would each
+ * start from the created attributes and only the last would stay.
  */
 async function setRefPathOnCreatedRef<GenericElement extends Scl.ElementsOf>(params: {
 	childRecord: Scl.RawRecord<GenericElement>
@@ -57,21 +59,23 @@ async function setRefPathOnCreatedRef<GenericElement extends Scl.ElementsOf>(par
 	const refPairs = PAIRS_BY_REF.get(childRecord.tagName)
 	if (!refPairs?.length) return []
 
-	const operations: Scl.Operation[] = []
+	const record = widen(childRecord)
+	let attributes: { name: string; value: string }[] = record.attributes
 
 	for (const pair of refPairs) {
-		const operation = await resolveRefPair({ childRecord, pair, query })
-		if (operation) operations.push(operation)
+		const pathValue = await resolveRefPairPath({ childRecord, pair, query })
+		if (pathValue) attributes = upsertAttribute(attributes, pair.pathAttr, pathValue)
 	}
 
-	return operations
+	if (attributes === record.attributes) return []
+	return [updatedOperation(record, attributes)]
 }
 
-async function resolveRefPair<GenericElement extends Scl.ElementsOf>(params: {
+async function resolveRefPairPath<GenericElement extends Scl.ElementsOf>(params: {
 	childRecord: Scl.RawRecord<GenericElement>
 	pair: RefPairEntry
 	query: Core.Query<Config>
-}): Promise<Scl.Operation | null> {
+}): Promise<string | null> {
 	const { childRecord, pair, query } = params
 
 	const uuidValue = childRecord.attributes.find((a) => a.name === pair.uuidAttr)?.value
@@ -86,11 +90,7 @@ async function resolveRefPair<GenericElement extends Scl.ElementsOf>(params: {
 
 	const reference = { tagName: childRecord.tagName, id: childRecord.id } as Scl.Ref<Scl.ElementsOf>
 	const target = { tagName: targetRecord.tagName, id: targetRecord.id } as Scl.Ref<Scl.ElementsOf>
-	const newPathValue = await buildReferencePath(query, { reference, target })
-	if (!newPathValue) return null
-
-	const record = widen(childRecord)
-	return updatedOperation(record, upsertAttribute(record.attributes, pair.pathAttr, newPathValue))
+	return await buildReferencePath(query, { reference, target })
 }
 
 async function findTargetByUuid(params: {

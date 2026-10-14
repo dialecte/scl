@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A mapped data name (`mappedDoName`, `mappedDaName`) is checked against every pattern level its schema type declares, read as the schema writes it (Unicode categories included).
 - The logical node classes a reference path accepts are those the schema enumerates, across its union of class lists.
 - A decision group's `editableAttributes` are those the element's definition declares where it sits, including the type it names with `xsi:type`. They used to be its tag's declared attributes only.
+- **A reference given several uuids at once gets every path.** A `SourceRef` or `ControlRef` created with both its source (controlled) LNode and its process resource, or pointed at both in one update, kept only the last path written (`resourceName`): its `source` (`controlled`) path was lost.
 
 ## [0.6.0] - 2026-10-14
 

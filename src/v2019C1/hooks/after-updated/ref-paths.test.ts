@@ -414,6 +414,50 @@ describe('updateRefPaths', () => {
 					unexpectedQueries: ['//v2019C1:ControlRef[@controlled="Sub1/F1/XCBR1.Pos"]'],
 				},
 
+			// ── Referrer re-pointed on several references at once ───────────────
+
+			'referrer — sourceLNodeUuid and resourceUuid changed together → source and resourceName both rebuilt':
+				{
+					sourceXml: /* xml */ `
+						<SCL ${ns} ${id}="root">
+							<Substation ${id}="sub1" name="S1">
+								<Function ${id}="f1" name="F1">
+									<Private type="eIEC61850-6-100">
+										<eIEC61850-6-100:ProcessResources>
+											<eIEC61850-6-100:ProcessResource name="PR1" uuid="uuid-resource-1"/>
+											<eIEC61850-6-100:ProcessResource name="PR2" uuid="uuid-resource-2"/>
+										</eIEC61850-6-100:ProcessResources>
+									</Private>
+									<LNode lnClass="XCBR" lnInst="1" iedName="None" uuid="uuid-lnode-1">
+										<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1"/>
+									</LNode>
+									<LNode lnClass="XCBR" lnInst="2" iedName="None" uuid="uuid-lnode-2">
+										<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="2"/>
+									</LNode>
+									<LNode lnClass="PTRC" lnInst="1" iedName="None">
+										<eIEC61850-6-100:LNodeInputs>
+											<eIEC61850-6-100:SourceRef ${id}="ref1" input="Pos" sourceLNodeUuid="uuid-lnode-1" sourceDoName="Pos" sourceDaName="stVal" source="S1/F1/XCBR1.Pos.stVal" resourceUuid="uuid-resource-1" resourceName="PR1"/>
+										</eIEC61850-6-100:LNodeInputs>
+									</LNode>
+								</Function>
+							</Substation>
+						</SCL>
+					`,
+					act: async (document) => {
+						await document.transaction(async (tx) => {
+							await tx.update(
+								{ tagName: 'SourceRef', id: 'ref1' },
+								{
+									attributes: { sourceLNodeUuid: 'uuid-lnode-2', resourceUuid: 'uuid-resource-2' },
+								},
+							)
+						})
+					},
+					expectedQueries: [
+						'//v2019C1:SourceRef[@source="S1/F1/XCBR2.Pos.stVal" and @resourceName="PR2"]',
+					],
+				},
+
 			// ── LNode identity ⇔ lnUuid binding ──────────────────────────────────
 
 			'lnode-binding — set lnUuid → identity stamped from the target LN': {

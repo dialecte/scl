@@ -654,4 +654,93 @@ describe('setRefPaths', () => {
 			},
 		})
 	})
+	describe('referrer created with several uuids', () => {
+		type TestCase = SclTest.BaseXmlTestCase & {
+			parent: Scl.Ref<Scl.ElementsOf>
+			referrer: { tagName: keyof typeof UUID_REFERENCE_PAIRS; attributes: Record<string, string> }
+		}
+
+		const testCases: SclTest.TestCases<TestCase> = {
+			'SourceRef with sourceLNodeUuid and resourceUuid → source and resourceName both written': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<Function name="F1" ${id}="f1">
+								<Private type="eIEC61850-6-100">
+									<eIEC61850-6-100:ProcessResources>
+										<eIEC61850-6-100:ProcessResource name="PR1" uuid="uuid-resource"/>
+									</eIEC61850-6-100:ProcessResources>
+								</Private>
+								<LNode lnClass="XCBR" lnInst="1" iedName="None" uuid="uuid-target">
+									<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1"/>
+								</LNode>
+								<LNode lnClass="PTRC" lnInst="1" iedName="None">
+									<eIEC61850-6-100:LNodeInputs ${id}="parent"/>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				parent: { tagName: 'LNodeInputs', id: 'parent' },
+				referrer: {
+					tagName: 'SourceRef',
+					attributes: {
+						input: 'Pos',
+						sourceLNodeUuid: 'uuid-target',
+						sourceDoName: 'Pos',
+						sourceDaName: 'stVal',
+						resourceUuid: 'uuid-resource',
+					},
+				},
+				expectedQueries: [
+					'//v2019C1:SourceRef[@source="S1/F1/XCBR1.Pos.stVal" and @resourceName="PR1"]',
+				],
+			},
+			'ControlRef with controlledLNodeUuid and resourceUuid → controlled and resourceName both written':
+				{
+					sourceXml: /* xml */ `
+						<SCL ${ns} ${id}="root">
+							<Substation name="S1" ${id}="s1">
+								<Function name="F1" ${id}="f1">
+									<Private type="eIEC61850-6-100">
+										<eIEC61850-6-100:ProcessResources>
+											<eIEC61850-6-100:ProcessResource name="PR1" uuid="uuid-resource"/>
+										</eIEC61850-6-100:ProcessResources>
+									</Private>
+									<LNode lnClass="XCBR" lnInst="1" iedName="None" uuid="uuid-target">
+										<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1"/>
+									</LNode>
+									<LNode lnClass="CSWI" lnInst="1" iedName="None">
+										<eIEC61850-6-100:LNodeOutputs ${id}="parent"/>
+									</LNode>
+								</Function>
+							</Substation>
+						</SCL>
+					`,
+					parent: { tagName: 'LNodeOutputs', id: 'parent' },
+					referrer: {
+						tagName: 'ControlRef',
+						attributes: {
+							output: 'Oper',
+							controlledLNodeUuid: 'uuid-target',
+							controlledDoName: 'Pos',
+							resourceUuid: 'uuid-resource',
+						},
+					},
+					expectedQueries: [
+						'//v2019C1:ControlRef[@controlled="S1/F1/XCBR1.Pos" and @resourceName="PR1"]',
+					],
+				},
+		}
+
+		runSclTestCases.withExport({
+			testCases,
+			act: async ({ source, testCase }) => {
+				await source.transaction(async (tx) => {
+					await tx.addChild(testCase.parent, testCase.referrer)
+				})
+				return { assertOn: 'source' }
+			},
+		})
+	})
 })
