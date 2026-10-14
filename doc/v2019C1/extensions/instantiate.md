@@ -44,7 +44,7 @@ Returns `{ functionRef, cloneMappings }` — the instantiated root (retagged to 
 
 An `AllocationRole` is an element the project holds once and several applications refer to. A role the ASD brings is **mapped** onto the project's role when the project has exactly one role of that name: it is not cloned, its function references are added to the project role, and the application's `AllocationRoleRef` points at it. The project role keeps its own attributes and receives no `templateUuid` — it is not an instance of the template's role.
 
-With no role of that name, or with several (none is picked), the role is created like any cloned element, and a name already taken at its level is bumped to a free one.
+With no role of that name, the role is created like any cloned element, and a name already taken at its level is bumped to a free one. With several, none is picked and none is created: the mapping is left undecided (`report.needsDecisions`), and `instantiate.asd` and `apply` refuse (`MAPPING_UNDECIDED`) until the consumer passes a choice in `resolution.mappings` — `{ existing }` or `{ create: {} }`.
 
 A role the project holds because an earlier placement of the same template created it comes first: it is the one proposed, even when it was renamed since.
 

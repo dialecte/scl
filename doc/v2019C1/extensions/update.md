@@ -23,17 +23,22 @@ The `reconcile` / `diff` primitives below (in `extensions/lifecycle/engine`) are
 The verb-agnostic surface is the recommended consumer entry point. **Dialecte decides the track**, the consumer never picks it: ask for a report, then apply.
 
 ```ts
-query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor, resolution? }) // -> DiffReport { instances, needsDecisions, summary, mappings }
+query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor, resolution? }) // -> DiffReport { instances, needsDecisions, summary, mappings, templateInstances, offLevel? }
 tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, resolution? }) // -> ApplyResult { report, instances }
 ```
 
-- `verb`: `'fsd'` (then `ref` is a `Function`), `'asd'` (then `ref` is an `Application`), or `'ssd'` (then `ref` is the topology scope, `Substation`/`VoltageLevel`/`Bay` — see [the note below](#txlifecycleupdatessd)) — the **layer**;
+The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & { resolution? }`), `LifecycleApplyParams` and `Resolution`.
+
+- `verb`: `'fsd'` (then `ref` is a `Function` or a `FunctionTemplate` — `FsdFunctionRef`), `'asd'` (then `ref` is an `Application`), or `'ssd'` (then `ref` is the topology scope, `Substation`/`VoltageLevel`/`Bay` — see [the note below](#tx-lifecycle-update-ssd)) — the **layer**;
 - `scenario`: `'instantiate'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`);
 - `anchor`: the target parent the instance lives under / is placed into.
-- `resolution`: what the consumer resolved, as one object — `{ decisions?, mappings?, keepNameTypesFrom? }`. `apply` reads all of it; `report` reads `mappings`, so the report is re-derived from the consumer's choices and shows their consequence:
+- `resolution`: what the consumer resolved, as one object — `{ decisions?, mappings?, keepNameTypesFrom?, afterApply? }` (type `Resolution`). `apply` reads all of it; `report` reads `mappings`, so the report is re-derived from the consumer's choices and shows their consequence:
   - `decisions`: accept / skip (and edited values) per decision group — see [Decision groups](#decision-groups-full-track);
   - `mappings`: where a shared element lands, per source element — see [Shared-element mappings](#shared-element-mappings);
-  - `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template).
+  - `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template);
+  - `afterApply`: the consumer's own step, run once after the apply — see [below](#the-consumer-s-step-after-the-apply-—-resolution-afterapply).
+
+**An FSD whose function is a `FunctionTemplate`.** A function template has no parent level: it is placed where the consumer starts from, whichever level that is, as a `Function` — a `SubFunction` under a function or a subfunction — and each `SubFunctionTemplate` it holds as a `SubFunction`. Every element inside it takes the namespace the schema declares for it where it now sits. The instance carries the template's lineage, and an update finds it and reconciles it like any function.
 
 ### Apply result
 
@@ -116,15 +121,14 @@ type DecisionGroup = {
 	companions: DiffNode[] // read-only detail — travel with the primary, never toggled alone
 	dependsOn: string[] // group ids this one requires
 	suggestedAction: 'accept' | 'skip' // default when the group is absent from the decision map
-	editableAttributes?: EditableAttribute[] // schema-derived editable fields of `primary`
+	editableAttributes?: EditableAttribute[] // the attributes of `primary` a UI may edit, and how
 }
 
-// which attributes of the primary a UI may edit (and how) — derived from the schema,
-// so the report is self-describing and the UI never re-derives them
+// derived from the schema, so the report is self-describing and the UI never re-derives them
 type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 ```
 
-Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: `reconcile` never overwrites them, even when a UI-instructed edit lists them. The binding is the lock (`dataModel.isLNodeLocked`); a dangling binding stays locked until orphan cleanup resolves it.
+The attributes classified are those the element's definition declares where it sits — the type it names with `xsi:type` included — not only the tag's. Each is `identity`, `reference`, `rename` or `free` (`AttributeEditability`); only the last two are listed. Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: `reconcile` never overwrites them, even when a UI-instructed edit lists them. The binding is the lock (`dataModel.isLNodeLocked`); a dangling binding stays locked until orphan cleanup resolves it.
 
 `apply` takes `resolution.decisions: Map<groupId, GroupDecision>` where a decision is either a plain
 accept/skip or an object carrying **edited values** for the group's `editableAttributes`:
@@ -160,23 +164,30 @@ Some elements are held once by the project and shared — an `AllocationRole` se
 
 ```ts
 type ReportMapping = {
-	id: string // record id of the SOURCE element — the key of a choice made for it
+	id: string // the key of a choice made for it: the record id of the SOURCE element, or `<placedFor id>::<source id>`
+	sourceId?: string // record id of the source element, when `id` is scoped to `placedFor`
+	placedFor?: AnyRefOrRecord // the project element this mapping is decided for, when listed once per such element
 	tagName: string
-	kind: 'level' | 'shared' // a structural level of the template, or a shared element
+	kind: MappingKind // 'level' | 'shared': a structural level of the template, or a shared element
 	mapping?: DecisionMapping // where it lands, as resolved — absent: the consumer has to choose
 	projectOwned?: true // it lands on an element the project owns (reused, not an instance of the source element)
 	parentPath?: string // for an element to create: the path of the element it is created under
-	reason: 'decision' | 'lineage' | 'name' | 'anchor' | 'only' | 'none'
+	reason: MappingReason // 'decision' | 'lineage' | 'name' | 'anchor' | 'only' | 'none'
 	ambiguous: boolean // something qualified and nothing was picked
 	selectable: boolean // the consumer may choose another mapping for an element of this kind
 	locked: boolean // the instance being updated already carries this mapping: shown, not changeable
-	candidates: { ref; title: string; path: string }[]
+	candidates: MappingCandidate[]
 	dependsOn?: string // the mapping this one follows from (the level above)
-	appliedRef?: Ref // filled by `apply`: the element it became, or was mapped onto
+	appliedRef?: AnyRefOrRecord // filled by `apply`: the element it became, or was mapped onto
 }
 
-type DecisionMapping = { existing: Ref } | { create: { name?: string } }
+type MappingCandidate = { ref: Scl.Ref<Scl.ElementsOf>; title: string; path: string }
+
+type DecisionMapping = { existing: Scl.Ref<Scl.ElementsOf> } | { create: { name?: string } }
+type DecisionMappings = ReadonlyMap<string, DecisionMapping> // keyed by `ReportMapping.id`
 ```
+
+`ReportMapping`, `MappingKind`, `MappingReason`, `MappingCandidate`, `DecisionMapping` and `DecisionMappings` are exported from `@dialecte/scl/v2019C1`.
 
 - **Resolved by default**, first answer wins: the one project element created from this source element by an earlier placement, whatever it is named now (`reason: 'lineage'`); else the project element of the same name when there is exactly one (`'name'`); else a new element (`'none'`). Where several elements qualify equally, none is picked (`ambiguous: true`): the mapping is left **undecided** — `mapping` is absent, the report sets `needsDecisions`, and `apply` refuses until the consumer passed a choice, an existing element or `{ create: {} }`. An element whose mapping cannot be chosen (`selectable: false`) is created under a free name instead.
 - **`candidates`**: every project element of that tag, listed from the placement outwards — the anchor's own level, each level above it, then the rest of the project. For a `locked` mapping, the one element it is mapped onto.
@@ -314,6 +325,19 @@ taken → `Prot_2`, never `Prot_1_1`). A `values` override lets the user set an 
 `name`): the user's value is applied first, then uniqueness is re-ensured — a user name that itself
 collides is still numbered. Only attributes listed in the group's `editableAttributes` are honoured.
 
+Which values must be unique is read from the uniqueness rules of the schema (the identity constraints of
+the parent's definition, read with `query.getDefinition`), as the schema writes them:
+
+- the rules are those of the place the element sits — one tag can carry different rules under different
+  parents (an equipment of a sub-function compares the names of its sub-equipments only, an equipment of
+  a bay those of its sub-equipments and functions together);
+- a rule that selects children directly under the element it is declared on (a selector of one step,
+  not `.//`) is the one a placement renames for; a longer selector selects deeper elements only;
+- a rule that reaches the whole document (`.//`, such as the uuid uniqueness on `SCL`) is left to
+  validation: a placement does not rename for it;
+- the compared children are those the selector's name and namespace admit: a rule that selects elements
+  of another namespace than the children it is meant for selects nothing.
+
 ### The consumer's step after the apply — `resolution.afterApply`
 
 A consumer that names what it places its own way, or wires it to something the template does not know,
@@ -338,9 +362,12 @@ await doc.prepare((tx) =>
   It receives the instances the apply placed or reconciled — only those it wrote. It does not run when
   nothing is written (decisions still to take).
 - The engine knows nothing of what the step does. To tell a name apart from a taken one, the step calls
-  **`tx.lifecycle.makeUnique({ ref })`**: the element is made unique where it sits in the engine's format,
-  and the outcome is returned as data — `{ status: 'ok' }`, `{ status: 'resolved', attr, from, to }`, or
-  `{ status: 'unresolvable', violation }` when the key has no field that can be changed.
+  **`tx.lifecycle.makeUnique({ ref })`** (`MakeUniqueParams`): the element is made unique where it sits in
+  the engine's format, and the outcome is returned as data (`PlacementResolution`) — `{ status: 'ok' }`,
+  `{ status: 'resolved', attr, from, to }`, or `{ status: 'unresolvable', violation }` when the key has no
+  field that can be changed; the `violation` (`ConstraintViolation`) names the `constraint`, its `fields`
+  and the `offendingId` of the sibling collided with.
+- The step's type is exported as `AfterApplyHook`: `(tx: Scl.Transaction, { instances }: { instances: AppliedInstances }) => Promise<void>`.
 - After the step, an application or function the apply placed or reconciled and the step renamed is made
   unique again: a name the step gives that is taken where the element sits is numbered all the same.
 
@@ -395,15 +422,13 @@ const { rootTag, omit, include } = presentationScope(target)
 // { rootTag: 'Substation', omit: ['Communication', 'IED'], include: ['DataTypeTemplates'] }
 ```
 
-````
-
 ## `tx.lifecycle.update.fsd`
 
 Access via `tx.lifecycle.update` inside a `doc.transaction()` callback.
 
 `fsd({ sourceQuery, functionRef, targetParent })` reconciles a project against a (possibly newer) FSD:
 
-- if the target already holds an instance of this Function (an element under `targetParent` whose `templateUuid` equals the source Function's `uuid`), reconcile the updated template onto it;
+- if the target already holds an instance of this Function (an element under `targetParent` whose `templateUuid` equals the source Function's `uuid`, carrying the tag the placement writes: a `SubFunction` under a function or a subfunction, else a `Function`), reconcile the updated template onto it;
 - otherwise instantiate it fresh (via [`instantiate.fsd`](./instantiate#fsd)).
 
 This unifies instantiate and update — instantiation is the first-time case of update. The read-only counterpart `doc.query.lifecycle.report({ verb: 'fsd', sourceQuery, ref: functionRef, anchor: targetParent })` returns a `DiffReport` (see [Engine](#engine)) without mutating.
@@ -429,12 +454,12 @@ The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQu
 - **first-time** — no scope primary (any `Application` or standalone `Function` under the scope) has an instance yet, or `scenario: 'instantiate'` — delegates whole to [`instantiate.ssd`](./instantiate#ssd), so the source is recorded **once** at document level, exactly like the direct verb (not scattered per primary);
 - **reconcile** — an instance exists:
   1. **topology frame** — reconcile the scope's **own** structural content (`Substation`/`VoltageLevel`/`Bay` attributes, `BayType`, equipment) via `reconcileTopologyFrame`, matched to the instance by its stamped `templateUuid` lineage — rename-robust, so a renamed Bay still matches. The fn/app tags are a **boundary** here, excluded from this pass and left to the cascade below;
-  2. **application cascade** — each `Application` under the scope, via [`update.asd`](#txlifecycleupdateasd) (which itself cascades to its composed Functions);
-  3. **function cascade** — each standalone `Function` (not composed by any `Application`), via [`update.fsd`](#txlifecycleupdatefsd).
+  2. **application cascade** — each `Application` under the scope, via [`update.asd`](#tx-lifecycle-update-asd) (which itself cascades to its composed Functions);
+  3. **function cascade** — each standalone `Function` (not composed by any `Application`), via [`update.fsd`](#tx-lifecycle-update-fsd).
 
 A part added by the newer SSD is instantiated; an existing one is reconciled — never blindly re-added.
 
-The read-only counterpart is `doc.query.lifecycle.report({ verb: 'ssd', sourceQuery, anchor: targetParent })`, assembled the same way: the topology frame's own diff plus the union of the per-primary `reportAsd`/`reportFsd` reports, merged into one `DiffReport` so `report.groups` covers the whole scope and the fast/full classification holds across it.
+The read-only counterpart is `doc.query.lifecycle.report({ verb: 'ssd', sourceQuery, anchor: targetParent })`, assembled the same way: the topology frame's own diff plus the union of the per-primary `reportAsd`/`reportFsd` reports, merged into one `DiffReport` so the groups of `report.instances` cover the whole scope and the fast/full classification holds across it.
 
 ::: info `ref` is not the acted-upon scope
 For `verb: 'ssd'`, `report`/`apply` always resolve the acted-upon scope as the SSD's **instantiable root** (same resolution as [`instantiate.ssd`](./instantiate#ssd)). `ref` is carried on `LifecycleTarget` for typing/UI symmetry with `fsd`/`asd`, but is not consulted — the scope is always derived from `sourceQuery`, not from the caller's `ref`.
@@ -474,7 +499,7 @@ Every satellite tag is a shared element: where a source satellite lands is the a
 - **delete** — the satellite **element** was removed from the template → delete the instance, **guarded** by a whole-document last-referrer check so a satellite still referenced by another primary is kept.
 
 ::: warning Catalog persistence — un-referencing is not deletion
-`FunctionCategory`, `AllocationRole`, `Variable` and `BehaviorDescription` are **catalog / shared / documentation** elements: a category classifies many functions, a role is shared for harmonization, a variable targets many elements. So **un-referencing a satellite does not delete it** — only removing the element from the template does. Dropping the *link* (e.g. a removed `AllocationRoleRef`) removes only the reference element and leaves the catalog element in place.
+`FunctionCategory`, `AllocationRole`, `Variable` and `BehaviorDescription` are **catalog / shared / documentation** elements: a category classifies many functions, a role is shared for harmonization, a variable targets many elements. So **un-referencing a satellite does not delete it** — only removing the element from the template does. Dropping the _link_ (e.g. a removed `AllocationRoleRef`) removes only the reference element and leaves the catalog element in place.
 :::
 
 ## Engine
@@ -510,6 +535,9 @@ type DiffReport = {
 	instances: ReportInstance[] // one entry per matched instance (both layers for an ASD)
 	needsDecisions: boolean
 	summary: { added: number; removed: number; modified: number }
+	mappings: ReportMapping[] // where each shared source element lands — one entry per source element
+	templateInstances: AnyRefOrRecord[] // the instances of the template itself the report covers; none on a first placement
+	offLevel?: { templateLevel: string; startedFrom: string } // set when started above the level the template was made for
 }
 
 type ReportInstance = {
@@ -520,8 +548,9 @@ type ReportInstance = {
 	upToDate: boolean // nothing to apply for this instance (no groups)
 	tree: DiffNode // full diff tree for this instance (unchanged context included)
 	groups: DecisionGroup[] // this instance's accept/skip units
+	mappings: ReportMapping[] // where the shared source elements this instance refers to land
 }
-````
+```
 
 Matched by `templateUuid`, same-space attribute compare. **Classify** decides the track: no instance = first-time instantiate = **fast** (headless); an existing instance with any change = **full** (needs decisions). This is the report a headless/review wrapper consumes to route fast vs full.
 
@@ -529,7 +558,7 @@ Matched by `templateUuid`, same-space attribute compare. **Classify** decides th
 
 `reconcile` (apply) and `diff` (report) pair a source child to its instance child through **one** shared matcher (`matchChild`), so the preview and the write always agree on which elements correspond:
 
-- **identified** elements match by `templateUuid` lineage, guarded to the same tag — a placeholder `templateUuid` reused across unrelated element types (see [`checkTemplateUuids`](#identity-integrity-checktemplateuuids)) never matches across types;
+- **identified** elements match by `templateUuid` lineage, guarded to the same tag — a placeholder `templateUuid` reused across unrelated element types (see [`checkTemplateUuids`](#identity-integrity-—-checktemplateuuids)) never matches across types;
 - a uuid-less **reference** link (e.g. `FunctionRef`) matches by its reference identity — the target it points to, mapped back to template space — with a resolved-name fallback for placeholder-lineage projects, never by tag position;
 - anything else falls back to position.
 
@@ -571,7 +600,7 @@ UI never re-authors (and drifts from) the explanation.
 type TemplateUuidWarningInfo = {
 	title: string // short name for the violation class
 	description: string // what it is, in plain terms (why lineage can't be trusted)
-	fallback: string // how the merge still proceeds (recognise by name, etc.)
+	fallback: string // what the engine does about it — a fact about the engine, not an instruction for a user
 }
 
 const TEMPLATE_UUID_WARNING_INFO: Record<TemplateUuidWarningCode, TemplateUuidWarningInfo>
