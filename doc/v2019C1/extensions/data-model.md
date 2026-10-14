@@ -93,6 +93,28 @@ await targetDoc.transaction(async (tx) => {
 
 `importTypes` drives the transaction's progress bar — a single nested plan over its phases (pre-existing index → source loop → repoint → reclaim), each captioned (`Indexing existing types…`, `Importing <id>`, `Repointing references…`, `Reclaiming ids…`), so the sub-bar advances per source type instead of freezing on a large closure. Under `dev.perf`, it emits a `scl::importTypes` span with `::preExistingIndex` / `::sourceLoop` / `::remap` / `::reclaim` sub-spans, read via `doc.perf.report()` (nothing is written when `dev.perf` is off).
 
+### `unlockLNode`
+
+Unlocks an `LNode` bound to an (S-)IED, so its data model can be changed and it can be allocated again. An `LNode` is locked while an IED is assigned to it (`iedName` set and not `None`, see `isLNodeLocked`).
+
+```ts
+unlockLNode(params: { lnode: Scl.Ref<'LNode'> }): Promise<void>
+```
+
+In one transaction, in this order:
+
+1. The data its `DOS` / `SDS` / `DAS` specify is no longer instantiated: the `DOI` / `SDI` / `DAI` holding it in the LN that implements it are removed (found by its data path while the binding still names that LN). Other instances of the LN stay.
+2. Its `SourceRef` / `ControlRef` are no longer implemented: `extRefAddr` / `extRefUuid`, `extCtrlAddr` / `extCtrlUuid` are dropped. Their source and the `ExtRef` / `ExtCtrl` in the IED stay.
+3. It is assigned to no IED: `iedName="None"`, `ldInst` and `lnUuid` cleared; `prefix`, `lnClass`, `lnInst` are those of its `LNodeSpecNaming`, which is left as it is. `lnType` stays.
+
+An `LNode` assigned to no IED is left as it is.
+
+```ts
+await doc.transaction(async (tx) => {
+	await tx.dataModel.unlockLNode({ lnode: { tagName: 'LNode', id: 'lnode-1' } })
+})
+```
+
 ## Exported types
 
 The `dataModel` module re-exports the parameter and result shapes of `importTypes` for typing call sites and tooling.
