@@ -16,11 +16,13 @@ SCL files are the exchange format between engineering tools in the substation au
 
 ### 1. Generated definition
 
-The SCL definition is produced from the **IEC 61850-6 v2019C1 XSD**. Every element, attribute, parent–child constraint, and namespace declared in the standard is captured in a typed config object. The version is reflected in the import path:
+The SCL definition is produced from the **IEC 61850-6 v2019C1 XSD** by `@dialecte/create` (0.1 and later) and read through `@dialecte/core` 0.6. Every element, attribute, parent–child constraint, and namespace declared in the standard is captured in a typed config object. The version is reflected in the import path:
 
 ```ts
 import { createSclProject } from '@dialecte/scl/v2019C1'
 ```
+
+**Shape of the definition.** `DEFINITION` maps each tag to its definition: a tag the schema declares one way carries its declaration at the tag level; a tag declared several ways (`ConductingEquipment`, `Labels`) also lists its `declarations`, each under its number, the tag level being their union (required, default, fixed values, constraints and variants only where they all agree). A value's facets sit in its datatype (`type: { builtin, facets }`), identity constraints sit on the declaration that declares them (`constraints`), and `TYPES` holds the types an element may take with `xsi:type`, by Clark name. `SCL_DIALECTE_CONFIG` carries both as `definition` and `types`. Code that reads `DEFINITION` directly must follow that shape; code that goes through `query.getDefinition(ref)` gets the declaration that applies to the record, its `xsi:type` included.
 
 **Namespaces.** SCL spans the default SCL namespace, the 6-100 extension namespace (`eIEC61850-6-100`), and `xsi`. Names follow the [core namespace rules](https://dialecte.github.io/core/guide/development/helpers#attribute-namespaces):
 
@@ -42,14 +44,18 @@ await doc.transaction(async (tx) => {
 })
 ```
 
-| Module      | Kind        | Method                                | What it does                                                      |
-| ----------- | ----------- | ------------------------------------- | ----------------------------------------------------------------- |
-| `history`   | query       | `getSortedHitems()`                   | All `Hitem` records sorted by version/revision ascending          |
-| `history`   | query       | `getLatestHitem()`                    | Most recent `Hitem` by version/revision                           |
-| `history`   | transaction | `addEntry(params)`                    | Ensures `Header` + `History`, increments version, appends Hitem   |
-| `dataModel` | query       | `resolve(params)`                     | Walks `lnType` → `LNodeType` → `DOType` → `DAType`/`EnumType`     |
-| `dataModel` | transaction | `extract(params)`                     | Deep-clones missing data-model types into `DataTypeTemplates`     |
-| `template`  | transaction | `ensureSubstationTemplateStructure()` | Ensures `Substation/VoltageLevel/Bay` named `TEMPLATE` under root |
+| Module      | Kind        | Methods                                                        | What it does                                                                    |
+| ----------- | ----------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `history`   | query       | `getSortedHitems()`, `getLatestHitem()`                        | `Hitem` records sorted by version/revision                                      |
+| `history`   | transaction | `addEntry(params)`                                             | Ensures `Header` + `History`, increments version, appends Hitem                 |
+| `dataModel` | query       | `resolve(params)`, `isLNodeLocked(...)`                        | Walks `lnType` → `LNodeType` → `DOType` → `DAType`/`EnumType`; LNode lock state |
+| `dataModel` | transaction | `importTypes(params)`, `unlockLNode(params)`                   | Content-addressed import of data-model types; unbinding an LNode from its IED   |
+| `info`      | query       | `of(ref, options?)`, `ofEach(refs, options?)`                  | What a UI shows about an element: title, state, labels                          |
+| `reference` | query / tx  | `buildElementPath`, `resolveReferencePath`, `setMappedData`, … | Reference paths: building, resolving, reverse lookup, remapping                 |
+| `identity`  | query / tx  | `resolveIdentity`, `writeIdentity`, …                          | Instance lineage (`uuid` / `templateUuid` / `originUuid`)                       |
+| `signature` | query       | `elementSignature(params)`                                     | Structural, id-independent signature of a subtree                               |
+| `lifecycle` | query / tx  | `report`, `apply`, `extract.*`, `instantiate.*`, `update.*`, … | FSD / ASD / SSD templates: extract, instantiate, update                         |
+| `cleanUp`   | transaction | `orphanUuidRefs()`, `resetLNode()`, `pruneEmptyContainers()`   | Post-mutation integrity helpers                                                 |
 
 See the [Extensions API](/v2019C1/extensions/) for full signatures.
 
@@ -66,6 +72,8 @@ Hooks enforce SCL-specific invariants automatically — no application code need
 | `afterCreated`            | After a child element is added                        | Wraps elements from a non-default namespace inside a `<Private>` container, as required by SCL; keeps the IED's minimum requested SCD file current (see below) |
 | `afterUpdated`            | After an element is updated                           | Keeps references in agreement with their target; keeps the IED's minimum requested SCD file current (see below)                                                |
 | `beforeDelete`            | Before an element and its subtree are deleted         | Cleans references to the deleted subtree; keeps the IED's minimum requested SCD file current (see below)                                                       |
+| `afterDelete`             | Once a record is staged for deletion                  | Rebuilds the references to the signals that shared the removed signal's name; rebuilds the paths through an LNode whose `LNodeSpecNaming` was removed          |
+| `beforeCommit`            | Once the transaction's work is done                   | Gives every `LNode` the transaction created an `LNodeSpecNaming` when it has none (one brought by a copy or added by the caller is kept)                       |
 
 **Minimum requested SCD file.** When a change affects an IED's configuration (control blocks and their settings, data sets, `ExtRef`, `DAI` values, relevant IED attributes, or its communication: `ConnectedAP`, addresses, `GSE`/`SMV`, `SubNetwork` settings and communication service specifications), the IED's `MinRequestedSCDFiles` gets an entry for the current SCD in the same transaction: `fileUuid` from the `Header` uuid, with its `version` and `revision` at edit time. `PhysConn` and its children, descriptive content, and changes only to IED `engRight` or `owner` do not trigger sync. Other IED attributes, including ICD-sourced ones, still count if changed through this SDK. Entries of other projects are kept, and a project is listed once: when an IED is cloned or an entry added for a project already listed, the entries are merged and hand-set `fileName`, `when` and `desc` are kept. An update counts when it changes an element's text or any attribute other than `desc` and the lineage uuids, subject to the IED exceptions above. A missing `Header` version or revision is written as an empty value; nothing is written when the `Header` has no uuid.
 

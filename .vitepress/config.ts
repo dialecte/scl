@@ -82,6 +82,7 @@ export default defineConfig({
 						{ text: 'Data Model', link: '/v2019C1/extensions/data-model' },
 						{ text: 'Reference', link: '/v2019C1/extensions/reference' },
 						{ text: 'Identity', link: '/v2019C1/extensions/identity' },
+						{ text: 'Signature', link: '/v2019C1/extensions/signature' },
 						{
 							text: 'Lifecycle',
 							items: [
@@ -91,7 +92,6 @@ export default defineConfig({
 								{ text: 'Transplant', link: '/v2019C1/extensions/transplant' },
 							],
 						},
-						{ text: 'Template', link: '/v2019C1/extensions/template' },
 						{ text: 'Info', link: '/v2019C1/extensions/info' },
 						{ text: 'Clean Up', link: '/v2019C1/extensions/clean-up' },
 					],

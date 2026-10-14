@@ -10,7 +10,7 @@ This page lists every SCL element recognized by `@dialecte/scl/v2019C1` (**210 e
 
 Source of truth: [`definition.generated.ts`](https://github.com/dialecte/scl/blob/main/src/v2019C1/definition/definition.generated.ts) | [`constants.generated.ts`](https://github.com/dialecte/scl/blob/main/src/v2019C1/definition/constants.generated.ts) | [`types.generated.ts`](https://github.com/dialecte/scl/blob/main/src/v2019C1/definition/types.generated.ts)
 
-Regenerate: `npx tsx scripts/generate-element-catalog.ts`
+Regenerate: `npm run doc:generate` (runs `.vitepress/scripts/generate-element-catalog.ts`)
 
 ## Schema overview
 
