@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.7.0] - 2026-10-14
+
 ### Changed
 
 - **Breaking - built on `@dialecte/core` 0.6 and the definition `@dialecte/create` writes from 0.1 on.** `DEFINITION` has the new shape: a tag declared several ways lists its declarations, a value's facets sit in its datatype, identity constraints sit on the declaration that declares them, and `TYPES` holds the types an element may take with `xsi:type`. Code that reads `DEFINITION` directly must follow; code that goes through `query.getDefinition` gets the declaration that applies. `SCL_DIALECTE_CONFIG` carries `types`.
