@@ -21,6 +21,5 @@ export {
 	mirrorSpecifiedNaming,
 	rebuildPathsOfNamedLNode,
 	specifiedNamingChanged,
-	specifiedNamingOf,
 } from './lnode-spec-naming'
 export { rebuildReferencesBelow, rebuildReferencesTo } from './references-through'

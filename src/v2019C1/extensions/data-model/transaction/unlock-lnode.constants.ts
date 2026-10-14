@@ -1,6 +1,3 @@
-/** The naming attributes an unlock clears instead of restoring them: the IED's. */
-export const CLEARED_ON_UNLOCK: ReadonlySet<string> = new Set(['iedName', 'ldInst'])
-
 /** The data an LNode specifies, in the order an unlock reads it. */
 export const MAPPED_DATA_TAGS = ['DOS', 'SDS', 'DAS'] as const
 

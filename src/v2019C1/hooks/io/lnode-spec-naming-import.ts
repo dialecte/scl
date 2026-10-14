@@ -1,5 +1,5 @@
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
-import { specifiedNamingOf } from '@/v2019C1/hooks/shared/lnode-spec-naming'
+import { specifiedNamingOf } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 
 import type { DerivedSpecificationNamingWarning } from './io-hooks.types'
 import type { SpecNamingImport } from './lnode-spec-naming-import.types'
@@ -7,7 +7,7 @@ import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
 
 /**
  * Gives every imported LNode without `LNodeSpecNaming` its own, with the same rule as the record
- * hooks (`specifiedNamingOf`). The import has no store access: the pass collects the LNodes, their
+ * hooks (`specifiedNamingOf`, data-model naming). The import has no store access: the pass collects the LNodes, their
  * `eIEC61850-6-100` Private and the LNodes that have one; the records are made at the end.
  */
 export function createSpecNamingImport(): SpecNamingImport {

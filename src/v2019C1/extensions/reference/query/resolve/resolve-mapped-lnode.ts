@@ -1,13 +1,12 @@
 import { buildMappedLNodePath } from '../build/build-mapped-lnode-path'
 import { resolveElementPath } from './resolve-element-path'
+import { LN_TARGETS } from './resolve-mapped-lnode.constants'
+
+import { LNODE_NAMING_ATTRIBUTES } from '@/v2019C1/constants'
 
 import type { MappedLNodeAttributes } from '../build/build-mapped-lnode-path.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
-
-const LN_TARGETS = new Set(['LN', 'LN0'])
-
-type LnRecord = Scl.TrackedRecord<'LN' | 'LN0'>
 
 /**
  * Resolves a mapped `LNode` to the IED `LN` (or `LN0`) that implements it.
@@ -24,26 +23,24 @@ type LnRecord = Scl.TrackedRecord<'LN' | 'LN0'>
 export async function resolveMappedLNode(
 	query: Core.Query<Config> | Core.Transaction<Config>,
 	lnode: Scl.TrackedRecord<'LNode'>,
-): Promise<LnRecord | undefined> {
+): Promise<Scl.TrackedRecord<'LN' | 'LN0'> | undefined> {
 	const path = buildMappedLNodePath(readMappedAttributes(lnode))
 	if (!path) return undefined
 
 	const resolved = await resolveElementPath(query, path)
 	if (!resolved || !LN_TARGETS.has(resolved.tagName)) return undefined
 
-	return resolved as LnRecord
+	return resolved as Scl.TrackedRecord<'LN' | 'LN0'>
 }
 
 // ── Internal ─────────────────────────────────────────────────────────
 
+/** The attributes of the LNode naming the LN that implements it. */
 function readMappedAttributes(lnode: Scl.TrackedRecord<'LNode'>): MappedLNodeAttributes {
-	const get = (name: string) => lnode.attributes.find((a) => a.name === name)?.value
-
-	return {
-		iedName: get('iedName'),
-		ldInst: get('ldInst'),
-		prefix: get('prefix'),
-		lnClass: get('lnClass'),
-		lnInst: get('lnInst'),
-	}
+	return Object.fromEntries(
+		LNODE_NAMING_ATTRIBUTES.map((name) => [
+			name,
+			lnode.attributes.find((attribute) => attribute.name === name)?.value,
+		]),
+	)
 }

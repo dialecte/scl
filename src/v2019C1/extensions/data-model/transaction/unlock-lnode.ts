@@ -1,6 +1,6 @@
-import { CLEARED_ON_UNLOCK, DATA_INSTANCE_TAGS, MAPPED_DATA_TAGS } from './unlock-lnode.constants'
+import { DATA_INSTANCE_TAGS, MAPPED_DATA_TAGS } from './unlock-lnode.constants'
 
-import { SPECIFIED_NAMING_ATTRIBUTES, UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
+import { unassignedNaming } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query/is-lnode-locked'
 import { PAIRS_BY_REF, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { resolveMappedData } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-data'
@@ -28,17 +28,10 @@ export async function unlockLNode(
 	await removeInstantiatedData(tx, { lnode })
 	await unimplementSignals(tx, { lnode })
 
-	const attributes = await tx.getAttributes(lnode)
+	const lnodeAttributes = await tx.getAttributes(lnode)
 	const naming = await tx.getChild(lnode, 'LNodeSpecNaming')
-	const specified = naming ? await tx.getAttributes(naming) : undefined
-
-	const reset: Record<string, string> = { iedName: UNALLOCATED_IED_NAME, ldInst: '', lnUuid: '' }
-	for (const [name, specifiedName] of SPECIFIED_NAMING_ATTRIBUTES) {
-		if (CLEARED_ON_UNLOCK.has(name) || !specified) continue
-		const value = (specified as Record<string, string | undefined>)[specifiedName]
-		// The class is required: kept from the LNode when the naming has none.
-		reset[name] = value ?? (name === 'lnClass' ? (attributes.lnClass ?? '') : '')
-	}
+	const specifiedAttributes = naming ? await tx.getAttributes(naming) : undefined
+	const reset = { ...unassignedNaming({ lnodeAttributes, specifiedAttributes }), lnUuid: undefined }
 	await tx.update(lnode, { attributes: reset })
 }
 

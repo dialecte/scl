@@ -1,7 +1,7 @@
 import { isElementOf } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
-import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
+import { unassignedNaming } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 import { ensureLNodeSpecNaming } from '@/v2019C1/hooks/shared/lnode-spec-naming'
 import { updatedOperation, upsertAttribute } from '@/v2019C1/hooks/shared/record-ops'
 
@@ -81,34 +81,23 @@ async function mappedIdentity(
 }
 
 /**
- * Specification identity restored on unbind. `iedName` is always cleared to the
- * unbound marker (`None`) with `ldInst` dropped; when an `LNodeSpecNaming` snapshot
- * exists, `prefix`/`lnClass`/`lnInst` are additionally restored from it (otherwise
- * they are left as-is — the hook has no specification to restore and must not strip
- * an LNode's required class). `sLnClass` on the snapshot is itself optional, so when
- * it isn't set, `lnClass` falls back to the LNode's own current value
- * rather than being stripped — it is XSD-required with no default. `templateUuid` is
- * never touched — it is instantiation provenance, independent of the binding state.
+ * Specification identity restored on unbind: the naming an LNode gets back when no IED is assigned
+ * to it anymore (`unassignedNaming`), its prefix, class and instance from its `LNodeSpecNaming`.
+ * `templateUuid` is never touched: it is instantiation provenance, independent of the binding.
  */
 async function specificationIdentity(
 	query: Core.Query<Config>,
 	lnodeRecord: Scl.RawRecord<Scl.ElementsOf>,
 ): Promise<Record<string, string | undefined>> {
-	const cleared = { iedName: UNALLOCATED_IED_NAME, ldInst: undefined }
-
 	const specNaming = await query.getChild(
 		{ tagName: 'LNode', id: lnodeRecord.id } as Scl.Ref<Scl.ElementsOf>,
 		'LNodeSpecNaming',
 	)
-	if (!specNaming) return cleared
-
-	const specAttrs = await query.getAttributes(specNaming)
-	return {
-		...cleared,
-		prefix: specAttrs.sPrefix,
-		lnClass: specAttrs.sLnClass || attributeValue(lnodeRecord, 'lnClass'),
-		lnInst: specAttrs.sLnInst,
-	}
+	const specifiedAttributes = specNaming ? await query.getAttributes(specNaming) : undefined
+	return unassignedNaming({
+		lnodeAttributes: { lnClass: attributeValue(lnodeRecord, 'lnClass') },
+		specifiedAttributes,
+	})
 }
 
 async function findLnByUuid(

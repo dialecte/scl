@@ -1,4 +1,5 @@
 import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
+import { unassignedNaming } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -56,36 +57,20 @@ async function resetLNodeBinding(
 	lnode: Scl.TrackedRecord<'LNode'>,
 ): Promise<void> {
 	const lNodeSpecNaming = await tx.getChild(lnode, 'LNodeSpecNaming')
+	const lnodeAttributes = await tx.getAttributes(lnode)
+	const specifiedAttributes = lNodeSpecNaming ? await tx.getAttributes(lNodeSpecNaming) : undefined
 
 	if (lNodeSpecNaming) {
-		const sLnClass = await tx.getAttribute(lNodeSpecNaming, { name: 'sLnClass' })
-		const sLnInst = await tx.getAttribute(lNodeSpecNaming, { name: 'sLnInst' })
-		const sPrefix = await tx.getAttribute(lNodeSpecNaming, { name: 'sPrefix' })
-		const lnClass = await tx.getAttribute(lnode, { name: 'lnClass' })
-
 		await tx.update(lNodeSpecNaming, {
 			attributes: { sIedName: UNALLOCATED_IED_NAME, sLdInst: undefined },
 		})
-
-		await tx.update(lnode, {
-			attributes: {
-				iedName: UNALLOCATED_IED_NAME,
-				ldInst: undefined,
-				lnUuid: undefined,
-				// sLnClass is optional; lnClass is required with no
-				// default, so fall back to the LNode's own value rather than clearing it.
-				lnClass: sLnClass || lnClass,
-				lnInst: sLnInst || undefined,
-				prefix: sPrefix || undefined,
-			},
-		})
-	} else {
-		await tx.update(lnode, {
-			attributes: {
-				iedName: UNALLOCATED_IED_NAME,
-				ldInst: undefined,
-				lnUuid: undefined,
-			},
-		})
 	}
+	// Without an LNodeSpecNaming there is nothing to restore prefix, class and instance from: they
+	// are left as they are (the class is required).
+	await tx.update(lnode, {
+		attributes: {
+			...unassignedNaming({ lnodeAttributes, specifiedAttributes }),
+			lnUuid: undefined,
+		},
+	})
 }
