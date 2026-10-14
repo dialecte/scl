@@ -509,7 +509,13 @@ The qualifier chain can be arbitrarily deep (e.g. `MMXU1.PhV.phsA.cVal.mag.f` --
 
 ### `ied-address` -- 2 pairs
 
-Reference to `ExtRef`/`ExtCtrl` inside the IED section via `intAddr`. Supports full path and IED-relative fallback.
+Reference to the `ExtRef`/`ExtCtrl` implementing a `SourceRef`/`ControlRef` (`extRefAddr`, `extCtrlAddr`), read in any of its three forms:
+
+- the full path, `IED/LDevice/LN.intAddr` (`PIU/CB_Function/LCBO1.TrCmd.stVal`): what the engine writes;
+- the path inside the IED of the `LNode`, `LDevice/LN.intAddr` (`CB_Function/LCBO1.TrCmd.stVal`);
+- the `intAddr` alone, or marked `@intAddr`, when the `ExtRef` sits in the LN implementing the `LNode` (`TrCmd.stVal`), read in the LN its `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` name.
+
+A value is kept in the form it is written in.
 
 ### `ancestor-name` -- 4 pairs
 
