@@ -35,6 +35,7 @@ export const DEFINITION = {
 			],
 		},
 		textContent: {},
+		type: '{http://www.iec.ch/61850/2003/SCL}tAccessControl',
 	},
 	AccessPoint: {
 		tag: 'AccessPoint',
@@ -191,6 +192,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tAccessPoint',
 	},
 	Address: {
 		tag: 'Address',
@@ -214,6 +216,7 @@ export const DEFINITION = {
 			maxOccurs: 1,
 			particles: [{ kind: 'element', name: 'P', minOccurs: 1, declaration: '1' }],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tAddress',
 	},
 	AllocationRole: {
 		tag: 'AllocationRole',
@@ -303,6 +306,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tAllocationRole',
 	},
 	AllocationRoleRef: {
 		tag: 'AllocationRoleRef',
@@ -381,6 +385,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tAllocationRoleRef',
 	},
 	AnalogueWiringParameters: {
 		tag: 'AnalogueWiringParameters',
@@ -469,6 +474,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tAnalogueWiringParameters',
 	},
 	AnalogueWiringParametersRef: {
 		tag: 'AnalogueWiringParametersRef',
@@ -528,6 +534,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tServiceParametersRef',
 	},
 	Application: {
 		tag: 'Application',
@@ -642,6 +649,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tApplication',
 	},
 	ApplicationSclRef: {
 		tag: 'ApplicationSclRef',
@@ -692,6 +700,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tApplicationSclRef',
 	},
 	Association: {
 		tag: 'Association',
@@ -1091,6 +1100,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tAssociation',
 	},
 	Authentication: {
 		tag: 'Authentication',
@@ -1349,6 +1359,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tBDA',
 	},
 	Bay: {
 		tag: 'Bay',
@@ -1575,6 +1586,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tBay',
 	},
 	BayType: {
 		tag: 'BayType',
@@ -1593,6 +1605,7 @@ export const DEFINITION = {
 		textContent: {
 			type: { builtin: 'normalizedString' },
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tBayType',
 	},
 	BehaviorDescription: {
 		tag: 'BehaviorDescription',
@@ -1754,6 +1767,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tBehaviorDescription',
 	},
 	BehaviorDescriptionRef: {
 		tag: 'BehaviorDescriptionRef',
@@ -1839,6 +1853,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tBehaviorDescriptionRef',
 	},
 	BehaviorReference: {
 		tag: 'BehaviorReference',
@@ -1907,6 +1922,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tBehaviorReference',
 	},
 	BinaryWiringParameters: {
 		tag: 'BinaryWiringParameters',
@@ -2033,6 +2049,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tBinaryWiringParameters',
 	},
 	BinaryWiringParametersRef: {
 		tag: 'BinaryWiringParametersRef',
@@ -2092,6 +2109,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tServiceParametersRef',
 	},
 	BitRate: {
 		tag: 'BitRate',
@@ -2144,6 +2162,7 @@ export const DEFINITION = {
 		textContent: {
 			type: { builtin: 'decimal' },
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tBitRateInMbPerSec',
 	},
 	CheckoutID: {
 		tag: 'CheckoutID',
@@ -2230,6 +2249,7 @@ export const DEFINITION = {
 			maxOccurs: 1,
 			particles: [{ kind: 'element', name: 'SubCheckoutID', maxOccurs: 1 }],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tCheckoutID',
 	},
 	ClientLN: {
 		tag: 'ClientLN',
@@ -2593,6 +2613,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tClientLN',
 	},
 	ClientServices: {
 		tag: 'ClientServices',
@@ -2690,6 +2711,7 @@ export const DEFINITION = {
 				{ kind: 'element', name: 'Security', maxOccurs: 1 },
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tClientServices',
 	},
 	CommProt: {
 		tag: 'CommProt',
@@ -2708,6 +2730,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tCommProt',
 	},
 	Communication: {
 		tag: 'Communication',
@@ -2787,6 +2810,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tCommunication',
 	},
 	CommunicationServiceSpecifications: {
 		tag: 'CommunicationServiceSpecifications',
@@ -2868,6 +2892,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tCommServiceSpecifications',
 	},
 	ConductingEquipment: {
 		tag: 'ConductingEquipment',
@@ -3082,6 +3107,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tConductingEquipment',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -3361,6 +3387,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tConductingEquipment',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -3640,6 +3667,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tConductingEquipment',
 			},
 			'3': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -3854,6 +3882,7 @@ export const DEFINITION = {
 						},
 					],
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tConductingEquipment',
 			},
 			'4': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -4130,6 +4159,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tConductingEquipment',
 			},
 			'5': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -4438,6 +4468,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tConductingEquipment',
 			},
 			'6': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -4744,6 +4775,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tConductingEquipment',
 			},
 		},
 	},
@@ -4774,6 +4806,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceForConfDataSet',
 	},
 	ConfLNs: {
 		tag: 'ConfLNs',
@@ -4796,6 +4829,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tConfLNs',
 	},
 	ConfLdName: {
 		tag: 'ConfLdName',
@@ -4809,6 +4843,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -4836,6 +4871,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceWithMaxNonZero',
 	},
 	ConfReportControl: {
 		tag: 'ConfReportControl',
@@ -4868,6 +4904,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceConfReportControl',
 	},
 	ConfSG: {
 		tag: 'ConfSG',
@@ -4907,6 +4944,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceWithMaxNonZero',
 	},
 	ConnectedAP: {
 		tag: 'ConnectedAP',
@@ -5065,6 +5103,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tConnectedAP',
 	},
 	ConnectivityNode: {
 		tag: 'ConnectivityNode',
@@ -5175,6 +5214,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tConnectivityNode',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -5329,6 +5369,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tConnectivityNode',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -5439,6 +5480,7 @@ export const DEFINITION = {
 						},
 					],
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tConnectivityNode',
 			},
 		},
 	},
@@ -5614,6 +5656,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tControlRef',
 	},
 	ControllingLNode: {
 		tag: 'ControllingLNode',
@@ -5693,6 +5736,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tControllingLNode',
 	},
 	DA: {
 		tag: 'DA',
@@ -6004,6 +6048,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tDA',
 	},
 	DAI: {
 		tag: 'DAI',
@@ -6128,6 +6173,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tDAI',
 	},
 	DAS: {
 		tag: 'DAS',
@@ -6275,6 +6321,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tDAS',
 	},
 	DAType: {
 		tag: 'DAType',
@@ -6395,6 +6442,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tDAType',
 	},
 	DO: {
 		tag: 'DO',
@@ -6481,6 +6529,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tDO',
 	},
 	DOI: {
 		tag: 'DOI',
@@ -6600,6 +6649,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tDOI',
 	},
 	DOS: {
 		tag: 'DOS',
@@ -6745,6 +6795,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tDOS',
 	},
 	DOType: {
 		tag: 'DOType',
@@ -6926,6 +6977,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tDOType',
 	},
 	DataObjectDirectory: {
 		tag: 'DataObjectDirectory',
@@ -6939,6 +6991,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -7029,6 +7082,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tDataSet',
 	},
 	DataSetDirectory: {
 		tag: 'DataSetDirectory',
@@ -7042,6 +7096,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -7204,6 +7259,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tDataTypeTemplates',
 	},
 	DynAssociation: {
 		tag: 'DynAssociation',
@@ -7221,6 +7277,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceWithOptionalMax',
 	},
 	DynDataSet: {
 		tag: 'DynDataSet',
@@ -7245,6 +7302,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceWithMaxAndMaxAttributes',
 		variants: ['{http://www.iec.ch/61850/2003/SCL}tServiceForConfDataSet'],
 	},
 	EnumType: {
@@ -7347,6 +7405,7 @@ export const DEFINITION = {
 				fields: [[{ steps: [] }]],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tEnumType',
 	},
 	EnumVal: {
 		tag: 'EnumVal',
@@ -7379,6 +7438,7 @@ export const DEFINITION = {
 				},
 			},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tEnumVal',
 	},
 	EqFunction: {
 		tag: 'EqFunction',
@@ -7530,6 +7590,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tEqFunction',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -7734,6 +7795,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tEqFunction',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -7938,6 +8000,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tEqFunction',
 			},
 			'3': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -8142,6 +8205,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tEqFunction',
 			},
 			'4': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -8346,6 +8410,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tEqFunction',
 			},
 			'5': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -8550,6 +8615,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tEqFunction',
 			},
 			'6': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -8754,6 +8820,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tEqFunction',
 			},
 		},
 	},
@@ -8962,6 +9029,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tEqSubFunction',
 	},
 	ExtCtrl: {
 		tag: 'ExtCtrl',
@@ -9690,6 +9758,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tExtCtrl',
 	},
 	ExtRef: {
 		tag: 'ExtRef',
@@ -10750,6 +10819,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tExtRef',
 	},
 	FCDA: {
 		tag: 'FCDA',
@@ -11126,6 +11196,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tFCDA',
 	},
 	FileHandling: {
 		tag: 'FileHandling',
@@ -11152,6 +11223,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tFileHandling',
 	},
 	Function: {
 		tag: 'Function',
@@ -11297,6 +11369,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tFunction',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -11502,6 +11575,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tFunction',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -11707,6 +11781,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tFunction',
 			},
 			'3': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -11912,6 +11987,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tFunction',
 			},
 			'4': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -12117,6 +12193,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tFunction',
 			},
 		},
 	},
@@ -12175,6 +12252,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionCatRef',
 	},
 	FunctionCategory: {
 		tag: 'FunctionCategory',
@@ -12269,6 +12347,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionCategory',
 	},
 	FunctionCategoryRef: {
 		tag: 'FunctionCategoryRef',
@@ -12347,6 +12426,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionCategoryRef',
 	},
 	FunctionRef: {
 		tag: 'FunctionRef',
@@ -12431,6 +12511,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionRef',
 	},
 	FunctionRole: {
 		tag: 'FunctionRole',
@@ -12589,6 +12670,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionRole',
 	},
 	FunctionRoleContent: {
 		tag: 'FunctionRoleContent',
@@ -12664,6 +12746,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionRoleContent',
 	},
 	FunctionSclRef: {
 		tag: 'FunctionSclRef',
@@ -12716,6 +12799,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionSclRef',
 	},
 	FunctionTemplate: {
 		tag: 'FunctionTemplate',
@@ -12838,6 +12922,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionTemplate',
 	},
 	FunctionalSubVariant: {
 		tag: 'FunctionalSubVariant',
@@ -12938,6 +13023,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionalSubVariant',
 	},
 	FunctionalVariant: {
 		tag: 'FunctionalVariant',
@@ -13038,6 +13124,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionalVariant',
 	},
 	FunctionalVariantGroup: {
 		tag: 'FunctionalVariantGroup',
@@ -13126,6 +13213,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionalVariantGroup',
 	},
 	FunctionalVariantRef: {
 		tag: 'FunctionalVariantRef',
@@ -13202,6 +13290,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionalVariantRef',
 	},
 	GOOSE: {
 		tag: 'GOOSE',
@@ -13232,6 +13321,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tGOOSEcapabilities',
 	},
 	GOOSEMcSecurity: {
 		tag: 'GOOSEMcSecurity',
@@ -13254,6 +13344,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tMcSecurity',
 	},
 	GOOSESecurity: {
 		tag: 'GOOSESecurity',
@@ -13360,6 +13451,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tCertificate',
 	},
 	GSE: {
 		tag: 'GSE',
@@ -13463,6 +13555,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tGSE',
 	},
 	GSEControl: {
 		tag: 'GSEControl',
@@ -13623,6 +13716,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tGSEControl',
 	},
 	GSEDir: {
 		tag: 'GSEDir',
@@ -13636,6 +13730,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -13694,6 +13789,7 @@ export const DEFINITION = {
 			maxOccurs: 1,
 			particles: [{ kind: 'element', name: 'McSecurity', maxOccurs: 1 }],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tGSESettings',
 	},
 	GSSE: {
 		tag: 'GSSE',
@@ -13712,6 +13808,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceWithMax',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tGOOSEcapabilities',
 			'{http://www.iec.ch/61850/2003/SCL}tSMVsc',
@@ -13888,6 +13985,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tGeneralEquipment',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -14106,6 +14204,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tGeneralEquipment',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -14324,6 +14423,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tGeneralEquipment',
 			},
 			'3': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -14542,6 +14642,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tGeneralEquipment',
 			},
 			'4': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -14760,6 +14861,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tGeneralEquipment',
 			},
 			'5': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -14978,6 +15080,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tGeneralEquipment',
 			},
 			'6': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -15225,6 +15328,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tGeneralEquipment',
 			},
 			'7': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -15473,6 +15577,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tGeneralEquipment',
 			},
 		},
 	},
@@ -15488,6 +15593,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -15507,6 +15613,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -15526,6 +15633,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -15545,6 +15653,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -15654,6 +15763,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tGooseParameters',
 	},
 	GooseParametersRef: {
 		tag: 'GooseParametersRef',
@@ -15713,6 +15823,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tServiceParametersRef',
 	},
 	Header: {
 		tag: 'Header',
@@ -15834,6 +15945,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tHeader',
 	},
 	History: {
 		tag: 'History',
@@ -15917,6 +16029,7 @@ export const DEFINITION = {
 			],
 		},
 		textContent: {},
+		type: '{http://www.iec.ch/61850/2003/SCL}tHitem',
 	},
 	IED: {
 		tag: 'IED',
@@ -16207,6 +16320,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tIED',
 	},
 	IEDName: {
 		tag: 'IEDName',
@@ -16618,6 +16732,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tIEDSclRef',
 	},
 	InputVar: {
 		tag: 'InputVar',
@@ -16749,6 +16864,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tInputVar',
 	},
 	InputVarRef: {
 		tag: 'InputVarRef',
@@ -16822,6 +16938,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tVariableRef',
 		variants: ['{http://www.iec.ch/61850/2019/SCL/6-100}tVariableRefWithUuid'],
 	},
 	Inputs: {
@@ -16881,6 +16998,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tInputs',
 	},
 	IssuerName: {
 		tag: 'IssuerName',
@@ -16912,6 +17030,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tCert',
 	},
 	KDC: {
 		tag: 'KDC',
@@ -16964,6 +17083,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tKDC',
 	},
 	L2CommParameters: {
 		tag: 'L2CommParameters',
@@ -17055,6 +17175,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tL2CommParameters',
 	},
 	L3IPv4CommParameters: {
 		tag: 'L3IPv4CommParameters',
@@ -17160,6 +17281,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tL3IPv4CommParameters',
 	},
 	L3IPv6CommParameters: {
 		tag: 'L3IPv6CommParameters',
@@ -17257,6 +17379,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tL3IPv6CommParameters',
 	},
 	LDevice: {
 		tag: 'LDevice',
@@ -17391,6 +17514,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tLDevice',
 	},
 	LN: {
 		tag: 'LN',
@@ -17923,6 +18047,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tLN',
 	},
 	LN0: {
 		tag: 'LN0',
@@ -19011,6 +19136,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tLNode',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -19475,6 +19601,7 @@ export const DEFINITION = {
 						},
 					],
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tLNode',
 			},
 			'2': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -19956,6 +20083,7 @@ export const DEFINITION = {
 						},
 					],
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tLNode',
 			},
 		},
 	},
@@ -20056,6 +20184,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tLNodeDataRef',
 	},
 	LNodeInputRef: {
 		tag: 'LNodeInputRef',
@@ -20134,6 +20263,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tLNodeInputRef',
 	},
 	LNodeInputs: {
 		tag: 'LNodeInputs',
@@ -20224,6 +20354,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tLNodeInputs',
 	},
 	LNodeOutputRef: {
 		tag: 'LNodeOutputRef',
@@ -20302,6 +20433,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tLNodeOutputRef',
 	},
 	LNodeOutputs: {
 		tag: 'LNodeOutputs',
@@ -20386,6 +20518,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tLNodeOutputs',
 	},
 	LNodeSpecNaming: {
 		tag: 'LNodeSpecNaming',
@@ -20751,6 +20884,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tLNodeSpecNaming',
 	},
 	LNodeType: {
 		tag: 'LNodeType',
@@ -21121,6 +21255,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tLNodeType',
 	},
 	Label: {
 		tag: 'Label',
@@ -21153,6 +21288,7 @@ export const DEFINITION = {
 		textContent: {
 			type: { builtin: 'normalizedString' },
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tLabel',
 	},
 	Labels: {
 		tag: 'Labels',
@@ -21250,6 +21386,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -21332,6 +21469,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -21414,6 +21552,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'3': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -21496,6 +21635,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'4': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -21578,6 +21718,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'5': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -21660,6 +21801,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'6': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -21742,6 +21884,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'7': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -21824,6 +21967,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'8': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -21906,6 +22050,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'9': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -21988,6 +22133,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'10': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -22070,6 +22216,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'11': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -22152,6 +22299,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'12': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -22234,6 +22382,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'13': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -22316,6 +22465,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'14': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -22398,6 +22548,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'15': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -22480,6 +22631,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'16': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -22579,6 +22731,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'17': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -22678,6 +22831,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 			'18': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -22777,6 +22931,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLabels',
 			},
 		},
 	},
@@ -22961,6 +23116,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tLine',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -23204,6 +23360,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tLine',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -23384,6 +23541,7 @@ export const DEFINITION = {
 						},
 					],
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tLine',
 			},
 		},
 	},
@@ -23448,6 +23606,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tLog',
 	},
 	LogControl: {
 		tag: 'LogControl',
@@ -23894,6 +24053,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tLogControl',
 	},
 	LogParameters: {
 		tag: 'LogParameters',
@@ -24302,6 +24462,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tLogParameters',
 	},
 	LogParametersRef: {
 		tag: 'LogParametersRef',
@@ -24361,6 +24522,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tServiceParametersRef',
 	},
 	LogSettings: {
 		tag: 'LogSettings',
@@ -24410,6 +24572,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tLogSettings',
 	},
 	MaxTime: {
 		tag: 'MaxTime',
@@ -24462,6 +24625,7 @@ export const DEFINITION = {
 		textContent: {
 			type: { builtin: 'decimal' },
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tDurationInMilliSec',
 	},
 	McSecurity: {
 		tag: 'McSecurity',
@@ -24484,6 +24648,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tMcSecurity',
 	},
 	MinRequestedSCDFile: {
 		tag: 'MinRequestedSCDFile',
@@ -24543,6 +24708,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tMinRequestedSCDFile',
 	},
 	MinRequestedSCDFiles: {
 		tag: 'MinRequestedSCDFiles',
@@ -24609,6 +24775,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tMinRequestedSCDFiles',
 	},
 	MinTime: {
 		tag: 'MinTime',
@@ -24661,6 +24828,7 @@ export const DEFINITION = {
 		textContent: {
 			type: { builtin: 'decimal' },
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tDurationInMilliSec',
 	},
 	MultiAPPerSubNet: {
 		tag: 'MultiAPPerSubNet',
@@ -24674,6 +24842,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -24803,6 +24972,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tTerminal',
 	},
 	OptFields: {
 		tag: 'OptFields',
@@ -24989,6 +25159,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tOutputVar',
 	},
 	OutputVarRef: {
 		tag: 'OutputVarRef',
@@ -25062,6 +25233,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tVariableRef',
 		variants: ['{http://www.iec.ch/61850/2019/SCL/6-100}tVariableRefWithUuid'],
 	},
 	Outputs: {
@@ -25121,6 +25293,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tOutputs',
 	},
 	P: {
 		tag: 'P',
@@ -25210,6 +25383,7 @@ export const DEFINITION = {
 						facets: { minLength: 1 },
 					},
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tP',
 				variants: [
 					'{http://www.iec.ch/61850/2003/SCL}tP_APPID',
 					'{http://www.iec.ch/61850/2003/SCL}tP_C37-118-IP-Port',
@@ -25277,6 +25451,7 @@ export const DEFINITION = {
 						facets: { minLength: 1 },
 					},
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tP_PhysConn',
 			},
 		},
 	},
@@ -25377,6 +25552,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tPhysConn',
 	},
 	PowerSystemRelation: {
 		tag: 'PowerSystemRelation',
@@ -25482,6 +25658,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tPowerSystemRelation',
 	},
 	PowerSystemRelationRef: {
 		tag: 'PowerSystemRelationRef',
@@ -25560,6 +25737,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tPowerSystemRelationRef',
 	},
 	PowerSystemRelations: {
 		tag: 'PowerSystemRelations',
@@ -25641,6 +25819,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tPowerSystemRelations',
 	},
 	PowerTransformer: {
 		tag: 'PowerTransformer',
@@ -25856,6 +26035,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tPowerTransformer',
 	},
 	Private: {
 		tag: 'Private',
@@ -25966,6 +26146,7 @@ export const DEFINITION = {
 			],
 		},
 		textContent: {},
+		type: '{http://www.iec.ch/61850/2003/SCL}tPrivate',
 	},
 	Process: {
 		tag: 'Process',
@@ -26144,6 +26325,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tProcess',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -26383,6 +26565,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tProcess',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -26621,6 +26804,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tProcess',
 			},
 		},
 	},
@@ -26711,6 +26895,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tProcessEcho',
 	},
 	ProcessResource: {
 		tag: 'ProcessResource',
@@ -26844,6 +27029,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tProcessResource',
 	},
 	ProcessResourceRef: {
 		tag: 'ProcessResourceRef',
@@ -26922,6 +27108,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tProcessResourceRef',
 	},
 	ProcessResources: {
 		tag: 'ProcessResources',
@@ -27016,6 +27203,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tProcessResources',
 	},
 	Project: {
 		tag: 'Project',
@@ -27090,6 +27278,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tProject',
 	},
 	ProjectProcessReference: {
 		tag: 'ProjectProcessReference',
@@ -27157,6 +27346,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tProjectProcessReference',
 	},
 	ProtNs: {
 		tag: 'ProtNs',
@@ -27187,6 +27377,7 @@ export const DEFINITION = {
 				},
 			},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tProtNs',
 	},
 	Protocol: {
 		tag: 'Protocol',
@@ -27209,6 +27400,7 @@ export const DEFINITION = {
 		textContent: {
 			type: { builtin: 'normalizedString' },
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tProtocol',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -27230,6 +27422,7 @@ export const DEFINITION = {
 					type: { builtin: 'normalizedString' },
 					fixed: 'R-GOOSE',
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tProtocol',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -27251,6 +27444,7 @@ export const DEFINITION = {
 					type: { builtin: 'normalizedString' },
 					fixed: 'R-SV',
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tProtocol',
 			},
 		},
 	},
@@ -27266,6 +27460,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -27298,6 +27493,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tRedProt',
 	},
 	ReportControl: {
 		tag: 'ReportControl',
@@ -27457,6 +27653,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tReportControl',
 	},
 	ReportParameters: {
 		tag: 'ReportParameters',
@@ -27548,6 +27745,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tReportParameters',
 	},
 	ReportParametersRef: {
 		tag: 'ReportParametersRef',
@@ -27607,6 +27805,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tServiceParametersRef',
 	},
 	ReportSettings: {
 		tag: 'ReportSettings',
@@ -27688,6 +27887,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tReportSettings',
 	},
 	Resource: {
 		tag: 'Resource',
@@ -27725,6 +27925,7 @@ export const DEFINITION = {
 		textContent: {
 			type: { builtin: 'normalizedString' },
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tResource',
 	},
 	RptEnabled: {
 		tag: 'RptEnabled',
@@ -27790,6 +27991,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tRptEnabled',
 	},
 	SCL: {
 		tag: 'SCL',
@@ -28203,6 +28405,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSCSM',
 	},
 	SDI: {
 		tag: 'SDI',
@@ -28324,6 +28527,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSDI',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -28472,6 +28676,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tSDI',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -28591,6 +28796,7 @@ export const DEFINITION = {
 						},
 					],
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tSDI',
 			},
 		},
 	},
@@ -28687,6 +28893,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSDO',
 	},
 	SDS: {
 		tag: 'SDS',
@@ -28834,6 +29041,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tSDS',
 		declarations: {
 			'1': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -29008,6 +29216,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2019/SCL/6-100}tSDS',
 			},
 			'2': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -29153,6 +29362,7 @@ export const DEFINITION = {
 						},
 					],
 				},
+				type: '{http://www.iec.ch/61850/2019/SCL/6-100}tSDS',
 			},
 		},
 	},
@@ -29267,6 +29477,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSMV',
 	},
 	SMVParameters: {
 		tag: 'SMVParameters',
@@ -29390,6 +29601,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tSMVParameters',
 	},
 	SMVParametersRef: {
 		tag: 'SMVParametersRef',
@@ -29449,6 +29661,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tServiceParametersRef',
 	},
 	SMVSecurity: {
 		tag: 'SMVSecurity',
@@ -29555,6 +29768,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tCertificate',
 	},
 	SMVSettings: {
 		tag: 'SMVSettings',
@@ -29655,6 +29869,7 @@ export const DEFINITION = {
 				{ kind: 'element', name: 'McSecurity', maxOccurs: 1 },
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSMVSettings',
 	},
 	SMVsc: {
 		tag: 'SMVsc',
@@ -29692,6 +29907,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSMVsc',
 	},
 	SVMcSecurity: {
 		tag: 'SVMcSecurity',
@@ -29714,6 +29930,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tMcSecurity',
 	},
 	SampledValueControl: {
 		tag: 'SampledValueControl',
@@ -29887,6 +30104,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSampledValueControl',
 	},
 	SamplesPerSec: {
 		tag: 'SamplesPerSec',
@@ -29997,6 +30215,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSclFileUUIDReference',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tMinRequestedSCDFile',
 			'{http://www.iec.ch/61850/2019/SCL/6-100}tCheckoutID',
@@ -30091,6 +30310,7 @@ export const DEFINITION = {
 						},
 					],
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tSclFileUUIDReference',
 				variants: [
 					'{http://www.iec.ch/61850/2003/SCL}tMinRequestedSCDFile',
 					'{http://www.iec.ch/61850/2019/SCL/6-100}tCheckoutID',
@@ -30195,6 +30415,7 @@ export const DEFINITION = {
 						},
 					],
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tSclFileUUIDReference',
 				variants: [
 					'{http://www.iec.ch/61850/2003/SCL}tMinRequestedSCDFile',
 					'{http://www.iec.ch/61850/2019/SCL/6-100}tCheckoutID',
@@ -30243,6 +30464,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSecurity',
 	},
 	Server: {
 		tag: 'Server',
@@ -30329,6 +30551,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tServer',
 	},
 	ServerAt: {
 		tag: 'ServerAt',
@@ -30399,6 +30622,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServerAt',
 	},
 	ServiceSpecifications: {
 		tag: 'ServiceSpecifications',
@@ -30491,6 +30715,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tServiceSpecifications',
 	},
 	Services: {
 		tag: 'Services',
@@ -30594,6 +30819,7 @@ export const DEFINITION = {
 				{ kind: 'element', name: 'MultiAPPerSubNet', maxOccurs: 1 },
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServices',
 	},
 	SetDataSetValue: {
 		tag: 'SetDataSetValue',
@@ -30607,6 +30833,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -30682,6 +30909,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSettingControl',
 	},
 	SettingGroups: {
 		tag: 'SettingGroups',
@@ -30704,6 +30932,7 @@ export const DEFINITION = {
 				{ kind: 'element', name: 'ConfSG', maxOccurs: 1 },
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSettingGroups',
 	},
 	SignalRole: {
 		tag: 'SignalRole',
@@ -30808,6 +31037,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tSignalRole',
 	},
 	SmpRate: {
 		tag: 'SmpRate',
@@ -30931,6 +31161,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tHeaderSclRef',
 	},
 	SourceRef: {
 		tag: 'SourceRef',
@@ -31153,6 +31384,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tSourceRef',
 	},
 	SubCategory: {
 		tag: 'SubCategory',
@@ -31244,6 +31476,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tFunctionCategory',
 	},
 	SubCheckoutID: {
 		tag: 'SubCheckoutID',
@@ -31329,6 +31562,7 @@ export const DEFINITION = {
 			maxOccurs: 1,
 			particles: [{ kind: 'element', name: 'SubCheckoutID', maxOccurs: 1 }],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tCheckoutID',
 	},
 	SubEquipment: {
 		tag: 'SubEquipment',
@@ -31459,6 +31693,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSubEquipment',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -31649,6 +31884,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tSubEquipment',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -31839,6 +32075,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tSubEquipment',
 			},
 			'3': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -32029,6 +32266,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tSubEquipment',
 			},
 		},
 	},
@@ -32176,6 +32414,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSubFunction',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -32381,6 +32620,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tSubFunction',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -32586,6 +32826,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tSubFunction',
 			},
 		},
 	},
@@ -32708,6 +32949,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tSubFunctionTemplate',
 		declarations: {
 			'1': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -32893,6 +33135,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2019/SCL/6-100}tSubFunctionTemplate',
 			},
 			'2': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -33079,6 +33322,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2019/SCL/6-100}tSubFunctionTemplate',
 			},
 		},
 	},
@@ -33222,6 +33466,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tSubNetwork',
 	},
 	Subject: {
 		tag: 'Subject',
@@ -33253,6 +33498,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tCert',
 	},
 	SubscriberLNode: {
 		tag: 'SubscriberLNode',
@@ -33354,6 +33600,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tSubscriberLNode',
 	},
 	Substation: {
 		tag: 'Substation',
@@ -33510,6 +33757,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSubstation',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -33727,6 +33975,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tSubstation',
 			},
 			'2': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -33943,6 +34192,7 @@ export const DEFINITION = {
 						],
 					},
 				],
+				type: '{http://www.iec.ch/61850/2003/SCL}tSubstation',
 			},
 		},
 	},
@@ -33967,6 +34217,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tSupSubscription',
 	},
 	TapChanger: {
 		tag: 'TapChanger',
@@ -34163,6 +34414,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tTapChanger',
 	},
 	Terminal: {
 		tag: 'Terminal',
@@ -34286,6 +34538,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tTerminal',
 	},
 	Text: {
 		tag: 'Text',
@@ -34458,6 +34711,7 @@ export const DEFINITION = {
 			],
 		},
 		textContent: {},
+		type: '{http://www.iec.ch/61850/2003/SCL}tText',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -34495,6 +34749,7 @@ export const DEFINITION = {
 					],
 				},
 				textContent: {},
+				type: '{http://www.iec.ch/61850/2003/SCL}tText',
 			},
 			'2': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -34532,6 +34787,7 @@ export const DEFINITION = {
 					],
 				},
 				textContent: {},
+				type: '{http://www.iec.ch/61850/2003/SCL}tText',
 			},
 		},
 	},
@@ -34564,6 +34820,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tTimeSyncProt',
 	},
 	TimerActivatedControl: {
 		tag: 'TimerActivatedControl',
@@ -34577,6 +34834,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tServiceYesNo',
 		variants: [
 			'{http://www.iec.ch/61850/2003/SCL}tCommProt',
 			'{http://www.iec.ch/61850/2003/SCL}tFileHandling',
@@ -34822,6 +35080,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tTransformerWinding',
 	},
 	TrgOps: {
 		tag: 'TrgOps',
@@ -34856,6 +35115,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tTrgOps',
 	},
 	Val: {
 		tag: 'Val',
@@ -34876,6 +35136,7 @@ export const DEFINITION = {
 		textContent: {
 			type: { builtin: 'normalizedString' },
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tVal',
 		declarations: {
 			'1': {
 				namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
@@ -34894,6 +35155,7 @@ export const DEFINITION = {
 				textContent: {
 					type: { builtin: 'normalizedString' },
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tVal',
 			},
 			'2': {
 				namespace: { prefix: 'eIEC61850-6-100', uri: 'http://www.iec.ch/61850/2019/SCL/6-100' },
@@ -34912,6 +35174,7 @@ export const DEFINITION = {
 				textContent: {
 					type: { builtin: 'normalizedString' },
 				},
+				type: '{http://www.iec.ch/61850/2003/SCL}tVal',
 			},
 		},
 	},
@@ -34932,6 +35195,7 @@ export const DEFINITION = {
 			sequence: [],
 			details: {},
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tValueHandling',
 	},
 	Variable: {
 		tag: 'Variable',
@@ -35035,6 +35299,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tVariable',
 	},
 	VariableApplyTo: {
 		tag: 'VariableApplyTo',
@@ -35143,6 +35408,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tVariableApplyTo',
 	},
 	VariableRef: {
 		tag: 'VariableRef',
@@ -35231,6 +35497,7 @@ export const DEFINITION = {
 				},
 			],
 		},
+		type: '{http://www.iec.ch/61850/2019/SCL/6-100}tVariableRefWithUuid',
 	},
 	Voltage: {
 		tag: 'Voltage',
@@ -35284,6 +35551,7 @@ export const DEFINITION = {
 		textContent: {
 			type: { builtin: 'decimal' },
 		},
+		type: '{http://www.iec.ch/61850/2003/SCL}tVoltage',
 	},
 	VoltageLevel: {
 		tag: 'VoltageLevel',
@@ -35516,6 +35784,7 @@ export const DEFINITION = {
 				],
 			},
 		],
+		type: '{http://www.iec.ch/61850/2003/SCL}tVoltageLevel',
 	},
 } as const
 

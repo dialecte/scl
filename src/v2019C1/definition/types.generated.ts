@@ -666,8 +666,86 @@ export type AttributesConfLNs = {
 	fixPrefix?: string
 }
 
-export type AttributesConfLdName = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesConfLdName =
+	| AttributesConfLdName_Own
+	| AttributesConfLdName_tCommProt
+	| AttributesConfLdName_tFileHandling
+	| AttributesConfLdName_tSCSM
+	| AttributesConfLdName_tTimeSyncProt
+
+export type AttributesConfLdName_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesConfLdName_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesConfLdName_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesConfLdName_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesConfLdName_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
 }
 
 export type AttributesConfLogControl = {
@@ -979,8 +1057,86 @@ export type AttributesDOType = {
 	iedType?: string
 }
 
-export type AttributesDataObjectDirectory = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesDataObjectDirectory =
+	| AttributesDataObjectDirectory_Own
+	| AttributesDataObjectDirectory_tCommProt
+	| AttributesDataObjectDirectory_tFileHandling
+	| AttributesDataObjectDirectory_tSCSM
+	| AttributesDataObjectDirectory_tTimeSyncProt
+
+export type AttributesDataObjectDirectory_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesDataObjectDirectory_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesDataObjectDirectory_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesDataObjectDirectory_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesDataObjectDirectory_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
 }
 
 export type AttributesDataSet = {
@@ -990,8 +1146,86 @@ export type AttributesDataSet = {
 	uuid?: string
 }
 
-export type AttributesDataSetDirectory = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesDataSetDirectory =
+	| AttributesDataSetDirectory_Own
+	| AttributesDataSetDirectory_tCommProt
+	| AttributesDataSetDirectory_tFileHandling
+	| AttributesDataSetDirectory_tSCSM
+	| AttributesDataSetDirectory_tTimeSyncProt
+
+export type AttributesDataSetDirectory_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesDataSetDirectory_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesDataSetDirectory_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesDataSetDirectory_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesDataSetDirectory_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
 }
 
 export type AttributesDataTypeTemplates = {}
@@ -1000,10 +1234,22 @@ export type AttributesDynAssociation = {
 	max?: string
 }
 
-export type AttributesDynDataSet = {
+export type AttributesDynDataSet =
+	| AttributesDynDataSet_Own
+	| AttributesDynDataSet_tServiceForConfDataSet
+
+export type AttributesDynDataSet_Own = {
+	'xsi:type'?: 'tServiceWithMaxAndMaxAttributes'
 	max: string
 	maxAttributes?: string
-	'xsi:type'?: 'tServiceForConfDataSet' | (string & {})
+	modify?: undefined
+}
+
+export type AttributesDynDataSet_tServiceForConfDataSet = {
+	'xsi:type': 'tServiceForConfDataSet'
+	max: string
+	maxAttributes?: string
+	modify?: string
 }
 
 export type AttributesEnumType = {
@@ -2202,8 +2448,86 @@ export type AttributesGSEControl = {
 	uuid?: string
 }
 
-export type AttributesGSEDir = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesGSEDir =
+	| AttributesGSEDir_Own
+	| AttributesGSEDir_tCommProt
+	| AttributesGSEDir_tFileHandling
+	| AttributesGSEDir_tSCSM
+	| AttributesGSEDir_tTimeSyncProt
+
+export type AttributesGSEDir_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGSEDir_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGSEDir_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGSEDir_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGSEDir_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
 }
 
 export type AttributesGSESettings = {
@@ -2214,16 +2538,132 @@ export type AttributesGSESettings = {
 	kdaParticipant?: string
 }
 
-export type AttributesGSSE = {
+export type AttributesGSSE =
+	| AttributesGSSE_Own
+	| AttributesGSSE_tGOOSEcapabilities
+	| AttributesGSSE_tSMVsc
+	| AttributesGSSE_tServiceConfReportControl
+	| AttributesGSSE_tServiceForConfDataSet
+	| AttributesGSSE_tServiceWithMaxAndMaxAttributes
+	| AttributesGSSE_tServiceWithMaxAndModify
+
+export type AttributesGSSE_Own = {
+	'xsi:type'?: 'tServiceWithMax'
 	max: string
-	'xsi:type'?:
-		| 'tGOOSEcapabilities'
-		| 'tSMVsc'
-		| 'tServiceConfReportControl'
-		| 'tServiceForConfDataSet'
-		| 'tServiceWithMaxAndMaxAttributes'
-		| 'tServiceWithMaxAndModify'
-		| (string & {})
+	fixedOffs?: undefined
+	goose?: undefined
+	rGOOSE?: undefined
+	delivery?: undefined
+	deliveryConf?: undefined
+	rSV?: undefined
+	sv?: undefined
+	bufConf?: undefined
+	bufMode?: undefined
+	maxBuf?: undefined
+	maxAttributes?: undefined
+	modify?: undefined
+}
+
+export type AttributesGSSE_tGOOSEcapabilities = {
+	'xsi:type': 'tGOOSEcapabilities'
+	fixedOffs?: string
+	goose?: string
+	max: string
+	rGOOSE?: string
+	delivery?: undefined
+	deliveryConf?: undefined
+	rSV?: undefined
+	sv?: undefined
+	bufConf?: undefined
+	bufMode?: undefined
+	maxBuf?: undefined
+	maxAttributes?: undefined
+	modify?: undefined
+}
+
+export type AttributesGSSE_tSMVsc = {
+	'xsi:type': 'tSMVsc'
+	delivery?: 'unicast' | 'multicast' | 'both' | (string & {})
+	deliveryConf?: string
+	max: string
+	rSV?: string
+	sv?: string
+	fixedOffs?: undefined
+	goose?: undefined
+	rGOOSE?: undefined
+	bufConf?: undefined
+	bufMode?: undefined
+	maxBuf?: undefined
+	maxAttributes?: undefined
+	modify?: undefined
+}
+
+export type AttributesGSSE_tServiceConfReportControl = {
+	'xsi:type': 'tServiceConfReportControl'
+	bufConf?: string
+	bufMode?: 'unbuffered' | 'buffered' | 'both' | (string & {})
+	max: string
+	maxBuf?: string
+	fixedOffs?: undefined
+	goose?: undefined
+	rGOOSE?: undefined
+	delivery?: undefined
+	deliveryConf?: undefined
+	rSV?: undefined
+	sv?: undefined
+	maxAttributes?: undefined
+	modify?: undefined
+}
+
+export type AttributesGSSE_tServiceForConfDataSet = {
+	'xsi:type': 'tServiceForConfDataSet'
+	max: string
+	maxAttributes?: string
+	modify?: string
+	fixedOffs?: undefined
+	goose?: undefined
+	rGOOSE?: undefined
+	delivery?: undefined
+	deliveryConf?: undefined
+	rSV?: undefined
+	sv?: undefined
+	bufConf?: undefined
+	bufMode?: undefined
+	maxBuf?: undefined
+}
+
+export type AttributesGSSE_tServiceWithMaxAndMaxAttributes = {
+	'xsi:type': 'tServiceWithMaxAndMaxAttributes'
+	max: string
+	maxAttributes?: string
+	fixedOffs?: undefined
+	goose?: undefined
+	rGOOSE?: undefined
+	delivery?: undefined
+	deliveryConf?: undefined
+	rSV?: undefined
+	sv?: undefined
+	bufConf?: undefined
+	bufMode?: undefined
+	maxBuf?: undefined
+	modify?: undefined
+}
+
+export type AttributesGSSE_tServiceWithMaxAndModify = {
+	'xsi:type': 'tServiceWithMaxAndModify'
+	max: string
+	modify?: string
+	fixedOffs?: undefined
+	goose?: undefined
+	rGOOSE?: undefined
+	delivery?: undefined
+	deliveryConf?: undefined
+	rSV?: undefined
+	sv?: undefined
+	bufConf?: undefined
+	bufMode?: undefined
+	maxBuf?: undefined
+	maxAttributes?: undefined
 }
 
 export type AttributesGeneralEquipment = {
@@ -2235,20 +2675,332 @@ export type AttributesGeneralEquipment = {
 	virtual?: string
 }
 
-export type AttributesGetCBValues = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesGetCBValues =
+	| AttributesGetCBValues_Own
+	| AttributesGetCBValues_tCommProt
+	| AttributesGetCBValues_tFileHandling
+	| AttributesGetCBValues_tSCSM
+	| AttributesGetCBValues_tTimeSyncProt
+
+export type AttributesGetCBValues_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
 }
 
-export type AttributesGetDataObjectDefinition = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesGetCBValues_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
 }
 
-export type AttributesGetDataSetValue = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesGetCBValues_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
 }
 
-export type AttributesGetDirectory = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesGetCBValues_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetCBValues_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+}
+
+export type AttributesGetDataObjectDefinition =
+	| AttributesGetDataObjectDefinition_Own
+	| AttributesGetDataObjectDefinition_tCommProt
+	| AttributesGetDataObjectDefinition_tFileHandling
+	| AttributesGetDataObjectDefinition_tSCSM
+	| AttributesGetDataObjectDefinition_tTimeSyncProt
+
+export type AttributesGetDataObjectDefinition_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDataObjectDefinition_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDataObjectDefinition_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDataObjectDefinition_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDataObjectDefinition_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+}
+
+export type AttributesGetDataSetValue =
+	| AttributesGetDataSetValue_Own
+	| AttributesGetDataSetValue_tCommProt
+	| AttributesGetDataSetValue_tFileHandling
+	| AttributesGetDataSetValue_tSCSM
+	| AttributesGetDataSetValue_tTimeSyncProt
+
+export type AttributesGetDataSetValue_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDataSetValue_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDataSetValue_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDataSetValue_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDataSetValue_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+}
+
+export type AttributesGetDirectory =
+	| AttributesGetDirectory_Own
+	| AttributesGetDirectory_tCommProt
+	| AttributesGetDirectory_tFileHandling
+	| AttributesGetDirectory_tSCSM
+	| AttributesGetDirectory_tTimeSyncProt
+
+export type AttributesGetDirectory_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDirectory_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDirectory_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDirectory_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesGetDirectory_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
 }
 
 export type AttributesGooseParameters = {
@@ -2489,11 +3241,24 @@ export type AttributesInputVar = {
 	varName: string
 }
 
-export type AttributesInputVarRef = {
+export type AttributesInputVarRef =
+	| AttributesInputVarRef_Own
+	| AttributesInputVarRef_EIEC618506100TVariableRefWithUuid
+
+export type AttributesInputVarRef_Own = {
+	'xsi:type'?: 'eIEC61850-6-100:tVariableRef'
 	desc?: string
 	value?: string
 	variable?: string
-	'xsi:type'?: 'tVariableRefWithUuid' | (string & {})
+	variableUuid?: undefined
+}
+
+export type AttributesInputVarRef_EIEC618506100TVariableRefWithUuid = {
+	'xsi:type': 'eIEC61850-6-100:tVariableRefWithUuid'
+	desc?: string
+	value?: string
+	variable?: string
+	variableUuid?: string
 }
 
 export type AttributesInputs = {
@@ -3880,8 +4645,86 @@ export type AttributesMinTime = {
 	unit?: 's'
 }
 
-export type AttributesMultiAPPerSubNet = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesMultiAPPerSubNet =
+	| AttributesMultiAPPerSubNet_Own
+	| AttributesMultiAPPerSubNet_tCommProt
+	| AttributesMultiAPPerSubNet_tFileHandling
+	| AttributesMultiAPPerSubNet_tSCSM
+	| AttributesMultiAPPerSubNet_tTimeSyncProt
+
+export type AttributesMultiAPPerSubNet_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesMultiAPPerSubNet_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesMultiAPPerSubNet_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesMultiAPPerSubNet_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesMultiAPPerSubNet_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
 }
 
 export type AttributesNeutralPoint = {
@@ -3920,18 +4763,64 @@ export type AttributesOutputVar = {
 	varName: string
 }
 
-export type AttributesOutputVarRef = {
+export type AttributesOutputVarRef =
+	| AttributesOutputVarRef_Own
+	| AttributesOutputVarRef_EIEC618506100TVariableRefWithUuid
+
+export type AttributesOutputVarRef_Own = {
+	'xsi:type'?: 'eIEC61850-6-100:tVariableRef'
 	desc?: string
 	value?: string
 	variable?: string
-	'xsi:type'?: 'tVariableRefWithUuid' | (string & {})
+	variableUuid?: undefined
+}
+
+export type AttributesOutputVarRef_EIEC618506100TVariableRefWithUuid = {
+	'xsi:type': 'eIEC61850-6-100:tVariableRefWithUuid'
+	desc?: string
+	value?: string
+	variable?: string
+	variableUuid?: string
 }
 
 export type AttributesOutputs = {
 	desc?: string
 }
 
-export type AttributesP = {
+export type AttributesP =
+	| AttributesP_Own
+	| AttributesP_tP_APPID
+	| AttributesP_TP_C37118IPPort
+	| AttributesP_tP_DNSName
+	| AttributesP_tP_IP
+	| AttributesP_TP_IPClassOfTraffic
+	| AttributesP_TP_IPGATEWAY
+	| AttributesP_TP_IPIGMPv3Src
+	| AttributesP_TP_IPSUBNET
+	| AttributesP_tP_IPv6
+	| AttributesP_TP_IPv6GATEWAY
+	| AttributesP_TP_IPv6IGMPv3Src
+	| AttributesP_TP_IPv6SUBNET
+	| AttributesP_tP_IPv6ClassOfTraffic
+	| AttributesP_tP_IPv6FlowLabel
+	| AttributesP_TP_MACAddress
+	| AttributesP_TP_MMSPort
+	| AttributesP_TP_OSIAEInvoke
+	| AttributesP_TP_OSIAEQualifier
+	| AttributesP_TP_OSIAPInvoke
+	| AttributesP_TP_OSIAPTitle
+	| AttributesP_TP_OSINSAP
+	| AttributesP_TP_OSIPSEL
+	| AttributesP_TP_OSISSEL
+	| AttributesP_TP_OSITSEL
+	| AttributesP_TP_SNTPPort
+	| AttributesP_TP_TCPPort
+	| AttributesP_TP_UDPPort
+	| AttributesP_TP_VLANID
+	| AttributesP_TP_VLANPRIORITY
+
+export type AttributesP_Own = {
+	'xsi:type'?: 'tP' | 'tP_PhysConn'
 	type:
 		| 'IP'
 		| 'IP-SUBNET'
@@ -3967,40 +4856,10 @@ export type AttributesP = {
 		| 'Cable'
 		| 'Port'
 		| (string & {})
-	'xsi:type'?:
-		| 'tP_APPID'
-		| 'tP_C37-118-IP-Port'
-		| 'tP_DNSName'
-		| 'tP_IP'
-		| 'tP_IP-ClassOfTraffic'
-		| 'tP_IP-GATEWAY'
-		| 'tP_IP-IGMPv3Src'
-		| 'tP_IP-SUBNET'
-		| 'tP_IPv6'
-		| 'tP_IPv6-GATEWAY'
-		| 'tP_IPv6-IGMPv3Src'
-		| 'tP_IPv6-SUBNET'
-		| 'tP_IPv6ClassOfTraffic'
-		| 'tP_IPv6FlowLabel'
-		| 'tP_MAC-Address'
-		| 'tP_MMS-Port'
-		| 'tP_OSI-AE-Invoke'
-		| 'tP_OSI-AE-Qualifier'
-		| 'tP_OSI-AP-Invoke'
-		| 'tP_OSI-AP-Title'
-		| 'tP_OSI-NSAP'
-		| 'tP_OSI-PSEL'
-		| 'tP_OSI-SSEL'
-		| 'tP_OSI-TSEL'
-		| 'tP_SNTP-Port'
-		| 'tP_TCP-Port'
-		| 'tP_UDP-Port'
-		| 'tP_VLAN-ID'
-		| 'tP_VLAN-PRIORITY'
-		| (string & {})
 }
 
-export type AttributesPInAddress = {
+export type AttributesP_tP_APPID = {
+	'xsi:type': 'tP_APPID'
 	type:
 		| 'IP'
 		| 'IP-SUBNET'
@@ -4032,36 +4891,2067 @@ export type AttributesPInAddress = {
 		| 'IP-IGMPv3Src'
 		| 'IP-ClassOfTraffic'
 		| (string & {})
-	'xsi:type'?:
-		| 'tP_APPID'
-		| 'tP_C37-118-IP-Port'
-		| 'tP_DNSName'
-		| 'tP_IP'
-		| 'tP_IP-ClassOfTraffic'
-		| 'tP_IP-GATEWAY'
-		| 'tP_IP-IGMPv3Src'
-		| 'tP_IP-SUBNET'
-		| 'tP_IPv6'
-		| 'tP_IPv6-GATEWAY'
-		| 'tP_IPv6-IGMPv3Src'
-		| 'tP_IPv6-SUBNET'
-		| 'tP_IPv6ClassOfTraffic'
-		| 'tP_IPv6FlowLabel'
-		| 'tP_MAC-Address'
-		| 'tP_MMS-Port'
-		| 'tP_OSI-AE-Invoke'
-		| 'tP_OSI-AE-Qualifier'
-		| 'tP_OSI-AP-Invoke'
-		| 'tP_OSI-AP-Title'
-		| 'tP_OSI-NSAP'
-		| 'tP_OSI-PSEL'
-		| 'tP_OSI-SSEL'
-		| 'tP_OSI-TSEL'
-		| 'tP_SNTP-Port'
-		| 'tP_TCP-Port'
-		| 'tP_UDP-Port'
-		| 'tP_VLAN-ID'
-		| 'tP_VLAN-PRIORITY'
+}
+
+export type AttributesP_TP_C37118IPPort = {
+	'xsi:type': 'tP_C37-118-IP-Port'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_tP_DNSName = {
+	'xsi:type': 'tP_DNSName'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_tP_IP = {
+	'xsi:type': 'tP_IP'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_IPClassOfTraffic = {
+	'xsi:type': 'tP_IP-ClassOfTraffic'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_IPGATEWAY = {
+	'xsi:type': 'tP_IP-GATEWAY'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_IPIGMPv3Src = {
+	'xsi:type': 'tP_IP-IGMPv3Src'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_IPSUBNET = {
+	'xsi:type': 'tP_IP-SUBNET'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_tP_IPv6 = {
+	'xsi:type': 'tP_IPv6'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_IPv6GATEWAY = {
+	'xsi:type': 'tP_IPv6-GATEWAY'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_IPv6IGMPv3Src = {
+	'xsi:type': 'tP_IPv6-IGMPv3Src'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_IPv6SUBNET = {
+	'xsi:type': 'tP_IPv6-SUBNET'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_tP_IPv6ClassOfTraffic = {
+	'xsi:type': 'tP_IPv6ClassOfTraffic'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_tP_IPv6FlowLabel = {
+	'xsi:type': 'tP_IPv6FlowLabel'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_MACAddress = {
+	'xsi:type': 'tP_MAC-Address'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_MMSPort = {
+	'xsi:type': 'tP_MMS-Port'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_OSIAEInvoke = {
+	'xsi:type': 'tP_OSI-AE-Invoke'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_OSIAEQualifier = {
+	'xsi:type': 'tP_OSI-AE-Qualifier'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_OSIAPInvoke = {
+	'xsi:type': 'tP_OSI-AP-Invoke'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_OSIAPTitle = {
+	'xsi:type': 'tP_OSI-AP-Title'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_OSINSAP = {
+	'xsi:type': 'tP_OSI-NSAP'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_OSIPSEL = {
+	'xsi:type': 'tP_OSI-PSEL'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_OSISSEL = {
+	'xsi:type': 'tP_OSI-SSEL'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_OSITSEL = {
+	'xsi:type': 'tP_OSI-TSEL'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_SNTPPort = {
+	'xsi:type': 'tP_SNTP-Port'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_TCPPort = {
+	'xsi:type': 'tP_TCP-Port'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_UDPPort = {
+	'xsi:type': 'tP_UDP-Port'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_VLANID = {
+	'xsi:type': 'tP_VLAN-ID'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesP_TP_VLANPRIORITY = {
+	'xsi:type': 'tP_VLAN-PRIORITY'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress =
+	| AttributesPInAddress_Own
+	| AttributesPInAddress_tP_APPID
+	| AttributesPInAddress_TP_C37118IPPort
+	| AttributesPInAddress_tP_DNSName
+	| AttributesPInAddress_tP_IP
+	| AttributesPInAddress_TP_IPClassOfTraffic
+	| AttributesPInAddress_TP_IPGATEWAY
+	| AttributesPInAddress_TP_IPIGMPv3Src
+	| AttributesPInAddress_TP_IPSUBNET
+	| AttributesPInAddress_tP_IPv6
+	| AttributesPInAddress_TP_IPv6GATEWAY
+	| AttributesPInAddress_TP_IPv6IGMPv3Src
+	| AttributesPInAddress_TP_IPv6SUBNET
+	| AttributesPInAddress_tP_IPv6ClassOfTraffic
+	| AttributesPInAddress_tP_IPv6FlowLabel
+	| AttributesPInAddress_TP_MACAddress
+	| AttributesPInAddress_TP_MMSPort
+	| AttributesPInAddress_TP_OSIAEInvoke
+	| AttributesPInAddress_TP_OSIAEQualifier
+	| AttributesPInAddress_TP_OSIAPInvoke
+	| AttributesPInAddress_TP_OSIAPTitle
+	| AttributesPInAddress_TP_OSINSAP
+	| AttributesPInAddress_TP_OSIPSEL
+	| AttributesPInAddress_TP_OSISSEL
+	| AttributesPInAddress_TP_OSITSEL
+	| AttributesPInAddress_TP_SNTPPort
+	| AttributesPInAddress_TP_TCPPort
+	| AttributesPInAddress_TP_UDPPort
+	| AttributesPInAddress_TP_VLANID
+	| AttributesPInAddress_TP_VLANPRIORITY
+
+export type AttributesPInAddress_Own = {
+	'xsi:type'?: 'tP'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_tP_APPID = {
+	'xsi:type': 'tP_APPID'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_C37118IPPort = {
+	'xsi:type': 'tP_C37-118-IP-Port'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_tP_DNSName = {
+	'xsi:type': 'tP_DNSName'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_tP_IP = {
+	'xsi:type': 'tP_IP'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_IPClassOfTraffic = {
+	'xsi:type': 'tP_IP-ClassOfTraffic'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_IPGATEWAY = {
+	'xsi:type': 'tP_IP-GATEWAY'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_IPIGMPv3Src = {
+	'xsi:type': 'tP_IP-IGMPv3Src'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_IPSUBNET = {
+	'xsi:type': 'tP_IP-SUBNET'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_tP_IPv6 = {
+	'xsi:type': 'tP_IPv6'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_IPv6GATEWAY = {
+	'xsi:type': 'tP_IPv6-GATEWAY'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_IPv6IGMPv3Src = {
+	'xsi:type': 'tP_IPv6-IGMPv3Src'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_IPv6SUBNET = {
+	'xsi:type': 'tP_IPv6-SUBNET'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_tP_IPv6ClassOfTraffic = {
+	'xsi:type': 'tP_IPv6ClassOfTraffic'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_tP_IPv6FlowLabel = {
+	'xsi:type': 'tP_IPv6FlowLabel'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_MACAddress = {
+	'xsi:type': 'tP_MAC-Address'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_MMSPort = {
+	'xsi:type': 'tP_MMS-Port'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_OSIAEInvoke = {
+	'xsi:type': 'tP_OSI-AE-Invoke'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_OSIAEQualifier = {
+	'xsi:type': 'tP_OSI-AE-Qualifier'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_OSIAPInvoke = {
+	'xsi:type': 'tP_OSI-AP-Invoke'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_OSIAPTitle = {
+	'xsi:type': 'tP_OSI-AP-Title'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_OSINSAP = {
+	'xsi:type': 'tP_OSI-NSAP'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_OSIPSEL = {
+	'xsi:type': 'tP_OSI-PSEL'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_OSISSEL = {
+	'xsi:type': 'tP_OSI-SSEL'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_OSITSEL = {
+	'xsi:type': 'tP_OSI-TSEL'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_SNTPPort = {
+	'xsi:type': 'tP_SNTP-Port'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_TCPPort = {
+	'xsi:type': 'tP_TCP-Port'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_UDPPort = {
+	'xsi:type': 'tP_UDP-Port'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_VLANID = {
+	'xsi:type': 'tP_VLAN-ID'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
+		| (string & {})
+}
+
+export type AttributesPInAddress_TP_VLANPRIORITY = {
+	'xsi:type': 'tP_VLAN-PRIORITY'
+	type:
+		| 'IP'
+		| 'IP-SUBNET'
+		| 'IP-GATEWAY'
+		| 'OSI-NSAP'
+		| 'OSI-TSEL'
+		| 'OSI-SSEL'
+		| 'OSI-PSEL'
+		| 'OSI-AP-Title'
+		| 'OSI-AP-Invoke'
+		| 'OSI-AE-Qualifier'
+		| 'OSI-AE-Invoke'
+		| 'MAC-Address'
+		| 'APPID'
+		| 'VLAN-PRIORITY'
+		| 'VLAN-ID'
+		| 'SNTP-Port'
+		| 'MMS-Port'
+		| 'DNSName'
+		| 'IPv6FlowLabel'
+		| 'IPv6ClassOfTraffic'
+		| 'C37-118-IP-Port'
+		| 'IP-UDP-PORT'
+		| 'IP-TCP-PORT'
+		| 'IPv6'
+		| 'IPv6-SUBNET'
+		| 'IPv6-GATEWAY'
+		| 'IPv6-IGMPv3Src'
+		| 'IP-IGMPv3Src'
+		| 'IP-ClassOfTraffic'
 		| (string & {})
 }
 
@@ -4166,8 +7056,86 @@ export type AttributesProtocol = {
 	mustUnderstand: 'true'
 }
 
-export type AttributesReadWrite = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesReadWrite =
+	| AttributesReadWrite_Own
+	| AttributesReadWrite_tCommProt
+	| AttributesReadWrite_tFileHandling
+	| AttributesReadWrite_tSCSM
+	| AttributesReadWrite_tTimeSyncProt
+
+export type AttributesReadWrite_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesReadWrite_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesReadWrite_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesReadWrite_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesReadWrite_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
 }
 
 export type AttributesRedProt = {
@@ -4382,7 +7350,14 @@ export type AttributesSampledValueControl = {
 
 export type AttributesSamplesPerSec = {}
 
-export type AttributesSclFileReference = {
+export type AttributesSclFileReference =
+	| AttributesSclFileReference_Own
+	| AttributesSclFileReference_tMinRequestedSCDFile
+	| AttributesSclFileReference_EIEC618506100TCheckoutID
+	| AttributesSclFileReference_EIEC618506100TSclFileUUIDCheckoutRestriction
+
+export type AttributesSclFileReference_Own = {
+	'xsi:type'?: 'tSclFileUUIDReference'
 	desc?: string
 	fileName?: string
 	fileType: 'ICD' | 'IID' | 'CID' | 'SSD' | 'SCD' | 'SED' | (string & {})
@@ -4390,11 +7365,47 @@ export type AttributesSclFileReference = {
 	revision: string
 	version: string
 	when?: string
-	'xsi:type'?:
-		| 'tMinRequestedSCDFile'
-		| 'tCheckoutID'
-		| 'tSclFileUUIDCheckoutRestriction'
-		| (string & {})
+	engRight?: undefined
+	headerId?: undefined
+}
+
+export type AttributesSclFileReference_tMinRequestedSCDFile = {
+	'xsi:type': 'tMinRequestedSCDFile'
+	desc?: string
+	fileName?: string
+	fileType: 'SCD' | (string & {})
+	fileUuid?: string
+	revision: string
+	version: string
+	when?: string
+	engRight?: undefined
+	headerId?: undefined
+}
+
+export type AttributesSclFileReference_EIEC618506100TCheckoutID = {
+	'xsi:type': 'eIEC61850-6-100:tCheckoutID'
+	desc?: string
+	engRight?: 'full' | 'fix' | 'dataflow' | (string & {})
+	fileName?: string
+	fileType: 'SED' | 'SCC' | (string & {})
+	fileUuid?: string
+	headerId?: string
+	revision: string
+	version: string
+	when?: string
+}
+
+export type AttributesSclFileReference_EIEC618506100TSclFileUUIDCheckoutRestriction = {
+	'xsi:type': 'eIEC61850-6-100:tSclFileUUIDCheckoutRestriction'
+	desc?: string
+	fileName?: string
+	fileType: 'SED' | 'SCC' | (string & {})
+	fileUuid?: string
+	revision: string
+	version: string
+	when?: string
+	engRight?: undefined
+	headerId?: undefined
 }
 
 export type AttributesSecPerSamples = {}
@@ -4423,8 +7434,86 @@ export type AttributesServices = {
 	nameLength?: string
 }
 
-export type AttributesSetDataSetValue = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesSetDataSetValue =
+	| AttributesSetDataSetValue_Own
+	| AttributesSetDataSetValue_tCommProt
+	| AttributesSetDataSetValue_tFileHandling
+	| AttributesSetDataSetValue_tSCSM
+	| AttributesSetDataSetValue_tTimeSyncProt
+
+export type AttributesSetDataSetValue_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesSetDataSetValue_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesSetDataSetValue_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesSetDataSetValue_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesSetDataSetValue_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
 }
 
 export type AttributesSettingControl = {
@@ -4593,8 +7682,86 @@ export type AttributesTimeSyncProt = {
 	sntp?: string
 }
 
-export type AttributesTimerActivatedControl = {
-	'xsi:type'?: 'tCommProt' | 'tFileHandling' | 'tSCSM' | 'tTimeSyncProt' | (string & {})
+export type AttributesTimerActivatedControl =
+	| AttributesTimerActivatedControl_Own
+	| AttributesTimerActivatedControl_tCommProt
+	| AttributesTimerActivatedControl_tFileHandling
+	| AttributesTimerActivatedControl_tSCSM
+	| AttributesTimerActivatedControl_tTimeSyncProt
+
+export type AttributesTimerActivatedControl_Own = {
+	'xsi:type'?: 'tServiceYesNo'
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesTimerActivatedControl_tCommProt = {
+	'xsi:type': 'tCommProt'
+	ipv6?: string
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesTimerActivatedControl_tFileHandling = {
+	'xsi:type': 'tFileHandling'
+	ftp?: string
+	ftps?: string
+	mms?: string
+	ipv6?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesTimerActivatedControl_tSCSM = {
+	'xsi:type': 'tSCSM'
+	iec61850_8_1?: string
+	iec61850_8_2?: string
+	serverAssociationInitiation?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	c37_238?: undefined
+	iec61850_9_3?: undefined
+	other?: undefined
+	sntp?: undefined
+}
+
+export type AttributesTimerActivatedControl_tTimeSyncProt = {
+	'xsi:type': 'tTimeSyncProt'
+	c37_238?: string
+	iec61850_9_3?: string
+	other?: string
+	sntp?: string
+	ipv6?: undefined
+	ftp?: undefined
+	ftps?: undefined
+	mms?: undefined
+	iec61850_8_1?: undefined
+	iec61850_8_2?: undefined
+	serverAssociationInitiation?: undefined
 }
 
 export type AttributesTransformerWinding = {
@@ -5817,7 +8984,8 @@ export type AttributesByParent = {
 
 export type RequiredAttributeNames<T extends AvailableElement> =
 	(typeof REQUIRED_ATTRIBUTES)[T][number]
+/** Every attribute name a member of the type offers, but the required ones. */
 export type OptionalAttributeNames<T extends AvailableElement> = Exclude<
-	keyof AttributesOf<T>,
+	AttributesOf<T> extends infer Member ? (Member extends unknown ? keyof Member : never) : never,
 	RequiredAttributeNames<T>
 >
