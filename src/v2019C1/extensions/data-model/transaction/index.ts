@@ -1,3 +1,4 @@
+export { unlockLNode } from './unlock-lnode'
 export { importTypes } from './import-types'
 export type {
 	ImportTypesParams,
