@@ -1,4 +1,5 @@
 import { buildElementPath } from '../build/build-element-path'
+import { functionBaseOf, isFunctionScoped } from '../build/function-scope'
 import { getPathSegment } from '../build/path-segment'
 import { readSpecNamings } from '../build/spec-namings'
 import { parseReferencePath, parsePathSegments, splitLnodeQualifier } from './parse-path'
@@ -75,12 +76,18 @@ export async function resolveReferencePath(
 		specNamings = await readSpecNamings(query, { records: ancestry })
 	}
 
+	const functionBase = isFunctionScoped(pair)
+		? await functionBaseOfReferrer(query, { record })
+		: undefined
+	if (isFunctionScoped(pair) && functionBase === undefined) return undefined
+
 	const parsed = parseReferencePath({
 		resolution: pair.resolution as ResolutionType,
 		pathAttribute,
 		pathValue,
 		ancestry,
 		specNamings,
+		functionBase,
 	})
 	if (!parsed) return undefined
 
@@ -110,6 +117,30 @@ export async function resolveReferencePath(
 	}
 
 	return undefined
+}
+
+/**
+ * The path of the Function a signal role's reference starts below: the Function, or the nearest
+ * one above the SubFunction, that its `FunctionRef` names.
+ */
+async function functionBaseOfReferrer(
+	query: Core.Query<Config> | Core.Transaction<Config>,
+	params: { record: Scl.TrackedRecord<Scl.ElementsOf> },
+): Promise<string | undefined> {
+	const ancestors = await query.findAncestors(params.record)
+	const functionRef = ancestors.find((ancestor) => ancestor.tagName === 'FunctionRef')
+	if (!functionRef) return undefined
+	const named = await resolveReferencePath(
+		query,
+		functionRef as Scl.TrackedRecord<Scl.ElementsOf>,
+		'function',
+	)
+	if (!named) return undefined
+	const functionPath = await buildElementPath(query, {
+		tagName: named.record.tagName,
+		id: named.record.id,
+	} as Scl.Ref<Scl.ElementsOf>)
+	return functionPath ? (functionBaseOf(functionPath) ?? undefined) : undefined
 }
 
 // ── Internal: reference pair lookup ──────────────────────────────────

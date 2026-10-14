@@ -602,7 +602,7 @@ describe('import of paths through an LNode bound to an IED', () => {
 					</Substation>
 				</SCL>
 			`,
-			expectedQueries: ['//v2019C1:LNodeInputRef[@sourceRef="S1/F1/PTRC1.Trip"]'],
+			expectedQueries: ['//v2019C1:LNodeInputRef[@sourceRef="PTRC1/Trip"]'],
 		},
 	}
 

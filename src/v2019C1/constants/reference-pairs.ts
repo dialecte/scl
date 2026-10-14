@@ -9,8 +9,17 @@
  * - `uuid`: the corresponding UUID attribute that identifies the same target
  * - `target`: the element tag(s) the UUID resolves to
  * - `companions`: attributes that must/may be set when the UUID is used
+ * - `scope`: `'function'` when the path is relative to the target's Function (`FUNCTION_SCOPE_TAGS`),
+ *   the Function left out: the references of a signal role (`LNodeInputRef`, `LNodeOutputRef`,
+ *   `LNodeDataRef`)
  */
 import { ELEMENT_NAMES } from '@/v2019C1/definition/constants.generated'
+
+/**
+ * The elements a function-scoped path (`scope: 'function'`) starts below: the nearest of them above
+ * the target is its Function, never a SubFunction.
+ */
+export const FUNCTION_SCOPE_TAGS: ReadonlySet<string> = new Set(['Function', 'EqFunction'])
 
 export const UUID_REFERENCE_PAIRS = {
 	AllocationRoleRef: [
@@ -134,6 +143,7 @@ export const UUID_REFERENCE_PAIRS = {
 		{
 			attribute: { path: 'data', uuid: 'lnodeUuid' },
 			resolution: 'lnode',
+			scope: 'function',
 			target: ['LNode'],
 			companions: [
 				{ name: 'doName', required: true },
@@ -145,6 +155,7 @@ export const UUID_REFERENCE_PAIRS = {
 		{
 			attribute: { path: 'sourceRef', uuid: 'sourceRefUuid' },
 			resolution: 'direct',
+			scope: 'function',
 			target: ['SourceRef'],
 			companions: [],
 		},
@@ -153,6 +164,7 @@ export const UUID_REFERENCE_PAIRS = {
 		{
 			attribute: { path: 'controlRef', uuid: 'controlRefUuid' },
 			resolution: 'direct',
+			scope: 'function',
 			target: ['ControlRef'],
 			companions: [],
 		},

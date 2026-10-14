@@ -106,9 +106,18 @@ export function parseReferencePath(params: {
 	ancestry?: readonly AnyRawRecord[]
 	/** The `LNodeSpecNaming` of each LNode of `ancestry`, by LNode id: names those LNodes. */
 	specNamings?: ReadonlyMap<string, AnyRawRecord>
+	/**
+	 * For a function-scoped pair (a signal role's reference): the path of the Function its path
+	 * starts below. The path is read relative to it, and as written, the absolute form an earlier
+	 * version wrote.
+	 */
+	functionBase?: string
 }): ParsedReference | null {
-	const { resolution, pathAttribute, pathValue, ancestry, specNamings } = params
+	const { resolution, pathAttribute, pathValue, ancestry, specNamings, functionBase } = params
 	if (!resolution || resolution === RESOLUTION_TYPE.unsupported) return null
+
+	if (functionBase !== undefined)
+		return parseFunctionScopedPath({ resolution, pathValue, functionBase })
 
 	if (resolution === RESOLUTION_TYPE.direct) return { lookupKey: pathValue }
 
@@ -125,6 +134,33 @@ export function parseReferencePath(params: {
 	}
 
 	return null
+}
+
+// ── function-scoped paths ────────────────────────────────────────────
+
+/**
+ * A path from a Function down, the Function left out, every level joined with "/": the absolute
+ * key puts the Function's path in front, and joins a signal to its LNode with "." (`SF1/PTRC1/Trip`
+ * below `S1/F1` is `S1/F1/SF1/PTRC1.Trip`); a data path keeps its qualifier.
+ */
+function parseFunctionScopedPath(params: {
+	resolution: ResolutionType
+	pathValue: string
+	functionBase: string
+}): ParsedReference | null {
+	const { resolution, pathValue, functionBase } = params
+	if (resolution === RESOLUTION_TYPE.lnode) {
+		const relative = parseLnodePath(`${functionBase}/${pathValue}`)
+		const asWritten = parseLnodePath(pathValue)
+		return { ...relative, fallbackLookupKeys: [asWritten.lookupKey] }
+	}
+	if (resolution !== RESOLUTION_TYPE.direct) return null
+	const lastSlash = pathValue.lastIndexOf('/')
+	const signalPath =
+		lastSlash === -1
+			? pathValue
+			: `${pathValue.slice(0, lastSlash)}.${pathValue.slice(lastSlash + 1)}`
+	return { lookupKey: `${functionBase}/${signalPath}`, fallbackLookupKeys: [pathValue] }
 }
 
 // ── ancestor-name strategy ───────────────────────────────────────────

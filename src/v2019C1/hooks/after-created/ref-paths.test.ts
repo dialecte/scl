@@ -17,8 +17,8 @@ const ns = ALL_XMLNS_NAMESPACES
  * - `DOS` / `SDS` / `DAS` `mappedDoName` / `mappedDaName`: stored in the mapped-data canonical
  *   form, see `reconcile-mapped-data.test.ts`.
  * - `VariableApplyTo.element`: an XPath selector, never rebuilt as a name path.
- * - `LNodeInputRef.sourceRef`, `LNodeOutputRef.controlRef`, `LNodeDataRef.data`: written today
- *   from the root, they are to become a path relative to the Function.
+ * - `LNodeInputRef.sourceRef`, `LNodeOutputRef.controlRef`, `LNodeDataRef.data`: relative to
+ *   their Function, see `extensions/reference/query/build/function-scoped-paths.test.ts`.
  */
 describe('setRefPaths', () => {
 	describe('referrer created with its uuid only', () => {

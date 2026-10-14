@@ -9,6 +9,10 @@ import {
 import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import { composeReferencePath } from '@/v2019C1/extensions/reference/query/build/compose-reference-path'
+import {
+	functionBaseOf,
+	isFunctionScoped,
+} from '@/v2019C1/extensions/reference/query/build/function-scope'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { createSpecNamingImport } from '@/v2019C1/hooks/io/lnode-spec-naming-import'
@@ -115,7 +119,10 @@ export function createSclIoHooks(): IOHooks {
 		const { record, ancestry, pair } = params
 		const pathValue = readAttribute(record, pair.attribute.path)
 		const uuidValue = readAttribute(record, pair.attribute.uuid)
-		const localAncestry = LOCAL_NAME_RESOLUTIONS.has(pair.resolution) ? [...ancestry] : undefined
+		const localAncestry =
+			LOCAL_NAME_RESOLUTIONS.has(pair.resolution) || isFunctionScoped(pair)
+				? [...ancestry]
+				: undefined
 
 		// A uuid without its path: the path is written once every target is stored. An XPath
 		// selector (`unsupported`) is never rebuilt as a name path.
@@ -160,7 +167,8 @@ export function createSclIoHooks(): IOHooks {
 			alwaysStandardize:
 				(pair.resolution === RESOLUTION_TYPE.behaviorDescription &&
 					pair.target.every((target) => SIGNAL_TAG_NAMES.has(target))) ||
-				pair.resolution === RESOLUTION_TYPE.ancestorName,
+				pair.resolution === RESOLUTION_TYPE.ancestorName ||
+				isFunctionScoped(pair),
 		})
 	}
 
@@ -241,23 +249,31 @@ function resolvePending(params: {
 	specNamings: ReadonlyMap<string, AnyRawRecord>
 }): { update?: RecordPatch; warning?: ImportWarning } {
 	const { pending, index, specNamings } = params
+	const scoped = isFunctionScoped(pending.pair)
+	const functionBase = scoped
+		? functionBaseOfReferrer({ ancestry: pending.ancestry, index })
+		: undefined
+	if (scoped && functionBase === undefined) return {}
 	const parsed = parseReferencePath({
 		resolution: pending.pair.resolution,
 		pathAttribute: pending.pair.attribute.path,
 		pathValue: pending.pathValue,
 		ancestry: pending.ancestry,
 		specNamings,
+		functionBase,
 	})
 	if (!parsed) return {}
 
 	const triedKeys = [parsed.lookupKey, ...(parsed.fallbackLookupKeys ?? [])]
 	const matchedKey = triedKeys.find((key) => index.byPath.has(key))
 	const resolvedUuid = matchedKey ? index.byPath.get(matchedKey) : undefined
+	// A path in a form an earlier version wrote: a former name, or an absolute signal role path.
+	const formerForm =
+		matchedKey !== undefined &&
+		(index.legacyKeys.has(matchedKey) || (scoped && matchedKey !== parsed.lookupKey))
 
 	if (pending.uuidValue) {
-		if (!matchedKey || resolvedUuid !== pending.uuidValue || !index.legacyKeys.has(matchedKey)) {
-			return {}
-		}
+		if (!matchedKey || resolvedUuid !== pending.uuidValue || !formerForm) return {}
 		const standard = standardPathOf({ pending, index, uuid: resolvedUuid, specNamings })
 		return standard.length > 0
 			? { update: { recordId: pending.recordId, attributes: standard } }
@@ -279,7 +295,7 @@ function resolvePending(params: {
 		}
 	}
 
-	const rewrite = pending.alwaysStandardize || index.legacyKeys.has(matchedKey)
+	const rewrite = pending.alwaysStandardize || formerForm
 	return {
 		update: {
 			recordId: pending.recordId,
@@ -330,6 +346,25 @@ function behaviorContextFromAncestry(params: {
 		specNamings,
 	})
 	return behaviorPath?.segments.slice(0, -1)
+}
+
+/**
+ * The path of the Function a signal role's reference starts below: the Function, or the nearest one
+ * above the SubFunction, that its `FunctionRef` names (by uuid, else by path).
+ */
+function functionBaseOfReferrer(params: {
+	ancestry: readonly AnyRawRecord[] | undefined
+	index: ImportPathIndex
+}): string | undefined {
+	const { ancestry, index } = params
+	const functionRef = ancestry?.findLast((ancestor) => ancestor.tagName === 'FunctionRef')
+	if (!functionRef) return undefined
+	const functionPath = readAttribute(functionRef, 'function')
+	const uuid =
+		readAttribute(functionRef, 'functionUuid') ??
+		(functionPath ? index.byPath.get(functionPath) : undefined)
+	const target = uuid ? index.targetsByUuid.get(uuid) : undefined
+	return target ? (functionBaseOf(target.path) ?? undefined) : undefined
 }
 
 function readAttribute(record: AnyRawRecord, name: string): string | undefined {

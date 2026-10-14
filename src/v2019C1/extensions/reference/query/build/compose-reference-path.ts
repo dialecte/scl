@@ -1,4 +1,5 @@
 import { splitLnodeQualifier } from '../resolve/parse-path'
+import { isFunctionScoped, pathBelowFunction } from './function-scope'
 import { joinPathParts } from './path-segment'
 
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
@@ -14,13 +15,19 @@ import type { ReferencePair } from '@/v2019C1/extensions/reference'
  * - `direct` / `ied-address` / `unsupported`: the target's path.
  * - `lnode`: the target's path, then the DO[.DA] of the companions (see below).
  * - `ancestor-name`: the target's bare name (a ProcessResource named from a placeholder below it).
+ * - a function-scoped pair (`scope: 'function'`, the references of a signal role): the same, from
+ *   the target's Function down, the Function left out, every level joined with "/".
  * - `behavior-description`: the local path from the BehaviorDescription's parent down to the
  *   target, that parent left out (`Trip` from the LNode holding the input, `PTRC1.Trip` from its
  *   Function), then the companions' DO[.DA] for `dataName`; `null` when the target is not below
  *   that parent.
  */
 export function composeReferencePath(parts: ReferencePathParts): string | null {
-	const { pair, referenceAttributes, targetPath, behaviorContext } = parts
+	const { pair, referenceAttributes, behaviorContext } = parts
+	// A signal role's reference names the target from its Function down, the Function left out.
+	const targetPath = isFunctionScoped(pair)
+		? (pathBelowFunction(parts.targetPath) ?? parts.targetPath)
+		: parts.targetPath
 
 	if (pair.resolution === RESOLUTION_TYPE.behaviorDescription) {
 		if (!behaviorContext) return null
