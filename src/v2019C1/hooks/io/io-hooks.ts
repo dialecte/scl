@@ -14,6 +14,7 @@ import {
 	joinPathParts,
 } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
+import { createSpecNamingImport } from '@/v2019C1/hooks/io/lnode-spec-naming-import'
 import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
 
 import type {
@@ -84,6 +85,7 @@ export function createSclIoHooks(): IOHooks {
 	const collectedSignals: CollectedSignal[] = []
 	const xpathWarnings: UnsupportedXPathWarning[] = []
 	let mappedDataImport = createMappedDataImport()
+	const specNamingImport = createSpecNamingImport()
 
 	const beforeImportRecord = (params: {
 		record: AnyRawRecord
@@ -92,6 +94,7 @@ export function createSclIoHooks(): IOHooks {
 		const { record, ancestry } = params
 		const { tagName } = record
 		mappedDataImport.collect({ record, ancestry })
+		specNamingImport.collect({ record, ancestry })
 
 		// The record is already standardized, so afterStandardizedRecord has
 		// enforced a uuid where the element supports one — just read it.
@@ -250,6 +253,10 @@ export function createSclIoHooks(): IOHooks {
 		warnings.push(...mappedData.warnings)
 		mappedDataImport = createMappedDataImport()
 
+		const specNaming = specNamingImport.resolve()
+		updates.push(...specNaming.updates)
+		warnings.push(...specNaming.warnings)
+
 		pathIndex.clear()
 		pendingResolutions.length = 0
 		pendingPathFills.length = 0
@@ -258,6 +265,7 @@ export function createSclIoHooks(): IOHooks {
 		xpathWarnings.length = 0
 
 		return {
+			creates: specNaming.creates,
 			updates,
 			warnings: warnings.length > 0 ? warnings : undefined,
 		}
@@ -334,12 +342,10 @@ function indexSignals(params: {
 function legacySignalName(record: AnyRawRecord): string | undefined {
 	const strategy = PATH_EXTRACTION_CONFIG[record.tagName]
 	if (strategy?.type !== 'signal') return undefined
-	const read = (name: string) =>
-		record.attributes.find((attribute) => attribute.name === name)?.value
-	const name = read(strategy.name)
+	const name = readAttribute(record, strategy.name)
 	if (!name) return undefined
-	const instance = read(strategy.instance)
-	const data = strategy.data ? read(strategy.data) : undefined
+	const instance = readAttribute(record, strategy.instance)
+	const data = strategy.data ? readAttribute(record, strategy.data) : undefined
 	return `${name}${instance && instance !== '1' ? `(${instance})` : ''}${data ? `.${data}` : ''}`
 }
 
@@ -353,4 +359,8 @@ function standardPathOf(params: {
 	const path = composeReferencePath({ ...pending.normalize, targetPath: target.path })
 	if (!path || path === pending.pathValue) return []
 	return [{ name: pending.normalize.pair.attribute.path, value: path }]
+}
+
+function readAttribute(record: AnyRawRecord, name: string): string | undefined {
+	return record.attributes.find((attribute) => attribute.name === name)?.value
 }

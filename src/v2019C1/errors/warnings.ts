@@ -17,6 +17,14 @@ export const SCL_IMPORT_WARNINGS = {
 	'incoherent-reference': {
 		message: 'A reference names one element by its path and another by its uuid',
 	},
+	/**
+	 * An LNode bound to an IED had no specified naming: it was given one from the logical node it is
+	 * bound to (prefix, class, instance).
+	 */
+	'derived-specification-naming': {
+		message:
+			'A logical node had no specified naming: it was taken from the logical node it is bound to',
+	},
 } as const
 
 /** A `type` of {@link SCL_IMPORT_WARNINGS}. */

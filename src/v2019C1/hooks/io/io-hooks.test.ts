@@ -112,6 +112,7 @@ describe('createSclIoHooks', () => {
 		const dos = makeRecord('DOS', { name: 'Mod', mappedDoName: 'Health' })
 
 		hooks.beforeImportRecord!({ record: dos, ancestry: [lnode] })
+		hooks.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
 		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
 		hooks.beforeImportRecord!({ record: makeRecord('LN', { uuid: 'ptoc1-uuid' }), ancestry: [] })
 
@@ -134,6 +135,7 @@ describe('createSclIoHooks', () => {
 		const dos = makeRecord('DOS', { name: 'Op', mappedDoName: 'OTHER/LD0/GGIO9.Ind2' })
 
 		hooks.beforeImportRecord!({ record: dos, ancestry: [lnode] })
+		hooks.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
 		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
 		hooks.beforeImportRecord!({ record: makeRecord('LN', { uuid: 'ptoc1-uuid' }), ancestry: [] })
 
@@ -159,6 +161,7 @@ describe('createSclIoHooks', () => {
 		const iedAncestry = [ied, accessPoint, server, ldevice]
 
 		hooks.beforeImportRecord!({ record: dos, ancestry: [lnode] })
+		hooks.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
 		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
 		hooks.beforeImportRecord!({
 			record: makeRecord('LN', { lnClass: 'PTOC', inst: '1', uuid: 'ptoc1-uuid' }),
@@ -202,6 +205,11 @@ describe('createSclIoHooks', () => {
 })
 
 // ── Helpers ──────────────────────────────────────────────────────────
+
+/** The `LNodeSpecNaming` an LNode of the file carries. */
+function specNamingOf(lnode: AnyRawRecord): AnyRawRecord {
+	return { ...makeRecord('LNodeSpecNaming'), parent: { id: lnode.id, tagName: lnode.tagName } }
+}
 
 function makeRecord(tagName: string, attributes: Record<string, string> = {}): AnyRawRecord {
 	return {
@@ -402,4 +410,109 @@ describe('import of a resourceName', () => {
 	}
 
 	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+})
+
+describe('import of an LNode without its LNodeSpecNaming', () => {
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		'an LNode allocated to no IED -> it gains its specified naming, its own': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation ${id}="substation" name="S1">
+						<Function ${id}="function" name="F1">
+							<LNode ${id}="lnode" iedName="None" ldInst="Prot" prefix="Main" lnClass="PTOC" lnInst="2" />
+						</Function>
+					</Substation>
+				</SCL>
+			`,
+			expectedQueries: [
+				'//default:LNode[@lnClass="PTOC"]/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sLdInst="Prot"][@sPrefix="Main"][@sLnClass="PTOC"][@sLnInst="2"]',
+			],
+			unexpectedQueries: ['//v2019C1:LNodeSpecNaming[@sIedName]'],
+		},
+		'an LNode bound to an IED -> it gains the naming of the logical node it is bound to, without the IED and LD names':
+			{
+				sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation ${id}="substation" name="S1">
+						<Function ${id}="function" name="F1">
+							<LNode ${id}="lnode" iedName="P1" ldInst="LD0" prefix="Main" lnClass="PTOC" lnInst="2" />
+						</Function>
+					</Substation>
+				</SCL>
+			`,
+				expectedQueries: [
+					'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sPrefix="Main"][@sLnClass="PTOC"][@sLnInst="2"]',
+				],
+				unexpectedQueries: [
+					'//v2019C1:LNodeSpecNaming[@sIedName]',
+					'//v2019C1:LNodeSpecNaming[@sLdInst]',
+				],
+			},
+		'an LNode with inputs in its Private -> the naming joins them in that Private': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation ${id}="substation" name="S1">
+						<Function ${id}="function" name="F1">
+							<LNode ${id}="lnode" iedName="None" lnClass="PTOC" lnInst="1">
+								<Private ${id}="lnode-private" type="eIEC61850-6-100">
+									<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+										<eIEC61850-6-100:SourceRef ${id}="source-ref" input="Trip" />
+									</eIEC61850-6-100:LNodeInputs>
+								</Private>
+							</LNode>
+						</Function>
+					</Substation>
+				</SCL>
+			`,
+			expectedQueries: [
+				'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sLnClass="PTOC"][@sLnInst="1"]',
+				'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeInputs/v2019C1:SourceRef',
+			],
+			unexpectedQueries: ['//default:LNode/default:Private[2]'],
+		},
+		'an LNode with its LNodeSpecNaming -> kept as it is': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation ${id}="substation" name="S1">
+						<Function ${id}="function" name="F1">
+							<LNode ${id}="lnode" iedName="P1" ldInst="LD0" lnClass="PTOC" lnInst="2">
+								<Private ${id}="lnode-private" type="eIEC61850-6-100">
+									<eIEC61850-6-100:LNodeSpecNaming ${id}="spec-naming" sLnClass="PTOC" sLnInst="7" />
+								</Private>
+							</LNode>
+						</Function>
+					</Substation>
+				</SCL>
+			`,
+			expectedQueries: ['//v2019C1:LNodeSpecNaming[@sLnInst="7"]'],
+			unexpectedQueries: [
+				'//v2019C1:LNodeSpecNaming[2]',
+				'//v2019C1:LNodeSpecNaming[@sLnInst="2"]',
+			],
+		},
+	}
+
+	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+})
+
+describe('import warning for a derived specified naming', () => {
+	it('an LNode bound to an IED without LNodeSpecNaming -> one derived-specification-naming warning', async () => {
+		const hooks = createSclIoHooks()
+		const lnode = makeRecord('LNode', {
+			iedName: 'P1',
+			ldInst: 'LD0',
+			lnClass: 'PTOC',
+			lnInst: '2',
+		})
+		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
+		hooks.beforeImportRecord!({
+			record: makeRecord('LNode', { iedName: 'None', lnClass: 'XCBR', lnInst: '1' }),
+			ancestry: [],
+		})
+
+		const result = await hooks.afterImport!()
+		expect(
+			result.warnings?.map((warning) => ({ type: warning.type, recordId: warning.recordId })),
+		).toEqual([{ type: 'derived-specification-naming', recordId: lnode.id }])
+	})
 })

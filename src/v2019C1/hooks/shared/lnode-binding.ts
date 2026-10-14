@@ -2,6 +2,7 @@ import { isElementOf } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
+import { ensureLNodeSpecNaming } from '@/v2019C1/hooks/shared/lnode-spec-naming'
 import { updatedOperation, upsertAttribute } from '@/v2019C1/hooks/shared/record-ops'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -19,27 +20,38 @@ import type * as Core from '@dialecte/core'
  * key used to locate the implementing ICD), which is owned by the instantiate
  * lifecycle, not by binding.
  *
+ * Before an identity is stamped, an LNode without `LNodeSpecNaming` gets one from the naming it
+ * still has, so the specified naming survives the binding.
+ *
  * Runs only when `lnUuid` actually changed, so ordinary edits and coherent imports
- * are untouched. Returns an update operation, or `null` when nothing changes.
+ * are untouched. Returns the operations, empty when nothing changes.
  */
 export async function reconcileLNodeBinding(params: {
 	oldRecord: Scl.RawRecord<Scl.ElementsOf>
 	newRecord: Scl.RawRecord<Scl.ElementsOf>
 	query: Core.Query<Config>
-}): Promise<Scl.Operation | null> {
+}): Promise<Scl.Operation[]> {
 	const { oldRecord, newRecord, query } = params
-	if (newRecord.tagName !== 'LNode') return null
+	if (newRecord.tagName !== 'LNode') return []
 
 	const oldLnUuid = attributeValue(oldRecord, 'lnUuid')
 	const newLnUuid = attributeValue(newRecord, 'lnUuid')
-	if (oldLnUuid === newLnUuid) return null
+	if (oldLnUuid === newLnUuid) return []
 
 	const desired = newLnUuid
 		? await mappedIdentity(query, newLnUuid)
 		: await specificationIdentity(query, newRecord)
-	if (!desired) return null
+	if (!desired) return []
 
-	return applyIdentity(newRecord, desired)
+	const specNamingOps = newLnUuid
+		? await ensureLNodeSpecNaming(query, { lnode: { tagName: 'LNode', id: newRecord.id } })
+		: []
+	// The identity is stamped on the LNode as the operations above leave it (a new Private child).
+	const lnode =
+		specNamingOps.findLast((operation) => operation.newRecord?.id === newRecord.id)?.newRecord ??
+		newRecord
+	const identityOp = applyIdentity(lnode, desired)
+	return identityOp ? [...specNamingOps, identityOp] : specNamingOps
 }
 
 /** Identity attributes derived from the implementing `LN` identified by uuid. */

@@ -6,7 +6,7 @@ import {
 import { RESOLUTION_TYPE } from './resolution-types'
 import { TYPE_ID_REFERENCE_PAIRS } from './type-id-pairs'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { LNODE_NAMING_ATTRIBUTES, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DEFINITION } from '@/v2019C1/definition/definition.generated'
 
 import type { TypeIdTarget, TypeIdReferrer } from './types'
@@ -130,16 +130,12 @@ export const TYPE_ID_TARGET_TAGS: ReadonlySet<string> = new Set(TYPE_ID_REFERRER
  * the schema `identityFields` and the type-id reference registry.
  */
 export const LOCKED_LNODE_ATTRIBUTES: ReadonlySet<string> = new Set<string>([
-	...((DEFINITION as Record<string, { attributes?: { identityFields?: readonly string[] } }>).LNode
-		?.attributes?.identityFields ?? []),
+	...LNODE_NAMING_ATTRIBUTES,
 	...(TYPE_ID_REF_ATTRIBUTES.get('LNode') ?? []),
 ])
 
 function buildMappedDataDefaultAttributes(): Map<string, readonly string[]> {
-	const lnodeIdentity =
-		(DEFINITION as Record<string, { attributes?: { identityFields?: readonly string[] } }>).LNode
-			?.attributes?.identityFields ?? []
-	const entries: [string, readonly string[]][] = [['LNode', [...lnodeIdentity, 'lnUuid']]]
+	const entries: [string, readonly string[]][] = [['LNode', [...LNODE_NAMING_ATTRIBUTES, 'lnUuid']]]
 	for (const tagName of ['DOS', 'SDS']) {
 		const attributeNames = MAPPED_NAME_REFS.get(tagName)
 		if (attributeNames) {

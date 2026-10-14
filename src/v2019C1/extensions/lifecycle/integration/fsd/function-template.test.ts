@@ -163,7 +163,7 @@ describe('lifecycle scenario — an FSD whose function is a template with no par
 		expect(lifecycleReport.needsDecisions, 'report').toBe(false)
 		const announced = lifecycleReport.instances
 			.flatMap((instance) => flattenNodes(instance.tree))
-			.filter((node) => node.tagName !== 'LNode')
+			.filter((node) => node.tagName !== 'LNode' && node.tagName !== 'LNodeSpecNaming')
 			.map((node) => `${node.change} ${node.tagName}`)
 		expect(announced, 'report').toEqual(['added Function', 'added SubFunction'])
 		const [group] = allGroups(lifecycleReport)
@@ -299,6 +299,8 @@ describe('lifecycle scenario — updating the instance of a function template', 
 		const updateReport = await report(target.query, { ...lifecycleTarget, scenario: 'template' })
 		const announced = updateReport.instances
 			.flatMap((instance) => flattenNodes(instance.tree))
+			// the LNodeSpecNaming an LNode carries follows its LNode
+			.filter((node) => node.tagName !== 'LNodeSpecNaming')
 			.filter((node) => node.tagName !== 'LNode' || node.change !== 'unchanged')
 			.map((node) => `${node.change} ${node.tagName}`)
 		expect(announced, 'report').toEqual(testCase.expected.announced)

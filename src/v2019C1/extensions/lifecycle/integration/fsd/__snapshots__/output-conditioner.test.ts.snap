@@ -22,9 +22,14 @@ exports[`lifecycle integration — Output Conditioner FSD rev1 → rev2 (golden)
                             <eIEC61850-6-100:LNodeInputs>
                                 <eIEC61850-6-100:SourceRef input="Trip" pDA="stVal" pDO="TrCmd" pLN="XCBR" service="GOOSE" templateUuid="srcref-src-uuid" uuid="uuid-9"/>
                             </eIEC61850-6-100:LNodeInputs>
+                            <eIEC61850-6-100:LNodeSpecNaming sLnClass="LCBO" sLnInst="1"/>
                         </Private>
                     </LNode>
-                    <LNode iedName="none" lnClass="LPDO" lnInst="1" templateUuid="uuid-10" uuid="uuid-11"/>
+                    <LNode iedName="none" lnClass="LPDO" lnInst="1" templateUuid="uuid-10" uuid="uuid-11">
+                        <Private type="eIEC61850-6-100">
+                            <eIEC61850-6-100:LNodeSpecNaming sLnClass="LPDO" sLnInst="1"/>
+                        </Private>
+                    </LNode>
                 </Function>
             </Bay>
         </VoltageLevel>

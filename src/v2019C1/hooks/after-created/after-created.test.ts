@@ -85,17 +85,17 @@ describe('afterCreated', () => {
 					await document.transaction(async (tx) => {
 						await tx.addChild(
 							{ tagName: 'LNode', id: 'ln1' },
-							{ tagName: 'LNodeSpecNaming', namespace: v2019C1, attributes: { sIedName: 'IED1' } },
+							{ tagName: 'LNodeInputs', namespace: v2019C1, attributes: { desc: 'inputs' } },
 						)
 						await tx.addChild(
 							{ tagName: 'LNode', id: 'ln1' },
-							{ tagName: 'LNodeSpecNaming', namespace: v2019C1, attributes: { sIedName: 'IED2' } },
+							{ tagName: 'LNodeOutputs', namespace: v2019C1, attributes: { desc: 'outputs' } },
 						)
 					})
 				},
 				expectedQueries: [
-					'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sIedName="IED1"]',
-					'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sIedName="IED2"]',
+					'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeInputs[@desc="inputs"]',
+					'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeOutputs[@desc="outputs"]',
 				],
 				unexpectedQueries: ['//default:LNode/default:Private[2]'],
 			},
@@ -115,11 +115,11 @@ describe('afterCreated', () => {
 	// Operations inspected directly rather than committing to DB.
 
 	describe('direct hook call — parent is Private', () => {
-		const buildLnodeSpecNaming = (parentId: string | null): Core.AnyRawRecord => ({
+		const buildLnodeInputs = (parentId: string | null): Core.AnyRawRecord => ({
 			id: '0-0-0-0-1',
-			tagName: 'LNodeSpecNaming',
+			tagName: 'LNodeInputs',
 			namespace: v2019C1,
-			attributes: [{ name: 'sIedName', value: 'IED1' }],
+			attributes: [{ name: 'desc', value: 'inputs' }],
 			value: '',
 			children: [],
 			parent: parentId ? { id: parentId, tagName: 'Private' as const } : null,
@@ -145,7 +145,7 @@ describe('afterCreated', () => {
 						{
 							status: 'updated',
 							newRecord: {
-								tagName: 'LNodeSpecNaming',
+								tagName: 'LNodeInputs',
 								parent: { tagName: 'Private', id: 'priv1' },
 							},
 						},
@@ -153,7 +153,7 @@ describe('afterCreated', () => {
 							status: 'updated',
 							newRecord: {
 								tagName: 'Private',
-								children: [{ tagName: 'LNodeSpecNaming', id: '0-0-0-0-1' }],
+								children: expect.arrayContaining([{ tagName: 'LNodeInputs', id: '0-0-0-0-1' }]),
 							},
 						},
 					],
@@ -179,7 +179,7 @@ describe('afterCreated', () => {
 				if (!privateRecord) return
 
 				const result = await afterCreated({
-					childRecord: buildLnodeSpecNaming(childParentId) as any,
+					childRecord: buildLnodeInputs(childParentId) as any,
 					parentRecord: privateRecord as any,
 					query: source.document.query,
 				})

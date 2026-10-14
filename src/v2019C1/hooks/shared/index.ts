@@ -16,3 +16,4 @@ export {
 	signalName,
 	signalNamingAttributes,
 } from './signal-sibling-paths'
+export { ensureLNodeSpecNaming, specifiedNamingOf } from './lnode-spec-naming'

@@ -93,7 +93,8 @@ describe('engine.diff (project-then-diff report + classify)', () => {
 			},
 			expected: {
 				needsDecisions: true,
-				summary: { added: 1, removed: 0, modified: 0 },
+				// the LNode and the LNodeSpecNaming it gains
+				summary: { added: 2, removed: 0, modified: 0 },
 				groups: [{ change: 'added', tagName: 'LNode' }],
 			},
 		},
@@ -106,7 +107,8 @@ describe('engine.diff (project-then-diff report + classify)', () => {
 			},
 			expected: {
 				needsDecisions: true,
-				summary: { added: 0, removed: 1, modified: 0 },
+				// the LNode and its LNodeSpecNaming
+				summary: { added: 0, removed: 2, modified: 0 },
 				groups: [{ change: 'removed', tagName: 'LNode' }],
 			},
 		},

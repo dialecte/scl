@@ -73,8 +73,21 @@ export type IncoherentReferenceWarning = ImportWarning & {
 	}
 }
 
+/**
+ * An LNode bound to an IED had no `LNodeSpecNaming`: it was given one from the naming of the
+ * logical node it is bound to (prefix, class, instance), the IED and LD names left out.
+ */
+export type DerivedSpecificationNamingWarning = ImportWarning & {
+	type: 'derived-specification-naming'
+	details: {
+		iedName: string
+		specifiedNaming: readonly { name: string; value: string }[]
+	}
+}
+
 /** Every warning the import of an SCL file reports: its `type` is a key of `SCL_IMPORT_WARNINGS`. */
 export type SclImportWarning =
 	| UnresolvedReferenceWarning
 	| UnsupportedXPathWarning
 	| IncoherentReferenceWarning
+	| DerivedSpecificationNamingWarning

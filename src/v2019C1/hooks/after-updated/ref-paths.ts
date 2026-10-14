@@ -58,12 +58,12 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 		operations.push(...(await reconcileMappedDataBelow(query, { record: current })))
 	}
 
-	const lnodeBindingOp = await reconcileLNodeBinding({
+	const lnodeBindingOps = await reconcileLNodeBinding({
 		oldRecord: previous,
 		newRecord: current,
 		query,
 	})
-	if (lnodeBindingOp) operations.push(lnodeBindingOp)
+	operations.push(...lnodeBindingOps)
 
 	const referrerOps = await reconcileReferrerRefPaths({
 		oldRecord: previous,
