@@ -56,10 +56,10 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.5.4"
+		"@dialecte/core": "0.6.0"
 	},
 	"devDependencies": {
-		"@dialecte/cli": "0.0.3",
+		"@dialecte/cli": "0.1.0",
 		"@tsconfig/node24": "^24.0.4",
 		"@types/node": "^24.12.4",
 		"@typescript/native": "npm:typescript@^7.0.2",
