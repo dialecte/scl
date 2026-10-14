@@ -71,9 +71,15 @@ The stored `FunctionRef` record ends up with both attributes:
 
 Unresolvable paths (path not in index at end of import) produce `ImportWarning` entries instead of updates:
 
-| Warning type                  | When                                                    |
-| ----------------------------- | ------------------------------------------------------- |
-| `unresolved-reference`        | Path was present but no target with that path was found |
-| `unsupported-xpath-reference` | Path uses an XPath syntax not supported by the resolver |
+| Warning type                   | When                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| `unresolved-reference`         | Path was present but no target with that path was found                                    |
+| `unsupported-xpath-reference`  | Path uses an XPath syntax not supported by the resolver                                    |
+| `incoherent-reference`         | The path and the uuid of a reference name two different elements                           |
+| `derived-specification-naming` | An LNode bound to an IED had no `LNodeSpecNaming`: one was made from the LN it is bound to |
+
+## Specified naming of the logical nodes
+
+The same pass notes every `LNode`, its `eIEC61850-6-100` `Private` and whether it holds an `LNodeSpecNaming`. At the end, each `LNode` without one gets one, placed in that `Private` (created when the `LNode` has none), with the rule of the record hooks (see [reference](../extensions/reference#automatic-coherence-record-hooks)).
 
 Warnings are returned via `AfterImportResult.warnings` and are accessible after `project.import` completes if you inspect the database directly. Future: surface via the Document API.

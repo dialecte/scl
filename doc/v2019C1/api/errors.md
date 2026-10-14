@@ -57,11 +57,12 @@ Anything else the lifecycle raises uses a key of the core catalogue (`ELEMENT_NO
 
 The import reports warnings (`ImportWarning`) instead of refusing a file. `type` is the code, `details` the data; the default wording of each type is in `SCL_IMPORT_WARNINGS`.
 
-| `type`                        | Reported when                                                    | `details`                                                                |
-| ----------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `unresolved-reference`        | a reference written as a path names no element of the file       | `elementTag`, `uuidAttribute`, `pathValue`, `triedKeys`                  |
-| `unsupported-xpath-reference` | a reference is written in a form that is not resolved            | `elementTag`, `pathAttribute`, `uuidAttribute`, `pathValue`              |
-| `incoherent-reference`        | the path and the uuid of a reference name two different elements | `elementTag`, `pathAttribute`, `pathValue`, `uuidAttribute`, `uuidValue` |
+| `type`                         | Reported when                                                                                                      | `details`                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `unresolved-reference`         | a reference written as a path names no element of the file                                                         | `elementTag`, `uuidAttribute`, `pathValue`, `triedKeys`                  |
+| `unsupported-xpath-reference`  | a reference is written in a form that is not resolved                                                              | `elementTag`, `pathAttribute`, `uuidAttribute`, `pathValue`              |
+| `incoherent-reference`         | the path and the uuid of a reference name two different elements                                                   | `elementTag`, `pathAttribute`, `pathValue`, `uuidAttribute`, `uuidValue` |
+| `derived-specification-naming` | an LNode bound to an IED had no `LNodeSpecNaming`: it got one from the LN it is bound to (prefix, class, instance) | `iedName`, `specifiedNaming`                                             |
 
 ## Identity warnings
 
