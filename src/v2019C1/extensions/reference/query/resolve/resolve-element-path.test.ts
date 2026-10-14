@@ -21,6 +21,50 @@ describe('resolveByPath', () => {
 	const ID = CUSTOM_RECORD_ID_ATTRIBUTE
 
 	const testCases: SclTest.TestCases<ResolveByPathTestCase> = {
+		'LNode bound to an IED, named by its specified naming — "S1/F1/XCBR1" → that LNode': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Function name="F1" ${ID}="f1">
+						<LNode iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" ${ID}="breaker">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1" ${ID}="breaker-naming"/>
+							</Private>
+						</LNode>
+						<LNode iedName="None" lnClass="XCBR" lnInst="3" ${ID}="other-breaker">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="3" ${ID}="other-naming"/>
+							</Private>
+						</LNode>
+					</Function>
+				</Substation>
+			</SCL>`,
+			path: 'S1/F1/XCBR1',
+			expected: { tagName: 'LNode', id: 'breaker' },
+		},
+
+		'LNode bound to an IED, named by the IED naming — "S1/F1/Q0XCBR2" → nothing': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+				<Substation name="S1" ${ID}="sub-1">
+					<Function name="F1" ${ID}="f1">
+						<LNode iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" ${ID}="breaker">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1" ${ID}="breaker-naming"/>
+							</Private>
+						</LNode>
+						<LNode iedName="None" lnClass="XCBR" lnInst="3" ${ID}="other-breaker">
+							<Private type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="3" ${ID}="other-naming"/>
+							</Private>
+						</LNode>
+					</Function>
+				</Substation>
+			</SCL>`,
+			path: 'S1/F1/Q0XCBR2',
+			expected: null,
+		},
+
 		'process section — named element chain': {
 			sourceXml: `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">

@@ -15,18 +15,22 @@
 import { getAttributeRules } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
+import { SPECIFIED_NAMING_ATTRIBUTES } from '@/v2019C1/constants/lnode-spec-naming'
+import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants/naming'
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
 
 import type {
 	PathSegment,
+	PathSegmentContext,
 	PathSegmentWithRef,
 	ElementPath,
 	PathExtractor,
 } from './path-segment.types'
 import type {
 	ExtractionStrategy,
+	LNodeStrategy,
 	SignalStrategy,
-} from '@/v2019C1/extensions/reference/constants/path-extraction'
+} from '@/v2019C1/extensions/reference/constants/path-extraction.types'
 import type { AnyRawRecord } from '@dialecte/core'
 
 // ── Extractor builders ───────────────────────────────────────────────
@@ -50,14 +54,23 @@ function buildExtractor(strategy: ExtractionStrategy): PathExtractor {
 				const inst = getAttribute(record, 'inst') ?? getAttribute(record, 'lnInst') ?? ''
 				return { segment: `${prefix}${lnClass}${inst}`, separator: '/' }
 			}
+		case 'lnode':
+			return (record, context) => {
+				const segment = buildLNodeName({ strategy, record, specNaming: context?.specNaming })
+				return segment ? { segment, separator: '/' } : null
+			}
 		case 'attribute':
 			return (record) => {
 				const val = getAttribute(record, strategy.attr)
 				return val ? { segment: val, separator: strategy.separator } : null
 			}
 		case 'signal':
-			return (record, siblings) => {
-				const segment = buildSignalName({ strategy, record, siblings: siblings ?? [record] })
+			return (record, context) => {
+				const segment = buildSignalName({
+					strategy,
+					record,
+					siblings: context?.siblings ?? [record],
+				})
 				return segment ? { segment, separator: '.' } : null
 			}
 	}
@@ -89,6 +102,42 @@ function buildSignalName(params: {
 	return `${name}${instance ? `(${instance})` : ''}${data ? `.${data}` : ''}`
 }
 
+/**
+ * The name of an LNode: prefix, class and instance of its own attributes while no IED is assigned
+ * to it; once one is, of the naming it was specified with when its `LNodeSpecNaming` is given (the
+ * class read from the LNode when the naming has none).
+ */
+function buildLNodeName(params: {
+	strategy: LNodeStrategy
+	record: AnyRawRecord
+	specNaming: AnyRawRecord | undefined
+}): string | null {
+	const { strategy, record, specNaming } = params
+	const iedName = getAttribute(record, strategy.ied)
+	const assigned = Boolean(iedName) && iedName !== UNALLOCATED_IED_NAME
+	const named =
+		assigned && specNaming
+			? {
+					prefix: getAttribute(specNaming, specifiedName(strategy.prefix)),
+					lnClass:
+						getAttribute(specNaming, specifiedName(strategy.lnClass)) ??
+						getAttribute(record, strategy.lnClass),
+					inst: getAttribute(specNaming, specifiedName(strategy.inst)),
+				}
+			: {
+					prefix: getAttribute(record, strategy.prefix),
+					lnClass: getAttribute(record, strategy.lnClass),
+					inst: getAttribute(record, strategy.inst),
+				}
+	if (!named.lnClass) return null
+	return `${named.prefix ?? ''}${named.lnClass}${named.inst ?? ''}`
+}
+
+/** The `LNodeSpecNaming` attribute keeping an LNode attribute's specified value. */
+function specifiedName(name: string): string {
+	return SPECIFIED_NAMING_ATTRIBUTES.get(name) ?? name
+}
+
 function schemaDefault(record: AnyRawRecord, attributeName: string): string | undefined {
 	return getAttributeRules({ dialecteConfig: SCL_DIALECTE_CONFIG, record, attributeName }).default
 }
@@ -109,10 +158,10 @@ const PATH_EXTRACTORS: Record<string, PathExtractor> = Object.fromEntries(
  */
 export function getPathSegment(
 	record: AnyRawRecord,
-	siblings?: readonly AnyRawRecord[],
+	context?: PathSegmentContext,
 ): PathSegment | null {
 	const extractor = PATH_EXTRACTORS[record.tagName]
-	if (extractor) return extractor(record, siblings)
+	if (extractor) return extractor(record, context)
 	return null
 }
 
@@ -136,16 +185,18 @@ export function buildPathFromAncestry(params: {
 	ancestry: readonly AnyRawRecord[]
 	/** The children of the record's parent, itself included: read by a signal's name. */
 	siblings?: readonly AnyRawRecord[]
+	/** The `LNodeSpecNaming` of each LNode of the path, by LNode id: read by an LNode's name. */
+	specNamings?: ReadonlyMap<string, AnyRawRecord>
 }): ElementPath | null {
-	const { record, ancestry, siblings } = params
+	const { record, ancestry, siblings, specNamings } = params
 	const parts: PathSegmentWithRef[] = []
 
 	for (const ancestor of ancestry) {
-		const seg = getPathSegment(ancestor)
+		const seg = getPathSegment(ancestor, { specNaming: specNamings?.get(ancestor.id) })
 		if (seg) parts.push({ ...seg, ref: { tagName: ancestor.tagName, id: ancestor.id } })
 	}
 
-	const ownSeg = getPathSegment(record, siblings)
+	const ownSeg = getPathSegment(record, { siblings, specNaming: specNamings?.get(record.id) })
 	if (ownSeg) parts.push({ ...ownSeg, ref: { tagName: record.tagName, id: record.id } })
 
 	if (parts.length === 0) return null

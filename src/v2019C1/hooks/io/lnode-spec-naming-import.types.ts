@@ -9,6 +9,8 @@ export type SpecNamingImport = {
 	 * warning for each one taken from the naming of the logical node the LNode is bound to.
 	 */
 	resolve(): {
+		/** The `LNodeSpecNaming` of every LNode, by LNode id: the file's and the ones made here. */
+		namings: ReadonlyMap<string, AnyRawRecord>
 		creates: AnyRawRecord[]
 		updates: RecordPatch[]
 		warnings: DerivedSpecificationNamingWarning[]

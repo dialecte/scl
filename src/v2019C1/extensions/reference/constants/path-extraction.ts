@@ -5,24 +5,7 @@
  * reference targets in UUID_REFERENCE_PAIRS.
  */
 
-export type ExtractionStrategy =
-	| { type: 'transparent' }
-	| { type: 'name'; separator?: '/' | '.' }
-	| { type: 'lnClass' }
-	| { type: 'attribute'; attr: string; separator: '/' | '.' }
-	| SignalStrategy
-
-/**
- * A signal of an LNode (`SourceRef`, `ControlRef`), named among the signals of that LNode: the plain
- * `name` attribute while it is unique among its siblings; once it is not, `name(instance)`, then
- * `.data` when that attribute is set. Its segment therefore depends on its siblings.
- */
-export type SignalStrategy = {
-	type: 'signal'
-	name: string
-	instance: string
-	data?: string
-}
+import type { ExtractionStrategy } from './path-extraction.types'
 
 export const PATH_EXTRACTION_CONFIG: Record<string, ExtractionStrategy> = {
 	// Transparent - do not contribute a path segment
@@ -70,7 +53,7 @@ export const PATH_EXTRACTION_CONFIG: Record<string, ExtractionStrategy> = {
 	TapChanger: { type: 'name' },
 	GeneralEquipment: { type: 'name' },
 	SubEquipment: { type: 'name' },
-	LNode: { type: 'lnClass' },
+	LNode: { type: 'lnode', prefix: 'prefix', lnClass: 'lnClass', inst: 'lnInst', ied: 'iedName' },
 	Function: { type: 'name' },
 	SubFunction: { type: 'name' },
 	FunctionTemplate: { type: 'name' },
@@ -98,7 +81,7 @@ export const SIGNAL_TAG_NAMES: ReadonlySet<string> = new Set(
 		.map(([tagName]) => tagName),
 )
 
-const LNCLASS_ATTRIBUTES = ['lnClass', 'prefix', 'inst', 'lnInst'] as const
+const LNCLASS_ATTRIBUTES = ['lnClass', 'prefix', 'inst'] as const
 
 /**
  * All attribute names that contribute to path segments, derived from
@@ -113,6 +96,8 @@ export const PATH_CONTRIBUTING_ATTRIBUTES: ReadonlySet<string> = new Set(
 				return ['name']
 			case 'lnClass':
 				return [...LNCLASS_ATTRIBUTES]
+			case 'lnode':
+				return [strategy.prefix, strategy.lnClass, strategy.inst, strategy.ied]
 			case 'attribute':
 				return [strategy.attr]
 			case 'signal':

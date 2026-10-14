@@ -516,3 +516,95 @@ describe('import warning for a derived specified naming', () => {
 		).toEqual([{ type: 'derived-specification-naming', recordId: lnode.id }])
 	})
 })
+
+describe('import of paths through an LNode bound to an IED', () => {
+	/** A breaker specified as XCBR1, bound to the IED's Q0XCBR2; `controlRef` is the controller's ControlRef. */
+	function boundBreakerXml(controlRef: string): string {
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation ${id}="substation" name="S1">
+					<Function ${id}="function" name="F1">
+						<LNode ${id}="breaker" uuid="breaker-uuid" iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2">
+							<Private ${id}="breaker-private" type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeSpecNaming ${id}="breaker-naming" sLnClass="XCBR" sLnInst="1" />
+							</Private>
+						</LNode>
+						<LNode ${id}="controller" iedName="None" lnClass="CSWI" lnInst="1">
+							<Private ${id}="controller-private" type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeSpecNaming ${id}="controller-naming" sLnClass="CSWI" sLnInst="1" />
+								<eIEC61850-6-100:LNodeOutputs ${id}="outputs">${controlRef}</eIEC61850-6-100:LNodeOutputs>
+							</Private>
+						</LNode>
+					</Function>
+				</Substation>
+			</SCL>
+		`
+	}
+
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		'a path naming the LNode as specified -> resolved, kept': {
+			sourceXml: boundBreakerXml(
+				`<eIEC61850-6-100:ControlRef ${id}="control-ref" output="Oper" controlled="S1/F1/XCBR1.Pos" controlledDoName="Pos" />`,
+			),
+			expectedQueries: [
+				'//v2019C1:ControlRef[@controlled="S1/F1/XCBR1.Pos"][@controlledLNodeUuid="breaker-uuid"]',
+			],
+		},
+		'a path an earlier version wrote with the IED naming -> resolved, written as specified': {
+			sourceXml: boundBreakerXml(
+				`<eIEC61850-6-100:ControlRef ${id}="control-ref" output="Oper" controlled="S1/F1/Q0XCBR2.Pos" controlledDoName="Pos" />`,
+			),
+			expectedQueries: [
+				'//v2019C1:ControlRef[@controlled="S1/F1/XCBR1.Pos"][@controlledLNodeUuid="breaker-uuid"]',
+			],
+		},
+		'a uuid alone -> the path names the LNode as specified': {
+			sourceXml: boundBreakerXml(
+				`<eIEC61850-6-100:ControlRef ${id}="control-ref" output="Oper" controlledLNodeUuid="breaker-uuid" controlledDoName="Pos" />`,
+			),
+			expectedQueries: ['//v2019C1:ControlRef[@controlled="S1/F1/XCBR1.Pos"]'],
+		},
+		'a uuid with the path an earlier version wrote -> the path written as specified': {
+			sourceXml: boundBreakerXml(
+				`<eIEC61850-6-100:ControlRef ${id}="control-ref" output="Oper" controlled="S1/F1/Q0XCBR2.Pos" controlledLNodeUuid="breaker-uuid" controlledDoName="Pos" />`,
+			),
+			expectedQueries: ['//v2019C1:ControlRef[@controlled="S1/F1/XCBR1.Pos"]'],
+			unexpectedQueries: ['//v2019C1:ControlRef[@controlled="S1/F1/Q0XCBR2.Pos"]'],
+		},
+		'a uuid with a signal name an earlier version wrote -> the name written in the standard form': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation ${id}="substation" name="S1">
+						<Function ${id}="function" name="F1">
+							<LNode ${id}="trip" iedName="None" lnClass="PTRC" lnInst="1">
+								<Private ${id}="trip-private" type="eIEC61850-6-100">
+									<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+										<eIEC61850-6-100:SourceRef ${id}="source-ref" uuid="source-ref-uuid" input="Trip" pDA="general" />
+									</eIEC61850-6-100:LNodeInputs>
+								</Private>
+							</LNode>
+						</Function>
+					</Substation>
+					<Substation ${id}="application-substation" name="S2">
+						<Private ${id}="application-private" type="eIEC61850-6-100">
+							<eIEC61850-6-100:Application ${id}="application" name="A1">
+								<eIEC61850-6-100:FunctionRole ${id}="role" name="R1">
+									<eIEC61850-6-100:FunctionRoleContent ${id}="content">
+										<eIEC61850-6-100:FunctionRef ${id}="function-ref" function="S1/F1">
+											<eIEC61850-6-100:SignalRole ${id}="signal-role" name="Input">
+												<eIEC61850-6-100:LNodeInputRef ${id}="input-ref" sourceRef="S1/F1/PTRC1.Trip.general" sourceRefUuid="source-ref-uuid" />
+											</eIEC61850-6-100:SignalRole>
+										</eIEC61850-6-100:FunctionRef>
+									</eIEC61850-6-100:FunctionRoleContent>
+								</eIEC61850-6-100:FunctionRole>
+							</eIEC61850-6-100:Application>
+						</Private>
+					</Substation>
+				</SCL>
+			`,
+			expectedQueries: ['//v2019C1:LNodeInputRef[@sourceRef="S1/F1/PTRC1.Trip"]'],
+		},
+	}
+
+	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+})

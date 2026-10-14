@@ -1,5 +1,6 @@
 import { buildPathFromAncestry, getPathSegment } from './path-segment'
 import { readSiblings } from './signal-name'
+import { readSpecNamings } from './spec-namings'
 
 import { toRawRecord } from '@dialecte/core/helpers'
 
@@ -33,11 +34,9 @@ export async function buildElementPath(
 	}
 
 	const ancestors = await query.findAncestors(ref, { order: 'top-down' })
+	const ancestry = ancestors.map(toRawRecord)
 	const siblings = SIGNAL_TAG_NAMES.has(raw.tagName) ? await readSiblings(query, raw) : undefined
+	const specNamings = await readSpecNamings(query, { records: [...ancestry, raw] })
 
-	return buildPathFromAncestry({
-		record: raw,
-		ancestry: ancestors.map(toRawRecord),
-		siblings,
-	})
+	return buildPathFromAncestry({ record: raw, ancestry, siblings, specNamings })
 }

@@ -13,7 +13,7 @@ import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
 export function createSpecNamingImport(): SpecNamingImport {
 	const lnodes = new Map<string, AnyRawRecord>()
 	const privateByLnode = new Map<string, AnyRawRecord>()
-	const named = new Set<string>()
+	const namings = new Map<string, AnyRawRecord>()
 
 	function collect(params: { record: AnyRawRecord; ancestry: readonly AnyRawRecord[] }): void {
 		const { record, ancestry } = params
@@ -24,7 +24,7 @@ export function createSpecNamingImport(): SpecNamingImport {
 		const lnode = ancestry.findLast((ancestor) => ancestor.tagName === 'LNode')
 		if (!lnode) return
 		if (record.tagName === 'LNodeSpecNaming') {
-			named.add(lnode.id)
+			if (!namings.has(lnode.id)) namings.set(lnode.id, record)
 			return
 		}
 		if (
@@ -42,7 +42,7 @@ export function createSpecNamingImport(): SpecNamingImport {
 		const warnings: DerivedSpecificationNamingWarning[] = []
 
 		for (const lnode of lnodes.values()) {
-			if (named.has(lnode.id)) continue
+			if (namings.has(lnode.id)) continue
 			const { attributes, derived } = specifiedNamingOf(attributesOf(lnode))
 			const existingPrivate = privateByLnode.get(lnode.id)
 			const holder = existingPrivate ?? newPrivate(lnode)
@@ -56,6 +56,7 @@ export function createSpecNamingImport(): SpecNamingImport {
 				children: [],
 			}
 			creates.push(specNaming)
+			namings.set(lnode.id, specNaming)
 			if (existingPrivate) {
 				updates.push({ recordId: existingPrivate.id, children: [childRef(specNaming)] })
 			} else {
@@ -71,10 +72,11 @@ export function createSpecNamingImport(): SpecNamingImport {
 			}
 		}
 
+		const resolved = new Map(namings)
 		lnodes.clear()
 		privateByLnode.clear()
-		named.clear()
-		return { creates, updates, warnings }
+		namings.clear()
+		return { namings: resolved, creates, updates, warnings }
 	}
 
 	return { collect, resolve }

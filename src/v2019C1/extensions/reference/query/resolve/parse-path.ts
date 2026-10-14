@@ -98,12 +98,16 @@ export function splitLnodeQualifier(pathValue: string): {
  *
  * Used by IO hooks (import-time) and can be used by query-time resolution.
  */
-export function parseReferencePath(
-	resolution: ResolutionType,
-	pathAttribute: string,
-	pathValue: string,
-	ancestry?: readonly AnyRawRecord[],
-): ParsedReference | null {
+export function parseReferencePath(params: {
+	resolution: ResolutionType
+	pathAttribute: string
+	pathValue: string
+	/** The referrer's ancestors, top-down: read by the strategies whose names are local. */
+	ancestry?: readonly AnyRawRecord[]
+	/** The `LNodeSpecNaming` of each LNode of `ancestry`, by LNode id: names those LNodes. */
+	specNamings?: ReadonlyMap<string, AnyRawRecord>
+}): ParsedReference | null {
+	const { resolution, pathAttribute, pathValue, ancestry, specNamings } = params
 	if (!resolution || resolution === RESOLUTION_TYPE.unsupported) return null
 
 	if (resolution === RESOLUTION_TYPE.direct) return { lookupKey: pathValue }
@@ -113,10 +117,12 @@ export function parseReferencePath(
 	if (resolution === RESOLUTION_TYPE.lnode) return parseLnodePath(pathValue)
 
 	if (resolution === RESOLUTION_TYPE.behaviorDescription) {
-		return parseBehaviorDescriptionPath(pathAttribute, pathValue, ancestry)
+		return parseBehaviorDescriptionPath({ pathAttribute, pathValue, ancestry, specNamings })
 	}
 
-	if (resolution === RESOLUTION_TYPE.ancestorName) return parseAncestorNamePath(pathValue, ancestry)
+	if (resolution === RESOLUTION_TYPE.ancestorName) {
+		return parseAncestorNamePath({ pathValue, ancestry, specNamings })
+	}
 
 	return null
 }
@@ -128,15 +134,17 @@ export function parseReferencePath(
  * name below that ancestor's path. A value holding a "/" is the full path an earlier version
  * wrote: it is tried first, as is.
  */
-function parseAncestorNamePath(
-	pathValue: string,
-	ancestry?: readonly AnyRawRecord[],
-): ParsedReference | null {
+function parseAncestorNamePath(params: {
+	pathValue: string
+	ancestry?: readonly AnyRawRecord[]
+	specNamings?: ReadonlyMap<string, AnyRawRecord>
+}): ParsedReference | null {
+	const { pathValue, ancestry, specNamings } = params
 	if (!ancestry) return null
 
 	const keys = pathValue.includes('/') ? [pathValue] : []
 	for (let depth = ancestry.length; depth > 0; depth--) {
-		const scope = buildPathFromAncestors(ancestry.slice(0, depth))
+		const scope = buildPathFromAncestors({ ancestors: ancestry.slice(0, depth), specNamings })
 		keys.push(scope ? `${scope}/${pathValue}` : pathValue)
 	}
 
@@ -144,9 +152,13 @@ function parseAncestorNamePath(
 	return lookupKey ? { lookupKey, fallbackLookupKeys } : null
 }
 
-function buildPathFromAncestors(ancestors: readonly AnyRawRecord[]): string | null {
+function buildPathFromAncestors(params: {
+	ancestors: readonly AnyRawRecord[]
+	specNamings?: ReadonlyMap<string, AnyRawRecord>
+}): string | null {
+	const { ancestors, specNamings } = params
 	const parts = ancestors
-		.map((ancestor) => getPathSegment(ancestor))
+		.map((ancestor) => getPathSegment(ancestor, { specNaming: specNamings?.get(ancestor.id) }))
 		.filter((segment): segment is PathSegment => segment !== null)
 	return parts.length > 0 ? joinPathParts(parts) : null
 }
@@ -187,14 +199,16 @@ function parseIedAddressPath(
 
 // ── behavior-description strategy ────────────────────────────────────
 
-function parseBehaviorDescriptionPath(
-	pathAttrName: string,
-	pathValue: string,
-	ancestry?: readonly AnyRawRecord[] | null,
-): ParsedReference | null {
+function parseBehaviorDescriptionPath(params: {
+	pathAttribute: string
+	pathValue: string
+	ancestry?: readonly AnyRawRecord[]
+	specNamings?: ReadonlyMap<string, AnyRawRecord>
+}): ParsedReference | null {
+	const { pathAttribute: pathAttrName, pathValue, ancestry, specNamings } = params
 	if (!ancestry) return null
 
-	const contextPath = findScopeContextPath(ancestry)
+	const contextPath = findScopeContextPath({ ancestry, specNamings })
 	if (!contextPath) return null
 
 	if (pathAttrName === 'dataName') {
@@ -220,7 +234,11 @@ function parseBehaviorDescriptionPath(
  * Walks ancestry backwards to build the path from ancestors above the
  * nearest BehaviorDescription.
  */
-function findScopeContextPath(ancestry: readonly AnyRawRecord[]): string | null {
+function findScopeContextPath(params: {
+	ancestry: readonly AnyRawRecord[]
+	specNamings?: ReadonlyMap<string, AnyRawRecord>
+}): string | null {
+	const { ancestry, specNamings } = params
 	let behaviorDescriptionIndex = -1
 	for (let i = ancestry.length - 1; i >= 0; i--) {
 		if (ancestry[i].tagName === 'BehaviorDescription') {
@@ -234,7 +252,7 @@ function findScopeContextPath(ancestry: readonly AnyRawRecord[]): string | null 
 	const parts: Array<{ segment: string; separator: '/' | '.' }> = []
 
 	for (let i = 0; i < behaviorDescriptionIndex; i++) {
-		const seg = getPathSegment(ancestry[i])
+		const seg = getPathSegment(ancestry[i], { specNaming: specNamings?.get(ancestry[i].id) })
 		if (seg) parts.push(seg)
 	}
 

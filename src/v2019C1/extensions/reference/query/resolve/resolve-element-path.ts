@@ -1,4 +1,5 @@
 import { getPathSegment } from '../build/path-segment'
+import { readSpecNamings } from '../build/spec-namings'
 import { parsePathSegments } from './parse-path'
 
 import { toRawRecord } from '@dialecte/core/helpers'
@@ -51,11 +52,16 @@ async function walkSegments(params: {
 
 	const childRecords = (await query.getRecords(children)).filter((child) => child !== undefined)
 	const siblings = childRecords.map(toRawRecord)
+	const specNamings = await readSpecNamings(query, { records: siblings })
 
 	for (const child of childRecords) {
 		// A signal is named among its siblings, and one segment of it may span several pieces of
-		// the parsed path (`Trip(1).general`, an input named `PTOC1.Op`).
-		const seg = getPathSegment(toRawRecord(child), siblings)
+		// the parsed path (`Trip(1).general`, an input named `PTOC1.Op`); an LNode by its
+		// specified naming.
+		const seg = getPathSegment(toRawRecord(child), {
+			siblings,
+			specNaming: specNamings.get(child.id),
+		})
 
 		// Transparent element — look through its children
 		if (!seg) {

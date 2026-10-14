@@ -1,27 +1,22 @@
 import { buildElementPath } from '../build/build-element-path'
 import { getPathSegment } from '../build/path-segment'
+import { readSpecNamings } from '../build/spec-namings'
 import { parseReferencePath, parsePathSegments, splitLnodeQualifier } from './parse-path'
 import { resolveMappedData } from './resolve-mapped-data'
+import { LN_CLASS_INST_ATTR, LN_CLASS_VALUES } from './resolve-reference-path.constants'
 
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { DEFINITION } from '@/v2019C1/definition'
 import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
 import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
 
 import type { PathSegment } from '../build/path-segment.types'
+import type { ResolveResult } from './resolve-reference-path.types'
 import type { Scl, Config } from '@/v2019C1/config'
-import type { ResolutionType } from '@/v2019C1/extensions/reference'
+import type { ReferencePair, ResolutionType } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
-
-// ── Types ────────────────────────────────────────────────────────────
-
-export type ResolveResult = {
-	record: Scl.TrackedRecord<Scl.ElementsOf>
-	qualifier?: string
-}
 
 // ── Public API ───────────────────────────────────────────────────────
 
@@ -69,21 +64,24 @@ export async function resolveReferencePath(
 
 	// Fallback: path-based resolution
 	let ancestry: AnyRawRecord[] | undefined
+	let specNamings: ReadonlyMap<string, AnyRawRecord> | undefined
 	if (
 		pair.resolution === RESOLUTION_TYPE.behaviorDescription ||
 		pair.resolution === RESOLUTION_TYPE.iedAddress ||
 		pair.resolution === RESOLUTION_TYPE.ancestorName
 	) {
 		const ancestors = await query.findAncestors(record, { order: 'top-down' })
-		ancestry = ancestors.map((a) => toRawRecord(a) as AnyRawRecord)
+		ancestry = ancestors.map((ancestor) => toRawRecord(ancestor) as AnyRawRecord)
+		specNamings = await readSpecNamings(query, { records: ancestry })
 	}
 
-	const parsed = parseReferencePath(
-		pair.resolution as ResolutionType,
+	const parsed = parseReferencePath({
+		resolution: pair.resolution as ResolutionType,
 		pathAttribute,
 		pathValue,
 		ancestry,
-	)
+		specNamings,
+	})
 	if (!parsed) return undefined
 
 	// A signal (SourceRef / ControlRef) is named among its siblings and its name may hold dots:
@@ -116,13 +114,10 @@ export async function resolveReferencePath(
 
 // ── Internal: reference pair lookup ──────────────────────────────────
 
-type ReferencePairs = typeof UUID_REFERENCE_PAIRS
-type ReferencePairEntry = ReferencePairs[keyof ReferencePairs][number]
-
-function findReferencePair(tagName: string, pathAttribute: string): ReferencePairEntry | undefined {
-	const pairs = UUID_REFERENCE_PAIRS[tagName as keyof ReferencePairs]
+function findReferencePair(tagName: string, pathAttribute: string): ReferencePair | undefined {
+	const pairs = UUID_REFERENCE_PAIRS[tagName as keyof typeof UUID_REFERENCE_PAIRS]
 	if (!pairs) return undefined
-	return (pairs as readonly ReferencePairEntry[]).find((p) => p.attribute.path === pathAttribute)
+	return (pairs as readonly ReferencePair[]).find((pair) => pair.attribute.path === pathAttribute)
 }
 
 // ── Internal: UUID-based resolution (fast path) ──────────────────────
@@ -135,7 +130,7 @@ function findReferencePair(tagName: string, pathAttribute: string): ReferencePai
 async function resolveByUuid(
 	query: Core.Query<Config> | Core.Transaction<Config>,
 	record: Scl.TrackedRecord<Scl.ElementsOf>,
-	pair: ReferencePairEntry,
+	pair: ReferencePair,
 ): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
 	const uuidAttrName = pair.attribute.uuid
 	const uuidValue = record.attributes.find((a) => a.name === uuidAttrName)?.value
@@ -159,7 +154,7 @@ async function resolveByUuid(
  * - behaviorDescription + inputName/outputName: no qualifier (target IS the ref)
  */
 function parseQualifier(
-	pair: ReferencePairEntry,
+	pair: ReferencePair,
 	pathAttribute: string,
 	pathValue: string,
 ): string | undefined {
@@ -173,16 +168,6 @@ function parseQualifier(
 }
 
 // ── Internal: candidate search + ancestry verification ───────────────
-
-const LN_CLASS_VALUES: ReadonlySet<string> = new Set(
-	DEFINITION.LNode.attributes.details.lnClass.facets.enumeration,
-)
-
-const LN_CLASS_INST_ATTR: Record<string, string> = {
-	LNode: 'lnInst',
-	LN: 'inst',
-	LN0: 'inst',
-}
 
 /**
  * Decompose a composite segment (prefix+lnClass+inst) into its parts.
@@ -302,9 +287,10 @@ async function findBySegmentScan(params: {
 	const { query, tagName, segment, expectedAncestry } = params
 
 	const records = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
+	const specNamings = await readSpecNamings(query, { records: records.map(toRawRecord) })
 
 	for (const record of records) {
-		const seg = getPathSegment(toRawRecord(record))
+		const seg = getPathSegment(toRawRecord(record), { specNaming: specNamings.get(record.id) })
 		if (!seg || seg.segment !== segment.segment) continue
 
 		if (await matchesAncestry(query, record, expectedAncestry)) {
@@ -323,12 +309,15 @@ async function matchesAncestry(
 	if (expectedSegments.length === 0) return true
 
 	const ancestors = await query.findAncestors(candidate)
+	const specNamings = await readSpecNamings(query, { records: ancestors.map(toRawRecord) })
 
 	// findAncestors returns bottom-up [parent, grandparent, …]
 	// Build top-down segments, skipping transparent elements
 	const ancestorSegments: PathSegment[] = []
 	for (let i = ancestors.length - 1; i >= 0; i--) {
-		const seg = getPathSegment(toRawRecord(ancestors[i]))
+		const seg = getPathSegment(toRawRecord(ancestors[i]), {
+			specNaming: specNamings.get(ancestors[i].id),
+		})
 		if (seg) ancestorSegments.push(seg)
 	}
 

@@ -16,4 +16,11 @@ export {
 	signalName,
 	signalNamingAttributes,
 } from './signal-sibling-paths'
-export { ensureLNodeSpecNaming, specifiedNamingOf } from './lnode-spec-naming'
+export {
+	ensureLNodeSpecNaming,
+	mirrorSpecifiedNaming,
+	rebuildPathsOfNamedLNode,
+	specifiedNamingChanged,
+	specifiedNamingOf,
+} from './lnode-spec-naming'
+export { rebuildReferencesBelow, rebuildReferencesTo } from './references-through'

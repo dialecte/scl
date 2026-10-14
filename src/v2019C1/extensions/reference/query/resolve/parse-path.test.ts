@@ -691,7 +691,9 @@ describe('reference-parsing', () => {
 					expect(tc.expected).toBeNull()
 					return
 				}
-				expect(parseReferencePath(resolution, tc.attribute, tc.value)).toEqual(tc.expected)
+				expect(
+					parseReferencePath({ resolution, pathAttribute: tc.attribute, pathValue: tc.value }),
+				).toEqual(tc.expected)
 			})
 		})
 	})

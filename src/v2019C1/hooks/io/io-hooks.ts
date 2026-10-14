@@ -1,36 +1,34 @@
+import { buildImportPathIndex } from './import-path-index'
+import { LOCAL_NAME_RESOLUTIONS } from './io-hooks.constants'
+
 import {
 	REFERENCE_TAG_NAMES,
 	TARGET_ELEMENT_TYPES,
 	UUID_REFERENCE_PAIRS,
 } from '@/v2019C1/constants'
 import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
-import {
-	PATH_EXTRACTION_CONFIG,
-	SIGNAL_TAG_NAMES,
-} from '@/v2019C1/extensions/reference/constants/path-extraction'
+import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import { composeReferencePath } from '@/v2019C1/extensions/reference/query/build/compose-reference-path'
-import {
-	buildPathFromAncestry,
-	joinPathParts,
-} from '@/v2019C1/extensions/reference/query/build/path-segment'
+import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { createSpecNamingImport } from '@/v2019C1/hooks/io/lnode-spec-naming-import'
 import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
 
 import type {
-	CollectedSignal,
-	IndexedTarget,
+	CollectedTarget,
+	ImportPathIndex,
 	PendingPathFill,
 	PendingResolution,
 	UnsupportedXPathWarning,
 } from './io-hooks.types'
+import type { ReferencePair } from '@/v2019C1/extensions/reference'
 import type { PathSegmentWithRef } from '@/v2019C1/extensions/reference/query/build'
 import type {
-	AnyAttribute,
 	AnyRawRecord,
 	IOHooks,
 	AfterImportResult,
 	ImportWarning,
+	RecordPatch,
 } from '@dialecte/core'
 
 /**
@@ -42,9 +40,10 @@ import type {
  * Records arrive already standardized, so any `uuid` enforced by
  * `afterStandardizedRecord` is already present — no need to ensure it here.
  * For each record:
- * 1. If it is a *target* element (e.g. `Function`), index its path → uuid in `pathIndex`.
- * 2. If it is a *reference* element (e.g. `FunctionRef`), and only the path attribute is
- *    present (not the uuid attribute), push a pending resolution.
+ * 1. If it is a *target* element (e.g. `Function`), keep it with its ancestry.
+ * 2. If it is a *reference* element (e.g. `FunctionRef`) written with a path, keep it as a
+ *    pending resolution. Nothing is parsed yet: a path names an LNode by its `LNodeSpecNaming`,
+ *    which the file may give after the elements below the LNode.
  *
  * After processing these two XML records:
  * ```xml
@@ -58,9 +57,8 @@ import type {
  *                         lookupKey: "S1/Bay1/VoltLevel1/Fn1" }]
  * ```
  *
- * **Pass 2 — `afterImport`** (called once, after all records):
- *
- * Each pending resolution is looked up in `pathIndex`:
+ * **Pass 2 — `afterImport`** (called once, after all records): every target is indexed under
+ * its path (`buildImportPathIndex`), then each pending resolution is parsed and looked up:
  * ```
  * "S1/Bay1/VoltLevel1/Fn1" → "abc-123"   ✓ resolved
  * ```
@@ -76,21 +74,17 @@ import type {
  *
  */
 export function createSclIoHooks(): IOHooks {
-	type Path = string & {}
-	type Uuid = string & {}
-	const pathIndex: Map<Path, Uuid> = new Map()
+	const targets: CollectedTarget[] = []
 	const pendingResolutions: PendingResolution[] = []
-	const targetsByUuid: Map<Uuid, IndexedTarget> = new Map()
 	const pendingPathFills: PendingPathFill[] = []
-	const collectedSignals: CollectedSignal[] = []
 	const xpathWarnings: UnsupportedXPathWarning[] = []
 	let mappedDataImport = createMappedDataImport()
-	const specNamingImport = createSpecNamingImport()
+	let specNamingImport = createSpecNamingImport()
 
-	const beforeImportRecord = (params: {
+	function beforeImportRecord(params: {
 		record: AnyRawRecord
 		ancestry: readonly AnyRawRecord[]
-	}): void => {
+	}): void {
 		const { record, ancestry } = params
 		const { tagName } = record
 		mappedDataImport.collect({ record, ancestry })
@@ -98,170 +92,107 @@ export function createSclIoHooks(): IOHooks {
 
 		// The record is already standardized, so afterStandardizedRecord has
 		// enforced a uuid where the element supports one — just read it.
-		const uuid = record.attributes.find((attribute) => attribute.name === 'uuid')?.value
-
-		const isTargetElement = uuid && TARGET_ELEMENT_TYPES.has(tagName)
-		// A signal is named among its siblings, some of which may come later: it is indexed once
-		// the whole file is read.
-		if (isTargetElement && SIGNAL_TAG_NAMES.has(tagName)) {
-			collectedSignals.push({ record, ancestry: [...ancestry], uuid })
-		}
-		// Index target elements: build path → uuid mapping
-		else if (isTargetElement) {
-			const elementPath = buildPathFromAncestry({ record, ancestry })
-			if (elementPath) {
-				pathIndex.set(elementPath.path, uuid)
-				targetsByUuid.set(uuid, { tagName, path: elementPath })
-			}
+		const uuid = readAttribute(record, 'uuid')
+		if (uuid && TARGET_ELEMENT_TYPES.has(tagName)) {
+			targets.push({ record, ancestry: [...ancestry], uuid })
 		}
 
-		const hasReferences = REFERENCE_TAG_NAMES.has(tagName)
-		if (!hasReferences) return
+		if (!REFERENCE_TAG_NAMES.has(tagName)) return
 		// DOS / SDS / DAS mapped data is resolved by its own rules once the pass is over.
 		if (MAPPED_NAME_REFS.has(tagName)) return
 
-		// Collect pending resolutions for elements with reference pairs
 		const pairs = UUID_REFERENCE_PAIRS[tagName as keyof typeof UUID_REFERENCE_PAIRS]
 		for (const pair of pairs) {
-			const pathValue = record.attributes.find(
-				(attribute: AnyAttribute) => attribute.name === pair.attribute.path,
-			)?.value
-
-			const existingUuid = record.attributes.find(
-				(attribute: AnyAttribute) => attribute.name === pair.attribute.uuid,
-			)?.value
-
-			// A uuid without its path: the path is written once every target is stored. An XPath
-			// selector (`unsupported`) is never rebuilt as a name path.
-			if (!pathValue) {
-				if (existingUuid && pair.resolution !== RESOLUTION_TYPE.unsupported) {
-					pendingPathFills.push({
-						recordId: record.id,
-						pair,
-						uuidValue: existingUuid,
-						referenceAttributes: record.attributes,
-						behaviorContext:
-							pair.resolution === RESOLUTION_TYPE.behaviorDescription
-								? behaviorContextFromAncestry(ancestry)
-								: undefined,
-					})
-				}
-				continue
-			}
-
-			// Only resolve if uuid is not already set
-			if (existingUuid) continue
-
-			const parsed = parseReferencePath(pair.resolution, pair.attribute.path, pathValue, ancestry)
-
-			if (!parsed) {
-				if (pair.resolution === RESOLUTION_TYPE.unsupported) {
-					xpathWarnings.push({
-						type: 'unsupported-xpath-reference',
-						recordId: record.id,
-						details: {
-							elementTag: tagName,
-							pathAttribute: pair.attribute.path,
-							uuidAttribute: pair.attribute.uuid,
-							pathValue,
-						},
-					})
-				}
-				continue
-			}
-
-			// Written again in the standard form once resolved: a name local to a BehaviorDescription
-			// that names a signal, and a ProcessResource named by its full path by an earlier version.
-			const namesSignal =
-				(pair.resolution === RESOLUTION_TYPE.behaviorDescription &&
-					pair.target.every((target) => SIGNAL_TAG_NAMES.has(target))) ||
-				pair.resolution === RESOLUTION_TYPE.ancestorName
-
-			pendingResolutions.push({
-				recordId: record.id,
-				elementTag: tagName,
-				uuidAttributeName: pair.attribute.uuid,
-				pathValue,
-				lookupKey: parsed.lookupKey,
-				fallbackLookupKeys: parsed.fallbackLookupKeys,
-				normalize: namesSignal
-					? {
-							pair,
-							referenceAttributes: record.attributes,
-							behaviorContext: behaviorContextFromAncestry(ancestry),
-						}
-					: undefined,
-			})
+			collectReference({ record, ancestry, pair })
 		}
 	}
 
-	const afterImport = async (): Promise<AfterImportResult> => {
-		const updates: AfterImportResult['updates'] = []
+	function collectReference(params: {
+		record: AnyRawRecord
+		ancestry: readonly AnyRawRecord[]
+		pair: ReferencePair
+	}): void {
+		const { record, ancestry, pair } = params
+		const pathValue = readAttribute(record, pair.attribute.path)
+		const uuidValue = readAttribute(record, pair.attribute.uuid)
+		const localAncestry = LOCAL_NAME_RESOLUTIONS.has(pair.resolution) ? [...ancestry] : undefined
+
+		// A uuid without its path: the path is written once every target is stored. An XPath
+		// selector (`unsupported`) is never rebuilt as a name path.
+		if (!pathValue) {
+			if (uuidValue && pair.resolution !== RESOLUTION_TYPE.unsupported) {
+				pendingPathFills.push({
+					recordId: record.id,
+					pair,
+					uuidValue,
+					referenceAttributes: record.attributes,
+					ancestry:
+						pair.resolution === RESOLUTION_TYPE.behaviorDescription ? localAncestry : undefined,
+				})
+			}
+			return
+		}
+
+		if (pair.resolution === RESOLUTION_TYPE.unsupported) {
+			if (!uuidValue) {
+				xpathWarnings.push({
+					type: 'unsupported-xpath-reference',
+					recordId: record.id,
+					details: {
+						elementTag: record.tagName,
+						pathAttribute: pair.attribute.path,
+						uuidAttribute: pair.attribute.uuid,
+						pathValue,
+					},
+				})
+			}
+			return
+		}
+
+		pendingResolutions.push({
+			recordId: record.id,
+			elementTag: record.tagName,
+			pair,
+			pathValue,
+			referenceAttributes: record.attributes,
+			ancestry: localAncestry,
+			uuidValue,
+			alwaysStandardize:
+				(pair.resolution === RESOLUTION_TYPE.behaviorDescription &&
+					pair.target.every((target) => SIGNAL_TAG_NAMES.has(target))) ||
+				pair.resolution === RESOLUTION_TYPE.ancestorName,
+		})
+	}
+
+	async function afterImport(): Promise<AfterImportResult> {
+		const updates: RecordPatch[] = []
 		const warnings: ImportWarning[] = [...xpathWarnings]
 
-		indexSignals({ signals: collectedSignals, pathIndex, targetsByUuid })
+		const specNaming = specNamingImport.resolve()
+		const index = buildImportPathIndex({ targets, specNamings: specNaming.namings })
 
-		// A reference stored with its uuid only gets the path of the target the uuid names, composed
-		// like the record hooks compose it. A uuid naming no element of the file is left alone.
 		for (const fill of pendingPathFills) {
-			const target = targetsByUuid.get(fill.uuidValue)
-			if (!target || !(fill.pair.target as readonly string[]).includes(target.tagName)) continue
-			const path = composeReferencePath({
-				pair: fill.pair,
-				referenceAttributes: fill.referenceAttributes,
-				targetPath: target.path,
-				behaviorContext: fill.behaviorContext,
-			})
-			if (!path) continue
-			updates.push({
-				recordId: fill.recordId,
-				attributes: [{ name: fill.pair.attribute.path, value: path }],
-			})
+			const update = fillPath({ fill, index, specNamings: specNaming.namings })
+			if (update) updates.push(update)
 		}
 
 		for (const pending of pendingResolutions) {
-			const triedKeys = [pending.lookupKey, ...(pending.fallbackLookupKeys ?? [])]
-			const resolvedUuid = triedKeys
-				.map((key) => pathIndex.get(key))
-				.find((uuid) => uuid !== undefined)
-
-			if (!resolvedUuid) {
-				warnings.push({
-					type: 'unresolved-reference',
-					recordId: pending.recordId,
-					details: {
-						elementTag: pending.elementTag,
-						uuidAttribute: pending.uuidAttributeName,
-						pathValue: pending.pathValue,
-						triedKeys,
-					},
-				})
-				continue
-			}
-
-			updates.push({
-				recordId: pending.recordId,
-				attributes: [
-					{ name: pending.uuidAttributeName, value: resolvedUuid },
-					...standardPathOf({ pending, target: targetsByUuid.get(resolvedUuid) }),
-				],
-			})
+			const outcome = resolvePending({ pending, index, specNamings: specNaming.namings })
+			if (outcome.update) updates.push(outcome.update)
+			if (outcome.warning) warnings.push(outcome.warning)
 		}
 
-		const mappedData = await mappedDataImport.resolve({ pathIndex })
+		const mappedData = await mappedDataImport.resolve({ pathIndex: index.byPath })
 		updates.push(...mappedData.updates)
 		warnings.push(...mappedData.warnings)
-		mappedDataImport = createMappedDataImport()
-
-		const specNaming = specNamingImport.resolve()
 		updates.push(...specNaming.updates)
 		warnings.push(...specNaming.warnings)
 
-		pathIndex.clear()
+		mappedDataImport = createMappedDataImport()
+		specNamingImport = createSpecNamingImport()
+		targets.length = 0
 		pendingResolutions.length = 0
 		pendingPathFills.length = 0
-		collectedSignals.length = 0
-		targetsByUuid.clear()
 		xpathWarnings.length = 0
 
 		return {
@@ -271,94 +202,134 @@ export function createSclIoHooks(): IOHooks {
 		}
 	}
 
-	return {
-		beforeImportRecord,
-		afterImport,
+	return { beforeImportRecord, afterImport }
+}
+
+/**
+ * A reference stored with its uuid only gets the path of the target the uuid names, composed like
+ * the record hooks compose it. A uuid naming no element of the file is left alone.
+ */
+function fillPath(params: {
+	fill: PendingPathFill
+	index: ImportPathIndex
+	specNamings: ReadonlyMap<string, AnyRawRecord>
+}): RecordPatch | undefined {
+	const { fill, index, specNamings } = params
+	const target = index.targetsByUuid.get(fill.uuidValue)
+	if (!target || !(fill.pair.target as readonly string[]).includes(target.tagName)) return undefined
+	const path = composeReferencePath({
+		pair: fill.pair,
+		referenceAttributes: fill.referenceAttributes,
+		targetPath: target.path,
+		behaviorContext: fill.ancestry
+			? behaviorContextFromAncestry({ ancestry: fill.ancestry, specNamings })
+			: undefined,
+	})
+	if (!path) return undefined
+	return { recordId: fill.recordId, attributes: [{ name: fill.pair.attribute.path, value: path }] }
+}
+
+/**
+ * A reference written with a path: parsed now that every LNode's naming is known, looked up, and
+ * given the uuid it names. Its path is written again in the standard form when it resolved through
+ * a former path, or always for the names that must be (`alwaysStandardize`). A reference that
+ * already has its uuid only has a former path rewritten, when it names that same element.
+ */
+function resolvePending(params: {
+	pending: PendingResolution
+	index: ImportPathIndex
+	specNamings: ReadonlyMap<string, AnyRawRecord>
+}): { update?: RecordPatch; warning?: ImportWarning } {
+	const { pending, index, specNamings } = params
+	const parsed = parseReferencePath({
+		resolution: pending.pair.resolution,
+		pathAttribute: pending.pair.attribute.path,
+		pathValue: pending.pathValue,
+		ancestry: pending.ancestry,
+		specNamings,
+	})
+	if (!parsed) return {}
+
+	const triedKeys = [parsed.lookupKey, ...(parsed.fallbackLookupKeys ?? [])]
+	const matchedKey = triedKeys.find((key) => index.byPath.has(key))
+	const resolvedUuid = matchedKey ? index.byPath.get(matchedKey) : undefined
+
+	if (pending.uuidValue) {
+		if (!matchedKey || resolvedUuid !== pending.uuidValue || !index.legacyKeys.has(matchedKey)) {
+			return {}
+		}
+		const standard = standardPathOf({ pending, index, uuid: resolvedUuid, specNamings })
+		return standard.length > 0
+			? { update: { recordId: pending.recordId, attributes: standard } }
+			: {}
 	}
+
+	if (!resolvedUuid || !matchedKey) {
+		return {
+			warning: {
+				type: 'unresolved-reference',
+				recordId: pending.recordId,
+				details: {
+					elementTag: pending.elementTag,
+					uuidAttribute: pending.pair.attribute.uuid,
+					pathValue: pending.pathValue,
+					triedKeys,
+				},
+			},
+		}
+	}
+
+	const rewrite = pending.alwaysStandardize || index.legacyKeys.has(matchedKey)
+	return {
+		update: {
+			recordId: pending.recordId,
+			attributes: [
+				{ name: pending.pair.attribute.uuid, value: resolvedUuid },
+				...(rewrite ? standardPathOf({ pending, index, uuid: resolvedUuid, specNamings }) : []),
+			],
+		},
+	}
+}
+
+/** The standard path of a resolved reference, when the file wrote another. */
+function standardPathOf(params: {
+	pending: PendingResolution
+	index: ImportPathIndex
+	uuid: string
+	specNamings: ReadonlyMap<string, AnyRawRecord>
+}): { name: string; value: string }[] {
+	const { pending, index, uuid, specNamings } = params
+	const target = index.targetsByUuid.get(uuid)
+	if (!target) return []
+	const path = composeReferencePath({
+		pair: pending.pair,
+		referenceAttributes: pending.referenceAttributes,
+		targetPath: target.path,
+		behaviorContext: pending.ancestry
+			? behaviorContextFromAncestry({ ancestry: pending.ancestry, specNamings })
+			: undefined,
+	})
+	if (!path || path === pending.pathValue) return []
+	return [{ name: pending.pair.attribute.path, value: path }]
 }
 
 /**
  * The path segments of the parent of the nearest BehaviorDescription in `ancestry` (the
  * BehaviorDescription left out), as the record hooks read them through a query.
  */
-function behaviorContextFromAncestry(
-	ancestry: readonly AnyRawRecord[],
-): PathSegmentWithRef[] | undefined {
+function behaviorContextFromAncestry(params: {
+	ancestry: readonly AnyRawRecord[]
+	specNamings: ReadonlyMap<string, AnyRawRecord>
+}): PathSegmentWithRef[] | undefined {
+	const { ancestry, specNamings } = params
 	const index = ancestry.findLastIndex((ancestor) => ancestor.tagName === 'BehaviorDescription')
 	if (index === -1) return undefined
 	const behaviorPath = buildPathFromAncestry({
 		record: ancestry[index],
 		ancestry: ancestry.slice(0, index),
+		specNamings,
 	})
 	return behaviorPath?.segments.slice(0, -1)
-}
-
-/**
- * Index every signal under its path, named among its siblings. The name
- * the engine wrote before the standard form (`Trip.general` for a unique input with a pDA,
- * `Trip(2)` for a unique input of instance 2, `Trip` for instance 1 of several) is indexed too,
- * unless it is the standard name of another signal, so a file written by an earlier version
- * still resolves.
- */
-function indexSignals(params: {
-	signals: readonly CollectedSignal[]
-	pathIndex: Map<string, string>
-	targetsByUuid: Map<string, IndexedTarget>
-}): void {
-	const { signals, pathIndex, targetsByUuid } = params
-
-	const siblingsByParent = new Map<string, AnyRawRecord[]>()
-	for (const { record } of signals) {
-		const parentId = record.parent?.id ?? ''
-		siblingsByParent.set(parentId, [...(siblingsByParent.get(parentId) ?? []), record])
-	}
-
-	const legacyPaths: [string, string][] = []
-	for (const { record, ancestry, uuid } of signals) {
-		const siblings = siblingsByParent.get(record.parent?.id ?? '') ?? [record]
-		const elementPath = buildPathFromAncestry({ record, ancestry, siblings })
-		if (!elementPath) continue
-		pathIndex.set(elementPath.path, uuid)
-		targetsByUuid.set(uuid, { tagName: record.tagName, path: elementPath })
-
-		const legacyName = legacySignalName(record)
-		const parentPath = elementPath.segments.slice(0, -1)
-		if (legacyName) {
-			legacyPaths.push([
-				parentPath.length > 0 ? `${joinPathParts(parentPath)}.${legacyName}` : legacyName,
-				uuid,
-			])
-		}
-	}
-	for (const [path, uuid] of legacyPaths) {
-		if (!pathIndex.has(path)) pathIndex.set(path, uuid)
-	}
-}
-
-/**
- * The name the engine gave a signal before the standard form: decided by its own values, the
- * instance when not 1, the data attribute when set.
- */
-function legacySignalName(record: AnyRawRecord): string | undefined {
-	const strategy = PATH_EXTRACTION_CONFIG[record.tagName]
-	if (strategy?.type !== 'signal') return undefined
-	const name = readAttribute(record, strategy.name)
-	if (!name) return undefined
-	const instance = readAttribute(record, strategy.instance)
-	const data = strategy.data ? readAttribute(record, strategy.data) : undefined
-	return `${name}${instance && instance !== '1' ? `(${instance})` : ''}${data ? `.${data}` : ''}`
-}
-
-/** The standard path of a resolved name local to a BehaviorDescription, when the file wrote another. */
-function standardPathOf(params: {
-	pending: PendingResolution
-	target: IndexedTarget | undefined
-}): { name: string; value: string }[] {
-	const { pending, target } = params
-	if (!pending.normalize || !target) return []
-	const path = composeReferencePath({ ...pending.normalize, targetPath: target.path })
-	if (!path || path === pending.pathValue) return []
-	return [{ name: pending.normalize.pair.attribute.path, value: path }]
 }
 
 function readAttribute(record: AnyRawRecord, name: string): string | undefined {

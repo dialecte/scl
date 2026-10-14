@@ -132,9 +132,11 @@ function collectPairViolations(params: {
 	const written = element.getAttribute(pair.attribute.path)
 	if (written === null) return []
 
+	const ancestors = ancestorsTopDown(target)
 	const expected = buildPathFromAncestry({
 		record: toRawRecord(target),
-		ancestry: ancestorsTopDown(target).map(toRawRecord),
+		ancestry: ancestors.map((ancestor, index) => toRawRecord(ancestor, `ancestor-${index}`)),
+		specNamings: specNamingsOf(ancestors),
 	})
 	if (!expected || expected.path === written) return []
 
@@ -186,10 +188,23 @@ function ancestorsTopDown(element: Element): Element[] {
 	return ancestors
 }
 
+/** The `LNodeSpecNaming` of each LNode among `ancestors`, keyed as `ancestorsTopDown` ids them. */
+function specNamingsOf(ancestors: readonly Element[]): Map<string, AnyRawRecord> {
+	const namings = new Map<string, AnyRawRecord>()
+	ancestors.forEach((ancestor, index) => {
+		if (ancestor.localName !== 'LNode') return
+		const naming = [...ancestor.getElementsByTagNameNS('*', 'LNodeSpecNaming')].find(
+			(candidate) => candidate.parentElement?.parentElement === ancestor,
+		)
+		if (naming) namings.set(`ancestor-${index}`, toRawRecord(naming))
+	})
+	return namings
+}
+
 /** The record shape the path builder reads: a tag and its attributes. */
-function toRawRecord(element: Element): AnyRawRecord {
+function toRawRecord(element: Element, id = ''): AnyRawRecord {
 	return {
-		id: '',
+		id,
 		tagName: element.localName,
 		namespace: { prefix: element.prefix ?? '', uri: element.namespaceURI ?? '' },
 		attributes: [...element.attributes].map((attribute) => ({

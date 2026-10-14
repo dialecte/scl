@@ -4,7 +4,11 @@ import { setRefPaths } from './ref-paths'
 
 import { widen } from '@dialecte/core/helpers'
 
-import { reconcileSignalSiblingPaths, signalName } from '@/v2019C1/hooks/shared'
+import {
+	rebuildPathsOfNamedLNode,
+	reconcileSignalSiblingPaths,
+	signalName,
+} from '@/v2019C1/hooks/shared'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -31,5 +35,10 @@ export async function afterCreated<
 			})
 		: []
 
-	return [...privateOps, ...refPathOps, ...minRequestedScdFileOps, ...siblingOps]
+	const namedLNodeOps = await rebuildPathsOfNamedLNode(query, {
+		specNaming: widen(childRecord),
+		holder: widen(parentRecord),
+	})
+
+	return [...privateOps, ...refPathOps, ...minRequestedScdFileOps, ...siblingOps, ...namedLNodeOps]
 }

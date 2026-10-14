@@ -10,7 +10,8 @@ export async function readSignalName(
 	query: Core.Query<Config>,
 	record: Core.AnyRawRecord,
 ): Promise<string | null> {
-	return getPathSegment(record, await readSiblings(query, record))?.segment ?? null
+	const siblings = await readSiblings(query, record)
+	return getPathSegment(record, { siblings })?.segment ?? null
 }
 
 /** The children of the record's parent, the record included. */

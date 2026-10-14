@@ -11,6 +11,8 @@ describe('getPathSegment', () => {
 		record: AnyRawRecord
 		/** The children of the record's parent, the record included (read by a signal's name). */
 		siblings?: AnyRawRecord[]
+		/** The LNode's `LNodeSpecNaming` (read by an LNode's name). */
+		specNaming?: AnyRawRecord
 		expected: { segment: string; separator: '/' | '.' } | null
 	}
 
@@ -217,6 +219,39 @@ describe('getPathSegment', () => {
 			}),
 			expected: { segment: 'LLN0', separator: '/' },
 		},
+		'LNode bound to an IED, with its LNodeSpecNaming → its specified naming': {
+			record: createSclTestRecord({
+				record: {
+					tagName: 'LNode',
+					attributes: { iedName: 'P1', prefix: 'Q0', lnClass: 'XCBR', lnInst: '2' },
+				},
+			}),
+			specNaming: createSclTestRecord({
+				record: { tagName: 'LNodeSpecNaming', attributes: { sLnClass: 'XCBR', sLnInst: '1' } },
+			}),
+			expected: { segment: 'XCBR1', separator: '/' },
+		},
+		'LNodeSpecNaming without sLnClass → the class read from the LNode': {
+			record: createSclTestRecord({
+				record: {
+					tagName: 'LNode',
+					attributes: { iedName: 'P1', prefix: 'Q0', lnClass: 'XCBR', lnInst: '2' },
+				},
+			}),
+			specNaming: createSclTestRecord({
+				record: { tagName: 'LNodeSpecNaming', attributes: { sPrefix: 'Main', sLnInst: '1' } },
+			}),
+			expected: { segment: 'MainXCBR1', separator: '/' },
+		},
+		'LNode assigned to no IED, with an LNodeSpecNaming → its own naming': {
+			record: createSclTestRecord({
+				record: { tagName: 'LNode', attributes: { iedName: 'None', lnClass: 'XCBR', lnInst: '4' } },
+			}),
+			specNaming: createSclTestRecord({
+				record: { tagName: 'LNodeSpecNaming', attributes: { sLnClass: 'XCBR', sLnInst: '1' } },
+			}),
+			expected: { segment: 'XCBR4', separator: '/' },
+		},
 		'LNode with only lnClass and no inst → lnClass as path segment': {
 			record: createSclTestRecord({
 				record: { tagName: 'LNode', attributes: { lnClass: 'LLN0' } },
@@ -390,7 +425,9 @@ describe('getPathSegment', () => {
 
 	Object.entries(testCases).forEach(([desc, tc]) => {
 		it(desc, () => {
-			expect(getPathSegment(tc.record, tc.siblings)).toEqual(tc.expected)
+			expect(
+				getPathSegment(tc.record, { siblings: tc.siblings, specNaming: tc.specNaming }),
+			).toEqual(tc.expected)
 		})
 	})
 })
