@@ -29,6 +29,18 @@ await doc.transaction(async (tx) => {
 
 The `cloneMappings` are the `CloneMapping[]` produced by a `deepClone` (or the extract / instantiate operations), so `writeIdentity` runs as a post-clone pass.
 
+## restoreClonedUuids
+
+`restoreClonedUuids({ cloneMappings })` gives each cloned element its source `uuid` back. A clone always mints a fresh element `uuid` (`beforeClone` strips it, standardization fills a new one) but copies every reference uuid attribute verbatim. A **fork** converges the target to the same identity as the source revision, so restoring the element uuids is enough: a reference inside the clone already points at its source-space target.
+
+```ts
+await doc.transaction(async (tx) => {
+	await tx.identity.restoreClonedUuids({ cloneMappings })
+})
+```
+
+A mapping whose source carries no `uuid`, or whose clone already carries the source one, is left as it is.
+
 ## resolveIdentity
 
 Resolves an element's **identity strategy** from the schema — how a source element is matched to its instance across a clone. Access via `identity.query.resolveIdentity(query, ref)`.

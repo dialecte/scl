@@ -14,12 +14,14 @@ Access via `doc.query.info`.
 
 ```ts
 const info = await doc.query.info.of(ref)
-// { title: string; state?: ElementState<Tag>; labels?: Record<string, Record<string, string>> }
+// ElementInfo: { title: string; state?: ...; labels?: Record<string, Record<string, string>> }
 
 const withLabels = await doc.query.info.of(ref, { withLabels: true, mode: 'full' })
 ```
 
-The type of `state` follows the tag of `ref`: `of({ tagName: 'LNode', id })` returns an `LNodeState`, a tag without a state has none.
+The type of `state` follows the tag of `ref`: `of({ tagName: 'LNode', id })` returns the state of an LNode (see [State](#state)), a tag without a state has none. `ElementInfo` and `InfoOptions` are exported from `@dialecte/scl/v2019C1`.
+
+`info.of` replaces the former `presentation.extractElementTitle`: `extractElementTitle(ref)` becomes `(await info.of(ref)).title`, and `withLabels: true` puts `labels` on the same object.
 
 ### `ofEach`
 
@@ -174,10 +176,10 @@ await doc.query.info.of(ied, { withLabels: true })
 
 const lnode = { tagName: 'LNode', id: 'lnode-1' }
 await doc.query.info.of(lnode)
-// { title: 'PXCBR1', state: { locked: true } }
+// { title: 'PXCBR1', state: { locked: true, mapping: 'real-ied' } }
 
 await doc.query.info.of(lnode, { mode: 'full' })
-// { title: 'IED_A/LD0/PXCBR1', state: { locked: true } }
+// { title: 'IED_A/LD0/PXCBR1', state: { locked: true, mapping: 'real-ied' } }
 
 const sourceRef = { tagName: 'SourceRef', id: 'sr-1' }
 await doc.query.info.of(sourceRef)

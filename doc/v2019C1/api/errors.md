@@ -55,7 +55,7 @@ Anything else the lifecycle raises uses a key of the core catalogue (`ELEMENT_NO
 
 ## Import warnings
 
-The import reports warnings (`ImportWarning`) instead of refusing a file. `type` is the code, `details` the data; the default wording of each type is in `SCL_IMPORT_WARNINGS`.
+The import reports warnings instead of refusing a file. Their type is exported as `SclImportWarning` (a union, one member per `type`; `SclImportWarningType` is the union of the codes). `type` is the code, `details` the data; the default wording of each type is in `SCL_IMPORT_WARNINGS`.
 
 | `type`                         | Reported when                                                                                                      | `details`                                                                |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |

@@ -30,6 +30,7 @@ buildMappedLNodePath <->  resolveMappedLNode     (mapped LNode <-> implementing 
 | `buildMappedLNodePath` | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode` |
 | `resolveMappedLNode`   | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`       |
 | `resolveMappedData`    | read      | `DOS`/`SDS`/`DAS` ref                | `MappedData` (`LN` ref + data path + origin)             | finding the data that implements a specified data object      |
+| `getPathSegment`       | write     | a record (+ context)                 | `PathSegment` (segment + separator) or `null`            | the segment of one element, without a query                   |
 
 ### Name distinctions
 
@@ -113,6 +114,31 @@ Most elements contribute their `name` attribute as segment. Special cases:
 ```
 
 On import, the names an earlier version wrote (`Trip.general` for the only `Trip`, `Trip(2)` for the only one of instance 2, `Trip` for instance 1 of several) still resolve, and an `InputVar` / `OutputVar` name is written again in the standard form.
+
+---
+
+## getPathSegment
+
+The segment a reference path gives one element, read from the record alone — no query. Cheaper than `buildElementPath` when only that question matters. Exported from `@dialecte/scl/v2019C1` with its result type `PathSegment`.
+
+```ts
+import { getPathSegment } from '@dialecte/scl/v2019C1'
+
+getPathSegment(
+  record: AnyRawRecord,
+  context?: {
+    siblings?: readonly AnyRawRecord[] // the children of its parent, itself included — for a signal, named among them
+    specNaming?: AnyRawRecord          // its `LNodeSpecNaming` — for an LNode, named by its specified naming
+  },
+): { segment: string; separator: '/' | '.' } | null
+```
+
+`null` when a path cannot address the element: a transparent container (`AccessPoint`, `Server`) or an element without identifiable attributes. Without `siblings` a signal is taken as the only one of its name; without `specNaming` an LNode is named by its own attributes.
+
+```ts
+getPathSegment(lnode, { specNaming }) // -> { segment: 'XCBR1', separator: '/' }
+getPathSegment(sourceRef, { siblings }) // -> { segment: 'Trip(1).general', separator: '.' }
+```
 
 ---
 
@@ -548,7 +574,7 @@ Reference coherence is an invariant that `@dialecte/scl` maintains for you: the 
 
 | On mutation of…                                             | dialecte keeps in agreement                      | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ----------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| any reference                                               | path attribute ↔ companion uuid                  | path written from the target on create (a reference created with its uuid only gets its path), rebuilt on target rename (written when it was missing), cleaned up on delete                                                                                                                                                                                                                                                         |
+| any reference                                               | path attribute ↔ companion uuid                  | path written from the target on create (a reference created with its uuid only gets its path), rebuilt on target rename (written when it was missing), cleaned up on delete. A reference carrying several uuids (a `SourceRef` with its source LNode and its process resource) gets every path, on create and on update                                                                                                             |
 | `DOS`/`SDS`/`DAS`                                           | `mappedDoName` / `mappedDaName` ↔ `mappedLnUuid` | stored together or not at all: nothing when the record is implemented by its default, otherwise the path from the implementing logical node with that node's uuid (an absolute reference or a uuid alone is completed). A change to an `LNode` mapping or to a parent's mapping re-stores the records below it; one whose implementation became the default loses both attributes. A path the schema cannot hold is left as written |
 | `SourceRef` / `ControlRef` / `ProcessEcho` / `LNodeDataRef` | path qualifier ↔ companion `*DoName`/`*DaName`   | editing a companion DO/DA name rebuilds the path qualifier                                                                                                                                                                                                                                                                                                                                                                          |
 | `LNode`                                                     | identity ↔ `lnUuid`                              | setting `lnUuid` stamps `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` from the target `LN`; clearing it restores the specification identity from `LNodeSpecNaming` (`lnType` stays the specification type). `templateUuid` is left untouched — it records the template the `LNode` was instantiated from, owned by the instantiate lifecycle, not by binding                                                                       |
