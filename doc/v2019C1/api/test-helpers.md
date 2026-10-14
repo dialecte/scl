@@ -287,7 +287,7 @@ What is checked:
 
 - **element namespace** — each element sits in the namespace the schema declares for it **in its parent context**. SCL reuses local names across namespaces (e.g. `SclFileReference` is default-namespace under an IED but `eIEC61850-6-100` under a `FunctionSclRef`), so the check is context-aware. Writing a default-namespace element such as `Function` under the `eIEC61850-6-100:` prefix — or a 6-100 element such as `FunctionCatRef` in the default namespace — is rejected;
 - **containment** — each element is an allowed child of its parent;
-- **attributes** — every unprefixed attribute is a known attribute of its element, as declared under its parent and as the type it names with `xsi:type` says. Namespaced attributes (`xmlns`, `xsi:`, and the dev-namespaced record id `dev:db-id`) are skipped.
+- **attributes** — every attribute, in whatever namespace, is a known attribute of its element: declared by the element (as declared under its parent and as the type it names with `xsi:type` says; a dialecte namespace under any prefix the document binds), or allowed by the element's attribute wildcard. Namespace declarations (`xmlns`), `xsi:*` and the record id `dev:db-id` are always allowed. A fixture carrying an attribute its element does not declare fails.
 
 What is skipped:
 
@@ -299,12 +299,15 @@ How failures are reported:
 - `runSclTestCases` checks **every** case of the suite before it runs and fails once, listing the violations of all invalid cases, each attributed to its case name and to `sourceXml` / `targetXml` — a suite's fixtures are fixed in one round;
 - an XML declaration (`<?xml … ?>`) that is not the very first characters of the string is malformed XML. A template-literal snippet starts with a newline, so drop the declaration from inline fixtures — the message says so instead of relaying the parser's error.
 
-Not enforced (planned with the validation feature): required-attribute completeness — minimal fixtures legitimately omit e.g. the `<SCL>` `version` / `revision` / `release` — attribute value facets (uuid pattern, enums), and cross-element constraints (unique keys, keyref resolution). Pass `{ requireComplete: true }` to opt into the required-attribute check:
+Not enforced (planned with the validation feature): attribute value facets (uuid pattern, enums) and cross-element constraints (unique keys, keyref resolution).
+
+Required-attribute completeness is checked by `assertValidSclXml` unless `{ requireComplete: false }` is passed. `createSclTestProject` and `runSclTestCases` pass `false` for their fixtures, so a minimal fixture may omit e.g. the `<SCL>` `version` / `revision` / `release`:
 
 ```ts
 import { assertValidSclXml } from '@dialecte/scl/v2019C1/test'
 
-assertValidSclXml(xml, 'my snippet', { requireComplete: true })
+assertValidSclXml(xml, 'my snippet') // required attributes checked
+assertValidSclXml(xml, 'my snippet', { requireComplete: false })
 ```
 
 ## Test XML is checked for coherent references
@@ -373,19 +376,6 @@ All types are bound to the SCL dialecte config via the `SclTest` namespace:
 
 `TestCases<T>` accepts any type extending `BaseTestCase` - use `BaseTestCase` for non-XML generic tests, `BaseXmlTestCase` for XML round-trip tests:
 
-````ts
-// Non-XML test case (generic runner)
-type MyCase = SclTest.BaseTestCase & { input: number; expected: number }
-const cases: SclTest.TestCases<MyCase> = { ... }
-runSclTestCases.generic(cases, (testCase) => { ... })
-
-// XML test case (withExport / withoutExport)
-type MyXmlCase = SclTest.BaseXmlTestCase & { functionId: string }
-const cases: SclTest.TestCases<MyXmlCase> = { ... }
-runSclTestCases.withExport({ testCases: cases, act })onfig                                                              |
-
-`TestCases<T>` accepts any type extending `BaseTestCase` - use `BaseTestCase` for non-XML generic tests, `BaseXmlTestCase` for XML round-trip tests:
-
 ```ts
 // Non-XML test case (generic runner)
 type MyCase = SclTest.BaseTestCase & { input: number; expected: number }
@@ -396,4 +386,4 @@ runSclTestCases.generic(cases, (testCase) => { ... })
 type MyXmlCase = SclTest.BaseXmlTestCase & { functionId: string }
 const cases: SclTest.TestCases<MyXmlCase> = { ... }
 runSclTestCases.withExport({ testCases: cases, act })
-````
+```
