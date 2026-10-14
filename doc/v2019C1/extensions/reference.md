@@ -85,11 +85,18 @@ Most elements contribute their `name` attribute as segment. Special cases:
 
 | Element    | Segment format                      | Example                   |
 | ---------- | ----------------------------------- | ------------------------- |
-| LNode/LN   | `prefix` + `lnClass` + `inst`       | `PXCBR1`, `LLN0`          |
+| LN/LN0     | `prefix` + `lnClass` + `inst`       | `PXCBR1`, `LLN0`          |
+| LNode      | its specified naming, see below     | `XCBR1`                   |
 | LDevice    | `inst` attribute                    | `LD0`                     |
 | SourceRef  | named among its siblings, see below | `Trip`, `Trip(1).general` |
 | ControlRef | named among its siblings, see below | `TripCmd`, `TripCmd(2)`   |
 | ExtRef     | `intAddr` attribute                 | `TrCmd.stVal`             |
+
+**LNode names**: an `LNode` is named by the naming it was specified with, so binding it to an IED does not change the paths through it.
+
+- While no IED is assigned to it (`iedName` unset or `None`), its own `prefix` + `lnClass` + `lnInst`, which are its specified naming; an edit of them is written to its `LNodeSpecNaming` too.
+- Once one is, binding writes the IED's naming on the `LNode` (`Q0XCBR2`): the segment is `sPrefix` + `sLnClass` + `sLnInst` of its `LNodeSpecNaming` (`XCBR1`; the class read from the `LNode` when the naming has none), its own attributes when it has none.
+- Editing, adding or removing its `LNodeSpecNaming` rebuilds the paths through it. On import, a path an earlier version wrote with the IED's naming (`S1/F1/Q0XCBR2.Pos`) still resolves and is written again as specified, also next to a uuid; the same holds for a signal name in a former form.
 
 **SourceRef/ControlRef names**: a signal is named among the SourceRefs (ControlRefs) of its LNode.
 

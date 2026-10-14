@@ -96,7 +96,7 @@ When `<FunctionRef function="S1/V1/B1/Protection">` arrives:
 
 ```ts
 pathValue = "S1/V1/B1/Protection"
-parseReferencePath("FunctionRef", "function", pathValue)
+parseReferencePath({ resolution: "direct", pathAttribute: "function", pathValue })
   // → resolution = 'direct'
   // → { lookupKey: "S1/V1/B1/Protection" }
 
@@ -113,7 +113,7 @@ Its pair: `{ attribute: { path: 'source', uuid: 'sourceLNodeUuid' }, resolution:
 
 ```ts
 pathValue = "S1/V1/B1/XCBR1.Pos.stVal"
-parseReferencePath("SourceRef", "source", pathValue)
+parseReferencePath({ resolution: "lnode", pathAttribute: "source", pathValue })
   // → resolution = 'lnode' → parseLnodeSpecPath(...)
   // → strips ".Pos.stVal" from last segment
   // → { lookupKey: "S1/V1/B1/XCBR1", qualifier: "Pos.stVal" }
