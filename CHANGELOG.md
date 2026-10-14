@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.8.0] - 2026-10-14
+
+### Changed
+
+- **Breaking (types): an element that may take another type with `xsi:type` is a union on `'xsi:type'`**, one named member per type (`AttributesConfLdName_tSCSM`, ...; `_Own` for the element's own attributes). An attribute only one type declares is typed on that member again: write it with the type, `addChild(services, { tagName: 'ConfLdName', attributes: { 'xsi:type': 'tSCSM', iec61850_8_1 } })`. A filter may leave the type out and match across types, or name it to narrow: `{ 'xsi:type': 'tCommProt', iec61850_8_1 }` is refused. Generated with `@dialecte/create` 0.1; a test checks the config's namespaces agree with the definition.
+- Requires `@dialecte/core` 0.6.1: `assertValidSclXml`, `runSclTestCases` and `createSclTestProject` check the attributes of every namespace and allow what an element's attribute wildcard allows - a fixture carrying an attribute its element does not declare now fails.
+
 ## [0.7.0] - 2026-10-14
 
 ### Changed
