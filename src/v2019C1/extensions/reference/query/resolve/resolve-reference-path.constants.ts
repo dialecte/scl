@@ -1,8 +1,13 @@
+import { enumeratedValues } from '@dialecte/core/utils'
+
 import { DEFINITION } from '@/v2019C1/definition'
 
-/** The logical node classes the schema knows: they spell the class out of a segment. */
+/**
+ * The logical node classes the schema knows: they spell the class out of a segment. Read from the
+ * union of enumerations of its datatype (the extension member is a pattern).
+ */
 export const LN_CLASS_VALUES: ReadonlySet<string> = new Set(
-	DEFINITION.LNode.attributes.details.lnClass.facets.enumeration,
+	enumeratedValues(DEFINITION.LNode.attributes.details.lnClass.type),
 )
 
 /**

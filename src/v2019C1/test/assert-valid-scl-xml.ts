@@ -1,7 +1,7 @@
 import { createXmlSchemaAssertions } from '@dialecte/core/test'
 
 import { SCL_NAMESPACES } from '@/v2019C1/config/dialecte.config'
-import { DEFINITION } from '@/v2019C1/definition/definition.generated'
+import { DEFINITION, TYPES } from '@/v2019C1/definition/definition.generated'
 
 /**
  * Structural SCL validation for test fixtures. The engine is dialecte-agnostic and
@@ -16,6 +16,7 @@ import { DEFINITION } from '@/v2019C1/definition/definition.generated'
  */
 const { assertValidXml, assertValidXmlTestCases } = createXmlSchemaAssertions({
 	definition: DEFINITION,
+	types: TYPES,
 	namespaces: SCL_NAMESPACES,
 	schemaName: 'SCL',
 })

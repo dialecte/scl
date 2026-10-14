@@ -1,6 +1,6 @@
 import { classifyAttribute } from './classify-attribute'
-import { findConstraintViolation } from './find-constraint-violation'
-import { resolveUniqueValue } from './resolve-unique-value'
+import { findViolationInScope, readConstraintScope } from './find-constraint-violation'
+import { findUniqueValueInScope } from './resolve-unique-value'
 
 import { toRef } from '@dialecte/core/helpers'
 
@@ -14,9 +14,9 @@ import type * as Core from '@dialecte/core'
  * Validate a just-placed element against its parent context and resolve a scoped-
  * uniqueness collision GENERICALLY over whichever key field is EDITABLE:
  *
- *  1. detect a violation from the parent (`findConstraintViolation`);
+ *  1. detect a violation from the parent (`findViolationInScope`, on the scope read once);
  *  2. if the violated key includes an editable field (`rename`/`free` per
- *     `classifyAttribute`), bump it to the first free value (`resolveUniqueValue`)
+ *     `classifyAttribute`), bump it to the first free value (`findUniqueValueInScope`)
  *     and apply it — the after-updated hook then rebuilds any ref paths that
  *     traverse it;
  *  3. if the violated key is entirely IDENTITY (e.g. an LNode lnClass/lnInst tuple),
@@ -54,12 +54,9 @@ export async function resolvePlacementCollision(
 		}
 	}
 
-	const violation = await findConstraintViolation(tx, {
-		parentRef,
-		childTag: ref.tagName,
-		candidate,
-		excludeId: ref.id,
-	})
+	// one read of the scope serves the check and the numbering
+	const scope = await readConstraintScope(tx, { parentRef, childTag: ref.tagName })
+	const violation = findViolationInScope({ scope, candidate, excludeId: ref.id })
 	if (!violation) return { status: 'ok' }
 
 	const editableField = violation.fields.find((field) => {
@@ -69,7 +66,8 @@ export async function resolvePlacementCollision(
 	if (!editableField) return { status: 'unresolvable', violation }
 
 	const from = candidate[editableField] ?? ''
-	const to = await resolveUniqueValue(tx, {
+	const to = findUniqueValueInScope({
+		scope,
 		parentRef,
 		childTag: ref.tagName,
 		candidate,

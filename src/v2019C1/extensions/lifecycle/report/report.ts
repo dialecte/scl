@@ -61,8 +61,16 @@ export async function report(
 						resolvePlacement: true,
 					})
 
+	// as each primary's definition says where it sits - a type it names with xsi:type included -: the
+	// project's element when it has one, the template's otherwise
 	for (const group of allGroups(report)) {
-		group.editableAttributes = editableAttributes(group.primary.tagName)
+		const { instanceRef, sourceRef, tagName } = group.primary
+		const definition = instanceRef
+			? await query.any.getDefinition(instanceRef)
+			: sourceRef
+				? await target.sourceQuery.any.getDefinition(sourceRef)
+				: undefined
+		group.editableAttributes = editableAttributes(tagName, definition?.attributes.sequence)
 	}
 
 	// a mapping nothing is decided for is the consumer's to choose before anything is written

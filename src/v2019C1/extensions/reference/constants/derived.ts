@@ -6,10 +6,13 @@ import {
 import { RESOLUTION_TYPE } from './resolution-types'
 import { TYPE_ID_REFERENCE_PAIRS } from './type-id-pairs'
 
+import { valuePatterns } from '@dialecte/core/utils'
+
 import { LNODE_NAMING_ATTRIBUTES, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DEFINITION } from '@/v2019C1/definition/definition.generated'
 
 import type { TypeIdTarget, TypeIdReferrer } from './types'
+import type { AnyDefinition } from '@dialecte/core'
 
 /**
  * Maps each resolution strategy to a map of target tagName -> RefEntry[].
@@ -75,22 +78,14 @@ export const MAPPED_DATA_DEFAULT_ATTRIBUTES: ReadonlyMap<string, readonly string
 
 /**
  * The schema patterns of each mapped-name attribute (`mappedDoName` / `mappedDaName`), per
- * ref tag, each anchored to the whole value. A value must match all of them; a data path that
- * does not cannot be stored. Read from the definition.
+ * ref tag, one per level of its datatype, each anchored to the whole value. A value must match
+ * all of them; a data path that does not cannot be stored. Read from the definition.
  */
 export const MAPPED_NAME_PATTERNS: ReadonlyMap<string, readonly RegExp[]> = new Map(
 	[...MAPPED_NAME_REFS].map(([refTag, attributeNames]) => {
-		const definition = DEFINITION as Record<
-			string,
-			{
-				attributes?: {
-					details?: Record<string, { facets?: { pattern?: readonly string[] } }>
-				}
-			}
-		>
-		const patterns =
-			definition[refTag]?.attributes?.details?.[attributeNames.path]?.facets?.pattern ?? []
-		return [refTag, patterns.map((pattern) => new RegExp(`^(?:${pattern})$`))] as const
+		const definition = DEFINITION as AnyDefinition
+		const datatype = definition[refTag]?.attributes.details[attributeNames.path]?.type
+		return [refTag, valuePatterns(datatype)] as const
 	}),
 )
 

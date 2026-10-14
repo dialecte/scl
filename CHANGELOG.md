@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Changed
+
+- **Breaking - built on `@dialecte/core` 0.6 and the definition `@dialecte/create` writes from 0.1 on.** `DEFINITION` has the new shape: a tag declared several ways lists its declarations, a value's facets sit in its datatype, identity constraints sit on the declaration that declares them, and `TYPES` holds the types an element may take with `xsi:type`. Code that reads `DEFINITION` directly must follow; code that goes through `query.getDefinition` gets the declaration that applies. `SCL_DIALECTE_CONFIG` carries `types`.
+- **A name made unique follows the uniqueness rules as the schema writes them.** A rule that reaches the whole document (`.//`, such as the uuid uniqueness on `SCL`) is left to validation: a placement does not rename for it. A rule that selects elements of another namespace than the children it is meant for selects nothing. The `LNode` rules of a `SubFunctionTemplate` name SCL `LNode`s, while a template holds 6-100 ones, so the logical nodes of a template are no longer renumbered.
+- **Breaking:** an element's attribute type (`AttributesOf`, `Scl.AttributesOf`) lists its declaration's attributes only. Attributes that only a type named with `xsi:type` declares are no longer listed (for example on the services capability elements). `xsi:type` stays an optional key, its hints the types the element may name, only where the element may name one (a `P` under an `Address`, not under a `PhysConn`). For a tag declared several ways, the by-tag type hints the values any of its declarations accepts.
+
+### Fixed
+
+- **A name made unique follows the rules of the place it sits.** One tag can carry different uniqueness rules under different parents (an equipment of a sub-function compares the names of its sub-equipments only, an equipment of a bay those of its sub-equipments and functions together). The rules of one declaration were applied everywhere, so a name could be renumbered where it was free, or reported under the wrong rule.
+- A mapped data name (`mappedDoName`, `mappedDaName`) is checked against every pattern level its schema type declares, read as the schema writes it (Unicode categories included).
+- The logical node classes a reference path accepts are those the schema enumerates, across its union of class lists.
+- A decision group's `editableAttributes` are those the element's definition declares where it sits, including the type it names with `xsi:type`. They used to be its tag's declared attributes only.
+
 ## [0.6.0] - 2026-10-14
 
 ### Added

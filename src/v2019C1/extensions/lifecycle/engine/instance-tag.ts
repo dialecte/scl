@@ -1,4 +1,6 @@
-import { DEFINITION } from '@/v2019C1/definition/definition.generated'
+import { resolveDefinition } from '@dialecte/core/utils'
+
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 
 import type { AnyTreeRecord } from '@dialecte/core'
 
@@ -10,13 +12,6 @@ const INSTANCE_TAGS: Readonly<Record<string, string>> = {
 	FunctionTemplate: 'Function',
 	SubFunctionTemplate: 'SubFunction',
 }
-
-type ElementDefinition = {
-	namespace?: AnyTreeRecord['namespace']
-	children?: { details?: Record<string, { namespace?: AnyTreeRecord['namespace'] }> }
-}
-
-const ELEMENT_DEFINITIONS = DEFINITION as unknown as Record<string, ElementDefinition>
 
 /** The tag an element of a template carries once instantiated — its own for any other element. */
 export function instanceTagOf(tagName: string): string {
@@ -41,10 +36,12 @@ export function toInstanceTree<GenericTree extends AnyTreeRecord>(params: {
 	const { tree, parentTagName } = params
 
 	const tagName = instanceTagOf(tree.tagName)
-	const namespace =
-		ELEMENT_DEFINITIONS[parentTagName]?.children?.details?.[tagName]?.namespace ??
-		ELEMENT_DEFINITIONS[tagName]?.namespace ??
-		tree.namespace
+	// the declaration the new parent holds: a record without a namespace yet takes the one held there
+	const declared = resolveDefinition({
+		dialecteConfig: SCL_DIALECTE_CONFIG,
+		record: { tagName, parent: { id: '', tagName: parentTagName }, attributes: tree.attributes },
+	})
+	const namespace = declared?.namespace ?? tree.namespace
 
 	return {
 		...tree,

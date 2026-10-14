@@ -1,10 +1,4 @@
-/** A scoped-uniqueness constraint declared on a parent element (from the schema). */
-export type SchemaConstraint = {
-	kind: string
-	name: string
-	selector?: { steps?: { kind: string; value?: string }[] }[]
-	fields?: { target?: { value?: string } }[]
-}
+import type * as Core from '@dialecte/core'
 
 /** A detected violation: the constraint broken and the existing child it collides with. */
 export type ConstraintViolation = {
@@ -14,4 +8,10 @@ export type ConstraintViolation = {
 	fields: string[]
 	/** The id of the existing sibling the candidate collides with. */
 	offendingId: string
+}
+
+/** The uniqueness constraints a child is compared under, and the siblings it is compared with. */
+export type ConstraintScope = {
+	constraints: readonly Core.IdentityConstraint[]
+	children: readonly Core.AnyTreeRecord[]
 }

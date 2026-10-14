@@ -1,5 +1,6 @@
 import {
 	DEFINITION,
+	TYPES,
 	ELEMENT_NAMES,
 	ATTRIBUTES,
 	CHILDREN,
@@ -65,6 +66,7 @@ export const SCL_DIALECTE_CONFIG = {
 	database: SCL_DATABASE_CONFIG,
 	io: SCL_IO_CONFIG,
 	definition: DEFINITION,
+	types: TYPES,
 } as const satisfies AnyDialecteConfig
 
 export interface Config extends Readonly<typeof SCL_DIALECTE_CONFIG> {}

@@ -72,6 +72,8 @@ describe('classifyAttribute', () => {
 describe('editableAttributes', () => {
 	type TestCase = SclTest.BaseTestCase & {
 		tag: string
+		/** The attributes its definition declares where it sits; by default the tag's. */
+		attributes?: string[]
 		includes: { attr: string; mode: 'rename' | 'free' }[]
 		excludes: string[]
 	}
@@ -85,6 +87,15 @@ describe('editableAttributes', () => {
 			],
 			excludes: ['uuid', 'templateUuid'],
 		},
+		'an attribute only the type it names with xsi:type declares -> listed from its definition': {
+			tag: 'SclFileReference',
+			attributes: ['engRight', 'headerId'],
+			includes: [
+				{ attr: 'engRight', mode: 'free' },
+				{ attr: 'headerId', mode: 'free' },
+			],
+			excludes: [],
+		},
 		'LNode hides its identity tuple': {
 			tag: 'LNode',
 			includes: [],
@@ -93,7 +104,7 @@ describe('editableAttributes', () => {
 	}
 
 	function act(testCase: TestCase) {
-		const editable = editableAttributes(testCase.tag)
+		const editable = editableAttributes(testCase.tag, testCase.attributes)
 		const byAttr = new Map(editable.map((e) => [e.attr, e.mode]))
 		for (const { attr, mode } of testCase.includes) expect(byAttr.get(attr)).toBe(mode)
 		for (const attr of testCase.excludes) expect(byAttr.has(attr)).toBe(false)

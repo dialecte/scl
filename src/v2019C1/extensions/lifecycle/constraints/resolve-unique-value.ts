@@ -1,7 +1,8 @@
-import { findConstraintViolation } from './find-constraint-violation'
+import { findViolationInScope, readConstraintScope } from './find-constraint-violation'
 
 import { throwDialecteError } from '@dialecte/core'
 
+import type { ConstraintScope } from './find-constraint-violation.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -29,23 +30,32 @@ export async function resolveUniqueValue(
 		excludeId?: string
 	},
 ): Promise<string> {
-	const { parentRef, childTag, candidate, attr, excludeId } = params
-	const base = candidate[attr] ?? ''
+	const { parentRef, childTag } = params
+	const scope = await readConstraintScope(query, { parentRef, childTag })
+	return findUniqueValueInScope({ ...params, scope })
+}
 
-	const asIs = await findConstraintViolation(query, { parentRef, childTag, candidate, excludeId })
-	if (!asIs) return base
+/**
+ * {@link resolveUniqueValue} on a scope already read: the scope does not change between
+ * attempts, so the values are tried in memory. Pure, apart from the error when none is free.
+ */
+export function findUniqueValueInScope(params: {
+	scope: ConstraintScope
+	parentRef: Scl.Ref<Scl.ElementsOf>
+	childTag: string
+	candidate: Record<string, string | undefined>
+	attr: string
+	excludeId?: string
+}): string {
+	const { scope, parentRef, childTag, candidate, attr, excludeId } = params
+	const base = candidate[attr] ?? ''
+	if (!findViolationInScope({ scope, candidate, excludeId })) return base
 
 	const { stem, next } = splitNumber(base)
 	for (let attempt = next; attempt < next + MAX_ATTEMPTS; attempt++) {
 		const value = `${stem}_${attempt}`
 		const trial = { ...candidate, [attr]: value }
-		const violation = await findConstraintViolation(query, {
-			parentRef,
-			childTag,
-			candidate: trial,
-			excludeId,
-		})
-		if (!violation) return value
+		if (!findViolationInScope({ scope, candidate: trial, excludeId })) return value
 	}
 
 	throwDialecteError('UNIQUE_CONSTRAINT_VIOLATION', {

@@ -43,10 +43,17 @@ export function isEditableMode(
 /**
  * The attributes of `tag` the UI may edit with no harmful side effect, each with its
  * edit mode. `rename` triggers a managed remap; `free` has no side effect. Identity
- * and reference attributes are omitted (nothing to show as editable).
+ * and reference attributes are omitted (nothing to show as editable). `attributes`: those
+ * the element's definition declares where it sits - its `xsi:type` included -, by default
+ * the tag's.
  */
-export function editableAttributes(tag: string): EditableAttribute[] {
-	const attrs = Object.keys((ATTRIBUTES.byTag as Record<string, object>)[tag] ?? {})
+export function editableAttributes(
+	tag: string,
+	attributes: readonly string[] = Object.keys(
+		(ATTRIBUTES.byTag as Record<string, object>)[tag] ?? {},
+	),
+): EditableAttribute[] {
+	const attrs = attributes
 	const out: EditableAttribute[] = []
 	for (const attr of attrs) {
 		const mode = classifyAttribute(tag, attr)

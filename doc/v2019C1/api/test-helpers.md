@@ -287,7 +287,7 @@ What is checked:
 
 - **element namespace** — each element sits in the namespace the schema declares for it **in its parent context**. SCL reuses local names across namespaces (e.g. `SclFileReference` is default-namespace under an IED but `eIEC61850-6-100` under a `FunctionSclRef`), so the check is context-aware. Writing a default-namespace element such as `Function` under the `eIEC61850-6-100:` prefix — or a 6-100 element such as `FunctionCatRef` in the default namespace — is rejected;
 - **containment** — each element is an allowed child of its parent;
-- **attributes** — every unprefixed attribute is a known attribute of its element. Namespaced attributes (`xmlns`, `xsi:`, and the dev-namespaced record id `dev:db-id`) are skipped.
+- **attributes** — every unprefixed attribute is a known attribute of its element, as declared under its parent and as the type it names with `xsi:type` says. Namespaced attributes (`xmlns`, `xsi:`, and the dev-namespaced record id `dev:db-id`) are skipped.
 
 What is skipped:
 
