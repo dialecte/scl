@@ -21,6 +21,9 @@ export type TupleRoles<Name extends string = string> = {
 	controlBlock?: Name
 }
 
+/** A part of a tuple address a reference names with one of its attributes, beside its IED. */
+export type TupleRole = Exclude<keyof TupleRoles, 'ied'>
+
 /**
  * A reference that names its target by several attributes (a tuple) beside one uuid attribute. It
  * applies only while none of `onlyWithout` is set on the referrer.
@@ -31,7 +34,7 @@ export type TupleReferencePair<Name extends string = string> = {
 	tuple: TupleRoles<Name>
 	onlyWithout?: readonly Name[]
 	/** For a role the referrer leaves out, the attribute naming that part instead. */
-	otherwise?: Partial<Record<Exclude<keyof TupleRoles, 'ied'>, Name>>
+	otherwise?: { [Role in TupleRole]?: Name }
 	/** Which of the `target` tags an attribute's value names, when several may answer one address. */
 	targetByAttribute?: { attribute: Name; tags: Readonly<Record<string, string>> }
 }

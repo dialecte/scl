@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest'
 import { createSclTestRecord } from '@/v2019C1/test'
 
 import type { CollectedTarget } from './io-hooks.types'
-import type { AnyRawRecord } from '@dialecte/core'
 
 const ied = createSclTestRecord({ record: { tagName: 'IED', attributes: { name: 'P1' } } })
 const accessPoint = createSclTestRecord({
