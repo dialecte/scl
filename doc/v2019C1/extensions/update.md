@@ -190,7 +190,7 @@ type DecisionMappings = ReadonlyMap<string, DecisionMapping> // keyed by `Report
 `ReportMapping`, `MappingKind`, `MappingReason`, `MappingCandidate`, `DecisionMapping` and `DecisionMappings` are exported from `@dialecte/scl/v2019C1`.
 
 - **Resolved by default**, first answer wins: the one project element created from this source element by an earlier placement, whatever it is named now (`reason: 'lineage'`); else the project element of the same name when there is exactly one (`'name'`); else a new element (`'none'`). Where several elements qualify equally, none is picked (`ambiguous: true`): the mapping is left **undecided** — `mapping` is absent, the report sets `needsDecisions`, and `apply` refuses until the consumer passed a choice, an existing element or `{ create: {} }`. An element whose mapping cannot be chosen (`selectable: false`) is created under a free name instead.
-- **`candidates`**: every project element of that tag, listed from the placement outwards — the anchor's own level, each level above it, then the rest of the project. For a `locked` mapping, the one element it is mapped onto.
+- **`candidates`**: every project element of that tag, listed from the placement outwards — the anchor's own level, each level above it, then the rest of the project. For an SSD, the anchor is where its unit lands (the deepest level of the project it sits on), not the element the consumer started from. For a `locked` mapping, the one element it is mapped onto.
 - **A new element** carries the name asked for: the one the consumer chose, else the source name. The report does not predict the name written: `apply` makes it free where the element lands ([placement collision resolution](#placement-collision-resolution)), and the consumer's own step may change it again. What was written is read at the element the mapping leads to once applied (`appliedRef`, on the report `apply` returns — in a preview, on the prepared document). `parentPath` tells where the element is created, as asked for.
 
 To change a mapping, pass the choice and ask for the report again; then apply with the same `resolution`:
@@ -336,7 +336,11 @@ the parent's definition, read with `query.getDefinition`), as the schema writes 
 - a rule that reaches the whole document (`.//`, such as the uuid uniqueness on `SCL`) is left to
   validation: a placement does not rename for it;
 - the compared children are those the selector's name and namespace admit: a rule that selects elements
-  of another namespace than the children it is meant for selects nothing.
+  of another namespace than the children it is meant for selects nothing. The `LNode` rule of a
+  `SubFunctionTemplate` names SCL `LNode`s while a template holds `LNode`s of its own namespace, so the
+  logical nodes of a template are not renumbered;
+- a value is compared only on the children carrying every field the rule reads: a child missing one of
+  them is not compared.
 
 ### The consumer's step after the apply — `resolution.afterApply`
 
