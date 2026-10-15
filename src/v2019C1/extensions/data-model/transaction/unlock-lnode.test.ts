@@ -11,10 +11,18 @@ const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
 /**
- * A breaker LNode specified as XCBR1, bound (`binding`) to the IED's Q0XCBR2: its Pos and its
- * ctlModel instantiated in the LN, a trip input and an operate output implemented in the IED.
+ * A breaker LNode specified as XCBR1 (`specifiedNaming`), bound (`binding`) to the IED's Q0XCBR2
+ * (`naming`): its Pos and its ctlModel instantiated in the LN, a trip input and an operate output
+ * implemented in the IED.
  */
-function boundBreakerXml(binding = 'lnUuid="ln-uuid" iedName="P1" ldInst="LD0"'): string {
+function boundBreakerXml(
+	params: { binding?: string; naming?: string; specifiedNaming?: string } = {},
+): string {
+	const {
+		binding = 'lnUuid="ln-uuid" iedName="P1" ldInst="LD0"',
+		naming = 'prefix="Q0" lnClass="XCBR" lnInst="2"',
+		specifiedNaming = 'sLnClass="XCBR" sLnInst="1"',
+	} = params
 	return /* xml */ `
 		<SCL ${ns} ${id}="root">
 			<IED ${id}="ied" name="P1">
@@ -38,9 +46,9 @@ function boundBreakerXml(binding = 'lnUuid="ln-uuid" iedName="P1" ldInst="LD0"')
 			</IED>
 			<Substation ${id}="substation" name="S1">
 				<Function ${id}="function" name="F1">
-					<LNode ${id}="breaker" ${binding} prefix="Q0" lnClass="XCBR" lnInst="2" lnType="XCBR_T">
+					<LNode ${id}="breaker" ${binding} ${naming} lnType="XCBR_T">
 						<Private ${id}="breaker-private" type="eIEC61850-6-100">
-							<eIEC61850-6-100:LNodeSpecNaming ${id}="breaker-naming" sLnClass="XCBR" sLnInst="1" />
+							<eIEC61850-6-100:LNodeSpecNaming ${id}="breaker-naming" ${specifiedNaming} />
 							<eIEC61850-6-100:DOS ${id}="dos-pos" name="Pos">
 								<eIEC61850-6-100:DAS ${id}="das-ctl-model" name="ctlModel">
 									<eIEC61850-6-100:Val>status-only</eIEC61850-6-100:Val>
@@ -77,6 +85,17 @@ describe('unlockLNode', () => {
 					'//default:LNode[@prefix]',
 				],
 			},
+		'an LNode specified in a logical device, bound to an IED -> assigned to no IED, expected in that logical device again':
+			{
+				sourceXml: boundBreakerXml({
+					specifiedNaming: 'sLdInst="LD1" sLnClass="XCBR" sLnInst="1"',
+				}),
+				expectedQueries: [
+					'//default:LNode[@iedName="None"][@ldInst="LD1"][@lnClass="XCBR"][@lnInst="1"]',
+					'//default:LNode//v2019C1:LNodeSpecNaming[@sLdInst="LD1"]',
+				],
+				unexpectedQueries: ['//default:LNode[@lnUuid]', '//default:LNode[@ldInst="LD0"]'],
+			},
 		'its SourceRef and ControlRef are implemented -> no longer: the ExtRef and ExtCtrl they named are dropped':
 			{
 				sourceXml: boundBreakerXml(),
@@ -100,7 +119,7 @@ describe('unlockLNode', () => {
 			unexpectedQueries: ['//default:DOI[@name="Pos"]', '//default:DAI[@name="ctlModel"]'],
 		},
 		'an LNode assigned to an IED by its name only -> the same reset': {
-			sourceXml: boundBreakerXml('iedName="P1" ldInst="LD0"'),
+			sourceXml: boundBreakerXml({ binding: 'iedName="P1" ldInst="LD0"' }),
 			expectedQueries: ['//default:LNode[@iedName="None"][@lnInst="1"]'],
 			unexpectedQueries: [
 				'//default:DOI[@name="Pos"]',
@@ -109,10 +128,10 @@ describe('unlockLNode', () => {
 			],
 		},
 		'an LNode assigned to no IED -> left as it is': {
-			sourceXml: boundBreakerXml('iedName="None"').replace(
-				'prefix="Q0" lnClass="XCBR" lnInst="2"',
-				'lnClass="XCBR" lnInst="1"',
-			),
+			sourceXml: boundBreakerXml({
+				binding: 'iedName="None"',
+				naming: 'lnClass="XCBR" lnInst="1"',
+			}),
 			expectedQueries: [
 				'//default:LNode[@iedName="None"][@lnInst="1"]',
 				'//default:DOI[@name="Pos"]',

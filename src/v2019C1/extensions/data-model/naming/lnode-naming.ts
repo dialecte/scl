@@ -25,21 +25,18 @@ export function specifiedNamingOf(
 }
 
 /**
- * The naming an LNode gets back when no IED is assigned to it anymore: `iedName` `None`, no
- * `ldInst`; its prefix, class and instance those of its `LNodeSpecNaming` when it has one (the class
- * kept from the LNode when the naming has none: it is required). An attribute set to `undefined` is
- * removed.
+ * The naming an LNode gets back when no IED is assigned to it anymore: `iedName` `None`; its logical
+ * device, prefix, class and instance are those of its `LNodeSpecNaming` (the class kept from the
+ * LNode when the naming has none: it is required). Without an `LNodeSpecNaming`, `ldInst` is removed.
+ * An attribute set to `undefined` is removed.
  */
 export function unassignedNaming(params: {
 	lnodeAttributes: Readonly<Record<string, string | undefined>>
 	specifiedAttributes: Readonly<Record<string, string | undefined>> | undefined
 }): Record<string, string | undefined> {
 	const { lnodeAttributes, specifiedAttributes } = params
-	const naming: Record<string, string | undefined> = {
-		iedName: UNALLOCATED_IED_NAME,
-		ldInst: undefined,
-	}
-	if (!specifiedAttributes) return naming
+	const naming: Record<string, string | undefined> = { iedName: UNALLOCATED_IED_NAME }
+	if (!specifiedAttributes) return { ...naming, ldInst: undefined }
 	for (const [name, specifiedName] of SPECIFIED_NAMING_ATTRIBUTES) {
 		if (name in naming) continue
 		const specified = specifiedAttributes[specifiedName] || undefined

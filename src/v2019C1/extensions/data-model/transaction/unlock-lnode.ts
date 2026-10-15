@@ -12,9 +12,9 @@ import type * as Core from '@dialecte/core'
  * Unlock an LNode bound to an (S-)IED, so its data model can be changed and it can be allocated
  * again: the data its `DOS` / `SDS` / `DAS` specify is no longer instantiated in the LN that
  * implements it (those `DOI` / `SDI` / `DAI` are removed), its signals are no longer implemented
- * (the ExtRef / ExtCtrl they name is dropped), and it is assigned to no IED (`iedName` `None`, `ldInst` and `lnUuid` cleared), its prefix, class and
- * instance those of its `LNodeSpecNaming`, which is left as it is. An LNode assigned to no IED is
- * left as it is.
+ * (the ExtRef / ExtCtrl they name is dropped), and it is assigned to no IED (`iedName` `None`,
+ * `lnUuid` cleared), its logical device, prefix, class and instance those of its `LNodeSpecNaming`,
+ * which is left as it is. An LNode assigned to no IED is left as it is.
  */
 export async function unlockLNode(
 	tx: Core.Transaction<Config>,

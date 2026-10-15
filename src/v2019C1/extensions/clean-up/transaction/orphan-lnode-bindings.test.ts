@@ -143,7 +143,7 @@ describe('resetLNodes', () => {
 			unexpectedQueries: ['//default:LNode[@iedName="P1"]', '//default:LNode[@ldInst]'],
 		},
 
-		'bound to an absent IED, with an LNodeSpecNaming -> naming back from it, every specified value kept':
+		'bound to an absent IED, with an LNodeSpecNaming -> naming and LD back from it, every specified value kept':
 			{
 				sourceXml: documentXml({
 					ied: '<!-- missing: <IED name="GONE_IED"/> -->',
@@ -154,7 +154,7 @@ describe('resetLNodes', () => {
 					`,
 				}),
 				expectedQueries: [
-					'//default:LNode[@iedName="None"][@lnClass="PTRC"][@lnInst="1"][@prefix="SP"][not(@ldInst)][not(@lnUuid)][@templateUuid="tpl-1"]',
+					'//default:LNode[@iedName="None"][@ldInst="LD0"][@lnClass="PTRC"][@lnInst="1"][@prefix="SP"][not(@lnUuid)][@templateUuid="tpl-1"]',
 					'//v2019C1:LNodeSpecNaming[@sIedName="GONE_IED"][@sLdInst="LD0"][@sLnClass="PTRC"][@sLnInst="1"][@sPrefix="SP"]',
 				],
 				unexpectedQueries: [
@@ -173,7 +173,7 @@ describe('resetLNodes', () => {
 				`,
 			}),
 			expectedQueries: [
-				'//default:LNode[@iedName="None"][@lnClass="PTRC"][@lnInst="1"][not(@prefix)][not(@ldInst)][not(@lnUuid)]',
+				'//default:LNode[@iedName="None"][@ldInst="LD0"][@lnClass="PTRC"][@lnInst="1"][not(@prefix)][not(@lnUuid)]',
 			],
 		},
 

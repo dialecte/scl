@@ -522,6 +522,31 @@ describe('updateRefPaths', () => {
 				unexpectedQueries: ['//default:LNode[@iedName="PIU"]', '//default:LNode[@lnInst="2"]'],
 			},
 
+			'lnode-binding — clear lnUuid, LNodeSpecNaming with sLdInst → ldInst back from it': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation ${id}="sub1" name="Sub1">
+							<Function ${id}="f1" name="F1">
+								<LNode ${id}="lnode1" iedName="PIU" ldInst="CTRL" lnClass="CSWI" lnInst="2" prefix="CB" lnType="CSWI_0" lnUuid="ln-uuid" templateUuid="lnode-tpl">
+									<Private ${id}="priv1" type="eIEC61850-6-100">
+										<eIEC61850-6-100:LNodeSpecNaming ${id}="lns1" sLdInst="SPEC_LD" sLnClass="CSWI" sLnInst="1"/>
+									</Private>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update({ tagName: 'LNode', id: 'lnode1' }, { attributes: { lnUuid: '' } })
+					})
+				},
+				expectedQueries: [
+					'//default:LNode[@iedName="None"][@ldInst="SPEC_LD"][@lnClass="CSWI"][@lnInst="1"][not(@prefix)][not(@lnUuid)]',
+				],
+				unexpectedQueries: ['//default:LNode[@ldInst="CTRL"]', '//default:LNode[@iedName="PIU"]'],
+			},
+
 			'lnode-binding — clear lnUuid, LNodeSpecNaming without sLnClass → lnClass kept from LNode': {
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">

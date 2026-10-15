@@ -12,10 +12,11 @@ import type * as Core from '@dialecte/core'
  * Keep an `LNode`'s implementation identity in agreement with its `lnUuid` as a
  * side effect of update. When `lnUuid` is set, the identity
  * (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) is stamped from the target `LN`;
- * when it is cleared, `iedName` is forced to the unbound `None` marker (with
- * `ldInst` dropped) and the specification `prefix`/`lnClass`/`lnInst` are restored
- * from `LNodeSpecNaming` when present. `lnType` is left untouched — it is the
- * specification type reference, not part of the mapped identity. `templateUuid` is
+ * when it is cleared, `iedName` is forced to the unbound `None` marker and the
+ * specification `ldInst`/`prefix`/`lnClass`/`lnInst` are restored from
+ * `LNodeSpecNaming` when present (`ldInst` removed when it names none). `lnType` is
+ * left untouched — it is the specification type reference, not part of the mapped
+ * identity. `templateUuid` is
  * also left untouched — it records the template the LNode was instantiated from (the
  * key used to locate the implementing ICD), which is owned by the instantiate
  * lifecycle, not by binding.
@@ -82,7 +83,8 @@ async function mappedIdentity(
 
 /**
  * Specification identity restored on unbind: the naming an LNode gets back when no IED is assigned
- * to it anymore (`unassignedNaming`), its prefix, class and instance from its `LNodeSpecNaming`.
+ * to it anymore (`unassignedNaming`), its logical device, prefix, class and instance from its
+ * `LNodeSpecNaming`.
  * `templateUuid` is never touched: it is instantiation provenance, independent of the binding.
  */
 async function specificationIdentity(

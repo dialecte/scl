@@ -34,7 +34,7 @@ Without `elements`, every `LNode`, `DOS` / `SDS` / `DAS` and `SourceRef` / `Cont
 
 - assigned to no IED → `iedName="None"` is written when absent or empty;
 - bound, its logical node in the document → left as it is. With an `lnUuid`, only the logical node carrying that uuid counts; without one, the logical node its naming (`iedName` / `ldInst` / `prefix` / `lnClass` / `lnInst`) names;
-- bound, its logical node absent → assigned to no IED: `iedName="None"`, `ldInst` and `lnUuid` removed, `prefix` / `lnClass` / `lnInst` from its `LNodeSpecNaming`, which keeps its values. Nothing in a device is removed (unlike [`dataModel.unlockLNode`](./data-model#unlocklnode));
+- bound, its logical node absent → assigned to no IED: `iedName="None"`, `lnUuid` removed, `ldInst` / `prefix` / `lnClass` / `lnInst` from its `LNodeSpecNaming`, which keeps its values (without one, `ldInst` is removed and the rest kept). Nothing in a device is removed (unlike [`dataModel.unlockLNode`](./data-model#unlocklnode));
 - bound or not, its `DOS` / `SDS` / `DAS` mapped to a logical node, its `SourceRef` / `ControlRef` naming an `ExtRef` / `ExtCtrl`, the document does not hold → that name (uuid and path) is removed, the element stays. An `LNode` implemented by several logical nodes, or sharing one, is assigned to no IED and names them there.
 
 `templateUuid` is never touched. The extract clean-up runs it on the whole document; `tx.lifecycle.apply` runs it on the elements it wrote.

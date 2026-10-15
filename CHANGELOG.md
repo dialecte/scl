@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Changed
+
+- **An LNode assigned to no IED keeps the logical device it is specified in.** Unlocking it (`dataModel.unlockLNode`), clearing its `lnUuid`, or releasing a binding to a logical node the document lacks now takes `ldInst` back from its `LNodeSpecNaming` (`sLdInst`), like its prefix, class and instance; it was removed. Without an `sLdInst`, `ldInst` is still removed.
+
 ### Fixed
 
 - **Instantiating or updating a template no longer leaves LNodes bound to a device the project does not hold.** A template's `LNode` bound to its own IED kept that binding once placed, naming a logical node absent from the project, and stayed locked against every later update. `tx.lifecycle.apply` now looks at the implementation it wrote (the `LNode`s, data and signals it created, a level it created included, and those whose binding or reference it changed): an `LNode` bound to a logical node the project lacks is assigned to no IED, its naming back from `LNodeSpecNaming`, and a `DOS` / `SDS` / `DAS` or `SourceRef` / `ControlRef` naming a logical node, `ExtRef` or `ExtCtrl` the project lacks loses that name. A `fork` whose project holds the logical node keeps the binding; what the run did not write is not touched. An added `LNode` written `iedName="none"` (lowercase, not the unallocated marker) comes out `iedName="None"`.
