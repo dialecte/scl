@@ -121,11 +121,19 @@ describe('postExtractionCleanup', () => {
 				`,
 				expectedQueries: ['//default:LNode[@iedName="None" and @lnClass="PTRC"]'],
 			},
-			'LNode with valid IED → binding preserved': {
+			'LNode bound to an LN of the document → binding preserved': {
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Header id="TestSCL"/>
-						<IED name="IED1"/>
+						<IED name="IED1">
+							<AccessPoint name="AP1">
+								<Server>
+									<LDevice inst="LD0">
+										<LN lnClass="PTRC" inst="1" lnType="PTRC_T" uuid="ln-uuid-1"/>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
 						<Substation name="S1">
 							<VoltageLevel name="V1">
 								<Bay name="B1">
@@ -139,7 +147,7 @@ describe('postExtractionCleanup', () => {
 					'//default:LNode[@iedName="IED1" and @ldInst="LD0" and @lnUuid="ln-uuid-1"]',
 				],
 			},
-			'LNode with missing IED + LNodeSpecNaming → reset from spec naming': {
+			'LNode with missing IED + LNodeSpecNaming → reset from spec naming, which keeps its values': {
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Header id="TestSCL"/>
@@ -156,7 +164,7 @@ describe('postExtractionCleanup', () => {
 				`,
 				expectedQueries: [
 					'//default:LNode[@iedName="None" and @lnClass="PTRC" and @lnInst="1" and @prefix="SP" and not(@ldInst) and not(@lnUuid)]',
-					'//v2019C1:LNodeSpecNaming[@sIedName="None" and not(@sLdInst)]',
+					'//v2019C1:LNodeSpecNaming[@sIedName="GONE_IED" and @sLdInst="LD0" and @sLnClass="PTRC" and @sLnInst="1" and @sPrefix="SP"]',
 				],
 			},
 			'LNode with missing IED + no LNodeSpecNaming → only binding-specific attrs cleared': {

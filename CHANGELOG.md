@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Fixed
+
+- **`cleanUp.resetLNode` judges a binding by its logical node, not by an IED of that name**, and leaves `LNodeSpecNaming` as specified. An `LNode` bound to an IED that exists but does not hold its logical node is now released; with an `lnUuid`, only the logical node of that uuid counts. `sIedName` and `sLdInst` are no longer rewritten (`sIedName="None"` before). It also removes the `DOS` / `SDS` / `DAS` and `SourceRef` / `ControlRef` names that point at nothing, and takes `{ elements }` to look at some elements only. The extract clean-up uses it.
+
 ### Added
 
 - The types of an element's state are exported: `ElementState`, `ElementStateByTag`, `SignalState`, `LNodeState`, `LNodeMapping` - the `state` of `info.of`. So is `DerivedSpecificationNamingWarning`, the member of `SclImportWarning` for an LNode given a derived `LNodeSpecNaming` on import.

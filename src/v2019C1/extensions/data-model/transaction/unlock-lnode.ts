@@ -1,6 +1,6 @@
+import { releaseLNodeBinding } from './release-lnode-binding'
 import { DATA_INSTANCE_TAGS, MAPPED_DATA_TAGS } from './unlock-lnode.constants'
 
-import { unassignedNaming } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query/is-lnode-locked'
 import { PAIRS_BY_REF, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { resolveMappedData } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-data'
@@ -28,11 +28,7 @@ export async function unlockLNode(
 	await removeInstantiatedData(tx, { lnode })
 	await unimplementSignals(tx, { lnode })
 
-	const lnodeAttributes = await tx.getAttributes(lnode)
-	const naming = await tx.getChild(lnode, 'LNodeSpecNaming')
-	const specifiedAttributes = naming ? await tx.getAttributes(naming) : undefined
-	const reset = { ...unassignedNaming({ lnodeAttributes, specifiedAttributes }), lnUuid: undefined }
-	await tx.update(lnode, { attributes: reset })
+	await releaseLNodeBinding(tx, { lnode })
 }
 
 /** Drop the implementation of the signals of an LNode: the attributes of their `ied-address` pairs. */
