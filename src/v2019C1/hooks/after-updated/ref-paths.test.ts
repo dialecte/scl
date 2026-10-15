@@ -630,4 +630,158 @@ describe('updateRefPaths', () => {
 			},
 		})
 	})
+
+	/**
+	 * A terminal names its connectivity node by path and by the names of the levels holding it, and
+	 * the node holds its own path: renaming any of those levels, or pointing the terminal at another
+	 * node, rewrites them.
+	 */
+	describe('terminals follow their connectivity node', () => {
+		type TestCase = SclTest.BaseXmlTestCase & {
+			act: (document: Core.Document<Config>) => Promise<void>
+		}
+
+		const L1 = '00000000-0000-4000-8000-000000000001'
+		const BB1 = '00000000-0000-4000-8000-000000000002'
+		const sourceXml = /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation name="S1" ${id}="s1">
+					<PowerTransformer name="T1" type="PTR" ${id}="t1">
+						<TransformerWinding name="W1" type="PTW" ${id}="w1">
+							<NeutralPoint connectivityNode="S1/VL1/B1/L1" substationName="S1" voltageLevelName="VL1" bayName="B1" cNodeName="L1" cNodeUuid="${L1}" ${id}="neutral"/>
+						</TransformerWinding>
+					</PowerTransformer>
+					<VoltageLevel name="VL1" ${id}="vl1">
+						<Bay name="B1" ${id}="b1">
+							<ConductingEquipment name="QA1" type="CBR" ${id}="qa1">
+								<Terminal connectivityNode="S1/VL1/B1/L1" substationName="S1" voltageLevelName="VL1" bayName="B1" cNodeName="L1" cNodeUuid="${L1}" ${id}="feeder"/>
+							</ConductingEquipment>
+							<ConductingEquipment name="QB1" type="DIS" ${id}="qb1">
+								<Terminal connectivityNode="S1/VL1/BB/BB1" substationName="S1" voltageLevelName="VL1" bayName="BB" cNodeName="BB1" cNodeUuid="${BB1}" ${id}="busbar-side"/>
+							</ConductingEquipment>
+							<ConnectivityNode name="L1" pathName="S1/VL1/B1/L1" uuid="${L1}" ${id}="l1"/>
+						</Bay>
+						<Bay name="BB" ${id}="bb">
+							<ConnectivityNode name="BB1" pathName="S1/VL1/BB/BB1" uuid="${BB1}" ${id}="bb1"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+			</SCL>
+		`
+
+		const testCases: SclTest.TestCases<TestCase> = {
+			'node renamed → its pathName, and the path and node name of its terminals follow': {
+				sourceXml,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update(
+							{ tagName: 'ConnectivityNode', id: 'l1' },
+							{ attributes: { name: 'L2' } },
+						)
+					})
+				},
+				expectedQueries: [
+					'//default:ConnectivityNode[@name="L2" and @pathName="S1/VL1/B1/L2"]',
+					`//default:Terminal[@cNodeUuid="${L1}" and @connectivityNode="S1/VL1/B1/L2" and @cNodeName="L2" and @bayName="B1"]`,
+					`//default:NeutralPoint[@cNodeUuid="${L1}" and @connectivityNode="S1/VL1/B1/L2" and @cNodeName="L2"]`,
+				],
+				unexpectedQueries: ['//default:*[@cNodeName="L1"]'],
+			},
+			'Bay renamed → the pathName of its nodes and the path and bay name of their terminals follow':
+				{
+					sourceXml,
+					act: async (document) => {
+						await document.transaction(async (tx) => {
+							await tx.update({ tagName: 'Bay', id: 'b1' }, { attributes: { name: 'B9' } })
+						})
+					},
+					expectedQueries: [
+						'//default:ConnectivityNode[@name="L1" and @pathName="S1/VL1/B9/L1"]',
+						`//default:Terminal[@cNodeUuid="${L1}" and @connectivityNode="S1/VL1/B9/L1" and @bayName="B9"]`,
+						`//default:NeutralPoint[@connectivityNode="S1/VL1/B9/L1" and @bayName="B9"]`,
+						`//default:Terminal[@cNodeUuid="${BB1}" and @connectivityNode="S1/VL1/BB/BB1" and @bayName="BB"]`,
+					],
+				},
+			'VoltageLevel renamed → every node and terminal below it follows': {
+				sourceXml,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update({ tagName: 'VoltageLevel', id: 'vl1' }, { attributes: { name: 'VL9' } })
+					})
+				},
+				expectedQueries: [
+					'//default:ConnectivityNode[@name="BB1" and @pathName="S1/VL9/BB/BB1"]',
+					`//default:Terminal[@cNodeUuid="${BB1}" and @connectivityNode="S1/VL9/BB/BB1" and @voltageLevelName="VL9"]`,
+					`//default:NeutralPoint[@connectivityNode="S1/VL9/B1/L1" and @voltageLevelName="VL9"]`,
+				],
+				unexpectedQueries: ['//default:*[@voltageLevelName="VL1"]'],
+			},
+			'Substation renamed → every node and terminal follows': {
+				sourceXml,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update({ tagName: 'Substation', id: 's1' }, { attributes: { name: 'S9' } })
+					})
+				},
+				expectedQueries: [
+					'//default:ConnectivityNode[@name="L1" and @pathName="S9/VL1/B1/L1"]',
+					`//default:NeutralPoint[@connectivityNode="S9/VL1/B1/L1" and @substationName="S9"]`,
+					`//default:Terminal[@cNodeUuid="${BB1}" and @connectivityNode="S9/VL1/BB/BB1" and @substationName="S9"]`,
+				],
+				unexpectedQueries: ['//default:*[@substationName="S1"]'],
+			},
+			'terminal pointed at another node → its path and names follow that node': {
+				sourceXml,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update(
+							{ tagName: 'Terminal', id: 'feeder' },
+							{ attributes: { cNodeUuid: BB1 } },
+						)
+					})
+				},
+				expectedQueries: [
+					`//default:ConductingEquipment[@name="QA1"]/default:Terminal[@cNodeUuid="${BB1}" and @connectivityNode="S1/VL1/BB/BB1" and @bayName="BB" and @cNodeName="BB1"]`,
+				],
+				unexpectedQueries: [
+					`//default:ConductingEquipment[@name="QA1"]/default:Terminal[@cNodeUuid="${L1}"]`,
+				],
+			},
+			'node pathName edited by hand → its position comes back': {
+				sourceXml,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update(
+							{ tagName: 'ConnectivityNode', id: 'l1' },
+							{ attributes: { pathName: 'X/Y' } },
+						)
+					})
+				},
+				expectedQueries: ['//default:ConnectivityNode[@name="L1" and @pathName="S1/VL1/B1/L1"]'],
+			},
+			'terminal given another node name by hand → the names of the node its uuid names come back': {
+				sourceXml,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update(
+							{ tagName: 'Terminal', id: 'feeder' },
+							{ attributes: { cNodeName: 'X' } },
+						)
+					})
+				},
+				expectedQueries: [
+					`//default:Terminal[@cNodeUuid="${L1}" and @connectivityNode="S1/VL1/B1/L1" and @cNodeName="L1"]`,
+				],
+				unexpectedQueries: ['//default:Terminal[@cNodeName="X"]'],
+			},
+		}
+
+		runSclTestCases.withExport({
+			testCases,
+			act: async ({ source, testCase }) => {
+				await testCase.act(source)
+				return { assertOn: 'source' }
+			},
+		})
+	})
 })

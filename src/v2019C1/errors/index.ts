@@ -4,6 +4,8 @@ export type { SclErrorKey } from './errors'
 export type { SclImportWarningType } from './warnings'
 export type {
 	DerivedSpecificationNamingWarning,
+	IncoherentPathName,
+	IncoherentPathNamesWarning,
 	IncoherentReferenceWarning,
 	SclImportWarning,
 	UnresolvedReferenceWarning,

@@ -1,87 +1,15 @@
-import { getRefEntriesForTarget } from './ref-entry-ops'
-
-import { describe, expect } from 'vitest'
+import { describe } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
-import type { RefEntry } from '@/v2019C1/extensions/reference'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
 describe('ref-entry-ops', () => {
-	// ── getRefEntriesForTarget ─────────────────────────────────────────────
-
-	describe('getRefEntriesForTarget', () => {
-		type TestCase = {
-			only?: boolean
-			tagName: string
-			expected: {
-				length: number
-				refTagNames: string[]
-			}
-		}
-
-		const testCases: Record<string, TestCase> = {
-			'Function → direct refs (FunctionCatRef, FunctionRef, Resource) + VariableApplyTo': {
-				tagName: 'Function',
-				expected: {
-					length: 4,
-					refTagNames: ['FunctionCatRef', 'FunctionRef', 'Resource', 'VariableApplyTo'],
-				},
-			},
-			'LNode → lnode + behavior-description + direct refs + VariableApplyTo': {
-				tagName: 'LNode',
-				expected: {
-					length: 8,
-					refTagNames: [
-						'ControlRef',
-						'LNodeDataRef',
-						'ProcessEcho',
-						'Resource',
-						'SourceRef',
-						'InputVar',
-						'OutputVar',
-						'VariableApplyTo',
-					],
-				},
-			},
-			'ExtRef → ied-address refs (SourceRef) + VariableApplyTo': {
-				tagName: 'ExtRef',
-				expected: {
-					length: 2,
-					refTagNames: ['SourceRef', 'VariableApplyTo'],
-				},
-			},
-			'SourceRef → direct + behavior-description refs (LNodeInputRef, InputVar) + VariableApplyTo':
-				{
-					tagName: 'SourceRef',
-					expected: {
-						length: 3,
-						refTagNames: ['InputVar', 'LNodeInputRef', 'VariableApplyTo'],
-					},
-				},
-			'unknown tagName → empty': {
-				tagName: 'Nonexistent',
-				expected: { length: 0, refTagNames: [] },
-			},
-		}
-
-		function act(testCase: TestCase) {
-			const entries = getRefEntriesForTarget(testCase.tagName)
-			expect(entries).toHaveLength(testCase.expected.length)
-			const refTagNames = [...new Set(entries.map((e: RefEntry) => e.refTagName))]
-			expect(refTagNames.sort()).toEqual(testCase.expected.refTagNames.sort())
-		}
-
-		runSclTestCases.generic(testCases, act)
-	})
-
-	// ── updateRefsForEntry ────────────────────────────────────────────────
-
-	describe('updateRefsForEntry', () => {
+	describe('rebuildReferencesByUuid', () => {
 		type TestCase = SclTest.BaseXmlTestCase & {
 			act: (document: Scl.Document) => Promise<void>
 		}

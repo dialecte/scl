@@ -150,19 +150,19 @@ describe('postExtractionCleanup', () => {
 			'LNode with missing IED + LNodeSpecNaming → reset from spec naming (its LD included), which keeps its values':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ALL_XMLNS_NAMESPACES}>
-						<Header id="TestSCL"/>
-						<Substation name="S1">
-							<VoltageLevel name="V1">
-								<Bay name="B1">
-									<LNode iedName="GONE_IED" ldInst="LD0" lnClass="XSWI" lnInst="2" prefix="PFX" lnUuid="old-uuid">
-										<eIEC61850-6-100:LNodeSpecNaming sIedName="GONE_IED" sLdInst="LD0" sLnClass="PTRC" sLnInst="1" sPrefix="SP"/>
-									</LNode>
-								</Bay>
-							</VoltageLevel>
-						</Substation>
-					</SCL>
-				`,
+						<SCL ${ALL_XMLNS_NAMESPACES}>
+							<Header id="TestSCL"/>
+							<Substation name="S1">
+								<VoltageLevel name="V1">
+									<Bay name="B1">
+										<LNode iedName="GONE_IED" ldInst="LD0" lnClass="XSWI" lnInst="2" prefix="PFX" lnUuid="old-uuid">
+											<eIEC61850-6-100:LNodeSpecNaming sIedName="GONE_IED" sLdInst="LD0" sLnClass="PTRC" sLnInst="1" sPrefix="SP"/>
+										</LNode>
+									</Bay>
+								</VoltageLevel>
+							</Substation>
+						</SCL>
+					`,
 					expectedQueries: [
 						'//default:LNode[@iedName="None" and @ldInst="LD0" and @lnClass="PTRC" and @lnInst="1" and @prefix="SP" and not(@lnUuid)]',
 						'//v2019C1:LNodeSpecNaming[@sIedName="GONE_IED" and @sLdInst="LD0" and @sLnClass="PTRC" and @sLnInst="1" and @sPrefix="SP"]',

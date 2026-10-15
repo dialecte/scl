@@ -1,23 +1,29 @@
-import { isElementOf } from '@dialecte/core/helpers'
-
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { RESOLUTION_TYPE, MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference'
-import { buildReferencePath } from '@/v2019C1/extensions/reference/query/build'
-import { updatedOperation, upsertAttribute } from '@/v2019C1/hooks/shared/record-ops'
+import { buildReferenceAttributes } from '@/v2019C1/extensions/reference/query/build/build-reference-attributes'
+import { derivedAttributesFollowing } from '@/v2019C1/extensions/reference/query/build/compose-derived-attributes'
+import {
+	hasAttributeChange,
+	readSnapshotAttribute,
+	updatedOperation,
+	withAttributeValues,
+} from '@/v2019C1/hooks/shared/record-ops'
+import { findTargetByUuid } from '@/v2019C1/hooks/shared/ref-entry-ops'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
+import type { AttributeList } from '@/v2019C1/hooks/shared/record-ops'
 import type * as Core from '@dialecte/core'
 
 /**
  * When a reference element's own binding attributes change (its companion DO/DA
- * name or its target uuid), rebuild its path attribute from the resolved target
- * so the name reference stays in agreement with the uuid reference.
+ * name, its target uuid, or an attribute it writes from the target's path such as a
+ * terminal's level names), rebuild what it holds for the resolved target so the name
+ * reference stays in agreement with the uuid reference.
  *
  * Skips `unsupported` paths (e.g. `VariableApplyTo` XPaths), which must not be
  * regenerated as plain name-paths, and mapped-name refs (`DOS`/`SDS`/`DAS`), which
- * are reconciled separately. Every rebuilt path lands in one update of the record:
+ * are reconciled separately. Everything rebuilt lands in one update of the record:
  * an update per pair would each start from the same attributes and only the last would stay.
  */
 export async function reconcileReferrerRefPaths(params: {
@@ -28,71 +34,38 @@ export async function reconcileReferrerRefPaths(params: {
 	const { oldRecord, newRecord, query } = params
 
 	if (MAPPED_NAME_REFS.has(newRecord.tagName)) return []
-	const pairs = UUID_REFERENCE_PAIRS[newRecord.tagName as keyof typeof UUID_REFERENCE_PAIRS]
+	const pairs: readonly ReferencePair[] | undefined =
+		UUID_REFERENCE_PAIRS[newRecord.tagName as keyof typeof UUID_REFERENCE_PAIRS]
 	if (!pairs) return []
 
-	let attributes: { name: string; value: string }[] = newRecord.attributes
+	const reference = { tagName: newRecord.tagName, id: newRecord.id } as Scl.Ref<Scl.ElementsOf>
+
+	let attributes: AttributeList = newRecord.attributes
 	for (const pair of pairs) {
 		if (pair.resolution === RESOLUTION_TYPE.unsupported) continue
-		if (!bindingAttrsChanged(oldRecord, newRecord, pair)) continue
-		const newPath = await rebuildRefPath({ newRecord, pair, query })
-		if (newPath) attributes = upsertAttribute(attributes, pair.attribute.path, newPath)
+		const names = bindingAttributeNames({ tagName: newRecord.tagName, pair })
+		if (!hasAttributeChange({ oldRecord, newRecord, names })) continue
+
+		const uuid = readSnapshotAttribute({ record: newRecord, name: pair.attribute.uuid })
+		const target = uuid
+			? await findTargetByUuid(query, { uuid, targetTagNames: pair.target })
+			: undefined
+		if (!target) continue
+
+		const values = await buildReferenceAttributes(query, { reference, target })
+		attributes = withAttributeValues(attributes, values)
 	}
 	if (attributes === newRecord.attributes) return []
 	return [updatedOperation(newRecord, attributes)]
 }
 
-/** True when the pair's uuid attribute or any of its companion names changed. */
-function bindingAttrsChanged(
-	oldRecord: Scl.RawRecord<Scl.ElementsOf>,
-	newRecord: Scl.RawRecord<Scl.ElementsOf>,
-	pair: ReferencePair,
-): boolean {
-	const names = [pair.attribute.uuid, ...pair.companions.map((companion) => companion.name)]
-	return names.some((name) => attributeValue(oldRecord, name) !== attributeValue(newRecord, name))
-}
-
-/** The pair's path rebuilt from its target, or null when it cannot be built or is already up to date. */
-async function rebuildRefPath(params: {
-	newRecord: Scl.RawRecord<Scl.ElementsOf>
-	pair: ReferencePair
-	query: Core.Query<Config>
-}): Promise<string | null> {
-	const { newRecord, pair, query } = params
-
-	const uuidValue = attributeValue(newRecord, pair.attribute.uuid)
-	if (!uuidValue) return null
-
-	const target = await findTargetByUuid({ uuidValue, targetTagNames: pair.target, query })
-	if (!target) return null
-
-	const reference = { tagName: newRecord.tagName, id: newRecord.id } as Scl.Ref<Scl.ElementsOf>
-	const newPath = await buildReferencePath(query, { reference, target })
-	if (!newPath) return null
-
-	if (attributeValue(newRecord, pair.attribute.path) === newPath) return null
-
-	return newPath
-}
-
-async function findTargetByUuid(params: {
-	uuidValue: string
-	targetTagNames: readonly string[]
-	query: Core.Query<Config>
-}): Promise<Scl.Ref<Scl.ElementsOf> | null> {
-	const { uuidValue, targetTagNames, query } = params
-
-	for (const targetTagName of targetTagNames) {
-		if (!isElementOf(targetTagName, SCL_DIALECTE_CONFIG)) continue
-		const candidates = await query.getRecordsByTagName(targetTagName)
-		const match = candidates.find(
-			(record) => record.attributes.find((a) => a.name === 'uuid')?.value === uuidValue,
-		)
-		if (match) return { tagName: match.tagName, id: match.id } as Scl.Ref<Scl.ElementsOf>
-	}
-	return null
-}
-
-function attributeValue(record: Scl.RawRecord<Scl.ElementsOf>, name: string): string | undefined {
-	return record.attributes.find((a) => a.name === name)?.value
+/** The attributes whose change rebinds the pair: its uuid, its companions, the attributes it writes. */
+function bindingAttributeNames(params: { tagName: string; pair: ReferencePair }): string[] {
+	const { tagName, pair } = params
+	const derived = derivedAttributesFollowing({ tagName, follows: pair.attribute.path })
+	return [
+		pair.attribute.uuid,
+		...pair.companions.map((companion) => companion.name),
+		...(derived?.attributes.map((attribute) => attribute.name) ?? []),
+	]
 }

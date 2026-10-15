@@ -1,3 +1,4 @@
+import { DERIVED_REFERENCE_ATTRIBUTES } from './derived-attributes'
 import {
 	buildPairsByRefMap,
 	buildResolutionsToTargetRefsMap,
@@ -11,7 +12,7 @@ import { valuePatterns } from '@dialecte/core/utils'
 import { LNODE_NAMING_ATTRIBUTES, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DEFINITION } from '@/v2019C1/definition/definition.generated'
 
-import type { TypeIdTarget, TypeIdReferrer } from './types'
+import type { DerivedAttributes, RefEntry, TypeIdTarget, TypeIdReferrer } from './types'
 import type { AnyDefinition } from '@dialecte/core'
 
 /**
@@ -44,6 +45,14 @@ export const RESOLVABLE_RESOLUTIONS = [
  * to find referrers by uuid; use RESOLVABLE_RESOLUTIONS only for path building.
  */
 export const ALL_RESOLUTIONS = [...RESOLVABLE_RESOLUTIONS, RESOLUTION_TYPE.unsupported] as const
+
+/**
+ * Maps target tagName -> the references that can point at it by uuid, every resolution
+ * included: a referrer whose path cannot be PARSED (e.g. VariableApplyTo, an XPath selector)
+ * still has its path REBUILT from the target its uuid names.
+ */
+export const REF_ENTRIES_BY_TARGET: ReadonlyMap<string, readonly RefEntry[]> =
+	buildRefEntriesByTarget()
 
 /**
  * Maps ref tagName -> list of its UUID pair entries (flattened).
@@ -107,6 +116,11 @@ export const ALL_REF_UUID_ATTRIBUTES: readonly string[] = [
 	),
 ]
 
+/** Per element tag, the attributes it writes from a path (see DERIVED_REFERENCE_ATTRIBUTES). */
+export const DERIVED_ATTRIBUTES_BY_TAG: ReadonlyMap<string, DerivedAttributes> = new Map(
+	Object.entries(DERIVED_REFERENCE_ATTRIBUTES),
+)
+
 // ── Type-id reference derived structures ────────────────────────────────────────
 
 /** Distinct attribute names that can carry a type id, per referrer tag. */
@@ -136,6 +150,16 @@ export const LOCKED_LNODE_ATTRIBUTES: ReadonlySet<string> = new Set<string>([
 	...LNODE_BINDING_ATTRIBUTES,
 	...(TYPE_ID_REF_ATTRIBUTES.get('LNode') ?? []),
 ])
+
+function buildRefEntriesByTarget(): Map<string, RefEntry[]> {
+	const map = new Map<string, RefEntry[]>()
+	for (const resolution of ALL_RESOLUTIONS) {
+		for (const [targetTagName, entries] of RESOLUTION_TARGET_REFS[resolution] ?? []) {
+			map.set(targetTagName, [...(map.get(targetTagName) ?? []), ...entries])
+		}
+	}
+	return map
+}
 
 function buildMappedDataDefaultAttributes(): Map<string, readonly string[]> {
 	const entries: [string, readonly string[]][] = [['LNode', LNODE_BINDING_ATTRIBUTES]]

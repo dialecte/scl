@@ -21,6 +21,15 @@ export type ReferenceViolation =
 			targetTagName: string
 	  }
 	| { kind: 'empty'; referenceTagName: string; uuidAttribute: string }
+	| {
+			kind: 'derived'
+			elementTagName: string
+			/** An attribute written from a path: a terminal's level name, a node's `pathName`. */
+			attribute: string
+			written: string
+			/** Its value read on the path, `undefined` when the path has no such level. */
+			expected: string | undefined
+	  }
 
 export type CollectReferenceViolationsParams = {
 	xml: string

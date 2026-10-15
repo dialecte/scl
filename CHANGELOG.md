@@ -23,7 +23,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Renaming an IED, an access point, a logical device, a logical node or a control block updates the references naming it by attributes.** The `ConnectedAP`, `ExtRef`, `FCDA`, `GSE` / `SMV`, `ClientLN`, `IEDName`... pointing at it (or at an element below it) by uuid write its new names in the same transaction, only those that differ: a name its target leaves out (no prefix) is removed, a part left to its schema value or to another of its attributes (`srcLDInst` left to `ldInst`) stays left out, `iedName="@"` stays. Renaming a `DataSet` updates the `datSet` of the control blocks publishing it.
 - **`applyUuidRemap` repoints the cloned references named by attributes** onto the clone of what they name (or the element a redirect maps it onto), as it does for the other references, and writes that element's names (`iedName="@"` replaced by the IED's name when that element is in another IED).
 - **Importing a file fills the uuid of the IED-section references that name their target by attributes.** A `ConnectedAP` or `KDC` without `apUuid`, an `ExtRef` without `lnUuid` or `srcCBUuid`, an `FCDA`, `ClientLN`, `Association` or `ExtCtrl` without `lnUuid`, a `GSE` or `SMV` without `cbUuid`, an `IEDName` without the uuid of what it names, a `ServerAt` without `apUuid`: each gets the uuid of the access point, logical device, logical node or control block its names name in the file (`iedName="@"` naming the IED the reference sits in, an `ExtRef`'s `serviceType` telling control blocks of the same name apart). A name naming nothing in the file, or several elements it cannot tell apart, is left as written. `TUPLE_REFERENCE_PAIRS` lists these references and the attributes naming their target (types `TupleReferencePair`, `TupleRoles`, `TupleRole`, `IedRole`).
+
+## [0.9.0] - 2026-10-15
+
+### Added
+
+- **A terminal follows its connectivity node.** A `Terminal` or a `NeutralPoint` names its `ConnectivityNode` by `cNodeUuid`, by its path (`connectivityNode`) and by the names of the levels holding it (`processName`, `lineName`, `substationName`, `voltageLevelName`, `bayName`, `cNodeName`). Creating one with its uuid writes the path and the names; renaming the node or a level above it rewrites them, and the node's own `pathName`; pointing it at another node rewrites them from that node; deleting the node deletes the terminals connected to it, the equipment stays. Extracting, instantiating and updating a bay-typical keep every terminal naming the nodes of its own copy. `DERIVED_REFERENCE_ATTRIBUTES` lists the attributes written from a path, `REF_ENTRIES_BY_TARGET` the references that can name each element. `buildReferencePath` takes the target's path when the caller already read it.
+- The import makes a terminal's path, uuid and level names agree, and a connectivity node's `pathName` its position: a value that disagrees is written again, with an `incoherent-path-names` warning (`IncoherentPathNamesWarning`). A terminal naming the predefined `grounded` node, which a file need not declare, is kept without a warning.
 - The types of an element's state are exported: `ElementState`, `ElementStateByTag`, `SignalState`, `LNodeState`, `LNodeMapping` - the `state` of `info.of`. So is `DerivedSpecificationNamingWarning`, the member of `SclImportWarning` for an LNode given a derived `LNodeSpecNaming` on import.
+
+### Changed
+
+- **On import, the uuid of a reference wins over its path.** A reference whose path names another element than its uuid, or none, was kept as read: its path is now written from the element the uuid names, with an `incoherent-reference` warning. A uuid naming no element of the file still leaves the reference as read.
+
+### Fixed
+
+- Updating a project from a newer SSD no longer copies the template's paths into it: a terminal's `connectivityNode` and level names and a connectivity node's `pathName` named the `TEMPLATE` scaffolding after the update, and showed as changes in its report.
 
 ## [0.8.1] - 2026-10-15
 

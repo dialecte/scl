@@ -410,12 +410,16 @@ async function updateMatchedAttributes(
 
 	// The template's attributes, with the user's value edits overlaid (so an in-place
 	// update honors an edited `desc`/`name` just like a freshly added element does).
+	const sourceAttributes = await sourceQuery.any.getAttributes(sourceNode)
+	const instanceAttributes = await tx.any.getAttributes(instanceRecord)
 	const desired = {
-		...visibleAttributes(await sourceQuery.any.getAttributes(sourceNode)),
+		...visibleAttributes({ tagName: sourceNode.tagName, attributes: sourceAttributes }),
 		...overrides?.get(sourceNode.id),
 	}
-	const instanceAttributes = await tx.any.getAttributes(instanceRecord)
-	const current = visibleAttributes(instanceAttributes)
+	const current = visibleAttributes({
+		tagName: instanceRecord.tagName,
+		attributes: instanceAttributes,
+	})
 	// what the project owns on the element (a bound LNode's implementation and type) is never
 	// written, even when a user edit overlaid above lists it
 	const owned = projectOwnedAttributes({ tagName: instanceRecord.tagName, instanceAttributes })

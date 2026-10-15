@@ -160,6 +160,14 @@ parent), and every target was indexed by uuid with its path (`targetsByUuid`). P
 `composeReferencePath`, the same function `buildReferencePath` uses after reading the parts through a query, so an import
 reads nothing back from the store. A uuid naming no element of the file is left alone.
 
+A reference the file gives both a path and a uuid that name two different elements (or a path naming none) is written
+again from the element the uuid names: the uuid wins, and the import reports an `incoherent-reference` warning. The
+attributes a reference writes from its target's path (a `Terminal`'s level names, see `DERIVED_REFERENCE_ATTRIBUTES`)
+are composed from the indexed target's path in the same pass, and an element that writes attributes from its own path
+(a `ConnectivityNode`'s `pathName`) gets them from its position. A value the file gave that disagrees is rewritten, with
+an `incoherent-path-names` warning. A `Terminal` naming the predefined `grounded` node, which a file need not declare,
+is left without a uuid and without a warning.
+
 ---
 
 Why two phases?
@@ -167,9 +175,9 @@ Because XML can reference elements that appear later in the file — a FunctionR
 
 ## Resolution strategies
 
-32 of 33 reference pairs are resolved. Each pair is assigned a `resolution` value in `UUID_REFERENCE_PAIRS`.
+34 of 35 reference pairs are resolved. Each pair is assigned a `resolution` value in `UUID_REFERENCE_PAIRS`.
 
-### `direct` — 15 pairs
+### `direct` — 17 pairs
 
 The path attribute value is an exact match against a target element's computed path.
 
@@ -184,11 +192,13 @@ The path attribute value is an exact match against a target element's computed p
 | FunctionalVariantRef    | `functionalVariant`   | FunctionalVariant, FunctionalSubVariant          |
 | LNodeInputRef           | `sourceRef`           | SourceRef                                        |
 | LNodeOutputRef          | `controlRef`          | ControlRef                                       |
+| NeutralPoint            | `connectivityNode`    | ConnectivityNode                                 |
 | PowerSystemRelation     | `relation`            | ConductingEquipment, PowerTransformer, …         |
 | PowerSystemRelationRef  | `powerSystemRelation` | PowerSystemRelation                              |
 | ProcessResourceRef      | `processResource`     | ProcessResource                                  |
 | ProjectProcessReference | `processReference`    | Process                                          |
 | Resource                | `source`              | Substation, Bay, Function, LNode, …              |
+| Terminal                | `connectivityNode`    | ConnectivityNode                                 |
 | VariableRef             | `variable`            | Variable                                         |
 
 **Example:** `FunctionRef.function="S1/V1/Protection"` → index lookup `"S1/V1/Protection"` → populates `functionUuid`.
@@ -300,12 +310,13 @@ When a VariableApplyTo with an XPath `element` value is encountered during impor
 
 | Strategy               | Pairs                      | Status |
 | ---------------------- | -------------------------- | ------ |
-| `direct`               | 19                         | ✅     |
+| `direct`               | 17                         | ✅     |
+| `ancestor-name`        | 4                          | ✅     |
 | `lnode`                | 7                          | ✅     |
 | `ied-address`          | 2 (+ IED-relative variant) | ✅     |
 | `behavior-description` | 4                          | ✅     |
 | `unsupported` (XPath)  | 1                          | ❌     |
-| **Total**              | **32 / 33**                |        |
+| **Total**              | **34 / 35**                |        |
 
 ---
 

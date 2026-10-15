@@ -243,32 +243,32 @@ describe('applyUuidRemap', () => {
 				allowIncoherentReferences:
 					'the cloned reference still carries the uuid and the names of the document it was cloned from',
 				sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="scl-1">
-					<IED name="P2" ${id}="ied-p2" uuid="ied-p2-uuid">
-						<AccessPoint name="AP1" ${id}="ap-p2" uuid="ap-p2-uuid">
-							<Server ${id}="server-p2">
-								<LDevice inst="LD0" ${id}="ld-p2" uuid="ld-p2-uuid">
-									<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-p2" uuid="lln0-p2-uuid">
-										<Inputs ${id}="inputs-clone">
-											<ExtRef ${id}="extref-clone" iedName="@" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" lnUuid="src-breaker-uuid" intAddr="Pos"/>
-										</Inputs>
-									</LN0>
-								</LDevice>
-							</Server>
-						</AccessPoint>
-					</IED>
-					<IED name="P3" ${id}="ied-p3" uuid="ied-p3-uuid">
-						<AccessPoint name="AP1" ${id}="ap-p3" uuid="ap-p3-uuid">
-							<Server ${id}="server-p3">
-								<LDevice inst="LD0" ${id}="ld-p3" uuid="ld-p3-uuid">
-									<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-p3" uuid="lln0-p3-uuid"/>
-									<LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" ${id}="breaker-project" uuid="project-breaker-uuid"/>
-								</LDevice>
-							</Server>
-						</AccessPoint>
-					</IED>
-				</SCL>
-			`,
+					<SCL ${ns} ${id}="scl-1">
+						<IED name="P2" ${id}="ied-p2" uuid="ied-p2-uuid">
+							<AccessPoint name="AP1" ${id}="ap-p2" uuid="ap-p2-uuid">
+								<Server ${id}="server-p2">
+									<LDevice inst="LD0" ${id}="ld-p2" uuid="ld-p2-uuid">
+										<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-p2" uuid="lln0-p2-uuid">
+											<Inputs ${id}="inputs-clone">
+												<ExtRef ${id}="extref-clone" iedName="@" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" lnUuid="src-breaker-uuid" intAddr="Pos"/>
+											</Inputs>
+										</LN0>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+						<IED name="P3" ${id}="ied-p3" uuid="ied-p3-uuid">
+							<AccessPoint name="AP1" ${id}="ap-p3" uuid="ap-p3-uuid">
+								<Server ${id}="server-p3">
+									<LDevice inst="LD0" ${id}="ld-p3" uuid="ld-p3-uuid">
+										<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-p3" uuid="lln0-p3-uuid"/>
+										<LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" ${id}="breaker-project" uuid="project-breaker-uuid"/>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+					</SCL>
+				`,
 				cloneMappings: [
 					{
 						source: { tagName: 'ExtRef', id: 'extref-src', attributes: [] },

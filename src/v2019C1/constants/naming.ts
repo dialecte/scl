@@ -6,3 +6,9 @@ export const UNALLOCATED_IED_NAME = 'None'
 
 /** The `iedName` an `ExtRef` / `ExtCtrl` writes for the IED it sits in (a reference inside that IED). */
 export const RELATIVE_IED_NAME = '@'
+
+/**
+ * The predefined connectivity node modelling earth potential: an earthing switch is connected on
+ * one side to it. A file may name it in a terminal without declaring it.
+ */
+export const GROUNDED_CONNECTIVITY_NODE_NAME = 'grounded'

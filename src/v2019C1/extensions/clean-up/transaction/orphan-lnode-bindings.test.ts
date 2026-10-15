@@ -284,21 +284,21 @@ describe('resetLNodes on some elements', () => {
 			allowIncoherentReferences: 'the inputs name a device the document lacks: what is cleaned up',
 			sourceXml: documentXml({
 				content: /* xml */ `
-						<LNode iedName="None" lnClass="PTRC" lnInst="1">
-							<Private type="eIEC61850-6-100">
-								<eIEC61850-6-100:LNodeInputs>
-									<eIEC61850-6-100:SourceRef ${CUSTOM_RECORD_ID_ATTRIBUTE}="given-input" input="Trip" extRefAddr="GONE/LD0/PTRC1.Trip" extRefUuid="missing-ext-ref-uuid"/>
-								</eIEC61850-6-100:LNodeInputs>
-							</Private>
-						</LNode>
-						<LNode iedName="None" lnClass="PDIS" lnInst="1">
-							<Private type="eIEC61850-6-100">
-								<eIEC61850-6-100:LNodeInputs>
-									<eIEC61850-6-100:SourceRef input="Start" extRefAddr="GONE/LD0/PDIS1.Str" extRefUuid="other-missing-ext-ref-uuid"/>
-								</eIEC61850-6-100:LNodeInputs>
-							</Private>
-						</LNode>
-					`,
+					<LNode iedName="None" lnClass="PTRC" lnInst="1">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:SourceRef ${CUSTOM_RECORD_ID_ATTRIBUTE}="given-input" input="Trip" extRefAddr="GONE/LD0/PTRC1.Trip" extRefUuid="missing-ext-ref-uuid"/>
+							</eIEC61850-6-100:LNodeInputs>
+						</Private>
+					</LNode>
+					<LNode iedName="None" lnClass="PDIS" lnInst="1">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:SourceRef input="Start" extRefAddr="GONE/LD0/PDIS1.Str" extRefUuid="other-missing-ext-ref-uuid"/>
+							</eIEC61850-6-100:LNodeInputs>
+						</Private>
+					</LNode>
+				`,
 			}),
 			expectedQueries: [
 				'//v2019C1:SourceRef[@input="Trip"][not(@extRefAddr)][not(@extRefUuid)]',

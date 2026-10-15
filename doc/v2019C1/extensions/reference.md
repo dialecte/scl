@@ -152,6 +152,7 @@ reference.query.buildReferencePath(
   params: {
     reference: Scl.Ref<Scl.ElementsOf>   // the REF element
     target: Scl.Ref<Scl.ElementsOf>      // the element it points to
+    targetPath?: ElementPath             // the target's path, when already read (several references to one target)
   },
 ): Promise<string | null>
 ```
@@ -513,7 +514,7 @@ This replaces the former `afterDeepClone` core hook (removed): that hook's per-e
 
 All reference pairs are defined in `UUID_REFERENCE_PAIRS`. Each pair maps a REF element + path attribute to one or more target element types and a resolution strategy.
 
-### `direct` -- 15 pairs
+### `direct` -- 17 pairs
 
 Path attribute value is an exact match against the target's computed path.
 
@@ -521,6 +522,8 @@ Path attribute value is an exact match against the target's computed path.
 <FunctionRef function="TEMPLATE/V1/Protection" functionUuid="abc-123"/>
 <!--          ^path attribute                   ^uuid attribute (resolved) -->
 ```
+
+A `Terminal` (and a `NeutralPoint`) names its `ConnectivityNode` this way: `connectivityNode` is the node's full path, `cNodeUuid` its uuid. See [Attributes written from a path](#attributes-written-from-a-path) for the level names written next to it.
 
 ### `lnode` -- 7 pairs
 
@@ -600,13 +603,39 @@ Reference coherence is an invariant that `@dialecte/scl` maintains for you: the 
 | a target of an IED reference named by a tuple (`IED`, `AccessPoint`, `LDevice`, `LN` / `LN0`, control block) | the names its references wrote for it            | renaming it, or an element above it, rewrites the names of the references pointing at it (or below it) by uuid: `ConnectedAP` `iedName` / `apName`, `ExtRef` `iedName` / `ldInst` / `lnInst` / `srcCBName`..., `FCDA`, `GSE` / `SMV`, an `IEDName`'s text. Only a name that differs is written: a name the target leaves out (no prefix) is removed, a part left to its schema value or to another of its attributes (`srcLDInst` left to `ldInst`) stays left out, `iedName="@"` stays. A reference without its uuid is not followed |
 | `DataSet`                                                                                                    | the `datSet` of its control blocks               | renaming it rewrites the `datSet` of the control blocks of its logical node that publish it                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
+### Attributes written from a path
+
+Some attributes are written from a path every time that path is, and never given by a caller (`DERIVED_REFERENCE_ATTRIBUTES`):
+
+- a `Terminal` or a `NeutralPoint` lists, next to `connectivityNode`, the names of the levels holding its node: `processName` (nested processes joined with `/`), `lineName`, or `substationName`, `voltageLevelName` and `bayName`, then `cNodeName`. A level the node is not in is left out (a node in a `Line` gets `lineName`, never `bayName`);
+- a `ConnectivityNode` holds its own path in `pathName`.
+
+```xml
+<Bay name="B1">
+	<ConductingEquipment name="QA1" type="CBR">
+		<Terminal connectivityNode="S1/VL1/B1/L1" substationName="S1" voltageLevelName="VL1" bayName="B1" cNodeName="L1" cNodeUuid="9839…"/>
+	</ConductingEquipment>
+	<ConnectivityNode name="L1" pathName="S1/VL1/B1/L1" uuid="9839…"/>
+</Bay>
+```
+
+| On…                                                      | the terminals and the node                                                                                    |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| a terminal created with its `cNodeUuid`                  | get `connectivityNode` and the level names of that node; names given for another node are replaced or removed |
+| a node created                                           | gets its `pathName`; the terminals already carrying its uuid get their path and names                         |
+| a rename of the node or of a level above it              | the node's `pathName` and the path and names of its terminals follow                                          |
+| a terminal pointed at another node (`cNodeUuid` changed) | its path and names follow that node; a level name edited by hand is written again from the node               |
+| a node deleted (or a level holding it)                   | the terminals connected to it are deleted, the equipment stays: an equipment that is not connected has none   |
+
+The lifecycle verbs follow from it: an extracted bay-typical names its nodes under the `TEMPLATE` scaffolding, and a terminal on a node outside the extracted scope is removed; an instantiated or updated one names the nodes placed with it, under the project's levels. A template's paths and level names are never copied onto an instance.
+
 **Every `LNode` carries its `LNodeSpecNaming`** (in its `eIEC61850-6-100` `Private`), the naming it was specified with, kept while an IED identity is stamped on the `LNode`:
 
 - an `LNode` a transaction creates keeps the one it was given, by a copy or by the caller; otherwise, when the transaction's work is done (`beforeCommit`), it gets one from its own naming: `sLdInst`, `sPrefix`, `sLnClass`, `sLnInst` while no IED is assigned; once one is (`iedName` set and not `None`), only `sPrefix`, `sLnClass`, `sLnInst`, the IED and LD names being the implementation's;
 - setting `lnUuid` on an `LNode` that has none gives it one from the naming it has before the identity is stamped;
 - on import, an `LNode` without one gets one by the same rule; when it is bound to an IED the import reports a `derived-specification-naming` warning ([errors](../api/errors#import-warnings)).
 
-On import, a reference that carries its uuid and no path (a file written by a tool that sets the uuid only) gets its path once the whole file is stored, built like on create; a uuid that names no element of the file leaves the reference without a path.
+On import, a reference that carries its uuid and no path (a file written by a tool that sets the uuid only) gets its path once the whole file is stored, built like on create; a uuid that names no element of the file leaves the reference without a path. A reference whose path names another element than its uuid (or none) is written again from the element the uuid names, with an `incoherent-reference` warning. The attributes written from a path are completed the same way; a value the file gave that disagrees with the path is rewritten, with an `incoherent-path-names` warning. A terminal naming the predefined `grounded` node, which a file need not declare, is kept without a uuid and without a warning ([errors](../api/errors#import-warnings)).
 
 Because these run as hooks, a tool never has to compute the derived half — setting the uuid, the companion names or `lnUuid` is enough, and the matching path, short name or identity is filled in the same transaction.
 
@@ -629,6 +658,9 @@ import {
 	RESOLVABLE_RESOLUTIONS,
 	PAIRS_BY_REF,
 	ALL_REF_UUID_ATTRIBUTES,
+	REF_ENTRIES_BY_TARGET,
+	DERIVED_REFERENCE_ATTRIBUTES,
+	DERIVED_ATTRIBUTES_BY_TAG,
 	KEEP_ON_ORPHAN_REFS,
 	REF_CONTAINERS,
 	PATH_EXTRACTION_CONFIG,
@@ -645,6 +677,9 @@ import {
 | `RESOLVABLE_RESOLUTIONS`       | Derived: pairs whose strategy is not `unsupported`                         |
 | `PAIRS_BY_REF`                 | Derived: pairs grouped by REF element tag name                             |
 | `ALL_REF_UUID_ATTRIBUTES`      | Derived: all uuid attribute names across pairs                             |
+| `REF_ENTRIES_BY_TARGET`        | Derived: per target tag, the references that can name it by uuid           |
+| `DERIVED_REFERENCE_ATTRIBUTES` | Attributes written from a path, per element tag (terminal level names, …)  |
+| `DERIVED_ATTRIBUTES_BY_TAG`    | Derived: `DERIVED_REFERENCE_ATTRIBUTES` as a map by tag name               |
 | `KEEP_ON_ORPHAN_REFS`          | Rules for which attributes to preserve when a REF becomes orphaned         |
 | `REF_CONTAINERS`               | Tag names considered REF containers (for `findRefsPointingTo`)             |
 | `PATH_EXTRACTION_CONFIG`       | Per-element strategy for building path segments (`name`, `lnClass`, etc.)  |
