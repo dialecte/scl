@@ -113,9 +113,17 @@ describe('findConstraintViolation + resolveUniqueValue', () => {
 // The same tag declared under different parents carries the uniqueness rules of that declaration:
 // a ConductingEquipment of a SubFunction compares its SubEquipment names only (an EqFunction may
 // reuse one), a Labels under an AccessPoint has its own rule. A ProcessResources, admitted in a
-// Private through its wildcard, keeps the rule of its global declaration.
+// Private through its wildcard, keeps the rule of its global declaration. The LNode rule of a
+// SubFunctionTemplate names SCL LNodes, while a template holds LNodes of its own namespace.
 const declaredUnderParentXml = /* xml */ `
 	<SCL ${ns} ${id}="root">
+		<Private type="eIEC61850-6-100" ${id}="root-private">
+			<eIEC61850-6-100:FunctionTemplate name="Prot" ${id}="function-template">
+				<eIEC61850-6-100:SubFunctionTemplate name="Trip" ${id}="sub-function-template">
+					<eIEC61850-6-100:LNode iedName="None" ldInst="LD0" prefix="P" lnClass="PTRC" lnInst="1" ${id}="template-lnode"/>
+				</eIEC61850-6-100:SubFunctionTemplate>
+			</eIEC61850-6-100:FunctionTemplate>
+		</Private>
 		<Substation name="S1" ${id}="substation">
 			<VoltageLevel name="V1" ${id}="voltage-level">
 				<Bay name="B1" ${id}="bay">
@@ -207,6 +215,18 @@ describe('findConstraintViolation - the rules declared under the parent of the p
 				childTag: 'ProcessResource',
 				candidate: { name: 'R1' },
 				expected: { constraint: 'uniquePR', fields: ['name'], offendingId: 'process-resource' },
+			},
+		'an LNode named like the LNode of a SubFunctionTemplate -> free, the template rule names SCL LNodes':
+			{
+				sourceXml: declaredUnderParentXml,
+				parentRef: {
+					tagName: 'SubFunctionTemplate',
+					id: 'sub-function-template',
+				} as Scl.Ref<Scl.ElementsOf>,
+				childTag: 'LNode',
+				// every field the rule compares, so the two would collide under it
+				candidate: { iedName: 'None', ldInst: 'LD0', prefix: 'P', lnClass: 'PTRC', lnInst: '1' },
+				expected: null,
 			},
 		'an equipment written earlier in the same transaction, under a SubFunction -> the rule declared there':
 			{
