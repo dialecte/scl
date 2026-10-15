@@ -411,11 +411,16 @@ async function updateMatchedAttributes(
 
 	// The template's attributes, with the user's value edits overlaid (so an in-place
 	// update honors an edited `desc`/`name` just like a freshly added element does).
+	const sourceAttributes = await sourceQuery.any.getAttributes(sourceNode)
+	const instanceAttributes = await tx.any.getAttributes(instanceRecord)
 	const desired = {
-		...visibleAttributes(await sourceQuery.any.getAttributes(sourceNode)),
+		...visibleAttributes({ tagName: sourceNode.tagName, attributes: sourceAttributes }),
 		...overrides?.get(sourceNode.id),
 	}
-	const current = visibleAttributes(await tx.any.getAttributes(instanceRecord))
+	const current = visibleAttributes({
+		tagName: instanceRecord.tagName,
+		attributes: instanceAttributes,
+	})
 
 	// Union of both sides: a name present on the template overwrites, a name the
 	// template dropped (present on the instance, absent from `desired`) is cleared

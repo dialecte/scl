@@ -733,3 +733,88 @@ describe('update.ssd - a function the application of a bay typical gains is plac
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+/**
+ * A newer bay-typical renames a connectivity node and gains one, with a terminal on it: the
+ * instance's terminals name the nodes of the instance, under the project's levels.
+ */
+describe('update.ssd - connectivity', () => {
+	const L1 = '00000000-0000-4000-8000-000000000001'
+	const L2 = '00000000-0000-4000-8000-000000000002'
+	const connectivitySource = /* xml */ `
+		<SCL ${ns} ${id}="ssd">
+			<Header id="ssd-header" uuid="ssd-doc-uuid" version="0" revision="14" ${id}="hdr-s"/>
+			<Substation name="TEMPLATE" ${id}="sub-s">
+				<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+					<Bay name="B1" ${id}="bay-s">
+						<ConductingEquipment name="QA1" type="CBR" ${id}="qa1">
+							<Terminal connectivityNode="TEMPLATE/TEMPLATE/B1/L1" substationName="TEMPLATE" voltageLevelName="TEMPLATE" bayName="B1" cNodeName="L1" cNodeUuid="${L1}" ${id}="feeder"/>
+						</ConductingEquipment>
+						<ConnectivityNode name="L1" pathName="TEMPLATE/TEMPLATE/B1/L1" uuid="${L1}" ${id}="l1"/>
+						<Function name="Prot" uuid="fn-src-uuid" ${id}="fn-1">
+							<LNode iedName="None" lnClass="CSWI" lnInst="1" uuid="lnode-src-uuid" ${id}="lnode-1"/>
+						</Function>
+					</Bay>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'node renamed and node gained in the template → each node keeps the path of its place, the terminals name the instance nodes':
+			{
+				sourceXml: connectivitySource,
+				targetXml,
+				expectedQueries: [
+					// the instance owns its names: the template's rename does not reach it
+					`//default:ConnectivityNode[@templateUuid="${L1}" and @name="L1" and @pathName="S1/V1/B1_1/L1"]`,
+					`//default:ConnectivityNode[@templateUuid="${L2}" and @name="L2" and @pathName="S1/V1/B1_1/L2"]`,
+					`//default:Terminal[@connectivityNode="S1/V1/B1_1/L1" and @cNodeName="L1" and @cNodeUuid = //default:ConnectivityNode[@templateUuid="${L1}"]/@uuid]`,
+					`//default:Terminal[@connectivityNode="S1/V1/B1_1/L2" and @bayName="B1_1" and @cNodeName="L2" and @cNodeUuid = //default:ConnectivityNode[@templateUuid="${L2}"]/@uuid]`,
+				],
+				unexpectedQueries: [
+					`//default:Terminal[@cNodeUuid="${L1}" or @cNodeUuid="${L2}"]`,
+					'//default:*[contains(@pathName, "TEMPLATE") or @substationName="TEMPLATE"]',
+				],
+			},
+	}
+
+	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+
+		await target.transaction(async (tx) => {
+			await instantiateSsd(tx, { sourceQuery: source.query, scopeRef, targetParent: bayRef })
+		})
+
+		await source.transaction(async (tx) => {
+			await tx.update({ tagName: 'ConnectivityNode', id: 'l1' } as Scl.Ref<'ConnectivityNode'>, {
+				attributes: { name: 'L9' },
+			})
+			await tx.addChild(scopeRef, {
+				tagName: 'ConnectivityNode',
+				// pathName, connectivityNode and the level names are written from the place
+				attributes: { name: 'L2', pathName: 'X/X', uuid: L2 },
+			})
+			await tx.addChild(
+				{ tagName: 'ConductingEquipment', id: 'qa1' } as Scl.Ref<'ConductingEquipment'>,
+				{
+					tagName: 'Terminal',
+					attributes: { connectivityNode: 'X/X', cNodeName: 'X', cNodeUuid: L2 },
+				},
+			)
+		})
+
+		await target.transaction(async (tx) => {
+			await updateSsd(tx, {
+				sourceQuery: source.query,
+				scopeRef,
+				targetParent: bayRef,
+				scenario: 'template',
+			})
+		})
+
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})

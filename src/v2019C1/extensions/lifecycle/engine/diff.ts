@@ -422,8 +422,13 @@ async function computeAttributeChanges(
 	},
 ): Promise<AttributeChange[]> {
 	const { targetQuery, sourceNode, instanceNode } = params
-	const desired = visibleAttributes(await sourceQuery.any.getAttributes(sourceNode))
-	const current = visibleAttributes(await targetQuery.any.getAttributes(instanceNode))
+	const sourceAttributes = await sourceQuery.any.getAttributes(sourceNode)
+	const instanceAttributes = await targetQuery.any.getAttributes(instanceNode)
+	const desired = visibleAttributes({ tagName: sourceNode.tagName, attributes: sourceAttributes })
+	const current = visibleAttributes({
+		tagName: instanceNode.tagName,
+		attributes: instanceAttributes,
+	})
 
 	const changes: AttributeChange[] = []
 	for (const name of new Set([...Object.keys(desired), ...Object.keys(current)])) {
