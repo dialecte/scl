@@ -13,6 +13,7 @@ export {
 	TYPE_ID_REFERRERS_BY_TARGET,
 	TYPE_ID_TARGET_TAGS,
 	LOCKED_LNODE_ATTRIBUTES,
+	LNODE_BINDING_ATTRIBUTES,
 } from './derived'
 export { REF_CONTAINERS } from './orphan-rules'
 export { PATH_EXTRACTION_CONFIG, PATH_CONTRIBUTING_ATTRIBUTES } from './path-extraction'

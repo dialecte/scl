@@ -69,6 +69,12 @@ export const MAPPED_NAME_REFS: ReadonlyMap<string, { path: string; uuid: string 
 )
 
 /**
+ * The attributes binding an LNode to the logical node that implements it: its naming
+ * (`iedName/ldInst/prefix/lnClass/lnInst`) and `lnUuid`.
+ */
+export const LNODE_BINDING_ATTRIBUTES: readonly string[] = [...LNODE_NAMING_ATTRIBUTES, 'lnUuid']
+
+/**
  * Per tag, the attributes whose change moves the default implementation of the `DOS` / `SDS` /
  * `DAS` below a record: the `LNode` identity and its `lnUuid` (the logical node it is mapped
  * to), and a parent data's name, array index and own mapped attributes.
@@ -119,18 +125,20 @@ export const TYPE_ID_REFERRERS_BY_TARGET: ReadonlyMap<TypeIdTarget, readonly Typ
 export const TYPE_ID_TARGET_TAGS: ReadonlySet<string> = new Set(TYPE_ID_REFERRERS_BY_TARGET.keys())
 
 /**
- * The attributes an LNode locked (implemented) in an IED owns: its schema identity
- * tuple (`iedName/ldInst/prefix/lnClass/lnInst`) plus its type reference (`lnType`).
- * A lifecycle reconcile must never overwrite these on a locked LNode. Derived from
- * the schema `identityFields` and the type-id reference registry.
+ * The attributes an LNode bound to an IED owns: where it is implemented — its naming
+ * (`iedName/ldInst/prefix/lnClass/lnInst`, the logical node's once bound) and `lnUuid`,
+ * the logical node it is bound to — and its type reference (`lnType`). A template update
+ * neither compares nor writes them on a bound LNode: its specification is in its
+ * `LNodeSpecNaming`. Derived from the schema `identityFields` and the type-id reference
+ * registry.
  */
 export const LOCKED_LNODE_ATTRIBUTES: ReadonlySet<string> = new Set<string>([
-	...LNODE_NAMING_ATTRIBUTES,
+	...LNODE_BINDING_ATTRIBUTES,
 	...(TYPE_ID_REF_ATTRIBUTES.get('LNode') ?? []),
 ])
 
 function buildMappedDataDefaultAttributes(): Map<string, readonly string[]> {
-	const entries: [string, readonly string[]][] = [['LNode', [...LNODE_NAMING_ATTRIBUTES, 'lnUuid']]]
+	const entries: [string, readonly string[]][] = [['LNode', LNODE_BINDING_ATTRIBUTES]]
 	for (const tagName of ['DOS', 'SDS']) {
 		const attributeNames = MAPPED_NAME_REFS.get(tagName)
 		if (attributeNames) {

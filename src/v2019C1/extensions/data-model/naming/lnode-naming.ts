@@ -11,8 +11,7 @@ import type { SpecifiedNaming } from './lnode-naming.types'
 export function specifiedNamingOf(
 	lnodeAttributes: Readonly<Record<string, string>>,
 ): SpecifiedNaming {
-	const iedName = lnodeAttributes.iedName
-	const derived = Boolean(iedName) && iedName !== UNALLOCATED_IED_NAME
+	const derived = isAssignedToIed({ iedName: lnodeAttributes.iedName })
 	const leftOut = derived ? ['iedName', 'ldInst'] : ['iedName']
 
 	const attributes: SpecifiedNaming['attributes'] = []
@@ -43,4 +42,10 @@ export function unassignedNaming(params: {
 		naming[name] = name === 'lnClass' ? (specified ?? lnodeAttributes.lnClass) : specified
 	}
 	return naming
+}
+
+/** Whether an LNode named `iedName` is assigned to an IED: the name is set and is not `None`. */
+export function isAssignedToIed(params: { iedName: string | undefined }): boolean {
+	const { iedName } = params
+	return Boolean(iedName) && iedName !== UNALLOCATED_IED_NAME
 }

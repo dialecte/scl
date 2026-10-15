@@ -1,16 +1,15 @@
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
+import { projectOwnedAttributes } from './project-owned-attributes'
 import { indexRedirectedSourceUuids } from './reference-match'
 import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
-import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
-import { LOCKED_LNODE_ATTRIBUTES } from '@/v2019C1/extensions/reference'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { PinnedMatches } from './match-child'
@@ -415,7 +414,11 @@ async function updateMatchedAttributes(
 		...visibleAttributes(await sourceQuery.any.getAttributes(sourceNode)),
 		...overrides?.get(sourceNode.id),
 	}
-	const current = visibleAttributes(await tx.any.getAttributes(instanceRecord))
+	const instanceAttributes = await tx.any.getAttributes(instanceRecord)
+	const current = visibleAttributes(instanceAttributes)
+	// what the project owns on the element (a bound LNode's implementation and type) is never
+	// written, even when a user edit overlaid above lists it
+	const owned = projectOwnedAttributes({ tagName: instanceRecord.tagName, instanceAttributes })
 
 	// Union of both sides: a name present on the template overwrites, a name the
 	// template dropped (present on the instance, absent from `desired`) is cleared
@@ -423,17 +426,8 @@ async function updateMatchedAttributes(
 	const updates: Record<string, string | undefined> = {}
 	for (const name of new Set([...Object.keys(desired), ...Object.keys(current)])) {
 		const next = name in desired ? desired[name] : undefined
+		if (owned.has(name)) continue
 		if (current[name] !== next) updates[name] = next
-	}
-
-	// A locked LNode (implemented in an IED) owns its identity + `lnType` — never let a
-	// template reconcile (or a user edit overlaid above) overwrite any of them.
-	if (
-		instanceRecord.tagName === 'LNode' &&
-		Object.keys(updates).some((attr) => LOCKED_LNODE_ATTRIBUTES.has(attr)) &&
-		(await isLNodeLocked(tx, instanceRecord))
-	) {
-		for (const attr of LOCKED_LNODE_ATTRIBUTES) delete updates[attr]
 	}
 
 	if (Object.keys(updates).length > 0) {

@@ -1,8 +1,11 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
-import { SPECIFIED_NAMING_ATTRIBUTES, UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
-import { specifiedNamingOf } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
+import { SPECIFIED_NAMING_ATTRIBUTES } from '@/v2019C1/constants'
+import {
+	isAssignedToIed,
+	specifiedNamingOf,
+} from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 import {
 	addChildToPrivate,
 	handleNewPrivateRecordCase,
@@ -170,5 +173,5 @@ export async function mirrorSpecifiedNaming(
 
 function isAssigned(record: Scl.RawRecord<Scl.ElementsOf>): boolean {
 	const iedName = record.attributes.find((attribute) => attribute.name === 'iedName')?.value
-	return Boolean(iedName) && iedName !== UNALLOCATED_IED_NAME
+	return isAssignedToIed({ iedName })
 }

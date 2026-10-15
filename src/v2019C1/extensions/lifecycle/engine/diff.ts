@@ -2,6 +2,7 @@ import { groupChanges } from './group'
 import { instanceTagOf } from './instance-tag'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
+import { projectOwnedAttributes } from './project-owned-attributes'
 import {
 	indexRedirectedSourceUuids,
 	referenceIdentity,
@@ -423,10 +424,13 @@ async function computeAttributeChanges(
 ): Promise<AttributeChange[]> {
 	const { targetQuery, sourceNode, instanceNode } = params
 	const desired = visibleAttributes(await sourceQuery.any.getAttributes(sourceNode))
-	const current = visibleAttributes(await targetQuery.any.getAttributes(instanceNode))
+	const instanceAttributes = await targetQuery.any.getAttributes(instanceNode)
+	const current = visibleAttributes(instanceAttributes)
+	const owned = projectOwnedAttributes({ tagName: instanceNode.tagName, instanceAttributes })
 
 	const changes: AttributeChange[] = []
 	for (const name of new Set([...Object.keys(desired), ...Object.keys(current)])) {
+		if (owned.has(name)) continue
 		const before = current[name]
 		const after = desired[name]
 		if (before !== after) changes.push({ name, before, after })

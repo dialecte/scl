@@ -1,5 +1,5 @@
-import { LNODE_NAMING_ATTRIBUTES, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { LNODE_BINDING_ATTRIBUTES, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { LN_TARGETS } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnode.constants'
 
 import type { ReferencePair } from '@/v2019C1/extensions/reference/constants'
@@ -30,7 +30,7 @@ export const IMPLEMENTATION_TARGET_TAGS: ReadonlySet<string> = new Set([
  * new to judge.
  */
 export const JUDGED_ATTRIBUTES_BY_TAG: ReadonlyMap<string, ReadonlySet<string>> = new Map([
-	['LNode', new Set([...LNODE_NAMING_ATTRIBUTES, 'lnUuid'])],
+	['LNode', new Set(LNODE_BINDING_ATTRIBUTES)],
 	...[...IMPLEMENTATION_PAIRS_BY_REF].map(
 		([tagName, pairs]) =>
 			[tagName, new Set(pairs.map((pair) => pair.attribute.uuid))] as [string, ReadonlySet<string>],

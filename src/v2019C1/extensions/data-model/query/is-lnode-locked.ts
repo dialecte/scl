@@ -1,4 +1,4 @@
-import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
+import { isAssignedToIed } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -22,5 +22,5 @@ export async function isLNodeLocked(
 	ref: AnyRefOrRecord,
 ): Promise<boolean> {
 	const iedName = await query.any.getAttribute(ref, { name: 'iedName' })
-	return Boolean(iedName) && iedName !== UNALLOCATED_IED_NAME
+	return isAssignedToIed({ iedName })
 }
