@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.9.0] - 2026-10-15
+
 ### Added
 
 - **A terminal follows its connectivity node.** A `Terminal` or a `NeutralPoint` names its `ConnectivityNode` by `cNodeUuid`, by its path (`connectivityNode`) and by the names of the levels holding it (`processName`, `lineName`, `substationName`, `voltageLevelName`, `bayName`, `cNodeName`). Creating one with its uuid writes the path and the names; renaming the node or a level above it rewrites them, and the node's own `pathName`; pointing it at another node rewrites them from that node; deleting the node deletes the terminals connected to it, the equipment stays. Extracting, instantiating and updating a bay-typical keep every terminal naming the nodes of its own copy. `DERIVED_REFERENCE_ATTRIBUTES` lists the attributes written from a path, `REF_ENTRIES_BY_TARGET` the references that can name each element. `buildReferencePath` takes the target's path when the caller already read it.
