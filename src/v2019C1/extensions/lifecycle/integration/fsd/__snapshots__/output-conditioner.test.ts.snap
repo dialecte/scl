@@ -25,7 +25,7 @@ exports[`lifecycle integration — Output Conditioner FSD rev1 → rev2 (golden)
                             <eIEC61850-6-100:LNodeSpecNaming sLnClass="LCBO" sLnInst="1"/>
                         </Private>
                     </LNode>
-                    <LNode iedName="none" lnClass="LPDO" lnInst="1" templateUuid="uuid-10" uuid="uuid-11">
+                    <LNode iedName="None" lnClass="LPDO" lnInst="1" templateUuid="uuid-10" uuid="uuid-11">
                         <Private type="eIEC61850-6-100">
                             <eIEC61850-6-100:LNodeSpecNaming sLnClass="LPDO" sLnInst="1"/>
                         </Private>

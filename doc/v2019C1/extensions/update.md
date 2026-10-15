@@ -128,7 +128,7 @@ type DecisionGroup = {
 type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 ```
 
-The attributes classified are those the element's definition declares where it sits — the type it names with `xsi:type` included — not only the tag's. Each is `identity`, `reference`, `rename` or `free` (`AttributeEditability`); only the last two are listed. Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: `reconcile` never overwrites them, even when a UI-instructed edit lists them. The binding is the lock (`dataModel.isLNodeLocked`); a dangling binding stays locked until orphan cleanup resolves it.
+The attributes classified are those the element's definition declares where it sits — the type it names with `xsi:type` included — not only the tag's. Each is `identity`, `reference`, `rename` or `free` (`AttributeEditability`); only the last two are listed. Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns its implementation identity (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`) and `lnType`: `reconcile` never overwrites them, even when a UI-instructed edit lists them. The binding is the lock (`dataModel.isLNodeLocked`); a binding to a logical node the document does not hold is released by `apply` for what it places (see [below](#lnodes-placed-bound-to-a-device-the-project-lacks)) and by the extract clean-up.
 
 `apply` takes `resolution.decisions: Map<groupId, GroupDecision>` where a decision is either a plain
 accept/skip or an object carrying **edited values** for the group's `editableAttributes`:
@@ -341,6 +341,15 @@ the parent's definition, read with `query.getDefinition`), as the schema writes 
   logical nodes of a template are not renumbered;
 - a value is compared only on the children carrying every field the rule reads: a child missing one of
   them is not compared.
+
+### LNodes placed bound to a device the project lacks
+
+An `LNode` bound to an IED names the logical node (`LN` / `LN0`) that implements it, and that logical node must be in the document. A template keeps the bindings it had: once everything is written, and before the consumer's step, `apply` looks at the implementation the run **wrote**: every `LNode`, `DOS` / `SDS` / `DAS` and `SourceRef` / `ControlRef` it created (in a level it created too), and those it updated on their binding or on a reference (a binding it copied onto an `LNode` the project held). One it only touched otherwise, a child added under it for instance, is not looked at. What names nothing in the project is released (`cleanUp.resetLNode` on those elements, see [Clean-up](./clean-up#resetlnode)):
+
+- bound to a logical node the project does not hold → assigned to no IED (`iedName="None"`, `ldInst` and `lnUuid` removed, `prefix` / `lnClass` / `lnInst` from its `LNodeSpecNaming`, which keeps its values). With an `lnUuid`, only the logical node of that uuid counts, whatever its naming says;
+- its `DOS` / `SDS` / `DAS` mapped to a logical node, or its `SourceRef` / `ControlRef` naming an `ExtRef` / `ExtCtrl`, the project does not hold → that name is removed, the element stays.
+
+A `fork` of the same file whose project holds the logical node keeps the binding. What the run did not write is left as it is, even when it names nothing. The verbs called directly (`tx.lifecycle.instantiate.*`, `tx.lifecycle.update.*`) do not do it: they are steps of `apply`.
 
 ### The consumer's step after the apply — `resolution.afterApply`
 

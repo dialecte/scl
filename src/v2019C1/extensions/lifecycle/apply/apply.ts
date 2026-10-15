@@ -1,3 +1,6 @@
+import { collectWrittenImplementation } from './collect-written-implementation'
+
+import { cleanUp } from '@/v2019C1/extensions/clean-up'
 import { makeUnique } from '@/v2019C1/extensions/lifecycle/constraints'
 import {
 	allGroups,
@@ -66,7 +69,13 @@ export async function apply(
 	if (decisions) assertDecisionsCoherent({ groups: allGroups(report), decisions })
 	// the report tells what THIS run places: what an earlier run placed is forgotten first
 	clearAnnotations({ report })
+	const writtenFrom = tx.getStagedOperations().length
 	const instances = await runVerb(tx, params, report, decisions) // no decisions: no gate = apply all
+
+	// what the template brings keeps the implementation it had there: what this run wrote naming a
+	// logical node, ExtRef or ExtCtrl the project lacks is released, once everything is written
+	const elements = collectWrittenImplementation(tx, { from: writtenFrom })
+	if (elements.length > 0) await cleanUp.transaction.resetLNode(tx, { elements })
 
 	// the consumer's own step, once everything is written, in the same transaction
 	const afterApply = params.resolution?.afterApply
