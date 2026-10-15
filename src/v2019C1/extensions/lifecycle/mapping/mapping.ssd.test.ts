@@ -189,3 +189,70 @@ describe('shared-element mapping — an SSD carrying an application', () => {
 
 	runSclTestCases.withoutExport({ testCases, act })
 })
+
+/**
+ * The shared elements of an SSD are looked for from where its unit lands, not from the element the
+ * consumer started from: the candidates are listed from that level outwards.
+ */
+describe('shared-element mapping — an SSD started above the level it lands on', () => {
+	// The bay lands in the only voltage level; a role of the typical's name sits at that voltage
+	// level and another at the substation the consumer starts from.
+	const twoRolesProjectXml = /* xml */ `
+		<SCL ${ns} ${id}="scd">
+			<Header id="project" uuid="project-uuid" ${id}="header-t"/>
+			<Substation name="S1" ${id}="substation-t">
+				<Private type="eIEC61850-6-100" ${id}="substation-private-t">
+					<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="substation-role-uuid" ${id}="substation-role-t"/>
+				</Private>
+				<VoltageLevel name="V1" ${id}="voltage-level-t">
+					<Private type="eIEC61850-6-100" ${id}="voltage-level-private-t">
+						<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="voltage-level-role-uuid" ${id}="voltage-level-role-t"/>
+					</Private>
+					<!-- no bay: the typical's bay is placed here -->
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+
+	type LandingTestCase = SclTest.BaseXmlTestCase & {
+		targetXml: string
+		anchor: Scl.Ref<Scl.ElementsOf>
+		expected: {
+			/** Ids of the project roles the report offers for the source role, in order. */
+			candidateIds: string[]
+		}
+	}
+
+	const testCases: SclTest.TestCases<LandingTestCase> = {
+		'started from the substation, the bay lands in its voltage level → the voltage level role listed first':
+			{
+				sourceXml,
+				targetXml: twoRolesProjectXml,
+				anchor: { tagName: 'Substation', id: 'substation-t' },
+				expected: { candidateIds: ['voltage-level-role-t', 'substation-role-t'] },
+			},
+	}
+
+	async function act({
+		testCase,
+		source,
+		target,
+	}: SclTest.ActParams<LandingTestCase>): Promise<void> {
+		if (!target) throw new Error('target required')
+
+		const reported = await report(target.query, {
+			verb: 'ssd',
+			scenario: 'instantiate',
+			sourceQuery: source.query,
+			ref: substationRef,
+			anchor: testCase.anchor,
+		})
+		const roleMapping = reported.mappings.find((mapping) => mapping.id === 'role-s')
+		expect(
+			roleMapping?.candidates.map((candidate) => candidate.ref.id),
+			'report',
+		).toEqual(testCase.expected.candidateIds)
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
