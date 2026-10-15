@@ -628,3 +628,197 @@ describe('import of paths through an LNode bound to an IED', () => {
 
 	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
 })
+
+describe('import of an IED reference named by a tuple', () => {
+	/** P1 subscribes to P2: P2 publishes gcb1 from its LLN0 and holds Q0XCBR2; both on subnetwork W1. */
+	function twoDevicesXml(
+		params: {
+			subscriber?: string
+			communication?: string
+			subscribers?: string
+			reportControls?: string
+		} = {},
+	): string {
+		const { subscriber = '', communication = '', subscribers = '', reportControls = '' } = params
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Header id="project"/>
+				<Communication ${id}="communication">
+					<SubNetwork ${id}="subnetwork" name="W1">
+						${communication}
+					</SubNetwork>
+				</Communication>
+				<IED ${id}="p1" name="P1">
+					<AccessPoint ${id}="p1-hmi-ap" name="AP2" uuid="p1-hmi-ap-uuid">
+						<LN ${id}="p1-hmi" lnClass="IHMI" inst="1" lnType="IHMI_T" uuid="p1-hmi-uuid"/>
+					</AccessPoint>
+					<AccessPoint ${id}="p1-ap" name="AP1" uuid="p1-ap-uuid">
+						<Server ${id}="p1-server">
+							<LDevice ${id}="p1-ld" inst="LD0" uuid="p1-ld-uuid">
+								<LN0 ${id}="p1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p1-lln0-uuid">
+									${subscriber}
+								</LN0>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<IED ${id}="p2" name="P2">
+					<AccessPoint ${id}="p2-ap" name="AP1" uuid="p2-ap-uuid">
+						<Server ${id}="p2-server">
+							<LDevice ${id}="p2-ld" inst="LD0" uuid="p2-ld-uuid">
+								<LN0 ${id}="p2-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p2-lln0-uuid">
+									<DataSet ${id}="p2-dataset" name="ds1">
+										<FCDA ${id}="p2-fcda" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" fc="ST"/>
+									</DataSet>
+									<GSEControl ${id}="p2-gcb" name="gcb1" appID="gcb1" datSet="ds1" uuid="p2-gcb-uuid">
+										${subscribers}
+									</GSEControl>
+									${reportControls}
+								</LN0>
+								<LN ${id}="p2-breaker" prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="p2-breaker-uuid"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+			</SCL>
+		`
+	}
+
+	const testCases: SclTest.TestCases = {
+		'ConnectedAP naming an access point of the file -> its apUuid filled': {
+			sourceXml: twoDevicesXml({
+				communication: `<ConnectedAP ${id}="p2-connected-ap" iedName="P2" apName="AP1"/>`,
+			}),
+			expectedQueries: [
+				'//default:ConnectedAP[@iedName="P2"][@apName="AP1"][@apUuid="p2-ap-uuid"]',
+			],
+		},
+
+		'ExtRef bound by its names to an LN and a control block of the file -> lnUuid and srcCBUuid filled':
+			{
+				sourceXml: twoDevicesXml({
+					subscriber: /* xml */ `
+						<Inputs ${id}="p1-inputs">
+							<ExtRef ${id}="p1-ext-ref" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" daName="stVal" srcLDInst="LD0" srcCBName="gcb1" intAddr="Pos.stVal"/>
+						</Inputs>
+					`,
+				}),
+				expectedQueries: [
+					'//default:ExtRef[@iedName="P2"][@lnUuid="p2-breaker-uuid"][@srcCBUuid="p2-gcb-uuid"]',
+				],
+			},
+
+		'GSE of a ConnectedAP naming a control block of its device -> its cbUuid filled': {
+			sourceXml: twoDevicesXml({
+				communication: /* xml */ `
+					<ConnectedAP ${id}="p2-connected-ap" iedName="P2" apName="AP1">
+						<GSE ${id}="p2-gse" ldInst="LD0" cbName="gcb1"/>
+					</ConnectedAP>
+				`,
+			}),
+			expectedQueries: ['//default:GSE[@ldInst="LD0"][@cbName="gcb1"][@cbUuid="p2-gcb-uuid"]'],
+		},
+
+		'FCDA naming an LN of its own device -> its lnUuid filled': {
+			sourceXml: twoDevicesXml(),
+			expectedQueries: ['//default:FCDA[@lnClass="XCBR"][@lnUuid="p2-breaker-uuid"]'],
+		},
+
+		'IEDName naming a subscriber by its access point -> apUuid filled, nothing else': {
+			sourceXml: twoDevicesXml({
+				subscribers: `<IEDName ${id}="subscriber" apRef="AP1">P1</IEDName>`,
+			}),
+			expectedQueries: ['//default:IEDName[@apRef="AP1"][@apUuid="p1-ap-uuid"][not(@ldUuid)]'],
+		},
+
+		'IEDName naming a subscriber logical device -> ldUuid filled, not apUuid': {
+			sourceXml: twoDevicesXml({
+				subscribers: `<IEDName ${id}="subscriber" apRef="AP1" ldInst="LD0">P1</IEDName>`,
+			}),
+			expectedQueries: ['//default:IEDName[@ldInst="LD0"][@ldUuid="p1-ld-uuid"][not(@apUuid)]'],
+		},
+
+		'ExtRef bound to a device the file does not hold -> left as written': {
+			sourceXml: twoDevicesXml({
+				subscriber: /* xml */ `
+					<Inputs ${id}="p1-inputs">
+						<ExtRef ${id}="p1-ext-ref" iedName="P9" ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Tr" intAddr="Tr.general"/>
+					</Inputs>
+				`,
+			}),
+			expectedQueries: ['//default:ExtRef[@iedName="P9"][not(@lnUuid)]'],
+		},
+
+		'ExtRef not bound yet (intAddr only) -> left as written': {
+			sourceXml: twoDevicesXml({
+				subscriber: /* xml */ `
+					<Inputs ${id}="p1-inputs">
+						<ExtRef ${id}="p1-ext-ref" intAddr="Trip.general"/>
+					</Inputs>
+				`,
+			}),
+			expectedQueries: ['//default:ExtRef[@intAddr="Trip.general"][not(@lnUuid)][not(@srcCBUuid)]'],
+		},
+
+		'ConnectedAP already holding a uuid -> left as written': {
+			allowIncoherentReferences: 'the uuid names no element of the file: what the import keeps',
+			sourceXml: twoDevicesXml({
+				communication: `<ConnectedAP ${id}="p2-connected-ap" iedName="P2" apName="AP1" apUuid="kept-uuid"/>`,
+			}),
+			expectedQueries: ['//default:ConnectedAP[@apUuid="kept-uuid"]'],
+			unexpectedQueries: ['//default:ConnectedAP[@apUuid="p2-ap-uuid"]'],
+		},
+
+		'ExtRef bound inside its own IED (iedName @) -> lnUuid filled': {
+			sourceXml: twoDevicesXml({
+				subscriber: /* xml */ `
+					<Inputs ${id}="p1-inputs">
+						<ExtRef ${id}="p1-ext-ref" iedName="@" ldInst="LD0" lnClass="LLN0" doName="Beh" intAddr="Beh.stVal"/>
+					</Inputs>
+				`,
+			}),
+			expectedQueries: ['//default:ExtRef[@iedName="@"][@lnUuid="p1-lln0-uuid"]'],
+		},
+
+		'GOOSE and report control blocks of the same name -> each reference gets the one of its kind': {
+			sourceXml: twoDevicesXml({
+				reportControls: `<ReportControl ${id}="p2-rcb" name="gcb1" confRev="1" uuid="p2-rcb-uuid"/>`,
+				communication: /* xml */ `
+					<ConnectedAP ${id}="p2-connected-ap" iedName="P2" apName="AP1">
+						<GSE ${id}="p2-gse" ldInst="LD0" cbName="gcb1"/>
+					</ConnectedAP>
+				`,
+				subscriber: /* xml */ `
+					<Inputs ${id}="p1-inputs">
+						<ExtRef ${id}="p1-goose" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" serviceType="GOOSE" srcCBName="gcb1" intAddr="Pos"/>
+						<ExtRef ${id}="p1-report" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" serviceType="Report" srcCBName="gcb1" intAddr="PosRpt"/>
+						<ExtRef ${id}="p1-unknown" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" srcCBName="gcb1" intAddr="PosAny"/>
+					</Inputs>
+				`,
+			}),
+			expectedQueries: [
+				'//default:GSE[@cbName="gcb1"][@cbUuid="p2-gcb-uuid"]',
+				'//default:ExtRef[@intAddr="Pos"][@srcCBUuid="p2-gcb-uuid"]',
+				'//default:ExtRef[@intAddr="PosRpt"][@srcCBUuid="p2-rcb-uuid"]',
+				// no service type: two control blocks answer, none is chosen
+				'//default:ExtRef[@intAddr="PosAny"][not(@srcCBUuid)]',
+			],
+		},
+
+		'ClientLN naming a logical node held by an access point -> left as written': {
+			sourceXml: twoDevicesXml({
+				reportControls: /* xml */ `
+					<ReportControl ${id}="p2-rcb" name="rcb1" confRev="1" uuid="p2-rcb-uuid">
+						<RptEnabled ${id}="p2-rpt-enabled">
+							<ClientLN ${id}="p2-client" iedName="P1" apRef="AP2" ldInst="LD0" lnClass="IHMI" lnInst="1"/>
+						</RptEnabled>
+					</ReportControl>
+				`,
+			}),
+			// P1 holds that IHMI1 directly in its access point AP2, outside any logical device
+			expectedQueries: ['//default:ClientLN[@apRef="AP2"][@lnClass="IHMI"][not(@lnUuid)]'],
+		},
+	}
+
+	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+})

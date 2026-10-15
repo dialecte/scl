@@ -566,6 +566,25 @@ On import, the full path an earlier version wrote (`S1/F1/PR1`) still resolves a
 
 Path format requires context not available during streaming. These pairs are recognized but not resolvable at runtime.
 
+### References of the IED section named by their attributes
+
+Some references of the IED section name their target by several attributes (a tuple) beside one uuid attribute, instead of one path. They are listed in `TUPLE_REFERENCE_PAIRS`:
+
+| Referrer                             | uuid                           | Target                                                 | Named by                                                                                                                |
+| ------------------------------------ | ------------------------------ | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `ConnectedAP`, `KDC`                 | `apUuid`                       | `AccessPoint`                                          | `iedName`, `apName`                                                                                                     |
+| `ServerAt`                           | `apUuid`                       | `AccessPoint`                                          | the IED it sits in, `apName`                                                                                            |
+| `ClientLN`, `Association`, `ExtCtrl` | `lnUuid`                       | `LN` / `LN0`                                           | `iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst`                                                                      |
+| `ExtRef`                             | `lnUuid`                       | `LN` / `LN0`                                           | `iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst`                                                                      |
+| `ExtRef`                             | `srcCBUuid`                    | `GSEControl` / `SampledValueControl` / `ReportControl` | `iedName`, `srcLDInst`, `srcPrefix`, `srcLNClass`, `srcLNInst`, `srcCBName`                                             |
+| `FCDA`                               | `lnUuid`                       | `LN` / `LN0`                                           | the IED it sits in, `ldInst`, `prefix`, `lnClass`, `lnInst`                                                             |
+| `GSE`, `SMV`                         | `cbUuid`                       | `GSEControl` / `SampledValueControl`                   | the `iedName` of its `ConnectedAP`, `ldInst`, `cbName`                                                                  |
+| `IEDName`                            | `apUuid` / `ldUuid` / `lnUuid` | `AccessPoint` / `LDevice` / `LN` / `LN0`               | its text (the IED), `apRef` / `ldInst` / `ldInst`, `prefix`, `lnClass`, `lnInst` — the most precise one that is written |
+
+A name the referrer leaves out takes its schema value. An `ExtRef` / `ExtCtrl` writing `iedName="@"` names the IED it sits in. An `ExtRef` naming a control block without its logical device names the one of the data it subscribes to (`ldInst`); without its logical node, `LN0`, the only element holding GOOSE and sampled value control blocks. Control blocks of different kinds may share a name: an `ExtRef`'s `serviceType` (`GOOSE`, `SMV`, `Report`) says which one it names. An access point is not part of a data path: it is named apart (IED and access point name), and the paths of logical nodes do not change.
+
+On import, such a reference written without its uuid gets the uuid of the element its names name in the file. A name naming nothing in the file (another device, in a file of one device), or naming several elements the reference cannot tell apart, is left as written, without a warning. A logical node held directly by an access point (a client logical node) is not named this way yet: a `ClientLN` naming one is left as written.
+
 ---
 
 ## Automatic coherence (record hooks)
@@ -603,6 +622,7 @@ The `reference` module re-exports its internal lookup tables and types for advan
 import {
 	RESOLUTION_TYPE,
 	UUID_REFERENCE_PAIRS,
+	TUPLE_REFERENCE_PAIRS,
 	RESOLUTION_TARGET_REFS,
 	RESOLVABLE_RESOLUTIONS,
 	PAIRS_BY_REF,
@@ -618,6 +638,7 @@ import {
 | ------------------------------ | -------------------------------------------------------------------------- |
 | `RESOLUTION_TYPE`              | Enum-like object of strategy keys (`direct`, `lnode`, etc.)                |
 | `UUID_REFERENCE_PAIRS`         | All REF element + path attribute -> target + strategy pairs                |
+| `TUPLE_REFERENCE_PAIRS`        | IED-section references named by several attributes beside one uuid         |
 | `RESOLUTION_TARGET_REFS`       | Derived: target tag names that can be referenced                           |
 | `RESOLVABLE_RESOLUTIONS`       | Derived: pairs whose strategy is not `unsupported`                         |
 | `PAIRS_BY_REF`                 | Derived: pairs grouped by REF element tag name                             |

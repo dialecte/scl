@@ -17,6 +17,7 @@ import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/buil
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { createSpecNamingImport } from '@/v2019C1/hooks/io/lnode-spec-naming-import'
 import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
+import { createTupleReferenceImport } from '@/v2019C1/hooks/io/tuple-reference-import'
 
 import type {
 	CollectedTarget,
@@ -84,6 +85,7 @@ export function createSclIoHooks(): IOHooks {
 	const xpathWarnings: UnsupportedXPathWarning[] = []
 	let mappedDataImport = createMappedDataImport()
 	let specNamingImport = createSpecNamingImport()
+	const tupleReferenceImport = createTupleReferenceImport()
 
 	function beforeImportRecord(params: {
 		record: AnyRawRecord
@@ -93,6 +95,7 @@ export function createSclIoHooks(): IOHooks {
 		const { tagName } = record
 		mappedDataImport.collect({ record, ancestry })
 		specNamingImport.collect({ record, ancestry })
+		tupleReferenceImport.collect({ record, ancestry })
 
 		// The record is already standardized, so afterStandardizedRecord has
 		// enforced a uuid where the element supports one — just read it.
@@ -195,6 +198,7 @@ export function createSclIoHooks(): IOHooks {
 		warnings.push(...mappedData.warnings)
 		updates.push(...specNaming.updates)
 		warnings.push(...specNaming.warnings)
+		updates.push(...tupleReferenceImport.resolve().updates)
 
 		mappedDataImport = createMappedDataImport()
 		specNamingImport = createSpecNamingImport()

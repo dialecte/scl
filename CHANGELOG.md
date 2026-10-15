@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Importing a file fills the uuid of the IED-section references that name their target by attributes.** A `ConnectedAP` or `KDC` without `apUuid`, an `ExtRef` without `lnUuid` or `srcCBUuid`, an `FCDA`, `ClientLN`, `Association` or `ExtCtrl` without `lnUuid`, a `GSE` or `SMV` without `cbUuid`, an `IEDName` without the uuid of what it names, a `ServerAt` without `apUuid`: each gets the uuid of the access point, logical device, logical node or control block its names name in the file (`iedName="@"` naming the IED the reference sits in, an `ExtRef`'s `serviceType` telling control blocks of the same name apart). A name naming nothing in the file, or several elements it cannot tell apart, is left as written. `TUPLE_REFERENCE_PAIRS` lists these references and the attributes naming their target (types `TupleReferencePair`, `TupleRoles`, `IedRole`).
 - The types of an element's state are exported: `ElementState`, `ElementStateByTag`, `SignalState`, `LNodeState`, `LNodeMapping` - the `state` of `info.of`. So is `DerivedSpecificationNamingWarning`, the member of `SclImportWarning` for an LNode given a derived `LNodeSpecNaming` on import.
 
 ## [0.8.1] - 2026-10-15
