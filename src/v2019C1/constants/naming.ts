@@ -3,3 +3,6 @@ export const TEMPLATE_NAME = 'TEMPLATE'
 
 /** The `iedName` of an LNode assigned to no IED (also the schema default of `iedName`). */
 export const UNALLOCATED_IED_NAME = 'None'
+
+/** The `iedName` an `ExtRef` / `ExtCtrl` writes for the IED it sits in (a reference inside that IED). */
+export const RELATIVE_IED_NAME = '@'

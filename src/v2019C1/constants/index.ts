@@ -1,4 +1,5 @@
 export * from './reference-pairs'
+export type * from './reference-pairs.types'
 export * from './naming'
 export * from './topology-tags'
 export type * from './topology-tags.types'

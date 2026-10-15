@@ -15,6 +15,8 @@
  */
 import { ELEMENT_NAMES } from '@/v2019C1/definition/constants.generated'
 
+import type { TupleReferencePairsShape } from './reference-pairs.types'
+
 /**
  * The elements a function-scoped path (`scope: 'function'`) starts below: the nearest of them above
  * the target is its Function, never a SubFunction.
@@ -316,6 +318,161 @@ export const UUID_REFERENCE_PAIRS = {
 		},
 	],
 } as const
+
+/**
+ * The references of the IED section that name their target by several attributes (a tuple: the IED,
+ * then its logical device, logical node, access point or control block) beside one uuid attribute.
+ * The IED is named by an attribute, by the element's text (`IEDName`), by the IED the referrer sits
+ * in (`FCDA`, `ServerAt`) or by its parent (`GSE` / `SMV`, by their `ConnectedAP`). A name the
+ * referrer leaves out takes its schema value; a control block named without its logical node is in
+ * LN0. Kept apart from {@link UUID_REFERENCE_PAIRS}, which names each target by one path.
+ */
+export const TUPLE_REFERENCE_PAIRS = {
+	Association: [
+		{
+			attribute: { uuid: 'lnUuid' },
+			target: ['LN', 'LN0'],
+			tuple: {
+				ied: { attribute: 'iedName' },
+				lDevice: 'ldInst',
+				prefix: 'prefix',
+				lnClass: 'lnClass',
+				lnInst: 'lnInst',
+			},
+		},
+	],
+	ClientLN: [
+		{
+			attribute: { uuid: 'lnUuid' },
+			target: ['LN', 'LN0'],
+			tuple: {
+				ied: { attribute: 'iedName' },
+				lDevice: 'ldInst',
+				prefix: 'prefix',
+				lnClass: 'lnClass',
+				lnInst: 'lnInst',
+			},
+		},
+	],
+	ConnectedAP: [
+		{
+			attribute: { uuid: 'apUuid' },
+			target: ['AccessPoint'],
+			tuple: { ied: { attribute: 'iedName' }, accessPoint: 'apName' },
+		},
+	],
+	ExtCtrl: [
+		{
+			attribute: { uuid: 'lnUuid' },
+			target: ['LN', 'LN0'],
+			tuple: {
+				ied: { attribute: 'iedName' },
+				lDevice: 'ldInst',
+				prefix: 'prefix',
+				lnClass: 'lnClass',
+				lnInst: 'lnInst',
+			},
+		},
+	],
+	ExtRef: [
+		{
+			attribute: { uuid: 'lnUuid' },
+			target: ['LN', 'LN0'],
+			tuple: {
+				ied: { attribute: 'iedName' },
+				lDevice: 'ldInst',
+				prefix: 'prefix',
+				lnClass: 'lnClass',
+				lnInst: 'lnInst',
+			},
+		},
+		{
+			attribute: { uuid: 'srcCBUuid' },
+			target: ['GSEControl', 'SampledValueControl', 'ReportControl'],
+			// a control block named without its logical device is in the one of the data subscribed to
+			otherwise: { lDevice: 'ldInst' },
+			// control blocks of different kinds may share a name: the service names the kind
+			targetByAttribute: {
+				attribute: 'serviceType',
+				tags: { GOOSE: 'GSEControl', SMV: 'SampledValueControl', Report: 'ReportControl' },
+			},
+			tuple: {
+				ied: { attribute: 'iedName' },
+				lDevice: 'srcLDInst',
+				prefix: 'srcPrefix',
+				lnClass: 'srcLNClass',
+				lnInst: 'srcLNInst',
+				controlBlock: 'srcCBName',
+			},
+		},
+	],
+	FCDA: [
+		{
+			attribute: { uuid: 'lnUuid' },
+			target: ['LN', 'LN0'],
+			tuple: {
+				ied: { ancestor: true },
+				lDevice: 'ldInst',
+				prefix: 'prefix',
+				lnClass: 'lnClass',
+				lnInst: 'lnInst',
+			},
+		},
+	],
+	GSE: [
+		{
+			attribute: { uuid: 'cbUuid' },
+			target: ['GSEControl'],
+			tuple: { ied: { parentAttribute: 'iedName' }, lDevice: 'ldInst', controlBlock: 'cbName' },
+		},
+	],
+	IEDName: [
+		{
+			attribute: { uuid: 'apUuid' },
+			target: ['AccessPoint'],
+			tuple: { ied: { text: true }, accessPoint: 'apRef' },
+			onlyWithout: ['ldInst'],
+		},
+		{
+			attribute: { uuid: 'ldUuid' },
+			target: ['LDevice'],
+			tuple: { ied: { text: true }, lDevice: 'ldInst' },
+			onlyWithout: ['lnClass'],
+		},
+		{
+			attribute: { uuid: 'lnUuid' },
+			target: ['LN', 'LN0'],
+			tuple: {
+				ied: { text: true },
+				lDevice: 'ldInst',
+				prefix: 'prefix',
+				lnClass: 'lnClass',
+				lnInst: 'lnInst',
+			},
+		},
+	],
+	KDC: [
+		{
+			attribute: { uuid: 'apUuid' },
+			target: ['AccessPoint'],
+			tuple: { ied: { attribute: 'iedName' }, accessPoint: 'apName' },
+		},
+	],
+	ServerAt: [
+		{
+			attribute: { uuid: 'apUuid' },
+			target: ['AccessPoint'],
+			tuple: { ied: { ancestor: true }, accessPoint: 'apName' },
+		},
+	],
+	SMV: [
+		{
+			attribute: { uuid: 'cbUuid' },
+			target: ['SampledValueControl'],
+			tuple: { ied: { parentAttribute: 'iedName' }, lDevice: 'ldInst', controlBlock: 'cbName' },
+		},
+	],
+} as const satisfies TupleReferencePairsShape
 
 /**
  * Reference tags that carry semantic CONTENT beyond the pointer: the eIEC signal specs
