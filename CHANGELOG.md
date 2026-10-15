@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.8.1] - 2026-10-15
+
 ### Fixed
 
 - **Extracting or instantiating keeps the attributes of a namespace the dialecte does not declare.** A Substation, VoltageLevel or Bay carrying one (a diagram editor's `esld:x`, `esld:h`) made `lifecycle.extract.ssd` and the instantiation of a template fail with `UNKNOWN_NAMESPACE_PREFIX`: the structural levels were copied through their value object, where such an attribute has no namespace. They are copied with their own entries now, each attribute in its namespace.
