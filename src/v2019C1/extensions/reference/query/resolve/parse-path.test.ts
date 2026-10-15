@@ -274,27 +274,27 @@ describe('reference-parsing', () => {
 			'DOS.mappedDoName through transparent AccessPoint → mappedLnUuid paired, name from the logical node':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ALL_XMLNS_NAMESPACES}>
-						<Substation name="S1">
-							<Bay name="B1">
-								<LNode lnClass="MMXU" lnInst="1">
-									<Private type="eIEC61850-6-100">
-										<eIEC61850-6-100:DOS name="A" mappedDoName="PIU/CT_Function/I01ATCTR1.AmpSv" />
-									</Private>
-								</LNode>
-							</Bay>
-						</Substation>
-						<IED name="PIU">
-							<AccessPoint name="AP1">
-								<Server>
-									<LDevice inst="CT_Function">
-										<LN prefix="I01A" lnClass="TCTR" inst="1" uuid="tctr-uuid" />
-									</LDevice>
-								</Server>
-							</AccessPoint>
-						</IED>
-					</SCL>
-				`,
+						<SCL ${ALL_XMLNS_NAMESPACES}>
+							<Substation name="S1">
+								<Bay name="B1">
+									<LNode lnClass="MMXU" lnInst="1">
+										<Private type="eIEC61850-6-100">
+											<eIEC61850-6-100:DOS name="A" mappedDoName="PIU/CT_Function/I01ATCTR1.AmpSv" />
+										</Private>
+									</LNode>
+								</Bay>
+							</Substation>
+							<IED name="PIU">
+								<AccessPoint name="AP1">
+									<Server>
+										<LDevice inst="CT_Function">
+											<LN prefix="I01A" lnClass="TCTR" inst="1" uuid="tctr-uuid" />
+										</LDevice>
+									</Server>
+								</AccessPoint>
+							</IED>
+						</SCL>
+					`,
 					expectedQueries: ['//v2019C1:DOS[@mappedDoName="AmpSv" and @mappedLnUuid="tctr-uuid"]'],
 				},
 		}
@@ -478,33 +478,33 @@ describe('reference-parsing', () => {
 				},
 			'SourceRef.extRefAddr as the intAddr marked with "@" → extRefUuid populated': {
 				sourceXml: /* xml */ `
-						<SCL ${ALL_XMLNS_NAMESPACES}>
-							<Substation name="S1">
-								<Bay name="B1">
-									<LNode iedName="PIU" ldInst="CB_Function" lnClass="LCBO" lnInst="1">
-										<Private type="eIEC61850-6-100">
-											<eIEC61850-6-100:LNodeInputs>
-												<eIEC61850-6-100:SourceRef input="Trip" extRefAddr="@TrCmd.stVal" />
-											</eIEC61850-6-100:LNodeInputs>
-										</Private>
-									</LNode>
-								</Bay>
-							</Substation>
-							<IED name="PIU">
-								<AccessPoint name="AP1">
-									<Server>
-										<LDevice inst="CB_Function">
-											<LN prefix="" lnClass="LCBO" inst="1">
-												<Inputs>
-													<ExtRef intAddr="TrCmd.stVal" uuid="extref-trcmd-uuid" />
-												</Inputs>
-											</LN>
-										</LDevice>
-									</Server>
-								</AccessPoint>
-							</IED>
-						</SCL>
-					`,
+					<SCL ${ALL_XMLNS_NAMESPACES}>
+						<Substation name="S1">
+							<Bay name="B1">
+								<LNode iedName="PIU" ldInst="CB_Function" lnClass="LCBO" lnInst="1">
+									<Private type="eIEC61850-6-100">
+										<eIEC61850-6-100:LNodeInputs>
+											<eIEC61850-6-100:SourceRef input="Trip" extRefAddr="@TrCmd.stVal" />
+										</eIEC61850-6-100:LNodeInputs>
+									</Private>
+								</LNode>
+							</Bay>
+						</Substation>
+						<IED name="PIU">
+							<AccessPoint name="AP1">
+								<Server>
+									<LDevice inst="CB_Function">
+										<LN prefix="" lnClass="LCBO" inst="1">
+											<Inputs>
+												<ExtRef intAddr="TrCmd.stVal" uuid="extref-trcmd-uuid" />
+											</Inputs>
+										</LN>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+					</SCL>
+				`,
 				expectedQueries: [
 					'//v2019C1:SourceRef[@extRefAddr="@TrCmd.stVal" and @extRefUuid="extref-trcmd-uuid"]',
 				],
@@ -646,18 +646,18 @@ describe('reference-parsing', () => {
 			'two references to one ProcessResource, resourceName written as a path → both resolved, the name rewritten bare':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ALL_XMLNS_NAMESPACES}>
-						<Substation name="S1">
-							<Private type="eIEC61850-6-100">
-								<eIEC61850-6-100:ProcessResources>
-									<eIEC61850-6-100:ProcessResource name="PR1" uuid="pr-uuid" />
-								</eIEC61850-6-100:ProcessResources>
-								<eIEC61850-6-100:ProcessResourceRef processResource="S1/PR1" />
-								<eIEC61850-6-100:ControllingLNode resourceName="S1/PR1" outputName="" />
-							</Private>
-						</Substation>
-					</SCL>
-				`,
+						<SCL ${ALL_XMLNS_NAMESPACES}>
+							<Substation name="S1">
+								<Private type="eIEC61850-6-100">
+									<eIEC61850-6-100:ProcessResources>
+										<eIEC61850-6-100:ProcessResource name="PR1" uuid="pr-uuid" />
+									</eIEC61850-6-100:ProcessResources>
+									<eIEC61850-6-100:ProcessResourceRef processResource="S1/PR1" />
+									<eIEC61850-6-100:ControllingLNode resourceName="S1/PR1" outputName="" />
+								</Private>
+							</Substation>
+						</SCL>
+					`,
 					expectedQueries: [
 						'//v2019C1:ProcessResourceRef[@processResource="S1/PR1" and @processResourceUuid="pr-uuid"]',
 						'//v2019C1:ControllingLNode[@resourceName="PR1" and @resourceUuid="pr-uuid"]',

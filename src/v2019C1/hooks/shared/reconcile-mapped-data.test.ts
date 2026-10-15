@@ -375,9 +375,9 @@ describe('mapped data attributes on create and update', () => {
 		},
 
 		'LNode rebound to the logical node a DOS pair names, same path -> that pair removed': {
-			sourceXml: mappedLNode(/* xml */ `
-				<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="Op" mappedLnUuid="ggio1-uuid"/>
-			`),
+			sourceXml: mappedLNode(
+				/* xml */ `<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="Op" mappedLnUuid="ggio1-uuid"/>`,
+			),
 			act: async (document) => {
 				await document.transaction(async (tx) => {
 					await tx.update(
@@ -390,9 +390,9 @@ describe('mapped data attributes on create and update', () => {
 		},
 
 		'LNode unbound -> a DOS with its own pair keeps it': {
-			sourceXml: mappedLNode(/* xml */ `
-				<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="Op" mappedLnUuid="ggio1-uuid"/>
-			`),
+			sourceXml: mappedLNode(
+				/* xml */ `<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="Op" mappedLnUuid="ggio1-uuid"/>`,
+			),
 			act: async (document) => {
 				await document.transaction(async (tx) => {
 					await tx.update({ tagName: 'LNode', id: 'lnode' }, { attributes: { lnUuid: undefined } })
@@ -430,11 +430,11 @@ describe('mapped data attributes on create and update', () => {
 		'DOS remapped from Health to Beh -> a DAS pair elsewhere kept, a DAS pair now default removed':
 			{
 				sourceXml: mappedLNode(/* xml */ `
-				<eIEC61850-6-100:DOS ${id}="dos-mod" name="Mod" mappedDoName="Health" mappedLnUuid="ptoc1-uuid">
-					<eIEC61850-6-100:DAS ${id}="das-stval" name="stVal" mappedDaName="Ind2.stVal" mappedLnUuid="ptoc1-uuid"/>
-					<eIEC61850-6-100:DAS ${id}="das-q" name="q" mappedDaName="Beh.q" mappedLnUuid="ptoc1-uuid"/>
-				</eIEC61850-6-100:DOS>
-			`),
+					<eIEC61850-6-100:DOS ${id}="dos-mod" name="Mod" mappedDoName="Health" mappedLnUuid="ptoc1-uuid">
+						<eIEC61850-6-100:DAS ${id}="das-stval" name="stVal" mappedDaName="Ind2.stVal" mappedLnUuid="ptoc1-uuid"/>
+						<eIEC61850-6-100:DAS ${id}="das-q" name="q" mappedDaName="Beh.q" mappedLnUuid="ptoc1-uuid"/>
+					</eIEC61850-6-100:DOS>
+				`),
 				act: async (document) => {
 					await document.transaction(async (tx) => {
 						await tx.update(
@@ -450,9 +450,9 @@ describe('mapped data attributes on create and update', () => {
 			},
 
 		'DOS renamed so that its pair is now its default -> pair removed': {
-			sourceXml: mappedLNode(/* xml */ `
-				<eIEC61850-6-100:DOS ${id}="dos-mod" name="Mod" mappedDoName="Health" mappedLnUuid="ptoc1-uuid"/>
-			`),
+			sourceXml: mappedLNode(
+				/* xml */ `<eIEC61850-6-100:DOS ${id}="dos-mod" name="Mod" mappedDoName="Health" mappedLnUuid="ptoc1-uuid"/>`,
+			),
 			act: async (document) => {
 				await document.transaction(async (tx) => {
 					await tx.update({ tagName: 'DOS', id: 'dos-mod' }, { attributes: { name: 'Health' } })
@@ -478,9 +478,9 @@ describe('mapped data attributes on create and update', () => {
 			},
 
 		'logical node a DOS pair names deleted -> both attributes removed, never one': {
-			sourceXml: mappedLNode(/* xml */ `
-				<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="Ind2" mappedLnUuid="ggio1-uuid"/>
-			`),
+			sourceXml: mappedLNode(
+				/* xml */ `<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="Ind2" mappedLnUuid="ggio1-uuid"/>`,
+			),
 			act: async (document) => {
 				await document.transaction(async (tx) => {
 					await tx.delete({ tagName: 'LN', id: 'ggio1' })

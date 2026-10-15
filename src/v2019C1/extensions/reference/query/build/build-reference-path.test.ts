@@ -432,25 +432,25 @@ describe('buildReferencePath — SourceRef / ControlRef name', () => {
 			expected: 'Trip(1).general',
 		},
 		'the input is unique → "Trip"': {
-			sourceXml: withInputs(/* xml */ `
-				<eIEC61850-6-100:SourceRef input="Trip" uuid="sr-uuid" ${ID}="sr-1"/>
-			`),
+			sourceXml: withInputs(
+				/* xml */ `<eIEC61850-6-100:SourceRef input="Trip" uuid="sr-uuid" ${ID}="sr-1"/>`,
+			),
 			reference: inputVar,
 			target: sourceRef,
 			expected: 'Trip',
 		},
 		'the input is unique and has a pDA → "Trip", the pDA left out': {
-			sourceXml: withInputs(/* xml */ `
-				<eIEC61850-6-100:SourceRef input="Trip" pDA="general" uuid="sr-uuid" ${ID}="sr-1"/>
-			`),
+			sourceXml: withInputs(
+				/* xml */ `<eIEC61850-6-100:SourceRef input="Trip" pDA="general" uuid="sr-uuid" ${ID}="sr-1"/>`,
+			),
 			reference: inputVar,
 			target: sourceRef,
 			expected: 'Trip',
 		},
 		'the input is unique with instance 2 → "Trip", the instance left out': {
-			sourceXml: withInputs(/* xml */ `
-				<eIEC61850-6-100:SourceRef input="Trip" inputInst="2" uuid="sr-uuid" ${ID}="sr-1"/>
-			`),
+			sourceXml: withInputs(
+				/* xml */ `<eIEC61850-6-100:SourceRef input="Trip" inputInst="2" uuid="sr-uuid" ${ID}="sr-1"/>`,
+			),
 			reference: inputVar,
 			target: sourceRef,
 			expected: 'Trip',
@@ -474,9 +474,9 @@ describe('buildReferencePath — SourceRef / ControlRef name', () => {
 			expected: 'Trip',
 		},
 		'an input with a dot in its name, unique → "PTOC1.Op"': {
-			sourceXml: withInputs(/* xml */ `
-				<eIEC61850-6-100:SourceRef input="PTOC1.Op" uuid="sr-uuid" ${ID}="sr-1"/>
-			`),
+			sourceXml: withInputs(
+				/* xml */ `<eIEC61850-6-100:SourceRef input="PTOC1.Op" uuid="sr-uuid" ${ID}="sr-1"/>`,
+			),
 			reference: inputVar,
 			target: sourceRef,
 			expected: 'PTOC1.Op',

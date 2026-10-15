@@ -169,25 +169,25 @@ describe('ref-entry-ops', () => {
 			'behavior-description — BehaviorDescription under the Function, SourceRef.input renamed → inputName "<LNode>.<input>" updated':
 				{
 					sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root">
-						<Substation ${id}="sub1" name="Sub1">
-							<Function ${id}="f1" name="F1">
-								<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1">
+						<SCL ${ns} ${id}="root">
+							<Substation ${id}="sub1" name="Sub1">
+								<Function ${id}="f1" name="F1">
+									<LNode ${id}="ln1" lnClass="XCBR" lnInst="1" uuid="uuid-ln1">
+										<Private type="eIEC61850-6-100">
+											<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+												<eIEC61850-6-100:SourceRef ${id}="sref1" uuid="uuid-sref1" input="TripCmd" source="Sub1/F1/XCBR1" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal" />
+											</eIEC61850-6-100:LNodeInputs>
+										</Private>
+									</LNode>
 									<Private type="eIEC61850-6-100">
-										<eIEC61850-6-100:LNodeInputs ${id}="lni1">
-											<eIEC61850-6-100:SourceRef ${id}="sref1" uuid="uuid-sref1" input="TripCmd" source="Sub1/F1/XCBR1" sourceLNodeUuid="uuid-ln1" sourceDoName="Pos" sourceDaName="stVal" />
-										</eIEC61850-6-100:LNodeInputs>
+										<eIEC61850-6-100:BehaviorDescription ${id}="bd1" name="BD1">
+											<eIEC61850-6-100:InputVar ${id}="ivar1" varName="ivar1" inputName="TripCmd" inputUuid="uuid-sref1" />
+										</eIEC61850-6-100:BehaviorDescription>
 									</Private>
-								</LNode>
-								<Private type="eIEC61850-6-100">
-									<eIEC61850-6-100:BehaviorDescription ${id}="bd1" name="BD1">
-										<eIEC61850-6-100:InputVar ${id}="ivar1" varName="ivar1" inputName="TripCmd" inputUuid="uuid-sref1" />
-									</eIEC61850-6-100:BehaviorDescription>
-								</Private>
-							</Function>
-						</Substation>
-					</SCL>
-				`,
+								</Function>
+							</Substation>
+						</SCL>
+					`,
 					act: async (document) => {
 						await document.transaction(async (tx) => {
 							await tx.update(

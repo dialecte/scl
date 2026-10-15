@@ -433,14 +433,14 @@ describe('import of an LNode without its LNodeSpecNaming', () => {
 		'an LNode bound to an IED -> it gains the naming of the logical node it is bound to, without the IED and LD names':
 			{
 				sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root">
-					<Substation ${id}="substation" name="S1">
-						<Function ${id}="function" name="F1">
-							<LNode ${id}="lnode" iedName="P1" ldInst="LD0" prefix="Main" lnClass="PTOC" lnInst="2" />
-						</Function>
-					</Substation>
-				</SCL>
-			`,
+					<SCL ${ns} ${id}="root">
+						<Substation ${id}="substation" name="S1">
+							<Function ${id}="function" name="F1">
+								<LNode ${id}="lnode" iedName="P1" ldInst="LD0" prefix="Main" lnClass="PTOC" lnInst="2" />
+							</Function>
+						</Substation>
+					</SCL>
+				`,
 				expectedQueries: [
 					'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sPrefix="Main"][@sLnClass="PTOC"][@sLnInst="2"]',
 				],

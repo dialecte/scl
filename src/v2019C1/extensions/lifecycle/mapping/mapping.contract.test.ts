@@ -293,20 +293,20 @@ describe('shared-element mapping — the report lists where each shared element 
 			{
 				sourceXml,
 				targetXml: /* xml */ `
-				<SCL ${ns} ${id}="scd">
-					<Substation name="S1" ${id}="substation-t">
-						<Private type="eIEC61850-6-100" ${id}="private-t">
-							<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="role-project-uuid" ${id}="role-t"/>
-						</Private>
-						<VoltageLevel name="V1" ${id}="voltage-level-t">
-							<Private type="eIEC61850-6-100" ${id}="voltage-level-private-t">
-								<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="role-project-uuid-2" ${id}="role-t-2"/>
+					<SCL ${ns} ${id}="scd">
+						<Substation name="S1" ${id}="substation-t">
+							<Private type="eIEC61850-6-100" ${id}="private-t">
+								<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="role-project-uuid" ${id}="role-t"/>
 							</Private>
-							<Bay name="B1" ${id}="bay-t"/>
-						</VoltageLevel>
-					</Substation>
-				</SCL>
-			`,
+							<VoltageLevel name="V1" ${id}="voltage-level-t">
+								<Private type="eIEC61850-6-100" ${id}="voltage-level-private-t">
+									<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="role-project-uuid-2" ${id}="role-t-2"/>
+								</Private>
+								<Bay name="B1" ${id}="bay-t"/>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
 				expectedMappings: [
 					{
 						id: 'role-s',

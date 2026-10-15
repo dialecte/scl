@@ -159,27 +159,27 @@ describe('an LNode always has its LNodeSpecNaming', () => {
 		'an LNode that lost its LNodeSpecNaming is bound to an LN -> it gets one from the naming it had before':
 			{
 				sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root">
-					<IED ${id}="ied" name="PIU">
-						<AccessPoint ${id}="access-point" name="AP1">
-							<Server ${id}="server">
-								<LDevice ${id}="ldevice" inst="CTRL">
-									<LN ${id}="ln" lnClass="CSWI" inst="2" prefix="CB" lnType="CSWI_0" uuid="ln-uuid" />
-								</LDevice>
-							</Server>
-						</AccessPoint>
-					</IED>
-					<Substation ${id}="substation" name="S1">
-						<Function ${id}="function" name="F1">
-							<LNode ${id}="lnode" iedName="None" lnClass="CSWI" lnInst="1">
-								<Private ${id}="lnode-private" type="eIEC61850-6-100">
-									<eIEC61850-6-100:LNodeSpecNaming ${id}="spec-naming" sLnClass="CSWI" sLnInst="1" />
-								</Private>
-							</LNode>
-						</Function>
-					</Substation>
-				</SCL>
-			`,
+					<SCL ${ns} ${id}="root">
+						<IED ${id}="ied" name="PIU">
+							<AccessPoint ${id}="access-point" name="AP1">
+								<Server ${id}="server">
+									<LDevice ${id}="ldevice" inst="CTRL">
+										<LN ${id}="ln" lnClass="CSWI" inst="2" prefix="CB" lnType="CSWI_0" uuid="ln-uuid" />
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+						<Substation ${id}="substation" name="S1">
+							<Function ${id}="function" name="F1">
+								<LNode ${id}="lnode" iedName="None" lnClass="CSWI" lnInst="1">
+									<Private ${id}="lnode-private" type="eIEC61850-6-100">
+										<eIEC61850-6-100:LNodeSpecNaming ${id}="spec-naming" sLnClass="CSWI" sLnInst="1" />
+									</Private>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
 				act: async (document) => {
 					await document.transaction(async (tx) => {
 						await tx.delete({ tagName: 'LNodeSpecNaming', id: 'spec-naming' })

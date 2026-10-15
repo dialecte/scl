@@ -68,25 +68,25 @@ describe('mapped data attributes on import', () => {
 		},
 
 		'DOS with an absolute reference and its uuid -> the name from the logical node': {
-			sourceXml: mappedLNode(/* xml */ `
-				<eIEC61850-6-100:DOS ${id}="dos-mod" name="Mod" mappedDoName="VENDOR/LD0/PTOC1.Health" mappedLnUuid="ptoc1-uuid"/>
-			`),
+			sourceXml: mappedLNode(
+				/* xml */ `<eIEC61850-6-100:DOS ${id}="dos-mod" name="Mod" mappedDoName="VENDOR/LD0/PTOC1.Health" mappedLnUuid="ptoc1-uuid"/>`,
+			),
 			expectedQueries: [
 				'//v2019C1:DOS[@name="Mod"][@mappedDoName="Health"][@mappedLnUuid="ptoc1-uuid"]',
 			],
 		},
 
 		'DOS with a pair that repeats its default -> both removed': {
-			sourceXml: mappedLNode(/* xml */ `
-				<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="Op" mappedLnUuid="ptoc1-uuid"/>
-			`),
+			sourceXml: mappedLNode(
+				/* xml */ `<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="Op" mappedLnUuid="ptoc1-uuid"/>`,
+			),
 			expectedQueries: ['//v2019C1:DOS[@name="Op"][not(@mappedDoName)][not(@mappedLnUuid)]'],
 		},
 
 		'DOS with an absolute reference to its default -> removed': {
-			sourceXml: mappedLNode(/* xml */ `
-				<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="VENDOR/LD0/PTOC1.Op"/>
-			`),
+			sourceXml: mappedLNode(
+				/* xml */ `<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="VENDOR/LD0/PTOC1.Op"/>`,
+			),
 			expectedQueries: ['//v2019C1:DOS[@name="Op"][not(@mappedDoName)][not(@mappedLnUuid)]'],
 		},
 
@@ -107,9 +107,9 @@ describe('mapped data attributes on import', () => {
 		},
 
 		'DOS with an absolute reference to a logical node absent from the file -> unchanged': {
-			sourceXml: mappedLNode(/* xml */ `
-				<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="OTHER/LD0/GGIO9.Ind2"/>
-			`),
+			sourceXml: mappedLNode(
+				/* xml */ `<eIEC61850-6-100:DOS ${id}="dos-op" name="Op" mappedDoName="OTHER/LD0/GGIO9.Ind2"/>`,
+			),
 			expectedQueries: [
 				'//v2019C1:DOS[@name="Op"][@mappedDoName="OTHER/LD0/GGIO9.Ind2"][not(@mappedLnUuid)]',
 			],

@@ -70,17 +70,17 @@ describe('applyUuidRemap', () => {
 				allowIncoherentReferences:
 					'the cloned reference still carries the uuid of the document it was cloned from',
 				sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="scl-1">
-					<Substation name="Sub1" ${id}="sub-1">
-						<Private type="eIEC61850-6-100" ${id}="priv-1">
-							<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="project-role-uuid" ${id}="role-project"/>
-							<eIEC61850-6-100:Application name="App" uuid="app-clone-uuid" ${id}="app-clone">
-								<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/HMI_PC" allocationRoleUuid="template-role-uuid" ${id}="role-ref-clone"/>
-							</eIEC61850-6-100:Application>
-						</Private>
-					</Substation>
-				</SCL>
-			`,
+					<SCL ${ns} ${id}="scl-1">
+						<Substation name="Sub1" ${id}="sub-1">
+							<Private type="eIEC61850-6-100" ${id}="priv-1">
+								<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="project-role-uuid" ${id}="role-project"/>
+								<eIEC61850-6-100:Application name="App" uuid="app-clone-uuid" ${id}="app-clone">
+									<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/HMI_PC" allocationRoleUuid="template-role-uuid" ${id}="role-ref-clone"/>
+								</eIEC61850-6-100:Application>
+							</Private>
+						</Substation>
+					</SCL>
+				`,
 				cloneMappings: [
 					{
 						source: {

@@ -302,7 +302,7 @@ describe('resolveMappedData', () => {
 
 		'DAS with an absolute reference to a logical node absent from the file -> no implementation': {
 			sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root">
+				<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub" name="S1">
 							<Function ${id}="fn" name="F1">
 								<LNode ${id}="lnode" iedName="VENDOR" ldInst="LD0" lnClass="PTOC" lnInst="1" lnUuid="ptoc1-uuid">
@@ -316,7 +316,7 @@ describe('resolveMappedData', () => {
 						</Substation>
 						${VENDOR_IED}
 					</SCL>
-				`,
+			`,
 			reference: { tagName: 'DAS', id: 'das-general' },
 			expected: undefined,
 		},

@@ -23,7 +23,9 @@ function boundBreakerXml(binding = 'lnUuid="ln-uuid" iedName="P1" ldInst="LD0"')
 						<LDevice ${id}="ldevice" inst="LD0">
 							<LN ${id}="ln" prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="ln-uuid">
 								<DOI ${id}="doi-pos" name="Pos">
-									<DAI ${id}="dai-ctl-model" name="ctlModel"><Val>status-only</Val></DAI>
+									<DAI ${id}="dai-ctl-model" name="ctlModel">
+										<Val>status-only</Val>
+									</DAI>
 								</DOI>
 								<DOI ${id}="doi-beh" name="Beh" />
 								<Inputs ${id}="inputs">
@@ -40,7 +42,9 @@ function boundBreakerXml(binding = 'lnUuid="ln-uuid" iedName="P1" ldInst="LD0"')
 						<Private ${id}="breaker-private" type="eIEC61850-6-100">
 							<eIEC61850-6-100:LNodeSpecNaming ${id}="breaker-naming" sLnClass="XCBR" sLnInst="1" />
 							<eIEC61850-6-100:DOS ${id}="dos-pos" name="Pos">
-								<eIEC61850-6-100:DAS ${id}="das-ctl-model" name="ctlModel"><eIEC61850-6-100:Val>status-only</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+								<eIEC61850-6-100:DAS ${id}="das-ctl-model" name="ctlModel">
+									<eIEC61850-6-100:Val>status-only</eIEC61850-6-100:Val>
+								</eIEC61850-6-100:DAS>
 							</eIEC61850-6-100:DOS>
 							<eIEC61850-6-100:LNodeInputs ${id}="lnode-inputs">
 								<eIEC61850-6-100:SourceRef ${id}="source-ref" input="Trip" extRefAddr="P1/LD0/Q0XCBR2.Trip.general" extRefUuid="ext-ref-uuid" />

@@ -97,20 +97,20 @@ describe('shared-element mapping — the report says what apply does', () => {
 			{
 				sourceXml,
 				targetXml: /* xml */ `
-				<SCL ${ns} ${id}="scd">
-					<Substation name="S1" ${id}="substation-t">
-						<Private type="eIEC61850-6-100" ${id}="private-t">
-							<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="role-project-uuid" ${id}="role-t"/>
-						</Private>
-						<VoltageLevel name="V1" ${id}="voltage-level-t">
-							<Private type="eIEC61850-6-100" ${id}="voltage-level-private-t">
-								<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="role-project-uuid-2" ${id}="role-t-2"/>
+					<SCL ${ns} ${id}="scd">
+						<Substation name="S1" ${id}="substation-t">
+							<Private type="eIEC61850-6-100" ${id}="private-t">
+								<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="role-project-uuid" ${id}="role-t"/>
 							</Private>
-							<Bay name="B1" ${id}="bay-t"/>
-						</VoltageLevel>
-					</Substation>
-				</SCL>
-			`,
+							<VoltageLevel name="V1" ${id}="voltage-level-t">
+								<Private type="eIEC61850-6-100" ${id}="voltage-level-private-t">
+									<eIEC61850-6-100:AllocationRole name="HMI_PC" uuid="role-project-uuid-2" ${id}="role-t-2"/>
+								</Private>
+								<Bay name="B1" ${id}="bay-t"/>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
 				// with several of that name nothing is picked: where the role lands is the consumer's choice
 				chosen: [['role-s', { create: {} }]],
 				expected: { mappedOnto: undefined, roleNames: ['HMI_PC', 'HMI_PC', 'HMI_PC_1'] },
@@ -119,17 +119,17 @@ describe('shared-element mapping — the report says what apply does', () => {
 			{
 				sourceXml,
 				targetXml: /* xml */ `
-				<SCL ${ns} ${id}="scd">
-					<Substation name="S1" ${id}="substation-t">
-						<Private type="eIEC61850-6-100" ${id}="private-t">
-							<eIEC61850-6-100:AllocationRole name="HMI_PC" desc="Operator workstation" uuid="role-project-uuid" ${id}="role-t"/>
-						</Private>
-						<VoltageLevel name="V1" ${id}="voltage-level-t">
-							<Bay name="B1" ${id}="bay-t"/>
-						</VoltageLevel>
-					</Substation>
-				</SCL>
-			`,
+					<SCL ${ns} ${id}="scd">
+						<Substation name="S1" ${id}="substation-t">
+							<Private type="eIEC61850-6-100" ${id}="private-t">
+								<eIEC61850-6-100:AllocationRole name="HMI_PC" desc="Operator workstation" uuid="role-project-uuid" ${id}="role-t"/>
+							</Private>
+							<VoltageLevel name="V1" ${id}="voltage-level-t">
+								<Bay name="B1" ${id}="bay-t"/>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
 				expected: {
 					mappedOnto: 'role-t',
 					roleNames: ['HMI_PC'],
