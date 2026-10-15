@@ -23,3 +23,5 @@ export {
 	specifiedNamingChanged,
 } from './lnode-spec-naming'
 export { rebuildReferencesBelow, rebuildReferencesTo } from './references-through'
+export { followDataSetRename } from './data-set-rename'
+export { followTupleTargetRename } from './tuple-reference-rename'

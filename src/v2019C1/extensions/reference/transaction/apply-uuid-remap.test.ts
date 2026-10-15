@@ -65,6 +65,222 @@ describe('applyUuidRemap', () => {
 			expectedQueries: ['//v2019C1:FunctionRef[@functionUuid="new-uuid"]'],
 			unexpectedQueries: ['//v2019C1:FunctionRef[@functionUuid="src-uuid"]'],
 		},
+		'cloned IED references named by attributes -> the uuid of what was cloned with them, the others kept':
+			{
+				allowIncoherentReferences:
+					'freshly cloned references still carry the uuids of the document they were cloned from',
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="scl-1">
+						<IED name="P2" ${id}="ied-clone" uuid="ied-clone-uuid">
+							<AccessPoint name="AP1" ${id}="ap-clone" uuid="ap-clone-uuid">
+								<Server ${id}="server-clone">
+									<LDevice inst="LD0" ${id}="ld-clone" uuid="ld-clone-uuid">
+										<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-clone" uuid="lln0-clone-uuid">
+											<DataSet name="ds1" ${id}="dataset-clone">
+												<FCDA ${id}="fcda-clone" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" fc="ST" lnUuid="src-breaker-uuid"/>
+											</DataSet>
+											<GSEControl name="gcb1" appID="gcb1" datSet="ds1" ${id}="gcb-clone" uuid="gcb-clone-uuid">
+												<!-- names a subscriber the clone does not hold -->
+												<IEDName ${id}="subscriber-clone" apRef="AP1" apUuid="subscriber-ap-uuid">P1</IEDName>
+											</GSEControl>
+										</LN0>
+										<LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" ${id}="breaker-clone" uuid="breaker-clone-uuid"/>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+					</SCL>
+				`,
+				cloneMappings: [
+					{
+						source: {
+							tagName: 'LN',
+							id: 'breaker-src',
+							attributes: [{ name: 'uuid', value: 'src-breaker-uuid' }],
+						},
+						target: { tagName: 'LN', id: 'breaker-clone' },
+					},
+					{
+						source: { tagName: 'FCDA', id: 'fcda-src', attributes: [] },
+						target: { tagName: 'FCDA', id: 'fcda-clone' },
+					},
+					{
+						source: { tagName: 'IEDName', id: 'subscriber-src', attributes: [] },
+						target: { tagName: 'IEDName', id: 'subscriber-clone' },
+					},
+				] as unknown as Scl.CloneMapping[],
+				expectedQueries: [
+					'//default:FCDA[@lnClass="XCBR"][@lnUuid="breaker-clone-uuid"]',
+					'//default:IEDName[@apUuid="subscriber-ap-uuid"]',
+				],
+				unexpectedQueries: ['//default:FCDA[@lnUuid="src-breaker-uuid"]'],
+			},
+		'a cloned IED reference to an element mapped onto an existing one -> repointed, its names those of that element':
+			{
+				allowIncoherentReferences:
+					'the cloned reference still carries the uuid and the names of the document it was cloned from',
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="scl-1">
+						<IED name="P2" ${id}="ied-p2" uuid="ied-p2-uuid">
+							<AccessPoint name="AP1" ${id}="ap-p2" uuid="ap-p2-uuid">
+								<Server ${id}="server-p2">
+									<LDevice inst="LD1" ${id}="ld-p2" uuid="ld-p2-uuid">
+										<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-p2" uuid="lln0-p2-uuid">
+											<DataSet name="ds1" ${id}="dataset-clone">
+												<FCDA ${id}="fcda-clone" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" fc="ST" lnUuid="src-breaker-uuid"/>
+											</DataSet>
+										</LN0>
+										<LN lnClass="XCBR" inst="3" lnType="XCBR_T" ${id}="breaker-project" uuid="project-breaker-uuid"/>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+					</SCL>
+				`,
+				cloneMappings: [
+					{
+						source: { tagName: 'FCDA', id: 'fcda-src', attributes: [] },
+						target: { tagName: 'FCDA', id: 'fcda-clone' },
+					},
+				] as unknown as Scl.CloneMapping[],
+				redirectMappings: [
+					{
+						sourceUuid: 'src-breaker-uuid',
+						target: { tagName: 'LN', id: 'breaker-project' },
+					},
+				],
+				expectedQueries: [
+					'//default:FCDA[@lnUuid="project-breaker-uuid"][@ldInst="LD1"][not(@prefix)][@lnClass="XCBR"][@lnInst="3"]',
+				],
+				unexpectedQueries: ['//default:FCDA[@lnUuid="src-breaker-uuid"]'],
+			},
+		'a cloned ExtRef naming its control block without its LD, both mapped onto existing ones -> its LD written once, srcLDInst left out':
+			{
+				allowIncoherentReferences:
+					'the cloned reference still carries the uuids and the names of the document it was cloned from',
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="scl-1">
+						<IED name="P1" ${id}="ied-p1" uuid="ied-p1-uuid">
+							<AccessPoint name="AP1" ${id}="ap-p1" uuid="ap-p1-uuid">
+								<Server ${id}="server-p1">
+									<LDevice inst="LD0" ${id}="ld-p1" uuid="ld-p1-uuid">
+										<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-p1" uuid="lln0-p1-uuid">
+											<Inputs ${id}="inputs-clone">
+												<ExtRef ${id}="extref-clone" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" lnUuid="src-breaker-uuid" srcCBName="gcb1" srcCBUuid="src-gcb-uuid" serviceType="GOOSE" intAddr="Pos"/>
+											</Inputs>
+										</LN0>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+						<IED name="P2" ${id}="ied-p2" uuid="ied-p2-uuid">
+							<AccessPoint name="AP1" ${id}="ap-p2" uuid="ap-p2-uuid">
+								<Server ${id}="server-p2">
+									<LDevice inst="LD1" ${id}="ld-p2" uuid="ld-p2-uuid">
+										<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-p2" uuid="lln0-p2-uuid">
+											<GSEControl name="gcb1" appID="gcb1" ${id}="gcb-project" uuid="project-gcb-uuid"/>
+										</LN0>
+										<LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" ${id}="breaker-project" uuid="project-breaker-uuid"/>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+					</SCL>
+				`,
+				cloneMappings: [
+					{
+						source: { tagName: 'ExtRef', id: 'extref-src', attributes: [] },
+						target: { tagName: 'ExtRef', id: 'extref-clone' },
+					},
+				] as unknown as Scl.CloneMapping[],
+				redirectMappings: [
+					{ sourceUuid: 'src-breaker-uuid', target: { tagName: 'LN', id: 'breaker-project' } },
+					{ sourceUuid: 'src-gcb-uuid', target: { tagName: 'GSEControl', id: 'gcb-project' } },
+				],
+				expectedQueries: [
+					'//default:ExtRef[@lnUuid="project-breaker-uuid"][@srcCBUuid="project-gcb-uuid"][@ldInst="LD1"][not(@srcLDInst)]',
+				],
+			},
+		'a cloned IEDName whose access point is mapped onto one of another IED -> its text names that IED':
+			{
+				allowIncoherentReferences:
+					'the cloned reference still carries the uuid and the names of the document it was cloned from',
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="scl-1">
+						<IED name="P2" ${id}="ied-p2" uuid="ied-p2-uuid">
+							<AccessPoint name="AP1" ${id}="ap-p2" uuid="ap-p2-uuid">
+								<Server ${id}="server-p2">
+									<LDevice inst="LD0" ${id}="ld-p2" uuid="ld-p2-uuid">
+										<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-p2" uuid="lln0-p2-uuid">
+											<GSEControl name="gcb1" appID="gcb1" ${id}="gcb-clone" uuid="gcb-clone-uuid">
+												<IEDName ${id}="subscriber-clone" apRef="AP1" apUuid="src-ap-uuid">P1</IEDName>
+											</GSEControl>
+										</LN0>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+						<IED name="P5" ${id}="ied-p5" uuid="ied-p5-uuid">
+							<AccessPoint name="AP3" ${id}="ap-project" uuid="project-ap-uuid"/>
+						</IED>
+					</SCL>
+				`,
+				cloneMappings: [
+					{
+						source: { tagName: 'IEDName', id: 'subscriber-src', attributes: [] },
+						target: { tagName: 'IEDName', id: 'subscriber-clone' },
+					},
+				] as unknown as Scl.CloneMapping[],
+				redirectMappings: [
+					{ sourceUuid: 'src-ap-uuid', target: { tagName: 'AccessPoint', id: 'ap-project' } },
+				],
+				expectedQueries: [
+					'//default:IEDName[@apUuid="project-ap-uuid"][@apRef="AP3"][text()="P5"]',
+				],
+			},
+		'a cloned ExtRef naming its own IED with @, its data mapped onto another IED -> names that IED':
+			{
+				allowIncoherentReferences:
+					'the cloned reference still carries the uuid and the names of the document it was cloned from',
+				sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="scl-1">
+					<IED name="P2" ${id}="ied-p2" uuid="ied-p2-uuid">
+						<AccessPoint name="AP1" ${id}="ap-p2" uuid="ap-p2-uuid">
+							<Server ${id}="server-p2">
+								<LDevice inst="LD0" ${id}="ld-p2" uuid="ld-p2-uuid">
+									<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-p2" uuid="lln0-p2-uuid">
+										<Inputs ${id}="inputs-clone">
+											<ExtRef ${id}="extref-clone" iedName="@" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" lnUuid="src-breaker-uuid" intAddr="Pos"/>
+										</Inputs>
+									</LN0>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+					<IED name="P3" ${id}="ied-p3" uuid="ied-p3-uuid">
+						<AccessPoint name="AP1" ${id}="ap-p3" uuid="ap-p3-uuid">
+							<Server ${id}="server-p3">
+								<LDevice inst="LD0" ${id}="ld-p3" uuid="ld-p3-uuid">
+									<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-p3" uuid="lln0-p3-uuid"/>
+									<LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" ${id}="breaker-project" uuid="project-breaker-uuid"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
+				cloneMappings: [
+					{
+						source: { tagName: 'ExtRef', id: 'extref-src', attributes: [] },
+						target: { tagName: 'ExtRef', id: 'extref-clone' },
+					},
+				] as unknown as Scl.CloneMapping[],
+				redirectMappings: [
+					{ sourceUuid: 'src-breaker-uuid', target: { tagName: 'LN', id: 'breaker-project' } },
+				],
+				expectedQueries: ['//default:ExtRef[@lnUuid="project-breaker-uuid"][@iedName="P3"]'],
+				unexpectedQueries: ['//default:ExtRef[@iedName="@"]'],
+			},
 		'a cloned ref to an element mapped onto an existing one → repointed to that element, uuid and path':
 			{
 				allowIncoherentReferences:

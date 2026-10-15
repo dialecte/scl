@@ -1,10 +1,19 @@
 import { buildReferencePath } from '../query/build'
+import { readRawAttribute } from '../query/build/raw-attribute'
+import { relativeIedName } from '../query/ied-tuple/own-ied-name'
+import { targetTupleParts } from '../query/ied-tuple/target-tuple-address'
+import { tupleReferenceWrite } from '../query/ied-tuple/tuple-reference-write'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { toRawRecord } from '@dialecte/core/helpers'
 
+import { TUPLE_REFERENCE_PAIRS, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+
+import type { TupleTargetParts } from '../query/ied-tuple/ied-tuple.types'
 import type { RedirectMapping } from './apply-uuid-remap.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type { TupleReferencePair } from '@/v2019C1/constants'
 import type * as Core from '@dialecte/core'
+import type { AnyRawRecord } from '@dialecte/core'
 
 /**
  * Repoint the uuid references of cloned elements onto the clone's fresh
@@ -92,4 +101,71 @@ export async function applyUuidRemap(
 
 		if (Object.keys(updates).length > 0) await tx.update(refRecord, { attributes: updates })
 	}
+
+	await remapTupleReferences(tx, { cloneMappings, uuidMap, uuidToRef })
+}
+
+/**
+ * The cloned references of the IED section named by a tuple of attributes: a uuid naming an element
+ * cloned with them, or mapped onto an element the document already holds, is repointed onto that
+ * element, and the reference writes its names (see `tupleReferenceWrite`).
+ */
+async function remapTupleReferences(
+	tx: Core.Transaction<Config>,
+	params: {
+		cloneMappings: readonly Scl.CloneMapping[]
+		uuidMap: ReadonlyMap<string, string>
+		uuidToRef: ReadonlyMap<string, { tagName: string; id: string }>
+	},
+): Promise<void> {
+	const { cloneMappings, uuidMap, uuidToRef } = params
+	const referrers: { record: AnyRawRecord; pairs: readonly TupleReferencePair[] }[] = []
+	const remapped = new Set<string>()
+	for (const { target } of cloneMappings) {
+		const pairs: readonly TupleReferencePair[] | undefined =
+			TUPLE_REFERENCE_PAIRS[target.tagName as keyof typeof TUPLE_REFERENCE_PAIRS]
+		if (!pairs) continue
+		const tracked = await tx.getRecord(target)
+		if (!tracked) continue
+		const record = toRawRecord(tracked) as AnyRawRecord
+		referrers.push({ record, pairs })
+		for (const pair of pairs) {
+			const uuid = readRawAttribute({ record, name: pair.attribute.uuid })
+			const targetUuid = uuid ? uuidMap.get(uuid) : undefined
+			if (targetUuid) remapped.add(targetUuid)
+		}
+	}
+
+	const partsByUuid = new Map<string, TupleTargetParts | undefined>()
+	for (const uuid of remapped) {
+		const parts = await targetPartsOf(tx, { ref: uuidToRef.get(uuid) })
+		partsByUuid.set(uuid, parts)
+	}
+
+	for (const { record, pairs } of referrers) {
+		const ownIedName = await relativeIedName(tx, { record, pairs })
+		const write = tupleReferenceWrite({ record, pairs, partsByUuid, ownIedName, retarget: uuidMap })
+		if (!write) continue
+		await tx.any.update(record, {
+			// an attribute set to undefined is removed (the update strips it)
+			attributes: write.attributes as Record<string, string>,
+			...(write.value === undefined ? {} : { value: write.value }),
+		})
+	}
+}
+
+/** The address parts of the element a remapped uuid names. */
+async function targetPartsOf(
+	tx: Core.Transaction<Config>,
+	params: { ref: { tagName: string; id: string } | undefined },
+): Promise<TupleTargetParts | undefined> {
+	const ref = params.ref as Scl.Ref<Scl.ElementsOf> | undefined
+	if (!ref) return undefined
+	const record = await tx.getRecord(ref)
+	if (!record) return undefined
+	const ancestors = await tx.findAncestors(ref)
+	return targetTupleParts({
+		record: toRawRecord(record) as AnyRawRecord,
+		ancestry: [...ancestors].reverse() as AnyRawRecord[],
+	})
 }

@@ -5,6 +5,8 @@ import {
 	PATH_CONTRIBUTING_ATTRIBUTES,
 } from '@/v2019C1/extensions/reference'
 import {
+	followDataSetRename,
+	followTupleTargetRename,
 	hasAttributeChange,
 	mirrorSpecifiedNaming,
 	rebuildReferencesBelow,
@@ -88,6 +90,17 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 	if (specifiedNamingChanged({ oldRecord: previous, newRecord: current })) {
 		operations.push(...(await rebuildPathsOfNamedLNode(query, { specNaming: current })))
 	}
+
+	const tupleOperations = await followTupleTargetRename(query, {
+		oldRecord: previous,
+		newRecord: current,
+	})
+	operations.push(...tupleOperations)
+	const dataSetOperations = await followDataSetRename(query, {
+		oldRecord: previous,
+		newRecord: current,
+	})
+	operations.push(...dataSetOperations)
 
 	return operations
 }
