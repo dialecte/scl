@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { Scl, SCL_NAMESPACES } from '@/v2019C1/config'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
+import type { DerivedSpecificationNamingWarning } from '@/v2019C1'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 import type { AnyRawRecord } from '@dialecte/core'
 
@@ -496,7 +497,7 @@ describe('import of an LNode without its LNodeSpecNaming', () => {
 })
 
 describe('import warning for a derived specified naming', () => {
-	it('an LNode bound to an IED without LNodeSpecNaming -> one derived-specification-naming warning', async () => {
+	it('an LNode bound to an IED without LNodeSpecNaming -> one derived-specification-naming warning carrying the naming it was given', async () => {
 		const hooks = createSclIoHooks()
 		const lnode = makeRecord('LNode', {
 			iedName: 'P1',
@@ -511,9 +512,28 @@ describe('import warning for a derived specified naming', () => {
 		})
 
 		const result = await hooks.afterImport!()
+		const expected: Array<
+			Pick<DerivedSpecificationNamingWarning, 'type' | 'recordId' | 'details'>
+		> = [
+			{
+				type: 'derived-specification-naming',
+				recordId: lnode.id,
+				details: {
+					iedName: 'P1',
+					specifiedNaming: [
+						{ name: 'sLnClass', value: 'PTOC' },
+						{ name: 'sLnInst', value: '2' },
+					],
+				},
+			},
+		]
 		expect(
-			result.warnings?.map((warning) => ({ type: warning.type, recordId: warning.recordId })),
-		).toEqual([{ type: 'derived-specification-naming', recordId: lnode.id }])
+			result.warnings?.map((warning) => ({
+				type: warning.type,
+				recordId: warning.recordId,
+				details: warning.details,
+			})),
+		).toEqual(expected)
 	})
 })
 

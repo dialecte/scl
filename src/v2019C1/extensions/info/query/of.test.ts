@@ -4,6 +4,7 @@ import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
+import type { ElementState } from '@/v2019C1'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
@@ -646,7 +647,7 @@ describe('of', () => {
 describe('of — state and signal title', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		ref: Scl.Ref<Scl.ElementsOf>
-		expected: { title: string; state?: unknown }
+		expected: { title: string; state?: ElementState }
 		mode?: 'compact' | 'full'
 	}
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Added
+
+- The types of an element's state are exported: `ElementState`, `ElementStateByTag`, `SignalState`, `LNodeState`, `LNodeMapping` - the `state` of `info.of`. So is `DerivedSpecificationNamingWarning`, the member of `SclImportWarning` for an LNode given a derived `LNodeSpecNaming` on import.
+
 ## [0.8.0] - 2026-10-14
 
 ### Changed

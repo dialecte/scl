@@ -64,6 +64,8 @@ The import reports warnings instead of refusing a file. Their type is exported a
 | `incoherent-reference`         | the path and the uuid of a reference name two different elements                                                   | `elementTag`, `pathAttribute`, `pathValue`, `uuidAttribute`, `uuidValue` |
 | `derived-specification-naming` | an LNode bound to an IED had no `LNodeSpecNaming`: it got one from the LN it is bound to (prefix, class, instance) | `iedName`, `specifiedNaming`                                             |
 
+Each member is exported under its own name, to narrow a warning by its `type`: `UnresolvedReferenceWarning`, `UnsupportedXPathWarning`, `IncoherentReferenceWarning`, `DerivedSpecificationNamingWarning`.
+
 ## Identity warnings
 
 `checkTemplateUuids` reports what makes the identity of a file unreliable. Each warning carries its `code`, the offending `value`, the `tagNames` and `refs` involved and a default `message`; `TEMPLATE_UUID_WARNING_INFO[code]` gives the default wording of the class (`title`, `description`) and what the engine does about it (`fallback`) — as facts about the engine, not as instructions for a user.

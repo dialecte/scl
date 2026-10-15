@@ -14,12 +14,12 @@ Access via `doc.query.info`.
 
 ```ts
 const info = await doc.query.info.of(ref)
-// ElementInfo: { title: string; state?: ...; labels?: Record<string, Record<string, string>> }
+// ElementInfo: { title: string; state?: ElementState; labels?: Record<string, Record<string, string>> }
 
 const withLabels = await doc.query.info.of(ref, { withLabels: true, mode: 'full' })
 ```
 
-The type of `state` follows the tag of `ref`: `of({ tagName: 'LNode', id })` returns the state of an LNode (see [State](#state)), a tag without a state has none. `ElementInfo` and `InfoOptions` are exported from `@dialecte/scl/v2019C1`.
+The type of `state` follows the tag of `ref`: `of({ tagName: 'LNode', id })` returns the state of an LNode (see [State](#state)), a tag without a state has none. `ElementInfo`, `InfoOptions` and the state types are exported from `@dialecte/scl/v2019C1`.
 
 `info.of` replaces the former `presentation.extractElementTitle`: `extractElementTitle(ref)` becomes `(await info.of(ref)).title`, and `withLabels: true` puts `labels` on the same object.
 
@@ -57,6 +57,8 @@ const display = info.labels?.[currentLang]?.[''] ?? info.labels?.en?.[''] ?? inf
 | ------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SourceRef`, `ControlRef` | `{ binding: 'open' \| 'connected'; implemented: boolean }`                      | `connected` once the source (controlled data) is given, by path (`source` / `controlled`) or by uuid; `implemented` once the ExtRef / ExtCtrl is named (`extRefAddr` / `extRefUuid`, `extCtrlAddr` / `extCtrlUuid`), whether connected or not                                                                               |
 | `LNode`                   | `{ locked: boolean; mapping: 'unmapped' \| 'specification-ied' \| 'real-ied' }` | `locked` once an IED is assigned: `iedName` set and not `None` (same rule as `dataModel.isLNodeLocked`). `mapping`: the LN it is bound to, by `lnUuid` (a uuid naming no LN is no binding) else by its identity attributes, and the kind of the IED holding it ([`lifecycle.classifyIeds`](./index#lifecycle-classifyieds)) |
+
+The types: `SignalState` for a SourceRef / ControlRef, `LNodeState` for an LNode (its `mapping` is an `LNodeMapping`), `ElementStateByTag` maps each tag to its state, and `ElementState<Tag>` is the state of a tag - every state when the tag is not known.
 
 A state is read from the element's own attributes; whether a path resolves is a validation question, not a state. Tag text, colours and wording belong to the consumer.
 
