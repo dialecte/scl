@@ -7,6 +7,7 @@ import { assertMappingsCoherent, createReportPass } from '@/v2019C1/extensions/l
 import type { Config } from '@/v2019C1/config'
 import type { LifecycleReportParams } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -27,39 +28,7 @@ export async function report(
 	// what the report lists and names is shared by all it describes: the names it gives to the
 	// elements to create are those apply gives them, one after the other
 	const pass = createReportPass()
-	const report =
-		target.verb === 'fsd'
-			? await reportFsd(query, {
-					pass,
-					sourceQuery: target.sourceQuery,
-					functionRef: target.ref,
-					targetParent: target.anchor,
-					scenario: target.scenario,
-					targetInstance: target.targetInstance,
-					decisionMappings: target.resolution?.mappings,
-					resolvePlacement: true,
-				})
-			: target.verb === 'ssd'
-				? await reportSsd(query, {
-						pass,
-						sourceQuery: target.sourceQuery,
-						// the SSD scope is the instantiable root (first named element below the TEMPLATE scaffolding), resolved
-						// from the source - not `target.ref`, which is only the coarse process-section anchor.
-						targetParent: target.anchor,
-						scenario: target.scenario,
-						targetInstance: target.targetInstance,
-						decisionMappings: target.resolution?.mappings,
-					})
-				: await reportAsd(query, {
-						pass,
-						sourceQuery: target.sourceQuery,
-						applicationRef: target.ref,
-						scenario: target.scenario,
-						targetInstance: target.targetInstance,
-						decisionMappings: target.resolution?.mappings,
-						anchor: target.anchor,
-						resolvePlacement: true,
-					})
+	const report = await reportVerb(query, { target, pass })
 
 	// as each primary's definition says where it sits - a type it names with xsi:type included -: the
 	// project's element when it has one, the template's otherwise
@@ -82,4 +51,50 @@ export async function report(
 		assertMappingsCoherent({ reportMappings: report.mappings, decisionMappings })
 
 	return report
+}
+
+/**
+ * The per-layer report of the target's verb. Each verb has its arm: a verb added to the contract
+ * without one does not compile.
+ */
+async function reportVerb(
+	query: Core.Query<Config>,
+	params: { target: LifecycleReportParams; pass: ReportPass },
+): Promise<DiffReport> {
+	const { target, pass } = params
+	switch (target.verb) {
+		case 'fsd':
+			return reportFsd(query, {
+				pass,
+				sourceQuery: target.sourceQuery,
+				functionRef: target.ref,
+				targetParent: target.anchor,
+				scenario: target.scenario,
+				targetInstance: target.targetInstance,
+				decisionMappings: target.resolution?.mappings,
+				resolvePlacement: true,
+			})
+		case 'ssd':
+			return reportSsd(query, {
+				pass,
+				sourceQuery: target.sourceQuery,
+				// the SSD scope is the instantiable root (first named element below the TEMPLATE scaffolding), resolved
+				// from the source - not `target.ref`, which is only the coarse process-section anchor.
+				targetParent: target.anchor,
+				scenario: target.scenario,
+				targetInstance: target.targetInstance,
+				decisionMappings: target.resolution?.mappings,
+			})
+		case 'asd':
+			return reportAsd(query, {
+				pass,
+				sourceQuery: target.sourceQuery,
+				applicationRef: target.ref,
+				scenario: target.scenario,
+				targetInstance: target.targetInstance,
+				decisionMappings: target.resolution?.mappings,
+				anchor: target.anchor,
+				resolvePlacement: true,
+			})
+	}
 }

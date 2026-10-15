@@ -85,10 +85,7 @@ async function runAfterApply(
 	params: { afterApply: AfterApplyHook; instances: AppliedInstances },
 ): Promise<void> {
 	const { afterApply, instances } = params
-	const roots: Scl.Ref<Scl.ElementsOf>[] =
-		instances.verb === 'fsd'
-			? instances.functions
-			: [...instances.applications, ...instances.functions]
+	const roots = appliedRoots(instances)
 
 	const namesBefore: (string | undefined)[] = []
 	for (const root of roots) {
@@ -106,11 +103,27 @@ async function runAfterApply(
 	}
 }
 
+/** The applications and functions an apply placed or reconciled, whatever its verb. */
+function appliedRoots(instances: AppliedInstances): Scl.Ref<Scl.ElementsOf>[] {
+	switch (instances.verb) {
+		case 'fsd':
+			return instances.functions
+		case 'asd':
+		case 'ssd':
+			return [...instances.applications, ...instances.functions]
+	}
+}
+
 /** The empty instance set for a verb (the not-decided-yet track writes nothing). */
 function emptyInstances(verb: LifecycleTarget['verb']): AppliedInstances {
-	if (verb === 'fsd') return { verb: 'fsd', functions: [] }
-	if (verb === 'ssd') return { verb: 'ssd', applications: [], functions: [] }
-	return { verb: 'asd', applications: [], functions: [] }
+	switch (verb) {
+		case 'fsd':
+			return { verb: 'fsd', functions: [] }
+		case 'asd':
+			return { verb: 'asd', applications: [], functions: [] }
+		case 'ssd':
+			return { verb: 'ssd', applications: [], functions: [] }
+	}
 }
 
 /**
@@ -125,47 +138,51 @@ async function runVerb(
 	report: DiffReport,
 	decisions: DecisionMap | undefined,
 ): Promise<AppliedInstances> {
-	if (target.verb === 'fsd') {
-		const functions = await updateFsd(tx, {
-			sourceQuery: target.sourceQuery,
-			functionRef: target.ref,
-			targetParent: target.anchor,
-			scenario: target.scenario,
-			targetInstance: target.targetInstance,
-			report,
-			decisions,
-			keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
-			decisionMappings: target.resolution?.mappings,
-			resolvePlacement: true,
-		})
-		return { verb: 'fsd', functions }
+	switch (target.verb) {
+		case 'fsd': {
+			const functions = await updateFsd(tx, {
+				sourceQuery: target.sourceQuery,
+				functionRef: target.ref,
+				targetParent: target.anchor,
+				scenario: target.scenario,
+				targetInstance: target.targetInstance,
+				report,
+				decisions,
+				keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
+				decisionMappings: target.resolution?.mappings,
+				resolvePlacement: true,
+			})
+			return { verb: 'fsd', functions }
+		}
+		case 'ssd': {
+			const { applications, functions } = await updateSsd(tx, {
+				sourceQuery: target.sourceQuery,
+				// the SSD scope is the instantiable root (first named element below the TEMPLATE scaffolding), resolved from the
+				// source - not `target.ref`, which is only the coarse process-section anchor.
+				targetParent: target.anchor,
+				scenario: target.scenario,
+				targetInstance: target.targetInstance,
+				report,
+				decisions,
+				keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
+				decisionMappings: target.resolution?.mappings,
+			})
+			return { verb: 'ssd', applications, functions }
+		}
+		case 'asd': {
+			const { applications, functions } = await updateAsd(tx, {
+				sourceQuery: target.sourceQuery,
+				applicationRef: target.ref,
+				targetParent: target.anchor,
+				scenario: target.scenario,
+				targetInstance: target.targetInstance,
+				report,
+				decisions,
+				keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
+				decisionMappings: target.resolution?.mappings,
+				resolvePlacement: true,
+			})
+			return { verb: 'asd', applications, functions }
+		}
 	}
-	if (target.verb === 'ssd') {
-		const { applications, functions } = await updateSsd(tx, {
-			sourceQuery: target.sourceQuery,
-			// the SSD scope is the instantiable root (first named element below the TEMPLATE scaffolding), resolved from the
-			// source - not `target.ref`, which is only the coarse process-section anchor.
-			targetParent: target.anchor,
-			scenario: target.scenario,
-			targetInstance: target.targetInstance,
-			report,
-			decisions,
-			keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
-			decisionMappings: target.resolution?.mappings,
-		})
-		return { verb: 'ssd', applications, functions }
-	}
-	const { applications, functions } = await updateAsd(tx, {
-		sourceQuery: target.sourceQuery,
-		applicationRef: target.ref,
-		targetParent: target.anchor,
-		scenario: target.scenario,
-		targetInstance: target.targetInstance,
-		report,
-		decisions,
-		keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
-		decisionMappings: target.resolution?.mappings,
-		resolvePlacement: true,
-	})
-	return { verb: 'asd', applications, functions }
 }
