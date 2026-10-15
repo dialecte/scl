@@ -255,12 +255,16 @@ async function createStructural(
 ): Promise<Scl.Ref<Scl.ElementsOf>> {
 	const { sourceQuery, source, parentTarget, name } = params
 
-	const attributes = await sourceQuery.any.getAttributes(source)
-	const cleanAttributes: Record<string, string> = {}
-	for (const [key, value] of Object.entries(attributes)) {
-		if (!CREATE_STRIP_ATTRIBUTES.includes(key)) cleanAttributes[key] = value
+	// The record's own entries, not a value object: an attribute of a namespace the dialecte does not declare (a
+	// diagram editor's esld:x) keeps the namespace only its entry carries.
+	const record = await sourceQuery.any.getRecord(source)
+	const cleanAttributes: AnyTrackedRecord['attributes'] = []
+	for (const attribute of record?.attributes ?? []) {
+		if (CREATE_STRIP_ATTRIBUTES.includes(attribute.name)) continue
+		if (name && attribute.name === 'name') continue
+		cleanAttributes.push(attribute)
 	}
-	if (name) cleanAttributes.name = name
+	if (name) cleanAttributes.push({ name: 'name', value: name })
 
 	const created = await tx.any.addChild(parentTarget, {
 		tagName: source.tagName,

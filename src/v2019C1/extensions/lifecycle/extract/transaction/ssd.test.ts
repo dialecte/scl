@@ -11,6 +11,8 @@ const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
 const scopeRef = { tagName: 'Bay', id: 'bay-1' } as Scl.Ref<'Bay'>
+// the namespace a single-line-diagram editor writes its layout in
+const ESLD = 'https://transpower.co.nz/SCL/SSD/SLD/v0'
 
 type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 
@@ -67,6 +69,32 @@ describe('extract.ssd', () => {
 				unexpectedQueries: [
 					// the exported root's templateUuid is stripped - a fresh, reusable template
 					'//default:Bay[@templateUuid]',
+				],
+			},
+		"keeps the attributes of a namespace the dialecte does not declare (a diagram editor's esld:x / esld:h)":
+			{
+				sourceXml: sourceXml
+					.replace(
+						`<SCL ${ns} ${id}="scl-src">`,
+						`<SCL ${ns} xmlns:esld="${ESLD}" ${id}="scl-src">`,
+					)
+					.replace(
+						`<Substation name="S1" ${id}="sub-1">`,
+						`<Substation name="S1" esld:w="40" ${id}="sub-1">`,
+					)
+					.replace(
+						`<VoltageLevel name="V1" ${id}="vl-1">`,
+						`<VoltageLevel name="V1" esld:x="2" ${id}="vl-1">`,
+					)
+					.replace(
+						`<Bay name="B1" templateUuid="bay-tmpl-uuid" ${id}="bay-1">`,
+						`<Bay name="B1" templateUuid="bay-tmpl-uuid" esld:h="12" ${id}="bay-1">`,
+					),
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				expectedQueries: [
+					`//default:Substation[@*[namespace-uri()="${ESLD}" and local-name()="w"]="40"]`,
+					`//default:VoltageLevel[@*[namespace-uri()="${ESLD}" and local-name()="x"]="2"]`,
+					`//default:Bay[@name="B1"][@*[namespace-uri()="${ESLD}" and local-name()="h"]="12"]`,
 				],
 			},
 	}

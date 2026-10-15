@@ -9,6 +9,8 @@ import type { SclTest } from '@/v2019C1/test'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
+// the namespace a single-line-diagram editor writes its layout in
+const ESLD = 'https://transpower.co.nz/SCL/SSD/SLD/v0'
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
@@ -74,6 +76,27 @@ describe('ensureTopologyFrame - reproduces the source topology frame by name (me
 				'//default:Substation/default:Function',
 			],
 		},
+
+		"carries an attribute of a namespace the dialecte does not declare, with its namespace (a diagram editor's esld:h)":
+			{
+				sourceXml: sourceXml
+					.replace(
+						`<SCL ${ns} ${id}="scl-src">`,
+						`<SCL ${ns} xmlns:esld="${ESLD}" ${id}="scl-src">`,
+					)
+					.replace(`<Bay name="B1" ${id}="bay-1">`, `<Bay name="B1" esld:h="12" ${id}="bay-1">`)
+					.replace(
+						`<ConductingEquipment name="QA1" type="CBR" ${id}="ce-1"/>`,
+						`<ConductingEquipment name="QA1" type="CBR" esld:x="3" ${id}="ce-1"/>`,
+					),
+				scopeTag: 'Substation',
+				scopeId: 'sub-1',
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				expectedQueries: [
+					`//default:Bay[@name="B1"][@*[namespace-uri()="${ESLD}" and local-name()="h"]="12"]`,
+					`//default:ConductingEquipment[@name="QA1"][@*[namespace-uri()="${ESLD}" and local-name()="x"]="3"]`,
+				],
+			},
 
 		'reuses the ancestor levels the target already provides and creates the scope Bay under them': {
 			sourceXml,
