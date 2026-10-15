@@ -205,6 +205,138 @@ describe('createSclIoHooks', () => {
 	})
 })
 
+describe('import warnings for a terminal', () => {
+	type TestCase = {
+		only?: boolean
+		terminal: Record<string, string>
+		nodePathName?: string
+		expectedWarnings: { type: string; details: Record<string, unknown> }[]
+	}
+
+	const L1 = '00000000-0000-4000-8000-000000000001'
+	const L2 = '00000000-0000-4000-8000-000000000002'
+
+	const testCases: Record<string, TestCase> = {
+		'path, names and uuid agreeing → no warning': {
+			terminal: {
+				connectivityNode: 'S1/VL1/B1/L1',
+				substationName: 'S1',
+				voltageLevelName: 'VL1',
+				bayName: 'B1',
+				cNodeName: 'L1',
+				cNodeUuid: L1,
+			},
+			expectedWarnings: [],
+		},
+		'names left out → filled, no warning': {
+			terminal: { connectivityNode: 'S1/VL1/B1/L1', cNodeName: '' },
+			expectedWarnings: [],
+		},
+		'path naming no node → one unresolved-reference warning': {
+			terminal: { connectivityNode: 'S1/VL1/B1/L9', cNodeName: 'L9' },
+			expectedWarnings: [
+				{
+					type: 'unresolved-reference',
+					details: {
+						elementTag: 'Terminal',
+						uuidAttribute: 'cNodeUuid',
+						pathValue: 'S1/VL1/B1/L9',
+						triedKeys: ['S1/VL1/B1/L9'],
+					},
+				},
+			],
+		},
+		'path naming the predefined grounded node, not declared → no warning': {
+			terminal: { connectivityNode: 'S1/VL1/B1/grounded', cNodeName: 'grounded' },
+			expectedWarnings: [],
+		},
+		'path naming one node, uuid another → one incoherent-reference warning': {
+			terminal: { connectivityNode: 'S1/VL1/B1/L1', cNodeName: 'L1', cNodeUuid: L2 },
+			expectedWarnings: [
+				{
+					type: 'incoherent-reference',
+					details: {
+						elementTag: 'Terminal',
+						pathAttribute: 'connectivityNode',
+						pathValue: 'S1/VL1/B1/L1',
+						uuidAttribute: 'cNodeUuid',
+						uuidValue: L2,
+					},
+				},
+			],
+		},
+		'names of another node → one incoherent-path-names warning listing them': {
+			terminal: {
+				connectivityNode: 'S1/VL1/B1/L1',
+				lineName: 'X',
+				bayName: 'B9',
+				cNodeName: 'L1',
+			},
+			expectedWarnings: [
+				{
+					type: 'incoherent-path-names',
+					details: {
+						elementTag: 'Terminal',
+						attributes: [
+							{ name: 'lineName', value: 'X', expected: undefined },
+							{ name: 'bayName', value: 'B9', expected: 'B1' },
+						],
+					},
+				},
+			],
+		},
+		'node pathName that is not its position → one incoherent-path-names warning': {
+			terminal: { connectivityNode: 'S1/VL1/B1/L1', cNodeName: 'L1', cNodeUuid: L1 },
+			nodePathName: 'S0/VL0/B0/L1',
+			expectedWarnings: [
+				{
+					type: 'incoherent-path-names',
+					details: {
+						elementTag: 'ConnectivityNode',
+						attributes: [{ name: 'pathName', value: 'S0/VL0/B0/L1', expected: 'S1/VL1/B1/L1' }],
+					},
+				},
+			],
+		},
+	}
+
+	let entries = Object.entries(testCases)
+	const onlyEntries = entries.filter(([, testCase]) => testCase.only)
+	if (onlyEntries.length) entries = onlyEntries
+
+	entries.forEach(([description, testCase]) => {
+		it(description, async () => {
+			const hooks = createSclIoHooks()
+			const substation = makeRecord('Substation', { name: 'S1' })
+			const voltageLevel = makeRecord('VoltageLevel', { name: 'VL1' })
+			const bay = makeRecord('Bay', { name: 'B1' })
+			const equipment = makeRecord('ConductingEquipment', { name: 'QA1', type: 'CBR' })
+			const terminal = makeRecord('Terminal', testCase.terminal)
+			const nodes = [
+				makeRecord('ConnectivityNode', {
+					name: 'L1',
+					pathName: testCase.nodePathName ?? 'S1/VL1/B1/L1',
+					uuid: L1,
+				}),
+				makeRecord('ConnectivityNode', { name: 'L2', pathName: 'S1/VL1/B1/L2', uuid: L2 }),
+			]
+
+			hooks.beforeImportRecord!({
+				record: terminal,
+				ancestry: [substation, voltageLevel, bay, equipment],
+			})
+			for (const node of nodes) {
+				hooks.beforeImportRecord!({ record: node, ancestry: [substation, voltageLevel, bay] })
+			}
+
+			const result = await hooks.afterImport!()
+			expect(
+				result.warnings?.map((warning) => ({ type: warning.type, details: warning.details })) ?? [],
+			).toEqual(testCase.expectedWarnings)
+		})
+	})
+})
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
 /** The `LNodeSpecNaming` an LNode of the file carries. */
@@ -623,6 +755,152 @@ describe('import of paths through an LNode bound to an IED', () => {
 				</SCL>
 			`,
 			expectedQueries: ['//v2019C1:LNodeInputRef[@sourceRef="PTRC1/Trip"]'],
+		},
+	}
+
+	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+})
+
+/**
+ * A terminal names its connectivity node by path, by the names of the levels holding it and by
+ * its uuid. On import the three are made to agree: the uuid wins over the path, the path over the
+ * names. A connectivity node's `pathName` follows its position.
+ */
+describe('import of a reference whose path and uuid disagree', () => {
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		'FunctionCatRef whose path names another Function → the uuid wins, path written from it': {
+			allowIncoherentReferences: 'a file whose path and uuid disagree is what is under test',
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<Function name="F1" uuid="uuid-f1" ${id}="f1"/>
+						<Function name="F2" uuid="uuid-f2" ${id}="f2"/>
+						<eIEC61850-6-100:FunctionCategory name="Cat1" ${id}="cat1">
+							<eIEC61850-6-100:FunctionCatRef function="S1/F1" functionUuid="uuid-f2" ${id}="ref"/>
+						</eIEC61850-6-100:FunctionCategory>
+					</Substation>
+				</SCL>
+			`,
+			expectedQueries: ['//v2019C1:FunctionCatRef[@functionUuid="uuid-f2" and @function="S1/F2"]'],
+		},
+		'FunctionCatRef whose path names nothing → the uuid wins, path written from it': {
+			allowIncoherentReferences: 'a file whose path and uuid disagree is what is under test',
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<Function name="F2" uuid="uuid-f2" ${id}="f2"/>
+						<eIEC61850-6-100:FunctionCategory name="Cat1" ${id}="cat1">
+							<eIEC61850-6-100:FunctionCatRef function="S1/Gone" functionUuid="uuid-f2" ${id}="ref"/>
+						</eIEC61850-6-100:FunctionCategory>
+					</Substation>
+				</SCL>
+			`,
+			expectedQueries: ['//v2019C1:FunctionCatRef[@functionUuid="uuid-f2" and @function="S1/F2"]'],
+		},
+	}
+
+	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+})
+
+describe('import of a terminal', () => {
+	const L1 = '00000000-0000-4000-8000-000000000001'
+	const L2 = '00000000-0000-4000-8000-000000000002'
+
+	function substationWith(params: { terminal: string; nodePathName?: string }): string {
+		const { terminal, nodePathName = 'S1/VL1/B1/L1' } = params
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation name="S1" ${id}="s1">
+					<VoltageLevel name="VL1" ${id}="vl1">
+						<Bay name="B1" ${id}="b1">
+							<ConductingEquipment name="QA1" type="CBR" ${id}="qa1">
+								${terminal}
+							</ConductingEquipment>
+							<ConnectivityNode name="L1" pathName="${nodePathName}" uuid="${L1}" ${id}="l1"/>
+							<ConnectivityNode name="L2" pathName="S1/VL1/B1/L2" uuid="${L2}" ${id}="l2"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+			</SCL>
+		`
+	}
+
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		'path only → cNodeUuid resolved, the level names written from the node': {
+			sourceXml: substationWith({
+				terminal: `<Terminal connectivityNode="S1/VL1/B1/L1" cNodeName="L1" ${id}="terminal"/>`,
+			}),
+			expectedQueries: [
+				`//default:Terminal[@cNodeUuid="${L1}" and @connectivityNode="S1/VL1/B1/L1" and @substationName="S1" and @voltageLevelName="VL1" and @bayName="B1" and @cNodeName="L1"]`,
+			],
+		},
+		'path only, names of another node → names rewritten from the node the path names': {
+			allowIncoherentReferences: 'a file whose names disagree with its path is what is under test',
+			sourceXml: substationWith({
+				terminal: `<Terminal connectivityNode="S1/VL1/B1/L1" lineName="X" bayName="B9" cNodeName="L9" ${id}="terminal"/>`,
+			}),
+			expectedQueries: [
+				`//default:Terminal[@cNodeUuid="${L1}" and @bayName="B1" and @cNodeName="L1" and not(@lineName)]`,
+			],
+		},
+		'uuid only → path and names written from the node': {
+			sourceXml: substationWith({
+				terminal: `<Terminal cNodeUuid="${L2}" ${id}="terminal"/>`,
+			}),
+			expectedQueries: [
+				`//default:Terminal[@cNodeUuid="${L2}" and @connectivityNode="S1/VL1/B1/L2" and @substationName="S1" and @voltageLevelName="VL1" and @bayName="B1" and @cNodeName="L2"]`,
+			],
+		},
+		'path, names and uuid agreeing → kept as read': {
+			sourceXml: substationWith({
+				terminal: `<Terminal connectivityNode="S1/VL1/B1/L1" substationName="S1" voltageLevelName="VL1" bayName="B1" cNodeName="L1" cNodeUuid="${L1}" ${id}="terminal"/>`,
+			}),
+			expectedQueries: [
+				`//default:Terminal[@cNodeUuid="${L1}" and @connectivityNode="S1/VL1/B1/L1" and @cNodeName="L1"]`,
+			],
+		},
+		'path naming one node, uuid another → the uuid wins, path and names rewritten': {
+			allowIncoherentReferences: 'a file whose path and uuid disagree is what is under test',
+			sourceXml: substationWith({
+				terminal: `<Terminal connectivityNode="S1/VL1/B1/L1" substationName="S1" voltageLevelName="VL1" bayName="B1" cNodeName="L1" cNodeUuid="${L2}" ${id}="terminal"/>`,
+			}),
+			expectedQueries: [
+				`//default:Terminal[@cNodeUuid="${L2}" and @connectivityNode="S1/VL1/B1/L2" and @cNodeName="L2"]`,
+			],
+		},
+		'path naming no node → left as read': {
+			sourceXml: substationWith({
+				terminal: `<Terminal connectivityNode="S1/VL1/B1/L9" substationName="S1" voltageLevelName="VL1" bayName="B1" cNodeName="L9" ${id}="terminal"/>`,
+			}),
+			expectedQueries: [
+				'//default:Terminal[@connectivityNode="S1/VL1/B1/L9" and @cNodeName="L9" and not(@cNodeUuid)]',
+			],
+		},
+		'node whose pathName is not its position → pathName rewritten': {
+			allowIncoherentReferences:
+				'a file whose pathName disagrees with its position is what is under test',
+			sourceXml: substationWith({
+				terminal: `<Terminal connectivityNode="S1/VL1/B1/L1" cNodeName="L1" ${id}="terminal"/>`,
+				nodePathName: 'S0/VL0/B0/L1',
+			}),
+			expectedQueries: ['//default:ConnectivityNode[@name="L1" and @pathName="S1/VL1/B1/L1"]'],
+		},
+		'node in a Line of a Process → resolved, process and line names written': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Process name="P1" ${id}="p1">
+						<Line name="LN1" ${id}="line">
+							<ConductingEquipment name="QA1" type="CBR" ${id}="qa1">
+								<Terminal connectivityNode="P1/LN1/N1" cNodeName="N1" ${id}="terminal"/>
+							</ConductingEquipment>
+							<ConnectivityNode name="N1" pathName="P1/LN1/N1" uuid="${L1}" ${id}="n1"/>
+						</Line>
+					</Process>
+				</SCL>
+			`,
+			expectedQueries: [
+				`//default:Terminal[@cNodeUuid="${L1}" and @processName="P1" and @lineName="LN1" and @cNodeName="N1" and not(@bayName)]`,
+			],
 		},
 	}
 

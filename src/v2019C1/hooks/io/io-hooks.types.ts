@@ -23,11 +23,29 @@ export type PendingResolution = {
 	alwaysStandardize: boolean
 }
 
-/** A target element of the file, indexed by its path once the whole file is read. */
-export type CollectedTarget = {
+/** An element of the file with the ancestors it was read below. */
+export type CollectedElement = {
 	record: AnyRawRecord
 	ancestry: readonly AnyRawRecord[]
+}
+
+/** A target element of the file, indexed by its path once the whole file is read. */
+export type CollectedTarget = CollectedElement & {
 	uuid: string
+}
+
+/** The attributes a patch sets, those it removes, and those the file gave another value. */
+export type AttributeChanges = {
+	attributes: { name: string; value: string }[]
+	removeAttributes: string[]
+	incoherent: IncoherentPathName[]
+}
+
+/** An attribute written from a path that the file gave another value: `expected` is the path's. */
+export type IncoherentPathName = {
+	name: string
+	value: string
+	expected: string | undefined
 }
 
 /** A target element of the file, indexed by its uuid. */
@@ -42,6 +60,7 @@ export type IndexedTarget = {
  */
 export type PendingPathFill = {
 	recordId: string
+	elementTag: string
 	pair: ReferencePair
 	uuidValue: string
 	referenceAttributes: readonly { name: string; value: string }[]
@@ -91,6 +110,18 @@ export type IncoherentReferenceWarning = ImportWarning & {
 }
 
 /**
+ * Attributes written from a path (a terminal's level names, a connectivity node's `pathName`) that
+ * disagree with that path: they were written again from it.
+ */
+export type IncoherentPathNamesWarning = ImportWarning & {
+	type: 'incoherent-path-names'
+	details: {
+		elementTag: string
+		attributes: IncoherentPathName[]
+	}
+}
+
+/**
  * An LNode bound to an IED had no `LNodeSpecNaming`: it was given one from the naming of the
  * logical node it is bound to (prefix, class, instance), the IED and LD names left out.
  */
@@ -107,4 +138,5 @@ export type SclImportWarning =
 	| UnresolvedReferenceWarning
 	| UnsupportedXPathWarning
 	| IncoherentReferenceWarning
+	| IncoherentPathNamesWarning
 	| DerivedSpecificationNamingWarning

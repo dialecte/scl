@@ -13,9 +13,19 @@ export const SCL_IMPORT_WARNINGS = {
 	'unsupported-xpath-reference': {
 		message: 'A reference is written in a form that is not resolved',
 	},
-	/** A reference whose path and whose uuid name two different elements: both are kept as read. */
+	/**
+	 * A reference whose path and whose uuid name two different elements: the uuid wins, the path is
+	 * written from the element it names.
+	 */
 	'incoherent-reference': {
 		message: 'A reference names one element by its path and another by its uuid',
+	},
+	/**
+	 * Names written from a path (a terminal's level names, a connectivity node's path name) disagree
+	 * with that path: they are written again from it.
+	 */
+	'incoherent-path-names': {
+		message: 'Names written from a path disagree with that path',
 	},
 	/**
 	 * An LNode bound to an IED had no specified naming: it was given one from the logical node it is
