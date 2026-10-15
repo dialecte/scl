@@ -243,6 +243,78 @@ describe('collectReferenceViolations', () => {
 				},
 			],
 		},
+		'terminal whose level names are not those of the node its uuid names → one derived violation per name':
+			{
+				xml: /* xml */ `
+					<SCL ${ALL_XMLNS_NAMESPACES}>
+						<Substation name="S1">
+							<VoltageLevel name="VL1">
+								<Bay name="B1">
+									<ConductingEquipment name="QA1" type="CBR">
+										<Terminal connectivityNode="S1/VL1/B1/L1" lineName="X" substationName="S1" voltageLevelName="VL1" bayName="B9" cNodeName="L1" cNodeUuid="node-uuid" />
+									</ConductingEquipment>
+									<ConnectivityNode name="L1" pathName="S1/VL1/B1/L1" uuid="node-uuid" />
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				expected: [
+					{
+						kind: 'derived',
+						elementTagName: 'Terminal',
+						attribute: 'lineName',
+						written: 'X',
+						expected: undefined,
+					},
+					{
+						kind: 'derived',
+						elementTagName: 'Terminal',
+						attribute: 'bayName',
+						written: 'B9',
+						expected: 'B1',
+					},
+				],
+			},
+		'connectivity node whose pathName is not its position → derived violation': {
+			xml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES}>
+					<Substation name="S1">
+						<VoltageLevel name="VL1">
+							<Bay name="B1">
+								<ConnectivityNode name="L1" pathName="S1/VL1/B0/L1" uuid="node-uuid" />
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+			expected: [
+				{
+					kind: 'derived',
+					elementTagName: 'ConnectivityNode',
+					attribute: 'pathName',
+					written: 'S1/VL1/B0/L1',
+					expected: 'S1/VL1/B1/L1',
+				},
+			],
+		},
+		'terminal without its optional level names → no violation': {
+			xml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES}>
+					<Substation name="S1">
+						<VoltageLevel name="VL1">
+							<Bay name="B1">
+								<ConductingEquipment name="QA1" type="CBR">
+									<Terminal connectivityNode="S1/VL1/B1/L1" cNodeName="L1" cNodeUuid="node-uuid" />
+								</ConductingEquipment>
+								<ConnectivityNode name="L1" pathName="S1/VL1/B1/L1" uuid="node-uuid" />
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+			expected: [],
+		},
 		'malformed document → no violation, the structural check reports it': {
 			xml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES}>

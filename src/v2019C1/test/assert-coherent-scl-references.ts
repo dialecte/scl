@@ -2,6 +2,10 @@ import { SCL_NAMESPACES } from '@/v2019C1/config/dialecte.config'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
+import {
+	composeDerivedAttributes,
+	derivedAttributesFollowing,
+} from '@/v2019C1/extensions/reference/query/build/compose-derived-attributes'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 
 import type {
@@ -10,7 +14,8 @@ import type {
 	CollectReferenceViolationsParams,
 	ReferenceViolation,
 } from './assert-coherent-scl-references.types'
-import type { ReferencePair } from '@/v2019C1/extensions/reference'
+import type { DerivedAttributes, ReferencePair } from '@/v2019C1/extensions/reference'
+import type { ElementPath } from '@/v2019C1/extensions/reference/query/build'
 import type { AnyRawRecord } from '@dialecte/core'
 
 const SCL_NAMESPACE_URIS: readonly string[] = Object.values(SCL_NAMESPACES).map(
@@ -76,7 +81,7 @@ function describeIncoherentReferences(params: { xml: string; label: string }): s
 }
 
 function describeViolation(violation: ReferenceViolation): string {
-	const reference = `<${violation.referenceTagName}>`
+	const reference = `<${violation.kind === 'derived' ? violation.elementTagName : violation.referenceTagName}>`
 	switch (violation.kind) {
 		case 'path':
 			return `[path] ${reference} ${violation.pathAttribute}="${violation.written}" is not the path of the element ${violation.uuidAttribute}="${violation.uuid}" points at, which is "${violation.expected}"`
@@ -86,6 +91,8 @@ function describeViolation(violation: ReferenceViolation): string {
 			return `[wrong-target] ${reference} ${violation.uuidAttribute}="${violation.uuid}" points at a <${violation.targetTagName}>, which it cannot reference`
 		case 'empty':
 			return `[empty] ${reference} ${violation.uuidAttribute} is empty`
+		case 'derived':
+			return `[derived] ${reference} ${violation.attribute}="${violation.written}" is not the value read on its path, which is ${violation.expected === undefined ? 'absent' : `"${violation.expected}"`}`
 	}
 }
 
@@ -95,11 +102,15 @@ function collectElementViolations(params: {
 }): ReferenceViolation[] {
 	const { element, elementsByUuid } = params
 
+	const ownViolations = collectOwnPathViolations(element)
 	const pairs: readonly ReferencePair[] | undefined =
 		UUID_REFERENCE_PAIRS[element.localName as keyof typeof UUID_REFERENCE_PAIRS]
-	if (!pairs) return []
+	if (!pairs) return ownViolations
 
-	return pairs.flatMap((pair) => collectPairViolations({ element, pair, elementsByUuid }))
+	return [
+		...ownViolations,
+		...pairs.flatMap((pair) => collectPairViolations({ element, pair, elementsByUuid })),
+	]
 }
 
 function collectPairViolations(params: {
@@ -129,16 +140,19 @@ function collectPairViolations(params: {
 
 	if (!isPlainNamePath({ pair, target })) return []
 
-	const written = element.getAttribute(pair.attribute.path)
-	if (written === null) return []
+	const expected = elementPathOf(target)
+	if (!expected) return []
 
-	const ancestors = ancestorsTopDown(target)
-	const expected = buildPathFromAncestry({
-		record: toRawRecord(target),
-		ancestry: ancestors.map((ancestor, index) => toRawRecord(ancestor, `ancestor-${index}`)),
-		specNamings: specNamingsOf(ancestors),
+	const derived = derivedAttributesFollowing({
+		tagName: referenceTagName,
+		follows: pair.attribute.path,
 	})
-	if (!expected || expected.path === written) return []
+	const derivedViolations = derived
+		? collectDerivedViolations({ element, derived, sourcePath: expected })
+		: []
+
+	const written = element.getAttribute(pair.attribute.path)
+	if (written === null || expected.path === written) return derivedViolations
 
 	return [
 		{
@@ -150,7 +164,51 @@ function collectPairViolations(params: {
 			written,
 			expected: expected.path,
 		},
+		...derivedViolations,
 	]
+}
+
+/** The attributes an element writes from its own path (a node's `pathName`) that disagree with it. */
+function collectOwnPathViolations(element: Element): ReferenceViolation[] {
+	const derived = derivedAttributesFollowing({ tagName: element.localName, follows: 'self' })
+	if (!derived) return []
+	const ownPath = elementPathOf(element)
+	return ownPath ? collectDerivedViolations({ element, derived, sourcePath: ownPath }) : []
+}
+
+/**
+ * The written values of `derived` that differ from their value on `sourcePath`. A value left out
+ * is not reported: a hand-made fixture may omit the optional names, the hooks write them.
+ */
+function collectDerivedViolations(params: {
+	element: Element
+	derived: DerivedAttributes
+	sourcePath: ElementPath
+}): ReferenceViolation[] {
+	const { element, derived, sourcePath } = params
+	return composeDerivedAttributes({ derived, sourcePath }).flatMap(({ name, value }) => {
+		const written = element.getAttribute(name)
+		if (!written || written === value) return []
+		return [
+			{
+				kind: 'derived' as const,
+				elementTagName: element.localName,
+				attribute: name,
+				written,
+				expected: value,
+			},
+		]
+	})
+}
+
+/** The path of an element of the document, read from its ancestors. */
+function elementPathOf(element: Element): ElementPath | null {
+	const ancestors = ancestorsTopDown(element)
+	return buildPathFromAncestry({
+		record: toRawRecord(element),
+		ancestry: ancestors.map((ancestor, index) => toRawRecord(ancestor, `ancestor-${index}`)),
+		specNamings: specNamingsOf(ancestors),
+	})
 }
 
 /**

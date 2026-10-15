@@ -71,3 +71,43 @@ export type TypeIdReferrer = {
 	attribute: TypeIdRefAttribute
 	when?: { attribute: string; equals: string }
 }
+
+// ── Derived reference attributes (written from a path, never given) ─────────────
+
+/**
+ * Where a derived attribute reads its value on its source path: `'path'`, the whole path;
+ * an element tag, the names of the levels of that tag on the path, joined with "/" (absent
+ * when the path has none).
+ */
+export type DerivedAttributeSource = 'path' | Scl.ElementsOf
+
+export type DerivedAttribute = {
+	name: string
+	from: DerivedAttributeSource
+}
+
+/**
+ * The attributes an element derives from one path: the path of the target of its pair whose
+ * path attribute is `follows`, or its own path when `follows` is `'self'`.
+ */
+export type DerivedAttributes = {
+	follows: string
+	attributes: readonly DerivedAttribute[]
+}
+
+/**
+ * Authoring shape for {@link DERIVED_REFERENCE_ATTRIBUTES}: keyed by element tag, it constrains
+ * `follows` and every attribute name to real attributes of that element.
+ */
+export type DerivedReferenceAttributesShape = {
+	[Tag in Scl.ElementsOf]?: {
+		follows: 'self' | Scl.AttributesOf<Tag>
+		attributes: readonly { name: Scl.AttributesOf<Tag>; from: DerivedAttributeSource }[]
+	}
+}
+
+/** One value to write: `undefined` removes the attribute. */
+export type DerivedAttributeValue = {
+	name: string
+	value: string | undefined
+}

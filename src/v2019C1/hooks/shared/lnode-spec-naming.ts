@@ -8,10 +8,7 @@ import {
 	handleNewPrivateRecordCase,
 } from '@/v2019C1/hooks/after-created/private-wrapper'
 import { hasAttributeChange, updatedOperation } from '@/v2019C1/hooks/shared/record-ops'
-import {
-	rebuildReferencesBelow,
-	rebuildReferencesTo,
-} from '@/v2019C1/hooks/shared/references-through'
+import { rebuildPathsBelow, rebuildReferencesTo } from '@/v2019C1/hooks/shared/references-through'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -116,10 +113,9 @@ export async function rebuildPathsOfNamedLNode(
 	if (specNaming.tagName !== 'LNodeSpecNaming') return []
 	const lnode = await owningLNode(query, params)
 	if (!lnode) return []
-	return [
-		...(await rebuildReferencesTo(query, { target: lnode })),
-		...(await rebuildReferencesBelow(query, { record: lnode })),
-	]
+	const referenceOps = await rebuildReferencesTo(query, { target: lnode })
+	const belowOps = await rebuildPathsBelow(query, { record: lnode })
+	return [...referenceOps, ...belowOps]
 }
 
 /** The LNode an `LNodeSpecNaming` belongs to: its parent, or the parent of its Private. */

@@ -1,18 +1,20 @@
-import { isElementOf, widen } from '@dialecte/core/helpers'
+import { widen } from '@dialecte/core/helpers'
 
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
-import { PAIRS_BY_REF } from '@/v2019C1/extensions/reference'
-import { buildReferencePath } from '@/v2019C1/extensions/reference/query/build'
+import { PAIRS_BY_REF, REF_ENTRIES_BY_TARGET } from '@/v2019C1/extensions/reference'
 import {
-	getRefEntriesForTarget,
+	buildOwnDerivedAttributes,
+	buildReferenceAttributes,
+} from '@/v2019C1/extensions/reference/query/build/build-reference-attributes'
+import {
+	findTargetByUuid,
+	rebuildReferencesByUuid,
 	reconcileMappedData,
 	updatedOperation,
-	updateRefsForEntry,
-	upsertAttribute,
+	withAttributeValues,
 } from '@/v2019C1/hooks/shared'
 
 import type { Scl, Config } from '@/v2019C1/config'
-import type { RefPairEntry } from '@/v2019C1/extensions/reference'
+import type { AttributeList } from '@/v2019C1/hooks/shared/record-ops'
 import type * as Core from '@dialecte/core'
 
 // ── Public entry point ────────────────────────────────────────────────────────
@@ -21,7 +23,9 @@ import type * as Core from '@dialecte/core'
  * Called when a new element is created. Handles two cases:
  *
  * 1. REF created (e.g. FunctionCatRef added) - target may already exist in DB.
- *    Look up target by UUID attr -> compute path -> set pathAttr on the new ref.
+ *    Look up target by UUID attr -> compute path -> set pathAttr on the new ref, with the
+ *    attributes it writes from the target's path (a terminal's level names). An element that
+ *    writes attributes from its own path (a connectivity node's `pathName`) gets them too.
  *
  * 2. TARGET created (e.g. Function added) - existing DB refs may point to its UUID.
  *    Scan DB for refs that match this uuid -> set their pathAttr.
@@ -32,7 +36,7 @@ export async function setRefPaths<GenericElement extends Scl.ElementsOf>(params:
 }): Promise<Scl.Operation[]> {
 	const { childRecord, query } = params
 
-	const asRef = await setRefPathOnCreatedRef({ childRecord, query })
+	const asRef = await setPathAttributesOfCreated({ childRecord, query })
 	const asTarget = await setRefPathsOnCreatedTarget({ childRecord, query })
 
 	const mappedNameOp = await reconcileMappedData(query, { record: widen(childRecord) })
@@ -44,79 +48,43 @@ export async function setRefPaths<GenericElement extends Scl.ElementsOf>(params:
 // ── Case 1: REF created ───────────────────────────────────────────────────────
 
 /**
- * The new element is a REF (e.g. FunctionCatRef).
- * If it carries a uuidAttr, look up the target element by UUID,
- * compute the path from the target's ancestry, set the pathAttr.
- * Every pair's path lands in one update of the record: an update per pair would each
- * start from the created attributes and only the last would stay.
+ * The new element is a REF (e.g. FunctionCatRef): for each pair whose uuid names an element,
+ * the attributes the reference holds for it. Then the attributes it writes from its own path.
+ * Everything lands in one update of the record: an update per pair would each start from the
+ * created attributes and only the last would stay.
  */
-async function setRefPathOnCreatedRef<GenericElement extends Scl.ElementsOf>(params: {
+async function setPathAttributesOfCreated<GenericElement extends Scl.ElementsOf>(params: {
 	childRecord: Scl.RawRecord<GenericElement>
 	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { childRecord, query } = params
 
-	const refPairs = PAIRS_BY_REF.get(childRecord.tagName)
-	if (!refPairs?.length) return []
-
 	const record = widen(childRecord)
-	let attributes: { name: string; value: string }[] = record.attributes
+	const reference = { tagName: record.tagName, id: record.id } as Scl.Ref<Scl.ElementsOf>
+	let attributes: AttributeList = record.attributes
 
-	for (const pair of refPairs) {
-		const pathValue = await resolveRefPairPath({ childRecord, pair, query })
-		if (pathValue) attributes = upsertAttribute(attributes, pair.pathAttr, pathValue)
+	for (const pair of PAIRS_BY_REF.get(record.tagName) ?? []) {
+		const uuid = record.attributes.find((attribute) => attribute.name === pair.uuidAttr)?.value
+		const target = uuid
+			? await findTargetByUuid(query, { uuid, targetTagNames: pair.targetTagNames })
+			: undefined
+		if (!target) continue
+		const values = await buildReferenceAttributes(query, { reference, target })
+		attributes = withAttributeValues(attributes, values)
 	}
+
+	const ownValues = await buildOwnDerivedAttributes(query, { element: reference })
+	attributes = withAttributeValues(attributes, ownValues)
 
 	if (attributes === record.attributes) return []
 	return [updatedOperation(record, attributes)]
 }
 
-async function resolveRefPairPath<GenericElement extends Scl.ElementsOf>(params: {
-	childRecord: Scl.RawRecord<GenericElement>
-	pair: RefPairEntry
-	query: Core.Query<Config>
-}): Promise<string | null> {
-	const { childRecord, pair, query } = params
-
-	const uuidValue = childRecord.attributes.find((a) => a.name === pair.uuidAttr)?.value
-	if (!uuidValue) return null
-
-	const targetRecord = await findTargetByUuid({
-		uuidValue,
-		targetTagNames: pair.targetTagNames,
-		query,
-	})
-	if (!targetRecord) return null
-
-	const reference = { tagName: childRecord.tagName, id: childRecord.id } as Scl.Ref<Scl.ElementsOf>
-	const target = { tagName: targetRecord.tagName, id: targetRecord.id } as Scl.Ref<Scl.ElementsOf>
-	return await buildReferencePath(query, { reference, target })
-}
-
-async function findTargetByUuid(params: {
-	uuidValue: string
-	targetTagNames: readonly string[]
-	query: Core.Query<Config>
-}): Promise<{ tagName: string; id: string } | null> {
-	const { uuidValue, targetTagNames, query } = params
-
-	for (const targetTagName of targetTagNames) {
-		if (!isElementOf(targetTagName, SCL_DIALECTE_CONFIG)) continue
-		const candidates = await query.getRecordsByTagName(targetTagName)
-		const match = candidates.find(
-			(r) => r.attributes.find((a) => a.name === 'uuid')?.value === uuidValue,
-		)
-		if (match) return { tagName: match.tagName, id: match.id }
-	}
-
-	return null
-}
-
 // ── Case 2: TARGET created ────────────────────────────────────────────────────
 
 /**
- * The new element is a TARGET (e.g. Function, LNode, ExtRef).
- * Scan DB for existing REF records pointing to its UUID and update their pathAttr.
+ * The new element is a TARGET (e.g. Function, LNode, ConnectivityNode): the existing references
+ * that carry its uuid get their path, and the attributes they write from it.
  */
 async function setRefPathsOnCreatedTarget<GenericElement extends Scl.ElementsOf>(params: {
 	childRecord: Scl.RawRecord<GenericElement>
@@ -124,19 +92,9 @@ async function setRefPathsOnCreatedTarget<GenericElement extends Scl.ElementsOf>
 }): Promise<Scl.Operation[]> {
 	const { childRecord, query } = params
 
-	const uuid = childRecord.attributes.find((a) => a.name === 'uuid')?.value
-	if (!uuid) return []
-
-	const refEntries = getRefEntriesForTarget(childRecord.tagName)
-	if (refEntries.length === 0) return []
+	const uuid = childRecord.attributes.find((attribute) => attribute.name === 'uuid')?.value
+	if (!uuid || !REF_ENTRIES_BY_TARGET.has(childRecord.tagName)) return []
 
 	const target = { tagName: childRecord.tagName, id: childRecord.id } as Scl.Ref<Scl.ElementsOf>
-	const operations: Scl.Operation[] = []
-
-	for (const entry of refEntries) {
-		const ops = await updateRefsForEntry({ uuid, entry, target, query })
-		operations.push(...ops)
-	}
-
-	return operations
+	return rebuildReferencesByUuid(query, { uuid, target })
 }

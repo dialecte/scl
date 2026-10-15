@@ -1,4 +1,5 @@
 import type { Scl } from '@/v2019C1/config'
+import type { DerivedAttributeValue } from '@/v2019C1/extensions/reference'
 
 /** A plain attribute list as built by the reconcile helpers. */
 export type AttributeList = readonly { name: string; value: string }[]
@@ -71,4 +72,24 @@ export function upsertAttribute(
 	const exists = attributes.some((a) => a.name === name)
 	if (exists) return attributes.map((a) => (a.name === name ? { ...a, value } : a))
 	return [...attributes, { name, value }]
+}
+
+/**
+ * The attribute list with each value set, or removed when it is `undefined`. The same list when
+ * nothing changes, so a caller can tell an update is needed by identity.
+ */
+export function withAttributeValues(
+	attributes: AttributeList,
+	values: readonly DerivedAttributeValue[],
+): AttributeList {
+	let result = attributes
+	for (const { name, value } of values) {
+		const current = result.find((attribute) => attribute.name === name)?.value
+		if (current === value) continue
+		result =
+			value === undefined
+				? result.filter((attribute) => attribute.name !== name)
+				: upsertAttribute(result, name, value)
+	}
+	return result
 }

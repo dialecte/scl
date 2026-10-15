@@ -4,7 +4,7 @@ import { composeReferencePath } from './compose-reference-path'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { RESOLUTION_TYPE, MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference/constants'
 
-import type { PathSegmentWithRef } from './path-segment.types'
+import type { ElementPath, PathSegmentWithRef } from './path-segment.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
@@ -25,7 +25,8 @@ import type * as Core from '@dialecte/core'
  * valid XPath) and keeps uuid + name references in agreement.
  *
  * @param query   - Active document query
- * @param params  - reference (the REF element) + target (the element it points to)
+ * @param params  - reference (the REF element) + target (the element it points to), and the
+ *                  target's path when the caller already read it (several references to one target)
  * @returns The computed path value, or null if unresolvable
  */
 export async function buildReferencePath(
@@ -33,6 +34,7 @@ export async function buildReferencePath(
 	params: {
 		reference: Scl.Ref<Scl.ElementsOf>
 		target: Scl.Ref<Scl.ElementsOf>
+		targetPath?: ElementPath
 	},
 ): Promise<string | null> {
 	const { reference, target } = params
@@ -45,7 +47,7 @@ export async function buildReferencePath(
 	const pair = findPair(reference.tagName, target.tagName)
 	if (!pair) return null
 
-	const targetPath = await buildElementPath(query, target)
+	const targetPath = params.targetPath ?? (await buildElementPath(query, target))
 	if (!targetPath) return null
 
 	const referenceRecord = await query.getRecord(reference)

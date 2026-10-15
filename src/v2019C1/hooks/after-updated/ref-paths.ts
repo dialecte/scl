@@ -4,10 +4,12 @@ import {
 	MAPPED_DATA_DEFAULT_ATTRIBUTES,
 	PATH_CONTRIBUTING_ATTRIBUTES,
 } from '@/v2019C1/extensions/reference'
+import { derivedAttributesFollowing } from '@/v2019C1/extensions/reference/query/build/compose-derived-attributes'
 import {
 	hasAttributeChange,
 	mirrorSpecifiedNaming,
-	rebuildReferencesBelow,
+	rebuildOwnPathAttributes,
+	rebuildPathsBelow,
 	rebuildReferencesTo,
 	reconcileLNodeBinding,
 	reconcileMappedData,
@@ -79,10 +81,17 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 	operations.push(...referrerOps)
 
 	const target = { tagName: newRecord.tagName, id: newRecord.id } as Scl.Ref<Scl.ElementsOf>
-	operations.push(...(await rebuildReferencesTo(query, { target })))
+	const referenceOps = await rebuildReferencesTo(query, { target })
+	operations.push(...referenceOps)
 
-	if (hasPathAttributeChange(oldRecord, newRecord)) {
-		operations.push(...(await rebuildReferencesBelow(query, { record: target })))
+	const pathChanged = hasPathAttributeChange(oldRecord, newRecord)
+	if (pathChanged || ownPathAttributeChanged({ oldRecord: previous, newRecord: current })) {
+		const ownOps = await rebuildOwnPathAttributes(query, { element: target })
+		operations.push(...ownOps)
+	}
+	if (pathChanged) {
+		const belowOps = await rebuildPathsBelow(query, { record: target })
+		operations.push(...belowOps)
 	}
 
 	if (specifiedNamingChanged({ oldRecord: previous, newRecord: current })) {
@@ -90,6 +99,18 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 	}
 
 	return operations
+}
+
+/** Whether an attribute the record writes from its own path (a node's `pathName`) was edited. */
+function ownPathAttributeChanged(params: {
+	oldRecord: Scl.RawRecord<Scl.ElementsOf>
+	newRecord: Scl.RawRecord<Scl.ElementsOf>
+}): boolean {
+	const { oldRecord, newRecord } = params
+	const derived = derivedAttributesFollowing({ tagName: newRecord.tagName, follows: 'self' })
+	if (!derived) return false
+	const names = derived.attributes.map((attribute) => attribute.name)
+	return hasAttributeChange({ oldRecord, newRecord, names })
 }
 
 function hasPathAttributeChange<GenericElement extends Scl.ElementsOf>(

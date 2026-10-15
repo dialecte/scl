@@ -249,3 +249,83 @@ describe('instantiate.ssd - placement collision', () => {
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+/**
+ * The terminals of an instantiated bay-typical name the nodes placed with it: the uuid of the
+ * placed node, its path and level names under the project's levels.
+ */
+describe('instantiate.ssd - connectivity', () => {
+	const L1 = '00000000-0000-4000-8000-000000000001'
+	const connectivitySource = /* xml */ `
+		<SCL ${ns} ${id}="ssd">
+			<Header id="ssd-header" uuid="ssd-doc-uuid" version="0" revision="14" ${id}="hdr-s"/>
+			<Substation name="TEMPLATE" ${id}="sub-s">
+				<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+					<Bay name="B1" ${id}="bay-s">
+						<ConductingEquipment name="QA1" type="CBR" ${id}="qa1">
+							<Terminal connectivityNode="TEMPLATE/TEMPLATE/B1/L1" substationName="TEMPLATE" voltageLevelName="TEMPLATE" bayName="B1" cNodeName="L1" cNodeUuid="${L1}" ${id}="feeder"/>
+						</ConductingEquipment>
+						<ConnectivityNode name="L1" pathName="TEMPLATE/TEMPLATE/B1/L1" uuid="${L1}" ${id}="l1"/>
+					</Bay>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+
+	type ConnectivityCase = SclTest.BaseXmlTestCase & { targetXml: string; times: number }
+
+	const targetVl = { tagName: 'VoltageLevel', id: 'vl-t' } as Scl.Ref<'VoltageLevel'>
+	const targetXml = /* xml */ `
+		<SCL ${ns} ${id}="scd">
+			<Header id="proj" uuid="proj-uuid" ${id}="hdr-t"/>
+			<Substation name="S1" ${id}="sub-t">
+				<VoltageLevel name="V1" ${id}="vl-t"/>
+			</Substation>
+		</SCL>
+	`
+
+	const testCases: SclTest.TestCases<ConnectivityCase> = {
+		'bay-typical placed → its terminals name the placed node under the project levels': {
+			sourceXml: connectivitySource,
+			targetXml,
+			times: 1,
+			expectedQueries: [
+				`//default:Bay[@name="B1"]/default:ConnectivityNode[@name="L1" and @pathName="S1/V1/B1/L1" and @templateUuid="${L1}"]`,
+				'//default:Terminal[@connectivityNode="S1/V1/B1/L1" and @substationName="S1" and @voltageLevelName="V1" and @bayName="B1" and @cNodeName="L1"]',
+				'//default:Terminal[@cNodeUuid = //default:ConnectivityNode[@name="L1"]/@uuid]',
+			],
+			unexpectedQueries: [
+				`//default:Terminal[@cNodeUuid="${L1}"]`,
+				'//default:*[@substationName="TEMPLATE"]',
+			],
+		},
+		"bay-typical placed twice → each copy's terminals name the node of their own bay": {
+			sourceXml: connectivitySource,
+			targetXml,
+			times: 2,
+			expectedQueries: [
+				'//default:Bay[@name="B1_1"]/default:ConnectivityNode[@name="L1" and @pathName="S1/V1/B1_1/L1"]',
+				'//default:Bay[@name="B1_1"]//default:Terminal[@connectivityNode="S1/V1/B1_1/L1" and @bayName="B1_1" and @cNodeUuid = //default:Bay[@name="B1_1"]/default:ConnectivityNode/@uuid]',
+				'//default:Bay[@name="B1"]//default:Terminal[@connectivityNode="S1/V1/B1/L1" and @cNodeUuid = //default:Bay[@name="B1"]/default:ConnectivityNode/@uuid]',
+			],
+		},
+	}
+
+	async function act({
+		testCase,
+		source,
+		target,
+	}: SclTest.ActParams<ConnectivityCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+
+		for (let time = 0; time < testCase.times; time++) {
+			await target.transaction(async (tx) => {
+				await ssd(tx, { sourceQuery: source.query, targetParent: targetVl })
+			})
+		}
+
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})

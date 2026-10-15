@@ -1,7 +1,7 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
-import { getRefEntriesForTarget, updateRefsForEntry } from '@/v2019C1/hooks/shared/ref-entry-ops'
+import { rebuildReferencesByUuid } from '@/v2019C1/hooks/shared/ref-entry-ops'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -42,9 +42,7 @@ export async function reconcileSignalSiblingPaths(
 		const uuid = sibling.attributes.find((a) => a.name === 'uuid')?.value
 		if (!uuid) continue
 		const target = { tagName: sibling.tagName, id: sibling.id } as Scl.Ref<Scl.ElementsOf>
-		for (const entry of getRefEntriesForTarget(tagName)) {
-			operations.push(...(await updateRefsForEntry({ uuid, entry, target, query })))
-		}
+		operations.push(...(await rebuildReferencesByUuid(query, { uuid, target })))
 	}
 	return operations
 }

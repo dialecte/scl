@@ -1,4 +1,4 @@
-export { updateRefsForEntry, getRefEntriesForTarget } from './ref-entry-ops'
+export { findTargetByUuid, rebuildReferencesByUuid } from './ref-entry-ops'
 export { reconcileMappedData } from './reconcile-mapped-data'
 export { reconcileMappedDataBelow } from './reconcile-mapped-data-below'
 export { reconcileReferrerRefPaths } from './ref-path-rebuild'
@@ -9,6 +9,7 @@ export {
 	readSnapshotAttribute,
 	updatedOperation,
 	upsertAttribute,
+	withAttributeValues,
 } from './record-ops'
 export * from './min-requested-scd-file'
 export {
@@ -22,4 +23,8 @@ export {
 	rebuildPathsOfNamedLNode,
 	specifiedNamingChanged,
 } from './lnode-spec-naming'
-export { rebuildReferencesBelow, rebuildReferencesTo } from './references-through'
+export {
+	rebuildOwnPathAttributes,
+	rebuildPathsBelow,
+	rebuildReferencesTo,
+} from './references-through'

@@ -116,3 +116,67 @@ describe('extract.ssd', () => {
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+/**
+ * A bay-typical's terminals name its connectivity nodes by uuid, path and level names: in the
+ * extracted SSD they name them under the TEMPLATE scaffolding.
+ */
+describe('extract.ssd - connectivity', () => {
+	const L1 = '00000000-0000-4000-8000-000000000001'
+	const BB1 = '00000000-0000-4000-8000-000000000002'
+	const connectivitySourceXml = /* xml */ `
+		<SCL ${ns} ${id}="scl-src">
+			<Substation name="S1" ${id}="sub-1">
+				<VoltageLevel name="V1" ${id}="vl-1">
+					<Bay name="B1" ${id}="bay-1">
+						<ConductingEquipment name="QA1" type="CBR" ${id}="qa1">
+							<Terminal connectivityNode="S1/V1/B1/L1" substationName="S1" voltageLevelName="V1" bayName="B1" cNodeName="L1" cNodeUuid="${L1}" ${id}="feeder"/>
+						</ConductingEquipment>
+						<ConductingEquipment name="QB1" type="DIS" ${id}="qb1">
+							<Terminal connectivityNode="S1/V1/B1/L1" substationName="S1" voltageLevelName="V1" bayName="B1" cNodeName="L1" cNodeUuid="${L1}" ${id}="qb1-feeder-side"/>
+							<Terminal connectivityNode="S1/V1/BB/BB1" substationName="S1" voltageLevelName="V1" bayName="BB" cNodeName="BB1" cNodeUuid="${BB1}" ${id}="qb1-busbar-side"/>
+						</ConductingEquipment>
+						<ConnectivityNode name="L1" pathName="S1/V1/B1/L1" uuid="${L1}" ${id}="l1"/>
+					</Bay>
+					<Bay name="BB" ${id}="bay-bb">
+						<ConnectivityNode name="BB1" pathName="S1/V1/BB/BB1" uuid="${BB1}" ${id}="bb1"/>
+					</Bay>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		"a Bay's node and the terminals on it → named under the TEMPLATE scaffolding": {
+			sourceXml: connectivitySourceXml,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			expectedQueries: [
+				'//default:Bay[@name="B1"]/default:ConnectivityNode[@name="L1" and @pathName="TEMPLATE/TEMPLATE/B1/L1"]',
+				'//default:ConductingEquipment[@name="QA1"]/default:Terminal[@connectivityNode="TEMPLATE/TEMPLATE/B1/L1" and @substationName="TEMPLATE" and @voltageLevelName="TEMPLATE" and @bayName="B1" and @cNodeName="L1"]',
+			],
+		},
+		'a terminal on a node of another Bay → removed, the equipment stays': {
+			sourceXml: connectivitySourceXml,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			expectedQueries: [
+				'//default:ConductingEquipment[@name="QB1"]/default:Terminal[@cNodeName="L1"]',
+			],
+			unexpectedQueries: [
+				'//default:Terminal[@cNodeName="BB1"]',
+				'//default:ConnectivityNode[@name="BB1"]',
+			],
+		},
+	}
+
+	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+
+		await target.transaction(async (tx) => {
+			await ssd(tx, { sourceQuery: source.query, scopeRef, tool: 'TEST', who: 'test' })
+		})
+
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})

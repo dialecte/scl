@@ -4,14 +4,13 @@ import { isElementOf } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG, Scl, Config } from '@/v2019C1/config'
 import {
-	ALL_RESOLUTIONS,
-	RESOLUTION_TARGET_REFS,
+	REF_ENTRIES_BY_TARGET,
 	TYPE_ID_REFERRERS_BY_TARGET,
 } from '@/v2019C1/extensions/reference/constants'
 import { isTypeIdTarget } from '@/v2019C1/extensions/reference/guards'
 
 import type { ResolvedReference } from './find-refs-pointing-to.types'
-import type { RefEntry, TypeIdReferrer, TypeIdTarget } from '@/v2019C1/extensions/reference'
+import type { TypeIdReferrer, TypeIdTarget } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -70,7 +69,7 @@ async function findUuidReferrers(
 	const uuid = targetRecord.attributes.find((a) => a.name === 'uuid')?.value
 	if (!uuid) return []
 
-	const entries = getRefEntriesForTarget(targetRecord.tagName)
+	const entries = REF_ENTRIES_BY_TARGET.get(targetRecord.tagName) ?? []
 	if (entries.length === 0) return []
 
 	const results: ResolvedReference[] = []
@@ -131,15 +130,6 @@ function matchesWhen(ref: Scl.TrackedRecord<Scl.ElementsOf>, referrer: TypeIdRef
 	if (!referrer.when) return true
 	const value = ref.attributes.find((a) => a.name === referrer.when!.attribute)?.value
 	return value === referrer.when.equals
-}
-
-function getRefEntriesForTarget(tagName: string): RefEntry[] {
-	const entries: RefEntry[] = []
-	for (const resolution of ALL_RESOLUTIONS) {
-		const found = RESOLUTION_TARGET_REFS[resolution]?.get(tagName)
-		if (found) entries.push(...found)
-	}
-	return entries
 }
 
 async function findAncestorByTagName(

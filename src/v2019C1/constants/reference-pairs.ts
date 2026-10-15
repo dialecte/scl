@@ -169,6 +169,14 @@ export const UUID_REFERENCE_PAIRS = {
 			companions: [],
 		},
 	],
+	NeutralPoint: [
+		{
+			attribute: { path: 'connectivityNode', uuid: 'cNodeUuid' },
+			resolution: 'direct',
+			target: ['ConnectivityNode'],
+			companions: [],
+		},
+	],
 	OutputVar: [
 		{
 			attribute: { path: 'dataName', uuid: 'lnodeUuid' },
@@ -292,6 +300,14 @@ export const UUID_REFERENCE_PAIRS = {
 			attribute: { path: 'resourceName', uuid: 'resourceUuid' },
 			resolution: 'ancestor-name',
 			target: ['ProcessResource'],
+			companions: [],
+		},
+	],
+	Terminal: [
+		{
+			attribute: { path: 'connectivityNode', uuid: 'cNodeUuid' },
+			resolution: 'direct',
+			target: ['ConnectivityNode'],
 			companions: [],
 		},
 	],

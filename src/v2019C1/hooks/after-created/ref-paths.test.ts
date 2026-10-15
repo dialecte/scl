@@ -743,4 +743,219 @@ describe('setRefPaths', () => {
 			},
 		})
 	})
+
+	/**
+	 * A connectivity node holds its own path in `pathName`, and the terminals that carry its uuid
+	 * name it from the moment it exists.
+	 */
+	describe('connectivity node created', () => {
+		type TestCase = SclTest.BaseXmlTestCase & {
+			parent: Scl.Ref<Scl.ElementsOf>
+			node: { tagName: 'ConnectivityNode'; attributes: Record<string, string> }
+		}
+
+		const testCases: SclTest.TestCases<TestCase> = {
+			'node created in a Bay → pathName written': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<VoltageLevel name="VL1" ${id}="vl1">
+								<Bay name="B1" ${id}="parent"/>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				parent: { tagName: 'Bay', id: 'parent' },
+				node: { tagName: 'ConnectivityNode', attributes: { name: 'L1' } },
+				expectedQueries: ['//default:ConnectivityNode[@name="L1" and @pathName="S1/VL1/B1/L1"]'],
+			},
+			'node created with the uuid terminals already carry → their path and names written': {
+				allowIncoherentReferences: 'the terminals carry the uuid of the node the act creates',
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<VoltageLevel name="VL1" ${id}="vl1">
+								<Bay name="B1" ${id}="parent">
+									<ConductingEquipment name="QA1" type="CBR" ${id}="qa1">
+										<Terminal cNodeUuid="00000000-0000-4000-8000-000000000001" connectivityNode="S1/VL1/B1/OLD" cNodeName="OLD" ${id}="terminal"/>
+									</ConductingEquipment>
+									<!-- ConnectivityNode created by act -->
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				parent: { tagName: 'Bay', id: 'parent' },
+				node: {
+					tagName: 'ConnectivityNode',
+					attributes: { name: 'L1', uuid: '00000000-0000-4000-8000-000000000001' },
+				},
+				expectedQueries: [
+					'//default:Terminal[@connectivityNode="S1/VL1/B1/L1" and @substationName="S1" and @voltageLevelName="VL1" and @bayName="B1" and @cNodeName="L1"]',
+				],
+			},
+		}
+
+		runSclTestCases.withExport({
+			testCases,
+			act: async ({ source, testCase }) => {
+				await source.transaction(async (tx) => {
+					await tx.addChild(testCase.parent, testCase.node)
+				})
+				return { assertOn: 'source' }
+			},
+		})
+	})
+
+	/**
+	 * A terminal names its connectivity node by path and by the names of the levels holding it;
+	 * both follow the node its `cNodeUuid` names.
+	 */
+	describe('terminal created with its cNodeUuid only', () => {
+		type TestCase = SclTest.BaseXmlTestCase & {
+			parent: Scl.Ref<Scl.ElementsOf>
+			referrer: { tagName: 'Terminal' | 'NeutralPoint'; attributes: Record<string, string> }
+		}
+
+		const testCases: SclTest.TestCases<TestCase> = {
+			'Terminal, node in a Bay → path, substation, voltage level, bay and node names written': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<VoltageLevel name="VL1" ${id}="vl1">
+								<Bay name="B1" ${id}="b1">
+									<ConductingEquipment name="QA1" type="CBR" ${id}="parent"/>
+									<ConnectivityNode name="L1" pathName="S1/VL1/B1/L1" uuid="00000000-0000-4000-8000-000000000001" ${id}="node"/>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				parent: { tagName: 'ConductingEquipment', id: 'parent' },
+				referrer: {
+					tagName: 'Terminal',
+					attributes: { cNodeUuid: '00000000-0000-4000-8000-000000000001' },
+				},
+				expectedQueries: [
+					'//default:Terminal[@cNodeUuid="00000000-0000-4000-8000-000000000001" and @connectivityNode="S1/VL1/B1/L1" and @substationName="S1" and @voltageLevelName="VL1" and @bayName="B1" and @cNodeName="L1" and not(@lineName) and not(@processName)]',
+				],
+			},
+			'NeutralPoint, node in a Line of a Process → path, process, line and node names written': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Process name="P1" ${id}="p1">
+							<Line name="LN1" ${id}="line">
+								<ConnectivityNode name="N1" pathName="P1/LN1/N1" uuid="00000000-0000-4000-8000-000000000002" ${id}="node"/>
+							</Line>
+							<Substation name="S1" ${id}="s1">
+								<PowerTransformer name="T1" type="PTR" ${id}="t1">
+									<TransformerWinding name="W1" type="PTW" ${id}="parent"/>
+								</PowerTransformer>
+							</Substation>
+						</Process>
+					</SCL>
+				`,
+				parent: { tagName: 'TransformerWinding', id: 'parent' },
+				referrer: {
+					tagName: 'NeutralPoint',
+					attributes: { cNodeUuid: '00000000-0000-4000-8000-000000000002' },
+				},
+				expectedQueries: [
+					'//default:NeutralPoint[@cNodeUuid="00000000-0000-4000-8000-000000000002" and @connectivityNode="P1/LN1/N1" and @processName="P1" and @lineName="LN1" and @cNodeName="N1" and not(@substationName) and not(@voltageLevelName) and not(@bayName)]',
+				],
+			},
+			'Terminal, node in a Bay of nested Processes → process names joined with "/"': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Process name="P1" ${id}="p1">
+							<Process name="P2" ${id}="p2">
+								<Substation name="S1" ${id}="s1">
+									<VoltageLevel name="VL1" ${id}="vl1">
+										<Bay name="B1" ${id}="b1">
+											<ConductingEquipment name="QA1" type="CBR" ${id}="parent"/>
+											<ConnectivityNode name="L1" pathName="P1/P2/S1/VL1/B1/L1" uuid="00000000-0000-4000-8000-000000000003" ${id}="node"/>
+										</Bay>
+									</VoltageLevel>
+								</Substation>
+							</Process>
+						</Process>
+					</SCL>
+				`,
+				parent: { tagName: 'ConductingEquipment', id: 'parent' },
+				referrer: {
+					tagName: 'Terminal',
+					attributes: { cNodeUuid: '00000000-0000-4000-8000-000000000003' },
+				},
+				expectedQueries: [
+					'//default:Terminal[@connectivityNode="P1/P2/S1/VL1/B1/L1" and @processName="P1/P2" and @substationName="S1" and @voltageLevelName="VL1" and @bayName="B1" and @cNodeName="L1"]',
+				],
+			},
+			'Terminal given the names of another node → names of the node its uuid names, others removed':
+				{
+					sourceXml: /* xml */ `
+						<SCL ${ns} ${id}="root">
+							<Substation name="S1" ${id}="s1">
+								<VoltageLevel name="VL1" ${id}="vl1">
+									<Bay name="B1" ${id}="b1">
+										<ConductingEquipment name="QA1" type="CBR" ${id}="parent"/>
+										<ConnectivityNode name="L1" pathName="S1/VL1/B1/L1" uuid="00000000-0000-4000-8000-000000000001" ${id}="node"/>
+									</Bay>
+								</VoltageLevel>
+							</Substation>
+						</SCL>
+					`,
+					parent: { tagName: 'ConductingEquipment', id: 'parent' },
+					referrer: {
+						tagName: 'Terminal',
+						attributes: {
+							cNodeUuid: '00000000-0000-4000-8000-000000000001',
+							connectivityNode: 'X1/N9',
+							lineName: 'X1',
+							cNodeName: 'N9',
+						},
+					},
+					expectedQueries: [
+						'//default:Terminal[@connectivityNode="S1/VL1/B1/L1" and @substationName="S1" and @voltageLevelName="VL1" and @bayName="B1" and @cNodeName="L1" and not(@lineName)]',
+					],
+				},
+			'Terminal with a cNodeUuid naming no node → left as given': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<VoltageLevel name="VL1" ${id}="vl1">
+								<Bay name="B1" ${id}="b1">
+									<ConductingEquipment name="QA1" type="CBR" ${id}="parent"/>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				parent: { tagName: 'ConductingEquipment', id: 'parent' },
+				referrer: {
+					tagName: 'Terminal',
+					attributes: {
+						cNodeUuid: '00000000-0000-4000-8000-000000000009',
+						connectivityNode: 'S1/VL1/B1/L9',
+						substationName: 'S1',
+						voltageLevelName: 'VL1',
+						bayName: 'B1',
+						cNodeName: 'L9',
+					},
+				},
+				expectedQueries: [
+					'//default:Terminal[@connectivityNode="S1/VL1/B1/L9" and @substationName="S1" and @voltageLevelName="VL1" and @bayName="B1" and @cNodeName="L9"]',
+				],
+			},
+		}
+
+		runSclTestCases.withExport({
+			testCases,
+			act: async ({ source, testCase }) => {
+				await source.transaction(async (tx) => {
+					await tx.addChild(testCase.parent, testCase.referrer)
+				})
+				return { assertOn: 'source' }
+			},
+		})
+	})
 })
