@@ -75,7 +75,8 @@ Unresolvable paths (path not in index at end of import) produce `ImportWarning` 
 | ------------------------------ | ------------------------------------------------------------------------------------------ |
 | `unresolved-reference`         | Path was present but no target with that path was found                                    |
 | `unsupported-xpath-reference`  | Path uses an XPath syntax not supported by the resolver                                    |
-| `incoherent-reference`         | The path and the uuid of a reference name two different elements                           |
+| `incoherent-reference`         | The path and the uuid of a reference name two different elements: the uuid wins            |
+| `incoherent-path-names`        | Names written from a path disagree with it: they are written again from the path           |
 | `derived-specification-naming` | An LNode bound to an IED had no `LNodeSpecNaming`: one was made from the LN it is bound to |
 
 ## Specified naming of the logical nodes
