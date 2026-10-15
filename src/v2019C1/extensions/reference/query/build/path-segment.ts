@@ -1,3 +1,4 @@
+import { readRawAttribute } from './raw-attribute'
 /**
  * Strategy-based path segment extraction for SCL elements.
  *
@@ -52,7 +53,7 @@ function buildExtractor(strategy: ExtractionStrategy): PathExtractor {
 				if (!lnClass) return null
 				const prefix = getAttribute(record, 'prefix') ?? ''
 				const inst = getAttribute(record, 'inst') ?? getAttribute(record, 'lnInst') ?? ''
-				return { segment: `${prefix}${lnClass}${inst}`, separator: '/' }
+				return { segment: logicalNodeName({ prefix, lnClass, inst }), separator: '/' }
 			}
 		case 'lnode':
 			return (record, context) => {
@@ -130,7 +131,7 @@ function buildLNodeName(params: {
 					inst: getAttribute(record, strategy.inst),
 				}
 	if (!named.lnClass) return null
-	return `${named.prefix ?? ''}${named.lnClass}${named.inst ?? ''}`
+	return logicalNodeName({ prefix: named.prefix, lnClass: named.lnClass, inst: named.inst })
 }
 
 /** The `LNodeSpecNaming` attribute keeping an LNode attribute's specified value. */
@@ -206,7 +207,17 @@ export function buildPathFromAncestry(params: {
 // ── Helpers ──────────────────────────────────────────────────────────
 
 function getAttribute(record: AnyRawRecord, name: string): string | undefined {
-	return record.attributes.find((attribute) => attribute.name === name)?.value
+	return readRawAttribute({ record, name })
+}
+
+/** The name of a logical node: its prefix, class and instance, joined. */
+export function logicalNodeName(params: {
+	prefix: string | undefined
+	lnClass: string
+	inst: string | undefined
+}): string {
+	const { prefix, lnClass, inst } = params
+	return `${prefix ?? ''}${lnClass}${inst ?? ''}`
 }
 
 export function joinPathParts(parts: readonly PathSegment[]): string {
