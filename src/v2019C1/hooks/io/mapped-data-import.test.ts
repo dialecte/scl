@@ -7,12 +7,15 @@ import type { SclTest } from '@/v2019C1/test'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-/** PTOC1 is what the LNode is mapped to, GGIO1 another logical node. */
+/** PTOC1 is what the LNode is mapped to, GGIO1 another logical node, LLN0 holds a control block. */
 const VENDOR_IED = /* xml */ `
 	<IED ${id}="ied" name="VENDOR">
 		<AccessPoint ${id}="ap" name="AP1">
 			<Server ${id}="srv">
 				<LDevice ${id}="ld" inst="LD0">
+					<LN0 ${id}="lln0" lnClass="LLN0" inst="" lnType="LLN0_T" uuid="lln0-uuid">
+						<GSEControl ${id}="gcb" name="gcb1" appID="gcb1" uuid="gcb-uuid"/>
+					</LN0>
 					<LN ${id}="ptoc1" lnClass="PTOC" inst="1" lnType="PTOC_T" uuid="ptoc1-uuid"/>
 					<LN ${id}="ggio1" lnClass="GGIO" inst="1" lnType="GGIO_T" uuid="ggio1-uuid"/>
 				</LDevice>
@@ -55,6 +58,18 @@ describe('mapped data attributes on import', () => {
 				`),
 				expectedQueries: [
 					'//v2019C1:DAS[@name="general"][@mappedDaName="Ind2.stVal"][@mappedLnUuid="ggio1-uuid"]',
+				],
+			},
+
+		'DAS with an absolute reference to an LLN0 holding a control block -> the path from LLN0 and its uuid':
+			{
+				sourceXml: mappedLNode(/* xml */ `
+					<eIEC61850-6-100:DOS ${id}="dos-op" name="Op">
+						<eIEC61850-6-100:DAS ${id}="das-general" name="general" mappedDaName="VENDOR/LD0/LLN0.Beh.stVal"/>
+					</eIEC61850-6-100:DOS>
+				`),
+				expectedQueries: [
+					'//v2019C1:DAS[@name="general"][@mappedDaName="Beh.stVal"][@mappedLnUuid="lln0-uuid"]',
 				],
 			},
 

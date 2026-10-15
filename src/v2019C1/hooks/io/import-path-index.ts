@@ -32,7 +32,9 @@ export function buildImportPathIndex(params: {
 	for (const { record, ancestry, uuid } of targets) {
 		const siblings = siblingsByParent.get(record.parent?.id ?? '')
 		const standard = buildPathFromAncestry({ record, ancestry, siblings, specNamings })
-		if (!standard) continue
+		// an element with no segment of its own (an access point, a control block) would take its
+		// parent's path: it is not named by a path
+		if (!standard || standard.segments.at(-1)?.ref.id !== record.id) continue
 		index.byPath.set(standard.path, uuid)
 		index.targetsByUuid.set(uuid, { tagName: record.tagName, path: standard })
 
