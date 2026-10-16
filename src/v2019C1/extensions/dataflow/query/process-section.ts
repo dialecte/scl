@@ -22,6 +22,7 @@ export async function readProcessSection(query: Core.Query<Config>): Promise<Pro
 	const lnodes = new Map<string, SectionNode<'LNode'>>()
 	const specNamings = new Map<string, Core.AnyRawRecord>()
 	const holderOfSignal = new Map<string, SectionNode<'LNode'>>()
+	const signals = new Map<string, SectionNode<'SourceRef' | 'ControlRef'>>()
 	const uuidsByTag = new Map<string, Set<string>>()
 
 	walkTree({
@@ -41,11 +42,12 @@ export async function readProcessSection(query: Core.Query<Config>): Promise<Pro
 			if (SIGNAL_TAG_NAMES.has(record.tagName) && nearestLNode) {
 				const holder = lnodes.get(nearestLNode.id)
 				if (holder) holderOfSignal.set(record.id, holder)
+				signals.set(record.id, node as SectionNode<'SourceRef' | 'ControlRef'>)
 			}
 		},
 	})
 
-	return { ...indexLNodes({ lnodes, specNamings }), uuidsByTag, holderOfSignal }
+	return { ...indexLNodes({ lnodes, specNamings }), uuidsByTag, signals, holderOfSignal }
 }
 
 /** The LNodes by uuid and by path; an LNode is named by its specified naming once an IED is assigned to it. */

@@ -1,8 +1,16 @@
+import { assertParity } from './__tests__/assert-parity'
 import {
 	assertDataflow,
+	MAPPED_INTO_B1_AND_P1,
+	MAPPED_INTO_B1_ONLY,
 	functionTemplateWithSourceRef,
 	BOUND_EXT_REF,
 	buildScd,
+	iedNameB1ByAccessPoint,
+	SECOND_ACCESS_POINT_OF_B1,
+	CLIENT_LN_IHMI_OF_B1,
+	ihmiOfAccessPointWithExtRef,
+	reportControlBlockWith,
 	EXT_REF_BY_CONTROL_BLOCK_NAMES,
 	EXT_REF_BY_REPORT,
 	gooseControlBlock,
@@ -51,8 +59,10 @@ const act: Parameters<typeof runSclTestCases.withoutExport<TestCase>>[0]['act'] 
 	source,
 	testCase,
 }) => {
-	const dataflow = await ofSourceRef(source.query, { ref: testCase.signal ?? REFS.sourceRef })
+	const ref = testCase.signal ?? REFS.sourceRef
+	const dataflow = await ofSourceRef(source.query, { ref })
 	assertDataflow({ dataflow, expected: testCase })
+	await assertParity({ query: source.query, signal: ref })
 }
 
 describe('ofSourceRef', () => {
@@ -77,6 +87,7 @@ describe('ofSourceRef', () => {
 					state: 'connected',
 					other: { lnode: REFS.senderLNode, doName: 'Op' },
 					allocation: 'inter-ied',
+					mappedIeds: MAPPED_INTO_B1_AND_P1,
 				},
 			}),
 		},
@@ -113,7 +124,7 @@ describe('ofSourceRef', () => {
 				expectedImplementation: {
 					controlBlock: REFS.gcb1,
 					publisher: REFS.iedP1,
-					registration: { element: REFS.iedNameB1, names: 'ied' },
+					registration: { element: REFS.iedNameB1, names: 'ap' },
 				},
 			},
 		'ExtRef of a Report service naming a ReportControl with a ClientLN → registration by logical node':
@@ -158,6 +169,7 @@ describe('ofSourceRef', () => {
 						service: 'GOOSE',
 						other: { lnode: REFS.senderLNode, doName: 'Op' },
 						allocation: 'same-ied',
+						mappedIeds: MAPPED_INTO_B1_ONLY,
 					},
 				}),
 			},
@@ -230,7 +242,10 @@ describe('ofSourceRef', () => {
 			expectedSignalSide: expectedSignalSide({
 				signal: REFS.templateSourceRef,
 				direction: 'input',
-				specification: { holder: REFS.templateLNode },
+				specification: {
+					holder: REFS.templateLNode,
+					mappedIeds: { holder: undefined, other: undefined },
+				},
 			}),
 			expectedImplementation: NOT_IMPLEMENTED,
 		},
@@ -247,6 +262,7 @@ describe('ofSourceRef', () => {
 					state: 'connected',
 					other: { lnode: REFS.senderLNode, doName: 'Op', daName: 'general' },
 					allocation: 'inter-ied',
+					mappedIeds: MAPPED_INTO_B1_AND_P1,
 				},
 			}),
 		},
@@ -262,6 +278,7 @@ describe('ofSourceRef', () => {
 					state: 'connected',
 					other: { lnode: REFS.senderLNode, doName: 'Op', daName: 'general' },
 					allocation: 'inter-ied',
+					mappedIeds: MAPPED_INTO_B1_AND_P1,
 				},
 			}),
 		},
@@ -274,6 +291,7 @@ describe('ofSourceRef', () => {
 					state: 'connected',
 					other: { lnode: REFS.senderLNode },
 					allocation: 'inter-ied',
+					mappedIeds: MAPPED_INTO_B1_AND_P1,
 				},
 			}),
 		},
@@ -318,6 +336,7 @@ describe('ofSourceRef — names written without their uuid', () => {
 					state: 'connected',
 					other: { lnode: REFS.senderLNode, doName: 'Op' },
 					allocation: 'inter-ied',
+					mappedIeds: MAPPED_INTO_B1_AND_P1,
 				},
 			}),
 		},
@@ -367,7 +386,7 @@ describe('ofSourceRef — names written without their uuid', () => {
 				expectedImplementation: {
 					controlBlock: REFS.gcb1,
 					publisher: REFS.iedP1,
-					registration: { element: REFS.iedNameB1, names: 'ied' },
+					registration: { element: REFS.iedNameB1, names: 'ap' },
 				},
 			},
 		'LNodes mapped to their logical nodes by names only → inter-ied': {
@@ -383,6 +402,7 @@ describe('ofSourceRef — names written without their uuid', () => {
 					state: 'connected',
 					other: { lnode: REFS.senderLNode, doName: 'Op' },
 					allocation: 'inter-ied',
+					mappedIeds: MAPPED_INTO_B1_AND_P1,
 				},
 			}),
 		},
@@ -398,6 +418,7 @@ describe('ofSourceRef — names written without their uuid', () => {
 					state: 'connected',
 					other: { lnode: REFS.senderLNode, doName: 'Op' },
 					allocation: 'unallocated',
+					mappedIeds: { holder: undefined, other: REFS.iedP1 },
 				},
 			}),
 		},
@@ -444,6 +465,59 @@ describe('ofSourceRef — names written without their uuid', () => {
 				}),
 				expectedImplementation: { ...NOT_IMPLEMENTED, state: 'implemented' },
 			},
+		'IEDName naming by uuid another access point of the subscriber IED → registration by access point':
+			{
+				sourceXml: buildScd({
+					signals: sourceRef('extRefUuid="uuid-ext-ref"'),
+					receiverLogicalNodes: xcbrWithExtRef(EXT_REF_BY_CONTROL_BLOCK_UUID),
+					receiverAccessPoints: SECOND_ACCESS_POINT_OF_B1,
+					controlBlocks: gooseControlBlock(
+						iedNameB1ByAccessPoint({ apRef: 'AP2', apUuid: 'uuid-ap2-b1' }),
+					),
+				}),
+				expectedImplementation: { registration: { element: REFS.iedNameB1, names: 'ap' } },
+			},
+		'IEDName naming by uuid the access point holding the ExtRef → registration by access point': {
+			sourceXml: buildScd({
+				signals: sourceRef('extRefUuid="uuid-ext-ref"'),
+				receiverLogicalNodes: xcbrWithExtRef(EXT_REF_BY_CONTROL_BLOCK_UUID),
+				controlBlocks: gooseControlBlock(
+					iedNameB1ByAccessPoint({ apRef: 'AP1', apUuid: 'uuid-ap1-b1' }),
+				),
+			}),
+			expectedImplementation: { registration: { element: REFS.iedNameB1, names: 'ap' } },
+		},
+		'IEDName carrying only the uuid of the subscriber logical node → registration by logical node':
+			{
+				sourceXml: buildScd({
+					signals: sourceRef('extRefUuid="uuid-ext-ref"'),
+					receiverLogicalNodes: xcbrWithExtRef(EXT_REF_BY_CONTROL_BLOCK_UUID),
+					controlBlocks: gooseControlBlock(iedNameB1('lnUuid="uuid-xcbr"')),
+				}),
+				expectedImplementation: { registration: { element: REFS.iedNameB1, names: 'ln' } },
+			},
+		'IEDName whose logical device uuid names the subscriber logical device, its ldInst another → registration by logical device':
+			{
+				sourceXml: buildScd({
+					signals: sourceRef('extRefUuid="uuid-ext-ref"'),
+					receiverLogicalNodes: xcbrWithExtRef(EXT_REF_BY_CONTROL_BLOCK_UUID),
+					controlBlocks: gooseControlBlock(iedNameB1('ldInst="LD9" ldUuid="uuid-ld-b1"')),
+				}),
+				expectedImplementation: { registration: { element: REFS.iedNameB1, names: 'ld' } },
+			},
+		'ClientLN of an access point logical node naming its IED, access point and logical node → registration by logical node':
+			{
+				sourceXml: buildScd({
+					signals: sourceRef('extRefUuid="uuid-ext-ref"'),
+					receiverLogicalNodes: xcbrWithExtRef(),
+					receiverAccessPointContent: ihmiOfAccessPointWithExtRef(EXT_REF_BY_REPORT),
+					controlBlocks: reportControlBlockWith(CLIENT_LN_IHMI_OF_B1),
+				}),
+				expectedImplementation: {
+					controlBlock: REFS.rcb1,
+					registration: { element: REFS.clientLnB1, names: 'ln' },
+				},
+			},
 		'two LNodes of one path, the SourceRef naming it by path → the last one': {
 			sourceXml: buildScd({
 				senderLNode: SENDER_LNODE_WITHOUT_UUID,
@@ -458,6 +532,7 @@ describe('ofSourceRef — names written without their uuid', () => {
 					state: 'connected',
 					other: { lnode: REFS.duplicateSenderLNode, doName: 'Op' },
 					allocation: 'inter-ied',
+					mappedIeds: MAPPED_INTO_B1_AND_P1,
 				},
 			}),
 		},

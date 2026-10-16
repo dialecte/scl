@@ -13,9 +13,5 @@ export async function ofControlRef(
 	query: Core.Query<Config>,
 	params: { ref: Scl.Ref<'ControlRef'> },
 ): Promise<SpecifiedDataflow> {
-	return describeSignal(query, {
-		ref: params.ref,
-		direction: 'output',
-		context: createDataflowContext(query),
-	})
+	return describeSignal({ ref: params.ref, context: createDataflowContext(query) })
 }

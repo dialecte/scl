@@ -1,10 +1,11 @@
+import { readExtRefsByControlBlock } from './ext-refs-by-control-block'
 import { readIedSection } from './ied-section'
 import { readProcessSection } from './process-section'
 
 import { createInfoContext } from '@/v2019C1/extensions/info/query/info-context'
 
 import type { DataflowContext } from './dataflow-context.types'
-import type { IedSection } from './ied-section.types'
+import type { IedNode, IedSection } from './ied-section.types'
 import type { ProcessSection } from './process-section.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -13,8 +14,9 @@ import type * as Core from '@dialecte/core'
 export function createDataflowContext(query: Core.Query<Config>): DataflowContext {
 	let processSection: Promise<ProcessSection> | undefined
 	let iedSection: Promise<IedSection> | undefined
+	let extRefsByControlBlock: Promise<ReadonlyMap<string, readonly IedNode<'ExtRef'>[]>> | undefined
 
-	return {
+	const context: DataflowContext = {
 		...createInfoContext(query),
 		processSection() {
 			processSection ??= readProcessSection(query)
@@ -24,5 +26,10 @@ export function createDataflowContext(query: Core.Query<Config>): DataflowContex
 			iedSection ??= readIedSection(query)
 			return iedSection
 		},
+		extRefsByControlBlock() {
+			extRefsByControlBlock ??= readExtRefsByControlBlock({ context })
+			return extRefsByControlBlock
+		},
 	}
+	return context
 }

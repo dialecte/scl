@@ -1,5 +1,7 @@
+import { assertParity } from './__tests__/assert-parity'
 import {
 	assertDataflow,
+	MAPPED_INTO_B1_AND_P1,
 	BOUND_EXT_CTRL,
 	UNBOUND_EXT_CTRL,
 	buildScd,
@@ -43,6 +45,7 @@ describe('ofControlRef', () => {
 						state: 'connected',
 						other: { lnode: REFS.senderLNode, doName: 'Op' },
 						allocation: 'inter-ied',
+						mappedIeds: MAPPED_INTO_B1_AND_P1,
 					},
 				}),
 			},
@@ -71,6 +74,7 @@ describe('ofControlRef', () => {
 					state: 'connected',
 					other: { lnode: REFS.senderLNode, doName: 'Pos.Oper' },
 					allocation: 'inter-ied',
+					mappedIeds: MAPPED_INTO_B1_AND_P1,
 				},
 			}),
 		},
@@ -81,6 +85,7 @@ describe('ofControlRef', () => {
 		act: async ({ source, testCase }) => {
 			const dataflow = await ofControlRef(source.query, { ref: REFS.controlRef })
 			assertDataflow({ dataflow, expected: testCase })
+			await assertParity({ query: source.query, signal: REFS.controlRef })
 		},
 	})
 })
@@ -114,6 +119,7 @@ describe('ofControlRef — names written without their uuid', () => {
 		act: async ({ source, testCase }) => {
 			const dataflow = await ofControlRef(source.query, { ref: REFS.controlRef })
 			assertDataflow({ dataflow, expected: testCase })
+			await assertParity({ query: source.query, signal: REFS.controlRef })
 		},
 	})
 })

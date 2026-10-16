@@ -16,15 +16,29 @@ export type ControlBlockNode = IedNode<'GSEControl' | 'SampledValueControl' | 'R
 
 /**
  * What one read of the IED section (every IED down to its logical nodes, their ExtRefs, ExtCtrls and
- * control blocks) gives: the ExtRefs and ExtCtrls by uuid and by path, the control blocks by uuid and by address, the logical
+ * control blocks) gives: every ExtRef in document order, the ExtRefs and ExtCtrls by uuid and by path, the control blocks by uuid and by address, the logical
  * nodes by path and the IED of each, by logical node id.
  */
 export type IedSection = {
+	extRefs: readonly IedNode<'ExtRef'>[]
+	/** Every ExtRef and ExtCtrl, by id. */
+	implementations: ReadonlyMap<string, IedNode<'ExtRef' | 'ExtCtrl'>>
+	/** The uuids of the access points of each IED, by IED id. */
+	accessPointUuidsByIed: ReadonlyMap<string, ReadonlySet<string>>
+	/** The uuid of each access point, logical device and logical node that has one, by id. */
+	uuidById: ReadonlyMap<string, string>
+	/** The logical nodes by uuid and by tuple address (a logical node held by an access point has none). */
+	lnsByUuid: ReadonlyMap<string, IedNode<'LN' | 'LN0'>>
+	lnsByAddress: ReadonlyMap<string, IedNode<'LN' | 'LN0'>>
+	/** Every IED, by name. */
+	iedByName: ReadonlyMap<string, Scl.Ref<'IED'>>
 	extRefsByUuid: ReadonlyMap<string, IedNode<'ExtRef'>>
 	/** Every ExtRef of a path: several may share an internal address. */
 	extRefsByPath: ReadonlyMap<string, readonly IedNode<'ExtRef'>[]>
 	extCtrlsByUuid: ReadonlyMap<string, IedNode<'ExtCtrl'>>
 	extCtrlsByPath: ReadonlyMap<string, readonly IedNode<'ExtCtrl'>[]>
+	/** Every control block, by id, in document order. */
+	controlBlocks: ReadonlyMap<string, ControlBlockNode>
 	controlBlocksByUuid: ReadonlyMap<string, ControlBlockNode>
 	/** By `targetKey` of the tuple address and the tag. */
 	controlBlocksByAddress: ReadonlyMap<string, ControlBlockNode>

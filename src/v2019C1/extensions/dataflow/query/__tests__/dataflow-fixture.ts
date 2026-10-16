@@ -2,9 +2,10 @@ import { expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE } from '@/v2019C1/test'
 
-import type { SpecifiedDataflow } from '../../dataflow.types'
+import type { Dataflow, SpecifiedDataflow } from '../../dataflow.types'
 import type {
 	ExpectedDataflow,
+	ExpectedEntry,
 	ScdSlots,
 	SignalSide,
 	Implementation,
@@ -55,6 +56,52 @@ export function functionTemplateWithSourceRef(attributes = ''): string {
 export const BOUND_EXT_REF =
 	'uuid="uuid-ext-ref" intAddr="Trip" iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Op" srcLDInst="LD0" srcCBName="gcb1" serviceType="GOOSE"'
 
+/** An ExtRef naming its signal and the control block publishing it, without an internal address: subscribed. */
+export function subscribedExtRef(uuid = 'uuid-ext-ref'): string {
+	return `uuid="${uuid}" iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Op" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb1"`
+}
+
+export const SUBSCRIBED_EXT_REF = subscribedExtRef()
+
+/** An IED `B2` whose logical node `XCBR1` holds an ExtRef, given by `attributes`. */
+export function iedB2WithExtRef(attributes: string): string {
+	return /* xml */ `
+		<IED name="B2" ${id}="ied-b2">
+			<AccessPoint name="AP1" ${id}="ap-b2">
+				<Server ${id}="server-b2">
+					<Authentication ${id}="authentication-b2"/>
+					<LDevice inst="LD0" ${id}="ld-b2">
+						<LN0 lnClass="LLN0" inst="" lnType="T0" uuid="uuid-ln0-b2" ${id}="ln0-b2"/>
+						<LN lnClass="XCBR" inst="1" lnType="T1" uuid="uuid-xcbr-b2" ${id}="ln-xcbr-b2">
+							<Inputs ${id}="inputs-b2"><ExtRef ${attributes} ${id}="ext-ref-b2"/></Inputs>
+						</LN>
+					</LDevice>
+				</Server>
+			</AccessPoint>
+		</IED>
+	`
+}
+
+/** The inputs of `P1`'s logical node `PTRC1`, holding an ExtRef given by `attributes`. */
+export function ptrcInputsWithExtRef(attributes: string): string {
+	return /* xml */ `<Inputs ${id}="inputs-ptrc"><ExtRef ${attributes} ${id}="ext-ref"/></Inputs>`
+}
+
+/** An ExtRef naming a signal of `P1` and no control block: it lands in `B1`, and is polled when it has a service. */
+export const EXT_REF_WITHOUT_CONTROL_BLOCK =
+	'uuid="uuid-ext-ref" intAddr="Trip" iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Op"'
+
+/** An ExtRef polling a signal of `P1`. */
+export const POLL_EXT_REF = `${EXT_REF_WITHOUT_CONTROL_BLOCK} serviceType="Poll"`
+
+/** An ExtRef subscribing to the report control block `rcb1` held by the logical node `PTRC1` of `P1`. */
+export const EXT_REF_BY_REPORT_IN_LN =
+	'uuid="uuid-ext-ref" intAddr="Trip" iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Op" serviceType="Report" srcLDInst="LD0" srcLNClass="PTRC" srcLNInst="1" srcCBName="rcb1"'
+
+/** An ExtCtrl controlling data of the logical node `GGIO1` of `B1`. */
+export const EXT_CTRL_ON_GGIO_OF_B1 =
+	'uuid="uuid-ext-ctrl" intAddr="Close" iedName="B1" ldInst="LD0" lnClass="GGIO" lnInst="1" doName="Op"'
+
 /** An ExtRef subscribing to the report control block `rcb1`. */
 export const EXT_REF_BY_REPORT =
 	'uuid="uuid-ext-ref" intAddr="Trip" iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Op" serviceType="Report" srcLDInst="LD0" srcCBName="rcb1"'
@@ -83,6 +130,16 @@ export function withoutLnUuid(attributes: string): string {
 
 export function sourceRef(attributes = '', signalId = 'source-ref'): string {
 	return /* xml */ `<eIEC61850-6-100:LNodeInputs ${id}="inputs-${signalId}"><eIEC61850-6-100:SourceRef input="Trip" ${attributes} ${id}="${signalId}"/></eIEC61850-6-100:LNodeInputs>`
+}
+
+/** Several SourceRefs of one LNode, in one `LNodeInputs`, each with its own id and attributes. */
+export function sourceRefs(signals: readonly { id: string; attributes: string }[]): string {
+	return /* xml */ `<eIEC61850-6-100:LNodeInputs ${id}="inputs-shared">${signals
+		.map(
+			(signal) =>
+				`<eIEC61850-6-100:SourceRef input="Trip" ${signal.attributes} ${id}="${signal.id}"/>`,
+		)
+		.join('')}</eIEC61850-6-100:LNodeInputs>`
 }
 
 export function controlRef(attributes = ''): string {
@@ -160,6 +217,14 @@ export function iedNameB1(attributes = ''): string {
 	return /* xml */ `<IEDName apRef="AP1" ${attributes} ${id}="iedname-b1">B1</IEDName>`
 }
 
+/** The `IEDName` naming `B1` and the access point `apRef`, by its uuid. */
+export function iedNameB1ByAccessPoint(params: { apRef: string; apUuid: string }): string {
+	return /* xml */ `<IEDName apRef="${params.apRef}" apUuid="${params.apUuid}" ${id}="iedname-b1">B1</IEDName>`
+}
+
+/** A second access point of `B1`, holding nothing. */
+export const SECOND_ACCESS_POINT_OF_B1 = /* xml */ `<AccessPoint name="AP2" uuid="uuid-ap2-b1" ${id}="ap2-b1"/>`
+
 export const IED_NAME_B1 = iedNameB1()
 
 export const IED_NAME_B2 = /* xml */ `<IEDName apRef="AP1" ${id}="iedname-b2">B2</IEDName>`
@@ -176,6 +241,32 @@ export const REPORT_CONTROL_BLOCK = /* xml */ `
 		</RptEnabled>
 	</ReportControl>
 `
+
+/** A report control block `rcb1` whose registration is the `ClientLN` given. */
+export function reportControlBlockWith(clientLn: string): string {
+	return /* xml */ `
+		<ReportControl name="rcb1" rptID="rpt1" confRev="1" datSet="DS1" buffered="true" uuid="uuid-rcb1" ${id}="rcb1">
+			<TrgOps dchg="true" ${id}="trgops"/>
+			<OptFields ${id}="optfields"/>
+			<RptEnabled max="1" ${id}="rpt-enabled">${clientLn}</RptEnabled>
+		</ReportControl>
+	`
+}
+
+/** The `ClientLN` naming the logical node `IHMI1` held by `B1`'s access point: no logical device, `ldInst` is a placeholder. */
+export const CLIENT_LN_IHMI_OF_B1 = /* xml */ `<ClientLN iedName="B1" apRef="AP1" ldInst="none" lnClass="IHMI" lnInst="1" ${id}="client-ln-b1"/>`
+
+/** A client logical node `IHMI1` held directly by `B1`'s access point, with an ExtRef given by `attributes`. */
+export function ihmiOfAccessPointWithExtRef(attributes: string): string {
+	return logicalNodeWithExtRef({
+		lnClass: 'IHMI',
+		lnId: 'ln-ihmi',
+		extRef: attributes,
+	})
+}
+
+/** A GOOSE control block `gcb2` held by `B1`, naming no subscriber. */
+export const GOOSE_CONTROL_BLOCK_IN_B1 = /* xml */ `<GSEControl name="gcb2" appID="app2" uuid="uuid-gcb2" ${id}="gcb2"/>`
 
 /** A GOOSE and a report control block of one name. */
 export const SHARED_NAME_CONTROL_BLOCKS = /* xml */ `
@@ -198,6 +289,11 @@ export function buildScd(slots: ScdSlots = {}): string {
 		signals = '',
 		receiverLogicalNodes = xcbrWithExtRef('intAddr="Trip"'),
 		controlBlocks = GOOSE_CONTROL_BLOCK,
+		senderLogicalNodeContent = '',
+		receiverControlBlocks = '',
+		receiverAccessPointContent = '',
+		receiverAccessPoints = '',
+		extraIeds = '',
 		templates = '',
 		functionExtras = '',
 	} = slots
@@ -224,22 +320,25 @@ export function buildScd(slots: ScdSlots = {}): string {
 								</DataSet>
 								${controlBlocks}
 							</LN0>
-							<LN lnClass="PTRC" inst="1" lnType="T2" uuid="uuid-ptrc" ${id}="ln-ptrc"/>
+							<LN lnClass="PTRC" inst="1" lnType="T2" uuid="uuid-ptrc" ${id}="ln-ptrc">${senderLogicalNodeContent}</LN>
 						</LDevice>
 					</Server>
 				</AccessPoint>
 			</IED>
 			<IED name="B1" ${id}="ied-b1">
-				<AccessPoint name="AP1" ${id}="ap-b1">
+				<AccessPoint name="AP1" uuid="uuid-ap1-b1" ${id}="ap-b1">
 					<Server ${id}="server-b1">
 						<Authentication ${id}="authentication-b1"/>
-						<LDevice inst="LD0" ${id}="ld-b1">
-							<LN0 lnClass="LLN0" inst="" lnType="T0" uuid="uuid-ln0-b1" ${id}="ln0-b1"/>
+						<LDevice inst="LD0" uuid="uuid-ld-b1" ${id}="ld-b1">
+							<LN0 lnClass="LLN0" inst="" lnType="T0" uuid="uuid-ln0-b1" ${id}="ln0-b1">${receiverControlBlocks}</LN0>
 							${receiverLogicalNodes}
 						</LDevice>
 					</Server>
+					${receiverAccessPointContent}
 				</AccessPoint>
+				${receiverAccessPoints}
 			</IED>
+			${extraIeds}
 		</SCL>
 	`
 }
@@ -260,10 +359,14 @@ export const REFS = {
 	ggio: { tagName: 'LN', id: 'ln-ggio' },
 	iedB1: { tagName: 'IED', id: 'ied-b1' },
 	iedP1: { tagName: 'IED', id: 'ied-p1' },
+	iedB2: { tagName: 'IED', id: 'ied-b2' },
 	gcb1: { tagName: 'GSEControl', id: 'gcb1' },
+	gcb2: { tagName: 'GSEControl', id: 'gcb2' },
 	rcb1: { tagName: 'ReportControl', id: 'rcb1' },
 	clientLnB1: { tagName: 'ClientLN', id: 'client-ln-b1' },
 	iedNameB1: { tagName: 'IEDName', id: 'iedname-b1' },
+	iedNameB2: { tagName: 'IEDName', id: 'iedname-b2' },
+	extRefB2: { tagName: 'ExtRef', id: 'ext-ref-b2' },
 } as const satisfies Record<string, Scl.Ref<Scl.ElementsOf>>
 
 // ── Expected shapes ──────────────────────────────────────────────────
@@ -279,6 +382,18 @@ export const NOT_IMPLEMENTED: Implementation = {
 	publisher: undefined,
 	registration: undefined,
 	dangling: [],
+}
+
+/** The IEDs of a signal whose receiver is implemented in `B1` and whose sender is in `P1`. */
+export const MAPPED_INTO_B1_AND_P1: Specification['mappedIeds'] = {
+	holder: REFS.iedB1,
+	other: REFS.iedP1,
+}
+
+/** The IEDs of a signal whose two LNodes are implemented in `B1`. */
+export const MAPPED_INTO_B1_ONLY: Specification['mappedIeds'] = {
+	holder: REFS.iedB1,
+	other: REFS.iedB1,
 }
 
 /** The signal side of a dataflow, as every case reads it: what the signal says about itself. */
@@ -303,6 +418,7 @@ export function expectedSignalSide(params: {
 			holder: REFS.receiverLNode,
 			other: undefined,
 			allocation: 'unallocated',
+			mappedIeds: { holder: REFS.iedB1, other: undefined },
 			...specification,
 		},
 	}
@@ -332,4 +448,39 @@ export function assertDataflow(params: {
 			expected.expectedImplementation,
 		)
 	}
+}
+
+/** The element implementing a dataflow, whatever its kind. */
+function elementOf(dataflow: Dataflow): Scl.Ref<'ExtRef' | 'ExtCtrl'> | undefined {
+	return dataflow.kind === 'implementation-only'
+		? dataflow.element
+		: dataflow.implementation.element
+}
+
+/** The parts of a dataflow that an expected entry names. */
+function projectEntry(params: { dataflow: Dataflow; expected: ExpectedEntry }): ExpectedEntry {
+	const { dataflow, expected } = params
+	return {
+		kind: dataflow.kind,
+		...('signal' in expected
+			? { signal: dataflow.kind === 'specified' ? dataflow.signal : undefined }
+			: {}),
+		...('element' in expected ? { element: elementOf(dataflow) } : {}),
+		...(expected.implementation
+			? { implementation: projectOnto(dataflow.implementation, expected.implementation) }
+			: {}),
+	}
+}
+
+/** Asserts a list of dataflows, entry by entry in order: as many as expected, each as far as it names. */
+export function assertDataflows(params: {
+	dataflows: readonly Dataflow[]
+	expected: readonly ExpectedEntry[]
+}): void {
+	const { dataflows, expected } = params
+	expect(
+		dataflows.map((dataflow, index) =>
+			projectEntry({ dataflow, expected: expected[index] ?? { kind: dataflow.kind } }),
+		),
+	).toEqual(expected)
 }

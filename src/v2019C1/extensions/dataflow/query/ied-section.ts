@@ -1,5 +1,6 @@
 import { CONTROL_BLOCK_TAGS } from '../constants/control-blocks.constants'
 import {
+	ACCESS_POINT_TAGS,
 	IED_SECTION_SELECT,
 	LOGICAL_DEVICE_TAGS,
 	LOGICAL_NODE_TAGS,
@@ -7,7 +8,10 @@ import {
 import { REGISTRATION_TAGS } from '../constants/registration.constants'
 import { walkTree } from './walk-tree'
 
-import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
+import {
+	buildPathFromAncestry,
+	getPathSegment,
+} from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { targetKey } from '@/v2019C1/extensions/reference/query/ied-tuple/target-key'
 import { targetTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
@@ -24,10 +28,18 @@ import type * as Core from '@dialecte/core'
  */
 export async function readIedSection(query: Core.Query<Config>): Promise<IedSection> {
 	const root = await query.getTree({ tagName: 'SCL' }, { select: IED_SECTION_SELECT })
+	const extRefs: IedNode<'ExtRef'>[] = []
+	const implementations = new Map<string, IedNode<'ExtRef' | 'ExtCtrl'>>()
+	const accessPointUuidsByIed = new Map<string, Set<string>>()
+	const uuidById = new Map<string, string>()
+	const lnsByUuid = new Map<string, IedNode<'LN' | 'LN0'>>()
+	const lnsByAddress = new Map<string, IedNode<'LN' | 'LN0'>>()
+	const iedByName = new Map<string, Scl.Ref<'IED'>>()
 	const extRefsByUuid = new Map<string, IedNode<'ExtRef'>>()
 	const extRefsByPath = new Map<string, IedNode<'ExtRef'>[]>()
 	const extCtrlsByUuid = new Map<string, IedNode<'ExtCtrl'>>()
 	const extCtrlsByPath = new Map<string, IedNode<'ExtCtrl'>[]>()
+	const controlBlocks = new Map<string, ControlBlockNode>()
 	const controlBlocksByUuid = new Map<string, ControlBlockNode>()
 	const controlBlocksByAddress = new Map<string, ControlBlockNode>()
 	const lnsByPath = new Map<string, IedNode<'LN' | 'LN0'>>()
@@ -41,17 +53,45 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 			if (!node) return
 			const { tagName } = node.record
 
+			const uuid = readRawAttribute({ record: node.record, name: 'uuid' })
+
+			if (tagName === 'IED') {
+				const name = getPathSegment(node.record)?.segment
+				if (name) iedByName.set(name, node.ied)
+			}
+
+			if (uuid && (ACCESS_POINT_TAGS.includes(tagName) || LOGICAL_DEVICE_TAGS.includes(tagName))) {
+				uuidById.set(node.record.id, uuid)
+			}
+
+			if (uuid && ACCESS_POINT_TAGS.includes(tagName)) {
+				const uuids = accessPointUuidsByIed.get(node.ied.id) ?? new Set<string>()
+				accessPointUuidsByIed.set(node.ied.id, uuids.add(uuid))
+			}
+
+			if (tagName === 'ExtRef' || tagName === 'ExtCtrl') {
+				implementations.set(node.record.id, node as IedNode<'ExtRef' | 'ExtCtrl'>)
+			}
+
 			if (tagName === 'ExtRef') {
-				indexImplementation({ node, byUuid: extRefsByUuid, byPath: extRefsByPath })
+				extRefs.push(node as IedNode<'ExtRef'>)
+				indexImplementation({ node, uuid, byUuid: extRefsByUuid, byPath: extRefsByPath })
 			}
 
 			if (tagName === 'ExtCtrl') {
-				indexImplementation({ node, byUuid: extCtrlsByUuid, byPath: extCtrlsByPath })
+				indexImplementation({ node, uuid, byUuid: extCtrlsByUuid, byPath: extCtrlsByPath })
 			}
 
 			if (LOGICAL_NODE_TAGS.includes(tagName)) {
+				const logicalNode = node as IedNode<'LN' | 'LN0'>
 				const path = elementPath(node)
-				if (path) lnsByPath.set(path, node as IedNode<'LN' | 'LN0'>)
+				if (path) lnsByPath.set(path, logicalNode)
+				const address = targetTupleAddress({ record: node.record, ancestry: node.ancestry })
+				if (address) lnsByAddress.set(address, logicalNode)
+				if (uuid) {
+					lnsByUuid.set(uuid, logicalNode)
+					uuidById.set(node.record.id, uuid)
+				}
 				iedOfLn.set(node.record.id, node.ied)
 			}
 
@@ -59,7 +99,7 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 				const registrations: IedNode<'IEDName' | 'ClientLN'>[] = []
 				registrationsOf.set(node.record.id, registrations)
 				const controlBlock = { ...node, registrations } as ControlBlockNode
-				const uuid = readRawAttribute({ record: node.record, name: 'uuid' })
+				controlBlocks.set(node.record.id, controlBlock)
 				if (uuid) controlBlocksByUuid.set(uuid, controlBlock)
 				const address = targetTupleAddress({ record: node.record, ancestry: node.ancestry })
 				if (address) {
@@ -77,10 +117,18 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 	})
 
 	return {
+		extRefs,
+		implementations,
+		iedByName,
+		accessPointUuidsByIed,
+		uuidById,
+		lnsByUuid,
+		lnsByAddress,
 		extRefsByUuid,
 		extRefsByPath,
 		extCtrlsByUuid,
 		extCtrlsByPath,
+		controlBlocks,
 		controlBlocksByUuid,
 		controlBlocksByAddress,
 		lnsByPath,
@@ -91,12 +139,12 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 /** Indexes an ExtRef / ExtCtrl by its uuid and by its path, the elements of one path kept in document order. */
 function indexImplementation<GenericElement extends 'ExtRef' | 'ExtCtrl'>(params: {
 	node: IedNode
+	uuid: string | undefined
 	byUuid: Map<string, IedNode<GenericElement>>
 	byPath: Map<string, IedNode<GenericElement>[]>
 }): void {
-	const { node, byUuid, byPath } = params
+	const { node, uuid, byUuid, byPath } = params
 	const element = node as IedNode<GenericElement>
-	const uuid = readRawAttribute({ record: node.record, name: 'uuid' })
 	if (uuid) byUuid.set(uuid, element)
 	const path = elementPath(node)
 	if (path) byPath.set(path, [...(byPath.get(path) ?? []), element])

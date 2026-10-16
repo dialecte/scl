@@ -3,7 +3,7 @@ import { invariant } from '@dialecte/core/utils'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 
-import type { SignalPairs } from '../dataflow.types'
+import type { SignalPairs, SpecifiedDataflow } from '../dataflow.types'
 import type { Scl } from '@/v2019C1/config'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
 
@@ -21,6 +21,11 @@ export const SIGNAL_DATA_ATTRIBUTE = 'pDA' satisfies Scl.AttributesOf<'ExtRef'> 
 
 /** The attribute of a SourceRef holding the service it asks for. */
 export const SOURCE_REF_SERVICE_ATTRIBUTE = 'service' satisfies Scl.AttributesOf<'SourceRef'>
+
+/** The direction of a signal, by tag: a SourceRef is an input of its LNode, a ControlRef an output. */
+export const SIGNAL_DIRECTION: Readonly<
+	Record<'SourceRef' | 'ControlRef', SpecifiedDataflow['direction']>
+> = { SourceRef: 'input', ControlRef: 'output' }
 
 /** The signals of the specification, by tag. */
 export const SIGNAL_PAIRS: Readonly<Record<'SourceRef' | 'ControlRef', SignalPairs>> = {

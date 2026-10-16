@@ -15,8 +15,8 @@ import type { LogicalNodeTuplePair } from '@/v2019C1/extensions/reference/query/
 // of a tag naming a logical node gives the attributes of the signal's address, the pair naming a
 // control block gives its attributes and the services that have one.
 
-const EXT_REF_LOGICAL_NODE_PAIR = logicalNodePairOf(TUPLE_REFERENCE_PAIRS.ExtRef)
-const EXT_CTRL_LOGICAL_NODE_PAIR = logicalNodePairOf(TUPLE_REFERENCE_PAIRS.ExtCtrl)
+export const EXT_REF_LOGICAL_NODE_PAIR = logicalNodePairOf(TUPLE_REFERENCE_PAIRS.ExtRef)
+export const EXT_CTRL_LOGICAL_NODE_PAIR = logicalNodePairOf(TUPLE_REFERENCE_PAIRS.ExtCtrl)
 
 function logicalNodePairOf(pairs: readonly TupleReferencePair[]): LogicalNodeTuplePair {
 	const pair = tuplePairTargeting({ pairs, kind: 'ln' })

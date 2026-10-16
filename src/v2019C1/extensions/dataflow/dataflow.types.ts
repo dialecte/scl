@@ -82,6 +82,12 @@ export type SpecifiedDataflow = {
 		 * from the service.
 		 */
 		allocation: 'same-ied' | 'inter-ied' | 'unallocated'
+		/**
+		 * The IED each of the two logical nodes is mapped into: the holder's, and the other's (`undefined`
+		 * while the signal names no other logical node). `undefined` for one that is not mapped to a
+		 * logical node of the document. What `allocation` is read from.
+		 */
+		mappedIeds: { holder: Scl.Ref<'IED'> | undefined; other: Scl.Ref<'IED'> | undefined }
 	}
 	/**
 	 * What implements the signal. Whether it is implemented never depends on the control block: the
@@ -112,20 +118,31 @@ export type SpecifiedDataflow = {
 	}
 }
 
-/** An ExtRef naming a control block that no signal of the specification links to. */
+/**
+ * An ExtRef naming a control block that no signal of the specification links to. It is implemented
+ * by definition (`state` is always `implemented`); `binding` carries how completely the ExtRef is
+ * written, the real rung, and is always set.
+ */
 export type ImplementationOnlyDataflow = {
 	kind: 'implementation-only'
 	element: Scl.Ref<'ExtRef'>
-	implementation: SpecifiedDataflow['implementation']
+	implementation: SpecifiedDataflow['implementation'] & {
+		state: 'implemented'
+		binding: ExtRefState
+	}
 }
 
 /**
  * The subscriber's own entry on a control block (an `IEDName`, or a `ClientLN` of a report), and
- * how precisely it names the subscriber: its IED only, also its logical device, or its logical node.
+ * how precisely it names the subscriber: its access point (the least precise: it always names its
+ * IED and an access point), its logical device, or its logical node. It names the subscriber by
+ * the uuids it carries, else by its names. The access point it names (`apRef`, `apUuid`) is an access
+ * point of the subscriber's IED, not necessarily the one holding the ExtRef: `apRef` does not tell
+ * subscribers apart, and an `apUuid` matches any access point of that IED.
  */
 export type Registration = {
 	element: Scl.Ref<'IEDName' | 'ClientLN'>
-	names: 'ied' | 'ld' | 'ln'
+	names: 'ap' | 'ld' | 'ln'
 }
 
 /** A uuid or an address naming nothing in the document: the attribute holding it, on which element. */

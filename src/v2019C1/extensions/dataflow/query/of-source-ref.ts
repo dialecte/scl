@@ -14,9 +14,5 @@ export async function ofSourceRef(
 	query: Core.Query<Config>,
 	params: { ref: Scl.Ref<'SourceRef'> },
 ): Promise<SpecifiedDataflow> {
-	return describeSignal(query, {
-		ref: params.ref,
-		direction: 'input',
-		context: createDataflowContext(query),
-	})
+	return describeSignal({ ref: params.ref, context: createDataflowContext(query) })
 }
