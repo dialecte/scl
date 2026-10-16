@@ -3,6 +3,7 @@ import { resolveElementPath } from './resolve-element-path'
 import { LN_TARGETS } from './resolve-mapped-lnode.constants'
 
 import { LNODE_NAMING_ATTRIBUTES } from '@/v2019C1/constants'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { MappedLNodeAttributes } from '../build/build-mapped-lnode-path.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -40,7 +41,7 @@ function readMappedAttributes(lnode: Scl.TrackedRecord<'LNode'>): MappedLNodeAtt
 	return Object.fromEntries(
 		LNODE_NAMING_ATTRIBUTES.map((name) => [
 			name,
-			lnode.attributes.find((attribute) => attribute.name === name)?.value,
+			readAttribute({ record: lnode, name, defaults: 'none', fullObject: true })?.value,
 		]),
 	)
 }

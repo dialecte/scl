@@ -2,6 +2,7 @@ import { isElementOf } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { unassignedNaming } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
+import { readAttribute } from '@/v2019C1/helpers'
 import { ensureLNodeSpecNaming } from '@/v2019C1/hooks/shared/lnode-spec-naming'
 import { updatedOperation, upsertAttribute } from '@/v2019C1/hooks/shared/record-ops'
 
@@ -35,8 +36,18 @@ export async function reconcileLNodeBinding(params: {
 	const { oldRecord, newRecord, query } = params
 	if (newRecord.tagName !== 'LNode') return []
 
-	const oldLnUuid = attributeValue(oldRecord, 'lnUuid')
-	const newLnUuid = attributeValue(newRecord, 'lnUuid')
+	const oldLnUuid = readAttribute({
+		record: oldRecord,
+		name: 'lnUuid',
+		defaults: 'none',
+		fullObject: true,
+	})?.value
+	const newLnUuid = readAttribute({
+		record: newRecord,
+		name: 'lnUuid',
+		defaults: 'none',
+		fullObject: true,
+	})?.value
 	if (oldLnUuid === newLnUuid) return []
 
 	const desired = newLnUuid
@@ -97,7 +108,14 @@ async function specificationIdentity(
 	)
 	const specifiedAttributes = specNaming ? await query.getAttributes(specNaming) : undefined
 	return unassignedNaming({
-		lnodeAttributes: { lnClass: attributeValue(lnodeRecord, 'lnClass') },
+		lnodeAttributes: {
+			lnClass: readAttribute({
+				record: lnodeRecord,
+				name: 'lnClass',
+				defaults: 'none',
+				fullObject: true,
+			})?.value,
+		},
 		specifiedAttributes,
 	})
 }
@@ -139,8 +157,4 @@ function applyIdentity(
 
 	if (!changed) return null
 	return updatedOperation(record, attributes)
-}
-
-function attributeValue(record: Scl.RawRecord<Scl.ElementsOf>, name: string): string | undefined {
-	return record.attributes.find((a) => a.name === name)?.value
 }

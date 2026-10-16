@@ -5,10 +5,10 @@ import {
 	MIN_REQUESTED_SCD_IED_IGNORED_ATTRIBUTES,
 } from '@/v2019C1/constants'
 import { LINEAGE } from '@/v2019C1/extensions/lifecycle/constraints'
+import { readAttribute } from '@/v2019C1/helpers'
 import {
 	changedAttributeNames,
 	hasAttributeChange,
-	readSnapshotAttribute,
 	resolveAffectedIeds,
 	resolveIedByName,
 	syncMinRequestedScdFiles,
@@ -50,7 +50,7 @@ export async function syncMinRequestedScdFileOnUpdate<GenericElement extends Scl
 	// @stopgap Former IED found by its name. Remove once a changed `ConnectedAP` reference is
 	// re-resolved by uuid through the reference registry, which then reports both IEDs.
 	if (isConnectedApReassigned) {
-		const formerIedName = readSnapshotAttribute({ record: oldRecord, name: 'iedName' })
+		const formerIedName = readAttribute({ record: oldRecord, name: 'iedName' })
 		const formerIed = await resolveIedByName(query, { iedName: formerIedName })
 		if (formerIed) iedRefs.push(formerIed)
 	}

@@ -4,6 +4,7 @@ import { DATA_INSTANCE_TAGS, MAPPED_DATA_TAGS } from './unlock-lnode.constants'
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query/is-lnode-locked'
 import { PAIRS_BY_REF, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { resolveMappedData } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-data'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -106,8 +107,9 @@ async function findDataInstance(
 		current = children.find(
 			(child) =>
 				child !== undefined &&
-				readAttribute(child, 'name') === name &&
-				readAttribute(child, 'ix') === ix,
+				readAttribute({ record: child, name: 'name' }) === name &&
+				readAttribute({ record: child, name: 'ix', defaults: 'none', fullObject: true })?.value ===
+					ix,
 		)
 	}
 	return current
@@ -117,11 +119,4 @@ async function findDataInstance(
 function splitArrayIndex(segment: string): { name: string; ix: string | undefined } {
 	const match = /^(.*)\((\d+)\)$/.exec(segment)
 	return match ? { name: match[1], ix: match[2] } : { name: segment, ix: undefined }
-}
-
-function readAttribute(
-	record: Scl.TrackedRecord<Scl.ElementsOf>,
-	name: string,
-): string | undefined {
-	return record.attributes.find((attribute) => attribute.name === name)?.value
 }

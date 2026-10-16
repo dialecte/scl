@@ -2,6 +2,7 @@ import { toRawRecord } from '@dialecte/core/helpers'
 import { invariant } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -62,10 +63,8 @@ export async function wrapWithPrivateElementIfNeeded<
 	const hasMatchingAncestor = ancestors.some(
 		(ancestor) =>
 			ancestor.tagName === 'Private' &&
-			ancestor.attributes.some(
-				(attribute) =>
-					attribute.name === 'type' && attribute.value === childRecord.namespace.prefix,
-			),
+			readAttribute({ record: ancestor, name: 'type', defaults: 'none' }) ===
+				childRecord.namespace.prefix,
 	)
 	if (hasMatchingAncestor) return []
 
@@ -148,10 +147,9 @@ export async function handleExistingPrivateRecordCase<
 		key: 'ELEMENT_NOT_FOUND',
 	})
 
-	const hasMatchingType = latestPrivateRecord.attributes.some(
-		(attribute: Core.AnyAttribute) =>
-			attribute.name === 'type' && attribute.value === childRecord.namespace.prefix,
-	)
+	const hasMatchingType =
+		readAttribute({ record: latestPrivateRecord, name: 'type', defaults: 'none' }) ===
+		childRecord.namespace.prefix
 
 	if (!hasMatchingType) return []
 

@@ -1,5 +1,7 @@
 import { getLatestHitem } from '../query'
 
+import { readAttribute } from '@/v2019C1/helpers'
+
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -56,8 +58,13 @@ export async function addEntry(
 
 	// Compute version/revision from latest Hitem
 	const lastHitem = await getLatestHitem(tx)
-	const lastVersion = lastHitem?.attributes.find((a) => a.name === 'version')?.value
-	const lastRevision = lastHitem?.attributes.find((a) => a.name === 'revision')?.value
+	const lastVersion = lastHitem
+		? readAttribute({ record: lastHitem, name: 'version', defaults: 'none', fullObject: true })
+				?.value
+		: undefined
+	const lastRevision = lastHitem
+		? readAttribute({ record: lastHitem, name: 'revision' })
+		: undefined
 
 	const computedVersion =
 		versionMode === 'keep'

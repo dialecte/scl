@@ -62,6 +62,22 @@ Domain-specific methods are bound onto every `doc.query` and `tx` instance under
 | `signature` | `doc.query.signature` | `elementSignature`                                                                                                                                                                               | [Signature](/v2019C1/extensions/signature)                                                                                                                                    |
 | `cleanUp`   | `tx.cleanUp`          | `orphanUuidRefs`, `resetLNode`, `pruneEmptyContainers`                                                                                                                                           | [Clean-up](/v2019C1/extensions/clean-up)                                                                                                                                      |
 
+## Reading attributes of a record you hold
+
+`readAttribute` and `readAttributes` read an SCL record you already hold (raw, tracked or tree) the way `query.getAttribute` / `query.getAttributes` read it, with no query and no configuration to pass: same `namespace`, `defaults` and `fullObject` options, same results, synchronous. Use them in an import pass or a pure function; inside a transaction read through `tx.getAttribute(s)`, which sees the staged writes.
+
+```ts
+import { readAttribute, readAttributes } from '@dialecte/scl/v2019C1'
+
+readAttribute({ record: lnode, name: 'lnClass' }) // 'XCBR'
+readAttribute({ record: lnode, name: 'iedName' }) // 'None' when absent: the schema default
+readAttribute({ record: lnode, name: 'iedName', defaults: 'none', fullObject: true }) // undefined when absent
+readAttribute({ record: root, name: 'revision', namespace: 'v2019C1' }) // 'C': eIEC61850-6-100:revision
+readAttributes({ record: lnode, defaults: 'none' }) // the stored attributes only
+```
+
+In the default view an absent attribute reads its schema value (`'None'` for an LNode's `iedName`), `''` when it has none. Only `{ defaults: 'none', fullObject: true }` returns `undefined` for it, the only way to tell it from one written empty.
+
 ## `Scl` type namespace
 
 All types from `@dialecte/core` are re-exported pre-bound to the SCL config under the `Scl` namespace. Import once, use everywhere:

@@ -1,6 +1,7 @@
 import { getAttributeRules } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Scl } from '@/v2019C1'
 /**
@@ -20,8 +21,7 @@ export function enforceUuidAttribute<GenericElement extends Scl.ElementsOf>(para
 	})
 	if (!uuidRules.isDefined) return record
 
-	const existingUuidAttribute = attributes.find((attribute) => attribute.name === 'uuid')
-	if (existingUuidAttribute?.value) return record
+	if (readAttribute({ record, name: 'uuid' })) return record
 
 	const uuidNamespace = uuidRules.namespace
 

@@ -3,6 +3,7 @@ import { CROSS_CUTTING_SATELLITE_CONTAINERS } from './applied-satellites.constan
 import { toRef } from '@dialecte/core/helpers'
 
 import { reference } from '@/v2019C1/extensions/reference'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -61,6 +62,9 @@ function collectTargets(params: {
 	const { node, subtreeIds, targets } = params
 	subtreeIds.add(node.id)
 	// only uuid-bearing elements can be referenced by a uuid satellite
-	if (node.attributes.some((attribute) => attribute.name === 'uuid')) targets.push(node)
+	if (
+		readAttribute({ record: node, name: 'uuid', defaults: 'none', fullObject: true }) !== undefined
+	)
+		targets.push(node)
 	for (const child of node.tree) collectTargets({ node: child, subtreeIds, targets })
 }

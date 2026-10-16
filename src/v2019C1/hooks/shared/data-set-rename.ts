@@ -1,7 +1,9 @@
 import { DATA_SET_USER_TAGS } from './data-set-rename.constants'
-import { readSnapshotAttribute, updatedOperation, upsertAttribute } from './record-ops'
+import { updatedOperation, upsertAttribute } from './record-ops'
 
 import { toRawRecord } from '@dialecte/core/helpers'
+
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -16,8 +18,8 @@ export async function followDataSetRename(
 ): Promise<Scl.Operation[]> {
 	const { oldRecord, newRecord } = params
 	if (newRecord.tagName !== 'DataSet' || !newRecord.parent) return []
-	const oldName = readSnapshotAttribute({ record: oldRecord, name: 'name' })
-	const newName = readSnapshotAttribute({ record: newRecord, name: 'name' })
+	const oldName = readAttribute({ record: oldRecord, name: 'name' })
+	const newName = readAttribute({ record: newRecord, name: 'name' })
 	if (!oldName || !newName || oldName === newName) return []
 
 	const parent = await query.getRecord(newRecord.parent as Scl.Ref<Scl.ElementsOf>)
@@ -28,7 +30,7 @@ export async function followDataSetRename(
 	for (const record of records) {
 		if (!record) continue
 		const raw = toRawRecord(record) as Scl.RawRecord<Scl.ElementsOf>
-		if (readSnapshotAttribute({ record: raw, name: 'datSet' }) !== oldName) continue
+		if (readAttribute({ record: raw, name: 'datSet', defaults: 'none' }) !== oldName) continue
 		operations.push(updatedOperation(raw, upsertAttribute(raw.attributes, 'datSet', newName)))
 	}
 	return operations

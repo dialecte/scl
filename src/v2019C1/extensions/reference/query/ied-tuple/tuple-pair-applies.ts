@@ -1,4 +1,4 @@
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { TupleReferencePair } from '@/v2019C1/constants/reference-pairs.types'
 import type { AnyRawRecord } from '@dialecte/core'
@@ -9,5 +9,7 @@ export function tuplePairApplies(params: {
 	pair: TupleReferencePair
 }): boolean {
 	const { record, pair } = params
-	return !pair.onlyWithout?.some((name) => readRawAttribute({ record, name }) !== undefined)
+	return !pair.onlyWithout?.some(
+		(name) => readAttribute({ record, name, defaults: 'none', fullObject: true }) !== undefined,
+	)
 }

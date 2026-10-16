@@ -4,6 +4,7 @@ import { TYPE_ID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
 import { applyTypeIdRemap } from '@/v2019C1/extensions/reference/transaction'
 import { elementSignature } from '@/v2019C1/extensions/signature/query'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ResolvedDataModel } from '../query/resolve.types'
 import type {
@@ -227,7 +228,7 @@ async function buildPreExistingSignatureIndex(
 	for (const tagName of TYPE_TAGS) {
 		const existing = await tx.getRecordsByTagName(tagName)
 		for (const record of existing) {
-			const id = record.attributes.find((a) => a.name === 'id')?.value
+			const id = readAttribute({ record, name: 'id' })
 			if (!id) continue
 			const signature = await elementSignature(tx, {
 				ref: { tagName, id: record.id },
@@ -413,7 +414,7 @@ async function referencedTypeRefs(
 			| undefined
 		for (const pair of pairs ?? []) {
 			if (!matchesWhen(node, pair)) continue
-			const value = node.attributes.find((a) => a.name === pair.attribute)?.value
+			const value = readAttribute({ record: node, name: pair.attribute, defaults: 'none' })
 			if (!value) continue
 			const [record] = await tx.findByAttributes({
 				tagName: pair.target as Scl.ElementsOf,
@@ -436,7 +437,10 @@ async function referencedTypeRefs(
 
 function matchesWhen(node: Scl.TreeRecord<Scl.ElementsOf>, pair: TypeIdReferencePair): boolean {
 	if (!pair.when) return true
-	return node.attributes.find((a) => a.name === pair.when!.attribute)?.value === pair.when.equals
+	return (
+		readAttribute({ record: node, name: pair.when.attribute, defaults: 'none' }) ===
+		pair.when.equals
+	)
 }
 
 /**

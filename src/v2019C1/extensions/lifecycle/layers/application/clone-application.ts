@@ -15,6 +15,7 @@ import {
 	resolveStructureRef,
 	createAncestryResolver,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { AllocationRoleReuse, CloneApplicationContentResult } from './clone-application.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -184,7 +185,7 @@ async function mapAllocationRoles(
 	const reuse: AllocationRoleReuse[] = []
 	const seen = new Set<string>()
 	for (const ref of refs) {
-		const roleUuid = ref.attributes.find((a) => a.name === 'allocationRoleUuid')?.value
+		const roleUuid = readAttribute({ record: ref, name: 'allocationRoleUuid' })
 		if (!roleUuid || seen.has(roleUuid)) continue
 		seen.add(roleUuid)
 

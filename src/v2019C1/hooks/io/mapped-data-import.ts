@@ -3,6 +3,7 @@ import { buildMappedDataAttributes } from '@/v2019C1/extensions/reference/query/
 import { buildMappedLNodePath } from '@/v2019C1/extensions/reference/query/build/build-mapped-lnode-path'
 import { splitLnodeQualifier } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { resolveMappedDataFrom } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-data-from'
+import { readAttributes } from '@/v2019C1/helpers'
 
 import type {
 	ImportedLNode,
@@ -27,7 +28,7 @@ export function createMappedDataImport(): MappedDataImport {
 
 	function collect(params: { record: AnyRawRecord; ancestry: readonly AnyRawRecord[] }): void {
 		const { record, ancestry } = params
-		const attributes = readAttributes(record)
+		const attributes = readAttributes({ record, defaults: 'none' })
 
 		if (record.tagName === 'LN' || record.tagName === 'LN0') {
 			if (attributes.uuid) lnUuids.add(attributes.uuid)
@@ -143,10 +144,6 @@ export function createMappedDataImport(): MappedDataImport {
 	}
 
 	return { collect, resolve }
-}
-
-function readAttributes(record: AnyRawRecord): Record<string, string | undefined> {
-	return Object.fromEntries(record.attributes.map((attribute) => [attribute.name, attribute.value]))
 }
 
 function unresolvedWarning(params: {

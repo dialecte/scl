@@ -6,6 +6,7 @@ import { REF_ENTRIES_BY_TARGET } from '@/v2019C1/extensions/reference'
 import { buildElementPath } from '@/v2019C1/extensions/reference/query/build'
 import { buildOwnDerivedAttributes } from '@/v2019C1/extensions/reference/query/build/build-reference-attributes'
 import { derivedAttributesFollowing } from '@/v2019C1/extensions/reference/query/build/compose-derived-attributes'
+import { readAttribute } from '@/v2019C1/helpers'
 import { updatedOperation, withAttributeValues } from '@/v2019C1/hooks/shared/record-ops'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -82,7 +83,7 @@ async function rebuildPathsOf(
 	if (!isTarget && !writesOwnPath) return []
 
 	const elementPath = writesOwnPath ? await buildElementPath(query, element) : undefined
-	const uuid = descendant.attributes.find((attribute) => attribute.name === 'uuid')?.value
+	const uuid = readAttribute({ record: descendant, name: 'uuid' })
 	const referenceOps =
 		isTarget && uuid
 			? await rebuildReferencesByUuid(query, {

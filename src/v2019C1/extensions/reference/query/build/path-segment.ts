@@ -1,4 +1,3 @@
-import { readRawAttribute } from './raw-attribute'
 /**
  * Strategy-based path segment extraction for SCL elements.
  *
@@ -19,6 +18,7 @@ import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 import { SPECIFIED_NAMING_ATTRIBUTES } from '@/v2019C1/constants/lnode-spec-naming'
 import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants/naming'
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
 	PathSegment,
@@ -43,16 +43,19 @@ function buildExtractor(strategy: ExtractionStrategy): PathExtractor {
 		case 'name': {
 			const separator = strategy.separator ?? '/'
 			return (record) => {
-				const name = getAttribute(record, 'name')
+				const name = readAttribute({ record, name: 'name' })
 				return name ? { segment: name, separator } : null
 			}
 		}
 		case 'lnClass':
 			return (record) => {
-				const lnClass = getAttribute(record, 'lnClass')
+				const lnClass = readAttribute({ record, name: 'lnClass', defaults: 'none' })
 				if (!lnClass) return null
-				const prefix = getAttribute(record, 'prefix') ?? ''
-				const inst = getAttribute(record, 'inst') ?? getAttribute(record, 'lnInst') ?? ''
+				const prefix = readAttribute({ record, name: 'prefix', defaults: 'none' })
+				const inst =
+					readAttribute({ record, name: 'inst', defaults: 'none', fullObject: true })?.value ??
+					readAttribute({ record, name: 'lnInst', defaults: 'none', fullObject: true })?.value ??
+					''
 				return { segment: logicalNodeName({ prefix, lnClass, inst }), separator: '/' }
 			}
 		case 'lnode':
@@ -62,7 +65,7 @@ function buildExtractor(strategy: ExtractionStrategy): PathExtractor {
 			}
 		case 'attribute':
 			return (record) => {
-				const val = getAttribute(record, strategy.attr)
+				const val = readAttribute({ record, name: strategy.attr, defaults: 'none' })
 				return val ? { segment: val, separator: strategy.separator } : null
 			}
 		case 'signal':
@@ -88,18 +91,22 @@ function buildSignalName(params: {
 	siblings: readonly AnyRawRecord[]
 }): string | null {
 	const { strategy, record, siblings } = params
-	const name = getAttribute(record, strategy.name)
+	const name = readAttribute({ record, name: strategy.name, defaults: 'none' })
 	if (!name) return null
 
 	const sharing = siblings.filter(
 		(sibling) =>
-			sibling.tagName === record.tagName && getAttribute(sibling, strategy.name) === name,
+			sibling.tagName === record.tagName &&
+			readAttribute({ record: sibling, name: strategy.name, defaults: 'none' }) === name,
 	)
 	if (sharing.length <= 1) return name
 
 	const instance =
-		getAttribute(record, strategy.instance) ?? schemaDefault(record, strategy.instance)
-	const data = strategy.data ? getAttribute(record, strategy.data) : undefined
+		readAttribute({ record, name: strategy.instance, defaults: 'none', fullObject: true })?.value ??
+		schemaDefault(record, strategy.instance)
+	const data = strategy.data
+		? readAttribute({ record, name: strategy.data, defaults: 'none' })
+		: undefined
 	return `${name}${instance ? `(${instance})` : ''}${data ? `.${data}` : ''}`
 }
 
@@ -114,21 +121,33 @@ function buildLNodeName(params: {
 	specNaming: AnyRawRecord | undefined
 }): string | null {
 	const { strategy, record, specNaming } = params
-	const iedName = getAttribute(record, strategy.ied)
+	const iedName = readAttribute({ record, name: strategy.ied, defaults: 'none' })
 	const assigned = Boolean(iedName) && iedName !== UNALLOCATED_IED_NAME
 	const named =
 		assigned && specNaming
 			? {
-					prefix: getAttribute(specNaming, specifiedName(strategy.prefix)),
+					prefix: readAttribute({
+						record: specNaming,
+						name: specifiedName(strategy.prefix),
+						defaults: 'none',
+					}),
 					lnClass:
-						getAttribute(specNaming, specifiedName(strategy.lnClass)) ??
-						getAttribute(record, strategy.lnClass),
-					inst: getAttribute(specNaming, specifiedName(strategy.inst)),
+						readAttribute({
+							record: specNaming,
+							name: specifiedName(strategy.lnClass),
+							defaults: 'none',
+							fullObject: true,
+						})?.value ?? readAttribute({ record, name: strategy.lnClass, defaults: 'none' }),
+					inst: readAttribute({
+						record: specNaming,
+						name: specifiedName(strategy.inst),
+						defaults: 'none',
+					}),
 				}
 			: {
-					prefix: getAttribute(record, strategy.prefix),
-					lnClass: getAttribute(record, strategy.lnClass),
-					inst: getAttribute(record, strategy.inst),
+					prefix: readAttribute({ record, name: strategy.prefix, defaults: 'none' }),
+					lnClass: readAttribute({ record, name: strategy.lnClass, defaults: 'none' }),
+					inst: readAttribute({ record, name: strategy.inst, defaults: 'none' }),
 				}
 	if (!named.lnClass) return null
 	return logicalNodeName({ prefix: named.prefix, lnClass: named.lnClass, inst: named.inst })
@@ -205,10 +224,6 @@ export function buildPathFromAncestry(params: {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
-
-function getAttribute(record: AnyRawRecord, name: string): string | undefined {
-	return readRawAttribute({ record, name })
-}
 
 /** The name of a logical node: its prefix, class and instance, joined. */
 export function logicalNodeName(params: {

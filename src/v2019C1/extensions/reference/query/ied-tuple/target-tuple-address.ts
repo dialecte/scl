@@ -4,7 +4,7 @@ import {
 	getPathSegment,
 	logicalNodeName,
 } from '@/v2019C1/extensions/reference/query/build/path-segment'
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { TupleTargetParts } from './ied-tuple.types'
 import type { AnyRawRecord } from '@dialecte/core'
@@ -52,7 +52,9 @@ export function targetTupleParts(params: {
 	const { record, ancestry } = params
 	const kind = TUPLE_TARGET_KINDS.get(record.tagName)
 	const iedRecord = nearest({ ancestry, tagNames: ['IED'] })
-	const ied = iedRecord ? readRawAttribute({ record: iedRecord, name: 'name' }) : undefined
+	const ied = iedRecord
+		? readAttribute({ record: iedRecord, name: 'name', defaults: 'none', fullObject: true })?.value
+		: undefined
 	if (!kind || !ied) return undefined
 
 	const lDeviceRecord =
@@ -62,7 +64,12 @@ export function targetTupleParts(params: {
 	const lDevice = lDeviceRecord ? getPathSegment(lDeviceRecord)?.segment : undefined
 	switch (kind) {
 		case 'ap':
-			return { kind, ied, accessPoint: readRawAttribute({ record, name: 'name' }) }
+			return {
+				kind,
+				ied,
+				accessPoint: readAttribute({ record, name: 'name', defaults: 'none', fullObject: true })
+					?.value,
+			}
 		case 'ld':
 			return { kind, ied, lDevice }
 		case 'ln':
@@ -74,7 +81,8 @@ export function targetTupleParts(params: {
 				ied,
 				lDevice,
 				...(logicalNode ? logicalNodePartsOf(logicalNode) : {}),
-				controlBlock: readRawAttribute({ record, name: 'name' }),
+				controlBlock: readAttribute({ record, name: 'name', defaults: 'none', fullObject: true })
+					?.value,
 			}
 		}
 	}
@@ -84,9 +92,9 @@ function logicalNodePartsOf(
 	record: AnyRawRecord,
 ): Pick<TupleTargetParts, 'prefix' | 'lnClass' | 'lnInst'> {
 	return {
-		prefix: readRawAttribute({ record, name: 'prefix' }),
-		lnClass: readRawAttribute({ record, name: 'lnClass' }),
-		lnInst: readRawAttribute({ record, name: 'inst' }),
+		prefix: readAttribute({ record, name: 'prefix', defaults: 'none', fullObject: true })?.value,
+		lnClass: readAttribute({ record, name: 'lnClass', defaults: 'none', fullObject: true })?.value,
+		lnInst: readAttribute({ record, name: 'inst', defaults: 'none', fullObject: true })?.value,
 	}
 }
 

@@ -2,7 +2,7 @@ import { DATA_TYPE_MODEL } from './data-types.constants'
 
 import { invariant } from '@dialecte/core/utils'
 
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { DataTypeIndex, DataTypeMembersBuilder } from './data-type-index.types'
 import type { DataTypeMember, DataTypeModelMember, DataTypes } from './data-types.types'
@@ -23,7 +23,7 @@ export function createDataTypeIndex(): DataTypeIndex {
 		const { record, ancestry } = params
 		const type = DATA_TYPE_MODEL.types.get(record.tagName)
 		if (type) {
-			const id = readRawAttribute({ record, name: type.idAttribute })
+			const id = readAttribute({ record, name: type.idAttribute, defaults: 'none' })
 			if (id) membersOf({ membersByType, typeTag: record.tagName, id })
 			return
 		}
@@ -31,7 +31,11 @@ export function createDataTypeIndex(): DataTypeIndex {
 		const parentType = parent ? DATA_TYPE_MODEL.types.get(parent.tagName) : undefined
 		const modelMember = parentType?.members.get(record.tagName)
 		if (!parent || !parentType || !modelMember) return
-		const parentId = readRawAttribute({ record: parent, name: parentType.idAttribute })
+		const parentId = readAttribute({
+			record: parent,
+			name: parentType.idAttribute,
+			defaults: 'none',
+		})
 		const member = memberOf({ record, modelMember })
 		if (!parentId || !member) return
 		const members = membersOf({ membersByType, typeTag: parent.tagName, id: parentId })
@@ -116,11 +120,11 @@ function memberOf(params: {
 	modelMember: DataTypeModelMember
 }): DataTypeMember | undefined {
 	const { record, modelMember } = params
-	const name = readRawAttribute({ record, name: modelMember.nameAttribute })
+	const name = readAttribute({ record, name: modelMember.nameAttribute, defaults: 'none' })
 	if (!name) return undefined
-	const type = readRawAttribute({ record, name: modelMember.typeAttribute })
+	const type = readAttribute({ record, name: modelMember.typeAttribute, defaults: 'none' })
 	const bType = modelMember.when
-		? readRawAttribute({ record, name: modelMember.when.attribute })
+		? readAttribute({ record, name: modelMember.when.attribute, defaults: 'none' })
 		: undefined
 	return { name, ...(type ? { type } : {}), ...(bType ? { bType } : {}) }
 }

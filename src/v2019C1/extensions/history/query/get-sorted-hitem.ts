@@ -1,3 +1,5 @@
+import { readAttribute } from '@/v2019C1/helpers'
+
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -17,7 +19,7 @@ export async function getSortedHitems(
 		record: (typeof hitems)[number],
 		name: 'version' | 'revision',
 	): number {
-		return Number(record.attributes.find((attr) => attr.name === name)?.value || 0)
+		return Number(readAttribute({ record, name }) || 0)
 	}
 
 	const sortedHitems = [...hitems].sort((a, b) => {

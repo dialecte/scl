@@ -1,6 +1,7 @@
 import { toRef } from '@dialecte/core/helpers'
 
 import { JUDGED_ATTRIBUTES_BY_TAG } from '@/v2019C1/extensions/clean-up/transaction/orphan-lnode-bindings.constants'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -38,8 +39,18 @@ function changesAny(params: {
 }): boolean {
 	const { operation, names } = params
 	for (const name of names) {
-		const before = operation.oldRecord.attributes.find((attribute) => attribute.name === name)
-		const after = operation.newRecord.attributes.find((attribute) => attribute.name === name)
+		const before = readAttribute({
+			record: operation.oldRecord,
+			name,
+			defaults: 'none',
+			fullObject: true,
+		})
+		const after = readAttribute({
+			record: operation.newRecord,
+			name,
+			defaults: 'none',
+			fullObject: true,
+		})
 		if (before?.value !== after?.value) return true
 	}
 	return false

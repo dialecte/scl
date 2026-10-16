@@ -56,9 +56,15 @@ function stampLineage(params: {
 	target: Core.AnyTrackedRecord
 }): LineageUpdates {
 	const { mapping, target } = params
-	const sourceUuid = readAttribute(mapping.source.attributes, 'uuid')
-	const sourceTemplateUuid = readAttribute(mapping.source.attributes, 'templateUuid')
-	const sourceOriginUuid = readAttribute(mapping.source.attributes, 'originUuid')
+	const sourceUuid = sourceAttributeValue({ attributes: mapping.source.attributes, name: 'uuid' })
+	const sourceTemplateUuid = sourceAttributeValue({
+		attributes: mapping.source.attributes,
+		name: 'templateUuid',
+	})
+	const sourceOriginUuid = sourceAttributeValue({
+		attributes: mapping.source.attributes,
+		name: 'originUuid',
+	})
 
 	const updates: LineageUpdates = {}
 	if (sourceUuid) updates.templateUuid = sourceUuid
@@ -79,9 +85,10 @@ function stampLineage(params: {
  * Reads one attribute value from a clone mapping's raw source attributes. The
  * source lives in another document, so `query.getAttributes` does not apply here.
  */
-function readAttribute(
-	attributes: readonly { name: string; value: string }[],
-	name: string,
-): string | undefined {
+function sourceAttributeValue(params: {
+	attributes: readonly { name: string; value: string }[]
+	name: string
+}): string | undefined {
+	const { attributes, name } = params
 	return attributes.find((attribute) => attribute.name === name)?.value
 }

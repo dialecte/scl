@@ -23,8 +23,8 @@ import {
 	isFunctionScoped,
 } from '@/v2019C1/extensions/reference/query/build/function-scope'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
-import { readRawAttributes } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
+import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 import { createSpecNamingImport } from '@/v2019C1/hooks/io/lnode-spec-naming-import'
 import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
 import { createTupleReferenceImport } from '@/v2019C1/hooks/io/tuple-reference-import'
@@ -119,7 +119,7 @@ export function createSclIoHooks(): IOHooks {
 
 		// The record is already standardized, so afterStandardizedRecord has
 		// enforced a uuid where the element supports one — just read it.
-		const uuid = readAttribute(record, 'uuid')
+		const uuid = readAttribute({ record, name: 'uuid' })
 		if (uuid && TARGET_ELEMENT_TYPES.has(tagName)) {
 			targets.push({ record, ancestry: [...ancestry], uuid })
 		}
@@ -143,8 +143,13 @@ export function createSclIoHooks(): IOHooks {
 		pair: ReferencePair
 	}): void {
 		const { record, ancestry, pair } = params
-		const pathValue = readAttribute(record, pair.attribute.path)
-		const uuidValue = readAttribute(record, pair.attribute.uuid)
+		const pathValue = readAttribute({ record, name: pair.attribute.path, defaults: 'none' })
+		const uuidValue = readAttribute({
+			record,
+			name: pair.attribute.uuid,
+			defaults: 'none',
+			fullObject: true,
+		})?.value
 		const localAncestry =
 			LOCAL_NAME_RESOLUTIONS.has(pair.resolution) || isFunctionScoped(pair)
 				? [...ancestry]
@@ -684,7 +689,9 @@ function referrerContextFromAncestry(params: {
 	const { pair, ancestry } = params
 	if (pair.resolution !== RESOLUTION_TYPE.iedAddress) return undefined
 	const lnode = ancestry?.findLast((ancestor) => ancestor.tagName === 'LNode')
-	return lnode ? { mappedLnPath: buildMappedLNodePath(readRawAttributes(lnode)) } : undefined
+	return lnode
+		? { mappedLnPath: buildMappedLNodePath(readAttributes({ record: lnode, defaults: 'none' })) }
+		: undefined
 }
 
 /**
@@ -698,14 +705,14 @@ function functionBaseOfReferrer(params: {
 	const { ancestry, index } = params
 	const functionRef = ancestry?.findLast((ancestor) => ancestor.tagName === 'FunctionRef')
 	if (!functionRef) return undefined
-	const functionPath = readAttribute(functionRef, 'function')
+	const functionPath = readAttribute({ record: functionRef, name: 'function' })
 	const uuid =
-		readAttribute(functionRef, 'functionUuid') ??
-		(functionPath ? index.byPath.get(functionPath) : undefined)
+		readAttribute({
+			record: functionRef,
+			name: 'functionUuid',
+			defaults: 'none',
+			fullObject: true,
+		})?.value ?? (functionPath ? index.byPath.get(functionPath) : undefined)
 	const target = uuid ? index.targetsByUuid.get(uuid) : undefined
 	return target ? (functionBaseOf(target.path) ?? undefined) : undefined
-}
-
-function readAttribute(record: AnyRawRecord, name: string): string | undefined {
-	return record.attributes.find((attribute) => attribute.name === name)?.value
 }

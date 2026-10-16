@@ -1,6 +1,6 @@
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { specifiedNamingOf } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
-import { readRawAttributes } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
+import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 
 import type { DerivedSpecificationNamingWarning } from './io-hooks.types'
 import type { SpecNamingImport } from './lnode-spec-naming-import.types'
@@ -31,7 +31,8 @@ export function createSpecNamingImport(): SpecNamingImport {
 		if (
 			record.tagName === 'Private' &&
 			record.parent?.id === lnode.id &&
-			readAttribute(record, 'type') === SCL_DIALECTE_CONFIG.namespaces.v2019C1.prefix
+			readAttribute({ record, name: 'type', defaults: 'none' }) ===
+				SCL_DIALECTE_CONFIG.namespaces.v2019C1.prefix
 		) {
 			privateByLnode.set(lnode.id, record)
 		}
@@ -44,7 +45,9 @@ export function createSpecNamingImport(): SpecNamingImport {
 
 		for (const lnode of lnodes.values()) {
 			if (namings.has(lnode.id)) continue
-			const { attributes, derived } = specifiedNamingOf(readRawAttributes(lnode))
+			const { attributes, derived } = specifiedNamingOf(
+				readAttributes({ record: lnode, defaults: 'none' }),
+			)
 			const existingPrivate = privateByLnode.get(lnode.id)
 			const holder = existingPrivate ?? newPrivate(lnode)
 			const specNaming: AnyRawRecord = {
@@ -68,7 +71,10 @@ export function createSpecNamingImport(): SpecNamingImport {
 				warnings.push({
 					type: 'derived-specification-naming',
 					recordId: lnode.id,
-					details: { iedName: readAttribute(lnode, 'iedName') ?? '', specifiedNaming: attributes },
+					details: {
+						iedName: readAttribute({ record: lnode, name: 'iedName', defaults: 'none' }),
+						specifiedNaming: attributes,
+					},
 				})
 			}
 		}
@@ -97,8 +103,4 @@ function newPrivate(lnode: AnyRawRecord): AnyRawRecord {
 
 function childRef(record: AnyRawRecord): { id: string; tagName: string } {
 	return { id: record.id, tagName: record.tagName }
-}
-
-function readAttribute(record: AnyRawRecord, name: string): string | undefined {
-	return record.attributes.find((attribute) => attribute.name === name)?.value
 }

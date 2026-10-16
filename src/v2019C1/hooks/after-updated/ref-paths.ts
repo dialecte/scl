@@ -5,6 +5,7 @@ import {
 	PATH_CONTRIBUTING_ATTRIBUTES,
 } from '@/v2019C1/extensions/reference'
 import { derivedAttributesFollowing } from '@/v2019C1/extensions/reference/query/build/compose-derived-attributes'
+import { readAttribute } from '@/v2019C1/helpers'
 import {
 	followDataSetRename,
 	followTupleTargetRename,
@@ -138,8 +139,18 @@ function hasPathAttributeChange<GenericElement extends Scl.ElementsOf>(
 	newRecord: Scl.RawRecord<GenericElement>,
 ): boolean {
 	for (const attrName of PATH_CONTRIBUTING_ATTRIBUTES) {
-		const oldVal = oldRecord.attributes.find((a) => a.name === attrName)?.value
-		const newVal = newRecord.attributes.find((a) => a.name === attrName)?.value
+		const oldVal = readAttribute({
+			record: oldRecord,
+			name: attrName,
+			defaults: 'none',
+			fullObject: true,
+		})?.value
+		const newVal = readAttribute({
+			record: newRecord,
+			name: attrName,
+			defaults: 'none',
+			fullObject: true,
+		})?.value
 		if (oldVal !== newVal) return true
 	}
 	return false

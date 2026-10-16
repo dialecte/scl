@@ -6,6 +6,7 @@ import { tupleReferenceWrite } from '../query/ied-tuple/tuple-reference-write'
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import { TUPLE_REFERENCE_PAIRS, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { TupleTargetParts } from '../query/ied-tuple/ied-tuple.types'
 import type { RedirectMapping } from './apply-uuid-remap.types'
@@ -48,18 +49,16 @@ export async function applyUuidRemap(
 		const sourceUuid = source.attributes.find((attribute) => attribute.name === 'uuid')?.value
 		if (!sourceUuid) continue
 		const targetRecord = await tx.getRecord(target)
-		const targetUuid = targetRecord?.attributes.find(
-			(attribute) => attribute.name === 'uuid',
-		)?.value
+		if (!targetRecord) continue
+		const targetUuid = readAttribute({ record: targetRecord, name: 'uuid' })
 		if (!targetUuid) continue
 		uuidMap.set(sourceUuid, targetUuid)
 		uuidToRef.set(targetUuid, { tagName: targetRecord.tagName, id: targetRecord.id })
 	}
 	for (const { sourceUuid, target } of redirectMappings) {
 		const targetRecord = await tx.getRecord(target)
-		const targetUuid = targetRecord?.attributes.find(
-			(attribute) => attribute.name === 'uuid',
-		)?.value
+		if (!targetRecord) continue
+		const targetUuid = readAttribute({ record: targetRecord, name: 'uuid' })
 		if (!targetUuid) continue
 		uuidMap.set(sourceUuid, targetUuid)
 		uuidToRef.set(targetUuid, { tagName: targetRecord.tagName, id: targetRecord.id })
@@ -76,9 +75,11 @@ export async function applyUuidRemap(
 		const updates: Record<string, string> = {}
 
 		for (const pair of pairs) {
-			const currentUuid = refRecord.attributes.find(
-				(attribute) => attribute.name === pair.attribute.uuid,
-			)?.value
+			const currentUuid = readAttribute({
+				record: refRecord,
+				name: pair.attribute.uuid,
+				defaults: 'none',
+			})
 			if (!currentUuid) continue
 
 			const newUuid = uuidMap.get(currentUuid)
@@ -92,9 +93,11 @@ export async function applyUuidRemap(
 				reference: { tagName: target.tagName, id: refRecord.id } as Scl.Ref<Scl.ElementsOf>,
 				target: { tagName: targetMeta.tagName, id: targetMeta.id } as Scl.Ref<Scl.ElementsOf>,
 			})
-			const currentPath = refRecord.attributes.find(
-				(attribute) => attribute.name === pair.attribute.path,
-			)?.value
+			const currentPath = readAttribute({
+				record: refRecord,
+				name: pair.attribute.path,
+				defaults: 'none',
+			})
 			if (newPath && newPath !== currentPath) updates[pair.attribute.path] = newPath
 		}
 

@@ -1,3 +1,5 @@
+import { readAttribute } from '@/v2019C1/helpers'
+
 import type { ConstraintScope, ConstraintViolation } from './find-constraint-violation.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -69,20 +71,19 @@ export function findViolationInScope(params: {
 
 		for (const selected of selectedBy({ constraint, children: scope.children })) {
 			if (selected.id === excludeId) continue
-			if (fields.every((field) => attributeValue(selected, field) === candidate[field])) {
+			if (
+				fields.every(
+					(field) =>
+						readAttribute({ record: selected, name: field, defaults: 'none', fullObject: true })
+							?.value === candidate[field],
+				)
+			) {
 				return { constraint: constraint.name, fields, offendingId: selected.id }
 			}
 		}
 	}
 
 	return null
-}
-
-function attributeValue(
-	node: { attributes: { name: string; value: string }[] },
-	name: string,
-): string | undefined {
-	return node.attributes.find((attribute) => attribute.name === name)?.value
 }
 
 /**

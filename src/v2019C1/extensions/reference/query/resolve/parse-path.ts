@@ -1,9 +1,9 @@
 import { buildMappedLNodePath } from '../build/build-mapped-lnode-path'
 import { getPathSegment, joinPathParts } from '../build/path-segment'
-import { readRawAttributes } from '../build/raw-attribute'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
+import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 
 import type { PathSegment } from '../build/path-segment.types'
 import type { ParsedReference } from './types'
@@ -236,7 +236,7 @@ function parseIedAddressPath(params: {
 	if (!lnode) return { lookupKey: pathValue }
 
 	const intAddr = pathValue.startsWith('@') ? pathValue.slice(1) : undefined
-	const lnPath = buildMappedLNodePath(readRawAttributes(lnode))
+	const lnPath = buildMappedLNodePath(readAttributes({ record: lnode, defaults: 'none' }))
 	const sameLnKey = lnPath ? `${lnPath}.${intAddr ?? pathValue}` : undefined
 	if (intAddr !== undefined) return { lookupKey: sameLnKey ?? intAddr }
 
@@ -316,7 +316,14 @@ function findScopeContextPath(params: {
 export function findIedNameFromAncestry(ancestry: readonly AnyRawRecord[]): string | null {
 	for (let i = ancestry.length - 1; i >= 0; i--) {
 		if (ancestry[i].tagName === 'LNode') {
-			return ancestry[i].attributes.find((a) => a.name === 'iedName')?.value ?? null
+			return (
+				readAttribute({
+					record: ancestry[i],
+					name: 'iedName',
+					defaults: 'none',
+					fullObject: true,
+				})?.value ?? null
+			)
 		}
 	}
 	return null

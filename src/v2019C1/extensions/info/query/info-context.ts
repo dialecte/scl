@@ -1,4 +1,5 @@
 import { classifyIeds } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { InfoContext } from './info-context.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -33,7 +34,7 @@ async function readLnsByUuid(
 	const byUuid = new Map<string, Scl.Ref<'LN' | 'LN0'>>()
 	for (const tagName of ['LN', 'LN0'] as const) {
 		for (const record of await query.getRecordsByTagName(tagName)) {
-			const uuid = record.attributes.find((attribute) => attribute.name === 'uuid')?.value
+			const uuid = readAttribute({ record, name: 'uuid' })
 			if (uuid) byUuid.set(uuid, { tagName, id: record.id })
 		}
 	}

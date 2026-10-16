@@ -1,6 +1,7 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import { MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference/constants'
+import { readAttribute } from '@/v2019C1/helpers'
 import { reconcileMappedData } from '@/v2019C1/hooks/shared/reconcile-mapped-data'
 
 import type { ReconcileMappedDataParams } from './reconcile-mapped-data.types'
@@ -28,9 +29,10 @@ export async function reconcileMappedDataBelow(
 		const records = (descendants as Record<string, Scl.TrackedRecord<Scl.ElementsOf>[]>)[tagName]
 		for (const descendant of records ?? []) {
 			if (descendant.id === record.id) continue
-			const namesImplementation = descendant.attributes.some(
-				(attribute) =>
-					attribute.name === attributeNames.path || attribute.name === attributeNames.uuid,
+			const namesImplementation = [attributeNames.path, attributeNames.uuid].some(
+				(name) =>
+					readAttribute({ record: descendant, name, defaults: 'none', fullObject: true }) !==
+					undefined,
 			)
 			if (!namesImplementation) continue
 			const operation = await reconcileMappedData(query, { record: toRawRecord(descendant) })

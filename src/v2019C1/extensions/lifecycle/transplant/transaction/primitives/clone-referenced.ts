@@ -2,6 +2,7 @@ import { cloneTree } from './clone-tree'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DESCENDANTS } from '@/v2019C1/definition'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ResolveTargetParent } from './clone-referenced.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -46,9 +47,7 @@ export async function findMissingReferencedRecords<
 
 	const uuids = new Set<string>()
 	for (const ref of refs) {
-		const uuid = ref.attributes.find(
-			(a: { name: string; value: string }) => a.name === uuidAttrName,
-		)?.value
+		const uuid = readAttribute({ record: ref, name: uuidAttrName, defaults: 'none' })
 		if (uuid) uuids.add(uuid)
 	}
 

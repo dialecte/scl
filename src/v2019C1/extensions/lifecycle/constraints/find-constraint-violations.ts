@@ -1,5 +1,7 @@
 import { findConstraintViolation } from './find-constraint-violation'
 
+import { readAttributes } from '@/v2019C1/helpers'
+
 import type { ConstraintViolation } from './find-constraint-violation.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -41,7 +43,7 @@ async function walk(
 		const violation = await findConstraintViolation(query, {
 			parentRef,
 			childTag: node.tagName,
-			candidate: attributesRecord(node),
+			candidate: readAttributes({ record: node, defaults: 'none' }),
 			excludeId: node.id,
 		})
 		if (violation) out.push(violation)
@@ -49,10 +51,4 @@ async function walk(
 
 	const childParent = { tagName: node.tagName, id: node.id } as Scl.Ref<Scl.ElementsOf>
 	for (const child of node.tree) await walk(query, { node: child, parentRef: childParent, out })
-}
-
-function attributesRecord(node: AnyTreeRecord): Record<string, string> {
-	const record: Record<string, string> = {}
-	for (const attribute of node.attributes) record[attribute.name] = attribute.value
-	return record
 }

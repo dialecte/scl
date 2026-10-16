@@ -6,6 +6,7 @@ import {
 	isAssignedToIed,
 	specifiedNamingOf,
 } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
+import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 import {
 	addChildToPrivate,
 	handleNewPrivateRecordCase,
@@ -154,9 +155,7 @@ export async function mirrorSpecifiedNaming(
 
 	const naming = await query.getChild({ tagName: 'LNode', id: newRecord.id }, 'LNodeSpecNaming')
 	if (!naming) return []
-	const lnodeAttributes = Object.fromEntries(
-		newRecord.attributes.map((attribute) => [attribute.name, attribute.value]),
-	)
+	const lnodeAttributes = readAttributes({ record: newRecord, defaults: 'none' })
 	const specified = specifiedNamingOf(lnodeAttributes).attributes
 	const namingRecord = toRawRecord(naming) as Scl.RawRecord<Scl.ElementsOf>
 	const specifiedNames = new Set(SPECIFIED_NAMING_ATTRIBUTES.values())
@@ -168,6 +167,11 @@ export async function mirrorSpecifiedNaming(
 }
 
 function isAssigned(record: Scl.RawRecord<Scl.ElementsOf>): boolean {
-	const iedName = record.attributes.find((attribute) => attribute.name === 'iedName')?.value
+	const iedName = readAttribute({
+		record,
+		name: 'iedName',
+		defaults: 'none',
+		fullObject: true,
+	})?.value
 	return isAssignedToIed({ iedName })
 }

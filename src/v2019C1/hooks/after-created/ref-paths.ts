@@ -5,6 +5,7 @@ import {
 	buildOwnDerivedAttributes,
 	buildReferenceAttributes,
 } from '@/v2019C1/extensions/reference/query/build/build-reference-attributes'
+import { readAttribute } from '@/v2019C1/helpers'
 import {
 	findTargetByUuid,
 	rebuildReferencesByUuid,
@@ -64,7 +65,7 @@ async function setPathAttributesOfCreated<GenericElement extends Scl.ElementsOf>
 	let attributes: AttributeList = record.attributes
 
 	for (const pair of PAIRS_BY_REF.get(record.tagName) ?? []) {
-		const uuid = record.attributes.find((attribute) => attribute.name === pair.uuidAttr)?.value
+		const uuid = readAttribute({ record, name: pair.uuidAttr, defaults: 'none' })
 		const target = uuid
 			? await findTargetByUuid(query, { uuid, targetTagNames: pair.targetTagNames })
 			: undefined
@@ -92,7 +93,7 @@ async function setRefPathsOnCreatedTarget<GenericElement extends Scl.ElementsOf>
 }): Promise<Scl.Operation[]> {
 	const { childRecord, query } = params
 
-	const uuid = childRecord.attributes.find((attribute) => attribute.name === 'uuid')?.value
+	const uuid = readAttribute({ record: childRecord, name: 'uuid' })
 	if (!uuid || !REF_ENTRIES_BY_TARGET.has(childRecord.tagName)) return []
 
 	const target = { tagName: childRecord.tagName, id: childRecord.id } as Scl.Ref<Scl.ElementsOf>

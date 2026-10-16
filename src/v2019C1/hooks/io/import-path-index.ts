@@ -4,6 +4,7 @@ import {
 	buildPathFromAncestry,
 	joinPathParts,
 } from '@/v2019C1/extensions/reference/query/build/path-segment'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { CollectedTarget, ImportPathIndex } from './io-hooks.types'
 import type { AnyRawRecord } from '@dialecte/core'
@@ -40,7 +41,12 @@ export function buildImportPathIndex(params: {
 		index.targetsByUuid.set(uuid, {
 			tagName: record.tagName,
 			path: standard,
-			lnType: readAttribute(record, LNODE_TYPE_ATTRIBUTE),
+			lnType: readAttribute({
+				record,
+				name: LNODE_TYPE_ATTRIBUTE,
+				defaults: 'none',
+				fullObject: true,
+			})?.value,
 		})
 
 		for (const former of formerPathsOf({
@@ -108,13 +114,11 @@ function parentPathOf(path: string, ownSegment: string | undefined): string | un
 function formerSignalName(record: AnyRawRecord): string | undefined {
 	const strategy = PATH_EXTRACTION_CONFIG[record.tagName]
 	if (strategy?.type !== 'signal') return undefined
-	const name = readAttribute(record, strategy.name)
+	const name = readAttribute({ record, name: strategy.name, defaults: 'none' })
 	if (!name) return undefined
-	const instance = readAttribute(record, strategy.instance)
-	const data = strategy.data ? readAttribute(record, strategy.data) : undefined
+	const instance = readAttribute({ record, name: strategy.instance, defaults: 'none' })
+	const data = strategy.data
+		? readAttribute({ record, name: strategy.data, defaults: 'none' })
+		: undefined
 	return `${name}${instance && instance !== '1' ? `(${instance})` : ''}${data ? `.${data}` : ''}`
-}
-
-function readAttribute(record: AnyRawRecord, name: string): string | undefined {
-	return record.attributes.find((attribute) => attribute.name === name)?.value
 }

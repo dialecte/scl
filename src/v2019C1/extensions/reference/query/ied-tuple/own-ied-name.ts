@@ -1,7 +1,7 @@
 import { toRef } from '@dialecte/core/helpers'
 
 import { RELATIVE_IED_NAME } from '@/v2019C1/constants/naming'
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TupleReferencePair } from '@/v2019C1/constants/reference-pairs.types'
@@ -11,7 +11,9 @@ import type { AnyRawRecord } from '@dialecte/core'
 /** The name of the IED a referrer sits in, among its ancestors. */
 export function ownIedName(params: { ancestry: readonly AnyRawRecord[] }): string | undefined {
 	const ied = params.ancestry.find((ancestor) => ancestor.tagName === 'IED')
-	return ied ? readRawAttribute({ record: ied, name: 'name' }) : undefined
+	return ied
+		? readAttribute({ record: ied, name: 'name', defaults: 'none', fullObject: true })?.value
+		: undefined
 }
 
 /**

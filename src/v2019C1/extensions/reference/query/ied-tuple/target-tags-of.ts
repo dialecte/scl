@@ -1,4 +1,4 @@
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { TupleReferencePair } from '@/v2019C1/constants/reference-pairs.types'
 import type { AnyRawRecord } from '@dialecte/core'
@@ -13,7 +13,12 @@ export function targetTagsOf(params: {
 }): readonly string[] {
 	const { pair, record } = params
 	if (!pair.targetByAttribute) return pair.target
-	const value = readRawAttribute({ record, name: pair.targetByAttribute.attribute })
+	const value = readAttribute({
+		record,
+		name: pair.targetByAttribute.attribute,
+		defaults: 'none',
+		fullObject: true,
+	})?.value
 	const named = value === undefined ? undefined : pair.targetByAttribute.tags[value]
 	return named ? [named] : pair.target
 }

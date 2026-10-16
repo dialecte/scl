@@ -39,7 +39,7 @@ export async function repointAddedReferences(
 		redirectMappings.map((redirectMapping) => redirectMapping.sourceUuid),
 	)
 	for (const { source } of cloneMappings) {
-		const sourceUuid = readAttribute(source.attributes, 'uuid')
+		const sourceUuid = sourceAttributeValue({ attributes: source.attributes, name: 'uuid' })
 		if (sourceUuid) resolvedSourceUuids.add(sourceUuid)
 	}
 
@@ -54,7 +54,10 @@ export async function repointAddedReferences(
 		if (!pairs) continue
 
 		for (const pair of pairs) {
-			const sourceUuid = readAttribute(source.attributes, pair.attribute.uuid)
+			const sourceUuid = sourceAttributeValue({
+				attributes: source.attributes,
+				name: pair.attribute.uuid,
+			})
 			if (!sourceUuid || resolvedSourceUuids.has(sourceUuid)) continue
 
 			const counterpart = await findInstanceCounterpart(tx, {
@@ -102,9 +105,10 @@ async function findInstanceCounterpart(
 	return inInstance.length === 1 ? inInstance[0] : undefined
 }
 
-function readAttribute(
-	attributes: readonly { name: string; value: string }[],
-	name: string,
-): string | undefined {
+function sourceAttributeValue(params: {
+	attributes: readonly { name: string; value: string }[]
+	name: string
+}): string | undefined {
+	const { attributes, name } = params
 	return attributes.find((attribute) => attribute.name === name)?.value || undefined
 }

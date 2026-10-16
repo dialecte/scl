@@ -7,7 +7,6 @@ export { reconcileSignalAddresses } from './signal-addresses'
 export {
 	changedAttributeNames,
 	hasAttributeChange,
-	readSnapshotAttribute,
 	updatedOperation,
 	upsertAttribute,
 	withAttributeValues,

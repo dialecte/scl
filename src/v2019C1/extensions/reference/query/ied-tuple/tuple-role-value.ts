@@ -1,7 +1,7 @@
 import { getAttributeRules } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { TupleReferencePair, TupleRole } from '@/v2019C1/constants/reference-pairs.types'
 import type { AnyRawRecord } from '@dialecte/core'
@@ -19,10 +19,12 @@ export function tupleRoleValue(params: {
 	const { record, pair, role } = params
 	const name = pair.tuple[role]
 	if (!name) return undefined
-	const written = readRawAttribute({ record, name })
+	const written = readAttribute({ record, name, defaults: 'none', fullObject: true })?.value
 	if (written !== undefined) return written
 	const otherwise = pair.otherwise?.[role]
-	const instead = otherwise ? readRawAttribute({ record, name: otherwise }) : undefined
+	const instead = otherwise
+		? readAttribute({ record, name: otherwise, defaults: 'none', fullObject: true })?.value
+		: undefined
 	if (instead !== undefined) return instead
 	const rules = getAttributeRules({
 		dialecteConfig: SCL_DIALECTE_CONFIG,

@@ -1,6 +1,7 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAGS, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -96,9 +97,11 @@ function collectOrphanedAttrs(params: {
 	const attrsToClear = new Set<string>()
 
 	for (const pair of refPairs) {
-		const uuidValue = refRecord.attributes.find(
-			(attribute) => attribute.name === pair.attribute.uuid,
-		)?.value
+		const uuidValue = readAttribute({
+			record: refRecord,
+			name: pair.attribute.uuid,
+			defaults: 'none',
+		})
 		if (!uuidValue || !subtreeUuids.has(uuidValue)) continue
 
 		attrsToClear.add(pair.attribute.uuid)
@@ -165,7 +168,7 @@ async function collectSubtreeData<GenericElement extends Scl.ElementsOf>(params:
 
 	ids.add(record.id)
 
-	const uuid = record.attributes.find((attribute) => attribute.name === 'uuid')?.value
+	const uuid = readAttribute({ record, name: 'uuid' })
 	if (uuid) uuids.add(uuid)
 
 	for (const childRef of record.children) {

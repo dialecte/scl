@@ -1,6 +1,7 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
+import { readAttribute } from '@/v2019C1/helpers'
 import { rebuildReferencesByUuid } from '@/v2019C1/hooks/shared/ref-entry-ops'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -34,12 +35,12 @@ export async function reconcileSignalSiblingPaths(
 		.filter(
 			(child) =>
 				child.tagName === tagName &&
-				names.includes(child.attributes.find((a) => a.name === strategy.name)?.value ?? ''),
+				names.includes(readAttribute({ record: child, name: strategy.name, defaults: 'none' })),
 		)
 
 	const operations: Scl.Operation[] = []
 	for (const sibling of sharing) {
-		const uuid = sibling.attributes.find((a) => a.name === 'uuid')?.value
+		const uuid = readAttribute({ record: sibling, name: 'uuid' })
 		if (!uuid) continue
 		const target = { tagName: sibling.tagName, id: sibling.id } as Scl.Ref<Scl.ElementsOf>
 		operations.push(...(await rebuildReferencesByUuid(query, { uuid, target })))
@@ -58,5 +59,5 @@ export function signalNamingAttributes(tagName: string): string[] {
 export function signalName(record: Scl.RawRecord<Scl.ElementsOf>): string | undefined {
 	const strategy = PATH_EXTRACTION_CONFIG[record.tagName]
 	if (strategy?.type !== 'signal') return undefined
-	return record.attributes.find((a) => a.name === strategy.name)?.value
+	return readAttribute({ record, name: strategy.name, defaults: 'none', fullObject: true })?.value
 }

@@ -3,6 +3,7 @@ import { DEFAULT_IGNORED_ATTRIBUTES } from './element-signature.constants'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DEFINITION } from '@/v2019C1/definition'
 import { TYPE_ID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
+import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 
 import type {
 	AttributeSchemaDetail,
@@ -85,7 +86,7 @@ async function serialize(
 	const skip = context.resolveReferences ? pathAttributesToFold(node.tagName) : NO_SKIP
 
 	const attributeParts: string[] = []
-	for (const attribute of node.attributes) {
+	for (const attribute of readAttributes({ record: node, defaults: 'none', fullObject: true })) {
 		if (context.ignore.has(attribute.name) || skip.has(attribute.name)) continue
 		// An attribute written with its schema default is equivalent to omitting it;
 		// fold it out so an explicit default never forks against an absent one.
@@ -157,7 +158,10 @@ function typeIdPair(
 
 function matchesWhen(node: Scl.TreeRecord<Scl.ElementsOf>, pair: TypeIdReferencePair): boolean {
 	if (!pair.when) return true
-	return node.attributes.find((a) => a.name === pair.when!.attribute)?.value === pair.when.equals
+	return (
+		readAttribute({ record: node, name: pair.when.attribute, defaults: 'none' }) ===
+		pair.when.equals
+	)
 }
 
 function uuidPairForUuidAttribute(

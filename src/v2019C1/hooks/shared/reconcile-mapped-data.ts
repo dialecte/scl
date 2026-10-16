@@ -1,11 +1,8 @@
 import { MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference/constants'
 import { buildMappedDataAttributes } from '@/v2019C1/extensions/reference/query/build/build-mapped-data-attributes'
 import { resolveMappedDataAndDefault } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-data-and-default'
-import {
-	readSnapshotAttribute,
-	updatedOperation,
-	upsertAttribute,
-} from '@/v2019C1/hooks/shared/record-ops'
+import { readAttribute } from '@/v2019C1/helpers'
+import { updatedOperation, upsertAttribute } from '@/v2019C1/hooks/shared/record-ops'
 
 import type { ReconcileMappedDataParams } from './reconcile-mapped-data.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -52,7 +49,8 @@ export async function reconcileMappedData(
 				}
 
 	const unchanged = [attributeNames.path, attributeNames.uuid].every(
-		(name) => readSnapshotAttribute({ record, name }) === desired[name],
+		(name) =>
+			readAttribute({ record, name, defaults: 'none', fullObject: true })?.value === desired[name],
 	)
 	if (unchanged) return null
 

@@ -1,3 +1,5 @@
+import { readAttribute } from '@/v2019C1/helpers'
+
 import type { Scl } from '@/v2019C1/config'
 import type { DerivedAttributeValue } from '@/v2019C1/extensions/reference'
 
@@ -21,18 +23,6 @@ export function updatedOperation(
 	}
 }
 
-/**
- * Read an attribute from a record snapshot. Only for a state `query` can no longer reach, such as
- * the `oldRecord` of an update hook; read the current state through `query.getAttribute`.
- */
-export function readSnapshotAttribute(params: {
-	record: Scl.RawRecord<Scl.ElementsOf>
-	name: string
-}): string | undefined {
-	const { record, name } = params
-	return record.attributes.find((attribute) => attribute.name === name)?.value
-}
-
 /** Whether any of the named attributes differs between two snapshots of one record. */
 export function hasAttributeChange(params: {
 	oldRecord: Scl.RawRecord<Scl.ElementsOf>
@@ -42,8 +32,8 @@ export function hasAttributeChange(params: {
 	const { oldRecord, newRecord, names } = params
 	return names.some(
 		(name) =>
-			readSnapshotAttribute({ record: oldRecord, name }) !==
-			readSnapshotAttribute({ record: newRecord, name }),
+			readAttribute({ record: oldRecord, name, defaults: 'none', fullObject: true })?.value !==
+			readAttribute({ record: newRecord, name, defaults: 'none', fullObject: true })?.value,
 	)
 }
 
@@ -58,8 +48,8 @@ export function changedAttributeNames(params: {
 	)
 	return [...names].filter(
 		(name) =>
-			readSnapshotAttribute({ record: oldRecord, name }) !==
-			readSnapshotAttribute({ record: newRecord, name }),
+			readAttribute({ record: oldRecord, name, defaults: 'none', fullObject: true })?.value !==
+			readAttribute({ record: newRecord, name, defaults: 'none', fullObject: true })?.value,
 	)
 }
 

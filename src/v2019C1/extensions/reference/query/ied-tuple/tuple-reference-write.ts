@@ -4,7 +4,7 @@ import { tupleRoleValue } from './tuple-role-value'
 import { tupleTargetKind } from './tuple-target-kind'
 
 import { RELATIVE_IED_NAME } from '@/v2019C1/constants'
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { TupleReferenceWrite, TupleTargetParts } from './ied-tuple.types'
 import type { TupleReferencePair, TupleRole } from '@/v2019C1/constants/reference-pairs.types'
@@ -33,7 +33,12 @@ export function tupleReferenceWrite(params: {
 	let current = record
 	for (const pair of pairs) {
 		if (!tuplePairApplies({ record: current, pair })) continue
-		const uuid = readRawAttribute({ record: current, name: pair.attribute.uuid })
+		const uuid = readAttribute({
+			record: current,
+			name: pair.attribute.uuid,
+			defaults: 'none',
+			fullObject: true,
+		})?.value
 		const targetUuid = uuid && retarget ? retarget.get(uuid) : uuid
 		if (!targetUuid) continue
 		const parts = partsByUuid.get(targetUuid)
@@ -81,7 +86,12 @@ function pairNames(params: {
 
 	const ied = pair.tuple.ied
 	if ('attribute' in ied) {
-		const written = readRawAttribute({ record, name: ied.attribute })
+		const written = readAttribute({
+			record,
+			name: ied.attribute,
+			defaults: 'none',
+			fullObject: true,
+		})?.value
 		const keepsRelative = written === RELATIVE_IED_NAME && ownIedName === parts.ied
 		if (!keepsRelative && written !== parts.ied) write.attributes[ied.attribute] = parts.ied
 	} else if ('text' in ied && record.value !== parts.ied) {

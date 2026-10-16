@@ -5,7 +5,7 @@ import { toRawRecord } from '@dialecte/core/helpers'
 import { LNODE_BINDING_ATTRIBUTES } from '@/v2019C1/extensions/reference'
 import { buildMappedLNodePath } from '@/v2019C1/extensions/reference/query/build/build-mapped-lnode-path'
 import { buildReferenceAttributes } from '@/v2019C1/extensions/reference/query/build/build-reference-attributes'
-import { readRawAttributes } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
+import { readAttributes } from '@/v2019C1/helpers'
 import {
 	hasAttributeChange,
 	updatedOperation,
@@ -45,7 +45,9 @@ export async function reconcileSignalAddresses(
 			?.newRecord ?? newRecord
 	// `lnode` is the LNode as the binding operations leave it, which the transaction has not staged
 	// yet: a read through the query would give the LNode as staged, without the binding
-	const referrerContext = { mappedLnPath: buildMappedLNodePath(readRawAttributes(lnode)) }
+	const referrerContext = {
+		mappedLnPath: buildMappedLNodePath(readAttributes({ record: lnode, defaults: 'none' })),
+	}
 
 	const descendants = await query.findDescendants({ tagName: 'LNode', id: newRecord.id })
 	const operations: Scl.Operation[] = []

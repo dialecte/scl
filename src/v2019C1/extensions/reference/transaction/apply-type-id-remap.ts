@@ -1,5 +1,7 @@
 import { TYPE_ID_REF_ATTRIBUTES } from '../constants'
 
+import { readAttribute } from '@/v2019C1/helpers'
+
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -32,7 +34,7 @@ export async function applyTypeIdRemap(
 
 		const updates: Record<string, string> = {}
 		for (const attribute of attributes) {
-			const current = record.attributes.find((a) => a.name === attribute)?.value
+			const current = readAttribute({ record, name: attribute, defaults: 'none' })
 			if (!current) continue
 			const next = idRemap.get(current)
 			if (next !== undefined && next !== current) updates[attribute] = next

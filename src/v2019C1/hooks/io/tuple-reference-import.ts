@@ -1,9 +1,9 @@
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { referrerTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/referrer-tuple-address'
 import { targetKey } from '@/v2019C1/extensions/reference/query/ied-tuple/target-key'
 import { targetTagsOf } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tags-of'
 import { targetTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { PendingTupleFill, TupleReferenceImport } from './tuple-reference-import.types'
 import type { TupleReferencePair } from '@/v2019C1/constants'
@@ -22,7 +22,7 @@ export function createTupleReferenceImport(): TupleReferenceImport {
 
 	function collect(params: { record: AnyRawRecord; ancestry: readonly AnyRawRecord[] }): void {
 		const { record, ancestry } = params
-		const uuid = readRawAttribute({ record, name: 'uuid' })
+		const uuid = readAttribute({ record, name: 'uuid' })
 		if (uuid) {
 			const address = targetTupleAddress({ record, ancestry })
 			if (address) targetsByAddress.set(targetKey({ address, tagName: record.tagName }), uuid)
@@ -31,7 +31,7 @@ export function createTupleReferenceImport(): TupleReferenceImport {
 		const pairs: readonly TupleReferencePair[] | undefined =
 			TUPLE_REFERENCE_PAIRS[record.tagName as keyof typeof TUPLE_REFERENCE_PAIRS]
 		for (const pair of pairs ?? []) {
-			if (readRawAttribute({ record, name: pair.attribute.uuid })) continue
+			if (readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })) continue
 			const address = referrerTupleAddress({ pair, record, ancestry })
 			if (!address) continue
 			pendingFills.push({

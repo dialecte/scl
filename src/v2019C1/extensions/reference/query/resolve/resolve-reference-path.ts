@@ -11,6 +11,7 @@ import { toRawRecord } from '@dialecte/core/helpers'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
 import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { PathSegment } from '../build/path-segment.types'
 import type { ResolveResult } from './resolve-reference-path.types'
@@ -55,7 +56,7 @@ export async function resolveReferencePath(
 		}
 	}
 
-	const pathValue = record.attributes.find((a) => a.name === pathAttribute)?.value
+	const pathValue = readAttribute({ record, name: pathAttribute, defaults: 'none' })
 	if (!pathValue) return undefined
 
 	// Fast path: resolve via UUID when available (exact, no ambiguity)
@@ -164,7 +165,7 @@ async function resolveByUuid(
 	pair: ReferencePair,
 ): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
 	const uuidAttrName = pair.attribute.uuid
-	const uuidValue = record.attributes.find((a) => a.name === uuidAttrName)?.value
+	const uuidValue = readAttribute({ record, name: uuidAttrName, defaults: 'none' })
 	if (!uuidValue) return undefined
 
 	for (const tagName of pair.target) {
@@ -276,8 +277,8 @@ async function findLnClassTarget(params: {
 	})
 
 	for (const record of records) {
-		const prefix = record.attributes.find((a) => a.name === 'prefix')?.value ?? ''
-		const inst = record.attributes.find((a) => a.name === instAttr)?.value ?? ''
+		const prefix = readAttribute({ record, name: 'prefix', defaults: 'none' })
+		const inst = readAttribute({ record, name: instAttr, defaults: 'none' })
 		if (prefix !== parts.prefix || inst !== parts.inst) continue
 
 		if (await matchesAncestry(query, record, expectedAncestry)) {

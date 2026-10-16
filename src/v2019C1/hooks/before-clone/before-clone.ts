@@ -1,6 +1,7 @@
 import { isElementOf } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG, SCL_NAMESPACES } from '@/v2019C1/config'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -52,7 +53,12 @@ export function beforeClone<GenericElement extends Scl.ElementsOf>(params: {
 	// Vendor privates carry information in their value or by their
 	// mere presence with a `type`, so they must be cloned.
 	const hasValue = !!record.value?.trim()
-	const typeValue = record.attributes.find((attribute) => attribute.name === 'type')?.value
+	const typeValue = readAttribute({
+		record,
+		name: 'type',
+		defaults: 'none',
+		fullObject: true,
+	})?.value
 	const hasType = typeValue !== undefined
 	if (record.tagName === 'Private' && !record.tree.length && !hasValue && !hasType) {
 		shouldBeCloned = false

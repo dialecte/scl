@@ -8,6 +8,7 @@ import {
 	TYPE_ID_REFERRERS_BY_TARGET,
 } from '@/v2019C1/extensions/reference/constants'
 import { isTypeIdTarget } from '@/v2019C1/extensions/reference/guards'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ResolvedReference } from './find-refs-pointing-to.types'
 import type { TypeIdReferrer, TypeIdTarget } from '@/v2019C1/extensions/reference'
@@ -66,7 +67,7 @@ async function findUuidReferrers(
 	targetRecord: Scl.TrackedRecord<Scl.ElementsOf>,
 	containerTagName?: Scl.ElementsOf,
 ): Promise<ResolvedReference[]> {
-	const uuid = targetRecord.attributes.find((a) => a.name === 'uuid')?.value
+	const uuid = readAttribute({ record: targetRecord, name: 'uuid' })
 	if (!uuid) return []
 
 	const entries = REF_ENTRIES_BY_TARGET.get(targetRecord.tagName) ?? []
@@ -99,7 +100,7 @@ async function findTypeIdReferrers(
 	targetRecord: Scl.TrackedRecord<Scl.ElementsOf>,
 	containerTagName?: Scl.ElementsOf,
 ): Promise<ResolvedReference[]> {
-	const id = targetRecord.attributes.find((a) => a.name === 'id')?.value
+	const id = readAttribute({ record: targetRecord, name: 'id' })
 	if (!id) return []
 
 	const referrers = TYPE_ID_REFERRERS_BY_TARGET.get(targetRecord.tagName as TypeIdTarget) ?? []
@@ -128,7 +129,7 @@ async function findTypeIdReferrers(
 /** Honour a referrer's optional discriminator (e.g. DA.bType === 'Enum'). */
 function matchesWhen(ref: Scl.TrackedRecord<Scl.ElementsOf>, referrer: TypeIdReferrer): boolean {
 	if (!referrer.when) return true
-	const value = ref.attributes.find((a) => a.name === referrer.when!.attribute)?.value
+	const value = readAttribute({ record: ref, name: referrer.when.attribute, defaults: 'none' })
 	return value === referrer.when.equals
 }
 
