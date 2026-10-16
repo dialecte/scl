@@ -860,3 +860,177 @@ describe('of — state and signal title', () => {
 		},
 	})
 })
+
+/**
+ * An ExtRef or an ExtCtrl reads, from how completely it is written: nothing, only where it lands
+ * in the IED (`later-binding`), the signal it names (`expected`), that signal together with its
+ * service and the control block publishing it, unless the service needs none (`subscribed`, an
+ * ExtRef only), then also where it lands (`bound`).
+ */
+describe('of — ExtRef and ExtCtrl state', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		ref: Scl.Ref<Scl.ElementsOf>
+		expected: ElementState
+	}
+
+	function ldeviceWith(params: { inputs?: string; outputs?: string }): string {
+		const { inputs = '', outputs = '' } = params
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<IED name="B1" ${id}="ied">
+					<AccessPoint name="AP1" ${id}="ap">
+						<Server ${id}="server">
+							<Authentication ${id}="authentication"/>
+							<LDevice inst="LD0" ${id}="ld0">
+								<LN0 lnClass="LLN0" inst="" lnType="T0" ${id}="ln0">
+									<GSEControl name="GCB1" appID="app1" ${id}="gse-control"/>
+								</LN0>
+								<LN lnClass="XCBR" inst="1" lnType="T1" uuid="uuid-xcbr" ${id}="xcbr">
+									${inputs}
+									${outputs}
+								</LN>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+			</SCL>
+		`
+	}
+
+	function withExtRef(attributes: string): string {
+		return ldeviceWith({
+			inputs: `<Inputs ${id}="inputs"><ExtRef ${attributes} ${id}="ext-ref"/></Inputs>`,
+		})
+	}
+
+	function withExtCtrl(attributes: string): string {
+		return ldeviceWith({
+			outputs: `<Outputs ${id}="outputs"><ExtCtrl ${attributes} ${id}="ext-ctrl"/></Outputs>`,
+		})
+	}
+
+	const extRef = { tagName: 'ExtRef', id: 'ext-ref' } as const
+	const extCtrl = { tagName: 'ExtCtrl', id: 'ext-ctrl' } as const
+	const signal = 'iedName="B1" ldInst="LD0" lnClass="XCBR" lnInst="1" doName="Pos"'
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'ExtRef naming a signal and a srcCBName without serviceType → expected': {
+			sourceXml: withExtRef(`${signal} srcCBName="GCB1"`),
+			ref: extRef,
+			expected: 'expected',
+		},
+		'ExtRef naming its logical node by lnUuid with a doName and a GOOSE control block → subscribed':
+			{
+				sourceXml: withExtRef(
+					'lnUuid="uuid-xcbr" doName="Pos" srcCBName="GCB1" serviceType="GOOSE"',
+				),
+				ref: extRef,
+				expected: 'subscribed',
+			},
+		'ExtRef with no attribute → empty': {
+			sourceXml: withExtRef(''),
+			ref: extRef,
+			expected: 'empty',
+		},
+		'ExtRef with an intAddr only → later-binding': {
+			sourceXml: withExtRef('intAddr="Pos"'),
+			ref: extRef,
+			expected: 'later-binding',
+		},
+		'ExtRef naming a signal, no control block, no intAddr → expected': {
+			sourceXml: withExtRef(`${signal}`),
+			ref: extRef,
+			expected: 'expected',
+		},
+		'ExtRef naming a signal and a GOOSE control block → subscribed': {
+			sourceXml: withExtRef(`${signal} srcCBName="GCB1" serviceType="GOOSE"`),
+			ref: extRef,
+			expected: 'subscribed',
+		},
+		'ExtRef naming a signal, a GOOSE control block and an intAddr → bound': {
+			sourceXml: withExtRef(
+				`${signal} intAddr="Pos" srcLDInst="LD0" srcCBName="GCB1" serviceType="GOOSE"`,
+			),
+			ref: extRef,
+			expected: 'bound',
+		},
+		'ExtRef naming a signal of a service without control block → subscribed': {
+			sourceXml: withExtRef(`${signal} serviceType="Poll"`),
+			ref: extRef,
+			expected: 'subscribed',
+		},
+		'ExtRef naming a signal, a srcCBUuid and a GOOSE service → subscribed': {
+			allowIncoherentReferences:
+				'the uuid names a control block of another file: the state reads its presence only',
+			sourceXml: withExtRef(`${signal} srcCBUuid="uuid-elsewhere" serviceType="GOOSE"`),
+			ref: extRef,
+			expected: 'subscribed',
+		},
+		'ExtRef naming a signal and an intAddr, GOOSE without control block → expected': {
+			sourceXml: withExtRef(`${signal} intAddr="Pos" serviceType="GOOSE"`),
+			ref: extRef,
+			expected: 'expected',
+		},
+		'ExtRef naming a signal and an intAddr, no service, no control block → expected': {
+			sourceXml: withExtRef(`${signal} intAddr="Pos"`),
+			ref: extRef,
+			expected: 'expected',
+		},
+		'ExtRef naming a doName and part of its logical node (no iedName) and an intAddr → later-binding':
+			{
+				sourceXml: withExtRef('ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Pos" intAddr="Pos"'),
+				ref: extRef,
+				expected: 'later-binding',
+			},
+		'ExtRef naming part of a signal (no doName) and an intAddr → later-binding': {
+			sourceXml: withExtRef('iedName="B1" ldInst="LD0" lnClass="XCBR" lnInst="1" intAddr="Pos"'),
+			ref: extRef,
+			expected: 'later-binding',
+		},
+		'ExtRef naming an LLN0 signal without lnInst, with a GOOSE control block → subscribed': {
+			sourceXml: withExtRef(
+				'iedName="B1" ldInst="LD0" lnClass="LLN0" doName="Mod" srcCBName="GCB1" serviceType="GOOSE"',
+			),
+			ref: extRef,
+			expected: 'subscribed',
+		},
+		'ExtCtrl with no attribute → empty': {
+			sourceXml: withExtCtrl(''),
+			ref: extCtrl,
+			expected: 'empty',
+		},
+		'ExtCtrl with an intAddr only → later-binding': {
+			sourceXml: withExtCtrl('intAddr="Pos"'),
+			ref: extCtrl,
+			expected: 'later-binding',
+		},
+		'ExtCtrl naming part of a signal (no doName) → empty': {
+			sourceXml: withExtCtrl('iedName="B1" ldInst="LD0" lnClass="XCBR" lnInst="1"'),
+			ref: extCtrl,
+			expected: 'empty',
+		},
+		'ExtCtrl naming its logical node by lnUuid with a doName → expected': {
+			sourceXml: withExtCtrl('lnUuid="uuid-xcbr" doName="Pos"'),
+			ref: extCtrl,
+			expected: 'expected',
+		},
+		'ExtCtrl naming a signal, no intAddr → expected': {
+			sourceXml: withExtCtrl(`${signal}`),
+			ref: extCtrl,
+			expected: 'expected',
+		},
+		'ExtCtrl naming a signal and an intAddr → bound': {
+			sourceXml: withExtCtrl(`${signal} intAddr="Pos"`),
+			ref: extCtrl,
+			expected: 'bound',
+		},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		act: async ({ source, testCase }) => {
+			const result = await of(source.query, testCase.ref)
+			expect(result.state).toEqual(testCase.expected)
+		},
+	})
+})

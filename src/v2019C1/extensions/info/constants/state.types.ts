@@ -1,5 +1,6 @@
 import type { InfoContext } from '../query/info-context.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type { ExtCtrlState, ExtRefState } from '@/v2019C1/extensions/dataflow/dataflow.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -29,6 +30,8 @@ export type ElementStateByTag = {
 	SourceRef: SignalState
 	ControlRef: SignalState
 	LNode: LNodeState
+	ExtRef: ExtRefState
+	ExtCtrl: ExtCtrlState
 }
 
 /** The state of an element of tag `GenericElement`; every state when the tag is not known. */

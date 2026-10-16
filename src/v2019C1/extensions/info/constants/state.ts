@@ -1,5 +1,11 @@
 import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query'
+import {
+	EXT_CTRL_SIGNAL,
+	EXT_REF_CONTROL_BLOCK,
+	EXT_REF_SIGNAL,
+	INTERNAL_ADDRESS_ATTRIBUTE,
+} from '@/v2019C1/extensions/dataflow/constants/ext-ref-state.constants'
 import { PAIRS_BY_REF, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { resolveMappedLNode } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnode'
 
@@ -11,6 +17,11 @@ import type {
 	StateRuleParams,
 } from './state.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type {
+	ExtCtrlState,
+	ExtRefState,
+	SignalAttributes,
+} from '@/v2019C1/extensions/dataflow/dataflow.types'
 import type { RefPairEntry } from '@/v2019C1/extensions/reference/constants'
 import type * as Core from '@dialecte/core'
 
@@ -24,6 +35,8 @@ export const STATE_RULES: {
 	SourceRef: signalState,
 	ControlRef: signalState,
 	LNode: lnodeState,
+	ExtRef: extRefState,
+	ExtCtrl: extCtrlState,
 }
 
 /**
@@ -51,6 +64,57 @@ function namesTarget(params: {
 	return pairs
 		.filter((pair) => pair.resolution === resolution)
 		.some((pair) => Boolean(attributes[pair.pathAttr] || attributes[pair.uuidAttr]))
+}
+
+/**
+ * An ExtRef, read from its own attributes only: nothing, the internal address alone, the signal
+ * it names, that signal with its service and control block (a service published without one needs
+ * none), then the internal address as well. The internal address alone is never a binding.
+ */
+async function extRefState(params: StateRuleParams): Promise<ExtRefState> {
+	const { attributes } = params
+	const internalAddress = Boolean(attributes[INTERNAL_ADDRESS_ATTRIBUTE])
+	if (!namesSignal({ signal: EXT_REF_SIGNAL, attributes })) {
+		return internalAddress ? 'later-binding' : 'empty'
+	}
+	if (!hasControlBlockIfNeeded(attributes)) return 'expected'
+	return internalAddress ? 'bound' : 'subscribed'
+}
+
+/** An ExtCtrl, read from its own attributes only: nothing, the internal address, the signal, both. */
+async function extCtrlState(params: StateRuleParams): Promise<ExtCtrlState> {
+	const { attributes } = params
+	const internalAddress = Boolean(attributes[INTERNAL_ADDRESS_ATTRIBUTE])
+	if (!namesSignal({ signal: EXT_CTRL_SIGNAL, attributes })) {
+		return internalAddress ? 'later-binding' : 'empty'
+	}
+	return internalAddress ? 'bound' : 'expected'
+}
+
+/**
+ * Whether an ExtRef has what its service needs: the service is set, and it either names the control
+ * block publishing the signal or is published without one. Without a service nothing else it names
+ * counts.
+ */
+function hasControlBlockIfNeeded(attributes: Readonly<Record<string, string>>): boolean {
+	const { names, serviceAttribute, servicesWithControlBlock } = EXT_REF_CONTROL_BLOCK
+	const service = attributes[serviceAttribute]
+	if (!service) return false
+	return names.some((name) => attributes[name]) || !servicesWithControlBlock.has(service)
+}
+
+/**
+ * Whether the attributes name a signal: its logical node, by uuid or by all its names, and its data
+ * object.
+ */
+function namesSignal(params: {
+	signal: SignalAttributes
+	attributes: Readonly<Record<string, string>>
+}): boolean {
+	const { signal, attributes } = params
+	const namesLogicalNode =
+		Boolean(attributes[signal.uuid]) || signal.names.every((name) => attributes[name])
+	return namesLogicalNode && Boolean(attributes[signal.data])
 }
 
 async function lnodeState(params: StateRuleParams): Promise<LNodeState> {
