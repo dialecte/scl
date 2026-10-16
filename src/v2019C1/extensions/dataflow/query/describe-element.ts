@@ -5,8 +5,6 @@ import { readElementLinks } from './read-element-links'
 import { resolveControlBlock } from './resolve-control-block'
 import { resolveRegistration } from './resolve-registration'
 
-import { readRawAttributes } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
-
 import type { ExtCtrlState, ExtRefState } from '../dataflow.types'
 import type { DataflowContext } from './dataflow-context.types'
 import type { ElementDescription } from './describe-element.types'
@@ -26,8 +24,7 @@ export async function describeElement<GenericElement extends 'ExtRef' | 'ExtCtrl
 		element.record.tagName === 'ExtRef'
 			? await resolveControlBlock({ extRef: element as IedNode<'ExtRef'>, context })
 			: undefined
-	const attributes = readRawAttributes(element.record)
-	const iedSection = await context.iedSection()
+	const attributes = await context.query.any.getAttributes(element.record)
 	const links = await readElementLinks({
 		element,
 		controlBlockFound: controlBlock !== undefined,
@@ -46,11 +43,11 @@ export async function describeElement<GenericElement extends 'ExtRef' | 'ExtCtrl
 		publisher: controlBlock?.ied,
 		registration:
 			controlBlock &&
-			resolveRegistration({
+			(await resolveRegistration({
 				controlBlock,
 				extRef: element as IedNode<'ExtRef'>,
-				iedSection,
-			}),
+				context,
+			})),
 		dangling: findDanglingLinks({ element: element.ref, attributes, links }),
 	}
 }

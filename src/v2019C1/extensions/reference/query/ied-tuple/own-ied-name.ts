@@ -23,11 +23,22 @@ export async function relativeIedName(
 	params: { record: AnyRawRecord; pairs: readonly TupleReferencePair[] },
 ): Promise<string | undefined> {
 	const { record, pairs } = params
-	const relative = pairs.some(
-		({ tuple: { ied } }) =>
-			'attribute' in ied && readRawAttribute({ record, name: ied.attribute }) === RELATIVE_IED_NAME,
-	)
-	if (!relative) return undefined
+	if (!(await namesRelativeIed(query, { record, pairs }))) return undefined
 	const ancestors = await query.findAncestors(toRef(record) as Scl.Ref<Scl.ElementsOf>)
 	return ownIedName({ ancestry: ancestors as AnyRawRecord[] })
+}
+
+/** Whether one of the pairs of a tuple reference names its IED `@`. */
+async function namesRelativeIed(
+	query: Core.Query<Config>,
+	params: { record: AnyRawRecord; pairs: readonly TupleReferencePair[] },
+): Promise<boolean> {
+	const { record, pairs } = params
+	for (const { tuple } of pairs) {
+		const { ied } = tuple
+		if (!('attribute' in ied)) continue
+		const written = await query.any.getAttribute(record, { name: ied.attribute })
+		if (written === RELATIVE_IED_NAME) return true
+	}
+	return false
 }

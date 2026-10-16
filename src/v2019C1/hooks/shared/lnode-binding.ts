@@ -108,11 +108,11 @@ async function findLnByUuid(
 ): Promise<Scl.Ref<'LN' | 'LN0'> | null> {
 	for (const tagName of ['LN', 'LN0']) {
 		if (!isElementOf(tagName, SCL_DIALECTE_CONFIG)) continue
-		const candidates = await query.getRecordsByTagName(tagName)
-		const match = candidates.find(
-			(record) => record.attributes.find((a) => a.name === 'uuid')?.value === lnUuid,
-		)
-		if (match) return { tagName: match.tagName, id: match.id } as Scl.Ref<'LN' | 'LN0'>
+		for (const record of await query.getRecordsByTagName(tagName)) {
+			if ((await query.any.getAttribute(record, { name: 'uuid' })) === lnUuid) {
+				return { tagName: record.tagName, id: record.id } as Scl.Ref<'LN' | 'LN0'>
+			}
+		}
 	}
 	return null
 }

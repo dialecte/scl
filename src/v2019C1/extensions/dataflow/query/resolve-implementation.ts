@@ -1,6 +1,5 @@
 import { SIGNAL_DATA_ATTRIBUTE } from '../constants/signal-pairs.constants'
 
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 
 import type { SignalPairs } from '../dataflow.types'
@@ -47,9 +46,10 @@ export async function resolveImplementation(params: {
 	for (const key of [parsed.lookupKey, ...(parsed.fallbackLookupKeys ?? [])]) {
 		const candidates: readonly IedNode<'ExtRef' | 'ExtCtrl'>[] = byPath.get(key) ?? []
 		if (candidates.length === 0) continue
-		const element = chooseCandidate({
+		const element = await chooseCandidate({
 			candidates,
 			dataAttribute: attributes[SIGNAL_DATA_ATTRIBUTE],
+			context,
 		})
 		return { element, ambiguous: element === undefined }
 	}
@@ -57,16 +57,20 @@ export async function resolveImplementation(params: {
 }
 
 /** The only candidate, else the one carrying the signal's data attribute (when it is the only one). */
-function chooseCandidate(params: {
+async function chooseCandidate(params: {
 	candidates: readonly IedNode<'ExtRef' | 'ExtCtrl'>[]
 	dataAttribute: string | undefined
-}): IedNode<'ExtRef' | 'ExtCtrl'> | undefined {
-	const { candidates, dataAttribute } = params
+	context: DataflowContext
+}): Promise<IedNode<'ExtRef' | 'ExtCtrl'> | undefined> {
+	const { candidates, dataAttribute, context } = params
 	if (candidates.length === 1) return candidates[0]
 	if (!dataAttribute) return undefined
-	const matching = candidates.filter(
-		(candidate) =>
-			readRawAttribute({ record: candidate.record, name: SIGNAL_DATA_ATTRIBUTE }) === dataAttribute,
-	)
+	const matching: IedNode<'ExtRef' | 'ExtCtrl'>[] = []
+	for (const candidate of candidates) {
+		const candidateData = await context.query.any.getAttribute(candidate.record, {
+			name: SIGNAL_DATA_ATTRIBUTE,
+		})
+		if (candidateData === dataAttribute) matching.push(candidate)
+	}
 	return matching.length === 1 ? matching[0] : undefined
 }

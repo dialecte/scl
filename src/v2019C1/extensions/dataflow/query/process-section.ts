@@ -4,7 +4,6 @@ import { sectionNodesOf } from './section-nodes'
 
 import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
 
 import type { ProcessSection } from './process-section.types'
@@ -30,7 +29,7 @@ export async function readProcessSection(query: Core.Query<Config>): Promise<Pro
 		const { record, ancestry } = node
 		const nearestLNode = ancestry.findLast((ancestor) => ancestor.tagName === 'LNode')
 		if (SIGNAL_FURTHER_TARGET_TAGS.has(record.tagName)) {
-			const uuid = readRawAttribute({ record, name: 'uuid' })
+			const uuid = await query.any.getAttribute(record, { name: 'uuid' })
 			if (uuid)
 				uuidsByTag.set(record.tagName, (uuidsByTag.get(record.tagName) ?? new Set()).add(uuid))
 		}
@@ -45,19 +44,23 @@ export async function readProcessSection(query: Core.Query<Config>): Promise<Pro
 		}
 	}
 
-	return { ...indexLNodes({ lnodes, specNamings }), uuidsByTag, signals, holderOfSignal }
+	const indexes = await indexLNodes(query, { lnodes, specNamings })
+	return { ...indexes, uuidsByTag, signals, holderOfSignal }
 }
 
 /** The LNodes by uuid and by path; an LNode is named by its specified naming once an IED is assigned to it. */
-function indexLNodes(params: {
-	lnodes: ReadonlyMap<string, SectionNode<'LNode'>>
-	specNamings: ReadonlyMap<string, Core.AnyRawRecord>
-}): Pick<ProcessSection, 'lnodeByUuid' | 'lnodeByPath'> {
+async function indexLNodes(
+	query: Core.Query<Config>,
+	params: {
+		lnodes: ReadonlyMap<string, SectionNode<'LNode'>>
+		specNamings: ReadonlyMap<string, Core.AnyRawRecord>
+	},
+): Promise<Pick<ProcessSection, 'lnodeByUuid' | 'lnodeByPath'>> {
 	const { lnodes, specNamings } = params
 	const lnodeByUuid = new Map<string, SectionNode<'LNode'>>()
 	const lnodeByPath = new Map<string, SectionNode<'LNode'>>()
 	for (const lnode of lnodes.values()) {
-		const uuid = readRawAttribute({ record: lnode.record, name: 'uuid' })
+		const uuid = await query.any.getAttribute(lnode.record, { name: 'uuid' })
 		if (uuid) lnodeByUuid.set(uuid, lnode)
 		const path = buildPathFromAncestry({
 			record: lnode.record,

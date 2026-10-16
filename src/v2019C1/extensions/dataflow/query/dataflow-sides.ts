@@ -7,8 +7,8 @@ import { resolveSignalLogicalNode } from './resolve-signal-logical-node'
 import { iedNameOf } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-name-of'
 
 import type { Dataflow } from '../dataflow.types'
+import type { DataflowContext } from './dataflow-context.types'
 import type { DataflowSides } from './dataflow-sides.types'
-import type { IedSection } from './ied-section.types'
 import type { Scl } from '@/v2019C1/config'
 
 /**
@@ -17,18 +17,18 @@ import type { Scl } from '@/v2019C1/config'
  * names, else the IED its ExtRef / ExtCtrl names as the owner of its signal, else the IED the other
  * LNode is mapped to.
  */
-export function dataflowSides(params: {
+export async function dataflowSides(params: {
 	dataflow: Dataflow
-	iedSection: IedSection
-}): DataflowSides {
-	const { dataflow, iedSection } = params
+	context: DataflowContext
+}): Promise<DataflowSides> {
+	const { dataflow, context } = params
 	const { implementation } = dataflow
 	const mappedIeds = dataflow.kind === 'specified' ? dataflow.specification.mappedIeds : undefined
 	return {
 		near: implementation.ied ?? mappedIeds?.holder,
 		far:
 			implementation.publisher ??
-			iedNamedByElement({ element: implementation.element, iedSection }) ??
+			(await iedNamedByElement({ element: implementation.element, context })) ??
 			mappedIeds?.other,
 	}
 }
@@ -38,14 +38,15 @@ export function dataflowSides(params: {
  * by its names), else the IED its `iedName` names (`@`: the one holding the element), when it is in
  * the document.
  */
-function iedNamedByElement(params: {
+async function iedNamedByElement(params: {
 	element: Scl.Ref<'ExtRef' | 'ExtCtrl'> | undefined
-	iedSection: IedSection
-}): Scl.Ref<'IED'> | undefined {
-	const { element, iedSection } = params
+	context: DataflowContext
+}): Promise<Scl.Ref<'IED'> | undefined> {
+	const { element, context } = params
+	const iedSection = await context.iedSection()
 	const node = element && iedSection.implementations.get(element.id)
 	if (!node) return undefined
-	const logicalNode = resolveSignalLogicalNode({ element: node, iedSection })
+	const logicalNode = await resolveSignalLogicalNode({ element: node, context })
 	if (logicalNode) return logicalNode.ied
 	const pair =
 		node.record.tagName === 'ExtRef' ? EXT_REF_LOGICAL_NODE_PAIR : EXT_CTRL_LOGICAL_NODE_PAIR

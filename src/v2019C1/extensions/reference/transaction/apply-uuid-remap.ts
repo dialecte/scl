@@ -1,5 +1,4 @@
 import { buildReferencePath } from '../query/build'
-import { readRawAttribute } from '../query/build/raw-attribute'
 import { relativeIedName } from '../query/ied-tuple/own-ied-name'
 import { targetTupleParts } from '../query/ied-tuple/target-tuple-address'
 import { tupleReferenceWrite } from '../query/ied-tuple/tuple-reference-write'
@@ -130,7 +129,7 @@ async function remapTupleReferences(
 		const record = toRawRecord(tracked) as AnyRawRecord
 		referrers.push({ record, pairs })
 		for (const pair of pairs) {
-			const uuid = readRawAttribute({ record, name: pair.attribute.uuid })
+			const uuid = await tx.any.getAttribute(record, { name: pair.attribute.uuid })
 			const targetUuid = uuid ? uuidMap.get(uuid) : undefined
 			if (targetUuid) remapped.add(targetUuid)
 		}

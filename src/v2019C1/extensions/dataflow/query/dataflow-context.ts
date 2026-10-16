@@ -21,6 +21,7 @@ export function createDataflowContext(query: Core.Query<Config>): DataflowContex
 
 	const context: DataflowContext = {
 		...createInfoContext(query),
+		query,
 		processSection() {
 			processSection ??= readProcessSection(query)
 			return processSection

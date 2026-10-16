@@ -1,6 +1,5 @@
 import { EXT_REF_CONTROL_BLOCK_PAIR } from '../constants/control-blocks.constants'
 
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { referrerTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/referrer-tuple-address'
 import { targetKey } from '@/v2019C1/extensions/reference/query/ied-tuple/target-key'
 import { targetTagsOf } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tags-of'
@@ -21,7 +20,9 @@ export async function resolveControlBlock(params: {
 	const { record, ancestry } = extRef
 	const { controlBlocksByUuid, controlBlocksByAddress } = await context.iedSection()
 
-	const uuid = readRawAttribute({ record, name: EXT_REF_CONTROL_BLOCK_PAIR.attribute.uuid })
+	const uuid = await context.query.any.getAttribute(record, {
+		name: EXT_REF_CONTROL_BLOCK_PAIR.attribute.uuid,
+	})
 	if (uuid) return controlBlocksByUuid.get(uuid)
 
 	const address = referrerTupleAddress({ pair: EXT_REF_CONTROL_BLOCK_PAIR, record, ancestry })

@@ -12,7 +12,6 @@ import {
 	buildPathFromAncestry,
 	getPathSegment,
 } from '@/v2019C1/extensions/reference/query/build/path-segment'
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
 import { targetKey } from '@/v2019C1/extensions/reference/query/ied-tuple/target-key'
 import { targetTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
@@ -54,7 +53,7 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 		if (!node) continue
 		const { tagName } = node.record
 
-		const uuid = readRawAttribute({ record: node.record, name: 'uuid' })
+		const uuid = await query.any.getAttribute(node.record, { name: 'uuid' })
 
 		if (tagName === 'IED') {
 			const name = getPathSegment(node.record)?.segment

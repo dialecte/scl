@@ -33,10 +33,13 @@ export async function subscribersOf(
 	const dataflows = await describeDocument({ context })
 
 	return {
-		registrations: controlBlock.registrations.map((registration) => ({
-			element: registration.ref as Registration['element'],
-			names: registrationPrecision({ registration }) ?? LEAST_PRECISE_REGISTRATION,
-		})),
+		registrations: await Promise.all(
+			controlBlock.registrations.map(async (registration) => ({
+				element: registration.ref as Registration['element'],
+				names:
+					(await registrationPrecision({ context, registration })) ?? LEAST_PRECISE_REGISTRATION,
+			})),
+		),
 		elements: extRefs.map((extRef) => extRef.ref),
 		dataflows: dataflows.filter(({ implementation }) =>
 			implementation.element ? elementIds.has(implementation.element.id) : false,

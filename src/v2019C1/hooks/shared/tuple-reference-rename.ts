@@ -5,7 +5,6 @@ import { toRawRecord, toRef } from '@dialecte/core/helpers'
 
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { getIdentityFields } from '@/v2019C1/extensions/lifecycle/constraints/identity-fields'
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
 import { TUPLE_TARGET_KINDS } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
 import { targetTupleParts } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
@@ -42,16 +41,29 @@ export async function followTupleTargetRename(
 		const referrers = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
 		for (const referrer of referrers) {
 			const record = toRawRecord(referrer) as AnyRawRecord
-			const named = pairs.some((pair) => {
-				const uuid = readRawAttribute({ record, name: pair.attribute.uuid })
-				return uuid !== undefined && partsByUuid.has(uuid)
-			})
-			if (!named) continue
+			if (!(await namesTarget(query, { record, pairs, partsByUuid }))) continue
 			const operation = await tupleNamesOperation(query, { record, pairs, partsByUuid })
 			if (operation) operations.push(operation)
 		}
 	}
 	return operations
+}
+
+/** Whether a referrer names, by the uuid of one of its pairs, an element whose address parts are given. */
+async function namesTarget(
+	query: Core.Query<Config>,
+	params: {
+		record: AnyRawRecord
+		pairs: readonly TupleReferencePair[]
+		partsByUuid: ReadonlyMap<string, TupleTargetParts>
+	},
+): Promise<boolean> {
+	const { record, pairs, partsByUuid } = params
+	for (const pair of pairs) {
+		const uuid = await query.any.getAttribute(record, { name: pair.attribute.uuid })
+		if (partsByUuid.has(uuid)) return true
+	}
+	return false
 }
 
 /** The address parts of every tuple target in a subtree, by uuid, and the tags they were read from. */
@@ -63,7 +75,7 @@ async function readTargetParts(
 	const partsByUuid = new Map<string, TupleTargetParts>()
 	const targetTags = new Set<string>()
 	for (const record of collected.records) {
-		const uuid = readRawAttribute({ record, name: 'uuid' })
+		const uuid = await query.any.getAttribute(record, { name: 'uuid' })
 		const parts = uuid
 			? targetTupleParts({ record, ancestry: collected.ancestryOf(record.id) })
 			: undefined

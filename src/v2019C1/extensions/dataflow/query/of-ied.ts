@@ -19,11 +19,12 @@ export async function ofIed(
 ): Promise<IedDataflows> {
 	const context = createDataflowContext(query)
 	const dataflows = await describeDocument({ context })
-	const iedSection = await context.iedSection()
-	const sides = dataflows.map((dataflow) => ({
-		dataflow,
-		...dataflowSides({ dataflow, iedSection }),
-	}))
+	const sides = await Promise.all(
+		dataflows.map(async (dataflow) => ({
+			dataflow,
+			...(await dataflowSides({ dataflow, context })),
+		})),
+	)
 	return {
 		published: sides.filter(({ far }) => far?.id === params.ref.id).map(({ dataflow }) => dataflow),
 		subscribed: sides

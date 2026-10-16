@@ -1,7 +1,6 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { TUPLE_TARGET_KINDS } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
 import { findRecordByUuid, readTargetTupleParts, tupleNamesOperation } from '@/v2019C1/hooks/shared'
 
@@ -44,7 +43,7 @@ async function writeNamesOfCreatedReferrer(params: {
 
 	const partsByUuid = new Map<string, TupleTargetParts | undefined>()
 	for (const pair of pairs) {
-		const uuid = readRawAttribute({ record, name: pair.attribute.uuid })
+		const uuid = await query.any.getAttribute(record, { name: pair.attribute.uuid })
 		if (!uuid || partsByUuid.has(uuid)) continue
 		const target = await findRecordByUuid(query, { uuid, targetTagNames: pair.target })
 		const parts = target
@@ -67,7 +66,7 @@ async function writeNamesOfCreatedTarget(params: {
 	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { record, query } = params
-	const uuid = readRawAttribute({ record, name: 'uuid' })
+	const uuid = await query.any.getAttribute(record, { name: 'uuid' })
 	if (!uuid || !TUPLE_TARGET_KINDS.has(record.tagName)) return []
 
 	const referrersByTag = await findReferrersByUuid({ record, uuid, query })

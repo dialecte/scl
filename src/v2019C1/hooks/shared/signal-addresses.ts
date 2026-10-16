@@ -8,7 +8,6 @@ import { buildReferenceAttributes } from '@/v2019C1/extensions/reference/query/b
 import { readRawAttributes } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import {
 	hasAttributeChange,
-	readSnapshotAttribute,
 	updatedOperation,
 	withAttributeValues,
 } from '@/v2019C1/hooks/shared/record-ops'
@@ -44,6 +43,8 @@ export async function reconcileSignalAddresses(
 	const lnode =
 		bindingOperations.findLast((operation) => operation.newRecord?.id === newRecord.id)
 			?.newRecord ?? newRecord
+	// `lnode` is the LNode as the binding operations leave it, which the transaction has not staged
+	// yet: a read through the query would give the LNode as staged, without the binding
 	const referrerContext = { mappedLnPath: buildMappedLNodePath(readRawAttributes(lnode)) }
 
 	const descendants = await query.findDescendants({ tagName: 'LNode', id: newRecord.id })
@@ -54,7 +55,7 @@ export async function reconcileSignalAddresses(
 			const reference = { tagName: record.tagName, id: record.id } as Scl.Ref<Scl.ElementsOf>
 			let attributes: AttributeList = record.attributes
 			for (const pair of pairs) {
-				const uuid = readSnapshotAttribute({ record, name: pair.uuidAttr })
+				const uuid = await query.any.getAttribute(record, { name: pair.uuidAttr })
 				const target = uuid
 					? await findTargetByUuid(query, { uuid, targetTagNames: pair.targetTagNames })
 					: undefined

@@ -2,8 +2,6 @@ import { EXT_REF_SIGNAL } from '../constants/ext-ref-state.constants'
 import { resolveControlBlock } from './resolve-control-block'
 import { resolveSignalLogicalNode } from './resolve-signal-logical-node'
 
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
-
 import type { DataflowContext } from './dataflow-context.types'
 import type { IedNode } from './ied-section.types'
 
@@ -21,9 +19,8 @@ export async function extRefDataflowKey(params: {
 	const { extRef, context } = params
 	const { record } = extRef
 	const controlBlock = await resolveControlBlock({ extRef, context })
-	const iedSection = await context.iedSection()
-	const logicalNode = resolveSignalLogicalNode({ element: extRef, iedSection })
-	const dataObject = readRawAttribute({ record, name: EXT_REF_SIGNAL.data })
+	const logicalNode = await resolveSignalLogicalNode({ element: extRef, context })
+	const dataObject = await context.query.any.getAttribute(record, { name: EXT_REF_SIGNAL.data })
 	if (!extRef.ln || !controlBlock || !logicalNode || !dataObject) return undefined
 	return [extRef.ln.id, controlBlock.record.id, logicalNode.record.id, dataObject].join('|')
 }

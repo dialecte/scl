@@ -3,8 +3,6 @@ import { describeElement } from './describe-element'
 import { describeSignal } from './describe-signal'
 import { extRefDataflowKey } from './ext-ref-dataflow-key'
 
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
-
 import type { Dataflow, ImplementationOnlyDataflow, SpecifiedDataflow } from '../dataflow.types'
 import type { DataflowContext } from './dataflow-context.types'
 import type { IedNode } from './ied-section.types'
@@ -46,12 +44,11 @@ async function describeImplementationOnly(params: {
 	})
 	const resolvedKeys = new Set(resolved.map(({ key }) => key))
 
-	const named = await withKeys({
-		extRefs: extRefs.filter(
-			(extRef) => namesControlBlock(extRef) && !resolvedElementIds.has(extRef.record.id),
-		),
+	const naming = await extRefsNamingControlBlock({
+		extRefs: extRefs.filter((extRef) => !resolvedElementIds.has(extRef.record.id)),
 		context,
 	})
+	const named = await withKeys({ extRefs: naming, context })
 	const unresolved = named.filter(({ key }) => key === undefined || !resolvedKeys.has(key))
 	return Promise.all(
 		unresolved.map(({ extRef }) => describeExtRefAlone({ element: extRef, context })),
@@ -83,9 +80,27 @@ async function describeExtRefAlone(params: {
 	}
 }
 
+/** The ExtRefs naming their control block, by its uuid or by its names, in the order given. */
+async function extRefsNamingControlBlock(params: {
+	extRefs: readonly IedNode<'ExtRef'>[]
+	context: DataflowContext
+}): Promise<IedNode<'ExtRef'>[]> {
+	const { extRefs, context } = params
+	const naming: IedNode<'ExtRef'>[] = []
+	for (const extRef of extRefs) {
+		if (await namesControlBlock({ extRef, context })) naming.push(extRef)
+	}
+	return naming
+}
+
 /** Whether an ExtRef names its control block, by its uuid or by its names. */
-function namesControlBlock(extRef: IedNode<'ExtRef'>): boolean {
-	return EXT_REF_CONTROL_BLOCK.names.some((name) =>
-		readRawAttribute({ record: extRef.record, name }),
-	)
+async function namesControlBlock(params: {
+	extRef: IedNode<'ExtRef'>
+	context: DataflowContext
+}): Promise<boolean> {
+	const { extRef, context } = params
+	for (const name of EXT_REF_CONTROL_BLOCK.names) {
+		if (await context.query.any.getAttribute(extRef.record, { name })) return true
+	}
+	return false
 }

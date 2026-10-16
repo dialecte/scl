@@ -19,11 +19,13 @@ export async function crossing(
 	const inside = new Set(params.ieds.map(({ id }) => id))
 	const context = createDataflowContext(query)
 	const dataflows = await describeDocument({ context })
-	const iedSection = await context.iedSection()
-	return dataflows.filter((dataflow) => {
-		const { near, far } = dataflowSides({ dataflow, iedSection })
-		return isInside({ side: near, inside }) !== isInside({ side: far, inside })
-	})
+	const crossings = await Promise.all(
+		dataflows.map(async (dataflow) => {
+			const { near, far } = await dataflowSides({ dataflow, context })
+			return isInside({ side: near, inside }) !== isInside({ side: far, inside })
+		}),
+	)
+	return dataflows.filter((_dataflow, index) => crossings[index])
 }
 
 function isInside(params: {

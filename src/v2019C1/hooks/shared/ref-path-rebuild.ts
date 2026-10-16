@@ -4,7 +4,6 @@ import { buildReferenceAttributes } from '@/v2019C1/extensions/reference/query/b
 import { derivedAttributesFollowing } from '@/v2019C1/extensions/reference/query/build/compose-derived-attributes'
 import {
 	hasAttributeChange,
-	readSnapshotAttribute,
 	updatedOperation,
 	withAttributeValues,
 } from '@/v2019C1/hooks/shared/record-ops'
@@ -46,7 +45,7 @@ export async function reconcileReferrerRefPaths(params: {
 		const names = bindingAttributeNames({ tagName: newRecord.tagName, pair })
 		if (!hasAttributeChange({ oldRecord, newRecord, names })) continue
 
-		const uuid = readSnapshotAttribute({ record: newRecord, name: pair.attribute.uuid })
+		const uuid = await query.any.getAttribute(newRecord, { name: pair.attribute.uuid })
 		const target = uuid
 			? await findTargetByUuid(query, { uuid, targetTagNames: pair.target })
 			: undefined

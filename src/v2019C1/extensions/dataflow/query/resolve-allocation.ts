@@ -1,7 +1,6 @@
 import { LNODE_LN_UUID_ATTRIBUTE } from '../constants/lnode.constants'
 
 import { buildMappedLNodePath } from '@/v2019C1/extensions/reference/query/build/build-mapped-lnode-path'
-import { readRawAttributes } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 
 import type { SpecifiedDataflow } from '../dataflow.types'
 import type { DataflowContext } from './dataflow-context.types'
@@ -46,7 +45,7 @@ async function iedOfMappedLNode(params: {
 	context: DataflowContext
 }): Promise<Scl.Ref<'IED'> | undefined> {
 	const { lnode, context } = params
-	const attributes = readRawAttributes(lnode.record)
+	const attributes = await context.query.any.getAttributes(lnode.record)
 	const { iedOfLn, lnsByPath } = await context.iedSection()
 	const lnUuid = attributes[LNODE_LN_UUID_ATTRIBUTE]
 	if (lnUuid) {
