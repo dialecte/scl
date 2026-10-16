@@ -102,6 +102,47 @@ describe('collectWithAncestry', () => {
 				select: { Substation: { Function: { LNode: false } } },
 				expectedRecordIds: ['scl-1', 'sub-1', 'fn-1', 'fn-2'],
 			},
+		'select ending with LNode: true → the LNodes and everything below them, a Private wrapper gone through':
+			{
+				sourceXml,
+				select: { Substation: { Function: { LNode: true } } },
+				expectedRecordIds: [
+					'scl-1',
+					'sub-1',
+					'fn-1',
+					'lnode-1',
+					'lnode-3',
+					'lno-1',
+					'cref-1',
+					'fn-2',
+					'lnode-4',
+				],
+				expectedAncestry: { 'cref-1': ['scl-1', 'sub-1', 'fn-1', 'lnode-3', 'lno-1'] },
+			},
+		'select through SubFunction → only the LNodes at that place, not those of the same tag elsewhere':
+			{
+				sourceXml,
+				select: { Substation: { Function: { SubFunction: { LNode: true } } } },
+				expectedRecordIds: ['scl-1', 'sub-1', 'fn-1', 'sf-1', 'lnode-2', 'fn-2'],
+				expectedAncestry: { 'lnode-2': ['scl-1', 'sub-1', 'fn-1', 'sf-1'] },
+			},
+		'select naming Substation: true → the whole subtree in document order': {
+			sourceXml,
+			select: { Substation: true },
+			expectedRecordIds: [
+				'scl-1',
+				'sub-1',
+				'fn-1',
+				'lnode-1',
+				'lnode-3',
+				'lno-1',
+				'cref-1',
+				'sf-1',
+				'lnode-2',
+				'fn-2',
+				'lnode-4',
+			],
+		},
 		'id of an element not read → empty ancestry': {
 			sourceXml,
 			root: { tagName: 'Function', id: 'fn-1' },

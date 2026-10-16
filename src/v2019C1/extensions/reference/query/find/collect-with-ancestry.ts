@@ -1,4 +1,5 @@
-import { toRawRecord } from '@dialecte/core/helpers'
+import { collectFromTags } from './collect-from-tags'
+import { collectFromTree } from './collect-from-tree'
 
 import { ROOT_ELEMENT } from '@/v2019C1/definition/constants.generated'
 
@@ -8,59 +9,30 @@ import type {
 } from './collect-with-ancestry.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
-import type { AnyRawRecord, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 
 /**
- * Reads a subtree once and lays it flat: every element of it in document order, with the records
- * above each, outermost first. One `getTree` is the whole read; the ancestry of an element is the
- * path the walk took to it, never a query. A root below the document root has its own ancestors
- * read once (`findAncestors`).
+ * Reads a subtree once and lays it flat: every element of it in document order (the sequence the
+ * dialecte declares for the children of each element, as `getTree` orders them), with the records
+ * above each, outermost first.
  *
- * A flat `findDescendants` was measured against it and is not an option: outside a transaction
- * core has no record cache, so it reads the store once per collected element to climb to the root
- * (80 times slower on a document of 11 000 elements).
+ * A select from the document root reads the elements of the tags it names by tag name
+ * (`collectFromTags`): on a document whose data instances far outnumber the section read it is
+ * several times faster than reading the whole document, though a tag below a `true` entry (`Val`,
+ * `Text`, `Private`...) is read in the whole document. A root below the document root, or no select,
+ * reads the document once as a tree (`collectFromTree`): a flat collect under a lower root reads
+ * every element of each tag in the whole document and checks each against the root, which was
+ * measured three times slower on a document of 200 000 elements.
+ *
+ * A root that is not found: the tree path throws `ELEMENT_NOT_FOUND` (as `getTree` does), the tags
+ * path (always the document root) returns an empty read.
  */
 export async function collectWithAncestry(
 	query: Core.Query<Config>,
 	params: CollectWithAncestryParams,
 ): Promise<CollectedWithAncestry> {
 	const { root = { tagName: ROOT_ELEMENT }, select } = params
-	const tree = await query.any.getTree(root, select && { select })
-	if (!tree) return { records: [], ancestryOf: noAncestry }
-
-	const ancestors = tree.parent ? await query.any.findAncestors(root) : []
-	const above = [...ancestors].reverse().map(toAnyRawRecord)
-	const records: AnyRawRecord[] = []
-	const ancestryById = new Map<string, readonly AnyRawRecord[]>()
-	flatten({ node: tree, ancestry: above, records, ancestryById })
-
-	function ancestryOf(id: string): readonly AnyRawRecord[] {
-		return ancestryById.get(id) ?? []
-	}
-
-	return { records, ancestryOf }
-}
-
-function noAncestry(): readonly AnyRawRecord[] {
-	return []
-}
-
-function toAnyRawRecord(record: AnyTrackedRecord | AnyTreeRecord): AnyRawRecord {
-	return toRawRecord(record) as AnyRawRecord
-}
-
-function flatten(params: {
-	node: AnyTreeRecord
-	ancestry: readonly AnyRawRecord[]
-	records: AnyRawRecord[]
-	ancestryById: Map<string, readonly AnyRawRecord[]>
-}): void {
-	const { node, ancestry, records, ancestryById } = params
-	const record = toAnyRawRecord(node)
-	records.push(record)
-	ancestryById.set(record.id, ancestry)
-	const ancestryOfChildren = [...ancestry, record]
-	for (const child of node.tree) {
-		flatten({ node: child, ancestry: ancestryOfChildren, records, ancestryById })
-	}
+	const readsSectionOfDocument = select !== undefined && root.tagName === ROOT_ELEMENT
+	return readsSectionOfDocument
+		? collectFromTags(query, { select })
+		: collectFromTree(query, { root, select })
 }
