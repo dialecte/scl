@@ -1,15 +1,31 @@
+import { EXT_REF_CONTROL_BLOCK_PAIR } from './control-blocks.constants'
+
+import { invariant } from '@dialecte/core/utils'
+
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { isLogicalNodePair } from '@/v2019C1/extensions/reference/query/ied-tuple/is-logical-node-pair'
+import { tuplePairTargeting } from '@/v2019C1/extensions/reference/query/ied-tuple/tuple-pair-targeting'
 
 import type { ControlBlockAttributes, SignalAttributes } from '../dataflow.types'
 import type { Scl } from '@/v2019C1/config'
+import type { TupleReferencePair } from '@/v2019C1/constants/reference-pairs.types'
+import type { LogicalNodeTuplePair } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.types'
 
 // The attributes the states of an ExtRef / ExtCtrl read, taken from the tuple references: the pair
 // of a tag naming a logical node gives the attributes of the signal's address, the pair naming a
 // control block gives its attributes and the services that have one.
 
-const EXT_REF_LOGICAL_NODE_PAIR = TUPLE_REFERENCE_PAIRS.ExtRef[0]
-const EXT_REF_CONTROL_BLOCK_PAIR = TUPLE_REFERENCE_PAIRS.ExtRef[1]
-const EXT_CTRL_LOGICAL_NODE_PAIR = TUPLE_REFERENCE_PAIRS.ExtCtrl[0]
+const EXT_REF_LOGICAL_NODE_PAIR = logicalNodePairOf(TUPLE_REFERENCE_PAIRS.ExtRef)
+const EXT_CTRL_LOGICAL_NODE_PAIR = logicalNodePairOf(TUPLE_REFERENCE_PAIRS.ExtCtrl)
+
+function logicalNodePairOf(pairs: readonly TupleReferencePair[]): LogicalNodeTuplePair {
+	const pair = tuplePairTargeting({ pairs, kind: 'ln' })
+	invariant(pair && isLogicalNodePair(pair), {
+		key: 'ASSERTION_FAILED',
+		detail: 'an ExtRef and an ExtCtrl name the logical node of their signal',
+	})
+	return pair
+}
 
 /**
  * The data a signal names: it is not a role of the tuple (it names data, not an element), so it is
