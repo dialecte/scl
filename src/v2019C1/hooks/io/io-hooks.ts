@@ -7,6 +7,8 @@ import {
 	TARGET_ELEMENT_TYPES,
 	UUID_REFERENCE_PAIRS,
 } from '@/v2019C1/constants'
+import { createDataTypeIndex } from '@/v2019C1/extensions/data-model/query/create-data-type-index'
+import { splitDataPath } from '@/v2019C1/extensions/data-model/query/split-data-path'
 import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import { buildMappedLNodePath } from '@/v2019C1/extensions/reference/query/build/build-mapped-lnode-path'
@@ -15,6 +17,7 @@ import {
 	derivedAttributesFollowing,
 } from '@/v2019C1/extensions/reference/query/build/compose-derived-attributes'
 import { composeReferencePath } from '@/v2019C1/extensions/reference/query/build/compose-reference-path'
+import { dataCompanionsOf } from '@/v2019C1/extensions/reference/query/build/data-companions'
 import {
 	functionBaseOf,
 	isFunctionScoped,
@@ -35,6 +38,7 @@ import type {
 	PendingResolution,
 	UnsupportedXPathWarning,
 } from './io-hooks.types'
+import type { DataTypes } from '@/v2019C1/extensions/data-model/query/data-types.types'
 import type { DerivedAttributeValue, ReferencePair } from '@/v2019C1/extensions/reference'
 import type {
 	ElementPath,
@@ -100,6 +104,7 @@ export function createSclIoHooks(): IOHooks {
 	let mappedDataImport = createMappedDataImport()
 	let specNamingImport = createSpecNamingImport()
 	const tupleReferenceImport = createTupleReferenceImport()
+	let dataTypeIndex = createDataTypeIndex()
 
 	function beforeImportRecord(params: {
 		record: AnyRawRecord
@@ -110,6 +115,7 @@ export function createSclIoHooks(): IOHooks {
 		mappedDataImport.collect({ record, ancestry })
 		specNamingImport.collect({ record, ancestry })
 		tupleReferenceImport.collect({ record, ancestry })
+		dataTypeIndex.add({ record, ancestry })
 
 		// The record is already standardized, so afterStandardizedRecord has
 		// enforced a uuid where the element supports one — just read it.
@@ -202,6 +208,7 @@ export function createSclIoHooks(): IOHooks {
 
 		const specNaming = specNamingImport.resolve()
 		const index = buildImportPathIndex({ targets, specNamings: specNaming.namings })
+		const dataTypes = dataTypeIndex.build()
 
 		for (const fill of pendingPathFills) {
 			const outcome = fillPath({ fill, index, specNamings: specNaming.namings })
@@ -210,7 +217,12 @@ export function createSclIoHooks(): IOHooks {
 		}
 
 		for (const pending of pendingResolutions) {
-			const outcome = resolvePending({ pending, index, specNamings: specNaming.namings })
+			const outcome = resolvePending({
+				pending,
+				index,
+				specNamings: specNaming.namings,
+				dataTypes,
+			})
 			if (outcome.update) updates.push(outcome.update)
 			warnings.push(...outcome.warnings)
 		}
@@ -230,6 +242,7 @@ export function createSclIoHooks(): IOHooks {
 
 		mappedDataImport = createMappedDataImport()
 		specNamingImport = createSpecNamingImport()
+		dataTypeIndex = createDataTypeIndex()
 		targets.length = 0
 		pendingResolutions.length = 0
 		pendingPathFills.length = 0
@@ -331,8 +344,9 @@ function resolvePending(params: {
 	pending: PendingResolution
 	index: ImportPathIndex
 	specNamings: ReadonlyMap<string, AnyRawRecord>
+	dataTypes: DataTypes
 }): { update?: RecordPatch; warnings: ImportWarning[] } {
-	const { pending, index, specNamings } = params
+	const { pending, index, specNamings, dataTypes } = params
 	const scoped = isFunctionScoped(pending.pair)
 	const functionBase = scoped
 		? functionBaseOfReferrer({ ancestry: pending.ancestry, index })
@@ -385,6 +399,14 @@ function resolvePending(params: {
 		}
 	}
 
+	const dataNames = dataNamesOfPath({
+		pending,
+		qualifier: parsed.qualifier,
+		lnType: index.targetsByUuid.get(resolvedUuid)?.lnType,
+		dataTypes,
+	})
+	if (dataNames === undefined) return { warnings: [dataPathNotSplitWarning(pending)] }
+
 	const rewrite = pending.alwaysStandardize || formerForm
 	return patchOf({
 		pending,
@@ -393,8 +415,59 @@ function resolvePending(params: {
 		attributes: [
 			{ name: pending.pair.attribute.uuid, value: resolvedUuid },
 			...(rewrite ? standardPathOf({ pending, index, uuid: resolvedUuid, specNamings }) : []),
+			...dataNames,
 		],
 	})
+}
+
+/**
+ * The data names a reference written with the path of an LNode (`.PhV.phsA.cVal.mag.f` after it)
+ * gets beside the uuid written from that path: the data object and the data attribute, split
+ * against the data model of the logical node type of the LNode the path names. An empty name counts
+ * as absent. Nothing is written when the data object is already there; a data attribute name there
+ * without it is kept, the data object written when the split agrees with it. `undefined` when the
+ * registry requires the data object beside the uuid and it can be neither found nor split exactly:
+ * the uuid is then not written.
+ */
+function dataNamesOfPath(params: {
+	pending: PendingResolution
+	qualifier: string | undefined
+	lnType: string | undefined
+	dataTypes: DataTypes
+}): { name: string; value: string }[] | undefined {
+	const { pending, qualifier, lnType, dataTypes } = params
+	const { doAttribute, daAttribute, doRequired } = dataCompanionsOf(pending.pair)
+	if (!doAttribute) return []
+	const held = (name: string | undefined) =>
+		pending.referenceAttributes.find((attribute) => attribute.name === name)?.value || undefined
+	if (held(doAttribute)) return []
+
+	const daHeld = held(daAttribute)
+	const split =
+		qualifier && lnType
+			? splitDataPath({ qualifier, lnType, types: dataTypes, dataObjectOnly: !daAttribute })
+			: undefined
+	if (!split || (daHeld !== undefined && split.daName !== daHeld))
+		return doRequired ? undefined : []
+	return [
+		{ name: doAttribute, value: split.doName },
+		...(daHeld === undefined && split.daName !== undefined && daAttribute
+			? [{ name: daAttribute, value: split.daName }]
+			: []),
+	]
+}
+
+/** A reference whose LNode path cannot be given the data-object name a data reference by uuid carries: left as read. */
+function dataPathNotSplitWarning(pending: PendingResolution): ImportWarning {
+	return {
+		type: 'data-path-not-split',
+		recordId: pending.recordId,
+		details: {
+			elementTag: pending.elementTag,
+			pathAttribute: pending.pair.attribute.path,
+			pathValue: pending.pathValue,
+		},
+	}
 }
 
 /**

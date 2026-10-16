@@ -1,3 +1,4 @@
+import { LNODE_TYPE_ATTRIBUTE } from '@/v2019C1/extensions/data-model/query/data-types.constants'
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import {
 	buildPathFromAncestry,
@@ -36,7 +37,11 @@ export function buildImportPathIndex(params: {
 		// parent's path: it is not named by a path
 		if (!standard || standard.segments.at(-1)?.ref.id !== record.id) continue
 		index.byPath.set(standard.path, uuid)
-		index.targetsByUuid.set(uuid, { tagName: record.tagName, path: standard })
+		index.targetsByUuid.set(uuid, {
+			tagName: record.tagName,
+			path: standard,
+			lnType: readAttribute(record, LNODE_TYPE_ATTRIBUTE),
+		})
 
 		for (const former of formerPathsOf({
 			record,

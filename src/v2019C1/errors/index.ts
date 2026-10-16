@@ -3,6 +3,7 @@ export { SCL_IMPORT_WARNINGS } from './warnings'
 export type { SclErrorKey } from './errors'
 export type { SclImportWarningType } from './warnings'
 export type {
+	DataPathNotSplitWarning,
 	DerivedSpecificationNamingWarning,
 	IncoherentPathName,
 	IncoherentPathNamesWarning,

@@ -28,6 +28,14 @@ export const SCL_IMPORT_WARNINGS = {
 		message: 'Names written from a path disagree with that path',
 	},
 	/**
+	 * A reference written with the path of an LNode could not be given the data-object name
+	 * a data reference by uuid carries (the data model of the file does not split the path): it is left as
+	 * read, without the uuid.
+	 */
+	'data-path-not-split': {
+		message: 'The data path of a reference is not split by the data model of the file',
+	},
+	/**
 	 * An LNode bound to an IED had no specified naming: it was given one from the logical node it is
 	 * bound to (prefix, class, instance).
 	 */

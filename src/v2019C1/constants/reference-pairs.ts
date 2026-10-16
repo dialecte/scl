@@ -225,7 +225,7 @@ export const UUID_REFERENCE_PAIRS = {
 			target: ['LNode'],
 			companions: [
 				{ name: 'sourceDoName', required: true },
-				{ name: 'sourceDaName', required: true },
+				{ name: 'sourceDaName', required: false },
 			],
 		},
 	],
@@ -281,7 +281,7 @@ export const UUID_REFERENCE_PAIRS = {
 			target: ['LNode'],
 			companions: [
 				{ name: 'sourceDoName', required: true },
-				{ name: 'sourceDaName', required: true },
+				{ name: 'sourceDaName', required: false },
 			],
 		},
 		{

@@ -71,13 +71,14 @@ The stored `FunctionRef` record ends up with both attributes:
 
 Unresolvable paths (path not in index at end of import) produce `ImportWarning` entries instead of updates:
 
-| Warning type                   | When                                                                                       |
-| ------------------------------ | ------------------------------------------------------------------------------------------ |
-| `unresolved-reference`         | Path was present but no target with that path was found                                    |
-| `unsupported-xpath-reference`  | Path uses an XPath syntax not supported by the resolver                                    |
-| `incoherent-reference`         | The path and the uuid of a reference name two different elements: the uuid wins            |
-| `incoherent-path-names`        | Names written from a path disagree with it: they are written again from the path           |
-| `derived-specification-naming` | An LNode bound to an IED had no `LNodeSpecNaming`: one was made from the LN it is bound to |
+| Warning type                   | When                                                                                                                                           |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unresolved-reference`         | Path was present but no target with that path was found                                                                                        |
+| `unsupported-xpath-reference`  | Path uses an XPath syntax not supported by the resolver                                                                                        |
+| `incoherent-reference`         | The path and the uuid of a reference name two different elements: the uuid wins                                                                |
+| `incoherent-path-names`        | Names written from a path disagree with it: they are written again from the path                                                               |
+| `data-path-not-split`          | The path of an LNode a reference names could not be given the data-object name a data reference by uuid carries: the reference is left as read |
+| `derived-specification-naming` | An LNode bound to an IED had no `LNodeSpecNaming`: one was made from the LN it is bound to                                                     |
 
 ## Specified naming of the logical nodes
 

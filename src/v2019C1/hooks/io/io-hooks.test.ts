@@ -376,6 +376,315 @@ describe('import warnings for a terminal', () => {
 	})
 })
 
+/**
+ * A path naming an LNode is resolved to its uuid; the data it carries (`PhV.phsA.cVal.mag.f`) is
+ * split into the data object and the data attribute the companions hold, against the data model the
+ * file holds for the logical node type of the LNode the path names.
+ */
+describe('import of the data names beside an LNode uuid written from a path', () => {
+	const substation = makeRecord('Substation', { name: 'S1' })
+	const fn = makeRecord('Function', { name: 'F1', uuid: 'function-uuid' })
+	const templates = makeRecord('DataTypeTemplates')
+
+	/**
+	 * The data model of the logical node type `PTRC_T` with the elements above each, in the order an
+	 * import pass hands records over: a record once it is complete, so its children first.
+	 */
+	function dataTypeRecords(): { record: AnyRawRecord; ancestry: AnyRawRecord[] }[] {
+		const lnodeType = makeRecord('LNodeType', { id: 'PTRC_T' })
+		const wyeType = makeRecord('DOType', { id: 'WYE_T' })
+		const cmvType = makeRecord('DOType', { id: 'CMV_T' })
+		const cvalType = makeRecord('DAType', { id: 'CVAL_T' })
+		const avType = makeRecord('DAType', { id: 'AV_T' })
+		return [
+			{ record: lnodeType, ancestry: [templates] },
+			{
+				record: makeRecord('DO', { name: 'PhV', type: 'WYE_T' }),
+				ancestry: [templates, lnodeType],
+			},
+			{ record: wyeType, ancestry: [templates] },
+			{
+				record: makeRecord('SDO', { name: 'phsA', type: 'CMV_T' }),
+				ancestry: [templates, wyeType],
+			},
+			{ record: cmvType, ancestry: [templates] },
+			{
+				record: makeRecord('DA', { name: 'cVal', bType: 'Struct', type: 'CVAL_T' }),
+				ancestry: [templates, cmvType],
+			},
+			{ record: cvalType, ancestry: [templates] },
+			{
+				record: makeRecord('BDA', { name: 'mag', bType: 'Struct', type: 'AV_T' }),
+				ancestry: [templates, cvalType],
+			},
+			{ record: avType, ancestry: [templates] },
+			{ record: makeRecord('BDA', { name: 'f', bType: 'FLOAT32' }), ancestry: [templates, avType] },
+		].reverse()
+	}
+
+	type SignalTag = 'SourceRef' | 'ControlRef' | 'ProcessEcho' | 'LNodeDataRef' | 'InputVar'
+
+	/** The elements above a reference of `tagName` naming an LNode's data, as its own tag keeps them. */
+	function ancestryOf(params: {
+		tagName: SignalTag
+		sender: AnyRawRecord
+		holder: AnyRawRecord
+	}): AnyRawRecord[] {
+		const { tagName, sender, holder } = params
+		switch (tagName) {
+			case 'SourceRef':
+				return [substation, fn, holder, makeRecord('LNodeInputs')]
+			case 'ControlRef':
+				return [substation, fn, holder, makeRecord('LNodeOutputs')]
+			case 'ProcessEcho':
+				return [substation, fn]
+			case 'LNodeDataRef':
+				return [
+					substation,
+					makeRecord('Application'),
+					makeRecord('FunctionRef', { function: 'S1/F1' }),
+					makeRecord('SignalRole'),
+				]
+			case 'InputVar':
+				return [substation, fn, sender, makeRecord('BehaviorDescription')]
+		}
+	}
+
+	/** The updates and warnings of a file whose LNode `PTRC1` (of type `lnType`) is named by a reference of the LNode `XCBR1`. */
+	async function importSignal(params: {
+		signal: { tagName: SignalTag; attributes: Record<string, string> }
+		lnType?: string
+		withDataTypes?: boolean
+	}) {
+		const { signal, lnType = 'PTRC_T', withDataTypes = true } = params
+		const hooks = createSclIoHooks()
+		const sender = makeRecord('LNode', {
+			iedName: 'None',
+			lnClass: 'PTRC',
+			lnInst: '1',
+			lnType,
+			uuid: 'sender-uuid',
+		})
+		const holder = makeRecord('LNode', { iedName: 'None', lnClass: 'XCBR', lnInst: '1' })
+		const signalRecord = makeRecord(signal.tagName, signal.attributes)
+
+		hooks.beforeImportRecord!({ record: fn, ancestry: [substation] })
+		hooks.beforeImportRecord!({ record: sender, ancestry: [substation, fn] })
+		hooks.beforeImportRecord!({ record: holder, ancestry: [substation, fn] })
+		hooks.beforeImportRecord!({
+			record: signalRecord,
+			ancestry: ancestryOf({ tagName: signal.tagName, sender, holder }),
+		})
+		if (withDataTypes) {
+			for (const fed of dataTypeRecords()) hooks.beforeImportRecord!(fed)
+		}
+		const result = await hooks.afterImport!()
+		return {
+			warnings: result.warnings ?? [],
+			signalUpdates: result.updates?.filter((update) => update.recordId === signalRecord.id),
+			signalId: signalRecord.id,
+		}
+	}
+
+	type TestCase = {
+		signal: { tagName: SignalTag; attributes: Record<string, string> }
+		lnType?: string
+		withDataTypes?: boolean
+		/** What the reference is updated with; nothing when the path cannot be split and no companion is there. */
+		expectedAttributes?: { name: string; value: string }[]
+		/** The path attribute the import reports `data-path-not-split` for, and its value. */
+		notSplit?: { pathAttribute: string; pathValue: string }
+	}
+
+	const testCases: Record<string, TestCase> = {
+		'SourceRef naming its source by a path through a sub data object, no companions → uuid, data object and data attribute written':
+			{
+				signal: {
+					tagName: 'SourceRef',
+					attributes: { input: 'Trip', source: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
+				},
+				expectedAttributes: [
+					{ name: 'sourceLNodeUuid', value: 'sender-uuid' },
+					{ name: 'sourceDoName', value: 'PhV.phsA' },
+					{ name: 'sourceDaName', value: 'cVal.mag.f' },
+				],
+			},
+		'SourceRef naming a data object only by its path → uuid and data object written, no data attribute':
+			{
+				signal: {
+					tagName: 'SourceRef',
+					attributes: { input: 'Trip', source: 'S1/F1/PTRC1.PhV.phsA' },
+				},
+				expectedAttributes: [
+					{ name: 'sourceLNodeUuid', value: 'sender-uuid' },
+					{ name: 'sourceDoName', value: 'PhV.phsA' },
+				],
+			},
+		'SourceRef naming a logical node only by its path → no uuid, one data-path-not-split warning': {
+			signal: { tagName: 'SourceRef', attributes: { input: 'Trip', source: 'S1/F1/PTRC1' } },
+			notSplit: { pathAttribute: 'source', pathValue: 'S1/F1/PTRC1' },
+		},
+		'SourceRef naming a logical node only by its path, the data object written beside → uuid written, companion kept':
+			{
+				signal: {
+					tagName: 'SourceRef',
+					attributes: { input: 'Trip', source: 'S1/F1/PTRC1', sourceDoName: 'Op' },
+				},
+				expectedAttributes: [{ name: 'sourceLNodeUuid', value: 'sender-uuid' }],
+			},
+		'SourceRef already carrying its data names → they stay, whatever the path says': {
+			signal: {
+				tagName: 'SourceRef',
+				attributes: {
+					input: 'Trip',
+					source: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f',
+					sourceDoName: 'PhV',
+					sourceDaName: 'phsA',
+				},
+			},
+			expectedAttributes: [{ name: 'sourceLNodeUuid', value: 'sender-uuid' }],
+		},
+		'SourceRef with an empty data object name → counts as absent, written from the path': {
+			signal: {
+				tagName: 'SourceRef',
+				attributes: {
+					input: 'Trip',
+					source: 'S1/F1/PTRC1.PhV.phsA.cVal',
+					sourceDoName: '',
+				},
+			},
+			expectedAttributes: [
+				{ name: 'sourceLNodeUuid', value: 'sender-uuid' },
+				{ name: 'sourceDoName', value: 'PhV.phsA' },
+				{ name: 'sourceDaName', value: 'cVal' },
+			],
+		},
+		'SourceRef with a data attribute name the path agrees with and no data object name → data object written':
+			{
+				signal: {
+					tagName: 'SourceRef',
+					attributes: {
+						input: 'Trip',
+						source: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f',
+						sourceDaName: 'cVal.mag.f',
+					},
+				},
+				expectedAttributes: [
+					{ name: 'sourceLNodeUuid', value: 'sender-uuid' },
+					{ name: 'sourceDoName', value: 'PhV.phsA' },
+				],
+			},
+		'SourceRef with a data attribute name the path disagrees with and no data object name → no uuid, one data-path-not-split warning':
+			{
+				signal: {
+					tagName: 'SourceRef',
+					attributes: {
+						input: 'Trip',
+						source: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f',
+						sourceDaName: 'cVal',
+					},
+				},
+				notSplit: { pathAttribute: 'source', pathValue: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
+			},
+		'SourceRef whose logical node type the file lacks → no uuid, one data-path-not-split warning': {
+			signal: {
+				tagName: 'SourceRef',
+				attributes: { input: 'Trip', source: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
+			},
+			lnType: 'XCBR_T',
+			notSplit: { pathAttribute: 'source', pathValue: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
+		},
+		'SourceRef in a file with no data types → no uuid, one data-path-not-split warning': {
+			signal: {
+				tagName: 'SourceRef',
+				attributes: { input: 'Trip', source: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
+			},
+			withDataTypes: false,
+			notSplit: { pathAttribute: 'source', pathValue: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
+		},
+		'SourceRef whose path leaves the data model → no uuid, one data-path-not-split warning': {
+			signal: {
+				tagName: 'SourceRef',
+				attributes: { input: 'Trip', source: 'S1/F1/PTRC1.PhV.phsB.cVal' },
+			},
+			notSplit: { pathAttribute: 'source', pathValue: 'S1/F1/PTRC1.PhV.phsB.cVal' },
+		},
+		'ControlRef naming a data object through a sub data object by its path → uuid and data object written':
+			{
+				signal: {
+					tagName: 'ControlRef',
+					attributes: { output: 'Close', controlled: 'S1/F1/PTRC1.PhV.phsA' },
+				},
+				expectedAttributes: [
+					{ name: 'controlledLNodeUuid', value: 'sender-uuid' },
+					{ name: 'controlledDoName', value: 'PhV.phsA' },
+				],
+			},
+		'ControlRef whose path reaches a data attribute → no uuid, one data-path-not-split warning': {
+			signal: {
+				tagName: 'ControlRef',
+				attributes: { output: 'Close', controlled: 'S1/F1/PTRC1.PhV.phsA.cVal' },
+			},
+			notSplit: { pathAttribute: 'controlled', pathValue: 'S1/F1/PTRC1.PhV.phsA.cVal' },
+		},
+		'ProcessEcho naming its source by a path → uuid, data object and data attribute written': {
+			signal: {
+				tagName: 'ProcessEcho',
+				attributes: { source: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
+			},
+			expectedAttributes: [
+				{ name: 'sourceLNodeUuid', value: 'sender-uuid' },
+				{ name: 'sourceDoName', value: 'PhV.phsA' },
+				{ name: 'sourceDaName', value: 'cVal.mag.f' },
+			],
+		},
+		'LNodeDataRef naming data by a path → uuid, data object and data attribute written': {
+			signal: {
+				tagName: 'LNodeDataRef',
+				attributes: { data: 'PTRC1.PhV.phsA.cVal.mag.f' },
+			},
+			expectedAttributes: [
+				{ name: 'lnodeUuid', value: 'sender-uuid' },
+				{ name: 'doName', value: 'PhV.phsA' },
+				{ name: 'daName', value: 'cVal.mag.f' },
+			],
+		},
+		'InputVar naming data by a local path → uuid, data object and data attribute written': {
+			signal: {
+				tagName: 'InputVar',
+				attributes: { dataName: 'PhV.phsA.cVal.mag.f' },
+			},
+			expectedAttributes: [
+				{ name: 'lnodeUuid', value: 'sender-uuid' },
+				{ name: 'doName', value: 'PhV.phsA' },
+				{ name: 'daName', value: 'cVal.mag.f' },
+			],
+		},
+	}
+
+	for (const [description, testCase] of Object.entries(testCases)) {
+		it(description, async () => {
+			const { warnings, signalUpdates, signalId } = await importSignal(testCase)
+			expect(signalUpdates).toEqual(
+				testCase.expectedAttributes
+					? [{ recordId: signalId, attributes: testCase.expectedAttributes }]
+					: [],
+			)
+			expect(warnings).toEqual(
+				testCase.notSplit
+					? [
+							{
+								type: 'data-path-not-split',
+								recordId: signalId,
+								details: { elementTag: testCase.signal.tagName, ...testCase.notSplit },
+							},
+						]
+					: [],
+			)
+		})
+	}
+})
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
 /** The `LNodeSpecNaming` an LNode of the file carries. */
@@ -553,6 +862,42 @@ describe('import of a reference holding its uuid only', () => {
 				'//v2019C1:SourceRef[@extRefUuid="uuid-extref" and @extRefAddr="IED1/LD0/XCBR1.Trip"]',
 			],
 		},
+		'SourceRef naming its source by a path through a sub data object → source uuid and data names written on import':
+			{
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation name="S1" ${id}="s1">
+							<Function name="F1" ${id}="f1">
+								<LNode lnClass="PTRC" lnInst="1" lnType="PTRC_T" iedName="None" uuid="uuid-target" ${id}="target">
+									<eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="1" ${id}="spec-target"/>
+								</LNode>
+								<LNode lnClass="XCBR" lnInst="1" iedName="None" ${id}="owner">
+									<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+										<eIEC61850-6-100:SourceRef input="Pos" source="S1/F1/PTRC1.PhV.phsA.cVal" ${id}="ref"/>
+									</eIEC61850-6-100:LNodeInputs>
+								</LNode>
+							</Function>
+						</Substation>
+						<DataTypeTemplates ${id}="data-type-templates">
+							<LNodeType id="PTRC_T" lnClass="PTRC" ${id}="lnode-type">
+								<DO name="PhV" type="WYE_T" ${id}="do-phv"/>
+							</LNodeType>
+							<DOType id="WYE_T" cdc="WYE" ${id}="do-type-wye">
+								<SDO name="phsA" type="CMV_T" ${id}="sdo-phsa"/>
+							</DOType>
+							<DOType id="CMV_T" cdc="CMV" ${id}="do-type-cmv">
+								<DA name="cVal" fc="MX" bType="Struct" type="CVAL_T" ${id}="da-cval"/>
+							</DOType>
+							<DAType id="CVAL_T" ${id}="da-type-cval">
+								<BDA name="mag" bType="FLOAT32" ${id}="bda-mag"/>
+							</DAType>
+						</DataTypeTemplates>
+					</SCL>
+				`,
+				expectedQueries: [
+					'//v2019C1:SourceRef[@source="S1/F1/PTRC1.PhV.phsA.cVal" and @sourceLNodeUuid="uuid-target" and @sourceDoName="PhV.phsA" and @sourceDaName="cVal"]',
+				],
+			},
 		'reference whose uuid names no element of the file → left without path': {
 			allowIncoherentReferences: 'a uuid naming an element of another file is what is under test',
 			sourceXml: /* xml */ `

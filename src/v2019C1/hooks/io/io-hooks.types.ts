@@ -52,6 +52,8 @@ export type IncoherentPathName = {
 export type IndexedTarget = {
 	tagName: string
 	path: ElementPath
+	/** The logical node type a logical node (an LNode, an LN) names: what its data paths are read against. */
+	lnType?: string
 }
 
 /**
@@ -136,10 +138,26 @@ export type DerivedSpecificationNamingWarning = ImportWarning & {
 	}
 }
 
+/**
+ * A reference written with the path of an LNode could not be given the data-object name that a data
+ * reference by uuid carries: the data path is not split by the data model of the file (no
+ * type, a name the data model lacks, a path reaching a data attribute where only a data object is
+ * held). The reference is left as read, without the uuid.
+ */
+export type DataPathNotSplitWarning = ImportWarning & {
+	type: 'data-path-not-split'
+	details: {
+		elementTag: string
+		pathAttribute: string
+		pathValue: string
+	}
+}
+
 /** Every warning the import of an SCL file reports: its `type` is a key of `SCL_IMPORT_WARNINGS`. */
 export type SclImportWarning =
 	| UnresolvedReferenceWarning
 	| UnsupportedXPathWarning
 	| IncoherentReferenceWarning
 	| IncoherentPathNamesWarning
+	| DataPathNotSplitWarning
 	| DerivedSpecificationNamingWarning

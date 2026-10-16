@@ -168,6 +168,13 @@ are composed from the indexed target's path in the same pass, and an element tha
 an `incoherent-path-names` warning. A `Terminal` naming the predefined `grounded` node, which a file need not declare,
 is left without a uuid and without a warning.
 
+A reference naming an LNode's data by path (`SourceRef`, `ControlRef`, `ProcessEcho`, `LNodeDataRef`,
+`InputVar` / `OutputVar`) gets its uuid and, beside it, the data names a data reference by uuid carries: the
+data path is split between the data object and the data attribute against the data model of the
+logical node type the LNode names. When the names cannot be written (no exact split, no data
+object already there) the reference is left as read, without the uuid, and the import reports a
+`data-path-not-split` warning.
+
 ---
 
 Why two phases?

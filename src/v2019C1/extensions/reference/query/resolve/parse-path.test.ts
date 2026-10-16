@@ -527,7 +527,7 @@ describe('reference-parsing', () => {
 								<LNode lnClass="XCBR" lnInst="1" uuid="ln-xcbr-uuid">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:BehaviorDescription name="BD1">
-											<eIEC61850-6-100:InputVar dataName="Op.general" />
+											<eIEC61850-6-100:InputVar dataName="Op.general" doName="Op" daName="general" />
 										</eIEC61850-6-100:BehaviorDescription>
 									</Private>
 								</LNode>
@@ -595,7 +595,7 @@ describe('reference-parsing', () => {
 								<LNode lnClass="XCBR" lnInst="1" uuid="ln-xcbr-uuid">
 									<Private type="eIEC61850-6-100">
 										<eIEC61850-6-100:BehaviorDescription name="BD1">
-											<eIEC61850-6-100:OutputVar dataName="Pos.stVal" />
+											<eIEC61850-6-100:OutputVar dataName="Pos.stVal" doName="Pos" daName="stVal" />
 										</eIEC61850-6-100:BehaviorDescription>
 									</Private>
 								</LNode>

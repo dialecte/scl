@@ -58,15 +58,16 @@ Anything else the lifecycle or the dataflow raises uses a key of the core catalo
 
 The import reports warnings instead of refusing a file. Their type is exported as `SclImportWarning` (a union, one member per `type`; `SclImportWarningType` is the union of the codes). `type` is the code, `details` the data; the default wording of each type is in `SCL_IMPORT_WARNINGS`.
 
-| `type`                         | Reported when                                                                                                      | `details`                                                                |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `unresolved-reference`         | a reference written as a path names no element of the file                                                         | `elementTag`, `uuidAttribute`, `pathValue`, `triedKeys`                  |
-| `unsupported-xpath-reference`  | a reference is written in a form that is not resolved                                                              | `elementTag`, `pathAttribute`, `uuidAttribute`, `pathValue`              |
-| `incoherent-reference`         | the path and the uuid of a reference name two different elements: the uuid wins, the path is written from it       | `elementTag`, `pathAttribute`, `pathValue`, `uuidAttribute`, `uuidValue` |
-| `incoherent-path-names`        | names written from a path disagree with it (a terminal's level names, a node's `pathName`): written again from it  | `elementTag`, `attributes` (`name`, `value`, `expected`)                 |
-| `derived-specification-naming` | an LNode bound to an IED had no `LNodeSpecNaming`: it got one from the LN it is bound to (prefix, class, instance) | `iedName`, `specifiedNaming`                                             |
+| `type`                         | Reported when                                                                                                                                                | `details`                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `unresolved-reference`         | a reference written as a path names no element of the file                                                                                                   | `elementTag`, `uuidAttribute`, `pathValue`, `triedKeys`                  |
+| `unsupported-xpath-reference`  | a reference is written in a form that is not resolved                                                                                                        | `elementTag`, `pathAttribute`, `uuidAttribute`, `pathValue`              |
+| `incoherent-reference`         | the path and the uuid of a reference name two different elements: the uuid wins, the path is written from it                                                 | `elementTag`, `pathAttribute`, `pathValue`, `uuidAttribute`, `uuidValue` |
+| `incoherent-path-names`        | names written from a path disagree with it (a terminal's level names, a node's `pathName`): written again from it                                            | `elementTag`, `attributes` (`name`, `value`, `expected`)                 |
+| `data-path-not-split`          | a reference written with the path of an LNode could not be given the data-object name a data reference by uuid carries: it is left as read, without the uuid | `elementTag`, `pathAttribute`, `pathValue`                               |
+| `derived-specification-naming` | an LNode bound to an IED had no `LNodeSpecNaming`: it got one from the LN it is bound to (prefix, class, instance)                                           | `iedName`, `specifiedNaming`                                             |
 
-Each member is exported under its own name, to narrow a warning by its `type`: `UnresolvedReferenceWarning`, `UnsupportedXPathWarning`, `IncoherentReferenceWarning`, `IncoherentPathNamesWarning` (each attribute an `IncoherentPathName`), `DerivedSpecificationNamingWarning`.
+Each member is exported under its own name, to narrow a warning by its `type`: `UnresolvedReferenceWarning`, `UnsupportedXPathWarning`, `IncoherentReferenceWarning`, `IncoherentPathNamesWarning` (each attribute an `IncoherentPathName`), `DataPathNotSplitWarning`, `DerivedSpecificationNamingWarning`.
 
 ## Identity warnings
 

@@ -1,4 +1,5 @@
 import { splitLnodeQualifier } from '../resolve/parse-path'
+import { dataCompanionsOf } from './data-companions'
 import { isFunctionScoped, pathBelowFunction } from './function-scope'
 import { joinPathParts } from './path-segment'
 
@@ -121,12 +122,12 @@ function qualifierFromCompanions(
 	attributes: ReferencePathParts['referenceAttributes'],
 	pair: ReferencePair,
 ): string | undefined {
-	const [doCompanion, daCompanion] = pair.companions
-	if (!doCompanion) return undefined
-	const doValue = attributes.find((attribute) => attribute.name === doCompanion.name)?.value
+	const { doAttribute, daAttribute } = dataCompanionsOf(pair)
+	if (!doAttribute) return undefined
+	const doValue = attributes.find((attribute) => attribute.name === doAttribute)?.value
 	if (!doValue) return undefined
-	const daValue = daCompanion
-		? attributes.find((attribute) => attribute.name === daCompanion.name)?.value
+	const daValue = daAttribute
+		? attributes.find((attribute) => attribute.name === daAttribute)?.value
 		: undefined
 	return daValue ? `${doValue}.${daValue}` : doValue
 }
