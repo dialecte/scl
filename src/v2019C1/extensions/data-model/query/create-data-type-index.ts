@@ -1,138 +1,126 @@
-import {
-	BASIC_TYPE_ATTRIBUTE,
-	DATA_TYPE_TAGS,
-	MEMBER_NAME_ATTRIBUTE,
-	MEMBER_TYPE_ATTRIBUTE,
-	TYPE_ID_ATTRIBUTE,
-} from './data-types.constants'
+import { DATA_TYPE_MODEL } from './data-types.constants'
+
+import { invariant } from '@dialecte/core/utils'
 
 import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 
-import type { DataObjectTypeBuilder, DataTypeIndex } from './data-type-index.types'
-import type { DataTypeMember, DataTypes } from './data-types.types'
+import type { DataTypeIndex, DataTypeMembersBuilder } from './data-type-index.types'
+import type { DataTypeMember, DataTypeModelMember, DataTypes } from './data-types.types'
 import type { AnyRawRecord } from '@dialecte/core'
 
 /**
  * An index of the data model fed record by record (`add`), a member before or after the type
- * holding it: the logical node types, data object types and data attribute types by id, each with
- * its members, as the data path split reads them. A member of a type that has no id is left out.
- * The tag of a record is read first: only the type and member tags cost an attribute read.
+ * holding it: each type of the data model by id, with its members, as the data path split reads
+ * them. A member of a type that has no id is left out. The tag of a record is read first: only the
+ * type and member tags cost an attribute read.
  */
 export function createDataTypeIndex(): DataTypeIndex {
-	const lnodeTypesById = new Map<string, DataTypeMember[]>()
-	const doTypesById = new Map<string, DataObjectTypeBuilder>()
-	const daTypesById = new Map<string, DataTypeMember[]>()
+	const membersByType = new Map<string, Map<string, DataTypeMembersBuilder>>(
+		[...DATA_TYPE_MODEL.types.keys()].map((typeTag) => [typeTag, new Map()]),
+	)
 
 	function add(params: { record: AnyRawRecord; ancestry: readonly AnyRawRecord[] }): void {
 		const { record, ancestry } = params
-		switch (record.tagName) {
-			case DATA_TYPE_TAGS.lnodeType: {
-				const id = readRawAttribute({ record, name: TYPE_ID_ATTRIBUTE })
-				if (id) getOrCreate({ map: lnodeTypesById, key: id, create: createMembers })
-				return
-			}
-			case DATA_TYPE_TAGS.dataObjectType: {
-				const id = readRawAttribute({ record, name: TYPE_ID_ATTRIBUTE })
-				if (id) getOrCreate({ map: doTypesById, key: id, create: createObjectMembers })
-				return
-			}
-			case DATA_TYPE_TAGS.dataAttributeType: {
-				const id = readRawAttribute({ record, name: TYPE_ID_ATTRIBUTE })
-				if (id) getOrCreate({ map: daTypesById, key: id, create: createMembers })
-				return
-			}
-			case DATA_TYPE_TAGS.dataObject:
-				addMember({ record, ancestry, parentTag: DATA_TYPE_TAGS.lnodeType, add: addToLnodeType })
-				return
-			case DATA_TYPE_TAGS.subObject:
-				addMember({ record, ancestry, parentTag: DATA_TYPE_TAGS.dataObjectType, add: addSubObject })
-				return
-			case DATA_TYPE_TAGS.dataAttribute:
-				addMember({ record, ancestry, parentTag: DATA_TYPE_TAGS.dataObjectType, add: addAttribute })
-				return
-			case DATA_TYPE_TAGS.nestedAttribute:
-				addMember({
-					record,
-					ancestry,
-					parentTag: DATA_TYPE_TAGS.dataAttributeType,
-					add: addToAttributeType,
-				})
-				return
+		const type = DATA_TYPE_MODEL.types.get(record.tagName)
+		if (type) {
+			const id = readRawAttribute({ record, name: type.idAttribute })
+			if (id) membersOf({ membersByType, typeTag: record.tagName, id })
+			return
 		}
-	}
-
-	function addToLnodeType(parentId: string, member: DataTypeMember): void {
-		getOrCreate({ map: lnodeTypesById, key: parentId, create: createMembers }).push(member)
-	}
-
-	function addSubObject(parentId: string, member: DataTypeMember): void {
-		getOrCreate({ map: doTypesById, key: parentId, create: createObjectMembers }).subObjects.push(
-			member,
-		)
-	}
-
-	function addAttribute(parentId: string, member: DataTypeMember): void {
-		getOrCreate({ map: doTypesById, key: parentId, create: createObjectMembers }).attributes.push(
-			member,
-		)
-	}
-
-	function addToAttributeType(parentId: string, member: DataTypeMember): void {
-		getOrCreate({ map: daTypesById, key: parentId, create: createMembers }).push(member)
+		const parent = ancestry.at(-1)
+		const parentType = parent ? DATA_TYPE_MODEL.types.get(parent.tagName) : undefined
+		const modelMember = parentType?.members.get(record.tagName)
+		if (!parent || !parentType || !modelMember) return
+		const parentId = readRawAttribute({ record: parent, name: parentType.idAttribute })
+		const member = memberOf({ record, modelMember })
+		if (!parentId || !member) return
+		const members = membersOf({ membersByType, typeTag: parent.tagName, id: parentId })
+		if (modelMember.continuesObject) members.objectMembers.push(member)
+		else members.attributeMembers.push(member)
 	}
 
 	function build(): DataTypes {
 		return {
-			lnodeTypesById: new Map(lnodeTypesById),
-			doTypesById: new Map(doTypesById),
-			daTypesById: new Map(daTypesById),
+			lnodeTypesById: allMembersById({ membersByType, typeTag: DATA_TYPE_MODEL.rootType }),
+			doTypesById: objectMembersById({ membersByType, typeTag: DATA_TYPE_MODEL.objectType }),
+			daTypesById: allMembersById({ membersByType, typeTag: DATA_TYPE_MODEL.attributeType }),
 		}
 	}
 
 	return { add, build }
 }
 
-/** A member of a type of tag `parentTag` that has an id: handed to `add` with that id. */
-function addMember(params: {
-	record: AnyRawRecord
-	ancestry: readonly AnyRawRecord[]
-	parentTag: string
-	add: (parentId: string, member: DataTypeMember) => void
-}): void {
-	const { record, ancestry, parentTag, add } = params
-	const parent = ancestry.at(-1)
-	if (parent?.tagName !== parentTag) return
-	const parentId = readRawAttribute({ record: parent, name: TYPE_ID_ATTRIBUTE })
-	const member = memberOf(record)
-	if (parentId && member) add(parentId, member)
-}
-
-function createMembers(): DataTypeMember[] {
-	return []
-}
-
-function createObjectMembers(): DataObjectTypeBuilder {
-	return { subObjects: [], attributes: [] }
-}
-
-function getOrCreate<GenericValue>(params: {
-	map: Map<string, GenericValue>
-	key: string
-	create: () => GenericValue
-}): GenericValue {
-	const { map, key, create } = params
-	const existing = map.get(key)
+/** The members of the type `typeTag` of id `id`, created empty on first sight. */
+function membersOf(params: {
+	membersByType: Map<string, Map<string, DataTypeMembersBuilder>>
+	typeTag: string
+	id: string
+}): DataTypeMembersBuilder {
+	const { membersByType, typeTag, id } = params
+	const typesById = typesByIdOf({ membersByType, typeTag })
+	const existing = typesById.get(id)
 	if (existing) return existing
-	const created = create()
-	map.set(key, created)
+	const created: DataTypeMembersBuilder = { objectMembers: [], attributeMembers: [] }
+	typesById.set(id, created)
 	return created
 }
 
-/** A data object, sub data object, data attribute or nested one as a member of its type; `undefined` when it has no name. */
-function memberOf(record: AnyRawRecord): DataTypeMember | undefined {
-	const name = readRawAttribute({ record, name: MEMBER_NAME_ATTRIBUTE })
+/** The types of tag `typeTag` by id; every type of the data model is seeded when the index is created. */
+function typesByIdOf(params: {
+	membersByType: ReadonlyMap<string, Map<string, DataTypeMembersBuilder>>
+	typeTag: string
+}): Map<string, DataTypeMembersBuilder> {
+	const { membersByType, typeTag } = params
+	const typesById = membersByType.get(typeTag)
+	invariant(typesById, {
+		key: 'ASSERTION_FAILED',
+		detail: 'the index holds every type of the data model',
+		meta: { typeTag },
+	})
+	return typesById
+}
+
+/** Each type of tag `typeTag` by id, with all its members in one list. */
+function allMembersById(params: {
+	membersByType: ReadonlyMap<string, Map<string, DataTypeMembersBuilder>>
+	typeTag: string
+}): Map<string, DataTypeMember[]> {
+	const { membersByType, typeTag } = params
+	const typesById = typesByIdOf({ membersByType, typeTag })
+	return new Map(
+		[...typesById].map(([id, members]) => [
+			id,
+			[...members.objectMembers, ...members.attributeMembers],
+		]),
+	)
+}
+
+/** Each type of tag `typeTag` by id, its members continuing the data object apart from the others. */
+function objectMembersById(params: {
+	membersByType: ReadonlyMap<string, Map<string, DataTypeMembersBuilder>>
+	typeTag: string
+}): DataTypes['doTypesById'] {
+	const { membersByType, typeTag } = params
+	const typesById = typesByIdOf({ membersByType, typeTag })
+	return new Map(
+		[...typesById].map(([id, members]) => [
+			id,
+			{ subObjects: [...members.objectMembers], attributes: [...members.attributeMembers] },
+		]),
+	)
+}
+
+/** A member record as a member of its type; `undefined` when it has no name. */
+function memberOf(params: {
+	record: AnyRawRecord
+	modelMember: DataTypeModelMember
+}): DataTypeMember | undefined {
+	const { record, modelMember } = params
+	const name = readRawAttribute({ record, name: modelMember.nameAttribute })
 	if (!name) return undefined
-	const type = readRawAttribute({ record, name: MEMBER_TYPE_ATTRIBUTE })
-	const bType = readRawAttribute({ record, name: BASIC_TYPE_ATTRIBUTE })
+	const type = readRawAttribute({ record, name: modelMember.typeAttribute })
+	const bType = modelMember.when
+		? readRawAttribute({ record, name: modelMember.when.attribute })
+		: undefined
 	return { name, ...(type ? { type } : {}), ...(bType ? { bType } : {}) }
 }

@@ -13,8 +13,11 @@ export type DataTypeIndex = {
 	build(): DataTypes
 }
 
-/** What a data object type holds while the index is being fed: its members are added as they come. */
-export type DataObjectTypeBuilder = {
-	subObjects: DataTypeMember[]
-	attributes: DataTypeMember[]
+/**
+ * What a type holds while the index is being fed, its members added as they come: those continuing
+ * the data object (data objects, sub data objects) and those of the data attribute.
+ */
+export type DataTypeMembersBuilder = {
+	objectMembers: DataTypeMember[]
+	attributeMembers: DataTypeMember[]
 }

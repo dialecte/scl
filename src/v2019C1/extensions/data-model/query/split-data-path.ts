@@ -1,4 +1,4 @@
-import { STRUCT_BASIC_TYPE } from './data-types.constants'
+import { DATA_TYPE_MODEL } from './data-types.constants'
 
 import type { DataPathSplit, DataTypeMember, DataTypes } from './data-types.types'
 
@@ -72,7 +72,9 @@ function namesOfAttributes(params: {
 	const { names, attribute, segments, types } = params
 	const [next, ...rest] = segments
 	if (next === undefined) return names.join('.')
-	if (attribute.bType !== STRUCT_BASIC_TYPE || !attribute.type) return undefined
+	if (attribute.bType !== DATA_TYPE_MODEL.attributeTypeCondition.equals || !attribute.type) {
+		return undefined
+	}
 
 	const nested = types.daTypesById.get(attribute.type)?.find((member) => member.name === next)
 	if (!nested) return undefined
