@@ -1,4 +1,4 @@
-export { findTargetByUuid, rebuildReferencesByUuid } from './ref-entry-ops'
+export { findRecordByUuid, findTargetByUuid, rebuildReferencesByUuid } from './ref-entry-ops'
 export { reconcileMappedData } from './reconcile-mapped-data'
 export { reconcileMappedDataBelow } from './reconcile-mapped-data-below'
 export { reconcileReferrerRefPaths } from './ref-path-rebuild'
@@ -31,3 +31,5 @@ export {
 } from './references-through'
 export { followDataSetRename } from './data-set-rename'
 export { followTupleTargetRename } from './tuple-reference-rename'
+export { tupleNamesOperation } from './tuple-names-operation'
+export { readTargetTupleParts } from './tuple-target-parts'

@@ -1,4 +1,5 @@
-import { hasAttributeChange, updatedOperation } from './record-ops'
+import { hasAttributeChange } from './record-ops'
+import { tupleNamesOperation } from './tuple-names-operation'
 
 import { toRawRecord, toRef } from '@dialecte/core/helpers'
 
@@ -6,12 +7,7 @@ import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { getIdentityFields } from '@/v2019C1/extensions/lifecycle/constraints/identity-fields'
 import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { TUPLE_TARGET_KINDS } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
-import { relativeIedName } from '@/v2019C1/extensions/reference/query/ied-tuple/own-ied-name'
 import { targetTupleParts } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
-import {
-	applyTupleReferenceWrite,
-	tupleReferenceWrite,
-} from '@/v2019C1/extensions/reference/query/ied-tuple/tuple-reference-write'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TupleReferencePair } from '@/v2019C1/constants'
@@ -59,18 +55,8 @@ export async function followTupleTargetRename(
 				return uuid !== undefined && partsByUuid.has(uuid)
 			})
 			if (!named) continue
-			const ownIedName = await relativeIedName(query, { record, pairs })
-			const write = tupleReferenceWrite({ record, pairs, partsByUuid, ownIedName })
-			if (!write) continue
-			const written = applyTupleReferenceWrite({ record, write })
-			const operation = updatedOperation(
-				record as Scl.RawRecord<Scl.ElementsOf>,
-				written.attributes,
-			)
-			operations.push({
-				...operation,
-				newRecord: { ...operation.newRecord, value: written.value },
-			} as Scl.Operation)
+			const operation = await tupleNamesOperation(query, { record, pairs, partsByUuid })
+			if (operation) operations.push(operation)
 		}
 	}
 	return operations
