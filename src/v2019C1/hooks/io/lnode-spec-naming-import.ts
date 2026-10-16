@@ -1,5 +1,6 @@
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { specifiedNamingOf } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
+import { readRawAttributes } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 
 import type { DerivedSpecificationNamingWarning } from './io-hooks.types'
 import type { SpecNamingImport } from './lnode-spec-naming-import.types'
@@ -43,7 +44,7 @@ export function createSpecNamingImport(): SpecNamingImport {
 
 		for (const lnode of lnodes.values()) {
 			if (namings.has(lnode.id)) continue
-			const { attributes, derived } = specifiedNamingOf(attributesOf(lnode))
+			const { attributes, derived } = specifiedNamingOf(readRawAttributes(lnode))
 			const existingPrivate = privateByLnode.get(lnode.id)
 			const holder = existingPrivate ?? newPrivate(lnode)
 			const specNaming: AnyRawRecord = {
@@ -96,10 +97,6 @@ function newPrivate(lnode: AnyRawRecord): AnyRawRecord {
 
 function childRef(record: AnyRawRecord): { id: string; tagName: string } {
 	return { id: record.id, tagName: record.tagName }
-}
-
-function attributesOf(record: AnyRawRecord): Record<string, string> {
-	return Object.fromEntries(record.attributes.map((attribute) => [attribute.name, attribute.value]))
 }
 
 function readAttribute(record: AnyRawRecord, name: string): string | undefined {

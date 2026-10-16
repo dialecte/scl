@@ -1,5 +1,6 @@
 import { buildMappedLNodePath } from '../build/build-mapped-lnode-path'
 import { getPathSegment, joinPathParts } from '../build/path-segment'
+import { readRawAttributes } from '../build/raw-attribute'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
@@ -235,7 +236,7 @@ function parseIedAddressPath(params: {
 	if (!lnode) return { lookupKey: pathValue }
 
 	const intAddr = pathValue.startsWith('@') ? pathValue.slice(1) : undefined
-	const lnPath = buildMappedLNodePath(attributesOf(lnode))
+	const lnPath = buildMappedLNodePath(readRawAttributes(lnode))
 	const sameLnKey = lnPath ? `${lnPath}.${intAddr ?? pathValue}` : undefined
 	if (intAddr !== undefined) return { lookupKey: sameLnKey ?? intAddr }
 
@@ -244,10 +245,6 @@ function parseIedAddressPath(params: {
 		(key): key is string => key !== undefined,
 	)
 	return { lookupKey: pathValue, fallbackLookupKeys: keys }
-}
-
-function attributesOf(record: AnyRawRecord): Record<string, string> {
-	return Object.fromEntries(record.attributes.map((attribute) => [attribute.name, attribute.value]))
 }
 
 // ── behavior-description strategy ────────────────────────────────────

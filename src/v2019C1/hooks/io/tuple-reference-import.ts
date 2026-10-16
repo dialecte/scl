@@ -1,6 +1,8 @@
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { referrerTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/referrer-tuple-address'
+import { targetKey } from '@/v2019C1/extensions/reference/query/ied-tuple/target-key'
+import { targetTagsOf } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tags-of'
 import { targetTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
 
 import type { PendingTupleFill, TupleReferenceImport } from './tuple-reference-import.types'
@@ -58,24 +60,4 @@ export function createTupleReferenceImport(): TupleReferenceImport {
 	}
 
 	return { collect, resolve }
-}
-
-/** The key of an element in the index: its address and its tag (kinds of control block may share a name). */
-function targetKey(params: { address: string; tagName: string }): string {
-	return `${params.tagName}|${params.address}`
-}
-
-/**
- * The tags a reference may point at: the one its own attribute names when the pair says which
- * attribute does (an `ExtRef`'s service names the kind of its control block), else every target.
- */
-function targetTagsOf(params: {
-	pair: TupleReferencePair
-	record: AnyRawRecord
-}): readonly string[] {
-	const { pair, record } = params
-	if (!pair.targetByAttribute) return pair.target
-	const value = readRawAttribute({ record, name: pair.targetByAttribute.attribute })
-	const named = value === undefined ? undefined : pair.targetByAttribute.tags[value]
-	return named ? [named] : pair.target
 }

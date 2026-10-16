@@ -1,4 +1,4 @@
-import type { TupleRole } from '@/v2019C1/constants/reference-pairs.types'
+import type { TupleReferencePair, TupleRole } from '@/v2019C1/constants/reference-pairs.types'
 
 /** What a tuple reference points at: a logical node, a logical device, an access point, a control block. */
 export type TupleTargetKind = 'ln' | 'ld' | 'ap' | 'cb'
@@ -15,4 +15,15 @@ export type TupleTargetParts = { kind: TupleTargetKind; ied: string } & {
 export type TupleReferenceWrite = {
 	attributes: Record<string, string | undefined>
 	value: string | undefined
+}
+
+/** A tuple reference naming a logical node by an attribute holding its IED, its logical device and its class. */
+export type LogicalNodeTuplePair = TupleReferencePair & {
+	tuple: { ied: { attribute: string }; lDevice: string; lnClass: string }
+}
+
+/** A tuple reference naming a control block, whose service attribute tells the kind of control block. */
+export type ControlBlockTuplePair = TupleReferencePair & {
+	targetByAttribute: NonNullable<TupleReferencePair['targetByAttribute']>
+	tuple: { controlBlock: string }
 }

@@ -1,14 +1,12 @@
+import { iedNameOf } from './ied-name-of'
 import { LN0_LN_CLASS } from './ied-tuple.constants'
-import { ownIedName } from './own-ied-name'
 import { tuplePairApplies } from './tuple-pair-applies'
 import { tupleRoleValue } from './tuple-role-value'
 import { tupleTargetKind } from './tuple-target-kind'
 
-import { RELATIVE_IED_NAME } from '@/v2019C1/constants/naming'
 import { logicalNodeName } from '@/v2019C1/extensions/reference/query/build/path-segment'
-import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 
-import type { IedRole, TupleReferencePair } from '@/v2019C1/constants/reference-pairs.types'
+import type { TupleReferencePair } from '@/v2019C1/constants/reference-pairs.types'
 import type { AnyRawRecord } from '@dialecte/core'
 
 /**
@@ -53,23 +51,6 @@ export function referrerTupleAddress(params: {
 				: undefined
 		}
 	}
-}
-
-/** The name of the IED a referrer points into, where its role says to read it. */
-function iedNameOf(params: {
-	role: IedRole
-	record: AnyRawRecord
-	ancestry: readonly AnyRawRecord[]
-}): string | undefined {
-	const { role, record, ancestry } = params
-	if ('attribute' in role) {
-		const name = readRawAttribute({ record, name: role.attribute })
-		return name === RELATIVE_IED_NAME ? ownIedName({ ancestry }) : name
-	}
-	if ('text' in role) return record.value || undefined
-	if ('ancestor' in role) return ownIedName({ ancestry })
-	const parent = ancestry.at(-1)
-	return parent ? readRawAttribute({ record: parent, name: role.parentAttribute }) : undefined
 }
 
 /** The logical node a referrer names, when it names its class. */
