@@ -1,51 +1,49 @@
+import { PROCESS_SECTION_SELECT } from '../constants/process-section.constants'
 import { SIGNAL_FURTHER_TARGET_TAGS } from '../constants/signal-pairs.constants'
-import { walkTree } from './walk-tree'
+import { sectionNodesOf } from './section-nodes'
 
 import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
+import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
 
 import type { ProcessSection } from './process-section.types'
-import type { SectionNode, TreeNode } from './section-node.types'
+import type { SectionNode } from './section-node.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
- * Reads the process section once: one tree of every substation, line, process and function template, whatever their
- * depth (an LNode sits at many of them), and from it every map a dataflow query needs.
+ * Reads the process section once: every substation, line, process and function template, whatever
+ * their depth (an LNode sits at many of them), and from it every map a dataflow query needs.
  */
 export async function readProcessSection(query: Core.Query<Config>): Promise<ProcessSection> {
-	const root = await query.getTree(
-		{ tagName: 'SCL' },
-		{ select: { Substation: true, Line: true, Process: true, FunctionTemplate: true } },
-	)
+	const collected = await collectWithAncestry(query, {
+		select: PROCESS_SECTION_SELECT,
+	})
 	const lnodes = new Map<string, SectionNode<'LNode'>>()
 	const specNamings = new Map<string, Core.AnyRawRecord>()
 	const holderOfSignal = new Map<string, SectionNode<'LNode'>>()
 	const signals = new Map<string, SectionNode<'SourceRef' | 'ControlRef'>>()
 	const uuidsByTag = new Map<string, Set<string>>()
 
-	walkTree({
-		nodes: (root?.tree ?? []) as readonly TreeNode[],
-		visit(node) {
-			const { record, ancestry } = node
-			const nearestLNode = ancestry.findLast((ancestor) => ancestor.tagName === 'LNode')
-			if (SIGNAL_FURTHER_TARGET_TAGS.has(record.tagName)) {
-				const uuid = readRawAttribute({ record, name: 'uuid' })
-				if (uuid)
-					uuidsByTag.set(record.tagName, (uuidsByTag.get(record.tagName) ?? new Set()).add(uuid))
-			}
-			if (record.tagName === 'LNode') lnodes.set(record.id, node as SectionNode<'LNode'>)
-			if (record.tagName === 'LNodeSpecNaming' && nearestLNode) {
-				specNamings.set(nearestLNode.id, record)
-			}
-			if (SIGNAL_TAG_NAMES.has(record.tagName) && nearestLNode) {
-				const holder = lnodes.get(nearestLNode.id)
-				if (holder) holderOfSignal.set(record.id, holder)
-				signals.set(record.id, node as SectionNode<'SourceRef' | 'ControlRef'>)
-			}
-		},
-	})
+	for (const node of sectionNodesOf(collected)) {
+		const { record, ancestry } = node
+		const nearestLNode = ancestry.findLast((ancestor) => ancestor.tagName === 'LNode')
+		if (SIGNAL_FURTHER_TARGET_TAGS.has(record.tagName)) {
+			const uuid = readRawAttribute({ record, name: 'uuid' })
+			if (uuid)
+				uuidsByTag.set(record.tagName, (uuidsByTag.get(record.tagName) ?? new Set()).add(uuid))
+		}
+		if (record.tagName === 'LNode') lnodes.set(record.id, node as SectionNode<'LNode'>)
+		if (record.tagName === 'LNodeSpecNaming' && nearestLNode) {
+			specNamings.set(nearestLNode.id, record)
+		}
+		if (SIGNAL_TAG_NAMES.has(record.tagName) && nearestLNode) {
+			const holder = lnodes.get(nearestLNode.id)
+			if (holder) holderOfSignal.set(record.id, holder)
+			signals.set(record.id, node as SectionNode<'SourceRef' | 'ControlRef'>)
+		}
+	}
 
 	return { ...indexLNodes({ lnodes, specNamings }), uuidsByTag, signals, holderOfSignal }
 }

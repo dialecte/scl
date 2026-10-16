@@ -1,6 +1,7 @@
 import { TYPE_ID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference/constants/type-id-pairs'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Scl, Config } from '@/v2019C1/config'
+import type { TreeSelect } from '@dialecte/core'
 
 // The attributes the data model is read by. The type references come from the registry; the names
 // and ids are the one place they are written (the registry holds references, not identities).
@@ -40,3 +41,6 @@ export const DATA_TYPE_TAGS = {
 	dataAttributeType: 'DAType',
 	nestedAttribute: 'BDA',
 } as const satisfies Record<string, Scl.ElementsOf>
+
+/** What one read of the data model keeps: the data type templates and everything in them. */
+export const DATA_TYPES_SELECT = { DataTypeTemplates: true } satisfies TreeSelect<Config, 'SCL'>

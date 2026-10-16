@@ -6,6 +6,7 @@ import { toRawRecord, toRef } from '@dialecte/core/helpers'
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { getIdentityFields } from '@/v2019C1/extensions/lifecycle/constraints/identity-fields'
 import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
+import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
 import { TUPLE_TARGET_KINDS } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
 import { targetTupleParts } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
 
@@ -13,7 +14,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { TupleReferencePair } from '@/v2019C1/constants'
 import type { TupleTargetParts } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.types'
 import type * as Core from '@dialecte/core'
-import type { AnyRawRecord, AnyTreeRecord } from '@dialecte/core'
+import type { AnyRawRecord } from '@dialecte/core'
 
 /**
  * When an element naming a part of a tuple address is renamed (an IED, an access point, a logical
@@ -31,16 +32,7 @@ export async function followTupleTargetRename(
 	if (!hasAttributeChange({ oldRecord, newRecord, names })) return []
 
 	const ref = toRef(newRecord) as Scl.Ref<Scl.ElementsOf>
-	const ancestors = await query.findAncestors(ref)
-	const tree = await query.getTree(ref)
-	const partsByUuid = new Map<string, TupleTargetParts>()
-	const targetTags = new Set<string>()
-	collectTargetParts({
-		node: tree as AnyTreeRecord,
-		ancestry: [...ancestors].reverse() as AnyRawRecord[],
-		partsByUuid,
-		targetTags,
-	})
+	const { partsByUuid, targetTags } = await readTargetParts(query, { root: ref })
 	if (partsByUuid.size === 0) return []
 
 	const operations: Scl.Operation[] = []
@@ -63,21 +55,22 @@ export async function followTupleTargetRename(
 }
 
 /** The address parts of every tuple target in a subtree, by uuid, and the tags they were read from. */
-function collectTargetParts(params: {
-	node: AnyTreeRecord
-	ancestry: readonly AnyRawRecord[]
-	partsByUuid: Map<string, TupleTargetParts>
-	targetTags: Set<string>
-}): void {
-	const { node, ancestry, partsByUuid, targetTags } = params
-	const record = node as unknown as AnyRawRecord
-	const uuid = readRawAttribute({ record, name: 'uuid' })
-	const parts = uuid ? targetTupleParts({ record, ancestry }) : undefined
-	if (uuid && parts) {
-		partsByUuid.set(uuid, parts)
-		targetTags.add(record.tagName)
+async function readTargetParts(
+	query: Core.Query<Config>,
+	params: { root: Scl.Ref<Scl.ElementsOf> },
+): Promise<{ partsByUuid: Map<string, TupleTargetParts>; targetTags: Set<string> }> {
+	const collected = await collectWithAncestry(query, { root: params.root })
+	const partsByUuid = new Map<string, TupleTargetParts>()
+	const targetTags = new Set<string>()
+	for (const record of collected.records) {
+		const uuid = readRawAttribute({ record, name: 'uuid' })
+		const parts = uuid
+			? targetTupleParts({ record, ancestry: collected.ancestryOf(record.id) })
+			: undefined
+		if (uuid && parts) {
+			partsByUuid.set(uuid, parts)
+			targetTags.add(record.tagName)
+		}
 	}
-	for (const child of node.tree) {
-		collectTargetParts({ node: child, ancestry: [...ancestry, record], partsByUuid, targetTags })
-	}
+	return { partsByUuid, targetTags }
 }
