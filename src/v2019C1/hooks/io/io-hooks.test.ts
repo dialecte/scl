@@ -188,6 +188,45 @@ describe('createSclIoHooks', () => {
 		).toEqual([{ type: 'incoherent-reference', recordId: dos.id }])
 	})
 
+	it('SourceRef whose extRefAddr names another ExtRef than its uuid, LNode mapped → intAddr alone written, incoherent-reference warning', async () => {
+		const hooks = createSclIoHooks()
+		const lnode = makeRecord('LNode', {
+			iedName: 'IED1',
+			ldInst: 'LD0',
+			lnClass: 'XCBR',
+			lnInst: '1',
+			lnUuid: 'xcbr-uuid',
+		})
+		const inputs = makeRecord('LNodeInputs')
+		const sourceRef = makeRecord('SourceRef', {
+			input: 'Trip',
+			extRefUuid: 'ext-ref-uuid',
+			extRefAddr: 'IED1/LD0/XCBR1.Other',
+		})
+		const ied = makeRecord('IED', { name: 'IED1' })
+		const accessPoint = makeRecord('AccessPoint', { name: 'AP1' })
+		const server = makeRecord('Server')
+		const ldevice = makeRecord('LDevice', { inst: 'LD0' })
+		const ln = makeRecord('LN', { lnClass: 'XCBR', inst: '1', uuid: 'xcbr-uuid' })
+		const extRef = makeRecord('ExtRef', { intAddr: 'Trip', uuid: 'ext-ref-uuid' })
+
+		hooks.beforeImportRecord!({ record: sourceRef, ancestry: [lnode, inputs] })
+		hooks.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
+		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
+		hooks.beforeImportRecord!({
+			record: extRef,
+			ancestry: [ied, accessPoint, server, ldevice, ln, makeRecord('Inputs')],
+		})
+
+		const result = await hooks.afterImport!()
+		expect(result.updates).toEqual([
+			{ recordId: sourceRef.id, attributes: [{ name: 'extRefAddr', value: 'Trip' }] },
+		])
+		expect(
+			result.warnings?.map((warning) => ({ type: warning.type, recordId: warning.recordId })),
+		).toEqual([{ type: 'incoherent-reference', recordId: sourceRef.id }])
+	})
+
 	it('Function indexed before FunctionRef → FunctionRef resolved with functionUuid', async () => {
 		const hooks = createSclIoHooks()
 		const refRecord = makeRecord('FunctionRef', { function: 'F1' })
@@ -357,6 +396,49 @@ function makeRecord(tagName: string, attributes: Record<string, string> = {}): A
 }
 
 describe('import of a reference holding its uuid only', () => {
+	/** An LNode of a function mapped to the logical node `XCBR1` of `LD0` in `IED1`. */
+	const MAPPED_LNODE = 'iedName="IED1" ldInst="LD0" lnClass="XCBR" lnInst="1" lnUuid="uuid-xcbr"'
+	/** An LNode of a function assigned to no IED. */
+	const UNMAPPED_LNODE = 'iedName="None" lnClass="XSWI" lnInst="1"'
+
+	/**
+	 * A function whose LNode (`lnode`) holds a SourceRef naming by uuid an ExtRef of `extRef`'s
+	 * attributes (and by `address` when given, else by its uuid only), held by the logical node
+	 * `XCBR1` of the IED `IED1`.
+	 */
+	function withExtRefInIed(params: { lnode: string; extRef: string; address?: string }): string {
+		const addressAttribute = params.address ? 'extRefAddr="' + params.address + '"' : ''
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation name="S1" ${id}="s1">
+					<Function name="F1" ${id}="f1">
+						<LNode ${params.lnode} ${id}="lnode">
+							<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1" ${id}="spec"/>
+							<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+								<eIEC61850-6-100:SourceRef input="Trip" extRefUuid="uuid-extref" ${addressAttribute} ${id}="ref"/>
+							</eIEC61850-6-100:LNodeInputs>
+						</LNode>
+					</Function>
+				</Substation>
+				<IED name="IED1" ${id}="ied1">
+					<AccessPoint name="AP1" ${id}="ap1">
+						<Server ${id}="srv1">
+							<Authentication ${id}="auth1"/>
+							<LDevice inst="LD0" ${id}="ld1">
+								<LN0 lnClass="LLN0" inst="" lnType="T0" ${id}="ln0"/>
+								<LN lnClass="XCBR" inst="1" lnType="T1" uuid="uuid-xcbr" ${id}="ln-xcbr">
+									<Inputs ${id}="inputs-xcbr">
+										<ExtRef ${params.extRef} uuid="uuid-extref" ${id}="extref"/>
+									</Inputs>
+								</LN>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+			</SCL>
+		`
+	}
+
 	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
 		'FunctionCatRef with functionUuid, no function path → path written on import': {
 			sourceXml: /* xml */ `
@@ -435,6 +517,42 @@ describe('import of a reference holding its uuid only', () => {
 					'//v2019C1:InputVar[@inputUuid="uuid-target" and @inputName="PTRC1.Trip"]',
 				],
 			},
+		'SourceRef with extRefUuid only, LNode mapped to the logical node holding the ExtRef → intAddr alone written on import':
+			{
+				sourceXml: withExtRefInIed({ lnode: MAPPED_LNODE, extRef: 'intAddr="Trip"' }),
+				expectedQueries: ['//v2019C1:SourceRef[@extRefUuid="uuid-extref" and @extRefAddr="Trip"]'],
+			},
+		'SourceRef with extRefUuid only, LNode not mapped → full path written on import': {
+			sourceXml: withExtRefInIed({ lnode: UNMAPPED_LNODE, extRef: 'intAddr="Trip"' }),
+			expectedQueries: [
+				'//v2019C1:SourceRef[@extRefUuid="uuid-extref" and @extRefAddr="IED1/LD0/XCBR1.Trip"]',
+			],
+		},
+		'SourceRef with extRefUuid only, ExtRef without intAddr → no extRefAddr written on import': {
+			sourceXml: withExtRefInIed({ lnode: MAPPED_LNODE, extRef: '' }),
+			expectedQueries: ['//v2019C1:SourceRef[@extRefUuid="uuid-extref"]'],
+			unexpectedQueries: ['//v2019C1:SourceRef[@extRefAddr]'],
+		},
+		'SourceRef with extRefAddr naming another ExtRef than its extRefUuid, LNode mapped → the uuid wins, intAddr alone written':
+			{
+				allowIncoherentReferences: 'a file whose address and uuid disagree is what is under test',
+				sourceXml: withExtRefInIed({
+					lnode: MAPPED_LNODE,
+					extRef: 'intAddr="Trip"',
+					address: 'IED1/LD0/XCBR1.Other',
+				}),
+				expectedQueries: ['//v2019C1:SourceRef[@extRefUuid="uuid-extref" and @extRefAddr="Trip"]'],
+			},
+		'SourceRef with the full extRefAddr naming its ExtRef, LNode mapped → kept as written': {
+			sourceXml: withExtRefInIed({
+				lnode: MAPPED_LNODE,
+				extRef: 'intAddr="Trip"',
+				address: 'IED1/LD0/XCBR1.Trip',
+			}),
+			expectedQueries: [
+				'//v2019C1:SourceRef[@extRefUuid="uuid-extref" and @extRefAddr="IED1/LD0/XCBR1.Trip"]',
+			],
+		},
 		'reference whose uuid names no element of the file → left without path': {
 			allowIncoherentReferences: 'a uuid naming an element of another file is what is under test',
 			sourceXml: /* xml */ `

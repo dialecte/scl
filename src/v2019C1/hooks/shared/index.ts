@@ -3,6 +3,7 @@ export { reconcileMappedData } from './reconcile-mapped-data'
 export { reconcileMappedDataBelow } from './reconcile-mapped-data-below'
 export { reconcileReferrerRefPaths } from './ref-path-rebuild'
 export { reconcileLNodeBinding } from './lnode-binding'
+export { reconcileSignalAddresses } from './signal-addresses'
 export {
 	changedAttributeNames,
 	hasAttributeChange,

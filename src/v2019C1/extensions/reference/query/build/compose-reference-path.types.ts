@@ -14,4 +14,12 @@ export type ReferencePathParts = {
 	targetPath: ElementPath
 	/** `behavior-description` pairs only: the path segments of the BehaviorDescription's parent. */
 	behaviorContext?: readonly PathSegmentWithRef[]
+	/** `ied-address` pairs only: where the referrer's LNode is mapped. */
+	referrerContext?: ReferrerContext
+}
+
+/** What an `ied-address` path reads of the referrer: the logical node its LNode is mapped to. */
+export type ReferrerContext = {
+	/** The path of the logical node implementing the referrer's LNode; `null` when it is not mapped. */
+	mappedLnPath: string | null
 }

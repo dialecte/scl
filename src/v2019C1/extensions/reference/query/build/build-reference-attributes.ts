@@ -4,6 +4,7 @@ import { composeDerivedAttributes, derivedAttributesFollowing } from './compose-
 
 import { PAIRS_BY_REF } from '@/v2019C1/extensions/reference/constants'
 
+import type { ReferrerContext } from './compose-reference-path.types'
 import type { ElementPath } from './path-segment.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DerivedAttributeValue } from '@/v2019C1/extensions/reference'
@@ -13,7 +14,8 @@ import type * as Core from '@dialecte/core'
  * The attributes a reference holds for `target`: the path of its pair, then the attributes it
  * writes from the target's path (a terminal's level names). Empty when the reference has no pair
  * to that target or the target has no path. Pass `targetPath` when several references share it,
- * so it is read once.
+ * so it is read once; pass `referrerContext` when the mapping of the referrer's LNode is held as the
+ * store does not yet.
  */
 export async function buildReferenceAttributes(
 	query: Core.Query<Config>,
@@ -21,9 +23,10 @@ export async function buildReferenceAttributes(
 		reference: Scl.Ref<Scl.ElementsOf>
 		target: Scl.Ref<Scl.ElementsOf>
 		targetPath?: ElementPath
+		referrerContext?: ReferrerContext
 	},
 ): Promise<DerivedAttributeValue[]> {
-	const { reference, target } = params
+	const { reference, target, referrerContext } = params
 	const pair = PAIRS_BY_REF.get(reference.tagName)?.find((entry) =>
 		entry.targetTagNames.includes(target.tagName),
 	)
@@ -32,7 +35,7 @@ export async function buildReferenceAttributes(
 	const targetPath = params.targetPath ?? (await buildElementPath(query, target))
 	if (!targetPath) return []
 
-	const path = await buildReferencePath(query, { reference, target, targetPath })
+	const path = await buildReferencePath(query, { reference, target, targetPath, referrerContext })
 	const derived = derivedAttributesFollowing({
 		tagName: reference.tagName,
 		follows: pair.pathAttr,

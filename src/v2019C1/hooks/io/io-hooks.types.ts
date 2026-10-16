@@ -64,7 +64,10 @@ export type PendingPathFill = {
 	pair: ReferencePair
 	uuidValue: string
 	referenceAttributes: readonly { name: string; value: string }[]
-	/** `behavior-description` pairs only: the referrer's ancestors, its BehaviorDescription among them. */
+	/**
+	 * `behavior-description` and `ied-address` pairs only: the referrer's ancestors, its
+	 * BehaviorDescription or its LNode among them.
+	 */
 	ancestry?: readonly AnyRawRecord[]
 }
 

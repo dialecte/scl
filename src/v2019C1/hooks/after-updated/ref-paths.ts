@@ -17,6 +17,7 @@ import {
 	reconcileMappedData,
 	reconcileMappedDataBelow,
 	reconcileReferrerRefPaths,
+	reconcileSignalAddresses,
 	rebuildPathsOfNamedLNode,
 	specifiedNamingChanged,
 } from '@/v2019C1/hooks/shared'
@@ -71,6 +72,12 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 		query,
 	})
 	operations.push(...lnodeBindingOps)
+	const signalAddressOps = await reconcileSignalAddresses(query, {
+		oldRecord: previous,
+		newRecord: current,
+		bindingOperations: lnodeBindingOps,
+	})
+	operations.push(...signalAddressOps)
 	operations.push(
 		...(await mirrorSpecifiedNaming(query, { oldRecord: previous, newRecord: current })),
 	)

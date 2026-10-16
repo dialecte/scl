@@ -194,6 +194,35 @@ describe('updateRefPaths', () => {
 				unexpectedQueries: ['//v2019C1:SourceRef[@source="Sub1/F1/XCBR1.Pos.stVal"]'],
 			},
 
+			'lnode — edit the path of a referrer whose uuid names a target → path recomposed from the uuid':
+				{
+					sourceXml: /* xml */ `
+						<SCL ${ns} ${id}="root">
+							<Substation ${id}="sub1" name="Sub1">
+								<Function ${id}="f1" name="F1">
+									<LNode ${id}="target" lnClass="XCBR" lnInst="1" iedName="None" uuid="uuid-target"/>
+									<LNode ${id}="owner" lnClass="PTRC" lnInst="1" iedName="None">
+										<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+											<eIEC61850-6-100:SourceRef ${id}="ref" input="Trip" sourceLNodeUuid="uuid-target" source="Sub1/F1/XCBR1"/>
+										</eIEC61850-6-100:LNodeInputs>
+									</LNode>
+								</Function>
+							</Substation>
+						</SCL>
+					`,
+					act: async (document) => {
+						await document.transaction(async (tx) => {
+							await tx.update(
+								{ tagName: 'SourceRef', id: 'ref' },
+								{ attributes: { source: 'Sub1/F1/Old' } },
+							)
+						})
+					},
+					expectedQueries: [
+						'//v2019C1:SourceRef[@sourceLNodeUuid="uuid-target" and @source="Sub1/F1/XCBR1"]',
+					],
+				},
+
 			// ── Strategy: ied-address ────────────────────────────────────────────
 
 			'ied-address — update ExtRef.intAddr → SourceRef.extRefAddr updated': {
@@ -233,6 +262,45 @@ describe('updateRefPaths', () => {
 				},
 				expectedQueries: ['//v2019C1:SourceRef[@extRefAddr="IED1/LD0/XCBR1.TrCmd2.stVal"]'],
 				unexpectedQueries: ['//v2019C1:SourceRef[@extRefAddr="IED1/LD0/XCBR1.TrCmd.stVal"]'],
+			},
+
+			'ied-address — LNode mapped, ExtRef without intAddr → stale SourceRef.extRefAddr removed': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<IED ${id}="ied1" name="IED1">
+							<AccessPoint ${id}="ap1" name="AP1">
+								<Server ${id}="srv1">
+									<LDevice ${id}="ld1" inst="LD0">
+										<LN ${id}="lnied1" lnClass="XCBR" inst="1" uuid="uuid-lnied1">
+											<Inputs ${id}="inp1">
+												<ExtRef ${id}="extref1" uuid="uuid-extref1"/>
+											</Inputs>
+										</LN>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+						<Substation ${id}="sub1" name="Sub1">
+							<Function ${id}="f1" name="F1">
+								<LNode ${id}="ln1" lnClass="XSWI" lnInst="1" iedName="None">
+									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
+										<eIEC61850-6-100:SourceRef ${id}="sref1" extRefAddr="IED1/LD0/XCBR1.Stale" extRefUuid="uuid-extref1"/>
+									</eIEC61850-6-100:LNodeInputs>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update(
+							{ tagName: 'LNode', id: 'ln1' },
+							{ attributes: { lnUuid: 'uuid-lnied1' } },
+						)
+					})
+				},
+				expectedQueries: ['//v2019C1:SourceRef[@extRefUuid="uuid-extref1"]'],
+				unexpectedQueries: ['//v2019C1:SourceRef[@extRefAddr]'],
 			},
 
 			// ── Ancestor rename (descendant ref path propagation) ────────────────

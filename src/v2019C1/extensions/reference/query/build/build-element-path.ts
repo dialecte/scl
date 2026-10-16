@@ -23,15 +23,7 @@ export async function buildElementPath(
 	// rather than return a truncated ancestry-only path that would address its
 	// parent — so a caller (e.g. buildReferencePath) leaves the existing path
 	// untouched instead of corrupting it.
-	if (!getPathSegment(raw)) {
-		const uuid = raw.attributes.find((a) => a.name === 'uuid')?.value
-		console.warn(
-			`[scl] buildElementPath: no path segment for <${raw.tagName}>` +
-				`${uuid ? ` (uuid ${uuid})` : ''} — cannot build a path to this element; ` +
-				`leaving any existing reference path untouched`,
-		)
-		return null
-	}
+	if (!getPathSegment(raw)) return null
 
 	const ancestors = await query.findAncestors(ref, { order: 'top-down' })
 	const ancestry = ancestors.map(toRawRecord)

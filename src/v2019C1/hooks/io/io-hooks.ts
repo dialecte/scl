@@ -9,6 +9,7 @@ import {
 } from '@/v2019C1/constants'
 import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
+import { buildMappedLNodePath } from '@/v2019C1/extensions/reference/query/build/build-mapped-lnode-path'
 import {
 	composeDerivedAttributes,
 	derivedAttributesFollowing,
@@ -19,6 +20,7 @@ import {
 	isFunctionScoped,
 } from '@/v2019C1/extensions/reference/query/build/function-scope'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
+import { readRawAttributes } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { createSpecNamingImport } from '@/v2019C1/hooks/io/lnode-spec-naming-import'
 import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
@@ -34,7 +36,11 @@ import type {
 	UnsupportedXPathWarning,
 } from './io-hooks.types'
 import type { DerivedAttributeValue, ReferencePair } from '@/v2019C1/extensions/reference'
-import type { ElementPath, PathSegmentWithRef } from '@/v2019C1/extensions/reference/query/build'
+import type {
+	ElementPath,
+	PathSegmentWithRef,
+	ReferrerContext,
+} from '@/v2019C1/extensions/reference/query/build'
 import type {
 	AnyRawRecord,
 	IOHooks,
@@ -149,7 +155,10 @@ export function createSclIoHooks(): IOHooks {
 					uuidValue,
 					referenceAttributes: record.attributes,
 					ancestry:
-						pair.resolution === RESOLUTION_TYPE.behaviorDescription ? localAncestry : undefined,
+						pair.resolution === RESOLUTION_TYPE.behaviorDescription ||
+						pair.resolution === RESOLUTION_TYPE.iedAddress
+							? localAncestry
+							: undefined,
 				})
 			}
 			return
@@ -259,6 +268,7 @@ function fillPath(params: {
 		behaviorContext: fill.ancestry
 			? behaviorContextFromAncestry({ ancestry: fill.ancestry, specNamings })
 			: undefined,
+		referrerContext: referrerContextFromAncestry({ pair: fill.pair, ancestry: fill.ancestry }),
 	})
 	if (!path) return { warnings: [] }
 	const changes = derivedChangesOf({
@@ -562,6 +572,10 @@ function standardPathOf(params: {
 		behaviorContext: pending.ancestry
 			? behaviorContextFromAncestry({ ancestry: pending.ancestry, specNamings })
 			: undefined,
+		referrerContext: referrerContextFromAncestry({
+			pair: pending.pair,
+			ancestry: pending.ancestry,
+		}),
 	})
 	if (!path || path === pending.pathValue) return []
 	return [{ name: pending.pair.attribute.path, value: path }]
@@ -584,6 +598,20 @@ function behaviorContextFromAncestry(params: {
 		specNamings,
 	})
 	return behaviorPath?.segments.slice(0, -1)
+}
+
+/**
+ * Where the LNode holding an `ied-address` reference is mapped, as the record hooks read it through
+ * a query: the nearest LNode of `ancestry`. `undefined` for any other reference.
+ */
+function referrerContextFromAncestry(params: {
+	pair: ReferencePair
+	ancestry: readonly AnyRawRecord[] | undefined
+}): ReferrerContext | undefined {
+	const { pair, ancestry } = params
+	if (pair.resolution !== RESOLUTION_TYPE.iedAddress) return undefined
+	const lnode = ancestry?.findLast((ancestor) => ancestor.tagName === 'LNode')
+	return lnode ? { mappedLnPath: buildMappedLNodePath(readRawAttributes(lnode)) } : undefined
 }
 
 /**

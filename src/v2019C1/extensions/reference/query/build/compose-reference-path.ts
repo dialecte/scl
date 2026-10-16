@@ -4,15 +4,20 @@ import { joinPathParts } from './path-segment'
 
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 
-import type { ReferencePathParts } from './compose-reference-path.types'
-import type { PathSegmentWithRef } from './path-segment.types'
+import type { ReferencePathParts, ReferrerContext } from './compose-reference-path.types'
+import type { ElementPath, PathSegmentWithRef } from './path-segment.types'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
 
 /**
  * The path value a reference stores, from its parts. Pure: the record hooks gather the parts
  * through a query (`buildReferencePath`), the import hooks from the records they stream.
  *
- * - `direct` / `ied-address` / `unsupported`: the target's path.
+ * - `direct` / `unsupported`: the target's path.
+ * - `ied-address`: where the target sits relative to the logical node the referrer's LNode is
+ *   mapped to: its own address alone in that logical node (`Trip`), the path below the IED in
+ *   another logical node of the same IED (`LD0/GGIO1.Trip`), the full path otherwise
+ *   (`IED1/LD0/GGIO1.Trip`, an LNode not mapped to that IED, or a logical node held by the access
+ *   point); `null` when the target has no address of its own. An `ExtCtrl` takes the same four forms.
  * - `lnode`: the target's path, then the DO[.DA] of the companions (see below).
  * - `ancestor-name`: the target's bare name (a ProcessResource named from a placeholder below it).
  * - a function-scoped pair (`scope: 'function'`, the references of a signal role): the same, from
@@ -38,6 +43,10 @@ export function composeReferencePath(parts: ReferencePathParts): string | null {
 	if (pair.resolution === RESOLUTION_TYPE.ancestorName)
 		return targetPath.segments.at(-1)?.segment ?? null
 
+	if (pair.resolution === RESOLUTION_TYPE.iedAddress) {
+		return composeIedAddressPath({ pair, targetPath, referrerContext: parts.referrerContext })
+	}
+
 	const basePath = targetPath.path
 	if (pair.resolution !== RESOLUTION_TYPE.lnode) return basePath
 
@@ -55,6 +64,27 @@ export function composeReferencePath(parts: ReferencePathParts): string | null {
 	if (!currentQualifier) return basePath
 	const qualifier = qualifierFromCompanions(referenceAttributes, pair) ?? currentQualifier
 	return `${basePath}.${qualifier}`
+}
+
+function composeIedAddressPath(params: {
+	pair: ReferencePair
+	targetPath: ElementPath
+	referrerContext: ReferrerContext | undefined
+}): string | null {
+	const { pair, targetPath, referrerContext } = params
+	const { segments } = targetPath
+	const own = segments.at(-1)
+	// a target without an address of its own has no segment: its path ends at its logical node
+	if (!own || !(pair.target as readonly string[]).includes(own.ref.tagName)) return null
+
+	const mappedLnPath = referrerContext?.mappedLnPath
+	if (!mappedLnPath) return targetPath.path
+	if (joinPathParts(segments.slice(0, -1)) === mappedLnPath) return own.segment
+	// below the IED only from a logical device on: from a logical node held by the access point, `LN.intAddr`
+	// would be read as an address of its own holding a dot
+	const sameIed = segments[0].segment === mappedLnPath.split('/')[0]
+	const belowLogicalDevice = segments[1]?.ref.tagName === 'LDevice'
+	return sameIed && belowLogicalDevice ? joinPathParts(segments.slice(1)) : targetPath.path
 }
 
 function composeBehaviorLocalPath(

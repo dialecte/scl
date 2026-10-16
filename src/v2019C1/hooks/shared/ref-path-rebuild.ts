@@ -17,7 +17,7 @@ import type * as Core from '@dialecte/core'
 
 /**
  * When a reference element's own binding attributes change (its companion DO/DA
- * name, its target uuid, or an attribute it writes from the target's path such as a
+ * name, its target uuid, its path, or an attribute it writes from the target's path such as a
  * terminal's level names), rebuild what it holds for the resolved target so the name
  * reference stays in agreement with the uuid reference.
  *
@@ -59,12 +59,16 @@ export async function reconcileReferrerRefPaths(params: {
 	return [updatedOperation(newRecord, attributes)]
 }
 
-/** The attributes whose change rebinds the pair: its uuid, its companions, the attributes it writes. */
+/**
+ * The attributes whose change rebinds the pair: its uuid, its path (the uuid wins: a path removed or
+ * edited while the uuid names a target is written again), its companions, the attributes it writes.
+ */
 function bindingAttributeNames(params: { tagName: string; pair: ReferencePair }): string[] {
 	const { tagName, pair } = params
 	const derived = derivedAttributesFollowing({ tagName, follows: pair.attribute.path })
 	return [
 		pair.attribute.uuid,
+		pair.attribute.path,
 		...pair.companions.map((companion) => companion.name),
 		...(derived?.attributes.map((attribute) => attribute.name) ?? []),
 	]

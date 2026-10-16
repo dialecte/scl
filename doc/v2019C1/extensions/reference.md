@@ -538,11 +538,13 @@ The qualifier chain can be arbitrarily deep (e.g. `MMXU1.PhV.phsA.cVal.mag.f` --
 
 ### `ied-address` -- 2 pairs
 
-Reference to the `ExtRef`/`ExtCtrl` implementing a `SourceRef`/`ControlRef` (`extRefAddr`, `extCtrlAddr`), read in any of its three forms:
+Reference to the `ExtRef`/`ExtCtrl` implementing a `SourceRef`/`ControlRef` (`extRefAddr`, `extCtrlAddr`), read and written in three forms:
 
-- the full path, `IED/LDevice/LN.intAddr` (`PIU/CB_Function/LCBO1.TrCmd.stVal`): what the engine writes;
-- the path inside the IED of the `LNode`, `LDevice/LN.intAddr` (`CB_Function/LCBO1.TrCmd.stVal`);
-- the `intAddr` alone, or marked `@intAddr`, when the `ExtRef` sits in the LN implementing the `LNode` (`TrCmd.stVal`), read in the LN its `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` name.
+- the full path, `IED/LDevice/LN.intAddr` (`PIU/CB_Function/LCBO1.TrCmd.stVal`): written when the signal's `LNode` is mapped to no IED or to another one, or when the `ExtRef`'s logical node is held directly by an access point;
+- the path inside the IED of the `LNode`, `LDevice/LN.intAddr` (`CB_Function/LCBO1.TrCmd.stVal`): written when the `ExtRef` sits in another logical node of that IED;
+- the `intAddr` alone, or marked `@intAddr` when read, when the `ExtRef` sits in the LN implementing the `LNode` (`TrCmd.stVal`), read in the LN its `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` name: the engine writes it unmarked.
+
+An `ExtRef`/`ExtCtrl` without an `intAddr` has no address: none is written. The written form follows the renames of the `ExtRef`'s own logical device and IED and the mapping of the signal's `LNode` (mapping, remapping or unmapping it rewrites the addresses of its signals, and removes one that can no longer be written).
 
 A value is kept in the form it is written in.
 
