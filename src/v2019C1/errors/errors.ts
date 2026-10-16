@@ -8,6 +8,7 @@ import { defineErrors } from '@dialecte/core'
  *
  * `SCL1xxx` — lifecycle: the decisions and mapping choices a consumer passes.
  * `SCL2xxx` — lifecycle: what a template or a project must hold.
+ * `SCL3xxx` — dataflow: a signal linked to an element that cannot implement it.
  */
 export const SCL_ERRORS = defineErrors({
 	/** A mapping choice for a source element the report does not list. `meta: { sourceId }` */
@@ -55,6 +56,14 @@ export const SCL_ERRORS = defineErrors({
 	TARGET_HEADER_MISSING: {
 		code: 'SCL2002',
 		message: 'The project has no Header to record the source file in',
+	},
+	/**
+	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
+	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`
+	 */
+	DATAFLOW_LINK_TARGET_MISMATCH: {
+		code: 'SCL3001',
+		message: 'The signal cannot be implemented by an element of this kind',
 	},
 })
 

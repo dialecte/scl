@@ -358,6 +358,7 @@ export const REFS = {
 	xcbr: { tagName: 'LN', id: 'ln-xcbr' },
 	ggio: { tagName: 'LN', id: 'ln-ggio' },
 	iedB1: { tagName: 'IED', id: 'ied-b1' },
+	ldB1: { tagName: 'LDevice', id: 'ld-b1' },
 	iedP1: { tagName: 'IED', id: 'ied-p1' },
 	iedB2: { tagName: 'IED', id: 'ied-b2' },
 	gcb1: { tagName: 'GSEControl', id: 'gcb1' },
