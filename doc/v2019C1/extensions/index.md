@@ -1,5 +1,5 @@
 ---
-description: Overview of SCL-specific extensions for @dialecte/scl v2019C1 -- history, dataModel, signature, reference, lifecycle, info and cleanUp.
+description: Overview of SCL-specific extensions for @dialecte/scl v2019C1 -- history, dataModel, dataflow, signature, reference, lifecycle, info and cleanUp.
 ---
 
 # Extensions
@@ -14,6 +14,7 @@ For a full explanation of how extensions work, see the [Writing Extensions](http
 | ----------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `cleanUp`   | -                                                                      | `tx.cleanUp`                                                                                   | [Clean-up](./clean-up)                                                                                |
 | `dataModel` | `doc.query.dataModel`                                                  | `tx.dataModel`                                                                                 | [Data Model](./data-model)                                                                            |
+| `dataflow`  | `doc.query.dataflow`                                                   | `tx.dataflow`                                                                                  | [Dataflow](./dataflow)                                                                                |
 | `lifecycle` | `doc.query.lifecycle.report` / `.checkTemplateUuids` / `.classifyIeds` | `tx.lifecycle.extract` / `.instantiate` / `.transplant` / `.update` / `.apply` / `.makeUnique` | [Extract](./extract) · [Instantiate](./instantiate) · [Transplant](./transplant) · [Update](./update) |
 | `history`   | `doc.query.history`                                                    | `tx.history`                                                                                   | [History](./history)                                                                                  |
 | `info`      | `doc.query.info`                                                       | -                                                                                              | [Info](./info)                                                                                        |

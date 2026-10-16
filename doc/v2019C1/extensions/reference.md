@@ -544,7 +544,9 @@ Reference to the `ExtRef`/`ExtCtrl` implementing a `SourceRef`/`ControlRef` (`ex
 - the path inside the IED of the `LNode`, `LDevice/LN.intAddr` (`CB_Function/LCBO1.TrCmd.stVal`): written when the `ExtRef` sits in another logical node of that IED;
 - the `intAddr` alone, or marked `@intAddr` when read, when the `ExtRef` sits in the LN implementing the `LNode` (`TrCmd.stVal`), read in the LN its `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` name: the engine writes it unmarked.
 
-An `ExtRef`/`ExtCtrl` without an `intAddr` has no address: none is written. The written form follows the renames of the `ExtRef`'s own logical device and IED and the mapping of the signal's `LNode` (mapping, remapping or unmapping it rewrites the addresses of its signals, and removes one that can no longer be written).
+An `ExtRef`/`ExtCtrl` without an `intAddr` has no address: none is written. The logical node the `LNode` is mapped to is read from its naming attributes (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`), which setting its `lnUuid` writes. The address follows the renames of the `ExtRef`'s own logical device and IED and the mapping changes of the signal's `LNode` (mapping, remapping or unmapping it rewrites the addresses of its signals, and removes one that can no longer be written); an `LNode` bound by `lnUuid` does not yet have them follow a rename of the logical device or IED of its logical node, so after such a rename the address is written in the `LD/LN.intAddr` or the full form.
+
+[`tx.dataflow.link`](./dataflow#link) writes the address from the element it links to, in the form its place gives.
 
 A value is kept in the form it is written in.
 

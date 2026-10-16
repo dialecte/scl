@@ -3,6 +3,7 @@
 // (registered via `createSclProject`) are intentionally not re-exported here.
 
 export * from './data-model/public'
+export * from './dataflow/public'
 export * from './lifecycle/public'
 export * from './lifecycle/transplant/public'
 export * from './info/public'

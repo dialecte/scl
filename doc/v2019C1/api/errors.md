@@ -40,18 +40,19 @@ const sentence =
 
 The errors the dialecte declares (`SCL_ERRORS`), beside those of the core catalogue:
 
-| Key                              | Code      | Raised when                                                                               | `meta`                                                            |
-| -------------------------------- | --------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `MAPPING_CHOICE_UNKNOWN`         | `SCL1001` | a mapping choice is passed for a source element the report does not list                  | `sourceId`                                                        |
-| `MAPPING_CHOICE_NOT_SELECTABLE`  | `SCL1002` | a mapping choice is passed for an element whose mapping cannot be chosen                  | `sourceId`, `tagName`                                             |
-| `MAPPING_CHOICE_LOCKED`          | `SCL1003` | a mapping choice is passed for a mapping the instance already carries                     | `sourceId`, `tagName`                                             |
-| `MAPPING_CHOICE_NOT_A_CANDIDATE` | `SCL1004` | a mapping choice names a project element that is not a candidate                          | `sourceId`, `tagName`, `chosen: { tagName, id }`                  |
-| `MAPPING_UNDECIDED`              | `SCL1005` | a write is asked while where an element of the template lands is the consumer's to choose | `sourceId`, `tagName`, `kind` (`level` \| `shared`), `operation?` |
-| `DECISION_DEPENDENCY_SKIPPED`    | `SCL1006` | a group is accepted while a group it depends on is skipped                                | `groupId`, `dependencyId`                                         |
-| `TEMPLATE_ROOT_NOT_FOUND`        | `SCL2001` | the template file holds nothing that can be instantiated                                  | —                                                                 |
-| `TARGET_HEADER_MISSING`          | `SCL2002` | the project has no `Header` to record the source file in                                  | —                                                                 |
+| Key                              | Code      | Raised when                                                                                                 | `meta`                                                            |
+| -------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `MAPPING_CHOICE_UNKNOWN`         | `SCL1001` | a mapping choice is passed for a source element the report does not list                                    | `sourceId`                                                        |
+| `MAPPING_CHOICE_NOT_SELECTABLE`  | `SCL1002` | a mapping choice is passed for an element whose mapping cannot be chosen                                    | `sourceId`, `tagName`                                             |
+| `MAPPING_CHOICE_LOCKED`          | `SCL1003` | a mapping choice is passed for a mapping the instance already carries                                       | `sourceId`, `tagName`                                             |
+| `MAPPING_CHOICE_NOT_A_CANDIDATE` | `SCL1004` | a mapping choice names a project element that is not a candidate                                            | `sourceId`, `tagName`, `chosen: { tagName, id }`                  |
+| `MAPPING_UNDECIDED`              | `SCL1005` | a write is asked while where an element of the template lands is the consumer's to choose                   | `sourceId`, `tagName`, `kind` (`level` \| `shared`), `operation?` |
+| `DECISION_DEPENDENCY_SKIPPED`    | `SCL1006` | a group is accepted while a group it depends on is skipped                                                  | `groupId`, `dependencyId`                                         |
+| `TEMPLATE_ROOT_NOT_FOUND`        | `SCL2001` | the template file holds nothing that can be instantiated                                                    | —                                                                 |
+| `TARGET_HEADER_MISSING`          | `SCL2002` | the project has no `Header` to record the source file in                                                    | —                                                                 |
+| `DATAFLOW_LINK_TARGET_MISMATCH`  | `SCL3001` | `tx.dataflow.link` links a signal to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`) | `signal: { tagName, id }`, `implementation: { tagName, id }`      |
 
-Anything else the lifecycle raises uses a key of the core catalogue (`ELEMENT_NOT_FOUND`, `UNIQUE_CONSTRAINT_VIOLATION`, `ASSERTION_FAILED`) — an internal inconsistency rather than something the consumer passed.
+Anything else the lifecycle or the dataflow raises uses a key of the core catalogue (`ELEMENT_NOT_FOUND`, `UNIQUE_CONSTRAINT_VIOLATION`, `ASSERTION_FAILED`) — an internal inconsistency rather than something the consumer passed.
 
 ## Import warnings
 

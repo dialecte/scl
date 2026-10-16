@@ -80,6 +80,7 @@ export default defineConfig({
 						{ text: 'Overview', link: '/v2019C1/extensions/' },
 						{ text: 'History', link: '/v2019C1/extensions/history' },
 						{ text: 'Data Model', link: '/v2019C1/extensions/data-model' },
+						{ text: 'Dataflow', link: '/v2019C1/extensions/dataflow' },
 						{ text: 'Reference', link: '/v2019C1/extensions/reference' },
 						{ text: 'Identity', link: '/v2019C1/extensions/identity' },
 						{ text: 'Signature', link: '/v2019C1/extensions/signature' },
