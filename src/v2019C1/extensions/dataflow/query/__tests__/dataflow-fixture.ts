@@ -35,6 +35,46 @@ export const PROCESS_RESOURCE = /* xml */ `
 /** The `LNodeSpecNaming` of the sender's LNode, as a file assigning it to an IED carries. */
 export const SENDER_SPEC_NAMING = /* xml */ `<eIEC61850-6-100:LNodeSpecNaming sLdInst="LD0" sLnClass="PTRC" sLnInst="1" ${id}="spec-naming-sender"/>`
 
+/**
+ * The data model of the sender's logical node type `PTRC_T`: a data object `Op` holding a data
+ * attribute `general`, and a data object `PhV` whose sub data object `phsA` holds a structured data
+ * attribute `cVal` nested down to a measured value `mag.f`, and a data object `Pos` whose sub data
+ * object `Oper` is a data object type of its own.
+ */
+export const DATA_TYPE_TEMPLATES = /* xml */ `
+	<DataTypeTemplates ${id}="data-type-templates">
+		<LNodeType id="PTRC_T" lnClass="PTRC" ${id}="lnode-type-ptrc">
+			<DO name="Op" type="ACT_T" ${id}="do-op"/>
+			<DO name="PhV" type="WYE_T" ${id}="do-phv"/>
+			<DO name="Pos" type="DPC_T" ${id}="do-pos"/>
+		</LNodeType>
+		<DOType id="ACT_T" cdc="ACT" ${id}="do-type-act">
+			<DA name="general" fc="ST" bType="BOOLEAN" ${id}="da-general"/>
+		</DOType>
+		<DOType id="DPC_T" cdc="DPC" ${id}="do-type-dpc">
+			<SDO name="Oper" type="ACT_T" ${id}="sdo-oper"/>
+		</DOType>
+		<DOType id="WYE_T" cdc="WYE" ${id}="do-type-wye">
+			<SDO name="phsA" type="CMV_T" ${id}="sdo-phsa"/>
+		</DOType>
+		<DOType id="CMV_T" cdc="CMV" ${id}="do-type-cmv">
+			<DA name="cVal" fc="MX" bType="Struct" type="CVAL_T" ${id}="da-cval"/>
+		</DOType>
+		<DAType id="CVAL_T" ${id}="da-type-cval">
+			<BDA name="mag" bType="Struct" type="AV_T" ${id}="bda-mag"/>
+		</DAType>
+		<DAType id="AV_T" ${id}="da-type-av">
+			<BDA name="f" bType="FLOAT32" ${id}="bda-f"/>
+		</DAType>
+	</DataTypeTemplates>
+`
+
+/** The sender's LNode, naming the logical node type of its data model. */
+export const SENDER_LNODE_TYPED = `${SENDER_LNODE} lnType="PTRC_T"`
+
+/** The sender's LNode without a uuid, naming the logical node type of its data model. */
+export const SENDER_LNODE_WITHOUT_UUID_TYPED = `${SENDER_LNODE_WITHOUT_UUID} lnType="PTRC_T"`
+
 /** A second LNode of the sender's path, to tell the last of a path from the first. */
 export const DUPLICATE_SENDER_LNODE = `<LNode ${SENDER_LNODE_WITHOUT_UUID} ${id}="lnode-sender-duplicate"/>`
 
@@ -296,6 +336,7 @@ export function buildScd(slots: ScdSlots = {}): string {
 		extraIeds = '',
 		templates = '',
 		functionExtras = '',
+		dataTypeTemplates = '',
 	} = slots
 	return /* xml */ `
 		<SCL ${ns} ${id}="root">
@@ -339,6 +380,7 @@ export function buildScd(slots: ScdSlots = {}): string {
 				${receiverAccessPoints}
 			</IED>
 			${extraIeds}
+			${dataTypeTemplates}
 		</SCL>
 	`
 }

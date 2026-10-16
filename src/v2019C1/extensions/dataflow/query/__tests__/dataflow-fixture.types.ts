@@ -35,6 +35,8 @@ export type ScdSlots = {
 	functionExtras?: string
 	/** What follows the substation in the document (a function template). */
 	templates?: string
+	/** The `DataTypeTemplates` of the document, after its IEDs. */
+	dataTypeTemplates?: string
 }
 
 export type Implementation = SpecifiedDataflow['implementation']

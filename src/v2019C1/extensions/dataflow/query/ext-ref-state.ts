@@ -1,25 +1,29 @@
 import {
 	EXT_REF_CONTROL_BLOCK,
+	EXT_REF_LATER_BINDING,
 	EXT_REF_SIGNAL,
 	INTERNAL_ADDRESS_ATTRIBUTE,
 } from '../constants/ext-ref-state.constants'
+import { isLaterBinding } from './is-later-binding'
 import { namesSignal } from './names-signal'
 
 import type { ExtRefState } from '../dataflow.types'
 
 /**
- * The state of an ExtRef, read from its own attributes only: nothing, the internal address alone,
- * the signal it names, that signal with its service and control block (a service published without
- * one needs none), then the internal address as well. The internal address alone is never a binding.
+ * The state of an ExtRef, read from its own attributes only: the internal address and the expected
+ * data object, nothing of a signal, a service or a control block (`later-binding`); the signal alone (`expected`); the signal with its service and control block
+ * (`subscribed`; a service published without one needs none), and the internal address as well
+ * (`bound`). Written in any other way, it has no state.
  */
-export function extRefState(params: { attributes: Readonly<Record<string, string>> }): ExtRefState {
+export function extRefState(params: {
+	attributes: Readonly<Record<string, string>>
+}): ExtRefState | undefined {
 	const { attributes } = params
+	if (isLaterBinding({ shape: EXT_REF_LATER_BINDING, attributes })) return 'later-binding'
+	if (!namesSignal({ signal: EXT_REF_SIGNAL, attributes })) return undefined
 	const internalAddress = Boolean(attributes[INTERNAL_ADDRESS_ATTRIBUTE])
-	if (!namesSignal({ signal: EXT_REF_SIGNAL, attributes })) {
-		return internalAddress ? 'later-binding' : 'empty'
-	}
-	if (!hasControlBlockIfNeeded(attributes)) return 'expected'
-	return internalAddress ? 'bound' : 'subscribed'
+	if (hasControlBlockIfNeeded(attributes)) return internalAddress ? 'bound' : 'subscribed'
+	return internalAddress || namesControlBlock(attributes) ? undefined : 'expected'
 }
 
 /**
@@ -28,8 +32,13 @@ export function extRefState(params: { attributes: Readonly<Record<string, string
  * counts.
  */
 function hasControlBlockIfNeeded(attributes: Readonly<Record<string, string>>): boolean {
-	const { names, serviceAttribute, servicesWithControlBlock } = EXT_REF_CONTROL_BLOCK
+	const { serviceAttribute, servicesWithControlBlock } = EXT_REF_CONTROL_BLOCK
 	const service = attributes[serviceAttribute]
 	if (!service) return false
-	return names.some((name) => attributes[name]) || !servicesWithControlBlock.has(service)
+	return namesControlBlock(attributes) || !servicesWithControlBlock.has(service)
+}
+
+/** Whether an ExtRef names a control block, by its uuid or by its name. */
+function namesControlBlock(attributes: Readonly<Record<string, string>>): boolean {
+	return EXT_REF_CONTROL_BLOCK.names.some((name) => attributes[name])
 }

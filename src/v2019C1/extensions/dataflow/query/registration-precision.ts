@@ -21,12 +21,11 @@ import type { TupleReferencePair } from '@/v2019C1/constants/reference-pairs.typ
  * How precisely a registration (an `IEDName` or a `ClientLN`) names its subscriber: its logical node
  * (`ln`), its logical device (`ld`), or an access point of its IED (`ap`), by the most precise of
  * its tuple references. A reference names the subscriber by its uuid when it carries one (the
- * uuid wins), else by its names. The access point a registration names (`apRef`, `apUuid`) is an
- * access point of the subscriber's IED, not necessarily the one holding the ExtRef: `apRef` is not
- * a key (except to tell a client logical node held directly by an access point), and an `apUuid`
- * matches any access point of that IED. With a `subscriber`, only
- * what names that subscriber counts (`undefined` when the registration names another); without
- * one, whatever the registration names.
+ * uuid wins), else by its names. Its `apRef` names an access point of the IED the registration
+ * names; it is a matching key only for a client logical node held directly by an access point, and
+ * an `apUuid` matches any access point of that IED. With a `subscriber`, only what names that
+ * subscriber counts (`undefined` when the registration names another); without one, whatever the
+ * registration names.
  */
 export function registrationPrecision(params: {
 	registration: IedNode<'IEDName' | 'ClientLN'>

@@ -45,7 +45,7 @@ const crossing = await doc.query.dataflow.crossing({ ieds: [bay1Ied, bay2Ied] })
 // Dataflow[]
 ```
 
-The dataflows with exactly one of their two sides inside the set of IEDs, in the order of `all`. A dataflow between two IEDs of the set, or between two IEDs outside it, does not cross it; a side that is not known counts as outside.
+The dataflows with exactly one of their two sides inside the set of IEDs, in the order of `all`. A dataflow between two IEDs of the set, or between two IEDs outside it, does not cross it; a side the set does not hold - an IED the document lacks included - is outside.
 
 ### `subscribersOf`
 
@@ -80,12 +80,12 @@ A `Dataflow` is a `SpecifiedDataflow` or an `ImplementationOnlyDataflow`, told a
 | `specification.state`         | `'connected'` once the other logical node is named, by path or by uuid, else `'open'`                                                                                                                                             |
 | `specification.service`       | the service the signal asks for, as written; an output has none                                                                                                                                                                   |
 | `specification.holder`        | the `LNode` holding the signal: the subscriber of an input, the controller of an output                                                                                                                                           |
-| `specification.other`         | `{ lnode, doName?, daName? }`: the other `LNode` and the data it provides; `undefined` while none is named, or it names nothing                                                                                                   |
+| `specification.other`         | `{ lnode, doName?, daName?, dataPath? }`: the other `LNode` and the data it provides; `undefined` while none is named, or it names nothing                                                                                        |
 | `specification.allocation`    | `'same-ied'`, `'inter-ied'`, or `'unallocated'` when one of the two `LNode`s is mapped to no logical node of the document, or when the signal names no other `LNode` or one the document lacks (every open signal is unallocated) |
 | `specification.mappedIeds`    | `{ holder, other }`: the IED each `LNode` is mapped into (what `allocation` is read from); `undefined` for one that is not mapped                                                                                                 |
 | `implementation.state`        | `'implemented'` once the signal names its `ExtRef` / `ExtCtrl`, else `'unimplemented'`                                                                                                                                            |
 | `implementation.element`      | the `ExtRef` / `ExtCtrl` it names; `undefined` while none is named, or it names nothing                                                                                                                                           |
-| `implementation.binding`      | how completely that element is written (`ExtRefState` / `ExtCtrlState`); `undefined` without an element                                                                                                                           |
+| `implementation.binding`      | the shape that element is written in (`ExtRefState` / `ExtCtrlState`); `undefined` without an element, or when it is written in none of the documented shapes                                                                     |
 | `implementation.ln`           | the logical node holding the element                                                                                                                                                                                              |
 | `implementation.ied`          | the IED holding the element: the subscriber of an input, the controller of an output                                                                                                                                              |
 | `implementation.controlBlock` | the control block the `ExtRef` names                                                                                                                                                                                              |
@@ -93,7 +93,7 @@ A `Dataflow` is a `SpecifiedDataflow` or an `ImplementationOnlyDataflow`, told a
 | `implementation.registration` | the subscriber's own entry on that control block, when it has one                                                                                                                                                                 |
 | `implementation.dangling`     | the `DanglingLink`s of the signal and of its element, see [How things are found](#how-things-are-found)                                                                                                                           |
 
-The data of `other`: `doName` / `daName` come from the signal's own data attributes when written, else from the qualifier its path carries (a `SourceRef` reads `DO.DA` as the data object up to the first dot and the rest as the data attribute, a `ControlRef` reads the whole qualifier as the data object). They are absent when the signal gives none.
+The data of `other`: `doName` / `daName` come from the signal's own data attributes when written. Else they come from the qualifier its path carries (`PhV.phsA.cVal.mag.f`), split against the data model of the logical node type the `LNode` names (`lnType`): the data object is a data object then its sub data objects (`PhV.phsA`), the data attribute a data attribute then its nested ones (`cVal.mag.f`), never a cut at the first dot. A `ControlRef` carries a data object only. The split is never guessed: when the data model cannot be followed (the `LNode` names no type, the document lacks the type or a name below it) `doName` and `daName` are absent. `dataPath` is that qualifier as written, set whenever the data comes from the path, split or not; it is absent when the signal's own data attributes gave the data, or when the signal gives none.
 
 `allocation` is read from where the two `LNode`s are mapped, never from the service.
 
@@ -101,11 +101,11 @@ The data of `other`: `doName` / `daName` come from the signal's own data attribu
 
 An `ExtRef` naming a control block that no signal links to.
 
-| Field            | Content                                                                                                          |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `kind`           | `'implementation-only'`                                                                                          |
-| `element`        | the `ExtRef`                                                                                                     |
-| `implementation` | like the `implementation` of a `SpecifiedDataflow`, with `state` always `'implemented'` and `binding` always set |
+| Field            | Content                                                                                                                                                                    |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kind`           | `'implementation-only'`                                                                                                                                                    |
+| `element`        | the `ExtRef`                                                                                                                                                               |
+| `implementation` | like the `implementation` of a `SpecifiedDataflow`, with `state` always `'implemented'`; `binding` is absent when the `ExtRef` is written in none of the documented shapes |
 
 ## States
 
@@ -113,7 +113,7 @@ An `ExtRef` naming a control block that no signal links to.
 
 **Implementation.** `unimplemented` until the signal names its `ExtRef` / `ExtCtrl` (`extRefUuid` / `extRefAddr`, `extCtrlUuid` / `extCtrlAddr`), `implemented` once it does. Whether it is implemented never depends on the control block: the control block, its publisher and the registration are facts beside it. A name that finds nothing is still a name: the dataflow is `implemented`, with no `element` and a `dangling` entry.
 
-**Binding.** How completely the `ExtRef` / `ExtCtrl` itself is written, the same value `info.of` gives the element, `empty · later-binding · expected · subscribed · bound` for an `ExtRef` (an `ExtCtrl` has no `subscribed`). The rule for each is in [Info: State](./info#state).
+**Binding.** The shape the `ExtRef` / `ExtCtrl` itself is written in, the same value `info.of` gives the element: `later-binding · expected · subscribed · bound` for an `ExtRef`, `later-binding · bound` for an `ExtCtrl`; `undefined` when it is written in none of them. `later-binding` is the internal address with, for an `ExtRef`, the expected data object (`pDO`), and nothing of a signal, a service or a control block (an `ExtCtrl`'s `pDO` is optional). The rule for each is in [Info: State](./info#state).
 
 ## How things are found
 
@@ -131,7 +131,7 @@ Every link of a dataflow is found the same way: **the uuid wins**, then the name
   | `ld`    | its logical device                                                    |
   | `ap`    | an access point of its IED: the least precise, it always names an IED |
 
-  When several registrations name the subscriber, the most precise is taken. `apRef` is not a key: it does not tell subscribers apart (except for a client logical node held directly by an access point), and an `apUuid` matches any access point of that IED, not necessarily the one holding the `ExtRef`.
+  When several registrations name the subscriber, the most precise is taken. `apRef` names an access point of the IED the registration names; it is a matching key only for a client logical node held directly by an access point, and an `apUuid` matches any access point of that IED, not necessarily the one holding the `ExtRef`.
 
 **Dangling.** A `DanglingLink` is `{ element, attribute, value }`: a uuid or an address that names nothing in the document, the attribute holding it, on which element. It covers the signal's link to the other logical node, its link to its `ExtRef` / `ExtCtrl` (the uuid when written, else the address), its `resourceUuid`, and the `lnUuid` and `srcCBUuid` of the element. An attribute that is not written is not dangling, it is not a link. An address fitting several elements without telling them apart is not dangling either: it names several things.
 

@@ -19,6 +19,7 @@ import {
 	EXT_REF_BY_CONTROL_BLOCK_UUID,
 	GOOSE_CONTROL_BLOCK_WITHOUT_UUID,
 	expectedSignalSide,
+	DATA_TYPE_TEMPLATES,
 	DUPLICATE_SENDER_LNODE,
 	ggioWithExtRef,
 	PROCESS_RESOURCE,
@@ -30,6 +31,7 @@ import {
 	SENDER_LNODE,
 	SHARED_NAME_CONTROL_BLOCKS,
 	SENDER_LNODE_IN_B1,
+	SENDER_LNODE_WITHOUT_UUID_TYPED,
 	SHARED_ADDRESS_EXT_REFS,
 	SENDER_LNODE_WITHOUT_UUID,
 	SENDER_SPEC_NAMING,
@@ -104,6 +106,22 @@ describe('ofSourceRef', () => {
 				ied: REFS.iedB1,
 			},
 		},
+		'SourceRef naming an ExtRef written with part of its signal and an intAddr → implemented, no binding':
+			{
+				sourceXml: buildScd({
+					signals: sourceRef('extRefUuid="uuid-ext-ref"'),
+					receiverLogicalNodes: xcbrWithExtRef(
+						'uuid="uuid-ext-ref" intAddr="Trip" iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1"',
+					),
+				}),
+				expectedImplementation: {
+					state: 'implemented',
+					element: REFS.extRef,
+					binding: undefined,
+					ln: REFS.xcbr,
+					ied: REFS.iedB1,
+				},
+			},
 		'SourceRef naming an ExtRef that is not in the document → implemented, no element, dangling': {
 			allowIncoherentReferences: 'the signal names an ExtRef the document does not hold',
 			sourceXml: buildScd({ signals: sourceRef('extRefUuid="uuid-missing-ext-ref"') }),
@@ -266,22 +284,23 @@ describe('ofSourceRef', () => {
 				},
 			}),
 		},
-		'SourceRef with no companion, its source path carrying DO.DA → data read from the path': {
-			sourceXml: buildScd({
-				senderContent: SENDER_SPEC_NAMING,
-				signals: sourceRef('source="S1/F1/PTRC1.Op.general"'),
-			}),
-			expectedSignalSide: expectedSignalSide({
-				signal: REFS.sourceRef,
-				direction: 'input',
-				specification: {
-					state: 'connected',
-					other: { lnode: REFS.senderLNode, doName: 'Op', daName: 'general' },
-					allocation: 'inter-ied',
-					mappedIeds: MAPPED_INTO_B1_AND_P1,
-				},
-			}),
-		},
+		'SourceRef with no companion, its source path carrying DO.DA, the document holding no data model → the path kept, nothing split':
+			{
+				sourceXml: buildScd({
+					senderContent: SENDER_SPEC_NAMING,
+					signals: sourceRef('source="S1/F1/PTRC1.Op.general"'),
+				}),
+				expectedSignalSide: expectedSignalSide({
+					signal: REFS.sourceRef,
+					direction: 'input',
+					specification: {
+						state: 'connected',
+						other: { lnode: REFS.senderLNode, dataPath: 'Op.general' },
+						allocation: 'inter-ied',
+						mappedIeds: MAPPED_INTO_B1_AND_P1,
+					},
+				}),
+			},
 		'SourceRef naming its source LNode only, no data → other without data': {
 			sourceXml: buildScd({ signals: sourceRef('sourceLNodeUuid="uuid-lnode-sender"') }),
 			expectedSignalSide: expectedSignalSide({
@@ -323,23 +342,145 @@ describe('ofSourceRef', () => {
  */
 describe('ofSourceRef — names written without their uuid', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'SourceRef naming its source by path only → connected, inter-ied': {
-			sourceXml: buildScd({
-				senderLNode: SENDER_LNODE_WITHOUT_UUID,
-				senderContent: SENDER_SPEC_NAMING,
-				signals: sourceRef('source="S1/F1/PTRC1.Op"'),
-			}),
-			expectedSignalSide: expectedSignalSide({
-				signal: REFS.sourceRef,
-				direction: 'input',
-				specification: {
-					state: 'connected',
-					other: { lnode: REFS.senderLNode, doName: 'Op' },
-					allocation: 'inter-ied',
-					mappedIeds: MAPPED_INTO_B1_AND_P1,
-				},
-			}),
-		},
+		'SourceRef with no companion, its source path through a sub data object → data split by the data model':
+			{
+				sourceXml: buildScd({
+					senderLNode: SENDER_LNODE_WITHOUT_UUID_TYPED,
+					senderContent: SENDER_SPEC_NAMING,
+					signals: sourceRef('source="S1/F1/PTRC1.PhV.phsA.cVal.mag.f"'),
+					dataTypeTemplates: DATA_TYPE_TEMPLATES,
+				}),
+				expectedSignalSide: expectedSignalSide({
+					signal: REFS.sourceRef,
+					direction: 'input',
+					specification: {
+						state: 'connected',
+						other: {
+							lnode: REFS.senderLNode,
+							doName: 'PhV.phsA',
+							daName: 'cVal.mag.f',
+							dataPath: 'PhV.phsA.cVal.mag.f',
+						},
+						allocation: 'inter-ied',
+						mappedIeds: MAPPED_INTO_B1_AND_P1,
+					},
+				}),
+			},
+		'SourceRef with no companion, its source path naming a data object only → data object, path kept':
+			{
+				sourceXml: buildScd({
+					senderLNode: SENDER_LNODE_WITHOUT_UUID_TYPED,
+					senderContent: SENDER_SPEC_NAMING,
+					signals: sourceRef('source="S1/F1/PTRC1.Op"'),
+					dataTypeTemplates: DATA_TYPE_TEMPLATES,
+				}),
+				expectedSignalSide: expectedSignalSide({
+					signal: REFS.sourceRef,
+					direction: 'input',
+					specification: {
+						state: 'connected',
+						other: { lnode: REFS.senderLNode, doName: 'Op', dataPath: 'Op' },
+						allocation: 'inter-ied',
+						mappedIeds: MAPPED_INTO_B1_AND_P1,
+					},
+				}),
+			},
+		'SourceRef with no companion, its source path naming a data attribute the model lacks → nothing split, path kept':
+			{
+				sourceXml: buildScd({
+					senderLNode: SENDER_LNODE_WITHOUT_UUID_TYPED,
+					senderContent: SENDER_SPEC_NAMING,
+					signals: sourceRef('source="S1/F1/PTRC1.Op.stVal"'),
+					dataTypeTemplates: DATA_TYPE_TEMPLATES,
+				}),
+				expectedSignalSide: expectedSignalSide({
+					signal: REFS.sourceRef,
+					direction: 'input',
+					specification: {
+						state: 'connected',
+						other: { lnode: REFS.senderLNode, dataPath: 'Op.stVal' },
+						allocation: 'inter-ied',
+						mappedIeds: MAPPED_INTO_B1_AND_P1,
+					},
+				}),
+			},
+		'SourceRef with no companion, its LNode naming a logical node type the document lacks → nothing split, path kept':
+			{
+				sourceXml: buildScd({
+					senderLNode: `${SENDER_LNODE_WITHOUT_UUID} lnType="XCBR_T"`,
+					senderContent: SENDER_SPEC_NAMING,
+					signals: sourceRef('source="S1/F1/PTRC1.Op.general"'),
+					dataTypeTemplates: DATA_TYPE_TEMPLATES,
+				}),
+				expectedSignalSide: expectedSignalSide({
+					signal: REFS.sourceRef,
+					direction: 'input',
+					specification: {
+						state: 'connected',
+						other: { lnode: REFS.senderLNode, dataPath: 'Op.general' },
+						allocation: 'inter-ied',
+						mappedIeds: MAPPED_INTO_B1_AND_P1,
+					},
+				}),
+			},
+		'SourceRef with no companion, its LNode naming no logical node type → nothing split, path kept':
+			{
+				sourceXml: buildScd({
+					senderLNode: SENDER_LNODE_WITHOUT_UUID,
+					senderContent: SENDER_SPEC_NAMING,
+					signals: sourceRef('source="S1/F1/PTRC1.Op.general"'),
+					dataTypeTemplates: DATA_TYPE_TEMPLATES,
+				}),
+				expectedSignalSide: expectedSignalSide({
+					signal: REFS.sourceRef,
+					direction: 'input',
+					specification: {
+						state: 'connected',
+						other: { lnode: REFS.senderLNode, dataPath: 'Op.general' },
+						allocation: 'inter-ied',
+						mappedIeds: MAPPED_INTO_B1_AND_P1,
+					},
+				}),
+			},
+		'SourceRef naming its data object and attribute by companions beside a path → the companions win, no data path':
+			{
+				sourceXml: buildScd({
+					senderLNode: SENDER_LNODE_WITHOUT_UUID_TYPED,
+					senderContent: SENDER_SPEC_NAMING,
+					signals: sourceRef(
+						'source="S1/F1/PTRC1.PhV.phsA.cVal.mag.f" sourceDoName="PhV.phsA" sourceDaName="cVal.mag.f"',
+					),
+					dataTypeTemplates: DATA_TYPE_TEMPLATES,
+				}),
+				expectedSignalSide: expectedSignalSide({
+					signal: REFS.sourceRef,
+					direction: 'input',
+					specification: {
+						state: 'connected',
+						other: { lnode: REFS.senderLNode, doName: 'PhV.phsA', daName: 'cVal.mag.f' },
+						allocation: 'inter-ied',
+						mappedIeds: MAPPED_INTO_B1_AND_P1,
+					},
+				}),
+			},
+		'SourceRef naming its source by path only → connected, inter-ied, the document holding no data model: the path kept':
+			{
+				sourceXml: buildScd({
+					senderLNode: SENDER_LNODE_WITHOUT_UUID,
+					senderContent: SENDER_SPEC_NAMING,
+					signals: sourceRef('source="S1/F1/PTRC1.Op"'),
+				}),
+				expectedSignalSide: expectedSignalSide({
+					signal: REFS.sourceRef,
+					direction: 'input',
+					specification: {
+						state: 'connected',
+						other: { lnode: REFS.senderLNode, dataPath: 'Op' },
+						allocation: 'inter-ied',
+						mappedIeds: MAPPED_INTO_B1_AND_P1,
+					},
+				}),
+			},
 		'SourceRef naming its ExtRef by the full address, in a proxy LN of the IED → implemented': {
 			sourceXml: buildScd({
 				signals: sourceRef('extRefAddr="B1/LD0/GGIO1.Trip"'),
@@ -530,7 +671,7 @@ describe('ofSourceRef — names written without their uuid', () => {
 				direction: 'input',
 				specification: {
 					state: 'connected',
-					other: { lnode: REFS.duplicateSenderLNode, doName: 'Op' },
+					other: { lnode: REFS.duplicateSenderLNode, dataPath: 'Op' },
 					allocation: 'inter-ied',
 					mappedIeds: MAPPED_INTO_B1_AND_P1,
 				},

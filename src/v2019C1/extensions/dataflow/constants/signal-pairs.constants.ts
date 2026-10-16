@@ -2,6 +2,7 @@ import { invariant } from '@dialecte/core/utils'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
+import { dataCompanionsOf } from '@/v2019C1/extensions/reference/query/build/data-companions'
 
 import type { SignalPairs, SpecifiedDataflow } from '../dataflow.types'
 import type { Scl } from '@/v2019C1/config'
@@ -40,15 +41,13 @@ function signalPairsOf(pairs: readonly ReferencePair[]): SignalPairs {
 		key: 'ASSERTION_FAILED',
 		detail: 'a signal names a logical node and the element implementing it',
 	})
-	// the companions are, in order, the data object and the data attribute (a signal that controls
-	// names no data attribute: it has one companion)
-	const [doCompanion, daCompanion] = specification.companions
+	const { doAttribute, daAttribute } = dataCompanionsOf(specification)
 	return {
 		specification: {
 			uuid: specification.attribute.uuid,
 			path: specification.attribute.path,
-			doName: doCompanion?.name,
-			daName: daCompanion?.name,
+			doName: doAttribute,
+			daName: daAttribute,
 		},
 		implementation: {
 			uuid: implementation.attribute.uuid,

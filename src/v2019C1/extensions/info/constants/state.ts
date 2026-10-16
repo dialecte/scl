@@ -47,15 +47,15 @@ async function signalState(params: StateRuleParams): Promise<SignalState> {
 }
 
 /**
- * An ExtRef, read from its own attributes only (see `extRefState`): how completely it names its
- * signal, control block and internal address.
+ * An ExtRef, read from its own attributes only (see `extRefState`): the shape it is written in,
+ * none when it is written in none of the documented ones.
  */
-async function extRefStateRule(params: StateRuleParams): Promise<ExtRefState> {
+async function extRefStateRule(params: StateRuleParams): Promise<ExtRefState | undefined> {
 	return extRefState({ attributes: params.attributes })
 }
 
 /** An ExtCtrl, read from its own attributes only (see `extCtrlState`). */
-async function extCtrlStateRule(params: StateRuleParams): Promise<ExtCtrlState> {
+async function extCtrlStateRule(params: StateRuleParams): Promise<ExtCtrlState | undefined> {
 	return extCtrlState({ attributes: params.attributes })
 }
 

@@ -2,42 +2,58 @@ import type { Scl } from '@/v2019C1/config'
 import type { ResolutionType } from '@/v2019C1/extensions/reference'
 
 /**
- * How completely an `ExtRef` (an input of a logical node) is written, from the most complete down:
- * - `bound`: it names the signal it receives, the control block publishing it (when its service
- *   needs one) and the internal address it lands on in the receiving device;
- * - `subscribed`: it names the signal and the control block publishing it (when its service needs
- *   one), and lands nowhere yet;
- * - `expected`: it names the signal, but no service, or no control block although its service needs
- *   one; an internal address alone is never read as a binding;
- * - `later-binding`: it names no signal, only the internal address it will land on;
- * - `empty`: it names neither.
+ * The shape an `ExtRef` (an input of a logical node) is written in, when it is one of the four
+ * documented ones:
+ * - `later-binding`: it carries the internal address it will land on and the expected data object,
+ *   nothing of a signal, a service or a control block;
+ * - `expected`: it names the signal, and neither an internal address nor a control block;
+ * - `subscribed`: it names the signal, the service and the control block publishing it (a service
+ *   published without a control block needs none), and lands nowhere yet;
+ * - `bound`: the same, with the internal address it lands on in the receiving device.
  *
  * A signal is named once its logical node is named, by its uuid or by its IED, logical device and
  * logical node class (a uuid naming the element stands for its names), and its data object is given.
- * The service must be set for `subscribed` and `bound`: without one the ExtRef stays `expected`
- * whatever else it names. A service published without a control block (polling) needs none; the
- * others need the control block named, by its uuid or by its name.
+ * An ExtRef written in none of these shapes has no state: nothing written, an internal address
+ * without the expected data object, a signal named in part, a control block named without a signal,
+ * an internal address beside a signal without its service or without the control block its service
+ * needs. Attributes a shape does not use (the expected data object of a signal named) are not read. A service published without a control block (polling) needs none; the others need the
+ * control block named, by its uuid or by its name.
  */
-export type ExtRefState = 'empty' | 'later-binding' | 'expected' | 'subscribed' | 'bound'
+export type ExtRefState = 'later-binding' | 'expected' | 'subscribed' | 'bound'
 
 /**
- * How completely an `ExtCtrl` (an output of a logical node) is written, the same ladder as an
- * `ExtRef` without its control block:
- * - `bound`: it names the signal it controls and the internal address it starts from;
- * - `expected`: it names the signal, without internal address;
- * - `later-binding`: it names no signal, only the internal address;
- * - `empty`: it names neither.
+ * The shape an `ExtCtrl` (an output of a logical node) is written in, when it is one of the two its
+ * purposes document:
+ * - `later-binding`: it carries the internal address it starts from, nothing of a signal (the
+ *   expected data object is optional);
+ * - `bound`: it names the signal it controls and the internal address it starts from.
+ *
+ * An ExtCtrl written in neither has no state: a signal without an internal address, a signal named in
+ * part, nothing written.
  */
-export type ExtCtrlState = 'empty' | 'later-binding' | 'expected' | 'bound'
+export type ExtCtrlState = 'later-binding' | 'bound'
 
 /**
  * The attributes through which an `ExtRef` / `ExtCtrl` names its signal: the logical node is named
- * once `uuid` is set or all of `names` are; the signal once `data` is set as well.
+ * once `uuid` is set or all of `names` are; the signal once `data` is set as well. `written` lists
+ * every attribute of the signal, named or not: a later-binding element has none of them.
  */
 export type SignalAttributes = {
 	uuid: string
 	names: readonly string[]
 	data: string
+	written: readonly string[]
+}
+
+/**
+ * The later-binding shape of an `ExtRef` / `ExtCtrl`: the attributes it carries (`required`: the
+ * internal address, and for an `ExtRef` the expected data object) and the ones it must not (`forbidden`, those of a
+ * signal and, for an `ExtRef`, of a service and a control block). An attribute that is neither is
+ * not read.
+ */
+export type LaterBindingAttributes = {
+	required: readonly string[]
+	forbidden: readonly string[]
 }
 
 /**
@@ -73,9 +89,13 @@ export type SpecifiedDataflow = {
 		holder: Scl.Ref<'LNode'>
 		/**
 		 * The other logical node and the data it provides: `doName` and `daName` are absent when the
-		 * signal gives none; `undefined` while no logical node is named, or it names nothing.
+		 * signal gives none, or gives it by a path the data model cannot split; `dataPath` is that path's
+		 * data qualifier as written, set whenever the data comes from the path; `undefined` while no
+		 * logical node is named, or it names nothing.
 		 */
-		other: { lnode: Scl.Ref<'LNode'>; doName?: string; daName?: string } | undefined
+		other:
+			| { lnode: Scl.Ref<'LNode'>; doName?: string; daName?: string; dataPath?: string }
+			| undefined
 		/**
 		 * Where the two logical nodes are implemented: both in one IED (`same-ied`), in two
 		 * (`inter-ied`), or one of them is not mapped to a logical node (`unallocated`). Never read
@@ -98,7 +118,10 @@ export type SpecifiedDataflow = {
 		state: 'unimplemented' | 'implemented'
 		/** The element the address or the uuid names; `undefined` while none is named, or it names nothing. */
 		element: Scl.Ref<'ExtRef' | 'ExtCtrl'> | undefined
-		/** How completely the element is written; `undefined` without an element. */
+		/**
+		 * The shape the element is written in; `undefined` without an element, or when it is written
+		 * in none of the documented shapes.
+		 */
 		binding: ExtRefState | ExtCtrlState | undefined
 		/** The logical node holding the element. */
 		ln: Scl.Ref<'LN' | 'LN0'> | undefined
@@ -120,15 +143,15 @@ export type SpecifiedDataflow = {
 
 /**
  * An ExtRef naming a control block that no signal of the specification links to. It is implemented
- * by definition (`state` is always `implemented`); `binding` carries how completely the ExtRef is
- * written, the real rung, and is always set.
+ * by definition (`state` is always `implemented`); `binding` is the shape the ExtRef is written in,
+ * absent when it is written in none of the documented ones (a partial signal).
  */
 export type ImplementationOnlyDataflow = {
 	kind: 'implementation-only'
 	element: Scl.Ref<'ExtRef'>
-	implementation: SpecifiedDataflow['implementation'] & {
+	implementation: Omit<SpecifiedDataflow['implementation'], 'binding'> & {
 		state: 'implemented'
-		binding: ExtRefState
+		binding?: ExtRefState
 	}
 }
 
@@ -136,9 +159,9 @@ export type ImplementationOnlyDataflow = {
  * The subscriber's own entry on a control block (an `IEDName`, or a `ClientLN` of a report), and
  * how precisely it names the subscriber: its access point (the least precise: it always names its
  * IED and an access point), its logical device, or its logical node. It names the subscriber by
- * the uuids it carries, else by its names. The access point it names (`apRef`, `apUuid`) is an access
- * point of the subscriber's IED, not necessarily the one holding the ExtRef: `apRef` does not tell
- * subscribers apart, and an `apUuid` matches any access point of that IED.
+ * the uuids it carries, else by its names. Its `apRef` names an access point of the IED the
+ * registration names; it is a matching key only for a client logical node held directly by an access
+ * point, and an `apUuid` matches any access point of that IED.
  */
 export type Registration = {
 	element: Scl.Ref<'IEDName' | 'ClientLN'>

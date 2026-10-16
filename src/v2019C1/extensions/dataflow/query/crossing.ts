@@ -9,8 +9,8 @@ import type * as Core from '@dialecte/core'
 /**
  * Query extension: the dataflows with exactly one side inside a set of IEDs, in the order of `all`.
  * A dataflow's sides are the IED holding what implements it and the IED it takes its data from or
- * controls; a side that is not known counts as outside. A dataflow between two IEDs of the set, or
- * between two IEDs outside it, does not cross it.
+ * controls; a side the set does not hold - an IED the document lacks included - is outside. A
+ * dataflow between two IEDs of the set, or between two IEDs outside it, does not cross it.
  */
 export async function crossing(
 	query: Core.Query<Config>,

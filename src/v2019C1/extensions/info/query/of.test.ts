@@ -862,10 +862,10 @@ describe('of — state and signal title', () => {
 })
 
 /**
- * An ExtRef or an ExtCtrl reads, from how completely it is written: nothing, only where it lands
- * in the IED (`later-binding`), the signal it names (`expected`), that signal together with its
+ * An ExtRef or an ExtCtrl reads the shape it is written in: only where it lands in the IED
+ * (`later-binding`; an ExtRef also carries its expected data object), the signal it names (`expected`, an ExtRef only), that signal together with its
  * service and the control block publishing it, unless the service needs none (`subscribed`, an
- * ExtRef only), then also where it lands (`bound`).
+ * ExtRef only), then also where it lands (`bound`). Written in any other way, it has no state.
  */
 describe('of — ExtRef and ExtCtrl state', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
@@ -914,10 +914,10 @@ describe('of — ExtRef and ExtCtrl state', () => {
 	const signal = 'iedName="B1" ldInst="LD0" lnClass="XCBR" lnInst="1" doName="Pos"'
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		'ExtRef naming a signal and a srcCBName without serviceType → expected': {
+		'ExtRef naming a signal and a srcCBName without serviceType → no state': {
 			sourceXml: withExtRef(`${signal} srcCBName="GCB1"`),
 			ref: extRef,
-			expected: 'expected',
+			expected: undefined,
 		},
 		'ExtRef naming its logical node by lnUuid with a doName and a GOOSE control block → subscribed':
 			{
@@ -927,15 +927,62 @@ describe('of — ExtRef and ExtCtrl state', () => {
 				ref: extRef,
 				expected: 'subscribed',
 			},
-		'ExtRef with no attribute → empty': {
+		'ExtRef with no attribute → no state': {
 			sourceXml: withExtRef(''),
 			ref: extRef,
-			expected: 'empty',
+			expected: undefined,
 		},
-		'ExtRef with an intAddr only → later-binding': {
-			sourceXml: withExtRef('intAddr="Pos"'),
+		'ExtRef with an intAddr and a pDO → later-binding': {
+			sourceXml: withExtRef('intAddr="Pos" pDO="Pos"'),
 			ref: extRef,
 			expected: 'later-binding',
+		},
+		'ExtRef with an intAddr only → no state': {
+			sourceXml: withExtRef('intAddr="Pos"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef with an intAddr, a pDO and a serviceType → no state': {
+			sourceXml: withExtRef('intAddr="Pos" pDO="Pos" serviceType="GOOSE"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef with an intAddr, a pDO and a srcCBName → no state': {
+			sourceXml: withExtRef('intAddr="Pos" pDO="Pos" srcCBName="GCB1"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef with an intAddr, a pDO and a srcCBUuid → no state': {
+			allowIncoherentReferences: 'the uuid names a control block of another file',
+			sourceXml: withExtRef('intAddr="Pos" pDO="Pos" srcCBUuid="uuid-elsewhere"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef with an intAddr, a pDO and a srcLDInst → no state': {
+			sourceXml: withExtRef('intAddr="Pos" pDO="Pos" srcLDInst="LD0"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef with an intAddr, a pDO and a doName → no state': {
+			sourceXml: withExtRef('intAddr="Pos" pDO="Pos" doName="Pos"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef with a pDO only → no state': {
+			sourceXml: withExtRef('pDO="Pos"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef naming a signal, no service, no intAddr, with a pDO → expected (pDO is not enforced there)':
+			{
+				sourceXml: withExtRef(`${signal} pDO="Pos"`),
+				ref: extRef,
+				expected: 'expected',
+			},
+		'ExtRef naming a signal and a GOOSE service, no control block, no intAddr → expected': {
+			sourceXml: withExtRef(`${signal} serviceType="GOOSE"`),
+			ref: extRef,
+			expected: 'expected',
 		},
 		'ExtRef naming a signal, no control block, no intAddr → expected': {
 			sourceXml: withExtRef(`${signal}`),
@@ -966,26 +1013,60 @@ describe('of — ExtRef and ExtCtrl state', () => {
 			ref: extRef,
 			expected: 'subscribed',
 		},
-		'ExtRef naming a signal and an intAddr, GOOSE without control block → expected': {
+		'ExtRef naming a signal and an intAddr, GOOSE without control block → no state': {
 			sourceXml: withExtRef(`${signal} intAddr="Pos" serviceType="GOOSE"`),
 			ref: extRef,
-			expected: 'expected',
+			expected: undefined,
 		},
-		'ExtRef naming a signal and an intAddr, no service, no control block → expected': {
+		'ExtRef naming a signal and an intAddr, no service, no control block → no state': {
 			sourceXml: withExtRef(`${signal} intAddr="Pos"`),
 			ref: extRef,
-			expected: 'expected',
+			expected: undefined,
 		},
-		'ExtRef naming a doName and part of its logical node (no iedName) and an intAddr → later-binding':
-			{
-				sourceXml: withExtRef('ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Pos" intAddr="Pos"'),
-				ref: extRef,
-				expected: 'later-binding',
-			},
-		'ExtRef naming part of a signal (no doName) and an intAddr → later-binding': {
+		'ExtRef naming a signal, a Poll service and an intAddr → bound': {
+			sourceXml: withExtRef(`${signal} intAddr="Pos" serviceType="Poll"`),
+			ref: extRef,
+			expected: 'bound',
+		},
+		'ExtRef naming a GOOSE service without signal nor control block → no state': {
+			sourceXml: withExtRef('serviceType="GOOSE"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef naming a GOOSE control block without signal → no state': {
+			sourceXml: withExtRef('srcCBName="GCB1" serviceType="GOOSE"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef naming a doName and part of its logical node (no iedName) and an intAddr → no state': {
+			sourceXml: withExtRef('ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Pos" intAddr="Pos"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef naming part of a signal (no doName) and an intAddr → no state': {
 			sourceXml: withExtRef('iedName="B1" ldInst="LD0" lnClass="XCBR" lnInst="1" intAddr="Pos"'),
 			ref: extRef,
-			expected: 'later-binding',
+			expected: undefined,
+		},
+		'ExtRef naming a logical node by lnUuid only and an intAddr → no state': {
+			sourceXml: withExtRef('lnUuid="uuid-xcbr" intAddr="Pos"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef naming a doName only and an intAddr → no state': {
+			sourceXml: withExtRef('doName="Pos" intAddr="Pos"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef naming a daName only and an intAddr → no state': {
+			sourceXml: withExtRef('daName="stVal" intAddr="Pos"'),
+			ref: extRef,
+			expected: undefined,
+		},
+		'ExtRef naming part of a signal (no doName), no intAddr → no state': {
+			sourceXml: withExtRef('iedName="B1" ldInst="LD0" lnClass="XCBR" lnInst="1"'),
+			ref: extRef,
+			expected: undefined,
 		},
 		'ExtRef naming an LLN0 signal without lnInst, with a GOOSE control block → subscribed': {
 			sourceXml: withExtRef(
@@ -994,30 +1075,50 @@ describe('of — ExtRef and ExtCtrl state', () => {
 			ref: extRef,
 			expected: 'subscribed',
 		},
-		'ExtCtrl with no attribute → empty': {
+		'ExtCtrl with no attribute → no state': {
 			sourceXml: withExtCtrl(''),
 			ref: extCtrl,
-			expected: 'empty',
+			expected: undefined,
+		},
+		'ExtCtrl with an intAddr and a pDO → later-binding': {
+			sourceXml: withExtCtrl('intAddr="Pos" pDO="Pos"'),
+			ref: extCtrl,
+			expected: 'later-binding',
 		},
 		'ExtCtrl with an intAddr only → later-binding': {
 			sourceXml: withExtCtrl('intAddr="Pos"'),
 			ref: extCtrl,
 			expected: 'later-binding',
 		},
-		'ExtCtrl naming part of a signal (no doName) → empty': {
+		'ExtCtrl with an intAddr, a pDO and a doName → no state': {
+			sourceXml: withExtCtrl('intAddr="Pos" pDO="Pos" doName="Pos"'),
+			ref: extCtrl,
+			expected: undefined,
+		},
+		'ExtCtrl naming part of a signal (no doName) → no state': {
 			sourceXml: withExtCtrl('iedName="B1" ldInst="LD0" lnClass="XCBR" lnInst="1"'),
 			ref: extCtrl,
-			expected: 'empty',
+			expected: undefined,
 		},
-		'ExtCtrl naming its logical node by lnUuid with a doName → expected': {
+		'ExtCtrl naming part of a signal (no doName) and an intAddr → no state': {
+			sourceXml: withExtCtrl('iedName="B1" ldInst="LD0" lnClass="XCBR" lnInst="1" intAddr="Pos"'),
+			ref: extCtrl,
+			expected: undefined,
+		},
+		'ExtCtrl naming its logical node by lnUuid with a doName, no intAddr → no state': {
 			sourceXml: withExtCtrl('lnUuid="uuid-xcbr" doName="Pos"'),
 			ref: extCtrl,
-			expected: 'expected',
+			expected: undefined,
 		},
-		'ExtCtrl naming a signal, no intAddr → expected': {
+		'ExtCtrl naming its logical node by lnUuid with a doName and an intAddr → bound': {
+			sourceXml: withExtCtrl('lnUuid="uuid-xcbr" doName="Pos" intAddr="Pos"'),
+			ref: extCtrl,
+			expected: 'bound',
+		},
+		'ExtCtrl naming a signal, no intAddr → no state': {
 			sourceXml: withExtCtrl(`${signal}`),
 			ref: extCtrl,
-			expected: 'expected',
+			expected: undefined,
 		},
 		'ExtCtrl naming a signal and an intAddr → bound': {
 			sourceXml: withExtCtrl(`${signal} intAddr="Pos"`),

@@ -13,7 +13,7 @@ import type { ElementDescription } from './describe-element.types'
 import type { IedNode } from './ied-section.types'
 
 /**
- * What an ExtRef / ExtCtrl is, read from the element alone: how completely it is written, where it
+ * What an ExtRef / ExtCtrl is, read from the element alone: the shape it is written in, where it
  * sits, the control block it names with its publisher and the subscriber's registration on it, and
  * the uuids of its own that name nothing.
  */
@@ -55,11 +55,11 @@ export async function describeElement<GenericElement extends 'ExtRef' | 'ExtCtrl
 	}
 }
 
-/** How completely an ExtRef / ExtCtrl is written, by the ladder of its kind. */
+/** The shape an ExtRef / ExtCtrl is written in, by its kind; `undefined` in none of the documented ones. */
 function bindingOf(params: {
 	tagName: string
 	attributes: Readonly<Record<string, string>>
-}): ExtRefState | ExtCtrlState {
+}): ExtRefState | ExtCtrlState | undefined {
 	const { tagName, attributes } = params
 	return tagName === 'ExtCtrl' ? extCtrlState({ attributes }) : extRefState({ attributes })
 }

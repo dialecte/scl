@@ -1,16 +1,23 @@
-import { EXT_CTRL_SIGNAL, INTERNAL_ADDRESS_ATTRIBUTE } from '../constants/ext-ref-state.constants'
+import {
+	EXT_CTRL_LATER_BINDING,
+	EXT_CTRL_SIGNAL,
+	INTERNAL_ADDRESS_ATTRIBUTE,
+} from '../constants/ext-ref-state.constants'
+import { isLaterBinding } from './is-later-binding'
 import { namesSignal } from './names-signal'
 
 import type { ExtCtrlState } from '../dataflow.types'
 
-/** The state of an ExtCtrl, read from its own attributes only: nothing, the internal address, the signal, both. */
+/**
+ * The state of an ExtCtrl, read from its own attributes only: the internal address, nothing of a
+ * signal (`later-binding`; the expected data object is optional), or the signal with the internal address
+ * (`bound`). Written in any other way, it has no state.
+ */
 export function extCtrlState(params: {
 	attributes: Readonly<Record<string, string>>
-}): ExtCtrlState {
+}): ExtCtrlState | undefined {
 	const { attributes } = params
-	const internalAddress = Boolean(attributes[INTERNAL_ADDRESS_ATTRIBUTE])
-	if (!namesSignal({ signal: EXT_CTRL_SIGNAL, attributes })) {
-		return internalAddress ? 'later-binding' : 'empty'
-	}
-	return internalAddress ? 'bound' : 'expected'
+	if (isLaterBinding({ shape: EXT_CTRL_LATER_BINDING, attributes })) return 'later-binding'
+	const signalNamed = namesSignal({ signal: EXT_CTRL_SIGNAL, attributes })
+	return signalNamed && attributes[INTERNAL_ADDRESS_ATTRIBUTE] ? 'bound' : undefined
 }

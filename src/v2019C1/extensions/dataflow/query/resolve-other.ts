@@ -1,4 +1,7 @@
+import { LNODE_TYPE_ATTRIBUTE } from '@/v2019C1/extensions/data-model/query/data-types.constants'
+import { splitDataPath } from '@/v2019C1/extensions/data-model/query/split-data-path'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
+import { readRawAttribute } from '@/v2019C1/extensions/reference/query/build/raw-attribute'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 
 import type { SignalPairs, SpecifiedDataflow } from '../dataflow.types'
@@ -8,11 +11,13 @@ import type { SectionNode } from './section-node.types'
 /**
  * The LNode a signal is linked to, and the data it names there: the LNode its uuid names, else the
  * one its path names (the last of a path, as when a file is imported). The data comes from the
- * signal's own data attributes when written, else from the qualifier its path carries. A signal
- * that names a data attribute (a SourceRef) reads `DO.DA` as the data object up to the first dot and
- * the rest as the data attribute, so a path through a sub data object reads that sub data object
- * into `daName`; a signal that does not (a ControlRef) reads the whole qualifier as the data object.
- * `undefined` while the signal names no LNode, or the one it names is not in the document.
+ * signal's own data attributes when written. Else it comes from the qualifier its path carries
+ * (`PhV.phsA.cVal.mag.f`), which is returned as written (`dataPath`) and split between the data
+ * object and the data attribute against the data model of the LNode's logical node type: never at
+ * the first dot, a sub data object and a nested data attribute have dots too. When the data model
+ * cannot be followed (no type, a name it lacks) nothing is split: `doName` and `daName` stay absent.
+ * A signal that names no data attribute (a ControlRef) carries a data object only. `undefined`
+ * while the signal names no LNode, or the one it names is not in the document.
  */
 export async function resolveOther(params: {
 	pairs: SignalPairs['specification']
@@ -21,7 +26,10 @@ export async function resolveOther(params: {
 }): Promise<
 	| {
 			lnode: SectionNode<'LNode'>
-			data: Pick<NonNullable<SpecifiedDataflow['specification']['other']>, 'doName' | 'daName'>
+			data: Pick<
+				NonNullable<SpecifiedDataflow['specification']['other']>,
+				'doName' | 'daName' | 'dataPath'
+			>
 	  }
 	| undefined
 > {
@@ -45,26 +53,28 @@ export async function resolveOther(params: {
 			: undefined
 	if (!lnode) return undefined
 
-	const fromPath = splitQualifier({
-		qualifier: parsed?.qualifier,
-		namesDataAttribute: Boolean(pairs.daName),
-	})
-	const doName = (pairs.doName && attributes[pairs.doName]) || fromPath.doName
-	const daName = (pairs.daName && attributes[pairs.daName]) || fromPath.daName
-	return {
-		lnode,
-		data: { ...(doName ? { doName } : {}), ...(daName ? { daName } : {}) },
+	const doName = pairs.doName && attributes[pairs.doName]
+	if (doName) {
+		const daName = pairs.daName && attributes[pairs.daName]
+		return { lnode, data: { doName, ...(daName ? { daName } : {}) } }
 	}
+	return { lnode, data: await dataOfPath({ qualifier: parsed?.qualifier, lnode, pairs, context }) }
 }
 
-/** The data object, and the data attribute, a path qualifier carries. */
-function splitQualifier(params: { qualifier: string | undefined; namesDataAttribute: boolean }): {
-	doName?: string
-	daName?: string
-} {
-	const { qualifier, namesDataAttribute } = params
+/** The data a path qualifier names: the qualifier as written, and its split when the data model gives one. */
+async function dataOfPath(params: {
+	qualifier: string | undefined
+	lnode: SectionNode<'LNode'>
+	pairs: SignalPairs['specification']
+	context: DataflowContext
+}): Promise<{ doName?: string; daName?: string; dataPath?: string }> {
+	const { qualifier, lnode, pairs, context } = params
 	if (!qualifier) return {}
-	if (!namesDataAttribute) return { doName: qualifier }
-	const [doName, ...rest] = qualifier.split('.')
-	return { doName, ...(rest.length > 0 ? { daName: rest.join('.') } : {}) }
+	const lnType = readRawAttribute({ record: lnode.record, name: LNODE_TYPE_ATTRIBUTE })
+	const types = lnType ? await context.dataTypes() : undefined
+	const split =
+		lnType && types
+			? splitDataPath({ qualifier, lnType, types, dataObjectOnly: !pairs.daName })
+			: undefined
+	return { ...split, dataPath: qualifier }
 }

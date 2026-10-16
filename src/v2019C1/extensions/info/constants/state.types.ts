@@ -25,13 +25,16 @@ export type LNodeState = {
 
 export type LNodeMapping = 'unmapped' | 'specification-ied' | 'real-ied'
 
-/** The state each tag has; a tag absent here has none. */
+/**
+ * The state each tag has; a tag absent here has none. An ExtRef / ExtCtrl written in none of the
+ * documented shapes has no state.
+ */
 export type ElementStateByTag = {
 	SourceRef: SignalState
 	ControlRef: SignalState
 	LNode: LNodeState
-	ExtRef: ExtRefState
-	ExtCtrl: ExtCtrlState
+	ExtRef: ExtRefState | undefined
+	ExtCtrl: ExtCtrlState | undefined
 }
 
 /** The state of an element of tag `GenericElement`; every state when the tag is not known. */

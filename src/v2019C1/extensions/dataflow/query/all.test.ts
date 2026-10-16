@@ -79,6 +79,21 @@ describe('all', () => {
 					},
 				],
 			},
+		'ExtRef naming a control block and part of its signal (no doName) → implementation-only entry without binding':
+			{
+				sourceXml: buildScd({
+					receiverLogicalNodes: xcbrWithExtRef(
+						'uuid="uuid-ext-ref" iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" serviceType="GOOSE" srcCBUuid="uuid-gcb1"',
+					),
+				}),
+				expected: [
+					{
+						kind: 'implementation-only',
+						element: REFS.extRef,
+						implementation: { binding: undefined, controlBlock: REFS.gcb1 },
+					},
+				],
+			},
 		'ExtRef naming no control block, no SourceRef naming it → not a dataflow': {
 			sourceXml: buildScd({ receiverLogicalNodes: xcbrWithExtRef('intAddr="Trip"') }),
 			expected: [],

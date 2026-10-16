@@ -12,7 +12,7 @@ import type { DataflowContext } from './dataflow-context.types'
 import type { SectionNode } from './section-node.types'
 import type { Scl } from '@/v2019C1/config'
 
-/** What implements a signal: the element it names, where it sits, how completely it is written. */
+/** What implements a signal: the element it names, where it sits, the shape it is written in. */
 export async function describeImplementation(params: {
 	ref: Scl.Ref<'SourceRef' | 'ControlRef'>
 	holder: SectionNode<'LNode'>
