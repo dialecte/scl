@@ -40,8 +40,11 @@ export type TagCollectingQuery = {
 	): Promise<Readonly<Record<string, readonly AnyTrackedRecord[]>>>
 }
 
-/** The same, the root given. */
-export type CollectFromRootParams = CollectWithAncestryParams & { root: Scl.Ref<Scl.ElementsOf> }
+/**
+ * The same, the root given. Written out rather than intersected with `CollectWithAncestryParams`: an
+ * intersection re-declaring `root` crosses the two unions of refs, one type per pair of element tags.
+ */
+export type CollectFromRootParams = { root: Scl.Ref<Scl.ElementsOf>; select?: CollectSelect }
 
 /**
  * A subtree read once and laid flat: its elements in document order, the records above each
