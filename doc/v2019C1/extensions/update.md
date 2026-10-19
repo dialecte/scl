@@ -87,7 +87,10 @@ type DiffNode = {
 	sourceRef?: AnyRefOrRecord // template element (added / modified / unchanged)
 	instanceRef?: AnyRefOrRecord // existing element (removed / modified / unchanged)
 	appliedRef?: AnyRefOrRecord // what it became after apply (filled by apply; absent on a pure report)
-	// ...tagName, attributeChanges, children
+	attributeChanges?: AttributeChange[] // what an accepted update writes (modified)
+	// what the update lists but does not apply: the project keeps `before` (a matched node, modified or not)
+	keptAttributeChanges?: KeptAttributeChange[] // AttributeChange & { reason: KeptAttributeReason }
+	// ...tagName, children
 }
 ```
 
@@ -128,7 +131,7 @@ type DecisionGroup = {
 type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 ```
 
-The attributes classified are those the element's definition declares where it sits — the type it names with `xsi:type` included — not only the tag's. Each is `identity`, `reference`, `rename` or `free` (`AttributeEditability`); only the last two are listed. Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns where it is implemented (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`, and `lnUuid`, the logical node it is bound to) and its `lnType`: the report does not compare them and `reconcile` never writes them, even when a UI-instructed edit lists them. What the template specifies for it is compared with its `LNodeSpecNaming` and written there: a template now specifying `XCBR3` changes `sLnInst`, the `LNode` stays bound where it is. A `fork` keeps the binding made in the project too, even when the newer revision binds the `LNode` elsewhere. The binding is the lock (`dataModel.isLNodeLocked`); a binding to a logical node the document does not hold is released by `apply` for what it places (see [below](#lnodes-placed-bound-to-a-device-the-project-lacks)) and by the extract clean-up.
+The attributes classified are those the element's definition declares where it sits — the type it names with `xsi:type` included — not only the tag's. Each is `identity`, `reference`, `rename` or `free` (`AttributeEditability`); only the last two are listed. Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns where it is implemented (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`, and `lnUuid`, the logical node it is bound to) and its `lnType`: `reconcile` never writes them, even when a UI-instructed edit lists them, and none of them is a change to decide. A template changing the `lnType` of a bound `LNode` is still listed, on its node's `keptAttributeChanges` as `{ name: 'lnType', before, after, reason: 'bound-logical-node' }`: the project keeps the type it holds, an update does not apply a type change to a bound `LNode` (a project rule for now; the type is part of the specification). A kept change opens no decision: an instance whose only difference it is stays `upToDate`, and `report.summary.kept` counts it. Its implementation differs from the template by design and is never listed. What the template specifies for it is compared with its `LNodeSpecNaming` and written there: a template now specifying `XCBR3` changes `sLnInst`, the `LNode` stays bound where it is. A `fork` keeps the binding made in the project too, even when the newer revision binds the `LNode` elsewhere. The binding is the lock (`dataModel.isLNodeLocked`); a binding to a logical node the document does not hold is released by `apply` for what it places (see [below](#lnodes-placed-bound-to-a-device-the-project-lacks)) and by the extract clean-up.
 
 `apply` takes `resolution.decisions: Map<groupId, GroupDecision>` where a decision is either a plain
 accept/skip or an object carrying **edited values** for the group's `editableAttributes`:
@@ -547,7 +550,7 @@ The project element is the one carrying the source element's lineage. When the t
 type DiffReport = {
 	instances: ReportInstance[] // one entry per matched instance (both layers for an ASD)
 	needsDecisions: boolean
-	summary: { added: number; removed: number; modified: number }
+	summary: { added: number; removed: number; modified: number; kept: number } // kept: changes listed, not applied
 	mappings: ReportMapping[] // where each shared source element lands — one entry per source element
 	templateInstances: AnyRefOrRecord[] // the instances of the template itself the report covers; none on a first placement
 	offLevel?: { templateLevel: string; startedFrom: string } // set when started above the level the template was made for
@@ -558,7 +561,7 @@ type ReportInstance = {
 	placedFor?: AnyRefOrRecord // a first placement made several times: what this one is made for
 	title: string // human label (e.g. "Prot" vs "Prot_1")
 	linked: boolean // recognised as an instantiation of the loaded template
-	upToDate: boolean // nothing to apply for this instance (no groups)
+	upToDate: boolean // nothing to apply for this instance (no groups); it may still carry kept changes
 	tree: DiffNode // full diff tree for this instance (unchanged context included)
 	groups: DecisionGroup[] // this instance's accept/skip units
 	mappings: ReportMapping[] // where the shared source elements this instance refers to land

@@ -10,6 +10,20 @@ export type DiffChange = 'added' | 'removed' | 'modified' | 'unchanged' | 'targe
 
 export type AttributeChange = { name: string; before?: string; after?: string }
 
+/**
+ * Why an update keeps the project's value of an attribute the template changes.
+ * - `bound-logical-node`: the LNode is bound to a logical node of an IED; the project keeps the type it holds, an
+ *   update does not apply a type change to a bound LNode (a project rule for now; the type is part of the
+ *   specification).
+ */
+export type KeptAttributeReason = 'bound-logical-node'
+
+/** A difference the update lists but does not apply: the project keeps `before`, the template says `after`. */
+export type KeptAttributeChange = AttributeChange & { reason: KeptAttributeReason }
+
+/** One element's attributes compared: the changes an accepted update writes, and those it keeps. */
+export type AttributeComparison = { changes: AttributeChange[]; kept: KeptAttributeChange[] }
+
 export type DiffNode = {
 	change: DiffChange
 	tagName: string
@@ -27,10 +41,24 @@ export type DiffNode = {
 	appliedRef?: AnyRefOrRecord
 	/** Attribute deltas — present for `modified`. */
 	attributeChanges?: AttributeChange[]
+	/**
+	 * The template's changes the update does not apply, with why — present on a matched node (`modified` or
+	 * `unchanged`) that has any. They neither make the node `modified` nor open a decision: there is nothing to accept.
+	 */
+	keptAttributeChanges?: KeptAttributeChange[]
 	children: DiffNode[]
 }
 
-export type DiffSummary = { added: number; removed: number; modified: number }
+export type DiffSummary = {
+	added: number
+	removed: number
+	modified: number
+	/**
+	 * The template's changes the update lists but does not apply (`keptAttributeChanges` across the tree). They open
+	 * no decision: an instance can be `upToDate` and still carry some.
+	 */
+	kept: number
+}
 
 /**
  * The engine's per-instance diff primitive: one instance's change `root` tree, its
@@ -97,7 +125,10 @@ export type ReportInstance = {
 	title: string
 	/** Recognised as an instantiation of the loaded template (provenance or `templateUuid` lineage). */
 	linked: boolean
-	/** Nothing to apply for this instance (`groups.length === 0`). */
+	/**
+	 * Nothing to apply for this instance (`groups.length === 0`). It may still carry changes the update keeps
+	 * (`keptAttributeChanges` in its `tree`, counted in the report's `summary.kept`).
+	 */
 	upToDate: boolean
 	/** The full diff tree for this instance (unchanged context included). */
 	tree: DiffNode

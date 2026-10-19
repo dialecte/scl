@@ -430,7 +430,7 @@ async function updateMatchedAttributes(
 	const updates: Record<string, string | undefined> = {}
 	for (const name of new Set([...Object.keys(desired), ...Object.keys(current)])) {
 		const next = name in desired ? desired[name] : undefined
-		if (owned.has(name)) continue
+		if (owned.attributes.has(name)) continue
 		if (current[name] !== next) updates[name] = next
 	}
 

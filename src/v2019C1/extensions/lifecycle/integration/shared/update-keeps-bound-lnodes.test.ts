@@ -6,13 +6,16 @@ import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } fro
 
 import type { Scl } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DiffNode } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DiffNode,
+	KeptAttributeChange,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
 // A bound LNode carries two things: where the project implemented it (its IED, logical device and logical node,
 // `lnUuid`) and what it was specified as (its `LNodeSpecNaming`, the template's naming). An update compares the
 // template with the specification and writes it there; the implementation is the project's: never compared, never
-// written. Its type stays as bound too.
+// written. Its type stays as bound too, and the report lists a type change it keeps.
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -110,8 +113,11 @@ const keptOnX =
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	scenario: LifecycleScenario
-	/** The attributes the report lists as changed on the LNode, then on its LNodeSpecNaming. */
-	reported: { lnode: string[]; specifiedNaming: string[] }
+	/**
+	 * The attributes the report lists as changed on the LNode, then on its LNodeSpecNaming, then the differences it
+	 * lists as kept on the LNode (none when absent), also counted in the report's summary.
+	 */
+	reported: { lnode: string[]; specifiedNaming: string[]; kept?: KeptAttributeChange[] }
 }
 
 describe('lifecycle — an update keeps the implementation of a bound LNode', () => {
@@ -149,7 +155,7 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 			],
 		},
 
-		'bound, newer template changing its type -> type kept and not listed': {
+		'bound, newer template changing its type -> type kept, listed as kept': {
 			sourceXml: sourceXml({
 				lnode: breaker({
 					attributes:
@@ -162,9 +168,39 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 				functionIdentity: instanceOfTemplate,
 			}),
 			scenario: 'template',
-			reported: { lnode: [], specifiedNaming: [] },
+			reported: {
+				lnode: [],
+				specifiedNaming: [],
+				kept: [
+					{ name: 'lnType', before: 'XCBR_T', after: 'XCBR_T2', reason: 'bound-logical-node' },
+				],
+			},
 			expectedQueries: [keptOnX],
 		},
+
+		'bound, newer template changing its description and its type -> description written, type kept, listed as kept':
+			{
+				sourceXml: sourceXml({
+					lnode: breaker({
+						attributes:
+							'iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T2" uuid="lnode-src-uuid" desc="Breaker"',
+						specifiedInst: '1',
+					}),
+				}),
+				targetXml: projectXml({
+					lnode: breaker({ attributes: boundToX, specifiedInst: '1' }),
+					functionIdentity: instanceOfTemplate,
+				}),
+				scenario: 'template',
+				reported: {
+					lnode: ['desc'],
+					specifiedNaming: [],
+					kept: [
+						{ name: 'lnType', before: 'XCBR_T', after: 'XCBR_T2', reason: 'bound-logical-node' },
+					],
+				},
+				expectedQueries: [`${keptOnX}[@desc="Breaker"]`],
+			},
 
 		'bound by its naming only, newer template changing its description -> binding kept': {
 			sourceXml: sourceXml({
@@ -207,6 +243,52 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 				'//default:LNode[@iedName="None"][@lnClass="XCBR"][@lnInst="3"]/default:Private/v2019C1:LNodeSpecNaming[@sLnInst="3"]',
 			],
 		},
+
+		'unbound, newer template changing its type -> its type follows': {
+			sourceXml: sourceXml({
+				lnode: breaker({
+					attributes:
+						'iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T2" uuid="lnode-src-uuid"',
+					specifiedInst: '1',
+				}),
+			}),
+			targetXml: projectXml({
+				lnode: breaker({
+					attributes:
+						'iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T" uuid="lnode-instance-uuid" templateUuid="lnode-src-uuid"',
+					specifiedInst: '1',
+				}),
+				functionIdentity: instanceOfTemplate,
+			}),
+			scenario: 'template',
+			reported: { lnode: ['lnType'], specifiedNaming: [] },
+			expectedQueries: ['//default:LNode[@iedName="None"][@lnInst="1"][@lnType="XCBR_T2"]'],
+		},
+
+		'newer revision of the same file changing the type of a LNode bound here -> type kept, listed as kept':
+			{
+				sourceXml: sourceXml({
+					lnode: breaker({
+						attributes:
+							'iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T2" uuid="lnode-instance-uuid"',
+						specifiedInst: '1',
+					}),
+					functionUuid: 'function-instance-uuid',
+				}),
+				targetXml: projectXml({
+					lnode: breaker({ attributes: boundToX, specifiedInst: '1' }),
+					functionIdentity: 'uuid="function-instance-uuid"',
+				}),
+				scenario: 'fork',
+				reported: {
+					lnode: [],
+					specifiedNaming: [],
+					kept: [
+						{ name: 'lnType', before: 'XCBR_T', after: 'XCBR_T2', reason: 'bound-logical-node' },
+					],
+				},
+				expectedQueries: [keptOnX],
+			},
 
 		'newer revision of the same file, unbound there -> the binding made here kept': {
 			sourceXml: sourceXml({
@@ -267,9 +349,15 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 			{
 				lnode: changedAttributes({ nodes, tagName: 'LNode' }),
 				specifiedNaming: changedAttributes({ nodes, tagName: 'LNodeSpecNaming' }),
+				kept: keptChanges({ nodes, tagName: 'LNode' }),
+				keptInSummary: lifecycleReport.summary.kept,
 			},
 			'report',
-		).toEqual(testCase.reported)
+		).toEqual({
+			kept: [],
+			...testCase.reported,
+			keptInSummary: (testCase.reported.kept ?? []).length,
+		})
 
 		await target.transaction(async (tx) => {
 			// every decision accepted
@@ -296,4 +384,12 @@ function changedAttributes(params: { nodes: DiffNode[]; tagName: string }): stri
 		.filter((node) => node.tagName === tagName)
 		.flatMap((node) => (node.attributeChanges ?? []).map((change) => change.name))
 		.sort()
+}
+
+/** The differences the report lists as kept on the nodes of `tagName`. */
+function keptChanges(params: { nodes: DiffNode[]; tagName: string }): KeptAttributeChange[] {
+	const { nodes, tagName } = params
+	return nodes
+		.filter((node) => node.tagName === tagName)
+		.flatMap((node) => node.keptAttributeChanges ?? [])
 }

@@ -18,11 +18,13 @@ import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/re
 import type { ReportMapping } from '../mapping/mapping.types'
 import type {
 	AttributeChange,
+	AttributeComparison,
 	DecisionGroup,
 	DiffNode,
 	DiffReport,
 	DiffSummary,
 	InstanceDiff,
+	KeptAttributeChange,
 	ReportInstance,
 } from './diff.types'
 import type { PinnedMatches } from './match-child'
@@ -220,8 +222,8 @@ async function diffMatched(
 	const omit = params.omit
 	const withinProjectOwned = params.withinProjectOwned ?? false
 	const contributeOnly = params.contributeOnly ?? false
-	const attributeChanges = params.skipOwnAttributes
-		? []
+	const { changes: attributeChanges, kept } = params.skipOwnAttributes
+		? { changes: [], kept: [] }
 		: await computeAttributeChanges(sourceQuery, { targetQuery, sourceNode, instanceNode })
 
 	const children: DiffNode[] = []
@@ -338,6 +340,7 @@ async function diffMatched(
 		sourceRef: toRef(sourceNode),
 		instanceRef: toRef(instanceNode),
 		attributeChanges: attributeChanges.length > 0 ? attributeChanges : undefined,
+		keptAttributeChanges: kept.length > 0 ? kept : undefined,
 		children,
 	}
 }
@@ -421,7 +424,7 @@ async function computeAttributeChanges(
 		sourceNode: AnyTreeRecord
 		instanceNode: AnyTreeRecord
 	},
-): Promise<AttributeChange[]> {
+): Promise<AttributeComparison> {
 	const { targetQuery, sourceNode, instanceNode } = params
 	const sourceAttributes = await sourceQuery.any.getAttributes(sourceNode)
 	const instanceAttributes = await targetQuery.any.getAttributes(instanceNode)
@@ -433,13 +436,16 @@ async function computeAttributeChanges(
 	const owned = projectOwnedAttributes({ tagName: instanceNode.tagName, instanceAttributes })
 
 	const changes: AttributeChange[] = []
+	const kept: KeptAttributeChange[] = []
 	for (const name of new Set([...Object.keys(desired), ...Object.keys(current)])) {
-		if (owned.has(name)) continue
 		const before = current[name]
 		const after = desired[name]
-		if (before !== after) changes.push({ name, before, after })
+		if (before === after) continue
+		const keptReason = owned.listedAsKept.get(name)
+		if (keptReason) kept.push({ name, before, after, reason: keptReason })
+		else if (!owned.attributes.has(name)) changes.push({ name, before, after })
 	}
-	return changes
+	return { changes, kept }
 }
 
 /**
@@ -460,9 +466,10 @@ export function assembleReport(params: {
 				added: acc.added + instanceSummary.added,
 				removed: acc.removed + instanceSummary.removed,
 				modified: acc.modified + instanceSummary.modified,
+				kept: acc.kept + instanceSummary.kept,
 			}
 		},
-		{ added: 0, removed: 0, modified: 0 },
+		{ added: 0, removed: 0, modified: 0, kept: 0 },
 	)
 	return {
 		instances,
@@ -532,11 +539,12 @@ export function collectTreeIds(root: DiffNode, side: 'instanceRef' | 'sourceRef'
 }
 
 function summarize(root: DiffNode): DiffSummary {
-	const summary: DiffSummary = { added: 0, removed: 0, modified: 0 }
+	const summary: DiffSummary = { added: 0, removed: 0, modified: 0, kept: 0 }
 	const visit = (node: DiffNode): void => {
 		if (node.change === 'added') summary.added++
 		else if (node.change === 'removed') summary.removed++
 		else if (node.change === 'modified') summary.modified++
+		summary.kept += node.keptAttributeChanges?.length ?? 0
 		for (const child of node.children) visit(child)
 	}
 	visit(root)

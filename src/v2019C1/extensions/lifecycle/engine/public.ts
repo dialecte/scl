@@ -10,4 +10,6 @@ export type {
 	DiffReport,
 	DiffSummary,
 	GroupDecision,
+	KeptAttributeChange,
+	KeptAttributeReason,
 } from './diff.types'

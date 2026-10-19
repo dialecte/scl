@@ -13,6 +13,8 @@ export type {
 	DiffReport,
 	DiffSummary,
 	GroupDecision,
+	KeptAttributeChange,
+	KeptAttributeReason,
 } from './engine/public'
 
 export type {
