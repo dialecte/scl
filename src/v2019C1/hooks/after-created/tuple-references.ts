@@ -2,6 +2,7 @@ import { toRawRecord } from '@dialecte/core/helpers'
 
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { TUPLE_TARGET_KINDS } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
+import { pairsWrittenWhenSet } from '@/v2019C1/extensions/reference/query/ied-tuple/pairs-written-when-set'
 import { findRecordByUuid, readTargetTupleParts, tupleNamesOperation } from '@/v2019C1/hooks/shared'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -12,7 +13,8 @@ import type { AnyRawRecord } from '@dialecte/core'
 
 /**
  * A tuple reference naming its target by a uuid (see `TUPLE_REFERENCE_PAIRS`) carries the names of
- * that target too, one reading the other:
+ * that target too, one reading the other (but for a `followsOnly` pair, an LNode's `lnUuid`, whose
+ * binding writes the names):
  *
  * 1. A reference created with its uuids (an `ExtRef` with `srcCBUuid` only, an `IEDName` with
  *    `apUuid` only) gets the names of the elements they name, when they differ (see
@@ -37,9 +39,10 @@ async function writeNamesOfCreatedReferrer(params: {
 	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { record, query } = params
-	const pairs: readonly TupleReferencePair[] | undefined =
-		TUPLE_REFERENCE_PAIRS[record.tagName as keyof typeof TUPLE_REFERENCE_PAIRS]
-	if (!pairs) return []
+	const pairs = pairsWrittenWhenSet({
+		pairs: TUPLE_REFERENCE_PAIRS[record.tagName as keyof typeof TUPLE_REFERENCE_PAIRS] ?? [],
+	})
+	if (pairs.length === 0) return []
 
 	const partsByUuid = new Map<string, TupleTargetParts | undefined>()
 	for (const pair of pairs) {
@@ -103,7 +106,7 @@ async function findReferrersByUuid(params: {
 		referrers: Scl.TrackedRecord<Scl.ElementsOf>[]
 	}[] = []
 	for (const [tagName, tagPairs] of Object.entries(TUPLE_REFERENCE_PAIRS)) {
-		const pairs = tagPairs as readonly TupleReferencePair[]
+		const pairs = pairsWrittenWhenSet({ pairs: tagPairs as readonly TupleReferencePair[] })
 		const referrers = new Map<string, Scl.TrackedRecord<Scl.ElementsOf>>()
 		for (const pair of pairs.filter((pair) => pair.target.includes(record.tagName))) {
 			const named = await query.findByAttributes({

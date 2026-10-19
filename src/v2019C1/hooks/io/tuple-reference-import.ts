@@ -2,6 +2,7 @@ import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { iedNameOf } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-name-of'
 import { TUPLE_ROLES } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
 import { ownIedName } from '@/v2019C1/extensions/reference/query/ied-tuple/own-ied-name'
+import { isWrittenWhenSet } from '@/v2019C1/extensions/reference/query/ied-tuple/pairs-written-when-set'
 import { referrerTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/referrer-tuple-address'
 import { targetKey } from '@/v2019C1/extensions/reference/query/ied-tuple/target-key'
 import { targetTagsOf } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tags-of'
@@ -39,7 +40,8 @@ import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
  *
  * A uuid naming an element the reference cannot point at (a control block of another kind than its
  * service names, an element of another IED than the one an `FCDA` / `ServerAt` / `GSE` / `SMV`
- * names by where it sits) is reported and left as read. A name naming nothing in the file (another
+ * names by where it sits) is reported and left as read; so is a `followsOnly` pair (an LNode's
+ * `lnUuid`) whose names disagree, and such a pair never gets its uuid filled. A name naming nothing in the file (another
  * device, for a file of one device), or naming several elements a reference cannot tell apart, a
  * uuid naming nothing in the file, and names not naming a whole address are left as they are.
  *
@@ -170,7 +172,7 @@ function fillsOf(params: {
 	const { referrer, targetsByAddress } = params
 	const fills: Record<string, string> = {}
 	for (const { pair, address, uuid, targetTags } of referrer.pairs) {
-		if (uuid) continue
+		if (uuid || !isWrittenWhenSet({ pair })) continue
 		const uuids = targetTags.flatMap((tagName) => {
 			const found = targetsByAddress.get(targetKey({ address, tagName }))
 			return found ? [found] : []
@@ -195,7 +197,8 @@ function pairReadingOf(params: {
 	if (!writesItsIed && target.parts.ied !== iedNameOf({ role: ied, record, ancestry }))
 		return 'cannot-follow'
 	if (target.address === address) return 'follows'
-	return 'disagrees'
+	// names another writer gives (an LNode's binding) are compared, never written
+	return isWrittenWhenSet({ pair }) ? 'disagrees' : 'cannot-follow'
 }
 
 /** The patch of a write: its attributes, those it removes, its text; `undefined` when it writes nothing. */

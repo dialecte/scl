@@ -37,6 +37,12 @@ export type TupleReferencePair<Name extends string = string> = {
 	otherwise?: { [Role in TupleRole]?: Name }
 	/** Which of the `target` tags an attribute's value names, when several may answer one address. */
 	targetByAttribute?: { attribute: Name; tags: Readonly<Record<string, string>> }
+	/**
+	 * The names follow a rename or a clone of the target only: when the uuid is first set, another
+	 * writer gives them (an LNode's binding), so creating or importing the referrer leaves its uuid
+	 * and names as written.
+	 */
+	followsOnly?: true
 }
 
 /**

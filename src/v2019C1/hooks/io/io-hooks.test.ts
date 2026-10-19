@@ -1625,6 +1625,138 @@ describe('import of an IED reference named by a tuple', () => {
 })
 
 /**
+ * An LNode names the logical node implementing it by its `lnUuid` and its names, but its binding
+ * writes them (`reconcileLNodeBinding`): the import fills and repairs neither, as for an LNode bound
+ * by its names only.
+ */
+describe('import of an LNode naming the logical node implementing it', () => {
+	function boundLNodeXml(lnode: string): string {
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation ${id}="substation" name="S1">
+					<Function ${id}="function" name="F1">
+						<LNode ${id}="lnode" ${lnode}/>
+					</Function>
+				</Substation>
+				<IED ${id}="p1" name="P1">
+					<AccessPoint ${id}="p1-ap" name="AP1" uuid="p1-ap-uuid">
+						<Server ${id}="p1-server">
+							<LDevice ${id}="p1-ld" inst="LD0" uuid="p1-ld-uuid">
+								<LN0 ${id}="p1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p1-lln0-uuid"/>
+								<LN ${id}="p1-breaker" prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="p1-breaker-uuid"/>
+								<LN ${id}="p1-other-breaker" lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="p1-other-breaker-uuid"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+			</SCL>
+		`
+	}
+
+	const testCases: SclTest.TestCases = {
+		'LNode naming a logical node of the file by its names only -> no lnUuid filled': {
+			sourceXml: boundLNodeXml('iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2"'),
+			expectedQueries: [
+				'//default:LNode[@iedName="P1"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"][not(@lnUuid)]',
+			],
+		},
+
+		'LNode whose lnUuid names Q0XCBR2 and names XCBR1 -> left as read': {
+			sourceXml: boundLNodeXml(
+				'iedName="P1" ldInst="LD0" lnClass="XCBR" lnInst="1" lnUuid="p1-breaker-uuid"',
+			),
+			expectedQueries: [
+				'//default:LNode[@iedName="P1"][not(@prefix)][@lnClass="XCBR"][@lnInst="1"][@lnUuid="p1-breaker-uuid"]',
+			],
+		},
+	}
+
+	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+
+	type WarningCase = {
+		only?: boolean
+		lnode: Record<string, string>
+		expectedWarnings: Pick<IncoherentReferenceWarning, 'type' | 'details'>[]
+	}
+
+	const warningCases: Record<string, WarningCase> = {
+		'LNode whose lnUuid names Q0XCBR2 and names XCBR1 -> one incoherent-reference warning': {
+			lnode: {
+				iedName: 'P1',
+				ldInst: 'LD0',
+				lnClass: 'XCBR',
+				lnInst: '1',
+				lnUuid: 'p1-breaker-uuid',
+			},
+			expectedWarnings: [
+				{
+					type: 'incoherent-reference',
+					details: {
+						elementTag: 'LNode',
+						pathAttribute: 'iedName ldInst prefix lnClass lnInst',
+						pathValue: 'P1/LD0/XCBR1',
+						uuidAttribute: 'lnUuid',
+						uuidValue: 'p1-breaker-uuid',
+					},
+				},
+			],
+		},
+		'LNode whose lnUuid names the logical node its names name -> no warning': {
+			lnode: {
+				iedName: 'P1',
+				ldInst: 'LD0',
+				prefix: 'Q0',
+				lnClass: 'XCBR',
+				lnInst: '2',
+				lnUuid: 'p1-breaker-uuid',
+			},
+			expectedWarnings: [],
+		},
+		'LNode naming a logical node by its names only -> no warning': {
+			lnode: { iedName: 'P1', ldInst: 'LD0', prefix: 'Q0', lnClass: 'XCBR', lnInst: '2' },
+			expectedWarnings: [],
+		},
+	}
+
+	let warningEntries = Object.entries(warningCases)
+	const onlyWarningEntries = warningEntries.filter(([, testCase]) => testCase.only)
+	if (onlyWarningEntries.length) warningEntries = onlyWarningEntries
+
+	warningEntries.forEach(([description, testCase]) => {
+		it(description, async () => {
+			const hooks = createSclIoHooks()
+			const ied = makeRecord('IED', { name: 'P1' })
+			const accessPoint = makeRecord('AccessPoint', { name: 'AP1', uuid: 'p1-ap-uuid' })
+			const server = makeRecord('Server')
+			const lDevice = makeRecord('LDevice', { inst: 'LD0', uuid: 'p1-ld-uuid' })
+			const breaker = makeRecord('LN', {
+				prefix: 'Q0',
+				lnClass: 'XCBR',
+				inst: '2',
+				uuid: 'p1-breaker-uuid',
+			})
+			const otherBreaker = makeRecord('LN', { lnClass: 'XCBR', inst: '1', uuid: 'p1-other-uuid' })
+
+			hooks.beforeImportRecord!({ record: makeRecord('LNode', testCase.lnode), ancestry: [] })
+			hooks.beforeImportRecord!({ record: accessPoint, ancestry: [ied] })
+			hooks.beforeImportRecord!({ record: lDevice, ancestry: [ied, accessPoint, server] })
+			for (const record of [breaker, otherBreaker]) {
+				hooks.beforeImportRecord!({ record, ancestry: [ied, accessPoint, server, lDevice] })
+			}
+
+			const result = await hooks.afterImport!()
+			// the LNode has no LNodeSpecNaming: its derived-specification-naming warning is not the case's
+			const incoherent = (result.warnings ?? []).filter(
+				(warning) => warning.type === 'incoherent-reference',
+			)
+			expect(
+				incoherent.map((warning) => ({ type: warning.type, details: warning.details })),
+			).toEqual(testCase.expectedWarnings)
+		})
+	})
+})
+
+/**
  * A reference of the IED section written with its uuid and with names: when the names name another
  * element than the uuid (or none), the uuid wins and the import reports it.
  */

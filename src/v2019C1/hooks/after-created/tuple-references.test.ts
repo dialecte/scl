@@ -12,15 +12,30 @@ const ns = ALL_XMLNS_NAMESPACES
  * P1 and P2, each with an access point, a logical device and an LN0. P2 holds a GOOSE control block
  * `gcb1` in its LN0, and a logical node `Q0XCBR2` holding a report control block `rcb1`. `inputs`
  * is what P1's LN0 inputs hold, `extras` what follows P2's logical node, `communication` the
- * `Communication` section.
+ * `Communication` section, `functions` what the function `F1` of substation `S1` holds.
  */
 function twoDevices(
-	params: { inputs?: string; extras?: string; communication?: string; registrations?: string } = {},
+	params: {
+		inputs?: string
+		extras?: string
+		communication?: string
+		registrations?: string
+		functions?: string
+	} = {},
 ) {
-	const { inputs = '', extras = '', communication = '', registrations = '' } = params
+	const {
+		inputs = '',
+		extras = '',
+		communication = '',
+		registrations = '',
+		functions = '',
+	} = params
 	return /* xml */ `
 		<SCL ${ns} ${id}="root">
 			<Header id="project"/>
+			<Substation ${id}="substation" name="S1">
+				<Function ${id}="function" name="F1">${functions}</Function>
+			</Substation>
 			${communication}
 			<IED ${id}="p1" name="P1">
 				<AccessPoint ${id}="p1-ap" name="AP1" uuid="p1-ap-uuid">
@@ -247,6 +262,41 @@ describe('afterCreated — tuple references', () => {
 				},
 				expectedQueries: [
 					'//default:ConnectedAP[@apUuid="p2-ap2-uuid"][@iedName="P2"][@apName="AP2"]',
+				],
+			},
+
+		'LNode created with the uuid of a logical node and its specified names → its names left to its binding, no update':
+			{
+				sourceXml: twoDevices(),
+				create: {
+					parent: { tagName: 'Function', id: 'function' },
+					tagName: 'LNode',
+					attributes: { iedName: 'None', lnClass: 'XCBR', lnInst: '1', lnUuid: 'p2-breaker-uuid' },
+				},
+				notUpdated: 'LNode',
+				expectedQueries: [
+					'//default:LNode[@iedName="None"][not(@prefix)][@lnClass="XCBR"][@lnInst="1"][@lnUuid="p2-breaker-uuid"]',
+				],
+			},
+		'LN created after the LNode naming it by uuid → the names of the LNode left to its binding, no update':
+			{
+				sourceXml: twoDevices({
+					functions: `<LNode ${id}="lnode" iedName="None" lnClass="MMXU" lnInst="1" lnUuid="p2-new-ln-uuid"/>`,
+				}),
+				create: {
+					parent: { tagName: 'LDevice', id: 'p2-ld' },
+					tagName: 'LN',
+					attributes: {
+						prefix: 'Q1',
+						lnClass: 'MMXU',
+						inst: '1',
+						lnType: 'MMXU_T',
+						uuid: 'p2-new-ln-uuid',
+					},
+				},
+				notUpdated: 'LNode',
+				expectedQueries: [
+					'//default:LNode[@iedName="None"][not(@prefix)][@lnUuid="p2-new-ln-uuid"]',
 				],
 			},
 	}

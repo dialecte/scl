@@ -21,8 +21,9 @@ import type * as Core from '@dialecte/core'
  * The address a signal of an LNode writes for the element implementing it depends on where that
  * element sits relative to the logical node the LNode is mapped to. When the LNode's binding changes
  * (`lnUuid`, or the naming that stands for it), the address of each of its own signals is written
- * again, from the mapping as `bindingOperations` leave it: the operations `reconcileLNodeBinding`
- * returned, not yet applied.
+ * again, from the mapping as `pendingOperations` leave it: the operations returned before this one,
+ * not yet applied (`reconcileLNodeBinding`'s, or the rename cascade's). A signal one of them updates
+ * is written over that update, so the last update of it keeps everything.
  *
  * This is the one place where an address that cannot be composed (the element has no internal
  * address) is removed rather than left: the stale one would name another place. Everything rebuilt
@@ -33,17 +34,15 @@ export async function reconcileSignalAddresses(
 	params: {
 		oldRecord: Scl.RawRecord<Scl.ElementsOf>
 		newRecord: Scl.RawRecord<Scl.ElementsOf>
-		bindingOperations: readonly Scl.Operation[]
+		pendingOperations: readonly Scl.Operation[]
 	},
 ): Promise<Scl.Operation[]> {
-	const { oldRecord, newRecord, bindingOperations } = params
+	const { oldRecord, newRecord, pendingOperations } = params
 	if (newRecord.tagName !== 'LNode') return []
 	if (!hasAttributeChange({ oldRecord, newRecord, names: LNODE_BINDING_ATTRIBUTES })) return []
 
-	const lnode =
-		bindingOperations.findLast((operation) => operation.newRecord?.id === newRecord.id)
-			?.newRecord ?? newRecord
-	// `lnode` is the LNode as the binding operations leave it, which the transaction has not staged
+	const lnode = pendingRecordOf({ pendingOperations, id: newRecord.id }) ?? newRecord
+	// `lnode` is the LNode as the pending operations leave it, which the transaction has not staged
 	// yet: a read through the query would give the LNode as staged, without the binding
 	const referrerContext = {
 		mappedLnPath: buildMappedLNodePath(readAttributes({ record: lnode, defaults: 'none' })),
@@ -53,7 +52,7 @@ export async function reconcileSignalAddresses(
 	const operations: Scl.Operation[] = []
 	for (const [tagName, pairs] of SIGNAL_ADDRESS_PAIRS_BY_REF) {
 		for (const signal of descendants[tagName as keyof typeof descendants] ?? []) {
-			const record = toRawRecord(signal)
+			const record = pendingRecordOf({ pendingOperations, id: signal.id }) ?? toRawRecord(signal)
 			const reference = { tagName: record.tagName, id: record.id } as Scl.Ref<Scl.ElementsOf>
 			let attributes: AttributeList = record.attributes
 			for (const pair of pairs) {
@@ -73,4 +72,13 @@ export async function reconcileSignalAddresses(
 		}
 	}
 	return operations
+}
+
+/** A record as the last of the pending operations updating it leaves it. */
+function pendingRecordOf(params: {
+	pendingOperations: readonly Scl.Operation[]
+	id: string
+}): Scl.RawRecord<Scl.ElementsOf> | undefined {
+	const { pendingOperations, id } = params
+	return pendingOperations.findLast((operation) => operation.newRecord?.id === id)?.newRecord
 }

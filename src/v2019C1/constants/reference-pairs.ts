@@ -336,8 +336,9 @@ export const UUID_REFERENCE_PAIRS = {
 } as const
 
 /**
- * The references of the IED section that name their target by several attributes (a tuple: the IED,
- * then its logical device, logical node, access point or control block) beside one uuid attribute.
+ * The references that name an element of the IED section by several attributes (a tuple: the IED,
+ * then its logical device, logical node, access point or control block) beside one uuid attribute,
+ * an LNode naming the logical node implementing it among them.
  * The IED is named by an attribute, by the element's text (`IEDName`), by the IED the referrer sits
  * in (`FCDA`, `ServerAt`) or by its parent (`GSE` / `SMV`, by their `ConnectedAP`). A name the
  * referrer leaves out takes its schema value; a control block named without its logical node is in
@@ -465,6 +466,21 @@ export const TUPLE_REFERENCE_PAIRS = {
 				lnClass: 'lnClass',
 				lnInst: 'lnInst',
 			},
+		},
+	],
+	// the logical node implementing the LNode: its binding (`reconcileLNodeBinding`) writes the names
+	LNode: [
+		{
+			attribute: { uuid: 'lnUuid' },
+			target: ['LN', 'LN0'],
+			tuple: {
+				ied: { attribute: 'iedName' },
+				lDevice: 'ldInst',
+				prefix: 'prefix',
+				lnClass: 'lnClass',
+				lnInst: 'lnInst',
+			},
+			followsOnly: true,
 		},
 	],
 	KDC: [

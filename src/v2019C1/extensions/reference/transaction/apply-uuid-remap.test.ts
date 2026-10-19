@@ -115,6 +115,64 @@ describe('applyUuidRemap', () => {
 				],
 				unexpectedQueries: ['//default:FCDA[@lnUuid="src-breaker-uuid"]'],
 			},
+		'cloned LNodes, one cloned with the logical node it is mapped to -> that one bound to the clone, the other kept':
+			{
+				allowIncoherentReferences:
+					'freshly cloned references still carry the uuids of the document they were cloned from',
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="scl-1">
+						<Substation name="S1" ${id}="substation">
+							<Function name="F1" ${id}="function">
+								<LNode ${id}="lnode-with-ln" iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" lnUuid="src-breaker-uuid">
+									<Private type="eIEC61850-6-100" ${id}="lnode-with-ln-private">
+										<eIEC61850-6-100:LNodeSpecNaming ${id}="lnode-with-ln-naming" sPrefix="Q0" sLnClass="XCBR" sLnInst="2"/>
+									</Private>
+								</LNode>
+								<!-- mapped to a logical node the clone does not hold -->
+								<LNode ${id}="lnode-without-ln" iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" lnUuid="src-ptrc-uuid">
+									<Private type="eIEC61850-6-100" ${id}="lnode-without-ln-private">
+										<eIEC61850-6-100:LNodeSpecNaming ${id}="lnode-without-ln-naming" sLnClass="PTRC" sLnInst="1"/>
+									</Private>
+								</LNode>
+							</Function>
+						</Substation>
+						<IED name="P9" ${id}="ied-clone" uuid="ied-clone-uuid">
+							<AccessPoint name="AP1" ${id}="ap-clone" uuid="ap-clone-uuid">
+								<Server ${id}="server-clone">
+									<LDevice inst="LD0" ${id}="ld-clone" uuid="ld-clone-uuid">
+										<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-clone" uuid="lln0-clone-uuid"/>
+										<LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" ${id}="breaker-clone" uuid="breaker-clone-uuid"/>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+					</SCL>
+				`,
+				cloneMappings: [
+					{
+						source: {
+							tagName: 'LN',
+							id: 'breaker-src',
+							attributes: [{ name: 'uuid', value: 'src-breaker-uuid' }],
+						},
+						target: { tagName: 'LN', id: 'breaker-clone' },
+					},
+					{
+						source: { tagName: 'LNode', id: 'lnode-with-ln-src', attributes: [] },
+						target: { tagName: 'LNode', id: 'lnode-with-ln' },
+					},
+					{
+						source: { tagName: 'LNode', id: 'lnode-without-ln-src', attributes: [] },
+						target: { tagName: 'LNode', id: 'lnode-without-ln' },
+					},
+				] as unknown as Scl.CloneMapping[],
+				expectedQueries: [
+					'//default:LNode[@lnUuid="breaker-clone-uuid"][@iedName="P9"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"]',
+					'//default:LNode[@lnUuid="src-ptrc-uuid"][@iedName="P1"][@lnClass="PTRC"]',
+					'//v2019C1:LNodeSpecNaming[@sPrefix="Q0"][@sLnClass="XCBR"][@sLnInst="2"]',
+				],
+				unexpectedQueries: ['//default:LNode[@lnUuid="src-breaker-uuid"]'],
+			},
 		'a cloned IED reference to an element mapped onto an existing one -> repointed, its names those of that element':
 			{
 				allowIncoherentReferences:

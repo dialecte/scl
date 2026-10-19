@@ -157,7 +157,7 @@ describe('link', () => {
 			],
 			unexpectedQueries: ['//default:ExtRef[@extRefUuid or @extRefAddr]'],
 		},
-		'SourceRef linked to the ExtRef of the mapped logical node, its logical device renamed → extRefAddr below the IED (the LNode own ldInst does not follow the rename yet)':
+		'SourceRef linked to the ExtRef of the mapped logical node, its logical device renamed → the LNode follows, extRefAddr stays the bare intAddr':
 			{
 				sourceXml: buildScd({
 					signals: sourceRef(),
@@ -166,7 +166,11 @@ describe('link', () => {
 				afterwards: async (tx) => {
 					await tx.update(REFS.ldB1, { attributes: { inst: 'LD1' } })
 				},
-				expectedQueries: ['//v2019C1:SourceRef[@extRefAddr="LD1/XCBR1.Trip"]'],
+				expectedQueries: [
+					'//default:LNode[@iedName="B1"][@ldInst="LD1"][@lnUuid="uuid-xcbr"]',
+					'//v2019C1:SourceRef[@extRefUuid="uuid-ext-ref"][@extRefAddr="Trip"]',
+				],
+				unexpectedQueries: ['//v2019C1:SourceRef[@extRefAddr="LD1/XCBR1.Trip"]'],
 			},
 		'SourceRef linked while its LNode is not mapped, the LNode then mapped by its names → extRefAddr the bare intAddr':
 			{

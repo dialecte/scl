@@ -76,7 +76,7 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 	const signalAddressOps = await reconcileSignalAddresses(query, {
 		oldRecord: previous,
 		newRecord: current,
-		bindingOperations: lnodeBindingOps,
+		pendingOperations: lnodeBindingOps,
 	})
 	operations.push(...signalAddressOps)
 	operations.push(
@@ -113,6 +113,12 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 		newRecord: current,
 	})
 	operations.push(...tupleOperations)
+	operations.push(
+		...(await reconcileSignalAddressesOfFollowing(query, {
+			followed: tupleOperations,
+			pendingOperations: operations,
+		})),
+	)
 	const dataSetOperations = await followDataSetRename(query, {
 		oldRecord: previous,
 		newRecord: current,
@@ -120,6 +126,30 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 	operations.push(...dataSetOperations)
 
 	return operations
+}
+
+/**
+ * The hooks do not run again on the operations they return: an LNode whose names `followed` a rename
+ * (of the logical node it is mapped to, its logical device or its IED) writes the addresses of its
+ * signals here, from the names it follows to. An address an earlier operation of this hook rebuilt
+ * from the names the LNode had (`pendingOperations`) is written over.
+ */
+async function reconcileSignalAddressesOfFollowing(
+	query: Core.Query<Config>,
+	params: { followed: readonly Scl.Operation[]; pendingOperations: readonly Scl.Operation[] },
+): Promise<Scl.Operation[]> {
+	const { followed, pendingOperations } = params
+	const signalOperations: Scl.Operation[] = []
+	for (const operation of followed) {
+		if (operation.status !== 'updated') continue
+		const addressOperations = await reconcileSignalAddresses(query, {
+			oldRecord: operation.oldRecord,
+			newRecord: operation.newRecord,
+			pendingOperations,
+		})
+		signalOperations.push(...addressOperations)
+	}
+	return signalOperations
 }
 
 /** Whether an attribute the record writes from its own path (a node's `pathName`) was edited. */

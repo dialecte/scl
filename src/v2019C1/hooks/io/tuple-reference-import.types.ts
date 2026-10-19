@@ -47,7 +47,8 @@ export type PendingTupleReferrer = {
  * How a pair holding a uuid naming an element of the file reads against that element: `follows` (its
  * names name it), `disagrees` (its names name another element, or none, and can be written from
  * it), `cannot-follow` (the element is of a kind the reference cannot point at, or in another IED
- * than the one the reference names by where it sits).
+ * than the one the reference names by where it sits, or the names disagree on a `followsOnly` pair,
+ * whose names another writer gives).
  */
 export type TuplePairReading = 'follows' | 'disagrees' | 'cannot-follow'
 

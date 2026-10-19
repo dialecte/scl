@@ -170,7 +170,7 @@ The address (`extRefAddr` / `extCtrlAddr`) is written in the form the element's 
 | anywhere else: the `LNode` is mapped to no IED or to another one, or the logical node is held directly by an access point | the full path `IED/LD/LN.intAddr` | `B1/LD0/XCBR1.Trip` |
 | without an `intAddr`                                                                                                      | none                              |                     |
 
-The logical node the `LNode` is mapped to is read from its naming attributes (`iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst`), which setting its `lnUuid` writes; an `LNode` bound by `lnUuid` does not yet have them follow a rename of the logical device or IED of its logical node, so after such a rename the address is written in the `LD/LN.intAddr` or the full form.
+The logical node the `LNode` is mapped to is read from its naming attributes (`iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst`), which setting its `lnUuid` writes; they follow a rename of that logical node, of its logical device and of its IED, so an element in the logical node the `LNode` is mapped to keeps the bare `intAddr` after such a rename.
 
 The address then follows the renames of the element's own logical device and IED, and the mapping of the `LNode`: mapping, remapping or unmapping it rewrites the addresses of its signals (and removes one that can no longer be written).
 

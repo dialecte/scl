@@ -70,6 +70,41 @@ const twoDevices = /* xml */ `
 	</SCL>
 `
 
+/**
+ * P1's logical node Q0XCBR2 implements the LNode of function F1 (bound by its `lnUuid`) and holds the ExtRef
+ * implementing the LNode's input: the SourceRef names it by its bare internal address.
+ */
+const boundLNode = /* xml */ `
+	<SCL ${ns} ${id}="root">
+		<Substation ${id}="substation" name="S1">
+			<Function ${id}="function" name="F1">
+				<LNode ${id}="lnode" iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" lnUuid="p1-breaker-uuid" uuid="lnode-uuid">
+					<Private ${id}="lnode-private" type="eIEC61850-6-100">
+						<eIEC61850-6-100:LNodeSpecNaming ${id}="lnode-spec-naming" sLdInst="LD0" sPrefix="Q0" sLnClass="XCBR" sLnInst="2"/>
+					</Private>
+					<eIEC61850-6-100:LNodeInputs ${id}="lnode-inputs">
+						<eIEC61850-6-100:SourceRef ${id}="source-ref" input="Trip" extRefUuid="p1-trip-uuid" extRefAddr="Trip"/>
+					</eIEC61850-6-100:LNodeInputs>
+				</LNode>
+			</Function>
+		</Substation>
+		<IED ${id}="p1" name="P1">
+			<AccessPoint ${id}="p1-ap" name="AP1" uuid="p1-ap-uuid">
+				<Server ${id}="p1-server">
+					<LDevice ${id}="p1-ld" inst="LD0" uuid="p1-ld-uuid">
+						<LN0 ${id}="p1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p1-lln0-uuid"/>
+						<LN ${id}="p1-breaker" prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="p1-breaker-uuid">
+							<Inputs ${id}="p1-breaker-inputs">
+								<ExtRef ${id}="p1-trip" intAddr="Trip" uuid="p1-trip-uuid"/>
+							</Inputs>
+						</LN>
+					</LDevice>
+				</Server>
+			</AccessPoint>
+		</IED>
+	</SCL>
+`
+
 describe('tuple references follow a rename', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		rename: {
@@ -200,6 +235,50 @@ describe('tuple references follow a rename', () => {
 				expectedQueries: [
 					'//default:ExtRef[@intAddr="PosReport"][@lnInst="3"][@srcLNInst="3"][@srcCBName="rcb1"]',
 				],
+			},
+
+		'IED renamed -> the LNode bound to its logical node by lnUuid follows, its specified naming kept':
+			{
+				sourceXml: boundLNode,
+				rename: { tagName: 'IED', id: 'p1', attributes: { name: 'P9' } },
+				expectedQueries: [
+					'//default:LNode[@iedName="P9"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"][@lnUuid="p1-breaker-uuid"]',
+					'//v2019C1:LNodeSpecNaming[@sLdInst="LD0"][@sPrefix="Q0"][@sLnClass="XCBR"][@sLnInst="2"]',
+				],
+				unexpectedQueries: ['//default:LNode[@iedName="P1"]'],
+			},
+
+		'logical device renamed -> the LNode bound to its logical node follows, its specified naming kept':
+			{
+				sourceXml: boundLNode,
+				rename: { tagName: 'LDevice', id: 'p1-ld', attributes: { inst: 'LD5' } },
+				expectedQueries: [
+					'//default:LNode[@iedName="P1"][@ldInst="LD5"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"][@lnUuid="p1-breaker-uuid"]',
+					'//v2019C1:LNodeSpecNaming[@sLdInst="LD0"]',
+				],
+			},
+
+		'logical node renumbered -> the LNode bound to it follows, its specified naming kept': {
+			sourceXml: boundLNode,
+			rename: { tagName: 'LN', id: 'p1-breaker', attributes: { inst: '3' } },
+			expectedQueries: [
+				'//default:LNode[@iedName="P1"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="3"][@lnUuid="p1-breaker-uuid"]',
+				'//v2019C1:LNodeSpecNaming[@sLnInst="2"]',
+			],
+		},
+
+		'IED renamed -> the SourceRef of the bound LNode keeps the bare internal address of its ExtRef':
+			{
+				sourceXml: boundLNode,
+				rename: { tagName: 'IED', id: 'p1', attributes: { name: 'P9' } },
+				expectedQueries: ['//v2019C1:SourceRef[@extRefUuid="p1-trip-uuid"][@extRefAddr="Trip"]'],
+			},
+
+		'logical node renumbered -> the SourceRef of the bound LNode keeps the bare internal address of its ExtRef':
+			{
+				sourceXml: boundLNode,
+				rename: { tagName: 'LN', id: 'p1-breaker', attributes: { inst: '3' } },
+				expectedQueries: ['//v2019C1:SourceRef[@extRefUuid="p1-trip-uuid"][@extRefAddr="Trip"]'],
 			},
 	}
 
