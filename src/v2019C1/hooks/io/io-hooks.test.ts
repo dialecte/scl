@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { Scl, SCL_NAMESPACES } from '@/v2019C1/config'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
-import type { DerivedSpecificationNamingWarning } from '@/v2019C1'
+import type { DerivedSpecificationNamingWarning, IncoherentReferenceWarning } from '@/v2019C1'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 import type { AnyRawRecord } from '@dialecte/core'
 
@@ -1225,16 +1225,26 @@ describe('import of paths through an LNode bound to an IED', () => {
 })
 
 describe('import of an IED reference named by a tuple', () => {
-	/** P1 subscribes to P2: P2 publishes gcb1 from its LLN0 and holds Q0XCBR2; both on subnetwork W1. */
+	/**
+	 * P1 subscribes to P2: P2 publishes gcb1 from the LLN0 of LD0, holds Q0XCBR2 in LD0 and XCBR1 in
+	 * LD1; both on subnetwork W1.
+	 */
 	function twoDevicesXml(
 		params: {
 			subscriber?: string
 			communication?: string
 			subscribers?: string
 			reportControls?: string
+			dataSets?: string
 		} = {},
 	): string {
-		const { subscriber = '', communication = '', subscribers = '', reportControls = '' } = params
+		const {
+			subscriber = '',
+			communication = '',
+			subscribers = '',
+			reportControls = '',
+			dataSets = '',
+		} = params
 		return /* xml */ `
 			<SCL ${ns} ${id}="root">
 				<Header id="project"/>
@@ -1265,12 +1275,17 @@ describe('import of an IED reference named by a tuple', () => {
 									<DataSet ${id}="p2-dataset" name="ds1">
 										<FCDA ${id}="p2-fcda" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" fc="ST"/>
 									</DataSet>
+									${dataSets}
 									<GSEControl ${id}="p2-gcb" name="gcb1" appID="gcb1" datSet="ds1" uuid="p2-gcb-uuid">
 										${subscribers}
 									</GSEControl>
 									${reportControls}
 								</LN0>
 								<LN ${id}="p2-breaker" prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="p2-breaker-uuid"/>
+							</LDevice>
+							<LDevice ${id}="p2-ld1" inst="LD1" uuid="p2-ld1-uuid">
+								<LN0 ${id}="p2-ld1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p2-ld1-lln0-uuid"/>
+								<LN ${id}="p2-ld1-breaker" lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="p2-ld1-breaker-uuid"/>
 							</LDevice>
 						</Server>
 					</AccessPoint>
@@ -1355,7 +1370,185 @@ describe('import of an IED reference named by a tuple', () => {
 			expectedQueries: ['//default:ExtRef[@intAddr="Trip.general"][not(@lnUuid)][not(@srcCBUuid)]'],
 		},
 
-		'ConnectedAP already holding a uuid -> left as written': {
+		'ExtRef whose lnUuid names another LN than its names -> the uuid wins, its names written from that LN':
+			{
+				allowIncoherentReferences:
+					'a reference whose uuid and names disagree is what is under test',
+				sourceXml: twoDevicesXml({
+					subscriber: /* xml */ `
+						<Inputs ${id}="p1-inputs">
+							<ExtRef ${id}="p1-ext-ref" iedName="P1" ldInst="LD0" lnClass="LLN0" lnUuid="p2-breaker-uuid" doName="Pos" intAddr="Pos"/>
+						</Inputs>
+					`,
+				}),
+				expectedQueries: [
+					'//default:ExtRef[@iedName="P2"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"][@lnUuid="p2-breaker-uuid"]',
+				],
+			},
+
+		'ConnectedAP whose apUuid names another access point than apName -> apName written from it': {
+			allowIncoherentReferences: 'a reference whose uuid and names disagree is what is under test',
+			sourceXml: twoDevicesXml({
+				communication: `<ConnectedAP ${id}="p1-connected-ap" iedName="P1" apName="AP2" apUuid="p1-ap-uuid"/>`,
+			}),
+			expectedQueries: [
+				'//default:ConnectedAP[@iedName="P1"][@apName="AP1"][@apUuid="p1-ap-uuid"]',
+			],
+		},
+
+		'ConnectedAP whose apUuid names the access point its names name -> left as written': {
+			sourceXml: twoDevicesXml({
+				communication: `<ConnectedAP ${id}="p2-connected-ap" iedName="P2" apName="AP1" apUuid="p2-ap-uuid"/>`,
+			}),
+			expectedQueries: [
+				'//default:ConnectedAP[@iedName="P2"][@apName="AP1"][@apUuid="p2-ap-uuid"]',
+			],
+		},
+
+		'ExtRef whose lnUuid moves it to LD1, its srcCBUuid naming the gcb1 of LD0 -> ldInst written, srcLDInst written to keep the control block':
+			{
+				allowIncoherentReferences:
+					'a reference whose uuid and names disagree is what is under test',
+				sourceXml: twoDevicesXml({
+					subscriber: /* xml */ `
+						<Inputs ${id}="p1-inputs">
+							<ExtRef ${id}="p1-ext-ref" iedName="P2" ldInst="LD0" lnClass="XCBR" lnInst="1" doName="Pos" serviceType="GOOSE" srcCBName="gcb1" lnUuid="p2-ld1-breaker-uuid" srcCBUuid="p2-gcb-uuid" intAddr="Pos"/>
+						</Inputs>
+					`,
+				}),
+				expectedQueries: [
+					'//default:ExtRef[@ldInst="LD1"][@lnUuid="p2-ld1-breaker-uuid"][@srcLDInst="LD0"][@srcCBName="gcb1"][@srcCBUuid="p2-gcb-uuid"]',
+				],
+			},
+
+		'ExtRef whose lnUuid moves it to LD1, its control block named without uuid -> srcCBUuid of the gcb1 its names name, srcLDInst written to keep it':
+			{
+				allowIncoherentReferences:
+					'a reference whose uuid and names disagree is what is under test',
+				sourceXml: twoDevicesXml({
+					subscriber: /* xml */ `
+						<Inputs ${id}="p1-inputs">
+							<ExtRef ${id}="p1-ext-ref" iedName="P2" ldInst="LD0" lnClass="XCBR" lnInst="1" doName="Pos" serviceType="GOOSE" srcCBName="gcb1" lnUuid="p2-ld1-breaker-uuid" intAddr="Pos"/>
+						</Inputs>
+					`,
+				}),
+				expectedQueries: [
+					'//default:ExtRef[@ldInst="LD1"][@lnUuid="p2-ld1-breaker-uuid"][@srcLDInst="LD0"][@srcCBName="gcb1"][@srcCBUuid="p2-gcb-uuid"]',
+				],
+			},
+
+		'ExtRef whose lnUuid names an LN of P1 and srcCBUuid a control block of P2 -> left as written (one iedName cannot name both)':
+			{
+				allowIncoherentReferences:
+					'a reference whose uuid and names disagree is what is under test',
+				sourceXml: twoDevicesXml({
+					subscriber: /* xml */ `
+						<Inputs ${id}="p1-inputs">
+							<ExtRef ${id}="p1-ext-ref" iedName="P2" ldInst="LD1" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcCBName="gcb1" lnUuid="p1-lln0-uuid" srcCBUuid="p2-gcb-uuid" intAddr="Beh"/>
+						</Inputs>
+					`,
+				}),
+				expectedQueries: [
+					'//default:ExtRef[@iedName="P2"][@ldInst="LD1"][@lnClass="LLN0"][not(@srcLDInst)][@lnUuid="p1-lln0-uuid"][@srcCBName="gcb1"][@srcCBUuid="p2-gcb-uuid"]',
+				],
+			},
+
+		'GOOSE ExtRef moved to LD1 by its lnUuid, its srcCBUuid naming a report control block -> left as written (its control block names would move)':
+			{
+				allowIncoherentReferences:
+					'a reference whose uuid and names disagree is what is under test',
+				sourceXml: twoDevicesXml({
+					reportControls: `<ReportControl ${id}="p2-rcb" name="rcb1" confRev="1" uuid="p2-rcb-uuid"/>`,
+					subscriber: /* xml */ `
+						<Inputs ${id}="p1-inputs">
+							<ExtRef ${id}="p1-ext-ref" iedName="P2" ldInst="LD0" lnClass="XCBR" lnInst="1" doName="Pos" serviceType="GOOSE" srcCBName="gcb1" lnUuid="p2-ld1-breaker-uuid" srcCBUuid="p2-rcb-uuid" intAddr="Pos"/>
+						</Inputs>
+					`,
+				}),
+				expectedQueries: [
+					'//default:ExtRef[@ldInst="LD0"][not(@srcLDInst)][@srcCBName="gcb1"][@srcCBUuid="p2-rcb-uuid"][@lnUuid="p2-ld1-breaker-uuid"]',
+				],
+			},
+
+		'GOOSE ExtRef moved to LD1 by its lnUuid, its control block named gcbZ (nothing in the file) -> left as written (its control block names would move)':
+			{
+				allowIncoherentReferences:
+					'a reference whose uuid and names disagree is what is under test',
+				sourceXml: twoDevicesXml({
+					subscriber: /* xml */ `
+						<Inputs ${id}="p1-inputs">
+							<ExtRef ${id}="p1-ext-ref" iedName="P2" ldInst="LD0" lnClass="XCBR" lnInst="1" doName="Pos" serviceType="GOOSE" srcCBName="gcbZ" lnUuid="p2-ld1-breaker-uuid" intAddr="Pos"/>
+						</Inputs>
+					`,
+				}),
+				expectedQueries: [
+					'//default:ExtRef[@ldInst="LD0"][not(@srcLDInst)][@srcCBName="gcbZ"][not(@srcCBUuid)][@lnUuid="p2-ld1-breaker-uuid"]',
+				],
+			},
+
+		'GOOSE ExtRef whose srcCBUuid names a report control block -> left as written': {
+			allowIncoherentReferences: 'a reference whose uuid and names disagree is what is under test',
+			sourceXml: twoDevicesXml({
+				reportControls: `<ReportControl ${id}="p2-rcb" name="rcb1" confRev="1" uuid="p2-rcb-uuid"/>`,
+				subscriber: /* xml */ `
+					<Inputs ${id}="p1-inputs">
+						<ExtRef ${id}="p1-ext-ref" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" serviceType="GOOSE" srcCBName="gcb1" srcCBUuid="p2-rcb-uuid" intAddr="Pos"/>
+					</Inputs>
+				`,
+			}),
+			expectedQueries: ['//default:ExtRef[@srcCBName="gcb1"][@srcCBUuid="p2-rcb-uuid"]'],
+		},
+
+		'FCDA of P2 whose lnUuid names an LN of P1 -> left as written (its IED is the one it sits in)':
+			{
+				allowIncoherentReferences:
+					'a reference whose uuid and names disagree is what is under test',
+				sourceXml: twoDevicesXml({
+					dataSets: /* xml */ `
+						<DataSet ${id}="p2-dataset-2" name="ds2">
+							<FCDA ${id}="p2-fcda-2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" fc="ST" lnUuid="p1-lln0-uuid"/>
+						</DataSet>
+					`,
+				}),
+				expectedQueries: [
+					'//default:FCDA[@lnUuid="p1-lln0-uuid"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"]',
+				],
+			},
+
+		'ConnectedAP whose apUuid names a logical node -> left as written': {
+			allowIncoherentReferences:
+				'a reference whose uuid names an element it cannot point at is what is under test',
+			sourceXml: twoDevicesXml({
+				communication: `<ConnectedAP ${id}="p1-connected-ap" iedName="P1" apName="AP9" apUuid="p2-breaker-uuid"/>`,
+			}),
+			expectedQueries: ['//default:ConnectedAP[@iedName="P1"][@apName="AP9"]'],
+		},
+
+		'ExtRef of P1 written iedName @ whose lnUuid names its own LLN0 -> @ kept, prefix and lnInst removed':
+			{
+				allowIncoherentReferences:
+					'a reference whose uuid and names disagree is what is under test',
+				sourceXml: twoDevicesXml({
+					subscriber: /* xml */ `
+						<Inputs ${id}="p1-inputs">
+							<ExtRef ${id}="p1-ext-ref" iedName="@" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Beh" lnUuid="p1-lln0-uuid" intAddr="Beh"/>
+						</Inputs>
+					`,
+				}),
+				expectedQueries: [
+					'//default:ExtRef[@iedName="@"][@ldInst="LD0"][@lnClass="LLN0"][not(@prefix)][not(@lnInst)][@lnUuid="p1-lln0-uuid"]',
+				],
+			},
+
+		'IEDName whose apUuid names the access point of P2, its text P1 -> text written P2': {
+			allowIncoherentReferences: 'a reference whose uuid and names disagree is what is under test',
+			sourceXml: twoDevicesXml({
+				subscribers: `<IEDName ${id}="subscriber" apRef="AP1" apUuid="p2-ap-uuid">P1</IEDName>`,
+			}),
+			expectedQueries: ['//default:IEDName[@apUuid="p2-ap-uuid"][text()="P2"]'],
+		},
+
+		'ConnectedAP holding a uuid that names nothing in the file -> left as written': {
 			allowIncoherentReferences: 'the uuid names no element of the file: what the import keeps',
 			sourceXml: twoDevicesXml({
 				communication: `<ConnectedAP ${id}="p2-connected-ap" iedName="P2" apName="AP1" apUuid="kept-uuid"/>`,
@@ -1416,6 +1609,211 @@ describe('import of an IED reference named by a tuple', () => {
 	}
 
 	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+})
+
+/**
+ * A reference of the IED section written with its uuid and with names: when the names name another
+ * element than the uuid (or none), the uuid wins and the import reports it.
+ */
+describe('import warning for an IED reference whose uuid and names disagree', () => {
+	type TestCase = {
+		only?: boolean
+		/** Where the referrer sits: nowhere (default), in an `Inputs` of P1, in a `DataSet` of P2. */
+		referrer: { tagName: string; attributes: Record<string, string>; in?: 'p1' | 'p2' }
+		expectedWarnings: Pick<IncoherentReferenceWarning, 'type' | 'details'>[]
+	}
+
+	const testCases: Record<string, TestCase> = {
+		'ExtRef whose lnUuid names XCBR2 and names LLN0 -> one incoherent-reference warning': {
+			referrer: {
+				tagName: 'ExtRef',
+				attributes: { iedName: 'P2', ldInst: 'LD0', lnClass: 'LLN0', lnUuid: 'xcbr-uuid' },
+			},
+			expectedWarnings: [
+				{
+					type: 'incoherent-reference',
+					details: {
+						elementTag: 'ExtRef',
+						pathAttribute: 'iedName ldInst prefix lnClass lnInst',
+						pathValue: 'P2/LD0/LLN0',
+						uuidAttribute: 'lnUuid',
+						uuidValue: 'xcbr-uuid',
+					},
+				},
+			],
+		},
+		'ConnectedAP whose apUuid names AP1 and apName AP2 -> one incoherent-reference warning': {
+			referrer: {
+				tagName: 'ConnectedAP',
+				attributes: { iedName: 'P2', apName: 'AP2', apUuid: 'ap-uuid' },
+			},
+			expectedWarnings: [
+				{
+					type: 'incoherent-reference',
+					details: {
+						elementTag: 'ConnectedAP',
+						pathAttribute: 'iedName apName',
+						pathValue: 'P2/AP2',
+						uuidAttribute: 'apUuid',
+						uuidValue: 'ap-uuid',
+					},
+				},
+			],
+		},
+		'ConnectedAP whose apUuid names nothing in the file -> no warning': {
+			referrer: {
+				tagName: 'ConnectedAP',
+				attributes: { iedName: 'P2', apName: 'AP2', apUuid: 'elsewhere-uuid' },
+			},
+			expectedWarnings: [],
+		},
+		'ConnectedAP whose apUuid names the access point its names name -> no warning': {
+			referrer: {
+				tagName: 'ConnectedAP',
+				attributes: { iedName: 'P2', apName: 'AP1', apUuid: 'ap-uuid' },
+			},
+			expectedWarnings: [],
+		},
+		'ExtRef whose lnUuid names an LN of P1, srcCBUuid a control block of P2 -> one warning, for lnUuid':
+			{
+				referrer: {
+					tagName: 'ExtRef',
+					in: 'p1',
+					attributes: {
+						iedName: 'P2',
+						ldInst: 'LD0',
+						lnClass: 'LLN0',
+						lnUuid: 'p1-lln0-uuid',
+						serviceType: 'GOOSE',
+						srcCBName: 'gcb1',
+						srcCBUuid: 'gcb-uuid',
+					},
+				},
+				expectedWarnings: [
+					{
+						type: 'incoherent-reference',
+						details: {
+							elementTag: 'ExtRef',
+							pathAttribute: 'iedName ldInst prefix lnClass lnInst',
+							pathValue: 'P2/LD0/LLN0',
+							uuidAttribute: 'lnUuid',
+							uuidValue: 'p1-lln0-uuid',
+						},
+					},
+				],
+			},
+		'GOOSE ExtRef whose srcCBUuid names a report control block -> one warning, for srcCBUuid': {
+			referrer: {
+				tagName: 'ExtRef',
+				in: 'p1',
+				attributes: {
+					iedName: 'P2',
+					ldInst: 'LD0',
+					prefix: 'Q0',
+					lnClass: 'XCBR',
+					lnInst: '2',
+					lnUuid: 'xcbr-uuid',
+					serviceType: 'GOOSE',
+					srcCBName: 'gcb1',
+					srcCBUuid: 'rcb-uuid',
+				},
+			},
+			expectedWarnings: [
+				{
+					type: 'incoherent-reference',
+					details: {
+						elementTag: 'ExtRef',
+						pathAttribute: 'iedName srcLDInst srcPrefix srcLNClass srcLNInst srcCBName',
+						pathValue: 'P2/LD0/LLN0.gcb1',
+						uuidAttribute: 'srcCBUuid',
+						uuidValue: 'rcb-uuid',
+					},
+				},
+			],
+		},
+		'FCDA of P2 whose lnUuid names an LN of P1 -> one warning': {
+			referrer: {
+				tagName: 'FCDA',
+				in: 'p2',
+				attributes: {
+					ldInst: 'LD0',
+					prefix: 'Q0',
+					lnClass: 'XCBR',
+					lnInst: '2',
+					doName: 'Pos',
+					fc: 'ST',
+					lnUuid: 'p1-lln0-uuid',
+				},
+			},
+			expectedWarnings: [
+				{
+					type: 'incoherent-reference',
+					details: {
+						elementTag: 'FCDA',
+						pathAttribute: 'ldInst prefix lnClass lnInst',
+						pathValue: 'P2/LD0/Q0XCBR2',
+						uuidAttribute: 'lnUuid',
+						uuidValue: 'p1-lln0-uuid',
+					},
+				},
+			],
+		},
+	}
+
+	let entries = Object.entries(testCases)
+	const onlyEntries = entries.filter(([, testCase]) => testCase.only)
+	if (onlyEntries.length) entries = onlyEntries
+
+	entries.forEach(([description, testCase]) => {
+		it(description, async () => {
+			const hooks = createSclIoHooks()
+			const ied = makeRecord('IED', { name: 'P2' })
+			const accessPoint = makeRecord('AccessPoint', { name: 'AP1', uuid: 'ap-uuid' })
+			const server = makeRecord('Server')
+			const lDevice = makeRecord('LDevice', { inst: 'LD0', uuid: 'ld-uuid' })
+			const ln0 = makeRecord('LN0', { lnClass: 'LLN0', inst: '', uuid: 'lln0-uuid' })
+			const breaker = makeRecord('LN', {
+				prefix: 'Q0',
+				lnClass: 'XCBR',
+				inst: '2',
+				uuid: 'xcbr-uuid',
+			})
+			const p2LogicalNode = [ied, accessPoint, server, lDevice, ln0]
+			const p1 = makeRecord('IED', { name: 'P1' })
+			const p1AccessPoint = makeRecord('AccessPoint', { name: 'AP1', uuid: 'p1-ap-uuid' })
+			const p1LDevice = makeRecord('LDevice', { inst: 'LD0', uuid: 'p1-ld-uuid' })
+			const p1Ln0 = makeRecord('LN0', { lnClass: 'LLN0', inst: '', uuid: 'p1-lln0-uuid' })
+			const p1LogicalNode = [p1, p1AccessPoint, makeRecord('Server'), p1LDevice, p1Ln0]
+			const referrerAncestry = {
+				p1: [...p1LogicalNode, makeRecord('Inputs')],
+				p2: [...p2LogicalNode, makeRecord('DataSet', { name: 'ds2' })],
+			}
+
+			hooks.beforeImportRecord!({
+				record: makeRecord(testCase.referrer.tagName, testCase.referrer.attributes),
+				ancestry: testCase.referrer.in ? referrerAncestry[testCase.referrer.in] : [],
+			})
+			hooks.beforeImportRecord!({ record: accessPoint, ancestry: [ied] })
+			hooks.beforeImportRecord!({ record: lDevice, ancestry: [ied, accessPoint, server] })
+			hooks.beforeImportRecord!({ record: ln0, ancestry: [ied, accessPoint, server, lDevice] })
+			hooks.beforeImportRecord!({ record: breaker, ancestry: [ied, accessPoint, server, lDevice] })
+			hooks.beforeImportRecord!({
+				record: makeRecord('GSEControl', { name: 'gcb1', uuid: 'gcb-uuid' }),
+				ancestry: p2LogicalNode,
+			})
+			hooks.beforeImportRecord!({
+				record: makeRecord('ReportControl', { name: 'rcb1', uuid: 'rcb-uuid' }),
+				ancestry: p2LogicalNode,
+			})
+			hooks.beforeImportRecord!({ record: p1LDevice, ancestry: p1LogicalNode.slice(0, 3) })
+			hooks.beforeImportRecord!({ record: p1Ln0, ancestry: p1LogicalNode.slice(0, 4) })
+
+			const result = await hooks.afterImport!()
+			expect(
+				result.warnings?.map((warning) => ({ type: warning.type, details: warning.details })) ?? [],
+			).toEqual(testCase.expectedWarnings)
+		})
+	})
 })
 
 /**

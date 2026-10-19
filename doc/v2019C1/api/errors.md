@@ -67,6 +67,8 @@ The import reports warnings instead of refusing a file. Their type is exported a
 | `data-path-not-split`          | a reference written with the path of an LNode could not be given the data-object name a data reference by uuid carries: it is left as read, without the uuid | `elementTag`, `pathAttribute`, `pathValue`                               |
 | `derived-specification-naming` | an LNode bound to an IED had no `LNodeSpecNaming`: it got one from the LN it is bound to (prefix, class, instance)                                           | `iedName`, `specifiedNaming`                                             |
 
+For a reference of the IED section named by attributes ([`TUPLE_REFERENCE_PAIRS`](../extensions/reference#references-of-the-ied-section-named-by-their-attributes)), an `incoherent-reference` warning gives in `pathAttribute` the attributes naming the target, space-separated (`iedName ldInst prefix lnClass lnInst`), and in `pathValue` what they named (`P1/LD0/LLN0`). Its names are written from the element the uuid names, unless that element is one the reference cannot point at (another tag, such as a logical node for an `apUuid`; another kind of control block than its service; another IED than the one it names by where it sits) or no names can name every uuid it holds and keep its other names: it is then left as read.
+
 Each member is exported under its own name, to narrow a warning by its `type`: `UnresolvedReferenceWarning`, `UnsupportedXPathWarning`, `IncoherentReferenceWarning`, `IncoherentPathNamesWarning` (each attribute an `IncoherentPathName`), `DataPathNotSplitWarning`, `DerivedSpecificationNamingWarning`.
 
 ## Identity warnings

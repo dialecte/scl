@@ -14,8 +14,10 @@ export const SCL_IMPORT_WARNINGS = {
 		message: 'A reference is written in a form that is not resolved',
 	},
 	/**
-	 * A reference whose path and whose uuid name two different elements: the uuid wins, the path is
-	 * written from the element it names.
+	 * A reference whose path (its names, for one of the IED section named by attributes) and whose
+	 * uuid name two different elements: the uuid wins, the path or names are written from the
+	 * element it names. A reference of the IED section is left as read when that element is one it
+	 * cannot point at, or when no names can name every uuid it holds and keep its other names.
 	 */
 	'incoherent-reference': {
 		message: 'A reference names one element by its path and another by its uuid',

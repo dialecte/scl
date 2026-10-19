@@ -20,7 +20,12 @@ export function targetTupleAddress(params: {
 	ancestry: readonly AnyRawRecord[]
 }): string | undefined {
 	const parts = targetTupleParts(params)
-	if (!parts) return undefined
+	return parts ? tupleAddressOf({ parts }) : undefined
+}
+
+/** The address an IED-section element is named by, from its parts (see `targetTupleParts`). */
+export function tupleAddressOf(params: { parts: TupleTargetParts }): string | undefined {
+	const { parts } = params
 	const { kind, ied, lDevice, accessPoint, controlBlock } = parts
 	switch (kind) {
 		case 'ap':

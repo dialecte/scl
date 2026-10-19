@@ -243,7 +243,9 @@ export function createSclIoHooks(): IOHooks {
 		warnings.push(...mappedData.warnings)
 		updates.push(...specNaming.updates)
 		warnings.push(...specNaming.warnings)
-		updates.push(...tupleReferenceImport.resolve().updates)
+		const tupleReferences = tupleReferenceImport.resolve()
+		updates.push(...tupleReferences.updates)
+		warnings.push(...tupleReferences.warnings)
 
 		mappedDataImport = createMappedDataImport()
 		specNamingImport = createSpecNamingImport()

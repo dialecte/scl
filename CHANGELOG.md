@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Fixed
+
+- **On import, the uuid of a reference of the IED section named by attributes wins over its names.** A `ConnectedAP`, `ExtRef`, `FCDA`, `ClientLN`, `GSE` / `SMV`, `IEDName`... whose uuid names another element than its names (an `ExtRef` with `lnUuid` naming `Q0XCBR2` and `lnClass="LLN0"`, a `ConnectedAP` with `apUuid` naming `AP1` and `apName="AP2"`), or whose names name nothing, was kept as read. Its names are now written from the element its uuid names, only those that differ, with an `incoherent-reference` warning, as for the references named by a path. The names are written once for the whole reference, from every uuid it holds or was just given, so an `ExtRef` moved to another logical device by its `lnUuid` keeps naming its control block (`srcLDInst` is then written when it was left to `ldInst`); when no names can name every uuid and keep the other names (an `lnUuid` and a `srcCBUuid` in two IEDs, a control block named without uuid that would move with the logical device), it is left as read, with the warning. A uuid naming an element of another tag (an `apUuid` naming a logical node), a control block of another kind than the `serviceType`, or an element of another IED than the one an `FCDA`, `ServerAt`, `GSE` or `SMV` names by where it sits, is reported and left as read. A uuid naming no element of the file still leaves the reference as read.
+
 ## [0.10.0] - 2026-10-19
 
 ### Added
