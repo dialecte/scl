@@ -1318,6 +1318,19 @@ describe('import of an IED reference named by a tuple', () => {
 				],
 			},
 
+		'ExtRef polling its data, a control block named beside -> lnUuid filled, no srcCBUuid': {
+			sourceXml: twoDevicesXml({
+				subscriber: /* xml */ `
+					<Inputs ${id}="p1-inputs">
+						<ExtRef ${id}="p1-ext-ref" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" serviceType="Poll" srcLDInst="LD0" srcCBName="gcb1" intAddr="Pos"/>
+					</Inputs>
+				`,
+			}),
+			expectedQueries: [
+				'//default:ExtRef[@serviceType="Poll"][@lnUuid="p2-breaker-uuid"][@srcCBName="gcb1"][not(@srcCBUuid)]',
+			],
+		},
+
 		'GSE of a ConnectedAP naming a control block of its device -> its cbUuid filled': {
 			sourceXml: twoDevicesXml({
 				communication: /* xml */ `
@@ -1727,6 +1740,35 @@ describe('import warning for an IED reference whose uuid and names disagree', ()
 						pathValue: 'P2/LD0/LLN0.gcb1',
 						uuidAttribute: 'srcCBUuid',
 						uuidValue: 'rcb-uuid',
+					},
+				},
+			],
+		},
+		'Poll ExtRef whose srcCBUuid names a control block -> one warning, for srcCBUuid': {
+			referrer: {
+				tagName: 'ExtRef',
+				in: 'p1',
+				attributes: {
+					iedName: 'P2',
+					ldInst: 'LD0',
+					prefix: 'Q0',
+					lnClass: 'XCBR',
+					lnInst: '2',
+					lnUuid: 'xcbr-uuid',
+					serviceType: 'Poll',
+					srcCBName: 'gcb1',
+					srcCBUuid: 'gcb-uuid',
+				},
+			},
+			expectedWarnings: [
+				{
+					type: 'incoherent-reference',
+					details: {
+						elementTag: 'ExtRef',
+						pathAttribute: 'iedName srcLDInst srcPrefix srcLNClass srcLNInst srcCBName',
+						pathValue: 'P2/LD0/LLN0.gcb1',
+						uuidAttribute: 'srcCBUuid',
+						uuidValue: 'gcb-uuid',
 					},
 				},
 			],

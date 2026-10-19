@@ -5,7 +5,8 @@ import type { AnyRawRecord } from '@dialecte/core'
 
 /**
  * The tags a reference may point at: the one its own attribute names when the pair says which
- * attribute does (an `ExtRef`'s service names the kind of its control block), else every target.
+ * attribute does (an `ExtRef`'s service names the kind of its control block), none when that
+ * attribute names no target (a `Poll` names no control block), every target when it is left out.
  */
 export function targetTagsOf(params: {
 	pair: TupleReferencePair
@@ -19,6 +20,7 @@ export function targetTagsOf(params: {
 		defaults: 'none',
 		fullObject: true,
 	})?.value
-	const named = value === undefined ? undefined : pair.targetByAttribute.tags[value]
-	return named ? [named] : pair.target
+	if (value === undefined) return pair.target
+	const named = pair.targetByAttribute.tags[value]
+	return named ? [named] : []
 }

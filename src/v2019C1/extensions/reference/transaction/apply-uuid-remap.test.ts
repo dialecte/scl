@@ -281,6 +281,65 @@ describe('applyUuidRemap', () => {
 				expectedQueries: ['//default:ExtRef[@lnUuid="project-breaker-uuid"][@iedName="P3"]'],
 				unexpectedQueries: ['//default:ExtRef[@iedName="@"]'],
 			},
+		'cloned ClientLN, Association and ExtRef whose logical node is mapped onto an LN0 -> lnInst exported empty where the schema requires it, left out of the ExtRef':
+			{
+				allowIncoherentReferences:
+					'the cloned reference still carries the uuid and the names of the document it was cloned from',
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="scl-1">
+						<IED name="P2" ${id}="ied-p2" uuid="ied-p2-uuid">
+							<AccessPoint name="AP1" ${id}="ap-p2" uuid="ap-p2-uuid">
+								<Server ${id}="server-p2">
+									<LDevice inst="LD0" ${id}="ld-p2" uuid="ld-p2-uuid">
+										<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-p2" uuid="lln0-p2-uuid">
+											<ReportControl name="rcb1" confRev="1" ${id}="rcb-p2" uuid="rcb-p2-uuid">
+												<RptEnabled ${id}="rpt-enabled-p2">
+													<ClientLN ${id}="client-clone" iedName="P1" apRef="AP1" ldInst="LD0" lnClass="IHMI" lnInst="1" lnUuid="src-hmi-uuid"/>
+												</RptEnabled>
+											</ReportControl>
+											<Inputs ${id}="inputs-p2">
+												<ExtRef ${id}="extref-clone" iedName="P1" ldInst="LD0" lnClass="IHMI" lnInst="1" doName="Beh" lnUuid="src-hmi-uuid" intAddr="Beh"/>
+											</Inputs>
+										</LN0>
+									</LDevice>
+									<Association ${id}="association-clone" kind="predefined" apRef="AP1" iedName="P1" ldInst="LD0" lnClass="IHMI" lnInst="1" lnUuid="src-hmi-uuid"/>
+								</Server>
+							</AccessPoint>
+						</IED>
+						<IED name="P3" ${id}="ied-p3" uuid="ied-p3-uuid">
+							<AccessPoint name="AP1" ${id}="ap-p3" uuid="ap-p3-uuid">
+								<Server ${id}="server-p3">
+									<LDevice inst="LD0" ${id}="ld-p3" uuid="ld-p3-uuid">
+										<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" ${id}="lln0-project" uuid="project-lln0-uuid"/>
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+					</SCL>
+				`,
+				cloneMappings: [
+					{
+						source: { tagName: 'ClientLN', id: 'client-src', attributes: [] },
+						target: { tagName: 'ClientLN', id: 'client-clone' },
+					},
+					{
+						source: { tagName: 'Association', id: 'association-src', attributes: [] },
+						target: { tagName: 'Association', id: 'association-clone' },
+					},
+					{
+						source: { tagName: 'ExtRef', id: 'extref-src', attributes: [] },
+						target: { tagName: 'ExtRef', id: 'extref-clone' },
+					},
+				] as unknown as Scl.CloneMapping[],
+				redirectMappings: [
+					{ sourceUuid: 'src-hmi-uuid', target: { tagName: 'LN0', id: 'lln0-project' } },
+				],
+				expectedQueries: [
+					'//default:ClientLN[@lnUuid="project-lln0-uuid"][@iedName="P3"][@ldInst="LD0"][@lnClass="LLN0"][@lnInst=""]',
+					'//default:Association[@lnUuid="project-lln0-uuid"][@iedName="P3"][@ldInst="LD0"][@lnClass="LLN0"][@lnInst=""]',
+					'//default:ExtRef[@lnUuid="project-lln0-uuid"][@iedName="P3"][@ldInst="LD0"][@lnClass="LLN0"][not(@lnInst)]',
+				],
+			},
 		'a cloned ref to an element mapped onto an existing one → repointed to that element, uuid and path':
 			{
 				allowIncoherentReferences:

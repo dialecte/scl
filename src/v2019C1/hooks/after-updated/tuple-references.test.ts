@@ -34,6 +34,8 @@ const twoDevices = /* xml */ `
 								<ExtRef ${id}="p1-report" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" lnUuid="p2-breaker-uuid" srcLDInst="LD0" srcPrefix="Q0" srcLNClass="XCBR" srcLNInst="2" srcCBName="rcb1" srcCBUuid="p2-rcb-uuid" serviceType="Report" intAddr="PosReport"/>
 								<!-- written by a tool that set the names only: the import fills its lnUuid -->
 								<ExtRef ${id}="p1-names-only" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="BlkOpn" intAddr="BlkOpn"/>
+								<!-- polling its data: the control block named beside is none it subscribes to -->
+								<ExtRef ${id}="p1-poll" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" lnUuid="p2-breaker-uuid" srcLDInst="LD0" srcCBName="gcb1" serviceType="Poll" intAddr="PosPoll"/>
 							</Inputs>
 						</LN0>
 					</LDevice>
@@ -165,6 +167,13 @@ describe('tuple references follow a rename', () => {
 				'//default:GSE[@cbName="gcb9"][@cbUuid="p2-gcb-uuid"]',
 				'//default:ExtRef[@intAddr="Pos"][@srcCBName="gcb9"][not(@srcLNClass)]',
 			],
+		},
+
+		'control block renamed -> an ExtRef polling data, naming it beside, does not follow': {
+			sourceXml: twoDevices,
+			rename: { tagName: 'GSEControl', id: 'p2-gcb', attributes: { name: 'gcb9' } },
+			notUpdated: ['p1-poll'],
+			expectedQueries: ['//default:ExtRef[@intAddr="PosPoll"][@srcCBName="gcb1"][not(@srcCBUuid)]'],
 		},
 
 		'data set renamed -> the control block publishing it follows': {

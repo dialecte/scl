@@ -10,6 +10,7 @@ import {
 	IED_NAME_B2,
 	iedB2WithExtRef,
 	iedNameB1,
+	POLL_EXT_REF,
 	REFS,
 	sourceRef,
 	subscribedExtRef,
@@ -107,6 +108,16 @@ describe('subscribersOf', () => {
 			sourceXml: buildScd({
 				receiverLogicalNodes: xcbrWithExtRef(EXT_REF_BY_REPORT),
 				controlBlocks: `${GOOSE_CONTROL_BLOCK}${REPORT_CONTROL_BLOCK}`,
+			}),
+			controlBlock: REFS.gcb1,
+			expectedRegistrations: [{ element: REFS.iedNameB1, names: 'ap' }],
+			expectedElements: [],
+			expectedDataflows: [],
+		},
+		'ExtRef polling its data, gcb1 named beside → not an element of gcb1': {
+			sourceXml: buildScd({
+				receiverLogicalNodes: xcbrWithExtRef(`${POLL_EXT_REF} srcLDInst="LD0" srcCBName="gcb1"`),
+				controlBlocks: GOOSE_CONTROL_BLOCK,
 			}),
 			controlBlock: REFS.gcb1,
 			expectedRegistrations: [{ element: REFS.iedNameB1, names: 'ap' }],
