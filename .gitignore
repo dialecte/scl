@@ -46,6 +46,10 @@ AGENTS.md
 
 .vitepress/dist
 .vitepress/cache
+# real-file corpus: synced from the Test System V2 folder, never published (see its README)
+src/v2019C1/test/fixtures/corpus/*
+!src/v2019C1/test/fixtures/corpus/README.md
+
 # the IEC schema files: synced from their source, never published (see their README)
 src/v2019C1/test/fixtures/xsd/*
 !src/v2019C1/test/fixtures/xsd/README.md

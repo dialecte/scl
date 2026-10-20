@@ -36,6 +36,8 @@
 		"doc:preview": "vitepress preview",
 		"//====== TEST ======//": "",
 		"test": "vitest",
+		"test:corpus": "vitest --project corpus",
+		"corpus:sync": "tsx scripts/sync-corpus-v2.ts",
 		"xsd:sync": "tsx scripts/sync-xsd.ts",
 		"//====== CHECK ======//": "",
 		"check": "run-p type-check type-check:test lint:check format:check",
