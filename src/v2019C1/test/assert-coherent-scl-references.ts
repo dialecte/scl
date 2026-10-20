@@ -77,10 +77,11 @@ function describeIncoherentReferences(params: { xml: string; label: string }): s
 	const { xml, label } = params
 	const violations = collectReferenceViolations({ xml })
 	if (violations.length === 0) return undefined
-	return `${label}: incoherent references:\n  ${violations.map(describeViolation).join('\n  ')}`
+	return `${label}: incoherent references:\n  ${violations.map(describeReferenceViolation).join('\n  ')}`
 }
 
-function describeViolation(violation: ReferenceViolation): string {
+/** One violation as one line: `[kind] <element> what is wrong`. */
+export function describeReferenceViolation(violation: ReferenceViolation): string {
 	const reference = `<${violation.kind === 'derived' ? violation.elementTagName : violation.referenceTagName}>`
 	switch (violation.kind) {
 		case 'path':

@@ -36,6 +36,7 @@
 		"doc:preview": "vitepress preview",
 		"//====== TEST ======//": "",
 		"test": "vitest",
+		"xsd:sync": "tsx scripts/sync-xsd.ts",
 		"//====== CHECK ======//": "",
 		"check": "run-p type-check type-check:test lint:check format:check",
 		"type-check": "tsc -p tsconfig.build.json --noEmit",
@@ -66,6 +67,7 @@
 		"@vitest/browser-playwright": "^4.1.10",
 		"husky": "^9.1.7",
 		"jiti": "^2.4.2",
+		"libxml2-wasm": "0.7.2",
 		"npm-run-all2": "^8.0.4",
 		"oxfmt": "^0.66.0",
 		"oxlint": "^1.81.0",
@@ -79,5 +81,17 @@
 		"vitepress-mermaid-renderer": "^1.1.21",
 		"vitepress-plugin-llms": "^1.13.1",
 		"vitest": "^4.1.10"
+	},
+	"peerDependencies": {
+		"libxml2-wasm": "^0.7.2",
+		"vitest": "^4.1.10"
+	},
+	"peerDependenciesMeta": {
+		"libxml2-wasm": {
+			"optional": true
+		},
+		"vitest": {
+			"optional": true
+		}
 	}
 }

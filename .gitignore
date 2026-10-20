@@ -46,3 +46,7 @@ AGENTS.md
 
 .vitepress/dist
 .vitepress/cache
+# the IEC schema files: synced from their source, never published (see their README)
+src/v2019C1/test/fixtures/xsd/*
+!src/v2019C1/test/fixtures/xsd/README.md
+!src/v2019C1/test/fixtures/xsd/use-fixture-schemas.setup.ts

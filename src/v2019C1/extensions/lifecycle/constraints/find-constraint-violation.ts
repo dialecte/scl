@@ -42,18 +42,31 @@ export async function readConstraintScope(
 	const { parentRef, childTag } = params
 
 	const parentDefinition = await query.getDefinition(parentRef)
-	const constraints = (parentDefinition?.constraints ?? []).filter(
-		(constraint) =>
-			(constraint.kind === 'unique' || constraint.kind === 'key') &&
-			fieldsOf(constraint).length > 0 &&
-			selectsChild({ constraint, tag: childTag }),
-	)
+	const constraints = constraintsSelecting({ parentDefinition, childTag })
 	if (constraints.length === 0) return { constraints, children: [] }
 
 	// direct children via the parent's tree (staged-aware: reflects siblings added earlier in the
 	// same transaction, unlike the parent record's cached children)
 	const tree = await query.any.getTree(parentRef)
 	return { constraints, children: tree?.tree ?? [] }
+}
+
+/**
+ * The uniqueness constraints declared on a parent (as its definition reads where it sits) that compare the
+ * `childTag` children it holds directly: unique and key constraints of one child step, on attributes. Pure: a
+ * caller walking a tree it already holds builds each {@link ConstraintScope} from it without a read.
+ */
+export function constraintsSelecting(params: {
+	parentDefinition: Pick<Core.ResolvedDefinition, 'constraints'> | undefined
+	childTag: string
+}): Core.IdentityConstraint[] {
+	const { parentDefinition, childTag } = params
+	return (parentDefinition?.constraints ?? []).filter(
+		(constraint) =>
+			(constraint.kind === 'unique' || constraint.kind === 'key') &&
+			fieldsOf(constraint).length > 0 &&
+			selectsChild({ constraint, tag: childTag }),
+	)
 }
 
 /** The first constraint of `scope` the `candidate` breaks, or `null`. Pure. */
