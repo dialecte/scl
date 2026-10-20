@@ -1,5 +1,5 @@
 ---
-description: Test helpers for @dialecte/scl v2019C1 — createSclTestProject, runSclTestCases, XML assertions, and namespace constants.
+description: Test helpers for @dialecte/scl v2019C1 — createSclTestProject, runSclTestCases, the checks of fixtures and of the documents a test leaves, XML assertions, and namespace constants.
 ---
 
 # Test Helpers
@@ -15,6 +15,8 @@ import {
 	assertUnexpectedElementQueries,
 	assertValidSclXml,
 	assertCoherentSclReferences,
+	collectSclOutputViolations,
+	assertNoNewSclOutputViolations,
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 } from '@dialecte/scl/v2019C1/test'
@@ -151,8 +153,18 @@ Lower-level helper for tests that need manual control over intermediate assertio
 async function createSclTestProject(params: {
 	sourceXml: string
 	targetXml?: string
+	dev?: { perf?: boolean }
+	/** Why the fixtures need an incoherent reference: they are then left unchecked. */
+	allowIncoherentReferences?: string
+	/** Why the test leaves a document a real file could not be: the documents are then left unchecked. */
+	allowInvalidOutput?: string
 }): Promise<SclTest.TestProjectResult>
 ```
+
+Call it inside a test. The test owns the project until it finishes; then the documents it leaves are checked (see
+[The documents a test leaves are checked too](#the-documents-a-test-leaves-are-checked-too)) and the project is
+destroyed. Do not call `project.destroy()` yourself: the check needs the project, and the destroy happens whatever it
+finds.
 
 The returned `TestProjectResult` shape:
 
@@ -171,7 +183,7 @@ import {
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 } from '@dialecte/scl/v2019C1/test'
 
-const { project, source } = await createSclTestProject({
+const { source } = await createSclTestProject({
 	sourceXml: `
 		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="s1">
@@ -181,15 +193,11 @@ const { project, source } = await createSclTestProject({
 	`,
 })
 
-try {
-	const vls = await source.document.query.getChildren(
-		{ tagName: 'Substation', id: 's1' },
-		'VoltageLevel',
-	)
-	expect(vls).toHaveLength(1)
-} finally {
-	await project.destroy()
-}
+const vls = await source.document.query.getChildren(
+	{ tagName: 'Substation', id: 's1' },
+	'VoltageLevel',
+)
+expect(vls).toHaveLength(1)
 ```
 
 Use `runSclTestCases` when the test fits the standard source → act → assert shape. Use `createSclTestProject` directly when:
@@ -299,7 +307,7 @@ How failures are reported:
 - `runSclTestCases` checks **every** case of the suite before it runs and fails once, listing the violations of all invalid cases, each attributed to its case name and to `sourceXml` / `targetXml` — a suite's fixtures are fixed in one round;
 - an XML declaration (`<?xml … ?>`) that is not the very first characters of the string is malformed XML. A template-literal snippet starts with a newline, so drop the declaration from inline fixtures — the message says so instead of relaying the parser's error.
 
-Not enforced (planned with the validation feature): attribute value facets (uuid pattern, enums) and cross-element constraints (unique keys, keyref resolution).
+Not enforced on fixtures: attribute value facets (uuid pattern, enums) and cross-element constraints (unique keys, keyref resolution). The documents a test leaves are held to them (see [The documents a test leaves are checked too](#the-documents-a-test-leaves-are-checked-too)).
 
 Required-attribute completeness is checked by `assertValidSclXml` unless `{ requireComplete: false }` is passed. `createSclTestProject` and `runSclTestCases` pass `false` for their fixtures, so a minimal fixture may omit e.g. the `<SCL>` `version` / `revision` / `release`:
 
@@ -357,22 +365,145 @@ import { assertCoherentSclReferences } from '@dialecte/scl/v2019C1/test'
 assertCoherentSclReferences({ xml, label: 'my snippet' })
 ```
 
+## The documents a test leaves are checked too
+
+`runSclTestCases.withExport` / `.withoutExport` and `createSclTestProject` check the source and target documents
+after the test wrote them: a case whose act leaves a document a real SCL file could not be fails, with one error
+listing every violation under its case and document (`my case › target: the document left is not a valid SCL file:`).
+The check runs after `act`, before the runner exports for `expectedQueries`; for `createSclTestProject`, when the test
+finishes. An `act` that throws keeps its own error, and a test that failed already is not checked.
+
+Each document is exported and checked, in this order (`SCL_OUTPUT_CHECK`):
+
+- **schema** — the structural check the fixtures pass (namespace per context, allowed child, known attribute);
+- **xsd** — the XSD validator (libxml2, `libxml2-wasm`, run in the test's browser) against the SCL schema and the
+  6-100 schema: value patterns and enumerations, required attributes and children, unique keys and key references.
+  This is the verdict. The schema files are not shipped with the package (see
+  [Set up the schema check](#set-up-the-schema-check)); when the core validation covers the same ground, it replaces
+  the validator behind the same function;
+- **uniqueness** — two children of one parent with one key, for the unique and key constraints the parent declares (a
+  `BehaviorDescription` holding two `InputVar varName="in1"`, two `LNode` of one function with one identity);
+- **references** — the reference check the fixtures pass (dangling, wrong-target, path, empty);
+- **identity** — a uuid used twice, a `templateUuid` shared by elements of two types or naming another type.
+
+Only what the test **added** fails it. The violations of each document are read before the act and compared with
+those after it by a key without record ids or positions (for the validator, without the list of what it expected
+there, which changes with the siblings); a second copy of a violation the input held is new. A violation another
+document of the project held before the act — the fixture the act copied from, a template imported during the act —
+is carried, not added, once per copy it held: a second copy is new, and a violation the act writes into both the
+source and the target is reported in both.
+
+A test document is read as a hand-made one: a document without a `Header` is given one before the validator runs
+(without it the validator checks nothing past the root's first child), and a value the schema refuses as a uuid is
+read as a test uuid when it is written in lowercase letters, digits and dashes (`function-source-uuid`, the runner's
+counter `0`, `1`, `2`...), or when a document of the project writes it as a uuid (`CB_APP`): the document itself before
+the act, or another document before or after it. Any other value refused as a uuid (a name with a capital, a path) is
+reported.
+
+### Set up the schema check
+
+The validator and the test runner are optional peer dependencies of `@dialecte/scl`: a package using the test helpers
+installs them as dev dependencies.
+
+```sh
+npm install -D libxml2-wasm vitest
+```
+
+The IEC schema files (`SCL_XSD_FILE_NAMES`: the SCL schema of the 2007 C5 edition with its parts, and the 6-100
+schema) are not shipped either: their licence is the IEC's (this package's own tests sync them, uncommitted, from the
+create package's copy with `npm run xsd:sync`). Keep a copy in the package and say where it is, once, in a
+setup file of the vitest project (`test.setupFiles`), before any test validates. Either a URL the test's browser
+fetches each file from, or a loader giving their texts by file name:
+
+```ts
+// vitest.setup.ts
+import { configureSclXsdSchemas } from '@dialecte/scl/v2019C1/test'
+
+configureSclXsdSchemas({
+	async load() {
+		const files = import.meta.glob<string>('./schemas/*.xsd', { query: '?raw', import: 'default' })
+		const texts: Record<string, string> = {}
+		for (const [path, load] of Object.entries(files)) {
+			texts[path.slice(path.lastIndexOf('/') + 1)] = await load()
+		}
+		return texts
+	},
+})
+// or: configureSclXsdSchemas({ baseUrl: '/schemas' })
+```
+
+The schemas are read and parsed the first time a test validates. A configured source that lacks a schema file, or a
+missing `libxml2-wasm`, fails the first check and says what is missing.
+
+**Without schemas** (none configured: a fresh clone or a CI without the IEC files) the XSD validator does not run and
+nothing fails for that reason: the other four checks run, `collectSclOutputViolations` reports which checks ran
+(`checks`, without `xsd`), `isSclXsdConfigured()` says so, and a failure says it was
+`checked without the XSD validator`. This package's own runs print one line saying the schemas are absent.
+
+### A case that leaves an invalid document
+
+A case that leaves an invalid document on purpose (an orphan the clean-up under test removes later, a bare element a
+hook test creates to see what the hook writes) says why, and which violations it may leave: a check, and a kind within
+it (`code`) when it names one. Only those are tolerated: any other violation the case adds still fails it, and a
+tolerated violation it no longer leaves (for a check that ran) fails it too, so the opt-out goes when the case is
+fixed. An empty reason or list is refused when the suite is registered:
+
+```ts
+const testCases: SclTest.TestCases<TestCase> = {
+	'Terminal with a cNodeUuid naming no node → left as given': {
+		allowInvalidOutput: {
+			reason: 'the terminal names no node on purpose',
+			violations: [{ check: 'references', code: 'dangling' }],
+		},
+		sourceXml: /* xml */ `…`,
+	},
+}
+```
+
+The codes (`SclOutputTolerance`): `schema` `namespace` / `containment` / `attribute`; `xsd` one of `SCL_XSD_CODE`
+(`pattern`, `value`, `missing-child`, `unexpected-child`, `required-attribute`, `unknown-attribute`, `duplicate-key`,
+`keyref`, `other`); `uniqueness` the constraint name; `references` `dangling` / `wrong-target` / `path` / `empty` /
+`derived`; `identity` the warning code (`duplicate-instance-uuid`...). `createSclTestProject` takes the same
+`allowInvalidOutput` parameter. When the fixture only lacks a part (a `Header`, a required child), complete it rather
+than opting out.
+
+`collectSclOutputViolations({ project, document })` reports the violations of one document and the checks that ran
+(pass `asTestDocument: true` to read it as a hand-made one), and `assertNoNewSclOutputViolations({ before, after,
+carried, checks, label, allowInvalidOutput })` throws with those `after` adds to `before`:
+
+```ts
+import {
+	assertNoNewSclOutputViolations,
+	collectSclOutputViolations,
+} from '@dialecte/scl/v2019C1/test'
+
+const before = await collectSclOutputViolations({ project, document: target.document })
+// … the act …
+const after = await collectSclOutputViolations({ project, document: target.document })
+assertNoNewSclOutputViolations({
+	before: before.violations,
+	after: after.violations,
+	checks: after.checks,
+	label: 'my case › target',
+})
+```
+
 ---
 
 ## SclTest type namespace
 
 All types are bound to the SCL dialecte config via the `SclTest` namespace:
 
-| Type                        | Description                                                                                          |
-| --------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `SclTest.BaseTestCase`      | `{ only?: boolean }` - minimal base for non-XML tests (e.g. `runSclTestCases.generic`)               |
-| `SclTest.BaseXmlTestCase`   | `BaseTestCase & { sourceXml, targetXml?, expectedQueries?, unexpectedQueries? }` - XML tests         |
-| `SclTest.TestCases<T>`      | `Record<string, T>` - key is the test description. Defaults to `BaseXmlTestCase`                     |
-| `SclTest.TestDocument`      | `{ documentId: string, document: Scl.Document }` - pre-opened document inside the test project       |
-| `SclTest.TestProjectResult` | `{ project, source: TestDocument, target?: TestDocument }` - returned by `createSclTestProject`      |
-| `SclTest.ActParams<T>`      | `{ project, source, target?, testCase }` - passed to `act`                                           |
-| `SclTest.ActResult`         | `{ assertOn?: 'source' \| 'target', withDatabaseIds?: boolean }` - returned by `act` in `withExport` |
-| `SclTest.TestRunner`        | Runner type bound to SCL config                                                                      |
+| Type                        | Description                                                                                                                                   |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SclTest.BaseTestCase`      | `{ only?: boolean }` - minimal base for non-XML tests (e.g. `runSclTestCases.generic`)                                                        |
+| `SclTest.BaseXmlTestCase`   | `BaseTestCase & { sourceXml, targetXml?, expectedQueries?, unexpectedQueries?, allowIncoherentReferences?, allowInvalidOutput? }` - XML tests |
+| `SclTest.TestCases<T>`      | `Record<string, T>` - key is the test description. Defaults to `BaseXmlTestCase`                                                              |
+| `SclTest.TestDocument`      | `{ documentId: string, document: Scl.Document }` - pre-opened document inside the test project                                                |
+| `SclTest.TestProjectResult` | `{ project, source: TestDocument, target?: TestDocument }` - returned by `createSclTestProject`                                               |
+| `SclTest.ActParams<T>`      | `{ project, source, target?, testCase }` - passed to `act`                                                                                    |
+| `SclTest.ActResult`         | `{ assertOn?: 'source' \| 'target', withDatabaseIds?: boolean }` - returned by `act` in `withExport`                                          |
+| `SclTest.TestRunner`        | Runner type bound to SCL config                                                                                                               |
 
 `TestCases<T>` accepts any type extending `BaseTestCase` - use `BaseTestCase` for non-XML generic tests, `BaseXmlTestCase` for XML round-trip tests:
 
