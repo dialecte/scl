@@ -56,7 +56,11 @@ describe('ensureTopologyFrame - reproduces the source topology frame by name (me
 			sourceXml,
 			scopeTag: 'Substation',
 			scopeId: 'sub-1',
-			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="scl-tgt">
+					<Header id="target"/>
+				</SCL>
+			`,
 			expectedQueries: [
 				// structural frame reproduced by name
 				'//default:Substation[@name="S1"]',
@@ -91,7 +95,11 @@ describe('ensureTopologyFrame - reproduces the source topology frame by name (me
 					),
 				scopeTag: 'Substation',
 				scopeId: 'sub-1',
-				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				targetXml: /* xml */ `
+					<SCL ${ns} ${id}="scl-tgt">
+						<Header id="target"/>
+					</SCL>
+				`,
 				expectedQueries: [
 					`//default:Bay[@name="B1"][@*[namespace-uri()="${ESLD}" and local-name()="h"]="12"]`,
 					`//default:ConductingEquipment[@name="QA1"][@*[namespace-uri()="${ESLD}" and local-name()="x"]="3"]`,

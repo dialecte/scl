@@ -49,7 +49,11 @@ describe('writeProvenance', () => {
 					<Header id="h" uuid="doc-uuid" version="3" revision="C" ${ID}="hdr-1"/>
 					<Substation name="S1" ${ID}="sub-1">
 						<Private type="eIEC61850-6-100" ${ID}="priv-1">
-							<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="app-uuid" ${ID}="app-1"/>
+							<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="app-uuid" ${ID}="app-1">
+								<eIEC61850-6-100:FunctionRole name="Operator" ${ID}="role-1">
+									<eIEC61850-6-100:FunctionRoleContent ${ID}="role-content-1"/>
+								</eIEC61850-6-100:FunctionRole>
+							</eIEC61850-6-100:Application>
 						</Private>
 					</Substation>
 				</SCL>

@@ -180,18 +180,14 @@ describe('the references of a signal role are relative to their Function', () =>
 
 describe('a relative signal role path resolves through the query', () => {
 	it('an LNodeInputRef holding only "PTRC1/Trip" -> its SourceRef', async () => {
-		const { project, source } = await createSclTestProject({ sourceXml: functionXml() })
-		try {
-			await source.document.transaction(async (tx) => {
-				const inputRef = await tx.addChild(
-					{ tagName: 'SignalRole', id: 'signal-role' },
-					{ tagName: 'LNodeInputRef', namespace: v2019C1, attributes: { sourceRef: 'PTRC1/Trip' } },
-				)
-				const resolved = await resolveReferencePath(tx, inputRef as never, 'sourceRef')
-				expect(resolved?.record.id).toBe('source-ref')
-			})
-		} finally {
-			await project.destroy()
-		}
+		const { source } = await createSclTestProject({ sourceXml: functionXml() })
+		await source.document.transaction(async (tx) => {
+			const inputRef = await tx.addChild(
+				{ tagName: 'SignalRole', id: 'signal-role' },
+				{ tagName: 'LNodeInputRef', namespace: v2019C1, attributes: { sourceRef: 'PTRC1/Trip' } },
+			)
+			const resolved = await resolveReferencePath(tx, inputRef as never, 'sourceRef')
+			expect(resolved?.record.id).toBe('source-ref')
+		})
 	})
 })

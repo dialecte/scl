@@ -96,7 +96,11 @@ describe('cloneTopologyContent - composes the application layer into a self-cont
 	const testCases: SclTest.TestCases<TestCase> = {
 		"a Bay's Application and its composed Function are both gathered into the target structure": {
 			sourceXml,
-			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="scl-tgt">
+					<Header id="target"/>
+				</SCL>
+			`,
 			expectedQueries: [
 				// the Application is cloned under the (TEMPLATE) Bay
 				'//default:Bay//v2019C1:Application[@name="CB"]',
@@ -110,7 +114,11 @@ describe('cloneTopologyContent - composes the application layer into a self-cont
 
 		'equipment and a standalone Function under the Bay are gathered': {
 			sourceXml: equipmentSourceXml,
-			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="scl-tgt">
+					<Header id="target"/>
+				</SCL>
+			`,
 			expectedQueries: [
 				// the Bay's own equipment travels (topology content)
 				'//default:Bay/default:ConductingEquipment[@name="QA1"]',
@@ -123,7 +131,11 @@ describe('cloneTopologyContent - composes the application layer into a self-cont
 
 		'a ConnectivityNode under the Bay is carried alongside equipment': {
 			sourceXml: connectivitySourceXml,
-			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="scl-tgt">
+					<Header id="target"/>
+				</SCL>
+			`,
 			expectedQueries: [
 				// equipment travels with its nested Terminal
 				'//default:Bay/default:ConductingEquipment[@name="QA1"]/default:Terminal[@cNodeName="CN1"]',

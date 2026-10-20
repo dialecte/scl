@@ -59,6 +59,15 @@ const sourceXml = /* xml */ `
 	</SCL>
 `
 
+// the same application with a second role, so that removing ROOT leaves the application a role
+const twoRolesSourceXml = sourceXml.replace(
+	'</eIEC61850-6-100:FunctionRole>',
+	`</eIEC61850-6-100:FunctionRole>
+					<eIEC61850-6-100:FunctionRole name="OPERATOR" ${id}="fr-operator-s">
+						<eIEC61850-6-100:FunctionRoleContent ${id}="frc-operator-s"/>
+					</eIEC61850-6-100:FunctionRole>`,
+)
+
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
 		<Substation name="S1" ${id}="sub-t">
@@ -77,10 +86,11 @@ describe('update.asd (engine: instantiate-or-reconcile, application layer)', () 
 			preInstantiate: true,
 			mutate: async (tx) => {
 				await tx.update(applicationRef, { attributes: { type: 'DCS2' } })
-				await tx.addChild(applicationRef, {
+				const role = await tx.addChild(applicationRef, {
 					tagName: 'FunctionRole',
 					attributes: { name: 'ROLE2' },
 				})
+				await tx.addChild(role, { tagName: 'FunctionRoleContent', attributes: {} })
 			},
 			expectedQueries: [
 				// the change lands on the SAME lineage-linked Application (updated in place)
@@ -146,14 +156,17 @@ describe('update.asd (engine: instantiate-or-reconcile, application layer)', () 
 		},
 
 		'deletes a role removed from the template': {
-			sourceXml,
+			sourceXml: twoRolesSourceXml,
 			targetXml,
 			preInstantiate: true,
 			mutate: async (tx) => {
 				await tx.delete({ tagName: 'FunctionRole', id: 'fr-s' } as Scl.Ref<'FunctionRole'>)
 			},
-			expectedQueries: ['//v2019C1:Application[@name="HMI"][@templateUuid="app-src-uuid"]'],
-			unexpectedQueries: ['//v2019C1:Application[@name="HMI"]/v2019C1:FunctionRole'],
+			expectedQueries: [
+				'//v2019C1:Application[@name="HMI"][@templateUuid="app-src-uuid"]',
+				'//v2019C1:Application[@name="HMI"]/v2019C1:FunctionRole[@name="OPERATOR"]',
+			],
+			unexpectedQueries: ['//v2019C1:Application[@name="HMI"]/v2019C1:FunctionRole[@name="ROOT"]'],
 		},
 
 		'instantiates fresh when the target holds no Application yet (first-time = update auto)': {
@@ -219,7 +232,10 @@ describe('update.asd — returns the applied instance roots', () => {
 	})
 
 	it('gate: a matched instance whose groups are all skipped is not returned in applications', async () => {
-		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		const { source, target } = await createSclTestProject({
+			sourceXml,
+			targetXml,
+		})
 		if (!target) throw new Error('target required')
 
 		// one existing instance to reconcile against
@@ -232,10 +248,11 @@ describe('update.asd — returns the applied instance roots', () => {
 		})
 		// the newer ASD adds a role, so there is exactly one diff group to skip
 		await source.document.transaction(async (tx) => {
-			await tx.addChild(applicationRef, {
+			const role = await tx.addChild(applicationRef, {
 				tagName: 'FunctionRole',
 				attributes: { name: 'ROLE2' },
 			})
+			await tx.addChild(role, { tagName: 'FunctionRoleContent', attributes: {} })
 		})
 
 		const rep = await report(target.document.query, {

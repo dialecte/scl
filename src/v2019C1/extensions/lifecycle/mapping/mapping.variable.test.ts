@@ -482,6 +482,11 @@ describe('shared-element mapping — a behaviour description documenting a logic
 	const testCases: SclTest.TestCases<BehaviourTestCase> = {
 		'one behaviour description of that name in the project → report and apply both map onto it, and it keeps what it had':
 			{
+				allowInvalidOutput: {
+					reason:
+						'mapping a behaviour description onto the project one of its name merges its inputs into it: two inputs with one variable name',
+					violations: [{ check: 'xsd', code: 'duplicate-key' }],
+				},
 				sourceXml: behaviourSourceXml,
 				targetXml: behaviourProjectXml,
 				expected: {

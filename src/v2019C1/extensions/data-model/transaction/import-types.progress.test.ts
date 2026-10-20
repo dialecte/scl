@@ -36,11 +36,11 @@ const SOURCE_XML = /* xml */ `
 	</SCL>
 `
 
-const EMPTY_TARGET = `<SCL ${ns} ${id}="scl-t"></SCL>`
+const EMPTY_TARGET = `<SCL ${ns} ${id}="scl-t"><Header id="target"/></SCL>`
 
 describe('importTypes — progress instrumentation', () => {
 	it('reports a fine step over the source-type loop and captions each type', async () => {
-		const { project, source, target } = await createSclTestProject({
+		const { source, target } = await createSclTestProject({
 			sourceXml: SOURCE_XML,
 			targetXml: EMPTY_TARGET,
 		})
@@ -67,7 +67,5 @@ describe('importTypes — progress instrumentation', () => {
 		expect(stepTotals).toContain(3)
 		// Each type is captioned by its id as the loop advances.
 		expect(labels.some((l) => l.includes('BehaviourModeKind'))).toBe(true)
-
-		await project.destroy()
 	})
 })

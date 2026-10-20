@@ -69,7 +69,7 @@ describe('asd — referenced satellites are not duplicated/misplaced (#1796)', (
 							</eIEC61850-6-100:Application>
 						</Private>
 						<Function ${id}="func1" name="Func" uuid="func-uuid">
-							<LNode ${id}="lnode1" iedName="None" lnType="ELIA_IHMI" uuid="lnode-uuid">
+							<LNode ${id}="lnode1" iedName="None" lnClass="IHMI" lnInst="1" lnType="ELIA_IHMI" uuid="lnode-uuid">
 								<Private ${id}="lnode-priv" type="eIEC61850-6-100">
 									<eIEC61850-6-100:LNodeInputs ${id}="lni1">
 										<eIEC61850-6-100:SourceRef ${id}="sref1" input="Op" inputInst="1" pDA="general" pDO="Op" pLN="PTOC" uuid="srcref1-uuid"/>

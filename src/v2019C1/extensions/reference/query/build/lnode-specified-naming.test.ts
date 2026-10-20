@@ -188,24 +188,20 @@ describe('an LNode is named in paths by its specified naming', () => {
 
 describe('a path naming an LNode by its specified naming resolves', () => {
 	it('a ControlRef holding only "S1/F1/XCBR1.Pos" -> the bound breaker, qualifier Pos', async () => {
-		const { project, source } = await createSclTestProject({ sourceXml: boundBreakerXml })
-		try {
-			await source.document.transaction(async (tx) => {
-				const outputs = await tx.addChild(
-					{ tagName: 'LNode', id: 'controller' },
-					{ tagName: 'LNodeOutputs', namespace: v2019C1, attributes: {} },
-				)
-				const controlRef = await tx.addChild(outputs, {
-					tagName: 'ControlRef',
-					namespace: v2019C1,
-					attributes: { output: 'Oper', controlled: 'S1/F1/XCBR1.Pos' },
-				})
-				const resolved = await resolveReferencePath(tx, controlRef as never, 'controlled')
-				expect(resolved?.record.id).toBe('breaker')
-				expect(resolved?.qualifier).toBe('Pos')
+		const { source } = await createSclTestProject({ sourceXml: boundBreakerXml })
+		await source.document.transaction(async (tx) => {
+			const outputs = await tx.addChild(
+				{ tagName: 'LNode', id: 'controller' },
+				{ tagName: 'LNodeOutputs', namespace: v2019C1, attributes: {} },
+			)
+			const controlRef = await tx.addChild(outputs, {
+				tagName: 'ControlRef',
+				namespace: v2019C1,
+				attributes: { output: 'Oper', controlled: 'S1/F1/XCBR1.Pos' },
 			})
-		} finally {
-			await project.destroy()
-		}
+			const resolved = await resolveReferencePath(tx, controlRef as never, 'controlled')
+			expect(resolved?.record.id).toBe('breaker')
+			expect(resolved?.qualifier).toBe('Pos')
+		})
 	})
 })

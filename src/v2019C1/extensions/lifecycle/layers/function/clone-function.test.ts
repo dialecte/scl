@@ -87,7 +87,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Function ${id}="func1" name="HMI Function" uuid="func-uuid">
 								<SubFunction ${id}="subfunc1" name="HMI" uuid="subfunc-uuid">
-									<LNode ${id}="lnode1" iedName="None" lnType="ELIA_IHMI" uuid="lnode-uuid">
+									<LNode ${id}="lnode1" iedName="None" lnClass="IHMI" lnInst="1" lnType="ELIA_IHMI" uuid="lnode-uuid">
 										<Private ${id}="lnode-priv" type="eIEC61850-6-100">
 											<eIEC61850-6-100:LNodeSpecNaming ${id}="lnsn1" sIedName="HMI" sLdInst="LD" sLnClass="IHMI" sLnInst="1"/>
 										</Private>
@@ -177,7 +177,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Function ${id}="func-parent" name="Parent" uuid="parent-uuid">
 								<SubFunction ${id}="subfunc1" name="Child" uuid="child-uuid">
-									<LNode ${id}="lnode1" iedName="None" lnType="ELIA_IHMI" uuid="lnode-uuid">
+									<LNode ${id}="lnode1" iedName="None" lnClass="IHMI" lnInst="1" lnType="ELIA_IHMI" uuid="lnode-uuid">
 										<Private ${id}="lnode-priv" type="eIEC61850-6-100">
 											<eIEC61850-6-100:LNodeSpecNaming ${id}="lnsn1" sIedName="IED" sLdInst="LD" sLnClass="IHMI" sLnInst="1"/>
 										</Private>
@@ -372,7 +372,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Function ${id}="func1" name="ProtFunc" uuid="func-uuid">
 								<SubFunction ${id}="subfunc1" name="PTOC" uuid="subfunc-uuid">
-									<LNode ${id}="lnode1" iedName="None" lnType="ELIA_PTOC_V001" uuid="lnode-uuid">
+									<LNode ${id}="lnode1" iedName="None" lnClass="PTOC" lnInst="1" lnType="ELIA_PTOC_V001" uuid="lnode-uuid">
 										<Private ${id}="lnode-priv" type="eIEC61850-6-100">
 											<eIEC61850-6-100:LNodeSpecNaming ${id}="lnsn1" sIedName="P1" sLdInst="Prot" sLnClass="PTOC" sLnInst="1"/>
 										</Private>

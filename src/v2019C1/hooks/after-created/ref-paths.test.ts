@@ -55,7 +55,11 @@ describe('setRefPaths', () => {
 					<SCL ${ns} ${id}="root">
 						<Substation name="S1" ${id}="s1">
 							<eIEC61850-6-100:AllocationRole name="AR1" uuid="uuid-target" ${id}="target"/>
-							<eIEC61850-6-100:Application name="A1" ${id}="parent"/>
+							<eIEC61850-6-100:Application name="A1" ${id}="parent">
+								<eIEC61850-6-100:FunctionRole name="Operator" ${id}="role">
+									<eIEC61850-6-100:FunctionRoleContent ${id}="role-content"/>
+								</eIEC61850-6-100:FunctionRole>
+							</eIEC61850-6-100:Application>
 						</Substation>
 					</SCL>
 				`,
@@ -186,7 +190,10 @@ describe('setRefPaths', () => {
 					</SCL>
 				`,
 				parent: { tagName: 'PowerSystemRelations', id: 'parent' },
-				referrer: { tagName: 'PowerSystemRelation', attributes: { relationUuid: 'uuid-target' } },
+				referrer: {
+					tagName: 'PowerSystemRelation',
+					attributes: { name: 'PSR1', relationUuid: 'uuid-target' },
+				},
 				expectedQueries: [
 					'//v2019C1:PowerSystemRelation[@relationUuid="uuid-target" and @relation="S1/V1/B1/CB1"]',
 				],
@@ -865,6 +872,11 @@ describe('setRefPaths', () => {
 				],
 			},
 			'Terminal, node in a Bay of nested Processes → process names joined with "/"': {
+				allowInvalidOutput: {
+					reason:
+						"the hook writes the substationName of a substation inside a process, which the schema's key on substation names refuses",
+					violations: [{ check: 'xsd', code: 'keyref' }],
+				},
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">
 						<Process name="P1" ${id}="p1">
@@ -919,6 +931,10 @@ describe('setRefPaths', () => {
 					],
 				},
 			'Terminal with a cNodeUuid naming no node → left as given': {
+				allowInvalidOutput: {
+					reason: 'the terminal names no node on purpose',
+					violations: [{ check: 'references', code: 'dangling' }],
+				},
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">
 						<Substation name="S1" ${id}="s1">

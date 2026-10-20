@@ -97,6 +97,7 @@ describe('import.deep', () => {
 		'imports an IED subtree with LN0 and its dependent type closure': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="scl-1">
+					<Header id="source"/>
 					<IED name="VENDOR_A" ${id}="ied-1">
 						<AccessPoint name="P1" ${id}="ap-1">
 							<Server ${id}="srv-1">
@@ -116,7 +117,11 @@ describe('import.deep', () => {
 					</DataTypeTemplates>
 				</SCL>
 			`,
-			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-t"/>`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="scl-t">
+					<Header id="target"/>
+				</SCL>
+			`,
 			ref: { tagName: 'IED', id: 'ied-1' },
 			targetParent: { tagName: 'SCL', id: 'scl-t' },
 			expectedQueries: [
@@ -250,6 +255,7 @@ describe('import.deep', () => {
 		'preserves text-only, empty-flag and namespaced vendor Private on IED clone': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="scl-1">
+					<Header id="source"/>
 					<IED name="VENDOR_A" ${id}="ied-1">
 						<Private type="Siemens-MasterId" ${id}="priv-master">23a3beb5-7342-4114-b042-6fb04f2312d2</Private>
 						<Private type="eIEC61850-6-100" ${id}="priv-ssd">
@@ -276,7 +282,11 @@ describe('import.deep', () => {
 					</DataTypeTemplates>
 				</SCL>
 			`,
-			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-t"/>`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="scl-t">
+					<Header id="target"/>
+				</SCL>
+			`,
 			ref: { tagName: 'IED', id: 'ied-1' },
 			targetParent: { tagName: 'SCL', id: 'scl-t' },
 			expectedQueries: [

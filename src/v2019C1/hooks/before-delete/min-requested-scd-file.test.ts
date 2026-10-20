@@ -20,6 +20,7 @@ const twoIedsOnOneSubNetwork = /* xml */ `
 				<ConnectedAP ${id}="control-connected-ap" iedName="Control" apName="AP1">
 					<Address ${id}="control-address">
 						<P ${id}="control-ip" type="IP">10.0.0.1</P>
+						<P ${id}="control-subnet" type="IP-SUBNET">255.255.255.0</P>
 					</Address>
 					<PhysConn ${id}="control-physical" type="Connection">
 						<P ${id}="control-port" type="Port">1</P>
@@ -36,6 +37,9 @@ const twoIedsOnOneSubNetwork = /* xml */ `
 							<DataSet ${id}="protection-dataset" name="DS1" />
 							<DOI ${id}="protection-empty-doi" name="Beh" />
 						</LN0>
+					</LDevice>
+					<LDevice ${id}="protection-second-ldevice" inst="LD2">
+						<LN0 ${id}="protection-second-ln0" lnClass="LLN0" inst="" lnType="LLN0Type" />
 					</LDevice>
 				</Server>
 			</AccessPoint>
@@ -77,7 +81,7 @@ describe('beforeDelete — MinRequestedSCDFile', () => {
 				})
 			},
 			expectedQueries: [projectEntryOf('Protection')],
-			unexpectedQueries: ['//default:LDevice'],
+			unexpectedQueries: ['//default:LDevice[@inst="LD1"]'],
 		},
 
 		'DOI without trigger content deleted → no entry written': {
@@ -91,6 +95,11 @@ describe('beforeDelete — MinRequestedSCDFile', () => {
 		},
 
 		'IED deleted → no entry written on the remaining IEDs': {
+			allowInvalidOutput: {
+				reason:
+					'deleting an IED leaves the connected access point naming it: the deletion rule for references named by attributes is a later change',
+				violations: [{ check: 'xsd', code: 'keyref' }],
+			},
 			sourceXml: twoIedsOnOneSubNetwork,
 			act: async (document) => {
 				await document.transaction(async (tx) => {

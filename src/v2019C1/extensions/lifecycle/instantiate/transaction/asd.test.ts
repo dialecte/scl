@@ -151,6 +151,11 @@ describe('instantiate.asd', () => {
 								<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="ar-fref-s"/>
 							</eIEC61850-6-100:AllocationRole>
 							<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="app-src-uuid" ${id}="app-s">
+								<eIEC61850-6-100:FunctionRole name="Operator" ${id}="role-s">
+									<eIEC61850-6-100:FunctionRoleContent ${id}="role-content-s">
+										<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-s"/>
+									</eIEC61850-6-100:FunctionRoleContent>
+								</eIEC61850-6-100:FunctionRole>
 								<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/HMI_PC" allocationRoleUuid="ar-src-uuid" ${id}="arref-s"/>
 							</eIEC61850-6-100:Application>
 						</Private>
@@ -178,6 +183,7 @@ describe('instantiate.asd', () => {
 			targetParentId: 'bay-t',
 			expectedQueries: [
 				// the incoming allocation (FunctionRef) is added to the pre-existing role
+				// expected to change when the engine stops merging an incoming role into the project one
 				'//v2019C1:AllocationRole[@uuid="existing-ar-uuid"]/v2019C1:FunctionRef',
 				// the Application's AllocationRoleRef is remapped onto the existing role
 				'//v2019C1:AllocationRoleRef[@allocationRoleUuid="existing-ar-uuid"]',

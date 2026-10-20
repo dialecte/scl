@@ -1,5 +1,6 @@
 import { SCL_EXTENSION_MODULES } from '../extensions'
 
+import type { SclOutputOptOut } from './assert-scl-output.types'
 import type { Config } from '@/v2019C1/config/dialecte.config'
 import type * as CoreTest from '@dialecte/core/test'
 
@@ -12,6 +13,12 @@ export namespace SclTest {
 		 * references.
 		 */
 		allowIncoherentReferences?: string
+		/**
+		 * Set when the case NEEDS to leave a document a real file could not be (an orphan the
+		 * clean-up under test removes later): the reason it does and the violations it may leave.
+		 * Any other violation still fails the case; an empty reason or list is refused.
+		 */
+		allowInvalidOutput?: SclOutputOptOut
 	}
 	export type TestCases<T extends BaseTestCase = BaseXmlTestCase> = Record<string, T>
 	export type TestDocument = CoreTest.TestDocument<Config>

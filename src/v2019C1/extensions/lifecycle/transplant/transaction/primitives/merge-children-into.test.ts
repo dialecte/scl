@@ -39,6 +39,10 @@ describe('mergeChildrenInto - recursive name-keyed container reuse', () => {
 		// contributing only a new FunctionCatRef. The existing SubCategory must ABSORB the new ref, not
 		// be duplicated into a second "Interface" wrapper.
 		'nested same-name SubCategory is reused, only the new FunctionCatRef is added': {
+			allowInvalidOutput: {
+				reason: 'the primitive under test copies the reference without the element it names',
+				violations: [{ check: 'references', code: 'dangling' }],
+			},
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
 					<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">

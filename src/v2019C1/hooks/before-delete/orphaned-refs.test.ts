@@ -18,15 +18,23 @@ describe('cleanOrphanedRefs', () => {
 		const testCases: SclTest.TestCases<TestCase> = {
 			// DELETE behavior: FunctionCatRef is NOT in KEEP_ON_ORPHAN_REFS → element deleted
 			'delete target → pointing ref deleted': {
+				allowInvalidOutput: {
+					reason:
+						'deleting the element a category refers to deletes the reference and leaves the category empty',
+					violations: [{ check: 'xsd', code: 'missing-child' }],
+				},
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="Sub1">
-							<Function ${id}="f1" name="F1" uuid="uuid-f1" />
 							<Private type="eIEC61850-6-100">
 								<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="Cat1">
 									<eIEC61850-6-100:FunctionCatRef ${id}="ref1" function="Sub1/F1" functionUuid="uuid-f1" />
 								</eIEC61850-6-100:FunctionCategory>
 							</Private>
+							<VoltageLevel ${id}="vl1" name="V1">
+								<Bay ${id}="bay1" name="B1" />
+							</VoltageLevel>
+							<Function ${id}="f1" name="F1" uuid="uuid-f1" />
 						</Substation>
 					</SCL>
 				`,
@@ -35,6 +43,7 @@ describe('cleanOrphanedRefs', () => {
 						await tx.delete({ tagName: 'Function', id: 'f1' })
 					})
 				},
+				// expected to change when the engine stops leaving a category empty after its last reference
 				expectedQueries: ['//v2019C1:FunctionCategory[@name="Cat1"]'],
 				unexpectedQueries: [
 					'//default:Function[@name="F1"]',

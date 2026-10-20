@@ -177,40 +177,36 @@ describe('lifecycle integration — Output Conditioner FSD rev1 → rev2 (open S
 // Golden: freeze the full accept-all rev2 instance.
 describe('lifecycle integration — Output Conditioner FSD rev1 → rev2 (golden)', () => {
 	test('accept-all rev2 produces the expected instance', async () => {
-		const { project, source, target } = await createSclTestProject({ sourceXml, targetXml })
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
 		if (!target) throw new Error('target required')
 
-		try {
-			await target.document.transaction((tx) =>
-				instantiateFsd(tx, {
-					sourceQuery: source.document.query,
-					functionRef,
-					targetParent: bayRef,
-				}),
-			)
-			await source.document.transaction(toRev2)
+		await target.document.transaction((tx) =>
+			instantiateFsd(tx, {
+				sourceQuery: source.document.query,
+				functionRef,
+				targetParent: bayRef,
+			}),
+		)
+		await source.document.transaction(toRev2)
 
-			const rep = await report(target.document.query, {
+		const rep = await report(target.document.query, {
+			verb: 'fsd',
+			sourceQuery: source.document.query,
+			ref: functionRef,
+			anchor: bayRef,
+		})
+		await target.document.transaction((tx) =>
+			apply(tx, {
 				verb: 'fsd',
 				sourceQuery: source.document.query,
 				ref: functionRef,
 				anchor: bayRef,
-			})
-			await target.document.transaction((tx) =>
-				apply(tx, {
-					verb: 'fsd',
-					sourceQuery: source.document.query,
-					ref: functionRef,
-					anchor: bayRef,
-					report: rep,
-					resolution: { decisions: new Map() },
-				}),
-			)
+				report: rep,
+				resolution: { decisions: new Map() },
+			}),
+		)
 
-			const xml = await target.document.query.getSnapshot({ as: 'xml' })
-			expect(normalizeUuids(xml)).toMatchSnapshot()
-		} finally {
-			await project.destroy()
-		}
+		const xml = await target.document.query.getSnapshot({ as: 'xml' })
+		expect(normalizeUuids(xml)).toMatchSnapshot()
 	})
 })

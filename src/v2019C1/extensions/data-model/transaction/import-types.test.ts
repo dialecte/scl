@@ -23,7 +23,7 @@ type TestCase = SclTest.BaseXmlTestCase & {
 
 describe('importTypes', () => {
 	const DTT = `${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-1"`
-	const EMPTY_TARGET = `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-t"></SCL>`
+	const EMPTY_TARGET = `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-t"><Header id="target"/></SCL>`
 
 	const testCases: SclTest.TestCases<TestCase> = {
 		'single LNode → LNodeType, DOType, EnumType cloned into target DTT': {

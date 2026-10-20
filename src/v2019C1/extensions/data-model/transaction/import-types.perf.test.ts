@@ -36,11 +36,11 @@ const SOURCE_XML = /* xml */ `
 	</SCL>
 `
 
-const EMPTY_TARGET = `<SCL ${ns} ${id}="scl-t"></SCL>`
+const EMPTY_TARGET = `<SCL ${ns} ${id}="scl-t"><Header id="target"/></SCL>`
 
 describe('importTypes — perf instrumentation', () => {
 	it('records a scl::importTypes perf span (with a sourceLoop sub-span) when dev.perf is on', async () => {
-		const { project, source, target } = await createSclTestProject({
+		const { source, target } = await createSclTestProject({
 			sourceXml: SOURCE_XML,
 			targetXml: EMPTY_TARGET,
 			dev: { perf: true },
@@ -55,12 +55,10 @@ describe('importTypes — perf instrumentation', () => {
 		const report = target.document.perf.report()
 		expect(report['scl::importTypes']?.calls).toBeGreaterThanOrEqual(1)
 		expect(report['scl::importTypes::sourceLoop']?.calls).toBeGreaterThanOrEqual(1)
-
-		await project.destroy()
 	})
 
 	it('writes nothing to the perf timeline when dev.perf is off', async () => {
-		const { project, source, target } = await createSclTestProject({
+		const { source, target } = await createSclTestProject({
 			sourceXml: SOURCE_XML,
 			targetXml: EMPTY_TARGET,
 		})
@@ -72,7 +70,5 @@ describe('importTypes — perf instrumentation', () => {
 		})
 
 		expect(target.document.perf.report()).toEqual({})
-
-		await project.destroy()
 	})
 })

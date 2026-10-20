@@ -227,40 +227,36 @@ describe('lifecycle integration — CB ASD rev1 → rev2 (application + satellit
 // does during act) keep the snapshot stable.
 describe('lifecycle integration — CB ASD rev1 → rev2 (golden)', () => {
 	test('accept-all rev2 produces the expected instance', async () => {
-		const { project, source, target } = await createSclTestProject({ sourceXml, targetXml })
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
 		if (!target) throw new Error('target required')
 
-		try {
-			await target.document.transaction((tx) =>
-				instantiateAsd(tx, {
-					sourceQuery: source.document.query,
-					applicationRef,
-					targetParent: bayRef,
-				}),
-			)
-			await source.document.transaction(toRev2)
+		await target.document.transaction((tx) =>
+			instantiateAsd(tx, {
+				sourceQuery: source.document.query,
+				applicationRef,
+				targetParent: bayRef,
+			}),
+		)
+		await source.document.transaction(toRev2)
 
-			const rep = await report(target.document.query, {
+		const rep = await report(target.document.query, {
+			verb: 'asd',
+			sourceQuery: source.document.query,
+			ref: applicationRef,
+			anchor: bayRef,
+		})
+		await target.document.transaction((tx) =>
+			apply(tx, {
 				verb: 'asd',
 				sourceQuery: source.document.query,
 				ref: applicationRef,
 				anchor: bayRef,
-			})
-			await target.document.transaction((tx) =>
-				apply(tx, {
-					verb: 'asd',
-					sourceQuery: source.document.query,
-					ref: applicationRef,
-					anchor: bayRef,
-					report: rep,
-					resolution: { decisions: new Map() },
-				}),
-			)
+				report: rep,
+				resolution: { decisions: new Map() },
+			}),
+		)
 
-			const xml = await target.document.query.getSnapshot({ as: 'xml' })
-			expect(normalizeUuids(xml)).toMatchSnapshot()
-		} finally {
-			await project.destroy()
-		}
+		const xml = await target.document.query.getSnapshot({ as: 'xml' })
+		expect(normalizeUuids(xml)).toMatchSnapshot()
 	})
 })

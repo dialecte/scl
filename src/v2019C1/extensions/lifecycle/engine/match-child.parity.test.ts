@@ -49,7 +49,14 @@ describe('engine — diff (report) and reconcile (apply) pair children identical
 			</SCL>
 		`
 
-		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		const { source, target } = await createSclTestProject({
+			sourceXml,
+			targetXml,
+			allowInvalidOutput: {
+				reason: 'the fixture gives a role and a function one placeholder templateUuid on purpose',
+				violations: [{ check: 'identity', code: 'cross-type-template-uuid' }],
+			},
+		})
 		if (!target) throw new Error('target required')
 
 		const applicationSourceRef = { tagName: 'Application', id: 'app-s' } as Scl.Ref<'Application'>
@@ -118,7 +125,15 @@ describe('engine — diff (report) and reconcile (apply) pair children identical
 			</SCL>
 		`
 
-		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		const { source, target } = await createSclTestProject({
+			sourceXml,
+			targetXml,
+			allowInvalidOutput: {
+				reason:
+					'the case reconciles the role alone: the function its new reference names is not placed',
+				violations: [{ check: 'references', code: 'dangling' }],
+			},
+		})
 		if (!target) throw new Error('target required')
 
 		const roleSourceRef = { tagName: 'AllocationRole', id: 'ar-s' } as Scl.Ref<'AllocationRole'>

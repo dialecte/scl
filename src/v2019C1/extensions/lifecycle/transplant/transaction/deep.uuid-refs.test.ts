@@ -59,6 +59,10 @@ describe('import.deep — uuid reference remapping', () => {
 		},
 
 		'external uuid ref → preserved (target not part of the clone)': {
+			allowInvalidOutput: {
+				reason: 'the reference names an element outside the cloned subtree on purpose',
+				violations: [{ check: 'references', code: 'dangling' }],
+			},
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="scl-1">
 					<Substation name="Sub1" ${id}="sub-1">

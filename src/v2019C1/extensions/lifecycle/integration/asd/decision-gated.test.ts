@@ -65,7 +65,11 @@ const targetXml = /* xml */ `
 // The newer ASD adds an application-layer role AND a composed-function LNode, so
 // the report has one group per layer that we can accept/skip independently.
 const mutate = async (tx: Scl.Transaction): Promise<void> => {
-	await tx.addChild(applicationRef, { tagName: 'FunctionRole', attributes: { name: 'ROLE2' } })
+	const role = await tx.addChild(applicationRef, {
+		tagName: 'FunctionRole',
+		attributes: { name: 'ROLE2' },
+	})
+	await tx.addChild(role, { tagName: 'FunctionRoleContent', attributes: {} })
 	await tx.addChild({ tagName: 'Function', id: 'fn-1' } as Scl.Ref<'Function'>, {
 		tagName: 'LNode',
 		attributes: { iedName: 'None', lnClass: 'XCBR', lnInst: '1', lnType: 'CSWI_Type' },

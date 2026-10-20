@@ -34,10 +34,28 @@ describe('applyTypeIdRemap', () => {
 						</AccessPoint>
 					</IED>
 					<DataTypeTemplates ${ID}="dtt-1">
+						<LNodeType id="OLD_LLN0" lnClass="LLN0" ${ID}="lnt-0">
+							<DO name="Mod" type="MODE_ENC" ${ID}="do-0"/>
+						</LNodeType>
 						<LNodeType id="OLD_XCBR" lnClass="XCBR" ${ID}="lnt-1">
 							<DO name="Pos" type="OLD_DPC" ${ID}="do-1"/>
 						</LNodeType>
-						<DOType id="OLD_DPC" cdc="DPC" ${ID}="dot-1"/>
+						<DOType id="OLD_DPC" cdc="DPC" ${ID}="dot-1">
+							<DA name="stVal" bType="Dbpos" fc="ST" ${ID}="da-1"/>
+						</DOType>
+						<DOType id="MODE_ENC" cdc="ENC" ${ID}="dot-mode">
+							<DA name="stVal" bType="BOOLEAN" fc="ST" ${ID}="da-mode"/>
+						</DOType>
+						<!-- the types the ids are remapped to, as the caller creates them -->
+						<LNodeType id="NEW_LLN0" lnClass="LLN0" ${ID}="lnt-new-0">
+							<DO name="Mod" type="MODE_ENC" ${ID}="do-new-0"/>
+						</LNodeType>
+						<LNodeType id="NEW_XCBR" lnClass="XCBR" ${ID}="lnt-new-1">
+							<DO name="Pos" type="NEW_DPC" ${ID}="do-new-1"/>
+						</LNodeType>
+						<DOType id="NEW_DPC" cdc="DPC" ${ID}="dot-new-1">
+							<DA name="stVal" bType="Dbpos" fc="ST" ${ID}="da-new-1"/>
+						</DOType>
 					</DataTypeTemplates>
 				</SCL>
 			`,

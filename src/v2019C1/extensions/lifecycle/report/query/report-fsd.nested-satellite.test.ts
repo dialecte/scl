@@ -42,6 +42,7 @@ const sourceXml = /* xml */ `
 					<Function name="Prot" ${id}="fn-1" uuid="fn-src-uuid">
 						<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-1" uuid="lnode-src-uuid"/>
 					</Function>
+					<Function name="Prot2" ${id}="fn-2" uuid="fn2-src-uuid"/>
 				</Bay>
 			</VoltageLevel>
 		</Substation>
@@ -88,7 +89,10 @@ describe('reportFsd — adding a ref into an already-existing FunctionCategory s
 					// add a NEW ref into the already-instantiated category
 					await tx.addChild(categoryRef, {
 						tagName: 'FunctionCatRef',
-						attributes: { functionUuid: 'fn2-src-uuid', function: 'TEMPLATE/Prot2' },
+						attributes: {
+							functionUuid: 'fn2-src-uuid',
+							function: 'TEMPLATE/TEMPLATE/TEMPLATE/Prot2',
+						},
 					})
 				},
 			},

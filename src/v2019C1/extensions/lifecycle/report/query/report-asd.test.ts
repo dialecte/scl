@@ -86,10 +86,11 @@ describe('reportAsd (application layer + composed-function cascade)', () => {
 			sourceXml,
 			targetXml,
 			mutate: async (tx) => {
-				await tx.addChild(applicationRef, {
+				const role = await tx.addChild(applicationRef, {
 					tagName: 'FunctionRole',
 					attributes: { name: 'ROLE2' },
 				})
+				await tx.addChild(role, { tagName: 'FunctionRoleContent', attributes: {} })
 			},
 			expected: { needsDecisions: true, groupTags: ['FunctionRole'] },
 		},

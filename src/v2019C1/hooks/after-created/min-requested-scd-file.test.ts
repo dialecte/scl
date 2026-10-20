@@ -156,7 +156,9 @@ describe('afterCreated — MinRequestedSCDFile', () => {
 								<Authentication ${id}="protection-authentication" />
 								<LDevice ${id}="protection-ldevice" inst="LD1">
 									<LN0 ${id}="protection-ln0" lnClass="LLN0" inst="" lnType="LLN0Type">
-										<DataSet ${id}="protection-dataset" name="DS1" />
+										<DataSet ${id}="protection-dataset" name="DS1">
+											<FCDA ${id}="protection-fcda" ldInst="LD1" lnClass="LLN0" fc="ST" doName="Mod" />
+										</DataSet>
 									</LN0>
 								</LDevice>
 							</Server>
@@ -166,6 +168,14 @@ describe('afterCreated — MinRequestedSCDFile', () => {
 							<MinRequestedSCDFile ${id}="protection-other-project-entry" fileType="SCD" fileUuid="${otherProjectUuid}" version="9" revision="Z" />
 						</MinRequestedSCDFiles>
 					</IED>
+					<DataTypeTemplates ${id}="templates">
+						<LNodeType ${id}="lln0-type" id="LLN0Type" lnClass="LLN0">
+							<DO ${id}="mod" name="Mod" type="ModType" />
+						</LNodeType>
+						<DOType ${id}="mod-type" id="ModType" cdc="ENC">
+							<DA ${id}="mod-stval" name="stVal" bType="BOOLEAN" fc="ST" />
+						</DOType>
+					</DataTypeTemplates>
 				</SCL>
 			`,
 			act: async (document) => {

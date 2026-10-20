@@ -695,10 +695,15 @@ describe('update.ssd - a function the application of a bay typical gains is plac
 
 		await source.transaction(async (tx) => {
 			if (testCase.gain === 'application') {
-				await tx.addChild(typicalRef, {
+				const application = await tx.addChild(typicalRef, {
 					tagName: 'Application',
 					attributes: { name: 'Display', type: 'DCS', uuid: 'display-g-uuid' },
 				})
+				const role = await tx.addChild(application, {
+					tagName: 'FunctionRole',
+					attributes: { name: 'Operator' },
+				})
+				await tx.addChild(role, { tagName: 'FunctionRoleContent', attributes: {} })
 				return
 			}
 			await tx.addChild(typicalRef, {
@@ -763,6 +768,11 @@ describe('update.ssd - connectivity', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'node renamed and node gained in the template → each node keeps the path of its place, the terminals name the instance nodes':
 			{
+				allowInvalidOutput: {
+					reason:
+						'instantiating a typical whose logical nodes name no type writes an empty DataTypeTemplates',
+					violations: [{ check: 'xsd', code: 'missing-child' }],
+				},
 				sourceXml: connectivitySource,
 				targetXml,
 				expectedQueries: [

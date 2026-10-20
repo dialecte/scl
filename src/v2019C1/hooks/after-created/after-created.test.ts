@@ -166,34 +166,30 @@ describe('afterCreated', () => {
 		}
 
 		it.each(Object.entries(testCases))('%s', async (_, { childParentId, expected }) => {
-			const { project, source } = await createSclTestProject({
+			const { source } = await createSclTestProject({
 				sourceXml: xmlWithPrivate,
 			})
 
-			try {
-				const privateRecord = await source.document.query.getRecord({
-					tagName: 'Private',
-					id: 'priv1',
-				})
-				expect(privateRecord).toBeDefined()
-				if (!privateRecord) return
+			const privateRecord = await source.document.query.getRecord({
+				tagName: 'Private',
+				id: 'priv1',
+			})
+			expect(privateRecord).toBeDefined()
+			if (!privateRecord) return
 
-				const result = await afterCreated({
-					childRecord: buildLnodeInputs(childParentId) as any,
-					parentRecord: privateRecord as any,
-					query: source.document.query,
-				})
+			const result = await afterCreated({
+				childRecord: buildLnodeInputs(childParentId) as any,
+				parentRecord: privateRecord as any,
+				query: source.document.query,
+			})
 
-				expect(result).toHaveLength(expected.operationCount)
-				expected.operations.forEach((expectedOp, i) => {
-					expect(result[i].status).toBe(expectedOp.status)
-					if (expectedOp.newRecord) {
-						expect(result[i].newRecord).toMatchObject(expectedOp.newRecord)
-					}
-				})
-			} finally {
-				await project.destroy()
-			}
+			expect(result).toHaveLength(expected.operationCount)
+			expected.operations.forEach((expectedOp, i) => {
+				expect(result[i].status).toBe(expectedOp.status)
+				if (expectedOp.newRecord) {
+					expect(result[i].newRecord).toMatchObject(expectedOp.newRecord)
+				}
+			})
 		})
 	})
 

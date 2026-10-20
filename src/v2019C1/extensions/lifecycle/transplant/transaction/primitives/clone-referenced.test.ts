@@ -139,6 +139,10 @@ describe('cloneReferencedRecords', () => {
 	describe('AllocationRole satellite clone', () => {
 		const testCases: SclTest.TestCases<TestCase> = {
 			'AllocationRoleRef → AllocationRole cloned with new uuid': {
+				allowInvalidOutput: {
+					reason: 'the primitive under test copies the reference without the element it names',
+					violations: [{ check: 'references', code: 'dangling' }],
+				},
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">

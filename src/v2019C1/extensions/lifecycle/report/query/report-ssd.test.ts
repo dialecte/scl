@@ -91,10 +91,11 @@ describe('reportSsd (topology scope = applications + standalone functions)', () 
 			sourceXml,
 			targetXml,
 			mutate: async (tx) => {
-				await tx.addChild({ tagName: 'Application', id: 'app-s' } as Scl.Ref<'Application'>, {
-					tagName: 'FunctionRole',
-					attributes: { name: 'ROLE2' },
-				})
+				const role = await tx.addChild(
+					{ tagName: 'Application', id: 'app-s' } as Scl.Ref<'Application'>,
+					{ tagName: 'FunctionRole', attributes: { name: 'ROLE2' } },
+				)
+				await tx.addChild(role, { tagName: 'FunctionRoleContent', attributes: {} })
 			},
 			expected: { needsDecisions: true, groupTags: ['FunctionRole'] },
 		},

@@ -81,7 +81,7 @@ describe('asd', () => {
 							</Private>
 							<Function ${id}="func1" name="HMI Function" uuid="func-uuid">
 								<SubFunction ${id}="subfunc1" name="HMI" uuid="subfunc-uuid">
-									<LNode ${id}="lnode1" iedName="None" lnType="ELIA_IHMI" uuid="lnode-uuid">
+									<LNode ${id}="lnode1" iedName="None" lnClass="IHMI" lnInst="1" lnType="ELIA_IHMI" uuid="lnode-uuid">
 										<Private ${id}="lnode-priv" type="eIEC61850-6-100">
 											<eIEC61850-6-100:LNodeSpecNaming ${id}="lnsn1" sIedName="HMI" sLdInst="HMI_Function" sLnClass="IHMI" sLnInst="1"/>
 											<eIEC61850-6-100:LNodeInputs ${id}="lni1">
@@ -149,7 +149,7 @@ describe('asd', () => {
 									</eIEC61850-6-100:Application>
 								</Private>
 								<Function ${id}="func1" name="SimpleFunc" uuid="func-uuid">
-									<LNode ${id}="lnode1" iedName="None" lnType="ELIA_IHMI" uuid="lnode-uuid">
+									<LNode ${id}="lnode1" iedName="None" lnClass="IHMI" lnInst="1" lnType="ELIA_IHMI" uuid="lnode-uuid">
 										<Private ${id}="lnode-priv" type="eIEC61850-6-100">
 											<eIEC61850-6-100:LNodeSpecNaming ${id}="lnsn1" sIedName="IED" sLdInst="LD" sLnClass="IHMI" sLnInst="1"/>
 										</Private>
@@ -246,7 +246,7 @@ describe('asd', () => {
 							</Private>
 							<Function ${id}="func1" name="HMI Function" uuid="func-uuid">
 								<SubFunction ${id}="subfunc1" name="HMI" uuid="subfunc-uuid">
-									<LNode ${id}="lnode1" iedName="None" lnType="ELIA_IHMI" uuid="lnode-uuid">
+									<LNode ${id}="lnode1" iedName="None" lnClass="IHMI" lnInst="1" lnType="ELIA_IHMI" uuid="lnode-uuid">
 										<Private ${id}="lnode-priv" type="eIEC61850-6-100">
 											<eIEC61850-6-100:LNodeSpecNaming ${id}="lnsn1" sIedName="HMI" sLdInst="LD" sLnClass="IHMI" sLnInst="1"/>
 										</Private>

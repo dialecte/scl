@@ -104,10 +104,15 @@ describe('update of a bay typical placed twice — what the typical gains is dec
 		const gainedTag = testCase.gain === 'application' ? 'Application' : 'Function'
 		await source.transaction(async (tx) => {
 			if (gainedTag === 'Application') {
-				await tx.addChild(typicalBayRef, {
+				const application = await tx.addChild(typicalBayRef, {
 					tagName: 'Application',
 					attributes: { name: 'Display', type: 'DCS', uuid: 'display-source-uuid' },
 				})
+				const role = await tx.addChild(application, {
+					tagName: 'FunctionRole',
+					attributes: { name: 'Operator' },
+				})
+				await tx.addChild(role, { tagName: 'FunctionRoleContent', attributes: {} })
 				return
 			}
 			await tx.addChild(typicalBayRef, {

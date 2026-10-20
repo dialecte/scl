@@ -51,6 +51,13 @@ const twoIedsOnOneSubNetwork = /* xml */ `
 	</SCL>
 `
 
+// the protection IED with a second access point, not yet connected: a ConnectedAP may move to it
+const protectionWithASecondAccessPoint = twoIedsOnOneSubNetwork.replace(
+	'			<!-- no MinRequestedSCDFiles -->',
+	`			<AccessPoint ${id}="protection-second-access-point" name="AP2" />
+			<!-- no MinRequestedSCDFiles -->`,
+)
+
 function projectEntryOf(iedName: string): string {
 	return `//default:IED[@name="${iedName}"]/default:MinRequestedSCDFiles/default:MinRequestedSCDFile[@fileUuid="${projectUuid}"][@version="2"][@revision="B"]`
 }
@@ -234,12 +241,12 @@ describe('afterUpdated — MinRequestedSCDFile', () => {
 		},
 
 		'ConnectedAP reassigned to another IED → former and new IED synced': {
-			sourceXml: twoIedsOnOneSubNetwork,
+			sourceXml: protectionWithASecondAccessPoint,
 			act: async (document) => {
 				await document.transaction(async (tx) => {
 					await tx.update(
 						{ tagName: 'ConnectedAP', id: 'control-connected-ap' },
-						{ attributes: { iedName: 'Protection' } },
+						{ attributes: { iedName: 'Protection', apName: 'AP2' } },
 					)
 				})
 			},

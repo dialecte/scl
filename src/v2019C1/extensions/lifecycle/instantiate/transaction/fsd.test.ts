@@ -157,7 +157,11 @@ describe('instantiate.fsd', () => {
 			`,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="scd">
-					<Substation name="S1" ${id}="sub-t"/>
+					<Substation name="S1" ${id}="sub-t">
+						<VoltageLevel name="V1" ${id}="vl-t">
+							<Bay name="B1" ${id}="bay-t"/>
+						</VoltageLevel>
+					</Substation>
 				</SCL>
 			`,
 			functionId: 'fn-1',
