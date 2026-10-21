@@ -4,7 +4,7 @@ import { buildReportInstance } from './report-instance'
 import { foldSatelliteCompanions } from './satellite-companions'
 
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import { placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
+import { addDroppedGroups, placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { linkPlacementDependencies } from '@/v2019C1/extensions/lifecycle/engine/link-placement-dependencies'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { describeStandingChoice } from '@/v2019C1/extensions/lifecycle/engine/standing'
@@ -16,6 +16,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/instance'
 import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
 import {
+	findDroppedComposedFunctions,
 	resolveApplicationSatellites,
 	resolveComposedFunctions,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
@@ -33,6 +34,7 @@ import { placedFresh, scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scen
 import type { Scl, Config } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
+	DecisionGroup,
 	DiffReport,
 	InstanceDiff,
 	ReportInstance,
@@ -220,6 +222,23 @@ export async function reportAsd(
 		)
 		if (owner) owner.mappings = [...owner.mappings, choice]
 	}
+	// the functions an instance composes that the newer application no longer does: each removed after the
+	// reference to it
+	const droppedByInstance = await findDroppedComposedFunctions(query, {
+		sourceQuery,
+		applicationRef,
+		instances: applicationInstances,
+		matchKey,
+		removalBase,
+	})
+	const droppedGroups: DecisionGroup[] = []
+	for (const reportInstance of reportInstances) {
+		const dropped = droppedByInstance.get(reportInstance.rootRef?.id ?? '') ?? []
+		droppedGroups.push(...addDroppedGroups({ reportInstance, dropped }))
+	}
+	// the references to it may sit in several instances: each removal comes first
+	const referenceGroups = reportInstances.flatMap((reportInstance) => reportInstance.groups)
+	await linkToReferenceRemovals(query, { groups: droppedGroups, referenceGroups })
 
 	const report = assembleReport({
 		instances: [...reportInstances, ...composedFunctions.instances],
@@ -477,4 +496,41 @@ async function reportComposedFunction(
 		namesFollow: params.namesFollow,
 	})
 	return buildReportInstance(query, { instanceDiff, instance, sourceQuery, sourceRef: functionRef })
+}
+
+/**
+ * Make the removal of each dropped function depend on the removals of the references to it: each group listing an
+ * instance's `FunctionRef` to that function as removed, whether as its change or among its companions.
+ */
+async function linkToReferenceRemovals(
+	query: Core.Query<Config>,
+	params: { groups: readonly DecisionGroup[]; referenceGroups: readonly DecisionGroup[] },
+): Promise<void> {
+	const { groups, referenceGroups } = params
+	for (const group of groups) {
+		const functionRef = group.primary.instanceRef
+		if (!functionRef) continue
+		const functionUuid = await query.any.getAttribute(functionRef, { name: 'uuid' })
+		for (const candidate of referenceGroups) {
+			if (candidate === group) continue
+			const removesReference = await removesReferenceTo(query, { group: candidate, functionUuid })
+			if (removesReference && !group.dependsOn.includes(candidate.id))
+				group.dependsOn.push(candidate.id)
+		}
+	}
+}
+
+/** Whether a group removes a `FunctionRef` naming a function by its uuid. */
+async function removesReferenceTo(
+	query: Core.Query<Config>,
+	params: { group: DecisionGroup; functionUuid: string | undefined },
+): Promise<boolean> {
+	const { group, functionUuid } = params
+	if (!functionUuid) return false
+	for (const node of [group.primary, ...group.companions]) {
+		if (node.change !== 'removed' || node.tagName !== 'FunctionRef' || !node.instanceRef) continue
+		const named = await query.any.getAttribute(node.instanceRef, { name: 'functionUuid' })
+		if (named === functionUuid) return true
+	}
+	return false
 }

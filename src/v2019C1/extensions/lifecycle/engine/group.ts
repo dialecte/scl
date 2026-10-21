@@ -1,4 +1,7 @@
+import { toRef } from '@dialecte/core/helpers'
+
 import type { DecisionGroup, DiffNode, ReportInstance } from './diff.types'
+import type { DroppedElement } from './removal-base.types'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
@@ -103,4 +106,30 @@ function groupId(node: DiffNode, scopePrefix: string | undefined): string {
 
 export function scopedId(params: { id: string; scopePrefix: string }): string {
 	return `${params.scopePrefix}::${params.id}`
+}
+
+/**
+ * List the elements an instance holds that the source no longer does (dropped, or the project's own) in that
+ * instance's report: each in its tree, and as a group of its own scoped to the instance — a removal suggested, the
+ * project's own kept unless accepted. Returns the groups added.
+ */
+export function addDroppedGroups(params: {
+	reportInstance: ReportInstance
+	dropped: readonly DroppedElement[]
+}): DecisionGroup[] {
+	const { reportInstance, dropped } = params
+	const added: DecisionGroup[] = []
+	for (const { element, change } of dropped) {
+		const node: DiffNode = {
+			change,
+			tagName: element.tagName,
+			instanceRef: toRef(element),
+			children: [],
+		}
+		reportInstance.tree.children.push(node)
+		added.push(...groupChanges(node, reportInstance.rootRef?.id))
+	}
+	reportInstance.groups.push(...added)
+	if (added.length > 0) reportInstance.upToDate = false
+	return added
 }

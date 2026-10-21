@@ -16,7 +16,10 @@ import {
 	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
-import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
+import {
+	deleteDropped,
+	resolveRemovalBase,
+} from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import {
 	collectForeignScopes,
@@ -27,7 +30,10 @@ import {
 } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { placeApplication } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/asd'
-import { resolveApplicationSatellites } from '@/v2019C1/extensions/lifecycle/layers/application'
+import {
+	findDroppedComposedFunctions,
+	resolveApplicationSatellites,
+} from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
 	assertMappingsDecided,
 	findWithdrawnContributions,
@@ -43,7 +49,9 @@ import type { ApplicationInstance } from './cascade-composed-functions.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DroppedElement } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -199,6 +207,16 @@ export async function asd(
 	const foreignScopes = await collectForeignScopes(tx, { instances: matched })
 	// what this update already added for an earlier instance: that instance's too
 	const addedForEarlierInstances = new Set<string>()
+	// the functions the instances compose that the newer application no longer does — read before any reconcile
+	// removes a reference to them — removed once the cascade ran
+	const droppedByInstance = await findDroppedComposedFunctions(tx, {
+		sourceQuery,
+		applicationRef,
+		instances,
+		matchKey,
+		removalBase,
+	})
+	const droppedFunctions: { dropped: DroppedElement[]; accepted: AcceptedIds | undefined }[] = []
 
 	for (const instance of instances) {
 		// gate THIS instance by only its own groups (source ids are unique within one instance)
@@ -249,6 +267,7 @@ export async function asd(
 			resolvedMappings,
 			matchKey,
 		})
+		droppedFunctions.push({ dropped: droppedByInstance.get(instance.id) ?? [], accepted })
 
 		// 1. application layer
 		const reconcileMappings = await reconcile(tx, {
@@ -339,6 +358,8 @@ export async function asd(
 		targetInstance,
 		decisionMappings: params.decisionMappings,
 	})
+	for (const { dropped, accepted } of droppedFunctions)
+		await deleteDropped(tx, { dropped, accepted })
 
 	// 3. the references each instance gained now have every target they can point at: the
 	// satellites added above and the composed functions the cascade placed — for a function the

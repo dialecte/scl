@@ -459,7 +459,8 @@ This unifies instantiate and update — instantiation is the first-time case of 
 2. **function-layer cascade** — _verbs compose verbs_: treat every composed Function the ASD references as an FSD to update and delegate to `tx.lifecycle.update.fsd`, **per instance of the application**:
    - the functions an instance refers to are its own: each is reconciled where it sits, whichever bay that is — not only those under the ASD anchor;
    - a function **added** by the newer ASD is new to every instance: each instance the update writes to gets its own, on the level that instance lives on (the bay of its other functions), and its new references point at it. A function of that lineage already standing there on its own, belonging to no instance, is taken instead of a new one; with several, the consumer chooses (see above);
-   - a function that belongs to no instance is reconciled when it sits where the consumer started.
+   - a function that belongs to no instance is reconciled when it sits where the consumer started;
+   - a function an instance composes that the newer ASD **no longer composes** is removed with the reference to it: the report lists its removal as a group of its own that depends on the group removing the reference. It is kept, and not listed, while another application of the project still composes it (functions may be shared by several applications), and when it records a function file of its own (placed from that file, not as part of the application). In a fork, the previous revision decides as for any element (`baseQuery`).
 
 The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQuery, ref: applicationRef })`.
 
@@ -475,7 +476,7 @@ The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQu
   2. **application cascade** — each `Application` under the scope, via [`update.asd`](#tx-lifecycle-update-asd) (which itself cascades to its composed Functions);
   3. **function cascade** — each standalone `Function` (not composed by any `Application`), via [`update.fsd`](#tx-lifecycle-update-fsd).
 
-A part added by the newer SSD is instantiated; an existing one is reconciled — never blindly re-added. An SSD with no application or function (levels and equipment only) is updated like any: the level it was placed on is its instance.
+A part added by the newer SSD is instantiated; an existing one is reconciled — never blindly re-added. An application or a function on a level of the unit that the newer SSD **dropped** is removed — the update replaces the unit's applications with the newer ones: the report lists each removal as a group of its own, scoped to the level's instance. A function's removal depends on the removal of the dropped applications composing it. Only what sits on the unit's own levels counts: a level placed there by another template (a bay-typical in a voltage level) or a level of the project the unit was mapped onto keeps what it holds. A function another application of the project still composes is kept and not listed, as is an element recording a file of its own (an ASD or FSD placed there on its own). In a fork, the previous revision decides (`baseQuery`): without it they are listed as the project's own and kept. An SSD with no application or function (levels and equipment only) is updated like any: the level it was placed on is its instance.
 
 The read-only counterpart is `doc.query.lifecycle.report({ verb: 'ssd', sourceQuery, anchor: targetParent })`, assembled the same way: the topology frame's own diff plus the union of the per-primary `reportAsd`/`reportFsd` reports, merged into one `DiffReport` so the groups of `report.instances` cover the whole scope and the fast/full classification holds across it.
 

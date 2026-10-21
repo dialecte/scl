@@ -15,3 +15,5 @@ export {
 	pointsInto,
 } from './foreign-scope'
 export type { ForeignScopes, ResolveForeignScope } from './foreign-scope.types'
+export { isLastReferrer } from './is-last-referrer'
+export { carriesOwnProvenance } from './own-provenance'

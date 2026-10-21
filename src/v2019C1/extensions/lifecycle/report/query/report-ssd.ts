@@ -5,11 +5,13 @@ import { reportTopologyFrame } from './report-topology-frame'
 import { toRef } from '@dialecte/core/helpers'
 
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import { placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
+import { addDroppedGroups, placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { linkPlacementDependencies } from '@/v2019C1/extensions/lifecycle/engine/link-placement-dependencies'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
+import { collectComposedFunctionUuids } from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	describePlacementMappings,
+	findDroppedPrimaries,
 	findLanding,
 	hasScopeInstance,
 	resolveInstantiableRoot,
@@ -22,7 +24,11 @@ import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DecisionGroup,
+	DiffReport,
+	ReportInstance,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type {
 	PrimaryPlace,
@@ -120,6 +126,19 @@ export async function reportSsd(
 		removalBase,
 		namesFollow,
 	})
+	// the applications and functions each instance holds that the newer template no longer does
+	for (const frameInstance of frameInstances) {
+		if (!frameInstance.rootRef) continue
+		const dropped = await findDroppedPrimaries(query, {
+			sourceQuery,
+			scopeRef: root,
+			frameInstance: frameInstance.rootRef,
+			matchKey,
+			removalBase,
+		})
+		const groups = addDroppedGroups({ reportInstance: frameInstance, dropped })
+		await linkToComposingApplications(query, { groups })
+	}
 
 	// the levels are listed first, the shared elements follow
 	const [placedFrame] = frameInstances
@@ -249,4 +268,31 @@ function placedInstances(params: {
 	if (!placedFor) return instances
 	for (const instance of instances) placeFor({ instance, placedFor })
 	return instances
+}
+
+/**
+ * Make the removal of each dropped function depend on the removal of the dropped applications composing it: removed
+ * while one of them stays, the application would refer to nothing.
+ */
+async function linkToComposingApplications(
+	query: Core.Query<Config>,
+	params: { groups: readonly DecisionGroup[] },
+): Promise<void> {
+	const { groups } = params
+	const applicationGroups = groups.filter((group) => group.primary.tagName === 'Application')
+	for (const group of groups) {
+		const functionRef = group.primary.tagName === 'Function' ? group.primary.instanceRef : undefined
+		if (!functionRef) continue
+		const functionUuid = await query.any.getAttribute(functionRef, { name: 'uuid' })
+		if (!functionUuid) continue
+		for (const applicationGroup of applicationGroups) {
+			const applicationRef = applicationGroup.primary.instanceRef
+			if (!applicationRef) continue
+			const composed = await collectComposedFunctionUuids(query, {
+				tagName: 'Application',
+				id: applicationRef.id ?? '',
+			})
+			if (composed.has(functionUuid)) group.dependsOn.push(applicationGroup.id)
+		}
+	}
 }

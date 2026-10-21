@@ -7,3 +7,4 @@ export type {
 	InstanceHoldings,
 	ResolveInstanceHoldingsParams,
 } from './resolve-instance-holdings.types'
+export { findDroppedComposedFunctions } from './find-dropped-composed-functions'

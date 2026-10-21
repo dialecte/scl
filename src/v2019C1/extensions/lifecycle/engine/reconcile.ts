@@ -2,7 +2,7 @@ import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
 import { projectOwnedAttributes } from './project-owned-attributes'
 import { indexRedirectedSourceUuids } from './reference-match'
-import { classifyUnmatched } from './removal-base'
+import { acceptsRemoval, classifyUnmatched } from './removal-base'
 import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
@@ -433,12 +433,8 @@ async function collectRemoved(
 		: 'still-held'
 	// one atomic group, its subtree cascading with it (do not descend): a removal is written unless it was
 	// skipped, an element of the project's own only when its removal was accepted
-	if (unmatched === 'removed') {
-		if (!accepted || accepted.instanceIds.has(node.id)) out.push(node)
-		return
-	}
-	if (unmatched === 'target-only') {
-		if (accepted?.instanceIds.has(node.id)) out.push(node)
+	if (unmatched !== 'still-held') {
+		if (acceptsRemoval({ change: unmatched, id: node.id, accepted })) out.push(node)
 		return
 	}
 	for (const child of node.tree) {

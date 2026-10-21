@@ -3,7 +3,10 @@ import { toRef } from '@dialecte/core/helpers'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
-import { classifyUnmatched } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
+import {
+	acceptsRemoval,
+	classifyUnmatched,
+} from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import {
 	collectForeignReferenceIds,
 	findInstanceByTemplateUuid,
@@ -183,9 +186,7 @@ export async function reconcileSatellites(
 		if (unmatched === 'still-held') continue
 
 		// a removal is gated on its companion's acceptance; the project's own goes only on an explicit accept
-		const accepts = accepted?.instanceIds.has(instanceRef.id ?? '') ?? false
-		if (unmatched === 'removed' && accepted && !accepts) continue
-		if (unmatched === 'target-only' && !accepts) continue
+		if (!acceptsRemoval({ change: unmatched, id: instanceRef.id ?? '', accepted })) continue
 
 		// shared-safety: keep if any OTHER primary still references this satellite
 		const referrers = await findRefsPointingTo(tx, { target: instanceRef })

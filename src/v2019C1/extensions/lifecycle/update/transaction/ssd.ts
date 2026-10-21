@@ -5,12 +5,21 @@ import {
 	annotateInstance,
 	sourceToTargetMap,
 } from '@/v2019C1/extensions/lifecycle/engine/correlate'
-import { collisionOverrides, leftOutRefIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import {
+	acceptedRefIds,
+	collisionOverrides,
+	groupsForInstance,
+	leftOutRefIds,
+} from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
+import {
+	deleteDropped,
+	resolveRemovalBase,
+} from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import { ssd as instantiateSsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import {
+	findDroppedPrimaries,
 	hasScopeInstance,
 	resolveInstantiableRoot,
 	resolvePrimaryParents,
@@ -147,6 +156,22 @@ export async function ssd(
 		targetInstance,
 		decisionMappings: params.decisionMappings,
 	})
+
+	// the applications and functions each instance holds that the newer template no longer does: the update
+	// replaces the unit's applications, so a dropped one goes — gated on the removal its report announced
+	for (const { instanceRootRef } of frameAdditions) {
+		const dropped = await findDroppedPrimaries(tx, {
+			sourceQuery,
+			scopeRef: root,
+			frameInstance: instanceRootRef,
+			matchKey,
+			removalBase,
+		})
+		const accepted = decisions
+			? acceptedRefIds({ groups: groupsForInstance(report, instanceRootRef.id ?? ''), decisions })
+			: undefined
+		await deleteDropped(tx, { dropped, accepted })
+	}
 
 	for (const applicationRef of applicationRefs) {
 		const placement = await resolvePrimaryParents(tx, {

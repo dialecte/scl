@@ -4,8 +4,10 @@ import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
 
+import type { AcceptedIds } from './decide.types'
 import type {
 	ClassifyUnmatchedParams,
+	DroppedElement,
 	RemovalBase,
 	ResolveRemovalBaseParams,
 	UnmatchedClass,
@@ -58,6 +60,41 @@ export function classifyUnmatched(params: ClassifyUnmatchedParams): UnmatchedCla
 			return throwDialecteError('ASSERTION_FAILED', {
 				detail: `classifyUnmatched: unhandled removal base ${String(removalBase satisfies never)}`,
 			})
+	}
+}
+
+/**
+ * Whether an apply removes an element the source no longer holds: a removal unless its group was skipped (every
+ * removal when no gate is given), an element of the project's own only when its removal was accepted.
+ */
+export function acceptsRemoval(params: {
+	change: Exclude<UnmatchedClass, 'still-held'>
+	id: string
+	accepted: AcceptedIds | undefined
+}): boolean {
+	const { change, id, accepted } = params
+	switch (change) {
+		case 'removed':
+			return !accepted || accepted.instanceIds.has(id)
+		case 'target-only':
+			return accepted?.instanceIds.has(id) ?? false
+		default:
+			return throwDialecteError('ASSERTION_FAILED', {
+				detail: `acceptsRemoval: unhandled change ${String(change satisfies never)}`,
+			})
+	}
+}
+
+/** Remove the dropped elements the decisions accept (see {@link acceptsRemoval}), each once. */
+export async function deleteDropped(
+	tx: Core.Transaction<Config>,
+	params: { dropped: readonly DroppedElement[]; accepted: AcceptedIds | undefined },
+): Promise<void> {
+	const { dropped, accepted } = params
+	for (const { element, change } of dropped) {
+		if (!acceptsRemoval({ change, id: element.id, accepted })) continue
+		const live = await tx.any.getRecord(element)
+		if (live) await tx.any.delete(element)
 	}
 }
 

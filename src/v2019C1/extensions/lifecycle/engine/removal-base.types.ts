@@ -1,6 +1,7 @@
 import type { Config } from '@/v2019C1/config'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
+import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
  * What tells, in one report or apply, that an element of the project the source lacks was dropped from it:
@@ -39,4 +40,13 @@ export type ClassifyUnmatchedParams = {
 	/** The source holds an element of that uuid. */
 	inSource: boolean
 	removalBase: RemovalBase
+}
+
+/**
+ * A primary of the project the source no longer holds — an application or a function of a placed unit, a function an
+ * application no longer composes — with what it is: dropped by the source, or the project's own.
+ */
+export type DroppedElement = {
+	element: AnyTrackedRecord
+	change: Exclude<UnmatchedClass, 'still-held'>
 }

@@ -43,3 +43,4 @@ export type {
 export type { HeldLevels, InstanceCounterpart } from './resolve-held-levels.types'
 export type { OffLevel, PrimaryPlacement } from './resolve-primary-placement.types'
 export type { PrimaryLanding } from './land-primaries.types'
+export { findDroppedPrimaries } from './find-dropped-primaries'
