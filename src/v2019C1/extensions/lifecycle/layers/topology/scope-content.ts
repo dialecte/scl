@@ -1,3 +1,5 @@
+import { findFrameInstances } from './find-frame-instances'
+
 import {
 	collectComposedFunctionUuids,
 	findInstancesByTemplateUuid,
@@ -72,19 +74,26 @@ export async function resolveTopologyReconcilables(
 }
 
 /**
- * Whether the project already holds an instance of any primary of a topology scope (by lineage).
- * With none, reconciling the scope is a first placement, whatever operation was asked for.
+ * Whether the project already holds an instance of a topology scope (by lineage): a level an earlier
+ * placement put the scope on, or an instance of any primary of the scope. With none, reconciling the
+ * scope is a first placement, whatever operation was asked for — a scope holding no primary (levels
+ * and equipment only) is found by its level.
  */
 export async function hasScopeInstance(
 	reader: Core.Query<Config> | Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
+		/** The unit of the template: the first named level. */
+		scopeRef: Scl.Ref<TopologyStructuralTag>
 		applicationRefs: readonly Scl.Ref<'Application'>[]
 		standaloneFunctions: readonly Scl.Ref<'Function'>[]
 		matchKey: MatchKey
 	},
 ): Promise<boolean> {
-	const { sourceQuery, applicationRefs, standaloneFunctions, matchKey } = params
+	const { sourceQuery, scopeRef, applicationRefs, standaloneFunctions, matchKey } = params
+
+	const frameInstances = await findFrameInstances(reader, { sourceQuery, scopeRef, matchKey })
+	if (frameInstances.length > 0) return true
 
 	for (const primaryRef of [...applicationRefs, ...standaloneFunctions]) {
 		const { uuid } = await sourceQuery.any.getAttributes(primaryRef)

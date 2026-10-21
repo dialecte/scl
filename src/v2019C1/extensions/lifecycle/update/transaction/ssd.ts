@@ -98,6 +98,7 @@ export async function ssd(
 		!policy.matchesInstances ||
 		!(await hasScopeInstance(tx, {
 			sourceQuery,
+			scopeRef: root,
 			applicationRefs,
 			standaloneFunctions,
 			matchKey,

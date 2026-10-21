@@ -259,3 +259,57 @@ for (const pair of NOT_REVISIONS) {
 		},
 	)
 }
+
+const TOPOLOGY_ONLY = '4 - SSD template files/SLD_TFO_Bay v0r1.xml'
+
+const projectSubstation = /* xml */ `
+	<SCL ${ns} ${id}="project">
+		<Header id="project" uuid="project-file-uuid" ${id}="project-header"/>
+		<Substation name="S1" ${id}="project-substation"/>
+	</SCL>
+`
+
+describe.skipIf(!areCorpusRevisionsSynced([TOPOLOGY_ONLY]))(
+	'corpus: a bay template of levels and equipment only',
+	() => {
+		it('updated with itself writes nothing; forked twice, each uuid stays once', async () => {
+			const xml = await readCorpusRevision(TOPOLOGY_ONLY)
+			const { project, source, target } = await createSclTestProject({
+				sourceXml: xml,
+				targetXml: projectSubstation,
+			})
+			if (!target) throw new Error('target required')
+			const forkedProject = await openSclDocument({
+				project,
+				xml: projectSubstation,
+				label: 'forked project',
+			})
+			const [substation] = await source.document.query.getRecordsByTagName('Substation')
+			const lifecycle = (scenario: 'instantiate' | 'template' | 'fork', document: Scl.Document) =>
+				reportAndApply({
+					document,
+					lifecycle: {
+						verb: 'ssd',
+						sourceQuery: source.document.query,
+						ref: { tagName: 'Substation', id: substation.id },
+						anchor: { tagName: 'Substation', id: 'project-substation' },
+						scenario,
+					} as LifecycleTarget,
+				})
+
+			await lifecycle('instantiate', target.document)
+			const placed = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+			const { report: update } = await lifecycle('template', target.document)
+			expect(listGroups(update), 'nothing to write').toEqual([])
+			expect(await target.document.query.getSnapshot({ as: 'xml' }), 'nothing written').toBe(placed)
+
+			await lifecycle('fork', forkedProject)
+			await lifecycle('fork', forkedProject)
+			const forked = (await forkedProject.query.getSnapshot({ as: 'xml' })) as string
+			const uuids = [
+				...new DOMParser().parseFromString(forked, 'application/xml').querySelectorAll('[uuid]'),
+			].map((element) => element.getAttribute('uuid'))
+			expect(new Set(uuids).size, 'each uuid once, the levels included').toBe(uuids.length)
+		})
+	},
+)

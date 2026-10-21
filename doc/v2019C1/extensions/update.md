@@ -467,15 +467,15 @@ The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQu
 
 ## `tx.lifecycle.update.ssd`
 
-`ssd({ sourceQuery, scopeRef?, targetParent, scenario, report, decisions, keepNameTypesFrom })` reconciles a project against a (possibly newer) SSD — the topology layer, cascading down to `asd`/`fsd`:
+`ssd({ sourceQuery, scopeRef?, targetParent, scenario, baseQuery?, report, decisions, keepNameTypesFrom })` reconciles a project against a (possibly newer) SSD — the topology layer, cascading down to `asd`/`fsd`:
 
-- **first-time** — no scope primary (any `Application` or standalone `Function` under the scope) has an instance yet, or `scenario: 'instantiate'` — delegates whole to [`instantiate.ssd`](./instantiate#ssd), so the source is recorded **once** at document level, exactly like the direct verb (not scattered per primary);
+- **first-time** — the project holds no instance of the scope yet — no level the scope was placed on, and no instance of a scope primary (any `Application` or standalone `Function` under the scope) — or `scenario: 'instantiate'` — delegates whole to [`instantiate.ssd`](./instantiate#ssd), so the source is recorded **once** at document level, exactly like the direct verb (not scattered per primary);
 - **reconcile** — an instance exists:
   1. **topology frame** — reconcile the scope's **own** structural content (`Substation`/`VoltageLevel`/`Bay` attributes, `BayType`, equipment) via `reconcileTopologyFrame`, matched to the instance by its stamped `templateUuid` lineage — rename-robust, so a renamed Bay still matches. The fn/app tags are a **boundary** here, excluded from this pass and left to the cascade below;
   2. **application cascade** — each `Application` under the scope, via [`update.asd`](#tx-lifecycle-update-asd) (which itself cascades to its composed Functions);
   3. **function cascade** — each standalone `Function` (not composed by any `Application`), via [`update.fsd`](#tx-lifecycle-update-fsd).
 
-A part added by the newer SSD is instantiated; an existing one is reconciled — never blindly re-added.
+A part added by the newer SSD is instantiated; an existing one is reconciled — never blindly re-added. An SSD with no application or function (levels and equipment only) is updated like any: the level it was placed on is its instance.
 
 The read-only counterpart is `doc.query.lifecycle.report({ verb: 'ssd', sourceQuery, anchor: targetParent })`, assembled the same way: the topology frame's own diff plus the union of the per-primary `reportAsd`/`reportFsd` reports, merged into one `DiffReport` so the groups of `report.instances` cover the whole scope and the fast/full classification holds across it.
 
