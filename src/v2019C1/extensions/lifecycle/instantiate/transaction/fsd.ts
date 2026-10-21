@@ -17,6 +17,7 @@ import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { FsdParams, FsdResult } from './fsd.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 
@@ -49,7 +50,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	// where the function lands: where the consumer started, or — started above the level the
 	// function was made for — on the level its template says, the missing levels created
 	const landing = params.resolvePlacement
-		? await landOnTemplateLevel(tx, params)
+		? await landOnTemplateLevel(tx, { ...params, matchKey: policy.matchKey })
 		: { targetParent: params.targetParent, cloneMappings: [], redirectMappings: [] }
 	const { targetParent } = landing
 
@@ -78,6 +79,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		structure,
 		stripCategoriesUuid: false,
 		decisionMappings: params.decisionMappings,
+		matchKey: policy.matchKey,
 	})
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) that apply
@@ -87,6 +89,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		primaryRef: functionRef,
 		structure,
 		strip: false,
+		matchKey: policy.matchKey,
 	})
 
 	const allMappings = [
@@ -155,7 +158,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
  */
 async function landOnTemplateLevel(
 	tx: Core.Transaction<Config>,
-	params: FsdParams,
+	params: FsdParams & { matchKey: MatchKey },
 ): Promise<{
 	targetParent: Scl.Ref<Scl.ElementsOf>
 	cloneMappings: Scl.CloneMapping[]
@@ -169,6 +172,7 @@ async function landOnTemplateLevel(
 		anchor: targetParent,
 		decisionMappings,
 		operation: 'instantiate.fsd',
+		matchKey: params.matchKey,
 	})
 	if (!landing) return { targetParent, cloneMappings: [], redirectMappings: [] }
 

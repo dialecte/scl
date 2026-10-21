@@ -1,5 +1,6 @@
 import type { PlacementLevel } from './resolve-placement-mappings.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
@@ -23,6 +24,8 @@ export type EnsureTopologyFrameParams = {
 	 * level holds, is not written — nor, for the unit, the levels above it.
 	 */
 	leftOut?: ReadonlySet<string>
+	/** The key a project element carries a source element's uuid in, to find what it lands on. Default `templateUuid`. */
+	matchKey?: MatchKey
 }
 
 export type EnsureTopologyFrameResult = {

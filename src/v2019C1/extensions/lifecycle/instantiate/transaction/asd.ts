@@ -79,6 +79,7 @@ export async function placeApplication(
 				anchor: targetParent,
 				decisionMappings,
 				operation: 'instantiate.asd',
+				matchKey: policy.matchKey,
 			})
 		: undefined
 	const structure = landing?.structure ?? (await resolveTargetStructure(tx, targetParent))
@@ -90,6 +91,7 @@ export async function placeApplication(
 		keepNameTypesFrom,
 		decisionMappings,
 		leftOut,
+		matchKey: policy.matchKey,
 	})
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) applying to
@@ -100,6 +102,7 @@ export async function placeApplication(
 		structure,
 		strip: false,
 		leftOut,
+		matchKey: policy.matchKey,
 	})
 
 	const allMappings = [

@@ -16,6 +16,7 @@ import type { PlacementLevel } from './resolve-placement-mappings.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
@@ -55,6 +56,8 @@ export async function cloneTopologyContent(
 		placementLevels?: readonly PlacementLevel[]
 		/** The source elements the consumer left out (record ids): a level, an application, a function. */
 		leftOut?: ReadonlySet<string>
+		/** The key a project element carries a source element's uuid in, to find what it lands on. Default `templateUuid`. */
+		matchKey?: MatchKey
 	},
 ): Promise<CloneTopologyContentResult> {
 	const { sourceQuery, scopeRef, targetParent, omit, decisionMappings, placementLevels } = params
@@ -68,6 +71,7 @@ export async function cloneTopologyContent(
 		omit,
 		placementLevels,
 		leftOut,
+		matchKey: params.matchKey,
 	})
 	const { frameIndex } = frame
 
@@ -102,6 +106,7 @@ export async function cloneTopologyContent(
 			omit,
 			decisionMappings,
 			leftOut,
+			matchKey: params.matchKey,
 		})
 		record(applicationContent.cloneMappings)
 		redirectMappings.push(...applicationContent.redirectMappings)
@@ -123,6 +128,7 @@ export async function cloneTopologyContent(
 			stripCategoriesUuid: false,
 			decisionMappings,
 			placedCategories,
+			matchKey: params.matchKey,
 		})
 		record(categories.cloneMappings)
 		redirectMappings.push(...categories.redirectMappings)

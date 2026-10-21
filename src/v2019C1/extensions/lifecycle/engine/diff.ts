@@ -27,8 +27,8 @@ import type {
 	KeptAttributeChange,
 	ReportInstance,
 } from './diff.types'
-import type { PinnedMatches } from './match-child'
-import type { RedirectedSourceUuids } from './reference-match'
+import type { PinnedMatches } from './match-child.types'
+import type { RedirectedSourceUuids } from './reference-match.types'
 import type { Config } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -239,6 +239,7 @@ async function diffMatched(
 			instanceParent: instanceNode,
 			index,
 			matchedInstanceIds,
+			matchKey,
 			refsAlwaysAdded,
 			redirectedSourceUuids: params.redirectedSourceUuids,
 			matchContainersByName: withinProjectOwned,
@@ -317,7 +318,11 @@ async function diffMatched(
 		) {
 			const keep =
 				keepLeftoverRefs ||
-				(await isMultiInstanceSiblingRef(targetQuery, instanceChild, sourceRefIdentities))
+				(await isMultiInstanceSiblingRef(targetQuery, {
+					instanceChild,
+					sourceRefIdentities,
+					matchKey,
+				}))
 			// Provenance override: a kept leftover ref is still a GENUINE removal when the policy says
 			// its target is in the source's own scope AND the source no longer references it.
 			const genuinelyRemoved =
@@ -375,7 +380,7 @@ async function collectSourceRefIdentities(
 	const identities = new Set<string>()
 	for (const child of sourceNode.tree) {
 		if (!REFERENCE_TAG_NAMES.has(child.tagName)) continue
-		const uuidIdentity = await referenceIdentity(sourceQuery, child, { mapToTemplate: false })
+		const uuidIdentity = await referenceIdentity(sourceQuery, child, { side: 'source' })
 		if (uuidIdentity) identities.add(uuidIdentity)
 		const nameIdentity = await referenceNameIdentity(sourceQuery, child)
 		if (nameIdentity) identities.add(nameIdentity)
@@ -386,11 +391,18 @@ async function collectSourceRefIdentities(
 /** Whether an unmatched instance reference is a multi-instance sibling of a template reference. */
 async function isMultiInstanceSiblingRef(
 	targetQuery: Core.Query<Config>,
-	instanceChild: AnyTreeRecord,
-	sourceRefIdentities: ReadonlySet<string>,
+	params: {
+		instanceChild: AnyTreeRecord
+		sourceRefIdentities: ReadonlySet<string>
+		matchKey: MatchKey
+	},
 ): Promise<boolean> {
+	const { instanceChild, sourceRefIdentities, matchKey } = params
 	if (sourceRefIdentities.size === 0) return false
-	const uuidIdentity = await referenceIdentity(targetQuery, instanceChild, { mapToTemplate: true })
+	const uuidIdentity = await referenceIdentity(targetQuery, instanceChild, {
+		side: 'instance',
+		matchKey,
+	})
 	if (uuidIdentity && sourceRefIdentities.has(uuidIdentity)) return true
 	const nameIdentity = await referenceNameIdentity(targetQuery, instanceChild)
 	return !!nameIdentity && sourceRefIdentities.has(nameIdentity)

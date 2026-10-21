@@ -21,6 +21,7 @@ import type { AllocationRoleReuse, CloneApplicationContentResult } from './clone
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
@@ -53,6 +54,8 @@ export async function cloneApplicationContent(
 		 * composes that are kept are placed without it.
 		 */
 		leftOut?: ReadonlySet<string>
+		/** The key a project element carries a source element's uuid in, to find what it lands on. Default `templateUuid`. */
+		matchKey?: MatchKey
 	},
 ): Promise<CloneApplicationContentResult> {
 	const { sourceQuery, applicationRef, structure, omit, keepNameTypesFrom, leftOut } = params
@@ -98,6 +101,7 @@ export async function cloneApplicationContent(
 			stripCategoriesUuid: false,
 			decisionMappings,
 			placedCategories,
+			matchKey: params.matchKey,
 		})
 		allMappings.push(...categories.cloneMappings)
 		categoryRedirectMappings.push(...categories.redirectMappings)
@@ -119,6 +123,7 @@ export async function cloneApplicationContent(
 		sourceQuery,
 		applicationRef,
 		decisionMappings,
+		matchKey: params.matchKey,
 	})
 	for (const reuse of roleReuse) {
 		cloneIndex.set(reuse.sourceId, reuse.existingRef)
@@ -171,9 +176,10 @@ async function mapAllocationRoles(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		decisionMappings?: DecisionMappings
+		matchKey?: MatchKey
 	},
 ): Promise<AllocationRoleReuse[]> {
-	const { sourceQuery, applicationRef, decisionMappings } = params
+	const { sourceQuery, applicationRef, decisionMappings, matchKey } = params
 
 	const { AllocationRoleRef: refs = [] } = await sourceQuery.findDescendants(applicationRef, {
 		collect: 'AllocationRoleRef',
@@ -199,6 +205,7 @@ async function mapAllocationRoles(
 			sourceRef: { tagName: 'AllocationRole', id: sourceRole.id },
 			policy,
 			decision: decisionMappings?.get(sourceRole.id),
+			matchKey,
 		})
 		assertMappingDecided({
 			sourceRef: { tagName: 'AllocationRole', id: sourceRole.id },

@@ -19,6 +19,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { SourceFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMapping, MappingPolicy } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
@@ -114,6 +115,7 @@ export async function cloneFunctionCategories(
 				categoryRef,
 				policy,
 				decision: params.decisionMappings?.get(categoryId),
+				matchKey: params.matchKey,
 			}))
 		if (existing) {
 			// Do NOT skip - that would drop this function's classification.
@@ -122,6 +124,7 @@ export async function cloneFunctionCategories(
 				source: categoryRef,
 				target: existing,
 				strip: false,
+				matchKey: params.matchKey,
 			})
 			cloneMappings.push(...merged.cloneMappings)
 			redirectMappings.push(...merged.redirectMappings)
@@ -194,9 +197,10 @@ async function findMappedCategory(
 		categoryRef: Scl.Ref<'FunctionCategory'>
 		policy: MappingPolicy | undefined
 		decision: DecisionMapping | undefined
+		matchKey: MatchKey | undefined
 	},
 ): Promise<Scl.Ref<'FunctionCategory'> | undefined> {
-	const { sourceQuery, categoryRef, policy, decision } = params
+	const { sourceQuery, categoryRef, policy, decision, matchKey } = params
 	if (!policy) return undefined
 
 	const resolved = await resolveMapping(tx, {
@@ -204,6 +208,7 @@ async function findMappedCategory(
 		sourceRef: categoryRef,
 		policy,
 		decision,
+		matchKey,
 	})
 	if (categoryRef.id) {
 		assertMappingDecided({

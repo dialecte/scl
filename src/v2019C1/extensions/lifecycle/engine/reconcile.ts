@@ -12,8 +12,8 @@ import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cut
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
-import type { PinnedMatches } from './match-child'
-import type { RedirectedSourceUuids } from './reference-match'
+import type { PinnedMatches } from './match-child.types'
+import type { RedirectedSourceUuids } from './reference-match.types'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
@@ -226,6 +226,7 @@ async function reconcileChildren(
 			instanceParent,
 			index,
 			matchedInstanceIds,
+			matchKey,
 			redirectedSourceUuids,
 			matchContainersByName: withinProjectOwned,
 			pinnedMatches: params.pinnedMatches,
@@ -301,18 +302,18 @@ async function reconcileChildren(
 		}
 	}
 
-	// Unmatched instance children with no `templateUuid`:
+	// Unmatched instance children with no lineage under the scenario's key:
 	//  - a REFERENCE (link) tag = a dropped link → removed (fast track removes it; the
 	//    full track gates on the removed node's acceptance);
 	//  - any other tag = an author-added TARGET-ONLY element → preserved by default and
 	//    removed ONLY when its own decision group is explicitly accepted.
-	// Identified removals (templateUuid lineage gone) are handled by `deleteRemoved`.
+	// Identified removals (lineage gone) are handled by `deleteRemoved`.
 	for (const instanceChild of instanceParent.tree) {
 		if (matchedInstanceIds.has(instanceChild.id)) continue
 		// a boundary tag is owned by another pass - never delete it here
 		if (omit?.includes(instanceChild.tagName)) continue
-		const templateUuid = await tx.any.getAttribute(instanceChild, { name: 'templateUuid' })
-		if (templateUuid) continue
+		const lineage = await tx.any.getAttribute(instanceChild, { name: matchKey })
+		if (lineage) continue
 		if (
 			REFERENCE_TAG_NAMES.has(instanceChild.tagName) &&
 			!KEEP_ON_ORPHAN_REFS.has(instanceChild.tagName)

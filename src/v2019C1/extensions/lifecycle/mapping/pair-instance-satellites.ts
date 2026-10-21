@@ -9,6 +9,7 @@ import type {
 	SourceSatellite,
 	StoredRef,
 } from './mapping.types'
+import type { ReferenceIdentitySide } from '@/v2019C1/extensions/lifecycle/engine/reference-match.types'
 import type { AnyTreeRecord } from '@dialecte/core'
 
 /** Whether a project element can be the one a shared source element stands for. */
@@ -57,7 +58,7 @@ export async function pairInstanceSatellites(
 		const sourceIdentities = new Set<string>()
 		await collectReferenceIdentities(sourceQuery, {
 			node: sourceTree,
-			mapToTemplate: false,
+			side: { side: 'source' },
 			identities: sourceIdentities,
 		})
 		if (sourceIdentities.size === 0) return false
@@ -65,7 +66,7 @@ export async function pairInstanceSatellites(
 		const instanceIdentities = new Set<string>()
 		await collectReferenceIdentities(reader, {
 			node: instanceTree,
-			mapToTemplate: true,
+			side: { side: 'instance', matchKey },
 			identities: instanceIdentities,
 		})
 		return [...sourceIdentities].some((identity) => instanceIdentities.has(identity))
@@ -135,14 +136,14 @@ export async function pairInstanceSatellites(
 /** The identity of every reference in a subtree: what it points at, in template space. */
 async function collectReferenceIdentities(
 	reader: MappingReader,
-	params: { node: AnyTreeRecord; mapToTemplate: boolean; identities: Set<string> },
+	params: { node: AnyTreeRecord; side: ReferenceIdentitySide; identities: Set<string> },
 ): Promise<void> {
-	const { node, mapToTemplate, identities } = params
+	const { node, side, identities } = params
 	if (node.tagName in UUID_REFERENCE_PAIRS) {
-		const identity = await referenceIdentity(reader, node, { mapToTemplate })
+		const identity = await referenceIdentity(reader, node, side)
 		if (identity) identities.add(identity)
 	}
 	for (const child of node.tree) {
-		await collectReferenceIdentities(reader, { node: child, mapToTemplate, identities })
+		await collectReferenceIdentities(reader, { node: child, side, identities })
 	}
 }

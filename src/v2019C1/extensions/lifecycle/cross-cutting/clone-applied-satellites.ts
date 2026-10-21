@@ -12,6 +12,7 @@ import type {
 	CloneAppliedSatellitesResult,
 } from './clone-applied-satellites.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 
@@ -34,20 +35,21 @@ export async function cloneAppliedSatellites(
 	tx: Core.Transaction<Config>,
 	params: CloneAppliedSatellitesParams,
 ): Promise<CloneAppliedSatellitesResult> {
-	const { sourceQuery, primaryRef, structure, strip = true, leftOut } = params
+	const { sourceQuery, primaryRef, structure, strip = true, leftOut, matchKey } = params
 
 	const satellites = await resolveAppliedSatellites(sourceQuery, { primaryRef, leftOut })
 
 	const cloneMappings: Scl.CloneMapping[] = []
 	const redirectMappings: RedirectMapping[] = []
 	for (const satelliteRef of satellites) {
-		const existing = await findMappedSatellite(tx, { sourceQuery, satelliteRef })
+		const existing = await findMappedSatellite(tx, { sourceQuery, satelliteRef, matchKey })
 		if (existing) {
 			const merged = await mergeChildrenInto(tx, {
 				sourceQuery,
 				source: satelliteRef,
 				target: existing,
 				strip: false,
+				matchKey,
 			})
 			cloneMappings.push(...merged.cloneMappings)
 			redirectMappings.push(...merged.redirectMappings)
@@ -71,14 +73,23 @@ export async function cloneAppliedSatellites(
 /** The element of the target a source satellite is mapped onto — none when it is to be created. */
 async function findMappedSatellite(
 	tx: Core.Transaction<Config>,
-	params: { sourceQuery: Core.Query<Config>; satelliteRef: Scl.Ref<Scl.ElementsOf> },
+	params: {
+		sourceQuery: Core.Query<Config>
+		satelliteRef: Scl.Ref<Scl.ElementsOf>
+		matchKey: MatchKey | undefined
+	},
 ): Promise<Scl.Ref<Scl.ElementsOf> | undefined> {
-	const { sourceQuery, satelliteRef } = params
+	const { sourceQuery, satelliteRef, matchKey } = params
 
 	const policy = findMappingPolicy(satelliteRef.tagName)
 	if (!policy) return undefined
 
-	const { existing } = await resolveMapping(tx, { sourceQuery, sourceRef: satelliteRef, policy })
+	const { existing } = await resolveMapping(tx, {
+		sourceQuery,
+		sourceRef: satelliteRef,
+		policy,
+		matchKey,
+	})
 	return existing
 		? ({ tagName: satelliteRef.tagName, id: existing.id } as Scl.Ref<Scl.ElementsOf>)
 		: undefined

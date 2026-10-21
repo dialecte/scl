@@ -108,6 +108,7 @@ export async function ensureTopologyFrame(
 			target,
 			omit: ownContentOmit,
 			leftOut,
+			matchKey: params.matchKey,
 		})
 		cloneMappings.push(...ownContent.cloneMappings)
 		redirectMappings.push(...ownContent.redirectMappings)

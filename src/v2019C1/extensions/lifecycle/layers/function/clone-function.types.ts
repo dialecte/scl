@@ -1,6 +1,7 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type { SourceFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
@@ -10,6 +11,8 @@ export type CloneFunctionCategoriesParams = {
 	functionRef: SourceFunctionRef
 	structure: TargetStructure
 	stripCategoriesUuid?: boolean
+	/** The key a project element carries a source element's uuid in, to find what it lands on. Default `templateUuid`. */
+	matchKey?: MatchKey
 	/** The consumer's choices for the categories, by source record id. */
 	decisionMappings?: DecisionMappings
 	/**

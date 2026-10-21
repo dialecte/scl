@@ -116,3 +116,10 @@ export function listGroups(report: DiffReport): string[] {
 		.map((group) => `${group.change} ${group.primary.tagName}`)
 		.sort()
 }
+
+/** The companions of every group of a report as `<change> <tag>`, sorted. */
+export function listCompanions(report: DiffReport): string[] {
+	return allGroups(report)
+		.flatMap((group) => group.companions.map((node) => `${node.change} ${node.tagName}`))
+		.sort()
+}

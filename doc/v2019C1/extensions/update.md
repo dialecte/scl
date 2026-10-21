@@ -524,7 +524,7 @@ The update verbs are built on two engine primitives in `extensions/lifecycle/eng
 
 ### reconcile — apply-core
 
-`reconcile(tx, { sourceQuery, sourceRootRef, instanceRootRef })` reconciles an updated template subtree **onto** an existing instance. Elements match by `templateUuid` (= the source element's `uuid`, immutable across template versions):
+`reconcile(tx, { sourceQuery, sourceRootRef, instanceRootRef, matchKey, identityMode, bumpsCollisions })` reconciles an updated template subtree **onto** an existing instance, with the fields of the scenario's policy (the verbs derive it, `scenarioPolicy`). Elements match by the scenario's key: `templateUuid` (= the source element's `uuid`, immutable across template versions), `uuid` for a fork:
 
 - matched element → update its user-visible attributes in place;
 - new source element → add its subtree (via [`transplant.deep`](./transplant) + `identity.writeIdentity` stamp), then auto-resolve a name [collision](#placement-collision-resolution) on the added element against its instance parent;
@@ -568,14 +568,14 @@ type ReportInstance = {
 }
 ```
 
-Matched by `templateUuid`, same-space attribute compare. **Classify** decides the track: no instance = first-time instantiate = **fast** (headless); an existing instance with any change = **full** (needs decisions). This is the report a headless/review wrapper consumes to route fast vs full.
+Matched by the scenario's key (`templateUuid`, `uuid` for a fork), same-space attribute compare. **Classify** decides the track: no instance = first-time instantiate = **fast** (headless); an existing instance with any change = **full** (needs decisions). This is the report a headless/review wrapper consumes to route fast vs full.
 
 ### Child matching — one shared matcher
 
 `reconcile` (apply) and `diff` (report) pair a source child to its instance child through **one** shared matcher (`matchChild`), so the preview and the write always agree on which elements correspond:
 
-- **identified** elements match by `templateUuid` lineage, guarded to the same tag — a placeholder `templateUuid` reused across unrelated element types (see [`checkTemplateUuids`](#identity-integrity-—-checktemplateuuids)) never matches across types;
-- a uuid-less **reference** link (e.g. `FunctionRef`) matches by its reference identity — the target it points to, mapped back to template space — with a resolved-name fallback for placeholder-lineage projects, never by tag position;
+- **identified** elements match by their lineage under the scenario's key (`templateUuid`, `uuid` for a fork), guarded to the same tag — a placeholder `templateUuid` reused across unrelated element types (see [`checkTemplateUuids`](#identity-integrity-—-checktemplateuuids)) never matches across types;
+- a uuid-less **reference** link (e.g. `FunctionRef`) matches by its reference identity — the target it points to, brought back to the source by the same key: its target's `templateUuid`, or for a fork the target's `uuid` itself — with a resolved-name fallback for placeholder-lineage projects, never by tag position;
 - anything else falls back to position.
 
 Because both sides share this matcher, `apply` can no longer pair a child differently from the `report` that gated it: the apply path carries the same cross-type guard and reference-identity matching as the report.

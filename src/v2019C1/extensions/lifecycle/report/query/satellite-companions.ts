@@ -44,8 +44,8 @@ import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
  *    shared element, the one its mapping resolves to (`resolveSatelliteMappings`, the answer the
  *    apply reads too); for any other, its instance (matched by `templateUuid`). One with nothing
  *    to land on surfaces all-added;
- *  - removed: a TARGET instance satellite whose `templateUuid` the source no longer
- *    references -> folded as a `removed` companion so accepting the primary deletes it.
+ *  - removed: a TARGET instance satellite whose lineage (under the scenario's key) the source no
+ *    longer holds -> folded as a `removed` companion so accepting the primary deletes it.
  *
  * Folds only when the primary itself is a changed group (satellite-only change with
  * an unchanged primary is deferred).
@@ -86,6 +86,7 @@ export async function foldSatelliteCompanions(
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
 		params
+	const matchKey = params.matchKey ?? 'templateUuid'
 	const firstTime = instanceScopeId === undefined
 
 	const group = report.groups.find((candidate) => candidate.primary.sourceRef?.id === primaryRef.id)
@@ -144,7 +145,11 @@ export async function foldSatelliteCompanions(
 			keepLeftoverRefs: true,
 			// Provenance override: a leftover ref IS a genuine removal when its target is in the
 			// source's own scope and the source satellite no longer references it (see below).
-			leftoverRefPolicy: await buildLeftoverRefPolicy(query, sourceQuery, satelliteRef),
+			leftoverRefPolicy: await buildLeftoverRefPolicy(query, {
+				sourceQuery,
+				satelliteRef,
+				matchKey,
+			}),
 			// INSTANTIATE: the satellite container may already exist (matched), but this instantiation's
 			// per-instance refs are genuinely new — classify them added instead of lineage-matching a
 			// prior instance's refs (which would report a no-op while apply still merges 4 more in).
@@ -180,11 +185,11 @@ export async function foldSatelliteCompanions(
 	// source-element non-existence, NOT a link drop.
 	for (const instanceRef of instanceSatelliteRefs ?? []) {
 		if (instanceRef.id && mappedOntoIds.has(instanceRef.id)) continue
-		const { templateUuid } = await query.any.getAttributes(instanceRef)
-		if (!templateUuid) continue
+		const lineage = await query.any.getAttribute(instanceRef, { name: matchKey })
+		if (!lineage) continue
 		const [stillInSource] = await sourceQuery.any.findByAttributes({
 			tagName: instanceRef.tagName,
-			attributes: { uuid: templateUuid },
+			attributes: { uuid: lineage },
 		})
 		if (stillInSource) continue
 		const removed: DiffNode = {
@@ -278,8 +283,8 @@ async function findSatelliteTarget(
 /**
  * Build the provenance policy for a shared satellite's leftover reference children. A leftover ref is
  * a GENUINE removal (not another primary's link) only when BOTH hold:
- *  - its target's `templateUuid` is a real element `uuid` IN THE SOURCE being updated (in-scope —
- *    excludes other applications' targets and dangling/placeholder lineages);
+ *  - its target's lineage under the scenario's key is a real element `uuid` IN THE SOURCE being
+ *    updated (in-scope — excludes other applications' targets and dangling/placeholder lineages);
  *  - the SOURCE satellite no longer references that template target (genuinely dropped, not a
  *    multi-instance sibling the source still references).
  * Otherwise keep. Under malformed lineage the target does not resolve in-source, so it degrades to
@@ -287,9 +292,13 @@ async function findSatelliteTarget(
  */
 async function buildLeftoverRefPolicy(
 	query: Core.Query<Config>,
-	sourceQuery: Core.Query<Config>,
-	satelliteRef: Scl.Ref<Scl.ElementsOf>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		satelliteRef: Scl.Ref<Scl.ElementsOf>
+		matchKey: MatchKey
+	},
 ): Promise<LeftoverRefPolicy> {
+	const { sourceQuery, satelliteRef, matchKey } = params
 	// Template targets the SOURCE satellite still references (its own ref children's target uuids).
 	const sourceTree = await sourceQuery.any.getTree(satelliteRef)
 	const sourceReferencedUuids = new Set<string>()
@@ -303,12 +312,12 @@ async function buildLeftoverRefPolicy(
 			if (!uuidValue) continue
 			const target = await findByUuid(query, uuidValue, pair.target)
 			if (!target) continue
-			const targetTemplateUuid = await query.any.getAttribute(target, { name: 'templateUuid' })
-			if (!targetTemplateUuid) continue
-			// in-scope: the target's template lineage is an element of the SOURCE being updated
-			if (!(await findByUuid(sourceQuery, targetTemplateUuid, pair.target))) continue
+			const targetLineage = await query.any.getAttribute(target, { name: matchKey })
+			if (!targetLineage) continue
+			// in-scope: the target's lineage is an element of the SOURCE being updated
+			if (!(await findByUuid(sourceQuery, targetLineage, pair.target))) continue
 			// still referenced by the SOURCE satellite -> multi-instance sibling -> keep
-			if (sourceReferencedUuids.has(targetTemplateUuid)) continue
+			if (sourceReferencedUuids.has(targetLineage)) continue
 			return 'removed'
 		}
 		return 'keep'

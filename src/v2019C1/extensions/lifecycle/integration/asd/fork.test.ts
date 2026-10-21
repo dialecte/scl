@@ -1,4 +1,4 @@
-import { findByUuid, listGroups, reportAndApply } from '../integration-helpers'
+import { findByUuid, listCompanions, listGroups, reportAndApply } from '../integration-helpers'
 
 import { describe, expect } from 'vitest'
 
@@ -27,6 +27,8 @@ type ForkTestCase = SclTest.BaseXmlTestCase & {
 	expectedInstances: (string | undefined)[]
 	/** The groups of the report, `<change> <tag>`, sorted. */
 	expectedGroups: string[]
+	/** The companions the groups carry, `<change> <tag>`, sorted, when the case says. */
+	expectedCompanions?: string[]
 	/** Forked a second time, after the newer revision changed this way (or not at all), from this source. */
 	secondFork?: { sourceXml?: string }
 }
@@ -54,9 +56,12 @@ function asdRevision(params: {
 	applicationContent?: string
 	bayPrivate?: string
 	bay?: string
+	/** The logical node was placed from a function file: it carries that file's element as its lineage. */
+	lnodeLineage?: boolean
 }): string {
 	const { side, applicationAttributes = '', functionAttributes = '' } = params
 	const { roleContent = '', applicationContent = '', bayPrivate = '', bay = '' } = params
+	const lnodeLineage = params.lnodeLineage ? 'templateUuid="lnode-template-uuid"' : ''
 	return /* xml */ `
 		<SCL ${ns} ${id}="${side}">
 			<Substation name="TEMPLATE" ${id}="${side}-substation">
@@ -75,7 +80,7 @@ function asdRevision(params: {
 							${bayPrivate}
 						</Private>
 						<Function name="Prot" uuid="function-uuid" ${functionAttributes} ${id}="${side}-function">
-							<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" uuid="lnode-uuid" ${id}="${side}-lnode"/>
+							<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" uuid="lnode-uuid" ${lnodeLineage} ${id}="${side}-lnode"/>
 						</Function>
 						${bay}
 					</Bay>
@@ -100,6 +105,15 @@ const allocationRole = (side: string, name: string, uuid: string) => /* xml */ `
 `
 const allocationRoleRef = (side: string, name: string, uuid: string) =>
 	/* xml */ `<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/TEMPLATE/TEMPLATE/${name}" allocationRoleUuid="${uuid}" ${id}="${side}-${name}-ref"/>`
+
+/** A function role referring to the composed function, with a signal role naming its logical node's data. */
+const signalRoleContent = (side: string) => /* xml */ `
+	<eIEC61850-6-100:FunctionRef functionUuid="function-uuid" ${id}="${side}-signal-function-ref">
+		<eIEC61850-6-100:SignalRole name="Internal" uuid="signal-uuid" ${id}="${side}-signal">
+			<eIEC61850-6-100:LNodeDataRef data="TEMPLATE/TEMPLATE/TEMPLATE/Prot/CSWI1.Pos.stVal" lnodeUuid="lnode-uuid" doName="Pos" daName="stVal" ${id}="${side}-data-ref"/>
+		</eIEC61850-6-100:SignalRole>
+	</eIEC61850-6-100:FunctionRef>
+`
 
 const projectWithEmptyBay = /* xml */ `
 	<SCL ${ns} ${id}="project">
@@ -236,6 +250,59 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 					'//v2019C1:FunctionCategory[2]',
 				],
 			},
+		'an allocation role the newer revision dropped is removed': {
+			sourceXml: asdRevision({ side: 'source' }),
+			targetXml: asdRevision({
+				side: 'project',
+				applicationContent: allocationRoleRef('project', 'BCU', 'role-bcu-uuid'),
+				bayPrivate: allocationRole('project', 'BCU', 'role-bcu-uuid'),
+			}),
+			applicationUuid: 'application-uuid',
+			anchor: { id: 'project-bay' },
+			expectedInstances: ['application-uuid', 'function-uuid'],
+			expectedGroups: ['removed AllocationRole', 'removed AllocationRoleRef'],
+			expectedQueries: ['//v2019C1:Application[@uuid="application-uuid"]'],
+			unexpectedQueries: ['//v2019C1:AllocationRole', '//v2019C1:AllocationRoleRef'],
+		},
+		'references that point at what they pointed at in the previous revision are matched, not removed and added again':
+			{
+				sourceXml: asdRevision({
+					side: 'source',
+					applicationAttributes: 'desc="rev2"',
+					roleContent: signalRoleContent('source'),
+					lnodeLineage: true,
+				}),
+				targetXml: asdRevision({
+					side: 'project',
+					roleContent: signalRoleContent('project'),
+					lnodeLineage: true,
+				}),
+				applicationUuid: 'application-uuid',
+				anchor: { id: 'project-bay' },
+				expectedInstances: ['application-uuid', 'function-uuid'],
+				expectedGroups: ['modified Application'],
+				expectedCompanions: [],
+				expectedQueries: [
+					'//v2019C1:SignalRole[@uuid="signal-uuid"]/v2019C1:LNodeDataRef[@lnodeUuid="lnode-uuid"]',
+				],
+				unexpectedQueries: ['(//v2019C1:LNodeDataRef)[2]'],
+			},
+		'a real application file that gains a role and a behaviour: those two listed, nothing else': {
+			sourceXml: readRevisionTwin({ twin: 'applicationGainsElements', revision: 2 }),
+			targetXml: readRevisionTwin({ twin: 'applicationGainsElements', revision: 1 }),
+			applicationUuid: '00000000-0000-4000-8000-000000000210',
+			anchor: { uuid: '00000000-0000-4000-8000-000000000203' },
+			expectedInstances: [
+				'00000000-0000-4000-8000-000000000210',
+				'00000000-0000-4000-8000-000000000220',
+			],
+			expectedGroups: ['added BehaviorDescription', 'added FunctionRole'],
+			expectedQueries: [
+				'//v2019C1:FunctionRole[@uuid="00000000-0000-4000-8000-000000000215"]',
+				'//v2019C1:BehaviorDescription[@uuid="00000000-0000-4000-8000-000000000216"]',
+			],
+			unexpectedQueries: ['(//v2019C1:LNodeDataRef)[3]', '(//v2019C1:FunctionRole)[4]'],
+		},
 	}
 
 	async function act({
@@ -274,6 +341,9 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 		}
 		expect(matched.sort()).toEqual(testCase.expectedInstances)
 		expect(listGroups(report)).toEqual(testCase.expectedGroups)
+		if (testCase.expectedCompanions) {
+			expect(listCompanions(report)).toEqual(testCase.expectedCompanions)
+		}
 
 		if (testCase.secondFork) {
 			const next = testCase.secondFork.sourceXml

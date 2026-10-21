@@ -34,6 +34,7 @@ export async function landPrimaries(
 		scopeRef: deepestLevel.sourceRef,
 		targetParent: anchor,
 		placementLevels: placement.levels,
+		matchKey: params.matchKey,
 	})
 	return {
 		structure: frame.structure,

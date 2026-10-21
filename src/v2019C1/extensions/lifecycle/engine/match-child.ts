@@ -3,19 +3,15 @@ import { referenceIdentity, referenceNameIdentity } from './reference-match'
 
 import { REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
 
-import type { RedirectedSourceUuids } from './reference-match'
+import type { PinnedMatches } from './match-child.types'
+import type { RedirectedSourceUuids } from './reference-match.types'
 import type { Config } from '@/v2019C1/config'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
 
 /** A read surface shared by the diff (Query) and reconcile (Transaction) sides. */
 type Reader = Core.Query<Config> | Core.Transaction<Config>
-
-/**
- * Source children whose counterpart is decided elsewhere, by source record id: the record id of the
- * instance child each lands on, or `undefined` for a child that is new whatever the instance holds.
- */
-export type PinnedMatches = ReadonlyMap<string, string | undefined>
 
 /**
  * Find the instance child that corresponds to a source child — the ONE matcher shared by the diff
@@ -25,7 +21,7 @@ export type PinnedMatches = ReadonlyMap<string, string | undefined>
  *    reuse one dummy value on Substation, LNode, ...) can coincide with a source `uuid`; a cross-type
  *    hit is a collision, not a lineage.
  *  - A uuid-less **REFERENCE** (e.g. `FunctionRef`) matches by its reference IDENTITY — the target
- *    `*Uuid` it points to, mapped back to template space — never by tag position; with a name-space
+ *    `*Uuid` it points to, brought back to the source by the scenario's key — never by tag position; with a name-space
  *    fallback for projects authored with placeholder `templateUuid`s. `refsAlwaysAdded` forces a fresh
  *    instantiation's refs to surface as `added` instead of matching a prior instance's ref. A reference
  *    to a project element a source element was mapped onto reads as a reference to that source element
@@ -43,8 +39,8 @@ export type PinnedMatches = ReadonlyMap<string, string | undefined>
  * children: those of another instance (`foreignInstanceIds`) are never the counterpart of a child of
  * this one, however alike they read once brought back to template space.
  *
- * The source side reads raw identities; the candidate (target) side is normalized to template space —
- * that role split is internal here, so callers never pass a space/`mapToTemplate` flag.
+ * The source side reads raw identities; the candidate (target) side is brought back to the source by
+ * `matchKey` — that role split is internal here, callers only say the scenario's key.
  */
 export async function matchChild(
 	sourceQuery: Reader,
@@ -54,6 +50,8 @@ export async function matchChild(
 		instanceParent: AnyTreeRecord
 		index: Map<string, AnyTreeRecord>
 		matchedInstanceIds: ReadonlySet<string>
+		/** The scenario's key: how a candidate reference's target is brought back to the source. */
+		matchKey: MatchKey
 		refsAlwaysAdded?: boolean
 		redirectedSourceUuids?: RedirectedSourceUuids
 		matchContainersByName?: boolean
@@ -101,16 +99,15 @@ export async function matchChild(
 	if (candidates.length === 0) return undefined
 
 	if (REFERENCE_TAG_NAMES.has(sourceChild.tagName)) {
-		// The source ref's target uuid is already TEMPLATE space (do not normalize it — an extracted
-		// template may carry its own `templateUuid`). The candidate ref's target uuid is mapped back to
-		// template space via its element's `templateUuid` so the two compare equal.
-		const sourceIdentity = await referenceIdentity(sourceQuery, sourceChild, {
-			mapToTemplate: false,
-		})
+		// The source ref's target uuid is read as it is (do not normalize it — an extracted template may
+		// carry its own `templateUuid`). The candidate ref's target uuid is brought back to the source by
+		// the scenario's key so the two compare equal.
+		const sourceIdentity = await referenceIdentity(sourceQuery, sourceChild, { side: 'source' })
 		if (sourceIdentity === undefined) return candidates[0]
 		for (const candidate of candidates) {
 			const candidateIdentity = await referenceIdentity(targetQuery, candidate, {
-				mapToTemplate: true,
+				side: 'instance',
+				matchKey: params.matchKey,
 				redirectedSourceUuids: params.redirectedSourceUuids,
 			})
 			if (candidateIdentity === sourceIdentity) return candidate

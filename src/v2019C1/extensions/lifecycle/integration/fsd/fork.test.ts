@@ -24,6 +24,8 @@ type ForkTestCase = SclTest.BaseXmlTestCase & {
 	expectedInstances: (string | undefined)[]
 	/** The groups of the report, `<change> <tag>`, sorted. */
 	expectedGroups: string[]
+	/** Where the report lands a shared source element (by record ids), when the case says. */
+	expectedMappings?: { source: string; lands: string }[]
 	/** Forked a second time, after the newer revision changed this way (or not at all). */
 	secondFork?: { editSource?: (tx: Scl.Transaction) => Promise<void> }
 }
@@ -294,6 +296,35 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 					'//v2019C1:Variable[@desc="rev1"]',
 				],
 			},
+		'a first fork onto a project holding the category under its uuid: the one category, the reference added to it':
+			{
+				sourceXml: fsdRevision({ side: 'source', substationPrivate: category('source', 'rev2') }),
+				targetXml: projectWithEmptyBay().replace(
+					`<Substation name="S1" ${id}="project-substation">`,
+					`<Substation name="S1" ${id}="project-substation"><Private type="eIEC61850-6-100" ${id}="project-substation-private"><eIEC61850-6-100:FunctionCategory name="PROTECTION_OLD" uuid="category-uuid" ${id}="project-category"/></Private>`,
+				),
+				anchor: projectBay,
+				expectedInstances: [undefined],
+				expectedGroups: ['added Function'],
+				expectedMappings: [{ source: 'source-category', lands: 'project-category' }],
+				expectedQueries: [
+					'//v2019C1:FunctionCategory[@uuid="category-uuid"]/v2019C1:FunctionCatRef[@functionUuid="function-uuid"]',
+				],
+				unexpectedQueries: [
+					'//v2019C1:FunctionCategory[2]',
+					'//v2019C1:FunctionCategory[@templateUuid]',
+				],
+			},
+		'a carried category the newer revision dropped: what the report lists is what the apply removes':
+			{
+				sourceXml: fsdRevision({ side: 'source' }),
+				targetXml: fsdRevision({ side: 'project', substationPrivate: category('project', 'rev1') }),
+				anchor: { tagName: 'Bay', id: 'project-bay' },
+				expectedInstances: ['project-function'],
+				expectedGroups: ['removed FunctionCategory'],
+				expectedQueries: ['//default:Function[@uuid="function-uuid"]'],
+				unexpectedQueries: ['//v2019C1:FunctionCategory', '//v2019C1:FunctionCatRef'],
+			},
 	}
 
 	async function act({
@@ -316,6 +347,13 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 			testCase.expectedInstances,
 		)
 		expect(listGroups(report)).toEqual(testCase.expectedGroups)
+		for (const { source: sourceId, lands } of testCase.expectedMappings ?? []) {
+			const listed = report.mappings.find((mapping) => mapping.id === sourceId)
+			const landing = listed?.mapping
+			expect(landing && 'existing' in landing ? landing.existing.id : undefined).toBe(lands)
+			// what the apply wrote it onto
+			expect(listed?.appliedRef?.id).toBe(lands)
+		}
 
 		if (testCase.secondFork) {
 			const { editSource } = testCase.secondFork

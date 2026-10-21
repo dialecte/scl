@@ -67,6 +67,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		decisionMappings,
 		placementLevels,
 		leftOut,
+		matchKey: policy.matchKey,
 	})
 	// the consumer left everything out: nothing is written, not even where it came from
 	if (leftOut?.size && contentMappings.length === 0) return { scopeRef: root, cloneMappings: [] }
@@ -80,6 +81,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		structure: scopeStructure,
 		strip: false,
 		leftOut,
+		matchKey: policy.matchKey,
 	})
 
 	const allMappings = [...contentMappings, ...applied.cloneMappings]

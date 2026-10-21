@@ -1,34 +1,30 @@
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 
+import type { RedirectedSourceUuids, ReferenceIdentitySide } from './reference-match.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
-
-/**
- * For each project element a source element was mapped onto: the project element's `uuid` -> the
- * source element's `uuid`. Such an element carries no lineage (it is the project's own), so this
- * is what tells a reference to it from the template reference it stands for.
- */
-export type RedirectedSourceUuids = ReadonlyMap<string, string>
 
 /** A read surface shared by the diff (Query) and reconcile (Transaction) sides. */
 type Reader = Core.Query<Config> | Core.Transaction<Config>
 
 /**
  * The reference identity of a link element: the set of target `*Uuid` attributes it carries, as a
- * stable string. When `mapToTemplate` is set (the INSTANCE/target side), each target uuid is resolved
- * to its element's `templateUuid` so an instantiated (remapped) reference compares equal to the
- * template reference it came from. A target the source element was MAPPED onto carries no lineage:
- * `redirectedSourceUuids` gives the source element it stands for. The SOURCE side passes the raw
- * uuids, which are already template space. Returns `undefined` when no uuid attribute is set
- * (unresolved ref), so matching falls back to position. Lineage-aware by design — this is a matching
- * helper, not an agnostic identity read.
+ * stable string. On the instance side (`side: 'instance'`), each target uuid is brought back to the
+ * source by the scenario's key: to its element's `templateUuid` for an instance of a template, so an
+ * instantiated (remapped) reference compares equal to the template reference it came from; to itself
+ * under `uuid`, where source and project share their uuids. A target the source element was MAPPED
+ * onto carries no lineage: `redirectedSourceUuids` gives the source element it stands for. The source
+ * side reads the raw uuids. Returns `undefined` when no uuid attribute is set (unresolved ref), so
+ * matching falls back to position. Lineage-aware by design — this is a matching helper, not an
+ * agnostic identity read.
  */
 export async function referenceIdentity(
 	query: Reader,
 	node: AnyTreeRecord,
-	options: { mapToTemplate: boolean; redirectedSourceUuids?: RedirectedSourceUuids },
+	options: ReferenceIdentitySide,
 ): Promise<string | undefined> {
 	const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS]
 	if (!pairs) return undefined
@@ -36,24 +32,31 @@ export async function referenceIdentity(
 	for (const pair of pairs) {
 		const uuidValue = await query.any.getAttribute(node, { name: pair.attribute.uuid })
 		if (!uuidValue) continue
-		const identity = options.mapToTemplate
-			? (options.redirectedSourceUuids?.get(uuidValue) ??
-				(await toTemplateSpaceUuid(query, uuidValue, pair.target)))
-			: uuidValue
+		const identity =
+			options.side === 'instance'
+				? (options.redirectedSourceUuids?.get(uuidValue) ??
+					(await toSourceSpaceUuid(query, {
+						uuidValue,
+						targetTags: pair.target,
+						matchKey: options.matchKey,
+					})))
+				: uuidValue
 		parts.push(`${pair.attribute.uuid}=${identity}`)
 	}
 	return parts.length > 0 ? parts.sort().join('|') : undefined
 }
 
 /**
- * Resolve an instance target `uuid` to its template-space identity: the referenced element's
- * `templateUuid` if it is an instance, else the uuid itself (an external/unresolvable target).
+ * Bring an instance target `uuid` back to the source: under `templateUuid`, the referenced element's
+ * `templateUuid` if it is an instance, else the uuid itself (an external/unresolvable target); under
+ * `uuid`, the uuid itself — the source names its elements by the uuids the project shares.
  */
-async function toTemplateSpaceUuid(
+async function toSourceSpaceUuid(
 	query: Reader,
-	uuidValue: string,
-	targetTags: readonly string[],
+	params: { uuidValue: string; targetTags: readonly string[]; matchKey: MatchKey },
 ): Promise<string> {
+	const { uuidValue, targetTags, matchKey } = params
+	if (matchKey === 'uuid') return uuidValue
 	for (const tagName of targetTags) {
 		const matches = await query.any.findByAttributes({
 			tagName: tagName as Parameters<typeof query.any.findByAttributes>[0]['tagName'],
@@ -61,7 +64,7 @@ async function toTemplateSpaceUuid(
 		})
 		const target = matches[0]
 		if (target) {
-			const templateUuid = await query.any.getAttribute(target, { name: 'templateUuid' })
+			const templateUuid = await query.any.getAttribute(target, { name: matchKey })
 			return templateUuid || uuidValue
 		}
 	}

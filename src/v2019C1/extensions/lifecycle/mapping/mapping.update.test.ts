@@ -324,6 +324,26 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 					roleAllocations: ['S1/V1/B1/Local'],
 				},
 			},
+		'… the project role’s own allocation to a function another template placed stays too': {
+			sourceXml,
+			targetXml: projectXml.replace(
+				'<Function name="Local" uuid="local-function-uuid"',
+				'<Function name="Local" uuid="local-function-uuid" templateUuid="other-template-function-uuid"',
+			),
+			editTemplate: async (tx) => {
+				await tx.delete({ tagName: 'FunctionRef', id: 'role-function-ref-s' })
+			},
+			expected: {
+				mappings: [lockedOntoProjectRole],
+				announcedNewRoles: 0,
+				announcedNewAllocations: 0,
+				announcedRemovedAllocations: 1,
+				roleNames: ['HMI_PC'],
+				applicationRoles: ['S1/HMI_PC'],
+				roleDescription: 'Operator workstation',
+				roleAllocations: ['S1/V1/B1/Local'],
+			},
+		},
 		'the template drops the role altogether → the project role stays, without what this instance had given it':
 			{
 				sourceXml,
@@ -636,6 +656,39 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 					roleAllocations: [],
 				},
 			},
+		'… or created under a name of the consumer’s → the role is created with that name': {
+			sourceXml: secondRoleUnusedSourceXml,
+			targetXml: twoRolesProjectXml,
+			editProject: renameBothProjectRoles,
+			editTemplate: referSecondRole,
+			chosenAtUpdate: [['control-role-s', { create: { name: 'Bay control' } }]],
+			expected: {
+				mappings: [
+					{
+						...lockedOntoProjectRole,
+						candidates: [{ ref: projectRoleRef, title: 'Workstation', path: 'S1/Workstation' }],
+					},
+					{
+						id: 'control-role-s',
+						tagName: 'AllocationRole',
+						kind: 'shared',
+						mapping: { create: { name: 'Bay control' } },
+						parentPath: 'S1',
+						reason: 'decision',
+						ambiguous: false,
+						selectable: true,
+						locked: false,
+						candidates: renamedProjectRoles,
+					},
+				],
+				announcedNewRoles: 1,
+				announcedNewAllocations: 0,
+				roleNames: ['Bay control', 'Controller', 'Workstation'],
+				applicationRoles: ['S1/Bay control', 'S1/Workstation'],
+				roleDescription: undefined,
+				roleAllocations: [],
+			},
+		},
 		'… and with no choice at all → neither is picked, apply refuses: the instance keeps the role it held':
 			{
 				sourceXml: secondRoleUnusedSourceXml,

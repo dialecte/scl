@@ -17,7 +17,7 @@ import {
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { PinnedMatches } from '@/v2019C1/extensions/lifecycle/engine/match-child'
+import type { PinnedMatches } from '@/v2019C1/extensions/lifecycle/engine/match-child.types'
 import type { InstanceLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'

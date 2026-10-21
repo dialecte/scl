@@ -5,6 +5,7 @@ import { elementSignature } from '@/v2019C1/extensions/signature/query'
 import type { StripConfig } from './clone-tree.types'
 import type { MergeChildrenResult } from './merge-children-into.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
@@ -17,8 +18,9 @@ import type { OmitEntry } from '@dialecte/core'
  * source child in as a fresh clone, this walks name-keyed containers (e.g. `FunctionCategory` ->
  * `SubCategory`) and, when the target already holds the twin of a source child, recurses into it -
  * so only the genuinely new leaves (references, unnamed content) are cloned. The twin is the
- * same-tag child created from that source child (it carries its uuid as `templateUuid`, whatever
- * it is named now), else the same-tag child of the same name - the rule the lifecycle matcher
+ * same-tag child created from that source child (it carries its uuid under `matchKey` — as its
+ * `templateUuid`, or as its own uuid for a fork — whatever it is named now), else the same-tag child
+ * of the same name - the rule the lifecycle matcher
  * (`matchChild`) applies inside an element the source is mapped onto, so the report and the write
  * pair containers alike. A source child with no twin is cloned whole.
  *
@@ -41,9 +43,12 @@ export async function mergeChildrenInto(
 		omit?: OmitEntry<Config>[]
 		/** The source elements the consumer left out (record ids): such a child is not cloned. */
 		leftOut?: ReadonlySet<string>
+		/** The key a target child carries a source child's uuid in. Default `templateUuid`. */
+		matchKey?: MatchKey
 	},
 ): Promise<MergeChildrenResult> {
 	const { sourceQuery, source, target, strip, omit, leftOut } = params
+	const matchKey = params.matchKey ?? 'templateUuid'
 
 	const cloneMappings: Scl.CloneMapping[] = []
 	const redirectMappings: RedirectMapping[] = []
@@ -55,7 +60,7 @@ export async function mergeChildrenInto(
 		if (isOmittedTag(omit, childRef.tagName)) continue
 
 		const child = { tagName: childRef.tagName, id: childRef.id } as Scl.Ref<Scl.ElementsOf>
-		const twin = await findTwin(tx, { sourceQuery, target, child })
+		const twin = await findTwin(tx, { sourceQuery, target, child, matchKey })
 
 		if (twin) {
 			// The container already exists - merge INTO it rather than duplicate it.
@@ -68,6 +73,7 @@ export async function mergeChildrenInto(
 				strip,
 				omit,
 				leftOut,
+				matchKey,
 			})
 			cloneMappings.push(...merged.cloneMappings)
 			redirectMappings.push(...merged.redirectMappings)
@@ -101,8 +107,8 @@ function isOmittedTag(omit: OmitEntry<Config>[] | undefined, tagName: string): b
 }
 
 /**
- * The child of `target` a source child lands in: the same-tag child created from it, else the
- * same-tag child of the same name.
+ * The child of `target` a source child lands in: the same-tag child carrying its uuid under
+ * `matchKey`, else the same-tag child of the same name.
  */
 async function findTwin(
 	tx: Core.Transaction<Config>,
@@ -110,9 +116,10 @@ async function findTwin(
 		sourceQuery: Core.Query<Config>
 		target: Scl.Ref<Scl.ElementsOf>
 		child: Scl.Ref<Scl.ElementsOf>
+		matchKey: MatchKey
 	},
 ): Promise<Scl.Ref<Scl.ElementsOf> | undefined> {
-	const { sourceQuery, target, child } = params
+	const { sourceQuery, target, child, matchKey } = params
 
 	const targetRecord = await tx.any.getRecord(target)
 	if (!targetRecord) return undefined
@@ -121,7 +128,7 @@ async function findTwin(
 	const uuid = await sourceQuery.any.getAttribute(child, { name: 'uuid' })
 	if (uuid) {
 		for (const sibling of siblings) {
-			const lineage = await tx.any.getAttribute(sibling, { name: 'templateUuid' })
+			const lineage = await tx.any.getAttribute(sibling, { name: matchKey })
 			if (lineage === uuid) return toChildRef(sibling)
 		}
 	}
