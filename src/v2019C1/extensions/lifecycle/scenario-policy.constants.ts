@@ -6,7 +6,8 @@ import type { ScenarioPolicy } from './scenario-policy.types'
  * row here.
  *  - `instantiate` places a new instance: its elements get a uuid of their own and the template's as their lineage;
  *  - `template` reconciles the instances of a template, by that lineage;
- *  - `fork` reconciles the previous revision of the same file, by the uuids both share, which it keeps.
+ *  - `fork` reconciles the previous revision of the same file, by the uuids both share, which it keeps — on what it
+ *    places too, with no provenance of its own: the project holds the file's elements, not instances of them.
  */
 export const SCENARIO_POLICIES = {
 	instantiate: {
@@ -15,6 +16,8 @@ export const SCENARIO_POLICIES = {
 		refsAlwaysAdded: true,
 		identityMode: 'stamp-template',
 		bumpsCollisions: true,
+		placementIdentity: 'stamp-template',
+		writesProvenance: true,
 	},
 	template: {
 		matchKey: 'templateUuid',
@@ -22,6 +25,8 @@ export const SCENARIO_POLICIES = {
 		refsAlwaysAdded: false,
 		identityMode: 'stamp-template',
 		bumpsCollisions: true,
+		placementIdentity: 'stamp-template',
+		writesProvenance: true,
 	},
 	fork: {
 		matchKey: 'uuid',
@@ -29,5 +34,7 @@ export const SCENARIO_POLICIES = {
 		refsAlwaysAdded: false,
 		identityMode: 'keep',
 		bumpsCollisions: false,
+		placementIdentity: 'keep',
+		writesProvenance: false,
 	},
 } as const satisfies Record<LifecycleScenario, ScenarioPolicy>

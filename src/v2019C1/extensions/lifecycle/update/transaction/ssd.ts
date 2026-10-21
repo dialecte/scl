@@ -100,7 +100,7 @@ export async function ssd(
 			sourceQuery,
 			scopeRef: root,
 			targetParent,
-			mode: identityMode,
+			scenario,
 			overrides,
 			decisionMappings: params.decisionMappings,
 			leftOut,

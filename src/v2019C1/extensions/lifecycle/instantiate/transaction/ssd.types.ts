@@ -1,6 +1,7 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
@@ -11,8 +12,12 @@ export type SsdParams = {
 	scopeRef?: Scl.Ref<TopologyStructuralTag>
 	/** Target parent the SSD content is instantiated under (e.g. a project Bay). */
 	targetParent: Scl.Ref<Scl.ElementsOf>
-	/** Identity policy: `stamp-template` (bay-typical reuse, default) or `keep` (project-base). */
-	mode?: 'stamp-template' | 'keep'
+	/**
+	 * The scenario the placement is made for: `instantiate` (default) places a new instance — a uuid of its own, the
+	 * template's as its lineage, its provenance; `fork` places the file's elements as they are — their uuids, no
+	 * provenance of their own; `template` places as `instantiate`.
+	 */
+	scenario?: LifecycleScenario
 	/** User-edited values per source element id (full track); drives collision override. */
 	overrides?: CollisionOverrides
 	/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */

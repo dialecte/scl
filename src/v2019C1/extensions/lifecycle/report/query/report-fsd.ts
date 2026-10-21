@@ -1,9 +1,18 @@
 import { reportFunction } from './report-function'
 import { buildReportInstance } from './report-instance'
 
+import { toRef } from '@dialecte/core/helpers'
+
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import { findInstancesUnder, scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
-import { placedFunctionTag } from '@/v2019C1/extensions/lifecycle/layers/function'
+import {
+	findByOwnUuid,
+	findInstancesUnder,
+	scopeToTargetInstance,
+} from '@/v2019C1/extensions/lifecycle/instance'
+import {
+	PLACED_FUNCTION_TAGS,
+	placedFunctionTag,
+} from '@/v2019C1/extensions/lifecycle/layers/function'
 import {
 	describePlacementMappings,
 	findLanding,
@@ -17,6 +26,7 @@ import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
+import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
  * Report (read-only) what `update.fromFsd` would change: a {@link DiffReport}
@@ -67,6 +77,14 @@ export async function reportFsd(
 			})
 		: []
 	const instances = await scopeToTargetInstance(query, { instances: matched, targetInstance })
+
+	// placed keeping the file's uuids: an element of the project already carrying the function's uuid is its instance,
+	// wherever it sits — reported there, as the update reconciles it, even outside `targetInstance`: a uuid names one
+	// element of a file, a second is never placed beside it
+	if (instances.length === 0 && policy.placementIdentity === 'keep') {
+		const owned = await findByOwnUuid(query, { tagNames: PLACED_FUNCTION_TAGS, uuid: sourceUuid })
+		if (owned.length > 0) return reportWhereKept(query, { params, elements: owned })
+	}
 
 	// no instance yet -> first-time = fast track
 	if (instances.length === 0) {
@@ -133,6 +151,27 @@ export async function reportFsd(
 				sourceRef: functionRef,
 			}),
 		)
+	}
+	return assembleReport({ instances: reportInstances, templateRoots: reportInstances })
+}
+
+/** Report the elements of the project carrying the function's uuid where each sits, as {@link reportFsd} from its parent. */
+async function reportWhereKept(
+	query: Core.Query<Config>,
+	context: { params: Parameters<typeof reportFsd>[1]; elements: readonly AnyTrackedRecord[] },
+): Promise<DiffReport> {
+	const { params, elements } = context
+	const reportInstances: ReportInstance[] = []
+	for (const element of elements) {
+		if (!element.parent) continue
+		const where = await reportFsd(query, {
+			...params,
+			targetParent: toRef(element.parent) as Scl.Ref<Scl.ElementsOf>,
+			targetInstance: toRef(element) as Scl.Ref<Scl.ElementsOf>,
+			placesFresh: false,
+			resolvePlacement: false,
+		})
+		reportInstances.push(...where.instances)
 	}
 	return assembleReport({ instances: reportInstances, templateRoots: reportInstances })
 }

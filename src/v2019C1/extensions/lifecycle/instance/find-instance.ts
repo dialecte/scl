@@ -152,6 +152,28 @@ export async function findInstancesByTemplateUuid(
 }
 
 /**
+ * The elements of the project carrying a uuid as their own, among the given tags, wherever they sit. A uuid names one
+ * element of a file: under a scenario that keeps the source's uuids, such an element IS the source element's
+ * instance, to reconcile where it sits — never one to place a second copy beside.
+ */
+export async function findByOwnUuid(
+	reader: Reader,
+	params: { tagNames: readonly Scl.ElementsOf[]; uuid: string | undefined },
+): Promise<AnyTrackedRecord[]> {
+	const { tagNames, uuid } = params
+	const found: AnyTrackedRecord[] = []
+	for (const tagName of tagNames) {
+		const records = await findInstancesByTemplateUuid(reader, {
+			tagName,
+			sourceUuid: uuid,
+			matchKey: 'uuid',
+		})
+		found.push(...records)
+	}
+	return found
+}
+
+/**
  * Narrow a set of matched instances to those SCOPED to one specific target instance: the instance
  * itself, or any instance structurally UNDER it. When `targetInstance` is undefined, every instance
  * passes (the default — operate on ALL instances of the template, a template-rollout).

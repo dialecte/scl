@@ -19,6 +19,7 @@ import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import {
 	collectForeignScopes,
+	findByOwnUuid,
 	findComposedFunctionRefs,
 	findInstancesByTemplateUuid,
 	scopeToTargetInstance,
@@ -117,6 +118,16 @@ export async function asd(
 		: []
 	const instances = await scopeToTargetInstance(tx, { instances: matched, targetInstance })
 
+	// placed keeping the file's uuids: an application of the project already carrying its uuid is its instance,
+	// wherever it sits — reconciled as the update of that instance, even outside `targetInstance`: a uuid names one
+	// element of a file, a second is never placed beside it
+	if (instances.length === 0 && policy.placementIdentity === 'keep') {
+		const owned = await findByOwnUuid(tx, { tagNames: ['Application'], uuid: sourceUuid })
+		if (owned.length > 0) {
+			return asd(tx, { ...params, placesFresh: false, targetInstance: undefined })
+		}
+	}
+
 	if (instances.length === 0) {
 		// a first placement writes what the consumer did not leave out — decided by the groups of
 		// this place when the report lists the placement per place. The report made the application
@@ -141,6 +152,7 @@ export async function asd(
 			sourceQuery,
 			applicationRef,
 			targetParent,
+			scenario,
 			overrides: gateOverrides,
 			keepNameTypesFrom,
 			decisionMappings: params.decisionMappings,

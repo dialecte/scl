@@ -11,6 +11,7 @@ import {
 	resolveInstantiableRoot,
 	resolvePlacementMappings,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
@@ -25,23 +26,17 @@ import type * as Core from '@dialecte/core'
  * skeleton (Substation/VoltageLevel/Bay + BayType + equipment) by name under `targetParent`, then
  * consumes the application/function layers to place the Applications + their composed Functions +
  * standalone Functions (with the type closure) under the name-correct level. Cross-cutting satellites
- * travel too; then the identity policy applies (`stamp-template` for bay-typical reuse = fresh uuid +
- * templateUuid, `keep` for a project base = preserved uuids). The instantiation is recorded once as a
- * document-level `SclFileReference` under the target `Header > SourceFiles`.
+ * travel too; then the identity the scenario places with applies (a new instance, for bay-typical reuse = fresh
+ * uuid + templateUuid; a fork, for a project base = preserved uuids). The placement is recorded once as a
+ * document-level `SclFileReference` under the target `Header > SourceFiles`, in every scenario.
  *
  * The scope defaults to the SSD's instantiable root (the first named level down the
  * `Substation -> VoltageLevel -> Bay` chain).
  */
 export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Promise<SsdResult> {
-	const {
-		sourceQuery,
-		scopeRef,
-		targetParent,
-		mode = 'stamp-template',
-		overrides,
-		leftOut,
-	} = params
+	const { sourceQuery, scopeRef, targetParent, overrides, leftOut } = params
 	const decisionMappings = params.decisionMappings
+	const policy = scenarioPolicy({ scenario: params.scenario ?? 'instantiate' })
 
 	const root = scopeRef ?? (await resolveInstantiableRoot(sourceQuery))
 	if (!root) {
@@ -92,15 +87,15 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	// Stamp/keep lineage + fix up refs (remap for stamp, restore for keep) in one seam.
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
-		mode,
+		mode: policy.placementIdentity,
 		redirectMappings: [...redirectMappings, ...applied.redirectMappings],
 	})
 
-	if (mode !== 'keep') {
+	if (policy.bumpsCollisions) {
 		// resolve a name collision on the CREATED frame scope root itself (instantiating one
 		// bay-typical twice under a VoltageLevel yields two distinct bays -> bump B1 to B1_1). The
 		// scope root's structural parent is its reproduced ancestor level (the SCL root for a
-		// Substation root, which has no structural ancestor). Fork/keep preserves identity, no bump.
+		// Substation root, which has no structural ancestor).
 		// a root mapped onto an element of the project is that element: it keeps its name
 		const rootLevel = placementLevels.find((level) => level.sourceRef.id === root.id)
 		const rootTarget = rootLevel?.resolved.existing ? undefined : frameIndex.get(root.id)
@@ -118,7 +113,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 
 		// resolve a name collision for each placed root at its own reproduced structural level (a
 		// repeated instantiate reuses the frame, so a second instance would otherwise duplicate a
-		// name among siblings). Fork/keep preserves identity, so it never bumps.
+		// name among siblings).
 		for (const placed of placedRoots) {
 			const sourceId = placed.id
 			if (!sourceId) continue

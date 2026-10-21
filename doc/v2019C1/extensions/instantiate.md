@@ -6,16 +6,18 @@ title: Instantiate
 
 Instantiate template content into a target document — the inverse direction of the [extract](./extract) operation. Each operation clones a template subtree together with its type closure and stamps instance lineage.
 
+Each operation takes `scenario` (`LifecycleScenario`, default `'instantiate'`), the identity it places with: `'instantiate'` (and `'template'`) places a **new instance** — a fresh `uuid` on every element, the template's as its `templateUuid`, the provenance of the file it came from, and a name collision numbered; `'fork'` places the **file's own elements** — their `uuid`s kept, no lineage stamped, no `FunctionSclRef` / `ApplicationSclRef` of their own, and no numbering. An SSD placement records the file in the project's `Header` in every scenario. The update verbs place with their own scenario when the project holds no instance yet (see [Update](./update#scenario-—-instantiate-vs-template-vs-fork)).
+
 ## fsd
 
 Access via `tx.lifecycle.instantiate` inside a `doc.transaction()` callback.
 
-`fsd({ sourceQuery, functionRef, targetParent })` instantiates the content an FSD carries into a target document:
+`fsd({ sourceQuery, functionRef, targetParent, scenario? })` instantiates the content an FSD carries into a target document:
 
 1. clone the function subtree and its content-addressed type closure under `targetParent` (via [`transplant.deep`](./transplant));
 2. place the `FunctionCategory` classification that references the function: mapped onto the category the project already holds (see [Shared elements are mapped, not copied](#shared-elements-are-mapped-not-copied)), else cloned at its structural level in the target project — the target Substation/VoltageLevel/Bay structure is resolved from `targetParent` (which may be a `Bay`, `VoltageLevel`, or `Substation`);
 3. place the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to any element in the function subtree: mapped onto the project's element of that name, else cloned at its own structural level;
-4. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its FSD counterpart as its `templateUuid` while receiving a fresh `uuid`;
+4. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its FSD counterpart as its `templateUuid` while receiving a fresh `uuid` — a `fork` keeps the source `uuid`s instead;
 5. validate the placed function against its parent context and auto-resolve a scoped-uniqueness [collision](./update#placement-collision-resolution) on its `name` (e.g. instantiating the same template twice under one Bay yields `Prot` then `Prot_1`).
 
 ```ts
@@ -34,10 +36,10 @@ Returns `{ functionRef, cloneMappings }` — the instantiated root (retagged to 
 
 ## asd
 
-`asd({ sourceQuery, applicationRef, targetParent })` instantiates the content an ASD carries — the **application layer** — into a target document:
+`asd({ sourceQuery, applicationRef, targetParent, scenario? })` instantiates the content an ASD carries — the **application layer** — into a target document:
 
 1. clone the `Application` and its composed Functions, categories and satellites (`AllocationRole`, dataflow refs, …) with their type closure, under the structure resolved from `targetParent` (via the shared `layers/application` take-over, built on [`transplant.deep`](./transplant)), together with the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to the Application or its content;
-2. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its ASD counterpart as its `templateUuid` while receiving a fresh `uuid`;
+2. stamp instance lineage (via `identity.writeIdentity` in `stamp-template` mode) on every cloned element, so each records its ASD counterpart as its `templateUuid` while receiving a fresh `uuid` — a `fork` keeps the source `uuid`s instead;
 3. validate the placed `Application` and each composed Function against their parent context and auto-resolve a scoped-uniqueness [collision](./update#placement-collision-resolution) on their `name`, each at its own structural level.
 
 ### Shared elements are mapped, not copied
@@ -70,12 +72,12 @@ Returns `{ applicationRef, composedFunctionRefs, cloneMappings }` — the instan
 
 ## ssd
 
-`ssd({ sourceQuery, scopeRef?, targetParent, mode?, overrides?, keepNameTypesFrom? })` instantiates the process-section content an SSD carries — the **topology layer**, one level above `asd` — into a target project:
+`ssd({ sourceQuery, scopeRef?, targetParent, scenario?, overrides?, keepNameTypesFrom? })` instantiates the process-section content an SSD carries — the **topology layer**, one level above `asd` — into a target project:
 
 1. `cloneTopologyContent` (`layers/topology`) REPRODUCES the source structural skeleton (`Substation`/`VoltageLevel`/`Bay` + their own `BayType`, equipment, connectivity) by name under `targetParent`, via `ensureTopologyFrame`: an ancestor level the target already provides is reused, the rest — the scope root and everything below it — is created. Multiple voltage levels/bays in the scope are each reproduced at their own level (never collapsed together). It then consumes the application/function layers to place each `Application` (with its composed Functions) and each standalone `Function`, under its name-correct reproduced level, together with the external cross-cutting [satellites](./update#satellites) applying to the scope;
-2. stamp instance lineage on every cloned element, in one of two identity modes:
-   - `mode: 'stamp-template'` (default) — bay-typical reuse: fresh `uuid` + `templateUuid` lineage, then a scoped-uniqueness [collision](./update#placement-collision-resolution) auto-resolved on each placed root (`Application` / standalone `Function`) at its own structural level, so instantiating the same SSD twice yields a second, distinct set of instances;
-   - `mode: 'keep'` — project base: adopt the SSD's own `uuid`s as-is (no re-stamp, no collision bump) — for the one-time case of turning an SSD into a project's starting content;
+2. write the identity of the scenario on every cloned element:
+   - `scenario: 'instantiate'` (default) — bay-typical reuse: fresh `uuid` + `templateUuid` lineage, then a scoped-uniqueness [collision](./update#placement-collision-resolution) auto-resolved on each placed root (`Application` / standalone `Function`) at its own structural level, so instantiating the same SSD twice yields a second, distinct set of instances;
+   - `scenario: 'fork'` — project base: adopt the SSD's own `uuid`s as-is (no re-stamp, no collision bump) — turning an SSD into a project's starting content, or the first fork of a file;
 3. record the instantiation **once**, at document level (`Header > SourceFiles`, via [`reference.writeProvenance`](./reference)) — not per element, since the whole scope came from one source file.
 
 The scope defaults to the SSD's instantiable root (`resolveInstantiableRoot` — the first named level down the `Substation → VoltageLevel → Bay` chain, below the `TEMPLATE`-named scaffolding levels).

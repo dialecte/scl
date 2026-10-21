@@ -9,6 +9,7 @@ import { linkPlacementDependencies } from '@/v2019C1/extensions/lifecycle/engine
 import { describeStandingChoice } from '@/v2019C1/extensions/lifecycle/engine/standing'
 import {
 	collectForeignScopes,
+	findByOwnUuid,
 	findInstancesByTemplateUuid,
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
@@ -94,6 +95,16 @@ export async function reportAsd(
 		instances: matchedApplications,
 		targetInstance,
 	})
+
+	// placed keeping the file's uuids: an application of the project already carrying its uuid is its instance,
+	// wherever it sits — reported as the update of that instance, as the update reconciles it, even outside
+	// `targetInstance`: a uuid names one element of a file, a second is never placed beside it
+	if (applicationInstances.length === 0 && policy.placementIdentity === 'keep') {
+		const owned = await findByOwnUuid(query, { tagNames: ['Application'], uuid: sourceUuid })
+		if (owned.length > 0) {
+			return reportAsd(query, { ...params, placesFresh: false, targetInstance: undefined })
+		}
+	}
 
 	// a first placement: where the application and its functions land is where the consumer
 	// started, or — started above a level one of them was made for — the levels their template says

@@ -11,6 +11,7 @@ import {
 	placedFunctionTag,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
 import { landPrimaries } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
@@ -23,9 +24,9 @@ import type * as Core from '@dialecte/core'
  * Instantiate the Function carried by an FSD into a target document.
  *
  * Clones the function subtree together with its type closure under
- * `targetParent` (`transplant.deep`), then stamps instance lineage
- * (`identity.writeIdentity`) so each cloned element records its FSD counterpart
- * as its `templateUuid` while receiving a fresh `uuid`.
+ * `targetParent` (`transplant.deep`), then writes the identity the scenario places with: a new instance stamps
+ * lineage (`identity.writeIdentity`) so each cloned element records its FSD counterpart as its `templateUuid`
+ * while receiving a fresh `uuid`; a fork keeps the file's uuids.
  *
  * When the target parent is itself a `Function`/`SubFunction`, the placed root is
  * retagged to `SubFunction` (schema: a function nested in a function is a
@@ -43,6 +44,7 @@ import type * as Core from '@dialecte/core'
  */
 export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Promise<FsdResult> {
 	const { sourceQuery, functionRef, overrides, keepNameTypesFrom } = params
+	const policy = scenarioPolicy({ scenario: params.scenario ?? 'instantiate' })
 
 	// where the function lands: where the consumer started, or — started above the level the
 	// function was made for — on the level its template says, the missing levels created
@@ -94,11 +96,11 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		...applied.cloneMappings,
 	]
 
-	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs
-	// (e.g. FunctionCatRef -> cloned Function) onto the fresh uuids.
+	// the identity the scenario places with: template lineage stamped onto a fresh instance and the cloned uuid
+	// references (e.g. FunctionCatRef -> cloned Function) repointed onto the fresh uuids, or the file's uuids kept
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
-		mode: 'stamp-template',
+		mode: policy.placementIdentity,
 		redirectMappings: [
 			...landing.redirectMappings,
 			...redirectMappings,
@@ -128,13 +130,15 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 
 	// validate the placed function against its parent context; apply any user edits
 	// then auto-resolve a name collision among siblings (schema constraint)
-	await resolvePlacementCollision(tx, {
-		ref: instantiatedRef,
-		parentRef: targetParent,
-		overrides: overrides?.get(functionRef.id),
-	})
+	if (policy.bumpsCollisions) {
+		await resolvePlacementCollision(tx, {
+			ref: instantiatedRef,
+			parentRef: targetParent,
+			overrides: overrides?.get(functionRef.id),
+		})
+	}
 	// a function placed as part of a larger template carries that template's provenance, not its own
-	if (!params.partOfTemplate) {
+	if (policy.writesProvenance && !params.partOfTemplate) {
 		await writeProvenance(tx, {
 			sourceQuery,
 			target: { anchor: 'function', root: instantiatedRef },

@@ -7,6 +7,7 @@ import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cut
 import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { landPrimaries } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import {
 	findMissingReferencedRecords,
 	resolveStructureRef,
@@ -22,8 +23,9 @@ import type * as Core from '@dialecte/core'
  *
  * Clones the application-layer content (Application + its Functions, categories and
  * satellites, with type closure) under the structure resolved from `targetParent`
- * (`layers/application`), then stamps instance lineage (`identity.writeIdentity` in
- * `stamp-template` mode) on every cloned element.
+ * (`layers/application`), then writes the identity the scenario places with on every cloned element: instance
+ * lineage stamped (`identity.writeIdentity` in `stamp-template` mode) for a new instance, the file's uuids kept
+ * for a fork.
  *
  * The clone's uuid references are repointed by `reference.applyUuidRemap` over the
  * combined mappings. The instantiation provenance link (`ApplicationSclRef` -> `SclFileReference` back to
@@ -53,6 +55,7 @@ export async function placeApplication(
 ): Promise<PlacedApplication> {
 	const { sourceQuery, applicationRef, targetParent, overrides, keepNameTypesFrom } = params
 	const { decisionMappings, leftOut } = params
+	const policy = scenarioPolicy({ scenario: params.scenario ?? 'instantiate' })
 
 	// capture the composed Function source refs BEFORE cloning (they are "missing" only
 	// until placed) so their clones can be collision-checked at their structural level
@@ -105,10 +108,10 @@ export async function placeApplication(
 		...applied.cloneMappings,
 	]
 
-	// Stamp template lineage onto the fresh instance and repoint cloned uuid refs.
+	// the identity the scenario places with: lineage stamped and the uuid references repointed, or the file's kept
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
-		mode: 'stamp-template',
+		mode: policy.placementIdentity,
 		redirectMappings: [
 			...(landing?.redirectMappings ?? []),
 			...redirectMappings,
@@ -118,7 +121,7 @@ export async function placeApplication(
 
 	// resolve a name collision for each placed composed Function at its own structural
 	// level (a repeated instantiate would otherwise duplicate a Function name in the Bay)
-	for (const functionRef of composedFunctionRefs) {
+	for (const functionRef of policy.bumpsCollisions ? composedFunctionRefs : []) {
 		const functionMapping = contentMappings.find((mapping) => mapping.source.id === functionRef.id)
 		if (!functionMapping) continue
 		const functionParent = await resolveStructureRef(sourceQuery, functionRef, structure)
@@ -155,14 +158,16 @@ export async function placeApplication(
 	// validate the placed application against its parent context (resolved at the
 	// application's own structural level, not the anchor): apply any user edits then
 	// auto-resolve a name collision among siblings (schema constraint)
-	const applicationParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
-	await resolvePlacementCollision(tx, {
-		ref: rootMapping.target,
-		parentRef: applicationParent,
-		overrides: overrides?.get(applicationRef.id),
-	})
+	if (policy.bumpsCollisions) {
+		const applicationParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
+		await resolvePlacementCollision(tx, {
+			ref: rootMapping.target,
+			parentRef: applicationParent,
+			overrides: overrides?.get(applicationRef.id),
+		})
+	}
 	// an application placed as part of a larger template carries that template's provenance, not its own
-	if (!params.partOfTemplate) {
+	if (policy.writesProvenance && !params.partOfTemplate) {
 		await writeProvenance(tx, {
 			sourceQuery,
 			target: { anchor: 'application', root: rootMapping.target as Scl.Ref<'Application'> },

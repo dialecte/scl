@@ -5,6 +5,7 @@ import { describe } from 'vitest'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
+import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SclTest } from '@/v2019C1/test'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -13,7 +14,7 @@ const ns = ALL_XMLNS_NAMESPACES
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	targetParentId: string
-	mode?: 'stamp-template' | 'keep'
+	scenario?: LifecycleScenario
 }
 
 describe('instantiate.ssd', () => {
@@ -80,7 +81,7 @@ describe('instantiate.ssd', () => {
 				],
 			},
 
-		'keep mode adopts the SSD as a project base: source uuids are preserved, no templateUuid stamped':
+		'a fork adopts the SSD as a project base: source uuids are preserved, no templateUuid stamped':
 			{
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="ssd">
@@ -124,7 +125,7 @@ describe('instantiate.ssd', () => {
 					</SCL>
 				`,
 				targetParentId: 'bay-t',
-				mode: 'keep',
+				scenario: 'fork',
 				expectedQueries: [
 					// project-base: the SSD's own uuids are adopted verbatim
 					'//v2019C1:Application[@name="HMI"][@uuid="app-src-uuid"]',
@@ -134,7 +135,7 @@ describe('instantiate.ssd', () => {
 					'//v2019C1:FunctionRef[@functionUuid="fn-src-uuid"]',
 				],
 				unexpectedQueries: [
-					// keep mode does not stamp template lineage
+					// a fork does not stamp template lineage
 					'//v2019C1:Application[@templateUuid]',
 					'//default:Function[@name="Prot"][@templateUuid]',
 				],
@@ -153,7 +154,7 @@ describe('instantiate.ssd', () => {
 			await ssd(tx, {
 				sourceQuery: source.query,
 				targetParent: root,
-				...(testCase.mode ? { mode: testCase.mode } : {}),
+				...(testCase.scenario ? { scenario: testCase.scenario } : {}),
 			})
 		})
 

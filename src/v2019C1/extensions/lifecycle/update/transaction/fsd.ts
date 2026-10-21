@@ -18,6 +18,7 @@ import {
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import {
+	findByOwnUuid,
 	findInstancesUnder,
 	foreignScopeResolver,
 	scopeToTargetInstance,
@@ -26,7 +27,10 @@ import {
 	fsd as instantiateFsd,
 	resolveTargetStructure,
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
-import { placedFunctionTag } from '@/v2019C1/extensions/lifecycle/layers/function'
+import {
+	PLACED_FUNCTION_TAGS,
+	placedFunctionTag,
+} from '@/v2019C1/extensions/lifecycle/layers/function'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
@@ -44,6 +48,7 @@ import type {
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
+import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
  * `update.fromFsd` — reconcile a project against a (possibly newer) FSD.
@@ -114,6 +119,14 @@ export async function fsd(
 		: []
 	const instances = await scopeToTargetInstance(tx, { instances: matched, targetInstance })
 
+	// placed keeping the file's uuids: an element of the project already carrying the function's uuid is its instance,
+	// wherever it sits — reconciled there, even outside `targetInstance`: a uuid names one element of a file, a second
+	// is never placed beside it
+	if (instances.length === 0 && policy.placementIdentity === 'keep') {
+		const owned = await findByOwnUuid(tx, { tagNames: PLACED_FUNCTION_TAGS, uuid: sourceUuid })
+		if (owned.length > 0) return reconcileWhereKept(tx, { params, elements: owned })
+	}
+
 	if (instances.length === 0) {
 		// first-time = one added group; gate the whole instantiate on its acceptance — the groups of
 		// this place when the report lists the placement per place
@@ -128,6 +141,7 @@ export async function fsd(
 			sourceQuery,
 			functionRef,
 			targetParent,
+			scenario,
 			overrides: gateOverrides,
 			keepNameTypesFrom,
 			decisionMappings: params.decisionMappings,
@@ -213,6 +227,30 @@ export async function fsd(
 	return instances.map(
 		(instance) => toRef(instance) as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
 	)
+}
+
+/**
+ * Reconcile the elements of the project carrying the function's uuid where each sits: the update, run from its
+ * parent, scoped to it.
+ */
+async function reconcileWhereKept(
+	tx: Core.Transaction<Config>,
+	context: { params: Parameters<typeof fsd>[1]; elements: readonly AnyTrackedRecord[] },
+): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
+	const { params, elements } = context
+	const reconciled: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[] = []
+	for (const element of elements) {
+		if (!element.parent) continue
+		const where = await fsd(tx, {
+			...params,
+			targetParent: toRef(element.parent) as Scl.Ref<Scl.ElementsOf>,
+			targetInstance: toRef(element) as Scl.Ref<Scl.ElementsOf>,
+			placesFresh: false,
+			resolvePlacement: false,
+		})
+		reconciled.push(...where)
+	}
+	return reconciled
 }
 
 /**

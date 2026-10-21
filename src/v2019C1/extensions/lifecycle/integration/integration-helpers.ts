@@ -109,3 +109,10 @@ async function describeNode(params: {
 	const { uuid, name } = await query.any.getAttributes(ref)
 	return uuid ?? name
 }
+
+/** The groups of a report as `<change> <tag>` of their primary, sorted: what a case expects of a report. */
+export function listGroups(report: DiffReport): string[] {
+	return allGroups(report)
+		.map((group) => `${group.change} ${group.primary.tagName}`)
+		.sort()
+}

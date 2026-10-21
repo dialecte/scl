@@ -17,6 +17,8 @@ const testCases: Record<string, TestCase> = {
 			refsAlwaysAdded: true,
 			identityMode: 'stamp-template',
 			bumpsCollisions: true,
+			placementIdentity: 'stamp-template',
+			writesProvenance: true,
 		},
 	},
 	'template: the instances matched by their lineage': {
@@ -27,9 +29,11 @@ const testCases: Record<string, TestCase> = {
 			refsAlwaysAdded: false,
 			identityMode: 'stamp-template',
 			bumpsCollisions: true,
+			placementIdentity: 'stamp-template',
+			writesProvenance: true,
 		},
 	},
-	'fork: the previous revision matched by the uuids both share, kept': {
+	'fork: the previous revision matched by the uuids both share, kept, on what it places too': {
 		params: { scenario: 'fork' },
 		expected: {
 			matchKey: 'uuid',
@@ -37,6 +41,8 @@ const testCases: Record<string, TestCase> = {
 			refsAlwaysAdded: false,
 			identityMode: 'keep',
 			bumpsCollisions: false,
+			placementIdentity: 'keep',
+			writesProvenance: false,
 		},
 	},
 	'no scenario asked: template': {
@@ -52,6 +58,8 @@ const testCases: Record<string, TestCase> = {
 				refsAlwaysAdded: true,
 				identityMode: 'keep',
 				bumpsCollisions: false,
+				placementIdentity: 'keep',
+				writesProvenance: false,
 			},
 		},
 	'placed afresh within a template update: as an instantiate': {

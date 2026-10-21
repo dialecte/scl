@@ -30,6 +30,17 @@ export type ScenarioPolicy = {
 	identityMode: Extract<IdentityMode, 'stamp-template' | 'keep'>
 	/** An added element whose name a sibling already holds is numbered. */
 	bumpsCollisions: boolean
+	/**
+	 * The identity of an element placed where the project holds no instance of it, and of what it holds: a uuid of
+	 * its own and the template's as its lineage (`stamp-template`), or the source's own uuid (`keep`) — then an
+	 * element of the project already carrying that uuid is the instance, wherever it sits.
+	 */
+	placementIdentity: Extract<IdentityMode, 'stamp-template' | 'keep'>
+	/**
+	 * A placed function or application records the file it came from (its own `FunctionSclRef` /
+	 * `ApplicationSclRef`). An SSD placement lists the file in the project's Header in every scenario.
+	 */
+	writesProvenance: boolean
 }
 
 export type ScenarioPolicyParams = {
