@@ -113,7 +113,7 @@ Most elements contribute their `name` attribute as segment. Special cases:
 // Trip + Trip inputInst="2"           ->  "Trip(1)", "Trip(2)"
 ```
 
-On import, the names an earlier version wrote (`Trip.general` for the only `Trip`, `Trip(2)` for the only one of instance 2, `Trip` for instance 1 of several) still resolve, and an `InputVar` / `OutputVar` name is written again in the standard form.
+On import, the names an earlier version wrote (`Trip.general` for the only `Trip`, `Trip(2)` for the only one of instance 2, `Trip` for instance 1 of several) still resolve, and so does a name written with its instance and data attribute for the only signal of its name (`AmpSv(1).instMag.i`, `TripCmd(1)`): it names that signal as the shorter name does. A signal role path may also join the signal to its LNode with `.` (`SF1/PDIS1.AmpSv`), as an `InputVar` does. Each is written again in the standard form, also next to its uuid, as is an `InputVar` / `OutputVar` name. A former path that two signals answer (through two LNodes bound to IEDs under the same naming) names neither: it is left unresolved.
 
 ---
 
@@ -514,7 +514,7 @@ This replaces the former `afterDeepClone` core hook (removed): that hook's per-e
 
 All reference pairs are defined in `UUID_REFERENCE_PAIRS`. Each pair maps a REF element + path attribute to one or more target element types and a resolution strategy.
 
-### `direct` -- 17 pairs
+### `direct` -- 16 pairs
 
 Path attribute value is an exact match against the target's computed path.
 
@@ -549,6 +549,24 @@ An `ExtRef`/`ExtCtrl` without an `intAddr` has no address: none is written. The 
 [`tx.dataflow.link`](./dataflow#link) writes the address from the element it links to, in the form its place gives.
 
 A value is kept in the form it is written in.
+
+### `scoped-name` -- 1 pair
+
+`functionalVariant` on `FunctionalVariantRef`: the bare name of a `FunctionalVariant` or `FunctionalSubVariant`, which is unique among the variants of its Application. It is looked up among the variants of the Application holding the reference, at any depth: directly in the Application, in a `FunctionalVariantGroup`, below another variant. A name may hold a `/` (`P21/01`): it is never read as a path.
+
+```xml
+<Application name="CB_App">
+	<FunctionRole name="Operator">
+		<FunctionalVariantRef functionalVariant="AIS TPO" functionalVariantUuid="42ca…" update="remove"/>
+		<FunctionRoleContent/>
+	</FunctionRole>
+	<FunctionalVariantGroup name="CB subtype">
+		<FunctionalVariant name="AIS TPO" uuid="42ca…"/>
+	</FunctionalVariantGroup>
+</Application>
+```
+
+Renaming the variant writes its new name on the references naming it by uuid; renaming the Application, a group or anything above leaves the names untouched. A reference created with its uuid only gets the variant's name. On import, the full path an earlier version wrote (`S1/CB_App/CB subtype/AIS TPO`) still resolves and is written again as the name, also next to its uuid. A reference outside an Application (in a `FunctionRef` of an `AllocationRole`) has no Application to read its name in: its uuid still resolves and writes the variant's name (a different name is reported as `incoherent-reference`), a name alone is left unresolved, without a warning.
 
 ### `ancestor-name` -- 4 pairs
 
@@ -616,7 +634,7 @@ Reference coherence is an invariant that `@dialecte/scl` maintains for you: the 
 
 Some attributes are written from a path every time that path is, and never given by a caller (`DERIVED_REFERENCE_ATTRIBUTES`):
 
-- a `Terminal` or a `NeutralPoint` lists, next to `connectivityNode`, the names of the levels holding its node: `processName` (nested processes joined with `/`), `lineName`, or `substationName`, `voltageLevelName` and `bayName`, then `cNodeName`. A level the node is not in is left out (a node in a `Line` gets `lineName`, never `bayName`);
+- a `Terminal` or a `NeutralPoint` lists, next to `connectivityNode`, the names of the levels holding its node: `processName` (nested processes joined with `/`), `lineName`, or `substationName`, `voltageLevelName` and `bayName`, then `cNodeName`. A level the node is not in is left out (a node in a `Line` gets `lineName`, never `bayName`). A `Terminal`'s `substationName` must name a substation at the root of the document (the schema checks it against the names of the root elements): a terminal whose node is in a substation inside a `Process` gets no `substationName` (its `processName`, `voltageLevelName` and `bayName` are written, and its `connectivityNode` still names the substation); a `NeutralPoint` there keeps it;
 - a `ConnectivityNode` holds its own path in `pathName`.
 
 ```xml

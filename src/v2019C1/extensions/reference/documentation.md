@@ -184,7 +184,7 @@ Because XML can reference elements that appear later in the file — a FunctionR
 
 34 of 35 reference pairs are resolved. Each pair is assigned a `resolution` value in `UUID_REFERENCE_PAIRS`.
 
-### `direct` — 17 pairs
+### `direct` — 16 pairs
 
 The path attribute value is an exact match against a target element's computed path.
 
@@ -196,7 +196,6 @@ The path attribute value is an exact match against a target element's computed p
 | FunctionCategoryRef     | `functionCategory`    | FunctionCategory, SubCategory                    |
 | FunctionCatRef          | `function`            | Function, SubFunction                            |
 | FunctionRef             | `function`            | Function, SubFunction, EqFunction, EqSubFunction |
-| FunctionalVariantRef    | `functionalVariant`   | FunctionalVariant, FunctionalSubVariant          |
 | LNodeInputRef           | `sourceRef`           | SourceRef                                        |
 | LNodeOutputRef          | `controlRef`          | ControlRef                                       |
 | NeutralPoint            | `connectivityNode`    | ConnectivityNode                                 |
@@ -209,6 +208,16 @@ The path attribute value is an exact match against a target element's computed p
 | VariableRef             | `variable`            | Variable                                         |
 
 **Example:** `FunctionRef.function="S1/V1/Protection"` → index lookup `"S1/V1/Protection"` → populates `functionUuid`.
+
+### `scoped-name` — 1 pair
+
+`functionalVariant` on FunctionalVariantRef: the bare name of a FunctionalVariant or FunctionalSubVariant, unique among
+the variants of the Application holding the reference (the pair's `nameScope`), at any depth (in a
+FunctionalVariantGroup, below another variant). `parseScopedNamePath` yields the key `scopedNameKey` builds from the
+Application's path and the name (joined by a line feed, so a name holding a `/` never reads as a path); the import index
+keys every variant the same way. A value starting with the Application's path (the full path an earlier version wrote)
+is tried next and written again as the name once resolved. Without an Application above the reference, the name is not
+read (its uuid still is).
 
 ### `ancestor-name` — 4 pairs
 
@@ -317,7 +326,8 @@ When a VariableApplyTo with an XPath `element` value is encountered during impor
 
 | Strategy               | Pairs                      | Status |
 | ---------------------- | -------------------------- | ------ |
-| `direct`               | 17                         | ✅     |
+| `direct`               | 16                         | ✅     |
+| `scoped-name`          | 1                          | ✅     |
 | `ancestor-name`        | 4                          | ✅     |
 | `lnode`                | 7                          | ✅     |
 | `ied-address`          | 2 (+ IED-relative variant) | ✅     |
