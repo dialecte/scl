@@ -100,7 +100,29 @@ function buildSignalName(params: {
 			readAttribute({ record: sibling, name: strategy.name, defaults: 'none' }) === name,
 	)
 	if (sharing.length <= 1) return name
+	return nameWithInstance({ strategy, record, name })
+}
 
+/**
+ * The name of a signal with its instance, then `.data` when that attribute is set, whatever its
+ * siblings: `Trip(1).general` for the only `Trip` of its LNode as for one of several. It names one
+ * signal as the shorter name does, so a file may write it for the only signal of its name. `null` for
+ * an element that is not a signal or has no name.
+ */
+export function fullSignalName(record: AnyRawRecord): string | null {
+	const strategy = PATH_EXTRACTION_CONFIG[record.tagName]
+	if (strategy?.type !== 'signal') return null
+	const name = readAttribute({ record, name: strategy.name, defaults: 'none' })
+	return name ? nameWithInstance({ strategy, record, name }) : null
+}
+
+/** `name(instance)`, the instance read with its schema default, then `.data` when that attribute is set. */
+function nameWithInstance(params: {
+	strategy: SignalStrategy
+	record: AnyRawRecord
+	name: string
+}): string {
+	const { strategy, record, name } = params
 	const instance =
 		readAttribute({ record, name: strategy.instance, defaults: 'none', fullObject: true })?.value ??
 		schemaDefault(record, strategy.instance)

@@ -342,10 +342,11 @@ function ownPathAttributesOf(params: {
 /**
  * A reference written with a path: parsed now that every LNode's naming is known, looked up, and
  * given the uuid it names. Its path is written again in the standard form when it resolved through
- * a former path, or always for the names that must be (`alwaysStandardize`). A reference that
- * already has its uuid only has a former path rewritten, when it names that same element. Either
- * way, the attributes it writes from the target's path (a terminal's level names) are made to
- * agree with that path.
+ * a former path, or always for the names that must be (`alwaysStandardize`). Beside its uuid, a
+ * reference naming that same element has a former path, or a name that must be standard (a data path
+ * aside), written again; one naming another element, or none, is written from its uuid. Either way,
+ * the attributes it writes from the target's path (a terminal's level names) are made to agree with
+ * that path.
  */
 function resolvePending(params: {
 	pending: PendingResolution
@@ -479,9 +480,10 @@ function dataPathNotSplitWarning(pending: PendingResolution): ImportWarning {
 
 /**
  * A reference the file gives both a path and a uuid. When the path names the element the uuid
- * names, only a former path is written again. When it names another element, or none, the uuid
- * wins: the path is written from the element the uuid names, and the disagreement is reported. A
- * uuid naming no element of the file (an element of another file) is kept as read.
+ * names, only a former path, or a name that must be written in the standard form, is written again
+ * (a data path keeps the qualifier it is written with). When it names another element, or none, the
+ * uuid wins: the path is written from the element the uuid names, and the disagreement is reported.
+ * A uuid naming no element of the file (an element of another file) is kept as read.
  */
 function resolveWithUuid(params: {
 	pending: PendingResolution
@@ -493,7 +495,10 @@ function resolveWithUuid(params: {
 }): { update?: RecordPatch; warnings: ImportWarning[] } {
 	const { pending, uuid, index, specNamings, pathNamesIt, formerForm } = params
 	if (pathNamesIt) {
-		const standard = formerForm ? standardPathOf({ pending, index, uuid, specNamings }) : []
+		const standardName =
+			pending.alwaysStandardize && pending.pair.resolution !== RESOLUTION_TYPE.lnode
+		const rewrite = formerForm || standardName
+		const standard = rewrite ? standardPathOf({ pending, index, uuid, specNamings }) : []
 		return patchOf({ pending, index, uuid, attributes: standard })
 	}
 

@@ -59,6 +59,47 @@ function functionXml(signalRole = ''): string {
 	`
 }
 
+/**
+ * A Function F1 whose SubFunction SF1 holds a distance LNode PDIS1: the only input AmpSv (instance 1,
+ * data attribute instMag.i), two Op inputs (instances 1 and 2, data attribute general) and the only
+ * output Trip (instance 1); an Application whose FunctionRef points at F1 and holds a SignalRole.
+ */
+function distanceXml(signalRole = ''): string {
+	return /* xml */ `
+		<SCL ${ns} ${id}="root">
+			<Substation ${id}="substation" name="S1">
+				<Function ${id}="function" name="F1" uuid="function-uuid">
+					<SubFunction ${id}="sub-function" name="SF1">
+						<LNode ${id}="distance" uuid="distance-uuid" iedName="None" lnClass="PDIS" lnInst="1">
+							<Private ${id}="distance-private" type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+									<eIEC61850-6-100:SourceRef ${id}="amp" uuid="amp-uuid" input="AmpSv" inputInst="1" pDA="instMag.i" />
+									<eIEC61850-6-100:SourceRef ${id}="op-1" uuid="op-1-uuid" input="Op" inputInst="1" pDA="general" />
+									<eIEC61850-6-100:SourceRef ${id}="op-2" uuid="op-2-uuid" input="Op" inputInst="2" pDA="general" />
+								</eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:LNodeOutputs ${id}="outputs">
+									<eIEC61850-6-100:ControlRef ${id}="trip" uuid="trip-uuid" output="Trip" outputInst="1" />
+								</eIEC61850-6-100:LNodeOutputs>
+							</Private>
+						</LNode>
+					</SubFunction>
+				</Function>
+				<Private ${id}="application-private" type="eIEC61850-6-100">
+					<eIEC61850-6-100:Application ${id}="application" name="A1">
+						<eIEC61850-6-100:FunctionRole ${id}="role" name="R1">
+							<eIEC61850-6-100:FunctionRoleContent ${id}="content">
+								<eIEC61850-6-100:FunctionRef ${id}="function-ref" function="S1/F1" functionUuid="function-uuid">
+									<eIEC61850-6-100:SignalRole ${id}="signal-role" name="Signals">${signalRole}</eIEC61850-6-100:SignalRole>
+								</eIEC61850-6-100:FunctionRef>
+							</eIEC61850-6-100:FunctionRoleContent>
+						</eIEC61850-6-100:FunctionRole>
+					</eIEC61850-6-100:Application>
+				</Private>
+			</Substation>
+		</SCL>
+	`
+}
+
 describe('the references of a signal role are relative to their Function', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		act?: (document: Core.Document<Config>) => Promise<void>
@@ -190,4 +231,101 @@ describe('a relative signal role path resolves through the query', () => {
 			expect(resolved?.record.id).toBe('source-ref')
 		})
 	})
+})
+
+/**
+ * A signal written with its instance and data attribute names one signal even when no other signal
+ * of its LNode shares its name, and a path may join the signal to its LNode with "." as an
+ * InputVar does: both resolve, and are written again in the form the engine writes.
+ */
+describe('a signal role path in another form the file may write', () => {
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		'the only AmpSv written with its instance and data attribute -> resolved, written as its name':
+			{
+				sourceXml: distanceXml(
+					`<eIEC61850-6-100:LNodeInputRef ${id}="input-ref" sourceRef="SF1/PDIS1/AmpSv(1).instMag.i" />`,
+				),
+				expectedQueries: [
+					'//v2019C1:LNodeInputRef[@sourceRefUuid="amp-uuid"][@sourceRef="SF1/PDIS1/AmpSv"]',
+				],
+			},
+		'the only AmpSv joined to its LNode with "." -> resolved, written with "/"': {
+			sourceXml: distanceXml(
+				`<eIEC61850-6-100:LNodeInputRef ${id}="input-ref" sourceRef="SF1/PDIS1.AmpSv" />`,
+			),
+			expectedQueries: [
+				'//v2019C1:LNodeInputRef[@sourceRefUuid="amp-uuid"][@sourceRef="SF1/PDIS1/AmpSv"]',
+			],
+		},
+		'the only AmpSv, its instance and data attribute, joined with "." -> resolved': {
+			sourceXml: distanceXml(
+				`<eIEC61850-6-100:LNodeInputRef ${id}="input-ref" sourceRef="SF1/PDIS1.AmpSv(1).instMag.i" />`,
+			),
+			expectedQueries: [
+				'//v2019C1:LNodeInputRef[@sourceRefUuid="amp-uuid"][@sourceRef="SF1/PDIS1/AmpSv"]',
+			],
+		},
+		'the absolute path, the only AmpSv with its instance and data attribute -> resolved, written relative':
+			{
+				sourceXml: distanceXml(
+					`<eIEC61850-6-100:LNodeInputRef ${id}="input-ref" sourceRef="S1/F1/SF1/PDIS1.AmpSv(1).instMag.i" />`,
+				),
+				expectedQueries: [
+					'//v2019C1:LNodeInputRef[@sourceRefUuid="amp-uuid"][@sourceRef="SF1/PDIS1/AmpSv"]',
+				],
+			},
+		'the second Op joined to its LNode with "." -> resolved, written with "/"': {
+			sourceXml: distanceXml(
+				`<eIEC61850-6-100:LNodeInputRef ${id}="input-ref" sourceRef="SF1/PDIS1.Op(2).general" />`,
+			),
+			expectedQueries: [
+				'//v2019C1:LNodeInputRef[@sourceRefUuid="op-2-uuid"][@sourceRef="SF1/PDIS1/Op(2).general"]',
+			],
+		},
+		'the only Trip output written with its instance -> resolved, written as its name': {
+			sourceXml: distanceXml(
+				`<eIEC61850-6-100:LNodeOutputRef ${id}="output-ref" controlRef="SF1/PDIS1/Trip(1)" />`,
+			),
+			expectedQueries: [
+				'//v2019C1:LNodeOutputRef[@controlRefUuid="trip-uuid"][@controlRef="SF1/PDIS1/Trip"]',
+			],
+		},
+	}
+
+	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+})
+
+describe('a signal role path in another form resolves through the query', () => {
+	const testCases: Record<string, { sourceRef: string; expectedId: string }> = {
+		'the only AmpSv with its instance and data attribute -> its SourceRef': {
+			sourceRef: 'SF1/PDIS1/AmpSv(1).instMag.i',
+			expectedId: 'amp',
+		},
+		'the only AmpSv joined to its LNode with "." -> its SourceRef': {
+			sourceRef: 'SF1/PDIS1.AmpSv',
+			expectedId: 'amp',
+		},
+		'the second Op joined to its LNode with "." -> its SourceRef': {
+			sourceRef: 'SF1/PDIS1.Op(2).general',
+			expectedId: 'op-2',
+		},
+	}
+
+	for (const [description, testCase] of Object.entries(testCases)) {
+		it(description, async () => {
+			const { source } = await createSclTestProject({ sourceXml: distanceXml() })
+			await source.document.transaction(async (tx) => {
+				const inputRef = await tx.addChild(
+					{ tagName: 'SignalRole', id: 'signal-role' },
+					{
+						tagName: 'LNodeInputRef',
+						namespace: v2019C1,
+						attributes: { sourceRef: testCase.sourceRef },
+					},
+				)
+				const resolved = await resolveReferencePath(tx, inputRef as never, 'sourceRef')
+				expect(resolved?.record.id).toBe(testCase.expectedId)
+			})
+		})
+	}
 })

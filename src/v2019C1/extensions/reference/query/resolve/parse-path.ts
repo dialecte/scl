@@ -143,7 +143,9 @@ export function parseReferencePath(params: {
 /**
  * A path from a Function down, the Function left out, every level joined with "/": the absolute
  * key puts the Function's path in front, and joins a signal to its LNode with "." (`SF1/PTRC1/Trip`
- * below `S1/F1` is `S1/F1/SF1/PTRC1.Trip`); a data path keeps its qualifier.
+ * below `S1/F1` is `S1/F1/SF1/PTRC1.Trip`); a data path keeps its qualifier. The keys tried next: the
+ * path below the Function as written, for a signal already joined to its LNode with "."
+ * (`SF1/PTRC1.Trip`), then the path as written, the absolute form an earlier version wrote.
  */
 function parseFunctionScopedPath(params: {
 	resolution: ResolutionType
@@ -162,7 +164,12 @@ function parseFunctionScopedPath(params: {
 		lastSlash === -1
 			? pathValue
 			: `${pathValue.slice(0, lastSlash)}.${pathValue.slice(lastSlash + 1)}`
-	return { lookupKey: `${functionBase}/${signalPath}`, fallbackLookupKeys: [pathValue] }
+	const lookupKey = `${functionBase}/${signalPath}`
+	const asWrittenBelow = `${functionBase}/${pathValue}`
+	return {
+		lookupKey,
+		fallbackLookupKeys: asWrittenBelow === lookupKey ? [pathValue] : [asWrittenBelow, pathValue],
+	}
 }
 
 // ── ancestor-name strategy ───────────────────────────────────────────

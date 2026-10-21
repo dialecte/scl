@@ -802,14 +802,4 @@ export const CORPUS_V2_ENGINE_DEFECTS: Readonly<Record<string, CorpusV2EngineDef
 		since: SET_ASIDE,
 		failingChecks: ['file', 'import'],
 	},
-	'5 - SSD system files/SSD1/TEMPLATE_v1rA.ssd': {
-		reason: 'an input reference to a source with an instance and a data attribute is not parsed',
-		since: SET_ASIDE,
-		failingChecks: ['import'],
-	},
-	'5 - SSD system files/SSD3/SUBSTATION_v1rA.ssd': {
-		reason: 'an input reference to a source with an instance and a data attribute is not parsed',
-		since: SET_ASIDE,
-		failingChecks: ['import'],
-	},
 }

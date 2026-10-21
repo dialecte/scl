@@ -83,6 +83,16 @@ export type ImportPathIndex = {
 	targetsByUuid: Map<string, IndexedTarget>
 }
 
+/**
+ * The other paths of the targets of a file, with the uuid each names, in the two tiers they are
+ * indexed in: the other names below a target's standard parent, then the paths through an LNode
+ * named by its own naming.
+ */
+export type OtherPaths = {
+	underStandardParent: [path: string, uuid: string][]
+	underOwnNaming: [path: string, uuid: string][]
+}
+
 export type UnresolvedReferenceWarning = ImportWarning & {
 	type: 'unresolved-reference'
 	details: {

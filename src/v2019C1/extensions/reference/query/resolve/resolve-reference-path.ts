@@ -1,6 +1,6 @@
 import { buildElementPath } from '../build/build-element-path'
 import { functionBaseOf, isFunctionScoped } from '../build/function-scope'
-import { getPathSegment } from '../build/path-segment'
+import { fullSignalName, getPathSegment, joinPathParts } from '../build/path-segment'
 import { readSpecNamings } from '../build/spec-namings'
 import { parseReferencePath, parsePathSegments, splitLnodeQualifier } from './parse-path'
 import { resolveMappedData } from './resolve-mapped-data'
@@ -13,7 +13,7 @@ import { MAPPED_NAME_REFS, RESOLUTION_TYPE } from '@/v2019C1/extensions/referenc
 import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import { readAttribute } from '@/v2019C1/helpers'
 
-import type { PathSegment } from '../build/path-segment.types'
+import type { ElementPath, PathSegment } from '../build/path-segment.types'
 import type { ResolveResult } from './resolve-reference-path.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { ReferencePair, ResolutionType } from '@/v2019C1/extensions/reference'
@@ -289,7 +289,10 @@ async function findLnClassTarget(params: {
 	return undefined
 }
 
-/** The signal whose path, built among its siblings, is one of `paths`. */
+/**
+ * The signal whose path, built among its siblings, is one of `paths`, or whose path with its full
+ * name (its instance and data attribute, whatever its siblings) is.
+ */
 async function findSignalByPath(params: {
 	query: Core.Query<Config> | Core.Transaction<Config>
 	targets: readonly string[]
@@ -301,13 +304,24 @@ async function findSignalByPath(params: {
 		const records = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
 		for (const record of records) {
 			const elementPath = await buildElementPath(query, record as Scl.Ref<Scl.ElementsOf>)
-			if (elementPath && paths.includes(elementPath.path)) {
+			if (!elementPath) continue
+			const fullPath = fullSignalPath({ record: toRawRecord(record), elementPath })
+			if (paths.includes(elementPath.path) || (fullPath && paths.includes(fullPath))) {
 				return record as Scl.TrackedRecord<Scl.ElementsOf>
 			}
 		}
 	}
 
 	return undefined
+}
+
+/** The path of a signal named with its full name below its LNode, `null` when it has none. */
+function fullSignalPath(params: { record: AnyRawRecord; elementPath: ElementPath }): string | null {
+	const { record, elementPath } = params
+	const name = fullSignalName(record)
+	const parentSegments = elementPath.segments.slice(0, -1)
+	if (!name || parentSegments.length === 0) return null
+	return `${joinPathParts(parentSegments)}.${name}`
 }
 
 async function findBySegmentScan(params: {

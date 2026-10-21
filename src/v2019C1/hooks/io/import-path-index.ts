@@ -2,20 +2,24 @@ import { LNODE_TYPE_ATTRIBUTE } from '@/v2019C1/extensions/data-model/query/data
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import {
 	buildPathFromAncestry,
+	fullSignalName,
 	joinPathParts,
 } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { readAttribute } from '@/v2019C1/helpers'
 
-import type { CollectedTarget, ImportPathIndex } from './io-hooks.types'
+import type { CollectedTarget, ImportPathIndex, OtherPaths } from './io-hooks.types'
 import type { AnyRawRecord } from '@dialecte/core'
 
 /**
  * Index every target of the file under its path, once the whole file is read: a signal is named
- * among its siblings, an LNode by its `LNodeSpecNaming` (`specNamings`, by LNode id). The paths an
- * earlier version wrote for a target are indexed too, as `legacyKeys`, unless they are the path of
- * another target: the LNode named by its own naming (the IED's, once bound), and a signal named
- * from its own values (`Trip.general` for a unique input with a pDA, `Trip(2)` for a unique input of
- * instance 2, `Trip` for instance 1 of several).
+ * among its siblings, an LNode by its `LNodeSpecNaming` (`specNamings`, by LNode id). The other paths
+ * a file may write for a target are indexed too, as `legacyKeys`, unless they are the path of
+ * another target: the LNode named by its own naming (the IED's, once bound), a signal named from its
+ * own values as an earlier version wrote it (`Trip.general` for a unique input with a pDA, `Trip(2)`
+ * for a unique input of instance 2, `Trip` for instance 1 of several), and a signal named with its
+ * instance and data attribute whatever its siblings (`Trip(1).general` for the only `Trip`). The
+ * names below a target's standard parent are indexed before the paths through an LNode named by its
+ * own naming, and a path two targets claim in one tier names neither.
  */
 export function buildImportPathIndex(params: {
 	targets: readonly CollectedTarget[]
@@ -29,7 +33,7 @@ export function buildImportPathIndex(params: {
 		legacyKeys: new Set(),
 		targetsByUuid: new Map(),
 	}
-	const formerPaths: [string, string][] = []
+	const otherPaths: OtherPaths = { underStandardParent: [], underOwnNaming: [] }
 
 	for (const { record, ancestry, uuid } of targets) {
 		const siblings = siblingsByParent.get(record.parent?.id ?? '')
@@ -49,22 +53,45 @@ export function buildImportPathIndex(params: {
 			})?.value,
 		})
 
-		for (const former of formerPathsOf({
-			record,
-			ancestry,
-			siblings,
-			standardPath: standard.path,
-		})) {
-			formerPaths.push([former, uuid])
-		}
+		const paths = otherPathsOf({ record, ancestry, siblings, standardPath: standard.path })
+		for (const path of paths.underStandardParent) otherPaths.underStandardParent.push([path, uuid])
+		for (const path of paths.underOwnNaming) otherPaths.underOwnNaming.push([path, uuid])
 	}
 
-	for (const [path, uuid] of formerPaths) {
-		if (index.byPath.has(path)) continue
+	// the other names below a target's standard parent first, then the paths through an LNode named
+	// by its own naming: an LNode bound to an IED may take, by its own naming, the name another LNode
+	// is specified with
+	const ambiguous = new Set<string>()
+	for (const tier of [otherPaths.underStandardParent, otherPaths.underOwnNaming]) {
+		indexOtherPaths({ index, paths: tier, ambiguous })
+	}
+	return index
+}
+
+/**
+ * Index `paths` as `legacyKeys`, each where no target holds it yet. A path two targets of `paths`
+ * claim names neither: it is left out, and kept out of the tiers after it (`ambiguous`).
+ */
+function indexOtherPaths(params: {
+	index: ImportPathIndex
+	paths: readonly [path: string, uuid: string][]
+	ambiguous: Set<string>
+}): void {
+	const { index, paths, ambiguous } = params
+	const claims = new Map<string, Set<string>>()
+	for (const [path, uuid] of paths) {
+		claims.set(path, (claims.get(path) ?? new Set()).add(uuid))
+	}
+	for (const [path, uuids] of claims) {
+		if (index.byPath.has(path) || ambiguous.has(path)) continue
+		if (uuids.size > 1) {
+			ambiguous.add(path)
+			continue
+		}
+		const [uuid] = uuids
 		index.byPath.set(path, uuid)
 		index.legacyKeys.add(path)
 	}
-	return index
 }
 
 /** The signals of the file by parent id: the siblings a signal is named among. */
@@ -78,27 +105,34 @@ function groupSignalsByParent(targets: readonly CollectedTarget[]): Map<string, 
 	return byParent
 }
 
-/** The paths an earlier version wrote for a target, its standard path left out. */
-function formerPathsOf(params: {
+/**
+ * The other paths a file may write for a target, its standard path left out: its other names below
+ * its standard parent, and its paths through the LNodes above it named by their own naming.
+ */
+function otherPathsOf(params: {
 	record: AnyRawRecord
 	ancestry: readonly AnyRawRecord[]
 	siblings: readonly AnyRawRecord[] | undefined
 	standardPath: string
-}): string[] {
+}): { underStandardParent: string[]; underOwnNaming: string[] } {
 	const { record, ancestry, siblings, standardPath } = params
 	const ownNaming = buildPathFromAncestry({ record, ancestry, siblings })
-	const paths = new Set<string>(ownNaming ? [ownNaming.path] : [])
+	const underStandardParent = new Set<string>()
+	const underOwnNaming = new Set<string>(ownNaming ? [ownNaming.path] : [])
 
-	const formerName = formerSignalName(record)
-	if (formerName && ownNaming) {
+	const otherNames = [formerSignalName(record), fullSignalName(record)].filter(
+		(name): name is string => Boolean(name),
+	)
+	if (otherNames.length > 0 && ownNaming) {
 		const standardParent = parentPathOf(standardPath, ownNaming.segments.at(-1)?.segment)
 		const ownParent = joinPathParts(ownNaming.segments.slice(0, -1))
-		for (const parent of [standardParent, ownParent]) {
-			if (parent) paths.add(`${parent}.${formerName}`)
+		for (const name of otherNames) {
+			if (standardParent) underStandardParent.add(`${standardParent}.${name}`)
+			if (ownParent) underOwnNaming.add(`${ownParent}.${name}`)
 		}
 	}
-	paths.delete(standardPath)
-	return [...paths]
+	for (const paths of [underStandardParent, underOwnNaming]) paths.delete(standardPath)
+	return { underStandardParent: [...underStandardParent], underOwnNaming: [...underOwnNaming] }
 }
 
 /** The path of a target's parent: its path without its own last segment. */

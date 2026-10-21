@@ -687,6 +687,42 @@ describe('import of the data names beside an LNode uuid written from a path', ()
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
+/**
+ * The updates and warnings the import hooks give for `xml`, its records handed over as an import
+ * pass does: each record once complete, its children first, with the elements above it. The ids
+ * are the `CUSTOM_RECORD_ID_ATTRIBUTE` of the elements; the targets carry their uuid in the XML.
+ */
+async function importOutcomeOf(xml: string) {
+	const hooks = createSclIoHooks()
+	const root = new DOMParser().parseFromString(xml, 'application/xml').documentElement
+	handOverRecords({ hooks, element: root, ancestry: [] })
+	return hooks.afterImport!()
+}
+
+function handOverRecords(params: {
+	hooks: ReturnType<typeof createSclIoHooks>
+	element: Element
+	ancestry: readonly AnyRawRecord[]
+}): void {
+	const { hooks, element, ancestry } = params
+	const parent = ancestry.at(-1)
+	const record: AnyRawRecord = {
+		id: element.getAttribute(id) ?? crypto.randomUUID(),
+		tagName: element.localName,
+		namespace: { prefix: element.prefix ?? '', uri: element.namespaceURI ?? '' },
+		attributes: [...element.attributes]
+			.filter((attribute) => attribute.name !== id && !attribute.name.startsWith('xmlns'))
+			.map((attribute) => ({ name: attribute.localName, value: attribute.value })),
+		value: '',
+		parent: parent ? { id: parent.id, tagName: parent.tagName } : null,
+		children: [],
+	}
+	for (const child of element.children) {
+		handOverRecords({ hooks, element: child, ancestry: [...ancestry, record] })
+	}
+	hooks.beforeImportRecord!({ record, ancestry })
+}
+
 /** The `LNodeSpecNaming` an LNode of the file carries. */
 function specNamingOf(lnode: AnyRawRecord): AnyRawRecord {
 	return { ...makeRecord('LNodeSpecNaming'), parent: { id: lnode.id, tagName: lnode.tagName } }
@@ -964,8 +1000,210 @@ describe('import of a name an earlier version wrote', () => {
 	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
 })
 
+describe('import warnings for a signal role path in another form', () => {
+	/** The only AmpSv input of PDIS1 (instance 1, data attribute instMag.i), named by an LNodeInputRef. */
+	function distanceXml(inputRef: string): string {
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation ${id}="substation" name="S1" uuid="substation-uuid">
+					<Function ${id}="function" name="F1" uuid="function-uuid">
+						<LNode ${id}="distance" uuid="distance-uuid" iedName="None" lnClass="PDIS" lnInst="1">
+							<Private ${id}="distance-private" type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+									<eIEC61850-6-100:SourceRef ${id}="amp" uuid="amp-uuid" input="AmpSv" inputInst="1" pDA="instMag.i" />
+								</eIEC61850-6-100:LNodeInputs>
+							</Private>
+						</LNode>
+					</Function>
+					<Private ${id}="application-private" type="eIEC61850-6-100">
+						<eIEC61850-6-100:Application ${id}="application" name="A1">
+							<eIEC61850-6-100:FunctionRole ${id}="role" name="R1">
+								<eIEC61850-6-100:FunctionRoleContent ${id}="content">
+									<eIEC61850-6-100:FunctionRef ${id}="function-ref" function="S1/F1" functionUuid="function-uuid">
+										<eIEC61850-6-100:SignalRole ${id}="signal-role" name="Signals">${inputRef}</eIEC61850-6-100:SignalRole>
+									</eIEC61850-6-100:FunctionRef>
+								</eIEC61850-6-100:FunctionRoleContent>
+							</eIEC61850-6-100:FunctionRole>
+						</eIEC61850-6-100:Application>
+					</Private>
+				</Substation>
+			</SCL>
+		`
+	}
+
+	const testCases: Record<string, { sourceRef: string; expectedPath: string }> = {
+		'the absolute path with the instance and data attribute, beside its uuid -> no warning, written relative':
+			{ sourceRef: 'S1/F1/PDIS1.AmpSv(1).instMag.i', expectedPath: 'PDIS1/AmpSv' },
+		'the relative path joined with "." beside its uuid -> no warning, written with "/"': {
+			sourceRef: 'PDIS1.AmpSv',
+			expectedPath: 'PDIS1/AmpSv',
+		},
+	}
+
+	for (const [description, testCase] of Object.entries(testCases)) {
+		it(description, async () => {
+			const outcome = await importOutcomeOf(
+				distanceXml(
+					`<eIEC61850-6-100:LNodeInputRef ${id}="input-ref" sourceRef="${testCase.sourceRef}" sourceRefUuid="amp-uuid" />`,
+				),
+			)
+			expect(outcome.warnings ?? []).toEqual([])
+			expect(outcome.updates?.find((update) => update.recordId === 'input-ref')).toEqual({
+				recordId: 'input-ref',
+				attributes: [{ name: 'sourceRef', value: testCase.expectedPath }],
+			})
+		})
+	}
+})
+
+describe('import outcome of a reference read in its scope or by another name', () => {
+	type TestCase = {
+		only?: boolean
+		xml: string
+		/** The reference whose update is checked. */
+		recordId: string
+		/** The attributes its update sets, `[]` for no update. */
+		expectedAttributes: { name: string; value: string }[]
+		/** The warnings of the import, by type and record. */
+		expectedWarnings: { type: string; recordId: string }[]
+	}
+
+	/** Two PDIS LNodes of F1: A bound to an IED, specified as PDIS1 and named PDIS2 by the IED, and B, PDIS2. */
+	function twoDistancesXml(inputRef: string): string {
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation ${id}="substation" name="S1" uuid="substation-uuid">
+					<Function ${id}="function" name="F1" uuid="function-uuid">
+						<LNode ${id}="bound" uuid="bound-uuid" iedName="IED1" lnClass="PDIS" lnInst="2">
+							<Private ${id}="bound-private" type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeSpecNaming ${id}="bound-naming" sLnClass="PDIS" sLnInst="1" />
+								<eIEC61850-6-100:LNodeInputs ${id}="bound-inputs">
+									<eIEC61850-6-100:SourceRef ${id}="bound-amp" uuid="bound-amp-uuid" input="AmpSv" inputInst="1" pDA="instMag.i" />
+								</eIEC61850-6-100:LNodeInputs>
+							</Private>
+						</LNode>
+						<LNode ${id}="free" uuid="free-uuid" iedName="None" lnClass="PDIS" lnInst="2">
+							<Private ${id}="free-private" type="eIEC61850-6-100">
+								<eIEC61850-6-100:LNodeInputs ${id}="free-inputs">
+									<eIEC61850-6-100:SourceRef ${id}="free-amp" uuid="free-amp-uuid" input="AmpSv" inputInst="1" pDA="instMag.i" />
+								</eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:BehaviorDescription ${id}="behavior" name="BD1">
+									<eIEC61850-6-100:InputVar ${id}="input-var" varName="v" inputName="AmpSv.instMag.i" inputUuid="free-amp-uuid" />
+								</eIEC61850-6-100:BehaviorDescription>
+							</Private>
+						</LNode>
+					</Function>
+					<Private ${id}="application-private" type="eIEC61850-6-100">
+						<eIEC61850-6-100:Application ${id}="application" name="A1" uuid="application-uuid">
+							<eIEC61850-6-100:FunctionRole ${id}="role" name="R1" uuid="role-uuid">
+								<eIEC61850-6-100:FunctionRoleContent ${id}="content">
+									<eIEC61850-6-100:FunctionRef ${id}="function-ref" function="S1/F1" functionUuid="function-uuid">
+										<eIEC61850-6-100:SignalRole ${id}="signal-role" name="Signals">${inputRef}</eIEC61850-6-100:SignalRole>
+									</eIEC61850-6-100:FunctionRef>
+								</eIEC61850-6-100:FunctionRoleContent>
+							</eIEC61850-6-100:FunctionRole>
+						</eIEC61850-6-100:Application>
+					</Private>
+				</Substation>
+			</SCL>
+		`
+	}
+
+	const testCases: Record<string, TestCase> = {
+		'the full name of the signal of PDIS2, which the bound PDIS1 is named by its IED -> the signal of PDIS2':
+			{
+				xml: twoDistancesXml(
+					`<eIEC61850-6-100:LNodeInputRef ${id}="input-ref" sourceRef="PDIS2/AmpSv(1).instMag.i" />`,
+				),
+				recordId: 'input-ref',
+				expectedAttributes: [
+					{ name: 'sourceRefUuid', value: 'free-amp-uuid' },
+					{ name: 'sourceRef', value: 'PDIS2/AmpSv' },
+				],
+				expectedWarnings: [],
+			},
+		'a data path beside its uuid, its data object another than the path says -> kept as written': {
+			xml: twoDistancesXml(
+				`<eIEC61850-6-100:LNodeDataRef ${id}="data-ref" data="PDIS2.Op.general" lnodeUuid="free-uuid" doName="Str" />`,
+			),
+			recordId: 'data-ref',
+			expectedAttributes: [],
+			expectedWarnings: [],
+		},
+		'an InputVar name an earlier version wrote beside its uuid -> still written in the standard form':
+			{
+				xml: twoDistancesXml(''),
+				recordId: 'input-var',
+				expectedAttributes: [{ name: 'inputName', value: 'AmpSv' }],
+				expectedWarnings: [],
+			},
+		'a signal named by the own naming two bound LNodes share -> neither, one unresolved-reference warning':
+			{
+				xml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation ${id}="substation" name="S1" uuid="substation-uuid">
+							<Function ${id}="function" name="F1" uuid="function-uuid">
+								<LNode ${id}="first" uuid="first-uuid" iedName="IED1" lnClass="PDIS" lnInst="3">
+									<Private ${id}="first-private" type="eIEC61850-6-100">
+										<eIEC61850-6-100:LNodeSpecNaming ${id}="first-naming" sLnClass="PDIS" sLnInst="1" />
+										<eIEC61850-6-100:LNodeInputs ${id}="first-inputs">
+											<eIEC61850-6-100:SourceRef ${id}="first-amp" uuid="first-amp-uuid" input="AmpSv" />
+										</eIEC61850-6-100:LNodeInputs>
+									</Private>
+								</LNode>
+								<LNode ${id}="second" uuid="second-uuid" iedName="IED2" lnClass="PDIS" lnInst="3">
+									<Private ${id}="second-private" type="eIEC61850-6-100">
+										<eIEC61850-6-100:LNodeSpecNaming ${id}="second-naming" sLnClass="PDIS" sLnInst="2" />
+										<eIEC61850-6-100:LNodeInputs ${id}="second-inputs">
+											<eIEC61850-6-100:SourceRef ${id}="second-amp" uuid="second-amp-uuid" input="AmpSv" />
+										</eIEC61850-6-100:LNodeInputs>
+									</Private>
+								</LNode>
+							</Function>
+							<Private ${id}="application-private" type="eIEC61850-6-100">
+								<eIEC61850-6-100:Application ${id}="application" name="A1" uuid="application-uuid">
+									<eIEC61850-6-100:FunctionRole ${id}="role" name="R1" uuid="role-uuid">
+										<eIEC61850-6-100:FunctionRoleContent ${id}="content">
+											<eIEC61850-6-100:FunctionRef ${id}="function-ref" function="S1/F1" functionUuid="function-uuid">
+												<eIEC61850-6-100:SignalRole ${id}="signal-role" name="Signals">
+													<eIEC61850-6-100:LNodeInputRef ${id}="input-ref" sourceRef="PDIS3/AmpSv" />
+												</eIEC61850-6-100:SignalRole>
+											</eIEC61850-6-100:FunctionRef>
+										</eIEC61850-6-100:FunctionRoleContent>
+									</eIEC61850-6-100:FunctionRole>
+								</eIEC61850-6-100:Application>
+							</Private>
+						</Substation>
+					</SCL>
+				`,
+				recordId: 'input-ref',
+				expectedAttributes: [],
+				expectedWarnings: [{ type: 'unresolved-reference', recordId: 'input-ref' }],
+			},
+	}
+
+	let entries = Object.entries(testCases)
+	const onlyEntries = entries.filter(([, testCase]) => testCase.only)
+	if (onlyEntries.length) entries = onlyEntries
+
+	for (const [description, testCase] of entries) {
+		it(description, async () => {
+			const outcome = await importOutcomeOf(testCase.xml)
+			const update = outcome.updates?.find((candidate) => candidate.recordId === testCase.recordId)
+			expect(update?.attributes ?? []).toEqual(testCase.expectedAttributes)
+			expect(
+				(outcome.warnings ?? []).map((warning) => ({
+					type: warning.type,
+					recordId: warning.recordId,
+				})),
+			).toEqual(testCase.expectedWarnings)
+		})
+	}
+})
+
 describe('import of a resourceName', () => {
-	function withResources(resourceName: string): string {
+	/** `uuidAttribute`: the `resourceUuid` written beside the name, if any. */
+	function withResources(resourceName: string, uuidAttribute = ''): string {
 		return /* xml */ `
 			<SCL ${ns} ${id}="root">
 				<Substation name="S1" ${id}="s1">
@@ -980,7 +1218,7 @@ describe('import of a resourceName', () => {
 							</eIEC61850-6-100:ProcessResources>
 							<LNode lnClass="PTRC" lnInst="1" iedName="None" ${id}="owner">
 								<eIEC61850-6-100:LNodeInputs ${id}="inputs">
-									<eIEC61850-6-100:SourceRef input="Trip" resourceName="${resourceName}" ${id}="ref"/>
+									<eIEC61850-6-100:SourceRef input="Trip" resourceName="${resourceName}" ${uuidAttribute} ${id}="ref"/>
 								</eIEC61850-6-100:LNodeInputs>
 							</LNode>
 						</SubFunction>
@@ -999,6 +1237,12 @@ describe('import of a resourceName', () => {
 		},
 		'the full path an earlier version wrote → resolved, written as the bare name': {
 			sourceXml: withResources('S1/F1/PR1'),
+			expectedQueries: [
+				'//v2019C1:SourceRef[@resourceUuid="uuid-function-pr" and @resourceName="PR1"]',
+			],
+		},
+		'the full path an earlier version wrote beside its uuid → written as the bare name': {
+			sourceXml: withResources('S1/F1/PR1', 'resourceUuid="uuid-function-pr"'),
 			expectedQueries: [
 				'//v2019C1:SourceRef[@resourceUuid="uuid-function-pr" and @resourceName="PR1"]',
 			],
