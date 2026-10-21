@@ -6,6 +6,7 @@ import { foldSatelliteCompanions } from './satellite-companions'
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { linkPlacementDependencies } from '@/v2019C1/extensions/lifecycle/engine/link-placement-dependencies'
+import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { describeStandingChoice } from '@/v2019C1/extensions/lifecycle/engine/standing'
 import {
 	collectForeignScopes,
@@ -36,6 +37,7 @@ import type {
 	InstanceDiff,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { StandingPlacement } from '@/v2019C1/extensions/lifecycle/engine/standing'
 import type {
 	DecisionMappings,
@@ -80,6 +82,11 @@ export async function reportAsd(
 		resolvePlacement?: boolean
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
+		/**
+		 * What tells an element the source dropped from one the project added, read once for the whole report.
+		 * Default: the scenario's, a fork given no previous revision.
+		 */
+		removalBase?: RemovalBase
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings } = params
@@ -87,6 +94,7 @@ export async function reportAsd(
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
 	const { matchKey, refsAlwaysAdded } = policy
+	const removalBase = params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery }))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matchedApplications = policy.matchesInstances
 		? await findInstancesByTemplateUuid(query, { tagName: 'Application', sourceUuid, matchKey })
@@ -138,6 +146,7 @@ export async function reportAsd(
 			matchKey,
 			decisionMappings,
 			anchor,
+			removalBase,
 		})
 		const reportInstance = await buildReportInstance(query, {
 			instanceDiff,
@@ -164,6 +173,7 @@ export async function reportAsd(
 				decisionMappings,
 				anchor,
 				foreignScope: foreignScopes.get(instance.id),
+				removalBase,
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
@@ -185,6 +195,7 @@ export async function reportAsd(
 		targetInstance,
 		decisionMappings,
 		anchor,
+		removalBase,
 	})
 
 	// what the groups of each placement depend on: on a first placement, the application on the
@@ -231,6 +242,7 @@ async function reportApplicationInstance(
 		foreignScope?: ReadonlySet<string>
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
+		removalBase: RemovalBase
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
@@ -267,6 +279,7 @@ async function reportApplicationInstance(
 		instanceRootRef: instance,
 		matchKey: params.matchKey,
 		redirectMappings,
+		removalBase: params.removalBase,
 	})
 
 	async function resolveForeignScope(): Promise<ReadonlySet<string>> {
@@ -290,6 +303,7 @@ async function reportApplicationInstance(
 			? ({ tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>)
 			: undefined,
 		resolveForeignScope,
+		removalBase: params.removalBase,
 	})
 
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
@@ -306,6 +320,7 @@ async function reportApplicationInstance(
 		anchor: params.anchor,
 		matchKey: params.matchKey,
 		resolveForeignScope,
+		removalBase: params.removalBase,
 	})
 
 	return applicationReport
@@ -334,6 +349,7 @@ async function reportComposedFunctions(
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
+		removalBase: RemovalBase
 	},
 ): Promise<{
 	instances: ReportInstance[]
@@ -431,6 +447,7 @@ async function reportComposedFunction(
 		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		pass?: ReportPass
+		removalBase: RemovalBase
 	},
 ): Promise<ReportInstance> {
 	const { sourceQuery, functionRef, instance, policy } = params
@@ -443,6 +460,7 @@ async function reportComposedFunction(
 		matchKey: policy.matchKey,
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
+		removalBase: params.removalBase,
 	})
 	return buildReportInstance(query, { instanceDiff, instance, sourceQuery, sourceRef: functionRef })
 }

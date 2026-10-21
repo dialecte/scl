@@ -16,6 +16,7 @@ import {
 	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
+import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import {
 	findByOwnUuid,
@@ -31,7 +32,10 @@ import {
 	PLACED_FUNCTION_TAGS,
 	placedFunctionTag,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
-import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
+import {
+	assertRevisionBaseFits,
+	scenarioPolicy,
+} from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
@@ -46,6 +50,7 @@ import type {
 	DecisionMap,
 	DiffReport,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -73,6 +78,10 @@ export async function fsd(
 		scenario?: LifecycleScenario
 		/** Placed afresh by a larger operation: a new instance whatever the project holds. */
 		placesFresh?: boolean
+		/** The previous revision of the file, for a fork: see {@link LifecycleRevisionBase}. Refused by another scenario. */
+		baseQuery?: Core.Query<Config>
+		/** What tells a dropped element from the project's own, when the caller read it already (once per apply). */
+		removalBase?: RemovalBase
 		/** Multi-instance gate: partitioned per instance by `instanceScopeId`. */
 		report?: DiffReport
 		decisions?: DecisionMap
@@ -106,8 +115,12 @@ export async function fsd(
 	} = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
+	assertRevisionBaseFits({ scenario, baseQuery: params.baseQuery })
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
 	const { matchKey, identityMode, bumpsCollisions } = policy
+	const removalBase =
+		params.removalBase ??
+		(await resolveRemovalBase({ policy, sourceQuery, baseQuery: params.baseQuery }))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matched = policy.matchesInstances
 		? await findInstancesUnder(tx, {
@@ -124,7 +137,9 @@ export async function fsd(
 	// is never placed beside it
 	if (instances.length === 0 && policy.placementIdentity === 'keep') {
 		const owned = await findByOwnUuid(tx, { tagNames: PLACED_FUNCTION_TAGS, uuid: sourceUuid })
-		if (owned.length > 0) return reconcileWhereKept(tx, { params, elements: owned })
+		if (owned.length > 0) {
+			return reconcileWhereKept(tx, { params: { ...params, removalBase }, elements: owned })
+		}
 	}
 
 	if (instances.length === 0) {
@@ -175,6 +190,7 @@ export async function fsd(
 			matchKey,
 			identityMode,
 			bumpsCollisions,
+			removalBase,
 		})
 		// an element the instances share (a category) holds one reference per instance: this one
 		// reconciles its own, as the project stands once the earlier instances are updated
@@ -193,6 +209,7 @@ export async function fsd(
 			matchKey,
 			identityMode,
 			bumpsCollisions,
+			removalBase,
 			decisionMappings: params.decisionMappings,
 			resolveForeignScope,
 		})
@@ -206,6 +223,7 @@ export async function fsd(
 			matchKey,
 			identityMode,
 			bumpsCollisions,
+			removalBase,
 			resolveForeignScope,
 		})
 		// carry the report->applied correlation onto this instance's report nodes

@@ -4,6 +4,7 @@ import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-c
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -37,6 +38,8 @@ export async function foldCrossCuttingSatellites(
 		resolveForeignScope?: ResolveForeignScope
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
+		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
+		removalBase: RemovalBase
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, instancePrimaryRef, report } = params
@@ -59,5 +62,6 @@ export async function foldCrossCuttingSatellites(
 		matchKey: params.matchKey,
 		instancePrimaryRef,
 		resolveForeignScope: params.resolveForeignScope,
+		removalBase: params.removalBase,
 	})
 }

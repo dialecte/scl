@@ -4,6 +4,7 @@ import { buildReportInstance } from './report-instance'
 import { toRef } from '@dialecte/core/helpers'
 
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import {
 	findByOwnUuid,
 	findInstancesUnder,
@@ -24,6 +25,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -60,6 +62,11 @@ export async function reportFsd(
 		resolvePlacement?: boolean
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
+		/**
+		 * What tells an element the source dropped from one the project added, read once for the whole report.
+		 * Default: the scenario's, a fork given no previous revision.
+		 */
+		removalBase?: RemovalBase
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, functionRef, targetParent, scenario, targetInstance, decisionMappings } =
@@ -67,6 +74,7 @@ export async function reportFsd(
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
 	const { matchKey, refsAlwaysAdded } = policy
+	const removalBase = params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery }))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matched = policy.matchesInstances
 		? await findInstancesUnder(query, {
@@ -113,6 +121,7 @@ export async function reportFsd(
 			matchKey,
 			decisionMappings,
 			anchor: landing,
+			removalBase,
 		})
 		const reportInstance = await buildReportInstance(query, {
 			instanceDiff,
@@ -142,6 +151,7 @@ export async function reportFsd(
 			matchKey,
 			decisionMappings,
 			anchor: targetParent,
+			removalBase,
 		})
 		reportInstances.push(
 			await buildReportInstance(query, {

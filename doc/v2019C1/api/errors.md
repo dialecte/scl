@@ -16,7 +16,7 @@ import { toDialecteError } from '@dialecte/core'
 import { SCL_ERRORS } from '@dialecte/scl/v2019C1'
 
 try {
-	await doc.prepare((tx) => tx.lifecycle.apply(tx, { ...target, report, resolution }))
+	await doc.prepare((tx) => tx.lifecycle.apply({ ...target, report, resolution }))
 } catch (thrown) {
 	const error = toDialecteError(thrown)
 	if (error?.key === SCL_ERRORS.MAPPING_UNDECIDED.key) {
@@ -48,6 +48,8 @@ The errors the dialecte declares (`SCL_ERRORS`), beside those of the core catalo
 | `MAPPING_CHOICE_NOT_A_CANDIDATE` | `SCL1004` | a mapping choice names a project element that is not a candidate                                            | `sourceId`, `tagName`, `chosen: { tagName, id }`                  |
 | `MAPPING_UNDECIDED`              | `SCL1005` | a write is asked while where an element of the template lands is the consumer's to choose                   | `sourceId`, `tagName`, `kind` (`level` \| `shared`), `operation?` |
 | `DECISION_DEPENDENCY_SKIPPED`    | `SCL1006` | a group is accepted while a group it depends on is skipped                                                  | `groupId`, `dependencyId`                                         |
+| `REVISION_BASE_WITHOUT_FORK`     | `SCL1007` | a previous revision (`baseQuery`) is given to an operation that is not a fork                               | `scenario`                                                        |
+| `REVISION_BASE_OTHER_FILE`       | `SCL1008` | the previous revision given to a fork is another file: its `Header` names another file than the newer one's | `fileUuid`, `baseFileUuid`                                        |
 | `TEMPLATE_ROOT_NOT_FOUND`        | `SCL2001` | the template file holds nothing that can be instantiated                                                    | —                                                                 |
 | `TARGET_HEADER_MISSING`          | `SCL2002` | the project has no `Header` to record the source file in                                                    | —                                                                 |
 | `DATAFLOW_LINK_TARGET_MISMATCH`  | `SCL3001` | `tx.dataflow.link` links a signal to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`) | `signal: { tagName, id }`, `implementation: { tagName, id }`      |

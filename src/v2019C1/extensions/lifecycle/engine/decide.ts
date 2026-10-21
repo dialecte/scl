@@ -179,22 +179,31 @@ function collectGroupIds(groups: readonly DecisionGroup[]): AcceptedIds {
 	const sourceIds = new Set<string>()
 	const instanceIds = new Set<string>()
 	for (const group of groups) {
+		// what the project added below a change of the template is a group of its own: not this one's
+		const ownOnly = group.change === 'target-only'
 		for (const node of [group.primary, ...group.companions]) {
-			collectNodeIds({ node, sourceIds, instanceIds })
+			collectNodeIds({ node, sourceIds, instanceIds, ownOnly })
 		}
 	}
 	return { sourceIds, instanceIds }
 }
 
-/** Collect the ids of a node and every descendant (structured companions carry nesting). */
+/**
+ * Collect the ids of a node and every descendant (structured companions carry nesting) — but those of an element the
+ * project added, unless the group is that element's (`ownOnly`).
+ */
 function collectNodeIds(params: {
 	node: DiffNode
 	sourceIds: Set<string>
 	instanceIds: Set<string>
+	ownOnly: boolean
 }): void {
-	const { node, sourceIds, instanceIds } = params
+	const { node, sourceIds, instanceIds, ownOnly } = params
 	collectNodeId({ node, sourceIds, instanceIds })
-	for (const child of node.children) collectNodeIds({ node: child, sourceIds, instanceIds })
+	for (const child of node.children) {
+		if (!ownOnly && child.change === 'target-only') continue
+		collectNodeIds({ node: child, sourceIds, instanceIds, ownOnly })
+	}
 }
 
 function collectNodeId(params: {

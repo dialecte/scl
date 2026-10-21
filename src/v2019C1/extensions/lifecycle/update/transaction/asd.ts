@@ -16,6 +16,7 @@ import {
 	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
+import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import {
 	collectForeignScopes,
@@ -33,13 +34,17 @@ import {
 	resolveSatelliteMappings,
 	toRedirectMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
-import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
+import {
+	assertRevisionBaseFits,
+	scenarioPolicy,
+} from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { ApplicationInstance } from './cascade-composed-functions.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
@@ -75,6 +80,10 @@ export async function asd(
 		scenario?: LifecycleScenario
 		/** Placed afresh by a larger operation: a new instance whatever the project holds. */
 		placesFresh?: boolean
+		/** The previous revision of the file, for a fork: see {@link LifecycleRevisionBase}. Refused by another scenario. */
+		baseQuery?: Core.Query<Config>
+		/** What tells a dropped element from the project's own, when the caller read it already (once per apply). */
+		removalBase?: RemovalBase
 		report?: DiffReport
 		decisions?: DecisionMap
 		/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */
@@ -110,8 +119,12 @@ export async function asd(
 	} = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
+	assertRevisionBaseFits({ scenario, baseQuery: params.baseQuery })
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
 	const { matchKey, identityMode, bumpsCollisions } = policy
+	const removalBase =
+		params.removalBase ??
+		(await resolveRemovalBase({ policy, sourceQuery, baseQuery: params.baseQuery }))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matched = policy.matchesInstances
 		? await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid, matchKey })
@@ -124,7 +137,7 @@ export async function asd(
 	if (instances.length === 0 && policy.placementIdentity === 'keep') {
 		const owned = await findByOwnUuid(tx, { tagNames: ['Application'], uuid: sourceUuid })
 		if (owned.length > 0) {
-			return asd(tx, { ...params, placesFresh: false, targetInstance: undefined })
+			return asd(tx, { ...params, placesFresh: false, targetInstance: undefined, removalBase })
 		}
 	}
 
@@ -248,6 +261,7 @@ export async function asd(
 			matchKey,
 			identityMode,
 			bumpsCollisions,
+			removalBase,
 			redirectMappings,
 		})
 		const foreignScope = new Set([
@@ -266,6 +280,7 @@ export async function asd(
 			matchKey,
 			identityMode,
 			bumpsCollisions,
+			removalBase,
 			resolvedMappings,
 			decisionMappings: params.decisionMappings,
 			resolveForeignScope,
@@ -287,6 +302,7 @@ export async function asd(
 			matchKey,
 			identityMode,
 			bumpsCollisions,
+			removalBase,
 			resolveForeignScope,
 		})
 		// carry the report->applied correlation onto this Application instance's report nodes (the
@@ -313,6 +329,7 @@ export async function asd(
 		targetParent,
 		applicationInstances,
 		scenario,
+		removalBase,
 		report,
 		decisions,
 		keepNameTypesFrom,

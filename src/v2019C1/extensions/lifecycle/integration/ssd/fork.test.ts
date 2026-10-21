@@ -1,9 +1,12 @@
 import { listGroups, reportAndApply } from '../integration-helpers'
 
-import { describe, expect } from 'vitest'
+import { toDialecteError } from '@dialecte/core'
+import { describe, expect, it } from 'vitest'
 
+import { ssd as updateSsd } from '@/v2019C1/extensions/lifecycle/update/transaction'
 import {
 	ALL_XMLNS_NAMESPACES,
+	createSclTestProject,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 	openSclDocument,
 	runSclTestCases,
@@ -22,7 +25,14 @@ type ForkTestCase = SclTest.BaseXmlTestCase & {
 	/** The groups of the first fork's report, `<change> <tag>`, sorted. */
 	expectedGroups: string[]
 	/** Then forked again in turn: each time from the newer revision as this XML gives it, or as the source stands. */
-	nextForks: { sourceXml?: string; editSource?: (tx: Scl.Transaction) => Promise<void> }[]
+	nextForks: {
+		sourceXml?: string
+		editSource?: (tx: Scl.Transaction) => Promise<void>
+		/** The previous revision, given to this fork as its base. */
+		baseXml?: string
+		/** The groups of this fork's report, `<change> <tag>`, sorted. */
+		expectedGroups?: string[]
+	}[]
 }
 
 const projectVoltageLevel = {
@@ -38,6 +48,28 @@ const projectXml = /* xml */ `
 		</Substation>
 	</SCL>
 `
+
+/** The feeder file with a breaker in its bay. */
+const feederWithBreakerSsd = /* xml */ `
+	<SCL ${ns} ${id}="source">
+		<Header id="feeder" uuid="feeder-file-uuid" version="0" revision="1" ${id}="source-header"/>
+		<Substation name="TEMPLATE" ${id}="source-substation">
+			<VoltageLevel name="TEMPLATE" ${id}="source-voltage-level">
+				<Bay name="Feeder" uuid="feeder-uuid" ${id}="source-feeder">
+					<ConductingEquipment name="QA1" type="CBR" uuid="breaker-uuid" ${id}="source-breaker"/>
+					<Function name="Prot" uuid="prot-uuid" ${id}="source-prot"/>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
+const dropBreaker = async (tx: Scl.Transaction) => {
+	await tx.delete({
+		tagName: 'ConductingEquipment',
+		id: 'source-breaker',
+	} as Scl.Ref<'ConductingEquipment'>)
+}
 
 const feederSsd = /* xml */ `
 	<SCL ${ns} ${id}="source">
@@ -116,6 +148,32 @@ describe('ssd fork: the newer revision of the same file, its uuids kept', () => 
 					'(//default:Function[@name="Breaker_Fn"])[2]',
 				],
 			},
+		'equipment the previous revision held and the newer one dropped is removed': {
+			sourceXml: feederWithBreakerSsd,
+			targetXml: projectXml,
+			expectedGroups: ['added Bay', 'added Function'],
+			nextForks: [
+				{
+					editSource: dropBreaker,
+					baseXml: feederWithBreakerSsd,
+					expectedGroups: ['removed ConductingEquipment'],
+				},
+			],
+			expectedQueries: ['//default:Bay[@uuid="feeder-uuid"]/default:Function[@uuid="prot-uuid"]'],
+			unexpectedQueries: ['//default:ConductingEquipment'],
+		},
+		"without the previous revision, equipment the newer one lacks is listed as the project's own and kept":
+			{
+				sourceXml: feederWithBreakerSsd,
+				targetXml: projectXml,
+				expectedGroups: ['added Bay', 'added Function'],
+				nextForks: [
+					{ editSource: dropBreaker, expectedGroups: ['target-only ConductingEquipment'] },
+				],
+				expectedQueries: [
+					'//default:Bay[@uuid="feeder-uuid"]/default:ConductingEquipment[@uuid="breaker-uuid"]',
+				],
+			},
 	}
 
 	async function act({
@@ -126,7 +184,10 @@ describe('ssd fork: the newer revision of the same file, its uuids kept', () => 
 	}: SclTest.ActParams<ForkTestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		// the scope is the file's unit, resolved from the file: `ref` names its substation
-		const lifecycleFrom = async (sourceQuery: Scl.Query): Promise<LifecycleTarget> => {
+		const lifecycleFrom = async (
+			sourceQuery: Scl.Query,
+			baseQuery?: Scl.Query,
+		): Promise<LifecycleTarget> => {
 			const [substation] = await sourceQuery.getRecordsByTagName('Substation')
 			return {
 				verb: 'ssd',
@@ -134,6 +195,7 @@ describe('ssd fork: the newer revision of the same file, its uuids kept', () => 
 				ref: { tagName: 'Substation', id: substation.id },
 				anchor: projectVoltageLevel,
 				scenario: 'fork',
+				...(baseQuery ? { baseQuery } : {}),
 			}
 		}
 
@@ -148,11 +210,84 @@ describe('ssd fork: the newer revision of the same file, its uuids kept', () => 
 			const revision = next.sourceXml
 				? await openSclDocument({ project, xml: next.sourceXml, label: 'next revision' })
 				: source
-			await reportAndApply({ document: target, lifecycle: await lifecycleFrom(revision.query) })
+			const base = next.baseXml
+				? await openSclDocument({ project, xml: next.baseXml, label: 'previous revision' })
+				: undefined
+			const { report: nextReport } = await reportAndApply({
+				document: target,
+				lifecycle: await lifecycleFrom(revision.query, base?.query),
+			})
+			if (next.expectedGroups) expect(listGroups(nextReport)).toEqual(next.expectedGroups)
 		}
 
 		return { assertOn: 'target' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })
+})
+
+describe('ssd fork: the previous revision it is given', () => {
+	// the scope is the file's unit, resolved from the file, as the apply resolves it
+	const updateParams = (params: { sourceQuery: Scl.Query; baseQuery: Scl.Query }) => ({
+		sourceQuery: params.sourceQuery,
+		targetParent: projectVoltageLevel,
+		baseQuery: params.baseQuery,
+	})
+
+	it('is refused by an update that is not a fork', async () => {
+		const { project, source, target } = await createSclTestProject({
+			sourceXml: feederSsd,
+			targetXml: projectXml,
+		})
+		if (!target) throw new Error('target required')
+		const base = await openSclDocument({ project, xml: feederSsd, label: 'previous revision' })
+
+		const refused = target.document.transaction(async function updateWithBase(tx) {
+			await updateSsd(tx, {
+				...updateParams({ sourceQuery: source.document.query, baseQuery: base.query }),
+				scenario: 'template',
+			})
+		})
+		await expect(refused).rejects.toThrow()
+		const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+		expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
+			key: 'REVISION_BASE_WITHOUT_FORK',
+			meta: { scenario: 'template' },
+		})
+	})
+
+	it('read by the update alone, without a report: what that revision held and the newer one dropped is removed', async () => {
+		const { project, source, target } = await createSclTestProject({
+			sourceXml: feederWithBreakerSsd,
+			targetXml: projectXml,
+		})
+		if (!target) throw new Error('target required')
+		await reportAndApply({
+			document: target.document,
+			lifecycle: {
+				verb: 'ssd',
+				sourceQuery: source.document.query,
+				ref: { tagName: 'Substation', id: 'source-substation' },
+				anchor: projectVoltageLevel,
+				scenario: 'fork',
+			},
+		})
+		const base = await openSclDocument({
+			project,
+			xml: feederWithBreakerSsd,
+			label: 'previous revision',
+		})
+		await source.document.transaction(dropBreaker)
+
+		await target.document.transaction(async function updateAlone(tx) {
+			await updateSsd(tx, {
+				...updateParams({ sourceQuery: source.document.query, baseQuery: base.query }),
+				scenario: 'fork',
+			})
+		})
+
+		const xml = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+		expect(xml).not.toContain('breaker-uuid')
+		expect(xml).toContain('prot-uuid')
+	})
 })

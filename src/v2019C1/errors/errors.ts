@@ -47,6 +47,19 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL1006',
 		message: 'A change is accepted while a change it depends on is skipped',
 	},
+	/** A previous revision is given to an operation that is not a fork. `meta: { scenario }` */
+	REVISION_BASE_WITHOUT_FORK: {
+		code: 'SCL1007',
+		message: 'A previous revision is given to an operation that is not a fork',
+	},
+	/**
+	 * The previous revision given to a fork is another file: its Header names another file than the newer
+	 * revision's. `meta: { fileUuid, baseFileUuid }`
+	 */
+	REVISION_BASE_OTHER_FILE: {
+		code: 'SCL1008',
+		message: 'The previous revision given is another file',
+	},
 	/** The template file holds nothing that can be instantiated. */
 	TEMPLATE_ROOT_NOT_FOUND: {
 		code: 'SCL2001',

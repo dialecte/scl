@@ -21,7 +21,7 @@ For a full explanation of how extensions work, see the [Writing Extensions](http
 | `reference` | `doc.query.reference`                                                  | `tx.reference`                                                                                 | [Reference](./reference)                                                                              |
 | `signature` | `doc.query.signature`                                                  | -                                                                                              | [Signature](./signature)                                                                              |
 
-`lifecycle` is a single module whose transaction/query methods nest by verb, so the public surface is `tx.lifecycle.<verb>.<recipe>` (e.g. `tx.lifecycle.extract.fsd`, `tx.lifecycle.update.asd`). The verb-agnostic two-track surface — `doc.query.lifecycle.report({ verb, sourceQuery, ref, anchor })` then `tx.lifecycle.apply(tx, { ..., report })` — is the recommended consumer entry point (see [Update](./update#two-track-surface-—-report-apply)).
+`lifecycle` is a single module whose transaction/query methods nest by verb, so the public surface is `tx.lifecycle.<verb>.<recipe>` (e.g. `tx.lifecycle.extract.fsd`, `tx.lifecycle.update.asd`). The verb-agnostic two-track surface — `doc.query.lifecycle.report({ verb, sourceQuery, ref, anchor })` then `tx.lifecycle.apply({ ..., report })` — is the recommended consumer entry point (see [Update](./update#two-track-surface-—-report-apply)).
 
 ## Usage pattern
 

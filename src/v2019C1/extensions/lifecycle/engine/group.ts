@@ -32,9 +32,15 @@ function collectGroups(params: {
 	}
 
 	// node is a topmost changed node -> a group root; its changed descendants
-	// become companions (we do NOT recurse into groups here).
+	// become companions (we do NOT recurse into groups here) — but what the project added below a
+	// change of the template is its own decision, kept by default: accepting the change never takes it
 	const companions: DiffNode[] = []
-	collectChangedDescendants({ node, out: companions })
+	const apart: DiffNode[] = []
+	collectChangedDescendants({
+		node,
+		out: companions,
+		apart: node.change === 'target-only' ? undefined : apart,
+	})
 
 	out.push({
 		id: groupId(node, scopePrefix),
@@ -47,13 +53,26 @@ function collectGroups(params: {
 		// explicitly opts into removing it. Everything else defaults to accept.
 		suggestedAction: node.change === 'target-only' ? 'skip' : 'accept',
 	})
+	for (const own of apart) collectGroups({ node: own, scopePrefix, out })
 }
 
-export function collectChangedDescendants(params: { node: DiffNode; out: DiffNode[] }): void {
-	const { node, out } = params
+/**
+ * The changed descendants of a node, in `out`. With `apart`, an element the project added (`target-only`) is set
+ * there instead, with what it holds: a group of its own.
+ */
+export function collectChangedDescendants(params: {
+	node: DiffNode
+	out: DiffNode[]
+	apart?: DiffNode[]
+}): void {
+	const { node, out, apart } = params
 	for (const child of node.children) {
+		if (apart && child.change === 'target-only') {
+			apart.push(child)
+			continue
+		}
 		if (child.change !== 'unchanged') out.push(child)
-		collectChangedDescendants({ node: child, out })
+		collectChangedDescendants({ node: child, out, apart })
 	}
 }
 

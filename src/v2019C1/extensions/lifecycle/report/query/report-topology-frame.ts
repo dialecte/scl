@@ -18,6 +18,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PinnedMatches } from '@/v2019C1/extensions/lifecycle/engine/match-child.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -56,6 +57,8 @@ export async function reportTopologyFrame(
 		pinnedMatches?: PinnedMatches
 		/** The consumer's choices, among them where a level the template gained lands per instance. */
 		decisionMappings?: DecisionMappings
+		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
+		removalBase: RemovalBase
 	},
 ): Promise<{ instances: ReportInstance[]; instanceLevelsList: InstanceLevels[] }> {
 	const { sourceQuery, scopeRef, matchKey, targetInstance, mappedOnto, pinnedMatches } = params
@@ -74,6 +77,7 @@ export async function reportTopologyFrame(
 			sourceRootRef: scopeRef,
 			instanceRootRef: mappedOnto,
 			matchKey,
+			removalBase: params.removalBase,
 			omit: FRAME_OMIT_CHILD_TAGS,
 			...(mappedOnto
 				? { instanceRootIsProjectOwned: true, contributeOnly: true, pinnedMatches }
@@ -119,6 +123,7 @@ export async function reportTopologyFrame(
 			sourceRootRef: scopeRef,
 			instanceRootRef: instance,
 			matchKey,
+			removalBase: params.removalBase,
 			omit: FRAME_OMIT_CHILD_TAGS,
 			pinnedMatches: toPinnedMatches({ instanceLevels: placement.levels, scopeRef }),
 			...(projectOwned ? { instanceRootIsProjectOwned: true } : {}),

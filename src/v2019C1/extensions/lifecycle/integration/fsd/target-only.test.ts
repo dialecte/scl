@@ -56,6 +56,7 @@ const targetXml = /* xml */ `
 // when the user explicitly accepts that group. Generic over the element tag.
 async function setup(): Promise<{
 	sourceQuery: Scl.Query
+	sourceDoc: Scl.Document
 	targetDoc: Scl.Document
 }> {
 	const { source, target } = await createSclTestProject({ sourceXml, targetXml })
@@ -82,7 +83,7 @@ async function setup(): Promise<{
 		})
 	})
 
-	return { sourceQuery, targetDoc }
+	return { sourceQuery, sourceDoc: source.document, targetDoc }
 }
 
 async function reportAndApply(
@@ -121,6 +122,27 @@ describe('lifecycle — target-only (author-added, no source lineage)', () => {
 		const targetOnly = allGroups(rep).filter((g) => g.change === 'target-only')
 		expect(targetOnly).toHaveLength(1)
 		expect(targetOnly[0]?.suggestedAction).toBe('skip')
+	})
+
+	it('KEEPS the author element when the template changes the function holding it', async () => {
+		const { sourceQuery, sourceDoc, targetDoc } = await setup()
+		await sourceDoc.transaction(async function changeTheFunction(tx) {
+			await tx.update(functionRef, { attributes: { desc: 'rev2' } })
+		})
+		const rep = await report(targetDoc.query, {
+			verb: 'fsd',
+			sourceQuery,
+			ref: functionRef,
+			anchor: bayRef,
+		})
+		// the author element is its own decision, not a companion of the change
+		expect(allGroups(rep).map((group) => `${group.change} ${group.primary.tagName}`)).toEqual([
+			'modified Function',
+			'target-only LNode',
+		])
+		const xml = await reportAndApply(sourceQuery, targetDoc, () => new Map())
+		expect(xml).toContain('desc="rev2"')
+		expect(xml).toContain('lnClass="GGIO"')
 	})
 
 	it('KEEPS the author element by default (no explicit decision)', async () => {

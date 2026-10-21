@@ -160,6 +160,13 @@ export type DiffReport = {
 	 * cannot stay there and lands below, on the levels its placement mappings say.
 	 */
 	offLevel?: OffLevel
+	/**
+	 * A fork's report: whether it was given the previous revision of the file (`given`) — an element the project
+	 * holds that the newer revision lacks is then removed when the previous revision held it — or not (`absent`):
+	 * every such element is listed as the project's own and kept by default, since nothing tells one the newer
+	 * revision dropped from one the project added. Absent from the report of another scenario.
+	 */
+	revisionBase?: 'given' | 'absent'
 }
 
 /**

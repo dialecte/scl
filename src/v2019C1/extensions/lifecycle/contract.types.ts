@@ -46,9 +46,23 @@ export type SourceFunctionRef = FsdFunctionRef | Scl.Ref<'SubFunction'>
 /**
  * What to reconcile and where — the uniform `{ verb, sourceQuery, ref, anchor }`
  * descriptor shared by `report` (read-only classify) and `apply` (write).
- * Discriminated on `verb` so `ref` narrows to the right element type.
+ * Discriminated on `verb` so `ref` narrows to the right element type, and on `scenario`: only a
+ * fork takes the previous revision of the file ({@link LifecycleRevisionBase}).
  */
-export type LifecycleTarget =
+export type LifecycleTarget = LifecycleVerbTarget & LifecycleRevisionBase
+
+/**
+ * The previous revision of the file a fork reconciles from (`baseQuery`): an element the project
+ * holds that the newer revision lacks is removed only when the previous revision held it — one it
+ * never held is the project's own. Without it, every such element is the project's own, kept by
+ * default. Another scenario takes none.
+ */
+export type LifecycleRevisionBase =
+	| { scenario?: Exclude<LifecycleScenario, 'fork'>; baseQuery?: never }
+	| { scenario: 'fork'; baseQuery?: Core.Query<Config> }
+
+/** The verb arm of a {@link LifecycleTarget}. */
+export type LifecycleVerbTarget =
 	| {
 			verb: 'fsd'
 			sourceQuery: Core.Query<Config>

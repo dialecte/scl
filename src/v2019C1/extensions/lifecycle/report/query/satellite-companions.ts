@@ -3,6 +3,7 @@ import { toRef } from '@dialecte/core/helpers'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
+import { classifyUnmatched } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import {
 	collectForeignReferenceIds,
 	findInstanceByTemplateUuid,
@@ -18,6 +19,7 @@ import {
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LeftoverRefPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import type { DiffNode, InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type {
 	DecisionMappings,
@@ -82,6 +84,8 @@ export async function foldSatelliteCompanions(
 		resolveForeignScope?: ResolveForeignScope
 		/** What the whole report already listed and named, shared by every fold of that report. */
 		pass?: ReportPass
+		/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */
+		removalBase: RemovalBase
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
@@ -155,6 +159,7 @@ export async function foldSatelliteCompanions(
 			// prior instance's refs (which would report a no-op while apply still merges 4 more in).
 			refsAlwaysAdded: params.refsAlwaysAdded ?? false,
 			foreignInstanceIds,
+			removalBase: params.removalBase,
 		})
 		const changed =
 			satelliteReport.summary.added +
@@ -179,10 +184,10 @@ export async function foldSatelliteCompanions(
 		}
 	}
 
-	// a target instance satellite whose template ELEMENT was removed from the source: removed with
-	// the primary's group (coupling invariant), or as a decision of its own when the primary is
-	// unchanged. Catalog/shared satellites persist when merely un-referenced, so the trigger is
-	// source-element non-existence, NOT a link drop.
+	// a target instance satellite whose source ELEMENT the source no longer holds: removed with the
+	// primary's group (coupling invariant), or as a decision of its own when the primary is unchanged;
+	// one the project added is a decision of its own, kept by default. Catalog/shared satellites persist
+	// when merely un-referenced, so the trigger is source-element non-existence, NOT a link drop.
 	for (const instanceRef of instanceSatelliteRefs ?? []) {
 		if (instanceRef.id && mappedOntoIds.has(instanceRef.id)) continue
 		const lineage = await query.any.getAttribute(instanceRef, { name: matchKey })
@@ -191,15 +196,20 @@ export async function foldSatelliteCompanions(
 			tagName: instanceRef.tagName,
 			attributes: { uuid: lineage },
 		})
-		if (stillInSource) continue
-		const removed: DiffNode = {
-			change: 'removed',
+		const unmatched = classifyUnmatched({
+			lineage,
+			inSource: stillInSource !== undefined,
+			removalBase: params.removalBase,
+		})
+		if (unmatched === 'still-held') continue
+		const node: DiffNode = {
+			change: unmatched,
 			tagName: instanceRef.tagName,
 			instanceRef,
 			children: [],
 		}
-		if (group) group.companions.push(removed)
-		else report.groups.push(...groupChanges(removed, instanceScopeId))
+		if (group && unmatched === 'removed') group.companions.push(node)
+		else report.groups.push(...groupChanges(node, instanceScopeId))
 	}
 
 	// what this instance gave to a project element the template no longer brings anything for

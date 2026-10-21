@@ -41,6 +41,13 @@ export type ScenarioPolicy = {
 	 * `ApplicationSclRef`). An SSD placement lists the file in the project's Header in every scenario.
 	 */
 	writesProvenance: boolean
+	/**
+	 * What tells that an element of the project the source lacks was dropped from it, to be removed: nothing (`none`:
+	 * a new instance removes nothing), the lineage the element carries (`lineage`: the template no longer holds the
+	 * element it was made from), or the previous revision of the file (`revision`: it held the element, the newer one
+	 * does not — an element it never held is the project's own).
+	 */
+	removalBase: 'none' | 'lineage' | 'revision'
 }
 
 export type ScenarioPolicyParams = {

@@ -2,6 +2,7 @@ import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
 import { projectOwnedAttributes } from './project-owned-attributes'
 import { indexRedirectedSourceUuids } from './reference-match'
+import { classifyUnmatched } from './removal-base'
 import { visibleAttributes } from './visible-attributes'
 
 import { toRef } from '@dialecte/core/helpers'
@@ -14,6 +15,7 @@ import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { PinnedMatches } from './match-child.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
+import type { RemovalBase } from './removal-base.types'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
@@ -65,6 +67,8 @@ export async function reconcile(
 		identityMode: IdentityMode
 		/** An added element whose name a sibling holds is numbered. */
 		bumpsCollisions: boolean
+		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
+		removalBase: RemovalBase
 		/**
 		 * Child tags to treat as BOUNDARIES: their subtrees are left untouched (not reconciled,
 		 * added, or deleted) because another pass owns them (e.g. the topology frame reconcile
@@ -167,7 +171,14 @@ export async function reconcile(
 	// removed from the template: delete instance elements whose lineage is gone. In a project-owned
 	// element, an identified child the source does not know is another template's or the project's.
 	if (!withinProjectOwned) {
-		await deleteRemoved(tx, { instanceNode: instanceTree, sourceUuids, accepted, matchKey, omit })
+		await deleteRemoved(tx, {
+			instanceNode: instanceTree,
+			sourceUuids,
+			accepted,
+			matchKey,
+			removalBase: params.removalBase,
+			omit,
+		})
 	}
 
 	return added
@@ -355,16 +366,18 @@ async function deleteRemoved(
 		sourceUuids: ReadonlySet<string>
 		accepted: AcceptedIds | undefined
 		matchKey: MatchKey
+		removalBase: RemovalBase
 		omit: readonly string[] | undefined
 	},
 ): Promise<void> {
-	const { instanceNode, sourceUuids, accepted, matchKey, omit } = params
+	const { instanceNode, sourceUuids, accepted, matchKey, removalBase, omit } = params
 	const toDelete: AnyTreeRecord[] = []
 	await collectRemoved(tx, {
 		node: instanceNode,
 		sourceUuids,
 		accepted,
 		matchKey,
+		removalBase,
 		omit,
 		out: toDelete,
 	})
@@ -384,21 +397,38 @@ async function collectRemoved(
 		sourceUuids: ReadonlySet<string>
 		accepted: AcceptedIds | undefined
 		matchKey: MatchKey
+		removalBase: RemovalBase
 		omit: readonly string[] | undefined
 		out: AnyTreeRecord[]
 	},
 ): Promise<void> {
-	const { node, sourceUuids, accepted, matchKey, omit, out } = params
+	const { node, sourceUuids, accepted, matchKey, removalBase, omit, out } = params
 	// a boundary subtree is owned by another pass - do not delete or descend into it
 	if (omit?.includes(node.tagName)) return
 	const lineage = await tx.any.getAttribute(node, { name: matchKey })
-	if (lineage && !sourceUuids.has(lineage)) {
-		// removed subtree = one atomic group; delete only if that group is accepted
+	const unmatched = lineage
+		? classifyUnmatched({ lineage, inSource: sourceUuids.has(lineage), removalBase })
+		: 'still-held'
+	// one atomic group, its subtree cascading with it (do not descend): a removal is written unless it was
+	// skipped, an element of the project's own only when its removal was accepted
+	if (unmatched === 'removed') {
 		if (!accepted || accepted.instanceIds.has(node.id)) out.push(node)
-		return // its subtree cascades with it; do not descend
+		return
+	}
+	if (unmatched === 'target-only') {
+		if (accepted?.instanceIds.has(node.id)) out.push(node)
+		return
 	}
 	for (const child of node.tree) {
-		await collectRemoved(tx, { node: child, sourceUuids, accepted, matchKey, omit, out })
+		await collectRemoved(tx, {
+			node: child,
+			sourceUuids,
+			accepted,
+			matchKey,
+			removalBase,
+			omit,
+			out,
+		})
 	}
 }
 

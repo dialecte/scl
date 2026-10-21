@@ -11,6 +11,7 @@ import type { ReconcileCrossCuttingSatellitesResult } from './cross-cutting-sate
 import type { Config, Scl } from '@/v2019C1/config'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -43,6 +44,8 @@ export async function reconcileCrossCuttingSatellites(
 		matchKey: MatchKey
 		identityMode: IdentityMode
 		bumpsCollisions: boolean
+		/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */
+		removalBase: RemovalBase
 		/** What belongs to the other instances of the primary's template. */
 		resolveForeignScope?: ResolveForeignScope
 	},
@@ -92,6 +95,7 @@ export async function reconcileCrossCuttingSatellites(
 		matchKey,
 		identityMode,
 		bumpsCollisions,
+		removalBase: params.removalBase,
 		resolvedMappings,
 		resolveForeignScope: params.resolveForeignScope,
 	})

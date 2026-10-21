@@ -23,15 +23,16 @@ The `reconcile` / `diff` primitives below (in `extensions/lifecycle/engine`) are
 The verb-agnostic surface is the recommended consumer entry point. **Dialecte decides the track**, the consumer never picks it: ask for a report, then apply.
 
 ```ts
-query.lifecycle.report({ verb, scenario, sourceQuery, ref, anchor, resolution? }) // -> DiffReport { instances, needsDecisions, summary, mappings, templateInstances, offLevel? }
-tx.lifecycle.apply(tx, { verb, scenario, sourceQuery, ref, anchor, report, resolution? }) // -> ApplyResult { report, instances }
+query.lifecycle.report({ verb, scenario, sourceQuery, baseQuery?, ref, anchor, resolution? }) // -> DiffReport { instances, needsDecisions, summary, mappings, templateInstances, offLevel?, revisionBase? }
+tx.lifecycle.apply({ verb, scenario, sourceQuery, baseQuery?, ref, anchor, report, resolution? }) // -> ApplyResult { report, instances }
 ```
 
-The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & { resolution? }`), `LifecycleApplyParams` and `Resolution`.
+The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & { resolution? }`), `LifecycleApplyParams` and `Resolution`; `LifecycleTarget` is a verb arm (`LifecycleVerbTarget`) and a scenario arm (`LifecycleRevisionBase`): only `scenario: 'fork'` takes `baseQuery`.
 
 - `verb`: `'fsd'` (then `ref` is a `Function` or a `FunctionTemplate` — `FsdFunctionRef`), `'asd'` (then `ref` is an `Application`), or `'ssd'` (then `ref` is the topology scope, `Substation`/`VoltageLevel`/`Bay` — see [the note below](#tx-lifecycle-update-ssd)) — the **layer**;
 - `scenario`: `'instantiate'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`);
 - `anchor`: the target parent the instance lives under / is placed into.
+- `baseQuery`: for a `fork` only, the **previous revision** of the file — the one the project was forked from. An element the project holds that the newer revision lacks is removed when the previous revision held it, and is the project's own otherwise (see [the fork](#scenario-—-instantiate-vs-template-vs-fork)). `report` and `apply` each read it once. Refused with `REVISION_BASE_OTHER_FILE` when its `Header` names another file than the newer revision's (both carry a `uuid`, and they differ); another scenario given one is refused with `REVISION_BASE_WITHOUT_FORK`.
 - `resolution`: what the consumer resolved, as one object — `{ decisions?, mappings?, keepNameTypesFrom?, afterApply? }` (type `Resolution`). `apply` reads all of it; `report` reads `mappings`, so the report is re-derived from the consumer's choices and shows their consequence:
   - `decisions`: accept / skip (and edited values) per decision group — see [Decision groups](#decision-groups-full-track);
   - `mappings`: where a shared element lands, per source element — see [Shared-element mappings](#shared-element-mappings);
@@ -100,7 +101,7 @@ The scenarios are **distinct operations**, chosen explicitly by the consumer —
 
 - **`instantiate`** — place a **new** instance of the template. Duplicates are allowed: re-applying the same template yields **another** instance (never a silent no-op), with a sibling name collision auto-resolved (e.g. `HMI` → `HMI_1`, and its composed functions `Prot` → `Prot_1`). The placed `name` is an editable field so the user can override the auto-resolved value.
 - **`template`** — source is a **template**; reconcile it **onto** its existing instance(s). Elements match by `templateUuid` (= the source `uuid`); added elements are stamped with instance lineage. If none exists yet it is the first-time case (instantiate); with existing instances it reconciles in place and never duplicates. _(Was `update`.)_
-- **`fork`** — source is a newer **revision of the same file**; reconcile it onto the prior revision, **keeping identity**. Source and target share `uuid`, so elements match by `uuid` (not `templateUuid`); the reconcile updates in place with **no re-stamp and no provenance**, deletes elements the new revision dropped, and adds a newly added element **keeping its source `uuid`** (so the target converges to the source revision's identity). What a fork places keeps its `uuid` too — a function or an application the newer revision gained, a first fork into a level that lacks it — with no lineage and no `FunctionSclRef` / `ApplicationSclRef` of its own (an SSD fork lists the file in the project's `Header`, as any SSD placement); an element of the project already carrying the `uuid` is the one reconciled, where it sits, never a second copy. The single-layer form of an SCD fork — e.g. bringing an FSD/ASD template from revision _n_ to _n+1_.
+- **`fork`** — source is a newer **revision of the same file**; reconcile it onto the prior revision, **keeping identity**. Source and target share `uuid`, so elements match by `uuid` (not `templateUuid`); the reconcile updates in place with **no re-stamp and no provenance**, removes an element the previous revision held (`baseQuery`) and the newer one lacks — without `baseQuery` it keeps it, listed as the project's own (`target-only`, kept by default), and `report.revisionBase` is `'absent'`; a reference without a uuid of its own the newer revision lacks is removed either way, as part of the element holding it — and adds a newly added element **keeping its source `uuid`** (so the target converges to the source revision's identity). What a fork places keeps its `uuid` too — a function or an application the newer revision gained, a first fork into a level that lacks it — with no lineage and no `FunctionSclRef` / `ApplicationSclRef` of its own (an SSD fork lists the file in the project's `Header`, as any SSD placement); an element of the project already carrying the `uuid` is the one reconciled, where it sits, never a second copy. The single-layer form of an SCD fork — e.g. bringing an FSD/ASD template from revision _n_ to _n+1_.
 
 `report.needsDecisions` gates the track:
 
@@ -113,7 +114,8 @@ The scenarios are **distinct operations**, chosen explicitly by the consumer —
 instance; each instance owns its accept/skip `groups`. `allGroups(report)` flattens the
 groups across every instance. The user decides on a **group**, never an individual element — each
 group carries its primary change plus the companions that travel with it, so a partial, incoherent
-apply is impossible.
+apply is impossible. An element the project added (`target-only`) is never a companion: below a change of the template it
+is a group of its own, suggested `skip`, so accepting the change never removes it.
 
 ```ts
 type DecisionGroup = {
@@ -206,7 +208,7 @@ const report = await doc.query.lifecycle.report({
 })
 // report.mappings and the review tree now show the role matched onto that element
 await doc.prepare((tx) =>
-	tx.lifecycle.apply(tx, {
+	tx.lifecycle.apply({
 		...target,
 		report,
 		resolution: { decisions, mappings: decisionMappings },
@@ -422,7 +424,7 @@ if (report.needsDecisions) {
 }
 
 const prepared = await doc.prepare((tx) =>
-	tx.lifecycle.apply(tx, { ...target, report, resolution: { decisions } }),
+	tx.lifecycle.apply({ ...target, report, resolution: { decisions } }),
 )
 await prepared.commit() // or prepared.discard()
 ```
@@ -554,6 +556,7 @@ type DiffReport = {
 	mappings: ReportMapping[] // where each shared source element lands — one entry per source element
 	templateInstances: AnyRefOrRecord[] // the instances of the template itself the report covers; none on a first placement
 	offLevel?: { templateLevel: string; startedFrom: string } // set when started above the level the template was made for
+	revisionBase?: 'given' | 'absent' // a fork's report: whether the previous revision of the file was given
 }
 
 type ReportInstance = {

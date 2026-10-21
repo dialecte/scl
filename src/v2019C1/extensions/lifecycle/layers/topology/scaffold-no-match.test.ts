@@ -52,6 +52,7 @@ describe('topology frame — no name adoption of a scaffold TEMPLATE bay', () =>
 			scopeRef: { tagName: 'Bay', id: 'bay-s' } as Scl.Ref<'Bay'>,
 			matchKey: 'templateUuid',
 			firstPlacement: false,
+			removalBase: { kind: 'lineage' },
 		})
 
 		// the target "TEMPLATE" bay shares only the name (different uuid, no templateUuid link),

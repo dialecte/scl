@@ -1,3 +1,5 @@
+import { CUSTOM_RECORD_ID_ATTRIBUTE_NAME } from '@dialecte/core/helpers'
+
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
@@ -11,6 +13,9 @@ import type {
 import type { Config, Scl } from '@/v2019C1/config'
 import type { DiffNode, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
+
+/** What the attributes holding a record id end with: the one a test writes, the one an export adds. */
+const RECORD_ID_SUFFIX = CUSTOM_RECORD_ID_ATTRIBUTE_NAME
 
 /**
  * Report, then apply that report in one transaction, through the public two-track surface — what a consumer does. The
@@ -122,4 +127,30 @@ export function listCompanions(report: DiffReport): string[] {
 	return allGroups(report)
 		.flatMap((group) => group.companions.map((node) => `${node.change} ${node.tagName}`))
 		.sort()
+}
+
+/**
+ * The element carrying a uuid in an XML document, as a comparable string: its tag, its attributes sorted, its
+ * children in order, whitespace and record ids left out — and an empty `Private`, a wrapper that holds nothing (the
+ * removal of what it held leaves it behind). Undefined when no element carries the uuid.
+ */
+export function canonicalElement(params: { xml: string; uuid: string }): string | undefined {
+	const { xml, uuid } = params
+	const document = new DOMParser().parseFromString(xml, 'application/xml')
+	const element = [...document.getElementsByTagName('*')].find(
+		(candidate) => candidate.getAttribute('uuid') === uuid,
+	)
+	return element ? canonicalize(element) : undefined
+}
+
+function canonicalize(element: Element): string {
+	const attributes = [...element.attributes]
+		.filter((attribute) => !attribute.localName.endsWith(RECORD_ID_SUFFIX))
+		.map((attribute) => `${attribute.localName}="${attribute.value}"`)
+		.sort()
+	const children = [...element.children]
+		.filter((child) => child.localName !== 'Private' || child.children.length > 0)
+		.map((child) => canonicalize(child))
+	const text = element.children.length === 0 ? (element.textContent ?? '').trim() : ''
+	return `<${element.localName} ${attributes.join(' ')}>${text}${children.join('')}</${element.localName}>`
 }

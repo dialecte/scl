@@ -8,6 +8,7 @@ import {
 	referenceIdentity,
 	referenceNameIdentity,
 } from './reference-match'
+import { classifyUnmatched } from './removal-base'
 import { visibleAttributes } from './visible-attributes'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -29,6 +30,7 @@ import type {
 } from './diff.types'
 import type { PinnedMatches } from './match-child.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
+import type { RemovalBase } from './removal-base.types'
 import type { Config } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -137,11 +139,17 @@ export async function diff(params: {
 	 * per-primary reports).
 	 */
 	omit?: readonly string[]
+	/**
+	 * What tells an element the source dropped (`removed`) from one the project added (`target-only`): see
+	 * {@link classifyUnmatched}. Default: the lineage the element carries.
+	 */
+	removalBase?: RemovalBase
 }): Promise<InstanceDiff> {
 	const { sourceQuery, targetQuery, sourceRootRef, instanceRootRef, keepLeftoverRefs } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 	const matchKey = params.matchKey ?? 'templateUuid'
+	const removalBase = params.removalBase ?? { kind: 'lineage' }
 	const omit = params.omit
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
@@ -178,6 +186,7 @@ export async function diff(params: {
 		leftoverRefPolicy,
 		refsAlwaysAdded,
 		matchKey,
+		removalBase,
 		omit,
 		skipOwnAttributes: params.instanceRootIsProjectOwned ?? false,
 		withinProjectOwned: params.instanceRootIsProjectOwned ?? false,
@@ -203,6 +212,7 @@ async function diffMatched(
 		leftoverRefPolicy?: LeftoverRefPolicy
 		refsAlwaysAdded?: boolean
 		matchKey: MatchKey
+		removalBase: RemovalBase
 		omit?: readonly string[]
 		/** Leave this node's own attributes uncompared. */
 		skipOwnAttributes?: boolean
@@ -217,6 +227,7 @@ async function diffMatched(
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
 		params
+	const { removalBase } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 	const omit = params.omit
@@ -270,6 +281,7 @@ async function diffMatched(
 					leftoverRefPolicy,
 					refsAlwaysAdded,
 					matchKey,
+					removalBase,
 					omit,
 					redirectedSourceUuids: params.redirectedSourceUuids,
 					pinnedMatches: params.pinnedMatches,
@@ -285,8 +297,8 @@ async function diffMatched(
 	}
 
 	// instance children with no surviving source match:
-	//  - an identified element whose template lineage is gone (templateUuid not in source)
-	//    -> removed;
+	//  - an identified element whose lineage the source no longer holds -> removed when the source
+	//    dropped it, target-only when it is the project's own (`classifyUnmatched`);
 	//  - a uuid-less REFERENCE (link) element with no matching source child (e.g. a
 	//    dropped AllocationRoleRef) -> removed;
 	//  - a non-ref element with NO templateUuid = author-added after instantiation
@@ -308,8 +320,14 @@ async function diffMatched(
 		if (lineage) {
 			// in a project-owned element, an identified child the source does not know is another
 			// template's or the project's: not this template's to remove
-			if (!sourceUuids.has(lineage) && !withinProjectOwned)
-				children.push(removedNode(instanceChild))
+			if (withinProjectOwned) continue
+			const unmatched = classifyUnmatched({
+				lineage,
+				inSource: sourceUuids.has(lineage),
+				removalBase,
+			})
+			if (unmatched === 'removed') children.push(removedNode(instanceChild))
+			else if (unmatched === 'target-only') pushInstanceOnly(instanceChild, children)
 			continue
 		}
 		if (

@@ -7,6 +7,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/engine/correlate'
 import { collisionOverrides, leftOutRefIds } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import { ssd as instantiateSsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import {
@@ -16,13 +17,17 @@ import {
 	reconcileTopologyFrame,
 	resolveTopologyReconcilables,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
-import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
+import {
+	assertRevisionBaseFits,
+	scenarioPolicy,
+} from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
@@ -51,6 +56,10 @@ export async function ssd(
 		scopeRef?: Scl.Ref<TopologyStructuralTag>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		scenario?: LifecycleScenario
+		/** The previous revision of the file, for a fork: see {@link LifecycleRevisionBase}. Refused by another scenario. */
+		baseQuery?: Core.Query<Config>
+		/** What tells a dropped element from the project's own, when the caller read it already (once per apply). */
+		removalBase?: RemovalBase
 		report?: DiffReport
 		decisions?: DecisionMap
 		keepNameTypesFrom?: KeepNameTypesFrom
@@ -79,8 +88,12 @@ export async function ssd(
 		root,
 	)
 
+	assertRevisionBaseFits({ scenario, baseQuery: params.baseQuery })
 	const policy = scenarioPolicy({ scenario })
 	const { matchKey, identityMode, bumpsCollisions } = policy
+	const removalBase =
+		params.removalBase ??
+		(await resolveRemovalBase({ policy, sourceQuery, baseQuery: params.baseQuery }))
 	const firstTime =
 		!policy.matchesInstances ||
 		!(await hasScopeInstance(tx, {
@@ -126,6 +139,7 @@ export async function ssd(
 		matchKey,
 		identityMode,
 		bumpsCollisions,
+		removalBase,
 		report,
 		decisions,
 		targetInstance,
@@ -152,6 +166,7 @@ export async function ssd(
 				// a gained application is a fresh one in each instance, whatever another instance holds
 				scenario,
 				placesFresh: placement.gained,
+				removalBase,
 				// placed as part of the substation template: its provenance is the document's
 				partOfTemplate: true,
 				report,
@@ -183,6 +198,7 @@ export async function ssd(
 				placedFor,
 				scenario,
 				placesFresh: placement.gained,
+				removalBase,
 				partOfTemplate: true,
 				report,
 				decisions,

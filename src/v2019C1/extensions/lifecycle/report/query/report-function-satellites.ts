@@ -7,6 +7,7 @@ import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers
 import type { Config, Scl } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -42,6 +43,8 @@ export async function foldCarriedSatellites(
 		resolveForeignScope?: ResolveForeignScope
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
+		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
+		removalBase: RemovalBase
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance, report } = params
@@ -67,5 +70,6 @@ export async function foldCarriedSatellites(
 			? ({ tagName: instance.tagName, id: instance.id } as Scl.Ref<Scl.ElementsOf>)
 			: undefined,
 		resolveForeignScope: params.resolveForeignScope,
+		removalBase: params.removalBase,
 	})
 }

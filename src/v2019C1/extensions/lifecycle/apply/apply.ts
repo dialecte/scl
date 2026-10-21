@@ -7,7 +7,12 @@ import {
 	assertDecisionsCoherent,
 	clearAnnotations,
 } from '@/v2019C1/extensions/lifecycle/engine'
+import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { assertMappingsCoherent } from '@/v2019C1/extensions/lifecycle/mapping'
+import {
+	assertRevisionBaseFits,
+	scenarioPolicy,
+} from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import {
 	asd as updateAsd,
 	fsd as updateFsd,
@@ -22,6 +27,7 @@ import type {
 	LifecycleTarget,
 } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -44,6 +50,9 @@ import type * as Core from '@dialecte/core'
  *    its suggested action. The engine rejects a decision set that accepts a group
  *    whose `dependsOn` parent is skipped.
  *
+ * A fork reads the previous revision of the file it is given (`baseQuery`) once, as `report` did:
+ * an element the newer revision lacks is removed when the previous revision held it.
+ *
  * Returns `{ report, instances }` — the effective report plus the instance roots
  * the write produced/reconciled. Run inside `doc.prepare(tx => tx.lifecycle.apply(...))`
  * for a previewable, reversible dry-run.
@@ -60,6 +69,9 @@ export async function apply(
 	if (decisionMappings)
 		assertMappingsCoherent({ reportMappings: report.mappings, decisionMappings })
 
+	// a previous revision only a fork reads: refused whatever the track
+	assertRevisionBaseFits({ scenario: params.scenario, baseQuery: params.baseQuery })
+
 	// No decisions supplied: the full track waits for a human, nothing is written
 	if (!params.resolution?.decisions && report.needsDecisions) {
 		return { report, instances: emptyInstances(params.verb) }
@@ -68,10 +80,16 @@ export async function apply(
 	// the gate is always the report's: no decisions = each group at its suggested action. User value edits are honored
 	// on either track, a conflict-free instantiate can carry edited editable attributes.
 	assertDecisionsCoherent({ groups: allGroups(report), decisions })
+	// what tells a dropped element from the project's own, read once for the whole apply
+	const removalBase = await resolveRemovalBase({
+		policy: scenarioPolicy({ scenario: params.scenario }),
+		sourceQuery: params.sourceQuery,
+		baseQuery: params.baseQuery,
+	})
 	// the report tells what THIS run places: what an earlier run placed is forgotten first
 	clearAnnotations({ report })
 	const writtenFrom = tx.getStagedOperations().length
-	const instances = await runVerb(tx, params, report, decisions)
+	const instances = await runVerb(tx, { target: params, report, decisions, removalBase })
 
 	// what the template brings keeps the implementation it had there: what this run wrote naming a
 	// logical node, ExtRef or ExtCtrl the project lacks is released, once everything is written
@@ -144,10 +162,14 @@ function emptyInstances(verb: LifecycleTarget['verb']): AppliedInstances {
  */
 async function runVerb(
 	tx: Core.Transaction<Config>,
-	target: LifecycleApplyParams,
-	report: DiffReport,
-	decisions: DecisionMap,
+	params: {
+		target: LifecycleApplyParams
+		report: DiffReport
+		decisions: DecisionMap
+		removalBase: RemovalBase
+	},
 ): Promise<AppliedInstances> {
+	const { target, report, decisions, removalBase } = params
 	switch (target.verb) {
 		case 'fsd': {
 			const functions = await updateFsd(tx, {
@@ -155,6 +177,7 @@ async function runVerb(
 				functionRef: target.ref,
 				targetParent: target.anchor,
 				scenario: target.scenario,
+				removalBase,
 				targetInstance: target.targetInstance,
 				report,
 				decisions,
@@ -171,6 +194,7 @@ async function runVerb(
 				// source - not `target.ref`, which is only the coarse process-section anchor.
 				targetParent: target.anchor,
 				scenario: target.scenario,
+				removalBase,
 				targetInstance: target.targetInstance,
 				report,
 				decisions,
@@ -185,6 +209,7 @@ async function runVerb(
 				applicationRef: target.ref,
 				targetParent: target.anchor,
 				scenario: target.scenario,
+				removalBase,
 				targetInstance: target.targetInstance,
 				report,
 				decisions,

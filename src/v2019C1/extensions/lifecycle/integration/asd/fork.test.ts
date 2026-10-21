@@ -1,9 +1,18 @@
-import { findByUuid, listCompanions, listGroups, reportAndApply } from '../integration-helpers'
+import {
+	canonicalElement,
+	findByUuid,
+	listCompanions,
+	listGroups,
+	reportAndApply,
+} from '../integration-helpers'
 
-import { describe, expect } from 'vitest'
+import { toDialecteError } from '@dialecte/core'
+import { describe, expect, it } from 'vitest'
 
+import { asd as updateAsd } from '@/v2019C1/extensions/lifecycle/update/transaction'
 import {
 	ALL_XMLNS_NAMESPACES,
+	createSclTestProject,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 	openSclDocument,
 	runSclTestCases,
@@ -11,7 +20,10 @@ import {
 import { readRevisionTwin } from '@/v2019C1/test/revision-twins'
 
 import type { Scl } from '@/v2019C1/config'
-import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	LifecycleScenario,
+	LifecycleTarget,
+} from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SclTest } from '@/v2019C1/test'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -29,8 +41,16 @@ type ForkTestCase = SclTest.BaseXmlTestCase & {
 	expectedGroups: string[]
 	/** The companions the groups carry, `<change> <tag>`, sorted, when the case says. */
 	expectedCompanions?: string[]
-	/** Forked a second time, after the newer revision changed this way (or not at all), from this source. */
-	secondFork?: { sourceXml?: string }
+	/** The previous revision of the file, given to the first fork as its base. */
+	baseXml?: string
+	/** Then forked again in turn: from this revision (or the source as it stands), given this base. */
+	nextForks?: { sourceXml?: string; baseXml?: string }[]
+	/** The elements, by uuid, the project holds again as before the forks, whole. */
+	expectedAsBefore?: string[]
+	/** The scenario of the update, when the case is not a fork. */
+	scenario?: Exclude<LifecycleScenario, 'fork'>
+	/** The one bay the update is scoped to, by record id, when the case says. */
+	targetInstance?: string
 }
 
 const TYPES = /* xml */ `
@@ -49,7 +69,7 @@ const TYPES = /* xml */ `
  * `function-uuid`), with what the case adds. `side` keeps the record ids of the source and of the project apart.
  */
 function asdRevision(params: {
-	side: 'source' | 'project'
+	side: 'source' | 'project' | 'base'
 	applicationAttributes?: string
 	functionAttributes?: string
 	roleContent?: string
@@ -126,6 +146,14 @@ const projectWithEmptyBay = /* xml */ `
 	</SCL>
 `
 
+/** The project with an empty bay beside the one holding the file's elements. */
+function withEmptyBay(xml: string): string {
+	return xml.replace(
+		'</VoltageLevel>',
+		`<Bay name="Empty" ${id}="project-empty-bay"/></VoltageLevel>`,
+	)
+}
+
 /** The renamed application of the twins, the uuid of its application. */
 const TWIN_APPLICATION_UUID = '00000000-0000-4000-8000-000000000110'
 
@@ -185,7 +213,7 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 				anchor: { id: 'project-bay' },
 				expectedInstances: ['application-uuid', 'function-uuid', undefined],
 				expectedGroups: ['added Function', 'added FunctionRef'],
-				secondFork: {},
+				nextForks: [{}],
 				expectedQueries: [
 					'//default:Function[@name="Ctrl"][@uuid="gained-function-uuid"]/default:LNode[@uuid="gained-lnode-uuid"]',
 					'//v2019C1:FunctionRef[@functionUuid="gained-function-uuid"]',
@@ -205,7 +233,7 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 				anchor: { id: 'project-bay' },
 				expectedInstances: [undefined, undefined],
 				expectedGroups: ['added Application', 'added Function'],
-				secondFork: {},
+				nextForks: [{}],
 				expectedQueries: [
 					'//default:Bay[@name="B1"]//v2019C1:Application[@uuid="application-uuid"]/v2019C1:FunctionRole[@uuid="role-uuid"]',
 					'//default:Bay[@name="B1"]/default:Function[@uuid="function-uuid"]/default:LNode[@uuid="lnode-uuid"]',
@@ -226,9 +254,9 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 				anchor: { id: 'project-bay' },
 				expectedInstances: [undefined, undefined],
 				expectedGroups: ['added Application', 'added Function'],
-				secondFork: {
-					sourceXml: readRevisionTwin({ twin: 'applicationRenamesFunctions', revision: 2 }),
-				},
+				nextForks: [
+					{ sourceXml: readRevisionTwin({ twin: 'applicationRenamesFunctions', revision: 2 }) },
+				],
 				expectedQueries: [
 					`//v2019C1:Application[@uuid="${TWIN_APPLICATION_UUID}"]`,
 					'//default:Function[@name="Breaker_Fn"][@uuid="00000000-0000-4000-8000-000000000120"]',
@@ -250,12 +278,17 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 					'//v2019C1:FunctionCategory[2]',
 				],
 			},
-		'an allocation role the newer revision dropped is removed': {
+		'an allocation role the previous revision held and the newer one dropped is removed': {
 			sourceXml: asdRevision({ side: 'source' }),
 			targetXml: asdRevision({
 				side: 'project',
 				applicationContent: allocationRoleRef('project', 'BCU', 'role-bcu-uuid'),
 				bayPrivate: allocationRole('project', 'BCU', 'role-bcu-uuid'),
+			}),
+			baseXml: asdRevision({
+				side: 'base',
+				applicationContent: allocationRoleRef('base', 'BCU', 'role-bcu-uuid'),
+				bayPrivate: allocationRole('base', 'BCU', 'role-bcu-uuid'),
 			}),
 			applicationUuid: 'application-uuid',
 			anchor: { id: 'project-bay' },
@@ -263,6 +296,151 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 			expectedGroups: ['removed AllocationRole', 'removed AllocationRoleRef'],
 			expectedQueries: ['//v2019C1:Application[@uuid="application-uuid"]'],
 			unexpectedQueries: ['//v2019C1:AllocationRole', '//v2019C1:AllocationRoleRef'],
+		},
+		"without the previous revision, an allocation role the newer one lacks is the project's own and kept":
+			{
+				sourceXml: asdRevision({ side: 'source' }),
+				targetXml: asdRevision({
+					side: 'project',
+					applicationContent: allocationRoleRef('project', 'BCU', 'role-bcu-uuid'),
+					bayPrivate: allocationRole('project', 'BCU', 'role-bcu-uuid'),
+				}),
+				applicationUuid: 'application-uuid',
+				anchor: { id: 'project-bay' },
+				expectedInstances: ['application-uuid', 'function-uuid'],
+				expectedGroups: ['removed AllocationRoleRef', 'target-only AllocationRole'],
+				expectedQueries: ['//v2019C1:AllocationRole[@uuid="role-bcu-uuid"]'],
+			},
+		'scoped to a bay that lacks it, an application the project holds in another bay is reconciled where it sits, not placed beside it':
+			{
+				sourceXml: asdRevision({ side: 'source', applicationAttributes: 'desc="rev2"' }),
+				targetXml: withEmptyBay(asdRevision({ side: 'project' })),
+				applicationUuid: 'application-uuid',
+				anchor: { id: 'project-empty-bay' },
+				targetInstance: 'project-empty-bay',
+				expectedInstances: ['application-uuid', 'function-uuid'],
+				expectedGroups: ['modified Application'],
+				expectedQueries: [
+					'//default:Bay[@uuid="bay-uuid"]//v2019C1:Application[@uuid="application-uuid"][@desc="rev2"]',
+				],
+				unexpectedQueries: ['//default:Bay[@name="Empty"]/*', '(//v2019C1:Application)[2]'],
+			},
+		'a template update leaves the application a fork placed: a new instance is placed beside it': {
+			sourceXml: asdRevision({ side: 'source' }),
+			targetXml: withEmptyBay(asdRevision({ side: 'project' })),
+			scenario: 'template',
+			applicationUuid: 'application-uuid',
+			anchor: { id: 'project-empty-bay' },
+			expectedInstances: [undefined, undefined],
+			expectedGroups: ['added Application', 'added Function'],
+			expectedQueries: [
+				'//default:Bay[@uuid="bay-uuid"]//v2019C1:Application[@uuid="application-uuid"][not(@templateUuid)]',
+				'//default:Bay[@name="Empty"]//v2019C1:Application[@templateUuid="application-uuid"]',
+			],
+		},
+		'an allocation role the previous revision held and the newer one dropped goes with the change of the application':
+			{
+				sourceXml: asdRevision({ side: 'source', applicationAttributes: 'desc="rev2"' }),
+				targetXml: asdRevision({
+					side: 'project',
+					applicationContent: allocationRoleRef('project', 'BCU', 'role-bcu-uuid'),
+					bayPrivate: allocationRole('project', 'BCU', 'role-bcu-uuid'),
+				}),
+				baseXml: asdRevision({
+					side: 'base',
+					applicationContent: allocationRoleRef('base', 'BCU', 'role-bcu-uuid'),
+					bayPrivate: allocationRole('base', 'BCU', 'role-bcu-uuid'),
+				}),
+				applicationUuid: 'application-uuid',
+				anchor: { id: 'project-bay' },
+				expectedInstances: ['application-uuid', 'function-uuid'],
+				expectedGroups: ['modified Application'],
+				expectedCompanions: ['removed AllocationRole', 'removed AllocationRoleRef'],
+				unexpectedQueries: ['//v2019C1:AllocationRole', '//v2019C1:AllocationRoleRef'],
+			},
+		"without the previous revision, an allocation role the newer one lacks stays a decision of its own beside the application's change":
+			{
+				sourceXml: asdRevision({ side: 'source', applicationAttributes: 'desc="rev2"' }),
+				targetXml: asdRevision({
+					side: 'project',
+					applicationContent: allocationRoleRef('project', 'BCU', 'role-bcu-uuid'),
+					bayPrivate: allocationRole('project', 'BCU', 'role-bcu-uuid'),
+				}),
+				applicationUuid: 'application-uuid',
+				anchor: { id: 'project-bay' },
+				expectedInstances: ['application-uuid', 'function-uuid'],
+				expectedGroups: ['modified Application', 'target-only AllocationRole'],
+				expectedCompanions: ['removed AllocationRoleRef'],
+				expectedQueries: ['//v2019C1:AllocationRole[@uuid="role-bcu-uuid"]'],
+			},
+		'an allocation role the newer revision still holds is no companion of the change of the application':
+			{
+				sourceXml: asdRevision({
+					side: 'source',
+					applicationAttributes: 'desc="rev2"',
+					applicationContent: allocationRoleRef('source', 'BCU', 'role-bcu-uuid'),
+					bayPrivate: allocationRole('source', 'BCU', 'role-bcu-uuid'),
+				}),
+				targetXml: asdRevision({
+					side: 'project',
+					applicationContent: allocationRoleRef('project', 'BCU', 'role-bcu-uuid'),
+					bayPrivate: allocationRole('project', 'BCU', 'role-bcu-uuid'),
+				}),
+				applicationUuid: 'application-uuid',
+				anchor: { id: 'project-bay' },
+				expectedInstances: ['application-uuid', 'function-uuid'],
+				expectedGroups: ['modified Application'],
+				expectedCompanions: [],
+				expectedQueries: ['//v2019C1:AllocationRole[@uuid="role-bcu-uuid"]'],
+			},
+		'an allocation role the application no longer refers to, that the newer revision still holds, is kept':
+			{
+				sourceXml: asdRevision({
+					side: 'source',
+					bayPrivate: allocationRole('source', 'BCU', 'role-bcu-uuid'),
+				}),
+				targetXml: asdRevision({
+					side: 'project',
+					applicationContent: allocationRoleRef('project', 'BCU', 'role-bcu-uuid'),
+					bayPrivate: allocationRole('project', 'BCU', 'role-bcu-uuid'),
+				}),
+				applicationUuid: 'application-uuid',
+				anchor: { id: 'project-bay' },
+				expectedInstances: ['application-uuid', 'function-uuid'],
+				expectedGroups: ['removed AllocationRoleRef'],
+				expectedQueries: ['//v2019C1:AllocationRole[@uuid="role-bcu-uuid"]'],
+				unexpectedQueries: ['//v2019C1:AllocationRoleRef'],
+			},
+		'of two allocation roles, the one the newer revision dropped is removed and the other kept': {
+			sourceXml: asdRevision({
+				side: 'source',
+				applicationContent: allocationRoleRef('source', 'BCU', 'role-bcu-uuid'),
+				bayPrivate: allocationRole('source', 'BCU', 'role-bcu-uuid'),
+			}),
+			targetXml: asdRevision({
+				side: 'project',
+				applicationContent:
+					allocationRoleRef('project', 'BCU', 'role-bcu-uuid') +
+					allocationRoleRef('project', 'GW', 'role-gw-uuid'),
+				bayPrivate:
+					allocationRole('project', 'BCU', 'role-bcu-uuid') +
+					allocationRole('project', 'GW', 'role-gw-uuid'),
+			}),
+			baseXml: asdRevision({
+				side: 'base',
+				applicationContent:
+					allocationRoleRef('base', 'BCU', 'role-bcu-uuid') +
+					allocationRoleRef('base', 'GW', 'role-gw-uuid'),
+				bayPrivate:
+					allocationRole('base', 'BCU', 'role-bcu-uuid') +
+					allocationRole('base', 'GW', 'role-gw-uuid'),
+			}),
+			applicationUuid: 'application-uuid',
+			anchor: { id: 'project-bay' },
+			expectedInstances: ['application-uuid', 'function-uuid'],
+			expectedGroups: ['removed AllocationRole', 'removed AllocationRoleRef'],
+			expectedQueries: ['//v2019C1:AllocationRole[@uuid="role-bcu-uuid"]'],
+			unexpectedQueries: ['//v2019C1:AllocationRole[@uuid="role-gw-uuid"]'],
 		},
 		'references that point at what they pointed at in the previous revision are matched, not removed and added again':
 			{
@@ -303,6 +481,33 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 			],
 			unexpectedQueries: ['(//v2019C1:LNodeDataRef)[3]', '(//v2019C1:FunctionRole)[4]'],
 		},
+		'a real application file forked to its next revision and back, each given the other as base: as it was':
+			{
+				sourceXml: readRevisionTwin({ twin: 'applicationGainsElements', revision: 2 }),
+				targetXml: readRevisionTwin({ twin: 'applicationGainsElements', revision: 1 }),
+				baseXml: readRevisionTwin({ twin: 'applicationGainsElements', revision: 1 }),
+				applicationUuid: '00000000-0000-4000-8000-000000000210',
+				anchor: { uuid: '00000000-0000-4000-8000-000000000203' },
+				expectedInstances: [
+					'00000000-0000-4000-8000-000000000210',
+					'00000000-0000-4000-8000-000000000220',
+				],
+				expectedGroups: ['added BehaviorDescription', 'added FunctionRole'],
+				nextForks: [
+					{
+						sourceXml: readRevisionTwin({ twin: 'applicationGainsElements', revision: 1 }),
+						baseXml: readRevisionTwin({ twin: 'applicationGainsElements', revision: 2 }),
+					},
+				],
+				expectedAsBefore: [
+					'00000000-0000-4000-8000-000000000210',
+					'00000000-0000-4000-8000-000000000220',
+				],
+				unexpectedQueries: [
+					'//v2019C1:FunctionRole[@uuid="00000000-0000-4000-8000-000000000215"]',
+					'//v2019C1:BehaviorDescription',
+				],
+			},
 	}
 
 	async function act({
@@ -316,20 +521,38 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 			'uuid' in testCase.anchor
 				? await findByUuid(target.query, { tagName: 'Bay', uuid: testCase.anchor.uuid })
 				: ({ tagName: 'Bay', id: testCase.anchor.id } as Scl.Ref<'Bay'>)
-		const lifecycleFrom = async (sourceQuery: Scl.Query): Promise<LifecycleTarget> => ({
-			verb: 'asd',
-			sourceQuery,
-			ref: await findByUuid(sourceQuery, {
-				tagName: 'Application',
-				uuid: testCase.applicationUuid,
-			}),
-			anchor,
-			scenario: 'fork',
-		})
+		const lifecycleFrom = async (params: {
+			sourceQuery: Scl.Query
+			baseQuery: Scl.Query | undefined
+		}): Promise<LifecycleTarget> => {
+			const common = {
+				verb: 'asd' as const,
+				sourceQuery: params.sourceQuery,
+				ref: await findByUuid(params.sourceQuery, {
+					tagName: 'Application',
+					uuid: testCase.applicationUuid,
+				}),
+				anchor,
+				...(testCase.targetInstance
+					? { targetInstance: { tagName: 'Bay', id: testCase.targetInstance } as Scl.Ref<'Bay'> }
+					: {}),
+			}
+			if (testCase.scenario) return { ...common, scenario: testCase.scenario }
+			return {
+				...common,
+				scenario: 'fork',
+				...(params.baseQuery ? { baseQuery: params.baseQuery } : {}),
+			}
+		}
 
+		const openRevision = async (xml: string | undefined, label: string) =>
+			xml ? openSclDocument({ project, xml, label }) : undefined
+		const before = (await target.query.getSnapshot({ as: 'xml' })) as string
+
+		const base = await openRevision(testCase.baseXml, 'previous revision')
 		const { report } = await reportAndApply({
 			document: target,
-			lifecycle: await lifecycleFrom(source.query),
+			lifecycle: await lifecycleFrom({ sourceQuery: source.query, baseQuery: base?.query }),
 		})
 		const matched: (string | undefined)[] = []
 		for (const instance of report.instances) {
@@ -340,24 +563,61 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 			)
 		}
 		expect(matched.sort()).toEqual(testCase.expectedInstances)
+		if (!testCase.scenario) expect(report.revisionBase).toBe(base ? 'given' : 'absent')
 		expect(listGroups(report)).toEqual(testCase.expectedGroups)
 		if (testCase.expectedCompanions) {
 			expect(listCompanions(report)).toEqual(testCase.expectedCompanions)
 		}
 
-		if (testCase.secondFork) {
-			const next = testCase.secondFork.sourceXml
-				? await openSclDocument({
-						project,
-						xml: testCase.secondFork.sourceXml,
-						label: 'next revision',
-					})
-				: source
-			await reportAndApply({ document: target, lifecycle: await lifecycleFrom(next.query) })
+		for (const next of testCase.nextForks ?? []) {
+			const revision = (await openRevision(next.sourceXml, 'next revision')) ?? source
+			const nextBase = await openRevision(next.baseXml, 'previous revision')
+			await reportAndApply({
+				document: target,
+				lifecycle: await lifecycleFrom({ sourceQuery: revision.query, baseQuery: nextBase?.query }),
+			})
+		}
+
+		const after = (await target.query.getSnapshot({ as: 'xml' })) as string
+		for (const uuid of testCase.expectedAsBefore ?? []) {
+			expect(canonicalElement({ xml: after, uuid }), uuid).toBe(
+				canonicalElement({ xml: before, uuid }),
+			)
 		}
 
 		return { assertOn: 'target' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })
+})
+
+describe('asd fork: the previous revision it is given', () => {
+	it('is refused by an update that is not a fork, a template update when none is said', async () => {
+		const { project, source, target } = await createSclTestProject({
+			sourceXml: asdRevision({ side: 'source' }),
+			targetXml: asdRevision({ side: 'project' }),
+		})
+		if (!target) throw new Error('target required')
+		const base = await openSclDocument({
+			project,
+			xml: asdRevision({ side: 'base' }),
+			label: 'previous revision',
+		})
+
+		const refused = target.document.transaction(async function updateWithBase(tx) {
+			await updateAsd(tx, {
+				sourceQuery: source.document.query,
+				applicationRef: { tagName: 'Application', id: 'source-application' },
+				targetParent: { tagName: 'Bay', id: 'project-bay' },
+				// no scenario: a template update
+				baseQuery: base.query,
+			})
+		})
+		await expect(refused).rejects.toThrow()
+		const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+		expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
+			key: 'REVISION_BASE_WITHOUT_FORK',
+			meta: { scenario: 'template' },
+		})
+	})
 })

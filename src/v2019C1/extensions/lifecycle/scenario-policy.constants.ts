@@ -18,6 +18,7 @@ export const SCENARIO_POLICIES = {
 		bumpsCollisions: true,
 		placementIdentity: 'stamp-template',
 		writesProvenance: true,
+		removalBase: 'none',
 	},
 	template: {
 		matchKey: 'templateUuid',
@@ -27,6 +28,7 @@ export const SCENARIO_POLICIES = {
 		bumpsCollisions: true,
 		placementIdentity: 'stamp-template',
 		writesProvenance: true,
+		removalBase: 'lineage',
 	},
 	fork: {
 		matchKey: 'uuid',
@@ -36,5 +38,6 @@ export const SCENARIO_POLICIES = {
 		bumpsCollisions: false,
 		placementIdentity: 'keep',
 		writesProvenance: false,
+		removalBase: 'revision',
 	},
 } as const satisfies Record<LifecycleScenario, ScenarioPolicy>

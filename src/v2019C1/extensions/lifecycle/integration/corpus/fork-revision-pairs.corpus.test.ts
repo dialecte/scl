@@ -1,7 +1,9 @@
-import { findByUuid, reportAndApply } from '../integration-helpers'
+import { canonicalElement, findByUuid, listGroups, reportAndApply } from '../integration-helpers'
 
+import { toDialecteError } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
 
+import { report } from '@/v2019C1/extensions/lifecycle/report'
 import {
 	ALL_XMLNS_NAMESPACES,
 	createSclTestProject,
@@ -14,6 +16,7 @@ import {
 } from '@/v2019C1/test/corpus/corpus-revisions'
 
 import type { Scl } from '@/v2019C1/config'
+import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -58,7 +61,7 @@ const APPLICATION_RENAMES = {
 describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_RENAMES)))(
 	'corpus fork: an application file that renames three subfunctions',
 	() => {
-		it('forked into an empty bay, then its next revision: the file uuids once each, its own lineage and provenance', async () => {
+		it('forked into an empty bay, then its next revision and back, each given the other as base', async () => {
 			const firstXml = await readCorpusRevision(APPLICATION_RENAMES.first)
 			const secondXml = await readCorpusRevision(APPLICATION_RENAMES.second)
 			const { project, source, target } = await createSclTestProject({
@@ -69,10 +72,11 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_RENAMES)))(
 			const second = await openSclDocument({ project, xml: secondXml, label: 'next revision' })
 			const anchor = { tagName: 'Bay', id: 'project-bay' } as Scl.Ref<'Bay'>
 			const [application] = await source.document.query.getRecordsByTagName('Application')
-			const applicationUuid = (await source.document.query.getAttributes(application)).uuid ?? ''
-
-			for (const revision of [source.document, second]) {
-				await reportAndApply({
+			const { uuid: applicationUuid = '' } = await source.document.query.getAttributes(application)
+			const [fn] = await source.document.query.getRecordsByTagName('Function')
+			const { uuid: functionUuid = '' } = await source.document.query.getAttributes(fn)
+			const fork = async (revision: Scl.Document, base?: Scl.Document) =>
+				reportAndApply({
 					document: target.document,
 					lifecycle: {
 						verb: 'asd',
@@ -83,10 +87,14 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_RENAMES)))(
 						}),
 						anchor,
 						scenario: 'fork',
+						...(base ? { baseQuery: base.query } : {}),
 					},
 				})
-			}
 
+			await fork(source.document)
+			const placed = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+
+			await fork(second, source.document)
 			const forked = (await target.document.query.getSnapshot({ as: 'xml' })) as string
 			const uuids = placedUuids(forked)
 			expect(new Set(uuids).size, 'each uuid once').toBe(uuids.length)
@@ -98,6 +106,117 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_RENAMES)))(
 				count(secondXml, { localName: 'FunctionSclRef' }),
 			)
 			expect(count(forked, { localName: 'ApplicationSclRef' }), 'none of its own').toBe(0)
+
+			await fork(source.document, second)
+			const back = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+			for (const uuid of [applicationUuid, functionUuid]) {
+				expect(canonicalElement({ xml: back, uuid }), 'back as first placed').toBe(
+					canonicalElement({ xml: placed, uuid }),
+				)
+			}
 		})
 	},
 )
+
+const APPLICATION_GAINS = {
+	first: '3 - ASD files/P51_Light/P51_Appv0r1.asd',
+	second: '3 - ASD files/P51_Light/P51_Appv0r2.asd',
+} as const
+
+describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_GAINS)))(
+	'corpus fork: an application file that gains a role and a behaviour',
+	() => {
+		it('forked to its next revision and back, each given the other as base: the two gained listed, then as it was', async () => {
+			const firstXml = await readCorpusRevision(APPLICATION_GAINS.first)
+			const secondXml = await readCorpusRevision(APPLICATION_GAINS.second)
+			const { project, source, target } = await createSclTestProject({
+				sourceXml: secondXml,
+				targetXml: firstXml,
+			})
+			if (!target) throw new Error('target required')
+			const first = await openSclDocument({ project, xml: firstXml, label: 'previous revision' })
+			const [application] = await source.document.query.getRecordsByTagName('Application')
+			const { uuid: applicationUuid = '' } = await source.document.query.getAttributes(application)
+			const [fn] = await source.document.query.getRecordsByTagName('Function')
+			const { uuid: functionUuid = '' } = await source.document.query.getAttributes(fn)
+			const [bay] = await target.document.query.getRecordsByTagName('Bay')
+			const before = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+			const lifecycle = async (
+				revision: Scl.Document,
+				base: Scl.Document,
+			): Promise<LifecycleTarget> => ({
+				verb: 'asd',
+				sourceQuery: revision.query,
+				ref: await findByUuid(revision.query, { tagName: 'Application', uuid: applicationUuid }),
+				anchor: { tagName: 'Bay', id: bay.id },
+				scenario: 'fork',
+				baseQuery: base.query,
+			})
+
+			const { report: gained } = await reportAndApply({
+				document: target.document,
+				lifecycle: await lifecycle(source.document, first),
+			})
+			expect(listGroups(gained), 'the two elements the revision gained, nothing else').toEqual([
+				'added BehaviorDescription',
+				'added FunctionRole',
+			])
+
+			await reportAndApply({
+				document: target.document,
+				lifecycle: await lifecycle(first, source.document),
+			})
+			const after = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+			for (const uuid of [applicationUuid, functionUuid]) {
+				expect(canonicalElement({ xml: after, uuid }), 'as it was').toBe(
+					canonicalElement({ xml: before, uuid }),
+				)
+			}
+		})
+	},
+)
+
+/** Two files of one name that are not revisions of one another: every uuid, the Header's included, differs. */
+const NOT_REVISIONS = [
+	{
+		name: 'a function file regenerated with a version',
+		project: '2 - FSD files/2 - FSD In Use (Extended)/GAPC_v2_r1.fsd',
+		revision: '2 - FSD files/2 - FSD In Use (Extended)/GAPC_v3_r1.fsd',
+	},
+	{
+		name: 'an application file saved again as a new file',
+		project: '3 - ASD files/CB_Light/CB_Light.asd',
+		revision: '3 - ASD files/CB_Light/CB_Lightv1r1.asd',
+	},
+] as const
+
+for (const pair of NOT_REVISIONS) {
+	describe.skipIf(!areCorpusRevisionsSynced([pair.project, pair.revision]))(
+		`corpus fork: ${pair.name}`,
+		() => {
+			it('given as the previous revision of the other, it is refused', async () => {
+				const projectXml = await readCorpusRevision(pair.project)
+				const { project, source, target } = await createSclTestProject({
+					sourceXml: await readCorpusRevision(pair.revision),
+					targetXml: projectXml,
+				})
+				if (!target) throw new Error('target required')
+				const base = await openSclDocument({ project, xml: projectXml, label: 'previous revision' })
+				const [bay] = await target.document.query.getRecordsByTagName('Bay')
+				const [fn] = await source.document.query.getRecordsByTagName('Function')
+
+				const refused = report(target.document.query, {
+					verb: 'fsd',
+					sourceQuery: source.document.query,
+					ref: { tagName: 'Function', id: fn.id },
+					anchor: { tagName: 'Bay', id: bay.id },
+					scenario: 'fork',
+					baseQuery: base.query,
+				})
+				await expect(refused).rejects.toThrow()
+				const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+				expect(refusal?.key).toBe('REVISION_BASE_OTHER_FILE')
+			})
+		},
+	)
+}

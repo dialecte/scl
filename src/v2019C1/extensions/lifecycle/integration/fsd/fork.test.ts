@@ -1,12 +1,22 @@
 import { listGroups, reportAndApply } from '../integration-helpers'
 
-import { describe, expect } from 'vitest'
+import { toDialecteError } from '@dialecte/core'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 
-import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import { report } from '@/v2019C1/extensions/lifecycle/report'
+import { fsd as updateFsd } from '@/v2019C1/extensions/lifecycle/update/transaction'
+import {
+	ALL_XMLNS_NAMESPACES,
+	createSclTestProject,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	openSclDocument,
+	runSclTestCases,
+} from '@/v2019C1/test'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SclTest } from '@/v2019C1/test'
+import type * as Core from '@dialecte/core'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -16,6 +26,8 @@ const functionRef = { tagName: 'Function', id: 'source-function' } as Scl.Ref<'F
 
 type ForkTestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
+	/** The previous revision of the file, given to the fork as its base. */
+	baseXml?: string
 	/** Where the fork starts in the project. */
 	anchor: Scl.Ref<Scl.ElementsOf>
 	/** The one instance the fork is scoped to, when the case says. */
@@ -47,7 +59,7 @@ const TYPES = /* xml */ `
  * and of the project (`project`) apart.
  */
 function fsdRevision(params: {
-	side: 'source' | 'project'
+	side: 'source' | 'project' | 'base'
 	functionAttributes?: string
 	inside?: string
 	substationPrivate?: string
@@ -91,6 +103,10 @@ function projectWithEmptyBay(elsewhere = ''): string {
 	`
 }
 
+const droppedLNode = (side: string) =>
+	/* xml */ `<LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="CSWI_Type" uuid="dropped-lnode-uuid" ${id}="${side}-dropped-lnode"/>`
+const userLNode = /* xml */ `<LNode iedName="None" lnClass="GGIO" lnInst="9" lnType="CSWI_Type" uuid="user-lnode-uuid" ${id}="project-user-lnode"/>`
+
 const gainedSubFunction = /* xml */ `
 	<SubFunction name="Sub" uuid="subfunction-uuid" ${id}="source-subfunction">
 		<LNode iedName="None" lnClass="CSWI" lnInst="2" lnType="CSWI_Type" uuid="sub-lnode-uuid" ${id}="source-sub-lnode"/>
@@ -128,12 +144,10 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 					'//default:Function[2]',
 				],
 			},
-		'an element the newer revision dropped is removed': {
+		'an element the previous revision held and the newer one dropped is removed': {
 			sourceXml: fsdRevision({ side: 'source' }),
-			targetXml: fsdRevision({
-				side: 'project',
-				inside: `<LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="CSWI_Type" uuid="dropped-lnode-uuid" ${id}="project-dropped-lnode"/>`,
-			}),
+			targetXml: fsdRevision({ side: 'project', inside: droppedLNode('project') }),
+			baseXml: fsdRevision({ side: 'base', inside: droppedLNode('base') }),
 			anchor: { tagName: 'Bay', id: 'project-bay' },
 			expectedInstances: ['project-function'],
 			expectedGroups: ['removed LNode'],
@@ -142,6 +156,28 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 			],
 			unexpectedQueries: ['//default:LNode[@uuid="dropped-lnode-uuid"]'],
 		},
+		'an element the project added beside the previous revision is its own: listed, kept': {
+			sourceXml: fsdRevision({ side: 'source' }),
+			targetXml: fsdRevision({ side: 'project', inside: userLNode }),
+			baseXml: fsdRevision({ side: 'base' }),
+			anchor: { tagName: 'Bay', id: 'project-bay' },
+			expectedInstances: ['project-function'],
+			expectedGroups: ['target-only LNode'],
+			expectedQueries: [
+				'//default:Function[@uuid="function-uuid"]/default:LNode[@uuid="user-lnode-uuid"]',
+			],
+		},
+		"without the previous revision, an element the newer one lacks is listed as the project's own and kept":
+			{
+				sourceXml: fsdRevision({ side: 'source' }),
+				targetXml: fsdRevision({ side: 'project', inside: droppedLNode('project') }),
+				anchor: { tagName: 'Bay', id: 'project-bay' },
+				expectedInstances: ['project-function'],
+				expectedGroups: ['target-only LNode'],
+				expectedQueries: [
+					'//default:Function[@uuid="function-uuid"]/default:LNode[@uuid="dropped-lnode-uuid"]',
+				],
+			},
 		'an element the newer revision gained keeps its uuid': {
 			sourceXml: fsdRevision({
 				side: 'source',
@@ -170,6 +206,28 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 				'//default:SubFunction[@templateUuid]',
 				'//default:SubFunction//v2019C1:FunctionSclRef',
 				'//default:SubFunction[2]',
+			],
+		},
+		"the project's own element under a function the newer revision changes is its own decision, kept":
+			{
+				sourceXml: fsdRevision({ side: 'source', functionAttributes: 'desc="rev2"' }),
+				targetXml: fsdRevision({ side: 'project', inside: userLNode }),
+				baseXml: fsdRevision({ side: 'base' }),
+				anchor: { tagName: 'Bay', id: 'project-bay' },
+				expectedInstances: ['project-function'],
+				expectedGroups: ['modified Function', 'target-only LNode'],
+				expectedQueries: [
+					'//default:Function[@uuid="function-uuid"][@desc="rev2"]/default:LNode[@uuid="user-lnode-uuid"]',
+				],
+			},
+		'without the previous revision, what the newer one lacks under a function it changes is kept': {
+			sourceXml: fsdRevision({ side: 'source', functionAttributes: 'desc="rev2"' }),
+			targetXml: fsdRevision({ side: 'project', inside: droppedLNode('project') }),
+			anchor: { tagName: 'Bay', id: 'project-bay' },
+			expectedInstances: ['project-function'],
+			expectedGroups: ['modified Function', 'target-only LNode'],
+			expectedQueries: [
+				'//default:Function[@uuid="function-uuid"][@desc="rev2"]/default:LNode[@uuid="dropped-lnode-uuid"]',
 			],
 		},
 		'a first fork into a bay without the function places it with its uuid, no lineage, no provenance; the next one reconciles it':
@@ -319,6 +377,7 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 			{
 				sourceXml: fsdRevision({ side: 'source' }),
 				targetXml: fsdRevision({ side: 'project', substationPrivate: category('project', 'rev1') }),
+				baseXml: fsdRevision({ side: 'base', substationPrivate: category('base', 'rev1') }),
 				anchor: { tagName: 'Bay', id: 'project-bay' },
 				expectedInstances: ['project-function'],
 				expectedGroups: ['removed FunctionCategory'],
@@ -329,20 +388,26 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 
 	async function act({
 		testCase,
+		project,
 		source,
 		target,
 	}: SclTest.ActParams<ForkTestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
+		const base = testCase.baseXml
+			? await openSclDocument({ project, xml: testCase.baseXml, label: 'previous revision' })
+			: undefined
 		const lifecycle: LifecycleTarget = {
 			verb: 'fsd',
 			sourceQuery: source.query,
 			ref: functionRef,
 			anchor: testCase.anchor,
 			scenario: 'fork',
+			...(base ? { baseQuery: base.query } : {}),
 			...(testCase.targetInstance ? { targetInstance: testCase.targetInstance } : {}),
 		}
 
 		const { report } = await reportAndApply({ document: target, lifecycle })
+		expect(report.revisionBase).toBe(base ? 'given' : 'absent')
 		expect(report.instances.map((instance) => instance.rootRef?.id)).toEqual(
 			testCase.expectedInstances,
 		)
@@ -365,4 +430,99 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 	}
 
 	runSclTestCases.withExport({ testCases, act })
+})
+
+describe('fsd fork: the previous revision it is given', () => {
+	const withHeader = (xml: string, fileUuid: string) =>
+		xml.replace(
+			'<Substation name="TEMPLATE"',
+			`<Header id="function-file" uuid="${fileUuid}" version="1" revision="2"/><Substation name="TEMPLATE"`,
+		)
+
+	it('is refused when it is another file: both name their file, and the names differ', async () => {
+		const { project, source, target } = await createSclTestProject({
+			sourceXml: withHeader(fsdRevision({ side: 'source' }), 'function-file-uuid'),
+			targetXml: fsdRevision({ side: 'project' }),
+		})
+		if (!target) throw new Error('target required')
+		const base = await openSclDocument({
+			project,
+			xml: withHeader(fsdRevision({ side: 'base' }), 'other-file-uuid'),
+			label: 'previous revision',
+		})
+
+		const refused = report(target.document.query, {
+			verb: 'fsd',
+			sourceQuery: source.document.query,
+			ref: functionRef,
+			anchor: { tagName: 'Bay', id: 'project-bay' },
+			scenario: 'fork',
+			baseQuery: base.query,
+		})
+		await expect(refused).rejects.toThrow()
+		const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+		expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
+			key: 'REVISION_BASE_OTHER_FILE',
+			meta: { fileUuid: 'function-file-uuid', baseFileUuid: 'other-file-uuid' },
+		})
+	})
+
+	it('is read when the newer revision names no file: its elements say which revision it is', async () => {
+		const { project, source, target } = await createSclTestProject({
+			sourceXml: fsdRevision({ side: 'source' }),
+			targetXml: fsdRevision({ side: 'project', inside: droppedLNode('project') }),
+		})
+		if (!target) throw new Error('target required')
+		const base = await openSclDocument({
+			project,
+			xml: withHeader(fsdRevision({ side: 'base', inside: droppedLNode('base') }), 'any-file-uuid'),
+			label: 'previous revision',
+		})
+
+		const reported = await report(target.document.query, {
+			verb: 'fsd',
+			sourceQuery: source.document.query,
+			ref: functionRef,
+			anchor: { tagName: 'Bay', id: 'project-bay' },
+			scenario: 'fork',
+			baseQuery: base.query,
+		})
+		expect(listGroups(reported)).toEqual(['removed LNode'])
+	})
+
+	it('is refused by an update that is not a fork', async () => {
+		const { project, source, target } = await createSclTestProject({
+			sourceXml: fsdRevision({ side: 'source' }),
+			targetXml: fsdRevision({ side: 'project' }),
+		})
+		if (!target) throw new Error('target required')
+		const base = await openSclDocument({
+			project,
+			xml: fsdRevision({ side: 'base' }),
+			label: 'previous revision',
+		})
+
+		const refused = target.document.transaction(async function updateWithBase(tx) {
+			await updateFsd(tx, {
+				sourceQuery: source.document.query,
+				functionRef,
+				targetParent: { tagName: 'Bay', id: 'project-bay' },
+				scenario: 'template',
+				baseQuery: base.query,
+			})
+		})
+		await expect(refused).rejects.toThrow()
+		const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+		expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
+			key: 'REVISION_BASE_WITHOUT_FORK',
+			meta: { scenario: 'template' },
+		})
+	})
+
+	it("is a fork's only: the target of another scenario takes none", () => {
+		type Template = Extract<LifecycleTarget, { verb: 'fsd'; scenario?: 'instantiate' | 'template' }>
+		type Fork = Extract<LifecycleTarget, { verb: 'fsd'; scenario: 'fork' }>
+		expectTypeOf<Template['baseQuery']>().toEqualTypeOf<undefined>()
+		expectTypeOf<Fork['baseQuery']>().toEqualTypeOf<Core.Query<Config> | undefined>()
+	})
 })

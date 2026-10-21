@@ -3,6 +3,7 @@ import { toRef } from '@dialecte/core/helpers'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
+import { classifyUnmatched } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import {
 	collectForeignReferenceIds,
 	findInstanceByTemplateUuid,
@@ -16,6 +17,7 @@ import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings, ResolvedMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -56,6 +58,8 @@ export async function reconcileSatellites(
 		identityMode: IdentityMode
 		/** A shared element created here whose name its level holds is numbered. */
 		bumpsCollisions: boolean
+		/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */
+		removalBase: RemovalBase
 		/** Where the shared satellites land, by source record id. */
 		resolvedMappings?: ResolvedMappings
 		/** The consumer's choices for the shared satellites, by source record id. */
@@ -76,6 +80,7 @@ export async function reconcileSatellites(
 		matchKey,
 		identityMode,
 		bumpsCollisions,
+		removalBase,
 		resolvedMappings,
 		decisionMappings,
 	} = params
@@ -115,6 +120,7 @@ export async function reconcileSatellites(
 				matchKey,
 				identityMode,
 				bumpsCollisions,
+				removalBase,
 				instanceRootIsProjectOwned: resolved?.projectOwned ?? false,
 				keepLeftoverRefs: true,
 				foreignInstanceIds,
@@ -151,10 +157,10 @@ export async function reconcileSatellites(
 		}
 	}
 
-	// delete: a target instance satellite whose template ELEMENT was removed from the
-	// source. Catalog/shared satellites (FunctionCategory, AllocationRole, Variable,
-	// BehaviorDescription) persist when merely un-referenced, so the
-	// trigger is source-element non-existence, NOT a dropped link.
+	// delete: a target instance satellite whose source ELEMENT the source no longer holds — dropped
+	// by it, or the project's own. Catalog/shared satellites (FunctionCategory, AllocationRole,
+	// Variable, BehaviorDescription) persist when merely un-referenced, so the trigger is
+	// source-element non-existence, NOT a dropped link.
 	for (const instanceRef of instanceSatelliteRefs ?? []) {
 		if (instanceRef.id && mappedOntoIds.has(instanceRef.id)) continue
 		const lineage = await tx.any.getAttribute(instanceRef, { name: matchKey })
@@ -164,10 +170,17 @@ export async function reconcileSatellites(
 			tagName: instanceRef.tagName,
 			attributes: { uuid: lineage },
 		})
-		if (stillInSource) continue
+		const unmatched = classifyUnmatched({
+			lineage,
+			inSource: stillInSource !== undefined,
+			removalBase,
+		})
+		if (unmatched === 'still-held') continue
 
-		// gated on the removal companion's acceptance
-		if (accepted && instanceRef.id && !accepted.instanceIds.has(instanceRef.id)) continue
+		// a removal is gated on its companion's acceptance; the project's own goes only on an explicit accept
+		const accepts = accepted?.instanceIds.has(instanceRef.id ?? '') ?? false
+		if (unmatched === 'removed' && accepted && !accepts) continue
+		if (unmatched === 'target-only' && !accepts) continue
 
 		// shared-safety: keep if any OTHER primary still references this satellite
 		const referrers = await findRefsPointingTo(tx, { target: instanceRef })

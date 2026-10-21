@@ -20,7 +20,8 @@ const TEMPLATE_RECONCILE = {
 	matchKey: SCENARIO_POLICIES.template.matchKey,
 	identityMode: SCENARIO_POLICIES.template.identityMode,
 	bumpsCollisions: SCENARIO_POLICIES.template.bumpsCollisions,
-}
+	removalBase: { kind: 'lineage' },
+} as const
 
 // The report (diff) and apply (reconcile) sides now share ONE matcher (`matchChild`), so a child is
 // paired identically whether we describe the change or perform it. These tests pin two scenarios that

@@ -12,6 +12,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -47,6 +48,8 @@ export async function reconcileCarriedSatellites(
 		identityMode: IdentityMode
 		/** A shared element created here whose name its level holds is numbered. */
 		bumpsCollisions: boolean
+		/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */
+		removalBase: RemovalBase
 		/** The consumer's choices for the shared elements the function is classified by. */
 		decisionMappings?: DecisionMappings
 		/** What belongs to the other instances of the function. */
@@ -102,6 +105,7 @@ export async function reconcileCarriedSatellites(
 		matchKey,
 		identityMode,
 		bumpsCollisions,
+		removalBase: params.removalBase,
 		resolvedMappings,
 		decisionMappings,
 		resolveForeignScope: params.resolveForeignScope,

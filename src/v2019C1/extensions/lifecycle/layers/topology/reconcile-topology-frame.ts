@@ -27,6 +27,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -55,6 +56,8 @@ export async function reconcileTopologyFrame(
 		identityMode: IdentityMode
 		/** A level the template gained whose name a sibling holds is numbered. */
 		bumpsCollisions: boolean
+		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
+		removalBase: RemovalBase
 		report?: DiffReport
 		decisions?: DecisionMap
 		/** Multi-instance anchor: reconcile only the frame instance that IS the target (or under it). */
@@ -113,6 +116,7 @@ export async function reconcileTopologyFrame(
 			matchKey,
 			identityMode,
 			bumpsCollisions,
+			removalBase: params.removalBase,
 			accepted,
 			overrides: levelOverrides,
 			omit: FRAME_OMIT_CHILD_TAGS,

@@ -7,6 +7,7 @@ import { toRef } from '@dialecte/core/helpers'
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { linkPlacementDependencies } from '@/v2019C1/extensions/lifecycle/engine/link-placement-dependencies'
+import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import {
 	describePlacementMappings,
 	findLanding,
@@ -22,6 +23,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type {
 	PrimaryPlace,
 	ResolvePrimaryParentsParams,
@@ -50,6 +52,11 @@ export async function reportSsd(
 		decisionMappings?: DecisionMappings
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
+		/**
+		 * What tells an element the source dropped from one the project added, read once for the whole report.
+		 * Default: the scenario's, a fork given no previous revision.
+		 */
+		removalBase?: RemovalBase
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, scopeRef, targetParent, scenario, targetInstance, decisionMappings } = params
@@ -67,6 +74,7 @@ export async function reportSsd(
 	// a first placement: asked for, or the project holds no instance of the scope yet
 	const policy = scenarioPolicy({ scenario })
 	const { matchKey } = policy
+	const removalBase = params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery }))
 	const firstPlacement =
 		!policy.matchesInstances ||
 		!(await hasScopeInstance(query, {
@@ -108,6 +116,7 @@ export async function reportSsd(
 		mappedOnto,
 		pinnedMatches,
 		decisionMappings,
+		removalBase,
 	})
 
 	// the levels are listed first, the shared elements follow
@@ -144,6 +153,7 @@ export async function reportSsd(
 				targetInstance,
 				decisionMappings,
 				anchor: parent ?? placedFor ?? landing,
+				removalBase,
 			})
 			primaryInstances.push(...placedInstances({ instances: report.instances, placedFor }))
 		}
@@ -167,6 +177,7 @@ export async function reportSsd(
 				placesFresh: placedFor !== undefined,
 				targetInstance,
 				decisionMappings,
+				removalBase,
 			})
 			primaryInstances.push(...placedInstances({ instances: report.instances, placedFor }))
 		}

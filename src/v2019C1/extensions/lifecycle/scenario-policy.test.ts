@@ -19,6 +19,7 @@ const testCases: Record<string, TestCase> = {
 			bumpsCollisions: true,
 			placementIdentity: 'stamp-template',
 			writesProvenance: true,
+			removalBase: 'none',
 		},
 	},
 	'template: the instances matched by their lineage': {
@@ -31,6 +32,7 @@ const testCases: Record<string, TestCase> = {
 			bumpsCollisions: true,
 			placementIdentity: 'stamp-template',
 			writesProvenance: true,
+			removalBase: 'lineage',
 		},
 	},
 	'fork: the previous revision matched by the uuids both share, kept, on what it places too': {
@@ -43,6 +45,7 @@ const testCases: Record<string, TestCase> = {
 			bumpsCollisions: false,
 			placementIdentity: 'keep',
 			writesProvenance: false,
+			removalBase: 'revision',
 		},
 	},
 	'no scenario asked: template': {
@@ -60,12 +63,14 @@ const testCases: Record<string, TestCase> = {
 				bumpsCollisions: false,
 				placementIdentity: 'keep',
 				writesProvenance: false,
+				removalBase: 'revision',
 			},
 		},
-	'placed afresh within a template update: as an instantiate': {
-		params: { scenario: 'template', placesFresh: true },
-		expected: SCENARIO_POLICIES.instantiate,
-	},
+	'placed afresh within a template update: the template identity, matched to no instance, its references its own':
+		{
+			params: { scenario: 'template', placesFresh: true },
+			expected: { ...SCENARIO_POLICIES.template, matchesInstances: false, refsAlwaysAdded: true },
+		},
 }
 
 describe('scenarioPolicy', () => {
