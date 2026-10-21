@@ -128,11 +128,12 @@ export type LifecycleReportParams = LifecycleTarget & {
 
 /**
  * `apply` inputs: the target plus the `report` produced by `report` (the
- * consumer classifies first, then applies). The report gates the track.
+ * consumer classifies first, then applies). The report gates what is written.
  *
- * `resolution.decisions` drives the full track: absent -> the caller has not decided
- * yet (apply writes nothing and returns the report); present -> apply the accepted
- * groups only (a group absent from the map defaults to accept).
+ * `resolution.decisions`: present -> apply the accepted groups only (a group absent from the map takes its suggested
+ * action). Absent -> on the full track the caller has not decided yet (apply writes nothing and returns the report);
+ * on the fast track every group takes its suggested action: what the report lists is written, an element the project
+ * added is kept.
  */
 export type LifecycleApplyParams = LifecycleTarget & {
 	report: DiffReport

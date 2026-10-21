@@ -104,7 +104,7 @@ The scenarios are **distinct operations**, chosen explicitly by the consumer —
 
 `report.needsDecisions` gates the track:
 
-- **fast** (`false`) — first-time instantiate or a conflict-free change → `apply` writes headless (pass no `decisions`). User value edits still ride through if `decisions` are supplied;
+- **fast** (`false`) — first-time instantiate or a conflict-free change → `apply` writes headless (pass no `decisions`): it writes what the report lists, each group at its suggested action — an element the project added is kept, a reference the report kept stays. Decisions supplied anyway are honored, user value edits included;
 - **full** (`true`) — the instance exists and something changed → `apply` needs `decisions`. Without them it writes **nothing** and returns the report so the caller can drive the review; with them it applies only the accepted groups (across both layers for an ASD).
 
 ### Decision groups (full track)
