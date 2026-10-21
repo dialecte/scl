@@ -13,6 +13,7 @@ import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/wri
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
@@ -46,6 +47,8 @@ export async function reconcileCrossCuttingSatellites(
 		bumpsCollisions: boolean
 		/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
+		/** Whose names an update follows: see `visibleAttributes`. */
+		namesFollow: NamesFollow
 		/** What belongs to the other instances of the primary's template. */
 		resolveForeignScope?: ResolveForeignScope
 	},
@@ -96,6 +99,7 @@ export async function reconcileCrossCuttingSatellites(
 		identityMode,
 		bumpsCollisions,
 		removalBase: params.removalBase,
+		namesFollow: params.namesFollow,
 		resolvedMappings,
 		resolveForeignScope: params.resolveForeignScope,
 	})

@@ -117,7 +117,7 @@ export async function fsd(
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	assertRevisionBaseFits({ scenario, baseQuery: params.baseQuery })
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
-	const { matchKey, identityMode, bumpsCollisions } = policy
+	const { matchKey, identityMode, bumpsCollisions, namesFollow } = policy
 	const removalBase =
 		params.removalBase ??
 		(await resolveRemovalBase({ policy, sourceQuery, baseQuery: params.baseQuery }))
@@ -191,6 +191,7 @@ export async function fsd(
 			identityMode,
 			bumpsCollisions,
 			removalBase,
+			namesFollow,
 		})
 		// an element the instances share (a category) holds one reference per instance: this one
 		// reconciles its own, as the project stands once the earlier instances are updated
@@ -210,6 +211,7 @@ export async function fsd(
 			identityMode,
 			bumpsCollisions,
 			removalBase,
+			namesFollow,
 			decisionMappings: params.decisionMappings,
 			resolveForeignScope,
 		})
@@ -224,6 +226,7 @@ export async function fsd(
 			identityMode,
 			bumpsCollisions,
 			removalBase,
+			namesFollow,
 			resolveForeignScope,
 		})
 		// carry the report->applied correlation onto this instance's report nodes

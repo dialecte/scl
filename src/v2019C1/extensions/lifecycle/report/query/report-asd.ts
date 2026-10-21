@@ -44,6 +44,7 @@ import type {
 	ReportMapping,
 	ReportPass,
 } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey, ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -93,7 +94,7 @@ export async function reportAsd(
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
-	const { matchKey, refsAlwaysAdded } = policy
+	const { matchKey, refsAlwaysAdded, namesFollow } = policy
 	const removalBase = params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery }))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matchedApplications = policy.matchesInstances
@@ -147,6 +148,7 @@ export async function reportAsd(
 			decisionMappings,
 			anchor,
 			removalBase,
+			namesFollow,
 		})
 		const reportInstance = await buildReportInstance(query, {
 			instanceDiff,
@@ -174,6 +176,7 @@ export async function reportAsd(
 				anchor,
 				foreignScope: foreignScopes.get(instance.id),
 				removalBase,
+				namesFollow,
 			})
 			reportInstances.push(
 				await buildReportInstance(query, {
@@ -196,6 +199,7 @@ export async function reportAsd(
 		decisionMappings,
 		anchor,
 		removalBase,
+		namesFollow,
 	})
 
 	// what the groups of each placement depend on: on a first placement, the application on the
@@ -243,6 +247,8 @@ async function reportApplicationInstance(
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
 		removalBase: RemovalBase
+		/** Whose names an update follows: see `visibleAttributes`. */
+		namesFollow: NamesFollow
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
@@ -280,6 +286,7 @@ async function reportApplicationInstance(
 		matchKey: params.matchKey,
 		redirectMappings,
 		removalBase: params.removalBase,
+		namesFollow: params.namesFollow,
 	})
 
 	async function resolveForeignScope(): Promise<ReadonlySet<string>> {
@@ -304,6 +311,7 @@ async function reportApplicationInstance(
 			: undefined,
 		resolveForeignScope,
 		removalBase: params.removalBase,
+		namesFollow: params.namesFollow,
 	})
 
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
@@ -321,6 +329,7 @@ async function reportApplicationInstance(
 		matchKey: params.matchKey,
 		resolveForeignScope,
 		removalBase: params.removalBase,
+		namesFollow: params.namesFollow,
 	})
 
 	return applicationReport
@@ -350,6 +359,8 @@ async function reportComposedFunctions(
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
 		removalBase: RemovalBase
+		/** Whose names an update follows: see `visibleAttributes`. */
+		namesFollow: NamesFollow
 	},
 ): Promise<{
 	instances: ReportInstance[]
@@ -448,6 +459,8 @@ async function reportComposedFunction(
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		pass?: ReportPass
 		removalBase: RemovalBase
+		/** Whose names an update follows: see `visibleAttributes`. */
+		namesFollow: NamesFollow
 	},
 ): Promise<ReportInstance> {
 	const { sourceQuery, functionRef, instance, policy } = params
@@ -461,6 +474,7 @@ async function reportComposedFunction(
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
 		removalBase: params.removalBase,
+		namesFollow: params.namesFollow,
 	})
 	return buildReportInstance(query, { instanceDiff, instance, sourceQuery, sourceRef: functionRef })
 }

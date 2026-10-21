@@ -121,7 +121,7 @@ export async function asd(
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	assertRevisionBaseFits({ scenario, baseQuery: params.baseQuery })
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
-	const { matchKey, identityMode, bumpsCollisions } = policy
+	const { matchKey, identityMode, bumpsCollisions, namesFollow } = policy
 	const removalBase =
 		params.removalBase ??
 		(await resolveRemovalBase({ policy, sourceQuery, baseQuery: params.baseQuery }))
@@ -262,6 +262,7 @@ export async function asd(
 			identityMode,
 			bumpsCollisions,
 			removalBase,
+			namesFollow,
 			redirectMappings,
 		})
 		const foreignScope = new Set([
@@ -281,6 +282,7 @@ export async function asd(
 			identityMode,
 			bumpsCollisions,
 			removalBase,
+			namesFollow,
 			resolvedMappings,
 			decisionMappings: params.decisionMappings,
 			resolveForeignScope,
@@ -303,6 +305,7 @@ export async function asd(
 			identityMode,
 			bumpsCollisions,
 			removalBase,
+			namesFollow,
 			resolveForeignScope,
 		})
 		// carry the report->applied correlation onto this Application instance's report nodes (the

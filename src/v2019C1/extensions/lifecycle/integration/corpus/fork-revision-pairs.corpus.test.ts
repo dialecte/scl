@@ -1,4 +1,10 @@
-import { canonicalElement, findByUuid, listGroups, reportAndApply } from '../integration-helpers'
+import {
+	canonicalElement,
+	findByUuid,
+	listAttributeChanges,
+	listGroups,
+	reportAndApply,
+} from '../integration-helpers'
 
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
@@ -41,6 +47,21 @@ function placedUuids(xml: string): string[] {
 		.filter((element) => !FRAME_TAGS.has(element.localName))
 		.map((element) => `${element.localName} ${element.getAttribute('uuid')}`)
 		.sort()
+}
+
+/** The `name` attributes of that name, and the paths naming it: `<tag>@<attribute>`. */
+function namesOrPathsNaming(params: { xml: string; name: string }): string[] {
+	const { xml, name } = params
+	const document = new DOMParser().parseFromString(xml, 'application/xml')
+	return [...document.getElementsByTagName('*')].flatMap((element) =>
+		[...element.attributes]
+			.filter((attribute) =>
+				attribute.localName === 'name'
+					? attribute.value === name
+					: attribute.value.includes(`/${name}`),
+			)
+			.map((attribute) => `${element.localName}@${attribute.localName}`),
+	)
 }
 
 /** How many elements carry an attribute, and how many are of a tag. */
@@ -94,8 +115,26 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_RENAMES)))(
 			await fork(source.document)
 			const placed = (await target.document.query.getSnapshot({ as: 'xml' })) as string
 
-			await fork(second, source.document)
+			const { report: renamed } = await fork(second, source.document)
+			expect(
+				listAttributeChanges(renamed),
+				'the renames and the type change, nothing else',
+			).toEqual([
+				'name: Conditioner for Boolean Output Signals -> Conditioner for TRIP',
+				'name: Logical device LN -> Application Management',
+				'name: Physical Digital Output -> TRIP',
+				'type: Protection -> HV_Interface',
+			])
 			const forked = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+			for (const former of [
+				'Conditioner for Boolean Output Signals',
+				'Logical device LN',
+				'Physical Digital Output',
+			]) {
+				expect(namesOrPathsNaming({ xml: forked, name: former }), `left naming ${former}`).toEqual(
+					[],
+				)
+			}
 			const uuids = placedUuids(forked)
 			expect(new Set(uuids).size, 'each uuid once').toBe(uuids.length)
 			expect(uuids, 'the file elements, with their uuids').toEqual(placedUuids(secondXml))

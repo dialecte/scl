@@ -154,3 +154,14 @@ function canonicalize(element: Element): string {
 	const text = element.children.length === 0 ? (element.textContent ?? '').trim() : ''
 	return `<${element.localName} ${attributes.join(' ')}>${text}${children.join('')}</${element.localName}>`
 }
+
+/** The attribute changes every group's primary lists, `<name>: <before> -> <after>`, sorted. */
+export function listAttributeChanges(report: DiffReport): string[] {
+	return allGroups(report)
+		.flatMap((group) =>
+			(group.primary.attributeChanges ?? []).map(
+				(change) => `${change.name}: ${change.before ?? '-'} -> ${change.after ?? '-'}`,
+			),
+		)
+		.sort()
+}

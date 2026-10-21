@@ -48,7 +48,15 @@ export type ScenarioPolicy = {
 	 * does not — an element it never held is the project's own).
 	 */
 	removalBase: 'none' | 'lineage' | 'revision'
+	/**
+	 * Whose name an element matched in the project keeps: the project's (`project` — an instance is named where it
+	 * sits, the template's renames do not reach it), or the source's (`source` — a revision's renames are the file's).
+	 */
+	namesFollow: NamesFollow
 }
+
+/** Whose names a matched element keeps: see {@link ScenarioPolicy.namesFollow}. */
+export type NamesFollow = 'project' | 'source'
 
 export type ScenarioPolicyParams = {
 	/** The scenario asked for. Default: `template`. */

@@ -7,7 +7,8 @@ import type { ScenarioPolicy } from './scenario-policy.types'
  *  - `instantiate` places a new instance: its elements get a uuid of their own and the template's as their lineage;
  *  - `template` reconciles the instances of a template, by that lineage;
  *  - `fork` reconciles the previous revision of the same file, by the uuids both share, which it keeps — on what it
- *    places too, with no provenance of its own: the project holds the file's elements, not instances of them.
+ *    places too, with no provenance of its own: the project holds the file's elements, not instances of them, and
+ *    takes the file's renames; a name a sibling of the project already holds is numbered.
  */
 export const SCENARIO_POLICIES = {
 	instantiate: {
@@ -19,6 +20,7 @@ export const SCENARIO_POLICIES = {
 		placementIdentity: 'stamp-template',
 		writesProvenance: true,
 		removalBase: 'none',
+		namesFollow: 'project',
 	},
 	template: {
 		matchKey: 'templateUuid',
@@ -29,15 +31,17 @@ export const SCENARIO_POLICIES = {
 		placementIdentity: 'stamp-template',
 		writesProvenance: true,
 		removalBase: 'lineage',
+		namesFollow: 'project',
 	},
 	fork: {
 		matchKey: 'uuid',
 		matchesInstances: true,
 		refsAlwaysAdded: false,
 		identityMode: 'keep',
-		bumpsCollisions: false,
+		bumpsCollisions: true,
 		placementIdentity: 'keep',
 		writesProvenance: false,
 		removalBase: 'revision',
+		namesFollow: 'source',
 	},
 } as const satisfies Record<LifecycleScenario, ScenarioPolicy>

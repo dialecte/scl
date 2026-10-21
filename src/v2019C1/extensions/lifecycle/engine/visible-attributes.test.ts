@@ -9,6 +9,8 @@ describe('visibleAttributes', () => {
 		only?: boolean
 		tagName: string
 		attributes: Record<string, string>
+		/** Whose names the comparison follows. Default: the project's. */
+		namesFollow?: 'project' | 'source'
 		expected: Record<string, string>
 	}
 
@@ -44,12 +46,25 @@ describe('visibleAttributes', () => {
 			attributes: { name: 'B1', desc: 'feeder', uuid: '00000000-0000-4000-8000-000000000003' },
 			expected: { desc: 'feeder' },
 		},
+		'names following the source → the name compared too': {
+			tagName: 'Bay',
+			attributes: { name: 'B1', desc: 'feeder', uuid: '00000000-0000-4000-8000-000000000003' },
+			namesFollow: 'source',
+			expected: { name: 'B1', desc: 'feeder' },
+		},
+		'names following the source → a terminal still leaves out the names it writes from a path': {
+			tagName: 'Terminal',
+			attributes: { name: 'T1', cNodeName: 'L1', bayName: 'B1' },
+			namesFollow: 'source',
+			expected: { name: 'T1' },
+		},
 	}
 
 	function act(testCase: TestCase): void {
 		const visible = visibleAttributes({
 			tagName: testCase.tagName,
 			attributes: testCase.attributes,
+			namesFollow: testCase.namesFollow ?? 'project',
 		})
 		expect(visible).toEqual(testCase.expected)
 	}

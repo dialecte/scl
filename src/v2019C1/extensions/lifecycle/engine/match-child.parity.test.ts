@@ -21,6 +21,7 @@ const TEMPLATE_RECONCILE = {
 	identityMode: SCENARIO_POLICIES.template.identityMode,
 	bumpsCollisions: SCENARIO_POLICIES.template.bumpsCollisions,
 	removalBase: { kind: 'lineage' },
+	namesFollow: SCENARIO_POLICIES.template.namesFollow,
 } as const
 
 // The report (diff) and apply (reconcile) sides now share ONE matcher (`matchChild`), so a child is

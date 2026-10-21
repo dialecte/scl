@@ -28,6 +28,7 @@ import type {
 	ResolvedMapping,
 	ResolvedMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
@@ -86,6 +87,8 @@ export async function foldSatelliteCompanions(
 		pass?: ReportPass
 		/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
+		/** Whose names an update follows: see `visibleAttributes`. */
+		namesFollow: NamesFollow
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
@@ -159,7 +162,9 @@ export async function foldSatelliteCompanions(
 			// prior instance's refs (which would report a no-op while apply still merges 4 more in).
 			refsAlwaysAdded: params.refsAlwaysAdded ?? false,
 			foreignInstanceIds,
+			matchKey,
 			removalBase: params.removalBase,
+			namesFollow: params.namesFollow,
 		})
 		const changed =
 			satelliteReport.summary.added +

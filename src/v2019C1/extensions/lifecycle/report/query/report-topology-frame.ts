@@ -21,6 +21,7 @@ import type { PinnedMatches } from '@/v2019C1/extensions/lifecycle/engine/match-
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 
@@ -59,6 +60,8 @@ export async function reportTopologyFrame(
 		decisionMappings?: DecisionMappings
 		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
+		/** Whose names an update follows: see `visibleAttributes`. */
+		namesFollow: NamesFollow
 	},
 ): Promise<{ instances: ReportInstance[]; instanceLevelsList: InstanceLevels[] }> {
 	const { sourceQuery, scopeRef, matchKey, targetInstance, mappedOnto, pinnedMatches } = params
@@ -78,6 +81,7 @@ export async function reportTopologyFrame(
 			instanceRootRef: mappedOnto,
 			matchKey,
 			removalBase: params.removalBase,
+			namesFollow: params.namesFollow,
 			omit: FRAME_OMIT_CHILD_TAGS,
 			...(mappedOnto
 				? { instanceRootIsProjectOwned: true, contributeOnly: true, pinnedMatches }
@@ -124,6 +128,7 @@ export async function reportTopologyFrame(
 			instanceRootRef: instance,
 			matchKey,
 			removalBase: params.removalBase,
+			namesFollow: params.namesFollow,
 			omit: FRAME_OMIT_CHILD_TAGS,
 			pinnedMatches: toPinnedMatches({ instanceLevels: placement.levels, scopeRef }),
 			...(projectOwned ? { instanceRootIsProjectOwned: true } : {}),

@@ -1,8 +1,9 @@
-import { listGroups, reportAndApply } from '../integration-helpers'
+import { listAttributeChanges, listGroups, reportAndApply } from '../integration-helpers'
 
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { fsd as updateFsd } from '@/v2019C1/extensions/lifecycle/update/transaction'
 import {
@@ -14,7 +15,11 @@ import {
 } from '@/v2019C1/test'
 
 import type { Config, Scl } from '@/v2019C1/config'
-import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	LifecycleApplyParams,
+	LifecycleScenario,
+	LifecycleTarget,
+} from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SclTest } from '@/v2019C1/test'
 import type * as Core from '@dialecte/core'
 
@@ -36,10 +41,14 @@ type ForkTestCase = SclTest.BaseXmlTestCase & {
 	expectedInstances: (string | undefined)[]
 	/** The groups of the report, `<change> <tag>`, sorted. */
 	expectedGroups: string[]
+	/** The attribute changes the report lists, `<name>: <before> -> <after>`, when the case says. */
+	expectedAttributeChanges?: string[]
 	/** Where the report lands a shared source element (by record ids), when the case says. */
 	expectedMappings?: { source: string; lands: string }[]
 	/** Forked a second time, after the newer revision changed this way (or not at all). */
 	secondFork?: { editSource?: (tx: Scl.Transaction) => Promise<void> }
+	/** The scenario of the update, when the case is not a fork. */
+	scenario?: Exclude<LifecycleScenario, 'fork'>
 }
 
 const TYPES = /* xml */ `
@@ -106,6 +115,12 @@ function projectWithEmptyBay(elsewhere = ''): string {
 const droppedLNode = (side: string) =>
 	/* xml */ `<LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="CSWI_Type" uuid="dropped-lnode-uuid" ${id}="${side}-dropped-lnode"/>`
 const userLNode = /* xml */ `<LNode iedName="None" lnClass="GGIO" lnInst="9" lnType="CSWI_Type" uuid="user-lnode-uuid" ${id}="project-user-lnode"/>`
+
+/** Two subfunctions of the function, named in this order. */
+const swappedPair = (side: string, [first, second]: [string, string]) => /* xml */ `
+	<SubFunction name="${first}" uuid="first-subfunction-uuid" ${id}="${side}-first-subfunction"/>
+	<SubFunction name="${second}" uuid="second-subfunction-uuid" ${id}="${side}-second-subfunction"/>
+`
 
 const gainedSubFunction = /* xml */ `
 	<SubFunction name="Sub" uuid="subfunction-uuid" ${id}="source-subfunction">
@@ -384,6 +399,86 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 				expectedQueries: ['//default:Function[@uuid="function-uuid"]'],
 				unexpectedQueries: ['//v2019C1:FunctionCategory', '//v2019C1:FunctionCatRef'],
 			},
+		'a function the newer revision renamed takes its new name': {
+			sourceXml: fsdRevision({ side: 'source' }).replace(
+				'<Function name="Prot"',
+				'<Function name="Prot2"',
+			),
+			targetXml: fsdRevision({ side: 'project' }),
+			anchor: { tagName: 'Bay', id: 'project-bay' },
+			expectedInstances: ['project-function'],
+			expectedGroups: ['modified Function'],
+			expectedAttributeChanges: ['name: Prot -> Prot2'],
+			expectedQueries: ['//default:Function[@uuid="function-uuid"][@name="Prot2"]'],
+		},
+		'two subfunctions the newer revision swapped names of trade them, numbered by none': {
+			sourceXml: fsdRevision({
+				side: 'source',
+				inside: swappedPair('source', ['Second', 'First']),
+			}),
+			targetXml: fsdRevision({
+				side: 'project',
+				inside: swappedPair('project', ['First', 'Second']),
+			}),
+			anchor: { tagName: 'Bay', id: 'project-bay' },
+			expectedInstances: ['project-function'],
+			expectedGroups: ['modified SubFunction', 'modified SubFunction'],
+			expectedAttributeChanges: ['name: First -> Second', 'name: Second -> First'],
+			expectedQueries: [
+				'//default:SubFunction[@uuid="first-subfunction-uuid"][@name="Second"]',
+				'//default:SubFunction[@uuid="second-subfunction-uuid"][@name="First"]',
+			],
+		},
+		'a template update leaves the function a fork placed: a new instance is placed beside it': {
+			sourceXml: fsdRevision({ side: 'source' }),
+			targetXml: projectWithEmptyBay(/* xml */ `
+				<Function name="Prot" uuid="function-uuid" ${id}="project-function">
+					<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" uuid="lnode-uuid" ${id}="project-lnode"/>
+				</Function>
+			`),
+			scenario: 'template',
+			anchor: projectBay,
+			expectedInstances: [undefined],
+			expectedGroups: ['added Function'],
+			expectedQueries: [
+				'//default:Bay[@name="B1"]/default:Function[@templateUuid="function-uuid"]',
+				'//default:Bay[@name="B2"]/default:Function[@uuid="function-uuid"][not(@templateUuid)]',
+			],
+		},
+		'a renamed function whose other attribute takes the name of a sibling: only the name is numbered':
+			{
+				sourceXml: fsdRevision({ side: 'source', functionAttributes: 'desc="Ctrl"' }).replace(
+					'<Function name="Prot"',
+					'<Function name="Relay"',
+				),
+				targetXml: fsdRevision({ side: 'project', functionAttributes: 'desc="old"' }).replace(
+					'</Bay>',
+					`<Function name="Ctrl" uuid="project-function-uuid" ${id}="project-own-function"/></Bay>`,
+				),
+				anchor: { tagName: 'Bay', id: 'project-bay' },
+				expectedInstances: ['project-function'],
+				expectedGroups: ['modified Function'],
+				expectedAttributeChanges: ['desc: old -> Ctrl', 'name: Prot -> Relay'],
+				expectedQueries: ['//default:Function[@uuid="function-uuid"][@name="Relay"][@desc="Ctrl"]'],
+			},
+		'a function renamed onto the name of a function the project added is numbered': {
+			sourceXml: fsdRevision({ side: 'source' }).replace(
+				'<Function name="Prot"',
+				'<Function name="Ctrl"',
+			),
+			targetXml: fsdRevision({ side: 'project' }).replace(
+				'</Bay>',
+				`<Function name="Ctrl" uuid="project-function-uuid" ${id}="project-own-function"/></Bay>`,
+			),
+			anchor: { tagName: 'Bay', id: 'project-bay' },
+			expectedInstances: ['project-function'],
+			expectedGroups: ['modified Function'],
+			expectedAttributeChanges: ['name: Prot -> Ctrl_1'],
+			expectedQueries: [
+				'//default:Function[@uuid="function-uuid"][@name="Ctrl_1"]',
+				'//default:Function[@uuid="project-function-uuid"][@name="Ctrl"]',
+			],
+		},
 	}
 
 	async function act({
@@ -396,22 +491,33 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 		const base = testCase.baseXml
 			? await openSclDocument({ project, xml: testCase.baseXml, label: 'previous revision' })
 			: undefined
-		const lifecycle: LifecycleTarget = {
-			verb: 'fsd',
+		const common = {
+			verb: 'fsd' as const,
 			sourceQuery: source.query,
 			ref: functionRef,
 			anchor: testCase.anchor,
-			scenario: 'fork',
-			...(base ? { baseQuery: base.query } : {}),
 			...(testCase.targetInstance ? { targetInstance: testCase.targetInstance } : {}),
 		}
+		const lifecycle: LifecycleTarget = testCase.scenario
+			? { ...common, scenario: testCase.scenario }
+			: { ...common, scenario: 'fork', ...(base ? { baseQuery: base.query } : {}) }
 
-		const { report } = await reportAndApply({ document: target, lifecycle })
-		expect(report.revisionBase).toBe(base ? 'given' : 'absent')
+		const { report, applied } = await reportAndApply({ document: target, lifecycle })
+		if (!testCase.scenario) expect(report.revisionBase).toBe(base ? 'given' : 'absent')
 		expect(report.instances.map((instance) => instance.rootRef?.id)).toEqual(
 			testCase.expectedInstances,
 		)
+		// the apply wrote the elements the report matched
+		if (testCase.expectedInstances.every((instance) => instance !== undefined)) {
+			const { instances } = applied
+			expect(instances.verb === 'fsd' ? instances.functions.map((ref) => ref.id) : []).toEqual(
+				testCase.expectedInstances,
+			)
+		}
 		expect(listGroups(report)).toEqual(testCase.expectedGroups)
+		if (testCase.expectedAttributeChanges) {
+			expect(listAttributeChanges(report)).toEqual(testCase.expectedAttributeChanges)
+		}
 		for (const { source: sourceId, lands } of testCase.expectedMappings ?? []) {
 			const listed = report.mappings.find((mapping) => mapping.id === sourceId)
 			const landing = listed?.mapping
@@ -510,6 +616,52 @@ describe('fsd fork: the previous revision it is given', () => {
 				scenario: 'template',
 				baseQuery: base.query,
 			})
+		})
+		await expect(refused).rejects.toThrow()
+		const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+		expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
+			key: 'REVISION_BASE_WITHOUT_FORK',
+			meta: { scenario: 'template' },
+		})
+	})
+
+	it('is refused by an apply that is not a fork, whatever its report says', async () => {
+		const { project, source, target } = await createSclTestProject({
+			sourceXml: fsdRevision({ side: 'source' }),
+			targetXml: fsdRevision({ side: 'project' }),
+		})
+		if (!target) throw new Error('target required')
+		const base = await openSclDocument({
+			project,
+			xml: fsdRevision({ side: 'base' }),
+			label: 'previous revision',
+		})
+		const lifecycle: LifecycleTarget = {
+			verb: 'fsd',
+			sourceQuery: source.document.query,
+			ref: functionRef,
+			anchor: { tagName: 'Bay', id: 'project-bay' },
+			scenario: 'template',
+		}
+		// an instance placed, then a change of the template: a report that waits for decisions
+		await reportAndApply({
+			document: target.document,
+			lifecycle: { ...lifecycle, scenario: 'instantiate' },
+		})
+		await source.document.transaction(async function describeRevision(tx) {
+			await tx.update(functionRef, { attributes: { desc: 'rev2' } })
+		})
+		const reported = await report(target.document.query, lifecycle)
+		expect(reported.needsDecisions).toBe(true)
+
+		const refused = target.document.transaction(async function applyWithBase(tx) {
+			// a caller outside the types: a previous revision beside a template update
+			const params = {
+				...lifecycle,
+				baseQuery: base.query,
+				report: reported,
+			} as unknown as LifecycleApplyParams
+			await apply(tx, params)
 		})
 		await expect(refused).rejects.toThrow()
 		const refusal = toDialecteError(await refused.catch((error: unknown) => error))

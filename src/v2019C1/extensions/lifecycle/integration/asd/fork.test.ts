@@ -508,6 +508,49 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 					'//v2019C1:BehaviorDescription',
 				],
 			},
+		'a composed function the newer revision renamed takes its new name, and the references to it follow':
+			{
+				sourceXml: asdRevision({ side: 'source' })
+					.replace('<Function name="Prot"', '<Function name="Prot2"')
+					.replace('TEMPLATE/TEMPLATE/TEMPLATE/Prot"', 'TEMPLATE/TEMPLATE/TEMPLATE/Prot2"'),
+				targetXml: asdRevision({ side: 'project' }),
+				applicationUuid: 'application-uuid',
+				anchor: { id: 'project-bay' },
+				expectedInstances: ['application-uuid', 'function-uuid'],
+				expectedGroups: ['modified Function'],
+				expectedQueries: [
+					'//default:Function[@uuid="function-uuid"][@name="Prot2"]',
+					'//v2019C1:FunctionRef[@functionUuid="function-uuid"][@function="TEMPLATE/TEMPLATE/TEMPLATE/Prot2"]',
+				],
+				unexpectedQueries: ['//*[@function="TEMPLATE/TEMPLATE/TEMPLATE/Prot"]'],
+			},
+		'a real application file that renames three subfunctions: the renames listed and applied, every path follows':
+			{
+				sourceXml: readRevisionTwin({ twin: 'applicationRenamesFunctions', revision: 2 }),
+				targetXml: readRevisionTwin({ twin: 'applicationRenamesFunctions', revision: 1 }),
+				baseXml: readRevisionTwin({ twin: 'applicationRenamesFunctions', revision: 1 }),
+				applicationUuid: TWIN_APPLICATION_UUID,
+				anchor: { uuid: '00000000-0000-4000-8000-000000000103' },
+				expectedInstances: [TWIN_APPLICATION_UUID, '00000000-0000-4000-8000-000000000120'],
+				expectedGroups: [
+					'modified Application',
+					'modified SubFunction',
+					'modified SubFunction',
+					'modified SubFunction',
+				],
+				expectedQueries: [
+					`//v2019C1:Application[@uuid="${TWIN_APPLICATION_UUID}"][@type="Interface"]`,
+					'//default:SubFunction[@uuid="00000000-0000-4000-8000-000000000122"][@name="Trip conditioner"]',
+					'//default:SubFunction[@uuid="00000000-0000-4000-8000-000000000123"][@name="Trip output"]',
+					'//default:SubFunction[@uuid="00000000-0000-4000-8000-000000000124"][@name="Application management"]',
+					'//v2019C1:SourceRef[@uuid="00000000-0000-4000-8000-000000000141"][contains(@source, "Trip conditioner")]',
+					'//v2019C1:FunctionCatRef[contains(@function, "Trip conditioner")]',
+				],
+				unexpectedQueries: [
+					'//*[contains(@source, "Output conditioner") or contains(@function, "Output conditioner") or contains(@sourceRef, "Output conditioner")]',
+					'//*[contains(@function, "Digital output")]',
+				],
+			},
 	}
 
 	async function act({

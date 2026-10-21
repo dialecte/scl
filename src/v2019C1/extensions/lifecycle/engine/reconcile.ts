@@ -20,6 +20,7 @@ import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
+import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
@@ -69,6 +70,8 @@ export async function reconcile(
 		bumpsCollisions: boolean
 		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
+		/** Whose names a matched element keeps: see `visibleAttributes`. */
+		namesFollow: NamesFollow
 		/**
 		 * Child tags to treat as BOUNDARIES: their subtrees are left untouched (not reconciled,
 		 * added, or deleted) because another pass owns them (e.g. the topology frame reconcile
@@ -140,13 +143,18 @@ export async function reconcile(
 
 	// root + descendants: update matched in place, add new
 	if (!withinProjectOwned) {
-		await updateMatchedAttributes(tx, {
+		const renamed = await updateMatchedAttributes(tx, {
 			sourceQuery,
 			instanceRecord: instanceTree,
 			sourceNode: sourceTree,
 			accepted,
 			overrides,
+			namesFollow: params.namesFollow,
 		})
+		// a name written that a sibling of the project already holds is numbered, as a placed element's is
+		if (renamed && bumpsCollisions) {
+			await resolvePlacementCollision(tx, { ref: toRef(instanceTree) as Scl.Ref<Scl.ElementsOf> })
+		}
 	}
 	await reconcileChildren(tx, {
 		sourceQuery,
@@ -159,6 +167,7 @@ export async function reconcile(
 		matchKey,
 		identityMode,
 		bumpsCollisions,
+		namesFollow: params.namesFollow,
 		omit,
 		added,
 		redirectedSourceUuids,
@@ -197,6 +206,7 @@ async function reconcileChildren(
 		matchKey: MatchKey
 		identityMode: IdentityMode
 		bumpsCollisions: boolean
+		namesFollow: NamesFollow
 		omit: readonly string[] | undefined
 		/** Accumulates the clone mappings of every element added below here (root + subtree). */
 		added: Scl.CloneMapping[]
@@ -219,6 +229,7 @@ async function reconcileChildren(
 		matchKey,
 		identityMode,
 		bumpsCollisions,
+		namesFollow,
 		omit,
 		added,
 		redirectedSourceUuids,
@@ -226,6 +237,8 @@ async function reconcileChildren(
 		withinProjectOwned,
 	} = params
 	const matchedInstanceIds = new Set<string>()
+	// the children renamed here, numbered once every rename of this parent is written
+	const renamedChildren: AnyTreeRecord[] = []
 	for (const sourceChild of sourceNode.tree) {
 		// a boundary tag is owned by another pass (e.g. fn/app cascade) - leave it untouched
 		if (omit?.includes(sourceChild.tagName)) continue
@@ -252,13 +265,15 @@ async function reconcileChildren(
 				!REFERENCE_TAG_NAMES.has(sourceChild.tagName) &&
 				!(await carriesLineageOf(tx, { sourceQuery, sourceNode: sourceChild, matched, matchKey }))
 			if (!isProjectContainer) {
-				await updateMatchedAttributes(tx, {
+				const renamed = await updateMatchedAttributes(tx, {
 					sourceQuery,
 					instanceRecord: matched,
 					sourceNode: sourceChild,
 					accepted,
 					overrides,
+					namesFollow,
 				})
+				if (renamed) renamedChildren.push(matched)
 			}
 			await reconcileChildren(tx, {
 				sourceQuery,
@@ -271,6 +286,7 @@ async function reconcileChildren(
 				matchKey,
 				identityMode,
 				bumpsCollisions,
+				namesFollow,
 				omit,
 				added,
 				redirectedSourceUuids,
@@ -311,6 +327,12 @@ async function reconcileChildren(
 				overrides: overrides?.get(sourceChild.id),
 			})
 		}
+	}
+
+	// a name written that a sibling already holds is numbered, as a placed element's is — once every rename of the
+	// parent is written, so two children trading names need no number (`numberRenames` says the same in the report)
+	for (const renamed of bumpsCollisions ? renamedChildren : []) {
+		await resolvePlacementCollision(tx, { ref: toRef(renamed) as Scl.Ref<Scl.ElementsOf> })
 	}
 
 	// Unmatched instance children with no lineage under the scenario's key:
@@ -432,6 +454,7 @@ async function collectRemoved(
 	}
 }
 
+/** Write the template's visible attributes on a matched element. Returns whether its name was written. */
 async function updateMatchedAttributes(
 	tx: Core.Transaction<Config>,
 	params: {
@@ -440,22 +463,28 @@ async function updateMatchedAttributes(
 		sourceNode: AnyTreeRecord
 		accepted?: AcceptedIds
 		overrides?: CollisionOverrides
+		namesFollow: NamesFollow
 	},
-): Promise<void> {
-	const { sourceQuery, instanceRecord, sourceNode, accepted, overrides } = params
-	if (accepted && !accepted.sourceIds.has(sourceNode.id)) return
+): Promise<boolean> {
+	const { sourceQuery, instanceRecord, sourceNode, accepted, overrides, namesFollow } = params
+	if (accepted && !accepted.sourceIds.has(sourceNode.id)) return false
 
 	// The template's attributes, with the user's value edits overlaid (so an in-place
 	// update honors an edited `desc`/`name` just like a freshly added element does).
 	const sourceAttributes = await sourceQuery.any.getAttributes(sourceNode)
 	const instanceAttributes = await tx.any.getAttributes(instanceRecord)
 	const desired = {
-		...visibleAttributes({ tagName: sourceNode.tagName, attributes: sourceAttributes }),
+		...visibleAttributes({
+			tagName: sourceNode.tagName,
+			attributes: sourceAttributes,
+			namesFollow,
+		}),
 		...overrides?.get(sourceNode.id),
 	}
 	const current = visibleAttributes({
 		tagName: instanceRecord.tagName,
 		attributes: instanceAttributes,
+		namesFollow,
 	})
 	// what the project owns on the element (a bound LNode's implementation and type) is never
 	// written, even when a user edit overlaid above lists it
@@ -476,4 +505,6 @@ async function updateMatchedAttributes(
 		// typed string-only, so cast the dynamic map (matches the repo's `as Record` pattern).
 		await tx.any.update(instanceRecord, { attributes: updates as Record<string, string> })
 	}
+	// the update went through the transaction: every path naming a renamed element follows
+	return 'name' in updates
 }

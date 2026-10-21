@@ -11,6 +11,7 @@ import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.typ
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
@@ -44,6 +45,8 @@ export async function reportFunction(
 		pass?: ReportPass
 		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
+		/** Whose names an update follows: see `visibleAttributes`. */
+		namesFollow: NamesFollow
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
@@ -56,6 +59,7 @@ export async function reportFunction(
 		instanceRootRef: instance,
 		matchKey: params.matchKey,
 		removalBase: params.removalBase,
+		namesFollow: params.namesFollow,
 	})
 	// On FIRST-TIME (no instance) the satellites are still created via the clone path,
 	// so they must be folded as `added` companions too — otherwise the merge-review
@@ -83,6 +87,7 @@ export async function reportFunction(
 		matchKey: params.matchKey,
 		resolveForeignScope,
 		removalBase: params.removalBase,
+		namesFollow: params.namesFollow,
 	})
 	return foldCrossCuttingSatellites(query, {
 		pass: params.pass,
@@ -95,5 +100,6 @@ export async function reportFunction(
 		matchKey: params.matchKey,
 		resolveForeignScope,
 		removalBase: params.removalBase,
+		namesFollow: params.namesFollow,
 	})
 }

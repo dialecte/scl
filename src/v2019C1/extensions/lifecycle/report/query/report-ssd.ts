@@ -73,7 +73,7 @@ export async function reportSsd(
 	// one ReportInstance per bay when a bay-typical was instantiated more than once
 	// a first placement: asked for, or the project holds no instance of the scope yet
 	const policy = scenarioPolicy({ scenario })
-	const { matchKey } = policy
+	const { matchKey, namesFollow } = policy
 	const removalBase = params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery }))
 	const firstPlacement =
 		!policy.matchesInstances ||
@@ -117,6 +117,7 @@ export async function reportSsd(
 		pinnedMatches,
 		decisionMappings,
 		removalBase,
+		namesFollow,
 	})
 
 	// the levels are listed first, the shared elements follow

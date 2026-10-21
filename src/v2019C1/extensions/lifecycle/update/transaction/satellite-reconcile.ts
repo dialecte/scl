@@ -20,6 +20,7 @@ import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.t
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings, ResolvedMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
@@ -60,6 +61,8 @@ export async function reconcileSatellites(
 		bumpsCollisions: boolean
 		/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
+		/** Whose names an update follows: see `visibleAttributes`. */
+		namesFollow: NamesFollow
 		/** Where the shared satellites land, by source record id. */
 		resolvedMappings?: ResolvedMappings
 		/** The consumer's choices for the shared satellites, by source record id. */
@@ -81,6 +84,7 @@ export async function reconcileSatellites(
 		identityMode,
 		bumpsCollisions,
 		removalBase,
+		namesFollow,
 		resolvedMappings,
 		decisionMappings,
 	} = params
@@ -121,6 +125,7 @@ export async function reconcileSatellites(
 				identityMode,
 				bumpsCollisions,
 				removalBase,
+				namesFollow,
 				instanceRootIsProjectOwned: resolved?.projectOwned ?? false,
 				keepLeftoverRefs: true,
 				foreignInstanceIds,

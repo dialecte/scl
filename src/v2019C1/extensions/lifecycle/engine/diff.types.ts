@@ -1,7 +1,7 @@
 import type { EditableAttribute } from '../constraints'
 import type { OffLevel } from '../layers/topology/resolve-primary-placement.types'
 import type { ReportMapping } from '../mapping/mapping.types'
-import type { AnyRefOrRecord } from '@dialecte/core'
+import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
 /** How a diffed element changed between the (updated) template and the instance. */
 // `target-only` = an instance element with NO source lineage (author-added after
@@ -184,3 +184,6 @@ export type GroupDecision =
  * map takes its `suggestedAction` (accept). So an empty map = accept everything.
  */
 export type DecisionMap = Map<string, GroupDecision>
+
+/** A matched node of the diff and the instance element it compares: what a rename is numbered among. */
+export type RenamedNode = { node: DiffNode; child: AnyTreeRecord }

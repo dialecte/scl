@@ -30,6 +30,7 @@ import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/eng
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 
@@ -58,6 +59,8 @@ export async function reconcileTopologyFrame(
 		bumpsCollisions: boolean
 		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
+		/** Whose names an update follows: see `visibleAttributes`. */
+		namesFollow: NamesFollow
 		report?: DiffReport
 		decisions?: DecisionMap
 		/** Multi-instance anchor: reconcile only the frame instance that IS the target (or under it). */
@@ -117,6 +120,7 @@ export async function reconcileTopologyFrame(
 			identityMode,
 			bumpsCollisions,
 			removalBase: params.removalBase,
+			namesFollow: params.namesFollow,
 			accepted,
 			overrides: levelOverrides,
 			omit: FRAME_OMIT_CHILD_TAGS,

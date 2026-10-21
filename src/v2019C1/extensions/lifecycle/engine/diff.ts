@@ -15,6 +15,7 @@ import { throwDialecteError } from '@dialecte/core'
 import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
+import { numberRenames } from '@/v2019C1/extensions/lifecycle/constraints/number-renames'
 
 import type { ReportMapping } from '../mapping/mapping.types'
 import type {
@@ -26,12 +27,14 @@ import type {
 	DiffSummary,
 	InstanceDiff,
 	KeptAttributeChange,
+	RenamedNode,
 	ReportInstance,
 } from './diff.types'
 import type { PinnedMatches } from './match-child.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
+import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
@@ -144,12 +147,15 @@ export async function diff(params: {
 	 * {@link classifyUnmatched}. Default: the lineage the element carries.
 	 */
 	removalBase?: RemovalBase
+	/** Whose names a matched element keeps: see `visibleAttributes`. Default: the project's. */
+	namesFollow?: NamesFollow
 }): Promise<InstanceDiff> {
 	const { sourceQuery, targetQuery, sourceRootRef, instanceRootRef, keepLeftoverRefs } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 	const matchKey = params.matchKey ?? 'templateUuid'
 	const removalBase = params.removalBase ?? { kind: 'lineage' }
+	const namesFollow = params.namesFollow ?? 'project'
 	const omit = params.omit
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
@@ -187,6 +193,7 @@ export async function diff(params: {
 		refsAlwaysAdded,
 		matchKey,
 		removalBase,
+		namesFollow,
 		omit,
 		skipOwnAttributes: params.instanceRootIsProjectOwned ?? false,
 		withinProjectOwned: params.instanceRootIsProjectOwned ?? false,
@@ -195,6 +202,13 @@ export async function diff(params: {
 		pinnedMatches: params.pinnedMatches,
 		foreignInstanceIds: params.foreignInstanceIds,
 	})
+	// a rename of the instance itself is numbered among its siblings, as the apply numbers it
+	if (instanceTree.parent) {
+		await numberRenamedNodes(targetQuery, {
+			parentRef: toRef(instanceTree.parent) as Scl.Ref<Scl.ElementsOf>,
+			renamed: [{ node: root, child: instanceTree }],
+		})
+	}
 	const summary = summarize(root)
 	const groups = groupChanges(root, instanceTree.id)
 	return { root, groups, summary }
@@ -213,6 +227,7 @@ async function diffMatched(
 		refsAlwaysAdded?: boolean
 		matchKey: MatchKey
 		removalBase: RemovalBase
+		namesFollow: NamesFollow
 		omit?: readonly string[]
 		/** Leave this node's own attributes uncompared. */
 		skipOwnAttributes?: boolean
@@ -227,7 +242,7 @@ async function diffMatched(
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
 		params
-	const { removalBase } = params
+	const { removalBase, namesFollow } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 	const omit = params.omit
@@ -235,10 +250,17 @@ async function diffMatched(
 	const contributeOnly = params.contributeOnly ?? false
 	const { changes: attributeChanges, kept } = params.skipOwnAttributes
 		? { changes: [], kept: [] }
-		: await computeAttributeChanges(sourceQuery, { targetQuery, sourceNode, instanceNode })
+		: await computeAttributeChanges(sourceQuery, {
+				targetQuery,
+				sourceNode,
+				instanceNode,
+				namesFollow,
+			})
 
 	const children: DiffNode[] = []
 	const matchedInstanceIds = new Set<string>()
+	// the matched children the source renames, numbered below once every rename is known
+	const renamed: RenamedNode[] = []
 
 	// source children: matched -> recurse; unmatched -> added subtree
 	for (const sourceChild of sourceNode.tree) {
@@ -270,27 +292,28 @@ async function diffMatched(
 						instanceNode: matched,
 						matchKey,
 					})))
-			children.push(
-				await diffMatched(sourceQuery, {
-					targetQuery,
-					sourceNode: sourceChild,
-					instanceNode: matched,
-					index,
-					sourceUuids,
-					keepLeftoverRefs,
-					leftoverRefPolicy,
-					refsAlwaysAdded,
-					matchKey,
-					removalBase,
-					omit,
-					redirectedSourceUuids: params.redirectedSourceUuids,
-					pinnedMatches: params.pinnedMatches,
-					foreignInstanceIds: params.foreignInstanceIds,
-					skipOwnAttributes: skipChildAttributes,
-					withinProjectOwned,
-					contributeOnly,
-				}),
-			)
+			const matchedNode = await diffMatched(sourceQuery, {
+				targetQuery,
+				sourceNode: sourceChild,
+				instanceNode: matched,
+				index,
+				sourceUuids,
+				keepLeftoverRefs,
+				leftoverRefPolicy,
+				refsAlwaysAdded,
+				matchKey,
+				removalBase,
+				namesFollow,
+				omit,
+				redirectedSourceUuids: params.redirectedSourceUuids,
+				pinnedMatches: params.pinnedMatches,
+				foreignInstanceIds: params.foreignInstanceIds,
+				skipOwnAttributes: skipChildAttributes,
+				withinProjectOwned,
+				contributeOnly,
+			})
+			children.push(matchedNode)
+			renamed.push({ node: matchedNode, child: matched })
 		} else {
 			children.push(addedNode(sourceChild, omit))
 		}
@@ -356,6 +379,11 @@ async function diffMatched(
 		if (withinProjectOwned) continue
 		pushInstanceOnly(instanceChild, children)
 	}
+
+	await numberRenamedNodes(targetQuery, {
+		parentRef: toRef(instanceNode) as Scl.Ref<Scl.ElementsOf>,
+		renamed,
+	})
 
 	return {
 		change: attributeChanges.length > 0 ? 'modified' : 'unchanged',
@@ -453,15 +481,21 @@ async function computeAttributeChanges(
 		targetQuery: Core.Query<Config>
 		sourceNode: AnyTreeRecord
 		instanceNode: AnyTreeRecord
+		namesFollow: NamesFollow
 	},
 ): Promise<AttributeComparison> {
-	const { targetQuery, sourceNode, instanceNode } = params
+	const { targetQuery, sourceNode, instanceNode, namesFollow } = params
 	const sourceAttributes = await sourceQuery.any.getAttributes(sourceNode)
 	const instanceAttributes = await targetQuery.any.getAttributes(instanceNode)
-	const desired = visibleAttributes({ tagName: sourceNode.tagName, attributes: sourceAttributes })
+	const desired = visibleAttributes({
+		tagName: sourceNode.tagName,
+		attributes: sourceAttributes,
+		namesFollow,
+	})
 	const current = visibleAttributes({
 		tagName: instanceNode.tagName,
 		attributes: instanceAttributes,
+		namesFollow,
 	})
 	const owned = projectOwnedAttributes({ tagName: instanceNode.tagName, instanceAttributes })
 
@@ -579,4 +613,22 @@ function summarize(root: DiffNode): DiffSummary {
 	}
 	visit(root)
 	return summary
+}
+
+/**
+ * The name a rename ends with where a sibling holds it: numbered as the apply numbers it once every rename of the
+ * parent is written (`numberRenames`), the change listing the name written.
+ */
+async function numberRenamedNodes(
+	targetQuery: Core.Query<Config>,
+	params: { parentRef: Scl.Ref<Scl.ElementsOf>; renamed: readonly RenamedNode[] },
+): Promise<void> {
+	const { parentRef } = params
+	const renames = params.renamed.flatMap(({ node, child }) => {
+		const change = node.attributeChanges?.find((attributeChange) => attributeChange.name === 'name')
+		return change?.after ? [{ node, child, change, name: change.after }] : []
+	})
+	if (renames.length === 0) return
+	const names = await numberRenames(targetQuery, { parentRef, renames })
+	for (const [index, { change }] of renames.entries()) change.after = names[index]
 }

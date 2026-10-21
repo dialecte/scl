@@ -53,6 +53,7 @@ describe('topology frame — no name adoption of a scaffold TEMPLATE bay', () =>
 			matchKey: 'templateUuid',
 			firstPlacement: false,
 			removalBase: { kind: 'lineage' },
+			namesFollow: 'project',
 		})
 
 		// the target "TEMPLATE" bay shares only the name (different uuid, no templateUuid link),

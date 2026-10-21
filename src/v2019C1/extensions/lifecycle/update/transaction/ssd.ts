@@ -90,7 +90,7 @@ export async function ssd(
 
 	assertRevisionBaseFits({ scenario, baseQuery: params.baseQuery })
 	const policy = scenarioPolicy({ scenario })
-	const { matchKey, identityMode, bumpsCollisions } = policy
+	const { matchKey, identityMode, bumpsCollisions, namesFollow } = policy
 	const removalBase =
 		params.removalBase ??
 		(await resolveRemovalBase({ policy, sourceQuery, baseQuery: params.baseQuery }))
@@ -140,6 +140,7 @@ export async function ssd(
 		identityMode,
 		bumpsCollisions,
 		removalBase,
+		namesFollow,
 		report,
 		decisions,
 		targetInstance,
