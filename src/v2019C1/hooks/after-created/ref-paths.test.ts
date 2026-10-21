@@ -871,37 +871,33 @@ describe('setRefPaths', () => {
 					'//default:NeutralPoint[@cNodeUuid="00000000-0000-4000-8000-000000000002" and @connectivityNode="P1/LN1/N1" and @processName="P1" and @lineName="LN1" and @cNodeName="N1" and not(@substationName) and not(@voltageLevelName) and not(@bayName)]',
 				],
 			},
-			'Terminal, node in a Bay of nested Processes → process names joined with "/"': {
-				allowInvalidOutput: {
-					reason:
-						"the hook writes the substationName of a substation inside a process, which the schema's key on substation names refuses",
-					violations: [{ check: 'xsd', code: 'keyref' }],
-				},
-				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root">
-						<Process name="P1" ${id}="p1">
-							<Process name="P2" ${id}="p2">
-								<Substation name="S1" ${id}="s1">
-									<VoltageLevel name="VL1" ${id}="vl1">
-										<Bay name="B1" ${id}="b1">
-											<ConductingEquipment name="QA1" type="CBR" ${id}="parent"/>
-											<ConnectivityNode name="L1" pathName="P1/P2/S1/VL1/B1/L1" uuid="00000000-0000-4000-8000-000000000003" ${id}="node"/>
-										</Bay>
-									</VoltageLevel>
-								</Substation>
+			'Terminal, node in a Bay of nested Processes → process names joined with "/", no substation name':
+				{
+					sourceXml: /* xml */ `
+						<SCL ${ns} ${id}="root">
+							<Process name="P1" ${id}="p1">
+								<Process name="P2" ${id}="p2">
+									<Substation name="S1" ${id}="s1">
+										<VoltageLevel name="VL1" ${id}="vl1">
+											<Bay name="B1" ${id}="b1">
+												<ConductingEquipment name="QA1" type="CBR" ${id}="parent"/>
+												<ConnectivityNode name="L1" pathName="P1/P2/S1/VL1/B1/L1" uuid="00000000-0000-4000-8000-000000000003" ${id}="node"/>
+											</Bay>
+										</VoltageLevel>
+									</Substation>
+								</Process>
 							</Process>
-						</Process>
-					</SCL>
-				`,
-				parent: { tagName: 'ConductingEquipment', id: 'parent' },
-				referrer: {
-					tagName: 'Terminal',
-					attributes: { cNodeUuid: '00000000-0000-4000-8000-000000000003' },
+						</SCL>
+					`,
+					parent: { tagName: 'ConductingEquipment', id: 'parent' },
+					referrer: {
+						tagName: 'Terminal',
+						attributes: { cNodeUuid: '00000000-0000-4000-8000-000000000003' },
+					},
+					expectedQueries: [
+						'//default:Terminal[@connectivityNode="P1/P2/S1/VL1/B1/L1" and @processName="P1/P2" and not(@substationName) and @voltageLevelName="VL1" and @bayName="B1" and @cNodeName="L1"]',
+					],
 				},
-				expectedQueries: [
-					'//default:Terminal[@connectivityNode="P1/P2/S1/VL1/B1/L1" and @processName="P1/P2" and @substationName="S1" and @voltageLevelName="VL1" and @bayName="B1" and @cNodeName="L1"]',
-				],
-			},
 			'Terminal given the names of another node → names of the node its uuid names, others removed':
 				{
 					sourceXml: /* xml */ `

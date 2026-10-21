@@ -2,8 +2,8 @@ import { DERIVED_ATTRIBUTES_BY_TAG } from '@/v2019C1/extensions/reference/consta
 
 import type { ElementPath } from './path-segment.types'
 import type {
+	DerivedAttribute,
 	DerivedAttributes,
-	DerivedAttributeSource,
 	DerivedAttributeValue,
 } from '@/v2019C1/extensions/reference'
 
@@ -18,7 +18,7 @@ export function composeDerivedAttributes(params: {
 	const { derived, sourcePath } = params
 	return derived.attributes.map((attribute) => ({
 		name: attribute.name,
-		value: valueOnPath({ from: attribute.from, sourcePath }),
+		value: valueOnPath({ attribute, sourcePath }),
 	}))
 }
 
@@ -35,14 +35,19 @@ export function derivedAttributesFollowing(params: {
 	return derived?.follows === follows ? derived : undefined
 }
 
+/**
+ * The value of `attribute` on `sourcePath`: the path, or the names of its levels of the tag it reads,
+ * joined with "/". A `rootOnly` attribute reads its level only when that level starts the path.
+ */
 function valueOnPath(params: {
-	from: DerivedAttributeSource
+	attribute: DerivedAttribute
 	sourcePath: ElementPath
 }): string | undefined {
-	const { from, sourcePath } = params
-	if (from === 'path') return sourcePath.path
+	const { attribute, sourcePath } = params
+	if (attribute.from === 'path') return sourcePath.path
+	if (attribute.rootOnly && sourcePath.segments[0]?.ref.tagName !== attribute.from) return undefined
 	const names = sourcePath.segments
-		.filter((segment) => segment.ref.tagName === from)
+		.filter((segment) => segment.ref.tagName === attribute.from)
 		.map((segment) => segment.segment)
 	return names.length > 0 ? names.join('/') : undefined
 }

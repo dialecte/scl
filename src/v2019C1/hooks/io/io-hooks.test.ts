@@ -1114,6 +1114,8 @@ describe('import outcome of a reference read in its scope or by another name', (
 		recordId: string
 		/** The attributes its update sets, `[]` for no update. */
 		expectedAttributes: { name: string; value: string }[]
+		/** The attributes its update removes. */
+		expectedRemovedAttributes?: string[]
 		/** The warnings of the import, by type and record. */
 		expectedWarnings: { type: string; recordId: string }[]
 	}
@@ -1289,6 +1291,29 @@ describe('import outcome of a reference read in its scope or by another name', (
 				expectedAttributes: [],
 				expectedWarnings: [{ type: 'unresolved-reference', recordId: 'variant-ref' }],
 			},
+		'a terminal of a substation in a Process naming that substation -> its name removed, one warning':
+			{
+				xml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Process ${id}="process" name="P1" uuid="process-uuid">
+							<Substation ${id}="substation" name="S1" uuid="substation-uuid">
+								<VoltageLevel ${id}="voltage-level" name="VL1" uuid="voltage-level-uuid">
+									<Bay ${id}="bay" name="B1" uuid="bay-uuid">
+										<ConductingEquipment ${id}="breaker" name="QA1" type="CBR" uuid="breaker-uuid">
+											<Terminal ${id}="terminal" connectivityNode="P1/S1/VL1/B1/L1" processName="P1" substationName="S1" voltageLevelName="VL1" bayName="B1" cNodeName="L1" />
+										</ConductingEquipment>
+										<ConnectivityNode ${id}="node" name="L1" pathName="P1/S1/VL1/B1/L1" uuid="node-uuid" />
+									</Bay>
+								</VoltageLevel>
+							</Substation>
+						</Process>
+					</SCL>
+				`,
+				recordId: 'terminal',
+				expectedAttributes: [{ name: 'cNodeUuid', value: 'node-uuid' }],
+				expectedRemovedAttributes: ['substationName'],
+				expectedWarnings: [{ type: 'incoherent-path-names', recordId: 'terminal' }],
+			},
 	}
 
 	let entries = Object.entries(testCases)
@@ -1300,6 +1325,7 @@ describe('import outcome of a reference read in its scope or by another name', (
 			const outcome = await importOutcomeOf(testCase.xml)
 			const update = outcome.updates?.find((candidate) => candidate.recordId === testCase.recordId)
 			expect(update?.attributes ?? []).toEqual(testCase.expectedAttributes)
+			expect(update?.removeAttributes ?? []).toEqual(testCase.expectedRemovedAttributes ?? [])
 			expect(
 				(outcome.warnings ?? []).map((warning) => ({
 					type: warning.type,
@@ -2467,6 +2493,36 @@ describe('import of a terminal', () => {
 			}),
 			expectedQueries: ['//default:ConnectivityNode[@name="L1" and @pathName="S1/VL1/B1/L1"]'],
 		},
+		'node in a substation of a Process → no substation name on the terminal, kept on the neutral point':
+			{
+				allowIncoherentReferences:
+					'a terminal naming a substation the schema does not let it name is what is under test',
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Process name="P1" ${id}="p1">
+							<Substation name="S1" ${id}="s1">
+								<VoltageLevel name="VL1" ${id}="vl1">
+									<Bay name="B1" ${id}="b1">
+										<ConductingEquipment name="QA1" type="CBR" ${id}="qa1">
+											<Terminal connectivityNode="P1/S1/VL1/B1/L1" substationName="S1" voltageLevelName="VL1" bayName="B1" cNodeName="L1" ${id}="terminal"/>
+										</ConductingEquipment>
+										<PowerTransformer name="TR1" type="PTR" ${id}="tr1">
+											<TransformerWinding name="W1" type="PTW" ${id}="w1">
+												<NeutralPoint connectivityNode="P1/S1/VL1/B1/L1" cNodeName="L1" ${id}="neutral"/>
+											</TransformerWinding>
+										</PowerTransformer>
+										<ConnectivityNode name="L1" pathName="P1/S1/VL1/B1/L1" uuid="${L1}" ${id}="l1"/>
+									</Bay>
+								</VoltageLevel>
+							</Substation>
+						</Process>
+					</SCL>
+				`,
+				expectedQueries: [
+					`//default:Terminal[@cNodeUuid="${L1}" and @processName="P1" and not(@substationName) and @voltageLevelName="VL1" and @bayName="B1"]`,
+					`//default:NeutralPoint[@cNodeUuid="${L1}" and @processName="P1" and @substationName="S1" and @voltageLevelName="VL1" and @bayName="B1"]`,
+				],
+			},
 		'node in a Line of a Process → resolved, process and line names written': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">

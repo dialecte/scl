@@ -54,19 +54,39 @@ describe('composeDerivedAttributes', () => {
 					{ name: 'cNodeName', value: 'N1' },
 				],
 			},
-		'terminal, node in a Bay of nested Processes → process names joined with "/"': {
-			tagName: 'Terminal',
+		'terminal, node in a Bay of nested Processes → process names joined with "/", no substation name':
+			{
+				tagName: 'Terminal',
+				follows: 'connectivityNode',
+				levels: [
+					['Process', 'P1'],
+					['Process', 'P2'],
+					['Substation', 'S1'],
+					['VoltageLevel', 'VL1'],
+					['Bay', 'B1'],
+					['ConnectivityNode', 'L1'],
+				],
+				expected: [
+					{ name: 'processName', value: 'P1/P2' },
+					{ name: 'lineName', value: undefined },
+					{ name: 'substationName', value: undefined },
+					{ name: 'voltageLevelName', value: 'VL1' },
+					{ name: 'bayName', value: 'B1' },
+					{ name: 'cNodeName', value: 'L1' },
+				],
+			},
+		'neutral point, node in a Bay of a Process → process and substation names': {
+			tagName: 'NeutralPoint',
 			follows: 'connectivityNode',
 			levels: [
 				['Process', 'P1'],
-				['Process', 'P2'],
 				['Substation', 'S1'],
 				['VoltageLevel', 'VL1'],
 				['Bay', 'B1'],
 				['ConnectivityNode', 'L1'],
 			],
 			expected: [
-				{ name: 'processName', value: 'P1/P2' },
+				{ name: 'processName', value: 'P1' },
 				{ name: 'lineName', value: undefined },
 				{ name: 'substationName', value: 'S1' },
 				{ name: 'voltageLevelName', value: 'VL1' },

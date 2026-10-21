@@ -3,6 +3,7 @@ import {
 	buildPairsByRefMap,
 	buildResolutionsToTargetRefsMap,
 	buildTypeIdReferrersByTarget,
+	markRootKeyedAttributes,
 } from './helpers'
 import { RESOLUTION_TYPE } from './resolution-types'
 import { TYPE_ID_REFERENCE_PAIRS } from './type-id-pairs'
@@ -10,6 +11,7 @@ import { TYPE_ID_REFERENCE_PAIRS } from './type-id-pairs'
 import { valuePatterns } from '@dialecte/core/utils'
 
 import { LNODE_NAMING_ATTRIBUTES, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { ROOT_ELEMENT } from '@/v2019C1/definition/constants.generated'
 import { DEFINITION } from '@/v2019C1/definition/definition.generated'
 
 import type {
@@ -137,9 +139,19 @@ export const ALL_REF_UUID_ATTRIBUTES: readonly string[] = [
 	),
 ]
 
-/** Per element tag, the attributes it writes from a path (see DERIVED_REFERENCE_ATTRIBUTES). */
+/**
+ * Per element tag, the attributes it writes from a path (see DERIVED_REFERENCE_ATTRIBUTES), each
+ * marked `rootOnly` when the schema checks it against the names of the root elements.
+ */
 export const DERIVED_ATTRIBUTES_BY_TAG: ReadonlyMap<string, DerivedAttributes> = new Map(
-	Object.entries(DERIVED_REFERENCE_ATTRIBUTES),
+	Object.entries(DERIVED_REFERENCE_ATTRIBUTES).map(([tagName, derived]) => [
+		tagName,
+		markRootKeyedAttributes({
+			tagName,
+			derived,
+			rootConstraints: (DEFINITION as AnyDefinition)[ROOT_ELEMENT]?.constraints ?? [],
+		}),
+	]),
 )
 
 // ── Type-id reference derived structures ────────────────────────────────────────

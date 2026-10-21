@@ -84,6 +84,11 @@ export type DerivedAttributeSource = 'path' | Scl.ElementsOf
 export type DerivedAttribute = {
 	name: string
 	from: DerivedAttributeSource
+	/**
+	 * Read only when its level is a root element (the first level of the path): the schema checks
+	 * the value against the names of the root elements. Derived from the definition, never declared.
+	 */
+	rootOnly?: true
 }
 
 /**
