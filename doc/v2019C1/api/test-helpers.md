@@ -17,6 +17,7 @@ import {
 	assertCoherentSclReferences,
 	collectSclOutputViolations,
 	assertNoNewSclOutputViolations,
+	openSclDocument,
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 } from '@dialecte/scl/v2019C1/test'
@@ -204,6 +205,35 @@ Use `runSclTestCases` when the test fits the standard source → act → assert 
 
 - Asserting intermediate states between transactions
 - Multiple exports at different stages
+
+## openSclDocument
+
+Imports one more document into a test project — a previous revision of a file, a third file the act reads — and opens
+it. Its XML is checked as a fixture is (by structure, then for coherent references), and its records keep the ids the
+XML names, like the source and the target. The project owns it: it goes when the project goes, and the documents the
+test leaves are checked as before (what it held when imported is carried, not gained).
+
+```ts
+async function openSclDocument(params: {
+	project: Scl.Project
+	xml: string
+	/** Names the document in a refusal and in the file name it is imported under. */
+	label: string
+	/** Why the document needs an incoherent reference: it is then left unchecked for them. */
+	allowIncoherentReferences?: string
+}): Promise<Scl.Document>
+```
+
+```ts
+async function act({ testCase, project, source, target }: SclTest.ActParams<TestCase>) {
+	const previous = await openSclDocument({
+		project,
+		xml: testCase.baseXml,
+		label: 'previous revision',
+	})
+	// ... read previous.query beside source.query
+}
+```
 
 ---
 

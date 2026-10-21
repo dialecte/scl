@@ -1,0 +1,42 @@
+{
+	"$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+	"testRunner": "command",
+	"commandRunner": {
+		"command": "npx vitest run src/v2019C1/extensions/lifecycle --project unit"
+	},
+	"mutate": [
+		"src/v2019C1/extensions/lifecycle/scenario-policy.ts",
+		"src/v2019C1/extensions/lifecycle/engine/diff.ts",
+		"src/v2019C1/extensions/lifecycle/engine/reconcile.ts",
+		"src/v2019C1/extensions/lifecycle/engine/visible-attributes.ts",
+		"src/v2019C1/extensions/lifecycle/engine/removal-base.ts",
+		"src/v2019C1/extensions/lifecycle/engine/reference-match.ts",
+		"src/v2019C1/extensions/lifecycle/apply/apply.ts",
+		"src/v2019C1/extensions/lifecycle/report/query/report-fsd.ts",
+		"src/v2019C1/extensions/lifecycle/report/query/report-asd.ts",
+		"src/v2019C1/extensions/lifecycle/report/query/report-ssd.ts",
+		"src/v2019C1/extensions/lifecycle/report/query/report-topology-frame.ts",
+		"src/v2019C1/extensions/lifecycle/report/query/satellite-companions.ts",
+		"src/v2019C1/extensions/lifecycle/update/transaction/fsd.ts",
+		"src/v2019C1/extensions/lifecycle/update/transaction/asd.ts",
+		"src/v2019C1/extensions/lifecycle/update/transaction/ssd.ts",
+		"src/v2019C1/extensions/lifecycle/update/transaction/cascade-composed-functions.ts",
+		"src/v2019C1/extensions/lifecycle/update/transaction/satellite-reconcile.ts",
+		"src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts",
+		"src/v2019C1/extensions/lifecycle/instantiate/transaction/asd.ts",
+		"src/v2019C1/extensions/lifecycle/instantiate/transaction/ssd.ts",
+		"src/v2019C1/extensions/lifecycle/layers/topology/scope-content.ts",
+		"src/v2019C1/extensions/lifecycle/layers/topology/find-dropped-primaries.ts",
+		"src/v2019C1/extensions/lifecycle/layers/application/find-dropped-composed-functions.ts"
+	],
+	"coverageAnalysis": "off",
+	"reporters": ["progress", "json"],
+	"jsonReporter": {
+		"fileName": ".tmp/stryker/report.json"
+	},
+	"tempDirName": ".tmp/stryker-tmp",
+	"cleanTempDir": "always",
+	"concurrency": 3,
+	"timeoutMS": 120000,
+	"disableTypeChecks": false
+}

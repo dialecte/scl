@@ -13,8 +13,15 @@ const CORPUS_SMOKE_PATH = fileURLToPath(new URL(`./${CORPUS_SMOKE_FOLDER}`, impo
 const CORPUS_TESTS = 'src/**/*.corpus.test.ts'
 /** The check of the files the sync leaves out, run on demand (`npm run corpus:check-excluded`). */
 const CORPUS_EXCLUDED_TESTS = 'src/**/*.excluded.test.ts'
-/** Says where the schema files of the output check are. */
-const SETUP_FILES = ['src/v2019C1/test/fixtures/xsd/use-fixture-schemas.setup.ts']
+/** Says where the schema files of the output check are, and hands the mutant of a mutation run to the browser. */
+const SETUP_FILES = [
+	'src/v2019C1/test/fixtures/xsd/use-fixture-schemas.setup.ts',
+	'src/v2019C1/test/active-mutant.setup.ts',
+]
+/** The mutant a mutation run tests (`npm run mutants`), named in the command's environment: none otherwise. */
+const ACTIVE_MUTANT_DEFINE = {
+	__STRYKER_ACTIVE_MUTANT__: JSON.stringify(process.env.__STRYKER_ACTIVE_MUTANT__ ?? ''),
+}
 /** A corpus file is the slowest case: the largest SSD imports, exports and validates twice. */
 const CORPUS_TEST_TIMEOUT = 120_000
 
@@ -62,6 +69,7 @@ function corpusExcludedProject() {
 			},
 			server: { fs: { allow: [ROOT, source] } },
 			plugins: [],
+			define: ACTIVE_MUTANT_DEFINE,
 			test: {
 				name: 'corpus-excluded',
 				browser: headlessChromium(),
@@ -84,6 +92,7 @@ export default mergeConfig(
 				{
 					resolve: viteConfig.resolve,
 					plugins: [],
+					define: ACTIVE_MUTANT_DEFINE,
 					test: {
 						name: 'unit',
 						browser: headlessChromium(),
@@ -96,6 +105,7 @@ export default mergeConfig(
 				{
 					resolve: viteConfig.resolve,
 					plugins: [],
+					define: ACTIVE_MUTANT_DEFINE,
 					test: {
 						name: 'corpus',
 						browser: headlessChromium(),

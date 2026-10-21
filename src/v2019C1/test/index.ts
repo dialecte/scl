@@ -1,5 +1,7 @@
 export * from './hydrated-test'
 export type * from './hydrated-test.types'
+export { openSclDocument } from './open-scl-document'
+export type { OpenSclDocumentParams } from './open-scl-document.types'
 export { SCL_OUTPUT_CHECK, SCL_XSD_CODE } from './assert-scl-output.constants'
 export type {
 	SclOutputBaseline,

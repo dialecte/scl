@@ -54,3 +54,6 @@ src/v2019C1/test/fixtures/corpus/*
 src/v2019C1/test/fixtures/xsd/*
 !src/v2019C1/test/fixtures/xsd/README.md
 !src/v2019C1/test/fixtures/xsd/use-fixture-schemas.setup.ts
+
+# mutation testing: the report and the sandbox, never published
+.tmp/
