@@ -12,10 +12,13 @@
  * - `scope`: `'function'` when the path is relative to the target's Function (`FUNCTION_SCOPE_TAGS`),
  *   the Function left out: the references of a signal role (`LNodeInputRef`, `LNodeOutputRef`,
  *   `LNodeDataRef`)
+ * - `nameScope`: for a `scoped-name` pair, the tag of the ancestor of the referrer the name is
+ *   unique in: a variant reference names a variant of its Application by the variant's name
  */
 import { ELEMENT_NAMES } from '@/v2019C1/definition/constants.generated'
 
 import type { TupleReferencePairsShape } from './reference-pairs.types'
+import type { Scl } from '@/v2019C1/config'
 
 /**
  * The elements a function-scoped path (`scope: 'function'`) starts below: the nearest of them above
@@ -119,7 +122,8 @@ export const UUID_REFERENCE_PAIRS = {
 	FunctionalVariantRef: [
 		{
 			attribute: { path: 'functionalVariant', uuid: 'functionalVariantUuid' },
-			resolution: 'direct',
+			resolution: 'scoped-name',
+			nameScope: 'Application' satisfies Scl.ElementsOf,
 			target: ['FunctionalVariant', 'FunctionalSubVariant'],
 			companions: [],
 		},

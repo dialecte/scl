@@ -789,17 +789,4 @@ export const CORPUS_V2_EXPECTED_WARNINGS: Readonly<Record<string, ImportWarningC
  * The truth files a known engine defect fails, with the defect and the checks it fails. Those checks run as expected
  * failures: the fix of the defect makes them pass, which fails the run until the entry is removed.
  */
-export const CORPUS_V2_ENGINE_DEFECTS: Readonly<Record<string, CorpusV2EngineDefect>> = {
-	'3 - ASD files/CB_App/CB_App.xml': {
-		reason:
-			'a functional variant reference names its variant, which scl reads as a path and rewrites',
-		since: SET_ASIDE,
-		failingChecks: ['file', 'import'],
-	},
-	'3 - ASD files/Protections_P21_App/P21_App.asd': {
-		reason:
-			'a functional variant reference names its variant, which scl reads as a path and rewrites',
-		since: SET_ASIDE,
-		failingChecks: ['file', 'import'],
-	},
-}
+export const CORPUS_V2_ENGINE_DEFECTS: Readonly<Record<string, CorpusV2EngineDefect>> = {}

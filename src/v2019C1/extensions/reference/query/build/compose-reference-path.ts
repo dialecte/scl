@@ -21,6 +21,7 @@ import type { ReferencePair } from '@/v2019C1/extensions/reference'
  *   point); `null` when the target has no address of its own. An `ExtCtrl` takes the same four forms.
  * - `lnode`: the target's path, then the DO[.DA] of the companions (see below).
  * - `ancestor-name`: the target's bare name (a ProcessResource named from a placeholder below it).
+ * - `scoped-name`: the target's bare name, unique in its scope (a variant in its Application).
  * - a function-scoped pair (`scope: 'function'`, the references of a signal role): the same, from
  *   the target's Function down, the Function left out, every level joined with "/".
  * - `behavior-description`: the local path from the BehaviorDescription's parent down to the
@@ -40,8 +41,12 @@ export function composeReferencePath(parts: ReferencePathParts): string | null {
 		return composeBehaviorLocalPath({ pair, referenceAttributes, targetPath, behaviorContext })
 	}
 
-	// An id reference: the bare name of the target, which the reader looks up in its ancestors.
-	if (pair.resolution === RESOLUTION_TYPE.ancestorName)
+	// An id reference: the bare name of the target, which the reader looks up in its ancestors, or
+	// among the targets of its scope.
+	if (
+		pair.resolution === RESOLUTION_TYPE.ancestorName ||
+		pair.resolution === RESOLUTION_TYPE.scopedName
+	)
 		return targetPath.segments.at(-1)?.segment ?? null
 
 	if (pair.resolution === RESOLUTION_TYPE.iedAddress) {

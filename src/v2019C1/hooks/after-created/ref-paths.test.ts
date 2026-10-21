@@ -154,7 +154,7 @@ describe('setRefPaths', () => {
 					'//v2019C1:FunctionRef[@functionUuid="uuid-target" and @function="S1/F1"]',
 				],
 			},
-			'FunctionalVariantRef with functionalVariantUuid → functionalVariant path written': {
+			'FunctionalVariantRef with functionalVariantUuid → functionalVariant name written': {
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">
 						<Substation name="S1" ${id}="s1">
@@ -171,7 +171,7 @@ describe('setRefPaths', () => {
 					attributes: { functionalVariantUuid: 'uuid-target' },
 				},
 				expectedQueries: [
-					'//v2019C1:FunctionalVariantRef[@functionalVariantUuid="uuid-target" and @functionalVariant="S1/A1/FV1"]',
+					'//v2019C1:FunctionalVariantRef[@functionalVariantUuid="uuid-target" and @functionalVariant="FV1"]',
 				],
 			},
 			'PowerSystemRelation with relationUuid → relation path written': {

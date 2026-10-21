@@ -1056,6 +1056,56 @@ describe('import warnings for a signal role path in another form', () => {
 	}
 })
 
+describe('import warnings for a variant reference', () => {
+	/** The variant `AIS TPO` in the group Subtypes of the Application A1, named by a variant reference of its role. */
+	function variantXml(variantRef: string): string {
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation ${id}="substation" name="S1" uuid="substation-uuid">
+					<Private ${id}="applications" type="eIEC61850-6-100">
+						<eIEC61850-6-100:Application ${id}="application" name="A1" uuid="application-uuid">
+							<eIEC61850-6-100:FunctionRole ${id}="role" name="R1" uuid="role-uuid">
+								${variantRef}
+								<eIEC61850-6-100:FunctionRoleContent ${id}="content" />
+							</eIEC61850-6-100:FunctionRole>
+							<eIEC61850-6-100:FunctionalVariantGroup ${id}="group" name="Subtypes" uuid="group-uuid">
+								<eIEC61850-6-100:FunctionalVariant ${id}="variant" name="AIS TPO" uuid="variant-uuid" />
+							</eIEC61850-6-100:FunctionalVariantGroup>
+						</eIEC61850-6-100:Application>
+					</Private>
+				</Substation>
+			</SCL>
+		`
+	}
+
+	const testCases: Record<
+		string,
+		{ functionalVariant: string; expectedUpdates: { name: string; value: string }[] }
+	> = {
+		'the name of its variant beside its uuid -> no warning, nothing written': {
+			functionalVariant: 'AIS TPO',
+			expectedUpdates: [],
+		},
+		'the full path an earlier version wrote beside its uuid -> no warning, the name written': {
+			functionalVariant: 'S1/A1/Subtypes/AIS TPO',
+			expectedUpdates: [{ name: 'functionalVariant', value: 'AIS TPO' }],
+		},
+	}
+
+	for (const [description, testCase] of Object.entries(testCases)) {
+		it(description, async () => {
+			const outcome = await importOutcomeOf(
+				variantXml(
+					`<eIEC61850-6-100:FunctionalVariantRef ${id}="variant-ref" functionalVariant="${testCase.functionalVariant}" functionalVariantUuid="variant-uuid" />`,
+				),
+			)
+			expect(outcome.warnings ?? []).toEqual([])
+			const update = outcome.updates?.find((candidate) => candidate.recordId === 'variant-ref')
+			expect(update?.attributes ?? []).toEqual(testCase.expectedUpdates)
+		})
+	}
+})
+
 describe('import outcome of a reference read in its scope or by another name', () => {
 	type TestCase = {
 		only?: boolean
@@ -1102,6 +1152,25 @@ describe('import outcome of a reference read in its scope or by another name', (
 									</eIEC61850-6-100:FunctionRef>
 								</eIEC61850-6-100:FunctionRoleContent>
 							</eIEC61850-6-100:FunctionRole>
+						</eIEC61850-6-100:Application>
+					</Private>
+				</Substation>
+			</SCL>
+		`
+	}
+
+	/** The variant FV1 of the Application A1, and an AllocationRole whose FunctionRef holds `variantRef`. */
+	function allocationRoleXml(variantRef: string): string {
+		return /* xml */ `
+			<SCL ${ns} ${id}="root">
+				<Substation ${id}="substation" name="S1" uuid="substation-uuid">
+					<Function ${id}="function" name="F1" uuid="function-uuid" />
+					<Private ${id}="private" type="eIEC61850-6-100">
+						<eIEC61850-6-100:AllocationRole ${id}="allocation-role" name="AR1" uuid="allocation-role-uuid">
+							<eIEC61850-6-100:FunctionRef ${id}="function-ref" function="S1/F1" functionUuid="function-uuid">${variantRef}</eIEC61850-6-100:FunctionRef>
+						</eIEC61850-6-100:AllocationRole>
+						<eIEC61850-6-100:Application ${id}="application" name="A1" uuid="application-uuid">
+							<eIEC61850-6-100:FunctionalVariant ${id}="variant" name="FV1" uuid="variant-uuid" />
 						</eIEC61850-6-100:Application>
 					</Private>
 				</Substation>
@@ -1179,6 +1248,46 @@ describe('import outcome of a reference read in its scope or by another name', (
 				recordId: 'input-ref',
 				expectedAttributes: [],
 				expectedWarnings: [{ type: 'unresolved-reference', recordId: 'input-ref' }],
+			},
+		'a variant reference outside an Application, another name beside its uuid -> the name of its uuid, one warning':
+			{
+				xml: allocationRoleXml(
+					`<eIEC61850-6-100:FunctionalVariantRef ${id}="variant-ref" functionalVariant="WRONG" functionalVariantUuid="variant-uuid" />`,
+				),
+				recordId: 'variant-ref',
+				expectedAttributes: [{ name: 'functionalVariant', value: 'FV1' }],
+				expectedWarnings: [{ type: 'incoherent-reference', recordId: 'variant-ref' }],
+			},
+		'a variant reference outside an Application, its name alone -> left unresolved, no warning': {
+			xml: allocationRoleXml(
+				`<eIEC61850-6-100:FunctionalVariantRef ${id}="variant-ref" functionalVariant="FV1" />`,
+			),
+			recordId: 'variant-ref',
+			expectedAttributes: [],
+			expectedWarnings: [],
+		},
+		'a variant reference naming a variant of another Application -> one unresolved-reference warning':
+			{
+				xml: /* xml */ `
+					<SCL ${ns} ${id}="root">
+						<Substation ${id}="substation" name="S1" uuid="substation-uuid">
+							<Private ${id}="private" type="eIEC61850-6-100">
+								<eIEC61850-6-100:Application ${id}="application" name="A1" uuid="application-uuid">
+									<eIEC61850-6-100:FunctionRole ${id}="role" name="R1" uuid="role-uuid">
+										<eIEC61850-6-100:FunctionalVariantRef ${id}="variant-ref" functionalVariant="OTHER" />
+										<eIEC61850-6-100:FunctionRoleContent ${id}="content" />
+									</eIEC61850-6-100:FunctionRole>
+								</eIEC61850-6-100:Application>
+								<eIEC61850-6-100:Application ${id}="other-application" name="A2" uuid="other-application-uuid">
+									<eIEC61850-6-100:FunctionalVariant ${id}="other-variant" name="OTHER" uuid="other-variant-uuid" />
+								</eIEC61850-6-100:Application>
+							</Private>
+						</Substation>
+					</SCL>
+				`,
+				recordId: 'variant-ref',
+				expectedAttributes: [],
+				expectedWarnings: [{ type: 'unresolved-reference', recordId: 'variant-ref' }],
 			},
 	}
 

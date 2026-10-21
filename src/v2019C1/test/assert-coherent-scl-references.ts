@@ -139,6 +139,9 @@ function collectPairViolations(params: {
 		return [{ kind: 'wrong-target', referenceTagName, uuidAttribute, uuid, targetTagName }]
 	}
 
+	if (pair.resolution === RESOLUTION_TYPE.scopedName) {
+		return collectScopedNameViolations({ element, pair, target, uuid })
+	}
 	if (!isPlainNamePath({ pair, target })) return []
 
 	const expected = elementPathOf(target)
@@ -166,6 +169,30 @@ function collectPairViolations(params: {
 			expected: expected.path,
 		},
 		...derivedViolations,
+	]
+}
+
+/** A reference naming its target by the target's name in its scope (a variant) that writes another. */
+function collectScopedNameViolations(params: {
+	element: Element
+	pair: ReferencePair
+	target: Element
+	uuid: string
+}): ReferenceViolation[] {
+	const { element, pair, target, uuid } = params
+	const written = element.getAttribute(pair.attribute.path)
+	const expected = target.getAttribute('name')
+	if (written === null || expected === null || written === expected) return []
+	return [
+		{
+			kind: 'path',
+			referenceTagName: element.localName,
+			pathAttribute: pair.attribute.path,
+			uuidAttribute: pair.attribute.uuid,
+			uuid,
+			written,
+			expected,
+		},
 	]
 }
 

@@ -1,5 +1,6 @@
 import { buildElementPath } from '../build/build-element-path'
 import { functionBaseOf, isFunctionScoped } from '../build/function-scope'
+import { nameScopeOf } from '../build/name-scope'
 import { fullSignalName, getPathSegment, joinPathParts } from '../build/path-segment'
 import { readSpecNamings } from '../build/spec-namings'
 import { parseReferencePath, parsePathSegments, splitLnodeQualifier } from './parse-path'
@@ -70,7 +71,8 @@ export async function resolveReferencePath(
 	if (
 		pair.resolution === RESOLUTION_TYPE.behaviorDescription ||
 		pair.resolution === RESOLUTION_TYPE.iedAddress ||
-		pair.resolution === RESOLUTION_TYPE.ancestorName
+		pair.resolution === RESOLUTION_TYPE.ancestorName ||
+		pair.resolution === RESOLUTION_TYPE.scopedName
 	) {
 		const ancestors = await query.findAncestors(record, { order: 'top-down' })
 		ancestry = ancestors.map((ancestor) => toRawRecord(ancestor) as AnyRawRecord)
@@ -89,8 +91,17 @@ export async function resolveReferencePath(
 		ancestry,
 		specNamings,
 		functionBase,
+		nameScope: nameScopeOf(pair),
 	})
 	if (!parsed) return undefined
+
+	// A name unique in its scope is found among the targets of that scope; the key the import index
+	// reads it by is not a path, only the full path an earlier version wrote is.
+	const scopedName = pair.resolution === RESOLUTION_TYPE.scopedName
+	if (scopedName) {
+		const named = await findNamedInScope({ query, pair, name: pathValue, ancestry })
+		if (named) return { record: named }
+	}
 
 	// A signal (SourceRef / ControlRef) is named among its siblings and its name may hold dots:
 	// it is found by its whole path, never by splitting the path into segments.
@@ -104,7 +115,10 @@ export async function resolveReferencePath(
 	}
 
 	// The keys in order: the first one naming an element wins (nearest scope first for a name).
-	for (const key of [parsed.lookupKey, ...(parsed.fallbackLookupKeys ?? [])]) {
+	const keys = scopedName
+		? (parsed.fallbackLookupKeys ?? [])
+		: [parsed.lookupKey, ...(parsed.fallbackLookupKeys ?? [])]
+	for (const key of keys) {
 		const segments = parsePathSegments(key)
 		if (segments.length === 0) continue
 
@@ -142,6 +156,54 @@ async function functionBaseOfReferrer(
 		id: named.record.id,
 	} as Scl.Ref<Scl.ElementsOf>)
 	return functionPath ? (functionBaseOf(functionPath) ?? undefined) : undefined
+}
+
+/**
+ * The target of `pair` named `name` whose nearest `nameScope` ancestor is the referrer's (the last
+ * of that tag in `ancestry`): a variant of the Application holding the reference. `undefined` when
+ * the referrer has no such ancestor or no target of the scope has that name.
+ */
+async function findNamedInScope(params: {
+	query: Core.Query<Config> | Core.Transaction<Config>
+	pair: ReferencePair
+	name: string
+	ancestry: readonly AnyRawRecord[] | undefined
+}): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
+	const { query, pair, name, ancestry } = params
+	const nameScope = nameScopeOf(pair)
+	const scope = ancestry?.findLast((ancestor) => ancestor.tagName === nameScope)
+	if (!nameScope || !scope) return undefined
+
+	for (const tagName of pair.target) {
+		const candidates = await query.findByAttributes({
+			tagName: tagName as Scl.ElementsOf,
+			attributes: { name } as Record<string, string>,
+		})
+		for (const candidate of candidates) {
+			const candidateScope = await nearestAncestorOfTag({
+				query,
+				record: candidate,
+				tagName: nameScope,
+			})
+			if (candidateScope?.id === scope.id) return candidate as Scl.TrackedRecord<Scl.ElementsOf>
+		}
+	}
+	return undefined
+}
+
+/** The nearest ancestor of `record` of `tagName`, read parent by parent. */
+async function nearestAncestorOfTag(params: {
+	query: Core.Query<Config> | Core.Transaction<Config>
+	record: Scl.TrackedRecord<Scl.ElementsOf>
+	tagName: string
+}): Promise<Scl.Ref<Scl.ElementsOf> | undefined> {
+	const { query, tagName } = params
+	let parent = params.record.parent as Scl.Ref<Scl.ElementsOf> | null
+	while (parent && parent.tagName !== tagName) {
+		const parentRecord = await query.getRecord(parent)
+		parent = (parentRecord?.parent ?? null) as Scl.Ref<Scl.ElementsOf> | null
+	}
+	return parent ?? undefined
 }
 
 // ── Internal: reference pair lookup ──────────────────────────────────

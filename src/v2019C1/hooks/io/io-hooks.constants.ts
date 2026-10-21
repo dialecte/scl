@@ -5,4 +5,5 @@ export const LOCAL_NAME_RESOLUTIONS: ReadonlySet<string> = new Set([
 	RESOLUTION_TYPE.behaviorDescription,
 	RESOLUTION_TYPE.iedAddress,
 	RESOLUTION_TYPE.ancestorName,
+	RESOLUTION_TYPE.scopedName,
 ])

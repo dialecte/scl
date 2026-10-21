@@ -22,6 +22,7 @@ import {
 	functionBaseOf,
 	isFunctionScoped,
 } from '@/v2019C1/extensions/reference/query/build/function-scope'
+import { nameScopeOf } from '@/v2019C1/extensions/reference/query/build/name-scope'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { readAttribute, readAttributes } from '@/v2019C1/helpers'
@@ -344,9 +345,9 @@ function ownPathAttributesOf(params: {
  * given the uuid it names. Its path is written again in the standard form when it resolved through
  * a former path, or always for the names that must be (`alwaysStandardize`). Beside its uuid, a
  * reference naming that same element has a former path, or a name that must be standard (a data path
- * aside), written again; one naming another element, or none, is written from its uuid. Either way,
- * the attributes it writes from the target's path (a terminal's level names) are made to agree with
- * that path.
+ * aside), written again; one naming another element, or none, is written from its uuid (a name
+ * outside the scope it is read in included). Either way, the attributes it writes from the target's
+ * path (a terminal's level names) are made to agree with that path.
  */
 function resolvePending(params: {
 	pending: PendingResolution
@@ -367,16 +368,32 @@ function resolvePending(params: {
 		ancestry: pending.ancestry,
 		specNamings,
 		functionBase,
+		nameScope: nameScopeOf(pending.pair),
 	})
+	// a name read in a scope the reference is not in (a variant reference outside an Application):
+	// the name cannot be read, its uuid still names its target
+	if (!parsed && pending.uuidValue && pending.pair.resolution === RESOLUTION_TYPE.scopedName) {
+		return resolveWithUuid({
+			pending,
+			uuid: pending.uuidValue,
+			index,
+			specNamings,
+			pathNamesIt: false,
+			formerForm: false,
+		})
+	}
 	if (!parsed) return { warnings: [] }
 
 	const triedKeys = [parsed.lookupKey, ...(parsed.fallbackLookupKeys ?? [])]
 	const matchedKey = triedKeys.find((key) => index.byPath.has(key))
 	const resolvedUuid = matchedKey ? index.byPath.get(matchedKey) : undefined
-	// A path in a form an earlier version wrote: a former name, or an absolute signal role path.
+	// A path in a form an earlier version wrote: a former name, an absolute signal role path, or the
+	// full path of a target named in its scope.
 	const formerForm =
 		matchedKey !== undefined &&
-		(index.legacyKeys.has(matchedKey) || (scoped && matchedKey !== parsed.lookupKey))
+		(index.legacyKeys.has(matchedKey) ||
+			((scoped || pending.pair.resolution === RESOLUTION_TYPE.scopedName) &&
+				matchedKey !== parsed.lookupKey))
 
 	if (pending.uuidValue) {
 		return resolveWithUuid({

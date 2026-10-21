@@ -276,6 +276,52 @@ describe('collectReferenceViolations', () => {
 					},
 				],
 			},
+		'variant reference naming its variant → no violation': {
+			xml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES}>
+					<Substation name="S1">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:Application name="A1">
+								<eIEC61850-6-100:FunctionalVariantGroup name="Subtypes">
+									<eIEC61850-6-100:FunctionalVariant name="FV1" uuid="variant-uuid" />
+								</eIEC61850-6-100:FunctionalVariantGroup>
+								<eIEC61850-6-100:FunctionRole name="R1">
+									<eIEC61850-6-100:FunctionalVariantRef functionalVariant="FV1" functionalVariantUuid="variant-uuid" />
+								</eIEC61850-6-100:FunctionRole>
+							</eIEC61850-6-100:Application>
+						</Private>
+					</Substation>
+				</SCL>
+			`,
+			expected: [],
+		},
+		'variant reference naming another variant than its uuid → path violation naming the variant': {
+			xml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES}>
+					<Substation name="S1">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:Application name="A1">
+								<eIEC61850-6-100:FunctionalVariant name="FV1" uuid="variant-uuid" />
+								<eIEC61850-6-100:FunctionRole name="R1">
+									<eIEC61850-6-100:FunctionalVariantRef functionalVariant="S1/A1/FV1" functionalVariantUuid="variant-uuid" />
+								</eIEC61850-6-100:FunctionRole>
+							</eIEC61850-6-100:Application>
+						</Private>
+					</Substation>
+				</SCL>
+			`,
+			expected: [
+				{
+					kind: 'path',
+					referenceTagName: 'FunctionalVariantRef',
+					pathAttribute: 'functionalVariant',
+					uuidAttribute: 'functionalVariantUuid',
+					uuid: 'variant-uuid',
+					written: 'S1/A1/FV1',
+					expected: 'FV1',
+				},
+			],
+		},
 		'connectivity node whose pathName is not its position → derived violation': {
 			xml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES}>

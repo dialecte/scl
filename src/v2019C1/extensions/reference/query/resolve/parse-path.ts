@@ -1,4 +1,5 @@
 import { buildMappedLNodePath } from '../build/build-mapped-lnode-path'
+import { scopedNameKey } from '../build/name-scope'
 import { getPathSegment, joinPathParts } from '../build/path-segment'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
@@ -114,8 +115,11 @@ export function parseReferencePath(params: {
 	 * version wrote.
 	 */
 	functionBase?: string
+	/** For a `scoped-name` pair, the tag of the ancestor its name is unique in. */
+	nameScope?: string
 }): ParsedReference | null {
-	const { resolution, pathAttribute, pathValue, ancestry, specNamings, functionBase } = params
+	const { resolution, pathAttribute, pathValue, ancestry, specNamings, functionBase, nameScope } =
+		params
 	if (!resolution || resolution === RESOLUTION_TYPE.unsupported) return null
 
 	if (functionBase !== undefined)
@@ -135,7 +139,39 @@ export function parseReferencePath(params: {
 		return parseAncestorNamePath({ pathValue, ancestry, specNamings })
 	}
 
+	if (resolution === RESOLUTION_TYPE.scopedName) {
+		return parseScopedNamePath({ pathValue, ancestry, specNamings, nameScope })
+	}
+
 	return null
+}
+
+// ── scoped-name strategy ─────────────────────────────────────────────
+
+/**
+ * A bare name, unique among the targets below the nearest `nameScope` ancestor of the referrer: the
+ * key is that ancestor's path and the name (`scopedNameKey`). A value starting with that path is the
+ * full path an earlier version wrote: tried next, as is. `null` without such an ancestor.
+ */
+function parseScopedNamePath(params: {
+	pathValue: string
+	ancestry?: readonly AnyRawRecord[]
+	specNamings?: ReadonlyMap<string, AnyRawRecord>
+	nameScope?: string
+}): ParsedReference | null {
+	const { pathValue, ancestry, specNamings, nameScope } = params
+	const scopeIndex = ancestry?.findLastIndex((ancestor) => ancestor.tagName === nameScope) ?? -1
+	if (!ancestry || scopeIndex === -1) return null
+
+	const scopePath = buildPathFromAncestors({
+		ancestors: ancestry.slice(0, scopeIndex + 1),
+		specNamings,
+	})
+	if (!scopePath) return null
+	return {
+		lookupKey: scopedNameKey({ scopePath, name: pathValue }),
+		fallbackLookupKeys: pathValue.startsWith(`${scopePath}/`) ? [pathValue] : [],
+	}
 }
 
 // ── function-scoped paths ────────────────────────────────────────────

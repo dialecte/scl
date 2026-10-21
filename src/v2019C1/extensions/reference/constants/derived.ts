@@ -12,7 +12,13 @@ import { valuePatterns } from '@dialecte/core/utils'
 import { LNODE_NAMING_ATTRIBUTES, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DEFINITION } from '@/v2019C1/definition/definition.generated'
 
-import type { DerivedAttributes, RefEntry, TypeIdTarget, TypeIdReferrer } from './types'
+import type {
+	DerivedAttributes,
+	ReferencePair,
+	RefEntry,
+	TypeIdTarget,
+	TypeIdReferrer,
+} from './types'
 import type { AnyDefinition } from '@dialecte/core'
 
 /**
@@ -36,6 +42,7 @@ export const RESOLVABLE_RESOLUTIONS = [
 	RESOLUTION_TYPE.iedAddress,
 	RESOLUTION_TYPE.behaviorDescription,
 	RESOLUTION_TYPE.ancestorName,
+	RESOLUTION_TYPE.scopedName,
 ] as const
 
 /**
@@ -53,6 +60,20 @@ export const ALL_RESOLUTIONS = [...RESOLVABLE_RESOLUTIONS, RESOLUTION_TYPE.unsup
  */
 export const REF_ENTRIES_BY_TARGET: ReadonlyMap<string, readonly RefEntry[]> =
 	buildRefEntriesByTarget()
+
+/**
+ * Per target tag of a `scoped-name` pair, the tag of the ancestor its name is unique in (the
+ * pair's `nameScope`): a variant's name is unique in its Application.
+ */
+export const NAME_SCOPE_BY_TARGET: ReadonlyMap<string, string> = new Map(
+	Object.values(UUID_REFERENCE_PAIRS).flatMap((pairs) =>
+		(pairs as readonly ReferencePair[]).flatMap((pair) =>
+			'nameScope' in pair
+				? pair.target.map((target): [string, string] => [target, pair.nameScope])
+				: [],
+		),
+	),
+)
 
 /**
  * Maps ref tagName -> list of its UUID pair entries (flattened).

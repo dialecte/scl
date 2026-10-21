@@ -1,5 +1,7 @@
 import { LNODE_TYPE_ATTRIBUTE } from '@/v2019C1/extensions/data-model/query/data-types.constants'
+import { NAME_SCOPE_BY_TARGET } from '@/v2019C1/extensions/reference/constants/derived'
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
+import { scopedNameKey } from '@/v2019C1/extensions/reference/query/build/name-scope'
 import {
 	buildPathFromAncestry,
 	fullSignalName,
@@ -58,6 +60,12 @@ export function buildImportPathIndex(params: {
 		for (const path of paths.underOwnNaming) otherPaths.underOwnNaming.push([path, uuid])
 	}
 
+	for (const [key, uuid] of targets.flatMap((target) =>
+		scopedNameKeysOf({ target, specNamings }),
+	)) {
+		if (!index.byPath.has(key)) index.byPath.set(key, uuid)
+	}
+
 	// the other names below a target's standard parent first, then the paths through an LNode named
 	// by its own naming: an LNode bound to an IED may take, by its own naming, the name another LNode
 	// is specified with
@@ -92,6 +100,30 @@ function indexOtherPaths(params: {
 		index.byPath.set(path, uuid)
 		index.legacyKeys.add(path)
 	}
+}
+
+/**
+ * The key a target named in its scope is looked up by (`scopedNameKey`): its name below its nearest
+ * scope ancestor (a variant in its Application). None for a target of no `scoped-name` pair, or
+ * outside such an ancestor.
+ */
+function scopedNameKeysOf(params: {
+	target: CollectedTarget
+	specNamings: ReadonlyMap<string, AnyRawRecord>
+}): [string, string][] {
+	const { target, specNamings } = params
+	const { record, ancestry, uuid } = target
+	const nameScope = NAME_SCOPE_BY_TARGET.get(record.tagName)
+	const name = readAttribute({ record, name: 'name', defaults: 'none' })
+	const scopeIndex = ancestry.findLastIndex((ancestor) => ancestor.tagName === nameScope)
+	if (!nameScope || !name || scopeIndex === -1) return []
+
+	const scopePath = buildPathFromAncestry({
+		record: ancestry[scopeIndex],
+		ancestry: ancestry.slice(0, scopeIndex),
+		specNamings,
+	})
+	return scopePath ? [[scopedNameKey({ scopePath: scopePath.path, name }), uuid]] : []
 }
 
 /** The signals of the file by parent id: the siblings a signal is named among. */
