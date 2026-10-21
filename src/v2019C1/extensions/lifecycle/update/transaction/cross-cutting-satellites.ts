@@ -12,7 +12,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 
@@ -40,8 +40,9 @@ export async function reconcileCrossCuttingSatellites(
 		instancePrimaryRef?: Scl.Ref<Scl.ElementsOf>
 		structure: TargetStructure
 		accepted?: AcceptedIds
-		matchKey?: MatchKey
-		identityMode?: IdentityMode
+		matchKey: MatchKey
+		identityMode: IdentityMode
+		bumpsCollisions: boolean
 		/** What belongs to the other instances of the primary's template. */
 		resolveForeignScope?: ResolveForeignScope
 	},
@@ -54,6 +55,7 @@ export async function reconcileCrossCuttingSatellites(
 		accepted,
 		matchKey,
 		identityMode,
+		bumpsCollisions,
 	} = params
 
 	const satelliteRefs = await resolveAppliedSatellites(sourceQuery, { primaryRef })
@@ -89,6 +91,7 @@ export async function reconcileCrossCuttingSatellites(
 		accepted,
 		matchKey,
 		identityMode,
+		bumpsCollisions,
 		resolvedMappings,
 		resolveForeignScope: params.resolveForeignScope,
 	})

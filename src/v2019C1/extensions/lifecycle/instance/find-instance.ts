@@ -3,7 +3,7 @@ import { identityEquals, resolveIdentity } from '@/v2019C1/extensions/identity/q
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { ElementIdentity } from '@/v2019C1/extensions/identity/query'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 

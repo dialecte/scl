@@ -1,6 +1,6 @@
 import type { InstanceLevels } from './resolve-instance-levels.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 
 export type ResolvePrimaryParentsParams = {

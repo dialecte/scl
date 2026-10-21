@@ -30,7 +30,7 @@ import type {
 import type { PinnedMatches } from './match-child'
 import type { RedirectedSourceUuids } from './reference-match'
 import type { Config } from '@/v2019C1/config'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'

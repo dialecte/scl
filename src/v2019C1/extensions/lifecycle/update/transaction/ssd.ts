@@ -16,10 +16,7 @@ import {
 	reconcileTopologyFrame,
 	resolveTopologyReconcilables,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
-import {
-	identityModeForScenario,
-	matchKeyForScenario,
-} from '@/v2019C1/extensions/lifecycle/scenario'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
@@ -82,9 +79,10 @@ export async function ssd(
 		root,
 	)
 
-	const matchKey = matchKeyForScenario(scenario)
+	const policy = scenarioPolicy({ scenario })
+	const { matchKey, identityMode, bumpsCollisions } = policy
 	const firstTime =
-		scenario === 'instantiate' ||
+		!policy.matchesInstances ||
 		!(await hasScopeInstance(tx, {
 			sourceQuery,
 			applicationRefs,
@@ -102,7 +100,7 @@ export async function ssd(
 			sourceQuery,
 			scopeRef: root,
 			targetParent,
-			mode: identityModeForScenario(scenario),
+			mode: identityMode,
 			overrides,
 			decisionMappings: params.decisionMappings,
 			leftOut,
@@ -126,7 +124,8 @@ export async function ssd(
 		sourceQuery,
 		scopeRef: root,
 		matchKey,
-		identityMode: identityModeForScenario(scenario),
+		identityMode,
+		bumpsCollisions,
 		report,
 		decisions,
 		targetInstance,
@@ -151,7 +150,8 @@ export async function ssd(
 				targetParent: parent,
 				placedFor,
 				// a gained application is a fresh one in each instance, whatever another instance holds
-				scenario: placement.gained ? 'instantiate' : scenario,
+				scenario,
+				placesFresh: placement.gained,
 				// placed as part of the substation template: its provenance is the document's
 				partOfTemplate: true,
 				report,
@@ -181,7 +181,8 @@ export async function ssd(
 				functionRef,
 				targetParent: parent,
 				placedFor,
-				scenario: placement.gained ? 'instantiate' : scenario,
+				scenario,
+				placesFresh: placement.gained,
 				partOfTemplate: true,
 				report,
 				decisions,

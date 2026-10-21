@@ -29,7 +29,7 @@ import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/wri
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -53,6 +53,8 @@ export async function reconcileTopologyFrame(
 		scopeRef: Scl.Ref<TopologyStructuralTag>
 		matchKey: MatchKey
 		identityMode: IdentityMode
+		/** A level the template gained whose name a sibling holds is numbered. */
+		bumpsCollisions: boolean
 		report?: DiffReport
 		decisions?: DecisionMap
 		/** Multi-instance anchor: reconcile only the frame instance that IS the target (or under it). */
@@ -61,8 +63,8 @@ export async function reconcileTopologyFrame(
 		decisionMappings?: DecisionMappings
 	},
 ): Promise<FrameReconciliation> {
-	const { sourceQuery, scopeRef, matchKey, identityMode, report, decisions, targetInstance } =
-		params
+	const { sourceQuery, scopeRef, matchKey, identityMode, bumpsCollisions, report } = params
+	const { decisions, targetInstance } = params
 
 	const frameInstances = await findFrameInstances(tx, { sourceQuery, scopeRef, matchKey })
 	const instances = await scopeToTargetInstance(tx, {
@@ -110,6 +112,7 @@ export async function reconcileTopologyFrame(
 			instanceRootRef: instance,
 			matchKey,
 			identityMode,
+			bumpsCollisions,
 			accepted,
 			overrides: levelOverrides,
 			omit: FRAME_OMIT_CHILD_TAGS,

@@ -1,4 +1,4 @@
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { AnyRefOrRecord, AnyTrackedRecord } from '@dialecte/core'
 
 export type CollectForeignScopesParams = {

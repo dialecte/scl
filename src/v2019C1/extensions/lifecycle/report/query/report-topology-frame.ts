@@ -13,15 +13,14 @@ import {
 	resolveTemplateFrame,
 	toPinnedMatches,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
-import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PinnedMatches } from '@/v2019C1/extensions/lifecycle/engine/match-child'
 import type { InstanceLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -46,9 +45,10 @@ export async function reportTopologyFrame(
 	params: {
 		sourceQuery: Core.Query<Config>
 		scopeRef: Scl.Ref<TopologyStructuralTag>
-		scenario?: LifecycleScenario
+		/** The scenario's key an instance element carries its source element's uuid in. */
+		matchKey: MatchKey
 		/** The project holds no instance of the scope yet, or a new one was asked for. */
-		firstPlacement?: boolean
+		firstPlacement: boolean
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
 		/** The element of the project the scope root is mapped onto, on a first placement. */
 		mappedOnto?: Scl.Ref<Scl.ElementsOf>
@@ -58,8 +58,7 @@ export async function reportTopologyFrame(
 		decisionMappings?: DecisionMappings
 	},
 ): Promise<{ instances: ReportInstance[]; instanceLevelsList: InstanceLevels[] }> {
-	const { sourceQuery, scopeRef, scenario, targetInstance, mappedOnto, pinnedMatches } = params
-	const matchKey = matchKeyForScenario(scenario)
+	const { sourceQuery, scopeRef, matchKey, targetInstance, mappedOnto, pinnedMatches } = params
 
 	// On instantiate the frame scope root is entirely ADDED: diff the source root against NO instance
 	// (instanceRootRef undefined) so the added frame (Substation/VoltageLevel/Bay attrs + equipment,
@@ -68,7 +67,7 @@ export async function reportTopologyFrame(
 	// on the NEW bay — not conflated with the existing same-named one.
 	// A root MAPPED onto an element of the project is that element: what it holds is left as it is,
 	// only what it lacks is added — and each level below it lands where its own mapping says.
-	if (params.firstPlacement ?? scenario === 'instantiate') {
+	if (params.firstPlacement) {
 		const instanceDiff = await diff({
 			sourceQuery,
 			targetQuery: query,

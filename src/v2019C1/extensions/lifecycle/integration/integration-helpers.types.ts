@@ -24,3 +24,12 @@ export type ForkInTurnParams = Omit<ReportAndApplyParams, 'withoutDecisions'> & 
 	/** How many times the same revision is forked, one apply after the other. */
 	turns: number
 }
+
+/** A decision group as a snapshot reads it: what changes, on which element (by its uuid or name), and how. */
+export type DescribedGroup = {
+	change: string
+	tagName: string
+	element: string | undefined
+	attributeChanges?: string[]
+	companions: string[]
+}

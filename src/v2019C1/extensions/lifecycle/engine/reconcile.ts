@@ -18,7 +18,7 @@ import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord, OmitEntry } from '@dialecte/core'
@@ -59,10 +59,12 @@ export async function reconcile(
 		overrides?: CollisionOverrides
 		/** Type-dedup name authority for added subtrees, forwarded to `importTypes`. */
 		keepNameTypesFrom?: KeepNameTypesFrom
-		/** How instance elements match source. `templateUuid` (default) or `uuid` (fork). */
-		matchKey?: MatchKey
-		/** Identity write mode for added elements. `stamp-template` (default) or `keep` (fork). */
-		identityMode?: IdentityMode
+		/** How instance elements match source: the scenario's key. */
+		matchKey: MatchKey
+		/** Identity write mode for added elements: the scenario's. */
+		identityMode: IdentityMode
+		/** An added element whose name a sibling holds is numbered. */
+		bumpsCollisions: boolean
 		/**
 		 * Child tags to treat as BOUNDARIES: their subtrees are left untouched (not reconciled,
 		 * added, or deleted) because another pass owns them (e.g. the topology frame reconcile
@@ -107,8 +109,9 @@ export async function reconcile(
 		accepted,
 		overrides,
 		keepNameTypesFrom,
-		matchKey = 'templateUuid',
-		identityMode = 'stamp-template',
+		matchKey,
+		identityMode,
+		bumpsCollisions,
 		omit,
 	} = params
 	const keepLeftoverRefs = params.keepLeftoverRefs ?? false
@@ -151,6 +154,7 @@ export async function reconcile(
 		keepNameTypesFrom,
 		matchKey,
 		identityMode,
+		bumpsCollisions,
 		omit,
 		added,
 		redirectedSourceUuids,
@@ -181,6 +185,7 @@ async function reconcileChildren(
 		keepNameTypesFrom: KeepNameTypesFrom | undefined
 		matchKey: MatchKey
 		identityMode: IdentityMode
+		bumpsCollisions: boolean
 		omit: readonly string[] | undefined
 		/** Accumulates the clone mappings of every element added below here (root + subtree). */
 		added: Scl.CloneMapping[]
@@ -202,6 +207,7 @@ async function reconcileChildren(
 		keepNameTypesFrom,
 		matchKey,
 		identityMode,
+		bumpsCollisions,
 		omit,
 		added,
 		redirectedSourceUuids,
@@ -252,6 +258,7 @@ async function reconcileChildren(
 				keepNameTypesFrom,
 				matchKey,
 				identityMode,
+				bumpsCollisions,
 				omit,
 				added,
 				redirectedSourceUuids,
@@ -283,10 +290,9 @@ async function reconcileChildren(
 		await finalizeClonedIdentity(tx, { cloneMappings, mode: identityMode })
 
 		// validate the added element against its instance-parent context: apply any
-		// user edit then auto-resolve a name collision among siblings (schema constraint).
-		// Fork keeps identity (same-file revision) — no re-stamp, no collision bump.
+		// user edit then auto-resolve a name collision among siblings (schema constraint)
 		const addRoot = cloneMappings.find((mapping) => mapping.source.id === sourceChild.id)
-		if (addRoot && identityMode !== 'keep') {
+		if (addRoot && bumpsCollisions) {
 			await resolvePlacementCollision(tx, {
 				ref: addRoot.target,
 				parentRef: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,

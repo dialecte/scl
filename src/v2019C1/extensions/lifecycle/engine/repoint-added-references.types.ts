@@ -1,5 +1,5 @@
 import type { Scl } from '@/v2019C1/config'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type { AnyRefOrRecord } from '@dialecte/core'
 

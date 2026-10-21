@@ -6,7 +6,7 @@ import { invariant } from '@dialecte/core/utils'
 import { SCL_ERRORS } from '@/v2019C1/errors'
 import { scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveComposedFunctions } from '@/v2019C1/extensions/lifecycle/layers/application'
-import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type {
 	CascadeComposedFunctionsParams,
@@ -46,7 +46,7 @@ export async function cascadeComposedFunctions(
 		applicationRef,
 		applicationInstances: applicationInstances.map(({ instance }) => instance),
 		anchor: targetParent,
-		matchKey: matchKeyForScenario(params.scenario),
+		matchKey: scenarioPolicy({ scenario: params.scenario }).matchKey,
 		decisionMappings: params.decisionMappings,
 	})
 
@@ -80,7 +80,8 @@ export async function cascadeComposedFunctions(
 					functionRef,
 					targetParent: standing.level,
 					// a fresh one, whatever another instance holds
-					scenario: 'instantiate',
+					scenario: params.scenario,
+					placesFresh: true,
 					// placed as part of the application template: its provenance is the application's
 					partOfTemplate: true,
 					// listed by the report once per instance of the application

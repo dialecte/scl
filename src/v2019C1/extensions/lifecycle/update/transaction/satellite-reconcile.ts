@@ -18,7 +18,7 @@ import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/wri
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings, ResolvedMappings } from '@/v2019C1/extensions/lifecycle/mapping'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 
@@ -50,10 +50,12 @@ export async function reconcileSatellites(
 		instanceSatelliteRefs?: Scl.Ref<Scl.ElementsOf>[]
 		structure: TargetStructure
 		accepted?: AcceptedIds
-		/** `templateUuid` (default) or `uuid` (fork) match for the satellite instance. */
-		matchKey?: MatchKey
-		/** `stamp-template` (default) or `keep` (fork) identity for an added satellite. */
-		identityMode?: IdentityMode
+		/** The scenario's key an instance of a satellite carries its source satellite's uuid in. */
+		matchKey: MatchKey
+		/** The scenario's identity for an added satellite. */
+		identityMode: IdentityMode
+		/** A shared element created here whose name its level holds is numbered. */
+		bumpsCollisions: boolean
 		/** Where the shared satellites land, by source record id. */
 		resolvedMappings?: ResolvedMappings
 		/** The consumer's choices for the shared satellites, by source record id. */
@@ -71,8 +73,9 @@ export async function reconcileSatellites(
 		instanceSatelliteRefs,
 		structure,
 		accepted,
-		matchKey = 'templateUuid',
-		identityMode = 'stamp-template',
+		matchKey,
+		identityMode,
+		bumpsCollisions,
 		resolvedMappings,
 		decisionMappings,
 	} = params
@@ -111,6 +114,7 @@ export async function reconcileSatellites(
 				accepted,
 				matchKey,
 				identityMode,
+				bumpsCollisions,
 				instanceRootIsProjectOwned: resolved?.projectOwned ?? false,
 				keepLeftoverRefs: true,
 				foreignInstanceIds,
@@ -136,7 +140,7 @@ export async function reconcileSatellites(
 
 		// a shared element created here is validated against its structural level: the chosen
 		// name is applied, and a name already taken there is bumped to a free one
-		if (resolved && identityMode !== 'keep') {
+		if (resolved && bumpsCollisions) {
 			const decision = satelliteRef.id ? decisionMappings?.get(satelliteRef.id) : undefined
 			const chosenName = decision && 'create' in decision ? decision.create.name : undefined
 			await resolvePlacementCollision(tx, {

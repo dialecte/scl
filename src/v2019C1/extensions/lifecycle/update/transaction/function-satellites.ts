@@ -14,7 +14,7 @@ import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.typ
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
@@ -41,10 +41,12 @@ export async function reconcileCarriedSatellites(
 		instanceRef: AnyRefOrRecord
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		accepted?: AcceptedIds
-		/** `templateUuid` (default) or `uuid` (fork) match for the satellite instance. */
-		matchKey?: MatchKey
-		/** `stamp-template` (default) or `keep` (fork) identity for an added satellite. */
-		identityMode?: IdentityMode
+		/** The scenario's key an instance of a satellite carries its source satellite's uuid in. */
+		matchKey: MatchKey
+		/** The scenario's identity for an added satellite. */
+		identityMode: IdentityMode
+		/** A shared element created here whose name its level holds is numbered. */
+		bumpsCollisions: boolean
 		/** The consumer's choices for the shared elements the function is classified by. */
 		decisionMappings?: DecisionMappings
 		/** What belongs to the other instances of the function. */
@@ -57,8 +59,9 @@ export async function reconcileCarriedSatellites(
 		instanceRef,
 		targetParent,
 		accepted,
-		matchKey = 'templateUuid',
-		identityMode = 'stamp-template',
+		matchKey,
+		identityMode,
+		bumpsCollisions,
 		decisionMappings,
 	} = params
 
@@ -98,6 +101,7 @@ export async function reconcileCarriedSatellites(
 		accepted,
 		matchKey,
 		identityMode,
+		bumpsCollisions,
 		resolvedMappings,
 		decisionMappings,
 		resolveForeignScope: params.resolveForeignScope,

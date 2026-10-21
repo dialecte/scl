@@ -9,7 +9,7 @@ import {
 	findLanding,
 	resolvePrimaryPlacement,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
-import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -37,6 +37,8 @@ export async function reportFsd(
 		functionRef: FsdFunctionRef
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		scenario?: LifecycleScenario
+		/** Placed afresh by a larger operation: a new instance whatever the project holds. */
+		placesFresh?: boolean
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
 		/** The consumer's choices for the shared elements the function is classified by. */
 		decisionMappings?: DecisionMappings
@@ -53,17 +55,17 @@ export async function reportFsd(
 	const { sourceQuery, functionRef, targetParent, scenario, targetInstance, decisionMappings } =
 		params
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
-	const matchKey = matchKeyForScenario(scenario)
-	// `instantiate` always places a NEW instance, so it never matches an existing one.
-	const matched =
-		scenario === 'instantiate'
-			? []
-			: await findInstancesUnder(query, {
-					targetParent,
-					tagName: placedFunctionTag(targetParent),
-					sourceUuid,
-					matchKey,
-				})
+	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
+	const { matchKey, refsAlwaysAdded } = policy
+	// a new instance is placed whatever the project holds: no existing one is matched
+	const matched = policy.matchesInstances
+		? await findInstancesUnder(query, {
+				targetParent,
+				tagName: placedFunctionTag(targetParent),
+				sourceUuid,
+				matchKey,
+			})
+		: []
 	const instances = await scopeToTargetInstance(query, { instances: matched, targetInstance })
 
 	// no instance yet -> first-time = fast track
@@ -89,7 +91,7 @@ export async function reportFsd(
 			sourceQuery,
 			functionRef,
 			instance: undefined,
-			refsAlwaysAdded: scenario === 'instantiate',
+			refsAlwaysAdded,
 			matchKey,
 			decisionMappings,
 			anchor: landing,
@@ -118,7 +120,7 @@ export async function reportFsd(
 			sourceQuery,
 			functionRef,
 			instance,
-			refsAlwaysAdded: scenario === 'instantiate',
+			refsAlwaysAdded,
 			matchKey,
 			decisionMappings,
 			anchor: targetParent,

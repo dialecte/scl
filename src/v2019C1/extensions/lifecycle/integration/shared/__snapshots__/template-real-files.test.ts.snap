@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`template update of a bay template built from a real application file > the revision before: the type change listed, the renamed subfunctions keep the project names 1`] = `
+[
+  {
+    "attributeChanges": [
+      "type: Interface -> Protection",
+    ],
+    "change": "modified",
+    "companions": [],
+    "element": "00000000-0000-4000-8000-000000000412",
+    "tagName": "Application",
+  },
+  {
+    "attributeChanges": [
+      "type: Interface -> Protection",
+    ],
+    "change": "modified",
+    "companions": [],
+    "element": "00000000-0000-4000-8000-000000000442",
+    "tagName": "Application",
+  },
+]
+`;
+
+exports[`template update of a bay template built from a real application file > the revision it was built from: both instances matched, up to date, nothing written 1`] = `[]`;

@@ -26,7 +26,7 @@ import {
 	resolveSatelliteMappings,
 	toRedirectMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
-import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
+import { placedFresh, scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -41,7 +41,7 @@ import type {
 	ReportMapping,
 	ReportPass,
 } from '@/v2019C1/extensions/lifecycle/mapping'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey, ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
@@ -63,6 +63,8 @@ export async function reportAsd(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		scenario?: LifecycleScenario
+		/** Placed afresh by a larger operation: a new instance whatever the project holds. */
+		placesFresh?: boolean
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
 		/** The consumer's choices for the shared elements the application refers to. */
 		decisionMappings?: DecisionMappings
@@ -82,12 +84,12 @@ export async function reportAsd(
 	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings } = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
-	const matchKey = matchKeyForScenario(scenario)
-	// `instantiate` always places a NEW instance, so it never matches an existing one.
-	const matchedApplications =
-		scenario === 'instantiate'
-			? []
-			: await findInstancesByTemplateUuid(query, { tagName: 'Application', sourceUuid, matchKey })
+	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
+	const { matchKey, refsAlwaysAdded } = policy
+	// a new instance is placed whatever the project holds: no existing one is matched
+	const matchedApplications = policy.matchesInstances
+		? await findInstancesByTemplateUuid(query, { tagName: 'Application', sourceUuid, matchKey })
+		: []
 	const applicationInstances = await scopeToTargetInstance(query, {
 		instances: matchedApplications,
 		targetInstance,
@@ -121,7 +123,7 @@ export async function reportAsd(
 			sourceQuery,
 			applicationRef,
 			instance: undefined,
-			refsAlwaysAdded: scenario === 'instantiate',
+			refsAlwaysAdded,
 			matchKey,
 			decisionMappings,
 			anchor,
@@ -146,7 +148,7 @@ export async function reportAsd(
 				sourceQuery,
 				applicationRef,
 				instance,
-				refsAlwaysAdded: scenario === 'instantiate',
+				refsAlwaysAdded,
 				matchKey,
 				decisionMappings,
 				anchor,
@@ -168,7 +170,7 @@ export async function reportAsd(
 		sourceQuery,
 		applicationRef,
 		applicationInstances,
-		scenario,
+		policy,
 		targetInstance,
 		decisionMappings,
 		anchor,
@@ -314,7 +316,8 @@ async function reportComposedFunctions(
 		applicationRef: Scl.Ref<'Application'>
 		/** The instances of the application in the project — none on a first placement. */
 		applicationInstances: readonly AnyTrackedRecord[]
-		scenario?: LifecycleScenario
+		/** The application's policy: the functions it composes are reported under it. */
+		policy: ScenarioPolicy
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
 		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
@@ -326,8 +329,8 @@ async function reportComposedFunctions(
 	choices: ReportMapping[]
 	placements: StandingPlacement[]
 }> {
-	const { sourceQuery, applicationRef, applicationInstances, scenario, anchor } = params
-	const matchKey = matchKeyForScenario(scenario)
+	const { sourceQuery, applicationRef, applicationInstances, policy, anchor } = params
+	const { matchKey } = policy
 
 	const reportInstances: ReportInstance[] = []
 	if (applicationInstances.length === 0) {
@@ -337,7 +340,7 @@ async function reportComposedFunctions(
 					...params,
 					functionRef,
 					instance: undefined,
-					refsAlwaysAdded: scenario === 'instantiate',
+					refsAlwaysAdded: policy.refsAlwaysAdded,
 				}),
 			)
 		}
@@ -373,7 +376,8 @@ async function reportComposedFunctions(
 					...params,
 					functionRef,
 					instance: undefined,
-					refsAlwaysAdded: true,
+					// placed for that instance: a new one, whatever another instance holds
+					refsAlwaysAdded: placedFresh(policy).refsAlwaysAdded,
 					anchor: standing.level,
 				})
 				// placed for each instance of the application: listed, and decided, per instance
@@ -395,7 +399,7 @@ async function reportComposedFunctions(
 					...params,
 					functionRef,
 					instance: functionInstance,
-					refsAlwaysAdded: scenario === 'instantiate',
+					refsAlwaysAdded: policy.refsAlwaysAdded,
 				}),
 			)
 		}
@@ -412,20 +416,20 @@ async function reportComposedFunction(
 		instance: AnyTrackedRecord | undefined
 		/** The function's references are new whatever the project holds (a function placed afresh). */
 		refsAlwaysAdded: boolean
-		scenario?: LifecycleScenario
+		policy: ScenarioPolicy
 		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		pass?: ReportPass
 	},
 ): Promise<ReportInstance> {
-	const { sourceQuery, functionRef, instance, scenario } = params
+	const { sourceQuery, functionRef, instance, policy } = params
 	const instanceDiff = await reportFunction(query, {
 		pass: params.pass,
 		sourceQuery,
 		functionRef,
 		instance,
 		refsAlwaysAdded: params.refsAlwaysAdded,
-		matchKey: matchKeyForScenario(scenario),
+		matchKey: policy.matchKey,
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
 	})

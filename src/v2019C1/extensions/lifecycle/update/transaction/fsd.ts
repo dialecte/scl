@@ -27,10 +27,7 @@ import {
 	resolveTargetStructure,
 } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { placedFunctionTag } from '@/v2019C1/extensions/lifecycle/layers/function'
-import {
-	identityModeForScenario,
-	matchKeyForScenario,
-} from '@/v2019C1/extensions/lifecycle/scenario'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
@@ -69,6 +66,8 @@ export async function fsd(
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		/** `instantiate` forces a fresh instance; `template` (default) reconciles. */
 		scenario?: LifecycleScenario
+		/** Placed afresh by a larger operation: a new instance whatever the project holds. */
+		placesFresh?: boolean
 		/** Multi-instance gate: partitioned per instance by `instanceScopeId`. */
 		report?: DiffReport
 		decisions?: DecisionMap
@@ -102,18 +101,17 @@ export async function fsd(
 	} = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
-	const matchKey = matchKeyForScenario(scenario)
-	const identityMode = identityModeForScenario(scenario)
-	// `instantiate` always places a NEW instance, so it never matches an existing one.
-	const matched =
-		scenario === 'instantiate'
-			? []
-			: await findInstancesUnder(tx, {
-					targetParent,
-					tagName: placedFunctionTag(targetParent),
-					sourceUuid,
-					matchKey,
-				})
+	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
+	const { matchKey, identityMode, bumpsCollisions } = policy
+	// a new instance is placed whatever the project holds: no existing one is matched
+	const matched = policy.matchesInstances
+		? await findInstancesUnder(tx, {
+				targetParent,
+				tagName: placedFunctionTag(targetParent),
+				sourceUuid,
+				matchKey,
+			})
+		: []
 	const instances = await scopeToTargetInstance(tx, { instances: matched, targetInstance })
 
 	if (instances.length === 0) {
@@ -162,6 +160,7 @@ export async function fsd(
 			keepNameTypesFrom,
 			matchKey,
 			identityMode,
+			bumpsCollisions,
 		})
 		// an element the instances share (a category) holds one reference per instance: this one
 		// reconciles its own, as the project stands once the earlier instances are updated
@@ -179,6 +178,7 @@ export async function fsd(
 			accepted: instanceAccepted,
 			matchKey,
 			identityMode,
+			bumpsCollisions,
 			decisionMappings: params.decisionMappings,
 			resolveForeignScope,
 		})
@@ -191,6 +191,7 @@ export async function fsd(
 			accepted: instanceAccepted,
 			matchKey,
 			identityMode,
+			bumpsCollisions,
 			resolveForeignScope,
 		})
 		// carry the report->applied correlation onto this instance's report nodes

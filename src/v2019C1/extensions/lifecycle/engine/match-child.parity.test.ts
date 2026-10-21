@@ -3,6 +3,7 @@ import { reconcile } from './reconcile'
 
 import { describe, expect, it } from 'vitest'
 
+import { SCENARIO_POLICIES } from '@/v2019C1/extensions/lifecycle/scenario-policy.constants'
 import {
 	ALL_XMLNS_NAMESPACES,
 	createSclTestProject,
@@ -13,6 +14,13 @@ import type { Scl } from '@/v2019C1/config'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
+
+/** What a template update hands the reconcile. */
+const TEMPLATE_RECONCILE = {
+	matchKey: SCENARIO_POLICIES.template.matchKey,
+	identityMode: SCENARIO_POLICIES.template.identityMode,
+	bumpsCollisions: SCENARIO_POLICIES.template.bumpsCollisions,
+}
 
 // The report (diff) and apply (reconcile) sides now share ONE matcher (`matchChild`), so a child is
 // paired identically whether we describe the change or perform it. These tests pin two scenarios that
@@ -78,6 +86,7 @@ describe('engine — diff (report) and reconcile (apply) pair children identical
 				sourceQuery: source.document.query,
 				sourceRootRef: applicationSourceRef,
 				instanceRootRef: applicationInstanceRef,
+				...TEMPLATE_RECONCILE,
 			})
 		})
 
@@ -161,6 +170,7 @@ describe('engine — diff (report) and reconcile (apply) pair children identical
 				sourceQuery: source.document.query,
 				sourceRootRef: roleSourceRef,
 				instanceRootRef: roleInstanceRef,
+				...TEMPLATE_RECONCILE,
 			})
 		})
 

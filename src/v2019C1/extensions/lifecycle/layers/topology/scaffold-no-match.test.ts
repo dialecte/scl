@@ -50,7 +50,8 @@ describe('topology frame — no name adoption of a scaffold TEMPLATE bay', () =>
 		const { instances: frame } = await reportTopologyFrame(target.document.query, {
 			sourceQuery: source.document.query,
 			scopeRef: { tagName: 'Bay', id: 'bay-s' } as Scl.Ref<'Bay'>,
-			scenario: 'template',
+			matchKey: 'templateUuid',
+			firstPlacement: false,
 		})
 
 		// the target "TEMPLATE" bay shares only the name (different uuid, no templateUuid link),

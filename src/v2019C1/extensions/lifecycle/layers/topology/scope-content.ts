@@ -6,7 +6,7 @@ import {
 import type { TopologyReconcilables } from './scope-content.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 
 /** Applications whose structural ancestry includes `scopeRef` (Substation / VoltageLevel / Bay). */

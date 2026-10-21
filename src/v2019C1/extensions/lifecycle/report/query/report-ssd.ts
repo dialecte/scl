@@ -16,7 +16,7 @@ import {
 	resolvePrimaryParents,
 	resolveTopologyReconcilables,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
-import { matchKeyForScenario } from '@/v2019C1/extensions/lifecycle/scenario'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
@@ -65,9 +65,10 @@ export async function reportSsd(
 	// the topology frame's own structural changes (Bay attrs / BayType / equipment), fn/app excluded;
 	// one ReportInstance per bay when a bay-typical was instantiated more than once
 	// a first placement: asked for, or the project holds no instance of the scope yet
-	const matchKey = matchKeyForScenario(scenario)
+	const policy = scenarioPolicy({ scenario })
+	const { matchKey } = policy
 	const firstPlacement =
-		scenario === 'instantiate' ||
+		!policy.matchesInstances ||
 		!(await hasScopeInstance(query, {
 			sourceQuery,
 			applicationRefs: applications,
@@ -101,7 +102,7 @@ export async function reportSsd(
 	const { instances: frameInstances, instanceLevelsList } = await reportTopologyFrame(query, {
 		sourceQuery,
 		scopeRef: root,
-		scenario,
+		matchKey,
 		firstPlacement,
 		targetInstance,
 		mappedOnto,
@@ -137,7 +138,9 @@ export async function reportSsd(
 				pass: params.pass,
 				sourceQuery,
 				applicationRef,
-				scenario: placedFor ? 'instantiate' : scenario,
+				// placed for an instance of the unit: a new one, whatever another instance holds
+				scenario,
+				placesFresh: placedFor !== undefined,
 				targetInstance,
 				decisionMappings,
 				anchor: parent ?? placedFor ?? landing,
@@ -160,7 +163,8 @@ export async function reportSsd(
 				sourceQuery,
 				functionRef,
 				targetParent: parent ?? placedFor ?? landing,
-				scenario: placedFor ? 'instantiate' : scenario,
+				scenario,
+				placesFresh: placedFor !== undefined,
 				targetInstance,
 				decisionMappings,
 			})

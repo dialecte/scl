@@ -32,10 +32,7 @@ import {
 	resolveSatelliteMappings,
 	toRedirectMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
-import {
-	identityModeForScenario,
-	matchKeyForScenario,
-} from '@/v2019C1/extensions/lifecycle/scenario'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { ApplicationInstance } from './cascade-composed-functions.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -75,6 +72,8 @@ export async function asd(
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		/** `instantiate` forces a fresh instance; `template` (default) reconciles. */
 		scenario?: LifecycleScenario
+		/** Placed afresh by a larger operation: a new instance whatever the project holds. */
+		placesFresh?: boolean
 		report?: DiffReport
 		decisions?: DecisionMap
 		/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */
@@ -110,13 +109,12 @@ export async function asd(
 	} = params
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
-	const matchKey = matchKeyForScenario(scenario)
-	const identityMode = identityModeForScenario(scenario)
-	// `instantiate` always places a NEW instance, so it never matches an existing one.
-	const matched =
-		scenario === 'instantiate'
-			? []
-			: await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid, matchKey })
+	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
+	const { matchKey, identityMode, bumpsCollisions } = policy
+	// a new instance is placed whatever the project holds: no existing one is matched
+	const matched = policy.matchesInstances
+		? await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid, matchKey })
+		: []
 	const instances = await scopeToTargetInstance(tx, { instances: matched, targetInstance })
 
 	if (instances.length === 0) {
@@ -237,6 +235,7 @@ export async function asd(
 			keepNameTypesFrom,
 			matchKey,
 			identityMode,
+			bumpsCollisions,
 			redirectMappings,
 		})
 		const foreignScope = new Set([
@@ -254,6 +253,7 @@ export async function asd(
 			accepted,
 			matchKey,
 			identityMode,
+			bumpsCollisions,
 			resolvedMappings,
 			decisionMappings: params.decisionMappings,
 			resolveForeignScope,
@@ -274,6 +274,7 @@ export async function asd(
 			accepted,
 			matchKey,
 			identityMode,
+			bumpsCollisions,
 			resolveForeignScope,
 		})
 		// carry the report->applied correlation onto this Application instance's report nodes (the
