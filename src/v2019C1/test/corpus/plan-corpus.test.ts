@@ -1,12 +1,12 @@
 import { runSclTestCases } from '../hydrated-test'
-import { planCorpusV2 } from './plan-corpus-v2'
+import { planCorpus } from './plan-corpus'
 
 import { describe, expect } from 'vitest'
 
 import type { SclTest } from '../hydrated-test.types'
-import type { CorpusV2Entry } from './corpus-v2.types'
+import type { CorpusEntry } from './corpus.types'
 
-function entry(params: Partial<CorpusV2Entry> & { path: string }): CorpusV2Entry {
+function entry(params: Partial<CorpusEntry> & { path: string }): CorpusEntry {
 	return {
 		headerUuid: params.path,
 		version: '0',
@@ -16,12 +16,18 @@ function entry(params: Partial<CorpusV2Entry> & { path: string }): CorpusV2Entry
 	}
 }
 
-describe('planCorpusV2', () => {
+describe('planCorpus', () => {
 	type TestCase = SclTest.BaseTestCase & {
-		entries: CorpusV2Entry[]
-		quarantined?: string[]
-		/** Per family: the smoke file, the pairs, the duplicates, the pairs of the smoke file's revision. */
-		expected: { smoke: string; pairs: string[]; duplicates: string[]; sameRevision?: string[] }[]
+		entries: CorpusEntry[]
+		excluded?: string[]
+		/** Per family: the smoke file, the pairs, the duplicates, the pairs of the smoke file's revision, the left out. */
+		expected: {
+			smoke: string | undefined
+			pairs: string[]
+			duplicates: string[]
+			sameRevision?: string[]
+			excluded?: string[]
+		}[]
 	}
 
 	const testCases: Record<string, TestCase> = {
@@ -43,22 +49,29 @@ describe('planCorpusV2', () => {
 			],
 			expected: [{ smoke: 'r10.asd', pairs: ['r9.asd'], duplicates: [] }],
 		},
-		'the latest revision quarantined → the latest valid one in the smoke, the others pairs': {
+		'the latest revision excluded → the latest valid one in the smoke, the others pairs': {
 			entries: [
 				entry({ path: 'v1r1.asd', headerUuid: 'c', revision: '1' }),
 				entry({ path: 'v1r2.asd', headerUuid: 'c', revision: '2' }),
 				entry({ path: 'v1r3.xml', headerUuid: 'c', revision: '3' }),
 			],
-			quarantined: ['v1r3.xml'],
+			excluded: ['v1r3.xml'],
 			expected: [{ smoke: 'v1r2.asd', pairs: ['v1r1.asd', 'v1r3.xml'], duplicates: [] }],
 		},
-		'every revision quarantined → the latest in the smoke': {
+		'every revision of two excluded → no smoke file, both pairs': {
 			entries: [
 				entry({ path: 'v0r1.xml', headerUuid: 't', revision: '1' }),
 				entry({ path: 'v0r2.xml', headerUuid: 't', revision: '2' }),
 			],
-			quarantined: ['v0r1.xml', 'v0r2.xml'],
-			expected: [{ smoke: 'v0r2.xml', pairs: ['v0r1.xml'], duplicates: [] }],
+			excluded: ['v0r1.xml', 'v0r2.xml'],
+			expected: [{ smoke: undefined, pairs: ['v0r1.xml', 'v0r2.xml'], duplicates: [] }],
+		},
+		'the only revision excluded → no smoke file, no pair, left out': {
+			entries: [entry({ path: 'ActivePowerLimitLN.fsd' })],
+			excluded: ['ActivePowerLimitLN.fsd'],
+			expected: [
+				{ smoke: undefined, pairs: [], duplicates: [], excluded: ['ActivePowerLimitLN.fsd'] },
+			],
 		},
 		'a byte duplicate → dropped, the own extension and the shorter name kept': {
 			entries: [
@@ -108,19 +121,20 @@ describe('planCorpusV2', () => {
 	}
 
 	function act(testCase: TestCase) {
-		const quarantined = new Set(testCase.quarantined ?? [])
-		const families = planCorpusV2({
+		const excluded = new Set(testCase.excluded ?? [])
+		const families = planCorpus({
 			entries: testCase.entries,
-			quarantined: (path) => quarantined.has(path),
+			excluded: (path) => excluded.has(path),
 		})
 		expect(
 			families.map((family) => ({
-				smoke: family.smoke.path,
+				smoke: family.smoke?.path,
 				pairs: family.pairs.map((pair) => pair.path),
 				duplicates: family.duplicates.map((duplicate) => duplicate.path),
 				sameRevision: family.sameRevision.map((pair) => pair.path),
+				excluded: family.excluded.map((entry) => entry.path),
 			})),
-		).toEqual(testCase.expected.map((family) => ({ sameRevision: [], ...family })))
+		).toEqual(testCase.expected.map((family) => ({ sameRevision: [], excluded: [], ...family })))
 	}
 
 	runSclTestCases.generic(testCases, act)

@@ -46,7 +46,7 @@ AGENTS.md
 
 .vitepress/dist
 .vitepress/cache
-# real-file corpus: synced from the Test System V2 folder, never published (see its README)
+# real-file corpus: synced from the expert's test system folder, never published (see its README)
 src/v2019C1/test/fixtures/corpus/*
 !src/v2019C1/test/fixtures/corpus/README.md
 

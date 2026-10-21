@@ -3,127 +3,101 @@ import { collectSclOutputViolations } from '../assert-scl-output'
 import { assertValidSclXml } from '../assert-valid-scl-xml'
 import { SCL_TEST_SETUP } from '../scl-test-setup.constants'
 import { collectSclXsdViolations, isSclXsdConfigured } from '../scl-xsd'
-import { CORPUS_V2_LOADERS } from './corpus-v2-loaders.constants'
-import {
-	CORPUS_V2_ENGINE_DEFECTS,
-	CORPUS_V2_EXPECTED_WARNINGS,
-	CORPUS_V2_FILES,
-	CORPUS_V2_KIND_FOLDERS,
-	CORPUS_V2_QUARANTINE,
-} from './corpus-v2.constants'
+import { CORPUS_LOADERS } from './corpus-loaders.constants'
+import { CORPUS_EXPECTED_WARNINGS, CORPUS_FILES, CORPUS_KIND_FOLDERS } from './corpus.constants'
 
 import { Project } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
 
 import { createSclIoHooks } from '@/v2019C1/hooks'
 
-import type { CorpusV2Kind, ImportWarningCounts, RunCorpusV2SmokeParams } from './corpus-v2.types'
+import type {
+	CorpusFileCheckParams,
+	CorpusKind,
+	ImportWarningCounts,
+	RunCorpusSmokeParams,
+} from './corpus.types'
 import type { Config } from '@/v2019C1/config/dialecte.config'
 import type { ImportWarning } from '@dialecte/core'
 
 /**
  * Two cases per corpus file of `kind`. The file: valid by structure, by the XSD validator and for coherent
  * references. Its import and export: it imports with the warnings it is known to give, the imported document holds
- * nothing a real file could not (a quarantined file aside: it is not valid to begin with), its export is a fixed point
- * (exported, imported again and exported, it does not change), and the export keeps every uuid and every element of
- * the file. A check a quarantine or a known engine defect fails runs as an expected failure. Skipped when the corpus
- * is not synced.
+ * nothing a real file could not, its export is a fixed point (exported, imported again and exported, it does not
+ * change), and the export keeps every uuid and every element of the file. Every smoke file must pass both.
+ * Skipped when the corpus is not synced.
  */
-export function runCorpusV2Smoke(params: RunCorpusV2SmokeParams): void {
+export function runCorpusSmoke(params: RunCorpusSmokeParams): void {
 	const { kind } = params
-	const files = CORPUS_V2_FILES.filter((file) => kindOf(file) === kind)
+	const files = CORPUS_FILES.filter((file) => kindOf(file) === kind)
 
-	describe.skipIf(!isCorpusV2Synced())(`corpus V2 — ${kind}`, () => {
+	describe.skipIf(!isCorpusSynced())(`corpus — ${kind}`, () => {
 		for (const file of files) {
-			const quarantine = CORPUS_V2_QUARANTINE[file]
-			const engineDefect = CORPUS_V2_ENGINE_DEFECTS[file]
-			const note = quarantine ? `quarantined: ${quarantine.reason}` : engineDefect?.reason
-
-			const fileFails =
-				quarantine?.fileCheck === 'fails' || engineDefect?.failingChecks.includes('file') === true
-			const importFails = engineDefect?.failingChecks.includes('import') === true
-
-			caseOf({ fails: fileFails })(
-				caseName({ file, check: 'the file', note }),
-				async function checkFile() {
-					await assertCorpusFileValid({ file })
-				},
-			)
-			caseOf({ fails: importFails })(
-				caseName({ file, check: 'import and export', note }),
-				async function checkImportAndExport() {
-					await assertCorpusFileImport({ file, imported: quarantine ? 'as read' : 'valid' })
-				},
-			)
+			it(`${file} › the file`, async function checkFile() {
+				const xml = await readCorpusFile(file)
+				await assertCorpusFileValid({ file, xml })
+			})
+			it(`${file} › import and export`, async function checkImportAndExport() {
+				const xml = await readCorpusFile(file)
+				await assertCorpusFileImport({ file, xml })
+			})
 		}
 	})
 }
 
 /** The files the glob finds and the list, compared: nothing synced unlisted, nothing listed missing, every file of a kind. */
-export function assertCorpusV2Listing(): void {
-	expect(Object.keys(CORPUS_V2_LOADERS).sort()).toEqual([...CORPUS_V2_FILES].sort())
-	expect(CORPUS_V2_FILES.filter((file) => kindOf(file) === undefined)).toEqual([])
+export function assertCorpusListing(): void {
+	expect(Object.keys(CORPUS_LOADERS).sort()).toEqual([...CORPUS_FILES].sort())
+	expect(CORPUS_FILES.filter((file) => kindOf(file) === undefined)).toEqual([])
 }
 
 /** Whether the corpus and the schema files are synced: its cases run only then (the file check is the validator's). */
-export function isCorpusV2Synced(): boolean {
-	return Object.keys(CORPUS_V2_LOADERS).length > 0 && isSclXsdConfigured()
+export function isCorpusSynced(): boolean {
+	return Object.keys(CORPUS_LOADERS).length > 0 && isSclXsdConfigured()
 }
 
-function kindOf(file: string): CorpusV2Kind | undefined {
-	const kinds = Object.entries(CORPUS_V2_KIND_FOLDERS) as [CorpusV2Kind, string][]
+function kindOf(file: string): CorpusKind | undefined {
+	const kinds = Object.entries(CORPUS_KIND_FOLDERS) as [CorpusKind, string][]
 	return kinds.find(([, folder]) => file.startsWith(folder))?.[0]
 }
 
-function caseOf(params: { fails: boolean }) {
-	return params.fails ? it.fails : it
-}
-
-function caseName(params: { file: string; check: string; note: string | undefined }): string {
-	const { file, check, note } = params
-	return note ? `${file} › ${check} — ${note}` : `${file} › ${check}`
-}
-
 async function readCorpusFile(file: string): Promise<string> {
-	const load = CORPUS_V2_LOADERS[file]
+	const load = CORPUS_LOADERS[file]
 	if (!load) throw new Error(`${file}: not synced`)
 	return load()
 }
 
-async function assertCorpusFileValid(params: { file: string }): Promise<void> {
-	const { file } = params
-	const xml = await readCorpusFile(file)
+/** The check of a corpus file itself: its structure, the XSD validator, its references. Throws on the first that fails. */
+export async function assertCorpusFileValid(params: CorpusFileCheckParams): Promise<void> {
+	const { file, xml } = params
 	assertValidSclXml(xml, file, { requireComplete: false })
 	const xsd = await collectSclXsdViolations({ xml })
 	expect(xsd, 'the XSD validator on the file').toEqual({ ran: true, violations: [] })
 	expect(collectReferenceViolations({ xml }), 'the references of the file').toEqual([])
 }
 
-async function assertCorpusFileImport(params: {
-	file: string
-	/** `valid`: the imported document holds no violation; `as read`: it is not checked (the file is not valid). */
-	imported: 'valid' | 'as read'
-}): Promise<void> {
-	const { file, imported: importedBar } = params
-	const xml = await readCorpusFile(file)
+/**
+ * The check of a corpus file's import and export: its known warnings, an imported document holding no violation, an
+ * export that is a fixed point and keeps every uuid and element. Throws on the first that fails.
+ */
+export async function assertCorpusFileImport(params: CorpusFileCheckParams): Promise<void> {
+	const { file, xml } = params
 
 	const corpus = await openCorpusProject()
 	try {
 		const imported = await corpus.importXml({ xml, fileName: fileNameOf(file) })
 		expect(countWarnings(imported.warnings), 'the import warnings').toEqual(
-			CORPUS_V2_EXPECTED_WARNINGS[file] ?? {},
+			CORPUS_EXPECTED_WARNINGS[file] ?? {},
 		)
 
-		if (importedBar === 'valid') {
-			const { violations } = await collectSclOutputViolations({
-				project: corpus.project,
-				document: imported.document,
-			})
-			expect(
-				violations.map((violation) => violation.description),
-				'the imported document',
-			).toEqual([])
-		}
+		const { violations } = await collectSclOutputViolations({
+			project: corpus.project,
+			document: imported.document,
+		})
+		expect(
+			violations.map((violation) => violation.description),
+			'the imported document',
+		).toEqual([])
 
 		const firstExport = await corpus.exportXml(imported.documentId)
 		const reimported = await corpus.importXml({ xml: firstExport, fileName: fileNameOf(file) })
