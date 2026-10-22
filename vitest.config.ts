@@ -1,6 +1,12 @@
 import { existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
+import {
+	MUTATION_BROWSER_ONLY_TESTS,
+	MUTATION_PROJECT_ENV,
+	MUTATION_PROJECT_NAME,
+	NODE_STAND_INS_SETUP,
+} from './scripts/mutants/mutants.constants'
 import { CORPUS_SMOKE_FOLDER } from './src/v2019C1/test/corpus/corpus.constants'
 import { SCL_XSD_FILE_NAMES, SCL_XSD_FIXTURE_FOLDER } from './src/v2019C1/test/scl-xsd.constants'
 import viteConfig from './vite.config'
@@ -82,6 +88,37 @@ function corpusExcludedProject() {
 	]
 }
 
+/**
+ * The project of the mutation runs (`npm run mutants:fast`): every unit test in node, the browser globals stood in
+ * for, so the mutation runner runs only the tests reaching each mutant and keeps its workers warm. The test files of a
+ * worker share their modules (no isolation): the modules the setup imports and the package load once per worker, not
+ * once per file, five times faster, with the browser's verdicts on the mutants compared. Only when the driver asks for
+ * it (`SCL_MUTATION_PROJECT`), never in a plain run: the browser `unit` project stays the check.
+ */
+function mutationProject() {
+	if (!process.env[MUTATION_PROJECT_ENV]) return []
+	return [
+		{
+			resolve: viteConfig.resolve,
+			plugins: [],
+			test: {
+				name: MUTATION_PROJECT_NAME,
+				environment: 'node' as const,
+				isolate: false,
+				include: ['src/**/*.test.{js,ts,jsx,tsx}', 'scripts/**/*.test.ts'],
+				exclude: [
+					...configDefaults.exclude,
+					CORPUS_TESTS,
+					CORPUS_EXCLUDED_TESTS,
+					...MUTATION_BROWSER_ONLY_TESTS.map(({ file }) => file),
+				],
+				root: ROOT,
+				setupFiles: [NODE_STAND_INS_SETUP, ...SETUP_FILES],
+			},
+		},
+	]
+}
+
 export default mergeConfig(
 	viteConfig,
 	defineConfig({
@@ -116,6 +153,7 @@ export default mergeConfig(
 					},
 				},
 				...corpusExcludedProject(),
+				...mutationProject(),
 			],
 		},
 	}),
