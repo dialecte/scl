@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.10.1] - 2026-10-19
+
+
+### Added
+
+- **Deleting the last `PowerSystemRelation` of a function now also removes the empty `PowerSystemRelations` container and the `Private` wrapping it.** The `Private` is kept when something else is in it, and a relation orphaned by deleting the equipment it names is cleaned up the same way.
+
 ## [0.10.0] - 2026-10-19
 
 ### Added
