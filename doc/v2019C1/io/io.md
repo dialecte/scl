@@ -1,5 +1,5 @@
 ---
-description: Reference for @dialecte/scl v2019C1 IO — project.import and project.export.
+description: Reference for @dialecte/scl v2019C1 IO — project.import, project.importFile and project.export.
 ---
 
 # IO Reference
@@ -10,13 +10,17 @@ See the [IO overview](/v2019C1/io/) for how these fit alongside `project.openDoc
 
 ## `project.import`
 
-Parses one or more SCL files and stores their records into the project.
+Parses one or more SCL files, one after the other, and stores each one as a document of the project. A file that fails is its own entry: the files after it are still imported.
 
 ```ts
 import { createSclProject } from '@dialecte/scl/v2019C1'
 
 const project = await createSclProject({ storage: { type: 'local' } }).open('my-project')
-const [{ documentId }] = await project.import([scdFile])
+const entries = await project.import([scdFile, icdFile])
+for (const entry of entries) {
+	if (entry.status === 'failed') console.error(entry.fileName, entry.error.key)
+	else console.log(entry.fileName, entry.documentId, entry.diagnostics)
+}
 ```
 
 **Params**
@@ -28,7 +32,21 @@ const [{ documentId }] = await project.import([scdFile])
 
 **Supported extensions** — `.fsd`, `.asd`, `.ssd`, `.scd`, `.isd`, `.icd`, `.iid`, `.xml`
 
-**Returns** `Promise<{ documentId: string; recordCount: number }[]>` — one entry per successfully imported file.
+**Returns** `Promise<ImportEntry[]>` — one entry per file, in the order given: `{ status: 'imported', fileName, documentId, recordCount, diagnostics }`, or `{ status: 'failed', fileName, error }` (`PARSE_ERROR` for a malformed file). `diagnostics` is what the import has to say about the file, `[]` when nothing: see [IO hooks](/v2019C1/io/hooks#diagnostics) and [import diagnostics](/v2019C1/api/errors#import-diagnostics).
+
+---
+
+## `project.importFile`
+
+Imports one file: returns the imported document, or throws what failed.
+
+```ts
+const { documentId, recordCount, diagnostics } = await project.importFile(scdFile)
+```
+
+**Params** — as `project.import`, with one `File`.
+
+**Returns** `Promise<ImportedDocument>` — `{ fileName, documentId, recordCount, diagnostics }`.
 
 ---
 

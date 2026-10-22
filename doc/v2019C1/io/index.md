@@ -29,8 +29,8 @@ import { createSclProject } from '@dialecte/scl/v2019C1'
 
 const project = await createSclProject({ storage: { type: 'local' } }).open('my-project')
 
-// 1. Import
-const [{ documentId }] = await project.import([scdFile])
+// 1. Import (one file: the imported document, or the failure thrown)
+const { documentId, diagnostics } = await project.importFile(scdFile)
 
 // 2. Work
 const doc = project.openDocument(documentId)
@@ -44,6 +44,6 @@ const { xmlDocument } = await project.export(documentId)
 
 ## Further reading
 
-- [IO reference](/v2019C1/io/io) - `project.import`, `project.export`
+- [IO reference](/v2019C1/io/io) - `project.import`, `project.importFile`, `project.export`
 - [IO hooks](/v2019C1/io/hooks) - SCL import lifecycle hooks
 - [Core IO](https://dialecte.github.io/core/io/) - underlying IO layer and configuration

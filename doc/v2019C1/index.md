@@ -14,7 +14,7 @@ The core Query and Transaction APIs are documented at [dialecte.github.io/core](
 import { createSclProject } from '@dialecte/scl/v2019C1'
 
 const project = await createSclProject({ storage: { type: 'local' } }).open('my-project')
-const [{ documentId }] = await project.import([scdFile])
+const { documentId } = await project.importFile(scdFile)
 const doc = project.openDocument(documentId)
 ```
 

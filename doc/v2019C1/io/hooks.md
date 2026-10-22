@@ -1,10 +1,10 @@
 ---
-description: SCL IO hooks for @dialecte/scl v2019C1 — two-pass UUID reference resolution during project.import.
+description: SCL IO hooks for @dialecte/scl v2019C1 — one import session per file, two-pass UUID reference resolution during project.import, and the diagnostics it returns.
 ---
 
 # IO Hooks
 
-`createSclProject` wires SCL's hooks onto the `Project` instance automatically (io hooks alongside the record hooks, as one `DialecteHooks` object). They run during `project.import` and are not user-configurable — this page documents what they do and what the output looks like.
+`createSclProject` wires SCL's hooks onto the `Project` instance automatically (its import session, given to core through `createImportSession`, alongside the record hooks, as one `DialecteHooks` object). Core creates one import session per file it imports, so what the session collects is that file's only. They run during `project.import` and `project.importFile` and are not user-configurable — this page documents what they do and what the output looks like.
 
 For the general IO hooks API, see [Core IO hooks](https://dialecte.github.io/core/io/hooks).
 
@@ -47,17 +47,18 @@ pendingResolutions = [{ recordId: "ref-id", uuidAttributeName: "functionUuid",
 
 ### Pass 2 — `afterImport`
 
-Runs once after all records are stored. Each pending resolution is looked up in `pathIndex`:
+Runs once after all records of the file are stored. Each pending resolution is looked up in `pathIndex`:
 
 ```
 "S1/Bay1/VL1/Fn1" → "abc-123"  ✓ resolved
 ```
 
-Returns a batch of updates that the import pipeline applies atomically:
+Returns a batch of updates that the import pipeline applies atomically, and the diagnostics of the file:
 
 ```ts
 {
-	updates: [{ recordId: 'ref-id', attributes: [{ name: 'functionUuid', value: 'abc-123' }] }]
+	updates: [{ recordId: 'ref-id', attributes: [{ name: 'functionUuid', value: 'abc-123' }] }],
+	diagnostics: []
 }
 ```
 
@@ -67,21 +68,21 @@ The stored `FunctionRef` record ends up with both attributes:
 <FunctionRef function="S1/Bay1/VL1/Fn1" functionUuid="abc-123" />
 ```
 
-## Warnings
+## Diagnostics
 
-Unresolvable paths (path not in index at end of import) produce `ImportWarning` entries instead of updates:
+What the import has to say about a file comes back as diagnostics, beside the writes (a path written again from the element its uuid names, a naming made for an LNode, names rewritten from a path are also reported), on the file's entry: `entry.diagnostics` of `project.import(files)`, `diagnostics` of `project.importFile(file)` (`[]` when there is nothing to say). Each is a core `Diagnostic` with `source: 'scl'`; the codes are in `SCL_IMPORT_DIAGNOSTICS`, and their data in [errors](../api/errors#import-diagnostics).
 
-| Warning type                   | When                                                                                                                                           |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `unresolved-reference`         | Path was present but no target with that path was found                                                                                        |
-| `unsupported-xpath-reference`  | Path uses an XPath syntax not supported by the resolver                                                                                        |
-| `incoherent-reference`         | The path and the uuid of a reference name two different elements: the uuid wins                                                                |
-| `incoherent-path-names`        | Names written from a path disagree with it: they are written again from the path                                                               |
-| `data-path-not-split`          | The path of an LNode a reference names could not be given the data-object name a data reference by uuid carries: the reference is left as read |
-| `derived-specification-naming` | An LNode bound to an IED had no `LNodeSpecNaming`: one was made from the LN it is bound to                                                     |
+| Code                           | Severity      | When                                                                                                                                           |
+| ------------------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unresolved-reference`         | `warning`     | Path was present but no target with that path was found                                                                                        |
+| `unsupported-xpath-reference`  | `warning`     | Path uses an XPath syntax not supported by the resolver                                                                                        |
+| `incoherent-reference`         | `warning`     | The path and the uuid of a reference name two different elements: the uuid wins                                                                |
+| `data-path-not-split`          | `warning`     | The path of an LNode a reference names could not be given the data-object name a data reference by uuid carries: the reference is left as read |
+| `incoherent-path-names`        | `information` | Names written from a path disagree with it: they are written again from the path                                                               |
+| `derived-specification-naming` | `information` | An LNode bound to an IED had no `LNodeSpecNaming`: one was made from the LN it is bound to                                                     |
 
 ## Specified naming of the logical nodes
 
 The same pass notes every `LNode`, its `eIEC61850-6-100` `Private` and whether it holds an `LNodeSpecNaming`. At the end, each `LNode` without one gets one, placed in that `Private` (created when the `LNode` has none), with the rule of the record hooks (see [reference](../extensions/reference#automatic-coherence-record-hooks)).
 
-Warnings are returned via `AfterImportResult.warnings` and are accessible after `project.import` completes if you inspect the database directly. Future: surface via the Document API.
+An LNode bound to an IED that gets its naming this way is reported with a `derived-specification-naming` diagnostic.

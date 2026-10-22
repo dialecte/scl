@@ -161,19 +161,19 @@ parent), and every target was indexed by uuid with its path (`targetsByUuid`). P
 reads nothing back from the store. A uuid naming no element of the file is left alone.
 
 A reference the file gives both a path and a uuid that name two different elements (or a path naming none) is written
-again from the element the uuid names: the uuid wins, and the import reports an `incoherent-reference` warning. The
+again from the element the uuid names: the uuid wins, and the import reports an `incoherent-reference` diagnostic. The
 attributes a reference writes from its target's path (a `Terminal`'s level names, see `DERIVED_REFERENCE_ATTRIBUTES`)
 are composed from the indexed target's path in the same pass, and an element that writes attributes from its own path
 (a `ConnectivityNode`'s `pathName`) gets them from its position. A value the file gave that disagrees is rewritten, with
-an `incoherent-path-names` warning. A `Terminal` naming the predefined `grounded` node, which a file need not declare,
-is left without a uuid and without a warning.
+an `incoherent-path-names` diagnostic. A `Terminal` naming the predefined `grounded` node, which a file need not declare,
+is left without a uuid and without a diagnostic.
 
 A reference naming an LNode's data by path (`SourceRef`, `ControlRef`, `ProcessEcho`, `LNodeDataRef`,
 `InputVar` / `OutputVar`) gets its uuid and, beside it, the data names a data reference by uuid carries: the
 data path is split between the data object and the data attribute against the data model of the
 logical node type the LNode names. When the names cannot be written (no exact split, no data
 object already there) the reference is left as read, without the uuid, and the import reports a
-`data-path-not-split` warning.
+`data-path-not-split` diagnostic.
 
 ---
 
@@ -311,7 +311,7 @@ Post-import XPath evaluation in phase 2 (afterImport), once all records are in t
 
 **Current safeguard:**
 
-When a VariableApplyTo with an XPath `element` value is encountered during import, an `unsupported-xpath-reference` warning is emitted. This ensures the edge case is visible rather than silently skipped.
+When a VariableApplyTo with an XPath `element` value is encountered during import, an `unsupported-xpath-reference` diagnostic is returned. This ensures the edge case is visible rather than silently skipped.
 
 ## Coverage summary
 

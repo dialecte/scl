@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Added
+
+- **`isSclImportDiagnostic(diagnostic)` narrows a diagnostic to the typed `SclImportDiagnostic`** (it checks `source: 'scl'` and the code), so a `switch` on `code` reads that code's `meta` and, for an incoherent reference, its `related`. `INCOHERENT_REFERENCE_RELATED` holds the two wordings of a related element (`uuidTarget`, `pathTarget`); the type `IncoherentReferenceRelated` is exported.
+
+### Changed
+
+- **Breaking: what the import has to say about a file comes back with that file, as diagnostics.** The import warnings were dropped by `@dialecte/core` before reaching the caller; each imported file's entry now carries them in `diagnostics` (`project.import(files)` entries, `project.importFile(file)`), `[]` when there is nothing to say. Each is a core `Diagnostic`: `code`, `severity`, `source: 'scl'`, `message`, `ref` (the element, and the attribute when it is about one), `related` and `meta`. `unresolved-reference`, `unsupported-xpath-reference`, `incoherent-reference` and `data-path-not-split` are `warning`s; `incoherent-path-names` and `derived-specification-naming`, a value written again on import, are `information`. The diagnostic of a reference points at its path attribute (`ref.attribute`); mapped data named by its uuid alone points at its uuid attribute, its `pathValue` that uuid. An `incoherent-reference` now names in `related` the element its uuid names, then the element its path names, each when the file holds it.
+- **Breaking: the import warning exports are renamed to diagnostics.** `SCL_IMPORT_WARNINGS` is `SCL_IMPORT_DIAGNOSTICS` (`source` + `codes`, each with `severity`, `family` and `message`), `SclImportWarningType` is `SclImportDiagnosticCode`, `SclImportWarning` is `SclImportDiagnostic`, and `UnresolvedReferenceWarning`, `UnsupportedXPathWarning`, `IncoherentReferenceWarning`, `DataPathNotSplitWarning`, `IncoherentPathNamesWarning`, `DerivedSpecificationNamingWarning` are the same names ending in `Diagnostic`. On a diagnostic, `type` is `code`, `recordId` is `ref.id`, `details.elementTag` is `ref.tagName`, `details.pathAttribute` is `ref.attribute`, and the rest of `details` is `meta`.
+- **Breaking:** requires `@dialecte/core` 0.7.0. The `Project` that `createSclProject` returns follows it: `project.import(files)` returns one entry per file (`{ status: 'imported', fileName, documentId, recordCount, diagnostics }` or `{ status: 'failed', fileName, error }`) and no longer rejects for one file; `project.importFile(file)` imports one file and returns it, or throws what failed (`PARSE_ERROR` for a malformed file); `project.close()` returns a promise. A caller that read `(await project.import([file]))[0].documentId` calls `project.importFile(file)`.
+
+### Fixed
+
+- **The references of an imported file are resolved against that file only.** The import kept what it collected (paths, pending references, LNode namings) in one state per project, emptied by hand at the end of each file; it is now one import session per file, created by core when the file is imported, so nothing of one file, a file that failed included, reaches another.
+
 ## [0.10.0] - 2026-10-19
 
 ### Added
