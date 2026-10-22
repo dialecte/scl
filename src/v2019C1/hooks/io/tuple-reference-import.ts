@@ -54,8 +54,6 @@ export function createTupleReferenceImport(): TupleReferenceImport {
 			if (uuids.length === 1)
 				updates.push({ recordId, attributes: [{ name: uuidAttribute, value: uuids[0] }] })
 		}
-		targetsByAddress.clear()
-		pendingFills.length = 0
 		return { updates }
 	}
 

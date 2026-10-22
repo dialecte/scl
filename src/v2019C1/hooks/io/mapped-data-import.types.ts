@@ -1,4 +1,13 @@
-import type { AnyRawRecord, ImportWarning, RecordPatch } from '@dialecte/core'
+import type {
+	IncoherentReferenceDiagnostic,
+	UnresolvedReferenceDiagnostic,
+} from '@/v2019C1/errors/import-diagnostics.types'
+import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
+
+/** What the resolution of the mapped data of a file says about it. */
+export type MappedDataImportDiagnostic =
+	| UnresolvedReferenceDiagnostic
+	| IncoherentReferenceDiagnostic
 
 /** A `DOS` / `SDS` / `DAS` seen during the import pass. */
 export type ImportedMappedDataNode = {
@@ -24,11 +33,12 @@ export type MappedDataImport = {
 	collect(params: { record: AnyRawRecord; ancestry: readonly AnyRawRecord[] }): void
 	/**
 	 * After the pass: the updates that store every `DOS` / `SDS` / `DAS` in canonical form,
-	 * and a warning per record whose implementation cannot be found in the file.
+	 * and a diagnostic per record whose implementation cannot be found in the file, or whose name and
+	 * uuid name two logical nodes.
 	 * `pathIndex`: element path -> uuid, as built by the import pass.
 	 */
 	resolve(params: { pathIndex: ReadonlyMap<string, string> }): Promise<{
 		updates: RecordPatch[]
-		warnings: ImportWarning[]
+		diagnostics: MappedDataImportDiagnostic[]
 	}>
 }

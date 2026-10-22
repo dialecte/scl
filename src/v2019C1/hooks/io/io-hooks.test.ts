@@ -1,57 +1,59 @@
-import { createSclIoHooks } from './io-hooks'
+import { createSclImportSession } from './io-hooks'
 
+import { createDiagnostic } from '@dialecte/core'
 import { describe, it, expect } from 'vitest'
 
 import { Scl, SCL_NAMESPACES } from '@/v2019C1/config'
+import { INCOHERENT_REFERENCE_RELATED, SCL_IMPORT_DIAGNOSTICS } from '@/v2019C1/errors'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
-import type { DerivedSpecificationNamingWarning } from '@/v2019C1'
+import type { SclImportDiagnostic } from '@/v2019C1'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 import type { AnyRawRecord } from '@dialecte/core'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-describe('createSclIoHooks', () => {
+describe('createSclImportSession', () => {
 	type TestCase = {
 		records: Array<{ tagName: Scl.ElementsOf; attributes?: Record<string, string> }>
 		expectedUpdates?: Array<{ attributes: Array<{ name: string; value: string }> }>
-		expectedWarnings?: Array<{ type: string }>
+		expectedDiagnostics?: Array<{ code: string }>
 		only?: boolean
 	}
 
 	const testCases: Record<string, TestCase> = {
-		'no records → 0 updates, 0 warnings': {
+		'no records → 0 updates, 0 diagnostics': {
 			records: [],
 		},
-		'target only, no reference → 0 updates, 0 warnings': {
+		'target only, no reference → 0 updates, 0 diagnostics': {
 			records: [{ tagName: 'Function', attributes: { name: 'F1', uuid: 'uuid-f1' } }],
 		},
-		'reference only, no indexed target → 0 updates, 1 warning': {
+		'reference only, no indexed target → 0 updates, 1 diagnostic': {
 			records: [{ tagName: 'FunctionRef', attributes: { function: 'F1' } }],
-			expectedWarnings: [{ type: 'unresolved-reference' }],
+			expectedDiagnostics: [{ code: 'unresolved-reference' }],
 		},
-		'target then reference with matching path → 1 update, 0 warnings': {
+		'target then reference with matching path → 1 update, 0 diagnostics': {
 			records: [
 				{ tagName: 'Function', attributes: { name: 'F1', uuid: 'uuid-f1' } },
 				{ tagName: 'FunctionRef', attributes: { function: 'F1' } },
 			],
 			expectedUpdates: [{ attributes: [{ name: 'functionUuid', value: 'uuid-f1' }] }],
 		},
-		'reference already has uuid attribute → 0 updates, 0 warnings': {
+		'reference already has uuid attribute → 0 updates, 0 diagnostics': {
 			records: [
 				{ tagName: 'Function', attributes: { name: 'F1', uuid: 'uuid-f1' } },
 				{ tagName: 'FunctionRef', attributes: { function: 'F1', functionUuid: 'uuid-f1' } },
 			],
 		},
-		'VariableApplyTo with XPath element → 0 updates, 1 warning': {
+		'VariableApplyTo with XPath element → 0 updates, 1 diagnostic': {
 			records: [
 				{
 					tagName: 'VariableApplyTo',
 					attributes: { element: './/LNode//LNodeSpecNaming', attribute: 'sLdInst' },
 				},
 			],
-			expectedWarnings: [{ type: 'unsupported-xpath-reference' }],
+			expectedDiagnostics: [{ code: 'unsupported-xpath-reference' }],
 		},
 	}
 
@@ -61,64 +63,60 @@ describe('createSclIoHooks', () => {
 
 	entries.forEach(([description, testCase]) => {
 		it(description, async () => {
-			const hooks = createSclIoHooks()
+			const session = createSclImportSession()
 
 			for (const { tagName, attributes } of testCase.records) {
-				hooks.beforeImportRecord!({
+				session.beforeImportRecord!({
 					record: makeRecord(tagName, attributes),
 					ancestry: [],
 				})
 			}
 
-			const first = await hooks.afterImport!()
-			expect(first.updates?.map((u) => ({ attributes: u.attributes })) ?? []).toEqual(
+			const result = await session.afterImport!()
+			expect(result.updates?.map((update) => ({ attributes: update.attributes })) ?? []).toEqual(
 				testCase.expectedUpdates ?? [],
 			)
-			expect(first.warnings?.map((w) => ({ type: w.type })) ?? []).toEqual(
-				testCase.expectedWarnings ?? [],
+			expect(result.diagnostics?.map((diagnostic) => ({ code: diagnostic.code })) ?? []).toEqual(
+				testCase.expectedDiagnostics ?? [],
 			)
 
-			// State is always cleared after afterImport
-			const second = await hooks.afterImport!()
-			expect(second.updates ?? []).toEqual([])
-			expect(second.warnings ?? []).toEqual([])
+			// A session is one file's: the next file's session holds nothing of it.
+			const next = await createSclImportSession().afterImport!()
+			expect(next.updates ?? []).toEqual([])
+			expect(next.diagnostics ?? []).toEqual([])
 		})
 	})
 
-	it('VariableApplyTo with XPath element → warning with full details and correct recordId', async () => {
-		const hooks = createSclIoHooks()
+	it('VariableApplyTo with XPath element → diagnostic on its path attribute, with its uuid attribute and value', async () => {
+		const session = createSclImportSession()
 		const record = makeRecord('VariableApplyTo', {
 			element: './/LNode//LNodeSpecNaming',
 			attribute: 'sLdInst',
 		})
 
-		hooks.beforeImportRecord!({ record, ancestry: [] })
+		session.beforeImportRecord!({ record, ancestry: [] })
 
-		const result = await hooks.afterImport!()
-		expect(result.warnings).toHaveLength(1)
-		const warning = result.warnings![0]
-		expect(warning.type).toBe('unsupported-xpath-reference')
-		expect(warning.recordId).toBe(record.id)
-		expect(warning.details).toEqual({
-			elementTag: 'VariableApplyTo',
-			pathAttribute: 'element',
-			uuidAttribute: 'elementUuid',
-			pathValue: './/LNode//LNodeSpecNaming',
-		})
+		const result = await session.afterImport!()
+		expect(result.diagnostics).toEqual([
+			createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'unsupported-xpath-reference', {
+				ref: { tagName: 'VariableApplyTo', id: record.id, attribute: 'element' },
+				meta: { uuidAttribute: 'elementUuid', pathValue: './/LNode//LNodeSpecNaming' },
+			}),
+		])
 	})
 
-	it('DOS with another DO name under a mapped LNode → uuid added, no warning', async () => {
-		const hooks = createSclIoHooks()
+	it('DOS with another DO name under a mapped LNode → uuid added, no diagnostic', async () => {
+		const session = createSclImportSession()
 		const lnode = makeRecord('LNode', { lnClass: 'PTOC', lnInst: '1', lnUuid: 'ptoc1-uuid' })
 		const dos = makeRecord('DOS', { name: 'Mod', mappedDoName: 'Health' })
 
-		hooks.beforeImportRecord!({ record: dos, ancestry: [lnode] })
-		hooks.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
-		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
-		hooks.beforeImportRecord!({ record: makeRecord('LN', { uuid: 'ptoc1-uuid' }), ancestry: [] })
+		session.beforeImportRecord!({ record: dos, ancestry: [lnode] })
+		session.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
+		session.beforeImportRecord!({ record: lnode, ancestry: [] })
+		session.beforeImportRecord!({ record: makeRecord('LN', { uuid: 'ptoc1-uuid' }), ancestry: [] })
 
-		const result = await hooks.afterImport!()
-		expect(result.warnings ?? []).toEqual([])
+		const result = await session.afterImport!()
+		expect(result.diagnostics ?? []).toEqual([])
 		expect(result.updates).toEqual([
 			{
 				recordId: dos.id,
@@ -130,25 +128,32 @@ describe('createSclIoHooks', () => {
 		])
 	})
 
-	it('DOS with an absolute reference to a logical node absent from the file → unresolved warning', async () => {
-		const hooks = createSclIoHooks()
+	it('DOS with an absolute reference to a logical node absent from the file → unresolved-reference on its name attribute', async () => {
+		const session = createSclImportSession()
 		const lnode = makeRecord('LNode', { lnClass: 'PTOC', lnInst: '1', lnUuid: 'ptoc1-uuid' })
 		const dos = makeRecord('DOS', { name: 'Op', mappedDoName: 'OTHER/LD0/GGIO9.Ind2' })
 
-		hooks.beforeImportRecord!({ record: dos, ancestry: [lnode] })
-		hooks.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
-		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
-		hooks.beforeImportRecord!({ record: makeRecord('LN', { uuid: 'ptoc1-uuid' }), ancestry: [] })
+		session.beforeImportRecord!({ record: dos, ancestry: [lnode] })
+		session.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
+		session.beforeImportRecord!({ record: lnode, ancestry: [] })
+		session.beforeImportRecord!({ record: makeRecord('LN', { uuid: 'ptoc1-uuid' }), ancestry: [] })
 
-		const result = await hooks.afterImport!()
+		const result = await session.afterImport!()
 		expect(result.updates ?? []).toEqual([])
-		expect(
-			result.warnings?.map((warning) => ({ type: warning.type, recordId: warning.recordId })),
-		).toEqual([{ type: 'unresolved-reference', recordId: dos.id }])
+		expect(result.diagnostics).toEqual([
+			createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'unresolved-reference', {
+				ref: { tagName: 'DOS', id: dos.id, attribute: 'mappedDoName' },
+				meta: {
+					uuidAttribute: 'mappedLnUuid',
+					pathValue: 'OTHER/LD0/GGIO9.Ind2',
+					triedKeys: [],
+				},
+			}),
+		])
 	})
 
-	it('DOS whose absolute name names another LN than its uuid → uuid wins, incoherent-reference warning', async () => {
-		const hooks = createSclIoHooks()
+	it('DOS whose absolute name names another LN than its uuid → uuid wins, incoherent-reference naming both LNs', async () => {
+		const session = createSclImportSession()
 		const lnode = makeRecord('LNode', { lnClass: 'PTOC', lnInst: '1', lnUuid: 'ptoc1-uuid' })
 		const dos = makeRecord('DOS', {
 			name: 'Op',
@@ -161,19 +166,15 @@ describe('createSclIoHooks', () => {
 		const ldevice = makeRecord('LDevice', { inst: 'LD0' })
 		const iedAncestry = [ied, accessPoint, server, ldevice]
 
-		hooks.beforeImportRecord!({ record: dos, ancestry: [lnode] })
-		hooks.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
-		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
-		hooks.beforeImportRecord!({
-			record: makeRecord('LN', { lnClass: 'PTOC', inst: '1', uuid: 'ptoc1-uuid' }),
-			ancestry: iedAncestry,
-		})
-		hooks.beforeImportRecord!({
-			record: makeRecord('LN', { lnClass: 'GGIO', inst: '1', uuid: 'ggio1-uuid' }),
-			ancestry: iedAncestry,
-		})
+		session.beforeImportRecord!({ record: dos, ancestry: [lnode] })
+		session.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
+		session.beforeImportRecord!({ record: lnode, ancestry: [] })
+		const ptoc = makeRecord('LN', { lnClass: 'PTOC', inst: '1', uuid: 'ptoc1-uuid' })
+		const ggio = makeRecord('LN', { lnClass: 'GGIO', inst: '1', uuid: 'ggio1-uuid' })
+		session.beforeImportRecord!({ record: ptoc, ancestry: iedAncestry })
+		session.beforeImportRecord!({ record: ggio, ancestry: iedAncestry })
 
-		const result = await hooks.afterImport!()
+		const result = await session.afterImport!()
 		expect(result.updates).toEqual([
 			{
 				recordId: dos.id,
@@ -183,13 +184,24 @@ describe('createSclIoHooks', () => {
 				],
 			},
 		])
-		expect(
-			result.warnings?.map((warning) => ({ type: warning.type, recordId: warning.recordId })),
-		).toEqual([{ type: 'incoherent-reference', recordId: dos.id }])
+		expect(result.diagnostics).toEqual([
+			createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'incoherent-reference', {
+				ref: { tagName: 'DOS', id: dos.id, attribute: 'mappedDoName' },
+				meta: {
+					uuidAttribute: 'mappedLnUuid',
+					pathValue: 'VENDOR/LD0/GGIO1.Ind2',
+					uuidValue: 'ptoc1-uuid',
+				},
+				related: [
+					{ ref: { tagName: 'LN', id: ptoc.id }, message: INCOHERENT_REFERENCE_RELATED.uuidTarget },
+					{ ref: { tagName: 'LN', id: ggio.id }, message: INCOHERENT_REFERENCE_RELATED.pathTarget },
+				],
+			}),
+		])
 	})
 
-	it('SourceRef whose extRefAddr names another ExtRef than its uuid, LNode mapped → intAddr alone written, incoherent-reference warning', async () => {
-		const hooks = createSclIoHooks()
+	it('SourceRef whose extRefAddr names no ExtRef, its uuid one, LNode mapped → intAddr alone written, incoherent-reference naming the ExtRef', async () => {
+		const session = createSclImportSession()
 		const lnode = makeRecord('LNode', {
 			iedName: 'IED1',
 			ldInst: 'LD0',
@@ -210,53 +222,66 @@ describe('createSclIoHooks', () => {
 		const ln = makeRecord('LN', { lnClass: 'XCBR', inst: '1', uuid: 'xcbr-uuid' })
 		const extRef = makeRecord('ExtRef', { intAddr: 'Trip', uuid: 'ext-ref-uuid' })
 
-		hooks.beforeImportRecord!({ record: sourceRef, ancestry: [lnode, inputs] })
-		hooks.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
-		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
-		hooks.beforeImportRecord!({
+		session.beforeImportRecord!({ record: sourceRef, ancestry: [lnode, inputs] })
+		session.beforeImportRecord!({ record: specNamingOf(lnode), ancestry: [lnode] })
+		session.beforeImportRecord!({ record: lnode, ancestry: [] })
+		session.beforeImportRecord!({
 			record: extRef,
 			ancestry: [ied, accessPoint, server, ldevice, ln, makeRecord('Inputs')],
 		})
 
-		const result = await hooks.afterImport!()
+		const result = await session.afterImport!()
 		expect(result.updates).toEqual([
 			{ recordId: sourceRef.id, attributes: [{ name: 'extRefAddr', value: 'Trip' }] },
 		])
-		expect(
-			result.warnings?.map((warning) => ({ type: warning.type, recordId: warning.recordId })),
-		).toEqual([{ type: 'incoherent-reference', recordId: sourceRef.id }])
+		expect(result.diagnostics).toEqual([
+			createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'incoherent-reference', {
+				ref: { tagName: 'SourceRef', id: sourceRef.id, attribute: 'extRefAddr' },
+				meta: {
+					uuidAttribute: 'extRefUuid',
+					pathValue: 'IED1/LD0/XCBR1.Other',
+					uuidValue: 'ext-ref-uuid',
+				},
+				related: [
+					{
+						ref: { tagName: 'ExtRef', id: extRef.id },
+						message: INCOHERENT_REFERENCE_RELATED.uuidTarget,
+					},
+				],
+			}),
+		])
 	})
 
 	it('Function indexed before FunctionRef → FunctionRef resolved with functionUuid', async () => {
-		const hooks = createSclIoHooks()
+		const session = createSclImportSession()
 		const refRecord = makeRecord('FunctionRef', { function: 'F1' })
 
-		hooks.beforeImportRecord!({
+		session.beforeImportRecord!({
 			record: makeRecord('Function', { name: 'F1', uuid: 'uuid-f1' }),
 			ancestry: [],
 		})
-		hooks.beforeImportRecord!({ record: refRecord, ancestry: [] })
+		session.beforeImportRecord!({ record: refRecord, ancestry: [] })
 
-		const result = await hooks.afterImport!()
+		const result = await session.afterImport!()
 		expect(result.updates).toHaveLength(1)
 		expect(result.updates?.[0].recordId).toBe(refRecord.id)
 		expect(result.updates?.[0].attributes).toEqual([{ name: 'functionUuid', value: 'uuid-f1' }])
 	})
 })
 
-describe('import warnings for a terminal', () => {
+describe('import diagnostics for a terminal', () => {
 	type TestCase = {
 		only?: boolean
 		terminal: Record<string, string>
 		nodePathName?: string
-		expectedWarnings: { type: string; details: Record<string, unknown> }[]
+		expectedDiagnostics: Pick<SclImportDiagnostic, 'code' | 'ref' | 'meta' | 'related'>[]
 	}
 
 	const L1 = '00000000-0000-4000-8000-000000000001'
 	const L2 = '00000000-0000-4000-8000-000000000002'
 
 	const testCases: Record<string, TestCase> = {
-		'path, names and uuid agreeing → no warning': {
+		'path, names and uuid agreeing → no diagnostic': {
 			terminal: {
 				connectivityNode: 'S1/VL1/B1/L1',
 				substationName: 'S1',
@@ -265,19 +290,19 @@ describe('import warnings for a terminal', () => {
 				cNodeName: 'L1',
 				cNodeUuid: L1,
 			},
-			expectedWarnings: [],
+			expectedDiagnostics: [],
 		},
-		'names left out → filled, no warning': {
+		'names left out → filled, no diagnostic': {
 			terminal: { connectivityNode: 'S1/VL1/B1/L1', cNodeName: '' },
-			expectedWarnings: [],
+			expectedDiagnostics: [],
 		},
-		'path naming no node → one unresolved-reference warning': {
+		'path naming no node → one unresolved-reference on the path attribute': {
 			terminal: { connectivityNode: 'S1/VL1/B1/L9', cNodeName: 'L9' },
-			expectedWarnings: [
+			expectedDiagnostics: [
 				{
-					type: 'unresolved-reference',
-					details: {
-						elementTag: 'Terminal',
+					code: 'unresolved-reference',
+					ref: { tagName: 'Terminal', id: 'terminal', attribute: 'connectivityNode' },
+					meta: {
 						uuidAttribute: 'cNodeUuid',
 						pathValue: 'S1/VL1/B1/L9',
 						triedKeys: ['S1/VL1/B1/L9'],
@@ -285,37 +310,42 @@ describe('import warnings for a terminal', () => {
 				},
 			],
 		},
-		'path naming the predefined grounded node, not declared → no warning': {
+		'path naming the predefined grounded node, not declared → no diagnostic': {
 			terminal: { connectivityNode: 'S1/VL1/B1/grounded', cNodeName: 'grounded' },
-			expectedWarnings: [],
+			expectedDiagnostics: [],
 		},
-		'path naming one node, uuid another → one incoherent-reference warning': {
+		'path naming one node, uuid another → one incoherent-reference naming both nodes': {
 			terminal: { connectivityNode: 'S1/VL1/B1/L1', cNodeName: 'L1', cNodeUuid: L2 },
-			expectedWarnings: [
+			expectedDiagnostics: [
 				{
-					type: 'incoherent-reference',
-					details: {
-						elementTag: 'Terminal',
-						pathAttribute: 'connectivityNode',
-						pathValue: 'S1/VL1/B1/L1',
-						uuidAttribute: 'cNodeUuid',
-						uuidValue: L2,
-					},
+					code: 'incoherent-reference',
+					ref: { tagName: 'Terminal', id: 'terminal', attribute: 'connectivityNode' },
+					meta: { uuidAttribute: 'cNodeUuid', pathValue: 'S1/VL1/B1/L1', uuidValue: L2 },
+					related: [
+						{
+							ref: { tagName: 'ConnectivityNode', id: 'node-l2' },
+							message: INCOHERENT_REFERENCE_RELATED.uuidTarget,
+						},
+						{
+							ref: { tagName: 'ConnectivityNode', id: 'node-l1' },
+							message: INCOHERENT_REFERENCE_RELATED.pathTarget,
+						},
+					],
 				},
 			],
 		},
-		'names of another node → one incoherent-path-names warning listing them': {
+		'names of another node → one incoherent-path-names listing them': {
 			terminal: {
 				connectivityNode: 'S1/VL1/B1/L1',
 				lineName: 'X',
 				bayName: 'B9',
 				cNodeName: 'L1',
 			},
-			expectedWarnings: [
+			expectedDiagnostics: [
 				{
-					type: 'incoherent-path-names',
-					details: {
-						elementTag: 'Terminal',
+					code: 'incoherent-path-names',
+					ref: { tagName: 'Terminal', id: 'terminal' },
+					meta: {
 						attributes: [
 							{ name: 'lineName', value: 'X', expected: undefined },
 							{ name: 'bayName', value: 'B9', expected: 'B1' },
@@ -324,14 +354,14 @@ describe('import warnings for a terminal', () => {
 				},
 			],
 		},
-		'node pathName that is not its position → one incoherent-path-names warning': {
+		'node pathName that is not its position → one incoherent-path-names on the node': {
 			terminal: { connectivityNode: 'S1/VL1/B1/L1', cNodeName: 'L1', cNodeUuid: L1 },
 			nodePathName: 'S0/VL0/B0/L1',
-			expectedWarnings: [
+			expectedDiagnostics: [
 				{
-					type: 'incoherent-path-names',
-					details: {
-						elementTag: 'ConnectivityNode',
+					code: 'incoherent-path-names',
+					ref: { tagName: 'ConnectivityNode', id: 'node-l1' },
+					meta: {
 						attributes: [{ name: 'pathName', value: 'S0/VL0/B0/L1', expected: 'S1/VL1/B1/L1' }],
 					},
 				},
@@ -345,33 +375,40 @@ describe('import warnings for a terminal', () => {
 
 	entries.forEach(([description, testCase]) => {
 		it(description, async () => {
-			const hooks = createSclIoHooks()
+			const session = createSclImportSession()
 			const substation = makeRecord('Substation', { name: 'S1' })
 			const voltageLevel = makeRecord('VoltageLevel', { name: 'VL1' })
 			const bay = makeRecord('Bay', { name: 'B1' })
 			const equipment = makeRecord('ConductingEquipment', { name: 'QA1', type: 'CBR' })
-			const terminal = makeRecord('Terminal', testCase.terminal)
+			const terminal = { ...makeRecord('Terminal', testCase.terminal), id: 'terminal' }
 			const nodes = [
-				makeRecord('ConnectivityNode', {
-					name: 'L1',
-					pathName: testCase.nodePathName ?? 'S1/VL1/B1/L1',
-					uuid: L1,
-				}),
-				makeRecord('ConnectivityNode', { name: 'L2', pathName: 'S1/VL1/B1/L2', uuid: L2 }),
+				{
+					...makeRecord('ConnectivityNode', {
+						name: 'L1',
+						pathName: testCase.nodePathName ?? 'S1/VL1/B1/L1',
+						uuid: L1,
+					}),
+					id: 'node-l1',
+				},
+				{
+					...makeRecord('ConnectivityNode', { name: 'L2', pathName: 'S1/VL1/B1/L2', uuid: L2 }),
+					id: 'node-l2',
+				},
 			]
 
-			hooks.beforeImportRecord!({
+			session.beforeImportRecord!({
 				record: terminal,
 				ancestry: [substation, voltageLevel, bay, equipment],
 			})
 			for (const node of nodes) {
-				hooks.beforeImportRecord!({ record: node, ancestry: [substation, voltageLevel, bay] })
+				session.beforeImportRecord!({ record: node, ancestry: [substation, voltageLevel, bay] })
 			}
 
-			const result = await hooks.afterImport!()
+			const result = await session.afterImport!()
 			expect(
-				result.warnings?.map((warning) => ({ type: warning.type, details: warning.details })) ?? [],
-			).toEqual(testCase.expectedWarnings)
+				result.diagnostics?.map(({ code, ref, meta, related }) => ({ code, ref, meta, related })) ??
+					[],
+			).toEqual(testCase.expectedDiagnostics)
 		})
 	})
 })
@@ -450,14 +487,14 @@ describe('import of the data names beside an LNode uuid written from a path', ()
 		}
 	}
 
-	/** The updates and warnings of a file whose LNode `PTRC1` (of type `lnType`) is named by a reference of the LNode `XCBR1`. */
+	/** The updates and diagnostics of a file whose LNode `PTRC1` (of type `lnType`) is named by a reference of the LNode `XCBR1`. */
 	async function importSignal(params: {
 		signal: { tagName: SignalTag; attributes: Record<string, string> }
 		lnType?: string
 		withDataTypes?: boolean
 	}) {
 		const { signal, lnType = 'PTRC_T', withDataTypes = true } = params
-		const hooks = createSclIoHooks()
+		const session = createSclImportSession()
 		const sender = makeRecord('LNode', {
 			iedName: 'None',
 			lnClass: 'PTRC',
@@ -468,19 +505,19 @@ describe('import of the data names beside an LNode uuid written from a path', ()
 		const holder = makeRecord('LNode', { iedName: 'None', lnClass: 'XCBR', lnInst: '1' })
 		const signalRecord = makeRecord(signal.tagName, signal.attributes)
 
-		hooks.beforeImportRecord!({ record: fn, ancestry: [substation] })
-		hooks.beforeImportRecord!({ record: sender, ancestry: [substation, fn] })
-		hooks.beforeImportRecord!({ record: holder, ancestry: [substation, fn] })
-		hooks.beforeImportRecord!({
+		session.beforeImportRecord!({ record: fn, ancestry: [substation] })
+		session.beforeImportRecord!({ record: sender, ancestry: [substation, fn] })
+		session.beforeImportRecord!({ record: holder, ancestry: [substation, fn] })
+		session.beforeImportRecord!({
 			record: signalRecord,
 			ancestry: ancestryOf({ tagName: signal.tagName, sender, holder }),
 		})
 		if (withDataTypes) {
-			for (const fed of dataTypeRecords()) hooks.beforeImportRecord!(fed)
+			for (const fed of dataTypeRecords()) session.beforeImportRecord!(fed)
 		}
-		const result = await hooks.afterImport!()
+		const result = await session.afterImport!()
 		return {
-			warnings: result.warnings ?? [],
+			diagnostics: result.diagnostics ?? [],
 			signalUpdates: result.updates?.filter((update) => update.recordId === signalRecord.id),
 			signalId: signalRecord.id,
 		}
@@ -520,7 +557,7 @@ describe('import of the data names beside an LNode uuid written from a path', ()
 					{ name: 'sourceDoName', value: 'PhV.phsA' },
 				],
 			},
-		'SourceRef naming a logical node only by its path → no uuid, one data-path-not-split warning': {
+		'SourceRef naming a logical node only by its path → no uuid, one data-path-not-split': {
 			signal: { tagName: 'SourceRef', attributes: { input: 'Trip', source: 'S1/F1/PTRC1' } },
 			notSplit: { pathAttribute: 'source', pathValue: 'S1/F1/PTRC1' },
 		},
@@ -574,7 +611,7 @@ describe('import of the data names beside an LNode uuid written from a path', ()
 					{ name: 'sourceDoName', value: 'PhV.phsA' },
 				],
 			},
-		'SourceRef with a data attribute name the path disagrees with and no data object name → no uuid, one data-path-not-split warning':
+		'SourceRef with a data attribute name the path disagrees with and no data object name → no uuid, one data-path-not-split':
 			{
 				signal: {
 					tagName: 'SourceRef',
@@ -586,7 +623,7 @@ describe('import of the data names beside an LNode uuid written from a path', ()
 				},
 				notSplit: { pathAttribute: 'source', pathValue: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
 			},
-		'SourceRef whose logical node type the file lacks → no uuid, one data-path-not-split warning': {
+		'SourceRef whose logical node type the file lacks → no uuid, one data-path-not-split': {
 			signal: {
 				tagName: 'SourceRef',
 				attributes: { input: 'Trip', source: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
@@ -594,7 +631,7 @@ describe('import of the data names beside an LNode uuid written from a path', ()
 			lnType: 'XCBR_T',
 			notSplit: { pathAttribute: 'source', pathValue: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
 		},
-		'SourceRef in a file with no data types → no uuid, one data-path-not-split warning': {
+		'SourceRef in a file with no data types → no uuid, one data-path-not-split': {
 			signal: {
 				tagName: 'SourceRef',
 				attributes: { input: 'Trip', source: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
@@ -602,7 +639,7 @@ describe('import of the data names beside an LNode uuid written from a path', ()
 			withDataTypes: false,
 			notSplit: { pathAttribute: 'source', pathValue: 'S1/F1/PTRC1.PhV.phsA.cVal.mag.f' },
 		},
-		'SourceRef whose path leaves the data model → no uuid, one data-path-not-split warning': {
+		'SourceRef whose path leaves the data model → no uuid, one data-path-not-split': {
 			signal: {
 				tagName: 'SourceRef',
 				attributes: { input: 'Trip', source: 'S1/F1/PTRC1.PhV.phsB.cVal' },
@@ -620,7 +657,7 @@ describe('import of the data names beside an LNode uuid written from a path', ()
 					{ name: 'controlledDoName', value: 'PhV.phsA' },
 				],
 			},
-		'ControlRef whose path reaches a data attribute → no uuid, one data-path-not-split warning': {
+		'ControlRef whose path reaches a data attribute → no uuid, one data-path-not-split': {
 			signal: {
 				tagName: 'ControlRef',
 				attributes: { output: 'Close', controlled: 'S1/F1/PTRC1.PhV.phsA.cVal' },
@@ -664,20 +701,23 @@ describe('import of the data names beside an LNode uuid written from a path', ()
 
 	for (const [description, testCase] of Object.entries(testCases)) {
 		it(description, async () => {
-			const { warnings, signalUpdates, signalId } = await importSignal(testCase)
+			const { diagnostics, signalUpdates, signalId } = await importSignal(testCase)
 			expect(signalUpdates).toEqual(
 				testCase.expectedAttributes
 					? [{ recordId: signalId, attributes: testCase.expectedAttributes }]
 					: [],
 			)
-			expect(warnings).toEqual(
+			expect(diagnostics).toEqual(
 				testCase.notSplit
 					? [
-							{
-								type: 'data-path-not-split',
-								recordId: signalId,
-								details: { elementTag: testCase.signal.tagName, ...testCase.notSplit },
-							},
+							createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'data-path-not-split', {
+								ref: {
+									tagName: testCase.signal.tagName,
+									id: signalId,
+									attribute: testCase.notSplit.pathAttribute,
+								},
+								meta: { pathValue: testCase.notSplit.pathValue },
+							}),
 						]
 					: [],
 			)
@@ -1091,44 +1131,34 @@ describe('import of an LNode without its LNodeSpecNaming', () => {
 	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
 })
 
-describe('import warning for a derived specified naming', () => {
-	it('an LNode bound to an IED without LNodeSpecNaming -> one derived-specification-naming warning carrying the naming it was given', async () => {
-		const hooks = createSclIoHooks()
+describe('import diagnostic for a derived specified naming', () => {
+	it('an LNode bound to an IED without LNodeSpecNaming -> one derived-specification-naming carrying the naming it was given', async () => {
+		const session = createSclImportSession()
 		const lnode = makeRecord('LNode', {
 			iedName: 'P1',
 			ldInst: 'LD0',
 			lnClass: 'PTOC',
 			lnInst: '2',
 		})
-		hooks.beforeImportRecord!({ record: lnode, ancestry: [] })
-		hooks.beforeImportRecord!({
+		session.beforeImportRecord!({ record: lnode, ancestry: [] })
+		session.beforeImportRecord!({
 			record: makeRecord('LNode', { iedName: 'None', lnClass: 'XCBR', lnInst: '1' }),
 			ancestry: [],
 		})
 
-		const result = await hooks.afterImport!()
-		const expected: Array<
-			Pick<DerivedSpecificationNamingWarning, 'type' | 'recordId' | 'details'>
-		> = [
-			{
-				type: 'derived-specification-naming',
-				recordId: lnode.id,
-				details: {
+		const result = await session.afterImport!()
+		expect(result.diagnostics).toEqual([
+			createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'derived-specification-naming', {
+				ref: { tagName: 'LNode', id: lnode.id },
+				meta: {
 					iedName: 'P1',
 					specifiedNaming: [
 						{ name: 'sLnClass', value: 'PTOC' },
 						{ name: 'sLnInst', value: '2' },
 					],
 				},
-			},
-		]
-		expect(
-			result.warnings?.map((warning) => ({
-				type: warning.type,
-				recordId: warning.recordId,
-				details: warning.details,
-			})),
-		).toEqual(expected)
+			}),
+		])
 	})
 })
 

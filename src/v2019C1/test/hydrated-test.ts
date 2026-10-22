@@ -19,14 +19,15 @@ import {
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { SCL_EXTENSION_MODULES } from '@/v2019C1/extensions'
-import { HOOKS, createSclIoHooks } from '@/v2019C1/hooks'
+import { HOOKS, createSclImportSession } from '@/v2019C1/hooks'
 
 import type { Config } from '@/v2019C1/config/dialecte.config'
 
 type SclModules = typeof SCL_EXTENSION_MODULES
 
-// All hooks (io + record) provided on the Project instance, mirroring createSclProject.
-const SCL_HOOKS = { ...createSclIoHooks(), ...HOOKS }
+// All hooks (import session + record) provided on the Project instance, mirroring createSclProject.
+// Stateless: core creates one import session per file, so no project or test shares import state.
+const SCL_HOOKS = { createImportSession: createSclImportSession, ...HOOKS }
 
 export const XMLNS_SCL_NAMESPACE = `xmlns="${SCL_DIALECTE_CONFIG.namespaces.default.uri}"`
 export const XMLNS_SCL_6_100_NAMESPACE = `xmlns:${SCL_DIALECTE_CONFIG.namespaces.v2019C1.prefix}="${SCL_DIALECTE_CONFIG.namespaces.v2019C1.uri}"`

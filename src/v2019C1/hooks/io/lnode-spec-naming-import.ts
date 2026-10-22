@@ -1,9 +1,10 @@
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { specifiedNamingOf } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 import { readAttribute, readAttributes } from '@/v2019C1/helpers'
+import { derivedSpecificationNamingDiagnostic } from '@/v2019C1/hooks/io/import-diagnostic-builders'
 
-import type { DerivedSpecificationNamingWarning } from './io-hooks.types'
 import type { SpecNamingImport } from './lnode-spec-naming-import.types'
+import type { DerivedSpecificationNamingDiagnostic } from '@/v2019C1/errors/import-diagnostics.types'
 import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
 
 /**
@@ -41,7 +42,7 @@ export function createSpecNamingImport(): SpecNamingImport {
 	function resolve(): ReturnType<SpecNamingImport['resolve']> {
 		const creates: AnyRawRecord[] = []
 		const updates: RecordPatch[] = []
-		const warnings: DerivedSpecificationNamingWarning[] = []
+		const diagnostics: DerivedSpecificationNamingDiagnostic[] = []
 
 		for (const lnode of lnodes.values()) {
 			if (namings.has(lnode.id)) continue
@@ -68,22 +69,19 @@ export function createSpecNamingImport(): SpecNamingImport {
 				updates.push({ recordId: lnode.id, children: [childRef(holder)] })
 			}
 			if (derived) {
-				warnings.push({
-					type: 'derived-specification-naming',
-					recordId: lnode.id,
-					details: {
-						iedName: readAttribute({ record: lnode, name: 'iedName', defaults: 'none' }),
-						specifiedNaming: attributes,
-					},
-				})
+				diagnostics.push(
+					derivedSpecificationNamingDiagnostic({
+						ref: { tagName: lnode.tagName, id: lnode.id },
+						meta: {
+							iedName: readAttribute({ record: lnode, name: 'iedName', defaults: 'none' }),
+							specifiedNaming: attributes,
+						},
+					}),
+				)
 			}
 		}
 
-		const resolved = new Map(namings)
-		lnodes.clear()
-		privateByLnode.clear()
-		namings.clear()
-		return { namings: resolved, creates, updates, warnings }
+		return { namings, creates, updates, diagnostics }
 	}
 
 	return { collect, resolve }

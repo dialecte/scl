@@ -25,6 +25,14 @@ import {
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { readAttribute, readAttributes } from '@/v2019C1/helpers'
+import {
+	dataPathNotSplitDiagnostic,
+	incoherentPathNamesDiagnostic,
+	incoherentReferenceDiagnostic,
+	incoherentReferenceRelated,
+	unresolvedReferenceDiagnostic,
+	unsupportedXPathDiagnostic,
+} from '@/v2019C1/hooks/io/import-diagnostic-builders'
 import { createSpecNamingImport } from '@/v2019C1/hooks/io/lnode-spec-naming-import'
 import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
 import { createTupleReferenceImport } from '@/v2019C1/hooks/io/tuple-reference-import'
@@ -36,8 +44,12 @@ import type {
 	ImportPathIndex,
 	PendingPathFill,
 	PendingResolution,
-	UnsupportedXPathWarning,
 } from './io-hooks.types'
+import type {
+	DiagnosticAttributeRef,
+	SclImportDiagnostic,
+	UnsupportedXPathDiagnostic,
+} from '@/v2019C1/errors/import-diagnostics.types'
 import type { DataTypes } from '@/v2019C1/extensions/data-model/query/data-types.types'
 import type { DerivedAttributeValue, ReferencePair } from '@/v2019C1/extensions/reference'
 import type {
@@ -45,17 +57,12 @@ import type {
 	PathSegmentWithRef,
 	ReferrerContext,
 } from '@/v2019C1/extensions/reference/query/build'
-import type {
-	AnyRawRecord,
-	IOHooks,
-	AfterImportResult,
-	ImportWarning,
-	RecordPatch,
-} from '@dialecte/core'
+import type { AfterImportResult, AnyRawRecord, ImportSession, RecordPatch } from '@dialecte/core'
 
 /**
- * Creates SCL IO hooks for UUID reference resolution.
- * The import pipeline is two-pass:
+ * Creates the import session of one SCL file: UUID reference resolution, and what the import has
+ * to say about the file. Core creates one per file imported, so what it collects is that file's
+ * only and nothing is reset by hand. The import is two-pass:
  *
  * **Pass 1 — `beforeImportRecord`** (called once per record, in document order):
  *
@@ -91,20 +98,20 @@ import type {
  * The import pipeline bulk-applies these updates, so the stored `FunctionRef` record
  * ends up with both `function="S1/Bay1/VoltLevel1/Fn1"` and `functionUuid="abc-123"`.
  *
- * Unresolvable references (path not in index) produce an `UnresolvedReferenceWarning`
+ * Unresolvable references (path not in index) produce an `unresolved-reference` diagnostic
  * instead of an update.
  *
  */
-export function createSclIoHooks(): IOHooks {
+export function createSclImportSession(): ImportSession<SclImportDiagnostic> {
 	const targets: CollectedTarget[] = []
 	const pendingResolutions: PendingResolution[] = []
 	const pendingPathFills: PendingPathFill[] = []
-	const xpathWarnings: UnsupportedXPathWarning[] = []
+	const xpathDiagnostics: UnsupportedXPathDiagnostic[] = []
 	const ownPathElements: CollectedElement[] = []
-	let mappedDataImport = createMappedDataImport()
-	let specNamingImport = createSpecNamingImport()
+	const mappedDataImport = createMappedDataImport()
+	const specNamingImport = createSpecNamingImport()
 	const tupleReferenceImport = createTupleReferenceImport()
-	let dataTypeIndex = createDataTypeIndex()
+	const dataTypeIndex = createDataTypeIndex()
 
 	function beforeImportRecord(params: {
 		record: AnyRawRecord
@@ -177,16 +184,12 @@ export function createSclIoHooks(): IOHooks {
 
 		if (pair.resolution === RESOLUTION_TYPE.unsupported) {
 			if (!uuidValue) {
-				xpathWarnings.push({
-					type: 'unsupported-xpath-reference',
-					recordId: record.id,
-					details: {
-						elementTag: record.tagName,
-						pathAttribute: pair.attribute.path,
-						uuidAttribute: pair.attribute.uuid,
-						pathValue,
-					},
-				})
+				xpathDiagnostics.push(
+					unsupportedXPathDiagnostic({
+						ref: { tagName: record.tagName, id: record.id, attribute: pair.attribute.path },
+						meta: { uuidAttribute: pair.attribute.uuid, pathValue },
+					}),
+				)
 			}
 			return
 		}
@@ -207,9 +210,9 @@ export function createSclIoHooks(): IOHooks {
 		})
 	}
 
-	async function afterImport(): Promise<AfterImportResult> {
+	async function afterImport(): Promise<AfterImportResult<SclImportDiagnostic>> {
 		const updates: RecordPatch[] = []
-		const warnings: ImportWarning[] = [...xpathWarnings]
+		const diagnostics: SclImportDiagnostic[] = [...xpathDiagnostics]
 
 		const specNaming = specNamingImport.resolve()
 		const index = buildImportPathIndex({ targets, specNamings: specNaming.namings })
@@ -218,7 +221,7 @@ export function createSclIoHooks(): IOHooks {
 		for (const fill of pendingPathFills) {
 			const outcome = fillPath({ fill, index, specNamings: specNaming.namings })
 			if (outcome.update) updates.push(outcome.update)
-			warnings.push(...outcome.warnings)
+			diagnostics.push(...outcome.diagnostics)
 		}
 
 		for (const pending of pendingResolutions) {
@@ -229,36 +232,23 @@ export function createSclIoHooks(): IOHooks {
 				dataTypes,
 			})
 			if (outcome.update) updates.push(outcome.update)
-			warnings.push(...outcome.warnings)
+			diagnostics.push(...outcome.diagnostics)
 		}
 
 		for (const element of ownPathElements) {
 			const outcome = ownPathAttributesOf({ element, specNamings: specNaming.namings })
 			if (outcome.update) updates.push(outcome.update)
-			warnings.push(...outcome.warnings)
+			diagnostics.push(...outcome.diagnostics)
 		}
 
 		const mappedData = await mappedDataImport.resolve({ pathIndex: index.byPath })
 		updates.push(...mappedData.updates)
-		warnings.push(...mappedData.warnings)
+		diagnostics.push(...mappedData.diagnostics)
 		updates.push(...specNaming.updates)
-		warnings.push(...specNaming.warnings)
+		diagnostics.push(...specNaming.diagnostics)
 		updates.push(...tupleReferenceImport.resolve().updates)
 
-		mappedDataImport = createMappedDataImport()
-		specNamingImport = createSpecNamingImport()
-		dataTypeIndex = createDataTypeIndex()
-		targets.length = 0
-		pendingResolutions.length = 0
-		pendingPathFills.length = 0
-		ownPathElements.length = 0
-		xpathWarnings.length = 0
-
-		return {
-			creates: specNaming.creates,
-			updates,
-			warnings: warnings.length > 0 ? warnings : undefined,
-		}
+		return { creates: specNaming.creates, updates, diagnostics }
 	}
 
 	return { beforeImportRecord, afterImport }
@@ -273,11 +263,11 @@ function fillPath(params: {
 	fill: PendingPathFill
 	index: ImportPathIndex
 	specNamings: ReadonlyMap<string, AnyRawRecord>
-}): { update?: RecordPatch; warnings: ImportWarning[] } {
+}): { update?: RecordPatch; diagnostics: SclImportDiagnostic[] } {
 	const { fill, index, specNamings } = params
 	const target = index.targetsByUuid.get(fill.uuidValue)
 	if (!target || !(fill.pair.target as readonly string[]).includes(target.tagName)) {
-		return { warnings: [] }
+		return { diagnostics: [] }
 	}
 	const path = composeReferencePath({
 		pair: fill.pair,
@@ -288,7 +278,7 @@ function fillPath(params: {
 			: undefined,
 		referrerContext: referrerContextFromAncestry({ pair: fill.pair, ancestry: fill.ancestry }),
 	})
-	if (!path) return { warnings: [] }
+	if (!path) return { diagnostics: [] }
 	const changes = derivedChangesOf({
 		tagName: fill.elementTag,
 		pair: fill.pair,
@@ -301,7 +291,7 @@ function fillPath(params: {
 			attributes: [{ name: fill.pair.attribute.path, value: path }, ...changes.attributes],
 			removeAttributes: changes.removeAttributes,
 		}),
-		warnings: incoherentPathNamesWarnings({
+		diagnostics: incoherentPathNamesDiagnostics({
 			recordId: fill.recordId,
 			elementTag: fill.elementTag,
 			changes,
@@ -316,12 +306,12 @@ function fillPath(params: {
 function ownPathAttributesOf(params: {
 	element: CollectedElement
 	specNamings: ReadonlyMap<string, AnyRawRecord>
-}): { update?: RecordPatch; warnings: ImportWarning[] } {
+}): { update?: RecordPatch; diagnostics: SclImportDiagnostic[] } {
 	const { element, specNamings } = params
 	const { record, ancestry } = element
 	const derived = derivedAttributesFollowing({ tagName: record.tagName, follows: 'self' })
 	const ownPath = buildPathFromAncestry({ record, ancestry, specNamings })
-	if (!derived || !ownPath) return { warnings: [] }
+	if (!derived || !ownPath) return { diagnostics: [] }
 
 	const changes = attributeChangesOf({
 		values: composeDerivedAttributes({ derived, sourcePath: ownPath }),
@@ -329,7 +319,7 @@ function ownPathAttributesOf(params: {
 	})
 	return {
 		update: patchFrom({ recordId: record.id, ...changes }),
-		warnings: incoherentPathNamesWarnings({
+		diagnostics: incoherentPathNamesDiagnostics({
 			recordId: record.id,
 			elementTag: record.tagName,
 			changes,
@@ -350,13 +340,13 @@ function resolvePending(params: {
 	index: ImportPathIndex
 	specNamings: ReadonlyMap<string, AnyRawRecord>
 	dataTypes: DataTypes
-}): { update?: RecordPatch; warnings: ImportWarning[] } {
+}): { update?: RecordPatch; diagnostics: SclImportDiagnostic[] } {
 	const { pending, index, specNamings, dataTypes } = params
 	const scoped = isFunctionScoped(pending.pair)
 	const functionBase = scoped
 		? functionBaseOfReferrer({ ancestry: pending.ancestry, index })
 		: undefined
-	if (scoped && functionBase === undefined) return { warnings: [] }
+	if (scoped && functionBase === undefined) return { diagnostics: [] }
 	const parsed = parseReferencePath({
 		resolution: pending.pair.resolution,
 		pathAttribute: pending.pair.attribute.path,
@@ -365,7 +355,7 @@ function resolvePending(params: {
 		specNamings,
 		functionBase,
 	})
-	if (!parsed) return { warnings: [] }
+	if (!parsed) return { diagnostics: [] }
 
 	const triedKeys = [parsed.lookupKey, ...(parsed.fallbackLookupKeys ?? [])]
 	const matchedKey = triedKeys.find((key) => index.byPath.has(key))
@@ -381,25 +371,23 @@ function resolvePending(params: {
 			uuid: pending.uuidValue,
 			index,
 			specNamings,
-			pathNamesIt: resolvedUuid === pending.uuidValue,
+			pathUuid: resolvedUuid,
 			formerForm,
 		})
 	}
 
 	if (!resolvedUuid || !matchedKey) {
-		if (namesUndeclaredGroundedNode(pending)) return { warnings: [] }
+		if (namesUndeclaredGroundedNode(pending)) return { diagnostics: [] }
 		return {
-			warnings: [
-				{
-					type: 'unresolved-reference',
-					recordId: pending.recordId,
-					details: {
-						elementTag: pending.elementTag,
+			diagnostics: [
+				unresolvedReferenceDiagnostic({
+					ref: referenceRefOf(pending),
+					meta: {
 						uuidAttribute: pending.pair.attribute.uuid,
 						pathValue: pending.pathValue,
 						triedKeys,
 					},
-				},
+				}),
 			],
 		}
 	}
@@ -410,7 +398,16 @@ function resolvePending(params: {
 		lnType: index.targetsByUuid.get(resolvedUuid)?.lnType,
 		dataTypes,
 	})
-	if (dataNames === undefined) return { warnings: [dataPathNotSplitWarning(pending)] }
+	if (dataNames === undefined) {
+		return {
+			diagnostics: [
+				dataPathNotSplitDiagnostic({
+					ref: referenceRefOf(pending),
+					meta: { pathValue: pending.pathValue },
+				}),
+			],
+		}
+	}
 
 	const rewrite = pending.alwaysStandardize || formerForm
 	return patchOf({
@@ -462,69 +459,69 @@ function dataNamesOfPath(params: {
 	]
 }
 
-/** A reference whose LNode path cannot be given the data-object name a data reference by uuid carries: left as read. */
-function dataPathNotSplitWarning(pending: PendingResolution): ImportWarning {
+/** A reference written with a path, and its path attribute: what a diagnostic about it points at. */
+function referenceRefOf(pending: PendingResolution): DiagnosticAttributeRef {
 	return {
-		type: 'data-path-not-split',
-		recordId: pending.recordId,
-		details: {
-			elementTag: pending.elementTag,
-			pathAttribute: pending.pair.attribute.path,
-			pathValue: pending.pathValue,
-		},
+		tagName: pending.elementTag,
+		id: pending.recordId,
+		attribute: pending.pair.attribute.path,
 	}
 }
 
 /**
  * A reference the file gives both a path and a uuid. When the path names the element the uuid
  * names, only a former path is written again. When it names another element, or none, the uuid
- * wins: the path is written from the element the uuid names, and the disagreement is reported. A
- * uuid naming no element of the file (an element of another file) is kept as read.
+ * wins: the path is written from the element the uuid names, and the disagreement is reported with
+ * the elements involved. A uuid naming no element of the file (an element of another file) is kept
+ * as read. `pathUuid` is the uuid of the element the path names, when the file holds one.
  */
 function resolveWithUuid(params: {
 	pending: PendingResolution
 	uuid: string
 	index: ImportPathIndex
 	specNamings: ReadonlyMap<string, AnyRawRecord>
-	pathNamesIt: boolean
+	pathUuid: string | undefined
 	formerForm: boolean
-}): { update?: RecordPatch; warnings: ImportWarning[] } {
-	const { pending, uuid, index, specNamings, pathNamesIt, formerForm } = params
-	if (pathNamesIt) {
+}): { update?: RecordPatch; diagnostics: SclImportDiagnostic[] } {
+	const { pending, uuid, index, specNamings, pathUuid, formerForm } = params
+	if (pathUuid === uuid) {
 		const standard = formerForm ? standardPathOf({ pending, index, uuid, specNamings }) : []
 		return patchOf({ pending, index, uuid, attributes: standard })
 	}
 
 	const target = index.targetsByUuid.get(uuid)
 	if (!target || !(pending.pair.target as readonly string[]).includes(target.tagName)) {
-		return { warnings: [] }
+		return { diagnostics: [] }
 	}
 	// a path that cannot be written from the element the uuid names (outside the context a local
 	// name is read in) is kept as read
 	const standard = standardPathOf({ pending, index, uuid, specNamings })
-	if (standard.length === 0) return { warnings: [] }
+	if (standard.length === 0) return { diagnostics: [] }
 	const outcome = patchOf({ pending, index, uuid, attributes: standard })
-	return { update: outcome.update, warnings: [incoherentReferenceWarning(pending)] }
+	const pathTarget = pathUuid ? index.targetsByUuid.get(pathUuid) : undefined
+	return {
+		update: outcome.update,
+		diagnostics: [
+			incoherentReferenceDiagnostic({
+				ref: referenceRefOf(pending),
+				meta: {
+					uuidAttribute: pending.pair.attribute.uuid,
+					pathValue: pending.pathValue,
+					uuidValue: uuid,
+				},
+				related: incoherentReferenceRelated({
+					uuidTarget: { tagName: target.tagName, id: target.recordId },
+					pathTarget: pathTarget && { tagName: pathTarget.tagName, id: pathTarget.recordId },
+				}),
+			}),
+		],
+	}
 }
 
 /** A terminal naming the predefined grounded node, which a file need not declare. */
 function namesUndeclaredGroundedNode(pending: PendingResolution): boolean {
 	const targetsNode = (pending.pair.target as readonly string[]).includes('ConnectivityNode')
 	return targetsNode && pending.pathValue.split('/').at(-1) === GROUNDED_CONNECTIVITY_NODE_NAME
-}
-
-function incoherentReferenceWarning(pending: PendingResolution): ImportWarning {
-	return {
-		type: 'incoherent-reference',
-		recordId: pending.recordId,
-		details: {
-			elementTag: pending.elementTag,
-			pathAttribute: pending.pair.attribute.path,
-			pathValue: pending.pathValue,
-			uuidAttribute: pending.pair.attribute.uuid,
-			uuidValue: pending.uuidValue,
-		},
-	}
 }
 
 /**
@@ -536,7 +533,7 @@ function patchOf(params: {
 	index: ImportPathIndex
 	uuid: string
 	attributes: readonly { name: string; value: string }[]
-}): { update?: RecordPatch; warnings: ImportWarning[] } {
+}): { update?: RecordPatch; diagnostics: SclImportDiagnostic[] } {
 	const { pending, index, uuid } = params
 	const target = index.targetsByUuid.get(uuid)
 	const changes = target
@@ -547,8 +544,8 @@ function patchOf(params: {
 				referenceAttributes: pending.referenceAttributes,
 			})
 		: undefined
-	const warnings = changes
-		? incoherentPathNamesWarnings({
+	const diagnostics = changes
+		? incoherentPathNamesDiagnostics({
 				recordId: pending.recordId,
 				elementTag: pending.elementTag,
 				changes,
@@ -559,7 +556,7 @@ function patchOf(params: {
 		attributes: [...params.attributes, ...(changes?.attributes ?? [])],
 		removeAttributes: changes?.removeAttributes ?? [],
 	})
-	return { update, warnings }
+	return { update, diagnostics }
 }
 
 /** A patch setting `attributes` and removing `removeAttributes`, or none when both are empty. */
@@ -616,20 +613,19 @@ function attributeChangesOf(params: {
 	return changes
 }
 
-/** The warning for attributes written from a path that the file gave other values. */
-function incoherentPathNamesWarnings(params: {
+/** The diagnostic for attributes written from a path that the file gave other values. */
+function incoherentPathNamesDiagnostics(params: {
 	recordId: string
 	elementTag: string
 	changes: AttributeChanges
-}): ImportWarning[] {
+}): SclImportDiagnostic[] {
 	const { recordId, elementTag, changes } = params
 	if (changes.incoherent.length === 0) return []
 	return [
-		{
-			type: 'incoherent-path-names',
-			recordId,
-			details: { elementTag, attributes: changes.incoherent },
-		},
+		incoherentPathNamesDiagnostic({
+			ref: { tagName: elementTag, id: recordId },
+			meta: { attributes: changes.incoherent },
+		}),
 	]
 }
 

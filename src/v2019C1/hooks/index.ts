@@ -21,5 +21,5 @@ export const HOOKS: Scl.TransactionHooks = {
 	beforeCommit,
 }
 
-// Re-exported so createSclProject can build fresh (stateful) io hooks per project.
-export { createSclIoHooks } from './io'
+// Re-exported so createSclProject hands core the factory of the import session, one per file.
+export { createSclImportSession } from './io'
