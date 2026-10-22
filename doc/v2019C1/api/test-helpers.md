@@ -518,6 +518,39 @@ assertNoNewSclOutputViolations({
 })
 ```
 
+## Mutation testing of this package
+
+This package's own tests are mutation-tested (StrykerJS): each change of the code a test should notice is made one at
+a time, and the tests that reach it run. Two tiers, run from the package root:
+
+```sh
+npm run mutants:fast -- src/v2019C1/extensions/lifecycle/apply/apply.ts src/v2019C1/extensions/reference/transaction/write-provenance.ts:9-30
+npm run mutants:fast -- --diff main          # the lines changed since main, the new source files whole
+npm run mutants:full                          # the browser tier on what the fast tier left
+npm run mutants -- --diff main --force        # both in turn, every mutant tested again
+npm run test:mutants                          # the tests of the gate itself
+```
+
+- **fast** runs every unit test in node (the `mutation` vitest project: jsdom for the XML parser and serializer, the
+  `xpath` package for XPath, `fake-indexeddb` for the store, the output check on). StrykerJS's vitest runner runs, for
+  each mutant, only the tests that reach it, in workers it keeps warm; the test files of a worker share their
+  modules, so a state one test file leaves in a module (a cache, the store) is seen by the next: a test that depends
+  on such a state can make a kill the browser would not. A mutant that timed out runs again alone, with a longer limit: it stays a timeout only when it times out
+  again. Without `--force` the results of a mutant whose code and tests did not change are taken from the last run;
+  a change elsewhere (another source file, the vitest config, the node stand-ins, a dependency) is not seen, so the
+  run before a commit takes `--force`.
+- **full** runs the browser `unit` project, the reference, on each survivor the records do not list, at its location
+  (with the mutants nested in it). A mutant either tier kills is killed. It refuses to run when a mutated file changed
+  since the fast run. The test files the node stand-ins cannot carry are listed with their reason in
+  `MUTATION_BROWSER_ONLY_TESTS` (`scripts/mutants/mutants.constants.ts`): only the full tier runs them.
+
+Every survivor is either killed by a new test or recorded in `scripts/mutants/equivalent-mutants.json`, with the reason
+no output can differ. The gate fails on a survivor of the run the records do not list with a reason, and on a recorded
+mutant the run killed (or, in a file mutated whole, no longer finds). `--record` writes the new survivors with an empty
+reason to fill, and drops those stale records. A record is keyed by what the mutant changed (file, mutator, original
+code, replacement, the text of its line), so moving a line keeps it; a second identical line is numbered. The reports
+go to `.tmp/stryker/` (ignored).
+
 ---
 
 ## SclTest type namespace
