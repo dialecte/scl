@@ -1,0 +1,19 @@
+{
+	"$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+	"testRunner": "command",
+	"commandRunner": {
+		"command": "npx vitest run --project unit --bail=1 --maxWorkers=2"
+	},
+	"coverageAnalysis": "off",
+	"mutate": [],
+	"reporters": ["progress", "json"],
+	"jsonReporter": {
+		"fileName": ".tmp/stryker/report-full.json"
+	},
+	"ignorePatterns": [".tmp", "dist", "doc", ".vitepress"],
+	"tempDirName": ".tmp/stryker-full-tmp",
+	"cleanTempDir": "always",
+	"concurrency": 1,
+	"timeoutMS": 30000,
+	"disableTypeChecks": false
+}
