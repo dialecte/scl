@@ -207,3 +207,133 @@ describe('an LNode always has its LNodeSpecNaming', () => {
 		},
 	})
 })
+
+const relationsXml = (privateContent: string) => /* xml */ `
+	<SCL ${ns} ${id}="root">
+		<Substation ${id}="substation" name="S1">
+			<Bay ${id}="bay" name="B1">
+				<ConductingEquipment ${id}="equipment" name="CB1" type="CBR" uuid="uuid-equipment" />
+			</Bay>
+			<Function ${id}="function" name="F1">
+				<Private ${id}="private" type="eIEC61850-6-100">
+					${privateContent}
+				</Private>
+			</Function>
+			<eIEC61850-6-100:Application ${id}="application" name="A1">
+				<eIEC61850-6-100:FunctionRole ${id}="role" name="R1">
+					<eIEC61850-6-100:FunctionRoleContent ${id}="content">
+						<eIEC61850-6-100:PowerSystemRelationRef ${id}="relation-ref" powerSystemRelationUuid="uuid-psr1" />
+					</eIEC61850-6-100:FunctionRoleContent>
+				</eIEC61850-6-100:FunctionRole>
+			</eIEC61850-6-100:Application>
+		</Substation>
+	</SCL>
+`
+
+const twoRelations = /* xml */ `
+	<eIEC61850-6-100:PowerSystemRelations ${id}="relations">
+		<eIEC61850-6-100:PowerSystemRelation ${id}="psr1" name="PSR1" uuid="uuid-psr1" relationUuid="uuid-equipment" />
+		<eIEC61850-6-100:PowerSystemRelation ${id}="psr2" name="PSR2" uuid="uuid-psr2" />
+	</eIEC61850-6-100:PowerSystemRelations>
+`
+
+const oneRelation = /* xml */ `
+	<eIEC61850-6-100:PowerSystemRelations ${id}="relations">
+		<eIEC61850-6-100:PowerSystemRelation ${id}="psr1" name="PSR1" uuid="uuid-psr1" relationUuid="uuid-equipment" />
+	</eIEC61850-6-100:PowerSystemRelations>
+`
+
+describe('the last PowerSystemRelation deleted takes its empty containers with it', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		act: (document: Core.Document<Config>) => Promise<void>
+	}
+
+	const deleteRecords =
+		(...refs: Scl.Ref<Scl.ElementsOf>[]) =>
+		async (document: Core.Document<Config>) => {
+			await document.transaction(async (tx) => {
+				for (const ref of refs) await tx.delete(ref)
+			})
+		}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'the only relation is deleted -> container and Private are gone, its reference too': {
+			sourceXml: relationsXml(oneRelation),
+			act: deleteRecords({ tagName: 'PowerSystemRelation', id: 'psr1' }),
+			unexpectedQueries: [
+				'//v2019C1:PowerSystemRelations',
+				'//v2019C1:PowerSystemRelation',
+				'//default:Function[@name="F1"]/default:Private',
+				'//v2019C1:PowerSystemRelationRef',
+			],
+			expectedQueries: ['//default:Function[@name="F1"]'],
+		},
+		'one of two relations is deleted -> container and sibling stay': {
+			sourceXml: relationsXml(twoRelations),
+			act: deleteRecords({ tagName: 'PowerSystemRelation', id: 'psr1' }),
+			expectedQueries: ['//v2019C1:PowerSystemRelations/v2019C1:PowerSystemRelation[@name="PSR2"]'],
+			unexpectedQueries: ['//v2019C1:PowerSystemRelation[@name="PSR1"]'],
+		},
+		'both relations are deleted in one transaction -> container and Private are gone': {
+			sourceXml: relationsXml(twoRelations),
+			act: deleteRecords(
+				{ tagName: 'PowerSystemRelation', id: 'psr1' },
+				{ tagName: 'PowerSystemRelation', id: 'psr2' },
+			),
+			unexpectedQueries: [
+				'//v2019C1:PowerSystemRelations',
+				'//default:Function[@name="F1"]/default:Private',
+			],
+			expectedQueries: ['//default:Function[@name="F1"]'],
+		},
+		'the Private holds another element -> container is gone, Private stays': {
+			sourceXml: relationsXml(`
+				${oneRelation}
+				<eIEC61850-6-100:ProcessResources ${id}="resources" />
+			`),
+			act: deleteRecords({ tagName: 'PowerSystemRelation', id: 'psr1' }),
+			unexpectedQueries: ['//v2019C1:PowerSystemRelations'],
+			expectedQueries: ['//default:Function[@name="F1"]/default:Private/v2019C1:ProcessResources'],
+		},
+		'the equipment a relation names is deleted -> relation, container and Private are gone': {
+			sourceXml: relationsXml(oneRelation),
+			act: deleteRecords({ tagName: 'ConductingEquipment', id: 'equipment' }),
+			unexpectedQueries: [
+				'//v2019C1:PowerSystemRelations',
+				'//default:Function[@name="F1"]/default:Private',
+			],
+			expectedQueries: ['//default:Function[@name="F1"]'],
+		},
+		'the owning Function is deleted -> everything below is gone without error': {
+			sourceXml: relationsXml(oneRelation),
+			act: deleteRecords({ tagName: 'Function', id: 'function' }),
+			unexpectedQueries: ['//v2019C1:PowerSystemRelations', '//default:Function'],
+		},
+		'the Private is deleted -> no error': {
+			sourceXml: relationsXml(oneRelation),
+			act: deleteRecords({ tagName: 'Private', id: 'private' }),
+			unexpectedQueries: ['//v2019C1:PowerSystemRelations'],
+		},
+		'an unrelated empty container stays': {
+			sourceXml: relationsXml(`
+				${oneRelation}
+			`).replace(
+				'<Function ',
+				`<Function ${id}="other" name="F2"><Private ${id}="other-private" type="eIEC61850-6-100"><eIEC61850-6-100:PowerSystemRelations ${id}="other-relations" /></Private></Function><Function `,
+			),
+			act: deleteRecords({ tagName: 'PowerSystemRelation', id: 'psr1' }),
+			expectedQueries: [
+				'//default:Function[@name="F2"]/default:Private/v2019C1:PowerSystemRelations',
+			],
+			unexpectedQueries: ['//default:Function[@name="F1"]/default:Private'],
+		},
+	}
+
+	runSclTestCases.withExport({
+		testCases,
+		act: async ({ source, testCase }) => {
+			await testCase.act(source)
+			return { assertOn: 'source' }
+		},
+	})
+})

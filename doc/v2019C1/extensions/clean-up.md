@@ -22,6 +22,8 @@ await doc.transaction(async (tx) => {
 })
 ```
 
+Deleting a `PowerSystemRelation` (directly, or by deleting the equipment it names) needs no call: when it was the last one of its `PowerSystemRelations`, that container is removed with it, and so is the `Private` wrapping it when nothing else is in it.
+
 ## `resetLNode`
 
 An `LNode` bound to an IED names the logical node that implements it, and that logical node must be in the document.

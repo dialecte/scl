@@ -2,6 +2,7 @@ export { findRecordByUuid, findTargetByUuid, rebuildReferencesByUuid } from './r
 export { reconcileMappedData } from './reconcile-mapped-data'
 export { reconcileMappedDataBelow } from './reconcile-mapped-data-below'
 export { reconcileReferrerRefPaths } from './ref-path-rebuild'
+export { pruneEmptiedPowerSystemRelations } from './prune-emptied-relations'
 export { reconcileLNodeBinding } from './lnode-binding'
 export { reconcileSignalAddresses } from './signal-addresses'
 export {
