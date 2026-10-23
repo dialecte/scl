@@ -8,6 +8,7 @@ import {
 	cloneFunction,
 	cloneFunctionCategories,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
+import { removeOwnProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { ExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -73,6 +74,9 @@ export async function fsd(
 		unlinked: new Set(templateLink === 'break' ? [functionRef.id] : []),
 		redirectMappings,
 	})
+	// nor does it record the file it was placed from any more; what it holds keeps the files it records
+	const root = functionMappings.find((mapping) => mapping.source.id === functionRef.id)?.target
+	if (root && templateLink === 'break') await removeOwnProvenance(tx, { element: root })
 
 	await postExtractionCleanup(tx)
 }

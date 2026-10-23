@@ -41,7 +41,7 @@ Steps:
 2. Write the FSD history header (`fileType: 'FSD'`, via [`history.startFile`](./history#startfile)).
 3. Clone the function via `cloneFunction` (layers/function) — promote `SubFunction`→`Function`, apply FSD omit filters, import the type closure.
 4. Clone the referenced `FunctionCategory` trees at their structural level.
-5. Write the identity ([`identity.writeIdentity`](./identity#writeidentity) in `strip` mode): the function extracted is a new template, its template link (`templateUuid`) is broken; what it holds and its categories keep their lineage (a subfunction may be instantiated from another FSD). The cloned uuid references are repointed.
+5. Write the identity ([`identity.writeIdentity`](./identity#writeidentity) in `strip` mode): the function extracted is a new template, its template link (`templateUuid`) is broken and the file it was placed from (its own `FunctionSclRef`) is no longer recorded; what it holds and its categories keep their lineage, and a subfunction placed from another FSD keeps its `FunctionSclRef`. The cloned uuid references are repointed.
 6. Run post-extraction clean-up (orphan UUID refs, reset LNode bindings to `None`, prune empty containers).
 
 ```ts
@@ -77,7 +77,7 @@ Steps:
 2. Write the ASD history header (`fileType: 'ASD'`).
 3. Clone the Application's functions (via `deep`) and their categories into the structure.
 4. Clone the remaining referenced satellites, placing each by mirroring its source hierarchy — a satellite owned by a function lands back under that function's clone — and cloning each target exactly once (satellites already brought in with a function are reused, not duplicated).
-5. Write the identity: the `Application` extracted loses its template link (`templateUuid` and `originUuid`); its functions, roles and categories keep their lineage. The cloned uuid references are repointed.
+5. Write the identity: the `Application` extracted loses its template link (`templateUuid` and `originUuid`) and its own `ApplicationSclRef`; its functions, roles and categories keep their lineage, and its functions the `FunctionSclRef` of the FSD each was placed from. The cloned uuid references are repointed.
 6. Run post-extraction clean-up.
 
 ### `ssd`
@@ -101,7 +101,7 @@ Steps:
 1. Write the SSD history header (`fileType: 'SSD'`).
 2. Gather the scope's content via `cloneTopologyContent` (layers/topology): it REPRODUCES the source's own structural frame above and at the scope — only the levels the scope actually has (`Substation`/`VoltageLevel`/`Bay`, each with its own `BayType`, equipment and connectivity, including `ConnectivityNode` so the single-line diagram stays connected) — then consumes the application/function layers for the Applications and the Functions they compose, plus any standalone Functions, each with its type closure. Several voltage levels/bays in the scope each get their own reproduced level, never collapsed together.
 3. TEMPLATE-name the reproduced ancestors above the selected entrypoint; the entrypoint itself keeps the source name, becoming the reusable root.
-4. Write the identity: the entrypoint and the `TEMPLATE` levels above it lose their template link; what the entrypoint holds — equipment, applications, functions — keeps its lineage. Repoint cloned UUID references and run post-extraction clean-up.
+4. Write the identity: the entrypoint and the `TEMPLATE` levels above it lose their template link; what the entrypoint holds — equipment, applications, functions — keeps its lineage, and its applications and functions the `ApplicationSclRef` / `FunctionSclRef` of the file each was placed from. Repoint cloned UUID references and run post-extraction clean-up.
 
 Returns the warnings gathered while extracting — currently one entry when the source has `IED` / `Communication` sections, which are not yet carried into an SSD.
 
@@ -110,7 +110,7 @@ Returns the warnings gathered while extracting — currently one entry when the 
 The three extracts take the same options (`ExtractOptions`):
 
 - `as` — the file written. `'new'` (default): a new template, a `Header` with a uuid of its own, version `0`, revision `1`. `'revision'`: a new revision of the template the element came from (its uuid, the next revision) — not available yet, refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'as', value: 'revision' }`) before anything is written.
-- `templateLink` — whether the element extracted stays an instance of the template it was made from. `'break'` (default): it loses its `templateUuid` and `originUuid`. `'keep'`: it keeps them. What it holds keeps its lineage either way; the `TEMPLATE` levels above an SSD's entrypoint carry none.
+- `templateLink` — whether the element extracted stays an instance of the template it was made from. `'break'` (default): it loses its `templateUuid` and `originUuid`. `'keep'`: it keeps them, and the file reference it records. What it holds keeps its lineage and its file references either way; the `TEMPLATE` levels above an SSD's entrypoint carry none.
 
 ### `ensureSubstationTemplateStructure`
 

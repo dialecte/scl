@@ -5,6 +5,7 @@ import { history } from '@/v2019C1/extensions/history'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { ALWAYS_OMIT } from '@/v2019C1/extensions/lifecycle/layers/omit-filters'
+import { removeOwnProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { ExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -59,6 +60,9 @@ export async function asd(
 		unlinked: new Set(templateLink === 'break' ? [applicationRef.id] : []),
 		redirectMappings,
 	})
+	// nor does it record the file it was placed from any more; its functions keep the files they record
+	const root = cloneMappings.find((mapping) => mapping.source.id === applicationRef.id)?.target
+	if (root && templateLink === 'break') await removeOwnProvenance(tx, { element: root })
 
 	await postExtractionCleanup(tx)
 }

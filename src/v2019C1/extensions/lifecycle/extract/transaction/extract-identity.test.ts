@@ -30,11 +30,25 @@ type TestCase = SclTest.BaseXmlTestCase & {
 
 type ExtractVerb = 'fsd' | 'asd' | 'ssd'
 
+/** A file reference an element records: the file it was placed from. */
+function fileReference(params: {
+	wrapper: 'FunctionSclRef' | 'ApplicationSclRef'
+	file: string
+	fileType: 'FSD' | 'ASD'
+}): string {
+	const { wrapper, file, fileType } = params
+	return /* xml */ `
+		<eIEC61850-6-100:${wrapper} ${id}="project-${file}-ref">
+			<eIEC61850-6-100:SclFileReference fileName="${file}" fileType="${fileType}" fileUuid="${file}-uuid" version="1" revision="2" ${id}="project-${file}"/>
+		</eIEC61850-6-100:${wrapper}>
+	`
+}
+
 /**
  * A project bay holding an instance of an application template: the application, its allocation role and the
  * category classifying its function carry the lineage of their templates (and an origin); the function, its
  * subfunction (made from another function file) and the breaker carry theirs; the bay, its level and its substation are instances of
- * a bay template.
+ * a bay template. The application, the function and the subfunction record the file each was placed from.
  */
 const projectXml = /* xml */ `
 	<SCL ${ns} ${id}="project" version="2007" revision="C" release="5">
@@ -58,11 +72,20 @@ const projectXml = /* xml */ `
 								</eIEC61850-6-100:FunctionRoleContent>
 							</eIEC61850-6-100:FunctionRole>
 							<eIEC61850-6-100:AllocationRoleRef allocationRole="S1/HMI_PC" allocationRoleUuid="role-uuid" ${id}="project-role-ref"/>
+							${fileReference({ wrapper: 'ApplicationSclRef', file: 'application-library', fileType: 'ASD' })}
 						</eIEC61850-6-100:Application>
 					</Private>
 					<ConductingEquipment name="QA1" type="CBR" uuid="breaker-uuid" templateUuid="breaker-template" ${id}="project-breaker"/>
 					<Function name="Prot" uuid="function-uuid" templateUuid="function-template" ${id}="project-function">
-						<SubFunction name="Sub" uuid="subfunction-uuid" templateUuid="subfunction-template" ${id}="project-subfunction"/>
+						<Text ${id}="project-function-text">Protection</Text>
+						<Private type="eIEC61850-6-100" ${id}="project-function-private">
+							${fileReference({ wrapper: 'FunctionSclRef', file: 'function-library', fileType: 'FSD' })}
+						</Private>
+						<SubFunction name="Sub" uuid="subfunction-uuid" templateUuid="subfunction-template" ${id}="project-subfunction">
+							<Private type="eIEC61850-6-100" ${id}="project-subfunction-private">
+								${fileReference({ wrapper: 'FunctionSclRef', file: 'subfunction-library', fileType: 'FSD' })}
+							</Private>
+						</SubFunction>
 						<GeneralEquipment name="GE1" type="AXN" ${id}="project-function-equipment"/>
 						<ConductingEquipment name="QB1" type="DIS" ${id}="project-function-switch"/>
 					</Function>
@@ -127,6 +150,59 @@ describe('extract: the element extracted is a new template, what it holds keeps 
 					'//default:Substation[@templateUuid]',
 				],
 			},
+	}
+
+	runSclTestCases.withExport({ testCases, act: extractFromProject })
+})
+
+/** The reference to a file, wherever it sits. */
+const recorded = (file: string) => `//v2019C1:SclFileReference[@fileName="${file}"]`
+
+describe('extract: the element extracted no longer records the file it was placed from, what it holds still does', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		"fsd: the function's own file reference goes, its subfunction's stays": {
+			sourceXml: projectXml,
+			targetXml: emptyTargetXml,
+			verb: 'fsd',
+			expectedQueries: [
+				`//default:SubFunction[@name="Sub"][@templateUuid="subfunction-template"]/default:Private/v2019C1:FunctionSclRef/v2019C1:SclFileReference[@fileName="subfunction-library"][@version="1"][@revision="2"]`,
+			],
+			unexpectedQueries: [recorded('function-library')],
+		},
+		"asd: the application's own file reference goes, its function's and subfunction's stay": {
+			sourceXml: projectXml,
+			targetXml: emptyTargetXml,
+			verb: 'asd',
+			expectedQueries: [
+				`//default:Function[@name="Prot"]/default:Private/v2019C1:FunctionSclRef${recorded('function-library').slice(1)}`,
+				`//default:SubFunction[@name="Sub"]/default:Private/v2019C1:FunctionSclRef${recorded('subfunction-library').slice(1)}`,
+			],
+			unexpectedQueries: [recorded('application-library')],
+		},
+		'ssd: the application and the functions the bay holds keep the files they record': {
+			sourceXml: projectXml,
+			targetXml: emptyTargetXml,
+			verb: 'ssd',
+			expectedQueries: [
+				`//v2019C1:Application[@name="HMI"]/v2019C1:ApplicationSclRef${recorded('application-library').slice(1)}`,
+				`//default:Function[@name="Prot"]/default:Private/v2019C1:FunctionSclRef${recorded('function-library').slice(1)}`,
+				recorded('subfunction-library'),
+			],
+		},
+		'fsd, templateLink keep: the function keeps the file it records': {
+			sourceXml: projectXml,
+			targetXml: emptyTargetXml,
+			verb: 'fsd',
+			options: { templateLink: 'keep' },
+			expectedQueries: [recorded('function-library'), recorded('subfunction-library')],
+		},
+		'asd, templateLink keep: the application keeps the file it records': {
+			sourceXml: projectXml,
+			targetXml: emptyTargetXml,
+			verb: 'asd',
+			options: { templateLink: 'keep' },
+			expectedQueries: [recorded('application-library'), recorded('function-library')],
+		},
 	}
 
 	runSclTestCases.withExport({ testCases, act: extractFromProject })

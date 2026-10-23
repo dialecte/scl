@@ -441,6 +441,17 @@ Each entry exposes `fileType`, `fileUuid`, `fileName`, `version`, `revision`, an
 
 The anchor is the nearest ancestor of the reference whose tag matches one of these kinds, so it is robust to intermediate `Private` wrappers.
 
+## findOwnProvenance
+
+Returns the source-file references an element records for itself — the file a function or an application was placed from: each `SclFileReference` below the element whose nearest anchor (above) is the element, with the wrapper holding it (`FunctionSclRef`, `ApplicationSclRef`). The references of the elements it holds that are anchors of their own — a subfunction placed from a function file, a function inside an application — are theirs. One read of the element's tree.
+
+```ts
+reference.query.findOwnProvenance(
+  reader: Scl.Query | Scl.Transaction,
+  params: { element: AnyRefOrRecord },
+): Promise<{ wrapper: AnyTreeRecord; reference: AnyTreeRecord }[]>
+```
+
 ---
 
 ## Transaction methods
@@ -468,6 +479,10 @@ await tx.reference.setMappedData({
 
 - `default`: the implementation is the record's default (or none was given); the record carries neither attribute.
 - `inexpressible`: the schema has no value for that path on this record (an `SDS` standing for an attribute structure, a second sub data object level); nothing is written. Document the deviation on the `DAS` below, whose path can go down to any attribute.
+
+### `removeOwnProvenance`
+
+`removeOwnProvenance({ element })` removes the source-file references the element records for itself ([`findOwnProvenance`](#findownprovenance)): the element is no longer what that file placed — an extract breaking the template link of the element it extracts. The references of the elements it holds are left.
 
 ### `applyTypeIdRemap`
 

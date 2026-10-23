@@ -3,7 +3,6 @@ import { postExtractionCleanup } from './post-extraction-cleanup'
 import { TEMPLATE_NAME, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { history } from '@/v2019C1/extensions/history'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
-import { TOPOLOGY_EXTRACT_OMIT } from '@/v2019C1/extensions/lifecycle/layers/omit-filters'
 import { cloneTopologyContent } from '@/v2019C1/extensions/lifecycle/layers/topology'
 
 import type { ExtractOptions } from './extract.types'
@@ -60,7 +59,6 @@ export async function ssd(
 		sourceQuery,
 		scopeRef,
 		targetParent: root,
-		omit: TOPOLOGY_EXTRACT_OMIT,
 	})
 
 	// TEMPLATE-name the reproduced ancestors above the entrypoint; the entrypoint is the named,
