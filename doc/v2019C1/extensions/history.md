@@ -86,3 +86,23 @@ await doc.transaction(async (tx) => {
 	})
 })
 ```
+
+### `startFile`
+
+Starts the file an operation writes into the document, with its first history item: the header logic of a file the operation creates, written once (the lifecycle extracts use it).
+
+```ts
+startFile(params: {
+  as: 'new' | 'revision'
+  filename: string
+  header: {
+    fileType: Scl.AttributesValueObjectOf<'Header'>['fileType']
+    nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
+    tool: Scl.AttributesValueObjectOf<'Header'>['toolID']
+  }
+  item: { who: string; what: string; why: string }
+}): Promise<void>
+```
+
+- `as: 'new'` — a new file: a `Header` with a uuid of its own, version `0`, revision `1`, then the first `Hitem` (as [`addEntry`](#addentry) with `version: 'keep'`; a `Header` the document already holds is kept).
+- `as: 'revision'` — a new revision of an existing file (its uuid, its version, the next revision): not available yet, refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'as', value: 'revision' }`) before anything is written.

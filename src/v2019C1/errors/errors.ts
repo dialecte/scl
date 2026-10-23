@@ -60,6 +60,14 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL1008',
 		message: 'The previous revision given is another file',
 	},
+	/**
+	 * An option is given a value the operation does not offer yet (an extract writing a new revision of the file
+	 * the element came from). `meta: { option, value }`
+	 */
+	OPTION_NOT_AVAILABLE: {
+		code: 'SCL1009',
+		message: 'This value of the option is not available yet',
+	},
 	/** The template file holds nothing that can be instantiated. */
 	TEMPLATE_ROOT_NOT_FOUND: {
 		code: 'SCL2001',

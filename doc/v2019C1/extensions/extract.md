@@ -30,13 +30,15 @@ tx.lifecycle.extract.fsd(params: {
   tool: string
   who: string
   nameStructure?: string
+  as?: 'new' | 'revision'           // default 'new' — see Options
+  templateLink?: 'keep' | 'break'   // default 'break' — see Options
 }): Promise<void>
 ```
 
 Steps:
 
 1. Ensure the TEMPLATE substation structure.
-2. Write the FSD history header (`fileType: 'FSD'`).
+2. Write the FSD history header (`fileType: 'FSD'`, via [`history.startFile`](./history#startfile)).
 3. Clone the function via `cloneFunction` (layers/function) — promote `SubFunction`→`Function`, apply FSD omit filters, import the type closure.
 4. Clone the referenced `FunctionCategory` trees at their structural level.
 5. Write the identity ([`identity.writeIdentity`](./identity#writeidentity) in `strip` mode): the function extracted is a new template, its template link (`templateUuid`) is broken; what it holds and its categories keep their lineage (a subfunction may be instantiated from another FSD). The cloned uuid references are repointed.
@@ -64,6 +66,8 @@ tx.lifecycle.extract.asd(params: {
   tool: string
   who: string
   nameStructure?: string
+  as?: 'new' | 'revision'
+  templateLink?: 'keep' | 'break'
 }): Promise<void>
 ```
 
@@ -87,6 +91,8 @@ tx.lifecycle.extract.ssd(params: {
   tool: string
   who: string
   nameStructure?: string
+  as?: 'new' | 'revision'
+  templateLink?: 'keep' | 'break'
 }): Promise<{ warnings: string[] }>
 ```
 
@@ -98,6 +104,13 @@ Steps:
 4. Write the identity: the entrypoint and the `TEMPLATE` levels above it lose their template link; what the entrypoint holds — equipment, applications, functions — keeps its lineage. Repoint cloned UUID references and run post-extraction clean-up.
 
 Returns the warnings gathered while extracting — currently one entry when the source has `IED` / `Communication` sections, which are not yet carried into an SSD.
+
+### Options
+
+The three extracts take the same options (`ExtractOptions`):
+
+- `as` — the file written. `'new'` (default): a new template, a `Header` with a uuid of its own, version `0`, revision `1`. `'revision'`: a new revision of the template the element came from (its uuid, the next revision) — not available yet, refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'as', value: 'revision' }`) before anything is written.
+- `templateLink` — whether the element extracted stays an instance of the template it was made from. `'break'` (default): it loses its `templateUuid` and `originUuid`. `'keep'`: it keeps them. What it holds keeps its lineage either way; the `TEMPLATE` levels above an SSD's entrypoint carry none.
 
 ### `ensureSubstationTemplateStructure`
 

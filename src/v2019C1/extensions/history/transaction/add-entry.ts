@@ -2,26 +2,13 @@ import { getLatestHitem } from '../query'
 
 import { readAttribute } from '@/v2019C1/helpers'
 
-import type { Scl, Config } from '@/v2019C1/config'
+import type { AddEntryParams } from './add-entry.types'
+import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 export async function addEntry(
 	tx: Core.Transaction<Config>,
-	params: {
-		filename: string
-		header: {
-			id?: string
-			fileType: Scl.AttributesValueObjectOf<'Header'>['fileType']
-			nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
-			version: 'keep' | 'increment'
-			tool: Scl.AttributesValueObjectOf<'Header'>['toolID']
-		}
-		item: {
-			who: Scl.AttributesValueObjectOf<'Hitem'>['who']
-			what: Scl.AttributesValueObjectOf<'Hitem'>['what']
-			why: Scl.AttributesValueObjectOf<'Hitem'>['why']
-		}
-	},
+	params: AddEntryParams,
 ): Promise<void> {
 	const { filename, header, item } = params
 	const { id, fileType, nameStructure, version: versionMode, tool } = header

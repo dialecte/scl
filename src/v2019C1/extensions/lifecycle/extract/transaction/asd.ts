@@ -6,6 +6,7 @@ import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cut
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { ALWAYS_OMIT } from '@/v2019C1/extensions/lifecycle/layers/omit-filters'
 
+import type { ExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -17,19 +18,19 @@ export async function asd(
 		tool: Scl.AttributesValueObjectOf<'Header'>['toolID']
 		who: Scl.AttributesValueObjectOf<'Hitem'>['who']
 		nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
-	},
+	} & ExtractOptions,
 ): Promise<void> {
 	const { sourceQuery, applicationRef, tool, who, nameStructure } = params
-	const structure = await ensureSubstationTemplateStructure(tx)
+	const { as = 'new', templateLink = 'break' } = params
 
 	const applicationName =
 		(await tx.getAttribute(applicationRef, { name: 'name' })) || 'Unnamed Application'
 
-	await history.transaction.addEntry(tx, {
+	await history.transaction.startFile(tx, {
+		as,
 		filename: `ASD_${applicationName.replace(/\s+/g, '_')}`,
 		header: {
 			fileType: 'ASD',
-			version: 'keep',
 			tool,
 			...(nameStructure ? { nameStructure } : {}),
 		},
@@ -40,6 +41,8 @@ export async function asd(
 		},
 	})
 
+	const structure = await ensureSubstationTemplateStructure(tx)
+
 	const { cloneMappings, redirectMappings } = await cloneApplicationContent(tx, {
 		sourceQuery,
 		applicationRef,
@@ -47,12 +50,13 @@ export async function asd(
 		omit: ALWAYS_OMIT,
 	})
 
-	// the application extracted is a new template: its own template link is broken, what it composes keeps its
-	// lineage; the cloned uuid refs are repointed across ALL clones, before cleanup reads them to detect orphans
+	// the application extracted is a new template: its own template link is broken unless the consumer keeps it,
+	// what it composes keeps its lineage; the cloned uuid refs are repointed across ALL clones, before cleanup reads
+	// them to detect orphans
 	await finalizeClonedIdentity(tx, {
 		cloneMappings,
 		mode: 'strip',
-		unlinked: new Set([applicationRef.id]),
+		unlinked: new Set(templateLink === 'break' ? [applicationRef.id] : []),
 		redirectMappings,
 	})
 

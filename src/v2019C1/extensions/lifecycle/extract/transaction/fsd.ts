@@ -9,6 +9,7 @@ import {
 	cloneFunctionCategories,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
 
+import type { ExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -20,23 +21,19 @@ export async function fsd(
 		tool: Scl.AttributesValueObjectOf<'Header'>['toolID']
 		who: Scl.AttributesValueObjectOf<'Hitem'>['who']
 		nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
-	},
+	} & ExtractOptions,
 ): Promise<void> {
 	const { sourceQuery, functionRef, tool, who, nameStructure } = params
-	const structure = await ensureSubstationTemplateStructure(tx)
-	const substationRef = {
-		tagName: structure.Substation.tagName,
-		id: structure.Substation.id,
-	} as const
+	const { as = 'new', templateLink = 'break' } = params
 
 	const functionName =
 		(await sourceQuery.getAttribute(functionRef, { name: 'name' })) || 'Unnamed Function'
 
-	await history.transaction.addEntry(tx, {
+	await history.transaction.startFile(tx, {
+		as,
 		filename: `FSD_${functionName.replace(/\s+/g, '_')}`,
 		header: {
 			fileType: 'FSD',
-			version: 'keep',
 			tool,
 			...(nameStructure ? { nameStructure } : {}),
 		},
@@ -46,6 +43,12 @@ export async function fsd(
 			why: 'Function was extracted from a previous file',
 		},
 	})
+
+	const structure = await ensureSubstationTemplateStructure(tx)
+	const substationRef = {
+		tagName: structure.Substation.tagName,
+		id: structure.Substation.id,
+	} as const
 
 	const functionMappings = await cloneFunction(tx, {
 		sourceQuery,
@@ -60,13 +63,14 @@ export async function fsd(
 		structure,
 	})
 
-	// the function extracted is a new template: its own template link is broken, what it holds keeps its lineage
-	// (a subfunction may be instantiated from another FSD); the cloned uuid refs (e.g. FunctionCatRef -> the cloned
-	// Function) are repointed across ALL clones of this operation, before cleanup reads them to detect orphans
+	// the function extracted is a new template: its own template link is broken unless the consumer keeps it, what
+	// it holds keeps its lineage (a subfunction may be instantiated from another FSD); the cloned uuid refs (e.g.
+	// FunctionCatRef -> the cloned Function) are repointed across ALL clones of this operation, before cleanup reads
+	// them to detect orphans
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: [...functionMappings, ...categoryMappings],
 		mode: 'strip',
-		unlinked: new Set([functionRef.id]),
+		unlinked: new Set(templateLink === 'break' ? [functionRef.id] : []),
 		redirectMappings,
 	})
 

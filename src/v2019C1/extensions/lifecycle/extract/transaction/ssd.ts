@@ -6,6 +6,7 @@ import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cut
 import { TOPOLOGY_EXTRACT_OMIT } from '@/v2019C1/extensions/lifecycle/layers/omit-filters'
 import { cloneTopologyContent } from '@/v2019C1/extensions/lifecycle/layers/topology'
 
+import type { ExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -28,9 +29,10 @@ export async function ssd(
 		tool: Scl.AttributesValueObjectOf<'Header'>['toolID']
 		who: Scl.AttributesValueObjectOf<'Hitem'>['who']
 		nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
-	},
+	} & ExtractOptions,
 ): Promise<{ warnings: string[] }> {
 	const { sourceQuery, scopeRef, tool, who, nameStructure } = params
+	const { as = 'new', templateLink = 'break' } = params
 	const root = await tx.getRoot()
 
 	const scopeName = (await sourceQuery.getAttribute(scopeRef, { name: 'name' })) || 'Unnamed'
@@ -39,11 +41,11 @@ export async function ssd(
 	// carried over once the IED/ISD layer exists).
 	const warnings = await collectSkippedSectionWarnings(sourceQuery)
 
-	await history.transaction.addEntry(tx, {
+	await history.transaction.startFile(tx, {
+		as,
 		filename: `SSD_${scopeName.replace(/\s+/g, '_')}`,
 		header: {
 			fileType: 'SSD',
-			version: 'keep',
 			tool,
 			...(nameStructure ? { nameStructure } : {}),
 		},
@@ -63,7 +65,7 @@ export async function ssd(
 
 	// TEMPLATE-name the reproduced ancestors above the entrypoint; the entrypoint is the named,
 	// reusable root.
-	const unlinked = new Set([scopeRef.id])
+	const unlinked = new Set(templateLink === 'break' ? [scopeRef.id] : [])
 	const ancestors = await sourceQuery.findAncestors(scopeRef, { stopAtTagName: 'Substation' })
 	for (const ancestor of ancestors) {
 		if (!(TOPOLOGY_STRUCTURAL_TAGS as readonly string[]).includes(ancestor.tagName)) continue
@@ -72,9 +74,9 @@ export async function ssd(
 		if (target) await tx.update(target, { attributes: { name: TEMPLATE_NAME } })
 	}
 
-	// the entrypoint is a new template, the levels above it its scaffolding: they lose their template link, what
-	// the entrypoint holds keeps its lineage; the cloned uuid refs are repointed across ALL clones, before cleanup
-	// reads them to detect orphans
+	// the entrypoint is a new template, the levels above it its scaffolding: they lose their template link (the
+	// entrypoint keeps it when the consumer says), what the entrypoint holds keeps its lineage; the cloned uuid refs
+	// are repointed across ALL clones, before cleanup reads them to detect orphans
 	await finalizeClonedIdentity(tx, { cloneMappings, mode: 'strip', unlinked, redirectMappings })
 
 	await postExtractionCleanup(tx)
