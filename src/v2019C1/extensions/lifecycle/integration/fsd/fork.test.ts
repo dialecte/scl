@@ -140,6 +140,16 @@ const variable = (side: string, desc: string) => /* xml */ `
 	</eIEC61850-6-100:Variable>
 `
 
+/** What an instance configures: a variable's value and a behaviour description's file, of one revision. */
+const configured = (side: string, revision: string) => /* xml */ `
+	<eIEC61850-6-100:Variable name="Prefix" value="value-${revision}" uuid="variable-uuid" ${id}="${side}-variable">
+		<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/Prot/CSWI1" elementUuid="lnode-uuid" ${id}="${side}-variable-apply"/>
+	</eIEC61850-6-100:Variable>
+	<eIEC61850-6-100:BehaviorDescription name="Logic" fileReference="logic-${revision}.xml" uuid="behavior-uuid" ${id}="${side}-behavior">
+		<eIEC61850-6-100:InputVar dataName="TEMPLATE/Prot/CSWI1" lnodeUuid="lnode-uuid" doName="Pos" ${id}="${side}-behavior-input"/>
+	</eIEC61850-6-100:BehaviorDescription>
+`
+
 describe('fsd fork: the newer revision of the same file, its uuids kept', () => {
 	const testCases: SclTest.TestCases<ForkTestCase> = {
 		'the previous revision is reconciled in place: its uuids, no lineage, the changed values written':
@@ -367,6 +377,25 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 				unexpectedQueries: [
 					'//v2019C1:Variable[@templateUuid]',
 					'//v2019C1:Variable[@desc="rev1"]',
+				],
+			},
+		"a variable's value and a behaviour description's file the newer revision changes are written: the file's, not an instance's":
+			{
+				sourceXml: fsdRevision({ side: 'source', substationPrivate: configured('source', 'rev2') }),
+				targetXml: fsdRevision({
+					side: 'project',
+					substationPrivate: configured('project', 'rev1'),
+				}),
+				anchor: { tagName: 'Bay', id: 'project-bay' },
+				expectedInstances: ['project-function'],
+				expectedGroups: ['modified BehaviorDescription', 'modified Variable'],
+				expectedAttributeChanges: [
+					'fileReference: logic-rev1.xml -> logic-rev2.xml',
+					'value: value-rev1 -> value-rev2',
+				],
+				expectedQueries: [
+					'//v2019C1:Variable[@uuid="variable-uuid"][@value="value-rev2"]',
+					'//v2019C1:BehaviorDescription[@uuid="behavior-uuid"][@fileReference="logic-rev2.xml"]',
 				],
 			},
 		'a first fork onto a project holding the category under its uuid: the one category, the reference added to it':

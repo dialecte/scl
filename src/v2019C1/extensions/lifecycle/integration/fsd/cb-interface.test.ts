@@ -100,7 +100,7 @@ const toRev2 = async (tx: Scl.Transaction): Promise<void> => {
 
 describe('lifecycle integration — CB Interface FSD rev1 → rev2 (function + satellites + add)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'accepting carries every rev2 change: function, FunctionCategory, Variable, and the new LNode':
+		'accepting carries every rev2 change but the value the instance configures: function, FunctionCategory, the new LNode':
 			{
 				sourceXml,
 				targetXml,
@@ -109,12 +109,16 @@ describe('lifecycle integration — CB Interface FSD rev1 → rev2 (function + s
 				expectedQueries: [
 					`//default:Function[@templateUuid="${FN_UUID}"][@desc="rev2 function"]`,
 					`//v2019C1:FunctionCategory[@templateUuid="${FCAT_UUID}"][@desc="rev2 category"]`,
-					'//v2019C1:Variable[@templateUuid="var-src-uuid"][@value="rev2val"]',
+					// the value of a variable is the instance's: a newer template does not overwrite it
+					'//v2019C1:Variable[@templateUuid="var-src-uuid"][@value="rev1val"]',
 					'//default:Function[@name="CB Interface"]/default:LNode[@lnClass="CILO"]',
 					// the VariableApplyTo path is rebuilt into instance space from its uuid
 					'//v2019C1:VariableApplyTo[@element="S1/V1/B1/CB Interface/CSWI1"]',
 				],
-				unexpectedQueries: ['//v2019C1:VariableApplyTo[@element="TEMPLATE/CB Interface/CSWI1"]'],
+				unexpectedQueries: [
+					'//v2019C1:VariableApplyTo[@element="TEMPLATE/CB Interface/CSWI1"]',
+					'//v2019C1:Variable[@value="rev2val"]',
+				],
 			},
 
 		'skipping leaves the rev1 instance untouched': {

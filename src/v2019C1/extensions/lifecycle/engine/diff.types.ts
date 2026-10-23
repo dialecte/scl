@@ -15,8 +15,10 @@ export type AttributeChange = { name: string; before?: string; after?: string }
  * - `bound-logical-node`: the LNode is bound to a logical node of an IED; the project keeps the type it holds, an
  *   update does not apply a type change to a bound LNode (a project rule for now; the type is part of the
  *   specification).
+ * - `instance-configuration`: the instance configures it where it sits (a behaviour description's file, a variable's
+ *   value); a template update does not overwrite it.
  */
-export type KeptAttributeReason = 'bound-logical-node'
+export type KeptAttributeReason = 'bound-logical-node' | 'instance-configuration'
 
 /** A difference the update lists but does not apply: the project keeps `before`, the template says `after`. */
 export type KeptAttributeChange = AttributeChange & { reason: KeptAttributeReason }

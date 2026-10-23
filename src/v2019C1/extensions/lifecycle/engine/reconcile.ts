@@ -486,7 +486,11 @@ async function updateMatchedAttributes(
 	})
 	// what the project owns on the element (a bound LNode's implementation and type) is never
 	// written, even when a user edit overlaid above lists it
-	const owned = projectOwnedAttributes({ tagName: instanceRecord.tagName, instanceAttributes })
+	const owned = projectOwnedAttributes({
+		tagName: instanceRecord.tagName,
+		instanceAttributes,
+		namesFollow,
+	})
 
 	// Union of both sides: a name present on the template overwrites, a name the
 	// template dropped (present on the instance, absent from `desired`) is cleared

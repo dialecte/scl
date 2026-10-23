@@ -171,7 +171,11 @@ export async function foldSatelliteCompanions(
 				satelliteReport.summary.removed +
 				satelliteReport.summary.modified >
 			0
-		if (!changed) continue
+		if (!changed) {
+			// a change the update keeps opens no decision: listed with the primary's tree, so the report says it
+			if (satelliteReport.summary.kept > 0) report.root.children.push(satelliteReport.root)
+			continue
+		}
 
 		if (group) {
 			// Fold the satellite as a STRUCTURED companion of the primary group: push the diff

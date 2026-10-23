@@ -497,7 +497,11 @@ async function computeAttributeChanges(
 		attributes: instanceAttributes,
 		namesFollow,
 	})
-	const owned = projectOwnedAttributes({ tagName: instanceNode.tagName, instanceAttributes })
+	const owned = projectOwnedAttributes({
+		tagName: instanceNode.tagName,
+		instanceAttributes,
+		namesFollow,
+	})
 
 	const changes: AttributeChange[] = []
 	const kept: KeptAttributeChange[] = []

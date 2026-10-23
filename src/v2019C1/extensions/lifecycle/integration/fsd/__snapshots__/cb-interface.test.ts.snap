@@ -8,7 +8,7 @@ exports[`lifecycle integration — CB Interface FSD rev1 → rev2 (golden) > acc
             <eIEC61850-6-100:FunctionCategory desc="rev2 category" name="INTERFACE FCAT" templateUuid="uuid-2" uuid="uuid-3">
                 <eIEC61850-6-100:FunctionCatRef function="S1/V1/B1/CB Interface" functionUuid="uuid-4"/>
             </eIEC61850-6-100:FunctionCategory>
-            <eIEC61850-6-100:Variable name="Prefix" templateUuid="var-src-uuid" uuid="uuid-5" value="rev2val">
+            <eIEC61850-6-100:Variable name="Prefix" templateUuid="var-src-uuid" uuid="uuid-5" value="rev1val">
                 <eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/CB Interface/CSWI1" elementUuid="uuid-6"/>
             </eIEC61850-6-100:Variable>
         </Private>
