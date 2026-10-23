@@ -9,10 +9,10 @@ import {
 
 import type { ReconcileCrossCuttingSatellitesResult } from './cross-cutting-satellites.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -43,7 +43,7 @@ export async function reconcileCrossCuttingSatellites(
 		structure: TargetStructure
 		accepted?: AcceptedIds
 		matchKey: MatchKey
-		identityMode: IdentityMode
+		identityMode: ScenarioPolicy['identityMode']
 		bumpsCollisions: boolean
 		/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase

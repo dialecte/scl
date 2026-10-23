@@ -18,11 +18,11 @@ import {
 import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
 
 import type { Config, Scl } from '@/v2019C1/config'
-import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings, ResolvedMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -59,7 +59,7 @@ export async function reconcileSatellites(
 		/** The scenario's key an instance of a satellite carries its source satellite's uuid in. */
 		matchKey: MatchKey
 		/** The scenario's identity for an added satellite. */
-		identityMode: IdentityMode
+		identityMode: ScenarioPolicy['identityMode']
 		/** A shared element created here whose name its level holds is numbered. */
 		bumpsCollisions: boolean
 		/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */

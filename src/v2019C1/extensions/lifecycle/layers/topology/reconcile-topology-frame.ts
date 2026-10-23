@@ -25,11 +25,11 @@ import type { FrameReconciliation } from './reconcile-topology-frame.types'
 import type { InstanceLevels } from './resolve-instance-levels.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
-import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
@@ -54,7 +54,7 @@ export async function reconcileTopologyFrame(
 		sourceQuery: Core.Query<Config>
 		scopeRef: Scl.Ref<TopologyStructuralTag>
 		matchKey: MatchKey
-		identityMode: IdentityMode
+		identityMode: ScenarioPolicy['identityMode']
 		/** A level the template gained whose name a sibling holds is numbered. */
 		bumpsCollisions: boolean
 		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */

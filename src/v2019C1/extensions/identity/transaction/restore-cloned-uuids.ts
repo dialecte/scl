@@ -1,3 +1,5 @@
+import { cloneAttributeValue } from './clone-attribute'
+
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Config, Scl } from '@/v2019C1/config'
@@ -21,20 +23,11 @@ export async function restoreClonedUuids(
 	const { cloneMappings } = params
 
 	for (const mapping of cloneMappings) {
-		const sourceUuid = sourceAttributeValue({ attributes: mapping.source.attributes, name: 'uuid' })
+		const sourceUuid = cloneAttributeValue({ attributes: mapping.source.attributes, name: 'uuid' })
 		if (!sourceUuid) continue
 		const target = await tx.getRecord(mapping.target)
 		const freshUuid = target ? readAttribute({ record: target, name: 'uuid' }) : undefined
 		if (!freshUuid || freshUuid === sourceUuid) continue
 		await tx.update(mapping.target, { attributes: { uuid: sourceUuid } })
 	}
-}
-
-/** An attribute value of a clone mapping's source, which carries its attributes, not a record. */
-function sourceAttributeValue(params: {
-	attributes: readonly { name: string; value: string }[]
-	name: string
-}): string | undefined {
-	const { attributes, name } = params
-	return attributes.find((attribute) => attribute.name === name)?.value
 }

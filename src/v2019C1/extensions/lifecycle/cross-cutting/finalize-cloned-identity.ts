@@ -3,45 +3,32 @@ import { throwDialecteError } from '@dialecte/core'
 import { restoreClonedUuids, writeIdentity } from '@/v2019C1/extensions/identity/transaction'
 import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 
-import type { Config, Scl } from '@/v2019C1/config'
-import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction'
-import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
+import type { FinalizeClonedIdentityParams } from './finalize-cloned-identity.types'
+import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
- * Finalize the identity of a freshly cloned subtree in ONE place: write the lineage
- * ({@link writeIdentity}) then fix up the reference uuids for the mode.
- *
- * The post-step is a strict binary, so this is the single seam every clone-then-place path
- * shares (instantiate/update/reconcile), instead of duplicating `writeIdentity(...)` +
- * `keep ? restore : remap` at each site:
+ * Finalize the identity of a freshly cloned subtree in ONE place: write the lineage ({@link writeIdentity}, the only
+ * writer of `templateUuid` / `originUuid`: the clone copied them as the source holds them) then fix up the uuids for
+ * the mode. Every clone-then-place path goes through it (instantiate, update, reconcile, extract):
  *  - `keep` (fork) converges the clone to the source revision's uuids → {@link restoreClonedUuids}
  *    (no ref remap: refs were copied verbatim in source space and stay coherent).
  *  - `strip` / `stamp-template` / `preserve` all keep the fresh clone uuid → {@link applyUuidRemap}
  *    repoints the subtree's internal refs onto those fresh uuids.
  *
- * Canonical order is write-lineage THEN ref-fixup: the two touch disjoint attribute sets
- * (`writeIdentity` reads the source attributes and writes only lineage; `applyUuidRemap` reads
- * the fresh element uuids and writes only reference attributes), so the order is free.
+ * The two touch disjoint attribute sets (`writeIdentity` reads the source attributes and writes only lineage;
+ * `applyUuidRemap` reads the fresh element uuids and writes only reference attributes), so the order is free.
  */
 export async function finalizeClonedIdentity(
 	tx: Core.Transaction<Config>,
-	params: {
-		cloneMappings: readonly Scl.CloneMapping[]
-		mode: IdentityMode
-		/**
-		 * Source elements mapped onto elements the target already holds (nothing cloned for them):
-		 * references to them are repointed, but no lineage is written on the target element — it
-		 * is the target's own, not an instance of the source.
-		 */
-		redirectMappings?: readonly RedirectMapping[]
-	},
+	params: FinalizeClonedIdentityParams,
 ): Promise<void> {
-	const { cloneMappings, mode, redirectMappings } = params
+	const { redirectMappings, ...write } = params
+	const { cloneMappings } = write
 
-	await writeIdentity(tx, { cloneMappings, mode })
+	await writeIdentity(tx, write)
 
-	switch (mode) {
+	switch (write.mode) {
 		case 'keep':
 			await restoreClonedUuids(tx, { cloneMappings })
 			// refs were copied in source space; only the redirected ones need repointing
@@ -53,13 +40,8 @@ export async function finalizeClonedIdentity(
 			await applyUuidRemap(tx, { cloneMappings, redirectMappings })
 			return
 		default:
-			return assertExhaustive(mode)
+			throwDialecteError('ASSERTION_FAILED', {
+				detail: `finalizeClonedIdentity: unhandled identity mode ${String(write satisfies never)}`,
+			})
 	}
-}
-
-/** Compile-time guard: a new `IdentityMode` cannot be added without choosing its post-step. */
-function assertExhaustive(mode: never): never {
-	throwDialecteError('ASSERTION_FAILED', {
-		detail: `finalizeClonedIdentity: unhandled identity mode ${String(mode)}`,
-	})
 }

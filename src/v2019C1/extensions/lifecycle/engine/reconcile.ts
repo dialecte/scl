@@ -19,7 +19,7 @@ import type { RemovalBase } from './removal-base.types'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
-import type { IdentityMode } from '@/v2019C1/extensions/identity/transaction/write-identity.types'
+import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -65,7 +65,7 @@ export async function reconcile(
 		/** How instance elements match source: the scenario's key. */
 		matchKey: MatchKey
 		/** Identity write mode for added elements: the scenario's. */
-		identityMode: IdentityMode
+		identityMode: ScenarioPolicy['identityMode']
 		/** An added element whose name a sibling holds is numbered. */
 		bumpsCollisions: boolean
 		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
@@ -204,7 +204,7 @@ async function reconcileChildren(
 		overrides: CollisionOverrides | undefined
 		keepNameTypesFrom: KeepNameTypesFrom | undefined
 		matchKey: MatchKey
-		identityMode: IdentityMode
+		identityMode: ScenarioPolicy['identityMode']
 		bumpsCollisions: boolean
 		namesFollow: NamesFollow
 		omit: readonly string[] | undefined

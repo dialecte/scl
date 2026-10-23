@@ -10,24 +10,35 @@ Helpers for instance-lineage identity (`uuid` / `templateUuid` / `originUuid`): 
 
 Access via `tx.identity` inside a `doc.transaction()` callback.
 
-`writeIdentity({ cloneMappings, mode })` walks the `cloneMappings` — each carries the source record's original attributes, so no cross-document query is needed — and writes lineage onto every target according to `mode`:
+`writeIdentity({ cloneMappings, mode, ... })` is the one writer of instance lineage (`templateUuid` / `originUuid`). A clone copies the lineage of every element as the source holds it; `writeIdentity` then decides it, from the `cloneMappings` — each carries the source record's attributes, so the source document is read only where `preserve` needs a cloned root's parent:
 
-| mode             | direction                                | effect                                                                                                                                                                                                                                                |
-| ---------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `stamp-template` | template → instance (instantiate/update) | `templateUuid ← source.uuid`; for element types whose schema carries a two-level lineage, `originUuid ← source.templateUuid` (only when the origin slot is still free). The instance `uuid` is already fresh from `deepClone`.                        |
-| `strip`          | project → template (extract)             | drops `templateUuid` and `originUuid`, leaving a fresh template.                                                                                                                                                                                      |
-| `preserve`       | copy → copy (copy/paste)                 | keeps the fresh `deepClone` uuid but carries `templateUuid`/`originUuid` verbatim, so a pasted copy stays an instance of the same template it was copied from. Written as a no-op (the clone already copied lineage when cloned with `strip: false`). |
-| `keep`           | peer ↔ peer (fork)                       | leaves lineage untouched.                                                                                                                                                                                                                             |
+| mode             | direction                                | params                                                                              | effect                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------- | ---------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `stamp-template` | template → instance (instantiate/update) | —                                                                                   | `templateUuid ← source.uuid`; for element types whose schema carries a two-level lineage, `originUuid ← source.originUuid`, else `source.templateUuid`: the origin of the template is conserved, the template's own template becomes the origin. The instance `uuid` is fresh from `deepClone`.                                                                                                                                                                                |
+| `keep`           | peer ↔ peer (fork, project base)         | —                                                                                   | lineage as the clone copied it (the uuids are restored by [`restoreClonedUuids`](#restorecloneduuids)).                                                                                                                                                                                                                                                                                                                                                                        |
+| `preserve`       | copy → copy (copy/paste)                 | `sourceQuery`, `sourceRoots` (the source elements cloned, as the source holds them) | lineage as copied, where the new parent is an instance of the same template: an element whose source parent — its nearest ancestor carrying a lineage — carries a `templateUuid` and is not a `Substation` / `VoltageLevel` / `Bay` keeps its lineage only when its new parent carries the same `templateUuid`; otherwise its lineage goes, and so does the lineage of what it holds. A function, an application or a level copied anywhere stays an instance of its template. |
+| `strip`          | project → template (extract)             | `unlinked`                                                                          | the elements named in `unlinked` (source record ids) lose their template link, `templateUuid` and `originUuid`; every other element keeps its lineage.                                                                                                                                                                                                                                                                                                                         |
 
-Whether an element carries `originUuid` is read from the dialect definition, so the two-level shift applies exactly to the element types that support it (application-layer elements such as `Application`, `AllocationRole`, `FunctionRole`, `SourceRef`) and never to single-level structural elements (`Function`, `SubFunction`, `LNode`, `Bay`).
+Whether an element carries `originUuid` is read from the dialect definition, so the origin applies exactly to the element types that support it (application-layer elements such as `Application`, `AllocationRole`, `FunctionCategory`, `SourceRef`, `Variable`) and never to single-level structural elements (`Function`, `SubFunction`, `LNode`, `Bay`). A lineage attribute is written only when it differs from what the clone copied.
 
 ```ts
 await doc.transaction(async (tx) => {
 	await tx.identity.writeIdentity({ cloneMappings, mode: 'stamp-template' })
+	await tx.identity.writeIdentity({
+		cloneMappings,
+		mode: 'strip',
+		unlinked: new Set([rootSourceId]),
+	})
+	await tx.identity.writeIdentity({
+		cloneMappings,
+		mode: 'preserve',
+		sourceQuery: source.query,
+		sourceRoots,
+	})
 })
 ```
 
-The `cloneMappings` are the `CloneMapping[]` produced by a `deepClone` (or the extract / instantiate operations), so `writeIdentity` runs as a post-clone pass.
+The `cloneMappings` are the `CloneMapping[]` produced by a `deepClone` (or the extract / instantiate operations), so `writeIdentity` runs as a post-clone pass. The lifecycle operations reach it through one seam that also fixes up the uuids for the mode: the fresh uuids are kept and the references inside the clone repointed onto them, except for `keep`, which gives each element its source uuid back.
 
 ## restoreClonedUuids
 
