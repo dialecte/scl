@@ -3,6 +3,7 @@ import { invariant } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 import { readAttribute } from '@/v2019C1/helpers'
+import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -70,11 +71,6 @@ export async function wrapWithPrivateElementIfNeeded<
 	if (hasMatchingAncestor) return []
 
 	return handleNewPrivateRecordCase({ parentRecord, updatedParentRecord, childRecord })
-}
-
-/** Whether a tag is a transparent wrapper of the dialecte (its content is shown as its parent's). */
-function isTransparentElement(tagName: string): boolean {
-	return (SCL_DIALECTE_CONFIG.transparentElements as readonly string[]).includes(tagName)
 }
 
 /** The parent's `Private` of the given `type`, when it holds one. */

@@ -4,6 +4,7 @@ import { projectOwnedAttributes } from './project-owned-attributes'
 import { indexRedirectedSourceUuids } from './reference-match'
 import { acceptsRemoval, classifyUnmatched } from './removal-base'
 import { visibleAttributes } from './visible-attributes'
+import { landingParent } from './wrapper'
 
 import { toRef } from '@dialecte/core/helpers'
 
@@ -302,10 +303,12 @@ async function reconcileChildren(
 		// which their own pass places
 		if (accepted && !accepted.sourceIds.has(sourceChild.id)) continue
 
+		// what the source holds in a wrapper lands in the instance's wrapper of its type
+		const targetParent = await landingParent(tx, { sourceQuery, sourceChild, instanceParent })
 		const { cloneMappings } = await deep(tx, {
 			sourceQuery,
 			ref: toRef(sourceChild) as unknown as Scl.Ref<Scl.ElementsOf>,
-			targetParent: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,
+			targetParent: toRef(targetParent) as unknown as Scl.Ref<Scl.ElementsOf>,
 			...(omit ? { omit: [...omit] as OmitEntry<Config>[] } : {}),
 			withTypes: { keepNameFrom: keepNameTypesFrom },
 		})
