@@ -8,9 +8,10 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
- *
- * Wraps elements with a non-default namespace into a Private element.
- * Routes to the appropriate sub-case in private-wrapper.ts.
+ * Places an element of another namespace than its parent's (the default namespace excepted) in the parent's
+ * transparent wrapper whose `type` is the element's namespace prefix: the one of that type when the parent holds one —
+ * never a wrapper of another type —, a new one otherwise. Nothing to do when a wrapper of that type above the parent
+ * already wraps the context, or when the parent is a wrapper itself (the element is then moved into it).
  */
 export async function wrapWithPrivateElementIfNeeded<
 	GenericElement extends Scl.ElementsOf,
@@ -30,23 +31,23 @@ export async function wrapWithPrivateElementIfNeeded<
 		return []
 	}
 
-	const isParentRecordPrivate = (parentRecord.tagName as string) === 'Private'
-	const isParentInDefaultNamespace =
-		parentRecord.namespace.prefix === SCL_DIALECTE_CONFIG.namespaces.default.prefix
-	if (!isParentRecordPrivate && !isParentInDefaultNamespace) {
-		return []
+	if (isTransparentElement(parentRecord.tagName)) {
+		return handleParentAsPrivateRecordCase({ parentRecord, childRecord, query })
 	}
-
-	const existingPrivateRef = parentRecord.children.find((child) => child.tagName === 'Private')
+	// an element of the parent's own namespace sits in it directly
+	if (parentRecord.namespace.uri === childRecord.namespace.uri) return []
 
 	const updatedParentRecord: Scl.RawRecord<GenericParentElement> = {
 		...parentRecord,
 		children: parentRecord.children.filter((childRef) => childRef.id !== childRecord.id),
 	}
 
-	if (isParentRecordPrivate) {
-		return handleParentAsPrivateRecordCase({ parentRecord, childRecord, query })
-	} else if (existingPrivateRef) {
+	const existingPrivateRef = await findPrivateOfType({
+		parentRecord,
+		type: childRecord.namespace.prefix,
+		query,
+	})
+	if (existingPrivateRef) {
 		return handleExistingPrivateRecordCase({
 			existingPrivateRef,
 			parentRecord,
@@ -56,7 +57,7 @@ export async function wrapWithPrivateElementIfNeeded<
 		})
 	}
 
-	// No existing Private child — check if a matching Private ancestor already wraps this context.
+	// No Private of its type — check if a matching Private ancestor already wraps this context.
 	// Walk up from parent: if any ancestor is Private with matching type, the element can be
 	// placed directly without creating a new wrapper.
 	const ancestors = await query.findAncestors(parentRecord)
@@ -69,6 +70,30 @@ export async function wrapWithPrivateElementIfNeeded<
 	if (hasMatchingAncestor) return []
 
 	return handleNewPrivateRecordCase({ parentRecord, updatedParentRecord, childRecord })
+}
+
+/** Whether a tag is a transparent wrapper of the dialecte (its content is shown as its parent's). */
+function isTransparentElement(tagName: string): boolean {
+	return (SCL_DIALECTE_CONFIG.transparentElements as readonly string[]).includes(tagName)
+}
+
+/** The parent's `Private` of the given `type`, when it holds one. */
+async function findPrivateOfType<GenericParentElement extends Scl.ElementsOf>(params: {
+	parentRecord: Scl.RawRecord<GenericParentElement>
+	type: string
+	query: Core.Query<Config>
+}): Promise<Scl.ChildRelationship<GenericParentElement> | undefined> {
+	const { parentRecord, type, query } = params
+	const privateRefs = parentRecord.children.filter((childRef) =>
+		isTransparentElement(childRef.tagName),
+	)
+	const privates = await query.any.getRecords(privateRefs)
+	const index = privates.findIndex(
+		(privateRecord) =>
+			privateRecord !== undefined &&
+			readAttribute({ record: privateRecord, name: 'type', defaults: 'none' }) === type,
+	)
+	return index === -1 ? undefined : privateRefs[index]
 }
 
 // ── Sub-case handlers ─────────────────────────────────────────────────────────
@@ -121,6 +146,7 @@ export async function handleParentAsPrivateRecordCase<
 	]
 }
 
+/** Move a created element into its parent's `Private` of the element's type, which the caller found. */
 export async function handleExistingPrivateRecordCase<
 	GenericElement extends Scl.ElementsOf,
 	// Bound to ElementsOf (not ParentsOf<GenericElement>): these helpers use records
@@ -146,12 +172,6 @@ export async function handleExistingPrivateRecordCase<
 		detail: 'Latest private record not found',
 		key: 'ELEMENT_NOT_FOUND',
 	})
-
-	const hasMatchingType =
-		readAttribute({ record: latestPrivateRecord, name: 'type', defaults: 'none' }) ===
-		childRecord.namespace.prefix
-
-	if (!hasMatchingType) return []
 
 	const { childRecord: updatedChild, privateRecord: updatedPrivate } = addChildToPrivate({
 		privateRecord: latestPrivateRecord,

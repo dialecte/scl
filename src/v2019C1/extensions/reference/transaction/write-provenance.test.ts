@@ -128,6 +128,33 @@ describe('writeProvenance', () => {
 			],
 		},
 
+		'a function holding a vendor Private: the reference lands in a Private of its own type, the vendor one untouched':
+			{
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${ID}="scl-1">
+						<Header id="h" uuid="doc-uuid" version="2" revision="B" ${ID}="hdr-1"/>
+						<Substation name="S1" ${ID}="sub-1">
+							<VoltageLevel name="V1" ${ID}="vl-1">
+								<Bay name="B1" ${ID}="bay-1">
+									<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
+										<Private type="ACME" ${ID}="vendor-1">vendor data</Private>
+									</Function>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+				expectedQueries: [
+					'//default:Function[@name="Prot"]/default:Private[@type="eIEC61850-6-100"]/v2019C1:FunctionSclRef/v2019C1:SclFileReference[@fileUuid="doc-uuid"]',
+					'//default:Function[@name="Prot"]/default:Private[@type="ACME"][.="vendor data"]',
+				],
+				unexpectedQueries: [
+					'//default:Function/v2019C1:FunctionSclRef',
+					'//default:Private[@type="ACME"]/*',
+				],
+			},
+
 		'a reference the function records of the same file is brought to the source version, in place':
 			{
 				sourceXml: functionRecording(

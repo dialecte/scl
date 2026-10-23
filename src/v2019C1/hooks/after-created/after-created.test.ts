@@ -40,6 +40,41 @@ const xmlWithPrivate = /* xml */ `
 	</SCL>
 `
 
+/** A namespace neither SCL nor 6-100: what a tool keeps in a Private of its own. */
+const INFO_NAMESPACE = { uri: 'urn:example:info', prefix: 'eInfo' }
+
+function lnodeHolding(content: string): string {
+	return /* xml */ `
+		<SCL ${ns} ${id}="root">
+			<Substation ${id}="sub1" name="Sub1">
+				<Function ${id}="f1" name="F1">
+					<LNode ${id}="ln1" lnClass="XCBR">${content}</LNode>
+				</Function>
+			</Substation>
+		</SCL>
+	`
+}
+
+function labelsHolding(content: string): string {
+	return /* xml */ `
+		<SCL ${ns} xmlns:${INFO_NAMESPACE.prefix}="${INFO_NAMESPACE.uri}" ${id}="root">
+			<Substation ${id}="sub1" name="Sub1">
+				<Function ${id}="f1" name="F1">
+					<LNode ${id}="ln1" lnClass="XCBR">
+						<Private ${id}="priv1" type="eIEC61850-6-100">
+							<eIEC61850-6-100:DOS ${id}="dos1" name="Pos">
+								<eIEC61850-6-100:DAS ${id}="das1" name="stVal">
+									<eIEC61850-6-100:Labels ${id}="labels1">${content}</eIEC61850-6-100:Labels>
+								</eIEC61850-6-100:DAS>
+							</eIEC61850-6-100:DOS>
+						</Private>
+					</LNode>
+				</Function>
+			</Substation>
+		</SCL>
+	`
+}
+
 describe('afterCreated', () => {
 	// ── Group 1: Integration ─────────────────────────────────────────────────
 	// Full flow via document.transaction — hook fires automatically.
@@ -99,6 +134,91 @@ describe('afterCreated', () => {
 				],
 				unexpectedQueries: ['//default:LNode/default:Private[2]'],
 			},
+			'non-default namespace child, the parent holding a Private of another type → a Private of its own type, the other untouched':
+				{
+					sourceXml: lnodeHolding(
+						/* xml */ `<Private ${id}="vendor" type="ACME">vendor data</Private>`,
+					),
+					act: async (document) => {
+						await document.transaction(async (tx) => {
+							await tx.addChild(
+								{ tagName: 'LNode', id: 'ln1' },
+								{
+									tagName: 'LNodeSpecNaming',
+									namespace: v2019C1,
+									attributes: { sIedName: 'IED1' },
+								},
+							)
+						})
+					},
+					expectedQueries: [
+						'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sIedName="IED1"]',
+						'//default:LNode/default:Private[@type="ACME"][.="vendor data"]',
+					],
+					unexpectedQueries: [
+						'//default:LNode/v2019C1:LNodeSpecNaming',
+						'//default:Private[@type="ACME"]/*',
+					],
+				},
+			'non-default namespace child, the parent holding a Private of another type then one of its type → the one of its type':
+				{
+					sourceXml: lnodeHolding(/* xml */ `
+						<Private ${id}="vendor" type="ACME">vendor data</Private>
+						<Private ${id}="own" type="eIEC61850-6-100"/>
+					`),
+					act: async (document) => {
+						await document.transaction(async (tx) => {
+							await tx.addChild(
+								{ tagName: 'LNode', id: 'ln1' },
+								{
+									tagName: 'LNodeSpecNaming',
+									namespace: v2019C1,
+									attributes: { sIedName: 'IED1' },
+								},
+							)
+						})
+					},
+					expectedQueries: [
+						'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sIedName="IED1"]',
+					],
+					unexpectedQueries: [
+						'//default:LNode/default:Private[3]',
+						'//default:Private[@type="ACME"]/*',
+					],
+				},
+			'child of a third namespace under a 6-100 parent → wrapped in a Private of its own type': {
+				sourceXml: labelsHolding(''),
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.any.addChild(
+							{ tagName: 'Labels', id: 'labels1' },
+							{ tagName: 'Info', namespace: INFO_NAMESPACE, attributes: [] },
+						)
+					})
+				},
+				expectedQueries: [
+					`//v2019C1:Labels/default:Private[@type="${INFO_NAMESPACE.prefix}"]/*[local-name()="Info"]`,
+				],
+				unexpectedQueries: ['//v2019C1:Labels/*[local-name()="Info"]'],
+			},
+			'child of a third namespace under a 6-100 parent holding a Private of its type → that Private':
+				{
+					sourceXml: labelsHolding(
+						/* xml */ `<Private ${id}="info-private" type="${INFO_NAMESPACE.prefix}"/>`,
+					),
+					act: async (document) => {
+						await document.transaction(async (tx) => {
+							await tx.any.addChild(
+								{ tagName: 'Labels', id: 'labels1' },
+								{ tagName: 'Info', namespace: INFO_NAMESPACE, attributes: [] },
+							)
+						})
+					},
+					expectedQueries: [
+						`//v2019C1:Labels/default:Private[@type="${INFO_NAMESPACE.prefix}"]/*[local-name()="Info"]`,
+					],
+					unexpectedQueries: ['//v2019C1:Labels/default:Private[2]'],
+				},
 		}
 
 		runSclTestCases.withExport({
