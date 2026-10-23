@@ -15,6 +15,8 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	ref: { tagName: string; id: string }
 	targetParent: { tagName: string; id: string }
 	keepNameFrom?: 'source' | 'target'
+	/** The source records not cloned (record ids). */
+	leaveOut?: string[]
 }
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -305,6 +307,76 @@ describe('import.deep', () => {
 				'//default:IED[@name="VENDOR_A"]/default:Private[@type="eIEC61850-6-100"]',
 			],
 		},
+		'leaveOut → the records named are not cloned, with what they hold': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="scl-1">
+					<Substation name="S1" ${id}="sub-1">
+						<VoltageLevel name="V1" ${id}="vl-1">
+							<Bay name="B1" ${id}="bay-1">
+								<Function name="Prot" ${id}="fn-1">
+									<SubFunction name="Kept" ${id}="sf-kept"/>
+									<SubFunction name="Left" ${id}="sf-left">
+										<SubFunction name="Inner" ${id}="sf-inner"/>
+									</SubFunction>
+								</Function>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="scl-t">
+					<Substation name="S1" ${id}="sub-t">
+						<VoltageLevel name="V1" ${id}="vl-t">
+							<Bay name="B1" ${id}="bay-t"/>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+			ref: { tagName: 'Function', id: 'fn-1' },
+			targetParent: { tagName: 'Bay', id: 'bay-t' },
+			leaveOut: ['sf-left'],
+			expectedQueries: ['//default:Function[@name="Prot"]/default:SubFunction[@name="Kept"]'],
+			unexpectedQueries: [
+				'//default:SubFunction[@name="Left"]',
+				'//default:SubFunction[@name="Inner"]',
+			],
+		},
+		'leaveOut, a Private merged into the Private of its type the target holds → the records named are not added':
+			{
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="scl-1">
+						<Substation name="S1" ${id}="sub-1">
+							<Function name="Prot" ${id}="fn-1">
+								<LNode iedName="None" lnClass="XCBR" lnInst="1" ${id}="lnode-1">
+									<Private type="eIEC61850-6-100" ${id}="priv-s">
+										<eIEC61850-6-100:DOS name="Pos" ${id}="dos-pos"/>
+										<eIEC61850-6-100:DOS name="Beh" ${id}="dos-beh"/>
+									</Private>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				targetXml: /* xml */ `
+					<SCL ${ns} ${id}="scl-t">
+						<Substation name="S1" ${id}="sub-t">
+							<Function name="Prot" ${id}="fn-t">
+								<LNode iedName="None" lnClass="XCBR" lnInst="1" ${id}="lnode-t">
+									<Private type="eIEC61850-6-100" ${id}="priv-t"/>
+								</LNode>
+							</Function>
+						</Substation>
+					</SCL>
+				`,
+				ref: { tagName: 'Private', id: 'priv-s' },
+				targetParent: { tagName: 'LNode', id: 'lnode-t' },
+				leaveOut: ['dos-beh'],
+				expectedQueries: [
+					'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:DOS[@name="Pos"]',
+				],
+				unexpectedQueries: ['//v2019C1:DOS[@name="Beh"]', '//default:LNode/default:Private[2]'],
+			},
 	}
 
 	async function act({
@@ -320,6 +392,7 @@ describe('import.deep', () => {
 				ref: testCase.ref as Scl.Ref<Scl.ElementsOf>,
 				targetParent: testCase.targetParent as Scl.Ref<Scl.ElementsOf>,
 				withTypes: { keepNameFrom: testCase.keepNameFrom },
+				leaveOut: testCase.leaveOut ? new Set(testCase.leaveOut) : undefined,
 			})
 		})
 

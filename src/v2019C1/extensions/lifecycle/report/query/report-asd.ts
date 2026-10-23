@@ -17,8 +17,12 @@ import {
 import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	findDroppedComposedFunctions,
+	NO_VARIANT_SELECTION,
+	readVariantSelection,
+	readVariantTemplate,
 	resolveApplicationSatellites,
 	resolveComposedFunctions,
+	sharedSelection,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
 	describePlacementMappings,
@@ -41,6 +45,7 @@ import type {
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { StandingPlacement } from '@/v2019C1/extensions/lifecycle/engine/standing'
+import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type {
 	DecisionMappings,
 	ReportMapping,
@@ -139,6 +144,8 @@ export async function reportAsd(
 		params.anchor
 
 	const reportInstances: ReportInstance[] = []
+	// what each instance's selection of variants leaves out of the template, by instance record id
+	const selections = new Map<string, VariantSelection>()
 	if (firstPlacement) {
 		const instanceDiff = await reportApplicationInstance(query, {
 			pass: params.pass,
@@ -166,7 +173,11 @@ export async function reportAsd(
 		// an element the instances share (a role) holds one reference per instance: each instance
 		// is compared with its own
 		const foreignScopes = await collectForeignScopes(query, { instances: matchedApplications })
+		// the template read once for the selections of its instances
+		const template = await readVariantTemplate(sourceQuery, { applicationRef, namesFollow })
 		for (const instance of applicationInstances) {
+			const selection = await readVariantSelection(query, { template, instance, matchKey })
+			selections.set(instance.id, selection)
 			const instanceDiff = await reportApplicationInstance(query, {
 				pass: params.pass,
 				sourceQuery,
@@ -179,15 +190,17 @@ export async function reportAsd(
 				foreignScope: foreignScopes.get(instance.id),
 				removalBase,
 				namesFollow,
+				selection,
 			})
-			reportInstances.push(
-				await buildReportInstance(query, {
-					instanceDiff,
-					instance,
-					sourceQuery,
-					sourceRef: applicationRef,
-				}),
-			)
+			const reportInstance = await buildReportInstance(query, {
+				instanceDiff,
+				instance,
+				sourceQuery,
+				sourceRef: applicationRef,
+			})
+			if (selection.variantsNotSelected.length > 0)
+				reportInstance.variantsNotSelected = selection.variantsNotSelected
+			reportInstances.push(reportInstance)
 		}
 	}
 
@@ -202,6 +215,7 @@ export async function reportAsd(
 		anchor,
 		removalBase,
 		namesFollow,
+		selections,
 	})
 
 	// what the groups of each placement depend on: on a first placement, the application on the
@@ -268,6 +282,8 @@ async function reportApplicationInstance(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
+		/** What the instance's selection of functional variants leaves out of the template. */
+		selection?: VariantSelection
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
@@ -275,7 +291,10 @@ async function reportApplicationInstance(
 
 	// application-layer satellites (e.g. a referenced AllocationRole) travel with
 	// the application's decision group
-	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
+	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, {
+		applicationRef,
+		leftOut: params.selection?.within,
+	})
 	const instanceSatelliteRefs = instance
 		? await resolveApplicationSatellites(query, {
 				applicationRef: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
@@ -306,6 +325,7 @@ async function reportApplicationInstance(
 		redirectMappings,
 		removalBase: params.removalBase,
 		namesFollow: params.namesFollow,
+		notSelected: params.selection?.leftOut,
 	})
 
 	async function resolveForeignScope(): Promise<ReadonlySet<string>> {
@@ -331,6 +351,7 @@ async function reportApplicationInstance(
 		resolveForeignScope,
 		removalBase: params.removalBase,
 		namesFollow: params.namesFollow,
+		notSelected: params.selection?.leftOut,
 	})
 
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
@@ -349,6 +370,7 @@ async function reportApplicationInstance(
 		resolveForeignScope,
 		removalBase: params.removalBase,
 		namesFollow: params.namesFollow,
+		selection: params.selection,
 	})
 
 	return applicationReport
@@ -380,6 +402,8 @@ async function reportComposedFunctions(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
+		/** What each instance of the application's selection of variants leaves out, by instance record id. */
+		selections: ReadonlyMap<string, VariantSelection>
 	},
 ): Promise<{
 	instances: ReportInstance[]
@@ -421,14 +445,22 @@ async function reportComposedFunctions(
 			if (choice) choices.push(await describeStandingChoice(query, { child, instance, choice }))
 		}
 		const reconciled = new Map<string, AnyTrackedRecord>()
+		// the selections of the instances of the application standing on each function of the project
+		const standers = new Map<string, VariantSelection[]>()
 		for (const instance of applicationInstances) {
 			const standing = standings.get(instance.id)
 			if (!standing || standing.kind === 'undecided') continue
+			const selection = params.selections.get(instance.id)
 			if (standing.kind === 'owned') {
-				for (const owned of standing.elements) reconciled.set(owned.id, owned)
+				for (const owned of standing.elements) {
+					reconciled.set(owned.id, owned)
+					standOn({ standers, functionId: owned.id, selection })
+				}
 			} else if (standing.kind === 'taken') {
 				reconciled.set(standing.element.id, standing.element)
-			} else {
+				standOn({ standers, functionId: standing.element.id, selection })
+			} else if (!selection?.leftOut.has(functionRef.id)) {
+				// a function the template gained that the instance's selection leaves out is not placed for it
 				const reportInstance = await reportComposedFunction(query, {
 					...params,
 					functionRef,
@@ -457,6 +489,8 @@ async function reportComposedFunctions(
 					functionRef,
 					instance: functionInstance,
 					refsAlwaysAdded: policy.refsAlwaysAdded,
+					// a function several instances compose leaves out only what none of them uses
+					selection: sharedSelection(standers.get(functionInstance.id) ?? []),
 				}),
 			)
 		}
@@ -480,6 +514,8 @@ async function reportComposedFunction(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
+		/** What the selection of variants of the instances composing it leaves out. */
+		selection?: VariantSelection
 	},
 ): Promise<ReportInstance> {
 	const { sourceQuery, functionRef, instance, policy } = params
@@ -494,6 +530,7 @@ async function reportComposedFunction(
 		anchor: params.anchor,
 		removalBase: params.removalBase,
 		namesFollow: params.namesFollow,
+		selection: params.selection,
 	})
 	return buildReportInstance(query, { instanceDiff, instance, sourceQuery, sourceRef: functionRef })
 }
@@ -533,4 +570,19 @@ async function removesReferenceTo(
 		if (named === functionUuid) return true
 	}
 	return false
+}
+
+/**
+ * Record that an instance of the application stands on a function of the project, with its selection of variants:
+ * none when it selected nothing, so nothing is left out of a function it shares.
+ */
+function standOn(params: {
+	standers: Map<string, VariantSelection[]>
+	functionId: string
+	selection: VariantSelection | undefined
+}): void {
+	const { standers, functionId, selection } = params
+	const listed = standers.get(functionId) ?? []
+	listed.push(selection ?? NO_VARIANT_SELECTION)
+	standers.set(functionId, listed)
 }

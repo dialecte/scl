@@ -9,6 +9,7 @@ import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.typ
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -48,10 +49,15 @@ export async function foldCarriedSatellites(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
+		/** What the selection of functional variants of the instances this is for leaves out of the template. */
+		selection?: VariantSelection
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance, report } = params
-	const satelliteRefs = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
+	const satelliteRefs = await resolveFunctionSatellites(sourceQuery, {
+		primaryRef: functionRef,
+		leftOut: params.selection?.within,
+	})
 	const instanceSatelliteRefs = instance
 		? await resolveFunctionSatellites(query, {
 				primaryRef: toRef(instance) as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
@@ -75,5 +81,6 @@ export async function foldCarriedSatellites(
 		resolveForeignScope: params.resolveForeignScope,
 		removalBase: params.removalBase,
 		namesFollow: params.namesFollow,
+		notSelected: params.selection?.leftOut,
 	})
 }

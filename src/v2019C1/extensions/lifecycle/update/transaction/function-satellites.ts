@@ -13,6 +13,7 @@ import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.typ
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -57,6 +58,8 @@ export async function reconcileCarriedSatellites(
 		decisionMappings?: DecisionMappings
 		/** What belongs to the other instances of the function. */
 		resolveForeignScope?: ResolveForeignScope
+		/** What the selection of functional variants of the instances this is for leaves out of the template. */
+		selection?: VariantSelection
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -77,7 +80,10 @@ export async function reconcileCarriedSatellites(
 		id: instanceRef.id,
 	} as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 
-	const satelliteRefs = await resolveFunctionSatellites(sourceQuery, { primaryRef: functionRef })
+	const satelliteRefs = await resolveFunctionSatellites(sourceQuery, {
+		primaryRef: functionRef,
+		leftOut: params.selection?.within,
+	})
 	const instanceSatelliteRefs = await resolveFunctionSatellites(tx, {
 		primaryRef: instancePrimaryRef,
 	})
@@ -113,6 +119,7 @@ export async function reconcileCarriedSatellites(
 		resolvedMappings,
 		decisionMappings,
 		resolveForeignScope: params.resolveForeignScope,
+		notSelected: params.selection?.leftOut,
 	})
 
 	for (const contribution of withdrawnContributions) {

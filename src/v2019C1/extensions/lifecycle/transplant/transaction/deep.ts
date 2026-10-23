@@ -42,6 +42,7 @@ export async function deep(
 		omit,
 		strip = false,
 		retagRoot,
+		leaveOut,
 	} = params
 
 	const mergeTarget = await resolveExistingPrivateMergeTarget(tx, {
@@ -59,6 +60,7 @@ export async function deep(
 			target: mergeTarget,
 			omit,
 			strip,
+			leaveOut,
 		})
 		const existing = await tx.getRecord(mergeTarget)
 		if (!existing) {
@@ -69,7 +71,15 @@ export async function deep(
 		}
 		record = existing as unknown as Scl.RawRecord<Scl.ElementsOf>
 	} else {
-		const clone = await cloneTree(tx, { sourceQuery, ref, targetParent, omit, strip, retagRoot })
+		const clone = await cloneTree(tx, {
+			sourceQuery,
+			ref,
+			targetParent,
+			omit,
+			strip,
+			retagRoot,
+			leaveOut,
+		})
 		if (!clone) {
 			throwDialecteError('ELEMENT_NOT_FOUND', {
 				detail: `transplant.deep: source element not found: ${ref.tagName}#${ref.id}`,

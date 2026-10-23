@@ -22,4 +22,15 @@ export const REVISION_TWINS = {
 	functionTypeGainsData: { name: 'function-type-gains-data', extension: 'fsd' },
 	/** A bay template of two levels, built from the two applications, that gains a dataflow between them. */
 	twoLevelBayTemplate: { name: 'two-level-bay-template', extension: 'ssd' },
+	/** An application with two groups of variants that changes inside and outside what an instance selects. */
+	variantApplication: { name: 'variant-application', extension: 'asd' },
+} as const
+
+/**
+ * The twins whose project instance is committed beside them (`<name>.instance.<extension>`): a project holding an
+ * instance of the first revision the way a tool left it.
+ */
+export const REVISION_TWIN_INSTANCES = {
+	/** The project holding the application's instance with one variant of each group selected. */
+	variantApplication: { extension: 'ssd' },
 } as const

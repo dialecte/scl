@@ -3,6 +3,7 @@ import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transact
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
@@ -30,6 +31,8 @@ export type CascadeComposedFunctionsParams = {
 	keepNameTypesFrom?: KeepNameTypesFrom
 	targetInstance?: Scl.Ref<Scl.ElementsOf>
 	decisionMappings?: DecisionMappings
+	/** What each instance of the application's selection of variants leaves out, by instance record id. */
+	selections?: ReadonlyMap<string, VariantSelection>
 }
 
 export type ComposedFunctionsCascade = {

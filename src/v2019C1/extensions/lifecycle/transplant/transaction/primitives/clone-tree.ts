@@ -31,16 +31,19 @@ export async function cloneTree(
 		omit?: OmitEntry<Config>[]
 		retagRoot?: RetagRootConfig
 		strip?: StripConfig | false
+		/** Source records not cloned, with what they hold (record ids). */
+		leaveOut?: ReadonlySet<string>
 	},
 ): Promise<Core.CloneResult<Config, Exclude<Scl.ElementsOf, 'SCL'>> | undefined> {
-	const { sourceQuery, ref, targetParent, omit, retagRoot, strip } = params
+	const { sourceQuery, ref, targetParent, omit, retagRoot, strip, leaveOut } = params
 
 	// A clone must be a faithful copy: keep transparent `Private` wrappers in the tree
 	// (`unwrap: []` disables the default transparent-element unwrap) so vendor privates —
 	// including text-only (e.g. Siemens-MasterId) and empty flags (e.g. Siemens-IsSiprotec5IED) —
 	// reach `deepClone` instead of being flattened away.
-	const tree = await sourceQuery.getTree(ref, { omit, unwrap: [] })
-	if (!tree) return undefined
+	const read = await sourceQuery.getTree(ref, { omit, unwrap: [] })
+	if (!read) return undefined
+	const tree = leaveOut && leaveOut.size > 0 ? withoutLeftOut({ tree: read, leaveOut }) : read
 
 	// a subtree holding template-only elements (a function template) is cloned as what it is
 	// instantiated as: a function, in the namespace of a function
@@ -67,4 +70,18 @@ export async function cloneTree(
 	// getTree on Scl.Ref<Scl.ElementsOf> includes 'SCL' in the union; deepClone requires
 	// a child element. 'SCL' is the document root and never a cloned satellite.
 	return await tx.deepClone(targetParent, result as Scl.TreeRecord<Exclude<Scl.ElementsOf, 'SCL'>>)
+}
+
+/** The tree without the records left out, with what they hold. */
+function withoutLeftOut<GenericTree extends { tree: GenericTree[] } & { id: string }>(params: {
+	tree: GenericTree
+	leaveOut: ReadonlySet<string>
+}): GenericTree {
+	const { tree, leaveOut } = params
+	return {
+		...tree,
+		tree: tree.tree
+			.filter((child) => !leaveOut.has(child.id))
+			.map((child) => withoutLeftOut({ tree: child, leaveOut })),
+	}
 }

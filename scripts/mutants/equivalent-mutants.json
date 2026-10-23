@@ -132,6 +132,65 @@
 			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/engine/project-owned-attributes.ts": {
+		"fc66211692fd63d6": {
+			"line": 50,
+			"mutation": "ConditionalExpression: default:\n\t\t\treturn throwDialecteError('ASSERTION_FAILED', {\n\t\t\t\tdetail: `projectOwnedAttributes: unhandled names rule ${String(namesFollo",
+			"equivalent": "the default of an exhaustive switch: the names rule has two values, the type refuses a third"
+		},
+		"6126ff6fc6bf164e": {
+			"line": 51,
+			"mutation": "StringLiteral: 'ASSERTION_FAILED' -> \"\"",
+			"equivalent": "the default of an exhaustive switch: the names rule has two values, the type refuses a third"
+		},
+		"68e70f3d1bdc6568": {
+			"line": 51,
+			"mutation": "ObjectLiteral: {\n\t\t\t\tdetail: `projectOwnedAttributes: unhandled names rule ${String(namesFollow satisfies never)}`,\n\t\t\t} -> {}",
+			"equivalent": "the default of an exhaustive switch: the names rule has two values, the type refuses a third"
+		},
+		"f06347dc50bd9100": {
+			"line": 52,
+			"mutation": "StringLiteral: `projectOwnedAttributes: unhandled names rule ${String(namesFollow satisfies never)}` -> ``",
+			"equivalent": "the default of an exhaustive switch: the names rule has two values, the type refuses a third"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/wrapper.ts": {
+		"99309ac0fc344751": {
+			"line": 48,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "the instance parent is a record of the transaction, and no other child tag of the elements a template wrapper lands under shares a wrapper's type value"
+		},
+		"9686008ad26e17ad": {
+			"line": 48,
+			"mutation": "OptionalChaining: parentRecord?.children -> parentRecord.children",
+			"equivalent": "the instance parent is a record of the transaction, and no other child tag of the elements a template wrapper lands under shares a wrapper's type value"
+		},
+		"95c8fb473d67b9b6": {
+			"line": 48,
+			"mutation": "MethodExpression: parentRecord?.children.filter((child) => child.tagName === tagName) -> parentRecord?.children",
+			"equivalent": "no other child tag of the elements a template wrapper lands under shares a wrapper's type value"
+		},
+		"a5ac5b6065966ce2": {
+			"line": 48,
+			"mutation": "ConditionalExpression: child.tagName === tagName -> true",
+			"equivalent": "no other child tag of the elements a template wrapper lands under shares a wrapper's type value"
+		},
+		"fd1828b77ff184fd": {
+			"line": 51,
+			"mutation": "ConditionalExpression: !wrapper -> false",
+			"equivalent": "reading the children a record lists never misses one"
+		},
+		"f29e78b82f5c3b04": {
+			"line": 52,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a wrapper without a type is refused by the schema: the template wrapper always carries one"
+		},
+		"d9979d2c5be5cc10": {
+			"line": 52,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/extract/transaction/asd.ts": {
 		"4335da37624ef25b": {
 			"line": 60,
@@ -166,6 +225,197 @@
 			"line": 66,
 			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
 			"equivalent": "templateLink keep: a junk id in unlinked names no source record"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/layers/application/variant-selection.ts": {
+		"32cfc9595ce987b4": {
+			"line": 43,
+			"mutation": "ConditionalExpression: !documentTree -> false",
+			"equivalent": "a document always reads as a tree from its root"
+		},
+		"32ae3ee0b3ebce05": {
+			"line": 79,
+			"mutation": "ConditionalExpression: !instanceTree -> false",
+			"equivalent": "the instance is a record of the project, read in the same transaction"
+		},
+		"2e7a18e4cdb1ae16": {
+			"line": 84,
+			"mutation": "ConditionalExpression: sets.length === 0 -> false",
+			"equivalent": "a shortcut: with no selected set, every later step leaves nothing out"
+		},
+		"1e195d56f8c35ad8": {
+			"line": 114,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a function's shared selection is read for what it leaves out; the variants not selected are listed on the application's report only"
+		},
+		"2fd97e841aded4f0": {
+			"line": 136,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
+		},
+		"150dc4d22c47d39e": {
+			"line": 137,
+			"mutation": "ConditionalExpression: uuid -> true",
+			"equivalent": "an empty uuid is never looked up"
+		},
+		"76c445e5469a8a60": {
+			"line": 160,
+			"mutation": "ConditionalExpression: selected !== undefined -> true",
+			"equivalent": "one variant held already gives the selected one"
+		},
+		"c7be75add01f5145": {
+			"line": 165,
+			"mutation": "ConditionalExpression: !VARIANT_SET_HOLDER_TAGS.has(child.tagName) -> false",
+			"equivalent": "walking into elements that hold no variant finds no set: it only costs time"
+		},
+		"08b7744b530de9d0-1": {
+			"line": 183,
+			"mutation": "MethodExpression: sourceNode.tree.filter((child) => VARIANT_TAGS.has(child.tagName)) -> sourceNode.tree",
+			"equivalent": "a variant's other children (variable references) carry no uuid a marker names"
+		},
+		"763a4c48102cbc21": {
+			"line": 184,
+			"mutation": "ConditionalExpression: variants.length > 0 -> true",
+			"equivalent": "an empty set of variants is named by no marker"
+		},
+		"74a14e37bdb1df3c": {
+			"line": 184,
+			"mutation": "EqualityOperator: variants.length > 0 -> variants.length >= 0",
+			"equivalent": "an empty set of variants is named by no marker"
+		},
+		"5aacbae788261697": {
+			"line": 186,
+			"mutation": "ConditionalExpression: VARIANT_SET_HOLDER_TAGS.has(child.tagName) -> true",
+			"equivalent": "walking into elements that hold no variant finds no set: it only costs time"
+		},
+		"4225dd4c84640856": {
+			"line": 198,
+			"mutation": "MethodExpression: instanceNode.tree.filter((child) => child.tagName === sourceNode.tagName) -> instanceNode.tree",
+			"equivalent": "a variant, a group and a holder of variants are matched among siblings that never share their lineage or name with an element of another tag"
+		},
+		"beeaf144a41946d0": {
+			"line": 198,
+			"mutation": "ConditionalExpression: child.tagName === sourceNode.tagName -> true",
+			"equivalent": "a variant, a group and a holder of variants are matched among siblings that never share their lineage or name with an element of another tag"
+		},
+		"3b419fc9c46c2ab5": {
+			"line": 199,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
+		},
+		"0d31b8d1533e73fd": {
+			"line": 203,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
+		},
+		"1c42b5e39f63df03": {
+			"line": 207,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
+		},
+		"6f41b6075c1f4ce1": {
+			"line": 211,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
+		},
+		"4ea6ca822662ba1c": {
+			"line": 228,
+			"mutation": "ConditionalExpression: !params.excluded && leftOut.has(node.id) -> false",
+			"equivalent": "what is left out before the walk is the variants not selected, which hold no composing reference and no marker that excludes anything more"
+		},
+		"3a0b87dcb7046605": {
+			"line": 228,
+			"mutation": "BooleanLiteral: !params.excluded -> params.excluded",
+			"equivalent": "what is left out before the walk is the variants not selected, which hold no composing reference and no marker that excludes anything more"
+		},
+		"34ecb44d5e6e6183": {
+			"line": 232,
+			"mutation": "ConditionalExpression: node.tagName === COMPOSING_REFERENCE_TAG -> true",
+			"equivalent": "an element of another tag carries no function uuid: nothing is recorded"
+		},
+		"b872fb5ea565637a": {
+			"line": 236,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
+		},
+		"9582d454018654be": {
+			"line": 238,
+			"mutation": "ConditionalExpression: functionUuid -> true",
+			"equivalent": "an element of another tag carries no function uuid: nothing is recorded"
+		},
+		"6095169120811e4e": {
+			"line": 254,
+			"mutation": "MethodExpression: node.tree.filter((child) => child.tagName === VARIANT_MARKER_TAG) -> node.tree",
+			"equivalent": "a child that is not a marker carries no variant uuid: it names no variant"
+		},
+		"5e3e26966d6a315b": {
+			"line": 254,
+			"mutation": "ConditionalExpression: child.tagName === VARIANT_MARKER_TAG -> true",
+			"equivalent": "a child that is not a marker carries no variant uuid: it names no variant"
+		},
+		"01e674c6e5f67638": {
+			"line": 261,
+			"mutation": "ConditionalExpression: ofSet.length === 0 -> false",
+			"equivalent": "with no marker of the set, nothing is removed or added"
+		},
+		"b872fb5ea565637a-1": {
+			"line": 285,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
+		},
+		"d80723a38d07fb47": {
+			"line": 287,
+			"mutation": "ConditionalExpression: !uuid -> false",
+			"equivalent": "an empty uuid matches no variant: each carries one"
+		},
+		"e68cc8dc578fbe18": {
+			"line": 290,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
+		},
+		"2fd97e841aded4f0-1": {
+			"line": 364,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "descending into what is left out only adds ids inside it: the comparisons skip it a subtree at a time, the readers ask `within`, which holds them anyway"
+		},
+		"6d3087709b863b1e": {
+			"line": 377,
+			"mutation": "ConditionalExpression: leftOut.has(node.id) -> false",
+			"equivalent": "every element inside what is left out is added to it at the end, whatever the reference pass found inside"
+		},
+		"3dbf5ea2b8ff029f": {
+			"line": 381,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/report/query/report-asd.ts": {
+		"c9b84b015e7bcdd7": {
+			"line": 462,
+			"mutation": "OptionalChaining: selection?.leftOut -> selection.leftOut",
+			"equivalent": "every instance of the application has its selection in the map"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/transplant/transaction/primitives/clone-tree.ts": {
+		"8f46b4c2ce40d1ea": {
+			"line": 44,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "an unwrap list naming no tag unwraps nothing, as the empty one"
+		},
+		"713448a7b21838e9": {
+			"line": 45,
+			"mutation": "ConditionalExpression: !read -> false",
+			"equivalent": "the source element exists: the caller read it from the source tree"
+		},
+		"ab8881d17d3e9232": {
+			"line": 46,
+			"mutation": "ConditionalExpression: leaveOut.size > 0 -> true",
+			"equivalent": "pruning with an empty set copies the tree as it is"
+		},
+		"6a7d70c42433239b": {
+			"line": 46,
+			"mutation": "EqualityOperator: leaveOut.size > 0 -> leaveOut.size >= 0",
+			"equivalent": "pruning with an empty set copies the tree as it is"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/update/transaction/application-groups.ts": {
@@ -215,6 +465,16 @@
 			"line": 65,
 			"mutation": "ConditionalExpression: !sourceUuid -> false",
 			"equivalent": "a function the template composes always has a uuid"
+		},
+		"abc5ce5a0c948802": {
+			"line": 68,
+			"mutation": "OptionalChaining: params.selections?.get -> params.selections.get",
+			"equivalent": "the application update always passes the selections"
+		},
+		"5af1fe538dacce1d": {
+			"line": 96,
+			"mutation": "ConditionalExpression: selection.leftOut.has(functionRef.id) -> false",
+			"equivalent": "the report lists no placement of a function the selection leaves out, and the apply places only what the report's groups accept"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/update/transaction/ssd.ts": {
@@ -251,6 +511,45 @@
 			"line": 129,
 			"mutation": "StringLiteral: 'none' -> \"\"",
 			"equivalent": "the file reference attributes compared have no schema default: no defaults mode fills them"
+		}
+	},
+	"src/v2019C1/hooks/after-created/private-wrapper.ts": {
+		"e59de887dd707b9b": {
+			"line": 39,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "the core stages the operations a hook returns and skips an entry that is no operation"
+		},
+		"7b58650329d8990f": {
+			"line": 83,
+			"mutation": "MethodExpression: parentRecord.children.filter((childRef) =>\n\t\tisTransparentElement(childRef.tagName),\n\t) -> parentRecord.children",
+			"equivalent": "no other child tag of a parent receiving a namespaced element shares a wrapper's type value (a namespace prefix)"
+		},
+		"3127459471f07b41": {
+			"line": 89,
+			"mutation": "ConditionalExpression: privateRecord !== undefined -> true",
+			"equivalent": "reading the children a record lists never misses one"
+		},
+		"6ee56804b4100022": {
+			"line": 90,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
+		},
+		"7616b7eafbea4fb9": {
+			"line": 92,
+			"mutation": "ConditionalExpression: index === -1 -> false",
+			"equivalent": "the element at index -1 is undefined, as the guard returns"
+		}
+	},
+	"src/v2019C1/test/revision-twins.ts": {
+		"75d9f834bb8c437a-1": {
+			"line": 26,
+			"mutation": "StringLiteral: `revision twin: ${path} is not in the fixtures` -> ``",
+			"equivalent": "the twins read are committed: only a misspelt twin name reaches the error"
+		},
+		"7d62437993ffcc07-1": {
+			"line": 26,
+			"mutation": "ConditionalExpression: xml === undefined -> false",
+			"equivalent": "the twins read are committed: only a misspelt twin name reaches the error"
 		}
 	}
 }

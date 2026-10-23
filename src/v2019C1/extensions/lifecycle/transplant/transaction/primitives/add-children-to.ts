@@ -25,21 +25,25 @@ export async function addChildrenTo(
 		omit?: OmitEntry<Config>[]
 		/** Attributes the clones drop: `transplant.deep`'s generic filter, passed through. None by default. */
 		strip?: StripConfig | false
+		/** Source records not cloned, with what they hold (record ids): what the instance's selection of variants leaves out. */
+		leaveOut?: ReadonlySet<string>
 	},
 ): Promise<Scl.CloneMapping[]> {
-	const { sourceQuery, source, target, omit, strip } = params
+	const { sourceQuery, source, target, omit, strip, leaveOut } = params
 
 	const sourceRecord = await sourceQuery.any.getRecord(source)
 	if (!sourceRecord) return []
 
 	const cloneMappings: Scl.CloneMapping[] = []
 	for (const childRef of sourceRecord.children) {
+		if (leaveOut?.has(childRef.id)) continue
 		const clone = await cloneTree(tx, {
 			sourceQuery,
 			ref: { tagName: childRef.tagName, id: childRef.id } as Scl.Ref<Scl.ElementsOf>,
 			targetParent: target,
 			omit,
 			...(strip === undefined ? {} : { strip }),
+			leaveOut,
 		})
 		if (clone) cloneMappings.push(...clone.mappings)
 	}

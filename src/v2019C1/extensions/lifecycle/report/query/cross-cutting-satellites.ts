@@ -6,6 +6,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -43,11 +44,16 @@ export async function foldCrossCuttingSatellites(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
+		/** What the selection of functional variants of the instances this is for leaves out of the template. */
+		selection?: VariantSelection
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, instancePrimaryRef, report } = params
 
-	const satelliteRefs = await resolveAppliedSatellites(sourceQuery, { primaryRef })
+	const satelliteRefs = await resolveAppliedSatellites(sourceQuery, {
+		primaryRef,
+		leftOut: params.selection?.within,
+	})
 	const instanceSatelliteRefs = instancePrimaryRef
 		? await resolveAppliedSatellites(query, { primaryRef: instancePrimaryRef })
 		: []
@@ -67,5 +73,6 @@ export async function foldCrossCuttingSatellites(
 		resolveForeignScope: params.resolveForeignScope,
 		removalBase: params.removalBase,
 		namesFollow: params.namesFollow,
+		notSelected: params.selection?.leftOut,
 	})
 }

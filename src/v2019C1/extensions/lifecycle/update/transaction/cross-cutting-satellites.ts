@@ -12,6 +12,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -51,6 +52,8 @@ export async function reconcileCrossCuttingSatellites(
 		namesFollow: NamesFollow
 		/** What belongs to the other instances of the primary's template. */
 		resolveForeignScope?: ResolveForeignScope
+		/** What the selection of functional variants of the instances this is for leaves out of the template. */
+		selection?: VariantSelection
 	},
 ): Promise<ReconcileCrossCuttingSatellitesResult> {
 	const {
@@ -64,7 +67,10 @@ export async function reconcileCrossCuttingSatellites(
 		bumpsCollisions,
 	} = params
 
-	const satelliteRefs = await resolveAppliedSatellites(sourceQuery, { primaryRef })
+	const satelliteRefs = await resolveAppliedSatellites(sourceQuery, {
+		primaryRef,
+		leftOut: params.selection?.within,
+	})
 	const instanceSatelliteRefs = instancePrimaryRef
 		? await resolveAppliedSatellites(tx, { primaryRef: instancePrimaryRef })
 		: []
@@ -102,6 +108,7 @@ export async function reconcileCrossCuttingSatellites(
 		namesFollow: params.namesFollow,
 		resolvedMappings,
 		resolveForeignScope: params.resolveForeignScope,
+		notSelected: params.selection?.leftOut,
 	})
 
 	for (const contribution of withdrawnContributions) {

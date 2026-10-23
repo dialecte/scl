@@ -29,6 +29,8 @@ export type ImportDeepParams = {
 	strip?: StripConfig | false
 	/** Replace the root tagName when it matches `from` (e.g. SubFunction -> Function). */
 	retagRoot?: RetagRootConfig
+	/** Source records not cloned, with what they hold (record ids): what the instance's selection of variants leaves out. */
+	leaveOut?: ReadonlySet<string>
 }
 
 export type ImportDeepResult = {

@@ -75,6 +75,8 @@ export async function reconcileSatellites(
 		 * shared satellite's references to it are theirs, not this instance's.
 		 */
 		resolveForeignScope?: ResolveForeignScope
+		/** The source elements the instance's selection of functional variants leaves out: see `reconcile`. */
+		notSelected?: ReadonlySet<string>
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -132,6 +134,7 @@ export async function reconcileSatellites(
 				instanceRootIsProjectOwned: resolved?.projectOwned ?? false,
 				keepLeftoverRefs: true,
 				foreignInstanceIds,
+				notSelected: params.notSelected,
 			})
 			added.push(...reconcileMappings)
 			continue
@@ -146,6 +149,7 @@ export async function reconcileSatellites(
 			sourceQuery,
 			ref: satelliteRef,
 			targetParent,
+			leaveOut: params.notSelected,
 		})
 		if (!clone) continue
 		await finalizeClonedIdentity(tx, { cloneMappings: clone.mappings, mode: identityMode })

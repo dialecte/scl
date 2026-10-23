@@ -108,6 +108,11 @@ export async function reconcile(
 		 * template (a shared element holds one reference per instance): never matched to a source child.
 		 */
 		foreignInstanceIds?: ReadonlySet<string>
+		/**
+		 * The source elements the instance's selection of functional variants leaves out (record ids): one matching
+		 * nothing in the instance is neither listed nor written, at any depth; one the instance holds is compared as any.
+		 */
+		notSelected?: ReadonlySet<string>
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -176,6 +181,7 @@ export async function reconcile(
 		withinProjectOwned,
 		pinnedMatches: params.pinnedMatches,
 		foreignInstanceIds: params.foreignInstanceIds,
+		notSelected: params.notSelected,
 	})
 
 	// removed from the template: delete instance elements whose lineage is gone. In a project-owned
@@ -217,6 +223,7 @@ async function reconcileChildren(
 		withinProjectOwned: boolean
 		pinnedMatches?: PinnedMatches
 		foreignInstanceIds?: ReadonlySet<string>
+		notSelected?: ReadonlySet<string>
 	},
 ): Promise<void> {
 	const {
@@ -295,12 +302,15 @@ async function reconcileChildren(
 				withinProjectOwned,
 				pinnedMatches: params.pinnedMatches,
 				foreignInstanceIds: params.foreignInstanceIds,
+				notSelected: params.notSelected,
 			})
 			continue
 		}
 
 		// add a new template element (with its subtree/companions via deep) — up to the boundary tags,
 		// which their own pass places
+		// what the instance's selection of variants leaves out is not added, nor what it consumed below an addition
+		if (params.notSelected?.has(sourceChild.id)) continue
 		if (accepted && !accepted.sourceIds.has(sourceChild.id)) continue
 
 		// what the source holds in a wrapper lands in the instance's wrapper of its type
@@ -311,6 +321,7 @@ async function reconcileChildren(
 			targetParent: toRef(targetParent) as unknown as Scl.Ref<Scl.ElementsOf>,
 			...(omit ? { omit: [...omit] as OmitEntry<Config>[] } : {}),
 			withTypes: { keepNameFrom: keepNameTypesFrom },
+			leaveOut: params.notSelected,
 		})
 		// keep the clone mappings of the whole grafted subtree (ids are stable; the collision
 		// bump below only edits the added root's name, never its id).

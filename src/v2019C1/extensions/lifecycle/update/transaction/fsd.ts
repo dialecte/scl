@@ -53,6 +53,7 @@ import type {
 	DiffReport,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -103,6 +104,11 @@ export async function fsd(
 		 * level it sits on) — the same before and after the write. Default: `targetParent`.
 		 */
 		placedFor?: Scl.Ref<Scl.ElementsOf>
+		/**
+		 * What the selection of functional variants of the application instances composing the function leaves out of
+		 * its template: neither added nor written, at any depth.
+		 */
+		selection?: VariantSelection
 	},
 ): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
 	const {
@@ -192,6 +198,7 @@ export async function fsd(
 			bumpsCollisions,
 			removalBase,
 			namesFollow,
+			notSelected: params.selection?.leftOut,
 		})
 		// an element the instances share (a category) holds one reference per instance: this one
 		// reconciles its own, as the project stands once the earlier instances are updated
@@ -214,6 +221,7 @@ export async function fsd(
 			namesFollow,
 			decisionMappings: params.decisionMappings,
 			resolveForeignScope,
+			selection: params.selection,
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
 		const cross = await reconcileCrossCuttingSatellites(tx, {
@@ -228,6 +236,7 @@ export async function fsd(
 			removalBase,
 			namesFollow,
 			resolveForeignScope,
+			selection: params.selection,
 		})
 		// carry the report->applied correlation onto this instance's report nodes
 		const addedMappings = [...reconcileMappings, ...carriedMappings, ...cross.cloneMappings]

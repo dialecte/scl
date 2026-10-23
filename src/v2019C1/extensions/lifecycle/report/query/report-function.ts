@@ -10,6 +10,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -47,6 +48,8 @@ export async function reportFunction(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
+		/** What the selection of functional variants of the instances this is for leaves out of the template. */
+		selection?: VariantSelection
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
@@ -60,6 +63,7 @@ export async function reportFunction(
 		matchKey: params.matchKey,
 		removalBase: params.removalBase,
 		namesFollow: params.namesFollow,
+		notSelected: params.selection?.leftOut,
 	})
 	// On FIRST-TIME (no instance) the satellites are still created via the clone path,
 	// so they must be folded as `added` companions too — otherwise the merge-review
@@ -88,6 +92,7 @@ export async function reportFunction(
 		resolveForeignScope,
 		removalBase: params.removalBase,
 		namesFollow: params.namesFollow,
+		selection: params.selection,
 	})
 	return foldCrossCuttingSatellites(query, {
 		pass: params.pass,
@@ -101,5 +106,6 @@ export async function reportFunction(
 		resolveForeignScope,
 		removalBase: params.removalBase,
 		namesFollow: params.namesFollow,
+		selection: params.selection,
 	})
 }

@@ -152,6 +152,21 @@ describe('update: what an instance configures is kept on a template update', () 
 		])
 	})
 
+	it('an update that changes nothing lists no satellite in the tree', async () => {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		if (!target) throw new Error('target required')
+		await reportAndApply({ document: target.document, lifecycle: lifecycle(source.document.query) })
+
+		const { report } = await reportAndApply({
+			document: target.document,
+			lifecycle: lifecycle(source.document.query),
+		})
+
+		expect(
+			report.instances.map((instance) => instance.tree.children.map((child) => child.tagName)),
+		).toEqual([['LNode']])
+	})
+
 	it('a behaviour description the template gains carries the template file', async () => {
 		const { source, target } = await placedAndConfigured()
 		await source.transaction(async (tx) => {

@@ -34,6 +34,8 @@ import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantia
 import { placeApplication } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/asd'
 import {
 	findDroppedComposedFunctions,
+	readVariantSelection,
+	readVariantTemplate,
 	resolveApplicationSatellites,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
@@ -57,6 +59,7 @@ import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/eng
 import type { DroppedElement } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
+import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
@@ -194,7 +197,6 @@ export async function asd(
 	}
 
 	const structure = await resolveTargetStructure(tx, targetParent)
-	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef })
 
 	// The instances this write actually reconciled. A fully-skipped instance (all its
 	// groups skipped) is left untouched, so it is NOT an applied root and is excluded
@@ -220,6 +222,10 @@ export async function asd(
 		removalBase,
 	})
 	const droppedFunctions: { dropped: DroppedElement[]; accepted: AcceptedIds | undefined }[] = []
+	// what each instance's selection of variants leaves out of the template, by instance record id: read from the
+	// instance before anything is written to it, as the report read it
+	const selections = new Map<string, VariantSelection>()
+	const template = await readVariantTemplate(sourceQuery, { applicationRef, namesFollow })
 
 	for (const instance of instances) {
 		// gate THIS instance by only its own groups (source ids are unique within one instance)
@@ -236,6 +242,13 @@ export async function asd(
 			writtenInstances.push({ tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>)
 		}
 		applicationInstances.push({ instance, written: wasWritten })
+		const selection = await readVariantSelection(tx, { template, instance, matchKey })
+		selections.set(instance.id, selection)
+		// what the application refers to outside it, but through what the selection leaves out
+		const satelliteRefs = await resolveApplicationSatellites(sourceQuery, {
+			applicationRef,
+			leftOut: selection.within,
+		})
 
 		// application-layer satellites (e.g. a referenced AllocationRole) travel with the
 		// application group. Resolve the instance-side satellites BEFORE the reconcile below
@@ -286,6 +299,7 @@ export async function asd(
 			removalBase,
 			namesFollow,
 			redirectMappings,
+			notSelected: selection.leftOut,
 		})
 		const foreignScope = new Set([
 			...(foreignScopes.get(instance.id) ?? []),
@@ -308,6 +322,7 @@ export async function asd(
 			resolvedMappings,
 			decisionMappings: params.decisionMappings,
 			resolveForeignScope,
+			notSelected: selection.leftOut,
 		})
 		for (const contribution of withdrawnContributions) {
 			// gated on the removal the report announced for it
@@ -329,6 +344,7 @@ export async function asd(
 			removalBase,
 			namesFollow,
 			resolveForeignScope,
+			selection,
 		})
 		// carry the report->applied correlation onto this Application instance's report nodes (the
 		// composed Functions are annotated by the FSD cascade below)
@@ -360,6 +376,7 @@ export async function asd(
 		keepNameTypesFrom,
 		targetInstance,
 		decisionMappings: params.decisionMappings,
+		selections,
 	})
 	for (const { dropped, accepted } of droppedFunctions)
 		await deleteDropped(tx, { dropped, accepted })

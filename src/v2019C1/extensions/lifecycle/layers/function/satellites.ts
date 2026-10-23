@@ -16,9 +16,13 @@ import type * as Core from '@dialecte/core'
  */
 export async function resolveFunctionSatellites(
 	query: Core.Query<Config>,
-	params: { primaryRef: SourceFunctionRef },
+	params: {
+		primaryRef: SourceFunctionRef
+		/** References left out (record ids): a satellite reached only through them is not resolved. */
+		leftOut?: ReadonlySet<string>
+	},
 ): Promise<Scl.Ref<Scl.ElementsOf>[]> {
-	const { primaryRef } = params
+	const { primaryRef, leftOut } = params
 
 	// the function itself plus its SubFunction descendants may each carry satellites
 	const targets: Scl.Ref<Scl.ElementsOf>[] = [primaryRef]
@@ -38,8 +42,8 @@ export async function resolveFunctionSatellites(
 				target,
 				containerTagName: containerTag,
 			})
-			for (const { container } of refs) {
-				if (!container || seen.has(container.id)) continue
+			for (const { ref, container } of refs) {
+				if (!container || seen.has(container.id) || leftOut?.has(ref.id)) continue
 				seen.add(container.id)
 				satellites.push(toRef(container) as Scl.Ref<Scl.ElementsOf>)
 			}

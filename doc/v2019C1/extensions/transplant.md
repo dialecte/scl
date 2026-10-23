@@ -32,6 +32,7 @@ tx.lifecycle.transplant.deep(params: {
   omit?: OmitEntry[]                        // child tags to drop from the clone
   strip?: StripConfig | false              // attributes dropped from the clone; default false (a faithful copy)
   retagRoot?: { from: Scl.ElementsOf; to: Scl.ElementsOf } // direction-neutral root retag (e.g. instantiate Function->SubFunction, extract SubFunction->Function)
+  leaveOut?: ReadonlySet<string>          // source record ids not cloned, with what they hold (an instance's selection of variants)
 }): Promise<{
   record: Scl.RawRecord<Scl.ElementsOf>    // cloned root
   typeIdRemap: Map<string, string>         // source type id → reconciled target type id (DataTypeTemplates)

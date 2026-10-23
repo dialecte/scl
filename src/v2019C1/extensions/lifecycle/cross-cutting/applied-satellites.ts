@@ -20,7 +20,10 @@ export async function resolveAppliedSatellites(
 	query: Core.Query<Config>,
 	params: {
 		primaryRef: Scl.Ref<Scl.ElementsOf>
-		/** Elements left out of the subtree (record ids): a satellite applying to them only is not resolved. */
+		/**
+		 * Elements left out (record ids): a satellite applying only to them, or only through references left out, is not
+		 * resolved.
+		 */
 		leftOut?: ReadonlySet<string>
 	},
 ): Promise<Scl.Ref<Scl.ElementsOf>[]> {
@@ -42,8 +45,8 @@ export async function resolveAppliedSatellites(
 				target: toRef(target) as Scl.Ref<Scl.ElementsOf>,
 				containerTagName: containerTag as Scl.ElementsOf,
 			})
-			for (const { container } of refs) {
-				if (!container || seen.has(container.id)) continue
+			for (const { ref, container } of refs) {
+				if (!container || seen.has(container.id) || leftOut?.has(ref.id)) continue
 				// internal/external guard: a satellite inside the subtree is already carried
 				if (subtreeIds.has(container.id)) continue
 				seen.add(container.id)

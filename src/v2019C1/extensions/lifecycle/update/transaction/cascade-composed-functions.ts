@@ -5,7 +5,11 @@ import { invariant } from '@dialecte/core/utils'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
 import { scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
-import { resolveComposedFunctions } from '@/v2019C1/extensions/lifecycle/layers/application'
+import {
+	NO_VARIANT_SELECTION,
+	resolveComposedFunctions,
+	sharedSelection,
+} from '@/v2019C1/extensions/lifecycle/layers/application'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type {
@@ -13,6 +17,7 @@ import type {
 	ComposedFunctionsCascade,
 } from './cascade-composed-functions.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
@@ -55,13 +60,22 @@ export async function cascadeComposedFunctions(
 		const sourceUuid = child.lineage
 		// the functions of the project to reconcile
 		const reconcilables = new Map<string, AnyTrackedRecord>()
+		// the selections of the instances of the application standing on each function of the project
+		const standers = new Map<string, VariantSelection[]>()
 		for (const { instance, written } of applicationInstances) {
 			const standing = standings.get(instance.id)
 			if (!standing) continue
+			const selection = params.selections?.get(instance.id) ?? NO_VARIANT_SELECTION
 			if (standing.kind === 'owned') {
-				for (const owned of standing.elements) reconcilables.set(owned.id, owned)
+				for (const owned of standing.elements) {
+					reconcilables.set(owned.id, owned)
+					standers.set(owned.id, [...(standers.get(owned.id) ?? []), selection])
+				}
 				continue
 			}
+			// a function the instance takes is one it stands on, written or not: as the report reads it
+			if (standing.kind === 'taken')
+				standers.set(standing.element.id, [...(standers.get(standing.element.id) ?? []), selection])
 			if (!sourceUuid) continue
 			// a function placed for the instance is decided by its own groups, whatever the instance's own: the reference
 			// to it may be declined; taking one, or choosing one, waits for a write to the instance
@@ -78,6 +92,8 @@ export async function cascadeComposedFunctions(
 				reconcilables.set(standing.element.id, standing.element)
 				standsFor = toRef(standing.element) as Scl.Ref<Scl.ElementsOf>
 			} else {
+				// a function the template gained that the instance's selection leaves out is not placed for it
+				if (selection.leftOut.has(functionRef.id)) continue
 				const [placed] = await updateFsd(tx, {
 					sourceQuery,
 					functionRef,
@@ -110,7 +126,13 @@ export async function cascadeComposedFunctions(
 			targetInstance,
 		})
 		for (const functionInstance of scoped) {
-			const reconciled = await reconcileWhereItSits(tx, { params, functionRef, functionInstance })
+			const reconciled = await reconcileWhereItSits(tx, {
+				params,
+				functionRef,
+				functionInstance,
+				// a function several instances compose leaves out only what none of them uses
+				selection: sharedSelection(standers.get(functionInstance.id) ?? []),
+			})
 			cascade.functions.push(...reconciled)
 		}
 	}
@@ -125,9 +147,10 @@ async function reconcileWhereItSits(
 		params: CascadeComposedFunctionsParams
 		functionRef: Scl.Ref<'Function'>
 		functionInstance: AnyTrackedRecord
+		selection: VariantSelection
 	},
 ): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
-	const { params, functionRef, functionInstance } = context
+	const { params, functionRef, functionInstance, selection } = context
 
 	const functionInstanceRef = {
 		tagName: 'Function',
@@ -149,5 +172,6 @@ async function reconcileWhereItSits(
 		keepNameTypesFrom: params.keepNameTypesFrom,
 		targetInstance: functionInstanceRef,
 		decisionMappings: params.decisionMappings,
+		selection,
 	})
 }

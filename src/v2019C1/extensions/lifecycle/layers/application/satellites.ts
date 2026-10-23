@@ -14,9 +14,13 @@ import type { AnyTreeRecord } from '@dialecte/core'
  */
 export async function resolveApplicationSatellites(
 	query: Core.Query<Config>,
-	params: { applicationRef: Scl.Ref<'Application'> },
+	params: {
+		applicationRef: Scl.Ref<'Application'>
+		/** Elements of the application left out (record ids): what they refer to through them is not resolved. */
+		leftOut?: ReadonlySet<string>
+	},
 ): Promise<Scl.Ref<Scl.ElementsOf>[]> {
-	const { applicationRef } = params
+	const { applicationRef, leftOut } = params
 	const tree = await query.any.getTree(applicationRef)
 	if (!tree) return []
 
@@ -29,6 +33,7 @@ export async function resolveApplicationSatellites(
 			node: tree,
 			refTag: link.refTag,
 			uuidAttr: link.uuidAttr,
+			leftOut,
 			out: uuids,
 		})
 		for (const uuid of uuids) {
@@ -46,14 +51,21 @@ export async function resolveApplicationSatellites(
 
 async function collectRefUuids(
 	query: Core.Query<Config>,
-	params: { node: AnyTreeRecord; refTag: string; uuidAttr: string; out: Set<string> },
+	params: {
+		node: AnyTreeRecord
+		refTag: string
+		uuidAttr: string
+		leftOut: ReadonlySet<string> | undefined
+		out: Set<string>
+	},
 ): Promise<void> {
-	const { node, refTag, uuidAttr, out } = params
+	const { node, refTag, uuidAttr, leftOut, out } = params
+	if (leftOut?.has(node.id)) return
 	if (node.tagName === refTag) {
 		const uuid = await query.any.getAttribute(node, { name: uuidAttr })
 		if (uuid) out.add(uuid)
 	}
 	for (const child of node.tree) {
-		await collectRefUuids(query, { node: child, refTag, uuidAttr, out })
+		await collectRefUuids(query, { ...params, node: child })
 	}
 }

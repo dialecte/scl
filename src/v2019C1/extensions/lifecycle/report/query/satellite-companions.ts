@@ -89,6 +89,8 @@ export async function foldSatelliteCompanions(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
+		/** The source elements the instance's selection of functional variants leaves out: see `diff`. */
+		notSelected?: ReadonlySet<string>
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
@@ -165,6 +167,7 @@ export async function foldSatelliteCompanions(
 			matchKey,
 			removalBase: params.removalBase,
 			namesFollow: params.namesFollow,
+			notSelected: params.notSelected,
 		})
 		const changed =
 			satelliteReport.summary.added +

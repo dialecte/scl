@@ -163,6 +163,22 @@ describe('update: what the template holds in a wrapper lands in the instance wra
 		})
 	})
 
+	it("a labels element gains a tool element, the instance holding another tool's wrapper only: a wrapper of its type is made", async () => {
+		const { xml } = await update({
+			source: { inFunction: '', inLabels: toolWrapper(toolLabel('a'), 's-tool') },
+			target: {
+				inFunction: '',
+				inLabels: `<Private type="Other-Tool" ${id}="t-other-tool">other data</Private>`,
+			},
+		})
+		expect(wrappedIn({ xml, parentLocalName: 'Labels', name: 'a' })).toEqual({
+			wrapperTypes: [`Private ${TOOL.wrapperType}`],
+			wrappersOfToolType: 1,
+			directChildren: 0,
+		})
+		expect(xml).toContain('other data')
+	})
+
 	it('a labels element gains two tool elements in a wrapper the instance lacks: one wrapper is made for both', async () => {
 		const { xml } = await update({
 			source: {

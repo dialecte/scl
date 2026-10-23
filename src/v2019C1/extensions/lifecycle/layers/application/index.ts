@@ -10,3 +10,4 @@ export type {
 export { findDroppedComposedFunctions } from './find-dropped-composed-functions'
 export { readVariantSelection, readVariantTemplate, sharedSelection } from './variant-selection'
 export type { VariantSelection, VariantTemplate } from './variant-selection.types'
+export { NO_VARIANT_SELECTION } from './variant-selection.constants'

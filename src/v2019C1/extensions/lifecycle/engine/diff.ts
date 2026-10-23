@@ -149,6 +149,11 @@ export async function diff(params: {
 	removalBase?: RemovalBase
 	/** Whose names a matched element keeps: see `visibleAttributes`. Default: the project's. */
 	namesFollow?: NamesFollow
+	/**
+	 * The source elements the instance's selection of functional variants leaves out (record ids): one matching
+	 * nothing in the instance is neither listed nor written, at any depth; one the instance holds is compared as any.
+	 */
+	notSelected?: ReadonlySet<string>
 }): Promise<InstanceDiff> {
 	const { sourceQuery, targetQuery, sourceRootRef, instanceRootRef, keepLeftoverRefs } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
@@ -157,6 +162,7 @@ export async function diff(params: {
 	const removalBase = params.removalBase ?? { kind: 'lineage' }
 	const namesFollow = params.namesFollow ?? 'project'
 	const omit = params.omit
+	const notSelected = params.notSelected
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	if (!sourceTree) {
@@ -167,7 +173,7 @@ export async function diff(params: {
 
 	// no instance yet -> first-time instantiate: the whole template is added (fast)
 	if (!instanceTree) {
-		const root = addedNode(sourceTree, omit)
+		const root = addedNode({ node: sourceTree, omit, notSelected })
 		return { root, groups: groupChanges(root), summary: summarize(root) }
 	}
 
@@ -201,6 +207,7 @@ export async function diff(params: {
 		redirectedSourceUuids,
 		pinnedMatches: params.pinnedMatches,
 		foreignInstanceIds: params.foreignInstanceIds,
+		notSelected,
 	})
 	// a rename of the instance itself is numbered among its siblings, as the apply numbers it
 	if (instanceTree.parent) {
@@ -238,6 +245,7 @@ async function diffMatched(
 		redirectedSourceUuids?: RedirectedSourceUuids
 		pinnedMatches?: PinnedMatches
 		foreignInstanceIds?: ReadonlySet<string>
+		notSelected?: ReadonlySet<string>
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
@@ -311,11 +319,12 @@ async function diffMatched(
 				skipOwnAttributes: skipChildAttributes,
 				withinProjectOwned,
 				contributeOnly,
+				notSelected: params.notSelected,
 			})
 			children.push(matchedNode)
 			renamed.push({ node: matchedNode, child: matched })
-		} else {
-			children.push(addedNode(sourceChild, omit))
+		} else if (!params.notSelected?.has(sourceChild.id)) {
+			children.push(addedNode({ node: sourceChild, omit, notSelected: params.notSelected }))
 		}
 	}
 
@@ -396,10 +405,15 @@ async function diffMatched(
 	}
 }
 
-function addedNode(node: AnyTreeRecord, omit?: readonly string[]): DiffNode {
+function addedNode(params: {
+	node: AnyTreeRecord
+	omit: readonly string[] | undefined
+	notSelected: ReadonlySet<string> | undefined
+}): DiffNode {
+	const { node, omit, notSelected } = params
 	const children: DiffNode[] = node.tree
-		.filter((child) => !omit?.includes(child.tagName))
-		.map((child) => addedNode(child, omit))
+		.filter((child) => !omit?.includes(child.tagName) && !notSelected?.has(child.id))
+		.map((child) => addedNode({ node: child, omit, notSelected }))
 	// the report speaks of what the project will hold: a template-only element as what it becomes
 	return { change: 'added', tagName: instanceTagOf(node.tagName), sourceRef: toRef(node), children }
 }

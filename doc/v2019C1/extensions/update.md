@@ -331,6 +331,39 @@ or an application updated as part of a larger template keeps the references it h
 An SSD update — template or fork — appends the newer revision to the project's `Header > SourceFiles`
 after the ones listed, unless that file version is listed already. A fork records no file on an element.
 
+### Functional variants an instance selected
+
+An application template may describe several variants of itself (`FunctionalVariant`s, grouped in
+`FunctionalVariantGroup`s, refined by `FunctionalSubVariant`s); an element of the application marks, with a
+`FunctionalVariantRef` (`update: 'add' | 'remove'`), the variants that add or remove it. A specification tool selects
+one variant of each set when it instantiates the application, and keeps only what that selection leaves: the variants
+not selected are gone, the markers too, and so are the elements the selection removed, the subfunctions only those
+composed and the references naming them.
+
+An update reads the selection from what the instance holds. A set of exclusive variants (an application's variants, a
+group's, a variant's sub-variants) is selected when the template holds several and the instance one of them (matched
+by its lineage, else its name): the instance is then compared with the template **as that selection reads it** — what
+the selection leaves out is neither listed nor written, at any depth:
+
+- the variants not selected, and the sub-variants of a variant not selected;
+- every marker naming a variant of a selected set (the selection consumed it), also inside an element the update adds;
+- every element the selected set excludes: one of its markers of the set removes it with the variant selected, or its
+  markers of the set adding it all name variants not selected;
+- every function or subfunction those elements compose (`FunctionRef`) that no element kept composes — neither it
+  nor anything below it (the function the application is rooted on always is);
+- every reference of the template naming, by its uuid, an element inside what is left out (a `ProcessResourceRef`, a
+  `FunctionCatRef`, a `SourceRef`, an `LNodeInputRef` naming that `SourceRef`…).
+
+A change of the template inside what the selection keeps reaches the instance as any. An element the selection would
+leave out that the instance does hold is compared as any: what the project kept stands. The report lists, on the
+application's instance, the template's variants not selected (`variantsNotSelected`) — a variant the template gained
+since included: it is not added, and opens no decision (choosing another variant is the selection, not an update). An
+instance holding several variants of a set has not selected yet (an SSD template may keep its variants for the
+project to choose): nothing changes for it. A function several instances of the application compose leaves out only
+what none of their selections uses; a variable, a category or a role the template holds beside the application is not
+placed when it reaches it only through what the selection leaves out. A fork reads no selection: the variants of a revision of the same file are its
+content.
+
 ### Placement collision resolution
 
 When a group is accepted and its primary is **placed** (a first-time instantiate, a composed function,
@@ -585,6 +618,7 @@ type ReportInstance = {
 	tree: DiffNode // full diff tree for this instance (unchanged context included)
 	groups: DecisionGroup[] // this instance's accept/skip units
 	mappings: ReportMapping[] // where the shared source elements this instance refers to land
+	variantsNotSelected?: AnyRefOrRecord[] // the template's variants an application instance did not select
 }
 ```
 

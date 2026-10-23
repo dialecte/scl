@@ -138,6 +138,12 @@ export type ReportInstance = {
 	groups: DecisionGroup[]
 	/** Where the shared source elements this instance refers to land in the project. */
 	mappings: ReportMapping[]
+	/**
+	 * The template's functional variants the instance did not select (an application instance holding one variant of
+	 * a set the template holds several of), as the template holds them. Neither they nor what they bring are added or
+	 * listed as changes; there is nothing to decide. Absent when the instance selected nothing.
+	 */
+	variantsNotSelected?: AnyRefOrRecord[]
 }
 
 export type DiffReport = {
