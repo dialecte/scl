@@ -8,3 +8,5 @@ export type {
 	ResolveInstanceHoldingsParams,
 } from './resolve-instance-holdings.types'
 export { findDroppedComposedFunctions } from './find-dropped-composed-functions'
+export { readVariantSelection, readVariantTemplate, sharedSelection } from './variant-selection'
+export type { VariantSelection, VariantTemplate } from './variant-selection.types'
