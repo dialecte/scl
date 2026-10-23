@@ -317,6 +317,18 @@ A function or an application placed as part of a larger template carries that te
 not its own: a function an application gains gets no `FunctionSclRef`, a primary a substation
 template gains no `FunctionSclRef` / `ApplicationSclRef`.
 
+#### Provenance after an update
+
+An instance records the revision of the file it holds. After a template update, the instance's own
+`FunctionSclRef` (`update.fsd`) or `ApplicationSclRef` (`update.asd`) names the newer file version —
+its `SclFileReference` is brought to the source `Header`'s `version` and `revision` in place, one
+reference per file (the references it records of other files are left). It is not rewritten when
+every change the update brings to that instance is declined (for an application, to the functions it
+composes and to the functions placed for it too); an instance the newer revision changes nothing for records it all the same. A function
+or an application updated as part of a larger template keeps the references it holds (a function of an application keeps the `FunctionSclRef` of its FSD).
+An SSD update — template or fork — appends the newer revision to the project's `Header > SourceFiles`
+after the ones listed, unless that file version is listed already. A fork records no file on an element.
+
 ### Placement collision resolution
 
 When a group is accepted and its primary is **placed** (a first-time instantiate, a composed function,

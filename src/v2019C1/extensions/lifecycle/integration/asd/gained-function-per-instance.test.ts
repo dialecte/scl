@@ -254,6 +254,21 @@ describe('update of an application placed in two bays — a function of the gain
 					functions: [],
 				},
 			},
+		'… and everything of that instance is left out → nothing to choose is asked of it, the other bay gets its own':
+			{
+				sourceXml,
+				targetXml: twoBaysProjectXml,
+				free: [
+					{ bay: firstBayRef, name: 'Ctrl' },
+					{ bay: firstBayRef, name: 'Ctrl_1' },
+				],
+				leftOutIn: firstBayRef,
+				expected: {
+					choice: 'B1: Ctrl | Ctrl_1 → to choose',
+					reported: ['B1: updated', 'B1: updated', 'B2: placed'],
+					functions: ['B1/Ctrl', 'B1/Ctrl_1', 'B2/Ctrl'],
+				},
+			},
 		'… the user picks the second one → that instance stands on it, the other stays as it is; the other bay gets its own':
 			{
 				sourceXml,

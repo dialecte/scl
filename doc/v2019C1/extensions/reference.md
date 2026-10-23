@@ -480,6 +480,13 @@ await tx.reference.setMappedData({
 - `default`: the implementation is the record's default (or none was given); the record carries neither attribute.
 - `inexpressible`: the schema has no value for that path on this record (an `SDS` standing for an attribute structure, a second sub data object level); nothing is written. Document the deviation on the `DAS` below, whose path can go down to any attribute.
 
+### `writeProvenance`
+
+`writeProvenance({ sourceQuery, target })` records the source file an element or the document was made from: an `SclFileReference` sourced from the source `Header` (`version`, `revision`, `uuid` → `fileUuid`) and the source document's name (`fileName`). The lifecycle placements and updates write it.
+
+- `target: { anchor: 'function' | 'application', root }` — the root's own `FunctionSclRef` / `ApplicationSclRef` naming the source file (the same `fileUuid`, or, for a source naming no uuid, the same `fileName` without uuid) is brought to the source's version in place; with none, one is added; a second one naming that file is removed. A reference the root records of another file is left.
+- `target: { anchor: 'document', fileType }` — appended to `Header > SourceFiles`, unless the `Header` lists that file version already (same file, `version` and `revision`); refused with `TARGET_HEADER_MISSING` when the document has no `Header`.
+
 ### `removeOwnProvenance`
 
 `removeOwnProvenance({ element })` removes the source-file references the element records for itself ([`findOwnProvenance`](#findownprovenance)): the element is no longer what that file placed — an extract breaking the template link of the element it extracts. The references of the elements it holds are left.

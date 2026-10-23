@@ -1,1 +1,256 @@
-{}
+{
+	"src/v2019C1/errors/errors.ts": {
+		"526e7f29a7640b70": {
+			"line": 69,
+			"mutation": "StringLiteral: 'This value of the option is not available yet' -> \"\"",
+			"equivalent": "the default message of the error: consumers build their wording from its key and meta"
+		}
+	},
+	"src/v2019C1/extensions/history/transaction/start-file.ts": {
+		"ea66f1aa597c05de": {
+			"line": 29,
+			"mutation": "StringLiteral: `startFile: a new revision of an existing ${header.fileType} file is not available yet` -> ``",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"e26d8c793d8b41f0": {
+			"line": 31,
+			"mutation": "ConditionalExpression: default:\n\t\t\tthrowDialecteError('ASSERTION_FAILED', {\n\t\t\t\tdetail: `startFile: unhandled file start ${String(as satisfies never)}`,\n\t\t\t}) -",
+			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		},
+		"0ef0a1c0072d5b09": {
+			"line": 32,
+			"mutation": "StringLiteral: 'ASSERTION_FAILED' -> \"\"",
+			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		},
+		"8d9a65494a8d6192": {
+			"line": 32,
+			"mutation": "ObjectLiteral: {\n\t\t\t\tdetail: `startFile: unhandled file start ${String(as satisfies never)}`,\n\t\t\t} -> {}",
+			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		},
+		"117049e84d445bbd": {
+			"line": 33,
+			"mutation": "StringLiteral: `startFile: unhandled file start ${String(as satisfies never)}` -> ``",
+			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		}
+	},
+	"src/v2019C1/extensions/identity/transaction/write-identity.ts": {
+		"57450316994ffc92": {
+			"line": 48,
+			"mutation": "ConditionalExpression: default:\n\t\t\tthrowDialecteError('ASSERTION_FAILED', {\n\t\t\t\tdetail: `writeIdentity: unhandled identity mode ${String(params satisfies never)",
+			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		},
+		"5f4db325e09b614d": {
+			"line": 49,
+			"mutation": "StringLiteral: 'ASSERTION_FAILED' -> \"\"",
+			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		},
+		"98ce92cce74981f7": {
+			"line": 49,
+			"mutation": "ObjectLiteral: {\n\t\t\t\tdetail: `writeIdentity: unhandled identity mode ${String(params satisfies never)}`,\n\t\t\t} -> {}",
+			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		},
+		"3b6534f1916cedec": {
+			"line": 50,
+			"mutation": "StringLiteral: `writeIdentity: unhandled identity mode ${String(params satisfies never)}` -> ``",
+			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		},
+		"43637ab6cd2b2eae": {
+			"line": 72,
+			"mutation": "ConditionalExpression: carriesOrigin -> true",
+			"equivalent": "an element whose declaration has no originUuid cannot hold one: the write of an undeclared attribute is dropped, the single-level row reads none back"
+		},
+		"7721d14ff8263270": {
+			"line": 88,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a clone mapping's source always has a record id"
+		},
+		"e3b459931796f34c": {
+			"line": 90,
+			"mutation": "ConditionalExpression: target -> true",
+			"equivalent": "tx.getRecord of a clone mapping's target always finds the record the clone just staged"
+		},
+		"8e9d71ffc3571720": {
+			"line": 105,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a staged clone always has a record id"
+		},
+		"700957c61881aa4a": {
+			"line": 111,
+			"mutation": "ConditionalExpression: known !== undefined -> false",
+			"equivalent": "the memo only saves reads: recomputing gives the same answer"
+		},
+		"84d278cead99c182": {
+			"line": 137,
+			"mutation": "ConditionalExpression: targetParent !== undefined -> true",
+			"equivalent": "a cloned root always has a parent in the target (it was cloned under one)"
+		},
+		"5c55214701b9b0da": {
+			"line": 139,
+			"mutation": "CallExpression: conserved.set(mapping, result) -> ;",
+			"equivalent": "the memo only saves reads: recomputing gives the same answer"
+		},
+		"e3b459931796f34c-1": {
+			"line": 146,
+			"mutation": "ConditionalExpression: target -> true",
+			"equivalent": "tx.getRecord of a clone mapping's target always finds the record the clone just staged"
+		},
+		"eab10f8bd96877fd": {
+			"line": 192,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "templateUuid and originUuid have no schema default: no defaults mode fills them"
+		},
+		"8bf007e9192b5f94": {
+			"line": 202,
+			"mutation": "BooleanLiteral: false -> true",
+			"equivalent": "an update with no lineage key, or with the values held, writes nothing"
+		},
+		"79f73715cb01e3ad": {
+			"line": 205,
+			"mutation": "ConditionalExpression: heldLineage({ record: target, name }) === wanted -> false",
+			"equivalent": "an update with no lineage key, or with the values held, writes nothing"
+		},
+		"ff4f4407f1ed7872": {
+			"line": 209,
+			"mutation": "ConditionalExpression: changed -> true",
+			"equivalent": "an update with no lineage key, or with the values held, writes nothing"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity.ts": {
+		"d2d3385b7030b800": {
+			"line": 43,
+			"mutation": "StringLiteral: 'ASSERTION_FAILED' -> \"\"",
+			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		},
+		"fe13d2ba2dec3a66": {
+			"line": 43,
+			"mutation": "ObjectLiteral: {\n\t\t\t\tdetail: `finalizeClonedIdentity: unhandled identity mode ${String(write satisfies never)}`,\n\t\t\t} -> {}",
+			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		},
+		"a17eafaf25f035eb": {
+			"line": 44,
+			"mutation": "StringLiteral: `finalizeClonedIdentity: unhandled identity mode ${String(write satisfies never)}` -> ``",
+			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/extract/transaction/asd.ts": {
+		"4335da37624ef25b": {
+			"line": 60,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "templateLink keep: a junk id in unlinked names no source record"
+		},
+		"51b36e649782822e": {
+			"line": 64,
+			"mutation": "OptionalChaining: cloneMappings.find((mapping) => mapping.source.id === applicationRef.id)?.target -> cloneMappings.find(mapping => mapping.source.id === applic",
+			"equivalent": "the extracted root always has a clone mapping"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/extract/transaction/fsd.ts": {
+		"9f78ad4bdeb84930": {
+			"line": 74,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "templateLink keep: a junk id in unlinked names no source record"
+		},
+		"b2b7a777da4e814c": {
+			"line": 78,
+			"mutation": "OptionalChaining: functionMappings.find((mapping) => mapping.source.id === functionRef.id)?.target -> functionMappings.find(mapping => mapping.source.id === fun",
+			"equivalent": "the extracted root always has a clone mapping, and deepClone maps the root before its children: the first mapping is the root's"
+		},
+		"bf68236d00c26afe": {
+			"line": 78,
+			"mutation": "ConditionalExpression: mapping.source.id === functionRef.id -> true",
+			"equivalent": "the extracted root always has a clone mapping, and deepClone maps the root before its children: the first mapping is the root's"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/extract/transaction/ssd.ts": {
+		"7369f480fd6236e2": {
+			"line": 66,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "templateLink keep: a junk id in unlinked names no source record"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/update/transaction/application-groups.ts": {
+		"3b5b5bdcb87a895e": {
+			"line": 28,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a junk group has no id and no suggested action, so it reads as accepted: followsSource answers true, as it does for no group"
+		},
+		"bec30c07140a08f5": {
+			"line": 30,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "findDescendants always returns the collected key"
+		},
+		"6922ade2238cd995": {
+			"line": 37,
+			"mutation": "ConditionalExpression: report.instances.filter((listed) => listed.rootRef?.tagName === 'Application').length === 1 -> true",
+			"equivalent": "with several instances of the application every placement the report lists carries the instance it is made for: the count of instances is read only for a placement listed once"
+		},
+		"5539b3533f0ac6df": {
+			"line": 61,
+			"mutation": "ConditionalExpression: rootRef.id === instance.id -> false",
+			"equivalent": "the application's own report instance is read by its own groups; read again it adds no answer (an application's uuid is never a function it composes, and a group counted twice changes no decision)"
+		},
+		"79847162c1023985": {
+			"line": 61,
+			"mutation": "BooleanLiteral: false -> true",
+			"equivalent": "the application's own report instance is read by its own groups; read again it adds no answer (an application's uuid is never a function it composes, and a group counted twice changes no decision)"
+		},
+		"574cf377388bd8a8": {
+			"line": 63,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a report instance's root always exists in the target"
+		},
+		"ab7e68f57a6c5cc7": {
+			"line": 64,
+			"mutation": "ConditionalExpression: uuid !== '' -> true",
+			"equivalent": "a function of a template lineage is placed with a uuid and its reference names it: an empty uuid is never read for one the instance composes"
+		},
+		"72bfe5cfeec2984d": {
+			"line": 64,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a function of a template lineage is placed with a uuid and its reference names it: an empty uuid is never read for one the instance composes"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/update/transaction/cascade-composed-functions.ts": {
+		"15b3b82777122516": {
+			"line": 65,
+			"mutation": "ConditionalExpression: !sourceUuid -> false",
+			"equivalent": "a function the template composes always has a uuid"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/update/transaction/ssd.ts": {
+		"0eda4de3a311484f": {
+			"line": 248,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a junk group has no id and no suggested action, so it reads as accepted: followsSource answers true, as it does for no group"
+		}
+	},
+	"src/v2019C1/extensions/reference/query/provenance/find-own-provenance.ts": {
+		"adafdee9df1a70f5": {
+			"line": 19,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "an element read always has a tree"
+		}
+	},
+	"src/v2019C1/extensions/reference/transaction/write-provenance.ts": {
+		"fcfa8d948ba6cdf1": {
+			"line": 59,
+			"mutation": "ConditionalExpression: wrapper.tagName === tag -> true",
+			"equivalent": "a root's own references are of its anchor's wrapper, and the file type compared next tells a function file from an application file"
+		},
+		"ce8ffcb986f13330": {
+			"line": 118,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a held version or revision is absent only on a reference written from a source without Header, whose version and revision are empty too: the comparison and the rewrite give the same values"
+		},
+		"2f7b2d70d1c87e7d": {
+			"line": 119,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a held version or revision is absent only on a reference written from a source without Header, whose version and revision are empty too: the comparison and the rewrite give the same values"
+		},
+		"178ab8e293a35679": {
+			"line": 129,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the file reference attributes compared have no schema default: no defaults mode fills them"
+		}
+	}
+}

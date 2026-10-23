@@ -99,6 +99,22 @@ function isAccepted(params: { group: DecisionGroup; decisions: DecisionMap }): b
 }
 
 /**
+ * Whether an instance follows the newer source after its update, so that it records the source file it now holds: it
+ * does unless every change the source brings to it is declined. An instance the source changes nothing for follows it
+ * (it holds that revision already); the elements the project added (`target-only`) are the project's, not a change
+ * the source brings. Without decisions every change is written: it follows.
+ */
+export function followsSource(params: {
+	groups: readonly DecisionGroup[]
+	decisions: DecisionMap | undefined
+}): boolean {
+	const { groups, decisions } = params
+	if (!decisions) return true
+	const brought = groups.filter((group) => group.change !== 'target-only')
+	return brought.length === 0 || brought.some((group) => isAccepted({ group, decisions }))
+}
+
+/**
  * The user-edited values for each accepted group, keyed by the primary's SOURCE id
  * (the placed element is matched by its source at instantiate time). Skipped groups
  * and groups with no edits are omitted.

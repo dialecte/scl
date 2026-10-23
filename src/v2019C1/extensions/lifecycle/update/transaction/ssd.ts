@@ -8,6 +8,7 @@ import {
 import {
 	acceptedRefIds,
 	collisionOverrides,
+	followsSource,
 	groupsForInstance,
 	leftOutRefIds,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
@@ -30,6 +31,7 @@ import {
 	assertRevisionBaseFits,
 	scenarioPolicy,
 } from '@/v2019C1/extensions/lifecycle/scenario-policy'
+import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
@@ -240,6 +242,11 @@ export async function ssd(
 	// the references the frame gained can point at anything the cascade placed above
 	for (const { instanceRootRef, cloneMappings } of frameAdditions) {
 		await repointAddedReferences(tx, { cloneMappings, instanceRootRef, matchKey })
+	}
+
+	// the project now holds this revision of the file: its Header lists it, in every scenario
+	if (followsSource({ groups: report ? allGroups(report) : [], decisions })) {
+		await writeProvenance(tx, { sourceQuery, target: { anchor: 'document', fileType: 'SSD' } })
 	}
 
 	return { applications, functions }

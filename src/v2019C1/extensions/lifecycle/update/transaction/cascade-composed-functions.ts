@@ -62,7 +62,10 @@ export async function cascadeComposedFunctions(
 				for (const owned of standing.elements) reconcilables.set(owned.id, owned)
 				continue
 			}
-			if (!written || !sourceUuid) continue
+			if (!sourceUuid) continue
+			// a function placed for the instance is decided by its own groups, whatever the instance's own: the reference
+			// to it may be declined; taking one, or choosing one, waits for a write to the instance
+			if (!written && standing.kind !== 'placed') continue
 			// several qualify where the instance lives: nothing is written until the consumer chose
 			invariant(standing.kind !== 'undecided', {
 				key: SCL_ERRORS.MAPPING_UNDECIDED,
@@ -139,6 +142,8 @@ async function reconcileWhereItSits(
 		targetParent: { tagName: parent.tagName, id: parent.id } as Scl.Ref<Scl.ElementsOf>,
 		scenario: params.scenario,
 		removalBase: params.removalBase,
+		// part of the application template: the file it records is the application's
+		partOfTemplate: true,
 		report: params.report,
 		decisions: params.decisions,
 		keepNameTypesFrom: params.keepNameTypesFrom,

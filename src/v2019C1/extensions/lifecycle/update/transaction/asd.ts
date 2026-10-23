@@ -1,3 +1,4 @@
+import { groupsOfApplicationInstance } from './application-groups'
 import { cascadeComposedFunctions } from './cascade-composed-functions'
 import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reconcileSatellites } from './satellite-reconcile'
@@ -11,6 +12,7 @@ import {
 	collisionOverrides,
 	firstTimeGroups,
 	firstTimeReportInstances,
+	followsSource,
 	groupsForInstance,
 	leftOutRefIds,
 	reportInstanceById,
@@ -44,6 +46,7 @@ import {
 	assertRevisionBaseFits,
 	scenarioPolicy,
 } from '@/v2019C1/extensions/lifecycle/scenario-policy'
+import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { ApplicationInstance } from './cascade-composed-functions.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -372,6 +375,23 @@ export async function asd(
 			matchKey,
 			redirectMappings: [...(redirectMappings ?? []), ...gainedFunctions],
 		})
+	}
+
+	// 4. each instance now holds this revision of its template — unless every change the update brought to it and the
+	// functions it composes is declined: its own reference names it (an application placed as part of a larger template
+	// records that template's file, not its own)
+	if (policy.writesProvenance && !params.partOfTemplate) {
+		for (const instance of instances) {
+			const brought = await groupsOfApplicationInstance(tx, { report, instance })
+			if (!followsSource({ groups: brought, decisions })) continue
+			await writeProvenance(tx, {
+				sourceQuery,
+				target: {
+					anchor: 'application',
+					root: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
+				},
+			})
+		}
 	}
 
 	return {

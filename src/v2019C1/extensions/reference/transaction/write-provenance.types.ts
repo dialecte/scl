@@ -16,6 +16,15 @@ export type ProvenanceTarget =
 	| { anchor: 'application'; root: Scl.Ref<'Application'> }
 	| { anchor: 'document'; fileType: SclFileType }
 
+/** The attributes of a source-file reference, as the writer builds them from the source (an absent value empty). */
+export type SclFileReferenceValues = {
+	fileType: SclFileType
+	version: string
+	revision: string
+	fileName: string
+	fileUuid: string
+}
+
 export type WriteProvenanceParams = {
 	/** Query over the source document the provenance is sourced from (Header + file name). */
 	sourceQuery: Core.Query<Config>

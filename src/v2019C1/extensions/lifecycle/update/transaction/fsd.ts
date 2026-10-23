@@ -12,6 +12,7 @@ import {
 	collisionOverrides,
 	firstTimeGroups,
 	firstTimeReportInstance,
+	followsSource,
 	groupsForInstance,
 	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
@@ -36,6 +37,7 @@ import {
 	assertRevisionBaseFits,
 	scenarioPolicy,
 } from '@/v2019C1/extensions/lifecycle/scenario-policy'
+import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
@@ -175,10 +177,8 @@ export async function fsd(
 
 	const structure = await resolveTargetStructure(tx, targetParent)
 	for (const instance of instances) {
-		const { instanceAccepted, instanceOverrides } = gateFor({
-			instanceGroups: groupsForInstance(report, instance.id),
-			decisions,
-		})
+		const instanceGroups = groupsForInstance(report, instance.id)
+		const { instanceAccepted, instanceOverrides } = gateFor({ instanceGroups, decisions })
 
 		const reconcileMappings = await reconcile(tx, {
 			sourceQuery,
@@ -242,6 +242,21 @@ export async function fsd(
 		const reportInstance = reportInstanceById(report, instance.id)
 		if (reportInstance) {
 			annotateInstance({ reportInstance, added: sourceToTargetMap(addedMappings) })
+		}
+		// the instance now holds this revision of its template: its own reference names it (a function placed as part
+		// of a larger template records that template's file, not its own)
+		if (
+			policy.writesProvenance &&
+			!params.partOfTemplate &&
+			followsSource({ groups: instanceGroups, decisions })
+		) {
+			await writeProvenance(tx, {
+				sourceQuery,
+				target: {
+					anchor: 'function',
+					root: toRef(instance) as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
+				},
+			})
 		}
 	}
 
