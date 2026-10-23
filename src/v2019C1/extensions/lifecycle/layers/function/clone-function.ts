@@ -32,10 +32,7 @@ import type { OmitEntry } from '@dialecte/core'
  * and extracts the data model.
  * UUID remapping is the caller's responsibility via `reference.applyUuidRemap` over the
  * returned mappings (see the recipe that orchestrates this and the category clones).
- *
- * @param stripRootAttributes - Attribute names to remove from the root element only (shallow).
- *   FSD extraction strips `templateUuid` so the clone becomes a fresh template.
- *   ASD extraction omits this param - no attributes are stripped.
+ * The lineage is copied as the source holds it: the calling operation writes the identity of its direction.
  */
 export async function cloneFunction(
 	tx: Core.Transaction<Config>,
@@ -44,22 +41,10 @@ export async function cloneFunction(
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 		targetParentRef: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
 		omit?: OmitEntry<Config>[]
-		stripRootAttributes?: readonly string[]
 		keepNameTypesFrom?: KeepNameTypesFrom
 	},
 ): Promise<Scl.CloneMapping[]> {
-	const {
-		sourceQuery,
-		functionRef,
-		targetParentRef,
-		omit,
-		stripRootAttributes,
-		keepNameTypesFrom,
-	} = params
-
-	const strip = stripRootAttributes?.length
-		? { scope: 'root' as const, attributes: [...stripRootAttributes] }
-		: (false as const)
+	const { sourceQuery, functionRef, targetParentRef, omit, keepNameTypesFrom } = params
 
 	// `deep` is a faithful subtree copy (no forward uuid closure); the function's own
 	// satellites (FunctionCategory, ProcessResource, etc.) are placed at their source
@@ -70,7 +55,6 @@ export async function cloneFunction(
 		ref: functionRef,
 		targetParent: targetParentRef,
 		omit,
-		strip,
 		retagRoot: { from: 'SubFunction', to: 'Function' },
 		withTypes: { keepNameFrom: keepNameTypesFrom },
 	})
@@ -96,7 +80,7 @@ export async function cloneFunctionCategories(
 	tx: Core.Transaction<Config>,
 	params: CloneFunctionCategoriesParams,
 ): Promise<CloneFunctionCategoriesResult> {
-	const { sourceQuery, functionRef, structure, stripCategoriesUuid = true } = params
+	const { sourceQuery, functionRef, structure } = params
 	// a category classifying several functions of one operation is placed once
 	const placedCategories = params.placedCategories ?? new Map<string, Scl.Ref<'FunctionCategory'>>()
 
@@ -123,7 +107,6 @@ export async function cloneFunctionCategories(
 				sourceQuery,
 				source: categoryRef,
 				target: existing,
-				strip: false,
 				matchKey: params.matchKey,
 			})
 			cloneMappings.push(...merged.cloneMappings)
@@ -140,7 +123,6 @@ export async function cloneFunctionCategories(
 			sourceQuery,
 			ref: categoryRef,
 			targetParent,
-			...(stripCategoriesUuid ? {} : { strip: false as const }),
 		})
 		if (!clone) continue
 		cloneMappings.push(...clone.mappings)

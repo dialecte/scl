@@ -35,7 +35,7 @@ export async function cloneAppliedSatellites(
 	tx: Core.Transaction<Config>,
 	params: CloneAppliedSatellitesParams,
 ): Promise<CloneAppliedSatellitesResult> {
-	const { sourceQuery, primaryRef, structure, strip = true, leftOut, matchKey } = params
+	const { sourceQuery, primaryRef, structure, leftOut, matchKey } = params
 
 	const satellites = await resolveAppliedSatellites(sourceQuery, { primaryRef, leftOut })
 
@@ -48,7 +48,6 @@ export async function cloneAppliedSatellites(
 				sourceQuery,
 				source: satelliteRef,
 				target: existing,
-				strip: false,
 				matchKey,
 			})
 			cloneMappings.push(...merged.cloneMappings)
@@ -63,7 +62,6 @@ export async function cloneAppliedSatellites(
 			sourceQuery,
 			ref: satelliteRef,
 			targetParent,
-			...(strip ? {} : { strip: false as const }),
 		})
 		if (clone) cloneMappings.push(...clone.mappings)
 	}

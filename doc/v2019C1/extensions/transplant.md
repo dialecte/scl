@@ -21,7 +21,7 @@ Access via `tx.lifecycle.transplant` inside a `doc.transaction()` callback. `dee
 1. **subtree clone** — clones the element under `targetParent` (with optional `omit` / `strip` / `retagRoot`).
 2. **content-addressed type closure** (`withTypes`, default `true`) — reconciles the `LNode`/`LN`/`LN0` type closure via `dataModel.importTypes` and repoints the cloned instances' `lnType` through the clone mappings. Pass `withTypes: { keepNameFrom: 'source' | 'target' }` to choose which side keeps the type name on a dedup (`'target'` default = destination is the naming authority); `withTypes: false` skips the closure for a bare subtree copy.
 
-`deep` is a **faithful** subtree copy: it does _not_ follow forward uuid references, reset IED bindings, strip template attributes, or clean up orphans. Reference rewiring and identity stamping are the caller's responsibility (see [extract](./extract), [instantiate](./instantiate) and [identity](./identity)). It returns the full `cloneMappings` (source → clone for every node) so callers can locate any cloned node in the target.
+`deep` is a **faithful** subtree copy: every attribute is copied as the source holds it, the lineage (`templateUuid` / `originUuid`) included; it does _not_ follow forward uuid references, reset IED bindings, or clean up orphans. `strip` only drops attributes a target cannot take (a generic filter, none by default); what the lineage of a clone becomes is written by [`identity.writeIdentity`](./identity#writeidentity). Reference rewiring and identity writing are the caller's responsibility (see [extract](./extract), [instantiate](./instantiate) and [identity](./identity)). It returns the full `cloneMappings` (source → clone for every node) so callers can locate any cloned node in the target.
 
 ```ts
 tx.lifecycle.transplant.deep(params: {
@@ -30,7 +30,7 @@ tx.lifecycle.transplant.deep(params: {
   targetParent: Scl.Ref<Scl.ElementsOf>   // where the subtree is cloned
   withTypes?: boolean | { keepNameFrom?: 'source' | 'target' } // default true; object picks the dedup name authority
   omit?: OmitEntry[]                        // child tags to drop from the clone
-  strip?: StripConfig | false              // default false (preserve provenance)
+  strip?: StripConfig | false              // attributes dropped from the clone; default false (a faithful copy)
   retagRoot?: { from: Scl.ElementsOf; to: Scl.ElementsOf } // direction-neutral root retag (e.g. instantiate Function->SubFunction, extract SubFunction->Function)
 }): Promise<{
   record: Scl.RawRecord<Scl.ElementsOf>    // cloned root

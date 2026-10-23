@@ -17,10 +17,6 @@ import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
 const STRUCTURAL_TAGS: readonly string[] = TOPOLOGY_STRUCTURAL_TAGS
-// A created frame element is a NEW element: drop the source `uuid` (the enforce hook mints a fresh
-// one) and its template lineage. The identity finalization then stamps `templateUuid` (stamp) or
-// restores the source `uuid` (keep) from the clone mappings — matching how fn/app clones behave.
-const CREATE_STRIP_ATTRIBUTES = ['uuid', 'templateUuid', 'originUuid']
 
 /** Own content omitted from the frame merge: structural levels (walked) + delegated fn/app content. */
 const FRAME_OWN_CONTENT_OMIT = [...TOPOLOGY_STRUCTURAL_TAGS, ...FRAME_OMIT_CHILD_TAGS]
@@ -238,8 +234,9 @@ export async function collectFrameElements(
 }
 
 /**
- * Create a fresh target structural element from `source`, carrying its own attributes minus
- * identity (`uuid`/lineage). Always CREATES a distinct element (never reuse-matches an existing
+ * Create a fresh target structural element from `source`, carrying its own attributes, its lineage
+ * included, minus its `uuid` (the enforce hook mints a fresh one): the identity finalization then writes
+ * the lineage and the uuid of the scenario from the clone mappings, as for every clone. Always CREATES a distinct element (never reuse-matches an existing
  * sibling) so instantiating one typical twice under a parent yields two elements — the caller
  * then resolves the name collision (`B1` -> `B1_1`). The fresh `uuid` is minted by the enforce
  * hook; the identity finalization stamps/restores lineage from the clone mappings.
@@ -261,7 +258,7 @@ async function createStructural(
 	const record = await sourceQuery.any.getRecord(source)
 	const cleanAttributes: AnyTrackedRecord['attributes'] = []
 	for (const attribute of record?.attributes ?? []) {
-		if (CREATE_STRIP_ATTRIBUTES.includes(attribute.name)) continue
+		if (attribute.name === 'uuid') continue
 		if (name && attribute.name === 'name') continue
 		cleanAttributes.push(attribute)
 	}

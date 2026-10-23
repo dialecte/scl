@@ -146,7 +146,6 @@ export async function reconcileSatellites(
 			sourceQuery,
 			ref: satelliteRef,
 			targetParent,
-			strip: false,
 		})
 		if (!clone) continue
 		await finalizeClonedIdentity(tx, { cloneMappings: clone.mappings, mode: identityMode })

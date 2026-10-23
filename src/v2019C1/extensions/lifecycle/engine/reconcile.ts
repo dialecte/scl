@@ -307,7 +307,6 @@ async function reconcileChildren(
 			ref: toRef(sourceChild) as unknown as Scl.Ref<Scl.ElementsOf>,
 			targetParent: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,
 			...(omit ? { omit: [...omit] as OmitEntry<Config>[] } : {}),
-			strip: false,
 			withTypes: { keepNameFrom: keepNameTypesFrom },
 		})
 		// keep the clone mappings of the whole grafted subtree (ids are stable; the collision

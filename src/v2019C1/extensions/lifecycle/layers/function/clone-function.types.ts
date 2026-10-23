@@ -10,7 +10,6 @@ export type CloneFunctionCategoriesParams = {
 	sourceQuery: Core.Query<Config>
 	functionRef: SourceFunctionRef
 	structure: TargetStructure
-	stripCategoriesUuid?: boolean
 	/** The key a project element carries a source element's uuid in, to find what it lands on. Default `templateUuid`. */
 	matchKey?: MatchKey
 	/** The consumer's choices for the categories, by source record id. */

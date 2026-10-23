@@ -10,19 +10,14 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
 
-const DEFAULT_STRIP: StripConfig = {
-	scope: 'tree',
-	attributes: ['templateUuid', 'originUuid'],
-}
-
 /**
  * Clone pipeline: getTree -> template-only elements as what they are instantiated as -> optional
- * retag root tagName -> strip -> deepClone.
- * UUID remapping is the caller's responsibility via `reference.applyUuidRemap` over the returned mappings.
+ * retag root tagName -> optional attribute filter -> deepClone.
  *
- * By default strips `templateUuid` and `originUuid` from the entire tree.
- * Pass `strip: false` to disable all stripping.
- * Pass `strip: { scope, attributes }` to customise.
+ * The clone is faithful: every attribute is copied as the source holds it, the lineage (`templateUuid` /
+ * `originUuid`) included — what the clone's lineage becomes is decided by the identity writer the caller runs over
+ * the returned mappings (`finalizeClonedIdentity`), which also fixes up the uuids. `strip: { scope, attributes }`
+ * drops attributes the target cannot take (a generic filter, not a lineage policy); none by default.
  *
  * Returns the `CloneResult` (cloned root record + source->target mappings), or
  * `undefined` when the source element does not exist.
@@ -38,7 +33,7 @@ export async function cloneTree(
 		strip?: StripConfig | false
 	},
 ): Promise<Core.CloneResult<Config, Exclude<Scl.ElementsOf, 'SCL'>> | undefined> {
-	const { sourceQuery, ref, targetParent, omit, retagRoot, strip = DEFAULT_STRIP } = params
+	const { sourceQuery, ref, targetParent, omit, retagRoot, strip } = params
 
 	// A clone must be a faithful copy: keep transparent `Private` wrappers in the tree
 	// (`unwrap: []` disables the default transparent-element unwrap) so vendor privates —

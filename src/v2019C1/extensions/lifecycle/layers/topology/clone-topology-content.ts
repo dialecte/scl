@@ -125,7 +125,6 @@ export async function cloneTopologyContent(
 			sourceQuery,
 			functionRef,
 			structure,
-			stripCategoriesUuid: false,
 			decisionMappings,
 			placedCategories,
 			matchKey: params.matchKey,

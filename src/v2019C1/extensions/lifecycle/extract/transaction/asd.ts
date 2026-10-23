@@ -2,9 +2,9 @@ import { ensureSubstationTemplateStructure } from './ensure-substation-structure
 import { postExtractionCleanup } from './post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
+import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { ALWAYS_OMIT } from '@/v2019C1/extensions/lifecycle/layers/omit-filters'
-import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -47,9 +47,14 @@ export async function asd(
 		omit: ALWAYS_OMIT,
 	})
 
-	// Repoint cloned uuid refs across ALL clones of this operation, before cleanup
-	// reads those refs to detect orphans.
-	await applyUuidRemap(tx, { cloneMappings, redirectMappings })
+	// the application extracted is a new template: its own template link is broken, what it composes keeps its
+	// lineage; the cloned uuid refs are repointed across ALL clones, before cleanup reads them to detect orphans
+	await finalizeClonedIdentity(tx, {
+		cloneMappings,
+		mode: 'strip',
+		unlinked: new Set([applicationRef.id]),
+		redirectMappings,
+	})
 
 	await postExtractionCleanup(tx)
 }

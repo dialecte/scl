@@ -23,6 +23,7 @@ export async function addChildrenTo(
 		/** The existing target element the children are added under. */
 		target: Scl.Ref<Scl.ElementsOf>
 		omit?: OmitEntry<Config>[]
+		/** Attributes the clones drop: `transplant.deep`'s generic filter, passed through. None by default. */
 		strip?: StripConfig | false
 	},
 ): Promise<Scl.CloneMapping[]> {

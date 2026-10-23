@@ -152,7 +152,6 @@ describe('finalizeClonedIdentity', () => {
 				ref: testCase.clone.ref,
 				targetParent: testCase.clone.under,
 				retagRoot: testCase.clone.retagRoot,
-				strip: false,
 			})
 			if (!clone) throw new Error('nothing cloned')
 			if (testCase.mode === 'preserve') {

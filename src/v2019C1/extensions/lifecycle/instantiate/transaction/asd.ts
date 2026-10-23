@@ -100,7 +100,6 @@ export async function placeApplication(
 		sourceQuery,
 		primaryRef: applicationRef,
 		structure,
-		strip: false,
 		leftOut,
 		matchKey: policy.matchKey,
 	})

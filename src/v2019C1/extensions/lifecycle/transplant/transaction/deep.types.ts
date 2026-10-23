@@ -22,8 +22,9 @@ export type ImportDeepParams = {
 	/** Child element tag names to drop from the cloned subtree. */
 	omit?: OmitEntry<Config>[]
 	/**
-	 * Attribute stripping applied to the cloned subtree. Default `false` (a generic
-	 * import preserves provenance); recipes pass their own policy.
+	 * Attributes dropped from the cloned subtree, for a target that cannot take them (a generic filter). Default
+	 * `false`: the copy is faithful, lineage and provenance included — the lifecycle operations write the lineage of
+	 * their direction afterwards (`identity.writeIdentity`).
 	 */
 	strip?: StripConfig | false
 	/** Replace the root tagName when it matches `from` (e.g. SubFunction -> Function). */

@@ -2,7 +2,6 @@ import { cloneTree } from './clone-tree'
 
 import { elementSignature } from '@/v2019C1/extensions/signature/query'
 
-import type { StripConfig } from './clone-tree.types'
 import type { MergeChildrenResult } from './merge-children-into.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -39,7 +38,6 @@ export async function mergeChildrenInto(
 		source: Scl.Ref<Scl.ElementsOf>
 		/** The existing target element the children are merged under. */
 		target: Scl.Ref<Scl.ElementsOf>
-		strip?: StripConfig | false
 		omit?: OmitEntry<Config>[]
 		/** The source elements the consumer left out (record ids): such a child is not cloned. */
 		leftOut?: ReadonlySet<string>
@@ -47,7 +45,7 @@ export async function mergeChildrenInto(
 		matchKey?: MatchKey
 	},
 ): Promise<MergeChildrenResult> {
-	const { sourceQuery, source, target, strip, omit, leftOut } = params
+	const { sourceQuery, source, target, omit, leftOut } = params
 	const matchKey = params.matchKey ?? 'templateUuid'
 
 	const cloneMappings: Scl.CloneMapping[] = []
@@ -70,7 +68,6 @@ export async function mergeChildrenInto(
 				sourceQuery,
 				source: child,
 				target: twin,
-				strip,
 				omit,
 				leftOut,
 				matchKey,
@@ -93,7 +90,6 @@ export async function mergeChildrenInto(
 			ref: child,
 			targetParent: target,
 			...(omit ? { omit } : {}),
-			...(strip === undefined ? {} : { strip }),
 		})
 		if (clone) cloneMappings.push(...clone.mappings)
 	}

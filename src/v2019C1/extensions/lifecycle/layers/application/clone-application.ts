@@ -30,8 +30,9 @@ import type { OmitEntry } from '@dialecte/core'
 /**
  * Application-layer take-over: clones an Application and all its satellites
  * (Functions, FunctionCategories, AllocationRoles, BehaviorDescriptions, ...) into
- * the target structure. Direction-agnostic — returns the full `CloneMapping[]` so
- * the calling operation applies identity policy (extract strips, instantiate stamps),
+ * the target structure. Direction-agnostic — returns the full `CloneMapping[]`, lineage copied as the source holds
+ * it, so the calling operation writes the identity of its direction (extract breaks the root's link, instantiate
+ * stamps),
  * plus the redirect mappings of the shared elements that were mapped instead of cloned.
  *
  * UUID remapping is the caller's responsibility via `reference.applyUuidRemap` over the
@@ -98,7 +99,6 @@ export async function cloneApplicationContent(
 			sourceQuery,
 			functionRef: ref,
 			structure,
-			stripCategoriesUuid: false,
 			decisionMappings,
 			placedCategories,
 			matchKey: params.matchKey,
@@ -219,7 +219,6 @@ async function mapAllocationRoles(
 			sourceQuery,
 			source: { tagName: 'AllocationRole', id: sourceRole.id },
 			target: existingRef,
-			strip: false,
 		})
 
 		reuse.push({ sourceId: sourceRole.id, sourceUuid: roleUuid, existingRef, contributedMappings })

@@ -79,7 +79,6 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		sourceQuery,
 		primaryRef: root,
 		structure: scopeStructure,
-		strip: false,
 		leftOut,
 		matchKey: policy.matchKey,
 	})

@@ -28,7 +28,6 @@ describe('mergeChildrenInto - recursive name-keyed container reuse', () => {
 				sourceQuery: source.query,
 				source: testCase.source,
 				target: testCase.target,
-				strip: false,
 			})
 		})
 		return { assertOn: 'target' }

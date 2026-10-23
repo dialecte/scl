@@ -3,11 +3,11 @@ import { FSD_OMIT } from './omit'
 import { postExtractionCleanup } from './post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
+import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import {
 	cloneFunction,
 	cloneFunctionCategories,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
-import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -52,7 +52,6 @@ export async function fsd(
 		functionRef,
 		targetParentRef: substationRef,
 		omit: FSD_OMIT,
-		stripRootAttributes: ['templateUuid'],
 	})
 
 	const { cloneMappings: categoryMappings, redirectMappings } = await cloneFunctionCategories(tx, {
@@ -61,10 +60,13 @@ export async function fsd(
 		structure,
 	})
 
-	// Repoint cloned uuid refs (e.g. FunctionCatRef -> the cloned Function) across ALL
-	// clones of this operation, before cleanup reads those refs to detect orphans.
-	await applyUuidRemap(tx, {
+	// the function extracted is a new template: its own template link is broken, what it holds keeps its lineage
+	// (a subfunction may be instantiated from another FSD); the cloned uuid refs (e.g. FunctionCatRef -> the cloned
+	// Function) are repointed across ALL clones of this operation, before cleanup reads them to detect orphans
+	await finalizeClonedIdentity(tx, {
 		cloneMappings: [...functionMappings, ...categoryMappings],
+		mode: 'strip',
+		unlinked: new Set([functionRef.id]),
 		redirectMappings,
 	})
 

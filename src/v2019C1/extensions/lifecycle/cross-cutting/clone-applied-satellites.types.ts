@@ -8,7 +8,6 @@ export type CloneAppliedSatellitesParams = {
 	sourceQuery: Core.Query<Config>
 	primaryRef: Scl.Ref<Scl.ElementsOf>
 	structure: TargetStructure
-	strip?: boolean
 	/** The source elements the consumer left out (record ids): a satellite applying to them only is not placed. */
 	leftOut?: ReadonlySet<string>
 	/** The key a project element carries a source element's uuid in, to find what it lands on. Default `templateUuid`. */

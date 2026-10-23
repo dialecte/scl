@@ -64,7 +64,6 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		sourceQuery,
 		ref: functionRef,
 		targetParent,
-		strip: false,
 		retagRoot,
 		withTypes: { keepNameFrom: keepNameTypesFrom },
 	})
@@ -77,7 +76,6 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		sourceQuery,
 		functionRef,
 		structure,
-		stripCategoriesUuid: false,
 		decisionMappings: params.decisionMappings,
 		matchKey: policy.matchKey,
 	})
@@ -88,7 +86,6 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		sourceQuery,
 		primaryRef: functionRef,
 		structure,
-		strip: false,
 		matchKey: policy.matchKey,
 	})
 
