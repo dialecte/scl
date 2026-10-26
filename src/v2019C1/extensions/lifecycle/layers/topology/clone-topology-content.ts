@@ -1,7 +1,6 @@
 import { ensureTopologyFrame, resolveFrameStructure } from './ensure-topology-frame'
 import { applicationsUnderScope, functionsUnderScope } from './scope-content'
 
-import { cleanUp } from '@/v2019C1/extensions/clean-up'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
 	cloneFunction,
@@ -63,7 +62,6 @@ export async function cloneTopologyContent(
 ): Promise<CloneTopologyContentResult> {
 	const { sourceQuery, scopeRef, targetParent, omit, decisionMappings, placementLevels } = params
 	const { leftOut } = params
-	const from = tx.getStagedOperations().length
 	const isLeftOut = (ref: Scl.Ref<Scl.ElementsOf>) => Boolean(leftOut?.has(ref.id ?? ''))
 
 	const frame = await ensureTopologyFrame(tx, {
@@ -135,10 +133,6 @@ export async function cloneTopologyContent(
 		redirectMappings.push(...categories.redirectMappings)
 		placedRoots.push(functionRef)
 	}
-
-	// what the clones left holding nothing — a wrapper whose content was omitted, a type section no type landed in —
-	// is not left behind
-	await cleanUp.transaction.pruneEmptyContainers(tx, { from })
 
 	return { cloneMappings, placedRoots, frameIndex, redirectMappings }
 }

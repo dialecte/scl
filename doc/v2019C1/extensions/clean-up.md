@@ -24,15 +24,15 @@ await doc.transaction(async (tx) => {
 
 ## `pruneEmptyContainers`
 
-A container holding nothing — no child element, no text — goes when it has no reason to stay then: a transparent wrapper (a `Private`), or an element whose definition needs a child element (a `FunctionCategory` needs a reference, a `DataTypeTemplates` a type, a `PowerSystemRelations` a relation). Read from the definition, each deleted through the transaction (the delete hooks clean what refers to it), then its parent judged the same way: the wrapper a category leaves empty goes too. A level of the topology (`Substation`, `VoltageLevel`, `Bay`) is never removed.
+A container holding nothing — no child element, no text — goes when it has no reason to stay then: an element whose definition needs a child element (a `FunctionCategory` needs a reference, a `PowerSystemRelations` a relation, a `ProcessResources` a resource, a `DataTypeTemplates` a type), or a transparent wrapper of the dialecte's own elements (a `Private` whose `type` is the prefix of a namespace the dialecte declares, `eIEC61850-6-100`). Both read from the definition and the namespaces, then its parent judged the same way: the wrapper a category leaves empty goes too. A `Private` of another `type` is a tool's private data, kept empty or not; a level of the topology (`Substation`, `VoltageLevel`, `Bay`) is never removed.
 
 ```ts
-pruneEmptyContainers(params?: { from?: number }): Promise<void>
+pruneEmptyContainers(): Promise<void>
 ```
 
-Without `from`, every container of the document. With it, only what the transaction left holding nothing from that staged operation on (`tx.getStagedOperations().length` read before the change): the parent of an element it deleted, and a wrapper it created. The extract clean-up runs it on the whole document; `tx.lifecycle.apply` on what it wrote, and the SSD placement and a satellite reconcile on what they wrote when called on their own.
+It judges every container of the document, deleted through the transaction (the delete hooks clean what refers to it): the extract clean-up runs it on the file it writes, whose containers may have been empty already.
 
-The delete hooks apply the same rule to what they remove: deleting an element whose last reference a category holds removes the category too, its wrapper when it leaves it empty, and the references to the category elsewhere.
+What a transaction leaves holding nothing goes at its commit, whatever wrote — a delete, `tx.lifecycle.apply`, an extract: the parent of every element it deleted and every wrapper it created are judged by the same rule, deleted with what refers to them (a reference to a category removed is deleted, as a delete does). The delete hooks apply it to what they remove: deleting the element a category's last reference names removes the reference, the category, the wrapper it leaves empty, and the references to the category elsewhere.
 
 ## `resetLNode`
 

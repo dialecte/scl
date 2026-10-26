@@ -1,4 +1,8 @@
-import { findOrphanedRefs } from '@/v2019C1/hooks/before-delete'
+import {
+	collectDeleteCascade,
+	collectEmptiedAbove,
+	collectSubtreeIds,
+} from '@/v2019C1/hooks/before-delete'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type {
@@ -7,13 +11,12 @@ import type {
 	RemovalSideEffect,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
-import type { AnyTreeRecord } from '@dialecte/core'
 
 /**
- * Write on each group that removes elements what its removal makes the delete hooks do outside them
- * (`DecisionGroup.sideEffects`): the references elsewhere in the project naming a removed element, deleted or
- * cleared — as `findOrphanedRefs` reads them for the hook. A reference inside what the group removes goes with it
- * and is not listed.
+ * Write on each group that removes elements what its removal does outside them (`DecisionGroup.sideEffects`), as the
+ * delete hooks and the commit read it: the containers the removal leaves holding nothing that have no reason to stay,
+ * the references elsewhere naming a removed element, deleted or cleared, and the containers and references those
+ * deletions take in turn. What the group removes itself is not listed.
  */
 export async function listRemovalSideEffects(
 	query: Core.Query<Config>,
@@ -29,39 +32,34 @@ async function readSideEffects(
 	query: Core.Query<Config>,
 	params: { group: DecisionGroup },
 ): Promise<RemovalSideEffect[]> {
-	const { group } = params
-	const removed: Scl.Ref<Scl.ElementsOf>[] = []
-	for (const node of [group.primary, ...group.companions]) {
+	const roots: Scl.TrackedRecord<Scl.ElementsOf>[] = []
+	for (const node of [params.group.primary, ...params.group.companions]) {
 		const { instanceRef } = node
 		if (!removes(node) || !instanceRef?.id) continue
-		removed.push({ tagName: instanceRef.tagName, id: instanceRef.id } as Scl.Ref<Scl.ElementsOf>)
-	}
-	const removedIds = new Set<string>()
-	for (const ref of removed) {
-		const tree = await query.any.getTree(ref)
-		if (tree) collectIds({ node: tree, ids: removedIds })
-	}
-
-	const sideEffects = new Map<string, RemovalSideEffect>()
-	for (const ref of removed) {
+		const ref = { tagName: instanceRef.tagName, id: instanceRef.id } as Scl.Ref<Scl.ElementsOf>
 		const record = await query.getRecord(ref)
-		if (!record) continue
-		for (const orphaned of await findOrphanedRefs({ record, query })) {
-			const { id, tagName } = orphaned.record
-			if (removedIds.has(id) || sideEffects.has(id)) continue
-			sideEffects.set(id, { element: { tagName, id }, effect: orphaned.effect })
-		}
+		if (record) roots.push(record)
 	}
-	return [...sideEffects.values()]
+	if (roots.length === 0) return []
+	const gone = await collectSubtreeIds(query, { records: roots })
+
+	// the containers the removal leaves holding nothing go at the commit, with what refers to them
+	const emptied: Scl.TrackedRecord<Scl.ElementsOf>[] = []
+	for (const root of roots)
+		emptied.push(...(await collectEmptiedAbove(query, { record: root, gone })))
+	const cascade = await collectDeleteCascade(query, { roots: [...roots, ...emptied] })
+
+	const sideEffects: RemovalSideEffect[] = []
+	for (const record of [...emptied, ...cascade.deleted]) {
+		sideEffects.push({ element: { tagName: record.tagName, id: record.id }, effect: 'deleted' })
+	}
+	for (const { record } of cascade.cleared) {
+		sideEffects.push({ element: { tagName: record.tagName, id: record.id }, effect: 'cleared' })
+	}
+	return sideEffects
 }
 
 /** Whether accepting a node deletes the element it names: a removal, or an element of the project's own. */
 function removes(node: DiffNode): boolean {
 	return node.change === 'removed' || node.change === 'target-only'
-}
-
-function collectIds(params: { node: AnyTreeRecord; ids: Set<string> }): void {
-	const { node, ids } = params
-	ids.add(node.id)
-	for (const child of node.tree) collectIds({ node: child, ids })
 }

@@ -5,12 +5,23 @@ import type { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 export type RefPairs = (typeof UUID_REFERENCE_PAIRS)[keyof typeof UUID_REFERENCE_PAIRS]
 
 /**
- * A reference outside a deleted subtree naming an element of it, and what the deletion does to it: `cleared` (its
+ * A reference outside deleted subtrees naming an element of them, and what the deletion does to it: `cleared` (its
  * `attributes` removed, the element kept) or `deleted`.
  */
 export type OrphanedRef = {
 	record: Scl.TrackedRecord<Scl.ElementsOf>
 	effect: 'deleted' | 'cleared'
-	/** The uuid, path and companion attributes naming the subtree. */
+	/** The uuid, path and companion attributes naming the subtrees. */
 	attributes: ReadonlySet<string>
+}
+
+/**
+ * Everything deleting some elements (the roots) does beyond their subtrees: the references deleted, the containers
+ * those deletions leave holding nothing, and what refers to those containers in turn (`deleted`, the roots left out);
+ * the references cleared (`cleared`). `gone` holds every record id that disappears, the roots' subtrees included.
+ */
+export type DeleteCascade = {
+	gone: ReadonlySet<string>
+	deleted: Scl.TrackedRecord<Scl.ElementsOf>[]
+	cleared: OrphanedRef[]
 }

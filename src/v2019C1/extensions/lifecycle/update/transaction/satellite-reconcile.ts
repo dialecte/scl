@@ -1,6 +1,5 @@
 import { toRef } from '@dialecte/core/helpers'
 
-import { cleanUp } from '@/v2019C1/extensions/clean-up'
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
@@ -94,7 +93,6 @@ export async function reconcileSatellites(
 		resolvedMappings,
 		decisionMappings,
 	} = params
-	const from = tx.getStagedOperations().length
 
 	// project elements a source satellite lands on: in use by the template, never deleted below
 	const mappedOntoIds = new Set<string>()
@@ -200,9 +198,6 @@ export async function reconcileSatellites(
 
 		await tx.delete(instanceRef)
 	}
-
-	// a wrapper or a category the removals left holding nothing goes with them
-	await cleanUp.transaction.pruneEmptyContainers(tx, { from })
 
 	return added
 }

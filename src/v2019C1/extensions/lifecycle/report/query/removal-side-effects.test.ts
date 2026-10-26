@@ -32,11 +32,16 @@ const functionTemplate = /* xml */ `
 `
 
 /** A project holding an instance of the function, and what refers to its `Trip` sub-function from outside. */
-function projectWith(params: { applicationReference?: string; signalInput?: string }): string {
-	const { applicationReference = '', signalInput = '' } = params
+function projectWith(params: {
+	applicationReference?: string
+	signalInput?: string
+	substationContent?: string
+}): string {
+	const { applicationReference = '', signalInput = '', substationContent = '' } = params
 	return /* xml */ `
 		<SCL ${ns} ${id}="scd">
 			<Substation name="S1" ${id}="substation-t">
+				${substationContent}
 				<VoltageLevel name="V1" ${id}="voltage-level-t">
 					<Bay name="B1" ${id}="bay-t">
 						<Private type="eIEC61850-6-100" ${id}="bay-private-t">
@@ -94,6 +99,24 @@ describe('report: what the removal of a group makes the delete hooks do outside 
 			}),
 			expectedSideEffects: ['removed SubFunction | SourceRef cleared'],
 		},
+		'a category whose last reference names it: the reference, the category, the wrapper it leaves empty and the reference to the category are listed deleted':
+			{
+				sourceXml: functionTemplate,
+				targetXml: projectWith({
+					substationContent: /* xml */ `
+						<Private type="eIEC61850-6-100" ${id}="substation-private-t">
+							<eIEC61850-6-100:FunctionCategory name="TRIPS" uuid="trips-uuid" ${id}="category-t">
+								<eIEC61850-6-100:FunctionCatRef function="S1/V1/B1/Prot/Trip" functionUuid="trip-uuid" ${id}="category-ref-t"/>
+							</eIEC61850-6-100:FunctionCategory>
+						</Private>
+					`,
+					applicationReference: /* xml */ `<eIEC61850-6-100:FunctionCategoryRef functionCategory="S1/TRIPS" functionCategoryUuid="trips-uuid" ${id}="hmi-category-ref-t"/>`,
+				}),
+				expectedSideEffects: [
+					'removed SubFunction | FunctionCatRef deleted, FunctionCategory deleted, Private deleted, FunctionCategoryRef deleted',
+					'removed FunctionCatRef | FunctionCategory deleted, Private deleted, FunctionCategoryRef deleted',
+				],
+			},
 	}
 
 	async function act({

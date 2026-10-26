@@ -1,35 +1,48 @@
 import { toRawRecord, widen } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAGS, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { PRUNED_WHEN_EMPTY } from '@/v2019C1/extensions/clean-up/transaction/prune-empty-containers.constants'
 import { readAttribute } from '@/v2019C1/helpers'
+import { isPrunedWhenEmpty } from '@/v2019C1/helpers/pruned-when-empty'
+import { PRUNED_WHEN_EMPTY_TAGS } from '@/v2019C1/helpers/pruned-when-empty.constants'
 
-import type { OrphanedRef, RefPairs } from './orphaned-refs.types'
+import type { DeleteCascade, OrphanedRef, RefPairs } from './orphaned-refs.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 // ── Orphaned refs cleanup ─────────────────────────────────────────────────────
 
 /**
- * Stage what the deletion of a subtree does to what refers to it ({@link findOrphanedRefs}): a reference keeping its
- * content has its uuid, path and companion attributes cleared; any other is deleted. A container a deleted reference
- * leaves holding nothing goes too when it has no reason to stay (`PRUNED_WHEN_EMPTY`: a category without its last
- * reference, the wrapper it leaves empty), and what refers to that container in turn — the operations staged here do
- * not run the hooks again. Each parent losing children is updated once.
+ * Stage what deleting a subtree does beyond it ({@link collectDeleteCascade}): a reference keeping its content has its
+ * uuid, path and companion attributes cleared; any other is deleted, with the containers that leaves holding nothing
+ * and what refers to them. Each parent losing children is updated once. The record itself is deleted by the caller.
  */
 export async function cleanOrphanedRefs<GenericElement extends Scl.ElementsOf>(params: {
 	record: Scl.RawRecord<GenericElement>
 	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { record, query } = params
-	const gone = new Set<string>()
-	await collectSubtreeData({ record, query, ids: gone, uuids: new Set() })
+	const cascade = await collectDeleteCascade(query, { roots: [widen(record)] })
+	return buildCascadeOperations(query, { cascade, deletedRoots: [] })
+}
+
+/**
+ * What deleting the roots does beyond their subtrees, read only: the references outside naming one of their elements
+ * (`findOrphanedRefs`), deleted or cleared; the containers a deleted reference leaves holding nothing that have no
+ * reason to stay ({@link collectEmptiedAbove}); then what refers to those containers, in turn. The delete hook stages
+ * it, the commit pass stages it for the containers it removes, a report lists it.
+ */
+export async function collectDeleteCascade(
+	query: Core.Query<Config>,
+	params: { roots: readonly Scl.RawRecord<Scl.ElementsOf>[] },
+): Promise<DeleteCascade> {
+	const gone = await collectSubtreeIds(query, { records: params.roots })
 
 	const deleted = new Map<string, Scl.TrackedRecord<Scl.ElementsOf>>()
 	const cleared = new Map<string, OrphanedRef>()
-	const removedRoots: Scl.RawRecord<Scl.ElementsOf>[] = [widen(record)]
-	for (let index = 0; index < removedRoots.length; index++) {
-		for (const orphaned of await findOrphanedRefs({ record: removedRoots[index], query })) {
+	let round: readonly Scl.RawRecord<Scl.ElementsOf>[] = params.roots
+	while (round.length > 0) {
+		const emptied: Scl.TrackedRecord<Scl.ElementsOf>[] = []
+		for (const orphaned of await findOrphanedRefs({ records: round, query })) {
 			const { id } = orphaned.record
 			if (gone.has(id)) continue
 			if (orphaned.effect === 'cleared') {
@@ -38,27 +51,81 @@ export async function cleanOrphanedRefs<GenericElement extends Scl.ElementsOf>(p
 			}
 			gone.add(id)
 			deleted.set(id, orphaned.record)
-			const emptied = await collectEmptiedContainers(query, { record: orphaned.record, gone })
-			for (const container of emptied) deleted.set(container.id, container)
-			removedRoots.push(...emptied)
+			emptied.push(...(await collectEmptiedAbove(query, { record: orphaned.record, gone })))
 		}
+		for (const container of emptied) deleted.set(container.id, container)
+		round = emptied
 	}
+	const stillThere = [...cleared.values()].filter((orphaned) => !gone.has(orphaned.record.id))
+	return { gone, deleted: [...deleted.values()], cleared: stillThere }
+}
 
-	const operations: Scl.Operation[] = []
-	for (const orphaned of cleared.values()) {
-		if (!gone.has(orphaned.record.id)) {
-			operations.push(buildClearedAttributesOp(orphaned.record, orphaned.attributes))
-		}
+/**
+ * The containers above a record that are left holding nothing once everything in `gone` is gone — no other child,
+ * no text — and have no reason to stay then (`isPrunedWhenEmpty`), walked up; each is added to `gone`. One already in
+ * `gone` is not walked through.
+ */
+export async function collectEmptiedAbove(
+	query: Core.Query<Config>,
+	params: { record: Scl.RawRecord<Scl.ElementsOf>; gone: Set<string> },
+): Promise<Scl.TrackedRecord<Scl.ElementsOf>[]> {
+	const { gone } = params
+	const emptied: Scl.TrackedRecord<Scl.ElementsOf>[] = []
+	let parentRef = params.record.parent
+	while (parentRef && PRUNED_WHEN_EMPTY_TAGS.has(parentRef.tagName) && !gone.has(parentRef.id)) {
+		const parent: Scl.TrackedRecord<Scl.ElementsOf> | undefined = await query.getRecord(parentRef)
+		if (!parent || !isPrunedWhenEmpty(parent) || !holdsNothingBut({ record: parent, gone })) break
+		gone.add(parent.id)
+		emptied.push(parent)
+		parentRef = parent.parent
 	}
-	for (const deletedRecord of deleted.values()) {
+	return emptied
+}
+
+/** Whether a record, not the root, holds no text and no child but those in `gone`. */
+export function holdsNothingBut(params: {
+	record: Scl.RawRecord<Scl.ElementsOf>
+	gone: ReadonlySet<string>
+}): boolean {
+	const { record, gone } = params
+	if (!record.parent || record.value.trim() !== '') return false
+	return record.children.every((child) => gone.has(child.id))
+}
+
+/**
+ * The operations of a cascade: each reference cleared, each record deleted (the roots given in `deletedRoots` too),
+ * and one update per parent that stays and loses children.
+ */
+export async function buildCascadeOperations(
+	query: Core.Query<Config>,
+	params: { cascade: DeleteCascade; deletedRoots: readonly Scl.TrackedRecord<Scl.ElementsOf>[] },
+): Promise<Scl.Operation[]> {
+	const { cascade, deletedRoots } = params
+	const operations: Scl.Operation[] = []
+	for (const orphaned of cascade.cleared) {
+		operations.push(buildClearedAttributesOp(orphaned.record, orphaned.attributes))
+	}
+	const deleted = [...deletedRoots, ...cascade.deleted]
+	for (const deletedRecord of deleted) {
 		operations.push({
 			status: 'deleted',
 			oldRecord: toRawRecord(deletedRecord),
 			newRecord: undefined,
 		})
 	}
-	operations.push(...(await buildParentUpdates(query, { deleted: [...deleted.values()], gone })))
+	operations.push(...(await buildParentUpdates(query, { deleted, gone: cascade.gone })))
 	return operations
+}
+
+/** The record ids of the subtrees of `records`, their wrappers included. */
+export async function collectSubtreeIds(
+	query: Core.Query<Config>,
+	params: { records: readonly Scl.RawRecord<Scl.ElementsOf>[] },
+): Promise<Set<string>> {
+	const ids = new Set<string>()
+	for (const record of params.records)
+		await collectSubtreeData({ record, query, ids, uuids: new Set() })
+	return ids
 }
 
 /** Record a reference cleared, the attributes of each removal naming it together. */
@@ -67,28 +134,6 @@ function mergeCleared(params: { cleared: Map<string, OrphanedRef>; orphaned: Orp
 	const known = cleared.get(orphaned.record.id)
 	const attributes = new Set([...(known?.attributes ?? []), ...orphaned.attributes])
 	cleared.set(orphaned.record.id, { ...orphaned, attributes })
-}
-
-/**
- * The containers above a deleted reference left holding nothing once everything `gone` is gone, walked up while each
- * has no reason to stay; each is added to `gone`.
- */
-async function collectEmptiedContainers(
-	query: Core.Query<Config>,
-	params: { record: Scl.TrackedRecord<Scl.ElementsOf>; gone: Set<string> },
-): Promise<Scl.TrackedRecord<Scl.ElementsOf>[]> {
-	const { gone } = params
-	const emptied: Scl.TrackedRecord<Scl.ElementsOf>[] = []
-	let parentRef = params.record.parent
-	while (parentRef && PRUNED_WHEN_EMPTY.has(parentRef.tagName)) {
-		const parent: Scl.TrackedRecord<Scl.ElementsOf> | undefined = await query.getRecord(parentRef)
-		if (!parent?.parent || parent.value.trim() !== '') break
-		if (parent.children.some((child) => !gone.has(child.id))) break
-		gone.add(parent.id)
-		emptied.push(parent)
-		parentRef = parent.parent
-	}
-	return emptied
 }
 
 /** One update per parent that stays and loses children: its children list without them. */
@@ -117,20 +162,21 @@ async function buildParentUpdates(
 }
 
 /**
- * The references outside a subtree that name an element of it, each with what its deletion does to them:
+ * The references outside some subtrees that name an element of them, each with what their deletion does to them:
  * `cleared` for a reference keeping its content (`KEEP_ON_ORPHAN_REFS`: its uuid, path and companion attributes go),
- * `deleted` for any other. A reference inside the subtree goes with it. Read only: the delete hook stages it, a
- * report lists it.
+ * `deleted` for any other. A reference inside the subtrees goes with them. The reference tags are read once.
  */
-export async function findOrphanedRefs<GenericElement extends Scl.ElementsOf>(params: {
-	record: Scl.RawRecord<GenericElement>
+export async function findOrphanedRefs(params: {
+	records: readonly Scl.RawRecord<Scl.ElementsOf>[]
 	query: Core.Query<Config>
 }): Promise<OrphanedRef[]> {
-	const { record, query } = params
+	const { records, query } = params
 
 	const subtreeIds = new Set<string>()
 	const subtreeUuids = new Set<string>()
-	await collectSubtreeData({ record, query, ids: subtreeIds, uuids: subtreeUuids })
+	for (const record of records) {
+		await collectSubtreeData({ record, query, ids: subtreeIds, uuids: subtreeUuids })
+	}
 	if (subtreeUuids.size === 0) return []
 
 	const orphaned: OrphanedRef[] = []
@@ -193,8 +239,8 @@ function buildClearedAttributesOp(
 
 // ── Subtree collection ────────────────────────────────────────────────────────
 
-async function collectSubtreeData<GenericElement extends Scl.ElementsOf>(params: {
-	record: Scl.RawRecord<GenericElement>
+async function collectSubtreeData(params: {
+	record: Scl.RawRecord<Scl.ElementsOf>
 	query: Core.Query<Config>
 	ids: Set<string>
 	uuids: Set<string>

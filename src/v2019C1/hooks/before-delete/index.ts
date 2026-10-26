@@ -1,3 +1,10 @@
 export { beforeDelete } from './before-delete'
-export { findOrphanedRefs } from './orphaned-refs'
-export type { OrphanedRef } from './orphaned-refs.types'
+export {
+	buildCascadeOperations,
+	collectDeleteCascade,
+	collectEmptiedAbove,
+	collectSubtreeIds,
+	findOrphanedRefs,
+	holdsNothingBut,
+} from './orphaned-refs'
+export type { DeleteCascade, OrphanedRef } from './orphaned-refs.types'
