@@ -64,7 +64,7 @@ export function constraintsSelecting(params: {
 	return (parentDefinition?.constraints ?? []).filter(
 		(constraint) =>
 			(constraint.kind === 'unique' || constraint.kind === 'key') &&
-			fieldsOf(constraint).length > 0 &&
+			constraintFields(constraint).length > 0 &&
 			selectsChild({ constraint, tag: childTag }),
 	)
 }
@@ -78,7 +78,7 @@ export function findViolationInScope(params: {
 	const { scope, candidate, excludeId } = params
 
 	for (const constraint of scope.constraints) {
-		const fields = fieldsOf(constraint)
+		const fields = constraintFields(constraint)
 		// the candidate must carry every key field to collide meaningfully
 		if (fields.length === 0 || fields.some((field) => candidate[field] === undefined)) continue
 
@@ -139,7 +139,7 @@ function childPaths(constraint: Core.IdentityConstraint): Core.IdentityConstrain
  * no namespace of the selected element itself. Any other field - an element's text, a deeper path - leaves the
  * constraint out of these comparisons: none is returned.
  */
-function fieldsOf(constraint: Core.IdentityConstraint): string[] {
+export function constraintFields(constraint: Core.IdentityConstraint): string[] {
 	const names = constraint.fields.map((alternatives) => {
 		const read = alternatives.map((path) =>
 			path.steps.length === 0 && path.attribute?.namespace === '' ? path.attribute.name : undefined,

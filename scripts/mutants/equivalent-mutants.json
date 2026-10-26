@@ -4,6 +4,31 @@
 			"line": 69,
 			"mutation": "StringLiteral: 'This value of the option is not available yet' -> \"\"",
 			"equivalent": "the default message of the error: consumers build their wording from its key and meta"
+		},
+		"40c5d31ab54704f7": {
+			"line": 80,
+			"mutation": "StringLiteral: 'An element shares with another one in the same place a key that cannot be changed' -> \"\"",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"277be82096851b5e": {
+			"line": 85,
+			"mutation": "StringLiteral: 'A decision concerns a change the report does not list' -> \"\"",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"0b3f881a5b9365cf": {
+			"line": 90,
+			"mutation": "StringLiteral: 'A change depends on a change the report does not list' -> \"\"",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"9af8e9aefd4c4ce5": {
+			"line": 99,
+			"mutation": "StringLiteral: 'The report was made for another target' -> \"\"",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"6824a1180b57bc57": {
+			"line": 107,
+			"mutation": "StringLiteral: 'The report names an element the document no longer holds' -> \"\"",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
 		}
 	},
 	"src/v2019C1/extensions/history/transaction/start-file.ts": {
@@ -115,6 +140,145 @@
 			"equivalent": "an update with no lineage key, or with the values held, writes nothing"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/apply/apply.ts": {
+		"df13ed0d070718ea": {
+			"line": 153,
+			"mutation": "ObjectLiteral: { from } -> {}",
+			"equivalent": "from the first staged operation the engine's own writes are read again: each was made unique when written, an untouched collision of the project is left, only more reads"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/apply/assert-report-fits.ts": {
+		"8d711c1b32509fc6": {
+			"line": 66,
+			"mutation": "ConditionalExpression: madeValue.tagName === askedValue.tagName -> true",
+			"equivalent": "a record id names one element of one tag in a document: the same id under another tag never occurs"
+		},
+		"cf6c862e2faa60f3": {
+			"line": 76,
+			"mutation": "ConditionalExpression: field === 'report' -> true",
+			"equivalent": "chooses only the detail of the refusal: key, code and meta are the same either way"
+		},
+		"e0c2c7fa1d995bad": {
+			"line": 76,
+			"mutation": "ConditionalExpression: field === 'report' -> false",
+			"equivalent": "chooses only the detail of the refusal: key, code and meta are the same either way"
+		},
+		"788d9654aff38c98": {
+			"line": 76,
+			"mutation": "EqualityOperator: field === 'report' -> field !== 'report'",
+			"equivalent": "chooses only the detail of the refusal: key, code and meta are the same either way"
+		},
+		"5fd5c48ed5acb313": {
+			"line": 76,
+			"mutation": "StringLiteral: 'report' -> \"\"",
+			"equivalent": "chooses only the detail of the refusal: key, code and meta are the same either way"
+		},
+		"c2cbbf285fa332e5": {
+			"line": 77,
+			"mutation": "StringLiteral: 'the report carries no target: it was not made by query.lifecycle.report' -> \"\"",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"aaa68e9e99b19d9e": {
+			"line": 78,
+			"mutation": "StringLiteral: `the report was made for another ${field} than the one it is applied to` -> ``",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"b5f8dd6721086c36": {
+			"line": 92,
+			"mutation": "StringLiteral: `the report names <${element.tagName}> \"${element.id}\" (${kind}), which the document no longer holds` -> ``",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/apply/recheck-after-apply.ts": {
+		"c3488d8d6a93c064": {
+			"line": 32,
+			"mutation": "ConditionalExpression: !created && changed.size === 0 -> false",
+			"equivalent": "a shortcut: an update changing no attribute touches no key field and is left by the next check, after more reads"
+		},
+		"47ada614992edd11": {
+			"line": 33,
+			"mutation": "ConditionalExpression: !(await tx.getRecord(ref)) -> false",
+			"equivalent": "an element the step deleted is left out of the touched elements already; one deleted by a cascade has no parent read and is skipped next"
+		},
+		"2eb970ff93c30c98": {
+			"line": 35,
+			"mutation": "ConditionalExpression: !parentRef -> false",
+			"equivalent": "only the document root has no parent, and the schema fixes its attributes: no step changes a key of it"
+		},
+		"90ac98d58890b880": {
+			"line": 40,
+			"mutation": "ConditionalExpression: !created && !keyFields.some((field) => changed.has(field)) -> false",
+			"equivalent": "a shortcut: an update touching no key field has no violation on a field it changed and is left by the later check, after more reads"
+		},
+		"8c15b723ff5ef644": {
+			"line": 45,
+			"mutation": "ConditionalExpression: !created && !violation.fields.some((field) => changed.has(field)) -> false",
+			"equivalent": "an element compared by two rules of disjoint fields carries the fields of one only (an LNode has no name): a violation found always lies on the fields the rule the change touched compares"
+		},
+		"a6e26c8a87daf099": {
+			"line": 61,
+			"mutation": "MethodExpression: tx.getStagedOperations().slice(params.from) -> tx.getStagedOperations()",
+			"equivalent": "from the first staged operation the engine's own writes are read again: each was made unique when written, an untouched collision of the project is left, only more reads"
+		},
+		"06986e4705375099": {
+			"line": 63,
+			"mutation": "CallExpression: touched.delete(operation.oldRecord.id) -> ;",
+			"equivalent": "an element deleted again is skipped by the next check (the record is gone) whether it stays in the list or not"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/constraints/find-constraint-violation.ts": {
+		"630162f29a00b2ae": {
+			"line": 67,
+			"mutation": "ConditionalExpression: constraintFields(constraint).length > 0 -> true",
+			"equivalent": "a rule whose fields are not attributes compares nothing: the violation search skips it and its fields are none"
+		},
+		"f0419d672896c481": {
+			"line": 67,
+			"mutation": "EqualityOperator: constraintFields(constraint).length > 0 -> constraintFields(constraint).length >= 0",
+			"equivalent": "a rule whose fields are not attributes compares nothing: the violation search skips it and its fields are none"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/constraints/find-identity-collision.ts": {
+		"35d4e441042701f8": {
+			"line": 32,
+			"mutation": "ConditionalExpression: !offending -> false",
+			"equivalent": "the violation names a child of the scope it was found in: the element it collides with is always found"
+		},
+		"20c1af4a1d09a5dc": {
+			"line": 47,
+			"mutation": "ConditionalExpression: !parentRef -> false",
+			"equivalent": "every element checked was placed under a parent: the wrapper walk always finds one"
+		},
+		"bef59a3ed01339c5": {
+			"line": 76,
+			"mutation": "StringLiteral: `<${element.tagName}> \"${element.id}\" shares with <${collidesWith.tagName}> \"${collidesWith.id}\" every field of ${constraint} (${fields.join(', '",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"aab5372d5fa1ffab": {
+			"line": 76,
+			"mutation": "StringLiteral: ', ' -> \"\"",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/constraints/place-uniquely.ts": {
+		"3c44b5c79e677f4c": {
+			"line": 18,
+			"mutation": "ConditionalExpression: outcome.status !== 'unresolvable' -> false",
+			"equivalent": "re-reading an element numbered or free finds no collision on a key nothing can change: only more reads"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/constraints/resolve-placement-collision.ts": {
+		"60e70bf3eafa46d9": {
+			"line": 89,
+			"mutation": "OptionalChaining: (await query.getRecord(params.ref))?.parent -> (await query.getRecord(params.ref)).parent",
+			"equivalent": "the walk starts from a stored element: its record exists"
+		},
+		"68a9ddb26de0233b": {
+			"line": 91,
+			"mutation": "OptionalChaining: (await query.getRecord(parent as Scl.Ref<Scl.ElementsOf>))?.parent -> (await query.getRecord(parent as Scl.Ref<Scl.ElementsOf>)).parent",
+			"equivalent": "the walk reads the parents of a stored element: each record it reads exists"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity.ts": {
 		"d2d3385b7030b800": {
 			"line": 43,
@@ -130,6 +294,50 @@
 			"line": 44,
 			"mutation": "StringLiteral: `finalizeClonedIdentity: unhandled identity mode ${String(write satisfies never)}` -> ``",
 			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/decide.ts": {
+		"d6a4a4c7a3d825b9": {
+			"line": 157,
+			"mutation": "StringLiteral: `a decision is passed for group \"${groupId}\", which the report does not list` -> ``",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"59c9e842f49b77f2": {
+			"line": 166,
+			"mutation": "StringLiteral: `group \"${group.id}\" depends on group \"${dependencyId}\", which the report does not list` -> ``",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"860240d6b5daa870": {
+			"line": 208,
+			"mutation": "ObjectLiteral: {\n\t\tdetail: `an added <${node.tagName}> carries no source element`,\n\t} -> {}",
+			"equivalent": "an added node always carries the source element it adds: the invariant never fails, its data is never read"
+		},
+		"48ca2a451558de80": {
+			"line": 209,
+			"mutation": "StringLiteral: `an added <${node.tagName}> carries no source element` -> ``",
+			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/identity-collisions.ts": {
+		"c5f21add0d1748af": {
+			"line": 26,
+			"mutation": "ConditionalExpression: !scope -> true",
+			"equivalent": "a cache of the scope read per tag: reading it again gives the same scope"
+		},
+		"da657a70fafd82f7": {
+			"line": 28,
+			"mutation": "CallExpression: scopes.set(node.tagName, scope) -> ;",
+			"equivalent": "a cache of the scope read per tag: reading it again gives the same scope"
+		},
+		"b9d20ea67690ba2f": {
+			"line": 30,
+			"mutation": "ConditionalExpression: scope.constraints.length === 0 -> false",
+			"equivalent": "a shortcut: a scope without a rule finds no violation"
+		},
+		"8a8dd21fe5fb3759": {
+			"line": 33,
+			"mutation": "ConditionalExpression: collision -> true",
+			"equivalent": "writes an absent collision as undefined, which every reader treats as none"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/engine/project-owned-attributes.ts": {
@@ -152,6 +360,28 @@
 			"line": 52,
 			"mutation": "StringLiteral: `projectOwnedAttributes: unhandled names rule ${String(namesFollow satisfies never)}` -> ``",
 			"equivalent": "the default of an exhaustive switch: the names rule has two values, the type refuses a third"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/reconcile.ts": {
+		"56d09dd39f9a2fe9": {
+			"line": 222,
+			"mutation": "ConditionalExpression: !(await tx.getRecord(placed.ref)) -> false",
+			"equivalent": "an element an addition placed is not removed by the same reconcile; read without the guard, a missing element has no parent and the check finds nothing"
+		},
+		"db81b603d8b0bb2e": {
+			"line": 364,
+			"mutation": "ConditionalExpression: addRoot -> true",
+			"equivalent": "the clone of the source child added is always among the clone mappings of its own clone"
+		},
+		"5181ca3c1d74ceea": {
+			"line": 375,
+			"mutation": "ConditionalExpression: !outcome || outcome.status === 'unresolvable' -> true",
+			"equivalent": "re-reading an addition that was numbered or was free finds no collision on a key nothing can change: only more reads"
+		},
+		"f9197ee3318a76f0": {
+			"line": 375,
+			"mutation": "BooleanLiteral: !outcome -> outcome",
+			"equivalent": "every scenario numbers its additions, so the outcome is always there: re-reading a numbered or free addition finds nothing, only more reads"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/engine/wrapper.ts": {
@@ -389,11 +619,30 @@
 			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/ensure-topology-frame.ts": {
+		"33071acae3eb2aea": {
+			"line": 81,
+			"mutation": "ConditionalExpression: params.placementLevels -> true",
+			"equivalent": "the condition predates the refusal (only the callee changed): a level created outside a placement lands under a level the frame creates too, where its name is free"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/report/query/report-asd.ts": {
 		"c9b84b015e7bcdd7": {
 			"line": 462,
 			"mutation": "OptionalChaining: selection?.leftOut -> selection.leftOut",
 			"equivalent": "every instance of the application has its selection in the map"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/report/report.ts": {
+		"25713eb3ecf742c4": {
+			"line": 72,
+			"mutation": "BlockStatement: {\n\t\treport.needsDecisions = true\n\t} -> {}",
+			"equivalent": "a collision is only marked below an element the instance holds, whose report already asks for a decision on the group adding it"
+		},
+		"af61cc49dc9f2782": {
+			"line": 72,
+			"mutation": "ConditionalExpression: acceptedCollisions({ groups: allGroups(report), decisions: new Map() }).length > 0 -> false",
+			"equivalent": "a collision is only marked below an element the instance holds, whose report already asks for a decision on the group adding it"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/transplant/transaction/primitives/clone-tree.ts": {

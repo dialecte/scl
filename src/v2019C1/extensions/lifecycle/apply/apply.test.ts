@@ -273,6 +273,126 @@ describe('apply — the decisions belong to the report', () => {
 	})
 })
 
+describe("apply — what the consumer's step writes is held to the uniqueness rules", () => {
+	// a bay beside the one the function is placed in, and a function there holding two logical nodes of one key
+	const busyTargetXml = targetXml.replace(
+		`<Bay name="B1" ${id}="bay-t"/>`,
+		/* xml */ `
+			<Bay name="B1" ${id}="bay-t"/>
+			<Bay name="B2" ${id}="bay-t2">
+				<Function name="Held" uuid="held-uuid" ${id}="held-t">
+					<LNode iedName="None" ldInst="LD1" prefix="QA" lnClass="XCBR" lnInst="1" ${id}="held-ln-1"/>
+					<LNode iedName="None" ldInst="LD1" prefix="QA" lnClass="XCBR" lnInst="1" ${id}="held-ln-2"/>
+					<LNode iedName="None" ldInst="LD1" prefix="QA" lnClass="XCBR" lnInst="2" ${id}="held-ln-3"/>
+				</Function>
+			</Bay>
+		`,
+	)
+
+	async function placeWithStep(afterApply: NonNullable<Resolution['afterApply']>) {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml: busyTargetXml })
+		if (!target) throw new Error('target required')
+		const lifecycleTarget = {
+			verb: 'fsd' as const,
+			sourceQuery: source.document.query,
+			ref: functionRef,
+			anchor: bayRef,
+		}
+		const reported = await report(target.document.query, lifecycleTarget)
+		const before = await target.document.query.getSnapshot({ as: 'xml' })
+		const applied = target.document.transaction(async function applyWithStep(tx) {
+			await apply(tx, { ...lifecycleTarget, report: reported, resolution: { afterApply } })
+		})
+		return { query: target.document.query, applied, before }
+	}
+
+	async function bayNames(query: Scl.Query): Promise<string[]> {
+		const names: string[] = []
+		for (const bay of await query.getRecordsByTagName('Bay'))
+			names.push((await query.getAttribute(bay, { name: 'name' })) ?? '')
+		return names.sort()
+	}
+
+	it('the step renames a bay outside what was placed to a name taken beside it → numbered', async () => {
+		const { query, applied } = await placeWithStep(async function renameBay(tx) {
+			await tx.update({ tagName: 'Bay', id: 'bay-t' } as Scl.Ref<'Bay'>, {
+				attributes: { name: 'B2' },
+			})
+		})
+		await applied
+
+		expect(await bayNames(query)).toEqual(['B2', 'B2_1'])
+	})
+
+	it('the step adds two logical nodes sharing their whole key → refused, nothing written', async () => {
+		const { query, applied, before } = await placeWithStep(async function addTwins(
+			tx,
+			{ instances },
+		) {
+			const [placed] = instances.verb === 'fsd' ? instances.functions : []
+			if (!placed) throw new Error('nothing placed')
+			for (let twin = 0; twin < 2; twin++) {
+				await tx.addChild(placed as Scl.Ref<'Function'>, {
+					tagName: 'LNode',
+					attributes: {
+						iedName: 'None',
+						ldInst: 'LD1',
+						prefix: 'QA',
+						lnClass: 'XCBR',
+						lnInst: '1',
+					},
+				})
+			}
+		})
+
+		const refusal = toDialecteError(await applied.catch((error: unknown) => error))
+		expect(refusal?.key).toBe('IDENTITY_COLLISION')
+		expect(await query.getSnapshot({ as: 'xml' })).toEqual(before)
+	})
+
+	it('the step renumbers a logical node onto the key of another → refused, nothing written', async () => {
+		const { query, applied, before } = await placeWithStep(async function renumber(tx) {
+			await tx.update({ tagName: 'LNode', id: 'held-ln-3' } as Scl.Ref<'LNode'>, {
+				attributes: { lnInst: '1' },
+			})
+		})
+
+		const refusal = toDialecteError(await applied.catch((error: unknown) => error))
+		expect({ key: refusal?.key, element: refusal?.meta?.element }).toEqual({
+			key: 'IDENTITY_COLLISION',
+			element: { tagName: 'LNode', id: 'held-ln-3' },
+		})
+		expect(await query.getSnapshot({ as: 'xml' })).toEqual(before)
+	})
+
+	it('the step renames a bay to a free name and deletes another bay → applied as it wrote', async () => {
+		const { query, applied } = await placeWithStep(async function rewrite(tx) {
+			await tx.update({ tagName: 'Bay', id: 'bay-t' } as Scl.Ref<'Bay'>, {
+				attributes: { name: 'B9' },
+			})
+			await tx.delete({ tagName: 'Bay', id: 'bay-t2' } as Scl.Ref<'Bay'>)
+		})
+		await applied
+
+		expect(await bayNames(query)).toEqual(['B9'])
+	})
+
+	it('the step changes the description of an element the project already held twice → left as it is', async () => {
+		const { query, applied } = await placeWithStep(async function describe(tx) {
+			await tx.update({ tagName: 'LNode', id: 'held-ln-2' } as Scl.Ref<'LNode'>, {
+				attributes: { desc: 'described by the consumer' },
+			})
+		})
+		await applied
+
+		const held = await query.findByAttributes({
+			tagName: 'LNode',
+			attributes: { lnClass: 'XCBR', lnInst: '1' },
+		})
+		expect(held).toHaveLength(2)
+	})
+})
+
 async function namesOfFunctions(query: Scl.Query): Promise<string[]> {
 	const records = await query.getRecordsByTagName('Function')
 	return records

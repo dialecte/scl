@@ -1,8 +1,8 @@
 import { assertReportFits } from './assert-report-fits'
 import { collectWrittenImplementation } from './collect-written-implementation'
+import { recheckAfterApply } from './recheck-after-apply'
 
 import { cleanUp } from '@/v2019C1/extensions/clean-up'
-import { makeUnique } from '@/v2019C1/extensions/lifecycle/constraints'
 import {
 	allGroups,
 	assertDecisionsCoherent,
@@ -139,42 +139,18 @@ async function writeReport(
 }
 
 /**
- * Run the consumer's step, then make unique again what it renamed among the applications and
- * functions the apply placed or reconciled: a name it gives that is taken where the element sits
- * is numbered as the engine numbers its own. What it did not rename is left as it is.
+ * Run the consumer's step, then hold what it wrote to the uniqueness rules: an element it created or whose key it
+ * changed that shares a key with a sibling is numbered as the engine numbers its own, or refused when nothing in the
+ * key can be changed. What it did not touch is left as it is.
  */
 async function runAfterApply(
 	tx: Core.Transaction<Config>,
 	params: { afterApply: AfterApplyHook; instances: AppliedInstances },
 ): Promise<void> {
 	const { afterApply, instances } = params
-	const roots = appliedRoots(instances)
-
-	const namesBefore: (string | undefined)[] = []
-	for (const root of roots) {
-		namesBefore.push(await tx.getAttribute(root, { name: 'name' }))
-	}
-
+	const from = tx.getStagedOperations().length
 	await afterApply(tx as Scl.Transaction, { instances })
-
-	for (const [index, root] of roots.entries()) {
-		// the consumer may have removed it
-		const record = await tx.getRecord(root)
-		if (!record) continue
-		const name = await tx.getAttribute(root, { name: 'name' })
-		if (name !== namesBefore[index]) await makeUnique(tx, { ref: root })
-	}
-}
-
-/** The applications and functions an apply placed or reconciled, whatever its verb. */
-function appliedRoots(instances: AppliedInstances): Scl.Ref<Scl.ElementsOf>[] {
-	switch (instances.verb) {
-		case 'fsd':
-			return instances.functions
-		case 'asd':
-		case 'ssd':
-			return [...instances.applications, ...instances.functions]
-	}
+	await recheckAfterApply(tx, { from })
 }
 
 /** The empty instance set for a verb (the not-decided-yet track writes nothing). */

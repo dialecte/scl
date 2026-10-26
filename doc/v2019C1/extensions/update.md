@@ -476,8 +476,12 @@ await doc.prepare((tx) =>
   field that can be changed; the `violation` (`ConstraintViolation`) names the `constraint`, its `fields`
   and the `offendingId` of the sibling collided with.
 - The step's type is exported as `AfterApplyHook`: `(tx: Scl.Transaction, { instances }: { instances: AppliedInstances }) => Promise<void>`.
-- After the step, an application or function the apply placed or reconciled and the step renamed is made
-  unique again: a name the step gives that is taken where the element sits is numbered all the same.
+- After the step, what it wrote is held to the uniqueness rules of where each element sits, as the engine's own
+  writes are: an element it created, or whose key it changed (a bay it renamed, outside what the apply placed as
+  well as inside), that shares a key with a sibling is numbered on the key's editable field — a name the step gives
+  that is taken there is numbered all the same — and refused with `IDENTITY_COLLISION` when nothing in the key can be
+  changed (two `LNode`s of one class, instance, prefix, device and IED). A collision the project held before, on a
+  key the step did not touch, is left as it is.
 
 #### The names written are read from the outcome
 

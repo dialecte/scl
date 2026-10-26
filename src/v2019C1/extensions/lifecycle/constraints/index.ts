@@ -2,6 +2,7 @@ export { classifyAttribute, editableAttributes, isEditableMode } from './classif
 export { EDITABLE_MODES, LINEAGE } from './classify-attribute.constants'
 export { getIdentityFields } from './identity-fields'
 export {
+	constraintFields,
 	constraintsSelecting,
 	findConstraintViolation,
 	findViolationInScope,
