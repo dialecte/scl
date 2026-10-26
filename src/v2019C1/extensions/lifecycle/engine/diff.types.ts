@@ -1,4 +1,4 @@
-import type { EditableAttribute } from '../constraints'
+import type { EditableAttribute, IdentityCollision } from '../constraints'
 import type { OffLevel } from '../layers/topology/resolve-primary-placement.types'
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
@@ -48,6 +48,13 @@ export type DiffNode = {
 	 * `unchanged`) that has any. They neither make the node `modified` nor open a decision: there is nothing to accept.
 	 */
 	keptAttributeChanges?: KeptAttributeChange[]
+	/**
+	 * Present on an `added` node that collides with an element the instance holds where it lands, on a key none of
+	 * whose fields can be changed (an `LNode` sharing class, instance, prefix, device and IED with one the project
+	 * added): its group cannot be accepted unless an accepted group removes `collidesWith` — `apply` refuses it with
+	 * `IDENTITY_COLLISION` before anything is written.
+	 */
+	identityCollision?: IdentityCollision
 	children: DiffNode[]
 }
 
@@ -195,3 +202,9 @@ export type DecisionMap = Map<string, GroupDecision>
 
 /** A matched node of the diff and the instance element it compares: what a rename is numbered among. */
 export type RenamedNode = { node: DiffNode; child: AnyTreeRecord }
+
+/** An added node of the diff and the source element it adds: what is compared with the instance's children. */
+export type AddedChild = { node: DiffNode; source: AnyTreeRecord }
+
+/** A node of the diff carrying an identity collision, with it. */
+export type NodeIdentityCollision = { node: DiffNode; collision: IdentityCollision }

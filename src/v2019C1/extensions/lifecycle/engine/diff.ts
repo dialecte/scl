@@ -1,4 +1,5 @@
 import { groupChanges } from './group'
+import { markIdentityCollisions } from './identity-collisions'
 import { instanceTagOf } from './instance-tag'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
@@ -19,6 +20,7 @@ import { numberRenames } from '@/v2019C1/extensions/lifecycle/constraints/number
 
 import type { ReportMapping } from '../mapping/mapping.types'
 import type {
+	AddedChild,
 	AttributeChange,
 	AttributeComparison,
 	DecisionGroup,
@@ -269,6 +271,8 @@ async function diffMatched(
 	const matchedInstanceIds = new Set<string>()
 	// the matched children the source renames, numbered below once every rename is known
 	const renamed: RenamedNode[] = []
+	// the children the source adds, compared below with what the instance holds
+	const added: AddedChild[] = []
 
 	// source children: matched -> recurse; unmatched -> added subtree
 	for (const sourceChild of sourceNode.tree) {
@@ -324,7 +328,9 @@ async function diffMatched(
 			children.push(matchedNode)
 			renamed.push({ node: matchedNode, child: matched })
 		} else if (!params.notSelected?.has(sourceChild.id)) {
-			children.push(addedNode({ node: sourceChild, omit, notSelected: params.notSelected }))
+			const node = addedNode({ node: sourceChild, omit, notSelected: params.notSelected })
+			children.push(node)
+			added.push({ node, source: sourceChild })
 		}
 	}
 
@@ -392,6 +398,12 @@ async function diffMatched(
 	await numberRenamedNodes(targetQuery, {
 		parentRef: toRef(instanceNode) as Scl.Ref<Scl.ElementsOf>,
 		renamed,
+	})
+	// an addition colliding with a child of the instance on a key nothing can change is listed: it cannot be written
+	await markIdentityCollisions(sourceQuery, {
+		targetQuery,
+		parentRef: toRef(instanceNode) as Scl.Ref<Scl.ElementsOf>,
+		added,
 	})
 
 	return {

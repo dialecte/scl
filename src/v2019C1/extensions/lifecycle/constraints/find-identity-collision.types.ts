@@ -1,6 +1,5 @@
 import type { ConstraintScope } from './find-constraint-violation.types'
 import type { Scl } from '@/v2019C1/config'
-import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
  * Two elements in one place sharing every field of a key none of which can be changed (the key of a logical node:
@@ -12,7 +11,7 @@ export type IdentityCollision = {
 	/** The key fields it compares. */
 	fields: string[]
 	/** The element of the project the other one collides with. */
-	collidesWith: AnyRefOrRecord
+	collidesWith: { tagName: string; id: string }
 }
 
 export type IdentityCollisionInScopeParams = {

@@ -150,6 +150,24 @@ empty map applies everything), but `skip` for a `target-only` group, so an autho
 kept unless the user explicitly opts into removing it. The engine rejects a set that accepts a group
 whose `dependsOn` parent is skipped.
 
+**An addition that cannot be written is listed.** An element the template adds that collides with one the instance
+holds where it lands, on a key none of whose fields can be changed (an `LNode` sharing class, instance, prefix,
+device and IED with an `LNode` the project added), carries it on its node:
+
+```ts
+type IdentityCollision = {
+	constraint: string
+	fields: string[]
+	collidesWith: { tagName: string; id: string }
+}
+// DiffNode.identityCollision?: IdentityCollision
+```
+
+The report then needs decisions (`needsDecisions: true`): its group can be skipped, or accepted together with the
+removal of `collidesWith` (the project's own element, a `target-only` group suggested `skip`). Accepting it while
+`collidesWith` stays is refused by `apply` with `IDENTITY_COLLISION` before anything is written (see
+[Placement collision resolution](#placement-collision-resolution)).
+
 What a placement writes, the report says goes with it (`dependsOn`), on a first placement and for
 what an update places afresh:
 

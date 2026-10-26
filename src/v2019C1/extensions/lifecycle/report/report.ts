@@ -3,6 +3,7 @@ import { reportAsd, reportFsd, reportSsd } from './query'
 import { throwDialecteError } from '@dialecte/core'
 
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
+import { acceptedCollisions } from '@/v2019C1/extensions/lifecycle/engine'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { assertMappingsCoherent, createReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -64,6 +65,10 @@ export async function report(
 
 	// a mapping nothing is decided for is the consumer's to choose before anything is written
 	if (report.mappings.some((mapping) => !mapping.mapping)) report.needsDecisions = true
+	// an addition colliding on a key nothing can change cannot be written as it is suggested
+	if (acceptedCollisions({ groups: allGroups(report), decisions: new Map() }).length > 0) {
+		report.needsDecisions = true
+	}
 
 	// the report was derived from the consumer's mapping choices: refuse the ones it cannot honour
 	const decisionMappings = target.resolution?.mappings

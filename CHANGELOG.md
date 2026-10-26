@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The report lists an addition that cannot be written: `DiffNode.identityCollision`** (`IdentityCollision`: `constraint`, `fields`, `collidesWith`). An element a template update adds that collides with one the instance holds on a key none of whose fields can be changed (an `LNode` the project added with the same class, instance, prefix, device and IED) carries it, and the report needs decisions. Its group can be skipped, or accepted with the removal of the project's element; `apply` refuses it otherwise with `IDENTITY_COLLISION` before anything is written.
+
 - **`ReportInstance.variantsNotSelected`**: on the report of an application instance that selected functional variants, the template's variants it did not select (a variant the template gained since included). There is nothing to decide about them: they and what they bring are not added. **`transplant.deep` takes `leaveOut`**: the source records not cloned, with what they hold.
 
 - **`extract.fsd`, `extract.asd` and `extract.ssd` take `as` and `templateLink` (`ExtractOptions`, `TemplateLink`).** `templateLink: 'keep'` keeps the element extracted an instance of the template it was made from (its `templateUuid` and `originUuid`); `'break'`, the default, is the behaviour so far. `as: 'new'`, the default, writes a new template as so far; `as: 'revision'`, a new revision of the template the element came from, is not available yet and is refused with `OPTION_NOT_AVAILABLE` (`SCL1009`, `meta: { option, value }`) before anything is written. The header of the file an operation writes is started by the new `tx.history.startFile({ as, filename, header, item })`, the one place that will write a revision too.

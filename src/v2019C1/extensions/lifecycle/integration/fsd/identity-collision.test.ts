@@ -4,6 +4,7 @@ import { toDialecteError } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
 
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { report as reportOf } from '@/v2019C1/extensions/lifecycle/report'
 import { fsd as updateFsd } from '@/v2019C1/extensions/lifecycle/update'
 import {
 	ALL_XMLNS_NAMESPACES,
@@ -12,7 +13,11 @@ import {
 } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
-import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DecisionMap,
+	DiffNode,
+	DiffReport,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -103,13 +108,15 @@ async function projectHoldingTheBreaker() {
 			attributes: { ...BREAKER, uuid: 'project-breaker-uuid' },
 		})
 	})
-	await source.document.transaction(async function templateGainsTheBreaker(tx) {
-		await tx.addChild(functionRef, {
-			tagName: 'LNode',
-			attributes: { ...BREAKER, uuid: 'template-breaker-uuid' },
-		})
-	})
-	return { source: source.document, target: target.document, projectBreaker }
+	const templateBreaker = await source.document.transaction(
+		async function templateGainsTheBreaker(tx) {
+			return tx.addChild(functionRef, {
+				tagName: 'LNode',
+				attributes: { ...BREAKER, uuid: 'template-breaker-uuid' },
+			})
+		},
+	)
+	return { source: source.document, target: target.document, projectBreaker, templateBreaker }
 }
 
 /** The breaker LNodes of the project, each by the template element it stands for, else its own uuid. */
@@ -126,21 +133,96 @@ async function breakersOf(document: Scl.Document): Promise<string[]> {
 	return uuids.sort()
 }
 
-/** The decisions accepting every group but those of the project's own elements, which are accepted too when asked. */
-function deciding(params: { removeProjectBreaker: boolean }): (report: DiffReport) => DecisionMap {
+/**
+ * The decisions: every group at its suggested action, but the removal of the project's own element accepted when
+ * asked, and the addition of the template's skipped when asked.
+ */
+function deciding(params: {
+	removeProjectBreaker?: boolean
+	skipTemplateBreaker?: boolean
+}): (report: DiffReport) => DecisionMap {
 	return function decide(report) {
 		const decisions: DecisionMap = new Map()
 		for (const group of allGroups(report)) {
 			if (group.change === 'target-only' && params.removeProjectBreaker)
 				decisions.set(group.id, 'accept')
+			if (group.change === 'added' && params.skipTemplateBreaker) decisions.set(group.id, 'skip')
 		}
 		return decisions
 	}
 }
 
+/** The collision each node of a report carries, as `<change> <tag>: <constraint> with <tag> <id>`. */
+function listCollisions(report: DiffReport): string[] {
+	return report.instances.flatMap((instance) => collisionsBelow(instance.tree))
+}
+
+function collisionsBelow(node: DiffNode): string[] {
+	const collision = node.identityCollision
+	const own = collision
+		? [
+				`${node.change} ${node.tagName}: ${collision.constraint} with ${collision.collidesWith.tagName} ${collision.collidesWith.id}`,
+			]
+		: []
+	return [...own, ...node.children.flatMap((child) => collisionsBelow(child))]
+}
+
 describe('update: an element the template brings that collides with the project on a key nothing can change', () => {
-	it('every change at its suggested action → refused, naming the key and the element it collides with; nothing written', async () => {
+	it('the report lists the collision on the element added, and asks for a decision', async () => {
 		const { source, target, projectBreaker } = await projectHoldingTheBreaker()
+
+		const report = await reportOf(target.query, lifecycle(source.query))
+
+		expect(listCollisions(report)).toEqual([
+			`added LNode: uniqueLNodeInFunctionB with LNode ${projectBreaker.id}`,
+		])
+		expect(report.needsDecisions).toBe(true)
+	})
+
+	it('a name the template adds that the project took is numbered, no collision listed', async () => {
+		const { source, target } = await createSclTestProject({ sourceXml: sourceXml(''), targetXml })
+		if (!target) throw new Error('target required')
+		await reportAndApply({ document: target.document, lifecycle: lifecycle(source.document.query) })
+		const [instance] = await target.document.query.findByAttributes({
+			tagName: 'Function',
+			attributes: { templateUuid: 'fn-uuid' },
+		})
+		await target.document.transaction(async function addOwnSubFunction(tx) {
+			await tx.addChild(instance as Scl.Ref<'Function'>, {
+				tagName: 'SubFunction',
+				attributes: { name: 'Trip', uuid: 'project-trip-uuid' },
+			})
+		})
+		await source.document.transaction(async function templateGainsTrip(tx) {
+			const trip = await tx.addChild(functionRef, {
+				tagName: 'SubFunction',
+				attributes: { name: 'Trip', uuid: 'template-trip-uuid' },
+			})
+			await tx.addChild(trip as Scl.Ref<'SubFunction'>, {
+				tagName: 'LNode',
+				attributes: { ...BREAKER, uuid: 'trip-breaker-uuid' },
+			})
+		})
+
+		const report = await reportOf(target.document.query, lifecycle(source.document.query))
+
+		expect(listCollisions(report)).toEqual([])
+	})
+
+	it('the addition skipped → applied without it, the project keeps its own', async () => {
+		const { source, target } = await projectHoldingTheBreaker()
+
+		await reportAndApply({
+			document: target,
+			lifecycle: lifecycle(source.query),
+			decide: deciding({ skipTemplateBreaker: true }),
+		})
+
+		expect(await breakersOf(target)).toEqual(['project-breaker-uuid'])
+	})
+
+	it('every change at its suggested action → refused before any write, naming the template element and the element it collides with', async () => {
+		const { source, target, projectBreaker, templateBreaker } = await projectHoldingTheBreaker()
 		const before = await target.query.getSnapshot({ as: 'xml' })
 
 		const refused = reportAndApply({ document: target, lifecycle: lifecycle(source.query) })
@@ -150,13 +232,13 @@ describe('update: an element the template brings that collides with the project 
 			key: refusal?.key,
 			constraint: refusal?.meta?.constraint,
 			fields: refusal?.meta?.fields,
-			element: (refusal?.meta?.element as { tagName?: string } | undefined)?.tagName,
+			element: refusal?.meta?.element,
 			collidesWith: refusal?.meta?.collidesWith,
 		}).toEqual({
 			key: 'IDENTITY_COLLISION',
 			constraint: 'uniqueLNodeInFunctionB',
 			fields: expect.arrayContaining(['prefix', 'lnClass', 'lnInst', 'ldInst', 'iedName']),
-			element: 'LNode',
+			element: { tagName: 'LNode', id: templateBreaker.id },
 			collidesWith: { tagName: 'LNode', id: projectBreaker.id },
 		})
 		expect(await target.query.getSnapshot({ as: 'xml' }), 'nothing written').toEqual(before)
@@ -219,5 +301,32 @@ describe('update: an element the template brings that collides with the project 
 
 		expect(listGroups(report)).toEqual(['added LNode', 'removed LNode'])
 		expect(await breakersOf(target.document)).toHaveLength(1)
+	})
+
+	it('the template renumbering its breaker and adding another of the former key → written, two breakers', async () => {
+		const breaker = /* xml */ `<LNode iedName="None" ldInst="LD1" prefix="QA" lnClass="XCBR" lnInst="1" lnType="XCBR_T" uuid="first-breaker-uuid" ${id}="ln-first-s"/>`
+		const { source, target } = await createSclTestProject({
+			sourceXml: sourceXml(breaker),
+			targetXml,
+		})
+		if (!target) throw new Error('target required')
+		await reportAndApply({ document: target.document, lifecycle: lifecycle(source.document.query) })
+		await source.document.transaction(async function templateRenumbersTheBreaker(tx) {
+			await tx.update({ tagName: 'LNode', id: 'ln-first-s' } as Scl.Ref<'LNode'>, {
+				attributes: { lnInst: '2' },
+			})
+			await tx.addChild(functionRef, {
+				tagName: 'LNode',
+				attributes: { ...BREAKER, uuid: 'second-breaker-uuid' },
+			})
+		})
+
+		const { report } = await reportAndApply({
+			document: target.document,
+			lifecycle: lifecycle(source.document.query),
+		})
+
+		expect(listGroups(report)).toEqual(['added LNode', 'modified LNode'])
+		expect(await breakersOf(target.document)).toEqual(['first-breaker-uuid', 'second-breaker-uuid'])
 	})
 })

@@ -1,6 +1,9 @@
+import { collectIdentityCollisions } from './identity-collisions'
+
 import { invariant } from '@dialecte/core/utils'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
+import { refuseIdentityCollision } from '@/v2019C1/extensions/lifecycle/constraints/find-identity-collision'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type {
@@ -9,6 +12,7 @@ import type {
 	DiffNode,
 	DiffReport,
 	GroupDecision,
+	NodeIdentityCollision,
 	ReportInstance,
 } from './diff.types'
 import type { AnyRefOrRecord } from '@dialecte/core'
@@ -154,6 +158,64 @@ export function assertDecisionsCoherent(params: {
 			})
 		}
 	}
+}
+
+/**
+ * Refuse, before any write, a decision set accepting the addition of an element that collides with one the instance
+ * holds on a key none of whose fields can be changed — unless an accepted group releases that element.
+ */
+export function assertNoAcceptedCollision(params: {
+	groups: DecisionGroup[]
+	decisions: DecisionMap
+}): void {
+	const [refused] = acceptedCollisions(params)
+	if (!refused) return
+	const { node, collision } = refused
+	invariant(node.sourceRef, {
+		detail: `an added <${node.tagName}> carries no source element`,
+	})
+	refuseIdentityCollision({ element: node.sourceRef, collision })
+}
+
+/**
+ * The identity collisions of the accepted groups that no accepted group releases: an accepted group releases the
+ * element collided with when it removes it, or when it changes one of the fields the collision compares on it.
+ */
+export function acceptedCollisions(params: {
+	groups: DecisionGroup[]
+	decisions: DecisionMap
+}): NodeIdentityCollision[] {
+	const { groups, decisions } = params
+	const accepted = groups.filter((group) => isAccepted({ group, decisions }))
+	const { instanceIds: removed } = acceptedRefIds({ groups, decisions })
+	const changed = changedAttributesByInstance(accepted)
+	return accepted
+		.flatMap((group) => collectIdentityCollisions([group.primary, ...group.companions]))
+		.filter(({ collision }) => {
+			const { id } = collision.collidesWith
+			const changedOnIt = changed.get(id)
+			return !removed.has(id) && !collision.fields.some((field) => changedOnIt?.has(field))
+		})
+}
+
+/** The attributes the given groups change, by the record id of the instance element they change them on. */
+function changedAttributesByInstance(groups: readonly DecisionGroup[]): Map<string, Set<string>> {
+	const changed = new Map<string, Set<string>>()
+	for (const group of groups) {
+		for (const node of [group.primary, ...group.companions]) collectChanges({ node, changed })
+	}
+	return changed
+}
+
+function collectChanges(params: { node: DiffNode; changed: Map<string, Set<string>> }): void {
+	const { node, changed } = params
+	const id = node.instanceRef?.id
+	if (id && node.attributeChanges) {
+		const names = changed.get(id) ?? new Set<string>()
+		for (const { name } of node.attributeChanges) names.add(name)
+		changed.set(id, names)
+	}
+	for (const child of node.children) collectChanges({ node: child, changed })
 }
 
 function groupById(groups: DecisionGroup[], id: string): DecisionGroup | undefined {

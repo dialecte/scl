@@ -21,6 +21,7 @@ export type {
 	AttributeEditability,
 	ConstraintViolation,
 	EditableAttribute,
+	IdentityCollision,
 	MakeUniqueParams,
 	PlacementResolution,
 } from './constraints/public'

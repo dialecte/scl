@@ -5,6 +5,7 @@ import { makeUnique } from '@/v2019C1/extensions/lifecycle/constraints'
 import {
 	allGroups,
 	assertDecisionsCoherent,
+	assertNoAcceptedCollision,
 	clearAnnotations,
 } from '@/v2019C1/extensions/lifecycle/engine'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
@@ -79,7 +80,10 @@ export async function apply(
 
 	// the gate is always the report's: no decisions = each group at its suggested action. User value edits are honored
 	// on either track, a conflict-free instantiate can carry edited editable attributes.
-	assertDecisionsCoherent({ groups: allGroups(report), decisions })
+	const groups = allGroups(report)
+	assertDecisionsCoherent({ groups, decisions })
+	// an addition the report says collides on a key nothing can change is refused before anything is written
+	assertNoAcceptedCollision({ groups, decisions })
 	// what tells a dropped element from the project's own, read once for the whole apply
 	const removalBase = await resolveRemovalBase({
 		policy: scenarioPolicy({ scenario: params.scenario }),

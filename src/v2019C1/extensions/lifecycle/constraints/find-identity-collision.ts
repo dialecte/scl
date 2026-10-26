@@ -3,7 +3,6 @@ import { findViolationInScope, readConstraintScope } from './find-constraint-vio
 import { findConstraintParent } from './resolve-placement-collision'
 
 import { throwDialecteError } from '@dialecte/core'
-import { toRef } from '@dialecte/core/helpers'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
 
@@ -34,7 +33,7 @@ export function identityCollisionInScope(
 	return {
 		constraint: violation.constraint,
 		fields: violation.fields,
-		collidesWith: toRef(offending),
+		collidesWith: { tagName: offending.tagName, id: offending.id },
 	}
 }
 
