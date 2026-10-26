@@ -119,6 +119,16 @@ describe('shared-element mapping — an SSD carrying an application', () => {
 				roleNames: ['Gateway', 'HMI_PC', 'HMI_PC'],
 			},
 		},
+		'the consumer wants a new role under a name of its own → created under that name': {
+			sourceXml,
+			targetXml: projectXml,
+			chosen: [['role-s', { create: { name: 'MyRole' } }]],
+			expected: {
+				mapping: { create: { name: 'MyRole' } },
+				rolePath: 'S1/V1/B1_1/MyRole',
+				roleNames: ['Gateway', 'HMI_PC', 'MyRole'],
+			},
+		},
 		'a revision of the project itself, whose role the project holds under another name → listed and mapped onto that very element':
 			{
 				sourceXml,

@@ -1,3 +1,5 @@
+import { nameCreatedSharedElements } from './name-created-shared-elements'
+
 import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
@@ -16,7 +18,8 @@ import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/t
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { SsdParams, SsdResult } from './ssd.types'
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
+import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -135,6 +138,17 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 			})
 		}
 	}
+
+	// a shared element created here (no project element to map onto) is named at its level of the frame
+	async function frameStructure(sourceRef: Scl.Ref<Scl.ElementsOf>): Promise<TargetStructure> {
+		return resolveFrameStructure(tx, sourceQuery, sourceRef, frameIndex)
+	}
+	await nameCreatedSharedElements(tx, {
+		sourceQuery,
+		cloneMappings: allMappings,
+		resolveStructure: frameStructure,
+		decisionMappings,
+	})
 
 	// One document-level provenance link back to the source SSD.
 	await writeProvenance(tx, { sourceQuery, target: { anchor: 'document', fileType: 'SSD' } })

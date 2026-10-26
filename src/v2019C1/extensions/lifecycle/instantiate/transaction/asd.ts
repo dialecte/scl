@@ -16,6 +16,7 @@ import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { AsdParams, AsdResult, PlaceApplicationParams, PlacedApplication } from './asd.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -131,10 +132,13 @@ export async function placeApplication(
 	}
 
 	// a shared element created here (no project element to map onto) is named at its structural level
+	async function placementStructure(): Promise<TargetStructure> {
+		return structure
+	}
 	await nameCreatedSharedElements(tx, {
 		sourceQuery,
 		cloneMappings: allMappings,
-		structure,
+		resolveStructure: placementStructure,
 		decisionMappings,
 	})
 

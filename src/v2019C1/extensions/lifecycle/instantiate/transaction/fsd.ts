@@ -18,6 +18,7 @@ import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 import type { FsdParams, FsdResult } from './fsd.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
+import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 
@@ -105,10 +106,13 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	})
 
 	// a shared element created here (no project element to map onto) is named at its structural level
+	async function placementStructure(): Promise<TargetStructure> {
+		return structure
+	}
 	await nameCreatedSharedElements(tx, {
 		sourceQuery,
 		cloneMappings: categoryMappings,
-		structure,
+		resolveStructure: placementStructure,
 		decisionMappings: params.decisionMappings,
 	})
 

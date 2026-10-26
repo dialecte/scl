@@ -15,7 +15,7 @@ export async function nameCreatedSharedElements(
 	tx: Core.Transaction<Config>,
 	params: NameCreatedSharedElementsParams,
 ): Promise<void> {
-	const { sourceQuery, cloneMappings, structure, decisionMappings } = params
+	const { sourceQuery, cloneMappings, resolveStructure, decisionMappings } = params
 
 	for (const mapping of cloneMappings) {
 		if (!mapping.source.id || !findMappingPolicy(mapping.source.tagName)) continue
@@ -24,6 +24,7 @@ export async function nameCreatedSharedElements(
 			tagName: mapping.source.tagName,
 			id: mapping.source.id,
 		} as Scl.Ref<Scl.ElementsOf>
+		const structure = await resolveStructure(sourceRef)
 		const parentRef = await resolveStructureRef(sourceQuery, sourceRef, structure)
 		const decision = decisionMappings?.get(mapping.source.id)
 		const chosenName = decision && 'create' in decision ? decision.create.name : undefined
