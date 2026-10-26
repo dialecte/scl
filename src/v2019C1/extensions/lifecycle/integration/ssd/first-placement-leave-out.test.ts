@@ -119,7 +119,12 @@ describe('first placement of a bay typical — every leave-out is honoured, a le
 				`${BAY}/default:ConductingEquipment[@name="QA1"]`,
 				`${BAY}/default:Function[@name="Prot"]`,
 			],
-			unexpectedQueries: ['//default:Function[@name="Disp"]', '//v2019C1:Application'],
+			// the bay's wrapper held the application only: it is not left behind empty
+			unexpectedQueries: [
+				'//default:Function[@name="Disp"]',
+				'//v2019C1:Application',
+				`${BAY}/default:Private`,
+			],
 		},
 		'the application left out alone → the function it composes is placed without it': {
 			sourceXml,
@@ -129,7 +134,7 @@ describe('first placement of a bay typical — every leave-out is honoured, a le
 				`${BAY}/default:Function[@name="Prot"]`,
 				`${BAY}/default:Function[@name="Disp"]`,
 			],
-			unexpectedQueries: ['//v2019C1:Application'],
+			unexpectedQueries: ['//v2019C1:Application', `${BAY}/default:Private`],
 		},
 	}
 

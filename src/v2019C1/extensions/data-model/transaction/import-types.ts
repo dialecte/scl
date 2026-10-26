@@ -73,10 +73,8 @@ export async function importTypes(
 	const resolved = await resolve(sourceQuery, { records })
 	const sourceTypes = collectTypesBottomUp(resolved)
 
-	const dataTypeTemplates = await tx.ensureChild(await tx.getRoot(), {
-		tagName: 'DataTypeTemplates',
-		attributes: {},
-	})
+	// written with the first type cloned: a closure the target already holds, or none, leaves no empty section
+	let dataTypeTemplates: Scl.RawRecord<'DataTypeTemplates'> | undefined
 
 	// The source loop is the heavy phase — size the bar to it (one step per type).
 	// The cheap remap/reclaim tail still captions via nextStep; those extra steps
@@ -153,6 +151,7 @@ export async function importTypes(
 			stats.preserved++
 		}
 
+		dataTypeTemplates ??= await ensureDataTypeTemplates(tx)
 		const clone = await tx.deepClone(dataTypeTemplates, preparedTree)
 		idRemap.set(sourceId, targetId)
 		if (clone?.record) {
@@ -206,6 +205,14 @@ export async function importTypes(
 	// transaction and simply leaves no measure (report reads measures, not marks).
 	tx.perf.stop('scl::importTypes')
 	return { idRemap, stats }
+}
+
+/** The target's `DataTypeTemplates`, created when it has none. */
+async function ensureDataTypeTemplates(
+	tx: Core.Transaction<Config>,
+): Promise<Scl.RawRecord<'DataTypeTemplates'>> {
+	const root = await tx.getRoot()
+	return tx.ensureChild(root, { tagName: 'DataTypeTemplates', attributes: {} })
 }
 
 // ── Internals ───────────────────────────────────────────────────────────────────

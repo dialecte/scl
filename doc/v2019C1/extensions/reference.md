@@ -713,7 +713,6 @@ import {
 	DERIVED_REFERENCE_ATTRIBUTES,
 	DERIVED_ATTRIBUTES_BY_TAG,
 	KEEP_ON_ORPHAN_REFS,
-	REF_CONTAINERS,
 	PATH_EXTRACTION_CONFIG,
 	PATH_CONTRIBUTING_ATTRIBUTES,
 } from '@dialecte/scl/v2019C1'
@@ -732,7 +731,6 @@ import {
 | `DERIVED_REFERENCE_ATTRIBUTES` | Attributes written from a path, per element tag (terminal level names, …)  |
 | `DERIVED_ATTRIBUTES_BY_TAG`    | Derived: `DERIVED_REFERENCE_ATTRIBUTES` as a map by tag name               |
 | `KEEP_ON_ORPHAN_REFS`          | Rules for which attributes to preserve when a REF becomes orphaned         |
-| `REF_CONTAINERS`               | Tag names considered REF containers (for `findRefsPointingTo`)             |
 | `PATH_EXTRACTION_CONFIG`       | Per-element strategy for building path segments (`name`, `lnClass`, etc.)  |
 | `PATH_CONTRIBUTING_ATTRIBUTES` | Attribute names that affect path segments (derived from extraction config) |
 

@@ -8,7 +8,7 @@ import type * as Core from '@dialecte/core'
  *
  * 1. Remap: orphanUuidRefs (clear/delete refs whose target is absent)
  * 2. Resolve orphan LNodes: resetLNode (reset IED bindings)
- * 3. Prune: pruneEmptyContainers (empty Private elements + empty ref containers)
+ * 3. Prune: pruneEmptyContainers (every container left holding nothing that has no reason to stay)
  *
  * Same function runs for all extraction scopes (FSD, ASD, ISD).
  * Behavior differs based on target DB content.

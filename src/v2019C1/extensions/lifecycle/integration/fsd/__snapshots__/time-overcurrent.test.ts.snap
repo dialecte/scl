@@ -4,7 +4,6 @@ exports[`lifecycle integration — Time Overcurrent FSD rev1 → rev2 (golden) >
 "<?xml version="1.0" encoding="UTF-8"?>
 <SCL xmlns="http://www.iec.ch/61850/2003/SCL" release="5" revision="C" version="2007" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
     <Substation name="S1" uuid="uuid-1">
-        <Private type="eIEC61850-6-100"/>
         <VoltageLevel name="V1" uuid="uuid-2">
             <Bay name="B1" uuid="uuid-3">
                 <Function desc="rev2 function" name="Time Overcurrent" templateUuid="uuid-4" uuid="uuid-5">

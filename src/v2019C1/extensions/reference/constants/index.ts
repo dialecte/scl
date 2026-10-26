@@ -18,7 +18,6 @@ export {
 	LOCKED_LNODE_ATTRIBUTES,
 	LNODE_BINDING_ATTRIBUTES,
 } from './derived'
-export { REF_CONTAINERS } from './orphan-rules'
 export { PATH_EXTRACTION_CONFIG, PATH_CONTRIBUTING_ATTRIBUTES } from './path-extraction'
 export type * from './types'
 export type { ExtractionStrategy } from './path-extraction.types'

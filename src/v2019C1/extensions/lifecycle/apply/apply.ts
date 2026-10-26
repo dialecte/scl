@@ -125,6 +125,9 @@ async function writeReport(
 	})
 	const writtenFrom = tx.getStagedOperations().length
 	const instances = await runVerb(tx, { target: params, report, decisions, removalBase })
+	// what the write left holding nothing — a wrapper whose content went elsewhere or was removed, a category without
+	// its last reference — goes with it
+	await cleanUp.transaction.pruneEmptyContainers(tx, { from: writtenFrom })
 
 	// what the template brings keeps the implementation it had there: what this run wrote naming a
 	// logical node, ExtRef or ExtCtrl the project lacks is released, once everything is written

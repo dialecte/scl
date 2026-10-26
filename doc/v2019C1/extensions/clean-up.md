@@ -12,7 +12,7 @@ Post-mutation integrity helpers accessible via `tx.cleanUp`. Also called interna
 | ---------------------- | ------------------------------------------------------------------------------------------------------- |
 | `orphanUuidRefs`       | Clear or delete UUID reference attributes pointing to missing targets                                   |
 | `resetLNode`           | Release the LNodes, data and signals that name a logical node or an ExtRef / ExtCtrl the document lacks |
-| `pruneEmptyContainers` | Delete empty REF container nodes and empty Private nodes                                                |
+| `pruneEmptyContainers` | Delete the containers left holding nothing that have no reason to stay then                             |
 
 ```ts
 await doc.transaction(async (tx) => {
@@ -21,6 +21,18 @@ await doc.transaction(async (tx) => {
 	await tx.cleanUp.pruneEmptyContainers()
 })
 ```
+
+## `pruneEmptyContainers`
+
+A container holding nothing — no child element, no text — goes when it has no reason to stay then: a transparent wrapper (a `Private`), or an element whose definition needs a child element (a `FunctionCategory` needs a reference, a `DataTypeTemplates` a type, a `PowerSystemRelations` a relation). Read from the definition, each deleted through the transaction (the delete hooks clean what refers to it), then its parent judged the same way: the wrapper a category leaves empty goes too. A level of the topology (`Substation`, `VoltageLevel`, `Bay`) is never removed.
+
+```ts
+pruneEmptyContainers(params?: { from?: number }): Promise<void>
+```
+
+Without `from`, every container of the document. With it, only what the transaction left holding nothing from that staged operation on (`tx.getStagedOperations().length` read before the change): the parent of an element it deleted, and a wrapper it created. The extract clean-up runs it on the whole document; `tx.lifecycle.apply` on what it wrote, and the SSD placement and a satellite reconcile on what they wrote when called on their own.
+
+The delete hooks apply the same rule to what they remove: deleting an element whose last reference a category holds removes the category too, its wrapper when it leaves it empty, and the references to the category elsewhere.
 
 ## `resetLNode`
 

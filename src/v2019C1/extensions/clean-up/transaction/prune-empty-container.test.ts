@@ -2,7 +2,7 @@ import { pruneEmptyContainers } from './prune-empty-containers'
 
 import { describe } from 'vitest'
 
-import { ALL_XMLNS_NAMESPACES, runSclTestCases } from '@/v2019C1/test'
+import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
@@ -82,6 +82,43 @@ describe('pruneEmptyContainers', () => {
 			expectedQueries: ['//default:Private[@type="eIEC61850-6-100"]'],
 		},
 
+		'a Private holding text only → kept': {
+			sourceXml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES}>
+					<Header id="TestSCL"/>
+					<Substation name="S1">
+						<Private type="ACME">v1</Private>
+					</Substation>
+				</SCL>
+			`,
+			expectedQueries: ['//default:Private[@type="ACME"]'],
+		},
+
+		'an empty DataTypeTemplates → deleted': {
+			sourceXml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES}>
+					<Header id="TestSCL"/>
+					<Substation name="S1"/>
+					<DataTypeTemplates/>
+				</SCL>
+			`,
+			unexpectedQueries: ['//default:DataTypeTemplates'],
+		},
+
+		'an empty category alone in its Private → both deleted': {
+			sourceXml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES}>
+					<Header id="TestSCL"/>
+					<Substation name="S1">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:FunctionCategory name="Cat1"/>
+						</Private>
+					</Substation>
+				</SCL>
+			`,
+			unexpectedQueries: ['//v2019C1:FunctionCategory', '//default:Private'],
+		},
+
 		'mixed: empty FunctionCategory deleted, Private with children kept': {
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES}>
@@ -105,6 +142,44 @@ describe('pruneEmptyContainers', () => {
 		act: async ({ source }) => {
 			await source.transaction(async (tx) => {
 				await pruneEmptyContainers(tx)
+			})
+			return { assertOn: 'source' }
+		},
+	})
+})
+
+describe('pruneEmptyContainers from a point of the transaction', () => {
+	const sourceXml = /* xml */ `
+		<SCL ${ALL_XMLNS_NAMESPACES}>
+			<Header id="TestSCL"/>
+			<Substation name="S1">
+				<Private type="eIEC61850-6-100">
+					<eIEC61850-6-100:FunctionCategory name="Cat1">
+						<eIEC61850-6-100:FunctionCatRef function="S1/Prot" functionUuid="func-uuid-1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="category-ref"/>
+					</eIEC61850-6-100:FunctionCategory>
+				</Private>
+				<Function name="Prot" uuid="func-uuid-1">
+					<Private type="eIEC61850-6-100"/>
+				</Function>
+			</Substation>
+		</SCL>
+	`
+	const testCases: SclTest.TestCases = {
+		'only what the transaction emptied since goes: the category and its wrapper, not an empty wrapper it did not touch':
+			{
+				sourceXml,
+				expectedQueries: ['//default:Function/default:Private'],
+				unexpectedQueries: ['//v2019C1:FunctionCategory', '//default:Substation/default:Private'],
+			},
+	}
+
+	runSclTestCases.withExport({
+		testCases,
+		act: async ({ source }) => {
+			await source.transaction(async (tx) => {
+				const from = tx.getStagedOperations().length
+				await tx.delete({ tagName: 'FunctionCatRef', id: 'category-ref' })
+				await pruneEmptyContainers(tx, { from })
 			})
 			return { assertOn: 'source' }
 		},
