@@ -7,10 +7,7 @@ import {
 	acceptsRemoval,
 	classifyUnmatched,
 } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
-import {
-	collectForeignReferenceIds,
-	findInstanceByTemplateUuid,
-} from '@/v2019C1/extensions/lifecycle/instance'
+import { collectForeignReferenceIds } from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	cloneTree,
 	resolveStructureRef,
@@ -34,8 +31,8 @@ import type * as Core from '@dialecte/core'
  * detection, the TARGET instance refs (`instanceSatelliteRefs`, resolved with the
  * same finder against the instance primary BEFORE the primary reconcile runs, since
  * that reconcile may drop the referring ref). A shared element lands where its mapping resolved
- * (`resolvedMappings`, the answer the report read too); any other satellite is matched by
- * `templateUuid`. Three cases:
+ * (`resolvedMappings`, the answer the report read too); a satellite the instance holds its own of
+ * (no mapping policy) is the one listed there for it, else new to the instance. Three cases:
  *  - an EXISTING element -> reconcile-in-place (`engine.reconcile`); when it is the project's
  *    own (a shared element mapped onto it), only what the source contributes below it;
  *  - NOTHING yet -> ADD it (clone at source structural level + stamp lineage),
@@ -104,16 +101,8 @@ export async function reconcileSatellites(
 	const added: Scl.CloneMapping[] = []
 
 	for (const satelliteRef of satelliteRefs) {
-		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
-
 		const resolved = satelliteRef.id ? resolvedMappings?.get(satelliteRef.id) : undefined
-		const instance = resolved
-			? resolved.existing
-			: await findInstanceByTemplateUuid(tx, {
-					tagName: satelliteRef.tagName,
-					sourceUuid,
-					matchKey,
-				})
+		const instance = resolved?.existing
 
 		if (instance) {
 			const foreignScope = await params.resolveForeignScope?.()
@@ -155,9 +144,9 @@ export async function reconcileSatellites(
 		await finalizeClonedIdentity(tx, { cloneMappings: clone.mappings, mode: identityMode })
 		added.push(...clone.mappings)
 
-		// a shared element created here is validated against its structural level: the chosen
-		// name is applied, and a name already taken there is bumped to a free one
-		if (resolved && bumpsCollisions) {
+		// a satellite created here is validated against its structural level: the name chosen for a
+		// shared one is applied, and a name already taken there is bumped to a free one
+		if (bumpsCollisions) {
 			const decision = satelliteRef.id ? decisionMappings?.get(satelliteRef.id) : undefined
 			const chosenName = decision && 'create' in decision ? decision.create.name : undefined
 			await placeUniquely(tx, {

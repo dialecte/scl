@@ -51,7 +51,8 @@ export async function describeMapping(
 		kind: 'shared' as const,
 		reason: resolved.reason,
 		ambiguous: resolved.ambiguous,
-		selectable: policy.selectable,
+		// where a shared element lands is the consumer's to choose
+		selectable: true,
 		locked: resolved.locked,
 	}
 

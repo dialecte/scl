@@ -1,5 +1,3 @@
-import { findMappingPolicy } from './mapping-policies'
-
 import { REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
 import { collectInstanceScope, pointsInto } from '@/v2019C1/extensions/lifecycle/instance'
 
@@ -33,7 +31,6 @@ export async function findWithdrawnContributions(
 
 	const leftElements: Scl.Ref<Scl.ElementsOf>[] = []
 	for (const instanceSatelliteRef of instanceSatelliteRefs) {
-		if (!findMappingPolicy(instanceSatelliteRef.tagName)) continue
 		if (instanceSatelliteRef.id && mappedOntoIds.has(instanceSatelliteRef.id)) continue
 		const lineage = await reader.any.getAttribute(instanceSatelliteRef, { name: matchKey })
 		if (lineage) continue

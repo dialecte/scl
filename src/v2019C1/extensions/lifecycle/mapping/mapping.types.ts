@@ -14,8 +14,6 @@ export type MappingPolicy = {
 	tagName: Scl.ElementsOf
 	/** The attribute a source element and a project element share when they are the same thing. */
 	key: 'name'
-	/** The consumer may choose another mapping than the one resolved. */
-	selectable: boolean
 }
 
 /**
@@ -51,7 +49,7 @@ export type ResolvedMapping = {
 	/**
 	 * Nothing is decided: several project elements qualify, or the instance holds an element that
 	 * could stand for this one, and where it lands is the consumer's to choose. Nothing is written
-	 * until it chose. Never set for an element whose mapping the consumer cannot choose.
+	 * until it chose.
 	 */
 	undecided: boolean
 }
@@ -93,8 +91,11 @@ export type FindWithdrawnContributionsParams = {
 /** A reference to a stored element: its record id is known. */
 export type StoredRef = Scl.Ref<Scl.ElementsOf> & { id: string }
 
-/** A shared source element and the policy its tag declares. */
-export type SourceSatellite = { ref: StoredRef; policy: MappingPolicy }
+/**
+ * A source satellite and the mapping policy its tag declares: a shared element; without one, an element each instance
+ * holds its own of.
+ */
+export type SourceSatellite = { ref: StoredRef; policy?: MappingPolicy }
 
 export type PairInstanceSatellitesParams = {
 	sourceQuery: Core.Query<Config>
@@ -184,11 +185,11 @@ export type ReportMapping = {
 	/**
 	 * Nothing was picked although something qualified: several project elements qualified equally
 	 * (`reason` tells how) or — with the reason `none` — the instance being updated holds an element
-	 * that could stand for this one and nothing tells whether it does. When the consumer may choose
-	 * (`selectable`), the mapping is then left undecided; otherwise a new element is created.
+	 * that could stand for this one and nothing tells whether it does. The mapping is then left
+	 * undecided until the consumer chose.
 	 */
 	ambiguous: boolean
-	/** The consumer may choose another mapping for an element of this kind. */
+	/** The consumer may choose another mapping for this element: every element the report lists is. */
 	selectable: boolean
 	/** The instance being updated already carries this mapping: shown, not the consumer's to change. */
 	locked: boolean

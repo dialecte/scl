@@ -5,5 +5,5 @@ import type { MappingPolicy } from '@/v2019C1/extensions/lifecycle/mapping/mappi
  * several functions. A source one maps onto the project's rather than being copied.
  */
 export const FUNCTION_MAPPING_POLICIES = [
-	{ tagName: 'FunctionCategory', key: 'name', selectable: true },
+	{ tagName: 'FunctionCategory', key: 'name' },
 ] as const satisfies readonly MappingPolicy[]

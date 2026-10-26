@@ -10,8 +10,7 @@ import type { AnyTrackedRecord } from '@dialecte/core'
  *  2. the one project element created from this source element (it carries its lineage);
  *  3. the one project element carrying the same key (its name).
  * With nothing to map onto, a new element is created. Where several elements qualify equally,
- * none is picked: the mapping is left `undecided` for the consumer to choose — or, for an element
- * whose mapping cannot be chosen, a new one is created too.
+ * none is picked: the mapping is left `undecided` for the consumer to choose.
  */
 export async function resolveMapping(
 	reader: MappingReader,
@@ -74,11 +73,11 @@ export async function resolveMapping(
 		}
 	}
 
-	// several qualify equally: none is picked — the consumer's to choose when it may, else a new one
-	const undecided = policy.selectable
-	if (sameKey.length > 1) return createdMapping({ reason: 'name', ambiguous: true, undecided })
+	// several qualify equally: none is picked — the consumer's to choose
+	if (sameKey.length > 1)
+		return createdMapping({ reason: 'name', ambiguous: true, undecided: true })
 	if (sameLineage.length > 1) {
-		return createdMapping({ reason: 'lineage', ambiguous: true, undecided })
+		return createdMapping({ reason: 'lineage', ambiguous: true, undecided: true })
 	}
 	return createdMapping({ reason: 'none', ambiguous: false, undecided: false })
 }

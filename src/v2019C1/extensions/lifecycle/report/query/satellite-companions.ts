@@ -4,10 +4,7 @@ import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { classifyUnmatched } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
-import {
-	collectForeignReferenceIds,
-	findInstanceByTemplateUuid,
-} from '@/v2019C1/extensions/lifecycle/instance'
+import { collectForeignReferenceIds } from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	createReportPass,
 	describeMapping,
@@ -121,8 +118,6 @@ export async function foldSatelliteCompanions(
 	// what the report already listed and named: the caller's, else this fold's own
 	const pass = params.pass ?? createReportPass()
 	for (const satelliteRef of satelliteRefs) {
-		const { uuid: sourceUuid } = await sourceQuery.any.getAttributes(satelliteRef)
-
 		const {
 			target: instance,
 			projectOwned,
@@ -130,12 +125,10 @@ export async function foldSatelliteCompanions(
 		} = await findSatelliteTarget(query, {
 			sourceQuery,
 			satelliteRef,
-			sourceUuid,
 			firstTime,
 			resolved: satelliteRef.id ? resolvedMappings.get(satelliteRef.id) : undefined,
 			decisionMappings: params.decisionMappings,
 			anchor: params.anchor,
-			matchKey: params.matchKey,
 			pass,
 		})
 		if (mapping) report.mappings = [...(report.mappings ?? []), mapping]
@@ -258,19 +251,17 @@ export async function foldSatelliteCompanions(
  * mapping resolves, exactly as the apply does. On a first placement the element found is only
  * contributed to, whoever owns it; on an update, an element the project owns (`projectOwned`)
  * only receives what the source contributes, and an instance of the source is compared in full.
- * Anything that is not a shared element is found by its template lineage.
+ * A satellite the instance holds its own of is diffed against the one it holds, if any.
  */
 async function findSatelliteTarget(
 	query: Core.Query<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
 		satelliteRef: Scl.Ref<Scl.ElementsOf>
-		sourceUuid: string | undefined
 		firstTime: boolean
 		resolved: ResolvedMapping | undefined
 		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
-		matchKey?: MatchKey
 		pass?: ReportPass
 	},
 ): Promise<{
@@ -278,7 +269,7 @@ async function findSatelliteTarget(
 	projectOwned: boolean
 	mapping?: ReportMapping
 }> {
-	const { sourceQuery, satelliteRef, sourceUuid, firstTime, resolved } = params
+	const { sourceQuery, satelliteRef, firstTime, resolved } = params
 
 	const policy = findMappingPolicy(satelliteRef.tagName)
 	const satelliteId = satelliteRef.id
@@ -299,12 +290,7 @@ async function findSatelliteTarget(
 		}
 	}
 
-	const target = await findInstanceByTemplateUuid(query, {
-		tagName: satelliteRef.tagName,
-		sourceUuid,
-		matchKey: params.matchKey,
-	})
-	return { target, projectOwned: false }
+	return { target: resolved?.existing, projectOwned: resolved?.projectOwned ?? false }
 }
 
 /**

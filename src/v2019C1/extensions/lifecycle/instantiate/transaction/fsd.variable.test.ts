@@ -69,30 +69,31 @@ describe('instantiate.fsd — carried Variable satellite', () => {
 			],
 		},
 
-		'applies to the existing same-name Variable without duplicating it': {
-			sourceXml,
-			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="scd">
-					<Substation name="S1" ${id}="sub-t">
-						<Private type="eIEC61850-6-100" ${id}="priv-t">
-							<eIEC61850-6-100:Variable name="VXCBR" uuid="existing-var-uuid" ${id}="var-t"/>
-						</Private>
-						<VoltageLevel name="V1" ${id}="vl-t">
-							<Bay name="B1" ${id}="bay-t"/>
-						</VoltageLevel>
-					</Substation>
-				</SCL>
-			`,
-			expectedQueries: [
-				// the instance function's application lands on the pre-existing Variable
-				'//v2019C1:Variable[@uuid="existing-var-uuid"]/v2019C1:VariableApplyTo',
-			],
-			unexpectedQueries: [
-				// no second same-name Variable is created
-				'//v2019C1:Variable[@name="VXCBR"][2]',
-				'//v2019C1:Variable[@uuid="var-src-uuid"]',
-			],
-		},
+		'a project Variable of that name beside it → the instance gets its own, numbered; the project one is left as it is':
+			{
+				sourceXml,
+				targetXml: /* xml */ `
+					<SCL ${ns} ${id}="scd">
+						<Substation name="S1" ${id}="sub-t">
+							<Private type="eIEC61850-6-100" ${id}="priv-t">
+								<eIEC61850-6-100:Variable name="VXCBR" uuid="existing-var-uuid" ${id}="var-t"/>
+							</Private>
+							<VoltageLevel name="V1" ${id}="vl-t">
+								<Bay name="B1" ${id}="bay-t"/>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				expectedQueries: [
+					'//v2019C1:Variable[@uuid="existing-var-uuid"][@name="VXCBR"]',
+					'//v2019C1:Variable[@name="VXCBR_1"][@templateUuid="var-src-uuid"]/v2019C1:VariableApplyTo',
+				],
+				unexpectedQueries: [
+					// the project's variable does not apply to the placed function
+					'//v2019C1:Variable[@uuid="existing-var-uuid"]/v2019C1:VariableApplyTo',
+					'//v2019C1:Variable[@uuid="var-src-uuid"]',
+				],
+			},
 	}
 
 	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {

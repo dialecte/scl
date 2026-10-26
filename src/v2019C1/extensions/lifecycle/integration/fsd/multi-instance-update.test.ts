@@ -114,7 +114,7 @@ describe('lifecycle.apply — an update reaches every instance of a function, ea
 					'//v2019C1:FunctionCategory[count(v2019C1:FunctionCatRef) != 4]',
 				],
 			},
-		'two instances sharing a variable, and the function of the template gains a subfunction the variable applies to → the variable applies to the subfunction of each instance':
+		'two instances, each with its own variable, and the function of the template gains a subfunction the variable applies to → the variable of each instance applies to its own subfunction':
 			{
 				sourceXml: sourceWithVariableXml,
 				targetXml,
@@ -132,12 +132,12 @@ describe('lifecycle.apply — an update reaches every instance of a function, ea
 					})
 				},
 				expectedQueries: [
-					'//v2019C1:Variable/v2019C1:VariableApplyTo[@elementUuid = //default:Bay[@name="B1"]/default:Function/default:SubFunction[@name="Trip"]/@uuid]',
-					'//v2019C1:Variable/v2019C1:VariableApplyTo[@elementUuid = //default:Bay[@name="B2"]/default:Function/default:SubFunction[@name="Trip"]/@uuid]',
+					'//v2019C1:Variable[v2019C1:VariableApplyTo/@elementUuid = //default:Bay[@name="B1"]/default:Function/@uuid][v2019C1:VariableApplyTo/@elementUuid = //default:Bay[@name="B1"]/default:Function/default:SubFunction[@name="Trip"]/@uuid]',
+					'//v2019C1:Variable[v2019C1:VariableApplyTo/@elementUuid = //default:Bay[@name="B2"]/default:Function/@uuid][v2019C1:VariableApplyTo/@elementUuid = //default:Bay[@name="B2"]/default:Function/default:SubFunction[@name="Trip"]/@uuid]',
 				],
 				unexpectedQueries: [
-					'//default:Substation[count(.//v2019C1:Variable) != 1]',
-					'//v2019C1:Variable[count(v2019C1:VariableApplyTo) != 4]',
+					'//default:Substation[count(.//v2019C1:Variable) != 2]',
+					'//v2019C1:Variable[count(v2019C1:VariableApplyTo) != 2]',
 				],
 			},
 	}

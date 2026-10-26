@@ -16,7 +16,7 @@ Access via `tx.lifecycle.instantiate` inside a `doc.transaction()` callback.
 
 1. clone the function subtree and its content-addressed type closure under `targetParent` (via [`transplant.deep`](./transplant));
 2. place the `FunctionCategory` classification that references the function: mapped onto the category the project already holds (see [Shared elements are mapped, not copied](#shared-elements-are-mapped-not-copied)), else cloned at its structural level in the target project — the target Substation/VoltageLevel/Bay structure is resolved from `targetParent` (which may be a `Bay`, `VoltageLevel`, or `Substation`);
-3. place the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to any element in the function subtree: mapped onto the project's element of that name, else cloned at its own structural level;
+3. place the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to any element in the function subtree: each instance gets its own, cloned at its own structural level and numbered when its name is taken there;
 4. stamp instance lineage (via [`identity.writeIdentity`](./identity#writeidentity) in `stamp-template` mode) on every cloned element, so each records its FSD counterpart as its `templateUuid` while receiving a fresh `uuid`, and conserves the origin the FSD element carries as its `originUuid` (or takes the FSD element's own `templateUuid` as its origin) — a `fork` keeps the source `uuid`s and lineage instead;
 5. validate the placed function against its parent context and auto-resolve a scoped-uniqueness [collision](./update#placement-collision-resolution) on its `name` (e.g. instantiating the same template twice under one Bay yields `Prot` then `Prot_1`).
 
@@ -38,7 +38,7 @@ Returns `{ functionRef, cloneMappings }` — the instantiated root (retagged to 
 
 `asd({ sourceQuery, applicationRef, targetParent, scenario? })` instantiates the content an ASD carries — the **application layer** — into a target document:
 
-1. clone the `Application` and its composed Functions, categories and satellites (`AllocationRole`, dataflow refs, …) with their type closure, under the structure resolved from `targetParent` (via the shared `layers/application` take-over, built on [`transplant.deep`](./transplant)), together with the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to the Application or its content;
+1. clone the `Application` and its composed Functions, categories and satellites (`AllocationRole`, dataflow refs, …) with their type closure, under the structure resolved from `targetParent` (via the shared `layers/application` take-over, built on [`transplant.deep`](./transplant)), together with the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to the Application or its content, one of each per instance;
 2. stamp instance lineage (via [`identity.writeIdentity`](./identity#writeidentity) in `stamp-template` mode) on every cloned element, so each records its ASD counterpart as its `templateUuid` while receiving a fresh `uuid`; an element whose schema carries an origin (the `Application`, its roles, categories, variables) conserves the one the ASD element carries as its `originUuid`, or takes the ASD element's own `templateUuid` as its origin — a `fork` keeps the source `uuid`s and lineage instead;
 3. validate the placed `Application` and each composed Function against their parent context and auto-resolve a scoped-uniqueness [collision](./update#placement-collision-resolution) on their `name`, each at its own structural level.
 
@@ -50,7 +50,7 @@ With no role of that name, the role is created like any cloned element, and a na
 
 A role the project holds because an earlier placement of the same template created it comes first: it is the one proposed, even when it was renamed since.
 
-A `Variable` and a `BehaviorDescription` follow it too, except that where they land is listed and not chosen (`selectable: false`): what they apply to (`VariableApplyTo`, `InputVar` / `OutputVar`) is added to the project's element, and a reference to them (`VariableRef`, `BehaviorDescriptionRef`) points at it.
+A `Variable` and a `BehaviorDescription` do not: they configure the instance placed, which gets its own — cloned, never mapped onto the project's element of its name, numbered when its name is taken where it lands — and a reference to them (`VariableRef`, `BehaviorDescriptionRef`) points at that instance's one.
 
 A `FunctionCategory` follows the same rule, for a function, an application's composed functions and an SSD alike: mapped onto the project's category of that name, its classifications (`FunctionCatRef`) are added to it — inside the project's `SubCategory` of the same name when the source nests them — and an application's `FunctionCategoryRef` points at the project's category or sub-category.
 

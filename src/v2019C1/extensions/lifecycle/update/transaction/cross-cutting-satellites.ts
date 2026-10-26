@@ -26,11 +26,11 @@ import type * as Core from '@dialecte/core'
  * `primaryRef` (function, application, and future IED / topology) so the 3-way
  * add / reconcile-in-place / delete is uniform and impossible to forget.
  *
- * These are SHARED elements: where each source one lands for this instance is resolved first
+ * Each belongs to the instance: what stands for each source one is resolved first
  * (`resolveSatelliteMappings`, the answer the report read too) — the one the instance already
- * holds, by lineage or because it was mapped onto an element of the project, else the element its
- * mapping resolves to. What the instance gave to a project element the template no longer brings
- * anything for is removed with the removal the report announced.
+ * holds, made from it or given the instance's references by an earlier placement, else a new one.
+ * What the instance gave to a project element the template no longer brings anything for is
+ * removed with the removal the report announced.
  *
  * `instancePrimaryRef` is the target-side primary; pass it when an instance exists. Layer-owned
  * satellites (FunctionCategory, AllocationRole) are reconciled separately by their own layer finder.

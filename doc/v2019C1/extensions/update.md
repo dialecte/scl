@@ -213,7 +213,7 @@ leaves out a group leaves out what depends on it in the same move — the decisi
 
 ### Shared-element mappings
 
-Some elements are held once by the project and shared — an `AllocationRole` several applications refer to, a `FunctionCategory` classifying several functions, a `Variable` or a `BehaviorDescription` applying to several elements. A template that brings such an element does not necessarily copy it: it **maps** it onto an element of the project, or creates a new one. `report` lists that decision for every shared element the template brings, and the consumer may change it.
+Some elements are held once by the project and shared — an `AllocationRole` several applications refer to, a `FunctionCategory` classifying several functions. A template that brings such an element does not necessarily copy it: it **maps** it onto an element of the project, or creates a new one. `report` lists that decision for every shared element the template brings, and the consumer may change it.
 
 ```ts
 type ReportMapping = {
@@ -227,7 +227,7 @@ type ReportMapping = {
 	parentPath?: string // for an element to create: the path of the element it is created under
 	reason: MappingReason // 'decision' | 'lineage' | 'name' | 'anchor' | 'only' | 'none'
 	ambiguous: boolean // something qualified and nothing was picked
-	selectable: boolean // the consumer may choose another mapping for an element of this kind
+	selectable: boolean // the consumer may choose another mapping: `true` for every mapping listed
 	locked: boolean // the instance being updated already carries this mapping: shown, not changeable
 	candidates: MappingCandidate[]
 	dependsOn?: string // the mapping this one follows from (the level above)
@@ -242,7 +242,7 @@ type DecisionMappings = ReadonlyMap<string, DecisionMapping> // keyed by `Report
 
 `ReportMapping`, `MappingKind`, `MappingReason`, `MappingCandidate`, `DecisionMapping` and `DecisionMappings` are exported from `@dialecte/scl/v2019C1`.
 
-- **Resolved by default**, first answer wins: the one project element created from this source element by an earlier placement, whatever it is named now (`reason: 'lineage'`); else the project element of the same name when there is exactly one (`'name'`); else a new element (`'none'`). Where several elements qualify equally, none is picked (`ambiguous: true`): the mapping is left **undecided** — `mapping` is absent, the report sets `needsDecisions`, and `apply` refuses (`MAPPING_UNDECIDED`, before anything is written) until the consumer passed a choice, an existing element or `{ create: {} }` — for a level, a choice for a level above it it follows from is enough; a mapping decided for one instance (`placedFor`) whose every change is skipped is not asked for. An element whose mapping cannot be chosen (`selectable: false`) is created under a free name instead.
+- **Resolved by default**, first answer wins: the one project element created from this source element by an earlier placement, whatever it is named now (`reason: 'lineage'`); else the project element of the same name when there is exactly one (`'name'`); else a new element (`'none'`). Where several elements qualify equally, none is picked (`ambiguous: true`): the mapping is left **undecided** — `mapping` is absent, the report sets `needsDecisions`, and `apply` refuses (`MAPPING_UNDECIDED`, before anything is written) until the consumer passed a choice, an existing element or `{ create: {} }` — for a level, a choice for a level above it it follows from is enough; a mapping decided for one instance (`placedFor`) whose every change is skipped is not asked for.
 - **`candidates`**: every project element of that tag, listed from the placement outwards — the anchor's own level, each level above it, then the rest of the project. For an SSD, the anchor is where its unit lands (the deepest level of the project it sits on), not the element the consumer started from. For a `locked` mapping, the one element it is mapped onto.
 - **A new element** carries the name asked for: the one the consumer chose, else the source name. The report does not predict the name written: `apply` makes it free where the element lands ([placement collision resolution](#placement-collision-resolution)), and the consumer's own step may change it again. What was written is read at the element the mapping leads to once applied (`appliedRef`, on the report `apply` returns — in a preview, on the prepared document). `parentPath` tells where the element is created, as asked for.
 
@@ -264,15 +264,15 @@ await doc.prepare((tx) =>
 )
 ```
 
-The mapping of a `Variable` or a `BehaviorDescription` is resolved and listed like the others, with `selectable: false`: it is shown, not chosen.
+A `Variable` or a `BehaviorDescription` is not shared: it belongs to the instance it configures. Each placement clones its own at the template's level — never mapped onto, never merged into, an element of its name the project holds — and numbered when its name is taken there (`VXCBR_1`), as any placed element. It is not listed in `report.mappings`: where it lands is not the consumer's to choose. An update reads each instance's own one: the one created from the template's for that instance, else the one an earlier placement gave the instance's references to — never one of another instance. A document where an earlier version made one variable for several instances is read as it is: each instance compares its own references with the template's, nothing else is listed, nothing is split.
 
-A choice the report cannot honour is refused, by `report` and by `apply`: a source element the template does not bring, a project element that is not among the candidates, a mapping that is not `selectable`, or one that is `locked`.
+A choice the report cannot honour is refused, by `report` and by `apply`: a source element the report does not list (a variable or a behaviour description among them), a project element that is not among the candidates, or a mapping that is `locked`.
 
 The element a source element is mapped onto stays the project's: its own attributes are neither compared nor written, it receives no `templateUuid`, and only what the source contributes below it (an `AllocationRole`'s function references, a `FunctionCategory`'s classifications) is added. The references to it follow (`AllocationRoleRef`, `FunctionCategoryRef`: uuid and path).
 
 Inside such an element, a named container the source brings (a `SubCategory`) lands on the container the project element already has: the one created from it by an earlier placement, else the one of the same name — which is the project's too, so its attributes are left alone. A container with no counterpart is added. What the project element holds besides is neither announced nor touched.
 
-Mappings are resolved for every verb — a function's categories (`verb: 'fsd'`, and the functions an application composes or an SSD carries), an application's roles (`verb: 'asd'`, or carried by an SSD), the variables and behaviour descriptions applying to any of them — on a first placement and on every update.
+Mappings are resolved for every verb — a function's categories (`verb: 'fsd'`, and the functions an application composes or an SSD carries), an application's roles (`verb: 'asd'`, or carried by an SSD) — on a first placement and on every update.
 
 #### On an update
 
@@ -329,8 +329,8 @@ the `decisions` map by `group.id` (already scoped per instance, so globally uniq
 
 #### What the instances share
 
-Instances of one template may share an element — an `AllocationRole`, a `FunctionCategory`, a
-`Variable` — each giving it its **own** reference children (one `FunctionRef` per instance, each to
+Instances of one template may share an element — an `AllocationRole`, a `FunctionCategory`, or a
+`Variable` an earlier version made once for several instances — each giving it its **own** reference children (one `FunctionRef` per instance, each to
 that instance's function). `report` and `apply` compare each instance with its own references only:
 a reference to an element another instance holds is that instance's, never the counterpart of one
 of this instance's. So when the shared element of the template gains a reference, every instance
@@ -612,19 +612,19 @@ The companion preserves the satellite's **structure**: when a change is nested i
 A satellite whose only differences are changes the update keeps (a behaviour description's file, a variable's value: [kept changes](#decision-groups-full-track)) opens no decision: its node is listed in the primary's `tree`, with its `keptAttributeChanges`, and counted in `report.summary.kept`.
 
 ::: info Instantiate creates its own references
-On `scenario: 'instantiate'`, a shared satellite container may already exist (a previous instantiation created it), but each instantiation owns its **own** per-instance reference children. So a reference into an already-existing shared satellite is reported as **added** (the container itself is matched and merged into), never a no-op — mirroring what `apply` writes (the new references are merged into the existing container).
+On `scenario: 'instantiate'`, a shared satellite container (a category, a role) may already exist (a previous instantiation created it), but each instantiation owns its **own** per-instance reference children. So a reference into an already-existing shared satellite is reported as **added** (the container itself is matched and merged into), never a no-op — mirroring what `apply` writes (the new references are merged into the existing container).
 :::
 
 ### On `apply` / `update` — a 3-way merge
 
-Every satellite tag is a shared element: where a source satellite lands is the answer of its [mapping](#shared-element-mappings), read by the report and by the apply. For each satellite the update verb does one of:
+A layer-specific satellite is a shared element: where a source satellite lands is the answer of its [mapping](#shared-element-mappings), read by the report and by the apply. A cross-cutting one is the instance's own: it lands on the one the instance holds for it, else a new one. For each satellite the update verb does one of:
 
-- **add** — the newer template references a satellite the instance holds nothing for, and its mapping resolves to a new element → clone it at its structural level and stamp instance lineage (so a newly-referenced `AllocationRole` / `Variable` travels on update, not only on first-time instantiate);
+- **add** — the newer template references a satellite the instance holds nothing for, and its mapping resolves to a new element (a `Variable` / `BehaviorDescription`: always, one of the instance's own) → clone it at its structural level and stamp instance lineage (so a newly-referenced `AllocationRole` / `Variable` travels on update, not only on first-time instantiate);
 - **reconcile in place** — the element the instance holds for it → reconcile it: in full when it was created from the template, only what the source contributes below it when it is the project's own;
 - **delete** — the satellite **element** was removed from the template → delete the instance, **guarded** by a whole-document last-referrer check so a satellite still referenced by another primary is kept.
 
 ::: warning Catalog persistence — un-referencing is not deletion
-`FunctionCategory`, `AllocationRole`, `Variable` and `BehaviorDescription` are **catalog / shared / documentation** elements: a category classifies many functions, a role is shared for harmonization, a variable targets many elements. So **un-referencing a satellite does not delete it** — only removing the element from the template does. Dropping the _link_ (e.g. a removed `AllocationRoleRef`) removes only the reference element and leaves the catalog element in place.
+`FunctionCategory`, `AllocationRole`, `Variable` and `BehaviorDescription` are **catalog / documentation** elements: a category classifies many functions, a role is shared for harmonization, a variable targets many elements of its instance. So **un-referencing a satellite does not delete it** — only removing the element from the template does. Dropping the _link_ (e.g. a removed `AllocationRoleRef`) removes only the reference element and leaves the catalog element in place.
 :::
 
 ## Engine

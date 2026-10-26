@@ -497,6 +497,29 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 					roleAllocations: ['S1/V1/B1/Prot'],
 				},
 			},
+		'two roles that allocate nothing, mapped onto project roles of their names → each is found by its name, the project own':
+			{
+				sourceXml: twoBareRolesSourceXml,
+				targetXml: twoRolesProjectXml,
+				editTemplate: describeTemplateRevision,
+				expected: {
+					mappings: [
+						lockedOntoProjectRole,
+						{
+							...lockedOntoProjectRole,
+							id: 'control-role-s',
+							mapping: { existing: projectControlRoleRef },
+							candidates: [{ ref: projectControlRoleRef, title: 'BAY_CTRL', path: 'S1/BAY_CTRL' }],
+						},
+					],
+					announcedNewRoles: 0,
+					announcedNewAllocations: 0,
+					roleNames: ['BAY_CTRL', 'HMI_PC'],
+					applicationRoles: ['S1/BAY_CTRL', 'S1/HMI_PC'],
+					roleDescription: undefined,
+					roleAllocations: [],
+				},
+			},
 		'two roles that allocate nothing, mapped onto project roles, both renamed since → nothing tells them apart: neither is picked, the consumer has to map them, apply refuses until then':
 			{
 				sourceXml: twoBareRolesSourceXml,

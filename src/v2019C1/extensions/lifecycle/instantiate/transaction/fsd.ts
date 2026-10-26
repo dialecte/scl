@@ -81,12 +81,12 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	})
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) that apply
-	// to any element in the function subtree also travel with it
+	// to any element in the function subtree also travel with it, one of each per instance
 	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: functionRef,
 		structure,
-		matchKey: policy.matchKey,
+		bumpsCollisions: policy.bumpsCollisions,
 	})
 
 	const allMappings = [
@@ -101,17 +101,13 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
 		mode: policy.placementIdentity,
-		redirectMappings: [
-			...landing.redirectMappings,
-			...redirectMappings,
-			...applied.redirectMappings,
-		],
+		redirectMappings: [...landing.redirectMappings, ...redirectMappings],
 	})
 
 	// a shared element created here (no project element to map onto) is named at its structural level
 	await nameCreatedSharedElements(tx, {
 		sourceQuery,
-		cloneMappings: [...categoryMappings, ...applied.cloneMappings],
+		cloneMappings: categoryMappings,
 		structure,
 		decisionMappings: params.decisionMappings,
 	})

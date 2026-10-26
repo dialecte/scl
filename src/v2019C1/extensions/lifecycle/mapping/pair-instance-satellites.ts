@@ -12,21 +12,27 @@ import type {
 import type { ReferenceIdentitySide } from '@/v2019C1/extensions/lifecycle/engine/reference-match.types'
 import type { AnyTreeRecord } from '@dialecte/core'
 
-/** Whether a project element can be the one a shared source element stands for. */
+/** Whether a project element can be the one a source satellite stands for. */
 type Qualifies = (params: { source: SourceSatellite; instanceRef: StoredRef }) => Promise<boolean>
 
+/** One kind of evidence, and whether it is read for shared elements only. */
+type PairingStep = { qualifies: Qualifies; projectOwned: boolean; sharedOnly: boolean }
+
 /**
- * Recognise, for one instance, the project element it already holds for each shared source
- * element — the mapping an earlier placement made. Nothing in the file records it, so it is read
- * from what that placement wrote, strongest evidence first:
+ * Recognise, for one instance, the project element it already holds for each source satellite — the
+ * mapping an earlier placement made. Nothing in the file records it, so it is read from what that
+ * placement wrote, strongest evidence first:
  *  1. the project element carries the source element's lineage (it was created from it);
  *  2. it holds a reference to the element that stands, in the project, for one the source element
  *     refers to (the references the mapping contributed to it);
  *  3. it carries the same key (its name);
  *  4. it is the only one left, for the only source element left.
- * Each step pairs a source element with a project element only when neither has another
+ * Steps 3 and 4 are read for shared elements only: an element each instance holds its own of (no
+ * mapping policy) is the instance's by what it was made from or by what the instance gave it, never by
+ * its name. Each step pairs a source element with a project element only when neither has another
  * possibility at that step. A source element left unpaired is new to the instance — or, when
- * elements of the instance are left too, undecided: nothing tells which one stands for it.
+ * elements of the instance are left too, undecided: nothing tells which one stands for it (read for a
+ * shared element only: one the instance holds its own of, left unpaired, is new to it).
  */
 export async function pairInstanceSatellites(
 	reader: MappingReader,
@@ -73,9 +79,11 @@ export async function pairInstanceSatellites(
 	}
 
 	async function sharesKey({ source, instanceRef }: Parameters<Qualifies>[0]): Promise<boolean> {
-		const sourceKey = await sourceQuery.any.getAttribute(source.ref, { name: source.policy.key })
+		const key = source.policy?.key
+		if (!key) return false
+		const sourceKey = await sourceQuery.any.getAttribute(source.ref, { name: key })
 		if (!sourceKey) return false
-		const instanceKey = await reader.any.getAttribute(instanceRef, { name: source.policy.key })
+		const instanceKey = await reader.any.getAttribute(instanceRef, { name: key })
 		return instanceKey === sourceKey
 	}
 
@@ -83,15 +91,17 @@ export async function pairInstanceSatellites(
 		return true
 	}
 
-	const steps: { qualifies: Qualifies; projectOwned: boolean }[] = [
-		{ qualifies: carriesLineage, projectOwned: false },
-		{ qualifies: sharesReferencedTarget, projectOwned: true },
-		{ qualifies: sharesKey, projectOwned: true },
-		{ qualifies: isLeft, projectOwned: true },
+	const steps: PairingStep[] = [
+		{ qualifies: carriesLineage, projectOwned: false, sharedOnly: false },
+		{ qualifies: sharesReferencedTarget, projectOwned: true, sharedOnly: false },
+		{ qualifies: sharesKey, projectOwned: true, sharedOnly: true },
+		{ qualifies: isLeft, projectOwned: true, sharedOnly: true },
 	]
 
-	for (const { qualifies, projectOwned } of steps) {
-		const remainingSources = sourceSatellites.filter((source) => !pairs.has(source.ref.id))
+	for (const { qualifies, projectOwned, sharedOnly } of steps) {
+		const remainingSources = sourceSatellites.filter(
+			(source) => !pairs.has(source.ref.id) && (!sharedOnly || source.policy !== undefined),
+		)
 		const remainingInstanceRefs = instanceSatelliteRefs.filter(
 			(instanceRef) => !pairedInstanceIds.has(instanceRef.id),
 		)
@@ -100,7 +110,7 @@ export async function pairInstanceSatellites(
 		const qualifying: { source: SourceSatellite; instanceRef: StoredRef }[] = []
 		for (const source of remainingSources) {
 			for (const instanceRef of remainingInstanceRefs) {
-				if (instanceRef.tagName !== source.policy.tagName) continue
+				if (instanceRef.tagName !== source.ref.tagName) continue
 				if (await qualifies({ source, instanceRef })) qualifying.push({ source, instanceRef })
 			}
 		}
@@ -125,7 +135,7 @@ export async function pairInstanceSatellites(
 		if (pairs.has(source.ref.id)) continue
 		const instanceElementIsLeft = instanceSatelliteRefs.some(
 			(instanceRef) =>
-				instanceRef.tagName === source.policy.tagName && !pairedInstanceIds.has(instanceRef.id),
+				instanceRef.tagName === source.ref.tagName && !pairedInstanceIds.has(instanceRef.id),
 		)
 		if (instanceElementIsLeft) undecidedSourceIds.add(source.ref.id)
 	}

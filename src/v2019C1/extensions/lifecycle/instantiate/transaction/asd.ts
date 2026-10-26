@@ -95,13 +95,13 @@ export async function placeApplication(
 	})
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) applying to
-	// any element in the Application subtree travel with it
+	// any element in the Application subtree travel with it, one of each per instance
 	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: applicationRef,
 		structure,
 		leftOut,
-		matchKey: policy.matchKey,
+		bumpsCollisions: policy.bumpsCollisions,
 	})
 
 	const allMappings = [
@@ -114,11 +114,7 @@ export async function placeApplication(
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
 		mode: policy.placementIdentity,
-		redirectMappings: [
-			...(landing?.redirectMappings ?? []),
-			...redirectMappings,
-			...applied.redirectMappings,
-		],
+		redirectMappings: [...(landing?.redirectMappings ?? []), ...redirectMappings],
 	})
 
 	// resolve a name collision for each placed composed Function at its own structural

@@ -27,8 +27,12 @@ import type * as Core from '@dialecte/core'
  * (`locked`, see {@link pairInstanceSatellites}). Any other — every one of them on a first
  * placement — is resolved by {@link resolveMapping}; where the instance holds an element that
  * could stand for it and nothing tells whether it does, it is flagged `ambiguous` until the
- * consumer's choices settle it. Elements whose tag declares no mapping
- * policy are not shared elements and are left out.
+ * consumer's choices settle it.
+ *
+ * A satellite whose tag declares no mapping policy is the instance's own (a variable, a behaviour
+ * description): it is listed only when the instance already holds one for it, found among what applies
+ * to that instance — never an element of another instance or of the project. Left out, it is new to the
+ * instance.
  */
 export async function resolveSatelliteMappings(
 	reader: MappingReader,
@@ -41,8 +45,7 @@ export async function resolveSatelliteMappings(
 	for (const satelliteRef of satelliteRefs) {
 		const policy = findMappingPolicy(satelliteRef.tagName)
 		const satelliteId = satelliteRef.id
-		if (policy && satelliteId)
-			sourceSatellites.push({ ref: { ...satelliteRef, id: satelliteId }, policy })
+		if (satelliteId) sourceSatellites.push({ ref: { ...satelliteRef, id: satelliteId }, policy })
 	}
 
 	const storedInstanceRefs: StoredRef[] = []
@@ -73,6 +76,8 @@ export async function resolveSatelliteMappings(
 			})
 			continue
 		}
+		// the instance's own, held nowhere yet: new to it
+		if (!policy) continue
 
 		const resolved = await resolveMapping(reader, {
 			sourceQuery,
@@ -86,7 +91,7 @@ export async function resolveSatelliteMappings(
 		resolvedMappings.set(ref.id, {
 			...resolved,
 			ambiguous: resolved.ambiguous || heldUntold,
-			undecided: resolved.undecided || (heldUntold && policy.selectable),
+			undecided: resolved.undecided || heldUntold,
 		})
 	}
 	return resolvedMappings

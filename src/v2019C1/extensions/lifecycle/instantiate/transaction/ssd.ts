@@ -79,14 +79,14 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		return { scopeRef: root, cloneMappings: [] }
 
 	// External cross-cutting satellites (Variable / BehaviorDescription) applying to any
-	// element in the scope subtree travel with it, placed at the scope's reproduced level.
+	// element in the scope subtree travel with it, placed at the scope's reproduced level, one of each per instance.
 	const scopeStructure = await resolveFrameStructure(tx, sourceQuery, root, frameIndex)
 	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: root,
 		structure: scopeStructure,
 		leftOut,
-		matchKey: policy.matchKey,
+		bumpsCollisions: policy.bumpsCollisions,
 	})
 
 	const allMappings = [...contentMappings, ...applied.cloneMappings]
@@ -95,7 +95,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
 		mode: policy.placementIdentity,
-		redirectMappings: [...redirectMappings, ...applied.redirectMappings],
+		redirectMappings,
 	})
 
 	if (policy.bumpsCollisions) {
