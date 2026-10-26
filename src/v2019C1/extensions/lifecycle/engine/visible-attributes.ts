@@ -1,7 +1,10 @@
 import { throwDialecteError } from '@dialecte/core'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
-import { DERIVED_ATTRIBUTES_BY_TAG } from '@/v2019C1/extensions/reference/constants'
+import {
+	DERIVED_ATTRIBUTES_BY_TAG,
+	TYPE_ID_REF_ATTRIBUTES,
+} from '@/v2019C1/extensions/reference/constants'
 
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 
@@ -22,10 +25,11 @@ const REFERENCE_ATTRS: ReadonlySet<string> = new Set(
 /**
  * The attributes that take part in the same-space content diff/reconcile:
  * everything except identity (`uuid`/`templateUuid`/`originUuid`), reference attributes,
- * the attributes the element writes from a path (a terminal's level names, a connectivity
- * node's `pathName`), which follow where the element sits — and `name` when the names are
- * the project's (`namesFollow: 'project'`, an instance of a template); a revision's renames
- * are compared and written (`namesFollow: 'source'`, a fork).
+ * type references (`lnType`, `type`: an id of the element's own document, compared by the type
+ * it names — see `typeChangesOf`), the attributes the element writes from a path (a terminal's
+ * level names, a connectivity node's `pathName`), which follow where the element sits — and
+ * `name` when the names are the project's (`namesFollow: 'project'`, an instance of a template);
+ * a revision's renames are compared and written (`namesFollow: 'source'`, a fork).
  */
 export function visibleAttributes(params: {
 	tagName: string
@@ -34,10 +38,12 @@ export function visibleAttributes(params: {
 }): Record<string, string> {
 	const { tagName, attributes, namesFollow } = params
 	const derived = DERIVED_ATTRIBUTES_BY_TAG.get(tagName)?.attributes ?? []
+	const typeReferences = TYPE_ID_REF_ATTRIBUTES.get(tagName) ?? []
 	const namesCompared = comparesNames(namesFollow)
 	const visible: Record<string, string> = {}
 	for (const [name, value] of Object.entries(attributes)) {
 		if (IDENTITY_ATTRS.has(name) || REFERENCE_ATTRS.has(name)) continue
+		if (typeReferences.includes(name)) continue
 		if (name === 'name' && !namesCompared) continue
 		if (derived.some((attribute) => attribute.name === name)) continue
 		visible[name] = value

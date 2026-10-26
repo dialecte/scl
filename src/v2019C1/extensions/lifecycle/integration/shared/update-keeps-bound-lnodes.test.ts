@@ -7,6 +7,7 @@ import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } fro
 import type { Scl } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
+	AttributeChange,
 	DiffNode,
 	KeptAttributeChange,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -114,10 +115,16 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	scenario: LifecycleScenario
 	/**
-	 * The attributes the report lists as changed on the LNode, then on its LNodeSpecNaming, then the differences it
-	 * lists as kept on the LNode (none when absent), also counted in the report's summary.
+	 * The attributes the report lists as changed on the LNode, then on its LNodeSpecNaming, the type references whose
+	 * type it lists as changed on the LNode (none when absent), then the differences it lists as kept on the LNode (none
+	 * when absent), also counted in the report's summary.
 	 */
-	reported: { lnode: string[]; specifiedNaming: string[]; kept?: KeptAttributeChange[] }
+	reported: {
+		lnode: string[]
+		specifiedNaming: string[]
+		types?: AttributeChange[]
+		kept?: KeptAttributeChange[]
+	}
 }
 
 describe('lifecycle — an update keeps the implementation of a bound LNode', () => {
@@ -261,7 +268,11 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 				functionIdentity: instanceOfTemplate,
 			}),
 			scenario: 'template',
-			reported: { lnode: ['lnType'], specifiedNaming: [] },
+			reported: {
+				lnode: [],
+				specifiedNaming: [],
+				types: [{ name: 'lnType', before: 'XCBR_T', after: 'XCBR_T2' }],
+			},
 			expectedQueries: ['//default:LNode[@iedName="None"][@lnInst="1"][@lnType="XCBR_T2"]'],
 		},
 
@@ -349,11 +360,15 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 			{
 				lnode: changedAttributes({ nodes, tagName: 'LNode' }),
 				specifiedNaming: changedAttributes({ nodes, tagName: 'LNodeSpecNaming' }),
+				types: nodes
+					.filter((node) => node.tagName === 'LNode')
+					.flatMap((node) => node.typeChanges ?? []),
 				kept: keptChanges({ nodes, tagName: 'LNode' }),
 				keptInSummary: lifecycleReport.summary.kept,
 			},
 			'report',
 		).toEqual({
+			types: [],
 			kept: [],
 			...testCase.reported,
 			keptInSummary: (testCase.reported.kept ?? []).length,

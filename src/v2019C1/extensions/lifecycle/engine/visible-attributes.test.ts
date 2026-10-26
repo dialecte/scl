@@ -46,6 +46,17 @@ describe('visibleAttributes', () => {
 			attributes: { name: 'B1', desc: 'feeder', uuid: '00000000-0000-4000-8000-000000000003' },
 			expected: { desc: 'feeder' },
 		},
+		'LNode → its type reference left out, compared by the type it names': {
+			tagName: 'LNode',
+			attributes: {
+				iedName: 'None',
+				lnClass: 'CSWI',
+				lnInst: '1',
+				lnType: 'CSWI_Type',
+				desc: 'controller',
+			},
+			expected: { iedName: 'None', lnClass: 'CSWI', lnInst: '1', desc: 'controller' },
+		},
 		'names following the source → the name compared too': {
 			tagName: 'Bay',
 			attributes: { name: 'B1', desc: 'feeder', uuid: '00000000-0000-4000-8000-000000000003' },

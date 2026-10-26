@@ -5,12 +5,14 @@ import { indexRedirectedSourceUuids } from './reference-match'
 import { acceptsRemoval, classifyUnmatched } from './removal-base'
 import { textChangeOf } from './text-change'
 import { reconcileTextWrappers } from './text-wrappers'
+import { createTypeComparison, typeChangesOf } from './type-change'
 import { visibleAttributes } from './visible-attributes'
 import { landingParent } from './wrapper'
 
 import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
+import { importTypes } from '@/v2019C1/extensions/data-model/transaction'
 import {
 	assertNoIdentityCollision,
 	resolvePlacementCollision,
@@ -22,9 +24,14 @@ import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { PinnedMatches } from './match-child.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
+import type { TypeFollowing } from './type-change.types'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
-import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type {
+	KeepNameTypesFrom,
+	LogicalNodeRecord,
+	TypeFollower,
+} from '@/v2019C1/extensions/data-model/transaction'
 import type { FindIdentityCollisionParams } from '@/v2019C1/extensions/lifecycle/constraints/find-identity-collision.types'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -152,6 +159,8 @@ export async function reconcile(
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
 
 	const redirectedSourceUuids = await indexRedirectedSourceUuids(tx, params.redirectMappings)
+	// the matched elements whose type the template changed, brought in one import once the walk is done
+	const typeFollowing: TypeFollowing = { comparison: createTypeComparison(), followers: [] }
 
 	// root + descendants: update matched in place, add new
 	if (!withinProjectOwned) {
@@ -162,6 +171,7 @@ export async function reconcile(
 			accepted,
 			overrides,
 			namesFollow: params.namesFollow,
+			typeFollowing,
 		})
 		await reconcileTextWrappers(tx, {
 			sourceQuery,
@@ -198,6 +208,7 @@ export async function reconcile(
 		pinnedMatches: params.pinnedMatches,
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected: params.notSelected,
+		typeFollowing,
 	})
 
 	// removed from the template: delete instance elements whose lineage is gone. In a project-owned
@@ -210,6 +221,15 @@ export async function reconcile(
 			matchKey,
 			removalBase: params.removalBase,
 			omit,
+		})
+	}
+	// the types the matched elements take from the template, through its closure, once what it removes is gone
+	if (typeFollowing.followers.length > 0) {
+		await importTypes(tx, {
+			sourceQuery,
+			records: [],
+			followers: typeFollowing.followers,
+			keepNameTypesFrom,
 		})
 	}
 	// what the template drops, or the project's own element whose removal is accepted, frees the key it held
@@ -258,6 +278,7 @@ async function reconcileChildren(
 		pinnedMatches?: PinnedMatches
 		foreignInstanceIds?: ReadonlySet<string>
 		notSelected?: ReadonlySet<string>
+		typeFollowing: TypeFollowing
 	},
 ): Promise<void> {
 	const {
@@ -315,6 +336,7 @@ async function reconcileChildren(
 					accepted,
 					overrides,
 					namesFollow,
+					typeFollowing: params.typeFollowing,
 				})
 				if (renamed) renamedChildren.push(matched)
 				await reconcileTextWrappers(tx, {
@@ -345,6 +367,7 @@ async function reconcileChildren(
 				pinnedMatches: params.pinnedMatches,
 				foreignInstanceIds: params.foreignInstanceIds,
 				notSelected: params.notSelected,
+				typeFollowing: params.typeFollowing,
 			})
 			continue
 		}
@@ -519,7 +542,10 @@ async function collectRemoved(
 	}
 }
 
-/** Write the template's visible attributes on a matched element. Returns whether its name was written. */
+/**
+ * Write the template's visible attributes on a matched element, and list it to follow the type the template names when
+ * it changed. Returns whether its name was written.
+ */
 async function updateMatchedAttributes(
 	tx: Core.Transaction<Config>,
 	params: {
@@ -529,6 +555,7 @@ async function updateMatchedAttributes(
 		accepted?: AcceptedIds
 		overrides?: CollisionOverrides
 		namesFollow: NamesFollow
+		typeFollowing: TypeFollowing
 	},
 ): Promise<boolean> {
 	const { sourceQuery, instanceRecord, sourceNode, accepted, overrides, namesFollow } = params
@@ -580,6 +607,43 @@ async function updateMatchedAttributes(
 			...(textChange ? { value: sourceNode.value } : {}),
 		})
 	}
+	await listTypeFollower(tx, {
+		sourceQuery,
+		instanceRecord,
+		sourceNode,
+		accepted,
+		typeFollowing: params.typeFollowing,
+	})
 	// the update went through the transaction: every path naming a renamed element follows
 	return 'name' in updates
+}
+
+/**
+ * List a matched element to follow the type its template element names, when the type differs and its change is the
+ * update's to write: the report listed it in an accepted group (any change, called with no gate). A type the project
+ * keeps (a bound LNode, on the consumer's word) is never listed there: the report reads that word, the gate follows it.
+ */
+async function listTypeFollower(
+	tx: Core.Transaction<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		instanceRecord: AnyTreeRecord
+		sourceNode: AnyTreeRecord
+		accepted: AcceptedIds | undefined
+		typeFollowing: TypeFollowing
+	},
+): Promise<void> {
+	const { sourceQuery, instanceRecord, sourceNode, accepted, typeFollowing } = params
+	if (accepted && !accepted.typeChangeIds.has(sourceNode.id)) return
+	const changes = await typeChangesOf(sourceQuery, {
+		targetQuery: tx,
+		sourceNode,
+		instanceNode: instanceRecord,
+		comparison: typeFollowing.comparison,
+	})
+	if (changes.length === 0) return
+	typeFollowing.followers.push({
+		source: sourceNode as unknown as LogicalNodeRecord,
+		target: toRef(instanceRecord) as TypeFollower['target'],
+	})
 }

@@ -5,7 +5,7 @@ import { invariant } from '@dialecte/core/utils'
 import { SCL_ERRORS } from '@/v2019C1/errors'
 import { refuseIdentityCollision } from '@/v2019C1/extensions/lifecycle/constraints/find-identity-collision'
 
-import type { AcceptedIds, CollisionOverrides } from './decide.types'
+import type { AcceptedIds, CollectedIds, CollisionOverrides } from './decide.types'
 import type {
 	DecisionGroup,
 	DecisionMap,
@@ -284,46 +284,41 @@ export function leftOutRefIds(params: {
 }
 
 function collectGroupIds(groups: readonly DecisionGroup[]): AcceptedIds {
-	const sourceIds = new Set<string>()
-	const instanceIds = new Set<string>()
+	const ids: CollectedIds = {
+		sourceIds: new Set(),
+		instanceIds: new Set(),
+		typeChangeIds: new Set(),
+	}
 	for (const group of groups) {
 		// what the project added below a change of the template is a group of its own: not this one's
 		const ownOnly = group.change === 'target-only'
 		for (const node of [group.primary, ...group.companions]) {
-			collectNodeIds({ node, sourceIds, instanceIds, ownOnly })
+			collectNodeIds({ node, ids, ownOnly })
 		}
 	}
-	return { sourceIds, instanceIds }
+	return ids
 }
 
 /**
  * Collect the ids of a node and every descendant (structured companions carry nesting) — but those of an element the
  * project added, unless the group is that element's (`ownOnly`).
  */
-function collectNodeIds(params: {
-	node: DiffNode
-	sourceIds: Set<string>
-	instanceIds: Set<string>
-	ownOnly: boolean
-}): void {
-	const { node, sourceIds, instanceIds, ownOnly } = params
-	collectNodeId({ node, sourceIds, instanceIds })
+function collectNodeIds(params: { node: DiffNode; ids: CollectedIds; ownOnly: boolean }): void {
+	const { node, ids, ownOnly } = params
+	collectNodeId({ node, ids })
 	for (const child of node.children) {
 		if (!ownOnly && child.change === 'target-only') continue
-		collectNodeIds({ node: child, sourceIds, instanceIds, ownOnly })
+		collectNodeIds({ node: child, ids, ownOnly })
 	}
 }
 
-function collectNodeId(params: {
-	node: DiffNode
-	sourceIds: Set<string>
-	instanceIds: Set<string>
-}): void {
-	const { node, sourceIds, instanceIds } = params
+function collectNodeId(params: { node: DiffNode; ids: CollectedIds }): void {
+	const { node, ids } = params
 	if (node.change === 'unchanged') return
 	if (node.change === 'removed' || node.change === 'target-only') {
-		if (node.instanceRef?.id) instanceIds.add(node.instanceRef.id)
+		if (node.instanceRef?.id) ids.instanceIds.add(node.instanceRef.id)
 	} else if (node.sourceRef?.id) {
-		sourceIds.add(node.sourceRef.id)
+		ids.sourceIds.add(node.sourceRef.id)
+		if (node.typeChanges) ids.typeChangeIds.add(node.sourceRef.id)
 	}
 }

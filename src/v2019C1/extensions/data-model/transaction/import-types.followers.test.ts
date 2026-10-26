@@ -275,6 +275,17 @@ describe('importTypes — elements following the type their source names', () =>
 				unexpectedQueries: ['//default:LNodeType[@id="Mine"]', '//default:LNodeType[2]'],
 			},
 
+		'source naming no type -> the follower names none, the type it left removed': {
+			sourceXml: sourceXml({ typeContent: position }).replace(' lnType="T"', ''),
+			targetXml: targetXml({
+				lnodes: lnode({ record: 'follower', lnType: 'T' }),
+				types: `${positionOnly({ typeId: 'T' })}${positionType}`,
+			}),
+			calls: [[follows('follower')]],
+			expectedQueries: ['//default:LNode[not(@lnType)]'],
+			unexpectedQueries: ['//default:LNodeType', '//default:DOType'],
+		},
+
 		'a follower naming no type, the source naming one -> the follower on it, a type nothing names left as it is':
 			{
 				sourceXml: sourceXml({ typeContent: positionAndBlock }),

@@ -56,7 +56,7 @@ describe('decide', () => {
 			only?: boolean
 			groups: DecisionGroup[]
 			decisions: [string, 'accept' | 'skip'][]
-			expected: { sourceIds: string[]; instanceIds: string[] }
+			expected: { sourceIds: string[]; instanceIds: string[]; typeChangeIds?: string[] }
 		}
 
 		const g1 = group('g1', 'added', node('added', 'Function', 'fn-1'), [
@@ -85,6 +85,15 @@ describe('decide', () => {
 			],
 		}
 		const g4 = group('g4', 'modified', node('modified', 'Function', 'fn-3'), [nestedCategory])
+		const retyped: DiffNode = {
+			...node('modified', 'LNode', 'ln-typed'),
+			typeChanges: [{ name: 'lnType', before: 'T', after: 'T' }],
+		}
+		const g5 = group('g5', 'modified', node('modified', 'Function', 'fn-4'), [retyped])
+		const g6 = group('g6', 'modified', {
+			...retyped,
+			sourceRef: { tagName: 'LNode', id: 'ln-skipped' },
+		})
 
 		const testCases: Record<string, TestCase> = {
 			'accept one, skip another -> only accepted ids (primary + companions)': {
@@ -115,13 +124,30 @@ describe('decide', () => {
 				decisions: [['g4', 'accept']],
 				expected: { sourceIds: ['fn-3', 'ref-1'], instanceIds: [] },
 			},
+			'an element whose type changes, accepted -> its id among the type changes, the other skipped':
+				{
+					groups: [g5, g6],
+					decisions: [
+						['g5', 'accept'],
+						['g6', 'skip'],
+					],
+					expected: {
+						sourceIds: ['fn-4', 'ln-typed'],
+						instanceIds: [],
+						typeChangeIds: ['ln-typed'],
+					},
+				},
 		}
 
 		function act(testCase: TestCase) {
 			const decisions: DecisionMap = new Map(testCase.decisions)
-			const { sourceIds, instanceIds } = acceptedRefIds({ groups: testCase.groups, decisions })
+			const { sourceIds, instanceIds, typeChangeIds } = acceptedRefIds({
+				groups: testCase.groups,
+				decisions,
+			})
 			expect([...sourceIds].sort()).toEqual(testCase.expected.sourceIds.sort())
 			expect([...instanceIds].sort()).toEqual(testCase.expected.instanceIds.sort())
+			expect([...typeChangeIds].sort()).toEqual((testCase.expected.typeChangeIds ?? []).sort())
 		}
 
 		runSclTestCases.generic(testCases, act)

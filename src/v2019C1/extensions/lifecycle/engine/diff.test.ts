@@ -18,6 +18,8 @@ const bayRef = { tagName: 'Bay', id: 'bay-t1' } as Scl.Ref<'Bay'>
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	mutate?: (tx: Scl.Transaction) => Promise<void>
+	/** The instance is an element of the project the template's function is mapped onto. */
+	instanceRootIsProjectOwned?: boolean
 	expected: {
 		needsDecisions: boolean
 		summary: DiffSummary
@@ -82,6 +84,20 @@ describe('engine.diff (project-then-diff report + classify)', () => {
 			},
 		},
 
+		'changed attribute of an element the project owns → nothing compared, nothing listed or kept': {
+			sourceXml,
+			targetXml,
+			mutate: async function describeTheFunction(tx) {
+				await tx.update(functionRef, { attributes: { desc: 'v2' } })
+			},
+			instanceRootIsProjectOwned: true,
+			expected: {
+				needsDecisions: false,
+				summary: { added: 0, removed: 0, modified: 0, kept: 0 },
+				groups: [],
+			},
+		},
+
 		'added element → added, needs decisions (full)': {
 			sourceXml,
 			targetXml,
@@ -138,6 +154,7 @@ describe('engine.diff (project-then-diff report + classify)', () => {
 			targetQuery: target.query,
 			sourceRootRef: functionRef,
 			instanceRootRef: instanceFunction,
+			instanceRootIsProjectOwned: testCase.instanceRootIsProjectOwned,
 		})
 
 		expect(report.groups.length > 0).toBe(testCase.expected.needsDecisions)

@@ -12,6 +12,7 @@ import {
 import { classifyUnmatched } from './removal-base'
 import { textChangeOf } from './text-change'
 import { diffTextWrappers } from './text-wrappers'
+import { createTypeComparison, typeChangesOf } from './type-change'
 import { visibleAttributes } from './visible-attributes'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -30,13 +31,14 @@ import type {
 	DiffReport,
 	DiffSummary,
 	InstanceDiff,
-	KeptAttributeChange,
 	RenamedNode,
 	ReportInstance,
 } from './diff.types'
 import type { PinnedMatches } from './match-child.types'
+import type { ProjectOwnedAttributes } from './project-owned-attributes.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
+import type { TypeComparison } from './type-change.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -212,6 +214,7 @@ export async function diff(params: {
 		pinnedMatches: params.pinnedMatches,
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected,
+		typeComparison: createTypeComparison(),
 	})
 	// a rename of the instance itself is numbered among its siblings, as the apply numbers it
 	if (instanceTree.parent) {
@@ -250,6 +253,8 @@ async function diffMatched(
 		pinnedMatches?: PinnedMatches
 		foreignInstanceIds?: ReadonlySet<string>
 		notSelected?: ReadonlySet<string>
+		/** The types read on each side so far: one run for the whole diff. */
+		typeComparison: TypeComparison
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
@@ -260,13 +265,18 @@ async function diffMatched(
 	const omit = params.omit
 	const withinProjectOwned = params.withinProjectOwned ?? false
 	const contributeOnly = params.contributeOnly ?? false
-	const { changes: attributeChanges, kept } = params.skipOwnAttributes
-		? { changes: [], kept: [] }
+	const {
+		changes: attributeChanges,
+		typeChanges,
+		kept,
+	} = params.skipOwnAttributes
+		? { changes: [], typeChanges: [], kept: [] }
 		: await computeAttributeChanges(sourceQuery, {
 				targetQuery,
 				sourceNode,
 				instanceNode,
 				namesFollow,
+				typeComparison: params.typeComparison,
 			})
 	// a text the template changed is a change of the element, as an attribute is; so is the vendor data one of its
 	// wrappers holds as text
@@ -332,6 +342,7 @@ async function diffMatched(
 				withinProjectOwned,
 				contributeOnly,
 				notSelected: params.notSelected,
+				typeComparison: params.typeComparison,
 			})
 			children.push(matchedNode)
 			renamed.push({ node: matchedNode, child: matched })
@@ -415,12 +426,14 @@ async function diffMatched(
 		added,
 	})
 
+	const modified = attributeChanges.length > 0 || typeChanges.length > 0 || textChange
 	return {
-		change: attributeChanges.length > 0 || textChange ? 'modified' : 'unchanged',
+		change: modified ? 'modified' : 'unchanged',
 		tagName: instanceTagOf(sourceNode.tagName),
 		sourceRef: toRef(sourceNode),
 		instanceRef: toRef(instanceNode),
 		attributeChanges: attributeChanges.length > 0 ? attributeChanges : undefined,
+		...(typeChanges.length > 0 ? { typeChanges } : {}),
 		...(textChange ? { textChange } : {}),
 		keptAttributeChanges: kept.length > 0 ? kept : undefined,
 		children,
@@ -518,9 +531,10 @@ async function computeAttributeChanges(
 		sourceNode: AnyTreeRecord
 		instanceNode: AnyTreeRecord
 		namesFollow: NamesFollow
+		typeComparison: TypeComparison
 	},
 ): Promise<AttributeComparison> {
-	const { targetQuery, sourceNode, instanceNode, namesFollow } = params
+	const { targetQuery, sourceNode, instanceNode, namesFollow, typeComparison } = params
 	const sourceAttributes = await sourceQuery.any.getAttributes(sourceNode)
 	const instanceAttributes = await targetQuery.any.getAttributes(instanceNode)
 	const desired = visibleAttributes({
@@ -539,17 +553,42 @@ async function computeAttributeChanges(
 		namesFollow,
 	})
 
-	const changes: AttributeChange[] = []
-	const kept: KeptAttributeChange[] = []
+	const comparison: AttributeComparison = { changes: [], typeChanges: [], kept: [] }
 	for (const name of new Set([...Object.keys(desired), ...Object.keys(current)])) {
 		const before = current[name]
 		const after = desired[name]
 		if (before === after) continue
-		const keptReason = owned.listedAsKept.get(name)
-		if (keptReason) kept.push({ name, before, after, reason: keptReason })
-		else if (!owned.attributes.has(name)) changes.push({ name, before, after })
+		listDifference({
+			difference: { name, before, after },
+			owned,
+			listedAs: comparison.changes,
+			comparison,
+		})
 	}
-	return { changes, kept }
+	// a type reference is compared by the type it names, each read in its own document
+	const typeDifferences = await typeChangesOf(sourceQuery, {
+		targetQuery,
+		sourceNode,
+		instanceNode,
+		comparison: typeComparison,
+	})
+	for (const difference of typeDifferences) {
+		listDifference({ difference, owned, listedAs: comparison.typeChanges, comparison })
+	}
+	return comparison
+}
+
+/** List a difference where it belongs: kept when the project owns it and says so, nowhere when it owns it silently. */
+function listDifference(params: {
+	difference: AttributeChange
+	owned: ProjectOwnedAttributes
+	listedAs: AttributeChange[]
+	comparison: AttributeComparison
+}): void {
+	const { difference, owned, listedAs, comparison } = params
+	const keptReason = owned.listedAsKept.get(difference.name)
+	if (keptReason) comparison.kept.push({ ...difference, reason: keptReason })
+	else if (!owned.attributes.has(difference.name)) listedAs.push(difference)
 }
 
 /**

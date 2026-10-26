@@ -24,8 +24,15 @@ export type KeptAttributeReason = 'bound-logical-node' | 'instance-configuration
 /** A difference the update lists but does not apply: the project keeps `before`, the template says `after`. */
 export type KeptAttributeChange = AttributeChange & { reason: KeptAttributeReason }
 
-/** One element's attributes compared: the changes an accepted update writes, and those it keeps. */
-export type AttributeComparison = { changes: AttributeChange[]; kept: KeptAttributeChange[] }
+/**
+ * One element's attributes compared: the changes an accepted update writes, its type references naming a type of other
+ * content, and those it keeps.
+ */
+export type AttributeComparison = {
+	changes: AttributeChange[]
+	typeChanges: AttributeChange[]
+	kept: KeptAttributeChange[]
+}
 
 export type DiffNode = {
 	change: DiffChange
@@ -44,6 +51,14 @@ export type DiffNode = {
 	appliedRef?: AnyRefOrRecord
 	/** Attribute deltas — present for `modified`. */
 	attributeChanges?: AttributeChange[]
+	/**
+	 * The type references of the element (an `LNode`'s `lnType`) whose type the template gives other content than the
+	 * project's — `before` the id the instance names, `after` the id the template names (in its own document: the two
+	 * may be equal) — present for `modified`. Accepted, the update brings the template's type into the project through
+	 * its closure (an equal type the project holds reused, a free id kept, a taken one forked) and points the element at
+	 * it; the type it leaves goes when nothing else names it. An equal type under another id is no change.
+	 */
+	typeChanges?: AttributeChange[]
 	/**
 	 * The text the template gives an element holding text only (a vendor `Private`, a `BayType`), when it differs from
 	 * the instance's — present for `modified`: written as an attribute change is, kept when declined.

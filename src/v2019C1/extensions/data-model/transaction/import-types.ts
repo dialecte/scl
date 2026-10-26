@@ -488,13 +488,16 @@ async function retargetFollowers(
 	for (const { source, target } of followers) {
 		const record = await tx.getRecord(target)
 		if (!record) continue
-		const updates: Record<string, string> = {}
+		const updates: Record<string, string | undefined> = {}
 		const pairs = TYPE_ID_REFERENCE_PAIRS[target.tagName] as readonly TypeIdReferencePair[]
 		for (const pair of pairs) {
 			const sourceValue = readAttribute({ record: source, name: pair.attribute, defaults: 'none' })
+			// a source naming no type: the follower names none either (a source naming a type its document lacks is refused
+			// by the closure's resolution before this)
 			const resolvedId = sourceValue ? idRemap.get(sourceValue) : undefined
-			const current = readAttribute({ record, name: pair.attribute, defaults: 'none' })
-			if (!resolvedId || resolvedId === current) continue
+			if (sourceValue && !resolvedId) continue
+			const current = readAttribute({ record, name: pair.attribute, defaults: 'none' }) || undefined
+			if (resolvedId === current) continue
 			updates[pair.attribute] = resolvedId
 			if (!current) continue
 			const [leftType] = await tx.findByAttributes({
@@ -503,7 +506,10 @@ async function retargetFollowers(
 			})
 			if (leftType) left.push(toRef(leftType.tagName, leftType.id))
 		}
-		if (Object.keys(updates).length > 0) await tx.update(record, { attributes: updates })
+		// `update` removes an attribute given `undefined`; its parameter is typed string-only
+		if (Object.keys(updates).length > 0) {
+			await tx.update(record, { attributes: updates as Record<string, string> })
+		}
 	}
 	return left
 }
