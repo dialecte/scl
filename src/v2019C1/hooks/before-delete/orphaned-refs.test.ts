@@ -83,6 +83,51 @@ describe('cleanOrphanedRefs', () => {
 				unexpectedQueries: ['//v2019C1:FunctionCategory', '//v2019C1:FunctionCategoryRef'],
 			},
 
+			'delete target, then a new reference added to its category in the same transaction → the category and the reference to it stay':
+				{
+					sourceXml: /* xml */ `
+						<SCL ${ns} ${id}="root">
+							<Substation ${id}="sub1" name="Sub1">
+								<Private type="eIEC61850-6-100">
+									<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="Cat1" uuid="uuid-cat1">
+										<eIEC61850-6-100:FunctionCatRef ${id}="ref1" function="Sub1/F1" functionUuid="uuid-f1" />
+									</eIEC61850-6-100:FunctionCategory>
+									<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="uuid-hmi">
+										<eIEC61850-6-100:FunctionRole name="ROOT">
+											<eIEC61850-6-100:FunctionRoleContent>
+												<eIEC61850-6-100:FunctionRef function="Sub1/F2" functionUuid="uuid-f2" />
+												<eIEC61850-6-100:FunctionCategoryRef functionCategory="Sub1/Cat1" functionCategoryUuid="uuid-cat1" ${id}="cat-ref1" />
+											</eIEC61850-6-100:FunctionRoleContent>
+										</eIEC61850-6-100:FunctionRole>
+									</eIEC61850-6-100:Application>
+								</Private>
+								<VoltageLevel ${id}="vl1" name="V1">
+									<Bay ${id}="bay1" name="B1" />
+								</VoltageLevel>
+								<Function ${id}="f1" name="F1" uuid="uuid-f1" />
+								<Function ${id}="f2" name="F2" uuid="uuid-f2" />
+							</Substation>
+						</SCL>
+					`,
+					act: async (document) => {
+						await document.transaction(async function swapTheReference(tx) {
+							await tx.delete({ tagName: 'Function', id: 'f1' })
+							await tx.addChild(
+								{ tagName: 'FunctionCategory', id: 'fcat1' },
+								{
+									tagName: 'FunctionCatRef',
+									attributes: { function: 'Sub1/F2', functionUuid: 'uuid-f2' },
+								},
+							)
+						})
+					},
+					expectedQueries: [
+						'//v2019C1:FunctionCategory[@name="Cat1"]/v2019C1:FunctionCatRef[@functionUuid="uuid-f2"]',
+						'//v2019C1:FunctionCategoryRef[@functionCategoryUuid="uuid-cat1"]',
+					],
+					unexpectedQueries: ['//default:Function[@name="F1"]'],
+				},
+
 			'delete target → unrelated ref untouched': {
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root">

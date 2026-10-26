@@ -4,7 +4,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { FRAME_OMIT_CHILD_TAGS, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
-import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
+import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type {
 	EnsureTopologyFrameParams,

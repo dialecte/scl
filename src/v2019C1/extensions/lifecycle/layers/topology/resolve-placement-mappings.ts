@@ -4,7 +4,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { TEMPLATE_NAME } from '@/v2019C1/constants'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/resolve-target-structure'
-import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
+import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type {
 	PlacementLevel,

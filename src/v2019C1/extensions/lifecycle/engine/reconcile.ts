@@ -569,14 +569,17 @@ async function updateMatchedAttributes(
 		if (current[name] !== next) updates[name] = next
 	}
 
-	if (Object.keys(updates).length > 0) {
+	// a text the template changed is written as an attribute is, in the same update
+	const textChange = textChangeOf({ sourceNode, instanceNode: instanceRecord })
+	const changesAttributes = Object.keys(updates).length > 0
+	if (changesAttributes || textChange) {
 		// `update` removes an attribute on an `undefined` value; the AnyTransaction param is
 		// typed string-only, so cast the dynamic map (matches the repo's `as Record` pattern).
-		await tx.any.update(instanceRecord, { attributes: updates as Record<string, string> })
+		await tx.any.update(instanceRecord, {
+			...(changesAttributes ? { attributes: updates as Record<string, string> } : {}),
+			...(textChange ? { value: sourceNode.value } : {}),
+		})
 	}
-	// a text the template changed is written as an attribute is
-	const textChange = textChangeOf({ sourceNode, instanceNode: instanceRecord })
-	if (textChange) await tx.any.update(instanceRecord, { value: textChange.after })
 	// the update went through the transaction: every path naming a renamed element follows
 	return 'name' in updates
 }

@@ -47,7 +47,10 @@ async function readSideEffects(
 	const emptied: Scl.TrackedRecord<Scl.ElementsOf>[] = []
 	for (const root of roots)
 		emptied.push(...(await collectEmptiedAbove(query, { record: root, gone })))
-	const cascade = await collectDeleteCascade(query, { roots: [...roots, ...emptied] })
+	const cascade = await collectDeleteCascade(query, {
+		roots: [...roots, ...emptied],
+		emptiesContainers: true,
+	})
 
 	const sideEffects: RemovalSideEffect[] = []
 	for (const record of [...emptied, ...cascade.deleted]) {

@@ -106,7 +106,7 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL1014',
 		message: 'The report names an element the document no longer holds',
 	},
-	/** The template file holds nothing that can be instantiated. */
+	/** The template file holds nothing that can be instantiated, or not the element an SSD operation names. */
 	TEMPLATE_ROOT_NOT_FOUND: {
 		code: 'SCL2001',
 		message: 'The template holds nothing that can be instantiated',

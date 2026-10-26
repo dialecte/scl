@@ -3,7 +3,7 @@ import { collectUuids } from './match-key'
 import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
-import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
+import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type { AcceptedIds } from './decide.types'
 import type {

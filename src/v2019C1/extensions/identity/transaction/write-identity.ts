@@ -4,8 +4,7 @@ import { throwDialecteError } from '@dialecte/core'
 import { getAttributeRules } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
-import { readAttribute } from '@/v2019C1/helpers'
-import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
+import { isTopologyLevel, readAttribute } from '@/v2019C1/helpers'
 
 import type { LineageUpdates, WriteIdentityParams } from './write-identity.types'
 import type { Config, Scl } from '@/v2019C1/config'

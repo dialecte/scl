@@ -1,5 +1,6 @@
 import { toRef } from '@dialecte/core/helpers'
 
+import { readAttribute } from '@/v2019C1/helpers'
 import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type { AcceptedIds } from './decide.types'
@@ -77,7 +78,10 @@ export async function reconcileTextWrappers(
 	}
 }
 
-/** Each text-only wrapper of the source element, with the instance's of the same `type` not paired yet. */
+/**
+ * Each text-only wrapper of the source element, with the instance's wrapper of the same `type` not paired yet and
+ * holding no element — whatever text it holds, none included.
+ */
 async function pairTextWrappers(
 	sourceQuery: Core.Query<Config> | Core.Transaction<Config>,
 	params: {
@@ -87,38 +91,37 @@ async function pairTextWrappers(
 	},
 ): Promise<TextWrapperPair[]> {
 	const { targetQuery, sourceNode, instanceNode } = params
-	const sourceWrappers = await readTextWrappers(sourceQuery, { element: sourceNode })
+	const sourceWrappers = (await readLeafWrappers(sourceQuery, { element: sourceNode })).filter(
+		(wrapper) => wrapper.value.trim() !== '',
+	)
 	if (sourceWrappers.length === 0) return []
-	const instanceWrappers = await readTextWrappers(targetQuery, { element: instanceNode })
+	const instanceWrappers = await readLeafWrappers(targetQuery, { element: instanceNode })
 
 	const pairs: TextWrapperPair[] = []
 	const paired = new Set<string>()
 	for (const source of sourceWrappers) {
-		const type = await sourceQuery.any.getAttribute(source, { name: 'type' })
-		let instance: AnyTrackedRecord | undefined
-		for (const candidate of instanceWrappers) {
-			if (paired.has(candidate.id)) continue
-			if ((await targetQuery.any.getAttribute(candidate, { name: 'type' })) !== type) continue
-			instance = candidate
-			break
-		}
+		const type = readAttribute({ record: source, name: 'type', defaults: 'none' })
+		const instance = instanceWrappers.find(
+			(candidate) =>
+				!paired.has(candidate.id) &&
+				readAttribute({ record: candidate, name: 'type', defaults: 'none' }) === type,
+		)
 		if (instance) paired.add(instance.id)
 		pairs.push({ source, instance })
 	}
 	return pairs
 }
 
-/** The wrappers directly under an element that hold text and no element. */
-async function readTextWrappers(
+/** The wrappers directly under an element that hold no element (text, or nothing). */
+async function readLeafWrappers(
 	reader: Core.Query<Config> | Core.Transaction<Config>,
 	params: { element: AnyTreeRecord },
 ): Promise<AnyTrackedRecord[]> {
-	const record = await reader.any.getRecord(params.element)
 	const wrappers: AnyTrackedRecord[] = []
-	for (const childRef of record?.children ?? []) {
+	for (const childRef of params.element.children) {
 		if (!isTransparentElement(childRef.tagName)) continue
 		const child = await reader.any.getRecord(childRef)
-		if (child && child.children.length === 0 && child.value.trim() !== '') wrappers.push(child)
+		if (child && child.children.length === 0) wrappers.push(child)
 	}
 	return wrappers
 }

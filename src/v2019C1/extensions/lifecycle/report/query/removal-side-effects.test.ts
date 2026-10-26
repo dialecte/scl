@@ -36,8 +36,14 @@ function projectWith(params: {
 	applicationReference?: string
 	signalInput?: string
 	substationContent?: string
+	functionContent?: string
 }): string {
-	const { applicationReference = '', signalInput = '', substationContent = '' } = params
+	const {
+		applicationReference = '',
+		signalInput = '',
+		substationContent = '',
+		functionContent = '',
+	} = params
 	return /* xml */ `
 		<SCL ${ns} ${id}="scd">
 			<Substation name="S1" ${id}="substation-t">
@@ -56,6 +62,7 @@ function projectWith(params: {
 						</Private>
 						<Function name="Prot" uuid="prot-uuid" templateUuid="prot-template-uuid" ${id}="prot-t">
 							<SubFunction name="Keep" uuid="keep-uuid" templateUuid="keep-template-uuid" ${id}="keep-t"/>
+							${functionContent}
 							<SubFunction name="Trip" uuid="trip-uuid" templateUuid="trip-template-uuid" ${id}="trip-t">
 								<LNode iedName="None" lnClass="PTRC" lnInst="1" uuid="ptrc-uuid" templateUuid="ptrc-template-uuid" ${id}="ptrc-t"/>
 							</SubFunction>
@@ -83,7 +90,7 @@ describe('report: what the removal of a group makes the delete hooks do outside 
 		'nothing outside refers to the removed sub-function: nothing listed': {
 			sourceXml: functionTemplate,
 			targetXml: projectWith({}),
-			expectedSideEffects: ['removed SubFunction |'],
+			expectedSideEffects: ['removed SubFunction | none'],
 		},
 		'an application of the project refers to it: its reference is listed deleted': {
 			sourceXml: functionTemplate,
@@ -98,6 +105,27 @@ describe('report: what the removal of a group makes the delete hooks do outside 
 				signalInput: `source="S1/V1/B1/Prot/Trip/PTRC1" sourceLNodeUuid="ptrc-uuid" sourceDoName="Tr" sourceDaName="general"`,
 			}),
 			expectedSideEffects: ['removed SubFunction | SourceRef cleared'],
+		},
+		"the project's own sub-function, referred to: its group lists the reference it would delete": {
+			sourceXml: functionTemplate,
+			targetXml: projectWith({
+				functionContent: /* xml */ `<SubFunction name="Extra" uuid="extra-uuid" ${id}="extra-t"/>`,
+				applicationReference: /* xml */ `<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot/Extra" functionUuid="extra-uuid" ${id}="hmi-extra-ref-t"/>`,
+			}),
+			expectedSideEffects: [
+				'target-only SubFunction | FunctionRef deleted',
+				'removed SubFunction | none',
+			],
+		},
+		'a sub-function the template changes, referred to: nothing listed, nothing is removed': {
+			sourceXml: functionTemplate.replace(
+				'<SubFunction name="Keep" uuid="keep-template-uuid"',
+				'<SubFunction name="Keep" desc="rev2" uuid="keep-template-uuid"',
+			),
+			targetXml: projectWith({
+				applicationReference: /* xml */ `<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot/Keep" functionUuid="keep-uuid" ${id}="hmi-keep-ref-t"/>`,
+			}),
+			expectedSideEffects: ['modified SubFunction | none', 'removed SubFunction | none'],
 		},
 		'a category whose last reference names it: the reference, the category, the wrapper it leaves empty and the reference to the category are listed deleted':
 			{
@@ -142,7 +170,8 @@ describe('report: what the removal of a group makes the delete hooks do outside 
 
 /** A group as `<group> | <tag> <effect>, …`. */
 function describeSideEffects(group: DecisionGroup): string {
-	const effects = (group.sideEffects ?? []).map(
+	if (!group.sideEffects) return `${group.title} | none`
+	const effects = group.sideEffects.map(
 		(sideEffect) => ` ${sideEffect.element.tagName} ${sideEffect.effect}`,
 	)
 	return `${group.title} |${effects.join(',')}`

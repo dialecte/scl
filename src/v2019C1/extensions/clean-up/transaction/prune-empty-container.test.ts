@@ -94,6 +94,18 @@ describe('pruneEmptyContainers', () => {
 			expectedQueries: ['//default:Private[@type="ACME"]'],
 		},
 
+		'an empty Private of a tool → kept': {
+			sourceXml: /* xml */ `
+				<SCL ${ALL_XMLNS_NAMESPACES}>
+					<Header id="TestSCL"/>
+					<Substation name="S1">
+						<Private type="ACME-FLAG"/>
+					</Substation>
+				</SCL>
+			`,
+			expectedQueries: ['//default:Private[@type="ACME-FLAG"]'],
+		},
+
 		'an empty DataTypeTemplates → deleted': {
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES}>

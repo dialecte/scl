@@ -28,12 +28,11 @@ export async function beforeCommit(params: {
 	for (const id of created) {
 		ensured.push(...(await ensureLNodeSpecNaming(query, { lnode: { tagName: 'LNode', id } })))
 	}
-	// what the transaction left holding nothing goes, but a container the naming just added a child to
-	const kept = new Set<string>()
+	// what the transaction left holding nothing goes, read with what the naming just wrote
+	const pending = new Map<string, Scl.RawRecord<Scl.ElementsOf>>()
 	for (const operation of ensured) {
-		if (operation.status === 'created' && operation.newRecord.parent)
-			kept.add(operation.newRecord.parent.id)
+		if (operation.status !== 'deleted') pending.set(operation.newRecord.id, operation.newRecord)
 	}
-	const pruned = await pruneEmptiedContainers({ operations, query, kept })
+	const pruned = await pruneEmptiedContainers({ operations, query, pending })
 	return [...ensured, ...pruned]
 }

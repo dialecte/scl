@@ -2,7 +2,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import { findMappingPolicy } from '@/v2019C1/extensions/lifecycle/mapping'
-import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
+import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type { FindFrameInstancesParams, FrameInstance } from './find-frame-instances.types'
 import type { Scl } from '@/v2019C1/config'

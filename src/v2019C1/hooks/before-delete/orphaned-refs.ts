@@ -12,36 +12,48 @@ import type * as Core from '@dialecte/core'
 // ── Orphaned refs cleanup ─────────────────────────────────────────────────────
 
 /**
- * Stage what deleting a subtree does beyond it ({@link collectDeleteCascade}): a reference keeping its content has its
- * uuid, path and companion attributes cleared; any other is deleted, with the containers that leaves holding nothing
- * and what refers to them. Each parent losing children is updated once. The record itself is deleted by the caller.
+ * Stage what deleting a subtree does to what refers to it ({@link collectDeleteCascade}): a reference keeping its
+ * content has its uuid, path and companion attributes cleared; any other is deleted. Each parent losing children is
+ * updated once. The record itself is deleted by the caller; a container left holding nothing goes at the commit.
  */
 export async function cleanOrphanedRefs<GenericElement extends Scl.ElementsOf>(params: {
 	record: Scl.RawRecord<GenericElement>
 	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
 	const { record, query } = params
-	const cascade = await collectDeleteCascade(query, { roots: [widen(record)] })
+	// a container a deleted reference empties is judged at the commit: the transaction may fill it again before
+	const cascade = await collectDeleteCascade(query, {
+		roots: [widen(record)],
+		emptiesContainers: false,
+	})
 	return buildCascadeOperations(query, { cascade, deletedRoots: [] })
 }
 
 /**
  * What deleting the roots does beyond their subtrees, read only: the references outside naming one of their elements
- * (`findOrphanedRefs`), deleted or cleared; the containers a deleted reference leaves holding nothing that have no
- * reason to stay ({@link collectEmptiedAbove}); then what refers to those containers, in turn. The delete hook stages
+ * (`findOrphanedRefs`), deleted or cleared; with `emptiesContainers`, the containers a deleted reference leaves holding
+ * nothing that have no reason to stay ({@link collectEmptiedAbove}); then what refers to what was deleted, in turn. The delete hook stages
  * it, the commit pass stages it for the containers it removes, a report lists it.
  */
 export async function collectDeleteCascade(
 	query: Core.Query<Config>,
-	params: { roots: readonly Scl.RawRecord<Scl.ElementsOf>[] },
+	params: {
+		roots: readonly Scl.RawRecord<Scl.ElementsOf>[]
+		/** The containers a deleted reference leaves holding nothing go too, with what refers to them. */
+		emptiesContainers: boolean
+		/** Containers never judged empty (the commit's other operations give them a child). */
+		kept?: ReadonlySet<string>
+	},
 ): Promise<DeleteCascade> {
+	const { emptiesContainers, kept } = params
 	const gone = await collectSubtreeIds(query, { records: params.roots })
 
 	const deleted = new Map<string, Scl.TrackedRecord<Scl.ElementsOf>>()
 	const cleared = new Map<string, OrphanedRef>()
 	let round: readonly Scl.RawRecord<Scl.ElementsOf>[] = params.roots
 	while (round.length > 0) {
-		const emptied: Scl.TrackedRecord<Scl.ElementsOf>[] = []
+		// what goes in this round is named by references in turn: a relation a deleted equipment took has its own
+		const next: Scl.TrackedRecord<Scl.ElementsOf>[] = []
 		for (const orphaned of await findOrphanedRefs({ records: round, query })) {
 			const { id } = orphaned.record
 			if (gone.has(id)) continue
@@ -51,10 +63,14 @@ export async function collectDeleteCascade(
 			}
 			gone.add(id)
 			deleted.set(id, orphaned.record)
-			emptied.push(...(await collectEmptiedAbove(query, { record: orphaned.record, gone })))
+			next.push(orphaned.record)
+			if (emptiesContainers) {
+				const emptied = await collectEmptiedAbove(query, { record: orphaned.record, gone, kept })
+				for (const container of emptied) deleted.set(container.id, container)
+				next.push(...emptied)
+			}
 		}
-		for (const container of emptied) deleted.set(container.id, container)
-		round = emptied
+		round = next
 	}
 	const stillThere = [...cleared.values()].filter((orphaned) => !gone.has(orphaned.record.id))
 	return { gone, deleted: [...deleted.values()], cleared: stillThere }
@@ -67,12 +83,18 @@ export async function collectDeleteCascade(
  */
 export async function collectEmptiedAbove(
 	query: Core.Query<Config>,
-	params: { record: Scl.RawRecord<Scl.ElementsOf>; gone: Set<string> },
+	params: {
+		record: Scl.RawRecord<Scl.ElementsOf>
+		gone: Set<string>
+		/** Containers the walk stops at, whatever they hold. */
+		kept?: ReadonlySet<string>
+	},
 ): Promise<Scl.TrackedRecord<Scl.ElementsOf>[]> {
-	const { gone } = params
+	const { gone, kept } = params
 	const emptied: Scl.TrackedRecord<Scl.ElementsOf>[] = []
 	let parentRef = params.record.parent
 	while (parentRef && PRUNED_WHEN_EMPTY_TAGS.has(parentRef.tagName) && !gone.has(parentRef.id)) {
+		if (kept?.has(parentRef.id)) break
 		const parent: Scl.TrackedRecord<Scl.ElementsOf> | undefined = await query.getRecord(parentRef)
 		if (!parent || !isPrunedWhenEmpty(parent) || !holdsNothingBut({ record: parent, gone })) break
 		gone.add(parent.id)
@@ -98,9 +120,14 @@ export function holdsNothingBut(params: {
  */
 export async function buildCascadeOperations(
 	query: Core.Query<Config>,
-	params: { cascade: DeleteCascade; deletedRoots: readonly Scl.TrackedRecord<Scl.ElementsOf>[] },
+	params: {
+		cascade: DeleteCascade
+		deletedRoots: readonly Scl.TrackedRecord<Scl.ElementsOf>[]
+		/** Records other operations of the same commit write, read instead of the staged state. */
+		pending?: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
+	},
 ): Promise<Scl.Operation[]> {
-	const { cascade, deletedRoots } = params
+	const { cascade, deletedRoots, pending } = params
 	const operations: Scl.Operation[] = []
 	for (const orphaned of cascade.cleared) {
 		operations.push(buildClearedAttributesOp(orphaned.record, orphaned.attributes))
@@ -113,7 +140,7 @@ export async function buildCascadeOperations(
 			newRecord: undefined,
 		})
 	}
-	operations.push(...(await buildParentUpdates(query, { deleted, gone: cascade.gone })))
+	operations.push(...(await buildParentUpdates(query, { deleted, gone: cascade.gone, pending })))
 	return operations
 }
 
@@ -139,17 +166,21 @@ function mergeCleared(params: { cleared: Map<string, OrphanedRef>; orphaned: Orp
 /** One update per parent that stays and loses children: its children list without them. */
 async function buildParentUpdates(
 	query: Core.Query<Config>,
-	params: { deleted: readonly Scl.TrackedRecord<Scl.ElementsOf>[]; gone: ReadonlySet<string> },
+	params: {
+		deleted: readonly Scl.TrackedRecord<Scl.ElementsOf>[]
+		gone: ReadonlySet<string>
+		pending?: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
+	},
 ): Promise<Scl.Operation[]> {
-	const { deleted, gone } = params
+	const { deleted, gone, pending } = params
 	const parentIds = new Map<string, Scl.Ref<Scl.ElementsOf>>()
 	for (const deletedRecord of deleted) {
 		const { parent } = deletedRecord
 		if (parent && !gone.has(parent.id)) parentIds.set(parent.id, parent as Scl.Ref<Scl.ElementsOf>)
 	}
 	const operations: Scl.Operation[] = []
-	for (const parentRef of parentIds.values()) {
-		const parentRecord = await query.getRecord(parentRef)
+	for (const [parentId, parentRef] of parentIds) {
+		const parentRecord = pending?.get(parentId) ?? (await query.getRecord(parentRef))
 		if (!parentRecord) continue
 		const children = parentRecord.children.filter((child) => !gone.has(child.id))
 		operations.push({

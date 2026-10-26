@@ -1,5 +1,4 @@
-import { requiresChildElement } from './requires-child-element'
-import { isTopologyLevel } from './topology-levels'
+import { isEmptiableContainer } from './emptiable-container'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 
@@ -8,16 +7,15 @@ import type { AnyDefinition } from '@dialecte/core'
 const DEFINITION: AnyDefinition = SCL_DIALECTE_CONFIG.definition
 
 /**
- * The tags whose content model needs a child element, read from the definition (a category needs a reference, a
- * `DataTypeTemplates` a type, a `PowerSystemRelations` a relation). A level of the topology is the project's structure:
- * never among them.
+ * The tags of a container that has no reason to stay once it holds none of the children its content model needs, read
+ * from the definition: a list with no identity of its own (no key fields, no uuid: a `PowerSystemRelations`, a
+ * `ProcessResources`, a `DataTypeTemplates`), or a set of references (every child it needs is a reference: a category
+ * and its `FunctionCatRef`, a `Variable` and its `VariableApplyTo`). An element of its own that needs a child (an
+ * `IED`, an `LNodeType`, an `Application`) is the project's to remove, and so is a level of the topology.
  */
 export const CHILD_REQUIRED_TAGS: ReadonlySet<string> = new Set(
 	Object.entries(DEFINITION)
-		.filter(([tagName, definition]) => {
-			if (isTopologyLevel(tagName)) return false
-			return requiresChildElement(definition.contentModel)
-		})
+		.filter(([tagName, definition]) => isEmptiableContainer({ tagName, definition }))
 		.map(([tagName]) => tagName),
 )
 

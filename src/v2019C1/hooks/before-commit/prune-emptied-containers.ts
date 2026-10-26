@@ -23,9 +23,12 @@ import type * as Core from '@dialecte/core'
 export async function pruneEmptiedContainers(params: {
 	operations: ReadonlyArray<Scl.Operation>
 	query: Core.Query<Config>
-	kept: ReadonlySet<string>
+	/** The records the commit's other operations write: a container they give a child is not judged empty. */
+	pending: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
 }): Promise<Scl.Operation[]> {
-	const { operations, query, kept } = params
+	const { operations, query, pending } = params
+	const kept = new Set<string>()
+	for (const record of pending.values()) if (record.parent) kept.add(record.parent.id)
 	const gone = new Set<string>()
 	const roots: Scl.TrackedRecord<Scl.ElementsOf>[] = []
 	for (const candidate of emptiedCandidates(operations)) {
@@ -34,14 +37,11 @@ export async function pruneEmptiedContainers(params: {
 		if (!record || !isPrunedWhenEmpty(record) || !holdsNothingBut({ record, gone })) continue
 		gone.add(record.id)
 		roots.push(record)
-		for (const above of await collectEmptiedAbove(query, { record, gone })) {
-			if (kept.has(above.id)) break
-			roots.push(above)
-		}
+		roots.push(...(await collectEmptiedAbove(query, { record, gone, kept })))
 	}
 	if (roots.length === 0) return []
-	const cascade = await collectDeleteCascade(query, { roots })
-	return buildCascadeOperations(query, { cascade, deletedRoots: roots })
+	const cascade = await collectDeleteCascade(query, { roots, emptiesContainers: true, kept })
+	return buildCascadeOperations(query, { cascade, deletedRoots: roots, pending })
 }
 
 /** What an operation may have left holding nothing: the parent of a deleted element, a wrapper created; each once. */
@@ -49,8 +49,9 @@ function emptiedCandidates(operations: ReadonlyArray<Scl.Operation>): PruneCandi
 	const candidates = new Map<string, PruneCandidate>()
 	for (const operation of operations) {
 		const candidate = emptiedBy(operation)
-		if (candidate && PRUNED_WHEN_EMPTY_TAGS.has(candidate.tagName))
+		if (candidate && PRUNED_WHEN_EMPTY_TAGS.has(candidate.tagName)) {
 			candidates.set(candidate.id, candidate)
+		}
 	}
 	return [...candidates.values()]
 }

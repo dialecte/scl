@@ -29,6 +29,23 @@
 			"line": 107,
 			"mutation": "StringLiteral: 'The report names an element the document no longer holds' -> \"\"",
 			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"49ad0748b3209c40": {
+			"line": 126,
+			"mutation": "StringLiteral: 'The template holds several units: the one to act on is to be chosen' -> \"\"",
+			"equivalent": "the default message of the error: the tests assert its key, code and meta; consumers build their own wording"
+		}
+	},
+	"src/v2019C1/extensions/clean-up/transaction/prune-empty-containers.ts": {
+		"e10f29f4cd3446f6": {
+			"line": 31,
+			"mutation": "LogicalOperator: ref && PRUNED_WHEN_EMPTY_TAGS.has(ref.tagName) -> ref || PRUNED_WHEN_EMPTY_TAGS.has(ref.tagName)",
+			"equivalent": "the tag test only spares a read: the next line judges the record by isPrunedWhenEmpty, which no tag outside the set passes"
+		},
+		"af9ed25b7d755926": {
+			"line": 35,
+			"mutation": "ConditionalExpression: !record.parent -> false",
+			"equivalent": "holdsNothingBut already refuses a record without a parent, the line before"
 		}
 	},
 	"src/v2019C1/extensions/history/transaction/start-file.ts": {
@@ -382,6 +399,68 @@
 			"line": 375,
 			"mutation": "BooleanLiteral: !outcome -> outcome",
 			"equivalent": "every scenario numbers its additions, so the outcome is always there: re-reading a numbered or free addition finds nothing, only more reads"
+		},
+		"3e9560967e872cf8": {
+			"line": 574,
+			"mutation": "ConditionalExpression: Object.keys(updates).length > 0 -> true",
+			"equivalent": "an update with an empty attribute map writes nothing: the record is the same after it"
+		},
+		"094564f88f78cac6": {
+			"line": 574,
+			"mutation": "EqualityOperator: Object.keys(updates).length > 0 -> Object.keys(updates).length >= 0",
+			"equivalent": "an update with an empty attribute map writes nothing: the record is the same after it"
+		},
+		"cc562be24dd157c3": {
+			"line": 575,
+			"mutation": "ConditionalExpression: changesAttributes || textChange -> true",
+			"equivalent": "an update with no attribute and no value writes nothing: the record is the same after it"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/text-wrappers.ts": {
+		"d2915885e9e57456": {
+			"line": 75,
+			"mutation": "ConditionalExpression: instance.value.trim() !== source.value.trim() -> true",
+			"equivalent": "the texts differ only in their surrounding whitespace when the condition is wrong: the file written trims a text, so writing the template's layout of the same text changes nothing in it (a direct update call pins it)"
+		},
+		"115333493d49626e": {
+			"line": 75,
+			"mutation": "MethodExpression: instance.value.trim() -> instance.value",
+			"equivalent": "the texts differ only in their surrounding whitespace when the condition is wrong: the file written trims a text, so writing the template's layout of the same text changes nothing in it (a direct update call pins it)"
+		},
+		"b3d8ca4fa7f803fb": {
+			"line": 75,
+			"mutation": "MethodExpression: source.value.trim() -> source.value",
+			"equivalent": "the texts differ only in their surrounding whitespace when the condition is wrong: the file written trims a text, so writing the template's layout of the same text changes nothing in it (a direct update call pins it)"
+		},
+		"6f5699d65da2e362": {
+			"line": 97,
+			"mutation": "ConditionalExpression: sourceWrappers.length === 0 -> false",
+			"equivalent": "a read shortcut: with no source wrapper there is nothing to pair, the loop below makes no pair either"
+		},
+		"12db0e9e5c028e68": {
+			"line": 103,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the type of a wrapper has no default value: read with or without defaults it is the same"
+		},
+		"d764910a92774f12": {
+			"line": 107,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the type of a wrapper has no default value: read with or without defaults it is the same"
+		},
+		"1c5105208944eb18": {
+			"line": 124,
+			"mutation": "ConditionalExpression: child && child.children.length === 0 -> true",
+			"equivalent": "a wrapper holding elements is of the dialecte's own type and holds no text: no text wrapper of the template has its type"
+		},
+		"58099c42a015bdee": {
+			"line": 124,
+			"mutation": "LogicalOperator: child && child.children.length === 0 -> child || child.children.length === 0",
+			"equivalent": "a wrapper holding elements is of the dialecte's own type and holds no text: no text wrapper of the template has its type"
+		},
+		"b2c4cada129cff6e": {
+			"line": 124,
+			"mutation": "ConditionalExpression: child.children.length === 0 -> true",
+			"equivalent": "a wrapper holding elements is of the dialecte's own type and holds no text: no text wrapper of the template has its type"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/engine/wrapper.ts": {
@@ -455,6 +534,38 @@
 			"line": 66,
 			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
 			"equivalent": "templateLink keep: a junk id in unlinked names no source record"
+		},
+		"d38519bc3d1c662a": {
+			"line": 70,
+			"mutation": "ConditionalExpression: !isTopologyLevel(ancestor.tagName) -> false",
+			"equivalent": "the ancestors of a level of the topology up to its substation are levels: the guard never skips one"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/integration/integration-helpers.ts": {
+		"048f9780ec1e7968": {
+			"line": 28,
+			"mutation": "ObjectLiteral: { resolution: { mappings } } -> {}",
+			"equivalent": "test helper: no case reports with mapping choices it does not also apply; the apply refuses choices the report did not read"
+		},
+		"b58c078f62213278": {
+			"line": 28,
+			"mutation": "ObjectLiteral: { mappings } -> {}",
+			"equivalent": "test helper: no case reports with mapping choices it does not also apply; the apply refuses choices the report did not read"
+		},
+		"a1f39e8d2bda6b1f": {
+			"line": 34,
+			"mutation": "ObjectLiteral: { mappings } -> {}",
+			"equivalent": "test helper: no case applies without decisions and with mapping choices"
+		},
+		"df130ae414f8e654": {
+			"line": 75,
+			"mutation": "StringLiteral: `no ${tagName} named ${name}` -> ``",
+			"equivalent": "test helper: the message of a fixture error a passing test never reaches"
+		},
+		"ca78b177592b94cc": {
+			"line": 75,
+			"mutation": "ConditionalExpression: !record -> false",
+			"equivalent": "test helper: every case names an element its file holds"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/layers/application/variant-selection.ts": {
@@ -624,6 +735,151 @@
 			"line": 81,
 			"mutation": "ConditionalExpression: params.placementLevels -> true",
 			"equivalent": "the condition predates the refusal (only the callee changed): a level created outside a placement lands under a level the frame creates too, where its name is free"
+		},
+		"3a9fcd8d54f1cd8a": {
+			"line": 172,
+			"mutation": "ConditionalExpression: isTopologyLevel(ancestor.tagName) && ancestor.id && ancestor.id !== scopeRef.id -> true",
+			"equivalent": "the ancestors of the scope root up to its substation are levels with an id and never the root itself"
+		},
+		"3c01fcecd4e6f0ec": {
+			"line": 172,
+			"mutation": "LogicalOperator: isTopologyLevel(ancestor.tagName) && ancestor.id && ancestor.id !== scopeRef.id -> isTopologyLevel(ancestor.tagName) && ancestor.id || ancestor",
+			"equivalent": "the ancestors of the scope root up to its substation are levels with an id and never the root itself"
+		},
+		"a434475e28836a5a": {
+			"line": 172,
+			"mutation": "ConditionalExpression: isTopologyLevel(ancestor.tagName) && ancestor.id -> true",
+			"equivalent": "the ancestors of the scope root up to its substation are levels with an id and never the root itself"
+		},
+		"cd49f1882360d832": {
+			"line": 172,
+			"mutation": "LogicalOperator: isTopologyLevel(ancestor.tagName) && ancestor.id -> isTopologyLevel(ancestor.tagName) || ancestor.id",
+			"equivalent": "the ancestors of the scope root up to its substation are levels with an id and never the root itself"
+		},
+		"e3c5585fb0161c51": {
+			"line": 172,
+			"mutation": "ConditionalExpression: ancestor.id !== scopeRef.id -> true",
+			"equivalent": "findAncestors does not list the element itself: no ancestor is the scope root"
+		},
+		"a5a2d722c182953a": {
+			"line": 190,
+			"mutation": "ConditionalExpression: isTopologyLevel(record.tagName) -> true",
+			"equivalent": "the ancestors of a level up to its substation are levels: the structure only ever gets level keys"
+		},
+		"8821cae1694420a4": {
+			"line": 209,
+			"mutation": "ConditionalExpression: record.id !== scopeRef.id -> true",
+			"equivalent": "findAncestors does not list the element itself: no ancestor is the scope root"
+		},
+		"f291d650b242d11e": {
+			"line": 286,
+			"mutation": "ConditionalExpression: !isTopologyLevel(source.tagName) || !source.id -> false",
+			"equivalent": "a non-level element of the chain has no entry in the frame index: the lookup below finds nothing and skips it"
+		},
+		"4d34f7e085f44c54": {
+			"line": 286,
+			"mutation": "LogicalOperator: !isTopologyLevel(source.tagName) || !source.id -> !isTopologyLevel(source.tagName) && !source.id",
+			"equivalent": "a non-level element of the chain has no entry in the frame index: the lookup below finds nothing and skips it"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/find-dropped-primaries.ts": {
+		"d59c2aa23ab7db2b": {
+			"line": 105,
+			"mutation": "ConditionalExpression: !isTopologyLevel(node.tagName) -> false",
+			"equivalent": "the uuid of a non-level element added to the level uuids is never a level's lineage: only levels are checked against it"
+		},
+		"e3b0a99f649525f8": {
+			"line": 130,
+			"mutation": "ConditionalExpression: !isTopologyLevel(child.tagName) -> false",
+			"equivalent": "an application or a function never carries a level's uuid as its lineage: its lineage is never in the level uuids"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/find-frame-instances.ts": {
+		"1ff41bb12bbccf43": {
+			"line": 99,
+			"mutation": "ConditionalExpression: !isTopologyLevel(child.tagName) -> false",
+			"equivalent": "walking into an identified element finds what it holds placed in the same level: the level found is the same"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/resolve-held-levels.ts": {
+		"34635c091dc5cb20": {
+			"line": 30,
+			"mutation": "ConditionalExpression: !isTopologyLevel(sourceLevel.tagName) || heldLevels.has(sourceLevel.id) -> false",
+			"equivalent": "a wrapper among the ancestors is held under its id, which no caller looks up as a level"
+		},
+		"418b08801a330055": {
+			"line": 30,
+			"mutation": "LogicalOperator: !isTopologyLevel(sourceLevel.tagName) || heldLevels.has(sourceLevel.id) -> !isTopologyLevel(sourceLevel.tagName) && heldLevels.has(sourceLevel.",
+			"equivalent": "a wrapper among the ancestors is held under its id, which no caller looks up as a level"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/resolve-ssd-scope.ts": {
+		"c60d236778123083": {
+			"line": 37,
+			"mutation": "EqualityOperator: named.length > 1 -> named.length >= 1",
+			"equivalent": "one named element was returned on the line before: two or more are left here"
+		},
+		"7435f8cb0f260bc8": {
+			"line": 61,
+			"mutation": "ConditionalExpression: !childTag -> false",
+			"equivalent": "a bay has no structural child: reading children of no tag finds none"
+		},
+		"6b8b4e7b78918a09": {
+			"line": 76,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a level always carries its name (the schema requires it): the fallback is never read"
+		},
+		"5f42bd52b4650d14": {
+			"line": 76,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the name of a level has no default value: read with or without defaults it is the same"
+		},
+		"98bcb59d79a144ce": {
+			"line": 90,
+			"mutation": "StringLiteral: `the template holds ${candidates.length} units at its first named level (${candidates\n\t\t\t.map((candidate) => `<${candidate.tagName}> \"${candidate",
+			"equivalent": "the wording of the error's detail: the tests assert its key, code and meta"
+		},
+		"cf20e6996f30f864": {
+			"line": 91,
+			"mutation": "ArrowFunction: (candidate) => `<${candidate.tagName}> \"${candidate.name}\"` -> () => undefined",
+			"equivalent": "the wording of the error's detail: the tests assert its key, code and meta"
+		},
+		"140b438358100374": {
+			"line": 91,
+			"mutation": "StringLiteral: `<${candidate.tagName}> \"${candidate.name}\"` -> ``",
+			"equivalent": "the wording of the error's detail: the tests assert its key, code and meta"
+		},
+		"f3c75ed076b7fb4d": {
+			"line": 92,
+			"mutation": "StringLiteral: ', ' -> \"\"",
+			"equivalent": "the wording of the error's detail: the tests assert its key, code and meta"
+		},
+		"f8ec88893de5e62b": {
+			"line": 98,
+			"mutation": "ObjectLiteral: {\n\t\tdetail: `the template holds no <${ref.tagName}> \"${ref.id}\"`,\n\t} -> {}",
+			"equivalent": "the wording of the error's detail: the tests assert its key and code"
+		},
+		"f7f4be576a954918": {
+			"line": 99,
+			"mutation": "StringLiteral: `the template holds no <${ref.tagName}> \"${ref.id}\"` -> ``",
+			"equivalent": "the wording of the error's detail: the tests assert its key and code"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/report/query/removal-side-effects.ts": {
+		"ab51c62691eeecd0": {
+			"line": 38,
+			"mutation": "OptionalChaining: instanceRef?.id -> instanceRef.id",
+			"equivalent": "removes() is read first: a removed or project's own node always names its instance element"
+		},
+		"e204e4594175621c": {
+			"line": 41,
+			"mutation": "ConditionalExpression: record -> true",
+			"equivalent": "a node of a fresh report names an element the document holds"
+		},
+		"62c8fb911c02caa4": {
+			"line": 43,
+			"mutation": "ConditionalExpression: roots.length === 0 -> false",
+			"equivalent": "a cascade of no root finds nothing: the result is the same empty list"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/report/query/report-asd.ts": {
@@ -762,6 +1018,30 @@
 			"equivalent": "the file reference attributes compared have no schema default: no defaults mode fills them"
 		}
 	},
+	"src/v2019C1/helpers/pruned-when-empty.constants.ts": {
+		"c659f3d2cac7eb61": {
+			"line": 18,
+			"mutation": "ObjectLiteral: { tagName, definition } -> {}",
+			"equivalent": "the set is derived once when the module loads, before a mutant is active; isEmptiableContainer is tested directly"
+		}
+	},
+	"src/v2019C1/helpers/pruned-when-empty.ts": {
+		"bf4c16ac0e0ea7d2": {
+			"line": 14,
+			"mutation": "ConditionalExpression: !isTransparentElement(record.tagName) -> false",
+			"equivalent": "an element of another tag carries no type naming a namespace of the dialecte"
+		},
+		"eaa557fe7787473b": {
+			"line": 15,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the type of a wrapper has no default value: read with or without defaults it is the same"
+		},
+		"d54ad88fc47fb1cf": {
+			"line": 16,
+			"mutation": "ConditionalExpression: type !== undefined -> true",
+			"equivalent": "no namespace of the dialecte has an undefined prefix: an absent type is never in the set"
+		}
+	},
 	"src/v2019C1/hooks/after-created/private-wrapper.ts": {
 		"e59de887dd707b9b": {
 			"line": 39,
@@ -787,6 +1067,112 @@
 			"line": 92,
 			"mutation": "ConditionalExpression: index === -1 -> false",
 			"equivalent": "the element at index -1 is undefined, as the guard returns"
+		}
+	},
+	"src/v2019C1/hooks/before-commit/before-commit.ts": {
+		"8e97c32213e3d051": {
+			"line": 34,
+			"mutation": "ConditionalExpression: operation.status !== 'deleted' -> true",
+			"equivalent": "the naming step only creates and updates: it deletes nothing"
+		},
+		"e43b292ff53a06b3": {
+			"line": 34,
+			"mutation": "StringLiteral: 'deleted' -> \"\"",
+			"equivalent": "the naming step only creates and updates: it deletes nothing"
+		}
+	},
+	"src/v2019C1/hooks/before-commit/prune-emptied-containers.ts": {
+		"74c536d11631189e": {
+			"line": 31,
+			"mutation": "ConditionalExpression: record.parent -> true",
+			"equivalent": "what the naming step writes always has a parent (a naming under its logical node, the logical node itself)"
+		},
+		"dd0e1a49020d70c6": {
+			"line": 42,
+			"mutation": "ConditionalExpression: roots.length === 0 -> false",
+			"equivalent": "a cascade of no root finds nothing and builds no operation: the result is the same empty list"
+		},
+		"8d3b6397fc9ecce7": {
+			"line": 42,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "core stages an operation by its status: an entry with none is ignored"
+		},
+		"60a7ff613862a584": {
+			"line": 43,
+			"mutation": "BooleanLiteral: true -> false",
+			"equivalent": "no reference the commit removes is the last child of a container it could remove (a set of references holds references, which no other reference names)"
+		},
+		"e5bfb380d21cd7b9": {
+			"line": 70,
+			"mutation": "ConditionalExpression: case 'updated':\n\t\t\treturn undefined -> case 'updated':",
+			"equivalent": "the switch ends there: an update falls through to no candidate either way"
+		},
+		"2ba6b572fffe81a6": {
+			"line": 70,
+			"mutation": "StringLiteral: 'updated' -> \"\"",
+			"equivalent": "the switch ends there: an update falls through to no candidate either way"
+		}
+	},
+	"src/v2019C1/hooks/before-delete/orphaned-refs.ts": {
+		"1b4efc7e92cc16e7": {
+			"line": 59,
+			"mutation": "ConditionalExpression: gone.has(id) -> false",
+			"equivalent": "findOrphanedRefs already leaves out what the roots hold; a reference deleted in an earlier round is found again only through a container also taken, and the map keeps it once"
+		},
+		"32b0624c8830c523": {
+			"line": 75,
+			"mutation": "MethodExpression: [...cleared.values()].filter((orphaned) => !gone.has(orphaned.record.id)) -> [...cleared.values()]",
+			"equivalent": "a reference cleared stays: no container it sits in is left empty, and it is never a reference another one deletes"
+		},
+		"24c13f9e428888d5": {
+			"line": 96,
+			"mutation": "ConditionalExpression: parentRef && PRUNED_WHEN_EMPTY_TAGS.has(parentRef.tagName) -> true",
+			"equivalent": "the tag test only spares a read: the next line judges the record by isPrunedWhenEmpty, which no tag outside the set passes"
+		},
+		"a0de2756b6bc8103": {
+			"line": 96,
+			"mutation": "LogicalOperator: parentRef && PRUNED_WHEN_EMPTY_TAGS.has(parentRef.tagName) -> parentRef || PRUNED_WHEN_EMPTY_TAGS.has(parentRef.tagName)",
+			"equivalent": "the tag test only spares a read: the next line judges the record by isPrunedWhenEmpty, which no tag outside the set passes"
+		},
+		"699e11c50d1b0e0b": {
+			"line": 131,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "core stages an operation by its status: an entry with none is ignored"
+		},
+		"226267b55c9147aa": {
+			"line": 162,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "an attribute name the reference does not carry: removing it changes nothing"
+		},
+		"4644e15d0581413e": {
+			"line": 179,
+			"mutation": "ConditionalExpression: parent && !gone.has(parent.id) -> true",
+			"equivalent": "a deleted record always has a parent; a parent that goes is deleted too, so its update is overwritten by its deletion"
+		},
+		"d2dee6c0f945e244": {
+			"line": 179,
+			"mutation": "LogicalOperator: parent && !gone.has(parent.id) -> parent || !gone.has(parent.id)",
+			"equivalent": "a deleted record always has a parent; a parent that goes is deleted too, so its update is overwritten by its deletion"
+		},
+		"129d1d9e54359696": {
+			"line": 184,
+			"mutation": "ConditionalExpression: !parentRecord -> false",
+			"equivalent": "a parent named by a record of the staged state is in it"
+		},
+		"e33ff0edf6de14d0": {
+			"line": 211,
+			"mutation": "ConditionalExpression: subtreeUuids.size === 0 -> false",
+			"equivalent": "a read shortcut: with no uuid in the subtrees no reference matches below"
+		},
+		"3291e00bbfe1f6ae": {
+			"line": 217,
+			"mutation": "ConditionalExpression: subtreeIds.has(refRecord.id) -> false",
+			"equivalent": "the cascade drops what the roots hold (gone) before using a reference: a reference inside a root is never kept"
+		},
+		"74dea761f42954be": {
+			"line": 220,
+			"mutation": "StringLiteral: 'deleted' -> \"\"",
+			"equivalent": "only `cleared` is told apart: every other effect deletes, and the report writes `deleted` itself"
 		}
 	},
 	"src/v2019C1/test/revision-twins.ts": {

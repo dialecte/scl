@@ -181,3 +181,96 @@ async function deleteInOneTransaction({
 	})
 	return { assertOn: 'source' }
 }
+
+const functionXml = /* xml */ `
+	<SCL ${ns} ${id}="root">
+		<Substation ${id}="substation" name="S1">
+			<Function ${id}="function" name="F1" uuid="uuid-f1">
+				<Private ${id}="tool-private" type="ACME">
+					<eIEC61850-6-100:PowerSystemRelations ${id}="relations">
+						<eIEC61850-6-100:PowerSystemRelation ${id}="psr1" name="PSR1" uuid="uuid-psr1" />
+					</eIEC61850-6-100:PowerSystemRelations>
+				</Private>
+			</Function>
+		</Substation>
+	</SCL>
+`
+
+type WriteCase = SclTest.BaseXmlTestCase & {
+	/** What the transaction writes. */
+	write: (tx: Scl.Transaction) => Promise<void>
+}
+
+const FUNCTION = { tagName: 'Function', id: 'function' } as const
+
+// What the transaction fills again, or what a tool holds, is not removed at the commit.
+describe('the commit leaves what is filled again, or a tool holds', () => {
+	const testCases: SclTest.TestCases<WriteCase> = {
+		"a tool's wrapper holding the list emptied stays, the list goes": {
+			sourceXml: functionXml,
+			write: deleteTheRelation,
+			expectedQueries: ['//default:Function/default:Private[@type="ACME"]'],
+			unexpectedQueries: ['//v2019C1:PowerSystemRelations'],
+		},
+		'a wrapper of the dialecte created and left empty goes': {
+			sourceXml: functionXml,
+			write: addAnEmptyWrapper,
+			unexpectedQueries: ['//default:Function/default:Private[@type="eIEC61850-6-100"]'],
+		},
+		'a logical node created, its inputs emptied: the inputs go, its wrapper keeps the naming the commit writes':
+			{
+				sourceXml: functionXml,
+				write: addALogicalNodeWithoutInput,
+				expectedQueries: [
+					'//default:LNode[@lnClass="PTRC"]/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming',
+				],
+				unexpectedQueries: ['//v2019C1:LNodeInputs'],
+			},
+		'a logical node created, its inputs deleted: its wrapper keeps the naming the commit writes': {
+			sourceXml: functionXml,
+			write: addALogicalNodeAndDeleteItsInputs,
+			expectedQueries: [
+				'//default:LNode[@lnClass="PTRC"]/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming',
+			],
+			unexpectedQueries: ['//v2019C1:LNodeInputs'],
+		},
+	}
+
+	runSclTestCases.withExport({ testCases, act: writeInOneTransaction })
+})
+
+async function writeInOneTransaction({
+	testCase,
+	source,
+}: SclTest.ActParams<WriteCase>): Promise<SclTest.ActResult> {
+	await source.transaction(testCase.write)
+	return { assertOn: 'source' }
+}
+
+async function deleteTheRelation(tx: Scl.Transaction): Promise<void> {
+	await tx.delete(RELATION_1)
+}
+
+async function addAnEmptyWrapper(tx: Scl.Transaction): Promise<void> {
+	await tx.addChild(FUNCTION, { tagName: 'Private', attributes: { type: 'eIEC61850-6-100' } })
+}
+
+async function addALogicalNodeWithoutInput(tx: Scl.Transaction): Promise<void> {
+	const lnode = await tx.addChild(FUNCTION, {
+		tagName: 'LNode',
+		attributes: { iedName: 'None', lnClass: 'PTRC', lnInst: '1' },
+	})
+	const inputs = await tx.addChild(lnode, { tagName: 'LNodeInputs' })
+	const input = await tx.addChild(inputs, { tagName: 'SourceRef', attributes: { input: 'Trip' } })
+	await tx.delete(input)
+}
+
+async function addALogicalNodeAndDeleteItsInputs(tx: Scl.Transaction): Promise<void> {
+	const lnode = await tx.addChild(FUNCTION, {
+		tagName: 'LNode',
+		attributes: { iedName: 'None', lnClass: 'PTRC', lnInst: '1' },
+	})
+	const inputs = await tx.addChild(lnode, { tagName: 'LNodeInputs' })
+	await tx.addChild(inputs, { tagName: 'SourceRef', attributes: { input: 'Trip' } })
+	await tx.delete(inputs)
+}

@@ -1,4 +1,4 @@
-import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
+import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type {
 	FindHeldLevelParams,

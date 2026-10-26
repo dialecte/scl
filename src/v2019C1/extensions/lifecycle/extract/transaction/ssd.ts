@@ -4,7 +4,7 @@ import { TEMPLATE_NAME } from '@/v2019C1/constants'
 import { history } from '@/v2019C1/extensions/history'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { cloneTopologyContent } from '@/v2019C1/extensions/lifecycle/layers/topology'
-import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
+import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type { ExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'

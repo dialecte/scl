@@ -24,7 +24,12 @@ await doc.transaction(async (tx) => {
 
 ## `pruneEmptyContainers`
 
-A container holding nothing — no child element, no text — goes when it has no reason to stay then: an element whose definition needs a child element (a `FunctionCategory` needs a reference, a `PowerSystemRelations` a relation, a `ProcessResources` a resource, a `DataTypeTemplates` a type), or a transparent wrapper of the dialecte's own elements (a `Private` whose `type` is the prefix of a namespace the dialecte declares, `eIEC61850-6-100`). Both read from the definition and the namespaces, then its parent judged the same way: the wrapper a category leaves empty goes too. A `Private` of another `type` is a tool's private data, kept empty or not; a level of the topology (`Substation`, `VoltageLevel`, `Bay`) is never removed.
+A container holding nothing — no child element, no text — goes when it has no reason to stay then. Read from the definition and the namespaces:
+
+- an element whose content model needs a child it no longer holds, when it is a list with no identity of its own (no key fields, no uuid: `PowerSystemRelations`, `ProcessResources`, `LNodeInputs`, `DataTypeTemplates`, `Communication`) or a set of references (every child it needs is a reference: a `FunctionCategory` and its `FunctionCatRef`, a `Variable` and its `VariableApplyTo`);
+- a transparent wrapper of the dialecte's own elements: a `Private` whose `type` is the prefix of a namespace the dialecte declares (`eIEC61850-6-100`).
+
+Its parent is then judged the same way: the wrapper a category leaves empty goes too. An element of its own that needs a child (an `IED`, an `LNodeType`, an `Application`) is the project's to remove; a `Private` of another `type` is a tool's private data, kept empty or not; a level of the topology (`Substation`, `VoltageLevel`, `Bay`) is never removed.
 
 ```ts
 pruneEmptyContainers(): Promise<void>
@@ -32,7 +37,7 @@ pruneEmptyContainers(): Promise<void>
 
 It judges every container of the document, deleted through the transaction (the delete hooks clean what refers to it): the extract clean-up runs it on the file it writes, whose containers may have been empty already.
 
-What a transaction leaves holding nothing goes at its commit, whatever wrote — a delete, `tx.lifecycle.apply`, an extract: the parent of every element it deleted and every wrapper it created are judged by the same rule, deleted with what refers to them (a reference to a category removed is deleted, as a delete does). The delete hooks apply it to what they remove: deleting the element a category's last reference names removes the reference, the category, the wrapper it leaves empty, and the references to the category elsewhere.
+What a transaction leaves holding nothing goes at its commit, whatever wrote — a delete, `tx.lifecycle.apply`, an extract: the parent of every element it deleted and every wrapper it created are judged by the same rule, once everything is written (a category whose reference the transaction swaps stays), and deleted with what refers to them, as a delete does. The delete hook removes the references naming what is deleted, and the references naming those in turn.
 
 ## `resetLNode`
 

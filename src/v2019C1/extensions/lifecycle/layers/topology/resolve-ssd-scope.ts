@@ -2,6 +2,7 @@ import { throwDialecteError } from '@dialecte/core'
 
 import { TEMPLATE_NAME, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { SCL_ERRORS } from '@/v2019C1/errors'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ResolveSsdScopeParams, SsdScopeCandidate } from './resolve-ssd-scope.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -17,7 +18,8 @@ import type * as Core from '@dialecte/core'
  * named units there and none chosen: refused with `SSD_SCOPE_AMBIGUOUS`, listing them, so the consumer asks again
  * naming one. A scaffolding with no named element below it is its deepest `TEMPLATE` level.
  *
- * Returns `undefined` when the file holds no substation, or not the element named.
+ * Returns `undefined` when nothing is named and the file holds no substation; an element named the file does not hold
+ * is refused with `TEMPLATE_ROOT_NOT_FOUND`.
  */
 export async function resolveSsdScope(
 	query: Core.Query<Config>,
@@ -25,6 +27,7 @@ export async function resolveSsdScope(
 ): Promise<Scl.Ref<TopologyStructuralTag> | undefined> {
 	const { ref } = params
 	const starts = ref ? await namedElements(query, { refs: [ref] }) : await substations(query)
+	if (starts.length === 0 && ref) refuseAbsent({ ref })
 	if (starts.length === 0) return undefined
 
 	let level = starts
@@ -70,7 +73,7 @@ async function namedElements(
 	for (const ref of params.refs) {
 		const record = await query.any.getRecord(ref)
 		if (!record) continue
-		const name = (await query.getAttribute(ref, { name: 'name' })) ?? ''
+		const name = readAttribute({ record, name: 'name', defaults: 'none' }) ?? ''
 		elements.push({ tagName: ref.tagName, id: record.id, name })
 	}
 	return elements
@@ -87,5 +90,12 @@ function refuseAmbiguous(params: { candidates: readonly SsdScopeCandidate[] }): 
 		detail: `the template holds ${candidates.length} units at its first named level (${candidates
 			.map((candidate) => `<${candidate.tagName}> "${candidate.name}"`)
 			.join(', ')}): name one of them as ref`,
+	})
+}
+
+function refuseAbsent(params: { ref: Scl.Ref<TopologyStructuralTag> }): never {
+	const { ref } = params
+	return throwDialecteError(SCL_ERRORS.TEMPLATE_ROOT_NOT_FOUND, {
+		detail: `the template holds no <${ref.tagName}> "${ref.id}"`,
 	})
 }

@@ -17,7 +17,7 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	ref?: Scl.Ref<TopologyStructuralTag>
 	expected?: Scl.Ref<TopologyStructuralTag> | undefined
 	/** The refusal: its key and the units it lists. */
-	expectedRefusal?: { key: string; candidates: { tagName: string; id: string; name: string }[] }
+	expectedRefusal?: { key: string; candidates?: { tagName: string; id: string; name: string }[] }
 }
 
 const twoNamedBays = /* xml */ `
@@ -194,10 +194,10 @@ describe('resolveSsdScope', () => {
 			},
 		},
 
-		'an element the file does not hold chosen: no scope': {
+		'an element the file does not hold chosen: refused': {
 			sourceXml: twoNamedBays,
 			ref: { tagName: 'Bay', id: 'absent' },
-			expected: undefined,
+			expectedRefusal: { key: 'TEMPLATE_ROOT_NOT_FOUND', candidates: undefined },
 		},
 	}
 

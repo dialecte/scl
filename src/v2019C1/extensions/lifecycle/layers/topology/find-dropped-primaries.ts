@@ -4,7 +4,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { classifyUnmatched } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { carriesOwnProvenance, isLastReferrer } from '@/v2019C1/extensions/lifecycle/instance'
-import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
+import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type {
 	FindDroppedPrimariesParams,
