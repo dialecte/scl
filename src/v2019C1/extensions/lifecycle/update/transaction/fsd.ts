@@ -1,5 +1,8 @@
-import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
-import { reconcileCarriedSatellites } from './function-satellites'
+import {
+	readCrossCuttingSatellites,
+	reconcileCrossCuttingSatellites,
+} from './cross-cutting-satellites'
+import { readCarriedSatellites, reconcileCarriedSatellites } from './function-satellites'
 
 import { toRef } from '@dialecte/core/helpers'
 
@@ -186,6 +189,25 @@ export async function fsd(
 		const instanceGroups = groupsForInstance(report, instance.id)
 		const { instanceAccepted, instanceOverrides } = gateFor({ instanceGroups, decisions })
 
+		// the satellites as the report read them, before the reconcile below changes the instance
+		const carried = await readCarriedSatellites(tx, {
+			sourceQuery,
+			functionRef,
+			instanceRef: instance,
+			matchKey,
+			removalBase,
+			decisionMappings: params.decisionMappings,
+			selection: params.selection,
+		})
+		const crossCutting = await readCrossCuttingSatellites(tx, {
+			sourceQuery,
+			primaryRef: functionRef,
+			instancePrimaryRef: toRef(instance) as Scl.Ref<Scl.ElementsOf>,
+			matchKey,
+			removalBase,
+			selection: params.selection,
+		})
+
 		const reconcileMappings = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: functionRef,
@@ -210,8 +232,7 @@ export async function fsd(
 		// carried satellites (e.g. FunctionCategory) travel with the function group
 		const carriedMappings = await reconcileCarriedSatellites(tx, {
 			sourceQuery,
-			functionRef,
-			instanceRef: instance,
+			reading: carried,
 			targetParent,
 			accepted: instanceAccepted,
 			matchKey,
@@ -226,8 +247,7 @@ export async function fsd(
 		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
 		const cross = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
-			primaryRef: functionRef,
-			instancePrimaryRef: toRef(instance) as Scl.Ref<Scl.ElementsOf>,
+			reading: crossCutting,
 			structure,
 			accepted: instanceAccepted,
 			matchKey,

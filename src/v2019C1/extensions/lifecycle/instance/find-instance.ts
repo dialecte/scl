@@ -1,22 +1,19 @@
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 import { identityEquals, resolveIdentity } from '@/v2019C1/extensions/identity/query'
 
-import type { Scl, Config } from '@/v2019C1/config'
+import type { InstanceReader } from './instance.types'
+import type { Scl } from '@/v2019C1/config'
 import type { ElementIdentity } from '@/v2019C1/extensions/identity/query'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
-import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
-
-/** A reader with the untyped `.any` facade — either a Query or a Transaction. */
-type Reader = Core.Query<Config> | Core.Transaction<Config>
 
 /**
  * The first record of `tagName` under `targetParent` whose `templateUuid`
  * equals the source uuid, if any. The scoped counterpart of
- * {@link findInstanceByTemplateUuid}, used where a placement anchor exists.
+ * {@link findInstancesByTemplateUuid}, used where a placement anchor exists.
  */
 export async function findInstanceUnder(
-	reader: Reader,
+	reader: InstanceReader,
 	params: {
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		tagName: Scl.ElementsOf
@@ -38,7 +35,7 @@ export async function findInstanceUnder(
  * instance of the same template lineage).
  */
 export async function findInstancesUnder(
-	reader: Reader,
+	reader: InstanceReader,
 	params: {
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		tagName: Scl.ElementsOf
@@ -57,7 +54,7 @@ export async function findInstancesUnder(
 }
 
 async function collectByMatchKey(
-	reader: Reader,
+	reader: InstanceReader,
 	params: {
 		node: AnyTreeRecord
 		tagName: Scl.ElementsOf
@@ -80,25 +77,6 @@ async function collectByMatchKey(
 }
 
 /**
- * The first record of `tagName` anywhere whose `templateUuid` equals the source
- * uuid, if any. The generic global lookup used where there is no placement
- * anchor (e.g. the report cascade). Multi-instance disambiguation (several
- * instances of one template) is a deferred concern.
- */
-export async function findInstanceByTemplateUuid(
-	reader: Reader,
-	params: {
-		tagName: Scl.ElementsOf
-		sourceUuid: string | undefined
-		matchKey?: MatchKey
-		sourceIdentity?: ElementIdentity
-	},
-): Promise<AnyTrackedRecord | undefined> {
-	const [first] = await findInstancesByTemplateUuid(reader, params)
-	return first
-}
-
-/**
  * ALL records of `tagName` anywhere whose `templateUuid` equals the source uuid,
  * in document order. The global counterpart of {@link findInstancesUnder} used
  * where there is no placement anchor (the ASD report/apply cascade), so several
@@ -114,7 +92,7 @@ export async function findInstanceByTemplateUuid(
  *    (from `resolveIdentity(sourceRecord)`) for these; uuid-bearing callers pass nothing.
  */
 export async function findInstancesByTemplateUuid(
-	reader: Reader,
+	reader: InstanceReader,
 	params: {
 		tagName: Scl.ElementsOf
 		sourceUuid: string | undefined
@@ -157,7 +135,7 @@ export async function findInstancesByTemplateUuid(
  * instance, to reconcile where it sits — never one to place a second copy beside.
  */
 export async function findByOwnUuid(
-	reader: Reader,
+	reader: InstanceReader,
 	params: { tagNames: readonly Scl.ElementsOf[]; uuid: string | undefined },
 ): Promise<AnyTrackedRecord[]> {
 	const { tagNames, uuid } = params
@@ -185,7 +163,7 @@ export async function findByOwnUuid(
  * its descendant Applications/Functions; a Function/Application `targetInstance` scopes itself.
  */
 export async function scopeToTargetInstance<GenericRecord extends { id: string; tagName: string }>(
-	reader: Reader,
+	reader: InstanceReader,
 	params: {
 		instances: readonly GenericRecord[]
 		targetInstance: Scl.Ref<Scl.ElementsOf> | undefined

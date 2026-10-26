@@ -25,8 +25,8 @@ import type { AnyRefOrRecord } from '@dialecte/core'
  * `Variable`) that apply to any element in the subtree.
  *
  * The `instance` is resolved by the caller — SCOPED (`findInstanceUnder`, the
- * anchored `reportFsd`) or GLOBAL (`findInstanceByTemplateUuid`, the ASD
- * composed-function cascade which has no anchor). Funnelling both entry points
+ * anchored `reportFsd`) or by what an application instance stands on (the ASD
+ * composed-function cascade, `resolveComposedFunctions`). Funnelling both entry points
  * through here is what makes satellites travel on every function-layer report.
  */
 export async function reportFunction(

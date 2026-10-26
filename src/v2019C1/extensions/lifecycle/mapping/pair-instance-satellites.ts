@@ -3,6 +3,8 @@ import { referenceIdentity } from '@/v2019C1/extensions/lifecycle/engine/referen
 
 import type {
 	InstanceSatellitePair,
+	PairingStep,
+	Qualifies,
 	InstanceSatellitePairing,
 	MappingReader,
 	PairInstanceSatellitesParams,
@@ -11,12 +13,6 @@ import type {
 } from './mapping.types'
 import type { ReferenceIdentitySide } from '@/v2019C1/extensions/lifecycle/engine/reference-match.types'
 import type { AnyTreeRecord } from '@dialecte/core'
-
-/** Whether a project element can be the one a source satellite stands for. */
-type Qualifies = (params: { source: SourceSatellite; instanceRef: StoredRef }) => Promise<boolean>
-
-/** One kind of evidence, and whether it is read for shared elements only. */
-type PairingStep = { qualifies: Qualifies; projectOwned: boolean; sharedOnly: boolean }
 
 /**
  * Recognise, for one instance, the project element it already holds for each source satellite — the

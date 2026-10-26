@@ -1,7 +1,11 @@
 import type { Config, Scl } from '@/v2019C1/config'
+import type {
+	RemovalBase,
+	UnmatchedClass,
+} from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
-import type { AnyRefOrRecord, AnyTrackedRecord } from '@dialecte/core'
+import type { AnyRefOrRecord, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 
 /** A read surface shared by the report (Query) and the apply (Transaction). */
 export type MappingReader = Core.Query<Config> | Core.Transaction<Config>
@@ -78,14 +82,31 @@ export type ResolveSatelliteMappingsParams = {
 	matchKey?: MatchKey
 }
 
-export type FindWithdrawnContributionsParams = {
+export type ResolveSatelliteRemovalsParams = {
+	sourceQuery: Core.Query<Config>
 	/** The instance being updated. */
 	instancePrimaryRef: AnyRefOrRecord
 	/** The project elements carried with the instance, as they were before the update. */
 	instanceSatelliteRefs: readonly Scl.Ref<Scl.ElementsOf>[]
-	/** Where the shared source elements of the template land for this instance. */
+	/** Where the source satellites of the template land for this instance. */
 	resolvedMappings: ResolvedMappings
-	matchKey?: MatchKey
+	/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */
+	removalBase: RemovalBase
+	matchKey: MatchKey
+}
+
+/**
+ * A satellite of the instance the template no longer brings anything for, and what goes of it: the whole element when
+ * it was made from the template and nothing outside the instance names it, else what the instance gave it.
+ */
+export type SatelliteRemoval = {
+	satellite: AnyTreeRecord
+	/** How the element the source no longer holds reads: dropped by the template, or the project's own. */
+	change: Exclude<UnmatchedClass, 'still-held'>
+	/** The element goes whole; else only its `contributions`. */
+	whole: boolean
+	/** The references below it pointing into the instance: what the instance gave it. */
+	contributions: AnyTreeRecord[]
 }
 
 /** A reference to a stored element: its record id is known. */
@@ -96,6 +117,15 @@ export type StoredRef = Scl.Ref<Scl.ElementsOf> & { id: string }
  * holds its own of.
  */
 export type SourceSatellite = { ref: StoredRef; policy?: MappingPolicy }
+
+/** Whether a project element can be the one a source satellite stands for. */
+export type Qualifies = (params: {
+	source: SourceSatellite
+	instanceRef: StoredRef
+}) => Promise<boolean>
+
+/** One kind of evidence an instance's element stands for a source satellite, and whether it is read for shared elements only. */
+export type PairingStep = { qualifies: Qualifies; projectOwned: boolean; sharedOnly: boolean }
 
 export type PairInstanceSatellitesParams = {
 	sourceQuery: Core.Query<Config>

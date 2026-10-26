@@ -3,22 +3,22 @@ import { toRef } from '@dialecte/core/helpers'
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
-import {
-	acceptsRemoval,
-	classifyUnmatched,
-} from '@/v2019C1/extensions/lifecycle/engine/removal-base'
+import { acceptsRemoval } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { collectForeignReferenceIds } from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	cloneTree,
 	resolveStructureRef,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
-import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
-import type { DecisionMappings, ResolvedMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type {
+	DecisionMappings,
+	ResolvedMappings,
+	SatelliteRemoval,
+} from '@/v2019C1/extensions/lifecycle/mapping'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -27,10 +27,10 @@ import type * as Core from '@dialecte/core'
 
 /**
  * Reconcile each satellite against the target, gated by `accepted`. Generic over
- * the layer: the caller resolves the SOURCE satellite refs and, for removal
- * detection, the TARGET instance refs (`instanceSatelliteRefs`, resolved with the
- * same finder against the instance primary BEFORE the primary reconcile runs, since
- * that reconcile may drop the referring ref). A shared element lands where its mapping resolved
+ * the layer: the caller resolves the SOURCE satellite refs and, for removals, what
+ * goes of the instance's satellites (`removals`, read from the instance BEFORE the
+ * primary reconcile runs, since that reconcile may drop the referring ref — the answer
+ * the report listed). A shared element lands where its mapping resolved
  * (`resolvedMappings`, the answer the report read too); a satellite the instance holds its own of
  * (no mapping policy) is the one listed there for it, else new to the instance. Three cases:
  *  - an EXISTING element -> reconcile-in-place (`engine.reconcile`); when it is the project's
@@ -38,8 +38,8 @@ import type * as Core from '@dialecte/core'
  *  - NOTHING yet -> ADD it (clone at source structural level + stamp lineage),
  *    so a newly-referenced satellite travels on update, not only first-time instantiate;
  *  - a TARGET instance the source no longer references -> DELETE it (the coupling
- *    invariant: it rides the primary group), guarded by a whole-target-doc
- *    last-referrer check so a satellite still referenced by ANOTHER primary is kept.
+ *    invariant: it rides the primary group), or only what the instance gave it while
+ *    something outside the instance names it.
  *
  * Gating: reconcile-in-place + add on `accepted.sourceIds` (the satellite's report
  * companion contributed its source id); delete on `accepted.instanceIds` (its removed
@@ -50,7 +50,8 @@ export async function reconcileSatellites(
 	params: {
 		sourceQuery: Core.Query<Config>
 		satelliteRefs: Scl.Ref<Scl.ElementsOf>[]
-		instanceSatelliteRefs?: Scl.Ref<Scl.ElementsOf>[]
+		/** What goes of the satellites of the instance the template no longer brings anything for: see `resolveSatelliteRemovals`. */
+		removals: readonly SatelliteRemoval[]
 		structure: TargetStructure
 		accepted?: AcceptedIds
 		/** The scenario's key an instance of a satellite carries its source satellite's uuid in. */
@@ -63,8 +64,8 @@ export async function reconcileSatellites(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
-		/** Where the shared satellites land, by source record id. */
-		resolvedMappings?: ResolvedMappings
+		/** Where the source satellites land, by source record id (`resolveSatelliteMappings`). */
+		resolvedMappings: ResolvedMappings
 		/** The consumer's choices for the shared satellites, by source record id. */
 		decisionMappings?: DecisionMappings
 		/**
@@ -79,7 +80,7 @@ export async function reconcileSatellites(
 	const {
 		sourceQuery,
 		satelliteRefs,
-		instanceSatelliteRefs,
+		removals,
 		structure,
 		accepted,
 		matchKey,
@@ -91,17 +92,11 @@ export async function reconcileSatellites(
 		decisionMappings,
 	} = params
 
-	// project elements a source satellite lands on: in use by the template, never deleted below
-	const mappedOntoIds = new Set<string>()
-	for (const resolved of resolvedMappings?.values() ?? []) {
-		if (resolved.existing) mappedOntoIds.add(resolved.existing.id)
-	}
-
 	// the clone mappings of every satellite element added here (see `annotateInstance`)
 	const added: Scl.CloneMapping[] = []
 
 	for (const satelliteRef of satelliteRefs) {
-		const resolved = satelliteRef.id ? resolvedMappings?.get(satelliteRef.id) : undefined
+		const resolved = satelliteRef.id ? resolvedMappings.get(satelliteRef.id) : undefined
 		const instance = resolved?.existing
 
 		if (instance) {
@@ -157,35 +152,19 @@ export async function reconcileSatellites(
 		}
 	}
 
-	// delete: a target instance satellite whose source ELEMENT the source no longer holds — dropped
-	// by it, or the project's own. Catalog/shared satellites (FunctionCategory, AllocationRole,
-	// Variable, BehaviorDescription) persist when merely un-referenced, so the trigger is
-	// source-element non-existence, NOT a dropped link.
-	for (const instanceRef of instanceSatelliteRefs ?? []) {
-		if (instanceRef.id && mappedOntoIds.has(instanceRef.id)) continue
-		const lineage = await tx.any.getAttribute(instanceRef, { name: matchKey })
-		if (!lineage) continue
-
-		const [stillInSource] = await sourceQuery.any.findByAttributes({
-			tagName: instanceRef.tagName,
-			attributes: { uuid: lineage },
-		})
-		const unmatched = classifyUnmatched({
-			tagName: instanceRef.tagName,
-			lineage,
-			inSource: stillInSource !== undefined,
-			removalBase,
-		})
-		if (unmatched === 'still-held') continue
-
-		// a removal is gated on its companion's acceptance; the project's own goes only on an explicit accept
-		if (!acceptsRemoval({ change: unmatched, id: instanceRef.id ?? '', accepted })) continue
-
-		// shared-safety: keep if any OTHER primary still references this satellite
-		const referrers = await findRefsPointingTo(tx, { target: instanceRef })
-		if (referrers.length > 0) continue
-
-		await tx.delete(instanceRef)
+	// delete: what goes of a satellite of the instance the template no longer brings anything for,
+	// as the report listed it — the element when its removal is accepted, else each reference the
+	// instance gave it whose removal is (two instances updated in one apply: the second one's
+	// references follow the report even once the first one's are gone)
+	for (const { satellite, change, whole, contributions } of removals) {
+		if (whole && acceptsRemoval({ change, id: satellite.id, accepted })) {
+			if (await tx.any.getRecord(satellite)) await tx.any.delete(satellite)
+			continue
+		}
+		for (const contribution of contributions) {
+			if (!acceptsRemoval({ change, id: contribution.id, accepted })) continue
+			if (await tx.any.getRecord(contribution)) await tx.any.delete(contribution)
+		}
 	}
 
 	return added

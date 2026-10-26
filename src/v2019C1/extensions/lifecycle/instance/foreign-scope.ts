@@ -10,12 +10,9 @@ import type {
 	ForeignScopes,
 	ResolveForeignScope,
 } from './foreign-scope.types'
-import type { Config, Scl } from '@/v2019C1/config'
-import type * as Core from '@dialecte/core'
+import type { InstanceReader } from './instance.types'
+import type { Scl } from '@/v2019C1/config'
 import type { AnyTreeRecord } from '@dialecte/core'
-
-/** A reader with the untyped `.any` facade — either a Query or a Transaction. */
-type Reader = Core.Query<Config> | Core.Transaction<Config>
 
 /**
  * What belongs to the other instances of a template, for each of its instances: the elements the
@@ -23,7 +20,7 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  * share is nobody's alone). Empty for a template the project holds one instance of.
  */
 export async function collectForeignScopes(
-	reader: Reader,
+	reader: InstanceReader,
 	params: CollectForeignScopesParams,
 ): Promise<ForeignScopes> {
 	const { instances } = params
@@ -55,7 +52,7 @@ export async function collectForeignScopes(
  * every instance of that template the project holds. Resolved when first asked for, once.
  */
 export function foreignScopeResolver(
-	reader: Reader,
+	reader: InstanceReader,
 	params: ForeignScopeResolverParams,
 ): ResolveForeignScope {
 	const { instanceRootRef, sourceUuid, matchKey } = params
@@ -84,7 +81,7 @@ export function foreignScopeResolver(
  * of one of this instance's.
  */
 export async function collectForeignReferenceIds(
-	reader: Reader,
+	reader: InstanceReader,
 	params: CollectForeignReferenceIdsParams,
 ): Promise<Set<string>> {
 	const { sharedRootRef, foreignScope } = params
@@ -100,7 +97,7 @@ export async function collectForeignReferenceIds(
 }
 
 async function collectForeignReferences(
-	reader: Reader,
+	reader: InstanceReader,
 	params: {
 		node: AnyTreeRecord
 		foreignScope: ReadonlySet<string>
@@ -123,7 +120,7 @@ async function collectForeignReferences(
 
 /** Whether a reference points at an element of a scope. */
 export async function pointsInto(
-	reader: Reader,
+	reader: InstanceReader,
 	params: { reference: AnyTreeRecord; scope: ReadonlySet<string> },
 ): Promise<boolean> {
 	const { reference, scope } = params

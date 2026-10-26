@@ -1,11 +1,8 @@
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 
-import type { Config, Scl } from '@/v2019C1/config'
-import type * as Core from '@dialecte/core'
+import type { InstanceReader } from './instance.types'
+import type { Scl } from '@/v2019C1/config'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
-
-/** A reader with the untyped `.any` facade — either a Query or a Transaction. */
-type Reader = Core.Query<Config> | Core.Transaction<Config>
 
 /**
  * The record ids of the elements that belong to an instance: the elements of its subtree and the
@@ -13,7 +10,7 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  * instance of the same template.
  */
 export async function collectInstanceScope(
-	reader: Reader,
+	reader: InstanceReader,
 	instanceRootRef: AnyRefOrRecord,
 ): Promise<Set<string>> {
 	const scope = new Set<string>()
@@ -23,7 +20,7 @@ export async function collectInstanceScope(
 }
 
 async function collectNodeScope(
-	reader: Reader,
+	reader: InstanceReader,
 	params: { node: AnyTreeRecord; scope: Set<string> },
 ): Promise<void> {
 	const { node, scope } = params

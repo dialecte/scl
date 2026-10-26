@@ -3,14 +3,13 @@ import { toRef } from '@dialecte/core/helpers'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
-import { classifyUnmatched } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { collectForeignReferenceIds } from '@/v2019C1/extensions/lifecycle/instance'
 import {
 	createReportPass,
 	describeMapping,
 	findMappingPolicy,
-	findWithdrawnContributions,
 	resolveSatelliteMappings,
+	resolveSatelliteRemovals,
 } from '@/v2019C1/extensions/lifecycle/mapping'
 
 import type { Config, Scl } from '@/v2019C1/config'
@@ -43,10 +42,11 @@ import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
  * independently decidable):
  *  - added / modified: a source satellite diffed against the project element it lands on — for a
  *    shared element, the one its mapping resolves to (`resolveSatelliteMappings`, the answer the
- *    apply reads too); for any other, its instance (matched by `templateUuid`). One with nothing
+ *    apply reads too); for one the instance holds its own of, the one it holds. One with nothing
  *    to land on surfaces all-added;
- *  - removed: a TARGET instance satellite whose lineage (under the scenario's key) the source no
- *    longer holds -> folded as a `removed` companion so accepting the primary deletes it.
+ *  - removed: what goes of a TARGET instance satellite the template no longer brings anything for
+ *    (`resolveSatelliteRemovals`, the answer the apply writes) -> folded as `removed` companions so
+ *    accepting the primary deletes them.
  *
  * Folds only when the primary itself is a changed group (satellite-only change with
  * an unchanged primary is deferred).
@@ -109,12 +109,6 @@ export async function foldSatelliteCompanions(
 			decisionMappings: params.decisionMappings,
 			matchKey: params.matchKey,
 		}))
-	// project elements a source satellite lands on: in use by the template, never a removal
-	const mappedOntoIds = new Set<string>()
-	for (const resolved of resolvedMappings.values()) {
-		if (resolved.existing) mappedOntoIds.add(resolved.existing.id)
-	}
-
 	// what the report already listed and named: the caller's, else this fold's own
 	const pass = params.pass ?? createReportPass()
 	for (const satelliteRef of satelliteRefs) {
@@ -193,53 +187,30 @@ export async function foldSatelliteCompanions(
 		}
 	}
 
-	// a target instance satellite whose source ELEMENT the source no longer holds: removed with the
-	// primary's group (coupling invariant), or as a decision of its own when the primary is unchanged;
-	// one the project added is a decision of its own, kept by default. Catalog/shared satellites persist
-	// when merely un-referenced, so the trigger is source-element non-existence, NOT a link drop.
-	for (const instanceRef of instanceSatelliteRefs ?? []) {
-		if (instanceRef.id && mappedOntoIds.has(instanceRef.id)) continue
-		const lineage = await query.any.getAttribute(instanceRef, { name: matchKey })
-		if (!lineage) continue
-		const [stillInSource] = await sourceQuery.any.findByAttributes({
-			tagName: instanceRef.tagName,
-			attributes: { uuid: lineage },
-		})
-		const unmatched = classifyUnmatched({
-			tagName: instanceRef.tagName,
-			lineage,
-			inSource: stillInSource !== undefined,
-			removalBase: params.removalBase,
-		})
-		if (unmatched === 'still-held') continue
-		const node: DiffNode = {
-			change: unmatched,
-			tagName: instanceRef.tagName,
-			instanceRef,
-			children: [],
-		}
-		if (group && unmatched === 'removed') group.companions.push(node)
-		else report.groups.push(...groupChanges(node, instanceScopeId))
-	}
-
-	// what this instance gave to a project element the template no longer brings anything for
-	// stands for nothing any more: announced as removed, the element itself stays
+	// what goes of a satellite of the instance the template no longer brings anything for — the
+	// answer the apply writes: the element, removed with the primary's group (coupling invariant) or
+	// as a decision of its own when the primary is unchanged, one the project added kept by default;
+	// or, while something outside the instance names it, only what the instance gave it
 	if (params.instancePrimaryRef) {
-		const withdrawnContributions = await findWithdrawnContributions(query, {
+		const removals = await resolveSatelliteRemovals(query, {
+			sourceQuery,
 			instancePrimaryRef: params.instancePrimaryRef,
 			instanceSatelliteRefs: instanceSatelliteRefs ?? [],
 			resolvedMappings,
-			matchKey: params.matchKey,
+			removalBase: params.removalBase,
+			matchKey,
 		})
-		for (const contribution of withdrawnContributions) {
-			const removed: DiffNode = {
-				change: 'removed',
-				tagName: contribution.tagName,
-				instanceRef: toRef(contribution),
-				children: [],
+		for (const { satellite, change, whole, contributions } of removals) {
+			for (const removed of whole ? [satellite] : contributions) {
+				const node: DiffNode = {
+					change,
+					tagName: removed.tagName,
+					instanceRef: toRef(removed),
+					children: [],
+				}
+				if (group && change === 'removed') group.companions.push(node)
+				else report.groups.push(...groupChanges(node, instanceScopeId))
 			}
-			if (group) group.companions.push(removed)
-			else report.groups.push(...groupChanges(removed, instanceScopeId))
 		}
 	}
 

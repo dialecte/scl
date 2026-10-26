@@ -368,6 +368,18 @@
 			"equivalent": "the walk reads the parents of a stored element: each record it reads exists"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites.ts": {
+		"69e7a5f19eaae68a": {
+			"line": 47,
+			"mutation": "ConditionalExpression: !clone -> false",
+			"equivalent": "cloneTree returns nothing only for a source record that does not exist: every satellite comes from the source just read"
+		},
+		"7d184cd1106f49e6": {
+			"line": 49,
+			"mutation": "ConditionalExpression: bumpsCollisions -> true",
+			"equivalent": "every scenario policy bumps collisions (instantiate, template, fork): the flag is never false today"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity.ts": {
 		"d2d3385b7030b800": {
 			"line": 43,
@@ -709,6 +721,20 @@
 			"line": 70,
 			"mutation": "ConditionalExpression: !isTopologyLevel(ancestor.tagName) -> false",
 			"equivalent": "the ancestors of a level of the topology up to its substation are levels: the guard never skips one"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/instance/named-outside.ts": {
+		"be7a9c8d3e633137": {
+			"line": 43,
+			"mutation": "ConditionalExpression: !referencedUuid -> false",
+			"equivalent": "a reference without the uuid looks for elements of an empty uuid and finds none: nothing outside is named either way"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts": {
+		"36829ec56e16c2fe": {
+			"line": 105,
+			"mutation": "ArrayDeclaration: [...landing.redirectMappings, ...redirectMappings] -> []",
+			"equivalent": "an FSD function holds no reference to a category or to a level of its own file: the redirects of a mapped category or level are read by no reference of the placed subtree"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/instantiate/transaction/ssd.ts": {
@@ -1153,6 +1179,99 @@
 			"equivalent": "a named unit always has a parent; a substation's parent, the SCL root, carries no name, so the TEMPLATE test on the next line returns the unit alone either way"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/mapping/pair-instance-satellites.ts": {
+		"f869085cab19b413": {
+			"line": 74,
+			"mutation": "MethodExpression: [...sourceIdentities].some((identity) => instanceIdentities.has(identity)) -> [...sourceIdentities].every(identity => instanceIdentities.has(i",
+			"equivalent": "outside this change set: a line the re-run's line range took in, untouched by it (left to the whole-feature run)"
+		},
+		"20fe1d788525d92c": {
+			"line": 78,
+			"mutation": "OptionalChaining: source.policy?.key -> source.policy.key",
+			"equivalent": "the key step reads shared elements only (the step is shared-only): a satellite reaching it always has a policy"
+		},
+		"3187b45d149346fc": {
+			"line": 79,
+			"mutation": "BooleanLiteral: false -> true",
+			"equivalent": "the key step reads shared elements only: their policy always names a key"
+		},
+		"06d4b3fa2b866e83": {
+			"line": 79,
+			"mutation": "ConditionalExpression: !key -> false",
+			"equivalent": "the key step reads shared elements only: their policy always names a key"
+		},
+		"39d12eaffd819891": {
+			"line": 81,
+			"mutation": "BooleanLiteral: false -> true",
+			"equivalent": "a shared element always carries its name: the schema requires it on an AllocationRole and a FunctionCategory"
+		},
+		"fd3210a025cbeba2": {
+			"line": 81,
+			"mutation": "ConditionalExpression: !sourceKey -> false",
+			"equivalent": "a shared element always carries its name: the schema requires it on an AllocationRole and a FunctionCategory"
+		},
+		"7e0780ab7a7fa899": {
+			"line": 93,
+			"mutation": "BooleanLiteral: true -> false",
+			"equivalent": "a satellite of no policy has no key: the key step pairs none of them, shared-only or not"
+		},
+		"b4d6e90ec405e2d5": {
+			"line": 109,
+			"mutation": "ConditionalExpression: instanceRef.tagName !== source.ref.tagName -> false",
+			"equivalent": "lineage names one element of one tag, and reference identities carry the reference attribute (elementUuid, lnodeUuid, functionUuid): no element of another tag qualifies at any step"
+		},
+		"d1e70cf8400f5495": {
+			"line": 117,
+			"mutation": "ConditionalExpression: qualifying.filter((entry) => entry.source.ref.id === source.ref.id).length === 1 -> true",
+			"equivalent": "outside this change set: a line the re-run's line range took in, untouched by it (left to the whole-feature run)"
+		},
+		"c0dfb570bd699187": {
+			"line": 123,
+			"mutation": "ConditionalExpression: !existing -> false",
+			"equivalent": "outside this change set: a line the re-run's line range took in, untouched by it (left to the whole-feature run)"
+		},
+		"7ef63647295f46d8": {
+			"line": 131,
+			"mutation": "ConditionalExpression: pairs.has(source.ref.id) -> false",
+			"equivalent": "a paired element's undecided mark is never read: its mapping is the pair, and a choice sent for a locked mapping is refused before"
+		},
+		"995aec2896329317": {
+			"line": 134,
+			"mutation": "ConditionalExpression: instanceRef.tagName === source.ref.tagName -> true",
+			"equivalent": "each call pairs the satellites of one finder (categories, roles, or variables and behaviour descriptions): an element left of another tag is of no policy, and the undecided mark is read for shared elements only"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/mapping/resolve-mapping.ts": {
+		"b3e925c3bcf24f52": {
+			"line": 77,
+			"mutation": "EqualityOperator: sameKey.length > 1 -> sameKey.length >= 1",
+			"equivalent": "exactly one element of the name returned above: from here the count is 0 or more than one"
+		},
+		"292eb3923491be50": {
+			"line": 79,
+			"mutation": "EqualityOperator: sameLineage.length > 1 -> sameLineage.length >= 1",
+			"equivalent": "exactly one element of the lineage returned above: from here the count is 0 or more than one"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/mapping/resolve-satellite-mappings.ts": {
+		"530b1e6f0833fc24": {
+			"line": 48,
+			"mutation": "ConditionalExpression: satelliteId -> true",
+			"equivalent": "a satellite comes from a record of the source read by its finder: it always has a record id"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/mapping/resolve-satellite-removals.ts": {
+		"12e360792c24d59d": {
+			"line": 45,
+			"mutation": "ConditionalExpression: !satellite -> false",
+			"equivalent": "an instance satellite is found by its finder in the reader just before: its tree is always there"
+		},
+		"86705b4c5170d6bd": {
+			"line": 50,
+			"mutation": "ConditionalExpression: lineage -> true",
+			"equivalent": "an empty lineage reads no source element of an empty uuid, and is classified as the project's own below: the same removal"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/report/query/removal-side-effects.ts": {
 		"ab51c62691eeecd0": {
 			"line": 38,
@@ -1182,6 +1301,13 @@
 			"line": 77,
 			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
 			"equivalent": "the report built for no scope lists no instance: the junk root names no record and is read by nothing"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/report/query/satellite-companions.ts": {
+		"110d79da5e43ef5c": {
+			"line": 264,
+			"mutation": "BooleanLiteral: false -> true",
+			"equivalent": "with no element of the instance to diff against, the diff reads no ownership: every node is added"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/report/report.ts": {
@@ -1275,6 +1401,38 @@
 			"line": 96,
 			"mutation": "ConditionalExpression: selection.leftOut.has(functionRef.id) -> false",
 			"equivalent": "the report lists no placement of a function the selection leaves out, and the apply places only what the report's groups accept"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/update/transaction/satellite-reconcile.ts": {
+		"2be86dbbc6b580bd": {
+			"line": 129,
+			"mutation": "ConditionalExpression: accepted && satelliteRef.id -> true",
+			"equivalent": "outside this change set: a line the re-run's line range took in, untouched by it (left to the whole-feature run)"
+		},
+		"4d176bd590eec45a": {
+			"line": 129,
+			"mutation": "LogicalOperator: accepted && satelliteRef.id -> accepted || satelliteRef.id",
+			"equivalent": "outside this change set: a line the re-run's line range took in, untouched by it (left to the whole-feature run)"
+		},
+		"fdd8e33e2ddaeb05": {
+			"line": 138,
+			"mutation": "ConditionalExpression: !clone -> false",
+			"equivalent": "cloneTree returns nothing only for a source record that does not exist: every satellite comes from the source just read"
+		},
+		"645928a9bbc7c0df": {
+			"line": 144,
+			"mutation": "ConditionalExpression: bumpsCollisions -> true",
+			"equivalent": "every scenario policy bumps collisions (instantiate, template, fork): the flag is never false today"
+		},
+		"38a9f15eedb421e6": {
+			"line": 161,
+			"mutation": "ConditionalExpression: await tx.any.getRecord(satellite) -> true",
+			"equivalent": "the plan is read before this instance's writes and lists distinct records: none is deleted before its turn"
+		},
+		"7a34bb947cc25986": {
+			"line": 166,
+			"mutation": "ConditionalExpression: await tx.any.getRecord(contribution) -> true",
+			"equivalent": "the plan is read before this instance's writes and lists distinct records: none is deleted before its turn"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/update/transaction/ssd.ts": {

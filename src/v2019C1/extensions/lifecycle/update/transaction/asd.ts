@@ -1,6 +1,9 @@
 import { groupsOfApplicationInstance } from './application-groups'
 import { cascadeComposedFunctions } from './cascade-composed-functions'
-import { reconcileCrossCuttingSatellites } from './cross-cutting-satellites'
+import {
+	readCrossCuttingSatellites,
+	reconcileCrossCuttingSatellites,
+} from './cross-cutting-satellites'
 import { reconcileSatellites } from './satellite-reconcile'
 
 import {
@@ -40,8 +43,8 @@ import {
 } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
 	assertMappingsDecided,
-	findWithdrawnContributions,
 	resolveSatelliteMappings,
+	resolveSatelliteRemovals,
 	toRedirectMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
@@ -275,17 +278,29 @@ export async function asd(
 			resolvedMappings,
 		})
 
-		// what the instance gave to a project element the template no longer brings anything for —
-		// read from the instance as it is before the reconcile below changes its references
-		const withdrawnContributions = await findWithdrawnContributions(tx, {
+		// what goes of the satellites the template no longer brings anything for — read from the
+		// instance as it is before the reconcile below changes its references, as the report read it
+		const removals = await resolveSatelliteRemovals(tx, {
+			sourceQuery,
 			instancePrimaryRef: instance,
 			instanceSatelliteRefs,
 			resolvedMappings,
+			removalBase,
 			matchKey,
 		})
 		droppedFunctions.push({ dropped: droppedByInstance.get(instance.id) ?? [], accepted })
 
 		// 1. application layer
+		// the cross-cutting satellites as the report read them, before the reconcile below
+		const crossCutting = await readCrossCuttingSatellites(tx, {
+			sourceQuery,
+			primaryRef: applicationRef,
+			instancePrimaryRef: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
+			matchKey,
+			removalBase,
+			selection,
+		})
+
 		const reconcileMappings = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: applicationRef,
@@ -311,7 +326,7 @@ export async function asd(
 		const satelliteMappings = await reconcileSatellites(tx, {
 			sourceQuery,
 			satelliteRefs,
-			instanceSatelliteRefs,
+			removals,
 			structure,
 			accepted,
 			matchKey,
@@ -324,18 +339,11 @@ export async function asd(
 			resolveForeignScope,
 			notSelected: selection.leftOut,
 		})
-		for (const contribution of withdrawnContributions) {
-			// gated on the removal the report announced for it
-			if (accepted && !accepted.instanceIds.has(contribution.id)) continue
-			const live = await tx.any.getRecord(contribution)
-			if (live) await tx.any.delete(contribution)
-		}
 		// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
 		// in the Application subtree travel with the application group
 		const cross = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
-			primaryRef: applicationRef,
-			instancePrimaryRef: { tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>,
+			reading: crossCutting,
 			structure,
 			accepted,
 			matchKey,

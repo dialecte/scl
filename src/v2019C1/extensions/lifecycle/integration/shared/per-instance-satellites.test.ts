@@ -23,6 +23,11 @@ const ns = ALL_XMLNS_NAMESPACES
 const functionRef = { tagName: 'Function', id: 'function-s' } as Scl.Ref<'Function'>
 const applicationRef = { tagName: 'Application', id: 'application-s' } as Scl.Ref<'Application'>
 const variableRef = { tagName: 'Variable', id: 'variable-s' } as Scl.Ref<'Variable'>
+const behaviourRef = {
+	tagName: 'BehaviorDescription',
+	id: 'behaviour-s',
+} as Scl.Ref<'BehaviorDescription'>
+const subFunctionRef = { tagName: 'SubFunction', id: 'trip-s' } as Scl.Ref<'SubFunction'>
 
 /** The tags whose elements belong to the instance they apply to, and their references. */
 const SATELLITE_TAGS = ['Variable', 'BehaviorDescription'] as const
@@ -198,6 +203,115 @@ const mergedEarlierXml = /* xml */ `
 	</SCL>
 `
 
+// A function library file whose variable applies to a subfunction of its function only.
+const subFunctionVariableXml = /* xml */ `
+	<SCL ${ns} ${id}="fsd">
+		<Substation name="TEMPLATE" ${id}="substation-s">
+			<Private type="eIEC61850-6-100" ${id}="private-s">
+				<eIEC61850-6-100:Variable name="VTRIP" uuid="variable-source-uuid" ${id}="variable-s">
+					<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/TEMPLATE/Prot/Trip" elementUuid="trip-source-uuid" ${id}="variable-apply-to-s"/>
+				</eIEC61850-6-100:Variable>
+			</Private>
+			<VoltageLevel name="TEMPLATE" ${id}="voltage-level-s">
+				<Bay name="TEMPLATE" ${id}="bay-s">
+					<Function name="Prot" uuid="function-source-uuid" ${id}="function-s">
+						<SubFunction name="Trip" uuid="trip-source-uuid" ${id}="trip-s"/>
+					</Function>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
+// A project an earlier version wrote: the template's variable mapped onto the project's of its name, which applies
+// to the instance only.
+const mappedOnlyForInstanceXml = /* xml */ `
+	<SCL ${ns} ${id}="scd">
+		<Substation name="S1" ${id}="substation-t">
+			<Private type="eIEC61850-6-100" ${id}="substation-private-t">
+				<eIEC61850-6-100:Variable name="VXCBR" desc="Project breaker variable" uuid="variable-project-uuid" ${id}="variable-project">
+					<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot" elementUuid="prot-1-uuid" ${id}="apply-to-1"/>
+				</eIEC61850-6-100:Variable>
+			</Private>
+			<VoltageLevel name="V1" ${id}="voltage-level-t">
+				${instanceFunctions}
+			</VoltageLevel>
+		</Substation>
+		${projectTypes}
+	</SCL>
+`
+
+// A project an earlier version wrote: the template's behaviour description mapped onto the project's of its name.
+const behaviourMappedByNameEarlierXml = /* xml */ `
+	<SCL ${ns} ${id}="scd">
+		<Substation name="S1" ${id}="substation-t">
+			<Private type="eIEC61850-6-100" ${id}="substation-private-t">
+				<eIEC61850-6-100:BehaviorDescription name="BD1" desc="Project behaviour" uuid="behaviour-project-uuid" ${id}="behaviour-project">
+					<eIEC61850-6-100:InputVar varName="local" dataName="S1/V1/B1/Local/CSWI1" lnodeUuid="local-lnode-uuid" doName="Pos" ${id}="input-local"/>
+					<eIEC61850-6-100:InputVar varName="in1" dataName="S1/V1/B1/Prot/CSWI1" lnodeUuid="lnode-1-uuid" doName="Pos" ${id}="input-1"/>
+				</eIEC61850-6-100:BehaviorDescription>
+			</Private>
+			<VoltageLevel name="V1" ${id}="voltage-level-t">
+				<Bay name="B1" ${id}="bay-b1">
+					<Function name="Prot" uuid="prot-1-uuid" templateUuid="function-source-uuid" ${id}="prot-1">
+						<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" uuid="lnode-1-uuid" templateUuid="lnode-source-uuid" ${id}="lnode-1"/>
+					</Function>
+					<Function name="Local" uuid="local-uuid" ${id}="local">
+						<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" uuid="local-lnode-uuid" ${id}="local-lnode"/>
+					</Function>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+		${projectTypes}
+	</SCL>
+`
+
+// The substation file, its variable applying to the function's logical node, which its behaviour description documents.
+const logicalNodeSatellitesXml = substationSatellitesXml.replace(
+	'element="TEMPLATE/TEMPLATE/TEMPLATE/Prot" elementUuid="function-source-uuid"',
+	'element="TEMPLATE/TEMPLATE/TEMPLATE/Prot/CSWI1" elementUuid="lnode-source-uuid"',
+)
+
+// A project an earlier version wrote: the template's variable and behaviour description mapped onto the project's of
+// their names, both naming the instance's logical node.
+const bothMappedByNameEarlierXml = /* xml */ `
+	<SCL ${ns} ${id}="scd">
+		<Substation name="S1" ${id}="substation-t">
+			<Private type="eIEC61850-6-100" ${id}="substation-private-t">
+				<eIEC61850-6-100:Variable name="VXCBR" uuid="variable-project-uuid" ${id}="variable-project">
+					<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot/CSWI1" elementUuid="lnode-1-uuid" ${id}="apply-to-lnode"/>
+				</eIEC61850-6-100:Variable>
+				<eIEC61850-6-100:BehaviorDescription name="BD1" uuid="behaviour-project-uuid" ${id}="behaviour-project">
+					<eIEC61850-6-100:InputVar varName="in1" dataName="S1/V1/B1/Prot/CSWI1" lnodeUuid="lnode-1-uuid" doName="Pos" ${id}="input-1"/>
+				</eIEC61850-6-100:BehaviorDescription>
+			</Private>
+			<VoltageLevel name="V1" ${id}="voltage-level-t">
+				${instanceFunctions}
+			</VoltageLevel>
+		</Substation>
+		${projectTypes}
+	</SCL>
+`
+
+// A project of the template's instance whose own variable of the template variable's name applies to the instance's
+// logical node and to a function of its own: nothing of what the template's variable applies to.
+const ownNamesakeXml = /* xml */ `
+	<SCL ${ns} ${id}="scd">
+		<Substation name="S1" ${id}="substation-t">
+			<Private type="eIEC61850-6-100" ${id}="substation-private-t">
+				<eIEC61850-6-100:Variable name="VXCBR" desc="Project variable" uuid="variable-project-uuid" ${id}="variable-project">
+					<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Local" elementUuid="local-uuid" ${id}="apply-to-local"/>
+					<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot/CSWI1" elementUuid="lnode-1-uuid" ${id}="apply-to-lnode"/>
+				</eIEC61850-6-100:Variable>
+			</Private>
+			<VoltageLevel name="V1" ${id}="voltage-level-t">
+				${instanceFunctions}
+			</VoltageLevel>
+		</Substation>
+		${projectTypes}
+	</SCL>
+`
+
 // A project an earlier version wrote: the template's variable mapped onto the project's of its name.
 const mappedByNameEarlierXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -220,8 +334,9 @@ const mappedByNameEarlierXml = /* xml */ `
 type Operation =
 	| { place: string }
 	| { revise: Scl.Ref<Scl.ElementsOf>; attributes: Record<string, string> }
+	| { template: (tx: Core.Transaction<Config>) => Promise<void> }
 	| { drop: Scl.Ref<Scl.ElementsOf> }
-	| { update: string }
+	| { update: string; withoutDecisions?: true }
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
@@ -234,6 +349,8 @@ type TestCase = SclTest.BaseXmlTestCase & {
 		held?: string[]
 		/** What the last report lists of them and their references, as `<change> <tag>`. */
 		listed?: string[]
+		/** What the last report's groups say their removals do outside them, as `<effect> <tag>`. */
+		sideEffects?: string[]
 		/** A fragment of the refusal of the first report; nothing else is checked. */
 		rejection?: string
 	}
@@ -369,6 +486,113 @@ describe('lifecycle — a variable or a behaviour description belongs to its ins
 					listed: ['removed VariableApplyTo'],
 				},
 			},
+		'an earlier version gave the instance the project variable of that name, which applies to nothing else, the template drops it → only what the instance gave it is listed; the variable, left applying to nothing, goes at the commit':
+			{
+				sourceXml: substationVariableXml,
+				targetXml: mappedOnlyForInstanceXml,
+				operations: [{ drop: variableRef }, { update: 'bay-b1' }],
+				expected: {
+					held: [],
+					listed: ['removed VariableApplyTo'],
+					// the variable left applying to nothing, and the wrapper it leaves empty
+					sideEffects: ['deleted Private', 'deleted Variable'],
+				},
+			},
+		'an earlier version gave the instance the project variable of that name, nothing changed since, the update applied without decisions → as it was':
+			{
+				sourceXml: substationVariableXml,
+				targetXml: mappedByNameEarlierXml,
+				operations: [{ update: 'bay-b1', withoutDecisions: true }],
+				expected: {
+					held: ['Variable VXCBR [Project breaker variable] @S1: B1/Local, B1/Prot'],
+					listed: [],
+				},
+			},
+		'the template drops a subfunction and the variable applying to it only, the instance updated → both removed, nothing left naming the subfunction':
+			{
+				sourceXml: subFunctionVariableXml,
+				targetXml: twoBaysXml,
+				operations: [
+					{ place: 'bay-b1' },
+					{ drop: variableRef },
+					{ drop: subFunctionRef },
+					{ update: 'bay-b1' },
+				],
+				expected: { held: [], listed: ['removed Variable'] },
+			},
+		'placed, then the template drops its behaviour description, the instance updated → its behaviour description removed':
+			{
+				sourceXml: baySatellitesXml,
+				targetXml: twoBaysXml,
+				operations: [{ place: 'bay-b1' }, { drop: behaviourRef }, { update: 'bay-b1' }],
+				expected: {
+					held: ['Variable VXCBR @B1: B1/Prot'],
+					listed: ['removed BehaviorDescription'],
+				},
+			},
+		'an earlier version gave the instance the project behaviour description of that name, the template drops it → it stays, without the input the instance gave it':
+			{
+				sourceXml: substationSatellitesXml,
+				targetXml: behaviourMappedByNameEarlierXml,
+				operations: [{ drop: behaviourRef }, { update: 'bay-b1' }],
+				expected: {
+					held: [
+						'BehaviorDescription BD1 [Project behaviour] @S1: B1/Local/CSWI1',
+						'Variable VXCBR @S1: B1/Prot',
+					],
+					listed: ['added Variable', 'added VariableApplyTo', 'removed InputVar'],
+				},
+			},
+		'a project variable of the template variable name applies to the instance by other references → the instance gets the template one beside it; what the project variable applied to in the instance reads as given by an earlier placement, and goes':
+			{
+				sourceXml: substationVariableXml,
+				targetXml: ownNamesakeXml,
+				operations: [
+					{ revise: functionRef, attributes: { desc: 'revision 2' } },
+					{ update: 'bay-b1' },
+				],
+				expected: {
+					held: [
+						'Variable VXCBR [Project variable] @S1: B1/Local',
+						'Variable VXCBR_1 @S1: B1/Prot',
+					],
+					listed: ['added Variable', 'added VariableApplyTo', 'removed VariableApplyTo'],
+				},
+			},
+		'placed in two bays, the template gains a variable, each bay updated in turn → each instance gets its own, the second numbered':
+			{
+				sourceXml: substationVariableXml,
+				targetXml: twoBaysXml,
+				operations: [
+					{ place: 'bay-b1' },
+					{ place: 'bay-b2' },
+					{ template: gainVariable },
+					{ update: 'bay-b1' },
+					{ update: 'bay-b2' },
+				],
+				expected: {
+					held: [
+						'Variable VNEW @S1: B1/Prot',
+						'Variable VNEW_1 @S1: B2/Prot',
+						'Variable VXCBR @S1: B1/Prot',
+						'Variable VXCBR_1 @S1: B2/Prot',
+					],
+					listed: ['added Variable', 'added VariableApplyTo'],
+				},
+			},
+		'an earlier version gave the instance a variable and a behaviour description naming the same logical node → each found as the one of its kind, nothing added':
+			{
+				sourceXml: logicalNodeSatellitesXml,
+				targetXml: bothMappedByNameEarlierXml,
+				operations: [
+					{ revise: functionRef, attributes: { desc: 'revision 2' } },
+					{ update: 'bay-b1' },
+				],
+				expected: {
+					held: ['BehaviorDescription BD1 @S1: B1/Prot/CSWI1', 'Variable VXCBR @S1: B1/Prot/CSWI1'],
+					listed: [],
+				},
+			},
 		'a choice sent for the variable → refused: where it lands is not the consumer to choose': {
 			sourceXml: substationSatellitesXml,
 			targetXml: twoBaysXml,
@@ -425,6 +649,8 @@ describe('lifecycle — a variable or a behaviour description belongs to its ins
 					lifecycle: targetFor({ bay: operation.place, scenario: 'instantiate' }),
 				})
 				lastReport = placed.report
+			} else if ('template' in operation) {
+				await source.transaction(operation.template)
 			} else if ('revise' in operation) {
 				await source.transaction(async function revise(tx) {
 					await tx.update(operation.revise, { attributes: operation.attributes })
@@ -441,6 +667,7 @@ describe('lifecycle — a variable or a behaviour description belongs to its ins
 						...targetFor({ bay: operation.update, scenario: 'template' }),
 						targetInstance: instance,
 					} as LifecycleTarget,
+					withoutDecisions: operation.withoutDecisions,
 				})
 				lastReport = updated.report
 			}
@@ -454,14 +681,40 @@ describe('lifecycle — a variable or a behaviour description belongs to its ins
 			),
 			'report',
 		).toEqual([])
+		if (testCase.expected.sideEffects) {
+			const sideEffects = allGroups(lastReport).flatMap((group) =>
+				(group.sideEffects ?? []).map((effect) => `${effect.effect} ${effect.element.tagName}`),
+			)
+			expect(sideEffects.sort(), 'report').toEqual(testCase.expected.sideEffects)
+		}
 		if (testCase.expected.listed) {
 			expect(listSatelliteNodes(lastReport), 'report').toEqual(testCase.expected.listed)
 		}
-		expect(await describeSatellites(target.query), 'apply').toEqual(testCase.expected.held)
+		const held = await describeSatellites(target.query)
+		expect(held, 'apply').toEqual(testCase.expected.held)
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
 })
+
+/** The template gains a variable applying to its function, beside the one it holds. */
+async function gainVariable(tx: Core.Transaction<Config>): Promise<void> {
+	const held = await tx.any.getRecord(variableRef)
+	if (!held?.parent) throw new Error('the template holds its variable')
+	const variable = await tx.any.addChild(held.parent, {
+		tagName: 'Variable',
+		namespace: held.namespace,
+		attributes: { name: 'VNEW', uuid: 'new-variable-source-uuid' },
+	})
+	await tx.any.addChild(variable, {
+		tagName: 'VariableApplyTo',
+		namespace: held.namespace,
+		attributes: {
+			element: 'TEMPLATE/TEMPLATE/TEMPLATE/Prot',
+			elementUuid: 'function-source-uuid',
+		},
+	})
+}
 
 /** The template's function placed under a bay. */
 async function findInstanceIn(
@@ -509,7 +762,8 @@ async function describeSatellites(query: Core.Query<Config>): Promise<string[]> 
 			const tree = await query.any.getTree(satellite)
 			for (const reference of tree?.tree ?? []) {
 				const { elementUuid, lnodeUuid } = await query.any.getAttributes(reference)
-				targets.push(await describeElement(query, elementUuid ?? lnodeUuid))
+				const described = await describeElement(query, elementUuid ?? lnodeUuid)
+				targets.push(described)
 			}
 			const description = desc ? ` [${desc}]` : ''
 			described.push(`${tagName} ${name}${description} @${levelName}: ${targets.sort().join(', ')}`)
@@ -532,8 +786,9 @@ async function describeElement(
 		const { name, lnClass, lnInst } = await query.any.getAttributes(element)
 		const names = [name ?? `${lnClass}${lnInst}`]
 		for (const ancestor of await query.any.findAncestors(element)) {
-			if (BAY_PATH_TAGS.has(ancestor.tagName))
-				names.unshift((await query.any.getAttribute(ancestor, { name: 'name' })) ?? '')
+			if (!BAY_PATH_TAGS.has(ancestor.tagName)) continue
+			const ancestorName = await query.any.getAttribute(ancestor, { name: 'name' })
+			names.unshift(ancestorName ?? '')
 		}
 		return names.join('/')
 	}

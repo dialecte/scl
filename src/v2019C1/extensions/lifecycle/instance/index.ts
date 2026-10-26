@@ -1,7 +1,6 @@
 export { collectComposedFunctionUuids, findComposedFunctionRefs } from './composed-functions'
 export {
 	findByOwnUuid,
-	findInstanceByTemplateUuid,
 	findInstancesByTemplateUuid,
 	findInstancesUnder,
 	findInstanceUnder,
@@ -16,4 +15,5 @@ export {
 } from './foreign-scope'
 export type { ForeignScopes, ResolveForeignScope } from './foreign-scope.types'
 export { isLastReferrer } from './is-last-referrer'
+export { isNamedOutside } from './named-outside'
 export { carriesOwnProvenance } from './own-provenance'
