@@ -1,4 +1,15 @@
 import type { ConstraintViolation } from './find-constraint-violation.types'
+import type { Scl } from '@/v2019C1/config'
+
+/** What a placement collision is resolved for. */
+export type PlacementCollisionParams = {
+	/** The element written. */
+	ref: Scl.Ref<Scl.ElementsOf>
+	/** The element whose rules cover it, when the caller knows it: else its parent, looked through a wrapper. */
+	parentRef?: Scl.Ref<Scl.ElementsOf>
+	/** The user's values for its editable attributes, written first. */
+	overrides?: Record<string, string>
+}
 
 /** The outcome of resolving a placement collision. */
 export type PlacementResolution =

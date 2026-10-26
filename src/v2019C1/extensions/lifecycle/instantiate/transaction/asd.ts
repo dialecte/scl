@@ -1,7 +1,7 @@
 import { nameCreatedSharedElements } from './name-created-shared-elements'
 import { resolveTargetStructure } from './resolve-target-structure'
 
-import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
+import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
@@ -127,7 +127,7 @@ export async function placeApplication(
 		const functionMapping = contentMappings.find((mapping) => mapping.source.id === functionRef.id)
 		if (!functionMapping) continue
 		const functionParent = await resolveStructureRef(sourceQuery, functionRef, structure)
-		await resolvePlacementCollision(tx, {
+		await placeUniquely(tx, {
 			ref: functionMapping.target,
 			parentRef: functionParent,
 			overrides: overrides?.get(functionRef.id),
@@ -162,7 +162,7 @@ export async function placeApplication(
 	// auto-resolve a name collision among siblings (schema constraint)
 	if (policy.bumpsCollisions) {
 		const applicationParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
-		await resolvePlacementCollision(tx, {
+		await placeUniquely(tx, {
 			ref: rootMapping.target,
 			parentRef: applicationParent,
 			overrides: overrides?.get(applicationRef.id),

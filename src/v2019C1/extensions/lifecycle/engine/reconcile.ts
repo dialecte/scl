@@ -9,7 +9,10 @@ import { landingParent } from './wrapper'
 import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
-import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
+import {
+	assertNoIdentityCollision,
+	resolvePlacementCollision,
+} from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
@@ -20,6 +23,7 @@ import type { RemovalBase } from './removal-base.types'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type { FindIdentityCollisionParams } from '@/v2019C1/extensions/lifecycle/constraints/find-identity-collision.types'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -157,11 +161,14 @@ export async function reconcile(
 			overrides,
 			namesFollow: params.namesFollow,
 		})
-		// a name written that a sibling of the project already holds is numbered, as a placed element's is
+		// a name written that a sibling of the project already holds is numbered, as a placed element's is. A rename
+		// writes editable fields only: a key it leaves colliding has none, the project held it so before
 		if (renamed && bumpsCollisions) {
 			await resolvePlacementCollision(tx, { ref: toRef(instanceTree) as Scl.Ref<Scl.ElementsOf> })
 		}
 	}
+	// what an addition leaves colliding on a key nothing can change, read again once the removals are written
+	const pendingCollisions: FindIdentityCollisionParams[] = []
 	await reconcileChildren(tx, {
 		sourceQuery,
 		sourceNode: sourceTree,
@@ -176,6 +183,7 @@ export async function reconcile(
 		namesFollow: params.namesFollow,
 		omit,
 		added,
+		pendingCollisions,
 		redirectedSourceUuids,
 		keepLeftoverRefs,
 		withinProjectOwned,
@@ -196,8 +204,24 @@ export async function reconcile(
 			omit,
 		})
 	}
+	// what the template drops, or the project's own element whose removal is accepted, frees the key it held
+	await assertNoPendingCollision(tx, { pending: pendingCollisions })
 
 	return added
+}
+
+/**
+ * Refuse an element an addition left colliding on a key none of whose fields can be changed, read as the reconcile
+ * leaves it: one whose twin the same reconcile removed is no collision.
+ */
+async function assertNoPendingCollision(
+	tx: Core.Transaction<Config>,
+	params: { pending: readonly FindIdentityCollisionParams[] },
+): Promise<void> {
+	for (const placed of params.pending) {
+		if (!(await tx.getRecord(placed.ref))) continue
+		await assertNoIdentityCollision(tx, placed)
+	}
 }
 
 async function reconcileChildren(
@@ -217,6 +241,8 @@ async function reconcileChildren(
 		omit: readonly string[] | undefined
 		/** Accumulates the clone mappings of every element added below here (root + subtree). */
 		added: Scl.CloneMapping[]
+		/** Accumulates the elements added below here that collide on a key nothing can change. */
+		pendingCollisions: FindIdentityCollisionParams[]
 		redirectedSourceUuids: RedirectedSourceUuids
 		keepLeftoverRefs: boolean
 		/** The children sit in an element of the project a source element is mapped onto. */
@@ -240,6 +266,7 @@ async function reconcileChildren(
 		namesFollow,
 		omit,
 		added,
+		pendingCollisions,
 		redirectedSourceUuids,
 		keepLeftoverRefs,
 		withinProjectOwned,
@@ -297,6 +324,7 @@ async function reconcileChildren(
 				namesFollow,
 				omit,
 				added,
+				pendingCollisions,
 				redirectedSourceUuids,
 				keepLeftoverRefs,
 				withinProjectOwned,
@@ -333,17 +361,26 @@ async function reconcileChildren(
 		// validate the added element against its instance-parent context: apply any
 		// user edit then auto-resolve a name collision among siblings (schema constraint)
 		const addRoot = cloneMappings.find((mapping) => mapping.source.id === sourceChild.id)
-		if (addRoot && bumpsCollisions) {
-			await resolvePlacementCollision(tx, {
-				ref: addRoot.target,
-				parentRef: toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>,
-				overrides: overrides?.get(sourceChild.id),
-			})
+		if (addRoot) {
+			const parentRef = toRef(instanceParent) as unknown as Scl.Ref<Scl.ElementsOf>
+			const outcome = bumpsCollisions
+				? await resolvePlacementCollision(tx, {
+						ref: addRoot.target,
+						parentRef,
+						overrides: overrides?.get(sourceChild.id),
+					})
+				: undefined
+			// a key nothing can change is refused, but only as the reconcile leaves it (its removals written); a caller
+			// numbering nothing (no scenario does today) has its additions checked the same way
+			if (!outcome || outcome.status === 'unresolvable') {
+				pendingCollisions.push({ ref: addRoot.target, parentRef })
+			}
 		}
 	}
 
 	// a name written that a sibling already holds is numbered, as a placed element's is — once every rename of the
-	// parent is written, so two children trading names need no number (`numberRenames` says the same in the report)
+	// parent is written, so two children trading names need no number (`numberRenames` says the same in the report).
+	// A key a rename leaves colliding has no editable field: the project held it so before
 	for (const renamed of bumpsCollisions ? renamedChildren : []) {
 		await resolvePlacementCollision(tx, { ref: toRef(renamed) as Scl.Ref<Scl.ElementsOf> })
 	}

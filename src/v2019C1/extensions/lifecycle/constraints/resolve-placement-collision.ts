@@ -6,7 +6,10 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 
-import type { PlacementResolution } from './resolve-placement-collision.types'
+import type {
+	PlacementCollisionParams,
+	PlacementResolution,
+} from './resolve-placement-collision.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -20,8 +23,8 @@ import type * as Core from '@dialecte/core'
  *     and apply it — the after-updated hook then rebuilds any ref paths that
  *     traverse it;
  *  3. if the violated key is entirely IDENTITY (e.g. an LNode lnClass/lnInst tuple),
- *     it is NOT auto-resolvable (that would be a delete+create) — reported as
- *     `unresolvable` for the future validation/conflict surface.
+ *     it is NOT auto-resolvable (that would be a delete+create) — returned as
+ *     `unresolvable`: an operation placing the element refuses it (`placeUniquely`).
  *
  * This is the auto-resolution (default fallback) half; a full-track consumer can
  * instead supply `overrides` (user-edited values for editable attributes). Those are
@@ -30,15 +33,11 @@ import type * as Core from '@dialecte/core'
  */
 export async function resolvePlacementCollision(
 	tx: Core.Transaction<Config>,
-	params: {
-		ref: Scl.Ref<Scl.ElementsOf>
-		parentRef?: Scl.Ref<Scl.ElementsOf>
-		overrides?: Record<string, string>
-	},
+	params: PlacementCollisionParams,
 ): Promise<PlacementResolution> {
 	const { ref, overrides } = params
 
-	const parentRef = params.parentRef ?? (await findConstraintParent(tx, ref))
+	const parentRef = params.parentRef ?? (await findConstraintParent(tx, { ref }))
 	if (!parentRef) return { status: 'ok' }
 
 	let candidate: Record<string, string | undefined> = await tx.getAttributes(ref)
@@ -82,14 +81,14 @@ export async function resolvePlacementCollision(
  * The element whose uniqueness rules cover `ref`: its parent, or — when the parent is a wrapper
  * the dialecte looks through (a Private) — that wrapper's own parent, and so on.
  */
-async function findConstraintParent(
-	tx: Core.Transaction<Config>,
-	ref: Scl.Ref<Scl.ElementsOf>,
+export async function findConstraintParent(
+	query: Core.Query<Config>,
+	params: { ref: Scl.Ref<Scl.ElementsOf> },
 ): Promise<Scl.Ref<Scl.ElementsOf> | undefined> {
 	const transparentElements: readonly string[] = SCL_DIALECTE_CONFIG.transparentElements
-	let parent = (await tx.getRecord(ref))?.parent
+	let parent = (await query.getRecord(params.ref))?.parent
 	while (parent && transparentElements.includes(parent.tagName)) {
-		parent = (await tx.getRecord(parent as Scl.Ref<Scl.ElementsOf>))?.parent
+		parent = (await query.getRecord(parent as Scl.Ref<Scl.ElementsOf>))?.parent
 	}
 	return parent ? (toRef(parent) as Scl.Ref<Scl.ElementsOf>) : undefined
 }

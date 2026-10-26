@@ -1,6 +1,6 @@
 import { toRef } from '@dialecte/core/helpers'
 
-import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
+import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import {
@@ -160,7 +160,7 @@ export async function reconcileSatellites(
 		if (resolved && bumpsCollisions) {
 			const decision = satelliteRef.id ? decisionMappings?.get(satelliteRef.id) : undefined
 			const chosenName = decision && 'create' in decision ? decision.create.name : undefined
-			await resolvePlacementCollision(tx, {
+			await placeUniquely(tx, {
 				ref: toRef(clone.record) as Scl.Ref<Scl.ElementsOf>,
 				parentRef: targetParent,
 				overrides: chosenName ? { name: chosenName } : undefined,

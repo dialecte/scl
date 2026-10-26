@@ -3,7 +3,7 @@ import { resolveTargetStructure } from './resolve-target-structure'
 
 import { throwDialecteError } from '@dialecte/core'
 
-import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
+import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import {
@@ -131,7 +131,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	// validate the placed function against its parent context; apply any user edits
 	// then auto-resolve a name collision among siblings (schema constraint)
 	if (policy.bumpsCollisions) {
-		await resolvePlacementCollision(tx, {
+		await placeUniquely(tx, {
 			ref: instantiatedRef,
 			parentRef: targetParent,
 			overrides: overrides?.get(functionRef.id),

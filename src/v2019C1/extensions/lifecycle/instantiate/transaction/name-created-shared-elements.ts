@@ -1,4 +1,4 @@
-import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
+import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { findMappingPolicy } from '@/v2019C1/extensions/lifecycle/mapping'
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
@@ -27,7 +27,7 @@ export async function nameCreatedSharedElements(
 		const parentRef = await resolveStructureRef(sourceQuery, sourceRef, structure)
 		const decision = decisionMappings?.get(mapping.source.id)
 		const chosenName = decision && 'create' in decision ? decision.create.name : undefined
-		await resolvePlacementCollision(tx, {
+		await placeUniquely(tx, {
 			ref: mapping.target,
 			parentRef,
 			overrides: chosenName ? { name: chosenName } : undefined,

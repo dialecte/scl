@@ -68,6 +68,17 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL1009',
 		message: 'This value of the option is not available yet',
 	},
+	/**
+	 * An element written beside one of the project that shares with it every field of a key none of which can be
+	 * changed (the key of a logical node: its class, instance, prefix, device and IED): two such elements in one place
+	 * are invalid, whatever is numbered. `meta: { constraint, fields, element: { tagName, id }, collidesWith: { tagName,
+	 * id } }` — `element` is the element the operation brings (as the template holds it when refused before any write,
+	 * as written otherwise), `collidesWith` the element of the project.
+	 */
+	IDENTITY_COLLISION: {
+		code: 'SCL1010',
+		message: 'An element shares with another one in the same place a key that cannot be changed',
+	},
 	/** The template file holds nothing that can be instantiated. */
 	TEMPLATE_ROOT_NOT_FOUND: {
 		code: 'SCL2001',

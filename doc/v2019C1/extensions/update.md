@@ -369,7 +369,14 @@ content.
 When a group is accepted and its primary is **placed** (a first-time instantiate, a composed function,
 or a add onto an existing instance), the engine validates it against its parent context and
 auto-resolves a scoped-uniqueness collision (e.g. two children with the same `name` under one Bay →
-`Prot` becomes `Prot_1`). Identity-only collisions are left untouched (never a silent delete + create).
+`Prot` becomes `Prot_1`).
+
+A collision on a key none of whose fields can be changed — an `LNode` sharing its class, instance, prefix, device
+and IED with another `LNode` of the same function — cannot be told apart by numbering, and the engine never deletes
+one to create the other: the apply is **refused** with `IDENTITY_COLLISION` (`meta: { constraint, fields, element,
+collidesWith }`), nothing written. An update reads it once the removals of the same apply are written: a template
+that drops an `LNode` and adds another of the same key, or the project's own `LNode` whose removal is accepted with
+the addition, is no collision. A rename never causes one (it changes editable fields only).
 
 The engine always **owns uniqueness**, in one format: a taken value is numbered `<value>_1`, `<value>_2`, …,
 and a value that already ends with a number gets the next free one instead of a second number (`Prot_1`

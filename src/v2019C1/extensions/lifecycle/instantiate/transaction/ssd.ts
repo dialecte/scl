@@ -1,7 +1,7 @@
 import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
-import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints'
+import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import {
@@ -105,7 +105,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 				root.tagName === 'Substation'
 					? targetParent
 					: await resolveStructureRef(sourceQuery, root, scopeStructure)
-			await resolvePlacementCollision(tx, {
+			await placeUniquely(tx, {
 				ref: rootTarget,
 				parentRef: rootParent,
 				overrides: root.id ? overrides?.get(root.id) : undefined,
@@ -122,7 +122,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 			if (!placedMapping) continue
 			const structure = await resolveFrameStructure(tx, sourceQuery, placed, frameIndex)
 			const parentRef = await resolveStructureRef(sourceQuery, placed, structure)
-			await resolvePlacementCollision(tx, {
+			await placeUniquely(tx, {
 				ref: placedMapping.target,
 				parentRef,
 				overrides: overrides?.get(sourceId),
