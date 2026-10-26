@@ -3,6 +3,12 @@ import { TEMPLATE_NAME } from '@/v2019C1/constants'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
+/**
+ * Ensures the TEMPLATE-named Substation / VoltageLevel / Bay scaffolding a template document holds
+ * its content under, creating any missing level, and returns the three levels.
+ *
+ * @intent create the TEMPLATE Substation/VoltageLevel/Bay skeleton of a template file, get the scaffolding of an FSD/ASD
+ */
 export async function ensureSubstationTemplateStructure(tx: Core.Transaction<Config>): Promise<{
 	Substation: Scl.RawRecord<'Substation'>
 	VoltageLevel: Scl.RawRecord<'VoltageLevel'>

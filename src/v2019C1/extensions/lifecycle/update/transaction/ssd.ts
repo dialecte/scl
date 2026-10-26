@@ -35,17 +35,19 @@ type UpdateSsdResult = {
 }
 
 /**
- * `update.fromSsd` - reconcile a project against a (possibly newer) SSD.
+ * `tx.lifecycle.update.ssd` - reconcile a project against a (possibly newer) SSD.
  *
- * Mirrors `update.fromAsd` one layer up:
+ * Mirrors `tx.lifecycle.update.asd` one layer up:
  *  - **first-time** (no instance of any scope primary, or a forced `instantiate`) delegates to
- *    `instantiate.ssd`, so the source is recorded ONCE at document level (`Header > SourceFiles`),
+ *    `tx.lifecycle.instantiate.ssd`, so the source is recorded ONCE at document level (`Header > SourceFiles`),
  *    consistent with the direct verb - not scattered per primary.
- *  - **reconcile** cascades to the per-primary update verbs: each Application via `update.fromAsd`
- *    (which cascades to its composed Functions) and each standalone Function via `update.fromFsd`.
+ *  - **reconcile** cascades to the per-primary update verbs: each Application via `tx.lifecycle.update.asd`
+ *    (which cascades to its composed Functions) and each standalone Function via `tx.lifecycle.update.fsd`.
  *
  * `report` + `decisions` gate every write, partitioned per instance by the sub-verbs. The scope
  * defaults to the SSD's instantiable root.
+ *
+ * @intent update a project from a newer SSD, reconcile a bay typical with its template, propagate an SSD change
  */
 export async function ssd(
 	tx: Core.Transaction<Config>,

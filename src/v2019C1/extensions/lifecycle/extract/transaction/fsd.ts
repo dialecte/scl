@@ -12,6 +12,14 @@ import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
+/**
+ * Extracts a Function or SubFunction from a project into the transaction's document as a
+ * standalone FSD template: the function (a SubFunction becomes a Function, its `templateUuid`
+ * dropped) with its categories and type closure under the TEMPLATE Substation, recorded in the FSD
+ * history.
+ *
+ * @intent extract a Function into an FSD template, create an FSD from a project, save a function as a reusable template
+ */
 export async function fsd(
 	tx: Core.Transaction<Config>,
 	params: {

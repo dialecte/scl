@@ -34,6 +34,8 @@ import type * as Core from '@dialecte/core'
  * Generic over element kind: works on DataTypeTemplates types (id refs), on
  * instances with uuid refs, or any mix. Reference cycles are broken with a
  * `@cycle` marker.
+ *
+ * @intent compare two subtrees structurally ignoring ids and uuids, detect equivalent or duplicate data types, content key of an element for dedup
  */
 export async function elementSignature(
 	query: Core.Query<Config>,

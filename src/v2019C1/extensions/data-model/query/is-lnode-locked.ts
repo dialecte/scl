@@ -16,6 +16,8 @@ import type { AnyRefOrRecord } from '@dialecte/core'
  * (`resetLNodes`), not by this predicate — so a dangling (orphaned) binding is
  * still locked and stays protected until cleanup resolves it. The S-IED
  * specification convention (`manufacturer="S_IED"`) is likewise not considered.
+ *
+ * @intent is an LNode bound to an IED, can the data model or lnType of an LNode be edited, LNode lock check
  */
 export async function isLNodeLocked(
 	query: Core.Query<Config>,

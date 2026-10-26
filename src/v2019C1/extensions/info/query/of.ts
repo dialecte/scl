@@ -19,7 +19,9 @@ import type { AnyRefOrRecord } from '@dialecte/core'
 // ── Public API ───────────────────────────────────────────────────────
 
 /**
- * Query extension: what a consumer shows and checks about an SCL element - its title, and its
+ * The own title of an SCL element, read from the element itself - its attributes or text, a named
+ * child for a few tags, the signal name for a signal - never from its ancestors (a Bay's title is its
+ * `name`, not its path from the root, which is `reference.buildElementPath`), its state, and its
  * `<Labels>` when asked (`withLabels: true`, one more read per element).
  *
  * Resolution precedence for the title (first non-empty wins):
@@ -27,6 +29,8 @@ import type { AnyRefOrRecord } from '@dialecte/core'
  * 2. `record.value` (XML text body) - handles BayType, IEDName, Val, etc.
  * 3. `DEFINITION.identityFields` fallback (name > id > first), lineage attributes left out.
  * 4. tagName.
+ *
+ * @intent own title or display name of an element, display name of a Bay/IED/LNode/ExtRef, state of an LNode or signal (locked, mapped, connected, implemented), Labels translations of an element
  */
 export async function of<GenericElement extends string = string>(
 	query: Core.Query<Config>,

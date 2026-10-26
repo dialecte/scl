@@ -33,6 +33,8 @@ import type * as Core from '@dialecte/core'
  * Returns the instantiated Application ref, its composed Function roots, and the clone
  * mappings of everything the operation cloned, so a consumer can drive follow-up rules against the fresh
  * instance without re-querying by templateUuid.
+ *
+ * @intent instantiate an ASD into a project, add an Application from a template, place an application template under a Bay
  */
 export async function asd(tx: Core.Transaction<Config>, params: AsdParams): Promise<AsdResult> {
 	const { applicationRef, ...placed } = await placeApplication(tx, params)

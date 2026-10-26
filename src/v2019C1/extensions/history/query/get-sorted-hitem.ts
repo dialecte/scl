@@ -6,6 +6,8 @@ import type * as Core from '@dialecte/core'
 /**
  * Query extension: returns all Hitem descendants of the History element,
  * sorted by version then revision (ascending).
+ *
+ * @intent document history in order, Hitem entries sorted by version and revision, revision log of an SCL file
  */
 export async function getSortedHitems(
 	query: Core.Query<Config>,

@@ -9,6 +9,13 @@ import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
+/**
+ * Extracts an Application from a project into the transaction's document as a standalone ASD
+ * template: the Application with its Functions, type closure and satellites under the TEMPLATE
+ * Substation/VoltageLevel/Bay scaffolding, recorded in the ASD history.
+ *
+ * @intent extract an Application into an ASD template, create an ASD from a project, save an application as a reusable template
+ */
 export async function asd(
 	tx: Core.Transaction<Config>,
 	params: {

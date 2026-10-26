@@ -10,10 +10,12 @@ import type * as Core from '@dialecte/core'
 
 /**
  * Resolves a canonical SCL path to the record it points to.
- * Inverse of {@link buildElementPath}.
+ * Inverse of `reference.buildElementPath`.
  *
  * Walks the tree from root, matching each path segment against children.
  * Transparent elements (AccessPoint, Server) are traversed automatically.
+ *
+ * @intent find an element by its path string like S1/V1/B1/CE1, path to record, inverse of buildElementPath, look up by name path instead of walking children
  *
  * @example
  * const record = await resolveElementPath(query, "S1/V1/B1/CE1")

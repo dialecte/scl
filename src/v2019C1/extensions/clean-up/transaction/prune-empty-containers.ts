@@ -8,6 +8,8 @@ import type * as Core from '@dialecte/core'
  *
  * When all children of a ref type are deleted, their container
  * hierarchy may become empty. Private elements emptied by ref cleanup are also pruned.
+ *
+ * @intent remove empty reference containers and empty Private elements, tidy up after deleting references
  */
 export async function pruneEmptyContainers(tx: Core.Transaction<Config>): Promise<void> {
 	const tagNames = [...Object.values(REF_CONTAINERS).flat(), 'Private']

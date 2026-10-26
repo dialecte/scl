@@ -21,6 +21,8 @@ import type * as Core from '@dialecte/core'
  *   instance uuid — the copy stays an instance of the SAME template. Written as a no-op
  *   because the clone already copied the lineage attributes verbatim (callers pass `strip:false`).
  * - `keep` (fork): leave lineage untouched.
+ *
+ * @intent stamp templateUuid/originUuid on cloned elements, set instance lineage after a clone, strip template lineage on extract
  */
 export async function writeIdentity(
 	tx: Core.Transaction<Config>,

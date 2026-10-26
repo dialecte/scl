@@ -9,6 +9,8 @@ import type * as Core from '@dialecte/core'
  * Query extension: every dataflow of the document: each signal of the specification with what
  * implements it, in document order, then the implementation-only entries (an ExtRef naming a
  * control block that no signal links to), in document order.
+ *
+ * @intent list every dataflow of a document, all signals with the ExtRef/ExtCtrl implementing them, dataflow table of the whole SCL
  */
 export async function all(query: Core.Query<Config>): Promise<Dataflow[]> {
 	return describeDocument({ context: createDataflowContext(query) })

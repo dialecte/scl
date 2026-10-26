@@ -29,6 +29,8 @@ import type { AnyRawRecord } from '@dialecte/core'
  * the record's attributes, parses it, and finds the target via candidate
  * search + ancestry verification.
  *
+ * @intent follow a reference to its target, element a SourceRef/ControlRef/FunctionRef path points to, resolve a path attribute to a record
+ *
  * @example
  * // SourceRef with source="S1/B1/PXCBR1.Pos.stVal"
  * const result = await resolve(query, sourceRefRecord, 'source')

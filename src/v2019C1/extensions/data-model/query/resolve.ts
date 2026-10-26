@@ -5,6 +5,13 @@ import type { ResolvedDataModel, DataModelMap } from './resolve.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
+/**
+ * The data types behind LNodes and LNs: every LNodeType their `lnType` names, with the DOType,
+ * DAType and EnumType it uses down the whole tree, each listed once. An `lnType` naming no
+ * LNodeType fails.
+ *
+ * @intent data types used by an LNode or LN, LNodeType/DOType/DAType/EnumType closure of a logical node, collect the DataTypeTemplates of a selection
+ */
 export async function resolve(
 	query: Core.Query<Config>,
 	params: {

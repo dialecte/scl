@@ -25,7 +25,9 @@ import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/eng
 import type * as Core from '@dialecte/core'
 
 /**
- * `tx.lifecycle.apply` — the generic write surface.
+ * `tx.lifecycle.apply` writes what a lifecycle report (instantiate or update from an FSD / ASD /
+ * SSD) says: all of it when no decision is needed, only the accepted groups once decisions are
+ * given, nothing while decisions are still missing (the report comes back for review).
  *
  * The consumer classifies first (`query.lifecycle.report`) and passes the
  * `report` in. The report + `decisions` gate what is written:
@@ -46,6 +48,8 @@ import type * as Core from '@dialecte/core'
  * Returns `{ report, instances }` — the effective report plus the instance roots
  * the write produced/reconciled. Run inside `doc.prepare(tx => tx.lifecycle.apply(...))`
  * for a previewable, reversible dry-run.
+ *
+ * @intent apply a template instantiation or update after review, write a lifecycle report with user decisions, accept or skip changes from a newer FSD/ASD/SSD
  */
 export async function apply(
 	tx: Core.Transaction<Config>,

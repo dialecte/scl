@@ -47,9 +47,9 @@ import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
- * `update.fromAsd` — reconcile a project against a (possibly newer) ASD.
+ * `tx.lifecycle.update.asd` — reconcile a project against a (possibly newer) ASD.
  *
- * Same engine as `update.fromFsd`, one layer up (proves `engine.reconcile` is
+ * Same engine as `tx.lifecycle.update.fsd`, one layer up (proves `engine.reconcile` is
  * layer-agnostic): several instances of one ASD template may live under one
  * anchor, so EVERY matching `Application` instance is reconciled; if
  * none exists yet, the application is instantiated fresh.
@@ -58,7 +58,7 @@ import type * as Core from '@dialecte/core'
  *  1. application layer — reconcile each `Application` subtree (roles, allocation
  *     refs, attributes);
  *  2. function-layer cascade — treat every composed Function the ASD
- *     references as an FSD to update and delegate to `update.fromFsd`
+ *     references as an FSD to update and delegate to `tx.lifecycle.update.fsd`
  *     (instantiate-or-reconcile), per instance of the application
  *     ({@link cascadeComposedFunctions}). Verbs compose verbs: a function added by
  *     the newer ASD is instantiated for each instance, an existing one is reconciled.
@@ -66,6 +66,8 @@ import type * as Core from '@dialecte/core'
  * `report` + `decisions` gate every write: each Application instance is gated by
  * ONLY its own groups (partitioned by `instanceScopeId`) so the user can update a
  * subset of instances across both layers.
+ *
+ * @intent update a project from a newer ASD, reconcile Application instances with their template, instantiate or update an application template
  */
 export async function asd(
 	tx: Core.Transaction<Config>,

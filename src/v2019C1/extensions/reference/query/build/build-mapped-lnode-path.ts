@@ -11,6 +11,8 @@ import type { MappedLNodeAttributes } from './build-mapped-lnode-path.types'
  * `LN` that implements it. An unmapped `LNode` uses `iedName="None"` and has no
  * implementing `LN`.
  *
+ * @intent path of the LN implementing an LNode, IED/LD/LN address string from LNode attributes, compose iedName/ldInst/prefix/lnClass/lnInst
+ *
  * @example
  * buildMappedLNodePath({ iedName: 'IED1', ldInst: 'LD0', prefix: '', lnClass: 'XCBR', lnInst: '1' })
  * // → "IED1/LD0/XCBR1"

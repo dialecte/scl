@@ -18,7 +18,7 @@ import type { AnyRawRecord } from '@dialecte/core'
 /**
  * Repoint the uuid references of cloned elements onto the clone's fresh
  * identities and recompute their path attributes. Counterpart of
- * {@link applyTypeIdRemap} for the uuid reference system (`UUID_REFERENCE_PAIRS`).
+ * `tx.reference.applyTypeIdRemap` for the uuid reference system (`UUID_REFERENCE_PAIRS`).
  *
  * Caller-owned, single pass: given the complete `cloneMappings` of an operation, it
  * builds the source-uuid -> target-uuid map once and rewrites every cloned
@@ -30,6 +30,8 @@ import type { AnyRawRecord } from '@dialecte/core'
  *
  * Idempotent: a ref already pointing at a target uuid (not a source uuid) is
  * left untouched.
+ *
+ * @intent repoint uuid references after a clone, make references inside copied elements point at the copies, rewrite refs from source to target uuids
  */
 export async function applyUuidRemap(
 	tx: Core.Transaction<Config>,

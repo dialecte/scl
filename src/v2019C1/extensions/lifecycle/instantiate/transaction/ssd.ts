@@ -31,6 +31,8 @@ import type * as Core from '@dialecte/core'
  *
  * The scope defaults to the SSD's instantiable root (the first named level down the
  * `Substation -> VoltageLevel -> Bay` chain).
+ *
+ * @intent instantiate an SSD into a project, add a bay typical or process section from a template, use an SSD as a project base
  */
 export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Promise<SsdResult> {
 	const {

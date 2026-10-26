@@ -12,6 +12,8 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  * `Bay`, `Function`, ...) resolves at the `uuid` branch whatever its `identityFields` say; a uuid-less
  * tag resolves by the fields its schema keys name (`id`/`lnClass`/`inst`/..., and `name` where the
  * schema makes it unique among siblings, e.g. `DA`/`SDO` in a type).
+ *
+ * @intent identity of an element (uuid or key fields), key to match an element across two documents, what makes an element the same element
  */
 export async function resolveIdentity(
 	query: Reader,
@@ -41,6 +43,8 @@ export async function resolveIdentity(
 /**
  * Whether two identities denote the same element. `uuid` identities are equal only on a shared,
  * defined uuid; `fields` on identical field maps; `positional` is never equal (no intrinsic id).
+ *
+ * @intent are two element identities the same element, compare identities from resolveIdentity, match elements across documents
  */
 export function identityEquals(first: ElementIdentity, second: ElementIdentity): boolean {
 	if (first.kind === 'uuid' && second.kind === 'uuid') {

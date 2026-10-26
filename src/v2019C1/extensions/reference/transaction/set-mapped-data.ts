@@ -15,6 +15,8 @@ import type * as Core from '@dialecte/core'
  * `mappedLnUuid` only when the implementation differs from its default; otherwise neither.
  * A data path the schema cannot hold on this record is not written and reported as
  * `inexpressible`. Without `implementation` the record follows its default.
+ *
+ * @intent map a DOS/SDS/DAS to the DO/DA that implements it, set mappedDoName/mappedDaName/mappedLnUuid, reset a data mapping to its default
  */
 export async function setMappedData(
 	tx: Core.Transaction<Config>,

@@ -18,6 +18,8 @@ import type * as Core from '@dialecte/core'
  * above the selected entrypoint are then TEMPLATE-named (the scaffolding marker: the first named
  * level below the TEMPLATE-named ancestors is the instantiable root), the entrypoint keeps its name
  * with `templateUuid` stripped, uuid refs are repointed and orphans cleaned up.
+ *
+ * @intent extract a bay typical into an SSD template, create an SSD from a bay or voltage level of a project, save a process section as a reusable template
  */
 export async function ssd(
 	tx: Core.Transaction<Config>,
