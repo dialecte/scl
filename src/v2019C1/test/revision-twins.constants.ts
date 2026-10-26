@@ -26,6 +26,8 @@ export const REVISION_TWINS = {
 	linkedLevelsTemplate: { name: 'linked-levels-template', extension: 'ssd' },
 	/** An application with two groups of variants that changes inside and outside what an instance selects. */
 	variantApplication: { name: 'variant-application', extension: 'asd' },
+	/** A library function whose type ids the project already holds with other content, its type gaining data. */
+	switchControllerTypeClash: { name: 'switch-controller-type-clash', extension: 'fsd' },
 } as const
 
 /**
@@ -35,4 +37,6 @@ export const REVISION_TWINS = {
 export const REVISION_TWIN_INSTANCES = {
 	/** The project holding the application's instance with one variant of each group selected. */
 	variantApplication: { extension: 'ssd' },
+	/** The project holding the other library function, whose types share their ids with the twin's. */
+	switchControllerTypeClash: { extension: 'ssd' },
 } as const

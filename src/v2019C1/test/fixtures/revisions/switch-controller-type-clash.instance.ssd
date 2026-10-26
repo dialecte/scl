@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" version="2007" revision="C" release="5">
+	<Header id="substation_project" uuid="00000000-0000-4000-8000-000000000750" version="0" revision="1" toolID="twin" fileType="SSD"/>
+	<Substation name="S1" uuid="00000000-0000-4000-8000-000000000751">
+		<VoltageLevel name="V1" uuid="00000000-0000-4000-8000-000000000752">
+			<Bay name="B1" uuid="00000000-0000-4000-8000-000000000753">
+				<Function name="Switch controller" uuid="00000000-0000-4000-8000-000000000760" templateUuid="00000000-0000-4000-8000-000000000800">
+					<LNode iedName="None" prefix="" lnClass="CSWI" lnInst="1" lnType="CSWI_#v0-LibTool" uuid="00000000-0000-4000-8000-000000000761" templateUuid="00000000-0000-4000-8000-000000000801">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="None" sPrefix="" sLnClass="CSWI" sLnInst="1"/>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+			<Bay name="B2" uuid="00000000-0000-4000-8000-000000000754"/>
+		</VoltageLevel>
+	</Substation>
+	<DataTypeTemplates>
+		<LNodeType id="CSWI_#v0-LibTool" lnClass="CSWI" desc="Switch controller">
+			<DO name="NamPlt" type="LPL.NamPlt_#v0-LibTool" transient="false" desc="Name plate of the logical node."/>
+			<DO name="Beh" type="ENS.Beh_#v0-LibTool" transient="false" desc="Behaviour of the logical node."/>
+			<DO name="Mod" type="ENC.Mod_#v0-LibTool" transient="false" desc="Operating mode of the logical node."/>
+			<DO name="Pos" type="DPC.Pos_#v0-LibTool" transient="false" desc="Switch position."/>
+		</LNodeType>
+		<DOType id="LPL.NamPlt_#v0-LibTool" cdc="LPL">
+			<DA name="vendor" fc="DC" bType="VisString255" desc="Name of the vendor."/>
+			<DA name="swRev" fc="DC" bType="VisString255" desc="Software revision."/>
+		</DOType>
+		<DOType id="ENS.Beh_#v0-LibTool" cdc="ENS">
+			<DA name="stVal" fc="ST" bType="Enum" type="BehaviourModeKind_#v0-LibTool" dchg="true" dupd="true" desc="Value of the data."/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true" desc="Quality of the value in stVal."/>
+			<DA name="t" fc="ST" bType="Timestamp" desc="Timestamp of the last change."/>
+		</DOType>
+		<DOType id="ENC.Mod_#v0-LibTool" cdc="ENC">
+			<DA name="stVal" fc="ST" bType="Enum" type="BehaviourModeKind_#v0-LibTool" dchg="true" desc="Status value of the controllable data object."/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true" desc="Quality of the value in stVal."/>
+			<DA name="t" fc="ST" bType="Timestamp" desc="Timestamp of the last change."/>
+			<DA name="ctlModel" fc="CF" bType="Enum" type="CtlModelKind_#v0-LibTool" dchg="true" desc="Control model."/>
+		</DOType>
+		<DOType id="DPC.Pos_#v0-LibTool" cdc="DPC">
+			<DA name="stVal" fc="ST" bType="Dbpos" dchg="true" desc="Status value of the controllable data object."/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true" desc="Quality of the value in stVal."/>
+			<DA name="t" fc="ST" bType="Timestamp" desc="Timestamp of the last change."/>
+			<DA name="ctlModel" fc="CF" bType="Enum" type="CtlModelKind_#v0-LibTool" dchg="true" desc="Control model."/>
+		</DOType>
+		<EnumType id="BehaviourModeKind_#v0-LibTool">
+			<EnumVal ord="1">on</EnumVal>
+			<EnumVal ord="2">blocked</EnumVal>
+			<EnumVal ord="3">test</EnumVal>
+			<EnumVal ord="4">test/blocked</EnumVal>
+			<EnumVal ord="5">off</EnumVal>
+		</EnumType>
+		<EnumType id="CtlModelKind_#v0-LibTool">
+			<EnumVal ord="0">status-only</EnumVal>
+			<EnumVal ord="1">direct-with-normal-security</EnumVal>
+			<EnumVal ord="2">sbo-with-normal-security</EnumVal>
+			<EnumVal ord="3">direct-with-enhanced-security</EnumVal>
+			<EnumVal ord="4">sbo-with-enhanced-security</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>

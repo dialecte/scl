@@ -12,14 +12,15 @@ The lifecycle tests are written in three tiers:
 3. the real files: at most one test per pair in the `corpus` vitest project, which skips when the corpus is not
    synced (`npm run corpus:sync`).
 
-| Twin                                  | Copied from                                       | What the second revision changes                                                              |
-| ------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `application-renames-functions` (ASD) | `CB_Light` v1r1 → v1r2                            | three subfunctions renamed (every path naming them follows), the application's `type` changed |
-| `application-gains-elements` (ASD)    | `P51_App` v0r1 → v0r2                             | gains a function role and the behaviour description it refers to                              |
-| `function-type-gains-data` (FSD)      | `XCBR` v2r1 → v2r2                                | the logical node type gains a data object, under the same id                                  |
-| `two-level-bay-template` (SSD)        | `Transformer Bay template` v0r1 → v0r2, repaired  | gains a dataflow from one application to the other: a signal role and two inputs per level    |
-| `linked-levels-template` (SSD)        | `SLD_TFO_Bay` v0r1, a second revision made        | the medium-voltage breaker gets a description; its terminal names a node of the other level   |
-| `variant-application` (ASD)           | `P21_App` and its SSD3 instance, `CB_App`'s group | inside and outside the selection of variants its committed instance made, a variant gained    |
+| Twin                                  | Copied from                                                                              | What the second revision changes                                                                                                       |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `application-renames-functions` (ASD) | `CB_Light` v1r1 → v1r2                                                                   | three subfunctions renamed (every path naming them follows), the application's `type` changed                                          |
+| `application-gains-elements` (ASD)    | `P51_App` v0r1 → v0r2                                                                    | gains a function role and the behaviour description it refers to                                                                       |
+| `function-type-gains-data` (FSD)      | `XCBR` v2r1 → v2r2                                                                       | the logical node type gains a data object, under the same id                                                                           |
+| `two-level-bay-template` (SSD)        | `Transformer Bay template` v0r1 → v0r2, repaired                                         | gains a dataflow from one application to the other: a signal role and two inputs per level                                             |
+| `linked-levels-template` (SSD)        | `SLD_TFO_Bay` v0r1, a second revision made                                               | the medium-voltage breaker gets a description; its terminal names a node of the other level                                            |
+| `variant-application` (ASD)           | `P21_App` and its SSD3 instance, `CB_App`'s group                                        | inside and outside the selection of variants its committed instance made, a variant gained                                             |
+| `switch-controller-type-clash` (FSD)  | the switch controller of the function library, its "in use" file, a second revision made | its type gains a data object under the same id; its project holds the baseline file's instance, the type ids shared with other content |
 
 The two-level bay template holds instances of the other twins (the renamed application's second revision on both
 levels, the gaining application's first one on the high-voltage level): the instances carry their elements' uuids as
@@ -28,4 +29,5 @@ its references name elements of the files it was built from); the twin is copied
 `two-level-bay-template.md`.
 
 A twin may come with its project instance, `<name>.instance.<ext>`: a project holding an instance of the first revision the
-way a tool left it (`variant-application.instance.ssd`, see `variant-application.md`).
+way a tool left it (`variant-application.instance.ssd`, see `variant-application.md`), or the project a twin is placed in
+(`switch-controller-type-clash.instance.ssd`: an instance of the other library file, see `switch-controller-type-clash.md`).

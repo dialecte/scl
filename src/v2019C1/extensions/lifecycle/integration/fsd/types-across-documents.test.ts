@@ -1,4 +1,4 @@
-import { reportAndApply } from '../integration-helpers'
+import { findByName, findByUuid, reportAndApply } from '../integration-helpers'
 
 import { describe, expect } from 'vitest'
 
@@ -11,6 +11,7 @@ import {
 	openSclDocument,
 	runSclTestCases,
 } from '@/v2019C1/test'
+import { readRevisionTwin, readRevisionTwinInstance } from '@/v2019C1/test/revision-twins'
 
 import type { Scl } from '@/v2019C1/config'
 import type {
@@ -391,3 +392,97 @@ function listTypeChanges(reported: DiffReport): string[] {
 	for (const instance of reported.instances) visit(instance.tree)
 	return out.map((line) => line.replace(/_[0-9a-f]{8}\b/g, '_<fork>')).sort()
 }
+
+// The function library's switch controller exists in two files whose type ids clash: the project holds an instance of
+// one, the other is placed beside it, then updated to a revision whose type gains a data object.
+describe('lifecycle — a library function whose type ids the project holds with other content', () => {
+	const libraryType = '//default:LNodeType[@id="CSWI_#v0-LibTool"]'
+	const otherInstance = '//default:Bay[@name="B1"]/default:Function/default:LNode'
+	const placed = '//default:Bay[@name="B2"]/default:Function/default:LNode'
+
+	type TwinCase = SclTest.BaseXmlTestCase & {
+		targetXml: string
+		/** Updated to the second revision after the placement, listing these type changes. */
+		updated?: { reported: string[] }
+	}
+
+	const twinCases: SclTest.TestCases<TwinCase> = {
+		'placed beside the instance of the other file -> on a type of its own, the other file type untouched':
+			{
+				sourceXml: readRevisionTwin({ twin: 'switchControllerTypeClash', revision: 1 }),
+				targetXml: readRevisionTwinInstance({ twin: 'switchControllerTypeClash' }),
+				expectedQueries: [
+					`${placed}[starts-with(@lnType, "CSWI_#v0-LibTool_")][@lnType = //default:LNodeType[default:DO/@name="Loc"]/@id]`,
+					`${otherInstance}[@lnType="CSWI_#v0-LibTool"]`,
+					`${libraryType}/default:DO[@name="Mod"]`,
+				],
+				unexpectedQueries: [DANGLING_TYPE, `${libraryType}/default:DO[@name="Loc"]`],
+			},
+
+		'updated to its second revision -> the type change listed and brought, the other instance and its type untouched':
+			{
+				sourceXml: readRevisionTwin({ twin: 'switchControllerTypeClash', revision: 1 }),
+				targetXml: readRevisionTwinInstance({ twin: 'switchControllerTypeClash' }),
+				updated: { reported: ['lnType: CSWI_#v0-LibTool_<fork> -> CSWI_#v0-LibTool'] },
+				expectedQueries: [
+					`${placed}[starts-with(@lnType, "CSWI_#v0-LibTool_")][@lnType = //default:LNodeType[default:DO/@name="LocSta"]/@id]`,
+					`${otherInstance}[@lnType="CSWI_#v0-LibTool"]`,
+					`${libraryType}/default:DO[@name="Mod"]`,
+				],
+				unexpectedQueries: [
+					DANGLING_TYPE,
+					`${libraryType}/default:DO[@name="LocSta"]`,
+					// the type the instance left is not kept beside its successor
+					'//default:LNodeType[default:DO/@name="Loc"][not(default:DO/@name="LocSta")]',
+				],
+			},
+	}
+
+	async function act({
+		testCase,
+		project,
+		source,
+		target,
+	}: SclTest.ActParams<TwinCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		const anchor = await findByName(target.query, { tagName: 'Bay', name: 'B2' })
+		const templateFunction = await findByUuid(source.query, {
+			tagName: 'Function',
+			uuid: '00000000-0000-4000-8000-000000000710',
+		})
+		await reportAndApply({
+			document: target,
+			lifecycle: {
+				verb: 'fsd',
+				sourceQuery: source.query,
+				ref: templateFunction,
+				anchor,
+				scenario: 'instantiate',
+			},
+		})
+		if (!testCase.updated) return { assertOn: 'target' }
+		const newer = await openSclDocument({
+			project,
+			xml: readRevisionTwin({ twin: 'switchControllerTypeClash', revision: 2 }),
+			label: 'next revision',
+		})
+		const newerFunction = await findByUuid(newer.query, {
+			tagName: 'Function',
+			uuid: '00000000-0000-4000-8000-000000000710',
+		})
+		const { report: reported } = await reportAndApply({
+			document: target,
+			lifecycle: {
+				verb: 'fsd',
+				sourceQuery: newer.query,
+				ref: newerFunction,
+				anchor,
+				scenario: 'template',
+			},
+		})
+		expect(listTypeChanges(reported), 'report').toEqual(testCase.updated.reported)
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport<TwinCase>({ testCases: twinCases, act })
+})
