@@ -23,7 +23,7 @@ The `reconcile` / `diff` primitives below (in `extensions/lifecycle/engine`) are
 The verb-agnostic surface is the recommended consumer entry point. **Dialecte decides the track**, the consumer never picks it: ask for a report, then apply.
 
 ```ts
-query.lifecycle.report({ verb, scenario, sourceQuery, baseQuery?, ref, anchor, resolution? }) // -> DiffReport { instances, needsDecisions, summary, mappings, templateInstances, offLevel?, revisionBase? }
+query.lifecycle.report({ verb, scenario, sourceQuery, baseQuery?, ref, anchor, resolution? }) // -> DiffReport { target, instances, needsDecisions, summary, mappings, templateInstances, offLevel?, revisionBase? }
 tx.lifecycle.apply({ verb, scenario, sourceQuery, baseQuery?, ref, anchor, report, resolution? }) // -> ApplyResult { report, instances }
 ```
 
@@ -38,6 +38,20 @@ The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & 
   - `mappings`: where a shared element lands, per source element — see [Shared-element mappings](#shared-element-mappings);
   - `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template);
   - `afterApply`: the consumer's own step, run once after the apply — see [below](#the-consumer-s-step-after-the-apply-—-resolution-afterapply).
+
+**A report is applied to the target it was made for.** `report` writes what it was made for on `report.target`
+(`ReportTarget`: the record ids of the project and the template documents, `verb`, `ref`, `anchor` as `{ tagName,
+id }`, `scenario` — `'template'` when none was asked for — and `targetInstance` when one was). `apply` compares it
+with what it is asked for and, whatever the track and before anything is written, refuses:
+
+- a report made for another target, or carrying none, with `REPORT_TARGET_MISMATCH` (`meta: { field }`, the first
+  field that differs, `'report'` when there is no target);
+- a report naming an element the document no longer holds — an instance it covers (`templateInstances`), the
+  element a mapping lands on, the element a mapping choice names — with `REPORT_STALE` (`meta: { element, kind:
+'instance' | 'mapping' }`): the project changed since, report again.
+
+A report applied a second time stays safe: a first placement finds its instance and writes nothing more, an update
+finds nothing left to change.
 
 **An FSD whose function is a `FunctionTemplate`.** A function template has no parent level: it is placed where the consumer starts from, whichever level that is, as a `Function` — a `SubFunction` under a function or a subfunction — and each `SubFunctionTemplate` it holds as a `SubFunction`. Every element inside it takes the namespace the schema declares for it where it now sits. The instance carries the template's lineage, and an update finds it and reconciles it like any function.
 

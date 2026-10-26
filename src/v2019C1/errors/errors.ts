@@ -89,6 +89,23 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL1012',
 		message: 'A change depends on a change the report does not list',
 	},
+	/**
+	 * A report is applied to another target than the one it was made for, or carries none (it was not made by
+	 * `query.lifecycle.report`). `meta: { field }` — the first that differs: `report` (none), `document`, `source`,
+	 * `verb`, `ref`, `anchor`, `scenario`, `targetInstance`.
+	 */
+	REPORT_TARGET_MISMATCH: {
+		code: 'SCL1013',
+		message: 'The report was made for another target',
+	},
+	/**
+	 * A report names an element the document no longer holds: an instance it covers, an element a mapping lands on,
+	 * an element a mapping choice names. `meta: { element: { tagName, id }, kind: 'instance' | 'mapping' }`
+	 */
+	REPORT_STALE: {
+		code: 'SCL1014',
+		message: 'The report names an element the document no longer holds',
+	},
 	/** The template file holds nothing that can be instantiated. */
 	TEMPLATE_ROOT_NOT_FOUND: {
 		code: 'SCL2001',

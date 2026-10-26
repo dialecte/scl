@@ -1,4 +1,5 @@
 import type { EditableAttribute, IdentityCollision } from '../constraints'
+import type { LifecycleScenario, LifecycleVerb } from '../contract.types'
 import type { OffLevel } from '../layers/topology/resolve-primary-placement.types'
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
@@ -153,7 +154,34 @@ export type ReportInstance = {
 	variantsNotSelected?: AnyRefOrRecord[]
 }
 
+/** An element a report names: its tag and record id. */
+export type ReportedElement = { tagName: string; id?: string }
+
+/**
+ * The target a report was made for, as `query.lifecycle.report` reads it: the documents (their record ids), the
+ * layer, the template element, where it lands, the operation (`template` when none was asked for) and the instance
+ * asked for, if any.
+ */
+export type ReportTarget = {
+	document: string
+	source: string
+	verb: LifecycleVerb
+	ref: ReportedElement
+	anchor: ReportedElement
+	scenario: LifecycleScenario
+	targetInstance?: ReportedElement
+}
+
+/** What a report applied to another target differs on first: `report` when it carries no target. */
+export type ReportTargetField = keyof ReportTarget | 'report'
+
 export type DiffReport = {
+	/**
+	 * The target the report was made for, written by `query.lifecycle.report`. `tx.lifecycle.apply` refuses a report
+	 * applied to another target, or carrying none (`REPORT_TARGET_MISMATCH`). The per-layer reports the surface is
+	 * built from carry none.
+	 */
+	target?: ReportTarget
 	/** One entry per reported instance (`Application`/`Function`). */
 	instances: ReportInstance[]
 	/**

@@ -1,3 +1,4 @@
+import { assertReportFits } from './assert-report-fits'
 import { collectWrittenImplementation } from './collect-written-implementation'
 
 import { cleanUp } from '@/v2019C1/extensions/clean-up'
@@ -64,9 +65,11 @@ export async function apply(
 ): Promise<ApplyResult> {
 	const { report } = params
 	const decisions = params.resolution?.decisions ?? new Map()
-
-	// mapping choices the report cannot honour are refused before any write
 	const decisionMappings = params.resolution?.mappings
+
+	// a report made for another target, or naming what the document no longer holds, is refused whatever the track
+	await assertReportFits(tx, { report, target: params, decisionMappings })
+	// mapping choices the report cannot honour are refused before any write
 	if (decisionMappings)
 		assertMappingsCoherent({ reportMappings: report.mappings, decisionMappings })
 

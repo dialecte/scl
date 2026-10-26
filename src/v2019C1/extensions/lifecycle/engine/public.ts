@@ -12,4 +12,7 @@ export type {
 	GroupDecision,
 	KeptAttributeChange,
 	KeptAttributeReason,
+	ReportedElement,
+	ReportTarget,
+	ReportTargetField,
 } from './diff.types'

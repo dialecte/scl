@@ -1,4 +1,5 @@
 import { reportAsd, reportFsd, reportSsd } from './query'
+import { reportTargetOf } from './report-target'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -48,6 +49,8 @@ export async function report(
 		baseQuery: target.baseQuery,
 	})
 	const report = await reportVerb(query, { target, pass, removalBase })
+	// what the report is made for: apply refuses it for another target
+	report.target = await reportTargetOf(query, target)
 	const revisionBase = revisionBaseOf(removalBase)
 	if (revisionBase) report.revisionBase = revisionBase
 

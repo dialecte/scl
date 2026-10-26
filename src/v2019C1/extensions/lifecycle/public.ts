@@ -15,6 +15,9 @@ export type {
 	GroupDecision,
 	KeptAttributeChange,
 	KeptAttributeReason,
+	ReportedElement,
+	ReportTarget,
+	ReportTargetField,
 } from './engine/public'
 
 export type {
