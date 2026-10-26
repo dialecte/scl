@@ -24,6 +24,7 @@ import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
+import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
 	DecisionGroup,
@@ -69,6 +70,8 @@ export async function reportSsd(
 		 * Default: the scenario's, a fork given no previous revision.
 		 */
 		removalBase?: RemovalBase
+		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
+		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, scopeRef, targetParent, scenario, targetInstance, decisionMappings } = params
@@ -135,6 +138,7 @@ export async function reportSsd(
 		pinnedMatches,
 		decisionMappings,
 		removalBase,
+		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 		namesFollow,
 		leftOut: scope.leftOut,
 	})
@@ -188,6 +192,7 @@ export async function reportSsd(
 				decisionMappings,
 				anchor: parent ?? placedFor ?? landing,
 				removalBase,
+				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			})
 			primaryInstances.push(...placedInstances({ instances: report.instances, placedFor }))
 		}
@@ -212,6 +217,7 @@ export async function reportSsd(
 				targetInstance,
 				decisionMappings,
 				removalBase,
+				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			})
 			primaryInstances.push(...placedInstances({ instances: report.instances, placedFor }))
 		}

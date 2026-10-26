@@ -5,7 +5,10 @@ import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	BoundLogicalNodeTypes,
+	LifecycleScenario,
+} from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
 	AttributeChange,
 	DiffNode,
@@ -16,7 +19,8 @@ import type { SclTest } from '@/v2019C1/test'
 // A bound LNode carries two things: where the project implemented it (its IED, logical device and logical node,
 // `lnUuid`) and what it was specified as (its `LNodeSpecNaming`, the template's naming). An update compares the
 // template with the specification and writes it there; the implementation is the project's: never compared, never
-// written. Its type stays as bound too, and the report lists a type change it keeps.
+// written. Its type is specification: it follows the template, unless the consumer keeps it — then the report lists a
+// type change it keeps.
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -110,10 +114,17 @@ const boundToX =
 const templateLNode = 'iedName="None" lnClass="XCBR" lnType="XCBR_T" uuid="lnode-src-uuid"'
 const keptOnX =
 	'//default:Function[@name="F1"]/default:LNode[@iedName="P1"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"][@lnUuid="ln-x"][@lnType="XCBR_T"]'
+/** Bound where it was, on the template's other breaker type, holding a second data object. */
+const onTheSecondType = keptOnX.replace('[@lnType="XCBR_T"]', '[@lnType="XCBR_T2"]')
+const typeChangedToTheSecond: AttributeChange[] = [
+	{ name: 'lnType', before: 'XCBR_T', after: 'XCBR_T2' },
+]
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	scenario: LifecycleScenario
+	/** The consumer's word on the types of bound LNodes, given to the report. Default: none. */
+	boundLogicalNodeTypes?: BoundLogicalNodeTypes
 	/**
 	 * The attributes the report lists as changed on the LNode, then on its LNodeSpecNaming, the type references whose
 	 * type it lists as changed on the LNode (none when absent), then the differences it lists as kept on the LNode (none
@@ -162,7 +173,7 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 			],
 		},
 
-		'bound, newer template changing its type -> type kept, listed as kept': {
+		'bound, newer template changing its type -> its type follows, binding kept': {
 			sourceXml: sourceXml({
 				lnode: breaker({
 					attributes:
@@ -175,6 +186,24 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 				functionIdentity: instanceOfTemplate,
 			}),
 			scenario: 'template',
+			reported: { lnode: [], specifiedNaming: [], types: typeChangedToTheSecond },
+			expectedQueries: [onTheSecondType],
+		},
+
+		'… the consumer keeping the types of bound LNodes -> type kept, listed as kept': {
+			sourceXml: sourceXml({
+				lnode: breaker({
+					attributes:
+						'iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T2" uuid="lnode-src-uuid"',
+					specifiedInst: '1',
+				}),
+			}),
+			targetXml: projectXml({
+				lnode: breaker({ attributes: boundToX, specifiedInst: '1' }),
+				functionIdentity: instanceOfTemplate,
+			}),
+			scenario: 'template',
+			boundLogicalNodeTypes: 'keep',
 			reported: {
 				lnode: [],
 				specifiedNaming: [],
@@ -185,7 +214,7 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 			expectedQueries: [keptOnX],
 		},
 
-		'bound, newer template changing its description and its type -> description written, type kept, listed as kept':
+		'bound, newer template changing its description and its type -> description written, its type follows':
 			{
 				sourceXml: sourceXml({
 					lnode: breaker({
@@ -199,6 +228,25 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 					functionIdentity: instanceOfTemplate,
 				}),
 				scenario: 'template',
+				reported: { lnode: ['desc'], specifiedNaming: [], types: typeChangedToTheSecond },
+				expectedQueries: [`${onTheSecondType}[@desc="Breaker"]`],
+			},
+
+		'… the consumer keeping the types of bound LNodes -> description written, type kept, listed as kept':
+			{
+				sourceXml: sourceXml({
+					lnode: breaker({
+						attributes:
+							'iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T2" uuid="lnode-src-uuid" desc="Breaker"',
+						specifiedInst: '1',
+					}),
+				}),
+				targetXml: projectXml({
+					lnode: breaker({ attributes: boundToX, specifiedInst: '1' }),
+					functionIdentity: instanceOfTemplate,
+				}),
+				scenario: 'template',
+				boundLogicalNodeTypes: 'keep',
 				reported: {
 					lnode: ['desc'],
 					specifiedNaming: [],
@@ -276,30 +324,48 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 			expectedQueries: ['//default:LNode[@iedName="None"][@lnInst="1"][@lnType="XCBR_T2"]'],
 		},
 
-		'newer revision of the same file changing the type of a LNode bound here -> type kept, listed as kept':
-			{
-				sourceXml: sourceXml({
-					lnode: breaker({
-						attributes:
-							'iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T2" uuid="lnode-instance-uuid"',
-						specifiedInst: '1',
-					}),
-					functionUuid: 'function-instance-uuid',
+		'newer revision of the same file changing the type of a LNode bound here -> its type follows': {
+			sourceXml: sourceXml({
+				lnode: breaker({
+					attributes:
+						'iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T2" uuid="lnode-instance-uuid"',
+					specifiedInst: '1',
 				}),
-				targetXml: projectXml({
-					lnode: breaker({ attributes: boundToX, specifiedInst: '1' }),
-					functionIdentity: 'uuid="function-instance-uuid"',
+				functionUuid: 'function-instance-uuid',
+			}),
+			targetXml: projectXml({
+				lnode: breaker({ attributes: boundToX, specifiedInst: '1' }),
+				functionIdentity: 'uuid="function-instance-uuid"',
+			}),
+			scenario: 'fork',
+			reported: { lnode: [], specifiedNaming: [], types: typeChangedToTheSecond },
+			expectedQueries: [onTheSecondType],
+		},
+
+		'… the consumer keeping the types of bound LNodes -> the fork keeps it too, listed as kept': {
+			sourceXml: sourceXml({
+				lnode: breaker({
+					attributes:
+						'iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T2" uuid="lnode-instance-uuid"',
+					specifiedInst: '1',
 				}),
-				scenario: 'fork',
-				reported: {
-					lnode: [],
-					specifiedNaming: [],
-					kept: [
-						{ name: 'lnType', before: 'XCBR_T', after: 'XCBR_T2', reason: 'bound-logical-node' },
-					],
-				},
-				expectedQueries: [keptOnX],
+				functionUuid: 'function-instance-uuid',
+			}),
+			targetXml: projectXml({
+				lnode: breaker({ attributes: boundToX, specifiedInst: '1' }),
+				functionIdentity: 'uuid="function-instance-uuid"',
+			}),
+			scenario: 'fork',
+			boundLogicalNodeTypes: 'keep',
+			reported: {
+				lnode: [],
+				specifiedNaming: [],
+				kept: [
+					{ name: 'lnType', before: 'XCBR_T', after: 'XCBR_T2', reason: 'bound-logical-node' },
+				],
 			},
+			expectedQueries: [keptOnX],
+		},
 
 		'newer revision of the same file, unbound there -> the binding made here kept': {
 			sourceXml: sourceXml({
@@ -354,7 +420,11 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 			ref: { tagName: 'Function', id: 'function-s' } as Scl.Ref<'Function'>,
 			anchor: { tagName: 'Bay', id: 'bay' } as Scl.Ref<'Bay'>,
 		}
-		const lifecycleReport = await report(target.query, lifecycleTarget)
+		const { boundLogicalNodeTypes } = testCase
+		const lifecycleReport = await report(target.query, {
+			...lifecycleTarget,
+			resolution: { boundLogicalNodeTypes },
+		})
 		const nodes = lifecycleReport.instances.flatMap((instance) => flatten(instance.tree))
 		expect(
 			{
@@ -379,6 +449,7 @@ describe('lifecycle — an update keeps the implementation of a bound LNode', ()
 			await apply(tx, {
 				...lifecycleTarget,
 				report: lifecycleReport,
+				// the apply writes the type changes the report lists: the consumer's word is read by the report
 				resolution: { decisions: new Map() },
 			})
 		})

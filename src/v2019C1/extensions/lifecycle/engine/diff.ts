@@ -40,6 +40,7 @@ import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
 import type { TypeComparison } from './type-change.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -160,6 +161,8 @@ export async function diff(params: {
 	 * nothing in the instance is neither listed nor written, at any depth; one the instance holds is compared as any.
 	 */
 	notSelected?: ReadonlySet<string>
+	/** Whether a bound logical node takes the type the template gives it. Default: `follow`. */
+	boundLogicalNodeTypes?: BoundLogicalNodeTypes
 }): Promise<InstanceDiff> {
 	const { sourceQuery, targetQuery, sourceRootRef, instanceRootRef, keepLeftoverRefs } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
@@ -215,6 +218,7 @@ export async function diff(params: {
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected,
 		typeComparison: createTypeComparison(),
+		boundLogicalNodeTypes: params.boundLogicalNodeTypes ?? 'follow',
 	})
 	// a rename of the instance itself is numbered among its siblings, as the apply numbers it
 	if (instanceTree.parent) {
@@ -255,6 +259,7 @@ async function diffMatched(
 		notSelected?: ReadonlySet<string>
 		/** The types read on each side so far: one run for the whole diff. */
 		typeComparison: TypeComparison
+		boundLogicalNodeTypes: BoundLogicalNodeTypes
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
@@ -277,6 +282,7 @@ async function diffMatched(
 				instanceNode,
 				namesFollow,
 				typeComparison: params.typeComparison,
+				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			})
 	// a text the template changed is a change of the element, as an attribute is; so is the vendor data one of its
 	// wrappers holds as text
@@ -343,6 +349,7 @@ async function diffMatched(
 				contributeOnly,
 				notSelected: params.notSelected,
 				typeComparison: params.typeComparison,
+				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			})
 			children.push(matchedNode)
 			renamed.push({ node: matchedNode, child: matched })
@@ -532,6 +539,7 @@ async function computeAttributeChanges(
 		instanceNode: AnyTreeRecord
 		namesFollow: NamesFollow
 		typeComparison: TypeComparison
+		boundLogicalNodeTypes: BoundLogicalNodeTypes
 	},
 ): Promise<AttributeComparison> {
 	const { targetQuery, sourceNode, instanceNode, namesFollow, typeComparison } = params
@@ -551,6 +559,7 @@ async function computeAttributeChanges(
 		tagName: instanceNode.tagName,
 		instanceAttributes,
 		namesFollow,
+		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 	})
 
 	const comparison: AttributeComparison = { changes: [], typeChanges: [], kept: [] }

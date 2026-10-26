@@ -36,6 +36,7 @@ import {
 import { placedFresh, scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
+import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
 	DecisionGroup,
@@ -95,6 +96,8 @@ export async function reportAsd(
 		 * Default: the scenario's, a fork given no previous revision.
 		 */
 		removalBase?: RemovalBase
+		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
+		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings } = params
@@ -157,6 +160,7 @@ export async function reportAsd(
 			decisionMappings,
 			anchor,
 			removalBase,
+			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			namesFollow,
 		})
 		const reportInstance = await buildReportInstance(query, {
@@ -189,6 +193,7 @@ export async function reportAsd(
 				anchor,
 				foreignScope: foreignScopes.get(instance.id),
 				removalBase,
+				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 				namesFollow,
 				selection,
 			})
@@ -214,6 +219,7 @@ export async function reportAsd(
 		decisionMappings,
 		anchor,
 		removalBase,
+		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 		namesFollow,
 		selections,
 	})
@@ -280,6 +286,8 @@ async function reportApplicationInstance(
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
 		removalBase: RemovalBase
+		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
+		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** What the instance's selection of functional variants leaves out of the template. */
@@ -324,6 +332,7 @@ async function reportApplicationInstance(
 		matchKey: params.matchKey,
 		redirectMappings,
 		removalBase: params.removalBase,
+		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 		namesFollow: params.namesFollow,
 		notSelected: params.selection?.leftOut,
 	})
@@ -350,6 +359,7 @@ async function reportApplicationInstance(
 			: undefined,
 		resolveForeignScope,
 		removalBase: params.removalBase,
+		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 		namesFollow: params.namesFollow,
 		notSelected: params.selection?.leftOut,
 	})
@@ -369,6 +379,7 @@ async function reportApplicationInstance(
 		matchKey: params.matchKey,
 		resolveForeignScope,
 		removalBase: params.removalBase,
+		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 		namesFollow: params.namesFollow,
 		selection: params.selection,
 	})
@@ -400,6 +411,8 @@ async function reportComposedFunctions(
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
 		removalBase: RemovalBase
+		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
+		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** What each instance of the application's selection of variants leaves out, by instance record id. */
@@ -512,6 +525,8 @@ async function reportComposedFunction(
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		pass?: ReportPass
 		removalBase: RemovalBase
+		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
+		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** What the selection of variants of the instances composing it leaves out. */
@@ -529,6 +544,7 @@ async function reportComposedFunction(
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
 		removalBase: params.removalBase,
+		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 		namesFollow: params.namesFollow,
 		selection: params.selection,
 	})

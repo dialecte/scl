@@ -18,6 +18,7 @@ import {
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
+import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PinnedMatches } from '@/v2019C1/extensions/lifecycle/engine/match-child.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -62,6 +63,8 @@ export async function reportTopologyFrame(
 		decisionMappings?: DecisionMappings
 		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
+		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
+		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** The template's elements the scope leaves out (record ids): never matched to what the project holds, nor listed. */
@@ -85,6 +88,7 @@ export async function reportTopologyFrame(
 			instanceRootRef: mappedOnto,
 			matchKey,
 			removalBase: params.removalBase,
+			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			namesFollow: params.namesFollow,
 			omit: FRAME_OMIT_CHILD_TAGS,
 			notSelected: params.leftOut,
@@ -139,6 +143,7 @@ export async function reportTopologyFrame(
 			instanceRootRef: instance,
 			matchKey,
 			removalBase: params.removalBase,
+			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			namesFollow: params.namesFollow,
 			omit: FRAME_OMIT_CHILD_TAGS,
 			pinnedMatches: pinLeftOut({

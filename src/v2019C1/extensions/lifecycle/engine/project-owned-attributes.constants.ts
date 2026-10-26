@@ -1,4 +1,4 @@
-import { LOCKED_LNODE_ATTRIBUTES, TYPE_ID_REF_ATTRIBUTES } from '@/v2019C1/extensions/reference'
+import { LNODE_BINDING_ATTRIBUTES, TYPE_ID_REF_ATTRIBUTES } from '@/v2019C1/extensions/reference'
 
 import type { KeptAttributeReason } from './diff.types'
 import type { ProjectOwnedAttributes } from './project-owned-attributes.types'
@@ -10,17 +10,29 @@ export const NO_PROJECT_OWNED_ATTRIBUTES: ProjectOwnedAttributes = {
 }
 
 /**
- * An LNode bound to an IED: its implementation (naming, `lnUuid`) is silent, it differs from the template by design;
- * its type reference is listed as kept, a template changing it is a difference the update does not apply.
+ * An LNode bound to an IED: its implementation (naming, `lnUuid`) is silent, it differs from the template by design. Its
+ * type follows the template's.
  */
 export const BOUND_LNODE_OWNED_ATTRIBUTES: ProjectOwnedAttributes = {
-	attributes: LOCKED_LNODE_ATTRIBUTES,
-	listedAsKept: new Map(
-		(TYPE_ID_REF_ATTRIBUTES.get('LNode') ?? []).map((name): [string, KeptAttributeReason] => [
-			name,
-			'bound-logical-node',
-		]),
-	),
+	attributes: new Set(LNODE_BINDING_ATTRIBUTES),
+	listedAsKept: new Map(),
+}
+
+/** The type references of an LNode, each listed as kept on a bound LNode keeping its type. */
+const BOUND_LNODE_TYPE_REFERENCES: ReadonlyMap<string, KeptAttributeReason> = new Map(
+	(TYPE_ID_REF_ATTRIBUTES.get('LNode') ?? []).map((name): [string, KeptAttributeReason] => [
+		name,
+		'bound-logical-node',
+	]),
+)
+
+/**
+ * An LNode bound to an IED whose consumer keeps the type it holds: its implementation is silent, and a template changing
+ * its type is a difference the update lists as kept and does not apply.
+ */
+export const BOUND_LNODE_KEEPING_ITS_TYPE: ProjectOwnedAttributes = {
+	attributes: new Set([...LNODE_BINDING_ATTRIBUTES, ...BOUND_LNODE_TYPE_REFERENCES.keys()]),
+	listedAsKept: BOUND_LNODE_TYPE_REFERENCES,
 }
 
 /**

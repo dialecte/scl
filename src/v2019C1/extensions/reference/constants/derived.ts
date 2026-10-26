@@ -171,19 +171,6 @@ export const TYPE_ID_REFERRERS_BY_TARGET: ReadonlyMap<TypeIdTarget, readonly Typ
 /** All DataTypeTemplates type tags that are targets of a type-id reference. */
 export const TYPE_ID_TARGET_TAGS: ReadonlySet<string> = new Set(TYPE_ID_REFERRERS_BY_TARGET.keys())
 
-/**
- * The attributes an LNode bound to an IED owns: where it is implemented — its naming
- * (`iedName/ldInst/prefix/lnClass/lnInst`, the logical node's once bound) and `lnUuid`,
- * the logical node it is bound to — and its type reference (`lnType`). A template update
- * neither compares nor writes them on a bound LNode: its specification is in its
- * `LNodeSpecNaming`. Derived from the schema `identityFields` and the type-id reference
- * registry.
- */
-export const LOCKED_LNODE_ATTRIBUTES: ReadonlySet<string> = new Set<string>([
-	...LNODE_BINDING_ATTRIBUTES,
-	...(TYPE_ID_REF_ATTRIBUTES.get('LNode') ?? []),
-])
-
 function buildRefEntriesByTarget(): Map<string, RefEntry[]> {
 	const map = new Map<string, RefEntry[]>()
 	for (const resolution of ALL_RESOLUTIONS) {

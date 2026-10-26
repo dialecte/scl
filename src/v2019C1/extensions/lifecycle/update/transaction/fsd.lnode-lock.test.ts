@@ -66,59 +66,61 @@ async function bindInstanceLnode(
 	await tx.update({ tagName: 'LNode', id: lnode.id } as Scl.Ref<'LNode'>, { attributes })
 }
 
-describe('update.fsd — locked LNode identity + lnType protection', () => {
+describe('update.fsd — a locked LNode keeps where it is implemented, its type follows the template', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'keeps the full identity + lnType of an LNode implemented in an IED (locked)': {
-			sourceXml,
-			targetXml,
-			// bind the instance LNode to the present IED with a distinct identity + vendor lnType
-			mutateTarget: async (tx) => {
-				await bindInstanceLnode(tx, {
-					iedName: 'VENDOR_A',
-					ldInst: 'LD0',
-					prefix: 'AA',
-					lnInst: '5',
-					lnType: 'VENDOR_CSWI_Type',
-				})
+		'keeps the full identity of an LNode implemented in an IED (locked), its type taken from the template':
+			{
+				sourceXml,
+				targetXml,
+				// bind the instance LNode to the present IED with a distinct identity + vendor lnType
+				mutateTarget: async (tx) => {
+					await bindInstanceLnode(tx, {
+						iedName: 'VENDOR_A',
+						ldInst: 'LD0',
+						prefix: 'AA',
+						lnInst: '5',
+						lnType: 'VENDOR_CSWI_Type',
+					})
+				},
+				expectedQueries: [
+					// reconcile must NOT overwrite any locked-identity attribute; the type is what the template specifies
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnType="CSWI_Type"]',
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@iedName="VENDOR_A"]',
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@ldInst="LD0"]',
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@prefix="AA"]',
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnInst="5"]',
+				],
+				unexpectedQueries: [
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnType="VENDOR_CSWI_Type"]',
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@iedName="None"]',
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnInst="1"]',
+				],
 			},
-			expectedQueries: [
-				// reconcile must NOT overwrite any locked-identity attribute nor lnType
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnType="VENDOR_CSWI_Type"]',
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@iedName="VENDOR_A"]',
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@ldInst="LD0"]',
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@prefix="AA"]',
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnInst="5"]',
-			],
-			unexpectedQueries: [
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnType="CSWI_Type"]',
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@iedName="None"]',
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnInst="1"]',
-			],
-		},
 
-		'keeps the identity of a bound LNode whose IED is absent (orphan → still locked)': {
-			sourceXml,
-			targetXml,
-			// bind to an IED that is NOT present in the target: an orphaned binding is
-			// still locked, so reconcile must leave it for cleanup to unlock, not reset it.
-			mutateTarget: async (tx) => {
-				await bindInstanceLnode(tx, {
-					iedName: 'GHOST',
-					ldInst: 'LD9',
-					lnInst: '7',
-					lnType: 'GHOST_Type',
-				})
+		'keeps the identity of a bound LNode whose IED is absent (orphan → still locked), its type taken from the template':
+			{
+				sourceXml,
+				targetXml,
+				// bind to an IED that is NOT present in the target: an orphaned binding is
+				// still locked, so reconcile must leave it for cleanup to unlock, not reset it.
+				mutateTarget: async (tx) => {
+					await bindInstanceLnode(tx, {
+						iedName: 'GHOST',
+						ldInst: 'LD9',
+						lnInst: '7',
+						lnType: 'GHOST_Type',
+					})
+				},
+				expectedQueries: [
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@iedName="GHOST"]',
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnInst="7"]',
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnType="CSWI_Type"]',
+				],
+				unexpectedQueries: [
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@iedName="None"]',
+					'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnType="GHOST_Type"]',
+				],
 			},
-			expectedQueries: [
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@iedName="GHOST"]',
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnInst="7"]',
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnType="GHOST_Type"]',
-			],
-			unexpectedQueries: [
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@iedName="None"]',
-				'//default:Bay[@name="B1"]/default:Function/default:LNode[@templateUuid="lnode-src-uuid"][@lnType="CSWI_Type"]',
-			],
-		},
 
 		'updates the lnType of an unbound LNode (unlocked → template wins)': {
 			sourceXml,

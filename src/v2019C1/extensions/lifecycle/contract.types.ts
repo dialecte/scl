@@ -108,18 +108,28 @@ export type LifecycleVerbTarget =
 	  }
 
 /**
+ * Whether an LNode bound to an IED takes the type a newer template gives it: `follow` (the type is part of what the
+ * template specifies, the implementation does not change it), or `keep` (the project keeps the type it holds, the
+ * template's change listed as kept).
+ */
+export type BoundLogicalNodeTypes = 'follow' | 'keep'
+
+/**
  * What the consumer resolved, handed to the lifecycle surface as ONE object:
  *  - `decisions` — accept / skip (and edited values) per decision group;
  *  - `mappings` — where a shared source element lands, per source element, when the consumer
  *    chose otherwise than the report resolved;
  *  - `keepNameTypesFrom` — on a type dedup, which side's id/name the surviving type keeps
  *    (forwarded to `importTypes`; default `'target'`, the destination authority);
+ *  - `boundLogicalNodeTypes` — whether a bound LNode takes the type the template gives it (default `'follow'`). Read by
+ *    `report`: a kept type change is listed as kept; `apply` writes the type changes the report lists;
  *  - `afterApply` — the consumer's own step, run by `apply` once it wrote (see {@link AfterApplyHook}).
  */
 export type Resolution = {
 	decisions?: DecisionMap
 	mappings?: DecisionMappings
 	keepNameTypesFrom?: KeepNameTypesFrom
+	boundLogicalNodeTypes?: BoundLogicalNodeTypes
 	afterApply?: AfterApplyHook
 }
 

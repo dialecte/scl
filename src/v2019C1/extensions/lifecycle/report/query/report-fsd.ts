@@ -22,6 +22,7 @@ import {
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
+import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -67,6 +68,8 @@ export async function reportFsd(
 		 * Default: the scenario's, a fork given no previous revision.
 		 */
 		removalBase?: RemovalBase
+		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
+		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, functionRef, targetParent, scenario, targetInstance, decisionMappings } =
@@ -122,6 +125,7 @@ export async function reportFsd(
 			decisionMappings,
 			anchor: landing,
 			removalBase,
+			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			namesFollow,
 		})
 		const reportInstance = await buildReportInstance(query, {
@@ -153,6 +157,7 @@ export async function reportFsd(
 			decisionMappings,
 			anchor: targetParent,
 			removalBase,
+			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			namesFollow,
 		})
 		reportInstances.push(

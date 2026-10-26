@@ -33,6 +33,7 @@ export type {
 
 export type {
 	AfterApplyHook,
+	BoundLogicalNodeTypes,
 	LifecycleApplyParams,
 	LifecycleReportParams,
 	Resolution,

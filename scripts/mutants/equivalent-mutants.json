@@ -53,6 +53,73 @@
 			"equivalent": "holdsNothingBut already refuses a record without a parent, the line before"
 		}
 	},
+	"src/v2019C1/extensions/data-model/transaction/import-types.ts": {
+		"6629ee1d9c4c7ba3": {
+			"line": 109,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a string in the list of reused forks destructures to no tag, source or fork id: the rename finds nothing to rename and the loop skips it"
+		},
+		"dd72104e7c60889c": {
+			"line": 206,
+			"mutation": "ConditionalExpression: collisions.length > 0 || leftTypes.length > 0 -> true",
+			"equivalent": "with no displaced type and no type left, the pass prunes and reclaims nothing: only its progress caption and perf span are added"
+		},
+		"b7c9bb4f5328c730": {
+			"line": 206,
+			"mutation": "EqualityOperator: collisions.length > 0 -> collisions.length >= 0",
+			"equivalent": "with no displaced type and no type left, the pass prunes and reclaims nothing: only its progress caption and perf span are added"
+		},
+		"ee5e8a8493c29d26": {
+			"line": 206,
+			"mutation": "EqualityOperator: leftTypes.length > 0 -> leftTypes.length >= 0",
+			"equivalent": "with no displaced type and no type left, the pass prunes and reclaims nothing: only its progress caption and perf span are added"
+		},
+		"c484606695a9b65c": {
+			"line": 394,
+			"mutation": "ConditionalExpression: queued.has(refKey(left)) -> false",
+			"equivalent": "a type both displaced and left is queued twice at worst: the second turn finds it deleted and skips it"
+		},
+		"5b0b02d1ed8a5458": {
+			"line": 396,
+			"mutation": "CallExpression: queued.add(refKey(left)) -> ;",
+			"equivalent": "a type both displaced and left is queued twice at worst: the second turn finds it deleted and skips it"
+		},
+		"7a8988d3e3f7733a-1": {
+			"line": 490,
+			"mutation": "ConditionalExpression: !record -> false",
+			"equivalent": "a follower is an element the reconcile just read and the import writes nothing it removes: it is always there"
+		},
+		"6bf52cf08851ec1e": {
+			"line": 494,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "lnType has no schema default: read with or without the defaults it is the same value"
+		},
+		"98e0a241285c6ed9": {
+			"line": 498,
+			"mutation": "ConditionalExpression: sourceValue && !resolvedId -> false",
+			"equivalent": "a source naming a type its document lacks is refused by the closure's resolution before the followers are pointed"
+		},
+		"349e988e1f2e3b9a": {
+			"line": 499,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "lnType has no schema default: read with or without the defaults it is the same value"
+		},
+		"61896542a8b96fae": {
+			"line": 500,
+			"mutation": "ConditionalExpression: resolvedId === current -> false",
+			"equivalent": "writing the id the follower already names changes nothing, and the type it would leave is the one it names: never pruned"
+		},
+		"105dd695376a8fce": {
+			"line": 510,
+			"mutation": "ConditionalExpression: Object.keys(updates).length > 0 -> true",
+			"equivalent": "an update with an empty attribute map writes nothing: the record is the same after it"
+		},
+		"f15ad0318ee02a78": {
+			"line": 510,
+			"mutation": "EqualityOperator: Object.keys(updates).length > 0 -> Object.keys(updates).length >= 0",
+			"equivalent": "an update with an empty attribute map writes nothing: the record is the same after it"
+		}
+	},
 	"src/v2019C1/extensions/history/transaction/start-file.ts": {
 		"ea66f1aa597c05de": {
 			"line": 29,
@@ -338,6 +405,16 @@
 			"line": 209,
 			"mutation": "StringLiteral: `an added <${node.tagName}> carries no source element` -> ``",
 			"equivalent": "the wording of the error's detail or default message: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"66a43df6f3758d3e": {
+			"line": 319,
+			"mutation": "ConditionalExpression: node.instanceRef?.id -> true",
+			"equivalent": "a removed or project-own node always carries the instance element it names"
+		},
+		"dc56be5231040f61": {
+			"line": 319,
+			"mutation": "OptionalChaining: node.instanceRef?.id -> node.instanceRef.id",
+			"equivalent": "a removed or project-own node always carries the instance element it names"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/engine/identity-collisions.ts": {
@@ -362,15 +439,22 @@
 			"equivalent": "writes an absent collision as undefined, which every reader treats as none"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/engine/project-owned-attributes.constants.ts": {
+		"d516a808b80628b9": {
+			"line": 23,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "module-level map built at load, before the test runner swaps in the mutant: a static mutant the fast tier cannot observe"
+		},
+		"78201f5c6a078467": {
+			"line": 23,
+			"mutation": "ArrowFunction: (name): [string, KeptAttributeReason] => [\n\t\tname,\n\t\t'bound-logical-node',\n\t] -> () => undefined",
+			"equivalent": "module-level map built at load, before the test runner swaps in the mutant: a static mutant the fast tier cannot observe"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/engine/project-owned-attributes.ts": {
 		"fc66211692fd63d6": {
 			"line": 50,
 			"mutation": "ConditionalExpression: default:\n\t\t\treturn throwDialecteError('ASSERTION_FAILED', {\n\t\t\t\tdetail: `projectOwnedAttributes: unhandled names rule ${String(namesFollo",
-			"equivalent": "the default of an exhaustive switch: the names rule has two values, the type refuses a third"
-		},
-		"6126ff6fc6bf164e": {
-			"line": 51,
-			"mutation": "StringLiteral: 'ASSERTION_FAILED' -> \"\"",
 			"equivalent": "the default of an exhaustive switch: the names rule has two values, the type refuses a third"
 		},
 		"68e70f3d1bdc6568": {
@@ -382,6 +466,26 @@
 			"line": 52,
 			"mutation": "StringLiteral: `projectOwnedAttributes: unhandled names rule ${String(namesFollow satisfies never)}` -> ``",
 			"equivalent": "the default of an exhaustive switch: the names rule has two values, the type refuses a third"
+		},
+		"ddc1a3e267628ff4": {
+			"line": 54,
+			"mutation": "ConditionalExpression: default:\n\t\t\treturn throwDialecteError('ASSERTION_FAILED', {\n\t\t\t\tdetail: `projectOwnedAttributes: unhandled type rule ${String(boundLogica",
+			"equivalent": "the default of an exhaustive switch: the type rule has two values, the type refuses a third"
+		},
+		"6126ff6fc6bf164e": {
+			"line": 55,
+			"mutation": "StringLiteral: 'ASSERTION_FAILED' -> \"\"",
+			"equivalent": "the default of an exhaustive switch: the names rule has two values, the type refuses a third"
+		},
+		"f644c53658d3d772": {
+			"line": 55,
+			"mutation": "ObjectLiteral: {\n\t\t\t\tdetail: `projectOwnedAttributes: unhandled type rule ${String(boundLogicalNodeTypes satisfies never)}`,\n\t\t\t} -> {}",
+			"equivalent": "the default of an exhaustive switch: the type rule has two values, the type refuses a third"
+		},
+		"c2183071de23ec60": {
+			"line": 56,
+			"mutation": "StringLiteral: `projectOwnedAttributes: unhandled type rule ${String(boundLogicalNodeTypes satisfies never)}` -> ``",
+			"equivalent": "the default of an exhaustive switch: the type rule has two values, the type refuses a third"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/engine/reconcile.ts": {
@@ -389,6 +493,16 @@
 			"line": 222,
 			"mutation": "ConditionalExpression: !(await tx.getRecord(placed.ref)) -> false",
 			"equivalent": "an element an addition placed is not removed by the same reconcile; read without the guard, a missing element has no parent and the check finds nothing"
+		},
+		"162278f5fbde6481": {
+			"line": 227,
+			"mutation": "ConditionalExpression: typeFollowing.followers.length > 0 -> true",
+			"equivalent": "an import with no record and no follower resolves nothing, clones nothing and points nothing: only reads"
+		},
+		"39bc9ec6606da6d2": {
+			"line": 227,
+			"mutation": "EqualityOperator: typeFollowing.followers.length > 0 -> typeFollowing.followers.length >= 0",
+			"equivalent": "an import with no record and no follower resolves nothing, clones nothing and points nothing: only reads"
 		},
 		"db81b603d8b0bb2e": {
 			"line": 364,
@@ -466,6 +580,57 @@
 			"line": 124,
 			"mutation": "ConditionalExpression: child.children.length === 0 -> true",
 			"equivalent": "a wrapper holding elements is of the dialecte's own type and holds no text: no text wrapper of the template has its type"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/type-change.constants.ts": {
+		"8027df80977e88a0": {
+			"line": 15,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "module-level map built at load, before the test runner swaps in the mutant: a static mutant the fast tier cannot observe"
+		},
+		"b6fe0cb8a89f2669": {
+			"line": 16,
+			"mutation": "LogicalOperator: byTag.get(referrer.refTagName) ?? [] -> byTag.get(referrer.refTagName) && []",
+			"equivalent": "module-level map built at load, before the test runner swaps in the mutant: a static mutant the fast tier cannot observe"
+		},
+		"3c43ab03a604c233": {
+			"line": 16,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "module-level map built at load, before the test runner swaps in the mutant: a static mutant the fast tier cannot observe"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/type-change.ts": {
+		"e84c2a1470272a48": {
+			"line": 38,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a string among the references of a tag with none destructures to no attribute: reading it gives no id on either side, no change"
+		},
+		"36c8f9d3b9bfb19f": {
+			"line": 40,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "lnType has no schema default: read with or without the defaults it is the same value"
+		},
+		"05bc89c8a84cd07a": {
+			"line": 42,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "lnType has no schema default: read with or without the defaults it is the same value"
+		},
+		"8ec349f2bdecad6c": {
+			"line": 68,
+			"mutation": "ConditionalExpression: side.byId.has(key) -> false",
+			"equivalent": "a cache of signatures by id: reading the type again gives the same signature, only more reads"
+		},
+		"1c205767e651caa6": {
+			"line": 77,
+			"mutation": "CallExpression: side.byId.set(key, signature) -> ;",
+			"equivalent": "a cache of signatures by id: reading the type again gives the same signature, only more reads"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/visible-attributes.ts": {
+		"22544b953b8f117c": {
+			"line": 41,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a tag naming no type: a string among its type references only leaves out an attribute no element carries"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/engine/wrapper.ts": {
@@ -988,7 +1153,6 @@
 			"equivalent": "a named unit always has a parent; a substation's parent, the SCL root, carries no name, so the TEMPLATE test on the next line returns the unit alone either way"
 		}
 	},
-	"src/v2019C1/extensions/lifecycle/layers/topology/scope-content.ts": {},
 	"src/v2019C1/extensions/lifecycle/report/query/removal-side-effects.ts": {
 		"ab51c62691eeecd0": {
 			"line": 38,

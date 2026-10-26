@@ -17,6 +17,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/mapping'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LeftoverRefPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import type { DiffNode, InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -87,6 +88,8 @@ export async function foldSatelliteCompanions(
 		pass?: ReportPass
 		/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
+		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
+		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** The source elements the instance's selection of functional variants leaves out: see `diff`. */
@@ -166,6 +169,7 @@ export async function foldSatelliteCompanions(
 			foreignInstanceIds,
 			matchKey,
 			removalBase: params.removalBase,
+			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			namesFollow: params.namesFollow,
 			notSelected: params.notSelected,
 		})

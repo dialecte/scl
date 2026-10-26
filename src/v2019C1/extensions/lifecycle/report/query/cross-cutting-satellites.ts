@@ -3,6 +3,7 @@ import { foldSatelliteCompanions } from './satellite-companions'
 import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
@@ -42,6 +43,8 @@ export async function foldCrossCuttingSatellites(
 		pass?: ReportPass
 		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
+		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
+		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** What the selection of functional variants of the instances this is for leaves out of the template. */
@@ -72,6 +75,7 @@ export async function foldCrossCuttingSatellites(
 		instancePrimaryRef,
 		resolveForeignScope: params.resolveForeignScope,
 		removalBase: params.removalBase,
+		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 		namesFollow: params.namesFollow,
 		notSelected: params.selection?.leftOut,
 	})

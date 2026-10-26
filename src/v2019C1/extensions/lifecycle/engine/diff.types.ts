@@ -13,9 +13,9 @@ export type AttributeChange = { name: string; before?: string; after?: string }
 
 /**
  * Why an update keeps the project's value of an attribute the template changes.
- * - `bound-logical-node`: the LNode is bound to a logical node of an IED; the project keeps the type it holds, an
- *   update does not apply a type change to a bound LNode (a project rule for now; the type is part of the
- *   specification).
+ * - `bound-logical-node`: the LNode is bound to a logical node of an IED and the consumer keeps the type of such an
+ *   LNode (`resolution.boundLogicalNodeTypes: 'keep'`); by default its type follows the template's, as it is part of
+ *   what the LNode was specified with.
  * - `instance-configuration`: the instance configures it where it sits (a behaviour description's file, a variable's
  *   value); a template update does not overwrite it.
  */

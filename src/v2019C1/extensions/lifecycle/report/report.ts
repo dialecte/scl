@@ -103,6 +103,7 @@ async function reportVerb(
 				scenario: target.scenario,
 				targetInstance: target.targetInstance,
 				decisionMappings: target.resolution?.mappings,
+				boundLogicalNodeTypes: target.resolution?.boundLogicalNodeTypes,
 				resolvePlacement: true,
 				removalBase,
 			})
@@ -115,6 +116,7 @@ async function reportVerb(
 				scenario: target.scenario,
 				targetInstance: target.targetInstance,
 				decisionMappings: target.resolution?.mappings,
+				boundLogicalNodeTypes: target.resolution?.boundLogicalNodeTypes,
 				removalBase,
 			})
 		case 'asd':
@@ -125,6 +127,7 @@ async function reportVerb(
 				scenario: target.scenario,
 				targetInstance: target.targetInstance,
 				decisionMappings: target.resolution?.mappings,
+				boundLogicalNodeTypes: target.resolution?.boundLogicalNodeTypes,
 				anchor: target.anchor,
 				resolvePlacement: true,
 				removalBase,
