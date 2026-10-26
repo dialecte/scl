@@ -1,6 +1,6 @@
 import { toRef } from '@dialecte/core/helpers'
 
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type { AcceptedIds } from './decide.types'
 import type { DiffNode } from './diff.types'
@@ -8,8 +8,6 @@ import type { TextWrapperPair } from './text-wrappers.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
-
-const TRANSPARENT: readonly string[] = SCL_DIALECTE_CONFIG.transparentElements
 
 /**
  * The diff nodes of the wrappers of a matched element holding text only — vendor data in a `Private`, which the
@@ -118,7 +116,7 @@ async function readTextWrappers(
 	const record = await reader.any.getRecord(params.element)
 	const wrappers: AnyTrackedRecord[] = []
 	for (const childRef of record?.children ?? []) {
-		if (!TRANSPARENT.includes(childRef.tagName)) continue
+		if (!isTransparentElement(childRef.tagName)) continue
 		const child = await reader.any.getRecord(childRef)
 		if (child && child.children.length === 0 && child.value.trim() !== '') wrappers.push(child)
 	}

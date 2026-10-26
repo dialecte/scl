@@ -1,11 +1,10 @@
 import { requiresChildElement } from './requires-child-element'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
-import { TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
+import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
 
 import type { AnyDefinition } from '@dialecte/core'
 
-const TOPOLOGY_LEVELS: readonly string[] = TOPOLOGY_STRUCTURAL_TAGS
 const DEFINITION: AnyDefinition = SCL_DIALECTE_CONFIG.definition
 
 /**
@@ -17,7 +16,7 @@ export const PRUNED_WHEN_EMPTY: ReadonlySet<string> = new Set([
 	...SCL_DIALECTE_CONFIG.transparentElements,
 	...Object.entries(DEFINITION)
 		.filter(([tagName, definition]) => {
-			if (TOPOLOGY_LEVELS.includes(tagName)) return false
+			if (isTopologyLevel(tagName)) return false
 			return requiresChildElement(definition.contentModel)
 		})
 		.map(([tagName]) => tagName),

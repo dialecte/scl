@@ -2,9 +2,9 @@ import { applicationsUnderScope, functionsUnderScope } from './scope-content'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import { TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { classifyUnmatched } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { carriesOwnProvenance, isLastReferrer } from '@/v2019C1/extensions/lifecycle/instance'
+import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
 
 import type {
 	FindDroppedPrimariesParams,
@@ -102,7 +102,7 @@ async function collectLevelUuids(
 	params: { node: AnyTreeRecord; levels: Set<string> },
 ): Promise<void> {
 	const { node, levels } = params
-	if (!isStructuralTag(node.tagName)) return
+	if (!isTopologyLevel(node.tagName)) return
 	const uuid = await sourceQuery.any.getAttribute(node, { name: 'uuid' })
 	if (uuid) levels.add(uuid)
 	for (const child of node.tree) await collectLevelUuids(sourceQuery, { node: child, levels })
@@ -127,7 +127,7 @@ async function collectUnitPrimaries(
 		// the tree a reader gives sees through the level's Private: an application is a child of the level
 		if (holdsUnitPrimaries && child.tagName === 'Function') primaries.functions.push(child)
 		if (holdsUnitPrimaries && child.tagName === 'Application') primaries.applications.push(child)
-		if (!isStructuralTag(child.tagName)) continue
+		if (!isTopologyLevel(child.tagName)) continue
 		const lineage = await reader.any.getAttribute(child, { name: matchKey })
 		if (!lineage || !levelUuids.has(lineage)) continue
 		await collectUnitPrimaries(reader, {
@@ -138,11 +138,6 @@ async function collectUnitPrimaries(
 			primaries,
 		})
 	}
-}
-
-/** Whether a tag is a level of the topology. */
-function isStructuralTag(tagName: string): boolean {
-	return (TOPOLOGY_STRUCTURAL_TAGS as readonly string[]).includes(tagName)
 }
 
 /** The primaries of the project the source no longer holds, classified. */

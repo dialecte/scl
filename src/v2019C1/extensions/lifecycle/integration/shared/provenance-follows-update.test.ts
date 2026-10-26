@@ -191,6 +191,29 @@ const TWIN_LEVEL_TOLERANCE: SclTest.BaseXmlTestCase['allowInvalidOutput'] = {
 	violations: [{ check: 'references', code: 'dangling' }],
 }
 
+/** The target of the case's file, placed or updated from `sourceQuery`: an SSD names the level the case names. */
+async function lifecycleFrom(params: {
+	testCase: TestCase
+	sourceQuery: Scl.Query
+	scenario: LifecycleScenario
+	anchor?: Scl.Ref<Scl.ElementsOf>
+}): Promise<LifecycleTarget> {
+	const { testCase, sourceQuery, scenario, anchor = testCase.anchor } = params
+	const common = { sourceQuery, anchor, scenario }
+	if (testCase.verb === 'ssd') {
+		const [substation] = await sourceQuery.getRecordsByTagName('Substation')
+		const ref = testCase.unit
+			? await findByName(sourceQuery, testCase.unit)
+			: { tagName: 'Substation' as const, id: substation.id }
+		return { ...common, verb: 'ssd', ref }
+	}
+	const tagName = testCase.verb === 'fsd' ? 'Function' : 'Application'
+	const ref = await findByUuid(sourceQuery, { tagName, uuid: testCase.rootUuid ?? '' })
+	return testCase.verb === 'fsd'
+		? { ...common, verb: 'fsd', ref: ref as Scl.Ref<'Function'> }
+		: { ...common, verb: 'asd', ref: ref as Scl.Ref<'Application'> }
+}
+
 /** Every group of a report declined. */
 function declineAll(report: DiffReport): DecisionMap {
 	return new Map(allGroups(report).map((group) => [group.id, 'skip' as const]))
@@ -583,36 +606,14 @@ describe('provenance follows an update: the instance records the revision of the
 		target,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const lifecycleFrom = async (params: {
-			sourceQuery: Scl.Query
-			scenario: LifecycleScenario
-			anchor?: Scl.Ref<Scl.ElementsOf>
-		}): Promise<LifecycleTarget> => {
-			const { sourceQuery, scenario, anchor = testCase.anchor } = params
-			const common = { sourceQuery, anchor, scenario }
-			if (testCase.verb === 'ssd') {
-				const [substation] = await sourceQuery.getRecordsByTagName('Substation')
-				const ref = testCase.unit
-					? await findByName(sourceQuery, testCase.unit)
-					: { tagName: 'Substation' as const, id: substation.id }
-				return { ...common, verb: 'ssd', ref }
-			}
-			const tagName = testCase.verb === 'fsd' ? 'Function' : 'Application'
-			const ref = await findByUuid(sourceQuery, { tagName, uuid: testCase.rootUuid ?? '' })
-			return testCase.verb === 'fsd'
-				? { ...common, verb: 'fsd', ref: ref as Scl.Ref<'Function'> }
-				: { ...common, verb: 'asd', ref: ref as Scl.Ref<'Application'> }
-		}
-
 		for (const anchor of testCase.placedUnder ?? [testCase.anchor]) {
-			await reportAndApply({
-				document: target,
-				lifecycle: await lifecycleFrom({
-					sourceQuery: source.query,
-					scenario: testCase.scenario ?? 'instantiate',
-					anchor,
-				}),
+			const lifecycle = await lifecycleFrom({
+				testCase,
+				sourceQuery: source.query,
+				scenario: testCase.scenario ?? 'instantiate',
+				anchor,
 			})
+			await reportAndApply({ document: target, lifecycle })
 		}
 		if (testCase.editProject) await target.transaction(testCase.editProject)
 
@@ -622,6 +623,7 @@ describe('provenance follows an update: the instance records the revision of the
 			? await openSclDocument({ project, xml: sourceXml, label: 'next revision' })
 			: source
 		const update = await lifecycleFrom({
+			testCase,
 			sourceQuery: newer.query,
 			scenario: testCase.scenario ?? 'template',
 		})

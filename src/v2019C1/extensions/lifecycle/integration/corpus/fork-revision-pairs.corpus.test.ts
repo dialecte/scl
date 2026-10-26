@@ -22,8 +22,12 @@ import {
 	readCorpusRevision,
 } from '@/v2019C1/test/corpus/corpus-revisions'
 
+import type { ReportedAndApplied } from '../integration-helpers.types'
 import type { Scl } from '@/v2019C1/config'
-import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	LifecycleScenario,
+	LifecycleTarget,
+} from '@/v2019C1/extensions/lifecycle/contract.types'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -97,26 +101,24 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_RENAMES)))(
 			const { uuid: applicationUuid = '' } = await source.document.query.getAttributes(application)
 			const [fn] = await source.document.query.getRecordsByTagName('Function')
 			const { uuid: functionUuid = '' } = await source.document.query.getAttributes(fn)
-			const fork = async (revision: Scl.Document, base?: Scl.Document) =>
-				reportAndApply({
-					document: target.document,
-					lifecycle: {
-						verb: 'asd',
-						sourceQuery: revision.query,
-						ref: await findByUuid(revision.query, {
-							tagName: 'Application',
-							uuid: applicationUuid,
-						}),
-						anchor,
-						scenario: 'fork',
-						...(base ? { baseQuery: base.query } : {}),
-					},
-				})
-
-			await fork(source.document)
+			const firstFork = await applicationFork({
+				revision: source.document,
+				applicationUuid,
+				anchor,
+			})
+			await reportAndApply({ document: target.document, lifecycle: firstFork })
 			const placed = (await target.document.query.getSnapshot({ as: 'xml' })) as string
 
-			const { report: renamed } = await fork(second, source.document)
+			const secondFork = await applicationFork({
+				revision: second,
+				base: source.document,
+				applicationUuid,
+				anchor,
+			})
+			const { report: renamed } = await reportAndApply({
+				document: target.document,
+				lifecycle: secondFork,
+			})
 			expect(
 				listAttributeChanges(renamed),
 				'the renames and the type change, nothing else',
@@ -147,7 +149,13 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_RENAMES)))(
 			)
 			expect(count(forked, { localName: 'ApplicationSclRef' }), 'none of its own').toBe(0)
 
-			await fork(source.document, second)
+			const backFork = await applicationFork({
+				revision: source.document,
+				base: second,
+				applicationUuid,
+				anchor,
+			})
+			await reportAndApply({ document: target.document, lifecycle: backFork })
 			const back = (await target.document.query.getSnapshot({ as: 'xml' })) as string
 			for (const uuid of [applicationUuid, functionUuid]) {
 				expect(canonicalElement({ xml: back, uuid }), 'back as first placed').toBe(
@@ -181,31 +189,30 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_GAINS)))(
 			const { uuid: functionUuid = '' } = await source.document.query.getAttributes(fn)
 			const [bay] = await target.document.query.getRecordsByTagName('Bay')
 			const before = (await target.document.query.getSnapshot({ as: 'xml' })) as string
-			const lifecycle = async (
-				revision: Scl.Document,
-				base: Scl.Document,
-			): Promise<LifecycleTarget> => ({
-				verb: 'asd',
-				sourceQuery: revision.query,
-				ref: await findByUuid(revision.query, { tagName: 'Application', uuid: applicationUuid }),
-				anchor: { tagName: 'Bay', id: bay.id },
-				scenario: 'fork',
-				baseQuery: base.query,
-			})
+			const anchor = { tagName: 'Bay', id: bay.id } as Scl.Ref<'Bay'>
 
+			const gainedFork = await applicationFork({
+				revision: source.document,
+				base: first,
+				applicationUuid,
+				anchor,
+			})
 			const { report: gained } = await reportAndApply({
 				document: target.document,
-				lifecycle: await lifecycle(source.document, first),
+				lifecycle: gainedFork,
 			})
 			expect(listGroups(gained), 'the two elements the revision gained, nothing else').toEqual([
 				'added BehaviorDescription',
 				'added FunctionRole',
 			])
 
-			await reportAndApply({
-				document: target.document,
-				lifecycle: await lifecycle(first, source.document),
+			const backFork = await applicationFork({
+				revision: first,
+				base: source.document,
+				applicationUuid,
+				anchor,
 			})
+			await reportAndApply({ document: target.document, lifecycle: backFork })
 			const after = (await target.document.query.getSnapshot({ as: 'xml' })) as string
 			for (const uuid of [applicationUuid, functionUuid]) {
 				expect(canonicalElement({ xml: after, uuid }), 'as it was').toBe(
@@ -215,6 +222,43 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_GAINS)))(
 		})
 	},
 )
+
+/** A fork of the application of a revision, given the previous one as its base when there is one. */
+async function applicationFork(params: {
+	revision: Scl.Document
+	base?: Scl.Document
+	applicationUuid: string
+	anchor: Scl.Ref<Scl.ElementsOf>
+}): Promise<LifecycleTarget> {
+	const { revision, base, applicationUuid, anchor } = params
+	const ref = await findByUuid(revision.query, { tagName: 'Application', uuid: applicationUuid })
+	return {
+		verb: 'asd',
+		sourceQuery: revision.query,
+		ref,
+		anchor,
+		scenario: 'fork',
+		...(base ? { baseQuery: base.query } : {}),
+	}
+}
+
+/** A level of an SSD placed or updated on the project's substation, reported then applied. */
+async function placeUnit(params: {
+	document: Scl.Document
+	sourceQuery: Scl.Query
+	ref: Scl.Ref<'VoltageLevel'>
+	scenario: LifecycleScenario
+}): Promise<ReportedAndApplied> {
+	const { document, sourceQuery, ref, scenario } = params
+	const lifecycle: LifecycleTarget = {
+		verb: 'ssd',
+		sourceQuery,
+		ref,
+		anchor: { tagName: 'Substation', id: 'project-substation' },
+		scenario,
+	}
+	return reportAndApply({ document, lifecycle })
+}
 
 /** Two files of one name that are not revisions of one another: every uuid, the Header's included, differs. */
 const NOT_REVISIONS = [
@@ -290,26 +334,21 @@ describe.skipIf(!areCorpusRevisionsSynced([TOPOLOGY_ONLY]))(
 				tagName: 'VoltageLevel',
 				name: 'TEMPLATE_HV',
 			})
-			const lifecycle = (scenario: 'instantiate' | 'template' | 'fork', document: Scl.Document) =>
-				reportAndApply({
-					document,
-					lifecycle: {
-						verb: 'ssd',
-						sourceQuery: source.document.query,
-						ref,
-						anchor: { tagName: 'Substation', id: 'project-substation' },
-						scenario,
-					} as LifecycleTarget,
-				})
+			const sourceQuery = source.document.query
 
-			await lifecycle('instantiate', target.document)
+			await placeUnit({ document: target.document, sourceQuery, ref, scenario: 'instantiate' })
 			const placed = (await target.document.query.getSnapshot({ as: 'xml' })) as string
-			const { report: update } = await lifecycle('template', target.document)
+			const { report: update } = await placeUnit({
+				document: target.document,
+				sourceQuery,
+				ref,
+				scenario: 'template',
+			})
 			expect(listGroups(update), 'nothing to write').toEqual([])
 			expect(await target.document.query.getSnapshot({ as: 'xml' }), 'nothing written').toBe(placed)
 
-			await lifecycle('fork', forkedProject)
-			await lifecycle('fork', forkedProject)
+			await placeUnit({ document: forkedProject, sourceQuery, ref, scenario: 'fork' })
+			await placeUnit({ document: forkedProject, sourceQuery, ref, scenario: 'fork' })
 			const forked = (await forkedProject.query.getSnapshot({ as: 'xml' })) as string
 			const uuids = [
 				...new DOMParser().parseFromString(forked, 'application/xml').querySelectorAll('[uuid]'),

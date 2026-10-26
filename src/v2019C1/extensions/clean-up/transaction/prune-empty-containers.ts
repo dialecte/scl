@@ -2,13 +2,11 @@ import { PRUNED_WHEN_EMPTY } from './prune-empty-containers.constants'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type { PruneEmptyContainersParams } from './prune-empty-containers.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
-
-const TRANSPARENT: readonly string[] = SCL_DIALECTE_CONFIG.transparentElements
 
 /**
  * Delete the containers left holding nothing — no child element, no text — that have no reason to stay then
@@ -66,7 +64,7 @@ function emptiedBy(operation: Scl.Operation): Scl.Ref<Scl.ElementsOf> | undefine
 		}
 		case 'created': {
 			const { tagName, id } = operation.newRecord
-			return TRANSPARENT.includes(tagName)
+			return isTransparentElement(tagName)
 				? ({ tagName, id } as Scl.Ref<Scl.ElementsOf>)
 				: undefined
 		}

@@ -2,8 +2,8 @@ import { collectUuids } from './match-key'
 
 import { throwDialecteError } from '@dialecte/core'
 
-import { TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { SCL_ERRORS } from '@/v2019C1/errors'
+import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
 
 import type { AcceptedIds } from './decide.types'
 import type {
@@ -65,11 +65,6 @@ export function classifyUnmatched(params: ClassifyUnmatchedParams): UnmatchedCla
 				detail: `classifyUnmatched: unhandled removal base ${String(removalBase satisfies never)}`,
 			})
 	}
-}
-
-/** Whether a tag is a level of the topology (a substation, a voltage level, a bay). */
-function isTopologyLevel(tagName: string): boolean {
-	return (TOPOLOGY_STRUCTURAL_TAGS as readonly string[]).includes(tagName)
 }
 
 /**

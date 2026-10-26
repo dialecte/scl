@@ -4,6 +4,7 @@ import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
+import type { DecisionGroup } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -108,15 +109,18 @@ describe('report: what the removal of a group makes the delete hooks do outside 
 			anchor: { tagName: 'Bay', id: 'bay-t' },
 			scenario: 'template',
 		})
-		const sideEffects = allGroups(reported).map(
-			(group) =>
-				`${group.title} |${(group.sideEffects ?? [])
-					.map((sideEffect) => ` ${sideEffect.element.tagName} ${sideEffect.effect}`)
-					.join(',')}`,
-		)
+		const sideEffects = allGroups(reported).map((group) => describeSideEffects(group))
 		expect(sideEffects).toEqual(testCase.expectedSideEffects)
 		return { assertOn: 'target' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+/** A group as `<group> | <tag> <effect>, …`. */
+function describeSideEffects(group: DecisionGroup): string {
+	const effects = (group.sideEffects ?? []).map(
+		(sideEffect) => ` ${sideEffect.element.tagName} ${sideEffect.effect}`,
+	)
+	return `${group.title} |${effects.join(',')}`
+}

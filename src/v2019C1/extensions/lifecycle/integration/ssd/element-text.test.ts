@@ -5,6 +5,7 @@ import { describe, expect } from 'vitest'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
+import type { Scl } from '@/v2019C1/config'
 import type {
 	LifecycleScenario,
 	LifecycleTarget,
@@ -87,21 +88,14 @@ describe('ssd update: the text of an element is compared and reconciled like an 
 		target,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const lifecycle = (scenario: LifecycleScenario): LifecycleTarget =>
-			({
-				verb: 'ssd',
-				sourceQuery: source.query,
-				ref: { tagName: 'Bay', id: 'source-feeder' },
-				anchor: { tagName: 'VoltageLevel', id: 'project-voltage-level' },
-				scenario,
-			}) as LifecycleTarget
-		await reportAndApply({ document: target, lifecycle: lifecycle('instantiate') })
+		const placement = feederTarget({ sourceQuery: source.query, scenario: 'instantiate' })
+		await reportAndApply({ document: target, lifecycle: placement })
 		await source.transaction(async function changeTheBayType(tx) {
 			await tx.update({ tagName: 'BayType', id: 'source-bay-type' }, { value: testCase.newerType })
 		})
 		const { report } = await reportAndApply({
 			document: target,
-			lifecycle: lifecycle('template'),
+			lifecycle: feederTarget({ sourceQuery: source.query, scenario: 'template' }),
 			decide: testCase.declined ? declineEvery : undefined,
 		})
 		expect(listGroups(report)).toEqual(testCase.expectedGroups)
@@ -112,6 +106,21 @@ describe('ssd update: the text of an element is compared and reconciled like an 
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+/** The bay of the template placed, or updated, in the project's voltage level. */
+function feederTarget(params: {
+	sourceQuery: Scl.Query
+	scenario: LifecycleScenario
+}): LifecycleTarget {
+	const { sourceQuery, scenario } = params
+	return {
+		verb: 'ssd',
+		sourceQuery,
+		ref: { tagName: 'Bay', id: 'source-feeder' },
+		anchor: { tagName: 'VoltageLevel', id: 'project-voltage-level' },
+		scenario,
+	}
+}
 
 /** Every group of a report declined. */
 function declineEvery(reported: DiffReport): DecisionMap {

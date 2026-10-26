@@ -4,8 +4,8 @@ import { throwDialecteError } from '@dialecte/core'
 import { getAttributeRules } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
-import { TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { readAttribute } from '@/v2019C1/helpers'
+import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
 
 import type { LineageUpdates, WriteIdentityParams } from './write-identity.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -153,9 +153,7 @@ async function preserveUnderSameTemplate(
  */
 function isPartOfInstance(params: { tagName: string; templateUuid: string | undefined }): boolean {
 	const { tagName, templateUuid } = params
-	return (
-		templateUuid !== undefined && !(TOPOLOGY_STRUCTURAL_TAGS as readonly string[]).includes(tagName)
-	)
+	return templateUuid !== undefined && !isTopologyLevel(tagName)
 }
 
 /**

@@ -1,15 +1,13 @@
 import { toRef } from '@dialecte/core/helpers'
 
-import { TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import { findMappingPolicy } from '@/v2019C1/extensions/lifecycle/mapping'
+import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
 
 import type { FindFrameInstancesParams, FrameInstance } from './find-frame-instances.types'
 import type { Scl } from '@/v2019C1/config'
 import type { MappingReader } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
 import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
-
-const STRUCTURAL_TAGS: readonly string[] = TOPOLOGY_STRUCTURAL_TAGS
 
 /**
  * Find the levels of the project the instances of a template's unit sit on — where an earlier
@@ -98,7 +96,7 @@ async function collectHeldElements(
 		const uuid = await sourceQuery.any.getAttribute(child, { name: 'uuid' })
 		if (uuid) {
 			heldElements.push(child)
-			if (!STRUCTURAL_TAGS.includes(child.tagName)) continue
+			if (!isTopologyLevel(child.tagName)) continue
 		}
 		await collectHeldElements(sourceQuery, { node: child, heldElements })
 	}

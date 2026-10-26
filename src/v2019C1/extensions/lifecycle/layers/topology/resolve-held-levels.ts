@@ -1,4 +1,4 @@
-import { TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
+import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
 
 import type {
 	FindHeldLevelParams,
@@ -8,8 +8,6 @@ import type {
 import type { Config, Scl } from '@/v2019C1/config'
 import type { MappingReader } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
 import type * as Core from '@dialecte/core'
-
-const STRUCTURAL_TAGS: readonly string[] = TOPOLOGY_STRUCTURAL_TAGS
 
 /**
  * The levels of the project one instance of a template lives on, read from where its elements
@@ -29,7 +27,7 @@ export async function resolveHeldLevels(
 		const instanceAncestors = await reader.findAncestors(instance, { stopAtTagName: 'Substation' })
 
 		for (const sourceLevel of sourceAncestors) {
-			if (!STRUCTURAL_TAGS.includes(sourceLevel.tagName) || heldLevels.has(sourceLevel.id)) continue
+			if (!isTopologyLevel(sourceLevel.tagName) || heldLevels.has(sourceLevel.id)) continue
 			const level = instanceAncestors.find((ancestor) => ancestor.tagName === sourceLevel.tagName)
 			if (!level) continue
 			heldLevels.set(sourceLevel.id, {

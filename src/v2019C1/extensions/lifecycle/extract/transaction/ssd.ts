@@ -1,9 +1,10 @@
 import { postExtractionCleanup } from './post-extraction-cleanup'
 
-import { TEMPLATE_NAME, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
+import { TEMPLATE_NAME } from '@/v2019C1/constants'
 import { history } from '@/v2019C1/extensions/history'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { cloneTopologyContent } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
 
 import type { ExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -66,7 +67,7 @@ export async function ssd(
 	const unlinked = new Set(templateLink === 'break' ? [scopeRef.id] : [])
 	const ancestors = await sourceQuery.findAncestors(scopeRef, { stopAtTagName: 'Substation' })
 	for (const ancestor of ancestors) {
-		if (!(TOPOLOGY_STRUCTURAL_TAGS as readonly string[]).includes(ancestor.tagName)) continue
+		if (!isTopologyLevel(ancestor.tagName)) continue
 		unlinked.add(ancestor.id)
 		const target = frameIndex.get(ancestor.id)
 		if (target) await tx.update(target, { attributes: { name: TEMPLATE_NAME } })

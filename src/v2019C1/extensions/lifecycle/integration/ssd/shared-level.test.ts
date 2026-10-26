@@ -109,14 +109,8 @@ describe("ssd update: a level the template does not hold is not the template's t
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		const bayFile = await openSclDocument({ project, xml: bayTemplate, label: 'bay template' })
-		const levelLifecycle = (scenario: LifecycleScenario): LifecycleTarget => ({
-			verb: 'ssd',
-			sourceQuery: source.query,
-			ref: { tagName: 'VoltageLevel', id: 'level-voltage-level' },
-			anchor: { tagName: 'Substation', id: 'project-substation' },
-			scenario,
-		})
-		await reportAndApply({ document: target, lifecycle: levelLifecycle('instantiate') })
+		const placement = levelTarget({ sourceQuery: source.query, scenario: 'instantiate' })
+		await reportAndApply({ document: target, lifecycle: placement })
 		const [placedLevel] = await target.query.getRecordsByTagName('VoltageLevel')
 		if (testCase.withBayTemplate) {
 			await reportAndApply({
@@ -134,7 +128,7 @@ describe("ssd update: a level the template does not hold is not the template's t
 
 		const { report } = await reportAndApply({
 			document: target,
-			lifecycle: levelLifecycle('template'),
+			lifecycle: levelTarget({ sourceQuery: source.query, scenario: 'template' }),
 			decide: testCase.acceptsRemovals ? acceptEveryGroup : undefined,
 		})
 		expect(listGroups(report)).toEqual(testCase.expectedGroups)
@@ -143,6 +137,21 @@ describe("ssd update: a level the template does not hold is not the template's t
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+/** The voltage level template placed, or updated, in the project's substation. */
+function levelTarget(params: {
+	sourceQuery: Scl.Query
+	scenario: LifecycleScenario
+}): LifecycleTarget {
+	const { sourceQuery, scenario } = params
+	return {
+		verb: 'ssd',
+		sourceQuery,
+		ref: { tagName: 'VoltageLevel', id: 'level-voltage-level' },
+		anchor: { tagName: 'Substation', id: 'project-substation' },
+		scenario,
+	}
+}
 
 /** The newer revision of the level template: its bay is gone. */
 async function dropTheCoupler(tx: Scl.Transaction): Promise<void> {

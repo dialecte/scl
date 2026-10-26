@@ -4,6 +4,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { FRAME_OMIT_CHILD_TAGS, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
+import { isTopologyLevel } from '@/v2019C1/helpers/topology-levels'
 
 import type {
 	EnsureTopologyFrameParams,
@@ -15,8 +16,6 @@ import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
-
-const STRUCTURAL_TAGS: readonly string[] = TOPOLOGY_STRUCTURAL_TAGS
 
 /** Own content omitted from the frame merge: structural levels (walked) + delegated fn/app content. */
 const FRAME_OWN_CONTENT_OMIT = [...TOPOLOGY_STRUCTURAL_TAGS, ...FRAME_OMIT_CHILD_TAGS]
@@ -170,7 +169,7 @@ export async function strictAncestorIds(
 	const ancestors = await sourceQuery.findAncestors(scopeRef, { stopAtTagName: 'Substation' })
 	const ids = new Set<string>()
 	for (const ancestor of ancestors) {
-		if (STRUCTURAL_TAGS.includes(ancestor.tagName) && ancestor.id && ancestor.id !== scopeRef.id) {
+		if (isTopologyLevel(ancestor.tagName) && ancestor.id && ancestor.id !== scopeRef.id) {
 			ids.add(ancestor.id)
 		}
 	}
@@ -188,7 +187,7 @@ async function resolveTargetAncestors(
 	const ancestors = await tx.findAncestors(targetParent, { stopAtTagName: 'Substation' })
 	const structure: TargetStructure = {}
 	for (const record of [parent, ...ancestors]) {
-		if (STRUCTURAL_TAGS.includes(record.tagName)) {
+		if (isTopologyLevel(record.tagName)) {
 			structure[record.tagName as keyof TargetStructure] = record as never
 		}
 	}
@@ -207,7 +206,7 @@ export async function collectFrameElements(
 
 	const ancestors = await sourceQuery.findAncestors(scopeRef, { stopAtTagName: 'Substation' })
 	const structuralAncestors = ancestors
-		.filter((record) => STRUCTURAL_TAGS.includes(record.tagName) && record.id !== scopeRef.id)
+		.filter((record) => isTopologyLevel(record.tagName) && record.id !== scopeRef.id)
 		.reverse()
 	for (const ancestor of structuralAncestors) {
 		result.push({ tagName: ancestor.tagName, id: ancestor.id } as Scl.Ref<Scl.ElementsOf>)
@@ -284,7 +283,7 @@ export async function resolveFrameStructure(
 	const chain = [ref, ...(await sourceQuery.findAncestors(ref, { stopAtTagName: 'Substation' }))]
 	const structure: TargetStructure = {}
 	for (const source of chain) {
-		if (!STRUCTURAL_TAGS.includes(source.tagName) || !source.id) continue
+		if (!isTopologyLevel(source.tagName) || !source.id) continue
 		const targetRef = frameIndex.get(source.id)
 		if (!targetRef) continue
 		const record = await tx.any.getRecord(targetRef)

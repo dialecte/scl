@@ -66,7 +66,7 @@ const feederWithBreakerSsd = /* xml */ `
 	</SCL>
 `
 
-const dropBreaker = async (tx: Scl.Transaction) => {
+async function dropBreaker(tx: Scl.Transaction): Promise<void> {
 	await tx.delete({
 		tagName: 'ConductingEquipment',
 		id: 'source-breaker',
@@ -186,28 +186,9 @@ describe('ssd fork: the newer revision of the same file, its uuids kept', () => 
 		target,
 	}: SclTest.ActParams<ForkTestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		// the scope is the level the case names, or the file's unit read from its substation
-		const lifecycleFrom = async (
-			sourceQuery: Scl.Query,
-			baseQuery?: Scl.Query,
-		): Promise<LifecycleTarget> => {
-			const [substation] = await sourceQuery.getRecordsByTagName('Substation')
-			const ref = testCase.unit
-				? await findByName(sourceQuery, testCase.unit)
-				: { tagName: 'Substation' as const, id: substation.id }
-			return {
-				verb: 'ssd',
-				sourceQuery,
-				ref,
-				anchor: projectVoltageLevel,
-				scenario: 'fork',
-				...(baseQuery ? { baseQuery } : {}),
-			}
-		}
-
 		const { report } = await reportAndApply({
 			document: target,
-			lifecycle: await lifecycleFrom(source.query),
+			lifecycle: await forkTarget({ sourceQuery: source.query, unit: testCase.unit }),
 		})
 		expect(listGroups(report)).toEqual(testCase.expectedGroups)
 
@@ -219,10 +200,12 @@ describe('ssd fork: the newer revision of the same file, its uuids kept', () => 
 			const base = next.baseXml
 				? await openSclDocument({ project, xml: next.baseXml, label: 'previous revision' })
 				: undefined
-			const { report: nextReport } = await reportAndApply({
-				document: target,
-				lifecycle: await lifecycleFrom(revision.query, base?.query),
+			const lifecycle = await forkTarget({
+				sourceQuery: revision.query,
+				baseQuery: base?.query,
+				unit: testCase.unit,
 			})
+			const { report: nextReport } = await reportAndApply({ document: target, lifecycle })
 			if (next.expectedGroups) expect(listGroups(nextReport)).toEqual(next.expectedGroups)
 		}
 
@@ -232,13 +215,36 @@ describe('ssd fork: the newer revision of the same file, its uuids kept', () => 
 	runSclTestCases.withExport({ testCases, act })
 })
 
+/** A fork of the level the case names, or of the file's unit read from its substation. */
+async function forkTarget(params: {
+	sourceQuery: Scl.Query
+	baseQuery?: Scl.Query
+	unit?: ForkTestCase['unit']
+}): Promise<LifecycleTarget> {
+	const { sourceQuery, baseQuery, unit } = params
+	const [substation] = await sourceQuery.getRecordsByTagName('Substation')
+	const ref = unit
+		? await findByName(sourceQuery, unit)
+		: { tagName: 'Substation' as const, id: substation.id }
+	return {
+		verb: 'ssd',
+		sourceQuery,
+		ref,
+		anchor: projectVoltageLevel,
+		scenario: 'fork',
+		...(baseQuery ? { baseQuery } : {}),
+	}
+}
+
 describe('ssd fork: the previous revision it is given', () => {
 	// the scope is the file's unit, resolved from the file, as the apply resolves it
-	const updateParams = (params: { sourceQuery: Scl.Query; baseQuery: Scl.Query }) => ({
-		sourceQuery: params.sourceQuery,
-		targetParent: projectVoltageLevel,
-		baseQuery: params.baseQuery,
-	})
+	function updateParams(params: { sourceQuery: Scl.Query; baseQuery: Scl.Query }) {
+		return {
+			sourceQuery: params.sourceQuery,
+			targetParent: projectVoltageLevel,
+			baseQuery: params.baseQuery,
+		}
+	}
 
 	it('is refused by an update that is not a fork', async () => {
 		const { project, source, target } = await createSclTestProject({
