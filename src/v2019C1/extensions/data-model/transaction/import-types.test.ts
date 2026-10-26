@@ -494,7 +494,7 @@ describe('importTypes', () => {
 			],
 		},
 
-		'locked LNode clone target → lnType NOT repointed (protected)': {
+		'a cloned LNode bound to an IED → lnType repointed like any clone': {
 			sourceXml: `
 			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">
 				<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="sub-1">
@@ -536,10 +536,10 @@ describe('importTypes', () => {
 			cloneTargets: [{ tagName: 'LNode', id: 'locked-lnode' }],
 			expectedStats: { reused: 2 },
 			expectedQueries: [
-				// the locked LNode keeps its original lnType — the fork/dedup remap is skipped
-				'//default:LNode[@iedName="VENDOR_A"][@lnType="SRC_CSWI"]',
+				// a clone is never an implementation of the project: it takes the type its template names
+				'//default:LNode[@iedName="VENDOR_A"][@lnType="PRJ_CSWI"]',
 			],
-			unexpectedQueries: ['//default:LNode[@iedName="VENDOR_A"][@lnType="PRJ_CSWI"]'],
+			unexpectedQueries: ['//default:LNode[@lnType="SRC_CSWI"]'],
 		},
 		// Two independently-authored files may reuse the same DataTypeTemplates `id` for DIFFERENT
 		// types. The SCL schema settles this with two separate constraints (verified against the XSDs):

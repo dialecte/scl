@@ -55,7 +55,7 @@ Resolves the type closure of the given `LNode`/`LN`/`LN0` records and imports it
 - **preserve:** no structural match and the id is free → clone, keeping the id;
 - **fork:** no match but the id is taken by _different_ content → clone under a new content-hash id (`<forkPrefix><id>_<hash>`, prefix optional) and propagate the fork to referrers.
 
-Child type references inside the imported types — and the `lnType`/`type` of the instances passed in `cloneMappings` — are repointed to the reconciled ids in the same transaction. With an empty / non-colliding target and no `cloneMappings`, the result is byte-identical to a plain id-preserving clone.
+Child type references inside the imported types — and the `lnType`/`type` of the instances passed in `cloneMappings` — are repointed to the reconciled ids in the same transaction. Every clone is repointed, an `LNode` naming an IED included: a clone is never an implementation of the target, it takes the type its source names. With an empty / non-colliding target and no `cloneMappings`, the result is byte-identical to a plain id-preserving clone.
 
 > Structural equality is computed by [`signature.elementSignature`](./signature).
 

@@ -1,4 +1,4 @@
-import { resolve, isLNodeLocked } from '../query'
+import { resolve } from '../query'
 
 import { TYPE_ID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
@@ -169,15 +169,11 @@ export async function importTypes(
 	tx.perf.stop('scl::importTypes::sourceLoop')
 
 	// Second pass: now that idRemap is complete, repoint the child type-refs of
-	// every cloned type and the `lnType` of the cloned instances (clone mappings).
-	// A locked LNode (implemented in an IED) owns its `lnType` — exclude it from the
-	// instance remap so a fork/dedup never rewrites it.
+	// every cloned type and the `lnType` of the cloned instances (clone mappings) —
+	// a clone bound to an IED too: a clone is never an implementation of the target,
+	// it takes the type its source names.
 	tx.perf.start('scl::importTypes::remap')
-	const recordsToRemap: Scl.Ref<Scl.ElementsOf>[] = []
-	for (const mapping of cloneMappings) {
-		if (mapping.target.tagName === 'LNode' && (await isLNodeLocked(tx, mapping.target))) continue
-		recordsToRemap.push(mapping.target)
-	}
+	const recordsToRemap: Scl.Ref<Scl.ElementsOf>[] = cloneMappings.map((mapping) => mapping.target)
 	for (const root of clonedRoots) {
 		tx.progress.nextStep('Repointing references…')
 		const tree = await tx.getTree(root)

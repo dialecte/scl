@@ -74,9 +74,31 @@ function templateXml(params: { functionContent: string; bayContent?: string }): 
 	`
 }
 
-/** The project: S1 / V1 / B1, the bay holding `bayContent`, and `beside` next to the substation. */
-function projectXml(params: { bayContent?: string; beside?: string } = {}): string {
-	const { bayContent = '', beside = '' } = params
+/**
+ * Another breaker type under the template's id, as a project built from another library holds it, named by a function
+ * of the project's own.
+ */
+const projectOwnBreakerType = {
+	types: /* xml */ `
+		<DataTypeTemplates>
+			<LNodeType id="XCBR_T" lnClass="XCBR">
+				<DO name="BlkOpn" type="SPC_T"/>
+			</LNodeType>
+			<DOType id="SPC_T" cdc="SPC">
+				<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+			</DOType>
+		</DataTypeTemplates>
+	`,
+	bayContent: /* xml */ `
+		<Function name="Own" uuid="own-function-uuid">
+			<LNode iedName="None" lnClass="XCBR" lnInst="9" lnType="XCBR_T" uuid="own-lnode-uuid"/>
+		</Function>
+	`,
+}
+
+/** The project: S1 / V1 / B1, the bay holding `bayContent`, `beside` next to the substation, and its `types`. */
+function projectXml(params: { bayContent?: string; beside?: string; types?: string } = {}): string {
+	const { bayContent = '', beside = '', types: projectTypes = types } = params
 	return /* xml */ `
 		<SCL ${ns}>
 			<Header id="project" uuid="project-uuid"/>
@@ -88,7 +110,7 @@ function projectXml(params: { bayContent?: string; beside?: string } = {}): stri
 					</Bay>
 				</VoltageLevel>
 			</Substation>
-			${types}
+			${projectTypes}
 		</SCL>
 	`
 }
@@ -151,6 +173,20 @@ describe('lifecycle — what an apply writes bound to a logical node the project
 				anchor: projectBay,
 				expectedQueries: [`//default:Bay[@name="B1"]${releasedBreaker}`],
 				unexpectedQueries: ['//default:LNode[@iedName="P1"]'],
+			},
+
+		'function whose LNode is bound to its device, project holding another type under its type id -> placed on the type of the template':
+			{
+				sourceXml: templateXml({ functionContent: boundBreaker }),
+				targetXml: projectXml(projectOwnBreakerType),
+				verb: 'fsd',
+				ref: functionSource,
+				anchor: projectBay,
+				expectedQueries: [
+					`${releasedBreaker}[@lnType = //default:LNodeType[default:DO/@name="Pos"]/@id]`,
+					'//default:Function[@name="Own"]/default:LNode[@lnType="XCBR_T"]',
+					'//default:LNodeType[@id="XCBR_T"]/default:DO[@name="BlkOpn"]',
+				],
 			},
 
 		'function placed from above its bay, the bay holding an LNode bound to the device -> the bay created, its LNode assigned to no IED':

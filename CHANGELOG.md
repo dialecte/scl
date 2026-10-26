@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A cloned `LNode` naming an IED takes the type its template names.** `dataModel.importTypes` left the `lnType` of a cloned `LNode` whose `iedName` named an IED (a template LNode specified on a specification IED) out of its repointing: placed in a project holding another type under the template's type id, the `LNode` pointed at the project's type, a different data model, and releasing its binding afterwards did not repair it. Every clone is now repointed to the type the import resolved.
+
 - **Deleting an element takes the references to the references it deletes.** The delete hook removed the references naming a deleted element; one of them named in turn — a `PowerSystemRelation` deleted with the equipment it relates to, named by an application's `PowerSystemRelationRef` — left that reference naming nothing. It now goes too, and a parent losing several references is written once.
 
 - **A text the template changed reaches the instance like an attribute** (`DiffNode.textChange`, `TextChange`). The diff compared attributes only: a template changing the text of an element holding text only — a `BayType`, an `IEDName`, vendor data a `Private` holds as text — listed nothing and wrote nothing. Such an element is now `modified`, its `textChange` gives the instance's text and the template's (surrounding whitespace aside), and the apply writes it when its group is accepted, keeps it when declined. A vendor `Private` is paired with the instance's of the same `type`: one the instance lacks is added, one only the instance holds is kept.
