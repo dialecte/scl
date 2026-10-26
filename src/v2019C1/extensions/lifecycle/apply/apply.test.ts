@@ -1,5 +1,6 @@
 import { apply } from './apply'
 
+import { toDialecteError } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
 
 import { report } from '@/v2019C1/extensions/lifecycle/report'
@@ -242,6 +243,33 @@ describe("apply — the consumer's afterApply hook", () => {
 		})
 
 		expect(called).toBe(false)
+	})
+})
+
+describe('apply — the decisions belong to the report', () => {
+	it('a decision for a group of another report → refused, nothing written', async () => {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		if (!target) throw new Error('target required')
+		const lifecycleTarget = {
+			verb: 'fsd' as const,
+			sourceQuery: source.document.query,
+			ref: functionRef,
+			anchor: bayRef,
+		}
+		const reported = await report(target.document.query, lifecycleTarget)
+		const before = await target.document.query.getSnapshot({ as: 'xml' })
+
+		const refused = target.document.transaction(async function applyStaleDecisions(tx) {
+			await apply(tx, {
+				...lifecycleTarget,
+				report: reported,
+				resolution: { decisions: new Map([['a-group-of-another-report', 'accept']]) },
+			})
+		})
+
+		const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+		expect(refusal?.key).toBe('DECISION_UNKNOWN')
+		expect(await target.document.query.getSnapshot({ as: 'xml' })).toEqual(before)
 	})
 })
 

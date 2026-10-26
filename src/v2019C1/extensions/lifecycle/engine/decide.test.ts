@@ -119,15 +119,57 @@ describe('decide', () => {
 		const parent = group('parent', 'added', node('added', 'Function', 'fn-1'))
 		const child = group('child', 'added', node('added', 'SubFunction', 'sf-1'), [], ['parent'])
 
-		it('accepting a child whose parent is skipped -> throws', () => {
+		it('accepting a child whose parent is skipped -> refused, naming both', () => {
 			const decisions: DecisionMap = new Map([['parent', 'skip']])
-			expect(() => assertDecisionsCoherent({ groups: [parent, child], decisions })).toThrow()
+			let thrown: unknown
+			try {
+				assertDecisionsCoherent({ groups: [parent, child], decisions })
+			} catch (error) {
+				thrown = error
+			}
+			const refusal = toDialecteError(thrown)
+			expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
+				key: 'DECISION_DEPENDENCY_SKIPPED',
+				meta: { groupId: 'child', dependencyId: 'parent' },
+			})
 		})
 
 		it('accepting both parent and child -> ok', () => {
 			expect(() =>
 				assertDecisionsCoherent({ groups: [parent, child], decisions: new Map() }),
 			).not.toThrow()
+		})
+
+		it('a decision for a group the report does not list -> refused, naming it', () => {
+			const decisions: DecisionMap = new Map([['from-another-report', 'accept']])
+			let thrown: unknown
+			try {
+				assertDecisionsCoherent({ groups: [parent, child], decisions })
+			} catch (error) {
+				thrown = error
+			}
+			const refusal = toDialecteError(thrown)
+			expect({ key: refusal?.key, code: refusal?.code, meta: refusal?.meta }).toEqual({
+				key: 'DECISION_UNKNOWN',
+				code: 'SCL1011',
+				meta: { groupId: 'from-another-report' },
+			})
+		})
+
+		it('a group depending on a group the report does not list -> refused, naming both', () => {
+			const orphan = group('orphan', 'added', node('added', 'LNode', 'ln-1'), [], ['gone'])
+			let thrown: unknown
+			try {
+				assertDecisionsCoherent({ groups: [parent, orphan], decisions: new Map() })
+			} catch (error) {
+				thrown = error
+			}
+			const refusal = toDialecteError(thrown)
+			expect({ key: refusal?.key, code: refusal?.code, meta: refusal?.meta }).toEqual({
+				key: 'DECISION_DEPENDENCY_UNKNOWN',
+				code: 'SCL1012',
+				meta: { groupId: 'orphan', dependencyId: 'gone' },
+			})
 		})
 
 		it('skipping the child while its parent is skipped -> ok', () => {

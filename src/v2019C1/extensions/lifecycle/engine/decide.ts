@@ -140,21 +140,36 @@ export function collisionOverrides(params: {
 }
 
 /**
- * Dependency guard: reject a decision set that accepts a group whose
- * `dependsOn` parent is skipped. Runs before any write.
+ * Reject, before any write, decisions the report does not hold, and a decision set the report's dependencies refuse:
+ * a decision for a group the report does not list, a group depending on a group the report does not list, a group
+ * accepted while a group it depends on is skipped.
  */
 export function assertDecisionsCoherent(params: {
 	groups: DecisionGroup[]
 	decisions: DecisionMap
 }): void {
 	const { groups, decisions } = params
+	const groupsById = new Map(groups.map((group) => [group.id, group]))
+	for (const groupId of decisions.keys()) {
+		invariant(groupsById.has(groupId), {
+			key: SCL_ERRORS.DECISION_UNKNOWN,
+			meta: { groupId },
+			detail: `a decision is passed for group "${groupId}", which the report does not list`,
+		})
+	}
 	for (const group of groups) {
-		if (!isAccepted({ group, decisions })) continue
-		for (const parentId of group.dependsOn) {
-			invariant(isAccepted({ group: groupById(groups, parentId) ?? group, decisions }), {
+		for (const dependencyId of group.dependsOn) {
+			const dependency = groupsById.get(dependencyId)
+			invariant(dependency, {
+				key: SCL_ERRORS.DECISION_DEPENDENCY_UNKNOWN,
+				meta: { groupId: group.id, dependencyId },
+				detail: `group "${group.id}" depends on group "${dependencyId}", which the report does not list`,
+			})
+			if (!isAccepted({ group, decisions })) continue
+			invariant(isAccepted({ group: dependency, decisions }), {
 				key: SCL_ERRORS.DECISION_DEPENDENCY_SKIPPED,
-				meta: { groupId: group.id, dependencyId: parentId },
-				detail: `decision accepts group "${group.id}" but its dependency "${parentId}" is skipped`,
+				meta: { groupId: group.id, dependencyId },
+				detail: `decision accepts group "${group.id}" but its dependency "${dependencyId}" is skipped`,
 			})
 		}
 	}
@@ -216,10 +231,6 @@ function collectChanges(params: { node: DiffNode; changed: Map<string, Set<strin
 		changed.set(id, names)
 	}
 	for (const child of node.children) collectChanges({ node: child, changed })
-}
-
-function groupById(groups: DecisionGroup[], id: string): DecisionGroup | undefined {
-	return groups.find((group) => group.id === id)
 }
 
 /**

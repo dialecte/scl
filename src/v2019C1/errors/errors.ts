@@ -79,6 +79,16 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL1010',
 		message: 'An element shares with another one in the same place a key that cannot be changed',
 	},
+	/** A decision is passed for a group the report does not list. `meta: { groupId }` */
+	DECISION_UNKNOWN: {
+		code: 'SCL1011',
+		message: 'A decision concerns a change the report does not list',
+	},
+	/** A group of the report depends on a group the report does not list. `meta: { groupId, dependencyId }` */
+	DECISION_DEPENDENCY_UNKNOWN: {
+		code: 'SCL1012',
+		message: 'A change depends on a change the report does not list',
+	},
 	/** The template file holds nothing that can be instantiated. */
 	TEMPLATE_ROOT_NOT_FOUND: {
 		code: 'SCL2001',

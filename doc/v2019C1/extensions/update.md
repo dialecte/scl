@@ -148,7 +148,9 @@ type GroupDecision =
 A group absent from the map defaults to its `suggestedAction` — `accept` for most changes (so an
 empty map applies everything), but `skip` for a `target-only` group, so an author-added element is
 kept unless the user explicitly opts into removing it. The engine rejects a set that accepts a group
-whose `dependsOn` parent is skipped.
+whose `dependsOn` parent is skipped, and, before anything is written, a decision for a group the report does not
+list (`DECISION_UNKNOWN`: decisions taken on another report) and a report whose group depends on a group it does not
+list (`DECISION_DEPENDENCY_UNKNOWN`).
 
 **An addition that cannot be written is listed.** An element the template adds that collides with one the instance
 holds where it lands, on a key none of whose fields can be changed (an `LNode` sharing class, instance, prefix,
