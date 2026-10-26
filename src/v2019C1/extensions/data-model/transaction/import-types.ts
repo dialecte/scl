@@ -11,6 +11,8 @@ import type {
 	ImportTypesParams,
 	ImportTypesResult,
 	ImportTypesStats,
+	ReusedFork,
+	TypeFollower,
 	TypeRecord,
 } from './import-types.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -34,6 +36,8 @@ export type {
 	ImportTypesResult,
 	ImportTypesStats,
 	KeepNameTypesFrom,
+	LogicalNodeRecord,
+	TypeFollower,
 } from './import-types.types'
 
 /**
@@ -55,6 +59,13 @@ export type {
  * the reconciled ids in the same transaction. With an empty / non-colliding
  * target and no `cloneMappings` this is byte-identical to a plain id-preserving
  * clone.
+ *
+ * Each of the `followers` (a logical node of the target matched to one of the
+ * source) is pointed at the id its source's type resolves to; the type it leaves
+ * joins the pruned ones when nothing names it any more, and, in a call with
+ * followers, a fork reused for a source type takes the source id back once it is
+ * free — so a type only the followers named is updated in place, one anything
+ * else names is forked.
  */
 export async function importTypes(
 	tx: Core.Transaction<Config>,
@@ -64,13 +75,17 @@ export async function importTypes(
 		sourceQuery,
 		records,
 		cloneMappings = [],
+		followers = [],
 		forkPrefix = '',
 		keepNameTypesFrom = 'target',
 	} = params
 
 	tx.perf.start('scl::importTypes')
 
-	const resolved = await resolve(sourceQuery, { records })
+	// a follower's source brings its closure as any record does
+	const resolved = await resolve(sourceQuery, {
+		records: [...records, ...followers.map((follower) => follower.source)],
+	})
 	const sourceTypes = collectTypesBottomUp(resolved)
 
 	// written with the first type cloned: a closure the target already holds, or none, leaves no empty section
@@ -91,6 +106,7 @@ export async function importTypes(
 	const idRemap = new Map<string, string>()
 	const clonedRoots: Scl.Ref<Scl.ElementsOf>[] = []
 	const collisions: Collision[] = []
+	const reusedForks: ReusedFork[] = []
 	const stats: ImportTypesStats = { reused: 0, preserved: 0, forked: 0, reclaimed: 0 }
 
 	// One signature cache for the whole source loop: a descendant type shared by
@@ -125,6 +141,11 @@ export async function importTypes(
 			// Keep the dedup index consistent so a later incoming type sharing this
 			// signature reuses the renamed (surviving) id, not the vanished old one.
 			if (survivingId !== reusedId) preExisting.set(signature, survivingId)
+			// for followers, a fork an earlier import minted for this very content (the instances of one template followed
+			// one after the other) takes the source id back once it is free
+			if (followers.length > 0 && survivingId === forkIdOf({ forkPrefix, sourceId, signature })) {
+				reusedForks.push({ tagName: source.tagName, sourceId, forkId: survivingId })
+			}
 			stats.reused++
 			continue
 		}
@@ -140,11 +161,7 @@ export async function importTypes(
 		let targetId = sourceId
 		let preparedTree = tree
 		if (existing) {
-			targetId = await freeForkId(
-				tx,
-				source.tagName,
-				`${forkPrefix}${sourceId}_${shortHash(signature)}`,
-			)
+			targetId = await freeForkId(tx, source.tagName, forkIdOf({ forkPrefix, sourceId, signature }))
 			preparedTree = withRootId(tree, targetId)
 			stats.forked++
 		} else {
@@ -180,21 +197,25 @@ export async function importTypes(
 		if (tree) collectRefs(tree, recordsToRemap)
 	}
 	await applyTypeIdRemap(tx, { records: recordsToRemap, idRemap })
+	const leftTypes = await retargetFollowers(tx, { followers, idRemap })
 	tx.perf.stop('scl::importTypes::remap')
 
 	// Third pass: reclaim the ids of types a fork superseded, when the displaced old
-	// type is left with no file-wide referrers.
-	if (collisions.length > 0) {
+	// type is left with no file-wide referrers — and prune the types the followers
+	// left that nothing names any more.
+	if (collisions.length > 0 || leftTypes.length > 0) {
 		tx.progress.nextStep('Reclaiming ids…')
 		tx.perf.start('scl::importTypes::reclaim')
 		await reclaimSupersededTypes(tx, {
 			collisions,
+			leftTypes,
 			idRemap,
-			referrerRecords: recordsToRemap,
+			referrerRecords: [...recordsToRemap, ...followers.map((follower) => follower.target)],
 			stats,
 		})
 		tx.perf.stop('scl::importTypes::reclaim')
 	}
+	await reclaimReusedForks(tx, { reusedForks, idRemap, stats })
 
 	tx.progress.endPlan()
 	// Best-effort dev span: only the success path stops it; a throw aborts the
@@ -311,14 +332,16 @@ async function reclaimSupersededTypes(
 	tx: Core.Transaction<Config>,
 	params: {
 		collisions: Collision[]
+		/** The types the followers stopped naming: pruned with the displaced ones when nothing names them. */
+		leftTypes: Scl.Ref<Scl.ElementsOf>[]
 		idRemap: Map<string, string>
 		referrerRecords: Scl.Ref<Scl.ElementsOf>[]
 		stats: ImportTypesStats
 	},
 ): Promise<void> {
-	const { collisions, idRemap, referrerRecords, stats } = params
+	const { collisions, leftTypes, idRemap, referrerRecords, stats } = params
 
-	const freedOldIds = await pruneDeadSupersededTypes(tx, collisions)
+	const freedOldIds = await pruneDeadSupersededTypes(tx, { collisions, leftTypes })
 
 	// forkedId -> reclaimed original id, for the collisions whose old id was freed.
 	const reclaimMap = new Map<string, string>()
@@ -355,8 +378,9 @@ async function reclaimSupersededTypes(
  */
 async function pruneDeadSupersededTypes(
 	tx: Core.Transaction<Config>,
-	collisions: Collision[],
+	params: { collisions: Collision[]; leftTypes: Scl.Ref<Scl.ElementsOf>[] },
 ): Promise<Set<string>> {
+	const { collisions, leftTypes } = params
 	const freedOldIds = new Set<string>()
 	// Map a candidate ref back to the collision id it may free (only the displaced
 	// old roots carry one; cascade-discovered descendants free nothing to reclaim).
@@ -366,6 +390,11 @@ async function pruneDeadSupersededTypes(
 
 	const worklist: Scl.Ref<Scl.ElementsOf>[] = collisions.map((c) => c.oldRef)
 	const queued = new Set<string>(worklist.map(refKey))
+	for (const left of leftTypes) {
+		if (queued.has(refKey(left))) continue
+		worklist.push(left)
+		queued.add(refKey(left))
+	}
 	const deleted = new Set<string>()
 
 	let progressed = true
@@ -444,6 +473,72 @@ function matchesWhen(node: Scl.TreeRecord<Scl.ElementsOf>, pair: TypeIdReference
 		readAttribute({ record: node, name: pair.when.attribute, defaults: 'none' }) ===
 		pair.when.equals
 	)
+}
+
+/**
+ * Point each follower at the id its source's type resolves to. Returns the types they stopped naming (those the
+ * target holds).
+ */
+async function retargetFollowers(
+	tx: Core.Transaction<Config>,
+	params: { followers: readonly TypeFollower[]; idRemap: ReadonlyMap<string, string> },
+): Promise<Scl.Ref<Scl.ElementsOf>[]> {
+	const { followers, idRemap } = params
+	const left: Scl.Ref<Scl.ElementsOf>[] = []
+	for (const { source, target } of followers) {
+		const record = await tx.getRecord(target)
+		if (!record) continue
+		const updates: Record<string, string> = {}
+		const pairs = TYPE_ID_REFERENCE_PAIRS[target.tagName] as readonly TypeIdReferencePair[]
+		for (const pair of pairs) {
+			const sourceValue = readAttribute({ record: source, name: pair.attribute, defaults: 'none' })
+			const resolvedId = sourceValue ? idRemap.get(sourceValue) : undefined
+			const current = readAttribute({ record, name: pair.attribute, defaults: 'none' })
+			if (!resolvedId || resolvedId === current) continue
+			updates[pair.attribute] = resolvedId
+			if (!current) continue
+			const [leftType] = await tx.findByAttributes({
+				tagName: pair.target as Scl.ElementsOf,
+				attributes: { id: current },
+			})
+			if (leftType) left.push(toRef(leftType.tagName, leftType.id))
+		}
+		if (Object.keys(updates).length > 0) await tx.update(record, { attributes: updates })
+	}
+	return left
+}
+
+/**
+ * A fork reused for a source type takes the source id back when no type holds it any more, every referrer following;
+ * the returned map says so.
+ */
+async function reclaimReusedForks(
+	tx: Core.Transaction<Config>,
+	params: {
+		reusedForks: readonly ReusedFork[]
+		idRemap: Map<string, string>
+		stats: ImportTypesStats
+	},
+): Promise<void> {
+	const { reusedForks, idRemap, stats } = params
+	for (const { tagName, sourceId, forkId } of reusedForks) {
+		const survivingId = await adoptIncomingName(tx, {
+			tagName,
+			currentId: forkId,
+			desiredId: sourceId,
+		})
+		if (survivingId === forkId) continue
+		stats.reclaimed++
+		for (const [mappedSource, targetId] of idRemap) {
+			if (targetId === forkId) idRemap.set(mappedSource, survivingId)
+		}
+	}
+}
+
+/** The id a fork of `sourceId` holding the content of `signature` is minted under (before any numbering). */
+function forkIdOf(params: { forkPrefix: string; sourceId: string; signature: string }): string {
+	const { forkPrefix, sourceId, signature } = params
+	return `${forkPrefix}${sourceId}_${shortHash(signature)}`
 }
 
 /**

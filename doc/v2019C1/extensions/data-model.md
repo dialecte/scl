@@ -55,7 +55,9 @@ Resolves the type closure of the given `LNode`/`LN`/`LN0` records and imports it
 - **preserve:** no structural match and the id is free → clone, keeping the id;
 - **fork:** no match but the id is taken by _different_ content → clone under a new content-hash id (`<forkPrefix><id>_<hash>`, prefix optional) and propagate the fork to referrers.
 
-Child type references inside the imported types — and the `lnType`/`type` of the instances passed in `cloneMappings` — are repointed to the reconciled ids in the same transaction. Every clone is repointed, an `LNode` naming an IED included: a clone is never an implementation of the target, it takes the type its source names. With an empty / non-colliding target and no `cloneMappings`, the result is byte-identical to a plain id-preserving clone.
+Child type references inside the imported types — and the `lnType`/`type` of the instances passed in `cloneMappings` — are repointed to the reconciled ids in the same transaction. Every clone is repointed, an `LNode` naming an IED included: a clone is never an implementation of the target, it takes the type its source names.
+
+`followers` are logical nodes the target already holds, matched to logical nodes of the source (an instance following a newer template: `{ source, target }`, `TypeFollower`): each takes the type its source names — its source's closure is imported with the `records`' and it is pointed at the id that closure resolves to, whatever id it named before (an equal type the target holds is reused, a free id kept, a taken one forked). The type a follower leaves is removed once nothing in the document names it any more, with the types only it named; a fork whose original id that frees takes the id back, and so does a fork an earlier call with followers minted for the same content (`<forkPrefix><id>_<hash>`) once its original id is free, every referrer following (the instances of one template followed one after the other end under one id); a call without followers leaves forks as they are. So a type only the followers named is updated in place, under its id; a type anything else names — another element of the project, a logical node of an IED — is left as it is, and the followers move to a fork. With an empty / non-colliding target and no `cloneMappings`, the result is byte-identical to a plain id-preserving clone.
 
 > Structural equality is computed by [`signature.elementSignature`](./signature).
 
@@ -64,11 +66,12 @@ importTypes(params: {
   sourceQuery: Scl.Query
   records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]
   cloneMappings?: Scl.CloneMapping[]   // repoint cloned instances' lnType/type on fork
+  followers?: TypeFollower[]           // { source, target }: target logical nodes taking their source's type
   forkPrefix?: string                  // optional prefix; id is always <forkPrefix><id>_<contentHash>
   keepNameTypesFrom?: 'source' | 'target' // dedup: which side keeps the type name (default 'target')
 }): Promise<{
   idRemap: Map<string, string>                              // source type id -> reconciled id
-  stats: { reused: number; preserved: number; forked: number }
+  stats: { reused: number; preserved: number; forked: number; reclaimed: number }
 }>
 ```
 
@@ -125,12 +128,16 @@ import type {
 	ImportTypesResult,
 	ImportTypesStats,
 	KeepNameTypesFrom,
+	LogicalNodeRecord,
+	TypeFollower,
 } from '@dialecte/scl/v2019C1'
 ```
 
-| Type                | Description                                                                                                    |
-| ------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `ImportTypesParams` | Parameters of `importTypes` (`sourceQuery`, `records`, `cloneMappings?`, `forkPrefix?`, `keepNameTypesFrom?`). |
-| `ImportTypesResult` | Result of `importTypes` (`idRemap`, `stats`).                                                                  |
-| `ImportTypesStats`  | Per-run reconciliation counts — `{ reused, preserved, forked }`.                                               |
-| `KeepNameTypesFrom` | On a dedup, which side keeps the type name — `'source' \| 'target'`.                                           |
+| Type                | Description                                                                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `ImportTypesParams` | Parameters of `importTypes` (`sourceQuery`, `records`, `cloneMappings?`, `followers?`, `forkPrefix?`, `keepNameTypesFrom?`). |
+| `ImportTypesResult` | Result of `importTypes` (`idRemap`, `stats`).                                                                                |
+| `ImportTypesStats`  | Per-run reconciliation counts — `{ reused, preserved, forked, reclaimed }`.                                                  |
+| `LogicalNodeRecord` | A logical node whose closure is imported: an `LNode`, `LN` or `LN0` record.                                                  |
+| `TypeFollower`      | A logical node of the target taking the type its source names: `{ source, target }`.                                         |
+| `KeepNameTypesFrom` | On a dedup, which side keeps the type name — `'source' \| 'target'`.                                                         |
