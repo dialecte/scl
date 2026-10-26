@@ -45,6 +45,11 @@ export type DiffNode = {
 	/** Attribute deltas — present for `modified`. */
 	attributeChanges?: AttributeChange[]
 	/**
+	 * The text the template gives an element holding text only (a vendor `Private`, a `BayType`), when it differs from
+	 * the instance's — present for `modified`: written as an attribute change is, kept when declined.
+	 */
+	textChange?: TextChange
+	/**
 	 * The template's changes the update does not apply, with why — present on a matched node (`modified` or
 	 * `unchanged`) that has any. They neither make the node `modified` nor open a decision: there is nothing to accept.
 	 */
@@ -58,6 +63,9 @@ export type DiffNode = {
 	identityCollision?: IdentityCollision
 	children: DiffNode[]
 }
+
+/** An element's text, as the instance holds it (`before`) and as the template gives it (`after`). */
+export type TextChange = { before: string; after: string }
 
 export type DiffSummary = {
 	added: number

@@ -13,6 +13,7 @@ export type {
 	KeptAttributeChange,
 	KeptAttributeReason,
 	RemovalSideEffect,
+	TextChange,
 	ReportedElement,
 	ReportTarget,
 	ReportTargetField,

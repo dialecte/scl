@@ -3,6 +3,8 @@ import { collectUuids, indexByMatchKey } from './match-key'
 import { projectOwnedAttributes } from './project-owned-attributes'
 import { indexRedirectedSourceUuids } from './reference-match'
 import { acceptsRemoval, classifyUnmatched } from './removal-base'
+import { textChangeOf } from './text-change'
+import { reconcileTextWrappers } from './text-wrappers'
 import { visibleAttributes } from './visible-attributes'
 import { landingParent } from './wrapper'
 
@@ -161,6 +163,12 @@ export async function reconcile(
 			overrides,
 			namesFollow: params.namesFollow,
 		})
+		await reconcileTextWrappers(tx, {
+			sourceQuery,
+			sourceNode: sourceTree,
+			instanceRecord: instanceTree,
+			accepted,
+		})
 		// a name written that a sibling of the project already holds is numbered, as a placed element's is. A rename
 		// writes editable fields only: a key it leaves colliding has none, the project held it so before
 		if (renamed && bumpsCollisions) {
@@ -309,6 +317,12 @@ async function reconcileChildren(
 					namesFollow,
 				})
 				if (renamed) renamedChildren.push(matched)
+				await reconcileTextWrappers(tx, {
+					sourceQuery,
+					sourceNode: sourceChild,
+					instanceRecord: matched,
+					accepted,
+				})
 			}
 			await reconcileChildren(tx, {
 				sourceQuery,
@@ -560,6 +574,9 @@ async function updateMatchedAttributes(
 		// typed string-only, so cast the dynamic map (matches the repo's `as Record` pattern).
 		await tx.any.update(instanceRecord, { attributes: updates as Record<string, string> })
 	}
+	// a text the template changed is written as an attribute is
+	const textChange = textChangeOf({ sourceNode, instanceNode: instanceRecord })
+	if (textChange) await tx.any.update(instanceRecord, { value: textChange.after })
 	// the update went through the transaction: every path naming a renamed element follows
 	return 'name' in updates
 }

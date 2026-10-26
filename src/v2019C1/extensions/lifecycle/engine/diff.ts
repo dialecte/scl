@@ -10,6 +10,8 @@ import {
 	referenceNameIdentity,
 } from './reference-match'
 import { classifyUnmatched } from './removal-base'
+import { textChangeOf } from './text-change'
+import { diffTextWrappers } from './text-wrappers'
 import { visibleAttributes } from './visible-attributes'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -266,8 +268,14 @@ async function diffMatched(
 				instanceNode,
 				namesFollow,
 			})
-
-	const children: DiffNode[] = []
+	// a text the template changed is a change of the element, as an attribute is; so is the vendor data one of its
+	// wrappers holds as text
+	const textChange = params.skipOwnAttributes
+		? undefined
+		: textChangeOf({ sourceNode, instanceNode })
+	const children: DiffNode[] = params.skipOwnAttributes
+		? []
+		: await diffTextWrappers(sourceQuery, { targetQuery, sourceNode, instanceNode })
 	const matchedInstanceIds = new Set<string>()
 	// the matched children the source renames, numbered below once every rename is known
 	const renamed: RenamedNode[] = []
@@ -408,11 +416,12 @@ async function diffMatched(
 	})
 
 	return {
-		change: attributeChanges.length > 0 ? 'modified' : 'unchanged',
+		change: attributeChanges.length > 0 || textChange ? 'modified' : 'unchanged',
 		tagName: instanceTagOf(sourceNode.tagName),
 		sourceRef: toRef(sourceNode),
 		instanceRef: toRef(instanceNode),
 		attributeChanges: attributeChanges.length > 0 ? attributeChanges : undefined,
+		...(textChange ? { textChange } : {}),
 		keptAttributeChanges: kept.length > 0 ? kept : undefined,
 		children,
 	}

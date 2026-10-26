@@ -105,6 +105,7 @@ type DiffNode = {
 	instanceRef?: AnyRefOrRecord // existing element (removed / modified / unchanged)
 	appliedRef?: AnyRefOrRecord // what it became after apply (filled by apply; absent on a pure report)
 	attributeChanges?: AttributeChange[] // what an accepted update writes (modified)
+	textChange?: { before: string; after: string } // the text an accepted update writes (modified)
 	// what the update lists but does not apply: the project keeps `before` (a matched node, modified or not)
 	keptAttributeChanges?: KeptAttributeChange[] // AttributeChange & { reason: KeptAttributeReason }
 	// ...tagName, children
@@ -630,7 +631,7 @@ The update verbs are built on two engine primitives in `extensions/lifecycle/eng
 
 `reconcile(tx, { sourceQuery, sourceRootRef, instanceRootRef, matchKey, identityMode, bumpsCollisions, removalBase, namesFollow })` reconciles an updated template subtree **onto** an existing instance, with the fields of the scenario's policy (the verbs derive it, `scenarioPolicy`). Elements match by the scenario's key: `templateUuid` (= the source element's `uuid`, immutable across template versions), `uuid` for a fork:
 
-- matched element → update its user-visible attributes in place;
+- matched element → update its user-visible attributes in place, and its text when it holds text only (no element child on either side: a `BayType`, an `IEDName`), its surrounding whitespace aside. The vendor data a matched element holds as the text of a wrapper of its own type (`<Private type="ACME">v1</Private>`, which the compared trees otherwise see through) is paired with the instance's wrapper of that `type`: a text the template changed is written there, a wrapper the instance lacks is added, one only the instance holds is the project's and is kept. Each is listed as a node of its own with its `textChange`, decided as an attribute change is;
 - new source element → add its subtree (via [`transplant.deep`](./transplant) + `identity.writeIdentity` stamp), then auto-resolve a name [collision](#placement-collision-resolution) on the added element against its instance parent. An element the template holds inside a transparent wrapper (a `Private`, which the compared trees show through) is added inside the instance parent's wrapper of the same `type` — the one it holds, else a new one with the template wrapper's attributes —, never beside it;
 - instance element whose template lineage is gone from the source → delete — except a level of the topology (a `Substation`, `VoltageLevel` or `Bay`) in a template update: its lineage names the template level it was made from, not the template that placed it, and another template placed in a level of the unit carries one too. Such a level is **target-only**, kept unless its removal is accepted (a fork given its previous revision removes a level that revision held);
 - instance **reference** element (a uuid-less link such as a dropped `AllocationRoleRef`) with no matching source child → removed, so the link disappears when the template drops it.
