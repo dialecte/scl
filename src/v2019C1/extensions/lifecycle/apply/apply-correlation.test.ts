@@ -436,3 +436,60 @@ describe('apply — the report describes the last run only', () => {
 		expect(nodes.map((node) => node.appliedRef)).toEqual(nodes.map(() => undefined))
 	})
 })
+
+describe('apply — a failed or a not-decided apply leaves no appliedRef', () => {
+	function lifecycle(sourceQuery: Scl.Query) {
+		return { verb: 'fsd', sourceQuery, ref: functionRef, anchor: bayRef } as const
+	}
+
+	/** Every node of the report an apply annotated. */
+	function annotated(rep: Awaited<ReturnType<typeof report>>): DiffNode[] {
+		return rep.instances.flatMap((instance) => annotatedBelow(instance.tree))
+	}
+
+	function annotatedBelow(node: DiffNode): DiffNode[] {
+		const own = node.appliedRef ? [node] : []
+		return [...own, ...node.children.flatMap((child) => annotatedBelow(child))]
+	}
+
+	it('the apply throws once everything is written (its consumer step fails) → the report keeps no appliedRef', async () => {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml: emptyTargetXml })
+		if (!target) throw new Error('target required')
+		const placement = lifecycle(source.document.query)
+		const rep = await report(target.document.query, placement)
+
+		const failed = target.document.transaction(async function applyThatFails(tx) {
+			await apply(tx, {
+				...placement,
+				report: rep,
+				resolution: {
+					afterApply: async function failingStep() {
+						throw new Error('the consumer step failed')
+					},
+				},
+			})
+		})
+
+		await expect(failed).rejects.toThrow('the consumer step failed')
+		expect(annotated(rep)).toEqual([])
+	})
+
+	it('nothing decided yet → what an earlier apply annotated is cleared', async () => {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml: emptyTargetXml })
+		if (!target) throw new Error('target required')
+		const placement = lifecycle(source.document.query)
+		const rep = await report(target.document.query, placement)
+		const preview = await target.document.prepare(async function previewApply(tx) {
+			await apply(tx, { ...placement, report: rep })
+		})
+		await preview.discard()
+		expect(annotated(rep).length, 'the preview annotated the report').toBeGreaterThan(0)
+
+		rep.needsDecisions = true
+		await target.document.transaction(async function notDecidedYet(tx) {
+			await apply(tx, { ...placement, report: rep })
+		})
+
+		expect(annotated(rep)).toEqual([])
+	})
+})

@@ -94,7 +94,9 @@ instances of one template never collide (each node carries its own `appliedRef`)
 
 The report tells what the **last** apply placed. One report is often applied more than once — a
 preview with everything accepted, a dry run with the decisions, the commit — so each apply first
-forgets every `appliedRef` an earlier run filled: a node or a mapping the run leaves out carries none.
+forgets every `appliedRef` an earlier run filled: a node or a mapping the run leaves out carries none. An apply
+that writes nothing (decisions still to take) forgets them too, and an apply that fails forgets those it filled
+before failing: the transaction is rolled back, and the report points at nothing it wrote.
 
 ```ts
 type DiffNode = {
@@ -230,7 +232,7 @@ type DecisionMappings = ReadonlyMap<string, DecisionMapping> // keyed by `Report
 
 `ReportMapping`, `MappingKind`, `MappingReason`, `MappingCandidate`, `DecisionMapping` and `DecisionMappings` are exported from `@dialecte/scl/v2019C1`.
 
-- **Resolved by default**, first answer wins: the one project element created from this source element by an earlier placement, whatever it is named now (`reason: 'lineage'`); else the project element of the same name when there is exactly one (`'name'`); else a new element (`'none'`). Where several elements qualify equally, none is picked (`ambiguous: true`): the mapping is left **undecided** — `mapping` is absent, the report sets `needsDecisions`, and `apply` refuses until the consumer passed a choice, an existing element or `{ create: {} }`. An element whose mapping cannot be chosen (`selectable: false`) is created under a free name instead.
+- **Resolved by default**, first answer wins: the one project element created from this source element by an earlier placement, whatever it is named now (`reason: 'lineage'`); else the project element of the same name when there is exactly one (`'name'`); else a new element (`'none'`). Where several elements qualify equally, none is picked (`ambiguous: true`): the mapping is left **undecided** — `mapping` is absent, the report sets `needsDecisions`, and `apply` refuses (`MAPPING_UNDECIDED`, before anything is written) until the consumer passed a choice, an existing element or `{ create: {} }` — for a level, a choice for a level above it it follows from is enough; a mapping decided for one instance (`placedFor`) whose every change is skipped is not asked for. An element whose mapping cannot be chosen (`selectable: false`) is created under a free name instead.
 - **`candidates`**: every project element of that tag, listed from the placement outwards — the anchor's own level, each level above it, then the rest of the project. For an SSD, the anchor is where its unit lands (the deepest level of the project it sits on), not the element the consumer started from. For a `locked` mapping, the one element it is mapped onto.
 - **A new element** carries the name asked for: the one the consumer chose, else the source name. The report does not predict the name written: `apply` makes it free where the element lands ([placement collision resolution](#placement-collision-resolution)), and the consumer's own step may change it again. What was written is read at the element the mapping leads to once applied (`appliedRef`, on the report `apply` returns — in a preview, on the prepared document). `parentPath` tells where the element is created, as asked for.
 

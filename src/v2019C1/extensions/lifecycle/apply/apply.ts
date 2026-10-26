@@ -8,9 +8,13 @@ import {
 	assertDecisionsCoherent,
 	assertNoAcceptedCollision,
 	clearAnnotations,
+	writtenInstanceIds,
 } from '@/v2019C1/extensions/lifecycle/engine'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
-import { assertMappingsCoherent } from '@/v2019C1/extensions/lifecycle/mapping'
+import {
+	assertMappingsCoherent,
+	assertReportMappingsDecided,
+} from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	assertRevisionBaseFits,
 	scenarioPolicy,
@@ -66,6 +70,8 @@ export async function apply(
 	const { report } = params
 	const decisions = params.resolution?.decisions ?? new Map()
 	const decisionMappings = params.resolution?.mappings
+	// the report tells what THIS run places: what an earlier run placed is forgotten first, whatever follows
+	clearAnnotations({ report })
 
 	// a report made for another target, or naming what the document no longer holds, is refused whatever the track
 	await assertReportFits(tx, { report, target: params, decisionMappings })
@@ -85,16 +91,38 @@ export async function apply(
 	// on either track, a conflict-free instantiate can carry edited editable attributes.
 	const groups = allGroups(report)
 	assertDecisionsCoherent({ groups, decisions })
+	// where an element lands that the report leaves to the consumer is chosen before anything is written
+	assertReportMappingsDecided({
+		reportMappings: report.mappings,
+		decisionMappings,
+		writtenFor: writtenInstanceIds({ report, decisions }),
+	})
 	// an addition the report says collides on a key nothing can change is refused before anything is written
 	assertNoAcceptedCollision({ groups, decisions })
+
+	try {
+		const instances = await writeReport(tx, { params, decisions })
+		return { report, instances }
+	} catch (error) {
+		// the store is rolled back with the transaction: the report points at nothing it wrote
+		clearAnnotations({ report })
+		throw error
+	}
+}
+
+/** Write what the report lists, release what names an implementation the project lacks, then run the consumer's step. */
+async function writeReport(
+	tx: Core.Transaction<Config>,
+	context: { params: LifecycleApplyParams; decisions: DecisionMap },
+): Promise<AppliedInstances> {
+	const { params, decisions } = context
+	const { report } = params
 	// what tells a dropped element from the project's own, read once for the whole apply
 	const removalBase = await resolveRemovalBase({
 		policy: scenarioPolicy({ scenario: params.scenario }),
 		sourceQuery: params.sourceQuery,
 		baseQuery: params.baseQuery,
 	})
-	// the report tells what THIS run places: what an earlier run placed is forgotten first
-	clearAnnotations({ report })
 	const writtenFrom = tx.getStagedOperations().length
 	const instances = await runVerb(tx, { target: params, report, decisions, removalBase })
 
@@ -107,7 +135,7 @@ export async function apply(
 	const afterApply = params.resolution?.afterApply
 	if (afterApply) await runAfterApply(tx, { afterApply, instances })
 
-	return { report, instances }
+	return instances
 }
 
 /**

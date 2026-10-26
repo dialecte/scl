@@ -176,6 +176,25 @@ export function assertDecisionsCoherent(params: {
 }
 
 /**
+ * The project elements an accepted group writes for: the instance roots, and the elements a placement listed several
+ * times is made for (`placedFor`), of every report instance holding an accepted group — by record id.
+ */
+export function writtenInstanceIds(params: {
+	report: DiffReport
+	decisions: DecisionMap
+}): Set<string> {
+	const { report, decisions } = params
+	const written = new Set<string>()
+	for (const instance of report.instances) {
+		if (!instance.groups.some((group) => isAccepted({ group, decisions }))) continue
+		for (const element of [instance.rootRef, instance.placedFor]) {
+			if (element?.id) written.add(element.id)
+		}
+	}
+	return written
+}
+
+/**
  * Refuse, before any write, a decision set accepting the addition of an element that collides with one the instance
  * holds on a key none of whose fields can be changed — unless an accepted group releases that element.
  */

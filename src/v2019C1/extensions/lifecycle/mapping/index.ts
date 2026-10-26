@@ -1,4 +1,8 @@
-export { assertMappingDecided, assertMappingsDecided } from './assert-mapping-decided'
+export {
+	assertMappingDecided,
+	assertMappingsDecided,
+	assertReportMappingsDecided,
+} from './assert-mapping-decided'
 export { assertMappingsCoherent } from './assert-mappings-coherent'
 export { createReportPass, describeMapping } from './describe-mapping'
 export { findMappingPolicy } from './mapping-policies'

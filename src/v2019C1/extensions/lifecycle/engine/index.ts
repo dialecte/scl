@@ -12,6 +12,7 @@ export {
 	firstTimeGroups,
 	firstTimeReportInstance,
 	firstTimeReportInstances,
+	writtenInstanceIds,
 } from './decide'
 export { visibleAttributes } from './visible-attributes'
 

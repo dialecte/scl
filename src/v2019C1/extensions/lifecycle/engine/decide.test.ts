@@ -1,11 +1,23 @@
-import { acceptedRefIds, assertDecisionsCoherent, assertNoAcceptedCollision } from './decide'
+import {
+	acceptedRefIds,
+	assertDecisionsCoherent,
+	assertNoAcceptedCollision,
+	writtenInstanceIds,
+} from './decide'
 
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
 
 import { runSclTestCases } from '@/v2019C1/test'
 
-import type { DecisionGroup, DecisionMap, DiffChange, DiffNode } from './diff.types'
+import type {
+	DecisionGroup,
+	DecisionMap,
+	DiffChange,
+	DiffNode,
+	DiffReport,
+	ReportInstance,
+} from './diff.types'
 
 // ── fixtures ─────────────────────────────────────────────────────────
 
@@ -270,5 +282,51 @@ describe('decide', () => {
 		}
 
 		runSclTestCases.generic(testCases, act)
+	})
+
+	describe('writtenInstanceIds (what an accepted group writes for)', () => {
+		/** A report instance holding one group. */
+		function instance(params: {
+			groupId: string
+			rootId?: string
+			placedForId?: string
+		}): ReportInstance {
+			const { groupId, rootId, placedForId } = params
+			return {
+				...(rootId ? { rootRef: { tagName: 'Application', id: rootId } } : {}),
+				...(placedForId ? { placedFor: { tagName: 'Application', id: placedForId } } : {}),
+				title: groupId,
+				linked: true,
+				upToDate: false,
+				tree: node('modified', 'Application', groupId),
+				groups: [group(groupId, 'added', node('added', 'Function', groupId))],
+				mappings: [],
+			}
+		}
+
+		it('the instance roots and the elements placements are made for, of the instances an accepted group writes for', () => {
+			const report = {
+				instances: [
+					instance({ groupId: 'kept', rootId: 'app-1' }),
+					instance({ groupId: 'placed', placedForId: 'app-2' }),
+					instance({ groupId: 'skipped', rootId: 'app-3', placedForId: 'app-4' }),
+				],
+			} as unknown as DiffReport
+			const decisions: DecisionMap = new Map([
+				['kept', 'accept'],
+				['skipped', 'skip'],
+			])
+
+			expect([...writtenInstanceIds({ report, decisions })].sort()).toEqual(['app-1', 'app-2'])
+		})
+
+		it('an instance one of whose groups is accepted, another skipped → written for', () => {
+			const partly = instance({ groupId: 'kept', rootId: 'app-1' })
+			partly.groups.push(group('skipped', 'added', node('added', 'Function', 'skipped')))
+			const report = { instances: [partly] } as unknown as DiffReport
+			const decisions: DecisionMap = new Map([['skipped', 'skip']])
+
+			expect([...writtenInstanceIds({ report, decisions })]).toEqual(['app-1'])
+		})
 	})
 })
