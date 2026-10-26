@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **`isSclImportDiagnostic(diagnostic)` narrows a diagnostic to the typed `SclImportDiagnostic`** (it checks `source: 'scl'` and the code), so a `switch` on `code` reads that code's `meta` and, for an incoherent reference, its `related`. `INCOHERENT_REFERENCE_RELATED` holds the two wordings of a related element (`uuidTarget`, `pathTarget`); the type `IncoherentReferenceRelated` is exported.
+- **Agent skill `dialecte-scl` ships with the package**, in `skills/`: the SCL business verbs, what the hooks keep coherent on every write and import, the reference registries. Its verb map and hook list are generated from the source. Install it for your coding agent with `npx @dialecte/cli skills sync`. Every SCL verb now carries a JSDoc summary and `@intent` tags (what a caller is trying to do), indexed in the skill's `references/api.md`; `npm run skills:check` fails when the skill cites what does not exist or a verb loses its summary or intent.
 
 ### Changed
 
