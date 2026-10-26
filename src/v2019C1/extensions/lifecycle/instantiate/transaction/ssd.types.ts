@@ -8,7 +8,10 @@ import type * as Core from '@dialecte/core'
 
 export type SsdParams = {
 	sourceQuery: Core.Query<Config>
-	/** The SSD scope to instantiate. Defaults to the SSD's instantiable root. */
+	/**
+	 * The element of the SSD to instantiate: a named level is the scope, the `TEMPLATE` scaffolding is walked down to
+	 * the one unit it holds. None: read from the file. Several units and none chosen: `SSD_SCOPE_AMBIGUOUS`.
+	 */
 	scopeRef?: Scl.Ref<TopologyStructuralTag>
 	/** Target parent the SSD content is instantiated under (e.g. a project Bay). */
 	targetParent: Scl.Ref<Scl.ElementsOf>

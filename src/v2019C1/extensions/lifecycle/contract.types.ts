@@ -90,7 +90,11 @@ export type LifecycleVerbTarget =
 	| {
 			verb: 'ssd'
 			sourceQuery: Core.Query<Config>
-			/** The source SSD scope to reconcile (Substation / VoltageLevel / Bay). */
+			/**
+			 * The element of the SSD to act on: a named Substation, VoltageLevel or Bay is the scope; the `TEMPLATE`
+			 * scaffolding is walked down to the one unit it holds. Several units at the first named level and the
+			 * scaffolding above them named: refused with `SSD_SCOPE_AMBIGUOUS`, listing them, to ask again naming one.
+			 */
 			ref: Scl.Ref<TopologyStructuralTag>
 			/** Target parent the SSD content is placed under (e.g. a project Bay). */
 			anchor: Scl.Ref<Scl.ElementsOf>

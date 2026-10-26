@@ -1,4 +1,4 @@
-import { listGroups, reportAndApply } from '../integration-helpers'
+import { findByName, listGroups, reportAndApply } from '../integration-helpers'
 
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
@@ -24,6 +24,8 @@ type ForkTestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	/** The groups of the first fork's report, `<change> <tag>`, sorted. */
 	expectedGroups: string[]
+	/** The level of the file the forks name, by its name. Default: its substation. */
+	unit?: { tagName: 'VoltageLevel' | 'Bay'; name: string }
 	/** Then forked again in turn: each time from the newer revision as this XML gives it, or as the source stands. */
 	nextForks: {
 		sourceXml?: string
@@ -127,9 +129,10 @@ describe('ssd fork: the newer revision of the same file, its uuids kept', () => 
 					'added VoltageLevel',
 				],
 				nextForks: [{ sourceXml: readRevisionTwin({ twin: 'twoLevelBayTemplate', revision: 2 }) }],
+				unit: { tagName: 'VoltageLevel', name: 'TEMPLATE_HV' },
 				allowInvalidOutput: {
 					reason:
-						'only the first named level of the template is placed, and its category is copied whole: its reference to the function of the level left out names nothing',
+						'the category the two levels share is copied whole with the level placed: its reference to the function of the other level names nothing',
 					violations: [{ check: 'references', code: 'dangling' }],
 				},
 				expectedQueries: [
@@ -183,16 +186,19 @@ describe('ssd fork: the newer revision of the same file, its uuids kept', () => 
 		target,
 	}: SclTest.ActParams<ForkTestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		// the scope is the file's unit, resolved from the file: `ref` names its substation
+		// the scope is the level the case names, or the file's unit read from its substation
 		const lifecycleFrom = async (
 			sourceQuery: Scl.Query,
 			baseQuery?: Scl.Query,
 		): Promise<LifecycleTarget> => {
 			const [substation] = await sourceQuery.getRecordsByTagName('Substation')
+			const ref = testCase.unit
+				? await findByName(sourceQuery, testCase.unit)
+				: { tagName: 'Substation' as const, id: substation.id }
 			return {
 				verb: 'ssd',
 				sourceQuery,
-				ref: { tagName: 'Substation', id: substation.id },
+				ref,
 				anchor: projectVoltageLevel,
 				scenario: 'fork',
 				...(baseQuery ? { baseQuery } : {}),

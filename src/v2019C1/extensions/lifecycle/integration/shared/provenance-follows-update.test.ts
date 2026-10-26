@@ -1,4 +1,4 @@
-import { findByUuid, reportAndApply } from '../integration-helpers'
+import { findByName, findByUuid, reportAndApply } from '../integration-helpers'
 
 import { describe, expect } from 'vitest'
 
@@ -28,8 +28,10 @@ const ns = ALL_XMLNS_NAMESPACES
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	verb: 'fsd' | 'asd' | 'ssd'
-	/** The function or the application of the file, by its uuid (an SSD's unit is its substation). */
+	/** The function or the application of the file, by its uuid. */
 	rootUuid?: string
+	/** The level of an SSD the case names, by its name. Default: its substation. */
+	unit?: { tagName: 'VoltageLevel' | 'Bay'; name: string }
 	/** Where the file is placed, then updated from. */
 	anchor: Scl.Ref<Scl.ElementsOf>
 	/** The scenario of the placement and of the updates. Default: instantiated, then updated as a template. */
@@ -182,10 +184,10 @@ async function nextApplicationAndFunction(tx: Scl.Transaction): Promise<void> {
 	await tx.update(sourceFunction, { attributes: { desc: 'rev2' } })
 }
 
-/** Only the first named level of the bay template twin is placed; its category names the function of the other. */
+/** One level of the bay template twin is placed; the category both levels share names the function of the other. */
 const TWIN_LEVEL_TOLERANCE: SclTest.BaseXmlTestCase['allowInvalidOutput'] = {
 	reason:
-		'only the first named level of the template is placed, and its category is copied whole: its reference to the function of the level left out names nothing',
+		'the category the two levels share is copied whole with the level placed: its reference to the function of the other level names nothing',
 	violations: [{ check: 'references', code: 'dangling' }],
 }
 
@@ -557,6 +559,7 @@ describe('provenance follows an update: the instance records the revision of the
 				verb: 'ssd',
 				anchor: projectVoltageLevel,
 				next: { sourceXml: readRevisionTwin({ twin: 'twoLevelBayTemplate', revision: 2 }) },
+				unit: { tagName: 'VoltageLevel', name: 'TEMPLATE_HV' },
 				allowInvalidOutput: TWIN_LEVEL_TOLERANCE,
 				expectedProvenance: [
 					'application breaker_application 1/2',
@@ -589,7 +592,10 @@ describe('provenance follows an update: the instance records the revision of the
 			const common = { sourceQuery, anchor, scenario }
 			if (testCase.verb === 'ssd') {
 				const [substation] = await sourceQuery.getRecordsByTagName('Substation')
-				return { ...common, verb: 'ssd', ref: { tagName: 'Substation', id: substation.id } }
+				const ref = testCase.unit
+					? await findByName(sourceQuery, testCase.unit)
+					: { tagName: 'Substation' as const, id: substation.id }
+				return { ...common, verb: 'ssd', ref }
 			}
 			const tagName = testCase.verb === 'fsd' ? 'Function' : 'Application'
 			const ref = await findByUuid(sourceQuery, { tagName, uuid: testCase.rootUuid ?? '' })

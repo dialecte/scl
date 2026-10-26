@@ -14,7 +14,7 @@ import {
 	findDroppedPrimaries,
 	findLanding,
 	hasScopeInstance,
-	resolveInstantiableRoot,
+	resolveSsdScope,
 	resolvePlacementMappings,
 	resolvePrimaryParents,
 	resolveTopologyReconcilables,
@@ -44,12 +44,17 @@ import type * as Core from '@dialecte/core'
  * merged into one {@link DiffReport}, so `groups` covers every primary and the fast/full
  * classification holds across the whole SSD.
  *
- * The scope defaults to the SSD's instantiable root.
+ * The scope is the element the consumer names, the unit its `TEMPLATE` scaffolding holds when it names that; several
+ * units there and none chosen is refused with `SSD_SCOPE_AMBIGUOUS`.
  */
 export async function reportSsd(
 	query: Core.Query<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
+		/**
+		 * The element of the SSD the consumer names (see {@link resolveSsdScope}): a named level is the scope, the
+		 * `TEMPLATE` scaffolding is walked down to the one unit it holds. None: read from the file.
+		 */
 		scopeRef?: Scl.Ref<TopologyStructuralTag>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		scenario?: LifecycleScenario
@@ -67,7 +72,7 @@ export async function reportSsd(
 ): Promise<DiffReport> {
 	const { sourceQuery, scopeRef, targetParent, scenario, targetInstance, decisionMappings } = params
 
-	const root = scopeRef ?? (await resolveInstantiableRoot(sourceQuery))
+	const root = await resolveSsdScope(sourceQuery, { ref: scopeRef })
 	if (!root) return assembleReport({ instances: [], templateRoots: [] })
 
 	const { applications, standaloneFunctions } = await resolveTopologyReconcilables(

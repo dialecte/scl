@@ -60,6 +60,17 @@ export async function findByUuid<GenericTag extends Scl.ElementsOf>(
 	return { tagName, id: record.id } as Scl.Ref<GenericTag>
 }
 
+/** The element of a tag carrying a name, in a document: an SSD's level as the consumer names it. */
+export async function findByName<GenericTag extends Scl.ElementsOf>(
+	query: Core.Query<Config>,
+	params: { tagName: GenericTag; name: string },
+): Promise<Scl.Ref<GenericTag>> {
+	const { tagName, name } = params
+	const [record] = await query.any.findByAttributes({ tagName, attributes: { name } })
+	if (!record) throw new Error(`no ${tagName} named ${name}`)
+	return { tagName, id: record.id } as Scl.Ref<GenericTag>
+}
+
 /**
  * Every group of a report as a snapshot reads it: its change, its primary's tag and uuid (else its name), the
  * attribute changes, and the companions the same way. Record ids are left out and the groups sorted by what they name:

@@ -8,8 +8,8 @@ import {
 	assertPlacementDecided,
 	cloneTopologyContent,
 	resolveFrameStructure,
-	resolveInstantiableRoot,
 	resolvePlacementMappings,
+	resolveSsdScope,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -30,15 +30,15 @@ import type * as Core from '@dialecte/core'
  * uuid + templateUuid; a fork, for a project base = preserved uuids). The placement is recorded once as a
  * document-level `SclFileReference` under the target `Header > SourceFiles`, in every scenario.
  *
- * The scope defaults to the SSD's instantiable root (the first named level down the
- * `Substation -> VoltageLevel -> Bay` chain).
+ * The scope is the element the consumer names; the `TEMPLATE` scaffolding, named or read from the file when
+ * nothing is, is walked down `Substation -> VoltageLevel -> Bay` to the unit it holds (see `resolveSsdScope`).
  */
 export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Promise<SsdResult> {
 	const { sourceQuery, scopeRef, targetParent, overrides, leftOut } = params
 	const decisionMappings = params.decisionMappings
 	const policy = scenarioPolicy({ scenario: params.scenario ?? 'instantiate' })
 
-	const root = scopeRef ?? (await resolveInstantiableRoot(sourceQuery))
+	const root = await resolveSsdScope(sourceQuery, { ref: scopeRef })
 	if (!root) {
 		throwDialecteError(SCL_ERRORS.TEMPLATE_ROOT_NOT_FOUND, {
 			detail: 'instantiate.ssd: no instantiable root found in the SSD',

@@ -1,4 +1,5 @@
-export { resolveInstantiableRoot } from './root-selection'
+export { resolveSsdScope } from './resolve-ssd-scope'
+export type { ResolveSsdScopeParams, SsdScopeCandidate } from './resolve-ssd-scope.types'
 export { cloneTopologyContent } from './clone-topology-content'
 export { ensureTopologyFrame, resolveFrameStructure } from './ensure-topology-frame'
 export { reconcileTopologyFrame } from './reconcile-topology-frame'

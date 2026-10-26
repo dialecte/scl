@@ -1,4 +1,4 @@
-import { reportAndApply } from '../integration-helpers'
+import { findByName, reportAndApply } from '../integration-helpers'
 
 import { describe } from 'vitest'
 
@@ -15,6 +15,8 @@ const ns = ALL_XMLNS_NAMESPACES
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	scenario: Extract<LifecycleScenario, 'instantiate' | 'fork'>
+	/** The level of the file the case names, by its name. Default: its substation. */
+	unit?: { tagName: 'VoltageLevel' | 'Bay'; name: string }
 }
 
 const projectXml = /* xml */ `
@@ -95,9 +97,10 @@ describe('ssd origin lineage: what a placement writes of the lineage the templat
 				sourceXml: readRevisionTwin({ twin: 'twoLevelBayTemplate', revision: 1 }),
 				targetXml: projectXml,
 				scenario: 'instantiate',
+				unit: { tagName: 'VoltageLevel', name: 'TEMPLATE_HV' },
 				allowInvalidOutput: {
 					reason:
-						'only the first named level of the template is placed, and its category is copied whole: its reference to the function of the level left out names nothing',
+						'the category the two levels share is copied whole with the level placed: its reference to the function of the other level names nothing',
 					violations: [{ check: 'references', code: 'dangling' }],
 				},
 				expectedQueries: [
@@ -114,12 +117,15 @@ describe('ssd origin lineage: what a placement writes of the lineage the templat
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		const [substation] = await source.query.getRecordsByTagName('Substation')
+		const ref = testCase.unit
+			? await findByName(source.query, testCase.unit)
+			: { tagName: 'Substation' as const, id: substation.id }
 		await reportAndApply({
 			document: target,
 			lifecycle: {
 				verb: 'ssd',
 				sourceQuery: source.query,
-				ref: { tagName: 'Substation', id: substation.id },
+				ref,
 				anchor: { tagName: 'VoltageLevel', id: 'project-voltage-level' } as Scl.Ref<'VoltageLevel'>,
 				scenario: testCase.scenario,
 			},

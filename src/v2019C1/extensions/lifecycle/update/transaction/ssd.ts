@@ -22,7 +22,7 @@ import { ssd as instantiateSsd } from '@/v2019C1/extensions/lifecycle/instantiat
 import {
 	findDroppedPrimaries,
 	hasScopeInstance,
-	resolveInstantiableRoot,
+	resolveSsdScope,
 	resolvePrimaryParents,
 	reconcileTopologyFrame,
 	resolveTopologyReconcilables,
@@ -57,13 +57,14 @@ type UpdateSsdResult = {
  *  - **reconcile** cascades to the per-primary update verbs: each Application via `update.fromAsd`
  *    (which cascades to its composed Functions) and each standalone Function via `update.fromFsd`.
  *
- * `report` + `decisions` gate every write, partitioned per instance by the sub-verbs. The scope
- * defaults to the SSD's instantiable root.
+ * `report` + `decisions` gate every write, partitioned per instance by the sub-verbs. The scope is the element
+ * the consumer names, the unit its `TEMPLATE` scaffolding holds when it names that (see `resolveSsdScope`).
  */
 export async function ssd(
 	tx: Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
+		/** The element of the SSD the consumer names; none: read from the file (see `resolveSsdScope`). */
 		scopeRef?: Scl.Ref<TopologyStructuralTag>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		scenario?: LifecycleScenario
@@ -91,7 +92,7 @@ export async function ssd(
 		targetInstance,
 	} = params
 
-	const root = scopeRef ?? (await resolveInstantiableRoot(sourceQuery))
+	const root = await resolveSsdScope(sourceQuery, { ref: scopeRef })
 	if (!root) return { applications: [], functions: [] }
 
 	const { applications: applicationRefs, standaloneFunctions } = await resolveTopologyReconcilables(

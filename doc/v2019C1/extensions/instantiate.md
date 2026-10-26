@@ -80,7 +80,7 @@ Returns `{ applicationRef, composedFunctionRefs, cloneMappings }` — the instan
    - `scenario: 'fork'` — project base: adopt the SSD's own `uuid`s as-is (no re-stamp; a name a sibling holds is still numbered) — turning an SSD into a project's starting content, or the first fork of a file;
 3. record the instantiation **once**, at document level (`Header > SourceFiles`, via [`reference.writeProvenance`](./reference#writeprovenance)) — not per element, since the whole scope came from one source file; a file version the `Header` already lists is not listed again.
 
-The scope defaults to the SSD's instantiable root (`resolveInstantiableRoot` — the first named level down the `Substation → VoltageLevel → Bay` chain, below the `TEMPLATE`-named scaffolding levels).
+The scope is the element `scopeRef` names: a named `Substation`, `VoltageLevel` or `Bay` is placed as it is (one bay of a template holding several). The `TEMPLATE` scaffolding — named, or the file's substations when `scopeRef` is absent — is walked down the `Substation → VoltageLevel → Bay` chain to the first level holding a named element, the unit; a scaffolding with nothing named below it is its deepest level. Several named units at that level and none chosen is refused with `SSD_SCOPE_AMBIGUOUS` (`SCL2003`), `meta.candidates` listing them (`{ tagName, id, name }`).
 
 ```ts
 await project.transaction(async (tx) => {

@@ -107,8 +107,7 @@ async function reportVerb(
 			return reportSsd(query, {
 				pass,
 				sourceQuery: target.sourceQuery,
-				// the SSD scope is the instantiable root (first named element below the TEMPLATE scaffolding), resolved
-				// from the source - not `target.ref`, which is only the coarse process-section anchor.
+				scopeRef: target.ref,
 				targetParent: target.anchor,
 				scenario: target.scenario,
 				targetInstance: target.targetInstance,

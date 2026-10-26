@@ -1,5 +1,6 @@
 import {
 	canonicalElement,
+	findByName,
 	findByUuid,
 	listAttributeChanges,
 	listGroups,
@@ -272,7 +273,7 @@ const projectSubstation = /* xml */ `
 describe.skipIf(!areCorpusRevisionsSynced([TOPOLOGY_ONLY]))(
 	'corpus: a bay template of levels and equipment only',
 	() => {
-		it('updated with itself writes nothing; forked twice, each uuid stays once', async () => {
+		it('its high-voltage level updated with itself writes nothing; forked twice, each uuid stays once', async () => {
 			const xml = await readCorpusRevision(TOPOLOGY_ONLY)
 			const { project, source, target } = await createSclTestProject({
 				sourceXml: xml,
@@ -284,14 +285,18 @@ describe.skipIf(!areCorpusRevisionsSynced([TOPOLOGY_ONLY]))(
 				xml: projectSubstation,
 				label: 'forked project',
 			})
-			const [substation] = await source.document.query.getRecordsByTagName('Substation')
+			// the template's first named level holds two voltage levels: the operation names one
+			const ref = await findByName(source.document.query, {
+				tagName: 'VoltageLevel',
+				name: 'TEMPLATE_HV',
+			})
 			const lifecycle = (scenario: 'instantiate' | 'template' | 'fork', document: Scl.Document) =>
 				reportAndApply({
 					document,
 					lifecycle: {
 						verb: 'ssd',
 						sourceQuery: source.document.query,
-						ref: { tagName: 'Substation', id: substation.id },
+						ref,
 						anchor: { tagName: 'Substation', id: 'project-substation' },
 						scenario,
 					} as LifecycleTarget,

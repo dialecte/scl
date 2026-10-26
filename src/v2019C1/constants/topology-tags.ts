@@ -2,7 +2,7 @@
  * Shared SCL topology tag sets for the process section.
  *
  * Single source of truth for the structural chain and the physical/topology content carried
- * with it, so extract/instantiate/root-selection do not re-declare these lists per file.
+ * with it, so extract, instantiate and the SSD scope do not re-declare these lists per file.
  */
 
 /** Structural levels of a process section, ordered outermost -> innermost. */
