@@ -22,6 +22,8 @@ export const REVISION_TWINS = {
 	functionTypeGainsData: { name: 'function-type-gains-data', extension: 'fsd' },
 	/** A bay template of two levels, built from the two applications, that gains a dataflow between them. */
 	twoLevelBayTemplate: { name: 'two-level-bay-template', extension: 'ssd' },
+	/** A transformer bay drawn across two voltage levels, a terminal of one on a node of the other. */
+	linkedLevelsTemplate: { name: 'linked-levels-template', extension: 'ssd' },
 	/** An application with two groups of variants that changes inside and outside what an instance selects. */
 	variantApplication: { name: 'variant-application', extension: 'asd' },
 } as const

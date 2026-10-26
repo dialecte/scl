@@ -91,6 +91,7 @@ describe('first placement of a bay typical — every leave-out is honoured, a le
 				'//default:Function',
 				'//v2019C1:Application',
 				'//default:VoltageLevel[@name="TEMPLATE"]',
+				'//default:Header/default:SourceFiles',
 			],
 		},
 		'the bay left out, one of its functions kept → refused, nothing is written': {

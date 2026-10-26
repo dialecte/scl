@@ -18,6 +18,7 @@ The lifecycle tests are written in three tiers:
 | `application-gains-elements` (ASD)    | `P51_App` v0r1 → v0r2                             | gains a function role and the behaviour description it refers to                              |
 | `function-type-gains-data` (FSD)      | `XCBR` v2r1 → v2r2                                | the logical node type gains a data object, under the same id                                  |
 | `two-level-bay-template` (SSD)        | `Transformer Bay template` v0r1 → v0r2, repaired  | gains a dataflow from one application to the other: a signal role and two inputs per level    |
+| `linked-levels-template` (SSD)        | `SLD_TFO_Bay` v0r1, a second revision made        | the medium-voltage breaker gets a description; its terminal names a node of the other level   |
 | `variant-application` (ASD)           | `P21_App` and its SSD3 instance, `CB_App`'s group | inside and outside the selection of variants its committed instance made, a variant gained    |
 
 The two-level bay template holds instances of the other twins (the renamed application's second revision on both

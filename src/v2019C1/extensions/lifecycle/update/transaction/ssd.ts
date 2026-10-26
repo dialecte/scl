@@ -92,12 +92,15 @@ export async function ssd(
 		targetInstance,
 	} = params
 
-	const root = await resolveSsdScope(sourceQuery, { ref: scopeRef })
-	if (!root) return { applications: [], functions: [] }
+	const scope = await resolveSsdScope(sourceQuery, { ref: scopeRef })
+	if (!scope) return { applications: [], functions: [] }
+	const { root } = scope
+	// a unit of the scope: it resolves, as the scope's own ref does, to the same units
+	const [scopeUnit] = scope.units
 
 	const { applications: applicationRefs, standaloneFunctions } = await resolveTopologyReconcilables(
 		sourceQuery,
-		root,
+		{ scopeRef: root, leftOut: scope.leftOut },
 	)
 
 	assertRevisionBaseFits({ scenario, baseQuery: params.baseQuery })
@@ -114,6 +117,7 @@ export async function ssd(
 			applicationRefs,
 			standaloneFunctions,
 			matchKey,
+			leftOut: scope.leftOut,
 		}))
 
 	if (firstTime) {
@@ -124,7 +128,7 @@ export async function ssd(
 		const leftOut = decisions ? leftOutRefIds({ groups, decisions }).sourceIds : undefined
 		const { cloneMappings } = await instantiateSsd(tx, {
 			sourceQuery,
-			scopeRef: root,
+			scopeRef: { tagName: scopeUnit.tagName, id: scopeUnit.id },
 			targetParent,
 			scenario,
 			overrides,
@@ -158,6 +162,7 @@ export async function ssd(
 		decisions,
 		targetInstance,
 		decisionMappings: params.decisionMappings,
+		leftOut: scope.leftOut,
 	})
 
 	// the applications and functions each instance holds that the newer template no longer does: the update
@@ -169,6 +174,7 @@ export async function ssd(
 			frameInstance: instanceRootRef,
 			matchKey,
 			removalBase,
+			leftOut: scope.leftOut,
 		})
 		const accepted = decisions
 			? acceptedRefIds({ groups: groupsForInstance(report, instanceRootRef.id ?? ''), decisions })

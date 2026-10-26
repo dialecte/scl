@@ -14,6 +14,13 @@ export type ResolvePlacementMappingsParams = {
 	anchor: Scl.Ref<Scl.ElementsOf>
 	/** The consumer's choices, by source record id. */
 	decisionMappings?: DecisionMappings
+	/**
+	 * The scope root is the `TEMPLATE` scaffolding of units placed together: it lands, as a level above a unit does, on
+	 * the project's level of its kind.
+	 */
+	rootIsContext?: boolean
+	/** The template's levels the operation leaves out (record ids): no placement is resolved for them. */
+	leftOut?: ReadonlySet<string>
 }
 
 /** Where one structural level of a template lands in the project. */

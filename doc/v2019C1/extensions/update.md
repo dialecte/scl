@@ -581,7 +581,7 @@ A part added by the newer SSD is instantiated; an existing one is reconciled —
 The read-only counterpart is `doc.query.lifecycle.report({ verb: 'ssd', sourceQuery, ref, anchor: targetParent })`, assembled the same way: the topology frame's own diff plus the union of the per-primary `reportAsd`/`reportFsd` reports, merged into one `DiffReport` so the groups of `report.instances` cover the whole scope and the fast/full classification holds across it.
 
 ::: info `ref` is the acted-upon scope
-For `verb: 'ssd'`, `report`/`apply` act on the element `ref` names (same resolution as [`instantiate.ssd`](./instantiate#ssd)): a named `Substation`, `VoltageLevel` or `Bay` is the scope — a template holding several bays is placed one bay at a time, the one chosen. The `TEMPLATE` scaffolding is resolved only when `ref` names it: it is walked down `Substation → VoltageLevel → Bay` to the first level holding a named element, the unit. Several named units there: the report is refused with `SSD_SCOPE_AMBIGUOUS` (`SCL2003`), its `meta.candidates` listing each (`{ tagName, id, name }`, as the template holds them) — a consumer offers them to choose from and asks again with the chosen one as `ref`. A `ref` the template does not hold is refused with `TEMPLATE_ROOT_NOT_FOUND`.
+For `verb: 'ssd'`, `report`/`apply` act on the element `ref` names (same resolution as [`instantiate.ssd`](./instantiate#ssd)): a named `Substation`, `VoltageLevel` or `Bay` is the scope — a template holding several independent bays is placed one chosen bay at a time. The `TEMPLATE` scaffolding is resolved only when `ref` names it: it is walked down `Substation → VoltageLevel → Bay` to the first level holding a named element. Units of that level joined by a reference — a terminal of one on a connectivity node of the other, an input of one fed by the other, any reference the registries know — are **one element**: they are placed and updated together, rooted at the `TEMPLATE` scaffolding holding them, which lands (as a level above a unit does) on the project's level of its kind, each of their levels where its level mapping says (the Map step); a `ref` naming one of them selects the whole group, and the report lists them in `scopeUnits`. Several elements at that level: the report is refused with `SSD_SCOPE_AMBIGUOUS` (`SCL2003`), `meta.candidates` listing one per element (`{ tagName, id, name, linked }`: a unit, with the units linked to it) — a consumer offers them to choose from and asks again with the chosen one as `ref`; the units the chosen element does not hold are left out of it, on placement and on update. A `ref` the template does not hold is refused with `TEMPLATE_ROOT_NOT_FOUND`.
 :::
 
 ## Satellites
@@ -660,6 +660,7 @@ type DiffReport = {
 	templateInstances: AnyRefOrRecord[] // the instances of the template itself the report covers; none on a first placement
 	offLevel?: { templateLevel: string; startedFrom: string } // set when started above the level the template was made for
 	revisionBase?: 'given' | 'absent' // a fork's report: whether the previous revision of the file was given
+	scopeUnits?: ReportedElement[] // an SSD's units placed together: the one named and those linked to it
 }
 
 type ReportInstance = {

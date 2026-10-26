@@ -34,16 +34,19 @@ import type * as Core from '@dialecte/core'
  * nothing is, is walked down `Substation -> VoltageLevel -> Bay` to the unit it holds (see `resolveSsdScope`).
  */
 export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Promise<SsdResult> {
-	const { sourceQuery, scopeRef, targetParent, overrides, leftOut } = params
+	const { sourceQuery, scopeRef, targetParent, overrides } = params
 	const decisionMappings = params.decisionMappings
 	const policy = scenarioPolicy({ scenario: params.scenario ?? 'instantiate' })
 
-	const root = await resolveSsdScope(sourceQuery, { ref: scopeRef })
-	if (!root) {
+	const scope = await resolveSsdScope(sourceQuery, { ref: scopeRef })
+	if (!scope) {
 		throwDialecteError(SCL_ERRORS.TEMPLATE_ROOT_NOT_FOUND, {
 			detail: 'instantiate.ssd: no instantiable root found in the SSD',
 		})
 	}
+	const { root } = scope
+	// what the consumer left out, and the units of the scaffolding the scope does not hold
+	const leftOut = mergeLeftOut({ consumer: params.leftOut, scope: scope.leftOut })
 
 	// where each level of the template lands — the answer the report listed
 	const placementLevels = await resolvePlacementMappings(tx, {
@@ -51,6 +54,8 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		scopeRef: root,
 		anchor: targetParent,
 		decisionMappings,
+		rootIsContext: scope.scaffolding,
+		leftOut: scope.leftOut,
 	})
 
 	assertPlacementDecided({ placementLevels, operation: 'instantiate.ssd' })
@@ -70,7 +75,8 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		matchKey: policy.matchKey,
 	})
 	// the consumer left everything out: nothing is written, not even where it came from
-	if (leftOut?.size && contentMappings.length === 0) return { scopeRef: root, cloneMappings: [] }
+	if (params.leftOut?.size && contentMappings.length === 0)
+		return { scopeRef: root, cloneMappings: [] }
 
 	// External cross-cutting satellites (Variable / BehaviorDescription) applying to any
 	// element in the scope subtree travel with it, placed at the scope's reproduced level.
@@ -134,4 +140,13 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	await writeProvenance(tx, { sourceQuery, target: { anchor: 'document', fileType: 'SSD' } })
 
 	return { scopeRef: root, cloneMappings: allMappings }
+}
+
+/** The record ids left out: the consumer's, with those of the units the scope does not hold. */
+function mergeLeftOut(params: {
+	consumer: ReadonlySet<string> | undefined
+	scope: ReadonlySet<string>
+}): ReadonlySet<string> {
+	const { consumer, scope } = params
+	return new Set([...(consumer ?? []), ...scope])
 }

@@ -34,6 +34,11 @@
 			"line": 126,
 			"mutation": "StringLiteral: 'The template holds several units: the one to act on is to be chosen' -> \"\"",
 			"equivalent": "the default message of the error: the tests assert its key, code and meta; consumers build their own wording"
+		},
+		"fda63a61fd6df42a": {
+			"line": 129,
+			"mutation": "StringLiteral: 'The template holds several elements to instantiate: the one to act on is to be chosen' -> \"\"",
+			"equivalent": "the refusal is told by its key and code, which the tests assert; the message is prose for the reader"
 		}
 	},
 	"src/v2019C1/extensions/clean-up/transaction/prune-empty-containers.ts": {
@@ -541,6 +546,13 @@
 			"equivalent": "the ancestors of a level of the topology up to its substation are levels: the guard never skips one"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/instantiate/transaction/ssd.ts": {
+		"fd37b0d5cff9ae07": {
+			"line": 151,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a junk id names no record: leaving it out leaves nothing out"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/integration/integration-helpers.ts": {
 		"048f9780ec1e7968": {
 			"line": 28,
@@ -783,6 +795,16 @@
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/layers/topology/find-dropped-primaries.ts": {
+		"e16a3da152d9c504": {
+			"line": 93,
+			"mutation": "ConditionalExpression: tree -> true",
+			"equivalent": "the scope ref was resolved in the template a step before: its tree is always there"
+		},
+		"4846fc7cbaa3436b": {
+			"line": 102,
+			"mutation": "ConditionalExpression: uuid -> true",
+			"equivalent": "an undefined uuid added to the set matches no lineage: no primary of the project carries an undefined lineage"
+		},
 		"d59c2aa23ab7db2b": {
 			"line": 105,
 			"mutation": "ConditionalExpression: !isTopologyLevel(node.tagName) -> false",
@@ -801,6 +823,55 @@
 			"equivalent": "walking into an identified element finds what it holds placed in the same level: the level found is the same"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/group-linked-units.constants.ts": {
+		"0780b2c659b69a31": {
+			"line": 9,
+			"mutation": "ArrowFunction: ([tagName, pairs]) => [tagName, pairs.map((pair) => pair.attribute.uuid)] -> () => undefined",
+			"equivalent": "module-level map built at load, before the test runner swaps in the mutant: a static mutant the fast tier cannot observe"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/group-linked-units.ts": {
+		"7a1f8792d2e50b0c": {
+			"line": 30,
+			"mutation": "ConditionalExpression: other === index -> false",
+			"equivalent": "a unit merged with itself leaves every group as it was"
+		},
+		"625b7f98bde74096": {
+			"line": 59,
+			"mutation": "ConditionalExpression: root -> true",
+			"equivalent": "each unit was found in the store: its record is always there"
+		},
+		"370dd733820e4605": {
+			"line": 71,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "a uuid attribute has no default value: reading it with or without defaults gives the same"
+		},
+		"7ce791ce1da8641e": {
+			"line": 72,
+			"mutation": "ConditionalExpression: uuid -> true",
+			"equivalent": "an undefined uuid in the set is matched by no reference, the references set never holding undefined"
+		},
+		"41ba4c6c23f9ad81": {
+			"line": 73,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a junk attribute name is carried by no record: it reads nothing"
+		},
+		"31815b13596161da": {
+			"line": 74,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "a reference uuid attribute has no default value: reading it with or without defaults gives the same"
+		},
+		"8a4e31c21682c2cb": {
+			"line": 75,
+			"mutation": "ConditionalExpression: referenced -> true",
+			"equivalent": "an undefined reference in the set matches no uuid, the uuids set never holding undefined"
+		},
+		"e4ce8e9fc89d0d2d": {
+			"line": 79,
+			"mutation": "ConditionalExpression: child -> true",
+			"equivalent": "a child ref read from its parent record always resolves to a record"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/layers/topology/resolve-held-levels.ts": {
 		"34635c091dc5cb20": {
 			"line": 30,
@@ -813,11 +884,23 @@
 			"equivalent": "a wrapper among the ancestors is held under its id, which no caller looks up as a level"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/resolve-instance-levels.ts": {
+		"c79e12a02ec3b0c8": {
+			"line": 153,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a junk id names no record: pinning it to nothing changes no match"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/layers/topology/resolve-ssd-scope.ts": {
 		"c60d236778123083": {
 			"line": 37,
 			"mutation": "EqualityOperator: named.length > 1 -> named.length >= 1",
 			"equivalent": "one named element was returned on the line before: two or more are left here"
+		},
+		"91a934b49e35d0b0": {
+			"line": 56,
+			"mutation": "EqualityOperator: units.length > 1 -> units.length >= 1",
+			"equivalent": "a level of exactly one unit returned on the line before"
 		},
 		"7435f8cb0f260bc8": {
 			"line": 61,
@@ -863,8 +946,49 @@
 			"line": 99,
 			"mutation": "StringLiteral: `the template holds no <${ref.tagName}> \"${ref.id}\"` -> ``",
 			"equivalent": "the wording of the error's detail: the tests assert its key and code"
+		},
+		"eb784a971fb6f05a": {
+			"line": 108,
+			"mutation": "ConditionalExpression: record -> true",
+			"equivalent": "each unit of a group was read from the store: its record is always there"
+		},
+		"8de7b3d02b1ed337": {
+			"line": 129,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "the scaffolding was just read from the store by its ref: its record is always there, the fallback never taken"
+		},
+		"05681a4857a20657": {
+			"line": 129,
+			"mutation": "OptionalChaining: record?.children -> record.children",
+			"equivalent": "the scaffolding was just read from the store by its ref: its record is always there"
+		},
+		"f709146c3efb3585": {
+			"line": 132,
+			"mutation": "ConditionalExpression: child -> true",
+			"equivalent": "a child ref read from its parent record always resolves to a record"
+		},
+		"01420e836a3d50d0": {
+			"line": 140,
+			"mutation": "ConditionalExpression: primaryRecord -> true",
+			"equivalent": "an application or function found under the scaffolding always resolves to a record"
+		},
+		"4c9943ed1f9e00e4": {
+			"line": 151,
+			"mutation": "OptionalChaining: record?.parent -> record.parent",
+			"equivalent": "the named unit was found in the store: its record is always there"
+		},
+		"3d620a680fae3378": {
+			"line": 152,
+			"mutation": "ConditionalExpression: !parent || !isTopologyLevel(parent.tagName) -> false",
+			"equivalent": "a named unit always has a parent; a substation's parent, the SCL root, carries no name, so the TEMPLATE test on the next line returns the unit alone either way"
+		},
+		"69256e7b4405c8c5": {
+			"line": 152,
+			"mutation": "LogicalOperator: !parent || !isTopologyLevel(parent.tagName) -> !parent && !isTopologyLevel(parent.tagName)",
+			"equivalent": "a named unit always has a parent; a substation's parent, the SCL root, carries no name, so the TEMPLATE test on the next line returns the unit alone either way"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/scope-content.ts": {},
 	"src/v2019C1/extensions/lifecycle/report/query/removal-side-effects.ts": {
 		"ab51c62691eeecd0": {
 			"line": 38,
@@ -887,6 +1011,13 @@
 			"line": 462,
 			"mutation": "OptionalChaining: selection?.leftOut -> selection.leftOut",
 			"equivalent": "every instance of the application has its selection in the map"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/report/query/report-ssd.ts": {
+		"779639dcdc552258": {
+			"line": 77,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "the report built for no scope lists no instance: the junk root names no record and is read by nothing"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/report/report.ts": {

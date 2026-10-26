@@ -317,7 +317,7 @@ const projectSubstation = /* xml */ `
 describe.skipIf(!areCorpusRevisionsSynced([TOPOLOGY_ONLY]))(
 	'corpus: a bay template of levels and equipment only',
 	() => {
-		it('its high-voltage level updated with itself writes nothing; forked twice, each uuid stays once', async () => {
+		it('its two linked levels placed together, updated with itself writes nothing; forked twice, each uuid stays once', async () => {
 			const xml = await readCorpusRevision(TOPOLOGY_ONLY)
 			const { project, source, target } = await createSclTestProject({
 				sourceXml: xml,
@@ -329,7 +329,7 @@ describe.skipIf(!areCorpusRevisionsSynced([TOPOLOGY_ONLY]))(
 				xml: projectSubstation,
 				label: 'forked project',
 			})
-			// the template's first named level holds two voltage levels: the operation names one
+			// the template's two voltage levels are linked (a terminal of one on a node of the other): naming one places both
 			const ref = await findByName(source.document.query, {
 				tagName: 'VoltageLevel',
 				name: 'TEMPLATE_HV',
@@ -338,6 +338,7 @@ describe.skipIf(!areCorpusRevisionsSynced([TOPOLOGY_ONLY]))(
 
 			await placeUnit({ document: target.document, sourceQuery, ref, scenario: 'instantiate' })
 			const placed = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+			expect(count(placed, { localName: 'VoltageLevel' }), 'both levels placed').toBe(2)
 			const { report: update } = await placeUnit({
 				document: target.document,
 				sourceQuery,

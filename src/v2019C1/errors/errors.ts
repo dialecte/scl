@@ -117,13 +117,16 @@ export const SCL_ERRORS = defineErrors({
 		message: 'The project has no Header to record the source file in',
 	},
 	/**
-	 * An SSD whose first named level holds several units, none of them chosen: the element named is the `TEMPLATE`
-	 * scaffolding above them, or none is named. The consumer asks again naming one of them as `ref`.
-	 * `meta: { candidates: [{ tagName, id, name }] }` — the units, as the template holds them.
+	 * An SSD whose first named level holds several elements to instantiate (a unit, or units linked by a reference), none
+	 * of them chosen: the element named is the `TEMPLATE` scaffolding above them, or none is named. The consumer asks
+	 * again naming one of them as `ref`.
+	 * `meta: { candidates: [{ tagName, id, name, linked }] }` — one per element to instantiate: a unit, as the template
+	 * holds it, with the units linked to it by a reference (placed with it).
 	 */
 	SSD_SCOPE_AMBIGUOUS: {
 		code: 'SCL2003',
-		message: 'The template holds several units: the one to act on is to be chosen',
+		message:
+			'The template holds several elements to instantiate: the one to act on is to be chosen',
 	},
 	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).

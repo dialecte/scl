@@ -52,10 +52,11 @@ export async function resolvePlacementMappings(
 	reader: MappingReader,
 	params: ResolvePlacementMappingsParams,
 ): Promise<PlacementLevel[]> {
-	const { sourceQuery, scopeRef, anchor, decisionMappings } = params
+	const { sourceQuery, scopeRef, anchor, decisionMappings, leftOut } = params
 
 	const frameElements = await collectFrameElements(sourceQuery, scopeRef)
 	const contextIds = await strictAncestorIds(sourceQuery, scopeRef)
+	if (params.rootIsContext && scopeRef.id) contextIds.add(scopeRef.id)
 	const anchorChain = await resolveTargetStructure(reader, anchor)
 	const [documentRoot] = await reader.getRecordsByTagName('SCL')
 
@@ -63,7 +64,7 @@ export async function resolvePlacementMappings(
 	for (const frameElement of frameElements) {
 		const sourceId = frameElement.id
 		// the scope may be a primary placed below the levels (a function): it is no level itself
-		if (!sourceId || !isTopologyLevel(frameElement.tagName)) continue
+		if (!sourceId || !isTopologyLevel(frameElement.tagName) || leftOut?.has(sourceId)) continue
 		const sourceRef: StoredRef = { ...frameElement, id: sourceId }
 
 		const parentLevel = await findParentLevel({ sourceQuery, sourceRef, levels })

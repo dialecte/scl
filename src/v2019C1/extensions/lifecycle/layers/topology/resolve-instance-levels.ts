@@ -130,6 +130,30 @@ export async function resolveTemplateFrame(
 	return { scopeRef, elements }
 }
 
+/**
+ * The template frame without what the scope leaves out: a unit of the level the scope does not hold is no level of
+ * its instances.
+ */
+export function leaveOutOfFrame(params: {
+	templateFrame: TemplateFrame
+	leftOut: ReadonlySet<string> | undefined
+}): TemplateFrame {
+	const { templateFrame, leftOut } = params
+	if (!leftOut?.size) return templateFrame
+	const elements = templateFrame.elements.filter((element) => !leftOut.has(element.ref.id))
+	return { ...templateFrame, elements }
+}
+
+/** The matcher's pins with what the scope leaves out pinned to nothing: never matched to what the project holds. */
+export function pinLeftOut(params: {
+	pinnedMatches: Map<string, string | undefined>
+	leftOut: ReadonlySet<string> | undefined
+}): Map<string, string | undefined> {
+	const { pinnedMatches, leftOut } = params
+	for (const id of leftOut ?? []) pinnedMatches.set(id, undefined)
+	return pinnedMatches
+}
+
 /** The levels below the unit, as the matcher reads them: each lands on its level, or is new. */
 export function toPinnedMatches(params: {
 	instanceLevels: InstanceLevels

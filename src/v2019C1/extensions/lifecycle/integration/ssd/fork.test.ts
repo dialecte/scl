@@ -130,12 +130,9 @@ describe('ssd fork: the newer revision of the same file, its uuids kept', () => 
 				],
 				nextForks: [{ sourceXml: readRevisionTwin({ twin: 'twoLevelBayTemplate', revision: 2 }) }],
 				unit: { tagName: 'VoltageLevel', name: 'TEMPLATE_HV' },
-				allowInvalidOutput: {
-					reason:
-						'the category the two levels share is copied whole with the level placed: its reference to the function of the other level names nothing',
-					violations: [{ check: 'references', code: 'dangling' }],
-				},
 				expectedQueries: [
+					// the second revision links the two levels (an input of one fed by the other): the fork brings the other level
+					'//v2019C1:Application[@name="Breaker_App"][@uuid="00000000-0000-4000-8000-000000000442"]',
 					// the signal role and the two inputs the second revision gained on the level placed
 					'//v2019C1:SignalRole[@uuid="00000000-0000-4000-8000-000000000428"]',
 					'//v2019C1:SourceRef[@uuid="00000000-0000-4000-8000-000000000429"]',
@@ -147,8 +144,8 @@ describe('ssd fork: the newer revision of the same file, its uuids kept', () => 
 				unexpectedQueries: [
 					'(//v2019C1:SignalRole[@uuid="00000000-0000-4000-8000-000000000428"])[2]',
 					'(//v2019C1:SourceRef[@uuid="00000000-0000-4000-8000-000000000429"])[2]',
-					'(//v2019C1:Application[@name="Breaker_App"])[2]',
-					'(//default:Function[@name="Breaker_Fn"])[2]',
+					'(//v2019C1:Application[@uuid="00000000-0000-4000-8000-000000000412"])[2]',
+					'(//default:Function[@uuid="00000000-0000-4000-8000-000000000417"])[2]',
 				],
 			},
 		'equipment the previous revision held and the newer one dropped is removed': {

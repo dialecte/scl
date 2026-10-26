@@ -32,7 +32,7 @@ export async function findDroppedPrimaries(
 ): Promise<DroppedElement[]> {
 	const { sourceQuery, scopeRef, frameInstance, matchKey, removalBase } = params
 
-	const sourceUuids = await readUnitUuids(sourceQuery, scopeRef)
+	const sourceUuids = await readUnitUuids(sourceQuery, { scopeRef, leftOut: params.leftOut })
 	const frame = await reader.any.getTree(frameInstance)
 	if (!frame) return []
 
@@ -75,21 +75,28 @@ export async function findDroppedPrimaries(
 	return dropped
 }
 
-/** The uuids of the unit's root level, of its levels, and of its primaries (applications, functions). */
+/**
+ * The uuids of the unit's root level, of its levels, and of its primaries (applications, functions), what the scope
+ * leaves out aside.
+ */
 async function readUnitUuids(
 	sourceQuery: Core.Query<Config>,
-	scopeRef: FindDroppedPrimariesParams['scopeRef'],
+	params: {
+		scopeRef: FindDroppedPrimariesParams['scopeRef']
+		leftOut: FindDroppedPrimariesParams['leftOut']
+	},
 ): Promise<UnitUuids> {
+	const { scopeRef, leftOut } = params
 	const root = await sourceQuery.any.getAttribute(scopeRef, { name: 'uuid' })
 	const levels = new Set<string>()
 	const tree = await sourceQuery.any.getTree(scopeRef)
-	if (tree) await collectLevelUuids(sourceQuery, { node: tree, levels })
+	if (tree) await collectLevelUuids(sourceQuery, { node: tree, levels, leftOut })
 
 	const primaries = new Set<string>()
 	const sourcePrimaries = [
 		...(await applicationsUnderScope(sourceQuery, scopeRef)),
 		...(await functionsUnderScope(sourceQuery, scopeRef)),
-	]
+	].filter((primary) => !leftOut.has(primary.id))
 	for (const primary of sourcePrimaries) {
 		const uuid = await sourceQuery.any.getAttribute(primary, { name: 'uuid' })
 		if (uuid) primaries.add(uuid)
@@ -99,13 +106,19 @@ async function readUnitUuids(
 
 async function collectLevelUuids(
 	sourceQuery: Core.Query<Config>,
-	params: { node: AnyTreeRecord; levels: Set<string> },
+	params: {
+		node: AnyTreeRecord
+		levels: Set<string>
+		leftOut: FindDroppedPrimariesParams['leftOut']
+	},
 ): Promise<void> {
-	const { node, levels } = params
-	if (!isTopologyLevel(node.tagName)) return
+	const { node, levels, leftOut } = params
+	if (!isTopologyLevel(node.tagName) || leftOut.has(node.id)) return
 	const uuid = await sourceQuery.any.getAttribute(node, { name: 'uuid' })
 	if (uuid) levels.add(uuid)
-	for (const child of node.tree) await collectLevelUuids(sourceQuery, { node: child, levels })
+	for (const child of node.tree) {
+		await collectLevelUuids(sourceQuery, { node: child, levels, leftOut })
+	}
 }
 
 /**

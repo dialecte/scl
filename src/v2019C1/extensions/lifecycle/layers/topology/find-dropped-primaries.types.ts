@@ -15,6 +15,8 @@ export type FindDroppedPrimariesParams = {
 	matchKey: MatchKey
 	/** What tells a primary the source dropped from one the project added: see `classifyUnmatched`. */
 	removalBase: RemovalBase
+	/** The template's elements the scope leaves out (record ids): no level nor primary of the unit. */
+	leftOut: ReadonlySet<string>
 }
 
 /** What the levels of a unit's instance hold: the applications, then the functions. */

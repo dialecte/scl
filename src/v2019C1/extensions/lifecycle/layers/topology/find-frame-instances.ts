@@ -22,7 +22,7 @@ export async function findFrameInstances(
 	reader: MappingReader,
 	params: FindFrameInstancesParams,
 ): Promise<FrameInstance[]> {
-	const { sourceQuery, scopeRef, within } = params
+	const { sourceQuery, scopeRef, within, leftOut } = params
 	const matchKey = params.matchKey ?? 'templateUuid'
 
 	const sourceUuid = await sourceQuery.any.getAttribute(scopeRef, { name: 'uuid' })
@@ -45,7 +45,7 @@ export async function findFrameInstances(
 	if (!sourceTree) return frameInstances
 
 	const heldElements: AnyTreeRecord[] = []
-	await collectHeldElements(sourceQuery, { node: sourceTree, heldElements })
+	await collectHeldElements(sourceQuery, { node: sourceTree, heldElements, leftOut })
 
 	for (const heldElement of heldElements) {
 		const heldUuid = await sourceQuery.any.getAttribute(heldElement, { name: 'uuid' })
@@ -87,17 +87,17 @@ async function isWithin(
  */
 async function collectHeldElements(
 	sourceQuery: FindFrameInstancesParams['sourceQuery'],
-	params: { node: AnyTreeRecord; heldElements: AnyTreeRecord[] },
+	params: { node: AnyTreeRecord; heldElements: AnyTreeRecord[]; leftOut?: ReadonlySet<string> },
 ): Promise<void> {
-	const { node, heldElements } = params
+	const { node, heldElements, leftOut } = params
 
 	for (const child of node.tree) {
-		if (findMappingPolicy(child.tagName)) continue
+		if (findMappingPolicy(child.tagName) || leftOut?.has(child.id)) continue
 		const uuid = await sourceQuery.any.getAttribute(child, { name: 'uuid' })
 		if (uuid) {
 			heldElements.push(child)
 			if (!isTopologyLevel(child.tagName)) continue
 		}
-		await collectHeldElements(sourceQuery, { node: child, heldElements })
+		await collectHeldElements(sourceQuery, { node: child, heldElements, leftOut })
 	}
 }

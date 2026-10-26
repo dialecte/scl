@@ -10,6 +10,8 @@ export type FindFrameInstancesParams = {
 	matchKey?: MatchKey
 	/** Only the levels below this element of the project. */
 	within?: Scl.Ref<Scl.ElementsOf>
+	/** The template's elements the scope leaves out (record ids): no evidence of an instance, no level of it. */
+	leftOut?: ReadonlySet<string>
 }
 
 /** A level of the project an instance of a template's unit sits on. */

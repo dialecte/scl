@@ -52,9 +52,16 @@ export async function functionsUnderScope(
  */
 export async function resolveTopologyReconcilables(
 	query: Core.Query<Config>,
-	scopeRef: Scl.Ref<TopologyStructuralTag>,
+	params: {
+		scopeRef: Scl.Ref<TopologyStructuralTag>
+		/** What the scope leaves out (record ids): its applications and functions are not the scope's. */
+		leftOut: ReadonlySet<string>
+	},
 ): Promise<TopologyReconcilables> {
-	const applications = await applicationsUnderScope(query, scopeRef)
+	const { scopeRef, leftOut } = params
+	const applications = (await applicationsUnderScope(query, scopeRef)).filter(
+		(application) => !leftOut.has(application.id),
+	)
 
 	const composedUuids = new Set<string>()
 	for (const application of applications) {
@@ -65,6 +72,7 @@ export async function resolveTopologyReconcilables(
 
 	const standaloneFunctions: Scl.Ref<'Function'>[] = []
 	for (const functionRef of await functionsUnderScope(query, scopeRef)) {
+		if (leftOut.has(functionRef.id)) continue
 		const { uuid } = await query.getAttributes(functionRef)
 		if (uuid && composedUuids.has(uuid)) continue
 		standaloneFunctions.push(functionRef)
@@ -88,11 +96,18 @@ export async function hasScopeInstance(
 		applicationRefs: readonly Scl.Ref<'Application'>[]
 		standaloneFunctions: readonly Scl.Ref<'Function'>[]
 		matchKey: MatchKey
+		/** What the scope leaves out (record ids): no evidence of an instance. */
+		leftOut?: ReadonlySet<string>
 	},
 ): Promise<boolean> {
-	const { sourceQuery, scopeRef, applicationRefs, standaloneFunctions, matchKey } = params
+	const { sourceQuery, scopeRef, applicationRefs, standaloneFunctions, matchKey, leftOut } = params
 
-	const frameInstances = await findFrameInstances(reader, { sourceQuery, scopeRef, matchKey })
+	const frameInstances = await findFrameInstances(reader, {
+		sourceQuery,
+		scopeRef,
+		matchKey,
+		leftOut,
+	})
 	if (frameInstances.length > 0) return true
 
 	for (const primaryRef of [...applicationRefs, ...standaloneFunctions]) {

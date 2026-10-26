@@ -10,6 +10,8 @@ import {
 	describeHeldPlacement,
 	findFrameInstances,
 	resolveInstanceLevels,
+	leaveOutOfFrame,
+	pinLeftOut,
 	resolveTemplateFrame,
 	toPinnedMatches,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
@@ -62,6 +64,8 @@ export async function reportTopologyFrame(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
+		/** The template's elements the scope leaves out (record ids): never matched to what the project holds, nor listed. */
+		leftOut?: ReadonlySet<string>
 	},
 ): Promise<{ instances: ReportInstance[]; instanceLevelsList: InstanceLevels[] }> {
 	const { sourceQuery, scopeRef, matchKey, targetInstance, mappedOnto, pinnedMatches } = params
@@ -83,6 +87,7 @@ export async function reportTopologyFrame(
 			removalBase: params.removalBase,
 			namesFollow: params.namesFollow,
 			omit: FRAME_OMIT_CHILD_TAGS,
+			notSelected: params.leftOut,
 			...(mappedOnto
 				? { instanceRootIsProjectOwned: true, contributeOnly: true, pinnedMatches }
 				: {}),
@@ -96,7 +101,12 @@ export async function reportTopologyFrame(
 		return { instances: [reportInstance], instanceLevelsList: [] }
 	}
 
-	const frameInstances = await findFrameInstances(query, { sourceQuery, scopeRef, matchKey })
+	const frameInstances = await findFrameInstances(query, {
+		sourceQuery,
+		scopeRef,
+		matchKey,
+		leftOut: params.leftOut,
+	})
 	const instances = await scopeToTargetInstance(query, {
 		instances: frameInstances.map((frameInstance) => frameInstance.instance),
 		targetInstance,
@@ -105,7 +115,8 @@ export async function reportTopologyFrame(
 	const reportInstances: ReportInstance[] = []
 	const instanceLevelsList: InstanceLevels[] = []
 	// the template's levels, read once for every instance
-	const templateFrame = await resolveTemplateFrame(sourceQuery, scopeRef)
+	const wholeFrame = await resolveTemplateFrame(sourceQuery, scopeRef)
+	const templateFrame = leaveOutOfFrame({ templateFrame: wholeFrame, leftOut: params.leftOut })
 	for (const instance of instances) {
 		// a level of the project the unit was mapped onto only receives what the template gives it
 		const projectOwned = frameInstances.some(
@@ -130,7 +141,11 @@ export async function reportTopologyFrame(
 			removalBase: params.removalBase,
 			namesFollow: params.namesFollow,
 			omit: FRAME_OMIT_CHILD_TAGS,
-			pinnedMatches: toPinnedMatches({ instanceLevels: placement.levels, scopeRef }),
+			pinnedMatches: pinLeftOut({
+				pinnedMatches: toPinnedMatches({ instanceLevels: placement.levels, scopeRef }),
+				leftOut: params.leftOut,
+			}),
+			notSelected: params.leftOut,
 			...(projectOwned ? { instanceRootIsProjectOwned: true } : {}),
 		})
 		const reportInstance = await buildReportInstance(query, {

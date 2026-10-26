@@ -5,6 +5,7 @@ import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
+import type { SsdScopeCandidate } from './resolve-ssd-scope.types'
 import type { Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { SclTest } from '@/v2019C1/test'
@@ -17,7 +18,10 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	ref?: Scl.Ref<TopologyStructuralTag>
 	expected?: Scl.Ref<TopologyStructuralTag> | undefined
 	/** The refusal: its key and the units it lists. */
-	expectedRefusal?: { key: string; candidates?: { tagName: string; id: string; name: string }[] }
+	expectedRefusal?: { key: string; candidates?: SsdScopeCandidate[] }
+	/** The units the scope places, and the record ids it leaves out under its root. */
+	expectedUnits?: string[]
+	expectedLeftOut?: string[]
 }
 
 const twoNamedBays = /* xml */ `
@@ -31,11 +35,148 @@ const twoNamedBays = /* xml */ `
 	</SCL>
 `
 
+/** Two bays, the breaker of the second on a node of the first; a third bay of its own, when asked. */
+function linkedBays(params: { third: boolean; level?: string }): string {
+	const level = params.level ?? 'TEMPLATE'
+	const third = params.third
+		? `<Bay name="B3" uuid="b3-uuid" ${id}="bay-3"><ConductingEquipment name="QA1" type="CBR" uuid="qa3-uuid" ${id}="equipment-3"/></Bay>`
+		: ''
+	return /* xml */ `
+		<SCL ${ns} ${id}="scl-1">
+			<Substation name="TEMPLATE" ${id}="sub-1">
+				<VoltageLevel name="${level}" ${id}="vl-1">
+					<Bay name="B1" uuid="b1-uuid" ${id}="bay-1">
+						<ConnectivityNode name="L1" pathName="TEMPLATE/${level}/B1/L1" uuid="node-uuid" ${id}="node-1"/>
+					</Bay>
+					<Bay name="B2" uuid="b2-uuid" ${id}="bay-2">
+						<ConductingEquipment name="QA1" type="CBR" uuid="qa2-uuid" ${id}="equipment-2">
+							<Terminal name="T1" connectivityNode="TEMPLATE/${level}/B1/L1" substationName="TEMPLATE" voltageLevelName="${level}" bayName="B1" cNodeName="L1" cNodeUuid="node-uuid" ${id}="terminal-2"/>
+						</ConductingEquipment>
+					</Bay>
+					${third}
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+}
+
+/** Two named substations, a terminal of the second on a node of the first. */
+const linkedSubstations = /* xml */ `
+	<SCL ${ns} ${id}="scl-1">
+		<Substation name="A" uuid="a-uuid" ${id}="sub-a">
+			<VoltageLevel name="V1" ${id}="vl-a">
+				<Bay name="B1" ${id}="bay-a">
+					<ConnectivityNode name="L1" pathName="A/V1/B1/L1" uuid="node-a-uuid" ${id}="node-a"/>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+		<Substation name="B" uuid="b-uuid" ${id}="sub-b">
+			<VoltageLevel name="V1" ${id}="vl-b">
+				<Bay name="B1" ${id}="bay-b">
+					<ConductingEquipment name="QA1" type="CBR" ${id}="equipment-b">
+						<Terminal name="T1" connectivityNode="A/V1/B1/L1" substationName="A" voltageLevelName="V1" bayName="B1" cNodeName="L1" cNodeUuid="node-a-uuid" ${id}="terminal-b"/>
+					</ConductingEquipment>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
 // The scope of an SSD: the element the consumer names when it is named; the TEMPLATE scaffolding,
 // named or read from the file, is walked down Substation -> VoltageLevel -> Bay to the first level
 // holding a named element - the reusable unit. Several named units there: the consumer chooses.
 describe('resolveSsdScope', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
+		'two bays linked by a terminal: one element, rooted at their scaffolding': {
+			sourceXml: linkedBays({ third: false }),
+			expected: { tagName: 'VoltageLevel', id: 'vl-1' },
+			expectedUnits: ['bay-1', 'bay-2'],
+			expectedLeftOut: [],
+		},
+		'… one of them named: the whole group': {
+			sourceXml: linkedBays({ third: false }),
+			ref: { tagName: 'Bay', id: 'bay-2' },
+			expected: { tagName: 'VoltageLevel', id: 'vl-1' },
+			expectedUnits: ['bay-1', 'bay-2'],
+		},
+		'three bays, two linked, none chosen: refused with two candidates': {
+			sourceXml: linkedBays({ third: true }),
+			expectedRefusal: {
+				key: 'SSD_SCOPE_AMBIGUOUS',
+				candidates: [
+					{
+						tagName: 'Bay',
+						id: 'bay-1',
+						name: 'B1',
+						linked: [{ tagName: 'Bay', id: 'bay-2', name: 'B2' }],
+					},
+					{ tagName: 'Bay', id: 'bay-3', name: 'B3', linked: [] },
+				],
+			},
+		},
+		'… one of the linked pair named: the pair, the third bay left out': {
+			sourceXml: linkedBays({ third: true }),
+			ref: { tagName: 'Bay', id: 'bay-1' },
+			expected: { tagName: 'VoltageLevel', id: 'vl-1' },
+			expectedUnits: ['bay-1', 'bay-2'],
+			expectedLeftOut: ['bay-3', 'equipment-3'],
+		},
+		"two linked bays and a function of their scaffolding: the function is not the group's": {
+			sourceXml: linkedBays({ third: false })
+				.replace(
+					'</VoltageLevel>',
+					`<PowerTransformer name="T1" type="PTR" uuid="own-transformer-uuid" ${id}="own-transformer"/><Function name="Own" uuid="own-uuid" ${id}="own-function"/></VoltageLevel>`,
+				)
+				.replace(
+					'<VoltageLevel name="TEMPLATE" ' + id + '="vl-1">',
+					`<VoltageLevel name="TEMPLATE" ${id}="vl-1"><Private type="eIEC61850-6-100" ${id}="vl-private"><eIEC61850-6-100:Application name="Own" type="DCS" uuid="own-application-uuid" ${id}="own-application"><eIEC61850-6-100:FunctionRole name="ROOT" ${id}="own-role"><eIEC61850-6-100:FunctionRoleContent ${id}="own-content"><eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/Own" functionUuid="own-uuid" ${id}="own-ref"/></eIEC61850-6-100:FunctionRoleContent></eIEC61850-6-100:FunctionRole></eIEC61850-6-100:Application></Private>`,
+				),
+			expected: { tagName: 'VoltageLevel', id: 'vl-1' },
+			expectedUnits: ['bay-1', 'bay-2'],
+			expectedLeftOut: [
+				'own-application',
+				'own-content',
+				'own-function',
+				'own-ref',
+				'own-role',
+				'own-transformer',
+			],
+		},
+		'two linked bays in a named voltage level, one of them named: it alone': {
+			sourceXml: linkedBays({ third: false, level: 'V1' }),
+			ref: { tagName: 'Bay', id: 'bay-2' },
+			expected: { tagName: 'Bay', id: 'bay-2' },
+			expectedUnits: ['bay-2'],
+		},
+		'a bay linked to a TEMPLATE bay beside it, named: it alone, the scaffolding is no unit': {
+			sourceXml: linkedBays({ third: false }).replaceAll('B1', 'TEMPLATE'),
+			ref: { tagName: 'Bay', id: 'bay-2' },
+			expected: { tagName: 'Bay', id: 'bay-2' },
+			expectedUnits: ['bay-2'],
+		},
+		'two named substations linked by a terminal: no scaffolding holds them, refused each on its own':
+			{
+				sourceXml: linkedSubstations,
+				expectedRefusal: {
+					key: 'SSD_SCOPE_AMBIGUOUS',
+					candidates: [
+						{ tagName: 'Substation', id: 'sub-a', name: 'A', linked: [] },
+						{ tagName: 'Substation', id: 'sub-b', name: 'B', linked: [] },
+					],
+				},
+			},
+		'… one of them named: it alone': {
+			sourceXml: linkedSubstations,
+			ref: { tagName: 'Substation', id: 'sub-b' },
+			expected: { tagName: 'Substation', id: 'sub-b' },
+			expectedUnits: ['sub-b'],
+		},
+		'… the third bay named: it alone': {
+			sourceXml: linkedBays({ third: true }),
+			ref: { tagName: 'Bay', id: 'bay-3' },
+			expected: { tagName: 'Bay', id: 'bay-3' },
+			expectedUnits: ['bay-3'],
+		},
 		'the first named level below TEMPLATE ancestors (a Bay) is the root': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="scl-1">
@@ -104,8 +245,8 @@ describe('resolveSsdScope', () => {
 			expectedRefusal: {
 				key: 'SSD_SCOPE_AMBIGUOUS',
 				candidates: [
-					{ tagName: 'Bay', id: 'bay-1', name: 'B1' },
-					{ tagName: 'Bay', id: 'bay-2', name: 'B2' },
+					{ tagName: 'Bay', id: 'bay-1', name: 'B1', linked: [] },
+					{ tagName: 'Bay', id: 'bay-2', name: 'B2', linked: [] },
 				],
 			},
 		},
@@ -116,8 +257,8 @@ describe('resolveSsdScope', () => {
 			expectedRefusal: {
 				key: 'SSD_SCOPE_AMBIGUOUS',
 				candidates: [
-					{ tagName: 'Bay', id: 'bay-1', name: 'B1' },
-					{ tagName: 'Bay', id: 'bay-2', name: 'B2' },
+					{ tagName: 'Bay', id: 'bay-1', name: 'B1', linked: [] },
+					{ tagName: 'Bay', id: 'bay-2', name: 'B2', linked: [] },
 				],
 			},
 		},
@@ -188,8 +329,8 @@ describe('resolveSsdScope', () => {
 			expectedRefusal: {
 				key: 'SSD_SCOPE_AMBIGUOUS',
 				candidates: [
-					{ tagName: 'VoltageLevel', id: 'vl-2', name: 'HV' },
-					{ tagName: 'VoltageLevel', id: 'vl-3', name: 'MV' },
+					{ tagName: 'VoltageLevel', id: 'vl-2', name: 'HV', linked: [] },
+					{ tagName: 'VoltageLevel', id: 'vl-3', name: 'MV', linked: [] },
 				],
 			},
 		},
@@ -212,7 +353,14 @@ describe('resolveSsdScope', () => {
 				testCase.expectedRefusal,
 			)
 		} else {
-			expect(await resolved).toEqual(testCase.expected)
+			const scope = await resolved
+			expect(scope?.root).toEqual(testCase.expected)
+			if (testCase.expectedUnits) {
+				expect(scope?.units.map((unit) => unit.id)).toEqual(testCase.expectedUnits)
+				expect(scope?.scaffolding).toBe(testCase.expectedUnits.length > 1)
+			}
+			if (testCase.expectedLeftOut)
+				expect([...(scope?.leftOut ?? [])].sort()).toEqual(testCase.expectedLeftOut)
 		}
 		return { assertOn: 'source' }
 	}

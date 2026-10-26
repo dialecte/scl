@@ -14,6 +14,7 @@ import {
 	findDroppedPrimaries,
 	findLanding,
 	hasScopeInstance,
+	pinLeftOut,
 	resolveSsdScope,
 	resolvePlacementMappings,
 	resolvePrimaryParents,
@@ -72,13 +73,14 @@ export async function reportSsd(
 ): Promise<DiffReport> {
 	const { sourceQuery, scopeRef, targetParent, scenario, targetInstance, decisionMappings } = params
 
-	const root = await resolveSsdScope(sourceQuery, { ref: scopeRef })
-	if (!root) return assembleReport({ instances: [], templateRoots: [] })
+	const scope = await resolveSsdScope(sourceQuery, { ref: scopeRef })
+	if (!scope) return assembleReport({ instances: [], templateRoots: [] })
+	const { root } = scope
 
-	const { applications, standaloneFunctions } = await resolveTopologyReconcilables(
-		sourceQuery,
-		root,
-	)
+	const { applications, standaloneFunctions } = await resolveTopologyReconcilables(sourceQuery, {
+		scopeRef: root,
+		leftOut: scope.leftOut,
+	})
 
 	// the topology frame's own structural changes (Bay attrs / BayType / equipment), fn/app excluded;
 	// one ReportInstance per bay when a bay-typical was instantiated more than once
@@ -94,6 +96,7 @@ export async function reportSsd(
 			applicationRefs: applications,
 			standaloneFunctions,
 			matchKey,
+			leftOut: scope.leftOut,
 		}))
 
 	// where each level of the template lands, on a first placement
@@ -103,6 +106,8 @@ export async function reportSsd(
 				scopeRef: root,
 				anchor: targetParent,
 				decisionMappings,
+				rootIsContext: scope.scaffolding,
+				leftOut: scope.leftOut,
 			})
 		: []
 	const rootLevel = placementLevels.find((level) => level.sourceRef.id === root.id)
@@ -111,7 +116,8 @@ export async function reportSsd(
 		: undefined
 
 	// each level below the root lands on the element it is mapped onto, or is new
-	const pinnedMatches = new Map<string, string | undefined>()
+	// a unit the scope leaves out is never matched to what the project holds
+	const pinnedMatches = pinLeftOut({ pinnedMatches: new Map(), leftOut: scope.leftOut })
 	for (const level of placementLevels) {
 		if (level.context || level.sourceRef.id === root.id) continue
 		pinnedMatches.set(level.sourceRef.id, level.resolved.existing?.id)
@@ -130,6 +136,7 @@ export async function reportSsd(
 		decisionMappings,
 		removalBase,
 		namesFollow,
+		leftOut: scope.leftOut,
 	})
 	// the applications and functions each instance holds that the newer template no longer does
 	for (const frameInstance of frameInstances) {
@@ -140,6 +147,7 @@ export async function reportSsd(
 			frameInstance: frameInstance.rootRef,
 			matchKey,
 			removalBase,
+			leftOut: scope.leftOut,
 		})
 		const groups = addDroppedGroups({ reportInstance: frameInstance, dropped })
 		await linkToComposingApplications(query, { groups })
@@ -220,6 +228,8 @@ export async function reportSsd(
 	})
 	// a level nothing is decided for is the consumer's to choose before anything is written
 	if (placementLevels.some((level) => level.undecided)) report.needsDecisions = true
+	// the unit named came with the units linked to it: the report says which it acts on
+	if (scope.units.length > 1) report.scopeUnits = scope.units
 	return report
 }
 

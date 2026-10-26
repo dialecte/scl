@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
+	<Header id="linked_levels" uuid="00000000-0000-4000-8000-000000000500" version="0" revision="1" toolID="twin" fileType="SSD">
+		<History>
+			<Hitem version="0" revision="1" when="2026-10-27T10:00:00" who="twin" what="first revision"/>
+		</History>
+	</Header>
+	<Substation name="TEMPLATE" uuid="00000000-0000-4000-8000-000000000501">
+		<VoltageLevel name="TEMPLATE_HV" uuid="00000000-0000-4000-8000-000000000510">
+			<Bay name="TEMPLATE" uuid="00000000-0000-4000-8000-000000000511">
+				<PowerTransformer name="PTR1" type="PTR" uuid="00000000-0000-4000-8000-000000000512">
+					<TransformerWinding name="W1" type="PTW" uuid="00000000-0000-4000-8000-000000000513">
+						<Terminal name="T1" substationName="TEMPLATE" voltageLevelName="TEMPLATE_HV" bayName="TEMPLATE" cNodeName="L1" connectivityNode="TEMPLATE/TEMPLATE_HV/TEMPLATE/L1"/>
+					</TransformerWinding>
+					<TransformerWinding name="W2" type="PTW" uuid="00000000-0000-4000-8000-000000000514">
+						<Terminal name="T1" substationName="TEMPLATE" voltageLevelName="TEMPLATE_HV" bayName="TEMPLATE" cNodeName="L2" connectivityNode="TEMPLATE/TEMPLATE_HV/TEMPLATE/L2"/>
+					</TransformerWinding>
+				</PowerTransformer>
+				<ConductingEquipment name="QA1" type="CBR" uuid="00000000-0000-4000-8000-000000000515">
+					<Terminal name="T2" substationName="TEMPLATE" voltageLevelName="TEMPLATE_HV" bayName="TEMPLATE" cNodeName="L1" connectivityNode="TEMPLATE/TEMPLATE_HV/TEMPLATE/L1"/>
+				</ConductingEquipment>
+				<ConnectivityNode name="L1" uuid="00000000-0000-4000-8000-000000000516" pathName="TEMPLATE/TEMPLATE_HV/TEMPLATE/L1"/>
+				<ConnectivityNode name="L2" uuid="00000000-0000-4000-8000-000000000517" pathName="TEMPLATE/TEMPLATE_HV/TEMPLATE/L2"/>
+			</Bay>
+		</VoltageLevel>
+		<VoltageLevel name="TEMPLATE_MV" uuid="00000000-0000-4000-8000-000000000520">
+			<Bay name="TEMPLATE" uuid="00000000-0000-4000-8000-000000000521">
+				<ConductingEquipment name="QA1" type="CBR" uuid="00000000-0000-4000-8000-000000000522">
+					<Terminal name="T1" substationName="TEMPLATE" voltageLevelName="TEMPLATE_HV" bayName="TEMPLATE" cNodeName="L2" connectivityNode="TEMPLATE/TEMPLATE_HV/TEMPLATE/L2"/>
+					<SubEquipment name="WDR1" desc="Withdrawable mechanism" uuid="00000000-0000-4000-8000-000000000523"/>
+				</ConductingEquipment>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+</SCL>

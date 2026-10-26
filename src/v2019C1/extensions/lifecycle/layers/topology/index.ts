@@ -1,5 +1,10 @@
 export { resolveSsdScope } from './resolve-ssd-scope'
-export type { ResolveSsdScopeParams, SsdScopeCandidate } from './resolve-ssd-scope.types'
+export type {
+	ResolveSsdScopeParams,
+	SsdScope,
+	SsdScopeCandidate,
+	SsdScopeUnit,
+} from './resolve-ssd-scope.types'
 export { cloneTopologyContent } from './clone-topology-content'
 export { ensureTopologyFrame, resolveFrameStructure } from './ensure-topology-frame'
 export { reconcileTopologyFrame } from './reconcile-topology-frame'
@@ -17,6 +22,8 @@ export {
 export { findFrameInstances } from './find-frame-instances'
 export {
 	resolveInstanceLevels,
+	leaveOutOfFrame,
+	pinLeftOut,
 	resolveTemplateFrame,
 	toPinnedMatches,
 } from './resolve-instance-levels'

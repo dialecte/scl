@@ -231,6 +231,11 @@ export type DiffReport = {
 	 * revision dropped from one the project added. Absent from the report of another scenario.
 	 */
 	revisionBase?: 'given' | 'absent'
+	/**
+	 * The units of an SSD template the report acts on, when the element named comes with the units linked to it by a
+	 * reference (a terminal of one on a connectivity node of the other): they are placed and updated together.
+	 */
+	scopeUnits?: ReportedElement[]
 }
 
 /**

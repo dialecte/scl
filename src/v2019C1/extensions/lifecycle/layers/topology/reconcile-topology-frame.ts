@@ -1,6 +1,8 @@
 import { findFrameInstances } from './find-frame-instances'
 import {
 	resolveInstanceLevels,
+	leaveOutOfFrame,
+	pinLeftOut,
 	resolveTemplateFrame,
 	toPinnedMatches,
 } from './resolve-instance-levels'
@@ -67,12 +69,19 @@ export async function reconcileTopologyFrame(
 		targetInstance?: Scl.Ref<Scl.ElementsOf>
 		/** The consumer's choices, among them where a level the template gained lands per instance. */
 		decisionMappings?: DecisionMappings
+		/** The template's elements the scope leaves out (record ids): never matched to what the project holds, nor written. */
+		leftOut?: ReadonlySet<string>
 	},
 ): Promise<FrameReconciliation> {
 	const { sourceQuery, scopeRef, matchKey, identityMode, bumpsCollisions, report } = params
 	const { decisions, targetInstance } = params
 
-	const frameInstances = await findFrameInstances(tx, { sourceQuery, scopeRef, matchKey })
+	const frameInstances = await findFrameInstances(tx, {
+		sourceQuery,
+		scopeRef,
+		matchKey,
+		leftOut: params.leftOut,
+	})
 	const instances = await scopeToTargetInstance(tx, {
 		instances: frameInstances.map((frameInstance) => frameInstance.instance),
 		targetInstance,
@@ -83,7 +92,8 @@ export async function reconcileTopologyFrame(
 	const additions: InstanceAdditions[] = []
 	const instanceLevelsList: InstanceLevels[] = []
 	// the template's levels, read once for every instance
-	const templateFrame = await resolveTemplateFrame(sourceQuery, scopeRef)
+	const wholeFrame = await resolveTemplateFrame(sourceQuery, scopeRef)
+	const templateFrame = leaveOutOfFrame({ templateFrame: wholeFrame, leftOut: params.leftOut })
 
 	for (const instance of instances) {
 		const instanceGroups = groupsForInstance(report, instance.id)
@@ -125,7 +135,11 @@ export async function reconcileTopologyFrame(
 			overrides: levelOverrides,
 			omit: FRAME_OMIT_CHILD_TAGS,
 			instanceRootIsProjectOwned: projectOwned,
-			pinnedMatches: toPinnedMatches({ instanceLevels, scopeRef }),
+			pinnedMatches: pinLeftOut({
+				pinnedMatches: toPinnedMatches({ instanceLevels, scopeRef }),
+				leftOut: params.leftOut,
+			}),
+			notSelected: params.leftOut,
 		})
 		// carry the report->applied correlation onto this frame instance's report nodes (fn/app tags
 		// are a boundary here — their instances are annotated by the fn/app cascade)
