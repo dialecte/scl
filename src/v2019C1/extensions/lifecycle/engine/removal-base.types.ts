@@ -35,6 +35,8 @@ export type ResolveRemovalBaseParams = {
 }
 
 export type ClassifyUnmatchedParams = {
+	/** The element's tag: a level of the topology is told apart by more than its lineage. */
+	tagName: string
 	/** The element's lineage under the scenario's key: its `templateUuid`, or its own uuid for a fork. */
 	lineage: string
 	/** The source holds an element of that uuid. */

@@ -22,15 +22,20 @@ const RECORD_ID_SUFFIX = CUSTOM_RECORD_ID_ATTRIBUTE_NAME
  * decisions are an empty map unless the case takes some (every group at its suggested action), or none at all.
  */
 export async function reportAndApply(params: ReportAndApplyParams): Promise<ReportedAndApplied> {
-	const { document, lifecycle, decide, withoutDecisions } = params
-	const reported = await report(document.query, lifecycle)
+	const { document, lifecycle, decide, withoutDecisions, mappings } = params
+	const reported = await report(document.query, {
+		...lifecycle,
+		...(mappings ? { resolution: { mappings } } : {}),
+	})
 	const decisions = decide ? decide(reported) : new Map()
+	// without decisions the consumer still passes the mapping choices it made
+	const resolution = withoutDecisions
+		? mappings
+			? { mappings }
+			: undefined
+		: { decisions, mappings }
 	const applied = await document.transaction(async function applyReport(tx) {
-		return apply(tx, {
-			...lifecycle,
-			report: reported,
-			...(withoutDecisions ? {} : { resolution: { decisions } }),
-		})
+		return apply(tx, { ...lifecycle, report: reported, ...(resolution ? { resolution } : {}) })
 	})
 	return { report: reported, applied }
 }

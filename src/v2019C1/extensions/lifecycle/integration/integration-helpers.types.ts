@@ -2,6 +2,7 @@ import type { Scl } from '@/v2019C1/config'
 import type { ApplyResult } from '@/v2019C1/extensions/lifecycle/apply/apply.types'
 import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 
 export type ReportAndApplyParams = {
 	/** The project document the lifecycle writes to. */
@@ -12,6 +13,8 @@ export type ReportAndApplyParams = {
 	decide?: (report: DiffReport) => DecisionMap
 	/** Apply with no decisions at all, as a headless caller does. */
 	withoutDecisions?: boolean
+	/** Where the consumer chose the template's elements land, given to the report and the apply. */
+	mappings?: DecisionMappings
 }
 
 /** What one report-then-apply gave: the report the consumer read, and what the apply wrote. */

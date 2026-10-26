@@ -360,6 +360,7 @@ async function diffMatched(
 			// template's or the project's: not this template's to remove
 			if (withinProjectOwned) continue
 			const unmatched = classifyUnmatched({
+				tagName: instanceChild.tagName,
 				lineage,
 				inSource: sourceUuids.has(lineage),
 				removalBase,

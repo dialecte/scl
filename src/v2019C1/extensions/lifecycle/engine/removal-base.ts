@@ -2,6 +2,7 @@ import { collectUuids } from './match-key'
 
 import { throwDialecteError } from '@dialecte/core'
 
+import { TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { SCL_ERRORS } from '@/v2019C1/errors'
 
 import type { AcceptedIds } from './decide.types'
@@ -46,11 +47,14 @@ export async function resolveRemovalBase(params: ResolveRemovalBaseParams): Prom
  * report lists what the apply removes.
  */
 export function classifyUnmatched(params: ClassifyUnmatchedParams): UnmatchedClass {
-	const { lineage, inSource, removalBase } = params
+	const { tagName, lineage, inSource, removalBase } = params
 	if (inSource) return 'still-held'
 	switch (removalBase.kind) {
 		case 'lineage':
-			return 'removed'
+			// a level's lineage names the template level it was made from, not the template that placed it: another
+			// template placed in a level of the unit carries one too, so a level the template does not hold is kept
+			// unless its removal is accepted
+			return isTopologyLevel(tagName) ? 'target-only' : 'removed'
 		case 'revision':
 			return removalBase.uuids.has(lineage) ? 'removed' : 'target-only'
 		case 'none':
@@ -61,6 +65,11 @@ export function classifyUnmatched(params: ClassifyUnmatchedParams): UnmatchedCla
 				detail: `classifyUnmatched: unhandled removal base ${String(removalBase satisfies never)}`,
 			})
 	}
+}
+
+/** Whether a tag is a level of the topology (a substation, a voltage level, a bay). */
+function isTopologyLevel(tagName: string): boolean {
+	return (TOPOLOGY_STRUCTURAL_TAGS as readonly string[]).includes(tagName)
 }
 
 /**

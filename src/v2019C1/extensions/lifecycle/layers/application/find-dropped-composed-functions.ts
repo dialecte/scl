@@ -41,7 +41,12 @@ export async function findDroppedComposedFunctions(
 			if (!composedFunction || listed.has(composedFunction.id)) continue
 			const lineage = await reader.any.getAttribute(composedFunction, { name: matchKey })
 			if (!lineage) continue
-			const change = classifyUnmatched({ lineage, inSource: composed.has(lineage), removalBase })
+			const change = classifyUnmatched({
+				tagName: composedFunction.tagName,
+				lineage,
+				inSource: composed.has(lineage),
+				removalBase,
+			})
 			if (change === 'still-held') continue
 			if (await carriesOwnProvenance(reader, composedFunction)) continue
 			const lastReferred = await isLastReferrer(reader, {

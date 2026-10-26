@@ -161,6 +161,7 @@ async function classifyPrimaries(
 		const lineage = await reader.any.getAttribute(primary, { name: matchKey })
 		if (!lineage) continue
 		const change = classifyUnmatched({
+			tagName: primary.tagName,
 			lineage,
 			inSource: sourcePrimaryUuids.has(lineage),
 			removalBase,

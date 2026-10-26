@@ -182,6 +182,7 @@ export async function reconcileSatellites(
 			attributes: { uuid: lineage },
 		})
 		const unmatched = classifyUnmatched({
+			tagName: instanceRef.tagName,
 			lineage,
 			inSource: stillInSource !== undefined,
 			removalBase,

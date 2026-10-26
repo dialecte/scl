@@ -209,6 +209,7 @@ export async function foldSatelliteCompanions(
 			attributes: { uuid: lineage },
 		})
 		const unmatched = classifyUnmatched({
+			tagName: instanceRef.tagName,
 			lineage,
 			inSource: stillInSource !== undefined,
 			removalBase: params.removalBase,

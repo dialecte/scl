@@ -479,7 +479,12 @@ async function collectRemoved(
 	if (omit?.includes(node.tagName)) return
 	const lineage = await tx.any.getAttribute(node, { name: matchKey })
 	const unmatched = lineage
-		? classifyUnmatched({ lineage, inSource: sourceUuids.has(lineage), removalBase })
+		? classifyUnmatched({
+				tagName: node.tagName,
+				lineage,
+				inSource: sourceUuids.has(lineage),
+				removalBase,
+			})
 		: 'still-held'
 	// one atomic group, its subtree cascading with it (do not descend): a removal is written unless it was
 	// skipped, an element of the project's own only when its removal was accepted
