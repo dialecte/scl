@@ -3,87 +3,61 @@ import { toRawRecord } from '@dialecte/core/helpers'
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAGS, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { readAttribute } from '@/v2019C1/helpers'
 
+import type { OrphanedRef, RefPairs } from './orphaned-refs.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 // ── Orphaned refs cleanup ─────────────────────────────────────────────────────
 
 /**
- * Collects all UUIDs from the deleted subtree, then for each external ref
- * pointing to one of those UUIDs:
- * - KEEP_ON_ORPHAN_REFS → clear uuid / path / companion attrs.
- * - Others → stage delete + update parent's children list.
- *
- * Refs that are themselves inside the deleted subtree are skipped —
- * the cascade in stageDelete handles them.
+ * Stage what {@link findOrphanedRefs} finds for the deleted subtree: a reference keeping its content has its uuid,
+ * path and companion attributes cleared; any other is deleted and its parent's children list updated.
  */
 export async function cleanOrphanedRefs<GenericElement extends Scl.ElementsOf>(params: {
 	record: Scl.RawRecord<GenericElement>
 	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
+	const { query } = params
+	const operations: Scl.Operation[] = []
+	for (const orphaned of await findOrphanedRefs(params)) {
+		if (orphaned.effect === 'cleared') {
+			operations.push(buildClearedAttributesOp(orphaned.record, orphaned.attributes))
+		} else {
+			operations.push(...(await buildDeleteRefOps(orphaned.record, query)))
+		}
+	}
+	return operations
+}
+
+/**
+ * The references outside a subtree that name an element of it, each with what its deletion does to them:
+ * `cleared` for a reference keeping its content (`KEEP_ON_ORPHAN_REFS`: its uuid, path and companion attributes go),
+ * `deleted` for any other. A reference inside the subtree goes with it. Read only: the delete hook stages it, a
+ * report lists it.
+ */
+export async function findOrphanedRefs<GenericElement extends Scl.ElementsOf>(params: {
+	record: Scl.RawRecord<GenericElement>
+	query: Core.Query<Config>
+}): Promise<OrphanedRef[]> {
 	const { record, query } = params
 
 	const subtreeIds = new Set<string>()
 	const subtreeUuids = new Set<string>()
 	await collectSubtreeData({ record, query, ids: subtreeIds, uuids: subtreeUuids })
-
 	if (subtreeUuids.size === 0) return []
 
-	const operations: Scl.Operation[] = []
-
+	const orphaned: OrphanedRef[] = []
 	for (const refTagName of REFERENCE_TAGS) {
-		const ops = await processRefTagName({ refTagName, subtreeIds, subtreeUuids, query })
-		operations.push(...ops)
+		const refPairs = UUID_REFERENCE_PAIRS[refTagName]
+		for (const refRecord of await query.getRecordsByTagName(refTagName)) {
+			if (subtreeIds.has(refRecord.id)) continue
+			const attributes = collectOrphanedAttrs({ refPairs, refRecord, subtreeUuids })
+			if (attributes.size === 0) continue
+			const effect = KEEP_ON_ORPHAN_REFS.has(refTagName) ? 'cleared' : 'deleted'
+			orphaned.push({ record: refRecord, effect, attributes })
+		}
 	}
-
-	return operations
-}
-
-// ── Per-tagName scanning ──────────────────────────────────────────────────────
-
-async function processRefTagName(params: {
-	refTagName: keyof typeof UUID_REFERENCE_PAIRS
-	subtreeIds: Set<string>
-	subtreeUuids: Set<string>
-	query: Core.Query<Config>
-}): Promise<Scl.Operation[]> {
-	const { refTagName, subtreeIds, subtreeUuids, query } = params
-
-	const refPairs = UUID_REFERENCE_PAIRS[refTagName]
-	const refRecords = await query.getRecordsByTagName(refTagName)
-	const operations: Scl.Operation[] = []
-
-	for (const refRecord of refRecords) {
-		if (subtreeIds.has(refRecord.id)) continue
-
-		const ops = await processOrphanedRef({ refTagName, refRecord, refPairs, subtreeUuids, query })
-		operations.push(...ops)
-	}
-
-	return operations
-}
-
-// ── Per-ref orphan check ──────────────────────────────────────────────────────
-
-type RefPairs = (typeof UUID_REFERENCE_PAIRS)[keyof typeof UUID_REFERENCE_PAIRS]
-
-async function processOrphanedRef(params: {
-	refTagName: keyof typeof UUID_REFERENCE_PAIRS
-	refRecord: Scl.TrackedRecord<Scl.ElementsOf>
-	refPairs: RefPairs
-	subtreeUuids: Set<string>
-	query: Core.Query<Config>
-}): Promise<Scl.Operation[]> {
-	const { refTagName, refRecord, refPairs, subtreeUuids, query } = params
-
-	const attrsToClear = collectOrphanedAttrs({ refPairs, refRecord, subtreeUuids })
-	if (attrsToClear.size === 0) return []
-
-	if (KEEP_ON_ORPHAN_REFS.has(refTagName)) {
-		return [buildClearedAttributesOp(refRecord, attrsToClear)]
-	}
-
-	return buildDeleteRefOps(refRecord, query)
+	return orphaned
 }
 
 // ── Attribute collection ──────────────────────────────────────────────────────
@@ -118,7 +92,7 @@ function collectOrphanedAttrs(params: {
 
 function buildClearedAttributesOp(
 	refRecord: Scl.TrackedRecord<Scl.ElementsOf>,
-	attributesToClear: Set<string>,
+	attributesToClear: ReadonlySet<string>,
 ): Scl.Operation {
 	const updatedAttributes = refRecord.attributes.filter(
 		(attribute) => !attributesToClear.has(attribute.name),

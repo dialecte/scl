@@ -1,4 +1,4 @@
-import { reportAsd, reportFsd, reportSsd } from './query'
+import { listRemovalSideEffects, reportAsd, reportFsd, reportSsd } from './query'
 import { reportTargetOf } from './report-target'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -65,6 +65,9 @@ export async function report(
 				: undefined
 		group.editableAttributes = editableAttributes(tagName, definition?.attributes.sequence)
 	}
+
+	// what a removal makes the delete hooks do outside it, read before anything is decided
+	await listRemovalSideEffects(query, { groups: allGroups(report) })
 
 	// a mapping nothing is decided for is the consumer's to choose before anything is written
 	if (report.mappings.some((mapping) => !mapping.mapping)) report.needsDecisions = true

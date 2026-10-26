@@ -12,6 +12,7 @@ export type {
 	GroupDecision,
 	KeptAttributeChange,
 	KeptAttributeReason,
+	RemovalSideEffect,
 	ReportedElement,
 	ReportTarget,
 	ReportTargetField,

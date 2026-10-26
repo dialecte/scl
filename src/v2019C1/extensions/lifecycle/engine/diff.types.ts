@@ -112,6 +112,19 @@ export type DecisionGroup = {
 	 * report surface tags it.
 	 */
 	editableAttributes?: EditableAttribute[]
+	/**
+	 * What accepting the group makes the delete hooks do outside what it removes: each reference elsewhere in the
+	 * project naming an element the group removes, `deleted`, or `cleared` when it keeps its content (a signal input,
+	 * a data setting: its uuid, path and companion attributes go). Read only: nothing to decide, the apply writes it
+	 * with the removal. Absent when nothing outside is touched, or the group removes nothing.
+	 */
+	sideEffects?: RemovalSideEffect[]
+}
+
+/** A reference outside what a group removes that the removal deletes or clears: see `DecisionGroup.sideEffects`. */
+export type RemovalSideEffect = {
+	element: { tagName: string; id: string }
+	effect: 'deleted' | 'cleared'
 }
 
 /**

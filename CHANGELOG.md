@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`DecisionGroup.sideEffects`: what a removal does outside it** (`RemovalSideEffect`). A group that removes elements lists the references elsewhere in the project naming one of them, each `deleted` or `cleared` (a reference keeping its content: a signal input, a data setting) — what the delete hooks then do when the removal is accepted, read with the same rule, before anything is decided. Read only: nothing to decide, `apply` is unchanged.
+
 - **`DiffReport.target`: what a report was made for** (`ReportTarget`, `ReportTargetField`, `ReportedElement`). `query.lifecycle.report` writes the record ids of the project and the template documents, the `verb`, the `ref` and the `anchor`, the `scenario` (`'template'` when none was asked for) and the `targetInstance` when one was asked for.
 
 - **The report lists an addition that cannot be written: `DiffNode.identityCollision`** (`IdentityCollision`: `constraint`, `fields`, `collidesWith`). An element a template update adds that collides with one the instance holds on a key none of whose fields can be changed (an `LNode` the project added with the same class, instance, prefix, device and IED) carries it, and the report needs decisions. Its group can be skipped, or accepted with the removal of the project's element; `apply` refuses it otherwise with `IDENTITY_COLLISION` before anything is written.
