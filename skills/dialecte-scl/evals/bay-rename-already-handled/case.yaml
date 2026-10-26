@@ -1,0 +1,6 @@
+schema_version: '1.1'
+name: bay-rename-already-handled
+expected_outcome: |
+  Recognises that @dialecte/scl's afterUpdated hook (ref-paths) already rewrites every referencing
+  path when a target or one of its ancestors is renamed, so no rename-follow-up function is
+  needed; at most proposes a test proving the behaviour, and writes no hand-rolled path rewriting.

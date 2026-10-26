@@ -14,6 +14,10 @@ $ pnpm add @dialecte/scl
 
 :::
 
+Working with a coding agent? The package ships the `dialecte-scl` skill (SCL verbs, what the hooks
+keep coherent); `npx @dialecte/cli skills sync` installs it with core's skills for your agent. See
+[Working with AI agents](https://dialecte.github.io/core/guide/introduction/ai-agents).
+
 ## Step 1 — Create a project
 
 `createSclProject` returns a [`Project`](https://dialecte.github.io/core/api/project) pre-configured with the SCL config, extensions, and hooks. Call `.open(name)` to initialize storage and hydrate state.

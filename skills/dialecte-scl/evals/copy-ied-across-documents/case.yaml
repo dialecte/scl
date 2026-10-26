@@ -1,0 +1,6 @@
+schema_version: '1.1'
+name: copy-ied-across-documents
+expected_outcome: |
+  Uses the existing scl lifecycle transplant primitive (tx.lifecycle.transplant.deep, with
+  applyUuidRemap / its type handling) rather than getTree + deepClone + hand-written type copying
+  and uuid regeneration; follows extension shape fn(tx, { ...params }).
