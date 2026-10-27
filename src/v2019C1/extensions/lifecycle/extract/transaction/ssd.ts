@@ -1,3 +1,4 @@
+import { readScopeInstanceContent } from './instance-content'
 import { postExtractionCleanup } from './post-extraction-cleanup'
 
 import { TEMPLATE_NAME } from '@/v2019C1/constants'
@@ -6,12 +7,7 @@ import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cut
 import { cloneTopologyContent } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { isTopologyLevel } from '@/v2019C1/helpers'
 
-import type {
-	ExtractOptions,
-	ExtractWarning,
-	SsdExtractScope,
-	TemplateFrame,
-} from './extract.types'
+import type { ExtractOptions, ExtractWarning, SsdExtractScope } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -23,9 +19,9 @@ import type * as Core from '@dialecte/core'
  * `Application` + its composed `Function`s + type closure + satellites). The levels above the units
  * are then TEMPLATE-named (the scaffolding marker: the first named levels below it are the
  * instantiable units): the levels above a voltage level or a bay, which is the unit; a substation
- * itself, whose voltage levels are the units. The scaffolding loses its template link, the units
- * too unless the consumer keeps it (what they hold keeps its lineage), uuid refs are repointed and
- * orphans cleaned up.
+ * itself, whose voltage levels are the units. The scaffolding loses its template link; the scope
+ * keeps its own unless the consumer breaks it, which reaches what came with its instance. Uuid refs
+ * are repointed and orphans cleaned up.
  */
 export async function ssd(
 	tx: Core.Transaction<Config>,
@@ -38,7 +34,7 @@ export async function ssd(
 	} & ExtractOptions,
 ): Promise<{ warnings: ExtractWarning[] }> {
 	const { sourceQuery, scopeRef, tool, who, nameStructure } = params
-	const { as = 'new', templateLink = 'break' } = params
+	const { as = 'new', templateLink = 'keep' } = params
 	const root = await tx.getRoot()
 
 	const scopeName = (await sourceQuery.getAttribute(scopeRef, { name: 'name' })) || 'Unnamed'
@@ -71,17 +67,20 @@ export async function ssd(
 	// the levels above the units are the template's scaffolding, TEMPLATE-named: the levels above the scope, and the
 	// scope itself when it is a substation (the top element of a template is named TEMPLATE, its voltage levels are the
 	// named units); the units keep their names
-	const { scaffoldingIds, unitIds } = await readTemplateFrame(sourceQuery, { scopeRef })
-	const unlinked = new Set(templateLink === 'break' ? unitIds : [])
+	const scaffoldingIds = await readScaffoldingIds(sourceQuery, { scopeRef })
+	const unlinked =
+		templateLink === 'break'
+			? await readScopeInstanceContent(sourceQuery, { scopeRef })
+			: new Set<string>()
 	for (const levelId of scaffoldingIds) {
 		unlinked.add(levelId)
 		const target = frameIndex.get(levelId)
 		if (target) await tx.update(target, { attributes: { name: TEMPLATE_NAME } })
 	}
 
-	// the units are a new template, the scaffolding above them loses its template link (the units keep theirs when the
-	// consumer says), what the units hold keeps its lineage; the cloned uuid refs are repointed across ALL clones, before
-	// cleanup reads them to detect orphans
+	// the scaffolding loses its template link; the scope keeps its own unless the consumer breaks it: then the scope and
+	// what came with its instance lose it, an application or a function placed from its own file keeps its link; the
+	// cloned uuid refs are repointed across ALL clones, before cleanup reads them to detect orphans
 	await finalizeClonedIdentity(tx, { cloneMappings, mode: 'strip', unlinked, redirectMappings })
 
 	await postExtractionCleanup(tx)
@@ -90,26 +89,19 @@ export async function ssd(
 }
 
 /**
- * The levels of the scope's frame the template names TEMPLATE (`scaffolding`), and the named levels below them it is
- * instantiated from (`units`): a substation is scaffolding, its voltage levels the units; a voltage level or a bay is
- * the unit, the levels above it scaffolding.
+ * The levels of the scope's frame the template names TEMPLATE, its scaffolding (source record ids): the levels above the
+ * scope, and a substation scope itself, whose voltage levels are the named units.
  */
-async function readTemplateFrame(
+async function readScaffoldingIds(
 	sourceQuery: Core.Query<Config>,
 	params: { scopeRef: SsdExtractScope },
-): Promise<TemplateFrame> {
+): Promise<string[]> {
 	const { scopeRef } = params
 	const ancestors = await sourceQuery.findAncestors(scopeRef, { stopAtTagName: 'Substation' })
 	const above = ancestors
 		.filter((ancestor) => isTopologyLevel(ancestor.tagName))
 		.map((ancestor) => ancestor.id)
-	if (scopeRef.tagName !== 'Substation') return { scaffoldingIds: above, unitIds: [scopeRef.id] }
-
-	const voltageLevels = await sourceQuery.getChildren(scopeRef, 'VoltageLevel')
-	return {
-		scaffoldingIds: [...above, scopeRef.id],
-		unitIds: voltageLevels.map((voltageLevel) => voltageLevel.id),
-	}
+	return scopeRef.tagName === 'Substation' ? [...above, scopeRef.id] : above
 }
 
 /** IED / Communication are dropped by the SSD extract until the IED/ISD layer lands: counted in one warning. */

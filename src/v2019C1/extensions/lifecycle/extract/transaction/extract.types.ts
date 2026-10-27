@@ -14,9 +14,9 @@ export type ExtractOptions = {
 	 */
 	as?: FileStart
 	/**
-	 * The element extracted (the function, the application, the level) loses its template link (`'break'`, default:
-	 * its `templateUuid`, `originUuid` and its own file reference go), or keeps it (`'keep'`). What it holds keeps its
-	 * lineage either way.
+	 * The element extracted (the function, the application, the level) keeps its template link (`'keep'`, default: its
+	 * `templateUuid`, `originUuid` and its own file reference), or loses it (`'break'`) — and so does what came with its
+	 * instance, except an element recording a source file of its own, with what it holds.
 	 */
 	templateLink?: TemplateLink
 }
@@ -32,12 +32,6 @@ export type ExtractWarning = {
 
 /** The element an SSD is extracted from: a substation, a voltage level or a bay. */
 export type SsdExtractScope = Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
-
-/** The levels of an extracted SSD's frame, by source record id: the TEMPLATE-named scaffolding, the named units below. */
-export type TemplateFrame = {
-	scaffoldingIds: readonly string[]
-	unitIds: readonly string[]
-}
 
 /**
  * What a function may hold besides its logical nodes and subfunctions, each optional in an FSD: what its logical nodes

@@ -9,7 +9,7 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test'
 
-import type { SsdExtractScope } from './extract.types'
+import type { SsdExtractScope, TemplateLink } from './extract.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
@@ -20,7 +20,11 @@ const scopeRef = { tagName: 'Bay', id: 'bay-1' } as Scl.Ref<'Bay'>
 // the namespace a single-line-diagram editor writes its layout in
 const ESLD = 'https://transpower.co.nz/SCL/SSD/SLD/v0'
 
-type TestCase = SclTest.BaseXmlTestCase & { targetXml: string; scope?: SsdExtractScope }
+type TestCase = SclTest.BaseXmlTestCase & {
+	targetXml: string
+	scope?: SsdExtractScope
+	templateLink?: TemplateLink
+}
 
 // Extract a bay-typical from a project: the produced SSD has an SSD Header, a TEMPLATE process
 // structure, and - by consuming the application layer - the Bay's Application plus its composed
@@ -31,7 +35,7 @@ const sourceXml = /* xml */ `
 			<VoltageLevel name="V1" templateUuid="vl-tmpl-uuid" ${id}="vl-1">
 				<Bay name="B1" templateUuid="bay-tmpl-uuid" ${id}="bay-1">
 					<Private type="eIEC61850-6-100" ${id}="bay-priv">
-						<eIEC61850-6-100:Application name="CB" type="HV" uuid="app-src-uuid" ${id}="app-1">
+						<eIEC61850-6-100:Application name="CB" type="HV" uuid="app-src-uuid" templateUuid="app-tmpl-uuid" ${id}="app-1">
 							<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="fr-1">
 								<eIEC61850-6-100:FunctionRoleContent roleInst="1" ${id}="frc-1">
 									<eIEC61850-6-100:FunctionRef function="S1/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-1"/>
@@ -41,7 +45,7 @@ const sourceXml = /* xml */ `
 					</Private>
 				</Bay>
 			</VoltageLevel>
-			<Function name="Prot" uuid="fn-src-uuid" ${id}="fn-1">
+			<Function name="Prot" uuid="fn-src-uuid" templateUuid="fn-tmpl-uuid" ${id}="fn-1">
 				<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" uuid="ln-src-uuid" ${id}="lnode-1"/>
 			</Function>
 		</Substation>
@@ -67,15 +71,13 @@ describe('extract.ssd', () => {
 					// ancestors stay TEMPLATE; the selected entrypoint is the named, reusable root
 					'//default:Substation[@name="TEMPLATE"]',
 					'//default:VoltageLevel[@name="TEMPLATE"]',
-					'//default:Bay[@name="B1"]',
+					'//default:Bay[@name="B1"][@templateUuid="bay-tmpl-uuid"]',
 					'//default:Bay//v2019C1:Application[@name="CB"]',
 					'//default:Substation/default:Function[@name="Prot"]',
 					'//default:DataTypeTemplates/default:LNodeType[@id="CSWI_Type"]',
 				],
-				unexpectedQueries: [
-					// the exported root's templateUuid is stripped - a fresh, reusable template
-					'//default:Bay[@templateUuid]',
-				],
+				// the bay extracted stays an instance of its template unless the consumer breaks the link
+				unexpectedQueries: ['//default:VoltageLevel[@templateUuid]'],
 			},
 		"keeps the attributes of a namespace the dialecte does not declare (a diagram editor's esld:x / esld:h)":
 			{
@@ -123,6 +125,52 @@ describe('extract.ssd', () => {
 	runSclTestCases.withExport({ testCases, act })
 })
 
+/** A bay's application composes a function of the substation: it came with the bay's instance. */
+describe('extract.ssd - a bay, the template link', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'by default: the bay and the function its application composes keep their link': {
+			sourceXml,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			expectedQueries: [
+				'//default:Bay[@name="B1"][@templateUuid="bay-tmpl-uuid"]',
+				'//v2019C1:Application[@name="CB"][@templateUuid="app-tmpl-uuid"]',
+				'//default:Function[@name="Prot"][@templateUuid="fn-tmpl-uuid"]',
+			],
+		},
+		'templateLink break: the bay and the function its application composes lose it': {
+			sourceXml,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			templateLink: 'break',
+			expectedQueries: [
+				'//default:Bay[@name="B1"][not(@templateUuid)]',
+				// an application recording no file of its own came with the bay
+				'//v2019C1:Application[@name="CB"][not(@templateUuid)]',
+				'//default:Function[@name="Prot"][not(@templateUuid)]',
+			],
+		},
+	}
+
+	async function act({
+		source,
+		target,
+		testCase,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		await target.transaction(async function extractBay(tx) {
+			await ssd(tx, {
+				sourceQuery: source.query,
+				scopeRef,
+				tool: 'TEST',
+				who: 'test',
+				...(testCase.templateLink ? { templateLink: testCase.templateLink } : {}),
+			})
+		})
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
 /** A substation is the template's scaffolding: renamed TEMPLATE, its voltage levels the named units. */
 describe('extract.ssd - a substation', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -138,9 +186,34 @@ describe('extract.ssd - a substation', () => {
 				'//default:Substation[@templateUuid]',
 			],
 		},
+		'by default: the voltage level and its bay keep their template link, the TEMPLATE substation has none':
+			{
+				sourceXml,
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				expectedQueries: [
+					'//default:VoltageLevel[@name="V1"][@templateUuid="vl-tmpl-uuid"]/default:Bay[@name="B1"][@templateUuid="bay-tmpl-uuid"]',
+					'//default:Function[@name="Prot"][@templateUuid="fn-tmpl-uuid"]',
+				],
+				unexpectedQueries: ['//default:Substation[@templateUuid]'],
+			},
+		'templateLink break: the voltage level, its bay and what came with the substation lose it': {
+			sourceXml,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			templateLink: 'break',
+			expectedQueries: [
+				'//default:VoltageLevel[@name="V1"][not(@templateUuid)]/default:Bay[@name="B1"][not(@templateUuid)]',
+				// the substation's own function, composed by the bay's application
+				'//default:Substation/default:Function[@name="Prot"][not(@templateUuid)]',
+			],
+			unexpectedQueries: ['//default:Substation[@templateUuid]'],
+		},
 	}
 
-	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+	async function act({
+		source,
+		target,
+		testCase,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		await target.transaction(async function extractSubstation(tx) {
 			await ssd(tx, {
@@ -148,6 +221,7 @@ describe('extract.ssd - a substation', () => {
 				scopeRef: { tagName: 'Substation', id: 'sub-1' },
 				tool: 'TEST',
 				who: 'test',
+				...(testCase.templateLink ? { templateLink: testCase.templateLink } : {}),
 			})
 		})
 		return { assertOn: 'target' }

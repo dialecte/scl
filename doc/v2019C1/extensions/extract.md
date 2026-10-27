@@ -31,7 +31,7 @@ tx.lifecycle.extract.fsd(params: {
   who: string
   nameStructure?: string
   as?: 'new' | 'revision'           // default 'new' — see Options
-  templateLink?: 'keep' | 'break'   // default 'break' — see Options
+  templateLink?: 'keep' | 'break'   // default 'keep' — see Options
   sections?: FunctionSections       // every section kept by default — see Options
   placement?: 'source-level' | 'substation' | 'function-template' // default 'source-level' — see below
 }): Promise<void>
@@ -47,7 +47,7 @@ Steps:
    - `'function-template'`: as a `FunctionTemplate` (its subfunctions as `SubFunctionTemplate`) in the document root's `eIEC61850-6-100` `Private`, with no level: a template that may be placed at every level. The dialecte writes in a function template its logical nodes (with what they specify), its subfunction templates and its equipment, and no `Private` yet: a function holding anything else at its own or a subfunction's level (labels, process resources, power system relations, behaviour descriptions, variables, a subfunction's `FunctionSclRef`, a vendor `Private`), or classified in a category (a category has no level to sit at), is refused with `FUNCTION_TEMPLATE_CANNOT_HOLD` (`SCL2004`, `meta: { tags }`), nothing written: leave those sections out, or place it at a level. The function's own `FunctionSclRef` is refused while its template link is kept; with `templateLink: 'break'` it goes with the link.
 4. Clone the function via `cloneFunction` (layers/function) — promote `SubFunction`→`Function`, leave out the sections the caller leaves out, import the type closure.
 5. Clone the referenced `FunctionCategory` trees at their structural level (unless `sections.categories` is `false`).
-6. Write the identity ([`identity.writeIdentity`](./identity#writeidentity) in `strip` mode): the function extracted is a new template, its template link (`templateUuid`) is broken and the file it was placed from (its own `FunctionSclRef`) is no longer recorded; what it holds and its categories keep their lineage, and a subfunction placed from another FSD keeps its `FunctionSclRef`. The cloned uuid references are repointed.
+6. Write the identity ([`identity.writeIdentity`](./identity#writeidentity) in `strip` mode): by default the function and what it holds keep their lineage and the files they record. With `templateLink: 'break'` the function and what came with its instance lose their template link, and the function its own `FunctionSclRef`; a subfunction placed from another FSD keeps its lineage and its `FunctionSclRef`, with what it holds. The categories keep their lineage. The cloned uuid references are repointed.
 7. Run post-extraction clean-up (orphan UUID refs, reset LNode bindings to `None`, prune empty containers).
 
 ```ts
@@ -84,7 +84,7 @@ Steps:
 2. Write the ASD history header (`fileType: 'ASD'`), the file named after the application (`ASD_<name>`).
 3. Clone the Application's functions (via `deep`, with the equipment they hold unless `sections.equipment` is `false`) and their categories into the structure.
 4. Clone the remaining referenced satellites, placing each by mirroring its source hierarchy — a satellite owned by a function lands back under that function's clone — and cloning each target exactly once (satellites already brought in with a function are reused, not duplicated).
-5. Write the identity: the `Application` extracted loses its template link (`templateUuid` and `originUuid`) and its own `ApplicationSclRef`; its functions, roles and categories keep their lineage, and its functions the `FunctionSclRef` of the FSD each was placed from. The cloned uuid references are repointed.
+5. Write the identity: by default the `Application` and what it composes keep their lineage and the files they record. With `templateLink: 'break'` the application loses its template link (`templateUuid` and `originUuid`) and its own `ApplicationSclRef`, and so does what came with its instance — what it holds, and a function it composes that records no file of its own; a function placed from its FSD keeps its lineage and `FunctionSclRef`. The application's own function roles came with it; the allocation roles and the categories it refers to are shared and keep their lineage. The cloned uuid references are repointed.
 6. Run post-extraction clean-up.
 
 ### `ssd`
@@ -108,7 +108,7 @@ Steps:
 1. Write the SSD history header (`fileType: 'SSD'`).
 2. Gather the scope's content via `cloneTopologyContent` (layers/topology): it REPRODUCES the source's own structural frame above and at the scope — only the levels the scope actually has (`Substation`/`VoltageLevel`/`Bay`, each with its own `BayType`, equipment and connectivity, including `ConnectivityNode` so the single-line diagram stays connected) — then consumes the application/function layers for the Applications and the Functions they compose, plus any standalone Functions, each with its type closure. Several voltage levels/bays in the scope each get their own reproduced level, never collapsed together.
 3. TEMPLATE-name the scaffolding: the reproduced levels above the units — above a voltage level or a bay, and a substation itself. The units keep their source names: they are the elements instantiated.
-4. Write the identity: the units and the `TEMPLATE` levels above them lose their template link; what the units hold — equipment, applications, functions — keeps its lineage, and its applications and functions the `ApplicationSclRef` / `FunctionSclRef` of the file each was placed from. Repoint cloned UUID references and run post-extraction clean-up.
+4. Write the identity: the `TEMPLATE` levels lose their template link; the units and what they hold keep theirs by default. With `templateLink: 'break'` the element extracted and what came with its instance lose it — what it holds, and the functions its applications compose wherever they sit, unless an element records a file of its own; an application or a function placed from its file keeps its lineage and its `ApplicationSclRef` / `FunctionSclRef`. Repoint cloned UUID references and run post-extraction clean-up.
 
 Returns the warnings gathered while extracting (`ExtractWarning`, a `code` and its data, for the caller to word) — currently one, when the source has `IED` / `Communication` sections, which are not yet carried into an SSD:
 
@@ -137,7 +137,7 @@ The three extracts take `as` and `templateLink` (`ExtractOptions`); `extract.fsd
 
   A section is left out at every depth of the function. A reference to what a section left out is cleaned up with the rest (a `PowerSystemRelation` to the function's equipment goes with the equipment).
 
-- `templateLink` — whether the element extracted stays an instance of the template it was made from. `'break'` (default): it loses its `templateUuid` and `originUuid`. `'keep'`: it keeps them, and the file reference it records. What it holds keeps its lineage and its file references either way; the `TEMPLATE` levels above an SSD's entrypoint carry none.
+- `templateLink` — whether the element extracted stays an instance of the template it was made from. `'keep'` (default): it keeps its `templateUuid` and `originUuid`, and the file reference it records — a copy of an instance is still one. `'break'`: it loses them, and so does what came with its instance (the elements below it, and for an application the functions it composes, unless an element records a source file of its own: a subfunction placed from another FSD, an application or a function placed from its file keeps its lineage and file reference, with what it holds). The `TEMPLATE` levels of an SSD carry no lineage either way.
 
 ### `ensureSubstationTemplateStructure`
 
@@ -179,9 +179,10 @@ lifecycle/
     ensure-substation-structure.ts , post-extraction-cleanup.ts
     function-sections.ts      the sections of a function an extract leaves out
     function-placement.ts     where an FSD holds its function, what a function template cannot hold
+    instance-content.ts       what came with an instance: what breaking its template link reaches
 ```
 
-> `transplant.deep` is the **mechanism**; `layers/` hold the per-layer **take-over**; `extract` adds the extract-direction **policy** (pruning, TEMPLATE placement, history, the root's template link broken, clean-up). The type engine it composes is [`dataModel.importTypes`](./data-model#importtypes); the content-addressing behind that is [`signature.elementSignature`](./signature).
+> `transplant.deep` is the **mechanism**; `layers/` hold the per-layer **take-over**; `extract` adds the extract-direction **policy** (the sections left out, the placement, history, the template link kept or broken, clean-up). The type engine it composes is [`dataModel.importTypes`](./data-model#importtypes); the content-addressing behind that is [`signature.elementSignature`](./signature).
 
 ## Exported types
 

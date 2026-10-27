@@ -88,42 +88,6 @@ describe('fsd', () => {
 		})
 	})
 
-	// ── Lineage: the extracted root is the new template; children keep provenance ──
-	// A function's subfunctions may themselves be instantiated from other
-	// FSDs, identified via SclFileReference + UUID. So the root's own `templateUuid` is
-	// stripped (it becomes a fresh template) while child `templateUuid` is PRESERVED.
-	describe('lineage: root becomes a fresh template, children keep composition provenance', () => {
-		const testCases: SclTest.TestCases<ExtractFunctionCase> = {
-			'root Function templateUuid stripped; child SubFunction templateUuid preserved': {
-				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
-						<Substation ${id}="sub1" name="TEMPLATE">
-							<VoltageLevel ${id}="vl1" name="TEMPLATE">
-								<Bay ${id}="bay1" name="TEMPLATE"/>
-							</VoltageLevel>
-							<Function ${id}="func1" name="Prot" uuid="fn-uuid" templateUuid="fn-tpl">
-								<SubFunction ${id}="subf1" name="Sub" uuid="sub-uuid" templateUuid="sub-tpl"/>
-							</Function>
-						</Substation>
-					</SCL>
-				`,
-				targetXml: emptyTargetXml,
-				functionId: 'func1',
-				expectedQueries: [
-					'//default:Function[@name="Prot"]',
-					// a child subfunction may itself be instantiated from another FSD — keep its templateUuid
-					'//default:SubFunction[@name="Sub"][@templateUuid="sub-tpl"]',
-				],
-				unexpectedQueries: [
-					// the extracted root is the new template — its own templateUuid is stripped
-					'//default:Function[@name="Prot"][@templateUuid]',
-				],
-			},
-		}
-
-		runSclTestCases.withExport<ExtractFunctionCase>({ testCases, act: extractFunction })
-	})
-
 	describe('what the function holds', () => {
 		const testCases: SclTest.TestCases<ExtractFunctionCase> = {
 			'a text-only vendor Private on the function → kept with its text': {

@@ -19,6 +19,14 @@ export async function findOwnProvenance(
 	return tree ? collectOwnProvenance(tree) : []
 }
 
+/**
+ * Whether an element records a source file of its own (its tree read): a function or an application placed from a
+ * template file, as opposed to one that came with the instance of what holds it.
+ */
+export function holdsOwnProvenance(params: { tree: AnyTreeRecord }): boolean {
+	return collectOwnProvenance(params.tree).length > 0
+}
+
 function collectOwnProvenance(node: AnyTreeRecord): OwnProvenance[] {
 	const found: OwnProvenance[] = []
 	for (const child of node.tree) {

@@ -1,5 +1,6 @@
 import { assertFunctionTemplateHolds, placeFunction } from './function-placement'
 import { keepsSection, omitOfSections } from './function-sections'
+import { readInstanceContent } from './instance-content'
 import { postExtractionCleanup } from './post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
@@ -25,7 +26,7 @@ export async function fsd(
 	} & FsdExtractOptions,
 ): Promise<void> {
 	const { sourceQuery, functionRef, tool, who, nameStructure, sections } = params
-	const { as = 'new', templateLink = 'break', placement = 'source-level' } = params
+	const { as = 'new', templateLink = 'keep', placement = 'source-level' } = params
 	const omit = omitOfSections({ sections })
 	const withCategories = keepsSection({ sections, section: 'categories' })
 
@@ -75,14 +76,18 @@ export async function fsd(
 		? await cloneFunctionCategories(tx, { sourceQuery, functionRef, structure })
 		: { cloneMappings: [], redirectMappings: [] }
 
-	// the function extracted is a new template: its own template link is broken unless the consumer keeps it, what
-	// it holds keeps its lineage (a subfunction may be instantiated from another FSD); the cloned uuid refs (e.g.
+	// the function extracted keeps its template link unless the consumer breaks it: then the function and what came with
+	// its instance lose it, a subfunction placed from another FSD keeps its own; the cloned uuid refs (e.g.
 	// FunctionCatRef -> the cloned Function) are repointed across ALL clones of this operation, before cleanup reads
 	// them to detect orphans
+	const unlinked =
+		templateLink === 'break'
+			? await readInstanceContent(sourceQuery, { roots: [functionRef] })
+			: new Set<string>()
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: [...functionMappings, ...categoryMappings],
 		mode: 'strip',
-		unlinked: new Set(templateLink === 'break' ? [functionRef.id] : []),
+		unlinked,
 		redirectMappings,
 	})
 	// nor does it record the file it was placed from any more; what it holds keeps the files it records

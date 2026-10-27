@@ -39,6 +39,16 @@
 			"line": 129,
 			"mutation": "StringLiteral: 'The template holds several elements to instantiate: the one to act on is to be chosen' -> \"\"",
 			"equivalent": "the refusal is told by its key and code, which the tests assert; the message is prose for the reader"
+		},
+		"ebccbb8c183debff": {
+			"line": 134,
+			"mutation": "StringLiteral: 'SCL2004' -> \"\"",
+			"equivalent": "an error table entry: a module constant read once when the module loads, before a mutant is switched on (the fast tier imports once); the key and meta are what the rows read"
+		},
+		"762afad7e4eaffc3": {
+			"line": 135,
+			"mutation": "StringLiteral: 'A function template cannot hold what the function holds' -> \"\"",
+			"equivalent": "an error table entry's message: free text for a reader, read once when the module loads"
 		}
 	},
 	"src/v2019C1/extensions/clean-up/transaction/prune-empty-containers.ts": {
@@ -607,6 +617,13 @@
 			"equivalent": "writes an absent collision as undefined, which every reader treats as none"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/engine/instance-tag.constants.ts": {
+		"44ddb61491be991f": {
+			"line": 12,
+			"mutation": "ArrowFunction: ([template, instance]) => [instance, template] -> () => undefined",
+			"equivalent": "a module constant derived once when the module loads, before a mutant is switched on (the fast tier imports once); the function-template rows read the reversed map"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/engine/match-child.ts": {
 		"ce5cfbd7b7e461f5": {
 			"line": 122,
@@ -973,6 +990,16 @@
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/extract/transaction/asd.ts": {
+		"cdc112f815531e62": {
+			"line": 27,
+			"mutation": "StringLiteral: 'keep' -> \"\"",
+			"equivalent": "the default is read only as === 'break': any other value keeps the link, as 'keep' does"
+		},
+		"7bf7aaf3461e13ba": {
+			"line": 30,
+			"mutation": "StringLiteral: 'Unnamed Application' -> \"\"",
+			"equivalent": "an application's name is required by the schema: the fallback is never read for a valid source"
+		},
 		"4335da37624ef25b": {
 			"line": 60,
 			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
@@ -985,6 +1012,11 @@
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/extract/transaction/fsd.ts": {
+		"75ff36c53685521a": {
+			"line": 29,
+			"mutation": "StringLiteral: 'keep' -> \"\"",
+			"equivalent": "the default is read only as === 'break': any other value keeps the link, as 'keep' does"
+		},
 		"9f78ad4bdeb84930": {
 			"line": 74,
 			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
@@ -1001,7 +1033,128 @@
 			"equivalent": "the extracted root always has a clone mapping, and deepClone maps the root before its children: the first mapping is the root's"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/extract/transaction/function-placement.ts": {
+		"7f06df88f2c7aaee": {
+			"line": 66,
+			"mutation": "StringLiteral: `${functionRef.tagName} ${functionRef.id} sits at no substation, voltage level or bay: an FSD holding it at its own level is not written yet` -> ",
+			"equivalent": "the refusal's detail is free text for a reader; the key and meta are the contract the rows assert"
+		},
+		"7776199c97843f75": {
+			"line": 88,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "an unwrap list naming a tag no element carries unwraps nothing, as the empty list"
+		},
+		"79462bffc8c88c5f": {
+			"line": 90,
+			"mutation": "ConditionalExpression: tree -> true",
+			"equivalent": "unreachable: the function the caller extracts is a record of the source, its tree is always read"
+		},
+		"c4fcecf945754cb3": {
+			"line": 92,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "ignoring a tag no element carries ignores nothing, as the empty list"
+		},
+		"29cac836a1f20e56": {
+			"line": 103,
+			"mutation": "StringLiteral: `A function template cannot hold ${tags.join(', ')}` -> ``",
+			"equivalent": "the refusal's detail is free text for a reader; the key and meta.tags are the contract the rows assert"
+		},
+		"2eece1ca80fa73cf": {
+			"line": 103,
+			"mutation": "StringLiteral: ', ' -> \"\"",
+			"equivalent": "the separator of the refusal's free-text detail"
+		},
+		"3fca8303e9e1fe3c": {
+			"line": 120,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "ignoring a tag no element carries ignores nothing, as the empty list"
+		},
+		"81b90792ec75e5dc": {
+			"line": 124,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "unreachable fallback: the definition declares children for both template tags the walk reads"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/extract/transaction/function-sections.constants.ts": {
+		"1ea7d16428a5db57": {
+			"line": 21,
+			"mutation": "StringLiteral: 'ConductingEquipment' -> \"\"",
+			"equivalent": "a module constant read once when the module loads, before a mutant is switched on; the equipment row asserts the conducting equipment left out"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/extract/transaction/instance-content.ts": {
+		"24c2cef2a2133e17": {
+			"line": 31,
+			"mutation": "ConditionalExpression: tree -> true",
+			"equivalent": "unreachable: the roots are records of the source, their trees are always read"
+		},
+		"2b3eb568eca0035d": {
+			"line": 36,
+			"mutation": "ConditionalExpression: companion.id !== undefined && (content.has(companion.id) || foreignIds.has(companion.id)) -> false",
+			"equivalent": "a guard against reading twice: a companion the roots hold is in the content already, walking it again adds the same ids; a companion is never foreign (they are filtered before)"
+		},
+		"b4edb11123e48503": {
+			"line": 36,
+			"mutation": "ConditionalExpression: companion.id !== undefined -> true",
+			"equivalent": "a companion is a record: its id is always set"
+		},
+		"736a0d6621a56d34": {
+			"line": 36,
+			"mutation": "EqualityOperator: companion.id !== undefined -> companion.id === undefined",
+			"equivalent": "with the guard off, a companion the roots hold is walked again and adds the same ids"
+		},
+		"c41bd793acd07614": {
+			"line": 36,
+			"mutation": "LogicalOperator: content.has(companion.id) || foreignIds.has(companion.id) -> content.has(companion.id) && foreignIds.has(companion.id)",
+			"equivalent": "a companion is never foreign (filtered before): the second test reads false either way"
+		},
+		"817944efd018298d": {
+			"line": 37,
+			"mutation": "ConditionalExpression: known -> false",
+			"equivalent": "a guard against reading twice: walking a companion the roots hold adds the same ids"
+		},
+		"055bb11a3fbaae2b": {
+			"line": 57,
+			"mutation": "ConditionalExpression: !tree -> false",
+			"equivalent": "unreachable: the scope is a record of the source, its tree is always read"
+		},
+		"21f19fa25cdbfa64": {
+			"line": 67,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "functionUuid has no schema default: 'none' and an empty defaults read the same"
+		},
+		"d3859b2e46f00707": {
+			"line": 69,
+			"mutation": "ConditionalExpression: functionUuid -> true",
+			"equivalent": "every FunctionRef the rows read carries functionUuid; an absent one reads empty and its lookup finds no function"
+		},
+		"ad9266a9c33acee7": {
+			"line": 76,
+			"mutation": "ConditionalExpression: foreignTree -> true",
+			"equivalent": "unreachable: a foreign function was found by its uuid in the source, its tree is always read"
+		},
+		"3cb5af370ed59b6d": {
+			"line": 78,
+			"mutation": "MethodExpression: [...ownedUuids].filter((uuid) => !foreignUuids.has(uuid)) -> [...ownedUuids]",
+			"equivalent": "a function both an application placed from its file and one of the scope compose: the SSD extract clones such a function twice today (open item), so the case gives an invalid file before the filter matters"
+		},
+		"0f712c7f2f77b40a": {
+			"line": 109,
+			"mutation": "ConditionalExpression: record -> true",
+			"equivalent": "unreachable for a coherent source: a composed function's uuid names a function of the file (fixtures are reference-checked)"
+		},
+		"393dcbf961255158": {
+			"line": 118,
+			"mutation": "ConditionalExpression: node.tagName === tagName -> true",
+			"equivalent": "read as applications and references, every element of the scope: only elements carrying functionUuid add a uuid, the references of the scope's applications and categories, which name the functions already composed or elements the extract does not clone"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/extract/transaction/ssd.ts": {
+		"f378a5219d2d57cb": {
+			"line": 37,
+			"mutation": "StringLiteral: 'keep' -> \"\"",
+			"equivalent": "the default is read only as === 'break': any other value keeps the link, as 'keep' does"
+		},
 		"7369f480fd6236e2": {
 			"line": 66,
 			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
@@ -1011,6 +1164,21 @@
 			"line": 70,
 			"mutation": "ConditionalExpression: !isTopologyLevel(ancestor.tagName) -> false",
 			"equivalent": "the ancestors of a level of the topology up to its substation are levels: the guard never skips one"
+		},
+		"bb6a9738c2878b96": {
+			"line": 100,
+			"mutation": "ObjectLiteral: { stopAtTagName: 'Substation' } -> {}",
+			"equivalent": "the scope's ancestors up to the substation are levels; past it (a process, the root) none is a level and the filter drops them: the stop bounds the walk only"
+		},
+		"1a6b8fd6f631cf1c": {
+			"line": 100,
+			"mutation": "StringLiteral: 'Substation' -> \"\"",
+			"equivalent": "the scope's ancestors up to the substation are levels; past it none is: the stop bounds the walk only"
+		},
+		"a69571e591d4a789": {
+			"line": 101,
+			"mutation": "MethodExpression: ancestors\n\t\t.filter((ancestor) => isTopologyLevel(ancestor.tagName)) -> ancestors",
+			"equivalent": "the ancestors of a substation, voltage level or bay up to the substation are all levels: the filter keeps them all"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/instance/named-outside.ts": {
