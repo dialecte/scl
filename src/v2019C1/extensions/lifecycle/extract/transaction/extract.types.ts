@@ -1,3 +1,4 @@
+import type { Scl } from '@/v2019C1/config'
 import type { FileStart } from '@/v2019C1/extensions/history/transaction/start-file.types'
 
 /** Whether the element extracted stays an instance of the template it was made from. */
@@ -26,4 +27,13 @@ export type ExtractOptions = {
 export type ExtractWarning = {
 	code: 'sections-not-carried'
 	counts: { IED: number; Communication: number }
+}
+
+/** The element an SSD is extracted from: a substation, a voltage level or a bay. */
+export type SsdExtractScope = Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
+
+/** The levels of an extracted SSD's frame, by source record id: the TEMPLATE-named scaffolding, the named units below. */
+export type TemplateFrame = {
+	scaffoldingIds: readonly string[]
+	unitIds: readonly string[]
 }

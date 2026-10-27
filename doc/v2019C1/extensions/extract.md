@@ -82,7 +82,7 @@ Steps:
 
 ### `ssd`
 
-Extracts a `Substation`, `VoltageLevel` or `Bay` and its content into a new SSD template document.
+Extracts a `Substation`, `VoltageLevel` or `Bay` and its content into a new SSD template document. A voltage level or a bay is the template's unit: the element another project instantiates from it. A substation is the template's top element, named `TEMPLATE`: each of its voltage levels is a unit (a project instantiating the file names one of them when there are several, or gets `SSD_SCOPE_AMBIGUOUS` listing them). What the substation holds outside its voltage levels (its own functions, power transformers, equipment) is written with the `TEMPLATE` substation and is part of no unit: an instantiation brings it only when an application of the unit composes it.
 
 ```ts
 tx.lifecycle.extract.ssd(params: {
@@ -100,8 +100,8 @@ Steps:
 
 1. Write the SSD history header (`fileType: 'SSD'`).
 2. Gather the scope's content via `cloneTopologyContent` (layers/topology): it REPRODUCES the source's own structural frame above and at the scope — only the levels the scope actually has (`Substation`/`VoltageLevel`/`Bay`, each with its own `BayType`, equipment and connectivity, including `ConnectivityNode` so the single-line diagram stays connected) — then consumes the application/function layers for the Applications and the Functions they compose, plus any standalone Functions, each with its type closure. Several voltage levels/bays in the scope each get their own reproduced level, never collapsed together.
-3. TEMPLATE-name the reproduced ancestors above the selected entrypoint; the entrypoint itself keeps the source name, becoming the reusable root.
-4. Write the identity: the entrypoint and the `TEMPLATE` levels above it lose their template link; what the entrypoint holds — equipment, applications, functions — keeps its lineage, and its applications and functions the `ApplicationSclRef` / `FunctionSclRef` of the file each was placed from. Repoint cloned UUID references and run post-extraction clean-up.
+3. TEMPLATE-name the scaffolding: the reproduced levels above the units — above a voltage level or a bay, and a substation itself. The units keep their source names: they are the elements instantiated.
+4. Write the identity: the units and the `TEMPLATE` levels above them lose their template link; what the units hold — equipment, applications, functions — keeps its lineage, and its applications and functions the `ApplicationSclRef` / `FunctionSclRef` of the file each was placed from. Repoint cloned UUID references and run post-extraction clean-up.
 
 Returns the warnings gathered while extracting (`ExtractWarning`, a `code` and its data, for the caller to word) — currently one, when the source has `IED` / `Communication` sections, which are not yet carried into an SSD:
 

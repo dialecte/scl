@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **An SSD extracted from a substation is a template: the substation is named `TEMPLATE`, its voltage levels are its units** (breaking for a caller expecting the substation's name in the file). `extract.ssd` renamed only the levels above the element extracted, so a substation kept its project name and the file was no template. Its voltage levels keep their names: a project instantiates one of them, naming it when the file holds several (`SSD_SCOPE_AMBIGUOUS` lists them otherwise).
+
 - **`extract.ssd` returns its warnings as data: `ExtractWarning`** (breaking for a caller reading `warnings` as strings). Each is a `code` and what it counts, for the caller to word: `{ code: 'sections-not-carried', counts: { IED, Communication } }` when the source holds sections an SSD does not carry yet.
 
 - **`ReportMapping.selectable` and `MAPPING_CHOICE_NOT_SELECTABLE` (`SCL1002`) are removed** (breaking for consumers reading `selectable`, or naming the error key in their own wording). Every mapping a report lists is the consumer's to choose, unless it is `locked`; a choice for a mapping is refused only as unknown, locked, or not a candidate.

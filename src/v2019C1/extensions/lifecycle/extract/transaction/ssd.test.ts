@@ -9,6 +9,7 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test'
 
+import type { SsdExtractScope } from './extract.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
@@ -19,15 +20,15 @@ const scopeRef = { tagName: 'Bay', id: 'bay-1' } as Scl.Ref<'Bay'>
 // the namespace a single-line-diagram editor writes its layout in
 const ESLD = 'https://transpower.co.nz/SCL/SSD/SLD/v0'
 
-type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
+type TestCase = SclTest.BaseXmlTestCase & { targetXml: string; scope?: SsdExtractScope }
 
 // Extract a bay-typical from a project: the produced SSD has an SSD Header, a TEMPLATE process
 // structure, and - by consuming the application layer - the Bay's Application plus its composed
 // Function and type closure, self-contained.
 const sourceXml = /* xml */ `
 	<SCL ${ns} ${id}="scl-src">
-		<Substation name="S1" ${id}="sub-1">
-			<VoltageLevel name="V1" ${id}="vl-1">
+		<Substation name="S1" templateUuid="sub-tmpl-uuid" ${id}="sub-1">
+			<VoltageLevel name="V1" templateUuid="vl-tmpl-uuid" ${id}="vl-1">
 				<Bay name="B1" templateUuid="bay-tmpl-uuid" ${id}="bay-1">
 					<Private type="eIEC61850-6-100" ${id}="bay-priv">
 						<eIEC61850-6-100:Application name="CB" type="HV" uuid="app-src-uuid" ${id}="app-1">
@@ -84,12 +85,12 @@ describe('extract.ssd', () => {
 						`<SCL ${ns} xmlns:esld="${ESLD}" ${id}="scl-src">`,
 					)
 					.replace(
-						`<Substation name="S1" ${id}="sub-1">`,
-						`<Substation name="S1" esld:w="40" ${id}="sub-1">`,
+						`<Substation name="S1" templateUuid="sub-tmpl-uuid" ${id}="sub-1">`,
+						`<Substation name="S1" templateUuid="sub-tmpl-uuid" esld:w="40" ${id}="sub-1">`,
 					)
 					.replace(
-						`<VoltageLevel name="V1" ${id}="vl-1">`,
-						`<VoltageLevel name="V1" esld:x="2" ${id}="vl-1">`,
+						`<VoltageLevel name="V1" templateUuid="vl-tmpl-uuid" ${id}="vl-1">`,
+						`<VoltageLevel name="V1" templateUuid="vl-tmpl-uuid" esld:x="2" ${id}="vl-1">`,
 					)
 					.replace(
 						`<Bay name="B1" templateUuid="bay-tmpl-uuid" ${id}="bay-1">`,
@@ -116,6 +117,39 @@ describe('extract.ssd', () => {
 			})
 		})
 
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+/** A substation is the template's scaffolding: renamed TEMPLATE, its voltage levels the named units. */
+describe('extract.ssd - a substation', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'the substation named TEMPLATE, its voltage level and bay keeping their names': {
+			sourceXml,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			expectedQueries: [
+				'/default:SCL/default:Substation[@name="TEMPLATE"]/default:VoltageLevel[@name="V1"]/default:Bay[@name="B1"]',
+				'/default:SCL/default:Substation[@name="TEMPLATE"]/default:Function[@name="Prot"]',
+			],
+			unexpectedQueries: [
+				'//default:Substation[@name="S1"]',
+				'//default:Substation[@templateUuid]',
+			],
+		},
+	}
+
+	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		await target.transaction(async function extractSubstation(tx) {
+			await ssd(tx, {
+				sourceQuery: source.query,
+				scopeRef: { tagName: 'Substation', id: 'sub-1' },
+				tool: 'TEST',
+				who: 'test',
+			})
+		})
 		return { assertOn: 'target' }
 	}
 
@@ -160,6 +194,17 @@ describe('extract.ssd - connectivity', () => {
 				'//default:ConductingEquipment[@name="QA1"]/default:Terminal[@connectivityNode="TEMPLATE/TEMPLATE/B1/L1" and @substationName="TEMPLATE" and @voltageLevelName="TEMPLATE" and @bayName="B1" and @cNodeName="L1"]',
 			],
 		},
+		"the substation extracted → its nodes and terminals named under the TEMPLATE substation, each voltage level's name kept":
+			{
+				sourceXml: connectivitySourceXml,
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				scope: { tagName: 'Substation', id: 'sub-1' },
+				expectedQueries: [
+					'//default:Bay[@name="B1"]/default:ConnectivityNode[@name="L1" and @pathName="TEMPLATE/V1/B1/L1"]',
+					'//default:Bay[@name="BB"]/default:ConnectivityNode[@name="BB1" and @pathName="TEMPLATE/V1/BB/BB1"]',
+					'//default:ConductingEquipment[@name="QB1"]/default:Terminal[@cNodeName="BB1" and @substationName="TEMPLATE" and @voltageLevelName="V1" and @bayName="BB"]',
+				],
+			},
 		'a terminal on a node of another Bay → removed, the equipment stays': {
 			sourceXml: connectivitySourceXml,
 			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
@@ -173,11 +218,20 @@ describe('extract.ssd - connectivity', () => {
 		},
 	}
 
-	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+	async function act({
+		source,
+		target,
+		testCase,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 
 		await target.transaction(async (tx) => {
-			await ssd(tx, { sourceQuery: source.query, scopeRef, tool: 'TEST', who: 'test' })
+			await ssd(tx, {
+				sourceQuery: source.query,
+				scopeRef: testCase.scope ?? scopeRef,
+				tool: 'TEST',
+				who: 'test',
+			})
 		})
 
 		return { assertOn: 'target' }
