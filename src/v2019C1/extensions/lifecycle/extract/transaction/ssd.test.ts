@@ -125,6 +125,89 @@ describe('extract.ssd', () => {
 	runSclTestCases.withExport({ testCases, act })
 })
 
+/** Two applications of a bay compose one function: the extracted bay holds it once, both refer to it. */
+const twoApplicationsXml = /* xml */ `
+	<SCL ${ns} ${id}="scl-src">
+		<Substation name="S1" ${id}="sub-1">
+			<VoltageLevel name="V1" ${id}="vl-1">
+				<Bay name="B1" ${id}="bay-1">
+					<Private type="eIEC61850-6-100" ${id}="bay-priv">
+						<eIEC61850-6-100:Application name="PROT_App" uuid="prot-app-uuid" ${id}="prot-app">
+							<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="prot-role">
+								<eIEC61850-6-100:FunctionRoleContent ${id}="prot-content">
+									<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Shared" functionUuid="shared-uuid" ${id}="prot-ref"/>
+								</eIEC61850-6-100:FunctionRoleContent>
+							</eIEC61850-6-100:FunctionRole>
+						</eIEC61850-6-100:Application>
+						<eIEC61850-6-100:Application name="CTRL_App" uuid="ctrl-app-uuid" ${id}="ctrl-app">
+							<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="ctrl-role">
+								<eIEC61850-6-100:FunctionRoleContent ${id}="ctrl-content">
+									<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Shared" functionUuid="shared-uuid" ${id}="ctrl-ref"/>
+								</eIEC61850-6-100:FunctionRoleContent>
+							</eIEC61850-6-100:FunctionRole>
+						</eIEC61850-6-100:Application>
+					</Private>
+					<Function name="Shared" uuid="shared-uuid" ${id}="shared"/>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
+/** The same bay, each application's role referring to the trip logic the shared function holds. */
+const twoApplicationsLogicXml = twoApplicationsXml
+	.replace(
+		`<Function name="Shared" uuid="shared-uuid" ${id}="shared"/>`,
+		[
+			`<Function name="Shared" uuid="shared-uuid" ${id}="shared">`,
+			`<Private type="eIEC61850-6-100" ${id}="shared-private">`,
+			`<eIEC61850-6-100:BehaviorDescription name="TRIP_LOGIC" uuid="logic-uuid" ${id}="logic"/>`,
+			`</Private>`,
+			`</Function>`,
+		].join(''),
+	)
+	.replaceAll(
+		`</eIEC61850-6-100:FunctionRoleContent>`,
+		`<eIEC61850-6-100:BehaviorDescriptionRef behaviorDescription="S1/V1/B1/Shared/TRIP_LOGIC" behaviorDescriptionUuid="logic-uuid"/></eIEC61850-6-100:FunctionRoleContent>`,
+	)
+
+describe('extract.ssd - a function two applications compose', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'the bay extracted → the function once, both applications referring to it': {
+			sourceXml: twoApplicationsXml,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			expectedQueries: [
+				'//default:Bay[@name="B1"][count(default:Function[@name="Shared"])=1]',
+				'//v2019C1:Application[@name="PROT_App"]//v2019C1:FunctionRef[@functionUuid=//default:Function[@name="Shared"]/@uuid]',
+				'//v2019C1:Application[@name="CTRL_App"]//v2019C1:FunctionRef[@functionUuid=//default:Function[@name="Shared"]/@uuid]',
+			],
+		},
+		"both roles referring to the function's trip logic → the logic once, both references naming it":
+			{
+				sourceXml: twoApplicationsLogicXml,
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				expectedQueries: [
+					'//default:Function[@name="Shared"][count(default:Private/v2019C1:BehaviorDescription)=1]',
+					'//v2019C1:Application[@name="CTRL_App"]//v2019C1:BehaviorDescriptionRef[@behaviorDescriptionUuid=//v2019C1:BehaviorDescription[@name="TRIP_LOGIC"]/@uuid]',
+				],
+			},
+	}
+
+	runSclTestCases.withExport({ testCases, act: extractBay })
+})
+
+/** Extract the bay of the source. */
+async function extractBay({
+	source,
+	target,
+}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+	if (!target) throw new Error('target required')
+	await target.transaction(async function extractTheBay(tx) {
+		await ssd(tx, { sourceQuery: source.query, scopeRef, tool: 'TEST', who: 'test' })
+	})
+	return { assertOn: 'target' }
+}
+
 /** A bay's application composes a function of the substation: it came with the bay's instance. */
 describe('extract.ssd - a bay, the template link', () => {
 	const testCases: SclTest.TestCases<TestCase> = {

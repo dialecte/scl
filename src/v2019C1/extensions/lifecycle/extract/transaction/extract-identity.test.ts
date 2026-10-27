@@ -195,6 +195,35 @@ describe('extract, templateLink break: the element and its own content lose thei
 					'//v2019C1:Application[@name="LOCAL"][not(@templateUuid)]',
 				],
 			},
+		'ssd: a function composed by an application placed from its file and by an application of the bay keeps its link':
+			{
+				sourceXml: projectXml
+					.replace(
+						fileReference({ wrapper: 'FunctionSclRef', file: 'function-library', fileType: 'FSD' }),
+						'',
+					)
+					.replace(
+						`<Private type="eIEC61850-6-100" ${id}="project-bay-private">`,
+						[
+							`<Private type="eIEC61850-6-100" ${id}="project-bay-private">`,
+							`<eIEC61850-6-100:Application name="LOCAL" uuid="local-uuid" templateUuid="local-template" ${id}="project-local">`,
+							`<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="project-local-role">`,
+							`<eIEC61850-6-100:FunctionRoleContent ${id}="project-local-content">`,
+							`<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot" functionUuid="function-uuid" ${id}="project-local-ref"/>`,
+							`</eIEC61850-6-100:FunctionRoleContent>`,
+							`</eIEC61850-6-100:FunctionRole>`,
+							`</eIEC61850-6-100:Application>`,
+						].join(''),
+					),
+				targetXml: emptyTargetXml,
+				verb: 'ssd',
+				options: { templateLink: 'break' },
+				expectedQueries: [
+					'//default:Bay[@name="B1"][count(default:Function[@name="Prot"])=1]',
+					'//default:Function[@name="Prot"][@templateUuid="function-template"]',
+					'//v2019C1:Application[@name="LOCAL"][not(@templateUuid)]',
+				],
+			},
 		'ssd: a function an application placed from its own file composes came with that application: it keeps its link':
 			{
 				sourceXml: projectXml.replace(

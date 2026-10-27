@@ -77,11 +77,13 @@ export async function cloneTopologyContent(
 	const cloneMappings: Scl.CloneMapping[] = [...frame.cloneMappings]
 	const placedRoots: Scl.Ref<Scl.ElementsOf>[] = []
 	const redirectMappings: RedirectMapping[] = [...frame.redirectMappings]
-	const clonedSourceIds = new Set<string>()
+	// what is placed so far (source record id -> its clone): an application composing a function another one placed,
+	// or referring to what such a function holds, refers to that clone
+	const placed = new Map<string, Scl.Ref<Scl.ElementsOf>>()
 	function record(added: Scl.CloneMapping[]): void {
 		for (const mapping of added) {
 			cloneMappings.push(mapping)
-			if (mapping.source.id) clonedSourceIds.add(mapping.source.id)
+			if (mapping.source.id) placed.set(mapping.source.id, mapping.target)
 		}
 	}
 
@@ -96,6 +98,7 @@ export async function cloneTopologyContent(
 			scopeRef: applicationRef,
 			refTagName: 'FunctionRef',
 			targetTagName: 'Function',
+			alreadyCloned: new Set(placed.keys()),
 		})
 		const structure = await resolveFrameStructure(tx, sourceQuery, applicationRef, frameIndex)
 		const applicationContent = await cloneApplicationContent(tx, {
@@ -106,6 +109,7 @@ export async function cloneTopologyContent(
 			decisionMappings,
 			leftOut,
 			matchKey: params.matchKey,
+			alreadyPlaced: placed,
 		})
 		record(applicationContent.cloneMappings)
 		redirectMappings.push(...applicationContent.redirectMappings)
@@ -116,7 +120,7 @@ export async function cloneTopologyContent(
 	// A category classifying several of them is placed once.
 	const placedCategories = new Map<string, Scl.Ref<'FunctionCategory'>>()
 	for (const functionRef of await functionsUnderScope(sourceQuery, scopeRef)) {
-		if (clonedSourceIds.has(functionRef.id) || isLeftOut(functionRef)) continue
+		if (placed.has(functionRef.id) || isLeftOut(functionRef)) continue
 		const structure = await resolveFrameStructure(tx, sourceQuery, functionRef, frameIndex)
 		const targetParentRef = await resolveStructureRef(sourceQuery, functionRef, structure)
 		record(await cloneFunction(tx, { sourceQuery, functionRef, targetParentRef, omit }))

@@ -74,6 +74,12 @@ export async function cloneApplicationContent(
 		matchKey?: MatchKey
 		/** Whether a function it composes stands on one the level already holds for another application. Default `clone`. */
 		sharedFunctions?: SharedFunctions
+		/**
+		 * What the operation already placed for another application (source record id -> the clone): a function this
+		 * application composes too, or what such a function holds that its roles refer to, is not placed again — it
+		 * refers to that clone.
+		 */
+		alreadyPlaced?: ReadonlyMap<string, Scl.Ref<Scl.ElementsOf>>
 	},
 ): Promise<CloneApplicationContentResult> {
 	const { sourceQuery, applicationRef, structure, omit, keepNameTypesFrom, leftOut } = params
@@ -82,15 +88,18 @@ export async function cloneApplicationContent(
 
 	// Source record id -> cloned target ref, accumulated as functions are cloned, so
 	// step 3's satellites can be placed back under their owning function.
-	const cloneIndex = new Map<string, Scl.Ref<Scl.ElementsOf>>()
+	const cloneIndex = new Map<string, Scl.Ref<Scl.ElementsOf>>(params.alreadyPlaced)
 	const allMappings: Scl.CloneMapping[] = []
 
-	// 1. Functions: resolve structural parent per function, clone tree + data model
+	// 1. Functions: resolve structural parent per function, clone tree + data model; one the operation already placed
+	// for another application is that clone
+	const alreadyCloned = new Set(params.alreadyPlaced?.keys())
 	const composedFunctions = await findMissingReferencedRecords(tx, {
 		sourceQuery,
 		scopeRef: applicationRef,
 		refTagName: 'FunctionRef',
 		targetTagName: 'Function',
+		alreadyCloned,
 	})
 	const placedFunctions = composedFunctions.filter((ref) => !leftOut?.has(ref.id))
 	// a function another application placed there with an identical template reference is stood on, when merged

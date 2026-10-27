@@ -77,6 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An extracted SSD holds once a function two applications of the scope compose.** Each application placed the functions it composes, so the second placed the function again beside the first — and what it holds that its roles refer to: two functions of one name in the bay, an invalid file. The function is placed once and both applications refer to it and to what it holds.
+
 - **`extract.asd` names the file after the application extracted.** It read the name in the document being written, where the application is not yet: every ASD was named `ASD_Unnamed_Application` (`Header@id` `asd_unnamed_application`).
 
 - **A first placement onto an element the project shares writes what its report lists.** A role, a category or the own content of an SSD level mapped onto the project's element was poured in by three rules: a role's every allocation was cloned (twice when two applications of a file mapped onto it), a category's sub-categories were paired with the project's otherwise than the report paired them, and a function placed by an update where it had no instance had its classification reported unchanged while the apply added it. One rule now writes it and the report reads it: a container lands on the project's child of its lineage, else of its name, nothing the project holds is rewritten, and each reference is the placement's own — not written twice when the project's container already names the very element it names.
