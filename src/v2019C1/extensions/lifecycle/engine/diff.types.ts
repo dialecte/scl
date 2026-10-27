@@ -76,6 +76,12 @@ export type DiffNode = {
 	 * `IDENTITY_COLLISION` before anything is written.
 	 */
 	identityCollision?: IdentityCollision
+	/**
+	 * Present on a reference paired with the template's by the names of what both name, their uuids disagreeing: the
+	 * placeholder lineage of the project's target that let it (`Resolution.referencesByName: 'placeholders'`). Listed
+	 * in `DiffReport.warnings`.
+	 */
+	pairedByName?: string
 	children: DiffNode[]
 }
 
@@ -251,6 +257,20 @@ export type DiffReport = {
 	 * reference (a terminal of one on a connectivity node of the other): they are placed and updated together.
 	 */
 	scopeUnits?: ReportedElement[]
+	/** What the report did that the consumer should know of: see {@link ReportWarning}. Absent when nothing. */
+	warnings?: ReportWarning[]
+}
+
+/**
+ * `reference-paired-by-name`: a reference of the project (`reference`) paired with the template's (`source`) by the
+ * names of what both name, their uuids disagreeing: the project's target carries the placeholder `lineage`, which the
+ * consumer lets pair by name (`Resolution.referencesByName: 'placeholders'`).
+ */
+export type ReportWarning = {
+	code: 'reference-paired-by-name'
+	reference: AnyRefOrRecord
+	source?: AnyRefOrRecord
+	lineage: string
 }
 
 /**
@@ -277,3 +297,9 @@ export type AddedChild = { node: DiffNode; source: AnyTreeRecord }
 
 /** A node of the diff carrying an identity collision, with it. */
 export type NodeIdentityCollision = { node: DiffNode; collision: IdentityCollision }
+
+/** The identities of a source node's own references: by the uuids they name, and by the names of their targets. */
+export type SourceRefIdentities = { uuids: Set<string>; names: Set<string> }
+
+/** Whether a leftover instance reference is another instance's link, and the placeholder that paired it by name. */
+export type MultiInstanceSibling = { sibling: boolean; pairedByName?: string }

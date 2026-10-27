@@ -5,6 +5,7 @@ import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-c
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
@@ -45,6 +46,8 @@ export async function foldCrossCuttingSatellites(
 		removalBase: RemovalBase
 		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** What the selection of functional variants of the instances this is for leaves out of the template. */
@@ -76,6 +79,7 @@ export async function foldCrossCuttingSatellites(
 		resolveForeignScope: params.resolveForeignScope,
 		removalBase: params.removalBase,
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		notSelected: params.selection?.leftOut,
 	})

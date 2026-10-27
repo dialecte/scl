@@ -10,6 +10,7 @@ import {
 	clearAnnotations,
 	writtenInstanceIds,
 } from '@/v2019C1/extensions/lifecycle/engine'
+import { resolvePlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import {
 	assertMappingsCoherent,
@@ -33,6 +34,7 @@ import type {
 	LifecycleTarget,
 } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type * as Core from '@dialecte/core'
 
@@ -123,8 +125,18 @@ async function writeReport(
 		sourceQuery: params.sourceQuery,
 		baseQuery: params.baseQuery,
 	})
+	// the lineages a reference may pair by name on, read once for the whole apply, as the report read them
+	const placeholderLineages = await resolvePlaceholderLineages(tx, {
+		referencesByName: params.resolution?.referencesByName,
+	})
 	const writtenFrom = tx.getStagedOperations().length
-	const instances = await runVerb(tx, { target: params, report, decisions, removalBase })
+	const instances = await runVerb(tx, {
+		target: params,
+		report,
+		decisions,
+		removalBase,
+		placeholderLineages,
+	})
 
 	// what the template brings keeps the implementation it had there: what this run wrote naming a
 	// logical node, ExtRef or ExtCtrl the project lacks is released, once everything is written
@@ -178,9 +190,10 @@ async function runVerb(
 		report: DiffReport
 		decisions: DecisionMap
 		removalBase: RemovalBase
+		placeholderLineages: PlaceholderLineages
 	},
 ): Promise<AppliedInstances> {
-	const { target, report, decisions, removalBase } = params
+	const { target, report, decisions, removalBase, placeholderLineages } = params
 	switch (target.verb) {
 		case 'fsd': {
 			const functions = await updateFsd(tx, {
@@ -189,6 +202,7 @@ async function runVerb(
 				targetParent: target.anchor,
 				scenario: target.scenario,
 				removalBase,
+				placeholderLineages,
 				targetInstance: target.targetInstance,
 				report,
 				decisions,
@@ -205,6 +219,7 @@ async function runVerb(
 				targetParent: target.anchor,
 				scenario: target.scenario,
 				removalBase,
+				placeholderLineages,
 				targetInstance: target.targetInstance,
 				report,
 				decisions,
@@ -220,6 +235,7 @@ async function runVerb(
 				targetParent: target.anchor,
 				scenario: target.scenario,
 				removalBase,
+				placeholderLineages,
 				targetInstance: target.targetInstance,
 				report,
 				decisions,

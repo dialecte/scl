@@ -12,6 +12,7 @@ import {
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type {
@@ -64,6 +65,8 @@ export async function reconcileSatellites(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 		/** Where the source satellites land, by source record id (`resolveSatelliteMappings`). */
 		resolvedMappings: ResolvedMappings
 		/** The consumer's choices for the shared satellites, by source record id. */
@@ -115,6 +118,7 @@ export async function reconcileSatellites(
 				bumpsCollisions,
 				removalBase,
 				namesFollow,
+				placeholderLineages: params.placeholderLineages,
 				instanceRootIsProjectOwned: resolved?.projectOwned ?? false,
 				keepLeftoverRefs: true,
 				foreignInstanceIds,

@@ -28,6 +28,7 @@ import type { InstanceLevels } from './resolve-instance-levels.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -63,6 +64,8 @@ export async function reconcileTopologyFrame(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 		report?: DiffReport
 		decisions?: DecisionMap
 		/** Multi-instance anchor: reconcile only the frame instance that IS the target (or under it). */
@@ -131,6 +134,7 @@ export async function reconcileTopologyFrame(
 			bumpsCollisions,
 			removalBase: params.removalBase,
 			namesFollow: params.namesFollow,
+			placeholderLineages: params.placeholderLineages,
 			accepted,
 			overrides: levelOverrides,
 			omit: FRAME_OMIT_CHILD_TAGS,

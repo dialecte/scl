@@ -22,6 +22,7 @@ import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { PinnedMatches } from './match-child.types'
+import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
 import type { TypeFollowing } from './type-change.types'
@@ -126,6 +127,8 @@ export async function reconcile(
 		 * nothing in the instance is neither listed nor written, at any depth; one the instance holds is compared as any.
 		 */
 		notSelected?: ReadonlySet<string>
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. Default none. */
+		placeholderLineages?: PlaceholderLineages
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -209,6 +212,7 @@ export async function reconcile(
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected: params.notSelected,
 		typeFollowing,
+		placeholderLineages: params.placeholderLineages ?? new Set(),
 	})
 
 	// removed from the template: delete instance elements whose lineage is gone. In a project-owned
@@ -279,6 +283,7 @@ async function reconcileChildren(
 		foreignInstanceIds?: ReadonlySet<string>
 		notSelected?: ReadonlySet<string>
 		typeFollowing: TypeFollowing
+		placeholderLineages: PlaceholderLineages
 	},
 ): Promise<void> {
 	const {
@@ -308,7 +313,7 @@ async function reconcileChildren(
 		if (omit?.includes(sourceChild.tagName)) continue
 		// The SAME matcher the diff (report) side uses, so apply pairs children identically: lineage
 		// with the cross-type guard, reference identity (uuid then name), then positional fallback.
-		const matched = await matchChild(sourceQuery, {
+		const match = await matchChild(sourceQuery, {
 			targetQuery: tx,
 			sourceChild,
 			instanceParent,
@@ -319,9 +324,11 @@ async function reconcileChildren(
 			matchContainersByName: withinProjectOwned,
 			pinnedMatches: params.pinnedMatches,
 			foreignInstanceIds: params.foreignInstanceIds,
+			placeholderLineages: params.placeholderLineages,
 		})
 
-		if (matched) {
+		if (match) {
+			const matched = match.record
 			matchedInstanceIds.add(matched.id)
 			// a container found by its name is the project's own: its attributes are not written
 			const isProjectContainer =
@@ -368,6 +375,7 @@ async function reconcileChildren(
 				foreignInstanceIds: params.foreignInstanceIds,
 				notSelected: params.notSelected,
 				typeFollowing: params.typeFollowing,
+				placeholderLineages: params.placeholderLineages,
 			})
 			continue
 		}

@@ -1,5 +1,6 @@
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 
+import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { RedirectedSourceUuids, ReferenceIdentitySide } from './reference-match.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -94,23 +95,54 @@ export async function referenceNameIdentity(
 	return parts.length > 0 ? parts.sort().join('|') : undefined
 }
 
+/**
+ * The placeholder lineage a reference of the project names through: the first of its targets whose lineage under the
+ * scenario's key is one of `placeholderLineages` (see `PlaceholderLineages`). Undefined when none is: the reference is
+ * then paired by the uuids it names only.
+ */
+export async function placeholderLineageOf(
+	query: Reader,
+	node: AnyTreeRecord,
+	params: { matchKey: MatchKey; placeholderLineages: PlaceholderLineages },
+): Promise<string | undefined> {
+	const { matchKey, placeholderLineages } = params
+	if (placeholderLineages.size === 0) return undefined
+	const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS]
+	if (!pairs) return undefined
+	for (const pair of pairs) {
+		const uuidValue = await query.any.getAttribute(node, { name: pair.attribute.uuid })
+		if (!uuidValue) continue
+		const target = await findTarget(query, { uuidValue, targetTags: pair.target })
+		if (!target) continue
+		const lineage = await query.any.getAttribute(target, { name: matchKey })
+		if (lineage && placeholderLineages.has(lineage)) return lineage
+	}
+	return undefined
+}
+
+async function findTarget(
+	query: Reader,
+	params: { uuidValue: string; targetTags: readonly string[] },
+): Promise<AnyTreeRecord | undefined> {
+	for (const tagName of params.targetTags) {
+		const [target] = await query.any.findByAttributes({
+			tagName: tagName as Parameters<typeof query.any.findByAttributes>[0]['tagName'],
+			attributes: { uuid: params.uuidValue } as Record<string, string>,
+		})
+		if (target) return target as AnyTreeRecord
+	}
+	return undefined
+}
+
 async function resolveTargetName(
 	query: Reader,
 	uuidValue: string,
 	targetTags: readonly string[],
 ): Promise<string | undefined> {
-	for (const tagName of targetTags) {
-		const matches = await query.any.findByAttributes({
-			tagName: tagName as Parameters<typeof query.any.findByAttributes>[0]['tagName'],
-			attributes: { uuid: uuidValue } as Record<string, string>,
-		})
-		const target = matches[0]
-		if (target) {
-			const name = await query.any.getAttribute(target, { name: 'name' })
-			return name || undefined
-		}
-	}
-	return undefined
+	const target = await findTarget(query, { uuidValue, targetTags })
+	if (!target) return undefined
+	const name = await query.any.getAttribute(target, { name: 'name' })
+	return name || undefined
 }
 
 /**

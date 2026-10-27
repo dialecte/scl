@@ -6,6 +6,7 @@ import { collectUuids, indexByMatchKey } from './match-key'
 import { projectOwnedAttributes } from './project-owned-attributes'
 import {
 	indexRedirectedSourceUuids,
+	placeholderLineageOf,
 	referenceIdentity,
 	referenceNameIdentity,
 } from './reference-match'
@@ -31,10 +32,13 @@ import type {
 	DiffReport,
 	DiffSummary,
 	InstanceDiff,
+	MultiInstanceSibling,
 	RenamedNode,
 	ReportInstance,
+	SourceRefIdentities,
 } from './diff.types'
 import type { PinnedMatches } from './match-child.types'
+import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { ProjectOwnedAttributes } from './project-owned-attributes.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
@@ -163,6 +167,8 @@ export async function diff(params: {
 	notSelected?: ReadonlySet<string>
 	/** Whether a bound logical node takes the type the template gives it. Default: `follow`. */
 	boundLogicalNodeTypes?: BoundLogicalNodeTypes
+	/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. Default none. */
+	placeholderLineages?: PlaceholderLineages
 }): Promise<InstanceDiff> {
 	const { sourceQuery, targetQuery, sourceRootRef, instanceRootRef, keepLeftoverRefs } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
@@ -219,6 +225,7 @@ export async function diff(params: {
 		notSelected,
 		typeComparison: createTypeComparison(),
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes ?? 'follow',
+		placeholderLineages: params.placeholderLineages ?? new Set(),
 	})
 	// a rename of the instance itself is numbered among its siblings, as the apply numbers it
 	if (instanceTree.parent) {
@@ -260,6 +267,7 @@ async function diffMatched(
 		/** The types read on each side so far: one run for the whole diff. */
 		typeComparison: TypeComparison
 		boundLogicalNodeTypes: BoundLogicalNodeTypes
+		placeholderLineages: PlaceholderLineages
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
@@ -302,7 +310,7 @@ async function diffMatched(
 	for (const sourceChild of sourceNode.tree) {
 		// a boundary tag is covered by another report - exclude its subtree
 		if (omit?.includes(sourceChild.tagName)) continue
-		const matched = await matchChild(sourceQuery, {
+		const match = await matchChild(sourceQuery, {
 			targetQuery,
 			sourceChild,
 			instanceParent: instanceNode,
@@ -314,8 +322,10 @@ async function diffMatched(
 			matchContainersByName: withinProjectOwned,
 			pinnedMatches: params.pinnedMatches,
 			foreignInstanceIds: params.foreignInstanceIds,
+			placeholderLineages: params.placeholderLineages,
 		})
-		if (matched) {
+		if (match) {
+			const matched = match.record
 			matchedInstanceIds.add(matched.id)
 			// a container found by its name is the project's own; on a first placement none is rewritten
 			const skipChildAttributes =
@@ -350,7 +360,9 @@ async function diffMatched(
 				notSelected: params.notSelected,
 				typeComparison: params.typeComparison,
 				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+				placeholderLineages: params.placeholderLineages,
 			})
+			if (match.pairedByName) matchedNode.pairedByName = match.pairedByName
 			children.push(matchedNode)
 			renamed.push({ node: matchedNode, child: matched })
 		} else if (!params.notSelected?.has(sourceChild.id)) {
@@ -375,7 +387,10 @@ async function diffMatched(
 	// identity matches a template ref of the same tag, OR unconditionally for a SHARED satellite
 	// (`keepLeftoverRefs`) whose extra refs belong to other primaries and cannot be resolved back to
 	// this template (mismatched `templateUuid` + de-duped names).
-	const sourceRefIdentities = await collectSourceRefIdentities(sourceQuery, sourceNode)
+	const sourceRefIdentities = await collectSourceRefIdentities(sourceQuery, {
+		sourceNode,
+		byName: params.placeholderLineages.size > 0,
+	})
 	for (const instanceChild of instanceNode.tree) {
 		if (matchedInstanceIds.has(instanceChild.id)) continue
 		// a boundary tag is covered by another report - never flag it here
@@ -399,19 +414,23 @@ async function diffMatched(
 			REFERENCE_TAG_NAMES.has(instanceChild.tagName) &&
 			!KEEP_ON_ORPHAN_REFS.has(instanceChild.tagName)
 		) {
-			const keep =
-				keepLeftoverRefs ||
-				(await isMultiInstanceSiblingRef(targetQuery, {
-					instanceChild,
-					sourceRefIdentities,
-					matchKey,
-				}))
+			const sibling = keepLeftoverRefs
+				? { sibling: true }
+				: await readMultiInstanceSibling(targetQuery, {
+						instanceChild,
+						sourceRefIdentities,
+						matchKey,
+						placeholderLineages: params.placeholderLineages,
+					})
+			const keep = sibling.sibling
 			// Provenance override: a kept leftover ref is still a GENUINE removal when the policy says
 			// its target is in the source's own scope AND the source no longer references it.
 			const genuinelyRemoved =
 				keep && leftoverRefPolicy ? (await leftoverRefPolicy(instanceChild)) === 'removed' : false
 			if (keep && !genuinelyRemoved) {
-				children.push(unchangedRefNode(instanceChild))
+				const kept = unchangedRefNode(instanceChild)
+				if (sibling.pairedByName) kept.pairedByName = sibling.pairedByName
+				children.push(kept)
 			} else {
 				children.push(removedNode(instanceChild))
 			}
@@ -471,43 +490,57 @@ function unchangedRefNode(node: AnyTreeRecord): DiffNode {
 }
 
 /**
- * The template-space reference identities of a node's own REFERENCE children (uuid and, as a
- * fallback, resolved target name). A leftover instance reference whose identity is in this set is a
- * multi-instance sibling (another instance's link to the same template target), not a removal.
+ * The template-space reference identities of a node's own REFERENCE children: by the uuids they name and, when a
+ * reference may pair by name (`byName`), by the names of their targets. A leftover instance reference whose identity
+ * is among them is a multi-instance sibling (another instance's link to the same template target), not a removal.
  */
 async function collectSourceRefIdentities(
 	sourceQuery: Core.Query<Config>,
-	sourceNode: AnyTreeRecord,
-): Promise<ReadonlySet<string>> {
-	const identities = new Set<string>()
-	for (const child of sourceNode.tree) {
+	params: { sourceNode: AnyTreeRecord; byName: boolean },
+): Promise<SourceRefIdentities> {
+	const identities: SourceRefIdentities = { uuids: new Set(), names: new Set() }
+	for (const child of params.sourceNode.tree) {
 		if (!REFERENCE_TAG_NAMES.has(child.tagName)) continue
 		const uuidIdentity = await referenceIdentity(sourceQuery, child, { side: 'source' })
-		if (uuidIdentity) identities.add(uuidIdentity)
+		if (uuidIdentity) identities.uuids.add(uuidIdentity)
+		if (!params.byName) continue
 		const nameIdentity = await referenceNameIdentity(sourceQuery, child)
-		if (nameIdentity) identities.add(nameIdentity)
+		if (nameIdentity) identities.names.add(nameIdentity)
 	}
 	return identities
 }
 
-/** Whether an unmatched instance reference is a multi-instance sibling of a template reference. */
-async function isMultiInstanceSiblingRef(
+/**
+ * Whether an unmatched instance reference is a multi-instance sibling of a template reference: by the uuids it names,
+ * or by the names of its targets where one carries a placeholder lineage the consumer lets pair by name (`pairedByName`).
+ */
+async function readMultiInstanceSibling(
 	targetQuery: Core.Query<Config>,
 	params: {
 		instanceChild: AnyTreeRecord
-		sourceRefIdentities: ReadonlySet<string>
+		sourceRefIdentities: SourceRefIdentities
 		matchKey: MatchKey
+		placeholderLineages: PlaceholderLineages
 	},
-): Promise<boolean> {
-	const { instanceChild, sourceRefIdentities, matchKey } = params
-	if (sourceRefIdentities.size === 0) return false
+): Promise<MultiInstanceSibling> {
+	const { instanceChild, sourceRefIdentities, matchKey, placeholderLineages } = params
+	if (sourceRefIdentities.uuids.size === 0 && sourceRefIdentities.names.size === 0) {
+		return { sibling: false }
+	}
 	const uuidIdentity = await referenceIdentity(targetQuery, instanceChild, {
 		side: 'instance',
 		matchKey,
 	})
-	if (uuidIdentity && sourceRefIdentities.has(uuidIdentity)) return true
+	if (uuidIdentity && sourceRefIdentities.uuids.has(uuidIdentity)) return { sibling: true }
+	if (sourceRefIdentities.names.size === 0) return { sibling: false }
+	const placeholder = await placeholderLineageOf(targetQuery, instanceChild, {
+		matchKey,
+		placeholderLineages,
+	})
+	if (!placeholder) return { sibling: false }
 	const nameIdentity = await referenceNameIdentity(targetQuery, instanceChild)
-	return !!nameIdentity && sourceRefIdentities.has(nameIdentity)
+	if (!nameIdentity || !sourceRefIdentities.names.has(nameIdentity)) return { sibling: false }
+	return { sibling: true, pairedByName: placeholder }
 }
 
 // An author-added instance element with no source lineage. Its subtree travels with it.

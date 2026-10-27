@@ -26,6 +26,7 @@ import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contr
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
@@ -70,6 +71,8 @@ export async function reportFsd(
 		removalBase?: RemovalBase
 		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, functionRef, targetParent, scenario, targetInstance, decisionMappings } =
@@ -126,6 +129,7 @@ export async function reportFsd(
 			anchor: landing,
 			removalBase,
 			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			placeholderLineages: params.placeholderLineages,
 			namesFollow,
 		})
 		const reportInstance = await buildReportInstance(query, {
@@ -158,6 +162,7 @@ export async function reportFsd(
 			anchor: targetParent,
 			removalBase,
 			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			placeholderLineages: params.placeholderLineages,
 			namesFollow,
 		})
 		reportInstances.push(

@@ -115,6 +115,15 @@ export type LifecycleVerbTarget =
 export type BoundLogicalNodeTypes = 'follow' | 'keep'
 
 /**
+ * Whether a reference of the project whose uuids disagree with the template's pairs with it by the names of what both
+ * name: `never` (uuids only: such a reference is listed removed and the template's added), or `placeholders` (only
+ * where the lineage the project's element carries is one `checkTemplateUuids` flags — a placeholder smeared over
+ * elements of several types, or naming an element of another type; each such pairing is listed in
+ * `DiffReport.warnings`).
+ */
+export type ReferencesByName = 'never' | 'placeholders'
+
+/**
  * What the consumer resolved, handed to the lifecycle surface as ONE object:
  *  - `decisions` — accept / skip (and edited values) per decision group;
  *  - `mappings` — where a shared source element lands, per source element, when the consumer
@@ -123,6 +132,8 @@ export type BoundLogicalNodeTypes = 'follow' | 'keep'
  *    (forwarded to `importTypes`; default `'target'`, the destination authority);
  *  - `boundLogicalNodeTypes` — whether a bound LNode takes the type the template gives it (default `'follow'`). Read by
  *    `report`: a kept type change is listed as kept; `apply` writes the type changes the report lists;
+ *  - `referencesByName` — whether a reference whose uuids disagree pairs by name on a flagged placeholder lineage
+ *    (default `'never'`); `report` and `apply` read it alike;
  *  - `afterApply` — the consumer's own step, run by `apply` once it wrote (see {@link AfterApplyHook}).
  */
 export type Resolution = {
@@ -130,6 +141,7 @@ export type Resolution = {
 	mappings?: DecisionMappings
 	keepNameTypesFrom?: KeepNameTypesFrom
 	boundLogicalNodeTypes?: BoundLogicalNodeTypes
+	referencesByName?: ReferencesByName
 	afterApply?: AfterApplyHook
 }
 

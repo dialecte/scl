@@ -20,6 +20,7 @@ export type {
 	ReportedElement,
 	ReportTarget,
 	ReportTargetField,
+	ReportWarning,
 } from './engine/public'
 
 export type {
@@ -34,6 +35,7 @@ export type {
 export type {
 	AfterApplyHook,
 	BoundLogicalNodeTypes,
+	ReferencesByName,
 	LifecycleApplyParams,
 	LifecycleReportParams,
 	Resolution,

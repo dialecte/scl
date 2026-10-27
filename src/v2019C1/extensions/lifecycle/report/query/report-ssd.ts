@@ -31,6 +31,7 @@ import type {
 	DiffReport,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type {
 	PrimaryPlace,
@@ -72,6 +73,8 @@ export async function reportSsd(
 		removalBase?: RemovalBase
 		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, scopeRef, targetParent, scenario, targetInstance, decisionMappings } = params
@@ -139,6 +142,7 @@ export async function reportSsd(
 		decisionMappings,
 		removalBase,
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		placeholderLineages: params.placeholderLineages,
 		namesFollow,
 		leftOut: scope.leftOut,
 	})
@@ -193,6 +197,7 @@ export async function reportSsd(
 				anchor: parent ?? placedFor ?? landing,
 				removalBase,
 				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+				placeholderLineages: params.placeholderLineages,
 			})
 			primaryInstances.push(...placedInstances({ instances: report.instances, placedFor }))
 		}
@@ -218,6 +223,7 @@ export async function reportSsd(
 				decisionMappings,
 				removalBase,
 				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+				placeholderLineages: params.placeholderLineages,
 			})
 			primaryInstances.push(...placedInstances({ instances: report.instances, placedFor }))
 		}

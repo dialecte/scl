@@ -17,4 +17,5 @@ export type {
 	ReportedElement,
 	ReportTarget,
 	ReportTargetField,
+	ReportWarning,
 } from './diff.types'

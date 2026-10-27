@@ -12,6 +12,7 @@ import type { SatelliteReading } from './satellite-reading.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
@@ -109,6 +110,8 @@ export async function reconcileCarriedSatellites(
 		removalBase: RemovalBase
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 		/** The consumer's choices for the shared elements the function is classified by. */
 		decisionMappings?: DecisionMappings
 		/** What belongs to the other instances of the function. */
@@ -131,6 +134,7 @@ export async function reconcileCarriedSatellites(
 		bumpsCollisions: params.bumpsCollisions,
 		removalBase: params.removalBase,
 		namesFollow: params.namesFollow,
+		placeholderLineages: params.placeholderLineages,
 		resolvedMappings: reading.resolvedMappings,
 		decisionMappings: params.decisionMappings,
 		resolveForeignScope: params.resolveForeignScope,

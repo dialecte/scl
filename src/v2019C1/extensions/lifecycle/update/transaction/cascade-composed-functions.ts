@@ -102,6 +102,7 @@ export async function cascadeComposedFunctions(
 					scenario: params.scenario,
 					placesFresh: true,
 					removalBase: params.removalBase,
+					placeholderLineages: params.placeholderLineages,
 					// placed as part of the application template: its provenance is the application's
 					partOfTemplate: true,
 					// listed by the report once per instance of the application
@@ -165,6 +166,7 @@ async function reconcileWhereItSits(
 		targetParent: { tagName: parent.tagName, id: parent.id } as Scl.Ref<Scl.ElementsOf>,
 		scenario: params.scenario,
 		removalBase: params.removalBase,
+		placeholderLineages: params.placeholderLineages,
 		// part of the application template: the file it records is the application's
 		partOfTemplate: true,
 		report: params.report,

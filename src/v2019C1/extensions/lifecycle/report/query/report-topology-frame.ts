@@ -21,6 +21,7 @@ import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PinnedMatches } from '@/v2019C1/extensions/lifecycle/engine/match-child.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -65,6 +66,8 @@ export async function reportTopologyFrame(
 		removalBase: RemovalBase
 		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** The template's elements the scope leaves out (record ids): never matched to what the project holds, nor listed. */
@@ -89,6 +92,7 @@ export async function reportTopologyFrame(
 			matchKey,
 			removalBase: params.removalBase,
 			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			placeholderLineages: params.placeholderLineages,
 			namesFollow: params.namesFollow,
 			omit: FRAME_OMIT_CHILD_TAGS,
 			notSelected: params.leftOut,
@@ -144,6 +148,7 @@ export async function reportTopologyFrame(
 			matchKey,
 			removalBase: params.removalBase,
 			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			placeholderLineages: params.placeholderLineages,
 			namesFollow: params.namesFollow,
 			omit: FRAME_OMIT_CHILD_TAGS,
 			pinnedMatches: pinLeftOut({

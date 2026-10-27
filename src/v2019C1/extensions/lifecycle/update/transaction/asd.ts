@@ -59,6 +59,7 @@ import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transact
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { DroppedElement } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
@@ -101,6 +102,8 @@ export async function asd(
 		baseQuery?: Core.Query<Config>
 		/** What tells a dropped element from the project's own, when the caller read it already (once per apply). */
 		removalBase?: RemovalBase
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 		report?: DiffReport
 		decisions?: DecisionMap
 		/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */
@@ -313,6 +316,7 @@ export async function asd(
 			bumpsCollisions,
 			removalBase,
 			namesFollow,
+			placeholderLineages: params.placeholderLineages,
 			redirectMappings,
 			notSelected: selection.leftOut,
 		})
@@ -334,6 +338,7 @@ export async function asd(
 			bumpsCollisions,
 			removalBase,
 			namesFollow,
+			placeholderLineages: params.placeholderLineages,
 			resolvedMappings,
 			decisionMappings: params.decisionMappings,
 			resolveForeignScope,
@@ -351,6 +356,7 @@ export async function asd(
 			bumpsCollisions,
 			removalBase,
 			namesFollow,
+			placeholderLineages: params.placeholderLineages,
 			resolveForeignScope,
 			selection,
 		})
@@ -379,6 +385,7 @@ export async function asd(
 		applicationInstances,
 		scenario,
 		removalBase,
+		placeholderLineages: params.placeholderLineages,
 		report,
 		decisions,
 		keepNameTypesFrom,

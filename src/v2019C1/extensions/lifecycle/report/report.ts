@@ -1,11 +1,13 @@
 import { listRemovalSideEffects, reportAsd, reportFsd, reportSsd } from './query'
 import { reportTargetOf } from './report-target'
+import { collectReportWarnings } from './report-warnings'
 
 import { throwDialecteError } from '@dialecte/core'
 
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
 import { acceptedCollisions } from '@/v2019C1/extensions/lifecycle/engine'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { resolvePlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { assertMappingsCoherent, createReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
@@ -16,6 +18,7 @@ import {
 import type { Config } from '@/v2019C1/config'
 import type { LifecycleReportParams } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
@@ -48,9 +51,15 @@ export async function report(
 		sourceQuery: target.sourceQuery,
 		baseQuery: target.baseQuery,
 	})
-	const report = await reportVerb(query, { target, pass, removalBase })
+	// the lineages a reference may pair by name on, read once for the whole report
+	const placeholderLineages = await resolvePlaceholderLineages(query, {
+		referencesByName: target.resolution?.referencesByName,
+	})
+	const report = await reportVerb(query, { target, pass, removalBase, placeholderLineages })
 	// what the report is made for: apply refuses it for another target
 	report.target = await reportTargetOf(query, target)
+	const warnings = collectReportWarnings(report)
+	if (warnings.length > 0) report.warnings = warnings
 	const revisionBase = revisionBaseOf(removalBase)
 	if (revisionBase) report.revisionBase = revisionBase
 
@@ -90,9 +99,14 @@ export async function report(
  */
 async function reportVerb(
 	query: Core.Query<Config>,
-	params: { target: LifecycleReportParams; pass: ReportPass; removalBase: RemovalBase },
+	params: {
+		target: LifecycleReportParams
+		pass: ReportPass
+		removalBase: RemovalBase
+		placeholderLineages: PlaceholderLineages
+	},
 ): Promise<DiffReport> {
-	const { target, pass, removalBase } = params
+	const { target, pass, removalBase, placeholderLineages } = params
 	switch (target.verb) {
 		case 'fsd':
 			return reportFsd(query, {
@@ -104,6 +118,7 @@ async function reportVerb(
 				targetInstance: target.targetInstance,
 				decisionMappings: target.resolution?.mappings,
 				boundLogicalNodeTypes: target.resolution?.boundLogicalNodeTypes,
+				placeholderLineages,
 				resolvePlacement: true,
 				removalBase,
 			})
@@ -117,6 +132,7 @@ async function reportVerb(
 				targetInstance: target.targetInstance,
 				decisionMappings: target.resolution?.mappings,
 				boundLogicalNodeTypes: target.resolution?.boundLogicalNodeTypes,
+				placeholderLineages,
 				removalBase,
 			})
 		case 'asd':
@@ -128,6 +144,7 @@ async function reportVerb(
 				targetInstance: target.targetInstance,
 				decisionMappings: target.resolution?.mappings,
 				boundLogicalNodeTypes: target.resolution?.boundLogicalNodeTypes,
+				placeholderLineages,
 				anchor: target.anchor,
 				resolvePlacement: true,
 				removalBase,

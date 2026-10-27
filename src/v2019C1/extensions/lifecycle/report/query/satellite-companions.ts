@@ -11,11 +11,13 @@ import {
 	resolveSatelliteMappings,
 	resolveSatelliteRemovals,
 } from '@/v2019C1/extensions/lifecycle/mapping'
+import { holdsPairingByName } from '@/v2019C1/extensions/lifecycle/report/report-warnings'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LeftoverRefPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import type { DiffNode, InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type {
@@ -87,6 +89,8 @@ export async function foldSatelliteCompanions(
 		removalBase: RemovalBase
 		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** The source elements the instance's selection of functional variants leaves out: see `diff`. */
@@ -157,6 +161,7 @@ export async function foldSatelliteCompanions(
 			matchKey,
 			removalBase: params.removalBase,
 			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			placeholderLineages: params.placeholderLineages,
 			namesFollow: params.namesFollow,
 			notSelected: params.notSelected,
 		})
@@ -166,8 +171,11 @@ export async function foldSatelliteCompanions(
 				satelliteReport.summary.modified >
 			0
 		if (!changed) {
-			// a change the update keeps opens no decision: listed with the primary's tree, so the report says it
-			if (satelliteReport.summary.kept > 0) report.root.children.push(satelliteReport.root)
+			// a change the update keeps opens no decision, nor does a reference paired by name: listed with the
+			// primary's tree, so the report says it
+			if (satelliteReport.summary.kept > 0 || holdsPairingByName(satelliteReport.root)) {
+				report.root.children.push(satelliteReport.root)
+			}
 			continue
 		}
 

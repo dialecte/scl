@@ -2,6 +2,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -26,6 +27,8 @@ export type CascadeComposedFunctionsParams = {
 	scenario?: LifecycleScenario
 	/** What tells an element the source dropped from one the project added, read once for the update. */
 	removalBase: RemovalBase
+	/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+	placeholderLineages?: PlaceholderLineages
 	report?: DiffReport
 	decisions?: DecisionMap
 	keepNameTypesFrom?: KeepNameTypesFrom

@@ -55,6 +55,7 @@ import type {
 	DecisionMap,
 	DiffReport,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -88,6 +89,8 @@ export async function fsd(
 		baseQuery?: Core.Query<Config>
 		/** What tells a dropped element from the project's own, when the caller read it already (once per apply). */
 		removalBase?: RemovalBase
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 		/** Multi-instance gate: partitioned per instance by `instanceScopeId`. */
 		report?: DiffReport
 		decisions?: DecisionMap
@@ -220,6 +223,7 @@ export async function fsd(
 			bumpsCollisions,
 			removalBase,
 			namesFollow,
+			placeholderLineages: params.placeholderLineages,
 			notSelected: params.selection?.leftOut,
 		})
 		// an element the instances share (a category) holds one reference per instance: this one
@@ -240,6 +244,7 @@ export async function fsd(
 			bumpsCollisions,
 			removalBase,
 			namesFollow,
+			placeholderLineages: params.placeholderLineages,
 			decisionMappings: params.decisionMappings,
 			resolveForeignScope,
 			selection: params.selection,
@@ -255,6 +260,7 @@ export async function fsd(
 			bumpsCollisions,
 			removalBase,
 			namesFollow,
+			placeholderLineages: params.placeholderLineages,
 			resolveForeignScope,
 			selection: params.selection,
 		})

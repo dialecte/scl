@@ -44,6 +44,7 @@ import type {
 	InstanceDiff,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { StandingPlacement } from '@/v2019C1/extensions/lifecycle/engine/standing'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
@@ -98,6 +99,8 @@ export async function reportAsd(
 		removalBase?: RemovalBase
 		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings } = params
@@ -161,6 +164,7 @@ export async function reportAsd(
 			anchor,
 			removalBase,
 			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			placeholderLineages: params.placeholderLineages,
 			namesFollow,
 		})
 		const reportInstance = await buildReportInstance(query, {
@@ -194,6 +198,7 @@ export async function reportAsd(
 				foreignScope: foreignScopes.get(instance.id),
 				removalBase,
 				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+				placeholderLineages: params.placeholderLineages,
 				namesFollow,
 				selection,
 			})
@@ -220,6 +225,7 @@ export async function reportAsd(
 		anchor,
 		removalBase,
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		placeholderLineages: params.placeholderLineages,
 		namesFollow,
 		selections,
 	})
@@ -288,6 +294,8 @@ async function reportApplicationInstance(
 		removalBase: RemovalBase
 		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** What the instance's selection of functional variants leaves out of the template. */
@@ -333,6 +341,7 @@ async function reportApplicationInstance(
 		redirectMappings,
 		removalBase: params.removalBase,
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		notSelected: params.selection?.leftOut,
 	})
@@ -360,6 +369,7 @@ async function reportApplicationInstance(
 		resolveForeignScope,
 		removalBase: params.removalBase,
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		notSelected: params.selection?.leftOut,
 	})
@@ -380,6 +390,7 @@ async function reportApplicationInstance(
 		resolveForeignScope,
 		removalBase: params.removalBase,
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		selection: params.selection,
 	})
@@ -413,6 +424,8 @@ async function reportComposedFunctions(
 		removalBase: RemovalBase
 		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** What each instance of the application's selection of variants leaves out, by instance record id. */
@@ -527,6 +540,8 @@ async function reportComposedFunction(
 		removalBase: RemovalBase
 		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
+		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/** What the selection of variants of the instances composing it leaves out. */
@@ -545,6 +560,7 @@ async function reportComposedFunction(
 		anchor: params.anchor,
 		removalBase: params.removalBase,
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		selection: params.selection,
 	})
