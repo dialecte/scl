@@ -5,7 +5,10 @@ import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
-import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
+import {
+	cloneApplicationContent,
+	resolveApplicationScope,
+} from '@/v2019C1/extensions/lifecycle/layers/application'
 import { landPrimaries } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import {
@@ -97,12 +100,15 @@ export async function placeApplication(
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) applying to
 	// any element in the Application subtree travel with it, one of each per instance
+	// what their references may name: the application and the functions it composes, as placed
+	const scope = await resolveApplicationScope(sourceQuery, { applicationRef, leftOut })
 	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: applicationRef,
 		structure,
 		leftOut,
 		bumpsCollisions: policy.bumpsCollisions,
+		scope,
 	})
 
 	const allMappings = [

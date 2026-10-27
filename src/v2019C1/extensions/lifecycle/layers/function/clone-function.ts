@@ -1,4 +1,8 @@
 import {
+	leaveOutOfScope,
+	resolveContributionScope,
+} from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import {
 	assertMappingDecided,
 	findMappingPolicy,
 	resolveMapping,
@@ -64,6 +68,8 @@ export async function cloneFunction(
 
 /**
  * Places the FunctionCategory trees that reference the given function (or its SubFunctions).
+ * Only their references to the function and what it holds are placed: one naming another function of the
+ * source would name nothing in the project, or what another placement placed.
  *
  * A category is a SHARED element: where it lands is the answer of its mapping (`resolveMapping`,
  * the one the report reads too). Mapped onto a category the target already holds, it is not
@@ -86,11 +92,17 @@ export async function cloneFunctionCategories(
 
 	const categoryIds = await collectReferencedCategoryIds(sourceQuery, functionRef)
 	const policy = findMappingPolicy('FunctionCategory')
+	const scope = await resolveContributionScope(sourceQuery, { roots: [functionRef] })
 
 	const cloneMappings: Scl.CloneMapping[] = []
 	const redirectMappings: RedirectMapping[] = []
 	for (const categoryId of categoryIds) {
 		const categoryRef: Scl.Ref<'FunctionCategory'> = { tagName: 'FunctionCategory', id: categoryId }
+		const leftOut = await leaveOutOfScope(sourceQuery, {
+			root: categoryRef,
+			scope,
+			leftOut: undefined,
+		})
 
 		const existing =
 			placedCategories.get(categoryId) ??
@@ -108,6 +120,7 @@ export async function cloneFunctionCategories(
 				source: categoryRef,
 				target: existing,
 				matchKey: params.matchKey,
+				leftOut,
 			})
 			cloneMappings.push(...merged.cloneMappings)
 			redirectMappings.push(...merged.redirectMappings)
@@ -123,6 +136,7 @@ export async function cloneFunctionCategories(
 			sourceQuery,
 			ref: categoryRef,
 			targetParent,
+			leaveOut: leftOut,
 		})
 		if (!clone) continue
 		cloneMappings.push(...clone.mappings)

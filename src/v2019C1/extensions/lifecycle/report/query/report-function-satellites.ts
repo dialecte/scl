@@ -7,6 +7,7 @@ import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -57,6 +58,8 @@ export async function foldCarriedSatellites(
 		namesFollow: NamesFollow
 		/** What the selection of functional variants of the instances this is for leaves out of the template. */
 		selection?: VariantSelection
+		/** What the categories' references may name: the function and what it holds. */
+		scope: ContributionScope
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance, report } = params
@@ -90,5 +93,6 @@ export async function foldCarriedSatellites(
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		notSelected: params.selection?.leftOut,
+		scope: params.scope,
 	})
 }

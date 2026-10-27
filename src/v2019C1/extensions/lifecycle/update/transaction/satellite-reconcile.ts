@@ -2,6 +2,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
+import { leaveOutOfScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { acceptsRemoval } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { collectForeignReferenceIds } from '@/v2019C1/extensions/lifecycle/instance'
@@ -11,6 +12,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -78,6 +80,8 @@ export async function reconcileSatellites(
 		resolveForeignScope?: ResolveForeignScope
 		/** The source elements the instance's selection of functional variants leaves out: see `reconcile`. */
 		notSelected?: ReadonlySet<string>
+		/** What the satellites' references may name: one naming anything else is neither reconciled nor added. */
+		scope: ContributionScope
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -101,6 +105,12 @@ export async function reconcileSatellites(
 	for (const satelliteRef of satelliteRefs) {
 		const resolved = satelliteRef.id ? resolvedMappings.get(satelliteRef.id) : undefined
 		const instance = resolved?.existing
+		// a reference naming what the update does not place is neither listed nor written
+		const leftOut = await leaveOutOfScope(sourceQuery, {
+			root: satelliteRef,
+			scope: params.scope,
+			leftOut: params.notSelected,
+		})
 
 		if (instance) {
 			const foreignScope = await params.resolveForeignScope?.()
@@ -122,7 +132,7 @@ export async function reconcileSatellites(
 				instanceRootIsProjectOwned: resolved?.projectOwned ?? false,
 				keepLeftoverRefs: true,
 				foreignInstanceIds,
-				notSelected: params.notSelected,
+				notSelected: leftOut,
 			})
 			added.push(...reconcileMappings)
 			continue
@@ -137,7 +147,7 @@ export async function reconcileSatellites(
 			sourceQuery,
 			ref: satelliteRef,
 			targetParent,
-			leaveOut: params.notSelected,
+			leaveOut: leftOut,
 		})
 		if (!clone) continue
 		await finalizeClonedIdentity(tx, { cloneMappings: clone.mappings, mode: identityMode })

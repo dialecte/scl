@@ -40,6 +40,7 @@ import {
 	readVariantSelection,
 	readVariantTemplate,
 	resolveApplicationSatellites,
+	resolveApplicationScope,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
 	assertMappingsDecided,
@@ -295,6 +296,12 @@ export async function asd(
 
 		// 1. application layer
 		// the cross-cutting satellites as the report read them, before the reconcile below
+		// what the satellites' references may name: the application and the functions it composes, but what the
+		// selection leaves out
+		const scope = await resolveApplicationScope(sourceQuery, {
+			applicationRef,
+			leftOut: selection.leftOut,
+		})
 		const crossCutting = await readCrossCuttingSatellites(tx, {
 			sourceQuery,
 			primaryRef: applicationRef,
@@ -302,6 +309,7 @@ export async function asd(
 			matchKey,
 			removalBase,
 			selection,
+			scope,
 		})
 
 		const reconcileMappings = await reconcile(tx, {
@@ -343,6 +351,7 @@ export async function asd(
 			decisionMappings: params.decisionMappings,
 			resolveForeignScope,
 			notSelected: selection.leftOut,
+			scope,
 		})
 		// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
 		// in the Application subtree travel with the application group

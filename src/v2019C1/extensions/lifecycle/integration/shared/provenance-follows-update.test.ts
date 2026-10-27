@@ -184,10 +184,13 @@ async function nextApplicationAndFunction(tx: Scl.Transaction): Promise<void> {
 	await tx.update(sourceFunction, { attributes: { desc: 'rev2' } })
 }
 
-/** One level of the bay template twin is placed; the category both levels share names the function of the other. */
-const TWIN_LEVEL_TOLERANCE: SclTest.BaseXmlTestCase['allowInvalidOutput'] = {
+/**
+ * The newer revision of the bay template twin gains signal inputs of one function fed by the logical node of another:
+ * the update writes them naming that logical node by the template's uuid.
+ */
+const TWIN_SIGNAL_INPUT_TOLERANCE: SclTest.BaseXmlTestCase['allowInvalidOutput'] = {
 	reason:
-		'the category the two levels share is copied whole with the level placed: its reference to the function of the other level names nothing',
+		"the signal inputs the newer revision gains name another function's logical node by the template's uuid",
 	violations: [{ check: 'references', code: 'dangling' }],
 }
 
@@ -583,7 +586,7 @@ describe('provenance follows an update: the instance records the revision of the
 				anchor: projectVoltageLevel,
 				next: { sourceXml: readRevisionTwin({ twin: 'twoLevelBayTemplate', revision: 2 }) },
 				unit: { tagName: 'VoltageLevel', name: 'TEMPLATE_HV' },
-				allowInvalidOutput: TWIN_LEVEL_TOLERANCE,
+				allowInvalidOutput: TWIN_SIGNAL_INPUT_TOLERANCE,
 				// the newer revision links the two levels (an input of one fed by the other): the update brings the second
 				expectedProvenance: [
 					'application breaker_application 1/2',

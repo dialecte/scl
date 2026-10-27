@@ -6,6 +6,7 @@ import { throwDialecteError } from '@dialecte/core'
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
+import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import {
 	cloneFunctionCategories,
 	placedFunctionTag,
@@ -83,11 +84,14 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) that apply
 	// to any element in the function subtree also travel with it, one of each per instance
+	// what their references may name: the function placed
+	const scope = await resolveContributionScope(sourceQuery, { roots: [functionRef] })
 	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: functionRef,
 		structure,
 		bumpsCollisions: policy.bumpsCollisions,
+		scope,
 	})
 
 	const allMappings = [

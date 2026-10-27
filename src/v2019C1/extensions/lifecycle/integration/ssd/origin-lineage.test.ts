@@ -98,11 +98,6 @@ describe('ssd origin lineage: what a placement writes of the lineage the templat
 				targetXml: projectXml,
 				scenario: 'instantiate',
 				unit: { tagName: 'VoltageLevel', name: 'TEMPLATE_HV' },
-				allowInvalidOutput: {
-					reason:
-						'the category the two levels share is copied whole with the level placed: its reference to the function of the other level names nothing',
-					violations: [{ check: 'references', code: 'dangling' }],
-				},
 				expectedQueries: [
 					`//v2019C1:Application[@templateUuid="${BREAKER_APPLICATION}"][@originUuid="${BREAKER_APPLICATION_TEMPLATE}"]`,
 					`//v2019C1:Application[@templateUuid="${OVERCURRENT_APPLICATION}"][@originUuid="${OVERCURRENT_APPLICATION_TEMPLATE}"]`,

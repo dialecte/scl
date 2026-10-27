@@ -604,6 +604,8 @@ A **satellite** is an element that lives **outside** the transplanted subtree bu
 
   A cross-cutting satellite that lives **inside** the subtree is carried by the normal clone/diff; only external ones are handled as satellites.
 
+A satellite's references name only what the operation places or the instance holds — its **scope**: the function and what it holds, the application and the functions it composes, the unit of an SSD, but what the consumer or the instance's selection of variants leaves out. A reference of the template's satellite naming an element outside that scope (a category also classifying a function the operation does not place, a role allocating a function of another application, a variable applying to another function) is neither listed nor written, by `report`, `apply` and the instantiate verbs alike: it would name nothing in the project, or what another placement placed. A reference of that kind the instance already holds is compared as any.
+
 ### On `report` — companions, never independent
 
 Each satellite's change folds into the **primary's** decision group as a read-only companion. Satellites are never independently decidable: accepting a group applies the primary **and** its satellites atomically; skipping applies neither. You cannot accept one side of a tightly-linked pair and leave the other broken.

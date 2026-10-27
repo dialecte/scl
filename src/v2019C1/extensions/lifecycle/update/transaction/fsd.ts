@@ -209,6 +209,7 @@ export async function fsd(
 			matchKey,
 			removalBase,
 			selection: params.selection,
+			scope: carried.scope,
 		})
 
 		const reconcileMappings = await reconcile(tx, {

@@ -1,6 +1,7 @@
 import { toRef } from '@dialecte/core/helpers'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { leaveOutOfScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { collectForeignReferenceIds } from '@/v2019C1/extensions/lifecycle/instance'
@@ -15,6 +16,7 @@ import { holdsPairingByName } from '@/v2019C1/extensions/lifecycle/report/report
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type { LeftoverRefPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import type { DiffNode, InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
@@ -95,6 +97,8 @@ export async function foldSatelliteCompanions(
 		namesFollow: NamesFollow
 		/** The source elements the instance's selection of functional variants leaves out: see `diff`. */
 		notSelected?: ReadonlySet<string>
+		/** What the satellites' references may name: what the placement places or the instance holds. */
+		scope: ContributionScope
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
@@ -135,6 +139,12 @@ export async function foldSatelliteCompanions(
 			instance && foreignScope
 				? await collectForeignReferenceIds(query, { sharedRootRef: instance, foreignScope })
 				: undefined
+		// a reference naming what the placement does not place is neither listed nor written
+		const leftOut = await leaveOutOfScope(sourceQuery, {
+			root: satelliteRef,
+			scope: params.scope,
+			leftOut: params.notSelected,
+		})
 		const satelliteReport = await diff({
 			sourceQuery,
 			targetQuery: query,
@@ -163,7 +173,7 @@ export async function foldSatelliteCompanions(
 			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			placeholderLineages: params.placeholderLineages,
 			namesFollow: params.namesFollow,
-			notSelected: params.notSelected,
+			notSelected: leftOut,
 		})
 		const changed =
 			satelliteReport.summary.added +

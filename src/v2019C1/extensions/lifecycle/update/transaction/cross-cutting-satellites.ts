@@ -10,6 +10,7 @@ import {
 import type { ReconcileCrossCuttingSatellitesResult } from './cross-cutting-satellites.types'
 import type { SatelliteReading } from './satellite-reading.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -43,6 +44,8 @@ export async function readCrossCuttingSatellites(
 		removalBase: RemovalBase
 		/** What the selection of functional variants of the instances this is for leaves out of the template. */
 		selection?: VariantSelection
+		/** What the satellites' references may name: what the instance holds or the update brings. */
+		scope: ContributionScope
 	},
 ): Promise<SatelliteReading> {
 	const { sourceQuery, primaryRef, instancePrimaryRef, matchKey } = params
@@ -71,7 +74,7 @@ export async function readCrossCuttingSatellites(
 				matchKey,
 			})
 		: []
-	return { satelliteRefs, resolvedMappings, removals }
+	return { satelliteRefs, resolvedMappings, removals, scope: params.scope }
 }
 
 /**
@@ -125,6 +128,7 @@ export async function reconcileCrossCuttingSatellites(
 		resolvedMappings: reading.resolvedMappings,
 		resolveForeignScope: params.resolveForeignScope,
 		notSelected: params.selection?.leftOut,
+		scope: reading.scope,
 	})
 
 	return { cloneMappings, redirectMappings }

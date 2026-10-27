@@ -1,3 +1,4 @@
+export { resolveApplicationScope } from './application-scope'
 export { cloneApplicationContent } from './clone-application'
 export { resolveApplicationSatellites } from './satellites'
 export { resolveComposedFunctions } from './resolve-composed-functions'

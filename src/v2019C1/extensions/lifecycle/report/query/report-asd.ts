@@ -21,6 +21,7 @@ import {
 	readVariantSelection,
 	readVariantTemplate,
 	resolveApplicationSatellites,
+	resolveApplicationScope,
 	resolveComposedFunctions,
 	sharedSelection,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
@@ -332,6 +333,12 @@ async function reportApplicationInstance(
 		resolvedMappings,
 	})
 
+	// what the references of its satellites may name: the application and the functions it composes, but what the
+	// selection leaves out
+	const scope = await resolveApplicationScope(sourceQuery, {
+		applicationRef,
+		leftOut: params.selection?.leftOut,
+	})
 	const applicationReport = await diff({
 		sourceQuery,
 		targetQuery: query,
@@ -351,6 +358,7 @@ async function reportApplicationInstance(
 	}
 
 	await foldSatelliteCompanions(query, {
+		scope,
 		pass: params.pass,
 		sourceQuery,
 		primaryRef: applicationRef,
@@ -377,6 +385,7 @@ async function reportApplicationInstance(
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
 	// in the Application subtree travel with the application group
 	await foldCrossCuttingSatellites(query, {
+		scope,
 		pass: params.pass,
 		sourceQuery,
 		primaryRef: applicationRef,

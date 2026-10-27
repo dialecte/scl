@@ -3,6 +3,7 @@ import { foldCarriedSatellites } from './report-function-satellites'
 
 import { toRef } from '@dialecte/core/helpers'
 
+import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { foreignScopeResolver } from '@/v2019C1/extensions/lifecycle/instance'
 
@@ -87,7 +88,13 @@ export async function reportFunction(
 				matchKey: params.matchKey,
 			})
 		: undefined
+	// what the references of its satellites may name: the function and what it holds, but what the selection leaves out
+	const scope = await resolveContributionScope(sourceQuery, {
+		roots: [functionRef],
+		leftOut: params.selection?.leftOut,
+	})
 	const withLayerSatellites = await foldCarriedSatellites(query, {
+		scope,
 		pass: params.pass,
 		sourceQuery,
 		functionRef,
@@ -105,6 +112,7 @@ export async function reportFunction(
 		selection: params.selection,
 	})
 	return foldCrossCuttingSatellites(query, {
+		scope,
 		pass: params.pass,
 		sourceQuery,
 		primaryRef: functionRef,

@@ -90,6 +90,8 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 		resolveTargetParent: ResolveTargetParent
 		alreadyCloned?: ReadonlySet<string>
 		omit?: OmitEntry<Config>[]
+		/** Source records not cloned, with what they hold (record ids): see `cloneTree`. */
+		leaveOut?: ReadonlySet<string>
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -100,6 +102,7 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 		resolveTargetParent,
 		alreadyCloned,
 		omit,
+		leaveOut,
 	} = params
 
 	const missing = await findMissingReferencedRecords(tx, {
@@ -113,7 +116,7 @@ export async function cloneReferencedRecords<Ref extends RefTagName, Target exte
 	const cloneMappings: Scl.CloneMapping[] = []
 	for (const ref of missing) {
 		const targetParent = await resolveTargetParent(ref)
-		const clone = await cloneTree(tx, { sourceQuery, ref, targetParent, omit })
+		const clone = await cloneTree(tx, { sourceQuery, ref, targetParent, omit, leaveOut })
 		if (clone) cloneMappings.push(...clone.mappings)
 	}
 	return cloneMappings
@@ -133,6 +136,7 @@ type CloneRefsFn = (
 		resolveTargetParent: ResolveTargetParent
 		alreadyCloned?: ReadonlySet<string>
 		omit?: OmitEntry<Config>[]
+		leaveOut?: ReadonlySet<string>
 	},
 ) => Promise<Scl.CloneMapping[]>
 
@@ -157,6 +161,8 @@ export async function cloneAllReferencedTargets(
 		alreadyCloned?: ReadonlySet<string>
 		skip?: ReadonlySet<string>
 		omit?: OmitEntry<Config>[]
+		/** Source records not cloned, with what they hold (record ids): see `cloneTree`. */
+		leaveOut?: ReadonlySet<string>
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const {
@@ -167,6 +173,7 @@ export async function cloneAllReferencedTargets(
 		alreadyCloned,
 		skip = new Set(),
 		omit,
+		leaveOut,
 	} = params
 
 	const refTags = ((DESCENDANTS[scopeTagName] ?? []) as readonly string[]).filter(
@@ -187,6 +194,7 @@ export async function cloneAllReferencedTargets(
 					resolveTargetParent,
 					alreadyCloned,
 					omit,
+					leaveOut,
 				})
 				cloneMappings.push(...cloned)
 			}

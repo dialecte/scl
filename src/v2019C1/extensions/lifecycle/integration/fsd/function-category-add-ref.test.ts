@@ -27,7 +27,9 @@ type TestCase = SclTest.BaseXmlTestCase & {
 // A later template change ADDS a second FunctionCatRef into that EXISTING category.
 // Accepting the function group must write the new ref INTO the existing category
 // (structured companion folded + the gate recursing to the nested added id), never
-// duplicate the category nor drop the addition.
+// duplicate the category nor drop the addition — when the reference names what the
+// update places: one naming a function of the file the update does not place is
+// neither listed nor written.
 const sourceXml = /* xml */ `
 	<SCL ${ns} ${id}="fsd">
 		<Substation name="TEMPLATE" ${id}="sub-s">
@@ -40,6 +42,7 @@ const sourceXml = /* xml */ `
 				<Bay name="TEMPLATE" ${id}="bay-s">
 					<Function name="Prot" ${id}="fn-1" uuid="fn-src-uuid">
 						<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-1" uuid="lnode-src-uuid"/>
+						<SubFunction name="Trip" ${id}="sub-1" uuid="sub-src-uuid"/>
 					</Function>
 					<Function name="Prot2" ${id}="fn-2" uuid="fn2-src-uuid"/>
 				</Bay>
@@ -71,7 +74,15 @@ const skipAll =
 	(groups: DecisionGroup[]): DecisionMap =>
 		new Map(groups.map((g) => [g.id, 'skip'] as const))
 
-const addRef = async (tx: Scl.Transaction): Promise<void> => {
+const addSubFunctionRef = async (tx: Scl.Transaction): Promise<void> => {
+	await tx.update(functionRef, { attributes: { desc: 'updated function' } })
+	await tx.addChild(categoryRef, {
+		tagName: 'FunctionCatRef',
+		attributes: { functionUuid: 'sub-src-uuid', function: 'TEMPLATE/TEMPLATE/TEMPLATE/Prot/Trip' },
+	})
+}
+
+const addOtherFunctionRef = async (tx: Scl.Transaction): Promise<void> => {
 	await tx.update(functionRef, { attributes: { desc: 'updated function' } })
 	await tx.addChild(categoryRef, {
 		tagName: 'FunctionCatRef',
@@ -82,26 +93,31 @@ const addRef = async (tx: Scl.Transaction): Promise<void> => {
 describe('lifecycle.apply — adding a ref into an already-existing FunctionCategory (full track)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'accepting the function group writes the new ref into the existing category': {
-			allowInvalidOutput: {
-				reason:
-					'accepting the category change copies its reference to a function the update does not place',
-				violations: [{ check: 'references', code: 'dangling' }],
-			},
 			sourceXml,
 			targetXml,
-			mutate: addRef,
+			mutate: addSubFunctionRef,
 			decide: () => new Map(),
 			expectedQueries: [
 				// exactly one category (no duplicate wrapper) now holding TWO refs
-				// expected to change when the engine stops copying a reference to a function it does not place
 				'//v2019C1:FunctionCategory[@templateUuid="cat-src-uuid"][count(v2019C1:FunctionCatRef)=2]',
+				'//v2019C1:FunctionCatRef[@function="S1/V1/B1/Prot/Trip"]',
+			],
+		},
+
+		'a new ref to a function the update does not place is neither listed nor written': {
+			sourceXml,
+			targetXml,
+			mutate: addOtherFunctionRef,
+			decide: () => new Map(),
+			expectedQueries: [
+				'//v2019C1:FunctionCategory[@templateUuid="cat-src-uuid"][count(v2019C1:FunctionCatRef)=1]',
 			],
 		},
 
 		'skipping the function group leaves the category untouched (single ref)': {
 			sourceXml,
 			targetXml,
-			mutate: addRef,
+			mutate: addSubFunctionRef,
 			decide: skipAll(),
 			expectedQueries: [
 				'//v2019C1:FunctionCategory[@templateUuid="cat-src-uuid"][count(v2019C1:FunctionCatRef)=1]',

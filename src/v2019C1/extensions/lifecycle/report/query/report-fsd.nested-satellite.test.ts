@@ -41,8 +41,8 @@ const sourceXml = /* xml */ `
 				<Bay name="TEMPLATE" ${id}="bay-s">
 					<Function name="Prot" ${id}="fn-1" uuid="fn-src-uuid">
 						<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-1" uuid="lnode-src-uuid"/>
+						<SubFunction name="Trip" ${id}="sub-1" uuid="sub-src-uuid"/>
 					</Function>
-					<Function name="Prot2" ${id}="fn-2" uuid="fn2-src-uuid"/>
 				</Bay>
 			</VoltageLevel>
 		</Substation>
@@ -86,12 +86,12 @@ describe('reportFsd — adding a ref into an already-existing FunctionCategory s
 				mutate: async (tx) => {
 					// touch the function so its decision group exists (the satellite rides it)
 					await tx.update(functionRef, { attributes: { desc: 'updated function' } })
-					// add a NEW ref into the already-instantiated category
+					// add a NEW ref, to the function's subfunction, into the already-instantiated category
 					await tx.addChild(categoryRef, {
 						tagName: 'FunctionCatRef',
 						attributes: {
-							functionUuid: 'fn2-src-uuid',
-							function: 'TEMPLATE/TEMPLATE/TEMPLATE/Prot2',
+							functionUuid: 'sub-src-uuid',
+							function: 'TEMPLATE/TEMPLATE/TEMPLATE/Prot/Trip',
 						},
 					})
 				},

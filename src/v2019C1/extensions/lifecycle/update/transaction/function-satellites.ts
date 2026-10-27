@@ -1,5 +1,6 @@
 import { reconcileSatellites } from './satellite-reconcile'
 
+import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers/function'
 import {
@@ -78,7 +79,12 @@ export async function readCarriedSatellites(
 		removalBase: params.removalBase,
 		matchKey,
 	})
-	return { satelliteRefs, resolvedMappings, removals }
+	// what their references may name: the function and what it holds, but what the selection leaves out
+	const scope = await resolveContributionScope(sourceQuery, {
+		roots: [functionRef],
+		leftOut: params.selection?.leftOut,
+	})
+	return { satelliteRefs, resolvedMappings, removals, scope }
 }
 
 /**
@@ -139,5 +145,6 @@ export async function reconcileCarriedSatellites(
 		decisionMappings: params.decisionMappings,
 		resolveForeignScope: params.resolveForeignScope,
 		notSelected: params.selection?.leftOut,
+		scope: reading.scope,
 	})
 }
