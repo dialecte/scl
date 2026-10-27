@@ -1,13 +1,13 @@
 import { ensureSubstationTemplateStructure } from './ensure-substation-structure'
+import { omitOfSections } from './function-sections'
 import { postExtractionCleanup } from './post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
-import { ALWAYS_OMIT } from '@/v2019C1/extensions/lifecycle/layers/omit-filters'
 import { removeOwnProvenance } from '@/v2019C1/extensions/reference/transaction'
 
-import type { ExtractOptions } from './extract.types'
+import type { AsdExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -19,9 +19,9 @@ export async function asd(
 		tool: Scl.AttributesValueObjectOf<'Header'>['toolID']
 		who: Scl.AttributesValueObjectOf<'Hitem'>['who']
 		nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
-	} & ExtractOptions,
+	} & AsdExtractOptions,
 ): Promise<void> {
-	const { sourceQuery, applicationRef, tool, who, nameStructure } = params
+	const { sourceQuery, applicationRef, tool, who, nameStructure, sections } = params
 	const { as = 'new', templateLink = 'break' } = params
 
 	const applicationName =
@@ -48,7 +48,7 @@ export async function asd(
 		sourceQuery,
 		applicationRef,
 		structure,
-		omit: ALWAYS_OMIT,
+		omit: omitOfSections({ sections }),
 	})
 
 	// the application extracted is a new template: its own template link is broken unless the consumer keeps it,

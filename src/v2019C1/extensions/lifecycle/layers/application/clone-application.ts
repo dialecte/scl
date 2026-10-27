@@ -59,7 +59,7 @@ export async function cloneApplicationContent(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		structure: TargetStructure
-		/** Child tags to drop from clones. Extract prunes (ALWAYS_OMIT); instantiate omits nothing. */
+		/** Child tags to drop from clones: the sections of the functions an extract leaves out; instantiate omits nothing. */
 		omit?: OmitEntry<Config>[]
 		keepNameTypesFrom?: KeepNameTypesFrom
 		/** The consumer's choices for the shared elements the application refers to. */

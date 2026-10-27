@@ -1,5 +1,5 @@
 import { ensureSubstationTemplateStructure } from './ensure-substation-structure'
-import { FSD_OMIT } from './omit'
+import { keepsSection, omitOfSections } from './function-sections'
 import { postExtractionCleanup } from './post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
@@ -10,7 +10,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/layers/function'
 import { removeOwnProvenance } from '@/v2019C1/extensions/reference/transaction'
 
-import type { ExtractOptions } from './extract.types'
+import type { FsdExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -22,9 +22,9 @@ export async function fsd(
 		tool: Scl.AttributesValueObjectOf<'Header'>['toolID']
 		who: Scl.AttributesValueObjectOf<'Hitem'>['who']
 		nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
-	} & ExtractOptions,
+	} & FsdExtractOptions,
 ): Promise<void> {
-	const { sourceQuery, functionRef, tool, who, nameStructure } = params
+	const { sourceQuery, functionRef, tool, who, nameStructure, sections } = params
 	const { as = 'new', templateLink = 'break' } = params
 
 	const functionName =
@@ -55,14 +55,15 @@ export async function fsd(
 		sourceQuery,
 		functionRef,
 		targetParentRef: substationRef,
-		omit: FSD_OMIT,
+		omit: omitOfSections({ sections }),
 	})
 
-	const { cloneMappings: categoryMappings, redirectMappings } = await cloneFunctionCategories(tx, {
-		sourceQuery,
-		functionRef,
-		structure,
+	const { cloneMappings: categoryMappings, redirectMappings } = keepsSection({
+		sections,
+		section: 'categories',
 	})
+		? await cloneFunctionCategories(tx, { sourceQuery, functionRef, structure })
+		: { cloneMappings: [], redirectMappings: [] }
 
 	// the function extracted is a new template: its own template link is broken unless the consumer keeps it, what
 	// it holds keeps its lineage (a subfunction may be instantiated from another FSD); the cloned uuid refs (e.g.

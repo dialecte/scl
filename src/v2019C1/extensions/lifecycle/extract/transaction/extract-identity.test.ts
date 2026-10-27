@@ -105,13 +105,11 @@ describe('extract: the element extracted is a new template, what it holds keeps 
 				'//default:Function[@name="Prot"]',
 				'//default:SubFunction[@name="Sub"][@templateUuid="subfunction-template"]',
 				'//v2019C1:FunctionCategory[@name="PROTECTION"][@templateUuid="category-template"][@originUuid="category-origin"]',
+				// the equipment the function holds is the function's
+				'//default:Function[@name="Prot"]/default:GeneralEquipment[@name="GE1"]',
+				'//default:Function[@name="Prot"]/default:ConductingEquipment[@name="QB1"]',
 			],
-			// the equipment of a function is out of an FSD's layer
-			unexpectedQueries: [
-				'//default:Function[@templateUuid]',
-				'//default:GeneralEquipment',
-				'//default:ConductingEquipment',
-			],
+			unexpectedQueries: ['//default:Function[@templateUuid]'],
 		},
 		'asd: the application loses its template link and its origin, what it composes and refers to keep theirs':
 			{
@@ -124,13 +122,13 @@ describe('extract: the element extracted is a new template, what it holds keeps 
 					'//default:SubFunction[@name="Sub"][@templateUuid="subfunction-template"]',
 					'//v2019C1:AllocationRole[@name="HMI_PC"][@templateUuid="role-template"][@originUuid="role-origin"]',
 					'//v2019C1:FunctionCategory[@name="PROTECTION"][@templateUuid="category-template"][@originUuid="category-origin"]',
+					// the equipment a composed function holds is the function's
+					'//default:Function[@name="Prot"]/default:GeneralEquipment[@name="GE1"]',
+					'//default:Function[@name="Prot"]/default:ConductingEquipment[@name="QB1"]',
 				],
 				unexpectedQueries: [
 					'//v2019C1:Application[@templateUuid]',
 					'//v2019C1:Application[@originUuid]',
-					// the equipment of a function is out of an ASD's layer (the bay's breaker is not the application's)
-					'//default:GeneralEquipment',
-					'//default:ConductingEquipment',
 				],
 			},
 		'ssd: the bay and the levels above it lose their template link, what the bay holds keeps its lineage':

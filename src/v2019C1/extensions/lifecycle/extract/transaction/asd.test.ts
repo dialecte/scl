@@ -4,6 +4,7 @@ import { describe } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
+import type { AsdExtractOptions } from './extract.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
@@ -16,6 +17,7 @@ describe('asd', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		targetXml: string
 		applicationId: string
+		sections?: AsdExtractOptions['sections']
 	}
 
 	const act = async ({
@@ -33,6 +35,7 @@ describe('asd', () => {
 				} as Scl.Ref<'Application'>,
 				tool: 'TEST',
 				who: 'test',
+				...(testCase.sections ? { sections: testCase.sections } : {}),
 			})
 		})
 		return { assertOn: 'target' }
@@ -319,6 +322,51 @@ describe('asd', () => {
 				targetXml: emptyTargetXml,
 				applicationId: 'app-s',
 				expectedQueries: ['//default:Header[@id="asd_feeder_protection"][@fileType="ASD"]'],
+			},
+		}
+
+		runSclTestCases.withExport<TestCase>({ testCases, act })
+	})
+
+	// ── the equipment a composed function holds ─────────────────────────────
+
+	describe('the equipment of the functions the application composes', () => {
+		const sourceXml = /* xml */ `
+			<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<Substation name="S1" ${id}="sub-s">
+					<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
+						<eIEC61850-6-100:Application name="Feeder" uuid="app-uuid" ${id}="app-s">
+							<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="fr-s">
+								<eIEC61850-6-100:FunctionRoleContent ${id}="frc-s">
+									<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot" functionUuid="fn-uuid" ${id}="fref-s"/>
+								</eIEC61850-6-100:FunctionRoleContent>
+							</eIEC61850-6-100:FunctionRole>
+						</eIEC61850-6-100:Application>
+					</Private>
+					<VoltageLevel name="V1" ${id}="vl-s">
+						<Bay name="B1" ${id}="bay-s">
+							<Function name="Prot" uuid="fn-uuid" ${id}="fn-s">
+								<GeneralEquipment name="GE1" type="AXN" ${id}="ge-s"/>
+							</Function>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+			</SCL>
+		`
+		const testCases: SclTest.TestCases<TestCase> = {
+			'no sections given → the function keeps its equipment': {
+				sourceXml,
+				targetXml: emptyTargetXml,
+				applicationId: 'app-s',
+				expectedQueries: ['//default:Function[@name="Prot"]/default:GeneralEquipment[@name="GE1"]'],
+			},
+			'equipment left out → the function holds none': {
+				sourceXml,
+				targetXml: emptyTargetXml,
+				applicationId: 'app-s',
+				sections: { equipment: false },
+				expectedQueries: ['//default:Function[@name="Prot"]'],
+				unexpectedQueries: ['//default:GeneralEquipment'],
 			},
 		}
 

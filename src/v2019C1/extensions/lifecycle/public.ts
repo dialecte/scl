@@ -48,8 +48,12 @@ export type {
 export type { AppliedInstances, ApplyResult } from './apply'
 
 export type {
+	AsdExtractOptions,
 	ExtractOptions,
 	ExtractWarning,
+	FsdExtractOptions,
+	FunctionSection,
+	FunctionSections,
 	TemplateLink,
 } from './extract/transaction/extract.types'
 
