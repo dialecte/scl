@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
+	<Header id="two_application_bay" uuid="00000000-0000-4000-8000-000000000600" version="0" revision="1" toolID="twin" fileType="SSD">
+		<History>
+			<Hitem version="0" revision="1" when="2026-10-27T10:00:00" who="twin" what="first revision"/>
+		</History>
+	</Header>
+	<Substation name="TEMPLATE" uuid="00000000-0000-4000-8000-000000000601">
+		<Private type="eIEC61850-6-100">
+			<eIEC61850-6-100:FunctionCategory name="APPLICATION MANAGEMENT" uuid="00000000-0000-4000-8000-000000000602">
+				<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/150kV/BAY1/P21_Fn/Application Management" functionUuid="00000000-0000-4000-8000-000000000615"/>
+				<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/150kV/BAY1/CBR1_Fn/Application Management" functionUuid="00000000-0000-4000-8000-000000000617"/>
+				<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/150kV/BAY2/P21_Fn/Application Management" functionUuid="00000000-0000-4000-8000-000000000635"/>
+				<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/150kV/BAY2/CBR1_Fn/Application Management" functionUuid="00000000-0000-4000-8000-000000000637"/>
+			</eIEC61850-6-100:FunctionCategory>
+			<eIEC61850-6-100:FunctionCategory name="GENERIC FUNCTION" uuid="00000000-0000-4000-8000-000000000603">
+				<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/150kV/BAY1/P21_Fn" functionUuid="00000000-0000-4000-8000-000000000614"/>
+				<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/150kV/BAY1/CBR1_Fn" functionUuid="00000000-0000-4000-8000-000000000616"/>
+				<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/150kV/BAY2/P21_Fn" functionUuid="00000000-0000-4000-8000-000000000634"/>
+				<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/150kV/BAY2/CBR1_Fn" functionUuid="00000000-0000-4000-8000-000000000636"/>
+			</eIEC61850-6-100:FunctionCategory>
+		</Private>
+		<VoltageLevel name="150kV" uuid="00000000-0000-4000-8000-000000000604">
+			<Bay name="BAY1" uuid="00000000-0000-4000-8000-000000000611">
+				<Private type="eIEC61850-6-100">
+					<eIEC61850-6-100:Application name="P21_App" type="Protection" uuid="00000000-0000-4000-8000-000000000612">
+						<eIEC61850-6-100:FunctionRole name="APPLICATION ROOT" uuid="00000000-0000-4000-8000-000000000620">
+							<eIEC61850-6-100:FunctionRoleContent>
+								<eIEC61850-6-100:FunctionRef function="TEMPLATE/150kV/BAY1/P21_Fn" functionUuid="00000000-0000-4000-8000-000000000614"/>
+							</eIEC61850-6-100:FunctionRoleContent>
+						</eIEC61850-6-100:FunctionRole>
+						<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/150kV/BAY1/PROT" allocationRoleUuid="00000000-0000-4000-8000-000000000618"/>
+					</eIEC61850-6-100:Application>
+					<eIEC61850-6-100:Application name="CBR1_App" type="Control" uuid="00000000-0000-4000-8000-000000000613">
+						<eIEC61850-6-100:FunctionRole name="APPLICATION ROOT" uuid="00000000-0000-4000-8000-000000000621">
+							<eIEC61850-6-100:FunctionRoleContent>
+								<eIEC61850-6-100:FunctionRef function="TEMPLATE/150kV/BAY1/CBR1_Fn" functionUuid="00000000-0000-4000-8000-000000000616"/>
+							</eIEC61850-6-100:FunctionRoleContent>
+						</eIEC61850-6-100:FunctionRole>
+						<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/150kV/BAY1/BCU" allocationRoleUuid="00000000-0000-4000-8000-000000000619"/>
+					</eIEC61850-6-100:Application>
+					<eIEC61850-6-100:AllocationRole name="PROT" uuid="00000000-0000-4000-8000-000000000618">
+						<eIEC61850-6-100:FunctionRef function="TEMPLATE/150kV/BAY1/P21_Fn" functionUuid="00000000-0000-4000-8000-000000000614"/>
+					</eIEC61850-6-100:AllocationRole>
+					<eIEC61850-6-100:AllocationRole name="BCU" uuid="00000000-0000-4000-8000-000000000619">
+						<eIEC61850-6-100:FunctionRef function="TEMPLATE/150kV/BAY1/CBR1_Fn/Application Management" functionUuid="00000000-0000-4000-8000-000000000617"/>
+					</eIEC61850-6-100:AllocationRole>
+				</Private>
+				<Function name="P21_Fn" uuid="00000000-0000-4000-8000-000000000614">
+					<SubFunction name="Application Management" uuid="00000000-0000-4000-8000-000000000615"/>
+				</Function>
+				<Function name="CBR1_Fn" uuid="00000000-0000-4000-8000-000000000616">
+					<SubFunction name="Application Management" uuid="00000000-0000-4000-8000-000000000617"/>
+				</Function>
+			</Bay>
+			<Bay name="BAY2" uuid="00000000-0000-4000-8000-000000000631">
+				<Private type="eIEC61850-6-100">
+					<eIEC61850-6-100:Application name="P21_App" type="Protection" uuid="00000000-0000-4000-8000-000000000632">
+						<eIEC61850-6-100:FunctionRole name="APPLICATION ROOT" uuid="00000000-0000-4000-8000-000000000640">
+							<eIEC61850-6-100:FunctionRoleContent>
+								<eIEC61850-6-100:FunctionRef function="TEMPLATE/150kV/BAY2/P21_Fn" functionUuid="00000000-0000-4000-8000-000000000634"/>
+							</eIEC61850-6-100:FunctionRoleContent>
+						</eIEC61850-6-100:FunctionRole>
+						<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/150kV/BAY2/PROT" allocationRoleUuid="00000000-0000-4000-8000-000000000638"/>
+					</eIEC61850-6-100:Application>
+					<eIEC61850-6-100:Application name="CBR1_App" type="Control" uuid="00000000-0000-4000-8000-000000000633">
+						<eIEC61850-6-100:FunctionRole name="APPLICATION ROOT" uuid="00000000-0000-4000-8000-000000000641">
+							<eIEC61850-6-100:FunctionRoleContent>
+								<eIEC61850-6-100:FunctionRef function="TEMPLATE/150kV/BAY2/CBR1_Fn" functionUuid="00000000-0000-4000-8000-000000000636"/>
+							</eIEC61850-6-100:FunctionRoleContent>
+						</eIEC61850-6-100:FunctionRole>
+						<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/150kV/BAY2/BCU" allocationRoleUuid="00000000-0000-4000-8000-000000000639"/>
+					</eIEC61850-6-100:Application>
+					<eIEC61850-6-100:AllocationRole name="PROT" uuid="00000000-0000-4000-8000-000000000638">
+						<eIEC61850-6-100:FunctionRef function="TEMPLATE/150kV/BAY2/P21_Fn" functionUuid="00000000-0000-4000-8000-000000000634"/>
+					</eIEC61850-6-100:AllocationRole>
+					<eIEC61850-6-100:AllocationRole name="BCU" uuid="00000000-0000-4000-8000-000000000639">
+						<eIEC61850-6-100:FunctionRef function="TEMPLATE/150kV/BAY2/CBR1_Fn/Application Management" functionUuid="00000000-0000-4000-8000-000000000637"/>
+					</eIEC61850-6-100:AllocationRole>
+				</Private>
+				<Function name="P21_Fn" uuid="00000000-0000-4000-8000-000000000634">
+					<SubFunction name="Application Management" uuid="00000000-0000-4000-8000-000000000635"/>
+				</Function>
+				<Function name="CBR1_Fn" uuid="00000000-0000-4000-8000-000000000636">
+					<SubFunction name="Application Management" uuid="00000000-0000-4000-8000-000000000637"/>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+</SCL>

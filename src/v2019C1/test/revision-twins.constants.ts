@@ -28,6 +28,8 @@ export const REVISION_TWINS = {
 	variantApplication: { name: 'variant-application', extension: 'asd' },
 	/** A library function whose type ids the project already holds with other content, its type gaining data. */
 	switchControllerTypeClash: { name: 'switch-controller-type-clash', extension: 'fsd' },
+	/** Two bays of two applications each, sharing their categories, whose breaker application gains the protection function. */
+	twoApplicationBay: { name: 'two-application-bay', extension: 'ssd' },
 } as const
 
 /**

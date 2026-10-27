@@ -21,6 +21,7 @@ The lifecycle tests are written in three tiers:
 | `linked-levels-template` (SSD)        | `SLD_TFO_Bay` v0r1, a second revision made                                               | the medium-voltage breaker gets a description; its terminal names a node of the other level                                            |
 | `variant-application` (ASD)           | `P21_App` and its SSD3 instance, `CB_App`'s group                                        | inside and outside the selection of variants its committed instance made, a variant gained                                             |
 | `switch-controller-type-clash` (FSD)  | the switch controller of the function library, its "in use" file, a second revision made | its type gains a data object under the same id; its project holds the baseline file's instance, the type ids shared with other content |
+| `two-application-bay` (SSD)           | `SSD3` `BAY1` and `BAY2`, their two applications, a second revision made                 | the breaker application of each bay composes the protection function too, and its role allocates it                                    |
 
 The two-level bay template holds instances of the other twins (the renamed application's second revision on both
 levels, the gaining application's first one on the high-voltage level): the instances carry their elements' uuids as
