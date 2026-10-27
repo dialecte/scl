@@ -383,7 +383,39 @@
 			"equivalent": "the walk reads the parents of a stored element: each record it reads exists"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.ts": {
+		"b8b078f0790cb5f0": {
+			"line": 40,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a guard against reading a composed function twice (one the primary holds, or listed twice): read again, it adds the same ids, and the satellites are kept once each"
+		},
+		"cedf3fbbd652d852": {
+			"line": 40,
+			"mutation": "ConditionalExpression: subtreeIds.has(composedRef.id ?? '') -> false",
+			"equivalent": "a guard against reading a composed function twice: read again, it adds the same ids, and the satellites are kept once each"
+		},
+		"a7dd0d3984aa695d": {
+			"line": 40,
+			"mutation": "LogicalOperator: composedRef.id ?? '' -> composedRef.id && ''",
+			"equivalent": "a composed function is a record: its id is always set"
+		},
+		"96f9ec191e308349": {
+			"line": 42,
+			"mutation": "ConditionalExpression: !composedTree -> false",
+			"equivalent": "unreachable: a composed function is a record of the source, its tree is always read"
+		},
+		"601a165dec6ac72f": {
+			"line": 44,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "the targets of a function not placed are collected into a list nothing reads"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites.ts": {
+		"81780df88cdd2034": {
+			"line": 45,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a left-out id no element carries leaves nothing more out"
+		},
 		"69e7a5f19eaae68a": {
 			"line": 47,
 			"mutation": "ConditionalExpression: !clone -> false",
@@ -393,6 +425,11 @@
 			"line": 49,
 			"mutation": "ConditionalExpression: bumpsCollisions -> true",
 			"equivalent": "every scenario policy bumps collisions (instantiate, template, fork): the flag is never false today"
+		},
+		"4e31cd913652032c": {
+			"line": 51,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite is a record: its id is always set"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity.ts": {
@@ -1009,6 +1046,16 @@
 			"line": 64,
 			"mutation": "OptionalChaining: cloneMappings.find((mapping) => mapping.source.id === applicationRef.id)?.target -> cloneMappings.find(mapping => mapping.source.id === applic",
 			"equivalent": "the extracted root always has a clone mapping"
+		},
+		"5483a5987c766bba": {
+			"line": 66,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a clone mapping's source is a record: its id is always set"
+		},
+		"56feee68d8ffed39": {
+			"line": 73,
+			"mutation": "BooleanLiteral: false -> true",
+			"equivalent": "the extracted file is fresh: a satellite placed there has no sibling of its name to be numbered against"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/extract/transaction/fsd.ts": {
@@ -1106,7 +1153,7 @@
 		"c41bd793acd07614": {
 			"line": 36,
 			"mutation": "LogicalOperator: content.has(companion.id) || foreignIds.has(companion.id) -> content.has(companion.id) && foreignIds.has(companion.id)",
-			"equivalent": "a companion is never foreign (filtered before): the second test reads false either way"
+			"equivalent": "the companions exclude the foreign functions before: the second test reads false either way"
 		},
 		"817944efd018298d": {
 			"line": 37,
@@ -1136,7 +1183,7 @@
 		"3cb5af370ed59b6d": {
 			"line": 78,
 			"mutation": "MethodExpression: [...ownedUuids].filter((uuid) => !foreignUuids.has(uuid)) -> [...ownedUuids]",
-			"equivalent": "a function both an application placed from its file and one of the scope compose: the SSD extract clones such a function twice today (open item), so the case gives an invalid file before the filter matters"
+			"equivalent": "a function both an application placed from its file and one of the scope compose is foreign: passed as a companion, it is skipped as foreign before it is read (row: an application of the bay beside one placed from its file)"
 		},
 		"0f712c7f2f77b40a": {
 			"line": 109,
@@ -1186,6 +1233,13 @@
 			"line": 43,
 			"mutation": "ConditionalExpression: !referencedUuid -> false",
 			"equivalent": "a reference without the uuid looks for elements of an empty uuid and finds none: nothing outside is named either way"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/instantiate/transaction/asd.ts": {
+		"4c606649c0ad28e3": {
+			"line": 108,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a clone mapping's source is a record: its id is always set"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts": {
@@ -1480,6 +1534,13 @@
 			"line": 118,
 			"mutation": "LogicalOperator: params.matchKey ?? 'templateUuid' -> params.matchKey && 'templateUuid'",
 			"equivalent": "every scenario that places functions through a placement passes the instantiate key, templateUuid: the default and the key coincide"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/clone-topology-content.ts": {
+		"15066156ad39b0eb": {
+			"line": 86,
+			"mutation": "ConditionalExpression: mapping.source.id -> true",
+			"equivalent": "a clone mapping's source is a record: its id is always set"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/layers/topology/ensure-topology-frame.ts": {

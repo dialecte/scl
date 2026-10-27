@@ -100,14 +100,23 @@ export async function placeApplication(
 	})
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) applying to
-	// any element in the Application subtree travel with it, one of each per instance
+	// any element in the Application subtree or in a function it places travel with it, one of each per instance
 	// what their references may name: the application and the functions it composes, as placed
 	const scope = await resolveApplicationScope(sourceQuery, { applicationRef, leftOut })
+	// what the operation placed: a function it does not place (left out, or stood on — another application placed it)
+	// keeps the satellites it has, and what it holds applies to nothing placed here
+	const alreadyCloned = new Set(contentMappings.flatMap((mapping) => mapping.source.id ?? []))
+	const notPlaced = composedFunctionRefs
+		.filter((ref) => !alreadyCloned.has(ref.id))
+		.map((ref) => ref.id)
 	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: applicationRef,
+		composedRefs: composedFunctionRefs,
+		alreadyCloned,
 		structure,
 		leftOut,
+		notPlaced: new Set(notPlaced),
 		bumpsCollisions: policy.bumpsCollisions,
 		scope,
 	})

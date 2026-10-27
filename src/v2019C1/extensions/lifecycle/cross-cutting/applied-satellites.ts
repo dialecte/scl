@@ -11,15 +11,17 @@ import type { AnyTreeRecord } from '@dialecte/core'
 
 /**
  * Resolve the cross-cutting satellites that apply to ANY element within the
- * primary's subtree: for every uuid-bearing element under `primaryRef`, find the
- * containers (e.g. `Variable`) referencing it. Excludes containers that live
- * INSIDE the subtree (internal — already carried by the primary clone/diff). This
+ * primary's subtree, and within the subtrees of what it composes (`composedRefs`: the functions an application composes
+ * travel with it): for every uuid-bearing element there, find the containers (e.g. `Variable`) referencing it.
+ * Excludes containers that live INSIDE those subtrees (internal — already carried by their clone/diff). This
  * is layer-agnostic: any verb passes its primary and gets the applied satellites.
  */
 export async function resolveAppliedSatellites(
 	query: Core.Query<Config>,
 	params: {
 		primaryRef: Scl.Ref<Scl.ElementsOf>
+		/** What travels with the primary (the functions an application composes): what applies to them is resolved too. */
+		composedRefs?: readonly Scl.Ref<Scl.ElementsOf>[]
 		/**
 		 * Elements left out (record ids): a satellite applying only to them, or only through references left out, is not
 		 * resolved.
@@ -27,13 +29,21 @@ export async function resolveAppliedSatellites(
 		leftOut?: ReadonlySet<string>
 	},
 ): Promise<Scl.Ref<Scl.ElementsOf>[]> {
-	const { primaryRef, leftOut } = params
+	const { primaryRef, composedRefs = [], leftOut } = params
 	const tree = await query.any.getTree(primaryRef)
 	if (!tree) return []
 
 	const subtreeIds = new Set<string>()
 	const targets: AnyTreeRecord[] = []
 	collectTargets({ node: tree, subtreeIds, targets })
+	for (const composedRef of composedRefs) {
+		if (subtreeIds.has(composedRef.id ?? '')) continue
+		const composedTree = await query.any.getTree(composedRef)
+		if (!composedTree) continue
+		// a function left out travels not: nothing applies to it, and what it holds is no satellite either
+		const collected = leftOut?.has(composedTree.id) ? [] : targets
+		collectTargets({ node: composedTree, subtreeIds, targets: collected })
+	}
 
 	const seen = new Set<string>()
 	const satellites: Scl.Ref<Scl.ElementsOf>[] = []

@@ -77,6 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A variable or a behaviour description applying to a function an application composes travels with the application.** Placed (`instantiate.asd`, an update placing it) or extracted (`extract.asd`), an application brought what applies to itself only: a variable or a behaviour description outside the function applying to it was listed by the report and not written, and left out of the extracted file. Both now carry it, one per instance, applying to what the operation places; with `templateLink: 'break'` an extract breaks its link too, unless it applies only to a function placed from its own file, which keeps its own.
+
 - **An extracted SSD holds once a function two applications of the scope compose.** Each application placed the functions it composes, so the second placed the function again beside the first — and what it holds that its roles refer to: two functions of one name in the bay, an invalid file. The function is placed once and both applications refer to it and to what it holds.
 
 - **`extract.asd` names the file after the application extracted.** It read the name in the document being written, where the application is not yet: every ASD was named `ASD_Unnamed_Application` (`Header@id` `asd_unnamed_application`).

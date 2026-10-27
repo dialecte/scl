@@ -18,7 +18,9 @@ import type * as Core from '@dialecte/core'
 
 /**
  * Places the external CROSS-CUTTING satellites (e.g. `Variable`,
- * `BehaviorDescription`) that apply to any element in the primary subtree. Tag-agnostic: whatever
+ * `BehaviorDescription`) that apply to any element in the primary subtree, or in what it composes (`composedRefs`),
+ * but those the operation placed already (`alreadyCloned`) and what applies only to what it composes and does not place
+ * (`notPlaced`). Tag-agnostic: whatever
  * `resolveAppliedSatellites` returns is placed by its own tag. Satellites living
  * inside the subtree are cloned by `deep`, not here (the resolver excludes them).
  *
@@ -34,12 +36,19 @@ export async function cloneAppliedSatellites(
 	tx: Core.Transaction<Config>,
 	params: CloneAppliedSatellitesParams,
 ): Promise<CloneAppliedSatellitesResult> {
-	const { sourceQuery, primaryRef, structure, leftOut, bumpsCollisions, scope } = params
+	const { sourceQuery, primaryRef, composedRefs, alreadyCloned, structure, leftOut } = params
+	const { bumpsCollisions, scope, notPlaced } = params
 
-	const satellites = await resolveAppliedSatellites(sourceQuery, { primaryRef, leftOut })
+	const satellites = await resolveAppliedSatellites(sourceQuery, {
+		primaryRef,
+		composedRefs,
+		leftOut: notPlaced ? new Set([...(leftOut ?? []), ...notPlaced]) : leftOut,
+	})
 
 	const cloneMappings: Scl.CloneMapping[] = []
 	for (const satelliteRef of satellites) {
+		// one the application refers to is placed with it already
+		if (alreadyCloned?.has(satelliteRef.id ?? '')) continue
 		const targetParent = await resolveStructureRef(sourceQuery, satelliteRef, structure)
 		const leaveOut = await leaveOutOfScope(sourceQuery, { root: satelliteRef, scope, leftOut })
 		const clone = await cloneTree(tx, {

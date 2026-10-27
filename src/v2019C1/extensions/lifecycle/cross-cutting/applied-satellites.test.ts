@@ -113,3 +113,82 @@ describe('resolveAppliedSatellites (cross-cutting: applies to any element in the
 
 	runSclTestCases.withoutExport({ testCases, act })
 })
+
+/** An application composing two functions; a variable of the bay applies to each, one lives inside the second. */
+const composedXml = /* xml */ `
+	<SCL ${ns} ${id}="asd">
+		<Substation name="TEMPLATE" ${id}="sub-s">
+			<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+				<Bay name="TEMPLATE" ${id}="bay-s">
+					<Private type="eIEC61850-6-100" ${id}="bay-priv">
+						<eIEC61850-6-100:Application name="App" uuid="app-uuid" ${id}="app">
+							<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="app-role">
+								<eIEC61850-6-100:FunctionRoleContent ${id}="app-content">
+									<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/F1" functionUuid="f1-uuid" ${id}="ref-1"/>
+									<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/F2" functionUuid="f2-uuid" ${id}="ref-2"/>
+								</eIEC61850-6-100:FunctionRoleContent>
+							</eIEC61850-6-100:FunctionRole>
+						</eIEC61850-6-100:Application>
+						<eIEC61850-6-100:Variable name="ON_F1" uuid="on-f1-uuid" ${id}="on-f1">
+							<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/TEMPLATE/F1" elementUuid="f1-uuid" ${id}="on-f1-apply"/>
+						</eIEC61850-6-100:Variable>
+						<eIEC61850-6-100:Variable name="ON_F2" uuid="on-f2-uuid" ${id}="on-f2">
+							<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/TEMPLATE/F2" elementUuid="f2-uuid" ${id}="on-f2-apply"/>
+						</eIEC61850-6-100:Variable>
+					</Private>
+					<Function name="F1" uuid="f1-uuid" ${id}="f1"/>
+					<Function name="F2" uuid="f2-uuid" ${id}="f2">
+						<Private type="eIEC61850-6-100" ${id}="f2-priv">
+							<eIEC61850-6-100:Variable name="IN_F2" uuid="in-f2-uuid" ${id}="in-f2">
+								<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/TEMPLATE/F1" elementUuid="f1-uuid" ${id}="in-f2-apply"/>
+							</eIEC61850-6-100:Variable>
+						</Private>
+					</Function>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+const applicationRef = { tagName: 'Application', id: 'app' } as Scl.Ref<Scl.ElementsOf>
+const composedRefs = [
+	{ tagName: 'Function', id: 'f1' },
+	{ tagName: 'Function', id: 'f2' },
+] as Scl.Ref<Scl.ElementsOf>[]
+
+type ComposedCase = SclTest.BaseXmlTestCase & {
+	composedRefs?: Scl.Ref<Scl.ElementsOf>[]
+	leftOut?: string[]
+	/** The satellites resolved, by record id, sorted. */
+	expectedIds: string[]
+}
+
+describe('resolveAppliedSatellites with what the primary composes', () => {
+	const testCases: SclTest.TestCases<ComposedCase> = {
+		'none composed given → what applies to the application only: nothing': {
+			sourceXml: composedXml,
+			expectedIds: [],
+		},
+		'its functions given → what applies to each, but what lives inside one of them': {
+			sourceXml: composedXml,
+			composedRefs,
+			expectedIds: ['on-f1', 'on-f2'],
+		},
+		'the second function left out → what applies to the first alone': {
+			sourceXml: composedXml,
+			composedRefs,
+			leftOut: ['f2'],
+			expectedIds: ['on-f1'],
+		},
+	}
+
+	async function act({ testCase, source }: SclTest.ActParams<ComposedCase>): Promise<void> {
+		const satellites = await resolveAppliedSatellites(source.query, {
+			primaryRef: applicationRef,
+			...(testCase.composedRefs ? { composedRefs: testCase.composedRefs } : {}),
+			...(testCase.leftOut ? { leftOut: new Set(testCase.leftOut) } : {}),
+		})
+		expect(satellites.map((ref) => ref.id).sort()).toEqual(testCase.expectedIds)
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
