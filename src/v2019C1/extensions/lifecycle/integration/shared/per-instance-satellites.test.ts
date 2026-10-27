@@ -8,7 +8,11 @@ import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } fro
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DiffNode, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DecisionMap,
+	DiffNode,
+	DiffReport,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { DecisionMapping } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { SclTest } from '@/v2019C1/test'
 import type * as Core from '@dialecte/core'
@@ -312,6 +316,12 @@ const ownNamesakeXml = /* xml */ `
 	</SCL>
 `
 
+// The same project, its variable named apart from the template's: one the user made.
+const userVariableXml = ownNamesakeXml.replace(
+	'name="VXCBR" desc="Project variable"',
+	'name="VUSER" desc="Project variable"',
+)
+
 // A project an earlier version wrote: the template's variable mapped onto the project's of its name.
 const mappedByNameEarlierXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -336,7 +346,7 @@ type Operation =
 	| { revise: Scl.Ref<Scl.ElementsOf>; attributes: Record<string, string> }
 	| { template: (tx: Core.Transaction<Config>) => Promise<void> }
 	| { drop: Scl.Ref<Scl.ElementsOf> }
-	| { update: string; withoutDecisions?: true }
+	| { update: string; withoutDecisions?: true; acceptProjectOwn?: true }
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
@@ -476,25 +486,36 @@ describe('lifecycle — a variable or a behaviour description belongs to its ins
 					listed: [],
 				},
 			},
-		'an earlier version gave the instance the project variable of that name, the template drops it → the project variable stays, without what the instance gave it':
+		"an earlier version gave the instance the project variable of that name, the template drops it → the variable is the project's own: it keeps what it applies to in the instance, listed as such":
 			{
 				sourceXml: substationVariableXml,
 				targetXml: mappedByNameEarlierXml,
 				operations: [{ drop: variableRef }, { update: 'bay-b1' }],
 				expected: {
-					held: ['Variable VXCBR [Project breaker variable] @S1: B1/Local'],
-					listed: ['removed VariableApplyTo'],
+					held: ['Variable VXCBR [Project breaker variable] @S1: B1/Local, B1/Prot'],
+					listed: ['target-only VariableApplyTo'],
 				},
 			},
-		'an earlier version gave the instance the project variable of that name, which applies to nothing else, the template drops it → only what the instance gave it is listed; the variable, left applying to nothing, goes at the commit':
+		"the project variable applies to nothing else, the template drops it → kept, listed as the project's own":
 			{
 				sourceXml: substationVariableXml,
 				targetXml: mappedOnlyForInstanceXml,
 				operations: [{ drop: variableRef }, { update: 'bay-b1' }],
 				expected: {
+					held: ['Variable VXCBR [Project breaker variable] @S1: B1/Prot'],
+					listed: ['target-only VariableApplyTo'],
+					// accepted, the variable left applying to nothing would go with the wrapper it leaves empty
+					sideEffects: ['deleted Private', 'deleted Variable'],
+				},
+			},
+		'… the consumer accepts removing what it applies to in the instance → removed; the variable, left applying to nothing, goes at the commit':
+			{
+				sourceXml: substationVariableXml,
+				targetXml: mappedOnlyForInstanceXml,
+				operations: [{ drop: variableRef }, { update: 'bay-b1', acceptProjectOwn: true }],
+				expected: {
 					held: [],
-					listed: ['removed VariableApplyTo'],
-					// the variable left applying to nothing, and the wrapper it leaves empty
+					listed: ['target-only VariableApplyTo'],
 					sideEffects: ['deleted Private', 'deleted Variable'],
 				},
 			},
@@ -530,20 +551,20 @@ describe('lifecycle — a variable or a behaviour description belongs to its ins
 					listed: ['removed BehaviorDescription'],
 				},
 			},
-		'an earlier version gave the instance the project behaviour description of that name, the template drops it → it stays, without the input the instance gave it':
+		"an earlier version gave the instance the project behaviour description of that name, the template drops it → it is the project's own: it keeps the input it reads in the instance, listed as such":
 			{
 				sourceXml: substationSatellitesXml,
 				targetXml: behaviourMappedByNameEarlierXml,
 				operations: [{ drop: behaviourRef }, { update: 'bay-b1' }],
 				expected: {
 					held: [
-						'BehaviorDescription BD1 [Project behaviour] @S1: B1/Local/CSWI1',
+						'BehaviorDescription BD1 [Project behaviour] @S1: B1/Local/CSWI1, B1/Prot/CSWI1',
 						'Variable VXCBR @S1: B1/Prot',
 					],
-					listed: ['added Variable', 'added VariableApplyTo', 'removed InputVar'],
+					listed: ['added Variable', 'added VariableApplyTo', 'target-only InputVar'],
 				},
 			},
-		'a project variable of the template variable name applies to the instance by other references → the instance gets the template one beside it; what the project variable applied to in the instance reads as given by an earlier placement, and goes':
+		"a variable the user made, of the template variable's name, applies to the instance's logical node → the instance gets the template one beside it; the user's keeps what it applies to, listed as the project's own":
 			{
 				sourceXml: substationVariableXml,
 				targetXml: ownNamesakeXml,
@@ -553,10 +574,26 @@ describe('lifecycle — a variable or a behaviour description belongs to its ins
 				],
 				expected: {
 					held: [
-						'Variable VXCBR [Project variable] @S1: B1/Local',
+						'Variable VXCBR [Project variable] @S1: B1/Local, B1/Prot/CSWI1',
 						'Variable VXCBR_1 @S1: B1/Prot',
 					],
-					listed: ['added Variable', 'added VariableApplyTo', 'removed VariableApplyTo'],
+					listed: ['added Variable', 'added VariableApplyTo', 'target-only VariableApplyTo'],
+				},
+			},
+		"a variable the user made applies to the instance's logical node, the template revised → kept with what it applies to, listed as the project's own":
+			{
+				sourceXml: substationVariableXml,
+				targetXml: userVariableXml,
+				operations: [
+					{ revise: functionRef, attributes: { desc: 'revision 2' } },
+					{ update: 'bay-b1' },
+				],
+				expected: {
+					held: [
+						'Variable VUSER [Project variable] @S1: B1/Local, B1/Prot/CSWI1',
+						'Variable VXCBR @S1: B1/Prot',
+					],
+					listed: ['added Variable', 'added VariableApplyTo', 'target-only VariableApplyTo'],
 				},
 			},
 		'placed in two bays, the template gains a variable, each bay updated in turn → each instance gets its own, the second numbered':
@@ -668,6 +705,7 @@ describe('lifecycle — a variable or a behaviour description belongs to its ins
 						targetInstance: instance,
 					} as LifecycleTarget,
 					withoutDecisions: operation.withoutDecisions,
+					decide: operation.acceptProjectOwn ? acceptProjectOwn : undefined,
 				})
 				lastReport = updated.report
 			}
@@ -793,4 +831,13 @@ async function describeElement(
 		return names.join('/')
 	}
 	return `nothing (${uuid})`
+}
+
+/** The consumer accepts removing what the project made: every group the report lists as the project's own. */
+function acceptProjectOwn(listed: DiffReport): DecisionMap {
+	return new Map(
+		allGroups(listed)
+			.filter((group) => group.change === 'target-only')
+			.map((group) => [group.id, 'accept'] as const),
+	)
 }

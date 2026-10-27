@@ -3,6 +3,7 @@ import { describe, expect } from 'vitest'
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
+import { fsd as updateFsd } from '@/v2019C1/extensions/lifecycle/update/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 import { collectReferenceViolations } from '@/v2019C1/test/assert-coherent-scl-references'
 
@@ -439,6 +440,8 @@ type UpdateTestCase = SclTest.BaseXmlTestCase & {
 	editProject?: (tx: Scl.Transaction) => Promise<void>
 	/** Place the template a second time instead of updating its instance. */
 	instantiateAgain?: boolean
+	/** The update is written by the verb alone, with no report to accept. */
+	updateAlone?: boolean
 	expected: {
 		/** Where the update's report says the source category lands — nothing when the template brings none. */
 		mapping: DecisionMapping | undefined
@@ -449,10 +452,14 @@ type UpdateTestCase = SclTest.BaseXmlTestCase & {
 			added: { FunctionCategory: number; SubCategory: number; FunctionCatRef: number }
 			removed: { FunctionCategory: number; SubCategory: number; FunctionCatRef: number }
 		}
+		/** The references the report lists as the project's own, kept unless their removal is accepted. Default none. */
+		listedAsProjectOwn?: number
 		/** Names of every FunctionCategory of the project, once updated. */
 		categoryNames: string[]
 		/** Names of every SubCategory of the project, once updated. */
 		subCategoryNames: string[]
+		/** The description of the project's sub-category "CURRENT", once updated, when the case reads it. */
+		currentDescription?: string
 		/** The description of the category "MEASUREMENT", once updated. */
 		categoryDescription: string | undefined
 		/** Every classification of the project once updated: `container path -> function path`. */
@@ -502,7 +509,7 @@ describe('shared-element mapping — an update finds the category the instantiat
 					classifications: ['MEASUREMENT -> S1/V1/B1/Local', 'MEASUREMENT -> S1/V1/B1/Prot'],
 				},
 			},
-		'the template no longer classifies the function → its reference leaves the project category, which keeps its own':
+		"the template no longer classifies the function → the project category is the project's own: its reference stays, listed as such":
 			{
 				sourceXml,
 				targetXml: projectXml,
@@ -513,15 +520,16 @@ describe('shared-element mapping — an update finds the category the instantiat
 					locked: undefined,
 					announced: {
 						added: { FunctionCategory: 0, SubCategory: 0, FunctionCatRef: 0 },
-						removed: { FunctionCategory: 0, SubCategory: 0, FunctionCatRef: 1 },
+						removed: { FunctionCategory: 0, SubCategory: 0, FunctionCatRef: 0 },
 					},
+					listedAsProjectOwn: 1,
 					categoryNames: ['MEASUREMENT'],
 					subCategoryNames: [],
 					categoryDescription: 'Project measurements',
-					classifications: ['MEASUREMENT -> S1/V1/B1/Local'],
+					classifications: ['MEASUREMENT -> S1/V1/B1/Local', 'MEASUREMENT -> S1/V1/B1/Prot'],
 				},
 			},
-		'… and when the reference sat in a sub-category of the project category → it leaves that sub-category, which stays':
+		"… and when the reference sat in a sub-category of the project category → it stays there, listed as the project's own":
 			{
 				sourceXml: nestedSourceXml,
 				targetXml: nestedProjectXml,
@@ -532,15 +540,19 @@ describe('shared-element mapping — an update finds the category the instantiat
 					locked: undefined,
 					announced: {
 						added: { FunctionCategory: 0, SubCategory: 0, FunctionCatRef: 0 },
-						removed: { FunctionCategory: 0, SubCategory: 0, FunctionCatRef: 1 },
+						removed: { FunctionCategory: 0, SubCategory: 0, FunctionCatRef: 0 },
 					},
+					listedAsProjectOwn: 1,
 					categoryNames: ['MEASUREMENT'],
 					subCategoryNames: ['CURRENT'],
 					categoryDescription: 'Project measurements',
-					classifications: ['MEASUREMENT/CURRENT -> S1/V1/B1/Local'],
+					classifications: [
+						'MEASUREMENT/CURRENT -> S1/V1/B1/Local',
+						'MEASUREMENT/CURRENT -> S1/V1/B1/Prot',
+					],
 				},
 			},
-		'the template classifies the function under one more sub-category → it is added to the project category, beside what that category already holds':
+		'the template classifies the function under one more sub-category and describes its own → it is added to the project category, nothing the project holds rewritten':
 			{
 				sourceXml: nestedSourceXml,
 				targetXml: nestedProjectXml,
@@ -556,6 +568,11 @@ describe('shared-element mapping — an update finds the category the instantiat
 							functionUuid: 'function-source-uuid',
 						},
 					})
+					await tx.update(sourceCategoryRef, { attributes: { desc: 'Measurements, revision 2' } })
+					await tx.update(
+						{ tagName: 'SubCategory', id: 'sub-category-s' } as Scl.Ref<'SubCategory'>,
+						{ attributes: { desc: 'Currents, revision 2' } },
+					)
 					await describeFunctionRevision(tx)
 				},
 				expected: {
@@ -569,6 +586,7 @@ describe('shared-element mapping — an update finds the category the instantiat
 					categoryNames: ['MEASUREMENT'],
 					subCategoryNames: ['CURRENT', 'VOLTAGE'],
 					categoryDescription: 'Project measurements',
+					currentDescription: undefined,
 					classifications: [
 						'MEASUREMENT/CURRENT -> S1/V1/B1/Local',
 						'MEASUREMENT/CURRENT -> S1/V1/B1/Prot',
@@ -576,6 +594,48 @@ describe('shared-element mapping — an update finds the category the instantiat
 					],
 				},
 			},
+		'… the update written by the verb alone → the same, nothing the project holds rewritten': {
+			sourceXml: nestedSourceXml,
+			targetXml: nestedProjectXml,
+			updateAlone: true,
+			editTemplate: async (tx) => {
+				const subCategory = await tx.addChild(sourceCategoryRef, {
+					tagName: 'SubCategory',
+					attributes: { name: 'VOLTAGE', uuid: 'voltage-source-uuid' },
+				})
+				await tx.addChild(subCategory, {
+					tagName: 'FunctionCatRef',
+					attributes: {
+						function: 'TEMPLATE/TEMPLATE/TEMPLATE/Prot',
+						functionUuid: 'function-source-uuid',
+					},
+				})
+				await tx.update(sourceCategoryRef, { attributes: { desc: 'Measurements, revision 2' } })
+				await tx.update(
+					{ tagName: 'SubCategory', id: 'sub-category-s' } as Scl.Ref<'SubCategory'>,
+					{ attributes: { desc: 'Currents, revision 2' } },
+				)
+				await describeFunctionRevision(tx)
+			},
+			expected: {
+				mapping: { existing: projectCategoryRef },
+				reason: 'lineage',
+				locked: true,
+				announced: {
+					added: { FunctionCategory: 0, SubCategory: 1, FunctionCatRef: 1 },
+					removed: { FunctionCategory: 0, SubCategory: 0, FunctionCatRef: 0 },
+				},
+				categoryNames: ['MEASUREMENT'],
+				subCategoryNames: ['CURRENT', 'VOLTAGE'],
+				categoryDescription: 'Project measurements',
+				currentDescription: undefined,
+				classifications: [
+					'MEASUREMENT/CURRENT -> S1/V1/B1/Local',
+					'MEASUREMENT/CURRENT -> S1/V1/B1/Prot',
+					'MEASUREMENT/VOLTAGE -> S1/V1/B1/Prot',
+				],
+			},
+		},
 		'the category was created by the instantiate → the update finds it by its lineage and reconciles it in full, description included':
 			{
 				sourceXml,
@@ -708,8 +768,15 @@ describe('shared-element mapping — an update finds the category the instantiat
 			},
 			'report',
 		).toEqual(testCase.expected.announced)
+		expect(count('target-only')('FunctionCatRef'), "report: listed as the project's own").toBe(
+			testCase.expected.listedAsProjectOwn ?? 0,
+		)
 
-		await target.transaction(async (tx) => {
+		await target.transaction(async function writeUpdate(tx) {
+			if (testCase.updateAlone) {
+				await updateFsd(tx, { sourceQuery: source.query, functionRef, targetParent: bayRef })
+				return
+			}
 			await apply(tx, {
 				...updateTarget,
 				report: updateReport,
@@ -728,6 +795,11 @@ describe('shared-element mapping — an update finds the category the instantiat
 		}
 		expect(await namesOf('FunctionCategory'), 'apply').toEqual(testCase.expected.categoryNames)
 		expect(await namesOf('SubCategory'), 'apply').toEqual(testCase.expected.subCategoryNames)
+		if ('currentDescription' in testCase.expected) {
+			const current = { tagName: 'SubCategory', id: 'sub-category-t' } as Scl.Ref<'SubCategory'>
+			const currentDescription = await target.query.getAttribute(current, { name: 'desc' })
+			expect(currentDescription || undefined, 'apply').toBe(testCase.expected.currentDescription)
+		}
 
 		const [measurement] = await target.query.findByAttributes({
 			tagName: 'FunctionCategory',

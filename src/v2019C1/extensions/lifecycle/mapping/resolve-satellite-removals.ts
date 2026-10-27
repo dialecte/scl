@@ -19,8 +19,10 @@ import type { AnyTreeRecord } from '@dialecte/core'
  *  - an element the template made (it carries the lineage of a source element the source no longer holds) goes whole,
  *    unless something outside the instance names it or is named by it (another instance's function a category
  *    classifies, another application's reference to a role): then only what the instance gave it goes;
- *  - an element of the project's own (no lineage) that a source element was mapped onto stays: what the instance gave
- *    it goes;
+ *  - an element of the project's own (no lineage) stays, and so do the references it gives the instance: what the
+ *    template never gave is not the template's to take — they are listed as the project's own (`target-only`), removed
+ *    only when the consumer accepts it, a project element a template mapped onto earlier included (nothing tells it
+ *    from one the user made);
  *  - an element the source still holds, or the one a source satellite lands on, is reconciled, not removed.
  * What the instance gave an element is the references below it pointing into the instance.
  */
@@ -44,9 +46,10 @@ export async function resolveSatelliteRemovals(
 		const satellite = await reader.any.getTree(instanceSatelliteRef)
 		if (!satellite) continue
 
-		// an element of the project's own goes as a removal; one the template made as its source element reads
+		// what the project made is its own: listed, kept unless its removal is accepted; one the template made reads
+		// as its source element does
 		const lineage = await reader.any.getAttribute(satellite, { name: matchKey })
-		let change: SatelliteRemoval['change'] | 'still-held' = 'removed'
+		let change: SatelliteRemoval['change'] | 'still-held' = 'target-only'
 		if (lineage) {
 			const inSource = await sourceQuery.any.findByAttributes({
 				tagName: satellite.tagName,

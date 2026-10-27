@@ -228,7 +228,7 @@ describe('lifecycle — a shared element the template retires', () => {
 					listed: ['removed AllocationRoleRef', 'removed FunctionRef'],
 				},
 			},
-		'a project role an earlier placement mapped the template role onto, only this application allocated to it, the template retires it → the project role stays, without the application function':
+		"a project role an earlier placement mapped the template role onto, only this application allocated to it, the template retires it → the role is the project's own: it keeps the application function, listed as such":
 			{
 				sourceXml: roleXml,
 				targetXml: projectRoleXml,
@@ -240,8 +240,8 @@ describe('lifecycle — a shared element the template retires', () => {
 					{ update: 'bay-b1' },
 				],
 				expected: {
-					held: ['AllocationRole HMI_PC: '],
-					listed: ['removed AllocationRoleRef', 'removed FunctionRef'],
+					held: ['AllocationRole HMI_PC: B1/Prot'],
+					listed: ['removed AllocationRoleRef', 'target-only FunctionRef'],
 				},
 			},
 		'a role the template retires that an application of the project refers to, though it allocates none of its functions → the role stays, without the instance function':
@@ -311,6 +311,18 @@ describe('lifecycle — a shared element the template retires', () => {
 					{ updateWithoutReport: 'bay-b1' },
 				],
 				expected: { held: ['FunctionCategory MEASUREMENT: B2/Prot'] },
+			},
+		'a category the placement made that also classifies a function of the project, the instance updated by the verb alone → that classification stays':
+			{
+				sourceXml: categoryXml,
+				targetXml: twoBaysXml,
+				operations: [
+					{ place: 'bay-b1' },
+					{ project: classifyLocalFunction },
+					{ revise: functionRef, attributes: { desc: 'revision 2' } },
+					{ updateWithoutReport: 'bay-b1' },
+				],
+				expected: { held: ['FunctionCategory MEASUREMENT: B1/Local, B1/Prot'] },
 			},
 	}
 

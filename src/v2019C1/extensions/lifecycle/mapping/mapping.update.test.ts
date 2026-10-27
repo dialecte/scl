@@ -198,6 +198,8 @@ type TestCase = SclTest.BaseXmlTestCase & {
 		applyRefusal?: string
 		/** How many allocations the report announces as removed from a role — none when left out. */
 		announcedRemovedAllocations?: number
+		/** How many allocations the report lists as the project's own, kept unless their removal is accepted. */
+		allocationsOfTheProject?: number
 		/** Names of every AllocationRole of the project once updated. */
 		roleNames: string[]
 		/** The roles the Application refers to once updated, by path. */
@@ -344,7 +346,7 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 				roleAllocations: ['S1/V1/B1/Local'],
 			},
 		},
-		'the template drops the role altogether → the project role stays, without what this instance had given it':
+		"the template drops the role altogether → the project role is the project's own: it keeps what the instance had given it, listed as such":
 			{
 				sourceXml,
 				targetXml: projectXml,
@@ -356,11 +358,11 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 					mappings: [],
 					announcedNewRoles: 0,
 					announcedNewAllocations: 0,
-					announcedRemovedAllocations: 1,
+					allocationsOfTheProject: 1,
 					roleNames: ['HMI_PC'],
 					applicationRoles: [],
 					roleDescription: 'Operator workstation',
-					roleAllocations: ['S1/V1/B1/Local'],
+					roleAllocations: ['S1/V1/B1/Local', 'S1/V1/B1/Prot'],
 				},
 			},
 		'the role was created by the instantiate → the update finds it by its lineage and reconciles it in full, description included':
@@ -840,6 +842,12 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 		)
 		expect(announcedRemovedAllocations.length, 'report').toBe(
 			testCase.expected.announcedRemovedAllocations ?? 0,
+		)
+		const allocationsOfTheProject = announced.filter(
+			(node) => node.tagName === 'FunctionRef' && node.change === 'target-only',
+		)
+		expect(allocationsOfTheProject.length, "report: listed as the project's own").toBe(
+			testCase.expected.allocationsOfTheProject ?? 0,
 		)
 
 		if (testCase.expected.applyRefusal) {

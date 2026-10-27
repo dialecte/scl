@@ -127,7 +127,7 @@ describe('report: what the removal of a group makes the delete hooks do outside 
 			}),
 			expectedSideEffects: ['modified SubFunction | none', 'removed SubFunction | none'],
 		},
-		'a category whose last reference names it: the reference, the category, the wrapper it leaves empty and the reference to the category are listed deleted':
+		"a category of the project's own whose last reference names it: the reference, the category, the wrapper it leaves empty and the reference to the category are listed deleted":
 			{
 				sourceXml: functionTemplate,
 				targetXml: projectWith({
@@ -142,7 +142,7 @@ describe('report: what the removal of a group makes the delete hooks do outside 
 				}),
 				expectedSideEffects: [
 					'removed SubFunction | FunctionCatRef deleted, FunctionCategory deleted, Private deleted, FunctionCategoryRef deleted',
-					'removed FunctionCatRef | FunctionCategory deleted, Private deleted, FunctionCategoryRef deleted',
+					'target-only FunctionCatRef | FunctionCategory deleted, Private deleted, FunctionCategoryRef deleted',
 				],
 			},
 	}
