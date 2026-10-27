@@ -47,7 +47,11 @@ export type {
 
 export type { AppliedInstances, ApplyResult } from './apply'
 
-export type { ExtractOptions, TemplateLink } from './extract/transaction/extract.types'
+export type {
+	ExtractOptions,
+	ExtractWarning,
+	TemplateLink,
+} from './extract/transaction/extract.types'
 
 export type {
 	DecisionMapping,

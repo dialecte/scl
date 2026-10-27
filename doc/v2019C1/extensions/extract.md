@@ -74,7 +74,7 @@ tx.lifecycle.extract.asd(params: {
 Steps:
 
 1. Ensure the TEMPLATE substation structure.
-2. Write the ASD history header (`fileType: 'ASD'`).
+2. Write the ASD history header (`fileType: 'ASD'`), the file named after the application (`ASD_<name>`).
 3. Clone the Application's functions (via `deep`) and their categories into the structure.
 4. Clone the remaining referenced satellites, placing each by mirroring its source hierarchy — a satellite owned by a function lands back under that function's clone — and cloning each target exactly once (satellites already brought in with a function are reused, not duplicated).
 5. Write the identity: the `Application` extracted loses its template link (`templateUuid` and `originUuid`) and its own `ApplicationSclRef`; its functions, roles and categories keep their lineage, and its functions the `FunctionSclRef` of the FSD each was placed from. The cloned uuid references are repointed.
@@ -93,7 +93,7 @@ tx.lifecycle.extract.ssd(params: {
   nameStructure?: string
   as?: 'new' | 'revision'
   templateLink?: 'keep' | 'break'
-}): Promise<{ warnings: string[] }>
+}): Promise<{ warnings: ExtractWarning[] }>
 ```
 
 Steps:
@@ -103,7 +103,11 @@ Steps:
 3. TEMPLATE-name the reproduced ancestors above the selected entrypoint; the entrypoint itself keeps the source name, becoming the reusable root.
 4. Write the identity: the entrypoint and the `TEMPLATE` levels above it lose their template link; what the entrypoint holds — equipment, applications, functions — keeps its lineage, and its applications and functions the `ApplicationSclRef` / `FunctionSclRef` of the file each was placed from. Repoint cloned UUID references and run post-extraction clean-up.
 
-Returns the warnings gathered while extracting — currently one entry when the source has `IED` / `Communication` sections, which are not yet carried into an SSD.
+Returns the warnings gathered while extracting (`ExtractWarning`, a `code` and its data, for the caller to word) — currently one, when the source has `IED` / `Communication` sections, which are not yet carried into an SSD:
+
+```ts
+{ code: 'sections-not-carried', counts: { IED: number, Communication: number } }
+```
 
 ### Options
 

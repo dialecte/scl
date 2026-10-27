@@ -18,3 +18,12 @@ export type ExtractOptions = {
 	 */
 	templateLink?: TemplateLink
 }
+
+/**
+ * What an extract left out and says so: `sections-not-carried` — the `IED` and `Communication` sections of the source,
+ * which an SSD does not carry yet, with their count.
+ */
+export type ExtractWarning = {
+	code: 'sections-not-carried'
+	counts: { IED: number; Communication: number }
+}

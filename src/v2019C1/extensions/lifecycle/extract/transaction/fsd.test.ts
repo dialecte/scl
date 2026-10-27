@@ -81,12 +81,7 @@ describe('fsd', () => {
 	// FSDs, identified via SclFileReference + UUID. So the root's own `templateUuid` is
 	// stripped (it becomes a fresh template) while child `templateUuid` is PRESERVED.
 	describe('lineage: root becomes a fresh template, children keep composition provenance', () => {
-		type TestCase = SclTest.BaseXmlTestCase & {
-			targetXml: string
-			functionId: string
-		}
-
-		const testCases: SclTest.TestCases<TestCase> = {
+		const testCases: SclTest.TestCases<ExtractFunctionCase> = {
 			'root Function templateUuid stripped; child SubFunction templateUuid preserved': {
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
@@ -114,20 +109,54 @@ describe('fsd', () => {
 			},
 		}
 
-		runSclTestCases.withExport<TestCase>({
-			testCases,
-			act: async ({ source, target, testCase }) => {
-				if (!target) throw new Error('target required')
-				await target.transaction(async (tx) => {
-					await fsd(tx, {
-						sourceQuery: source.query,
-						functionRef: { tagName: 'Function', id: testCase.functionId },
-						tool: 'TEST',
-						who: 'test',
-					})
-				})
-				return { assertOn: 'target' }
+		runSclTestCases.withExport<ExtractFunctionCase>({ testCases, act: extractFunction })
+	})
+
+	describe('what the function holds', () => {
+		const testCases: SclTest.TestCases<ExtractFunctionCase> = {
+			'a text-only vendor Private on the function → kept with its text': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+						<Substation ${id}="sub1" name="S1">
+							<VoltageLevel ${id}="vl1" name="V1">
+								<Bay ${id}="bay1" name="B1">
+									<Function ${id}="func1" name="Prot" uuid="fn-uuid">
+										<Private ${id}="fn-acme" type="ACME-Id">42</Private>
+										<Private ${id}="fn-flag" type="ACME-Flag"/>
+									</Function>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				targetXml: emptyTargetXml,
+				functionId: 'func1',
+				expectedQueries: [
+					'//default:Function[@name="Prot"]/default:Private[@type="ACME-Id"][text()="42"]',
+					'//default:Function[@name="Prot"]/default:Private[@type="ACME-Flag"]',
+				],
 			},
-		})
+		}
+
+		runSclTestCases.withExport<ExtractFunctionCase>({ testCases, act: extractFunction })
 	})
 })
+
+type ExtractFunctionCase = SclTest.BaseXmlTestCase & { targetXml: string; functionId: string }
+
+async function extractFunction({
+	source,
+	target,
+	testCase,
+}: SclTest.ActParams<ExtractFunctionCase>): Promise<SclTest.ActResult> {
+	if (!target) throw new Error('target required')
+	await target.transaction(async function extractFsd(tx) {
+		await fsd(tx, {
+			sourceQuery: source.query,
+			functionRef: { tagName: 'Function', id: testCase.functionId },
+			tool: 'TEST',
+			who: 'test',
+		})
+	})
+	return { assertOn: 'target' }
+}

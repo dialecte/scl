@@ -291,6 +291,40 @@ describe('asd', () => {
 		})
 	})
 
+	// ── the file written ─────────────────────────────────────────────────────
+
+	describe('the file is named after the application extracted', () => {
+		const testCases: SclTest.TestCases<TestCase> = {
+			'application "Feeder Protection" → Header id asd_feeder_protection': {
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+						<Substation name="S1" ${id}="sub-s">
+							<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
+								<eIEC61850-6-100:Application name="Feeder Protection" type="PAC" uuid="app-uuid" ${id}="app-s">
+									<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="fr-s">
+										<eIEC61850-6-100:FunctionRoleContent ${id}="frc-s">
+											<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot" functionUuid="fn-uuid" ${id}="fref-s"/>
+										</eIEC61850-6-100:FunctionRoleContent>
+									</eIEC61850-6-100:FunctionRole>
+								</eIEC61850-6-100:Application>
+							</Private>
+							<VoltageLevel name="V1" ${id}="vl-s">
+								<Bay name="B1" ${id}="bay-s">
+									<Function name="Prot" uuid="fn-uuid" ${id}="fn-s"/>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				targetXml: emptyTargetXml,
+				applicationId: 'app-s',
+				expectedQueries: ['//default:Header[@id="asd_feeder_protection"][@fileType="ASD"]'],
+			},
+		}
+
+		runSclTestCases.withExport<TestCase>({ testCases, act })
+	})
+
 	// ── AllocationRole cloning ───────────────────────────────────────────────
 
 	describe('AllocationRole referenced by Application → cloned to target', () => {

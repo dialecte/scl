@@ -25,7 +25,7 @@ export async function asd(
 	const { as = 'new', templateLink = 'break' } = params
 
 	const applicationName =
-		(await tx.getAttribute(applicationRef, { name: 'name' })) || 'Unnamed Application'
+		(await sourceQuery.getAttribute(applicationRef, { name: 'name' })) || 'Unnamed Application'
 
 	await history.transaction.startFile(tx, {
 		as,

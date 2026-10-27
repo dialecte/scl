@@ -6,7 +6,7 @@ import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cut
 import { cloneTopologyContent } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { isTopologyLevel } from '@/v2019C1/helpers'
 
-import type { ExtractOptions } from './extract.types'
+import type { ExtractOptions, ExtractWarning } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -30,7 +30,7 @@ export async function ssd(
 		who: Scl.AttributesValueObjectOf<'Hitem'>['who']
 		nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
 	} & ExtractOptions,
-): Promise<{ warnings: string[] }> {
+): Promise<{ warnings: ExtractWarning[] }> {
 	const { sourceQuery, scopeRef, tool, who, nameStructure } = params
 	const { as = 'new', templateLink = 'break' } = params
 	const root = await tx.getRoot()
@@ -83,14 +83,19 @@ export async function ssd(
 	return { warnings }
 }
 
-/** IED / Communication are dropped by the SSD extract until the IED/ISD layer lands. */
-async function collectSkippedSectionWarnings(sourceQuery: Core.Query<Config>): Promise<string[]> {
+/** IED / Communication are dropped by the SSD extract until the IED/ISD layer lands: counted in one warning. */
+async function collectSkippedSectionWarnings(
+	sourceQuery: Core.Query<Config>,
+): Promise<ExtractWarning[]> {
 	const ieds = await sourceQuery.getRecordsByTagName('IED')
 	const communications = await sourceQuery.getRecordsByTagName('Communication')
 
 	if (ieds.length === 0 && communications.length === 0) return []
 
 	return [
-		`Skipped ${ieds.length} IED and ${communications.length} Communication section(s): not yet carried into an SSD (available once the IED/ISD layer exists).`,
+		{
+			code: 'sections-not-carried',
+			counts: { IED: ieds.length, Communication: communications.length },
+		},
 	]
 }

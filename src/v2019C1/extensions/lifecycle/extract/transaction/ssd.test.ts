@@ -1,8 +1,13 @@
 import { ssd } from './ssd'
 
-import { describe } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import {
+	ALL_XMLNS_NAMESPACES,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	createSclTestProject,
+	runSclTestCases,
+} from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
@@ -179,4 +184,46 @@ describe('extract.ssd - connectivity', () => {
 	}
 
 	runSclTestCases.withExport({ testCases, act })
+})
+
+describe('extract.ssd - what it does not carry', () => {
+	it('a source holding IEDs and a Communication section → one warning counting them', async () => {
+		const withDevices = sourceXml.replace(
+			`<DataTypeTemplates ${id}="dtt-1">`,
+			// a fragment: the sections inserted before the data types, whose opening tag it ends with
+			[
+				`<Communication ${id}="comm-1"><SubNetwork name="W1" ${id}="subnet-1"/></Communication>`,
+				`<IED name="P1" ${id}="ied-1"><AccessPoint name="AP1" ${id}="ap-1"/></IED>`,
+				`<IED name="P2" ${id}="ied-2"><AccessPoint name="AP1" ${id}="ap-2"/></IED>`,
+				`<DataTypeTemplates ${id}="dtt-1">`,
+			].join(''),
+		)
+		const { source, target } = await createSclTestProject({
+			sourceXml: withDevices,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+		})
+		if (!target) throw new Error('target required')
+
+		const result = await target.document.transaction((tx) =>
+			ssd(tx, { sourceQuery: source.document.query, scopeRef, tool: 'TEST', who: 'test' }),
+		)
+
+		expect(result.warnings).toEqual([
+			{ code: 'sections-not-carried', counts: { IED: 2, Communication: 1 } },
+		])
+	})
+
+	it('a source holding neither → no warning', async () => {
+		const { source, target } = await createSclTestProject({
+			sourceXml,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+		})
+		if (!target) throw new Error('target required')
+
+		const result = await target.document.transaction((tx) =>
+			ssd(tx, { sourceQuery: source.document.query, scopeRef, tool: 'TEST', who: 'test' }),
+		)
+
+		expect(result.warnings).toEqual([])
+	})
 })
