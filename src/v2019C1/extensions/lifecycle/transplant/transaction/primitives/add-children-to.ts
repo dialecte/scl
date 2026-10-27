@@ -9,10 +9,10 @@ import type { OmitEntry } from '@dialecte/core'
  * Add the CHILDREN of a source element under an EXISTING target element, instead
  * of cloning the source element itself.
  *
- * Used to reuse a singleton/shared target element (e.g. a `Private` grouping of a
- * given `type`, or a same-name catalog entry) and pour the incoming content into
- * it, rather than producing a duplicate wrapper/entity. Each child is cloned via
- * `cloneTree`, so uuid remapping and reference-path rebuilding still fire.
+ * Used to land a wrapper in the target's wrapper of its kind (a `Private` grouping of a given
+ * `type`) rather than producing a duplicate wrapper. Each child is cloned via `cloneTree`, so uuid
+ * remapping and reference-path rebuilding still fire. An element the project shares (a role, a
+ * category) is poured in by `contribute`, which pairs what it holds.
  */
 export async function addChildrenTo(
 	tx: Core.Transaction<Config>,

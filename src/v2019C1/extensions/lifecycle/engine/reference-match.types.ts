@@ -11,8 +11,17 @@ export type RedirectedSourceUuids = ReadonlyMap<string, string>
  * The side a reference identity is read on. The source side reads the uuids a reference names as they are; the
  * instance side brings each back to the source: by the lineage its target carries under the scenario's key (a
  * target's `templateUuid`, or under `uuid` the target's uuid itself), or through the source element a project element
- * stands for (`redirectedSourceUuids`).
+ * stands for (`redirectedSourceUuids`). The project side brings back only what a source element stands for, and reads
+ * any other uuid as it is when the source is another document (`readsSourceUuids`): a reference naming an element an
+ * earlier placement made names it by its own uuid, never the source's; one naming the source's uuid was written by
+ * this placement.
  */
 export type ReferenceIdentitySide =
 	| { side: 'source' }
 	| { side: 'instance'; matchKey: MatchKey; redirectedSourceUuids?: RedirectedSourceUuids }
+	| {
+			side: 'project'
+			redirectedSourceUuids?: RedirectedSourceUuids
+			/** A uuid the source and the project both name is the source's element: false when the source is the project. */
+			readsSourceUuids: boolean
+	  }

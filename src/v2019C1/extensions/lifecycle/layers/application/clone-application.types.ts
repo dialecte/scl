@@ -15,4 +15,6 @@ export type AllocationRoleReuse = {
 	existingRef: Scl.Ref<'AllocationRole'>
 	/** The source role's children cloned under the existing role. */
 	contributedMappings: Scl.CloneMapping[]
+	/** Where the source role, and what it holds, landed on what the existing role holds. */
+	redirectMappings: RedirectMapping[]
 }

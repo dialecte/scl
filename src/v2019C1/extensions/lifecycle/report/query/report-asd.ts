@@ -34,7 +34,7 @@ import {
 	resolveSatelliteMappings,
 	toRedirectMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
-import { placedFresh, scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -108,7 +108,7 @@ export async function reportAsd(
 
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
-	const { matchKey, refsAlwaysAdded, namesFollow } = policy
+	const { matchKey, namesFollow } = policy
 	const removalBase = params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery }))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matchedApplications = policy.matchesInstances
@@ -159,7 +159,6 @@ export async function reportAsd(
 			sourceQuery,
 			applicationRef,
 			instance: undefined,
-			refsAlwaysAdded,
 			matchKey,
 			decisionMappings,
 			anchor,
@@ -192,7 +191,6 @@ export async function reportAsd(
 				sourceQuery,
 				applicationRef,
 				instance,
-				refsAlwaysAdded,
 				matchKey,
 				decisionMappings,
 				anchor,
@@ -284,7 +282,6 @@ async function reportApplicationInstance(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		instance: AnyTrackedRecord | undefined
-		refsAlwaysAdded?: boolean
 		matchKey?: MatchKey
 		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
@@ -304,7 +301,6 @@ async function reportApplicationInstance(
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
-	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 
 	// application-layer satellites (e.g. a referenced AllocationRole) travel with
 	// the application's decision group
@@ -366,7 +362,6 @@ async function reportApplicationInstance(
 		instanceSatelliteRefs,
 		report: applicationReport,
 		instanceScopeId: instance?.id,
-		refsAlwaysAdded,
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
 		matchKey: params.matchKey,
@@ -393,7 +388,6 @@ async function reportApplicationInstance(
 			? ({ tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>)
 			: undefined,
 		report: applicationReport,
-		refsAlwaysAdded,
 		anchor: params.anchor,
 		matchKey: params.matchKey,
 		resolveForeignScope,
@@ -456,7 +450,6 @@ async function reportComposedFunctions(
 					...params,
 					functionRef,
 					instance: undefined,
-					refsAlwaysAdded: policy.refsAlwaysAdded,
 				}),
 			)
 		}
@@ -500,8 +493,6 @@ async function reportComposedFunctions(
 					...params,
 					functionRef,
 					instance: undefined,
-					// placed for that instance: a new one, whatever another instance holds
-					refsAlwaysAdded: placedFresh(policy).refsAlwaysAdded,
 					anchor: standing.level,
 				})
 				// placed for each instance of the application: listed, and decided, per instance
@@ -523,7 +514,6 @@ async function reportComposedFunctions(
 					...params,
 					functionRef,
 					instance: functionInstance,
-					refsAlwaysAdded: policy.refsAlwaysAdded,
 					// a function several instances compose leaves out only what none of them uses
 					selection: sharedSelection(standers.get(functionInstance.id) ?? []),
 				}),
@@ -541,7 +531,6 @@ async function reportComposedFunction(
 		functionRef: Scl.Ref<'Function'>
 		instance: AnyTrackedRecord | undefined
 		/** The function's references are new whatever the project holds (a function placed afresh). */
-		refsAlwaysAdded: boolean
 		policy: ScenarioPolicy
 		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
@@ -563,7 +552,6 @@ async function reportComposedFunction(
 		sourceQuery,
 		functionRef,
 		instance,
-		refsAlwaysAdded: params.refsAlwaysAdded,
 		matchKey: policy.matchKey,
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,

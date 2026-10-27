@@ -37,8 +37,6 @@ export async function reportFunction(
 		sourceQuery: Core.Query<Config>
 		functionRef: FsdFunctionRef
 		instance: AnyRefOrRecord | undefined
-		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
-		refsAlwaysAdded?: boolean
 		/** How the instance matches source. `templateUuid` (default) or `uuid` (fork). */
 		matchKey?: MatchKey
 		/** The consumer's choices for the shared elements the function is classified by. */
@@ -60,7 +58,6 @@ export async function reportFunction(
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
-	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 
 	const report = await diff({
 		sourceQuery,
@@ -100,7 +97,6 @@ export async function reportFunction(
 		functionRef,
 		instance,
 		report,
-		refsAlwaysAdded,
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
 		matchKey: params.matchKey,
@@ -118,7 +114,6 @@ export async function reportFunction(
 		primaryRef: functionRef,
 		instancePrimaryRef: instance ? (toRef(instance) as Scl.Ref<Scl.ElementsOf>) : undefined,
 		report: withLayerSatellites,
-		refsAlwaysAdded,
 		anchor: params.anchor,
 		matchKey: params.matchKey,
 		resolveForeignScope,

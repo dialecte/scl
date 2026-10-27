@@ -1,3 +1,5 @@
+import { throwDialecteError } from '@dialecte/core'
+
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 
 import type { PlaceholderLineages } from './placeholder-lineages.types'
@@ -33,18 +35,37 @@ export async function referenceIdentity(
 	for (const pair of pairs) {
 		const uuidValue = await query.any.getAttribute(node, { name: pair.attribute.uuid })
 		if (!uuidValue) continue
-		const identity =
-			options.side === 'instance'
-				? (options.redirectedSourceUuids?.get(uuidValue) ??
-					(await toSourceSpaceUuid(query, {
-						uuidValue,
-						targetTags: pair.target,
-						matchKey: options.matchKey,
-					})))
-				: uuidValue
+		const identity = await identityOf(query, { uuidValue, targetTags: pair.target, options })
+		if (identity === undefined) return undefined
 		parts.push(`${pair.attribute.uuid}=${identity}`)
 	}
 	return parts.length > 0 ? parts.sort().join('|') : undefined
+}
+
+/** One uuid a reference names, brought back to the source as its side reads it: see `ReferenceIdentitySide`. */
+async function identityOf(
+	query: Reader,
+	params: { uuidValue: string; targetTags: readonly string[]; options: ReferenceIdentitySide },
+): Promise<string | undefined> {
+	const { uuidValue, targetTags, options } = params
+	switch (options.side) {
+		case 'source':
+			return uuidValue
+		case 'project':
+			return (
+				options.redirectedSourceUuids?.get(uuidValue) ??
+				(options.readsSourceUuids ? uuidValue : undefined)
+			)
+		case 'instance':
+			return (
+				options.redirectedSourceUuids?.get(uuidValue) ??
+				(await toSourceSpaceUuid(query, { uuidValue, targetTags, matchKey: options.matchKey }))
+			)
+		default:
+			return throwDialecteError('ASSERTION_FAILED', {
+				detail: `referenceIdentity: unhandled side ${String(options satisfies never)}`,
+			})
+	}
 }
 
 /**

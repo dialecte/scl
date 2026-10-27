@@ -36,8 +36,6 @@ export async function foldCarriedSatellites(
 		functionRef: FsdFunctionRef
 		instance: AnyRefOrRecord | undefined
 		report: InstanceDiff
-		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
-		refsAlwaysAdded?: boolean
 		/** The consumer's choices for the shared elements the function is classified by. */
 		decisionMappings?: DecisionMappings
 		/** The project element the function is placed under. */
@@ -80,7 +78,6 @@ export async function foldCarriedSatellites(
 		instanceSatelliteRefs,
 		report,
 		instanceScopeId: instance?.id,
-		refsAlwaysAdded: params.refsAlwaysAdded ?? false,
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
 		matchKey: params.matchKey,

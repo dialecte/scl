@@ -125,7 +125,7 @@ export async function reconcileTopologyFrame(
 			const edited = levelOverrides.get(sourceRef.id)
 			if (name && !edited?.name) levelOverrides.set(sourceRef.id, { ...edited, name })
 		}
-		const reconcileMappings = await reconcile(tx, {
+		const { cloneMappings: reconcileMappings } = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: scopeRef,
 			instanceRootRef: instance,

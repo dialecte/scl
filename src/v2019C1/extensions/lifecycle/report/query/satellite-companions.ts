@@ -1,6 +1,7 @@
 import { toRef } from '@dialecte/core/helpers'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { describeContribution } from '@/v2019C1/extensions/lifecycle/engine/contribute'
 import { leaveOutOfScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
@@ -14,6 +15,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/mapping'
 import { holdsPairingByName } from '@/v2019C1/extensions/lifecycle/report/report-warnings'
 
+import type { SatelliteDiffParams } from './satellite-companions.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
@@ -31,6 +33,7 @@ import type {
 } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -65,8 +68,6 @@ export async function foldSatelliteCompanions(
 		report: InstanceDiff
 		/** Instance scope for a standalone satellite group (primary-unchanged case). */
 		instanceScopeId?: string
-		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
-		refsAlwaysAdded?: boolean
 		/** The consumer's choices for shared satellites, by source record id. */
 		decisionMappings?: DecisionMappings
 		/** The project element the template is placed under. */
@@ -99,6 +100,8 @@ export async function foldSatelliteCompanions(
 		notSelected?: ReadonlySet<string>
 		/** What the satellites' references may name: what the placement places or the instance holds. */
 		scope: ContributionScope
+		/** On a first placement, source elements it places onto elements the project holds (a function stood on). */
+		redirectMappings?: readonly RedirectMapping[]
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
@@ -134,47 +137,20 @@ export async function foldSatelliteCompanions(
 			pass,
 		})
 		if (mapping) report.mappings = [...(report.mappings ?? []), mapping]
-		const foreignScope = instance ? await params.resolveForeignScope?.() : undefined
-		const foreignInstanceIds =
-			instance && foreignScope
-				? await collectForeignReferenceIds(query, { sharedRootRef: instance, foreignScope })
-				: undefined
-		// a reference naming what the placement does not place is neither listed nor written
-		const leftOut = await leaveOutOfScope(sourceQuery, {
-			root: satelliteRef,
-			scope: params.scope,
-			leftOut: params.notSelected,
-		})
-		const satelliteReport = await diff({
-			sourceQuery,
-			targetQuery: query,
-			sourceRootRef: satelliteRef,
-			instanceRootRef: instance,
-			instanceRootIsProjectOwned: projectOwned,
-			// a first placement only contributes to an element the project already holds
-			contributeOnly: firstTime,
-			// Shared/catalog satellite: its extra reference children belong to OTHER primaries/
-			// instances; a scoped single-primary update must not flag them as removed.
-			keepLeftoverRefs: true,
-			// Provenance override: a leftover ref IS a genuine removal when its target is in the
-			// source's own scope and the source satellite no longer references it (see below).
-			leftoverRefPolicy: await buildLeftoverRefPolicy(query, {
-				sourceQuery,
-				satelliteRef,
-				matchKey,
-			}),
-			// INSTANTIATE: the satellite container may already exist (matched), but this instantiation's
-			// per-instance refs are genuinely new — classify them added instead of lineage-matching a
-			// prior instance's refs (which would report a no-op while apply still merges 4 more in).
-			refsAlwaysAdded: params.refsAlwaysAdded ?? false,
-			foreignInstanceIds,
-			matchKey,
-			removalBase: params.removalBase,
-			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
-			placeholderLineages: params.placeholderLineages,
-			namesFollow: params.namesFollow,
-			notSelected: leftOut,
-		})
+		// a first placement onto an element the project holds only contributes to it, as the apply pours it
+		const satelliteReport =
+			firstTime && instance
+				? await describeContribution(query, {
+						sourceQuery,
+						source: satelliteRef,
+						target: toRef(instance) as Scl.Ref<Scl.ElementsOf>,
+						scope: params.scope,
+						matchKey,
+						leftOut: params.notSelected,
+						redirectMappings: params.redirectMappings,
+						placeholderLineages: params.placeholderLineages,
+					})
+				: await diffSatellite(query, { ...params, satelliteRef, instance, projectOwned, matchKey })
 		const changed =
 			satelliteReport.summary.added +
 				satelliteReport.summary.removed +
@@ -233,6 +209,54 @@ export async function foldSatelliteCompanions(
 	}
 
 	return report
+}
+
+/**
+ * A source satellite compared with the element of the project it lands on, or with none: its reference children naming
+ * what the placement does not place left out, those of another instance never its counterparts, a leftover one removed
+ * only when the source genuinely dropped it.
+ */
+async function diffSatellite(
+	query: Core.Query<Config>,
+	params: SatelliteDiffParams,
+): Promise<InstanceDiff> {
+	const { sourceQuery, satelliteRef, instance, matchKey } = params
+	const foreignScope = instance ? await params.resolveForeignScope?.() : undefined
+	const foreignInstanceIds =
+		instance && foreignScope
+			? await collectForeignReferenceIds(query, { sharedRootRef: instance, foreignScope })
+			: undefined
+	// a reference naming what the placement does not place is neither listed nor written
+	const leftOut = await leaveOutOfScope(sourceQuery, {
+		root: satelliteRef,
+		scope: params.scope,
+		leftOut: params.notSelected,
+	})
+	// Provenance override: a leftover ref IS a genuine removal when its target is in the source's own scope and the
+	// source satellite no longer references it (see below).
+	const leftoverRefPolicy = await buildLeftoverRefPolicy(query, {
+		sourceQuery,
+		satelliteRef,
+		matchKey,
+	})
+	return diff({
+		sourceQuery,
+		targetQuery: query,
+		sourceRootRef: satelliteRef,
+		instanceRootRef: instance,
+		instanceRootIsProjectOwned: params.projectOwned,
+		// Shared/catalog satellite: its extra reference children belong to OTHER primaries/instances; a scoped
+		// single-primary update must not flag them as removed.
+		keepLeftoverRefs: true,
+		leftoverRefPolicy,
+		foreignInstanceIds,
+		matchKey,
+		removalBase: params.removalBase,
+		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		placeholderLineages: params.placeholderLineages,
+		namesFollow: params.namesFollow,
+		notSelected: leftOut,
+	})
 }
 
 /**

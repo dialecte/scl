@@ -3,6 +3,10 @@ import { buildReportInstance } from './report-instance'
 import { toRef } from '@dialecte/core/helpers'
 
 import { FRAME_OMIT_CHILD_TAGS } from '@/v2019C1/constants'
+import {
+	leaveOutOfScope,
+	resolveContributionScope,
+} from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
 import {
@@ -84,6 +88,17 @@ export async function reportTopologyFrame(
 	// A root MAPPED onto an element of the project is that element: what it holds is left as it is,
 	// only what it lacks is added — and each level below it lands where its own mapping says.
 	if (params.firstPlacement) {
+		// what the frame pours into a level references what the unit places only, as the apply pours it
+		const scope = await resolveContributionScope(sourceQuery, {
+			roots: [scopeRef],
+			leftOut: params.leftOut,
+		})
+		const notSelected = await leaveOutOfScope(sourceQuery, {
+			root: scopeRef,
+			scope,
+			leftOut: params.leftOut,
+			omit: FRAME_OMIT_CHILD_TAGS,
+		})
 		const instanceDiff = await diff({
 			sourceQuery,
 			targetQuery: query,
@@ -95,9 +110,15 @@ export async function reportTopologyFrame(
 			placeholderLineages: params.placeholderLineages,
 			namesFollow: params.namesFollow,
 			omit: FRAME_OMIT_CHILD_TAGS,
-			notSelected: params.leftOut,
+			notSelected,
 			...(mappedOnto
-				? { instanceRootIsProjectOwned: true, contributeOnly: true, pinnedMatches }
+				? {
+						instanceRootIsProjectOwned: true,
+						contributeOnly: true,
+						refsAlwaysAdded: true,
+						keepLeftoverRefs: true,
+						pinnedMatches,
+					}
 				: {}),
 		})
 		const reportInstance = await buildReportInstance(query, {

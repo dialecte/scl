@@ -1,3 +1,4 @@
+import { contribute } from '@/v2019C1/extensions/lifecycle/engine/contribute'
 import {
 	leaveOutOfScope,
 	resolveContributionScope,
@@ -10,7 +11,6 @@ import {
 import {
 	deep as deepExtract,
 	cloneTree,
-	mergeChildrenInto,
 	resolveStructureRef,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { reference } from '@/v2019C1/extensions/reference'
@@ -73,8 +73,8 @@ export async function cloneFunction(
  *
  * A category is a SHARED element: where it lands is the answer of its mapping (`resolveMapping`,
  * the one the report reads too). Mapped onto a category the target already holds, it is not
- * cloned: its referencing children (FunctionCatRef, SubCategory) are merged into that category,
- * reusing same-name nested containers instead of duplicating them. With nothing to map onto, it is
+ * cloned: what it contributes (its FunctionCatRef, in the SubCategory it nests them in) is poured
+ * into that category (`contribute`, as the report reads it). With nothing to map onto, it is
  * cloned at its source-side structural level.
  *
  * UUID remapping (FunctionCatRef -> the cloned Function) is the caller's responsibility via
@@ -98,11 +98,6 @@ export async function cloneFunctionCategories(
 	const redirectMappings: RedirectMapping[] = []
 	for (const categoryId of categoryIds) {
 		const categoryRef: Scl.Ref<'FunctionCategory'> = { tagName: 'FunctionCategory', id: categoryId }
-		const leftOut = await leaveOutOfScope(sourceQuery, {
-			root: categoryRef,
-			scope,
-			leftOut: undefined,
-		})
 
 		const existing =
 			placedCategories.get(categoryId) ??
@@ -115,29 +110,28 @@ export async function cloneFunctionCategories(
 			}))
 		if (existing) {
 			// Do NOT skip - that would drop this function's classification.
-			const merged = await mergeChildrenInto(tx, {
+			const contributed = await contribute(tx, {
 				sourceQuery,
 				source: categoryRef,
 				target: existing,
-				matchKey: params.matchKey,
-				leftOut,
+				scope,
+				matchKey: params.matchKey ?? 'templateUuid',
 			})
-			cloneMappings.push(...merged.cloneMappings)
-			redirectMappings.push(...merged.redirectMappings)
-			const sourceUuid = await sourceQuery.getAttribute(categoryRef, { name: 'uuid' })
-			if (sourceUuid) redirectMappings.push({ sourceUuid, target: existing })
+			cloneMappings.push(...contributed.cloneMappings)
+			redirectMappings.push(...contributed.redirectMappings)
 			placedCategories.set(categoryId, existing)
 			continue
 		}
 
 		const targetParent = await resolveStructureRef(sourceQuery, categoryRef, structure)
 
-		const clone = await cloneTree(tx, {
-			sourceQuery,
-			ref: categoryRef,
-			targetParent,
-			leaveOut: leftOut,
+		// created here: only its references to what the placement places
+		const leaveOut = await leaveOutOfScope(sourceQuery, {
+			root: categoryRef,
+			scope,
+			leftOut: undefined,
 		})
+		const clone = await cloneTree(tx, { sourceQuery, ref: categoryRef, targetParent, leaveOut })
 		if (!clone) continue
 		cloneMappings.push(...clone.mappings)
 		placedCategories.set(categoryId, { tagName: 'FunctionCategory', id: clone.record.id })

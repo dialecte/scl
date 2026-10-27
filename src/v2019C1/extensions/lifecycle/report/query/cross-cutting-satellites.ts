@@ -33,8 +33,6 @@ export async function foldCrossCuttingSatellites(
 		primaryRef: Scl.Ref<Scl.ElementsOf>
 		instancePrimaryRef?: Scl.Ref<Scl.ElementsOf>
 		report: InstanceDiff
-		/** INSTANTIATE: force satellite reference children to `added` (new per-instance refs). */
-		refsAlwaysAdded?: boolean
 		/** The project element the primary is placed under. */
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		/** How an instance element carries its source element's uuid. Default `templateUuid`. */
@@ -75,7 +73,6 @@ export async function foldCrossCuttingSatellites(
 		instanceSatelliteRefs,
 		report,
 		instanceScopeId: instancePrimaryRef?.id,
-		refsAlwaysAdded: params.refsAlwaysAdded ?? false,
 		anchor: params.anchor,
 		matchKey: params.matchKey,
 		instancePrimaryRef,

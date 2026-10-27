@@ -68,7 +68,6 @@ export async function cloneTopologyContent(
 		sourceQuery,
 		scopeRef,
 		targetParent,
-		omit,
 		placementLevels,
 		leftOut,
 		matchKey: params.matchKey,

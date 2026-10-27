@@ -10,7 +10,6 @@ export type { ImportDeepParams, ImportDeepResult } from './deep.types'
 export * from './primitives/clone-tree'
 export * from './primitives/clone-referenced'
 export { addChildrenTo } from './primitives/add-children-to'
-export { mergeChildrenInto } from './primitives/merge-children-into'
 
 export { resolveStructureRef, createAncestryResolver } from './resolve-structure-ref'
 export type { TemplateStructure, TargetStructure } from './structure.types'

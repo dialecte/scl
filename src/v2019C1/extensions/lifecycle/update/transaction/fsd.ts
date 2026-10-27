@@ -212,7 +212,7 @@ export async function fsd(
 			scope: carried.scope,
 		})
 
-		const reconcileMappings = await reconcile(tx, {
+		const { cloneMappings: reconcileMappings } = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: functionRef,
 			instanceRootRef: instance,

@@ -4,7 +4,6 @@ import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.ty
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
-import type { OmitEntry } from '@dialecte/core'
 
 export type EnsureTopologyFrameParams = {
 	sourceQuery: Core.Query<Config>
@@ -12,8 +11,6 @@ export type EnsureTopologyFrameParams = {
 	scopeRef: Scl.Ref<Scl.ElementsOf>
 	/** The target element the reproduced frame is rooted under (typically the SCL root). */
 	targetParent: Scl.Ref<Scl.ElementsOf>
-	/** Extra child tags to drop from the frame's own-content clones (e.g. extract prunes provenance). */
-	omit?: OmitEntry<Config>[]
 	/**
 	 * Where each structural level lands, as resolved for a placement. Absent: the levels above the
 	 * scope root are those of `targetParent` where it has them, every other level is created.

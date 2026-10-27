@@ -1,9 +1,11 @@
-import { mergeChildrenInto } from '../../transplant/transaction/primitives/merge-children-into'
+import { FRAME_OWN_CONTENT_OMIT } from './ensure-topology-frame.constants'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import { FRAME_OMIT_CHILD_TAGS, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
+import { TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
+import { contribute } from '@/v2019C1/extensions/lifecycle/engine/contribute'
+import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type {
@@ -16,9 +18,6 @@ import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
-
-/** Own content omitted from the frame merge: structural levels (walked) + delegated fn/app content. */
-const FRAME_OWN_CONTENT_OMIT = [...TOPOLOGY_STRUCTURAL_TAGS, ...FRAME_OMIT_CHILD_TAGS]
 
 /**
  * Reproduce the source topology frame into the target, keyed by structural POSITION (never by name).
@@ -38,7 +37,7 @@ export async function ensureTopologyFrame(
 	tx: Core.Transaction<Config>,
 	params: EnsureTopologyFrameParams,
 ): Promise<EnsureTopologyFrameResult> {
-	const { sourceQuery, scopeRef, targetParent, omit, leftOut } = params
+	const { sourceQuery, scopeRef, targetParent, leftOut } = params
 
 	const levels =
 		params.placementLevels ??
@@ -86,26 +85,31 @@ export async function ensureTopologyFrame(
 		}
 	}
 
-	// 2. Merge OWN content (Private/BayType, equipment, connectivity) into the levels the source
+	// 2. Pour OWN content (Private/BayType, equipment, connectivity) into the levels the source
 	// gives content to, omitting the structural children (walked in step 1) and the delegated fn/app
 	// children: a CREATED level receives it all; a level of the unit mapped onto an element of the
-	// target receives what that element lacks — what it holds is left as it is. A context level is
-	// the target's own structure and is left untouched.
-	const ownContentOmit = omit ? [...FRAME_OWN_CONTENT_OMIT, ...omit] : FRAME_OWN_CONTENT_OMIT
+	// target receives what that element lacks — what it holds is left as it is (`contribute`). A
+	// context level is the target's own structure and is left untouched. Their references name what
+	// the frame places.
+	const scope = await resolveContributionScope(sourceQuery, { roots: [scopeRef], leftOut })
 	for (const { sourceRef } of levels) {
 		if (!createdIds.has(sourceRef.id) && !mappedUnitIds.has(sourceRef.id)) continue
 		const target = frameIndex.get(sourceRef.id)
 		if (!target) continue
-		const ownContent = await mergeChildrenInto(tx, {
+		const ownContent = await contribute(tx, {
 			sourceQuery,
 			source: sourceRef,
 			target,
-			omit: ownContentOmit,
+			scope,
+			omit: FRAME_OWN_CONTENT_OMIT,
 			leftOut,
-			matchKey: params.matchKey,
+			matchKey: params.matchKey ?? 'templateUuid',
 		})
 		cloneMappings.push(...ownContent.cloneMappings)
-		redirectMappings.push(...ownContent.redirectMappings)
+		// the level itself is placed by step 1: only what it holds landed on the target's elements
+		redirectMappings.push(
+			...ownContent.redirectMappings.filter((redirect) => redirect.target.id !== target.id),
+		)
 	}
 
 	const structure = await resolveFrameStructure(tx, sourceQuery, scopeRef, frameIndex)

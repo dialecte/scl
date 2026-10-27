@@ -614,8 +614,8 @@ The companion preserves the satellite's **structure**: when a change is nested i
 
 A satellite whose only differences are changes the update keeps (a behaviour description's file, a variable's value: [kept changes](#decision-groups-full-track)) opens no decision: its node is listed in the primary's `tree`, with its `keptAttributeChanges`, and counted in `report.summary.kept`.
 
-::: info Instantiate creates its own references
-On `scenario: 'instantiate'`, a shared satellite container (a category, a role) may already exist (a previous instantiation created it), but each instantiation owns its **own** per-instance reference children. So a reference into an already-existing shared satellite is reported as **added** (the container itself is matched and merged into), never a no-op — mirroring what `apply` writes (the new references are merged into the existing container).
+::: info A first placement contributes its own references
+A shared satellite container (a category, a role) a first placement lands on may already exist (a previous placement created it, or the project made it), but each placement owns its **own** per-instance reference children — whatever the scenario, an update placing a function where it has no instance included. So a reference into an already-existing shared satellite is reported as **added** (the container itself is matched and contributed to), never a no-op — unless the project's container already names the very element it names (one a source element was mapped onto): then it is not written twice. The report and the apply read one rule: [the contribution](#contribute-—-a-first-placement-onto-a-shared-element).
 :::
 
 ### On `apply` / `update` — a 3-way merge
@@ -684,6 +684,16 @@ type ReportInstance = {
 ```
 
 Matched by the scenario's key (`templateUuid`, `uuid` for a fork), same-space attribute compare. **Classify** decides the track: no instance = first-time instantiate = **fast** (headless); an existing instance with any change = **full** (needs decisions). This is the report a headless/review wrapper consumes to route fast vs full.
+
+### contribute — a first placement onto a shared element
+
+What a first placement brings into an element the project already holds — a role or a category its mapping lands on, the own content of a level of an SSD mapped onto the project's — is poured by one rule, `contribute`, that the report reads as a dry diff (`describeContribution`) and a copy will write too:
+
+- a container lands on the child the project holds for it — carrying its uuid as lineage anywhere below, else of its name — and nothing the project holds is rewritten, whoever made it;
+- a reference is the placement's own: added, unless the child it lands beside already names the very element it names (an element a source element was mapped onto); one naming what the placement does not place ([its scope](#two-kinds)) is not written, nor what the consumer left out;
+- what it adds is finalized with the rest of the placement: a reference to an element it places elsewhere names that element.
+
+Pairing is [the shared matcher](#child-matching-—-one-shared-matcher)'s, so the review and the write pair the same children.
 
 ### Child matching — one shared matcher
 

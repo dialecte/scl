@@ -1,6 +1,7 @@
 import { resolveApplicationScope } from './application-scope'
 import { resolveApplicationSatellites } from './satellites'
 
+import { contribute } from '@/v2019C1/extensions/lifecycle/engine/contribute'
 import { leaveOutOfScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import {
 	cloneFunction,
@@ -12,7 +13,6 @@ import {
 	resolveMapping,
 } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
-	addChildrenTo,
 	cloneAllReferencedTargets,
 	findMissingReferencedRecords,
 	cloneTree,
@@ -24,6 +24,7 @@ import { readAttribute } from '@/v2019C1/helpers'
 import type { AllocationRoleReuse, CloneApplicationContentResult } from './clone-application.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -117,7 +118,8 @@ export async function cloneApplicationContent(
 
 	// the references of the roles it refers to name what this placement places only: the application and the
 	// functions it composes, but those left out
-	const leaveOut = await leaveOutOfApplicationScope(sourceQuery, { applicationRef, leftOut })
+	const scope = await resolveApplicationScope(sourceQuery, { applicationRef, leftOut })
+	const leaveOut = await leaveOutOfApplicationScope(sourceQuery, { applicationRef, scope, leftOut })
 
 	// 3. All other referenced targets - derived from UUID_REFERENCE_PAIRS and DESCENDANTS.
 	// Each is placed by mirroring its source hierarchy (under its owning function when it
@@ -131,8 +133,9 @@ export async function cloneApplicationContent(
 		sourceQuery,
 		applicationRef,
 		decisionMappings,
-		matchKey: params.matchKey,
-		leaveOut,
+		matchKey: params.matchKey ?? 'templateUuid',
+		scope,
+		leftOut,
 	})
 	for (const reuse of roleReuse) {
 		cloneIndex.set(reuse.sourceId, reuse.existingRef)
@@ -165,20 +168,17 @@ export async function cloneApplicationContent(
 
 	// References to a mapped role still carry the source uuid: the caller's remap repoints them
 	// through `redirectMappings` (the role itself was not cloned, so no clone mapping covers it).
-	const roleRedirectMappings: RedirectMapping[] = roleReuse.map((reuse) => ({
-		sourceUuid: reuse.sourceUuid,
-		target: reuse.existingRef,
-	}))
-	redirectMappings.push(...roleRedirectMappings)
+	redirectMappings.push(...roleReuse.flatMap((reuse) => reuse.redirectMappings))
 
 	return { cloneMappings: allMappings, redirectMappings }
 }
 
 /**
  * Map each AllocationRole referenced by the Application onto the target role its mapping
- * resolves to, when there is one: the source role's `FunctionRef` allocations are added to
- * that role, and the reuse is recorded so the caller can (a) skip cloning a duplicate and
- * (b) repoint the references to it.
+ * resolves to, when there is one: what the source role contributes — its `FunctionRef` allocations
+ * of what the placement places — is poured into that role (`contribute`, as the report reads it),
+ * and the reuse is recorded so the caller can (a) skip cloning a duplicate and (b) repoint the
+ * references to it.
  */
 async function mapAllocationRoles(
 	tx: Core.Transaction<Config>,
@@ -186,12 +186,14 @@ async function mapAllocationRoles(
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		decisionMappings?: DecisionMappings
-		matchKey?: MatchKey
-		/** The references of the roles naming what the placement does not place (record ids): not added. */
-		leaveOut: ReadonlySet<string>
+		matchKey: MatchKey
+		/** What the roles' references may name: what the placement places. */
+		scope: ContributionScope
+		/** The source elements the consumer left out (record ids). */
+		leftOut: ReadonlySet<string> | undefined
 	},
 ): Promise<AllocationRoleReuse[]> {
-	const { sourceQuery, applicationRef, decisionMappings, matchKey, leaveOut } = params
+	const { sourceQuery, applicationRef, decisionMappings, matchKey, scope, leftOut } = params
 
 	const { AllocationRoleRef: refs = [] } = await sourceQuery.findDescendants(applicationRef, {
 		collect: 'AllocationRoleRef',
@@ -227,14 +229,22 @@ async function mapAllocationRoles(
 		if (!existing) continue
 
 		const existingRef: Scl.Ref<'AllocationRole'> = { tagName: 'AllocationRole', id: existing.id }
-		const contributedMappings = await addChildrenTo(tx, {
+		const contributed = await contribute(tx, {
 			sourceQuery,
 			source: { tagName: 'AllocationRole', id: sourceRole.id },
 			target: existingRef,
-			leaveOut,
+			scope,
+			matchKey,
+			leftOut,
 		})
 
-		reuse.push({ sourceId: sourceRole.id, sourceUuid: roleUuid, existingRef, contributedMappings })
+		reuse.push({
+			sourceId: sourceRole.id,
+			sourceUuid: roleUuid,
+			existingRef,
+			contributedMappings: contributed.cloneMappings,
+			redirectMappings: contributed.redirectMappings,
+		})
 	}
 	return reuse
 }
@@ -245,10 +255,13 @@ async function mapAllocationRoles(
  */
 async function leaveOutOfApplicationScope(
 	sourceQuery: Core.Query<Config>,
-	params: { applicationRef: Scl.Ref<'Application'>; leftOut: ReadonlySet<string> | undefined },
+	params: {
+		applicationRef: Scl.Ref<'Application'>
+		scope: ContributionScope
+		leftOut: ReadonlySet<string> | undefined
+	},
 ): Promise<ReadonlySet<string>> {
-	const { applicationRef, leftOut } = params
-	const scope = await resolveApplicationScope(sourceQuery, { applicationRef, leftOut })
+	const { applicationRef, scope, leftOut } = params
 	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef, leftOut })
 	const leaveOut = new Set(leftOut ?? [])
 	for (const satelliteRef of satelliteRefs) {

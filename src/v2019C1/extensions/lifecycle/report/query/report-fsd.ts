@@ -79,7 +79,7 @@ export async function reportFsd(
 		params
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
-	const { matchKey, refsAlwaysAdded, namesFollow } = policy
+	const { matchKey, namesFollow } = policy
 	const removalBase = params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery }))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matched = policy.matchesInstances
@@ -123,7 +123,6 @@ export async function reportFsd(
 			sourceQuery,
 			functionRef,
 			instance: undefined,
-			refsAlwaysAdded,
 			matchKey,
 			decisionMappings,
 			anchor: landing,
@@ -156,7 +155,6 @@ export async function reportFsd(
 			sourceQuery,
 			functionRef,
 			instance,
-			refsAlwaysAdded,
 			matchKey,
 			decisionMappings,
 			anchor: targetParent,

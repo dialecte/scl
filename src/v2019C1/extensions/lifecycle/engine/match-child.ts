@@ -61,6 +61,8 @@ export async function matchChild(
 		foreignInstanceIds?: ReadonlySet<string>
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. Default none. */
 		placeholderLineages?: PlaceholderLineages
+		/** The source is the project itself (a copy): a uuid both name is one element, never a reference this walk wrote. */
+		sourceIsProject: boolean
 	},
 ): Promise<ChildMatch | undefined> {
 	const { targetQuery, sourceChild, instanceParent, index, matchedInstanceIds } = params
@@ -92,10 +94,6 @@ export async function matchChild(
 		return sameName && { record: sameName }
 	}
 
-	// INSTANTIATE: a fresh instantiation creates its OWN per-instance refs, so never match a link to a
-	// prior instance's ref — surface it as `added` (the prior refs stay as kept context).
-	if (refsAlwaysAdded && REFERENCE_TAG_NAMES.has(sourceChild.tagName)) return undefined
-
 	const candidates = instanceParent.tree.filter(
 		(instanceChild) =>
 			instanceChild.tagName === instanceTag &&
@@ -103,6 +101,18 @@ export async function matchChild(
 			!params.foreignInstanceIds?.has(instanceChild.id),
 	)
 	if (candidates.length === 0) return undefined
+
+	// a fresh placement makes its OWN references: one matches only a child already naming, in the project, the very
+	// element it names (a source element mapped onto it) — never a prior instance's reference
+	if (refsAlwaysAdded && REFERENCE_TAG_NAMES.has(sourceChild.tagName)) {
+		return matchReferenceNamingTheSame(sourceQuery, {
+			targetQuery,
+			sourceChild,
+			candidates,
+			redirectedSourceUuids: params.redirectedSourceUuids,
+			sourceIsProject: params.sourceIsProject,
+		})
+	}
 
 	if (REFERENCE_TAG_NAMES.has(sourceChild.tagName)) {
 		// The source ref's target uuid is read as it is (do not normalize it — an extracted template may
@@ -128,6 +138,36 @@ export async function matchChild(
 	}
 
 	return { record: candidates[0] }
+}
+
+/**
+ * The candidate reference naming the very element the source reference names: an element a source element was mapped
+ * onto (`redirectedSourceUuids`), or — the same placement having written it already, not yet finalized — the source
+ * element itself (never in a copy, where the source is the project). None for a reference an earlier placement made for
+ * what it placed.
+ */
+async function matchReferenceNamingTheSame(
+	sourceQuery: Reader,
+	params: {
+		targetQuery: Reader
+		sourceChild: AnyTreeRecord
+		candidates: readonly AnyTreeRecord[]
+		redirectedSourceUuids: RedirectedSourceUuids | undefined
+		sourceIsProject: boolean
+	},
+): Promise<ChildMatch | undefined> {
+	const { targetQuery, sourceChild, candidates, redirectedSourceUuids, sourceIsProject } = params
+	const sourceIdentity = await referenceIdentity(sourceQuery, sourceChild, { side: 'source' })
+	if (sourceIdentity === undefined) return undefined
+	for (const candidate of candidates) {
+		const candidateIdentity = await referenceIdentity(targetQuery, candidate, {
+			side: 'project',
+			redirectedSourceUuids,
+			readsSourceUuids: !sourceIsProject,
+		})
+		if (candidateIdentity === sourceIdentity) return { record: candidate }
+	}
+	return undefined
 }
 
 /**

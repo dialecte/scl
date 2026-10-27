@@ -312,7 +312,7 @@ export async function asd(
 			scope,
 		})
 
-		const reconcileMappings = await reconcile(tx, {
+		const { cloneMappings: reconcileMappings } = await reconcile(tx, {
 			sourceQuery,
 			sourceRootRef: applicationRef,
 			instanceRootRef: instance,

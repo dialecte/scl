@@ -118,7 +118,7 @@ export async function reconcileSatellites(
 				sharedRootRef: instance,
 				foreignScope: foreignScope ?? new Set(),
 			})
-			const reconcileMappings = await reconcile(tx, {
+			const { cloneMappings: reconcileMappings } = await reconcile(tx, {
 				sourceQuery,
 				sourceRootRef: satelliteRef,
 				instanceRootRef: instance,

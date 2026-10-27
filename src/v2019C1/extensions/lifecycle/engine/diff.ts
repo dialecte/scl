@@ -169,6 +169,8 @@ export async function diff(params: {
 	boundLogicalNodeTypes?: BoundLogicalNodeTypes
 	/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. Default none. */
 	placeholderLineages?: PlaceholderLineages
+	/** The source is the project itself (a copy): a uuid both name is one element, never a reference this walk wrote. */
+	sourceIsProject?: boolean
 }): Promise<InstanceDiff> {
 	const { sourceQuery, targetQuery, sourceRootRef, instanceRootRef, keepLeftoverRefs } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
@@ -226,6 +228,7 @@ export async function diff(params: {
 		typeComparison: createTypeComparison(),
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes ?? 'follow',
 		placeholderLineages: params.placeholderLineages ?? new Set(),
+		sourceIsProject: params.sourceIsProject ?? false,
 	})
 	// a rename of the instance itself is numbered among its siblings, as the apply numbers it
 	if (instanceTree.parent) {
@@ -268,6 +271,7 @@ async function diffMatched(
 		typeComparison: TypeComparison
 		boundLogicalNodeTypes: BoundLogicalNodeTypes
 		placeholderLineages: PlaceholderLineages
+		sourceIsProject: boolean
 	},
 ): Promise<DiffNode> {
 	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
@@ -323,6 +327,7 @@ async function diffMatched(
 			pinnedMatches: params.pinnedMatches,
 			foreignInstanceIds: params.foreignInstanceIds,
 			placeholderLineages: params.placeholderLineages,
+			sourceIsProject: params.sourceIsProject,
 		})
 		if (match) {
 			const matched = match.record
@@ -361,6 +366,7 @@ async function diffMatched(
 				typeComparison: params.typeComparison,
 				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 				placeholderLineages: params.placeholderLineages,
+				sourceIsProject: params.sourceIsProject,
 			})
 			if (match.pairedByName) matchedNode.pairedByName = match.pairedByName
 			children.push(matchedNode)
