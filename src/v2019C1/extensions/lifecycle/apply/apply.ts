@@ -242,6 +242,7 @@ async function runVerb(
 				keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 				decisionMappings: target.resolution?.mappings,
 				resolvePlacement: true,
+				sharedFunctions: target.resolution?.sharedFunctions,
 			})
 			return { verb: 'asd', applications, functions }
 		}

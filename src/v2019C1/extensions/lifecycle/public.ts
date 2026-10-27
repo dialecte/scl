@@ -36,6 +36,7 @@ export type {
 	AfterApplyHook,
 	BoundLogicalNodeTypes,
 	ReferencesByName,
+	SharedFunctions,
 	LifecycleApplyParams,
 	LifecycleReportParams,
 	Resolution,

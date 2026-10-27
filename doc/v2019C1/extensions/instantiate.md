@@ -36,11 +36,15 @@ Returns `{ functionRef, cloneMappings }` — the instantiated root (retagged to 
 
 ## asd
 
-`asd({ sourceQuery, applicationRef, targetParent, scenario? })` instantiates the content an ASD carries — the **application layer** — into a target document:
+`asd({ sourceQuery, applicationRef, targetParent, scenario?, sharedFunctions? })` instantiates the content an ASD carries — the **application layer** — into a target document:
 
 1. clone the `Application` and its composed Functions, categories and satellites (`AllocationRole`, dataflow refs, …) with their type closure, under the structure resolved from `targetParent` (via the shared `layers/application` take-over, built on [`transplant.deep`](./transplant)), together with the external cross-cutting [satellites](./update#satellites) (`Variable` / `BehaviorDescription`) that apply to the Application or its content, one of each per instance;
 2. stamp instance lineage (via [`identity.writeIdentity`](./identity#writeidentity) in `stamp-template` mode) on every cloned element, so each records its ASD counterpart as its `templateUuid` while receiving a fresh `uuid`; an element whose schema carries an origin (the `Application`, its roles, categories, variables) conserves the one the ASD element carries as its `originUuid`, or takes the ASD element's own `templateUuid` as its origin — a `fork` keeps the source `uuid`s and lineage instead;
 3. validate the placed `Application` and each composed Function against their parent context and auto-resolve a scoped-uniqueness [collision](./update#placement-collision-resolution) on their `name`, each at its own structural level.
+
+### Functions applications share
+
+By default (`sharedFunctions: 'clone'`) each placement of an application places the functions it composes, its own. With `sharedFunctions: 'merge'` (in `resolution` for `report` and `apply`), a composed function the level it lands on already holds with an identical template reference — its lineage is the composed function's uuid, or names a function of the file made from the same template element (`templateUuid`) — is stood on instead of placed: the application's `FunctionRef` names it, and a role already allocating it is not given it twice. One found is taken, and the report lists it as a mapping (`locked`: the option decided it); several are the consumer's to choose (a mapping without `mapping`, `needsDecisions`, `apply` refusing with `MAPPING_UNDECIDED` until `{ existing }` or `{ create: {} }` is passed); none, the function is placed. Only the level the function lands on is looked at, and only a function of the project carrying a lineage: two files made from one library function hold no trace of it in the project, their functions stay apart. Two functions the application composes stay two: a function one of them stands on is not free for the other. The option is read for an application placed on its own (`verb: 'asd'`); the applications an SSD unit holds are placed with the unit, their functions its own.
 
 ### Shared elements are mapped, not copied
 

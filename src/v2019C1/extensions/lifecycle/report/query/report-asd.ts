@@ -1,6 +1,7 @@
 import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reportFunction } from './report-function'
 import { buildReportInstance } from './report-instance'
+import { reportSharedFunctions } from './report-shared-functions'
 import { foldSatelliteCompanions } from './satellite-companions'
 
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
@@ -36,9 +37,14 @@ import {
 } from '@/v2019C1/extensions/lifecycle/mapping'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
+import type {
+	ReportedSharedFunctions,
+	ReportSharedFunctionsParams,
+} from './report-shared-functions.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { SharedFunctions } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
 	DecisionGroup,
 	DiffReport,
@@ -56,6 +62,7 @@ import type {
 } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey, ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
@@ -98,6 +105,8 @@ export async function reportAsd(
 		 * Default: the scenario's, a fork given no previous revision.
 		 */
 		removalBase?: RemovalBase
+		/** Whether a first placement stands on a function another application placed there: see `Resolution.sharedFunctions`. */
+		sharedFunctions?: SharedFunctions
 		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
@@ -153,6 +162,18 @@ export async function reportAsd(
 	const reportInstances: ReportInstance[] = []
 	// what each instance's selection of variants leaves out of the template, by instance record id
 	const selections = new Map<string, VariantSelection>()
+	// a first placement merging the functions applications share: what the application stands on, read once for it and
+	// for the functions it composes
+	const shared =
+		firstPlacement && params.sharedFunctions === 'merge'
+			? await readSharedFunctions(query, {
+					sourceQuery,
+					applicationRef,
+					anchor,
+					decisionMappings,
+					matchKey,
+				})
+			: undefined
 	if (firstPlacement) {
 		const instanceDiff = await reportApplicationInstance(query, {
 			pass: params.pass,
@@ -166,6 +187,7 @@ export async function reportAsd(
 			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			placeholderLineages: params.placeholderLineages,
 			namesFollow,
+			stoodOn: shared?.taken,
 		})
 		const reportInstance = await buildReportInstance(query, {
 			instanceDiff,
@@ -227,6 +249,7 @@ export async function reportAsd(
 		placeholderLineages: params.placeholderLineages,
 		namesFollow,
 		selections,
+		shared,
 	})
 
 	// what the groups of each placement depend on: on a first placement, the application on the
@@ -298,6 +321,8 @@ async function reportApplicationInstance(
 		namesFollow: NamesFollow
 		/** What the instance's selection of functional variants leaves out of the template. */
 		selection?: VariantSelection
+		/** On a first placement, the functions it composes that it stands on: a reference to one names that function. */
+		stoodOn?: readonly RedirectMapping[]
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
@@ -355,6 +380,7 @@ async function reportApplicationInstance(
 
 	await foldSatelliteCompanions(query, {
 		scope,
+		redirectMappings: params.stoodOn,
 		pass: params.pass,
 		sourceQuery,
 		primaryRef: applicationRef,
@@ -433,6 +459,8 @@ async function reportComposedFunctions(
 		namesFollow: NamesFollow
 		/** What each instance of the application's selection of variants leaves out, by instance record id. */
 		selections: ReadonlyMap<string, VariantSelection>
+		/** On a first placement merging shared functions, what the application stands on and what it places. */
+		shared?: ReportedSharedFunctions
 	},
 ): Promise<{
 	instances: ReportInstance[]
@@ -444,7 +472,10 @@ async function reportComposedFunctions(
 
 	const reportInstances: ReportInstance[] = []
 	if (applicationInstances.length === 0) {
-		for (const functionRef of await findComposedFunctionRefs(sourceQuery, applicationRef)) {
+		// a function stood on is listed as the mapping it is; the others are placed
+		const composed = await findComposedFunctionRefs(sourceQuery, applicationRef)
+		const placed = params.shared?.placed ?? composed
+		for (const functionRef of placed) {
 			reportInstances.push(
 				await reportComposedFunction(query, {
 					...params,
@@ -453,7 +484,7 @@ async function reportComposedFunctions(
 				}),
 			)
 		}
-		return { instances: reportInstances, choices: [], placements: [] }
+		return { instances: reportInstances, choices: params.shared?.mappings ?? [], placements: [] }
 	}
 
 	const composedFunctions = await resolveComposedFunctions(query, {
@@ -614,4 +645,13 @@ function standOn(params: {
 	const listed = standers.get(functionId) ?? []
 	listed.push(selection ?? NO_VARIANT_SELECTION)
 	standers.set(functionId, listed)
+}
+
+/** What a first placement merging shared functions stands on, for the functions the application composes. */
+async function readSharedFunctions(
+	query: Core.Query<Config>,
+	params: Omit<ReportSharedFunctionsParams, 'functionRefs'>,
+): Promise<ReportedSharedFunctions> {
+	const functionRefs = await findComposedFunctionRefs(params.sourceQuery, params.applicationRef)
+	return reportSharedFunctions(query, { ...params, functionRefs })
 }

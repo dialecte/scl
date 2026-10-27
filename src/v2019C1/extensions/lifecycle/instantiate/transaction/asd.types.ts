@@ -1,6 +1,9 @@
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	LifecycleScenario,
+	SharedFunctions,
+} from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
@@ -23,6 +26,11 @@ export type AsdParams = {
 	keepNameTypesFrom?: KeepNameTypesFrom
 	/** The consumer's choices for the shared elements the application refers to. */
 	decisionMappings?: DecisionMappings
+	/**
+	 * Whether a function the application composes stands on one the level it lands on already holds with an identical
+	 * template reference, placed for another application (`merge`), or gets its own (`clone`, default).
+	 */
+	sharedFunctions?: SharedFunctions
 	/**
 	 * The application is placed by this operation alone (an ASD): `targetParent` is where the
 	 * consumer started, and started above a level the application or one of its functions was made

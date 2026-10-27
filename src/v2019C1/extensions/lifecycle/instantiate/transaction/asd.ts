@@ -96,6 +96,7 @@ export async function placeApplication(
 		decisionMappings,
 		leftOut,
 		matchKey: policy.matchKey,
+		sharedFunctions: params.sharedFunctions,
 	})
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) applying to

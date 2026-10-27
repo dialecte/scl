@@ -124,6 +124,14 @@ export type BoundLogicalNodeTypes = 'follow' | 'keep'
 export type ReferencesByName = 'never' | 'placeholders'
 
 /**
+ * What a first placement of an application does with a function it composes that the level it lands on already
+ * holds with an identical template reference (placed for another application): `clone` (a function of its own, placed
+ * beside), or `merge` (it stands on that one: one found is taken, several are the consumer's to choose, none is
+ * placed).
+ */
+export type SharedFunctions = 'clone' | 'merge'
+
+/**
  * What the consumer resolved, handed to the lifecycle surface as ONE object:
  *  - `decisions` — accept / skip (and edited values) per decision group;
  *  - `mappings` — where a shared source element lands, per source element, when the consumer
@@ -134,6 +142,8 @@ export type ReferencesByName = 'never' | 'placeholders'
  *    `report`: a kept type change is listed as kept; `apply` writes the type changes the report lists;
  *  - `referencesByName` — whether a reference whose uuids disagree pairs by name on a flagged placeholder lineage
  *    (default `'never'`); `report` and `apply` read it alike;
+ *  - `sharedFunctions` — whether a first placement of an application merges a function it composes into one another
+ *    application placed there (default `'clone'`); `report` and `apply` read it alike;
  *  - `afterApply` — the consumer's own step, run by `apply` once it wrote (see {@link AfterApplyHook}).
  */
 export type Resolution = {
@@ -142,6 +152,7 @@ export type Resolution = {
 	keepNameTypesFrom?: KeepNameTypesFrom
 	boundLogicalNodeTypes?: BoundLogicalNodeTypes
 	referencesByName?: ReferencesByName
+	sharedFunctions?: SharedFunctions
 	afterApply?: AfterApplyHook
 }
 

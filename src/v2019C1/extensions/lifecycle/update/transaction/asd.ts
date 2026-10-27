@@ -58,6 +58,7 @@ import type { ApplicationInstance } from './cascade-composed-functions.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { SharedFunctions } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
@@ -101,6 +102,8 @@ export async function asd(
 		placesFresh?: boolean
 		/** The previous revision of the file, for a fork: see {@link LifecycleRevisionBase}. Refused by another scenario. */
 		baseQuery?: Core.Query<Config>
+		/** Whether a first placement stands on a function another application placed there: see `Resolution.sharedFunctions`. */
+		sharedFunctions?: SharedFunctions
 		/** What tells a dropped element from the project's own, when the caller read it already (once per apply). */
 		removalBase?: RemovalBase
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
@@ -193,6 +196,7 @@ export async function asd(
 			resolvePlacement: params.resolvePlacement,
 			partOfTemplate: params.partOfTemplate,
 			leftOut,
+			sharedFunctions: params.sharedFunctions,
 		})
 		// first-time ASD clones the Application + composed Functions + satellites in one pass; annotate
 		// every first-time report instance (Application and each composed Function) from the shared map

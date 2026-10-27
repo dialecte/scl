@@ -147,6 +147,7 @@ async function reportVerb(
 				placeholderLineages,
 				anchor: target.anchor,
 				resolvePlacement: true,
+				sharedFunctions: target.resolution?.sharedFunctions,
 				removalBase,
 			})
 	}

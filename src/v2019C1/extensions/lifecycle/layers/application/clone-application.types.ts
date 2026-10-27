@@ -18,3 +18,10 @@ export type AllocationRoleReuse = {
 	/** Where the source role, and what it holds, landed on what the existing role holds. */
 	redirectMappings: RedirectMapping[]
 }
+
+/** A function the application composes that it stands on: one the level already held for another application. */
+export type TakenFunction = {
+	sourceId: string
+	sourceUuid: string
+	target: Scl.Ref<Scl.ElementsOf>
+}
