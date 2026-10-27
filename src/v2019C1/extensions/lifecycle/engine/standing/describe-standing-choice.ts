@@ -37,7 +37,6 @@ export async function describeStandingChoice(
 		...(parentPath ? { parentPath } : {}),
 		reason: choice.decision ? 'decision' : 'none',
 		ambiguous: true,
-		selectable: true,
 		locked: false,
 		candidates,
 	}

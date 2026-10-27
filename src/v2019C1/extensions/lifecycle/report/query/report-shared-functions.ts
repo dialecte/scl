@@ -82,7 +82,6 @@ async function describeTakenFunction(
 		mapping: { existing: element },
 		reason: 'only',
 		ambiguous: false,
-		selectable: true,
 		locked: true,
 		candidates: [candidate],
 	}

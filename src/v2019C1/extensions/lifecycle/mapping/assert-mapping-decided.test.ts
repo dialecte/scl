@@ -26,7 +26,6 @@ function mapping(params: {
 		...(decided ? { mapping: { create: {} } } : {}),
 		reason: 'name',
 		ambiguous: !decided,
-		selectable: true,
 		locked: false,
 		candidates: [],
 		...(dependsOn ? { dependsOn } : {}),

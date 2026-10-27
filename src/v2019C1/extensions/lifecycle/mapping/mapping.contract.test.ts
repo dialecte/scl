@@ -107,7 +107,6 @@ describe('shared-element mapping — the report lists where each shared element 
 						projectOwned: true,
 						reason: 'name',
 						ambiguous: false,
-						selectable: true,
 						locked: false,
 						// both roles sit at the same level: listed by path
 						candidates: projectCandidates,
@@ -127,7 +126,6 @@ describe('shared-element mapping — the report lists where each shared element 
 					projectOwned: true,
 					reason: 'decision',
 					ambiguous: false,
-					selectable: true,
 					locked: false,
 					candidates: projectCandidates,
 				},
@@ -153,7 +151,6 @@ describe('shared-element mapping — the report lists where each shared element 
 						parentPath: 'S1',
 						reason: 'decision',
 						ambiguous: false,
-						selectable: true,
 						locked: false,
 						candidates: projectCandidates,
 					},
@@ -177,7 +174,6 @@ describe('shared-element mapping — the report lists where each shared element 
 					parentPath: 'S1',
 					reason: 'decision',
 					ambiguous: false,
-					selectable: true,
 					locked: false,
 					candidates: projectCandidates,
 				},
@@ -202,7 +198,6 @@ describe('shared-element mapping — the report lists where each shared element 
 						parentPath: 'S1',
 						reason: 'decision',
 						ambiguous: false,
-						selectable: true,
 						locked: false,
 						candidates: projectCandidates,
 					},
@@ -283,7 +278,6 @@ describe('shared-element mapping — the report lists where each shared element 
 					parentPath: 'S1',
 					reason: 'none',
 					ambiguous: false,
-					selectable: true,
 					locked: false,
 					candidates: [projectCandidates[0]],
 				},
@@ -315,7 +309,6 @@ describe('shared-element mapping — the report lists where each shared element 
 						// no `mapping`: neither of the two is picked, and none is created behind the consumer's back
 						reason: 'name',
 						ambiguous: true,
-						selectable: true,
 						locked: false,
 						candidates: [
 							// the VoltageLevel of the placement comes before its Substation
@@ -370,7 +363,6 @@ describe('shared-element mapping — the report lists where each shared element 
 					parentPath: 'S1',
 					reason: 'none',
 					ambiguous: false,
-					selectable: true,
 					locked: false,
 					candidates: [
 						// the Bay the application is placed in, then its VoltageLevel, its Substation, the rest

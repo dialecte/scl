@@ -23,12 +23,6 @@ export function assertMappingsCoherent(params: {
 		})
 		const { tagName } = mapping
 
-		invariant(mapping.selectable, {
-			key: SCL_ERRORS.MAPPING_CHOICE_NOT_SELECTABLE,
-			detail: `mapping choice for "${sourceId}": the mapping of <${tagName}> cannot be chosen`,
-			meta: { sourceId, tagName },
-		})
-
 		invariant(!mapping.locked, {
 			key: SCL_ERRORS.MAPPING_CHOICE_LOCKED,
 			detail: `mapping choice for "${sourceId}": the instance already carries the mapping of this <${tagName}>`,

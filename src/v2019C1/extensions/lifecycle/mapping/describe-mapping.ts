@@ -52,7 +52,6 @@ export async function describeMapping(
 		reason: resolved.reason,
 		ambiguous: resolved.ambiguous,
 		// where a shared element lands is the consumer's to choose
-		selectable: true,
 		locked: resolved.locked,
 	}
 

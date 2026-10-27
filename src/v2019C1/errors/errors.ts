@@ -16,11 +16,6 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL1001',
 		message: 'The choice concerns an element the template does not bring',
 	},
-	/** A mapping choice for an element whose mapping cannot be chosen. `meta: { sourceId, tagName }` */
-	MAPPING_CHOICE_NOT_SELECTABLE: {
-		code: 'SCL1002',
-		message: 'Where an element of this kind lands cannot be chosen',
-	},
 	/** A mapping choice for a mapping the instance already carries. `meta: { sourceId, tagName }` */
 	MAPPING_CHOICE_LOCKED: {
 		code: 'SCL1003',

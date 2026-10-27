@@ -46,7 +46,6 @@ export async function describePlacementMappings(
 			...(created && parentPath ? { parentPath } : {}),
 			reason: resolved.reason,
 			ambiguous: resolved.ambiguous,
-			selectable: true,
 			locked: resolved.locked,
 			candidates,
 			...(parentSourceId ? { dependsOn: parentSourceId } : {}),
@@ -133,7 +132,6 @@ export async function describeHeldPlacement(
 			...(projectOwned ? { projectOwned: true as const } : {}),
 			reason: 'lineage',
 			ambiguous: false,
-			selectable: true,
 			locked: true,
 			candidates: [await describeCandidate(query, level)],
 			...(parentSourceId ? { dependsOn: parentSourceId } : {}),
@@ -183,7 +181,6 @@ export async function describeGainedLevels(
 			...(parentPath ? { parentPath } : {}),
 			reason: decision ? 'decision' : 'none',
 			ambiguous: false,
-			selectable: true,
 			locked: false,
 			candidates: candidates.sort(byPath),
 		})

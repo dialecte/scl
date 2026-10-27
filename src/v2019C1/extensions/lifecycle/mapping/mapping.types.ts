@@ -219,8 +219,6 @@ export type ReportMapping = {
 	 * undecided until the consumer chose.
 	 */
 	ambiguous: boolean
-	/** The consumer may choose another mapping for this element: every element the report lists is. */
-	selectable: boolean
 	/** The instance being updated already carries this mapping: shown, not the consumer's to change. */
 	locked: boolean
 	/**

@@ -229,7 +229,6 @@ type ReportMapping = {
 	parentPath?: string // for an element to create: the path of the element it is created under
 	reason: MappingReason // 'decision' | 'lineage' | 'name' | 'anchor' | 'only' | 'none'
 	ambiguous: boolean // something qualified and nothing was picked
-	selectable: boolean // the consumer may choose another mapping: `true` for every mapping listed
 	locked: boolean // the instance being updated already carries this mapping: shown, not changeable
 	candidates: MappingCandidate[]
 	dependsOn?: string // the mapping this one follows from (the level above)

@@ -20,7 +20,6 @@ function reportedMapping(overrides: Partial<ReportMapping>): ReportMapping {
 		mapping: { existing: projectRole },
 		reason: 'lineage',
 		ambiguous: false,
-		selectable: true,
 		locked: true,
 		candidates: [{ ref: projectRole, title: 'HMI_PC', path: 'S1/HMI_PC' }],
 		...overrides,

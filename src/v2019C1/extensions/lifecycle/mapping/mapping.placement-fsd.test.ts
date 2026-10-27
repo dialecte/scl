@@ -79,7 +79,7 @@ const voltageLevel = { ref: voltageLevelRef, title: 'V1', path: 'S1/V1' }
 const bay = { ref: bayRef, title: 'B1', path: 'S1/V1/B1' }
 const secondBay = { ref: secondBayRef, title: 'B2', path: 'S1/V1/B2' }
 
-const shared = { ambiguous: false, selectable: true, locked: false }
+const shared = { ambiguous: false, locked: false }
 const onTheClickedSubstation = {
 	...shared,
 	id: 'substation-s',

@@ -230,6 +230,11 @@
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/apply/apply.ts": {
+		"72278d6f9d81a965": {
+			"line": 129,
+			"mutation": "ObjectLiteral: {\n\t\treferencesByName: params.resolution?.referencesByName,\n\t} -> {}",
+			"equivalent": "the apply writes what the report accepts: a reference the report paired by name is listed unchanged, so without the pairing the apply neither adds its counterpart (not accepted) nor removes the project's (its removal not accepted)"
+		},
 		"df13ed0d070718ea": {
 			"line": 153,
 			"mutation": "ObjectLiteral: { from } -> {}",
@@ -397,6 +402,65 @@
 			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/engine/contribute.ts": {
+		"0cf0328e213601d4": {
+			"line": 40,
+			"mutation": "BooleanLiteral: false -> true",
+			"equivalent": "a contribution pours into an element the project holds: what it adds lands under a container of the project, where a collision is the project's names, never renumbered (the addition is matched by name first)"
+		},
+		"986a359573bacaac": {
+			"line": 42,
+			"mutation": "ObjectLiteral: { kind: 'none' } -> {}",
+			"equivalent": "a contribution writes nothing of the project's own: with the matched root project-owned, the removal pass is skipped whatever its base"
+		},
+		"e613a7037c32c8fc": {
+			"line": 42,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "a contribution writes nothing of the project's own: with the matched root project-owned, the removal pass is skipped whatever its base"
+		},
+		"c6c9c24246830b59": {
+			"line": 43,
+			"mutation": "StringLiteral: 'project' -> \"\"",
+			"equivalent": "a contribution writes no attribute of what it lands on, so whose names follow is never read"
+		},
+		"582e8a0757728d65": {
+			"line": 51,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "every element declaring a uuid gets one on import: a contributed root without one does not occur"
+		},
+		"986a359573bacaac-1": {
+			"line": 80,
+			"mutation": "ObjectLiteral: { kind: 'none' } -> {}",
+			"equivalent": "the report of a contribution lists no removal: with the root project-owned, a leftover child is skipped before the removal base is read"
+		},
+		"e613a7037c32c8fc-1": {
+			"line": 80,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "the report of a contribution lists no removal: with the root project-owned, a leftover child is skipped before the removal base is read"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/contribution-scope.ts": {
+		"4630a1df7fee6b83": {
+			"line": 21,
+			"mutation": "ConditionalExpression: tree -> true",
+			"equivalent": "a root of the scope is an element the caller just read: its tree is always there"
+		},
+		"86730915a121033a": {
+			"line": 33,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value: an absent uuid reads empty either way and is not added"
+		},
+		"531a1b929c84aac7": {
+			"line": 54,
+			"mutation": "ConditionalExpression: !tree -> false",
+			"equivalent": "the root is a source element the caller just read: its tree is always there"
+		},
+		"d417cd58d3fa86f7": {
+			"line": 74,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value: an absent uuid reads empty either way and names nothing"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/engine/decide.ts": {
 		"d6a4a4c7a3d825b9": {
 			"line": 157,
@@ -429,6 +493,98 @@
 			"equivalent": "a removed or project-own node always carries the instance element it names"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/engine/diff.ts": {
+		"50297855411d9d7c": {
+			"line": 231,
+			"mutation": "LogicalOperator: params.sourceIsProject ?? false -> params.sourceIsProject && false",
+			"equivalent": "the report never reads a project this placement wrote: no raw uuid of the template is there, so whether the project side reads them changes nothing"
+		},
+		"0067fae855c1029a": {
+			"line": 231,
+			"mutation": "BooleanLiteral: false -> true",
+			"equivalent": "the report never reads a project this placement wrote: no raw uuid of the template is there, so whether the project side reads them changes nothing"
+		},
+		"884c99debf1511a8": {
+			"line": 371,
+			"mutation": "ConditionalExpression: match.pairedByName -> true",
+			"equivalent": "assigns an absent pairing: the node reads the same"
+		},
+		"3a05d3c3b4ee7fc0": {
+			"line": 398,
+			"mutation": "ConditionalExpression: params.placeholderLineages.size > 0 -> true",
+			"equivalent": "names collected while no lineage may pair pair nothing: the placeholder test finds none; the guard spares reads"
+		},
+		"4c21b7b4302fe157": {
+			"line": 398,
+			"mutation": "EqualityOperator: params.placeholderLineages.size > 0 -> params.placeholderLineages.size >= 0",
+			"equivalent": "names collected while no lineage may pair pair nothing: the placeholder test finds none; the guard spares reads"
+		},
+		"01d616fc782837ef": {
+			"line": 438,
+			"mutation": "ConditionalExpression: sibling.pairedByName -> true",
+			"equivalent": "assigns an absent pairing: the node reads the same"
+		},
+		"33510c5cabd7e2a0": {
+			"line": 511,
+			"mutation": "ConditionalExpression: uuidIdentity -> true",
+			"equivalent": "an absent identity added to the set is never looked up: the instance side tests its own identity first"
+		},
+		"2e32934dd4e3411e": {
+			"line": 512,
+			"mutation": "ConditionalExpression: !params.byName -> false",
+			"equivalent": "names collected while no lineage may pair pair nothing: the placeholder test finds none; the guard spares reads"
+		},
+		"4592ed7c807c3ee7": {
+			"line": 514,
+			"mutation": "ConditionalExpression: nameIdentity -> true",
+			"equivalent": "an absent name added to the set is never looked up: the instance side tests its own name first"
+		},
+		"f5b04f4d2e7f98b4": {
+			"line": 533,
+			"mutation": "ConditionalExpression: sourceRefIdentities.uuids.size === 0 && sourceRefIdentities.names.size === 0 -> false",
+			"equivalent": "an early answer: with both sets empty the later tests find nothing and answer the same"
+		},
+		"3fd11b3093cbc70d": {
+			"line": 533,
+			"mutation": "ConditionalExpression: sourceRefIdentities.names.size === 0 -> true",
+			"equivalent": "a template reference always names its target by uuid (the import stamps every target): with no uuid identity there is no name identity either"
+		},
+		"c087160338260ff4": {
+			"line": 533,
+			"mutation": "EqualityOperator: sourceRefIdentities.names.size === 0 -> sourceRefIdentities.names.size !== 0",
+			"equivalent": "with both sets empty the later tests answer the same; with names only, see the uuid rule: a template reference always names its target by uuid"
+		},
+		"93a62f9f14f71542": {
+			"line": 533,
+			"mutation": "BlockStatement: {\n\t\treturn { sibling: false }\n\t} -> {}",
+			"equivalent": "an early answer: with both sets empty the later tests find nothing and answer the same"
+		},
+		"59670e644927776a": {
+			"line": 534,
+			"mutation": "ObjectLiteral: { sibling: false } -> {}",
+			"equivalent": "an empty answer reads as not a sibling, as the explicit one"
+		},
+		"3d8a21b848b6c11e": {
+			"line": 541,
+			"mutation": "ConditionalExpression: sourceRefIdentities.names.size === 0 -> false",
+			"equivalent": "an early answer: with no name identity the name test finds none"
+		},
+		"95b829de17d169fb": {
+			"line": 541,
+			"mutation": "ObjectLiteral: { sibling: false } -> {}",
+			"equivalent": "an empty answer reads as not a sibling, as the explicit one"
+		},
+		"481253995fab36e8": {
+			"line": 546,
+			"mutation": "ObjectLiteral: { sibling: false } -> {}",
+			"equivalent": "an empty answer reads as not a sibling, as the explicit one"
+		},
+		"fa786bdf1a1f283e": {
+			"line": 548,
+			"mutation": "ObjectLiteral: { sibling: false } -> {}",
+			"equivalent": "an empty answer reads as not a sibling, as the explicit one"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/engine/identity-collisions.ts": {
 		"c5f21add0d1748af": {
 			"line": 26,
@@ -449,6 +605,28 @@
 			"line": 33,
 			"mutation": "ConditionalExpression: collision -> true",
 			"equivalent": "writes an absent collision as undefined, which every reader treats as none"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/match-child.ts": {
+		"ce5cfbd7b7e461f5": {
+			"line": 122,
+			"mutation": "ConditionalExpression: sourceIdentity === undefined -> false",
+			"equivalent": "the source side reads a uuid as it is: a source reference naming none has no counterpart identity either, and the first candidate is taken as before"
+		},
+		"d033b8b9ffb77508": {
+			"line": 161,
+			"mutation": "ConditionalExpression: sourceIdentity === undefined -> false",
+			"equivalent": "the source side reads a uuid as it is: an identity naming none equals no candidate's, so nothing is matched either way"
+		},
+		"079ccf4ca17bb376": {
+			"line": 189,
+			"mutation": "ConditionalExpression: placeholderLineages.size === 0 -> false",
+			"equivalent": "with no lineage to pair on the placeholder test finds none for any candidate: the guard spares reads"
+		},
+		"b0750b87c7b496f9": {
+			"line": 191,
+			"mutation": "ConditionalExpression: sourceNameIdentity === undefined -> false",
+			"equivalent": "a source reference without a name identity is compared with candidates whose own name identity is defined: none equals"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/engine/project-owned-attributes.constants.ts": {
@@ -501,6 +679,26 @@
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/engine/reconcile.ts": {
+		"4d4f018131031f70": {
+			"line": 160,
+			"mutation": "ObjectLiteral: { cloneMappings: added, landedOn } -> {}",
+			"equivalent": "both roots are records the caller just read or wrote: the trees are always there"
+		},
+		"d8872605bff52bbd": {
+			"line": 160,
+			"mutation": "ConditionalExpression: !sourceTree || !instanceTree -> false",
+			"equivalent": "both roots are records the caller just read or wrote: the trees are always there"
+		},
+		"5e59c681a80c4985": {
+			"line": 160,
+			"mutation": "LogicalOperator: !sourceTree || !instanceTree -> !sourceTree && !instanceTree",
+			"equivalent": "both roots are records the caller just read or wrote: the trees are always there"
+		},
+		"c1bc3d5279127036": {
+			"line": 219,
+			"mutation": "LogicalOperator: params.placeholderLineages ?? new Set() -> params.placeholderLineages && new Set()",
+			"equivalent": "the apply writes what the report accepts: a reference the report paired by name is listed unchanged, so without the pairing the apply neither adds its counterpart (not accepted) nor removes the project's (its removal not accepted)"
+		},
 		"56d09dd39f9a2fe9": {
 			"line": 222,
 			"mutation": "ConditionalExpression: !(await tx.getRecord(placed.ref)) -> false",
@@ -515,6 +713,11 @@
 			"line": 227,
 			"mutation": "EqualityOperator: typeFollowing.followers.length > 0 -> typeFollowing.followers.length >= 0",
 			"equivalent": "an import with no record and no follower resolves nothing, clones nothing and points nothing: only reads"
+		},
+		"55b8d541faf33666": {
+			"line": 348,
+			"mutation": "ConditionalExpression: params.contributeOnly -> true",
+			"equivalent": "the landings are read by a contribution only: every other caller takes the clone mappings alone"
 		},
 		"db81b603d8b0bb2e": {
 			"line": 364,
@@ -531,6 +734,36 @@
 			"mutation": "BooleanLiteral: !outcome -> outcome",
 			"equivalent": "every scenario numbers its additions, so the outcome is always there: re-reading a numbered or free addition finds nothing, only more reads"
 		},
+		"42a06b3096df3014": {
+			"line": 424,
+			"mutation": "BooleanLiteral: false -> true",
+			"equivalent": "what a contribution adds is a shared element's reference or container, or a level's own content: the placement imports the types that content names from the same template right after, so types imported here first are found there and the document is the same"
+		},
+		"c0cf4acf5d170eff": {
+			"line": 424,
+			"mutation": "ObjectLiteral: { keepNameFrom: keepNameTypesFrom } -> {}",
+			"equivalent": "a type an update's added logical node reuses keeps the project's id whichever side is asked (measured: 'source' leaves the project id too), so the option reads the same"
+		},
+		"f655faa104a8b0ea": {
+			"line": 502,
+			"mutation": "ConditionalExpression: !sourceUuid -> false",
+			"equivalent": "an element without a uuid is a wrapper no reference names: a landing recorded for it under an empty uuid redirects nothing a reference reads"
+		},
+		"8b1876850038eb8c": {
+			"line": 503,
+			"mutation": "ObjectLiteral: { name: 'uuid' } -> {}",
+			"equivalent": "reads an empty value: a landing is then recorded onto the element itself too, which only a copy reaches and which redirects a uuid to itself; elsewhere the two uuids always differ"
+		},
+		"df0d9f2880961a0e": {
+			"line": 503,
+			"mutation": "StringLiteral: 'uuid' -> \"\"",
+			"equivalent": "reads an empty value: a landing is then recorded onto the element itself too, which only a copy reaches and which redirects a uuid to itself; elsewhere the two uuids always differ"
+		},
+		"bc04dd1c1652a251": {
+			"line": 504,
+			"mutation": "ConditionalExpression: landedUuid === sourceUuid -> false",
+			"equivalent": "a landing on the element itself (a copy) maps a uuid to itself: the redirect changes nothing"
+		},
 		"3e9560967e872cf8": {
 			"line": 574,
 			"mutation": "ConditionalExpression: Object.keys(updates).length > 0 -> true",
@@ -545,6 +778,63 @@
 			"line": 575,
 			"mutation": "ConditionalExpression: changesAttributes || textChange -> true",
 			"equivalent": "an update with no attribute and no value writes nothing: the record is the same after it"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/reference-match.ts": {
+		"8f86f76ba7f59f5c": {
+			"line": 39,
+			"mutation": "ConditionalExpression: identity === undefined -> false",
+			"equivalent": "an identity part naming `undefined` equals no source identity: the source side reads every uuid as it is"
+		},
+		"0ccdf9a7567dcdd9": {
+			"line": 56,
+			"mutation": "OptionalChaining: options.redirectedSourceUuids?.get -> options.redirectedSourceUuids.get",
+			"equivalent": "every walk indexes its redirects, an empty map when none: the map is always there"
+		},
+		"bd509b744df2fdb3": {
+			"line": 64,
+			"mutation": "ConditionalExpression: default:\n\t\t\treturn throwDialecteError('ASSERTION_FAILED', {\n\t\t\t\tdetail: `referenceIdentity: unhandled side ${String(options satisfies nev",
+			"equivalent": "unreachable: the side is a closed union the type check exhausts"
+		},
+		"3c7761d432d46956": {
+			"line": 65,
+			"mutation": "StringLiteral: 'ASSERTION_FAILED' -> \"\"",
+			"equivalent": "unreachable: the side is a closed union the type check exhausts"
+		},
+		"f72d81000d7bf109": {
+			"line": 65,
+			"mutation": "ObjectLiteral: {\n\t\t\t\tdetail: `referenceIdentity: unhandled side ${String(options satisfies never)}`,\n\t\t\t} -> {}",
+			"equivalent": "unreachable: the side is a closed union the type check exhausts"
+		},
+		"bb278ac282fe736a": {
+			"line": 66,
+			"mutation": "StringLiteral: `referenceIdentity: unhandled side ${String(options satisfies never)}` -> ``",
+			"equivalent": "unreachable: the side is a closed union the type check exhausts"
+		},
+		"3711616e28d4e38e": {
+			"line": 130,
+			"mutation": "ConditionalExpression: placeholderLineages.size === 0 -> false",
+			"equivalent": "with no lineage to pair on, no target's lineage is among them: the guard spares reads"
+		},
+		"1ca7f5a30ccb91fe-2": {
+			"line": 132,
+			"mutation": "ConditionalExpression: !pairs -> false",
+			"equivalent": "called on reference tags only, and every reference tag declares its uuid pairs (the reference tags are the keys of the pairs registry)"
+		},
+		"df8750bef69f9d42-2": {
+			"line": 135,
+			"mutation": "ConditionalExpression: !uuidValue -> false",
+			"equivalent": "an absent uuid reads as an empty value, which no element carries (the import stamps every target): the lookup finds none"
+		},
+		"18055bac6ebf5408": {
+			"line": 137,
+			"mutation": "ConditionalExpression: !target -> false",
+			"equivalent": "a target not found reads no lineage: the next pair is tried as with the guard"
+		},
+		"6403ac4d4ce98888": {
+			"line": 164,
+			"mutation": "ConditionalExpression: !target -> false",
+			"equivalent": "a target not found reads no name: the identity stays undefined as with the guard"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/engine/text-wrappers.ts": {
@@ -771,6 +1061,85 @@
 			"equivalent": "test helper: every case names an element its file holds"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/layers/application/clone-application.ts": {
+		"73683c8d8c1a4361": {
+			"line": 81,
+			"mutation": "StringLiteral: 'templateUuid' -> \"\"",
+			"equivalent": "only an extract omits the key: it pours into what the same extract created, whose children carry no lineage of the source's uuids, so no key finds one"
+		},
+		"2175c06e02c94887": {
+			"line": 81,
+			"mutation": "LogicalOperator: params.matchKey ?? 'templateUuid' -> params.matchKey && 'templateUuid'",
+			"equivalent": "every scenario that places applications through a placement passes the instantiate key, templateUuid: the default and the key coincide"
+		},
+		"371a3cd4a6a54501": {
+			"line": 110,
+			"mutation": "CallExpression: cloneIndex.set(sourceId, target) -> ;",
+			"equivalent": "the index places the application's referenced targets under the function holding them; the function references are skipped here, and an application refers to nothing else inside a function it stands on"
+		},
+		"7dffb91997e2ba79": {
+			"line": 303,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a set built from an absent iterable or an empty array is empty alike; the string added is no record id"
+		},
+		"be15b9e115027810": {
+			"line": 303,
+			"mutation": "LogicalOperator: leftOut ?? [] -> leftOut && []",
+			"equivalent": "a set built from an absent iterable or an empty array is empty alike"
+		},
+		"11789c9cb176b3ce": {
+			"line": 334,
+			"mutation": "ObjectLiteral: { taken: [] } -> {}",
+			"equivalent": "the landing of the application is a level the placement just resolved or created: it is always there"
+		},
+		"f7f44685e4e973d5": {
+			"line": 334,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "the landing of the application is a level the placement just resolved or created: it is always there"
+		},
+		"a27db11b76c8341f": {
+			"line": 334,
+			"mutation": "ConditionalExpression: !placedFor -> false",
+			"equivalent": "the landing of the application is a level the placement just resolved or created: it is always there"
+		},
+		"0708ee5323afa009": {
+			"line": 346,
+			"mutation": "OptionalChaining: standing?.kind -> standing.kind",
+			"equivalent": "the standing rule answers for every instance it is asked about: the standing is always there"
+		},
+		"7ce0e3ffc457da7c": {
+			"line": 349,
+			"mutation": "StringLiteral: `which <Function> the application stands on for \"${child.ref.id}\" is not decided: several functions of that template qualify, choose one or have ",
+			"equivalent": "the wording of the refusal: the tests assert its key and meta; consumers build their own wording"
+		},
+		"739a77978ee1f5c3": {
+			"line": 351,
+			"mutation": "OptionalChaining: standing?.kind -> standing.kind",
+			"equivalent": "the standing rule answers for every instance it is asked about: the standing is always there"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/layers/application/resolve-shared-functions.ts": {
+		"e0aa137ffde0b912": {
+			"line": 65,
+			"mutation": "OptionalChaining: standing?.kind -> standing.kind",
+			"equivalent": "the standing rule answers for every instance it is asked about: the standing is always there"
+		},
+		"a129150ead7f3acf": {
+			"line": 99,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "every element declaring a uuid gets one on import: a composed function without one does not occur"
+		},
+		"ac18baab1c763e97": {
+			"line": 101,
+			"mutation": "ConditionalExpression: !templateUuid -> false",
+			"equivalent": "an absent templateUuid reads as an empty value, which no function's lookup matches: the guard spares a read"
+		},
+		"4c4814de3480b4f5": {
+			"line": 108,
+			"mutation": "ConditionalExpression: uuid -> true",
+			"equivalent": "an absent uuid added to the set is never looked up: a candidate is tested on a lineage it carries"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/layers/application/variant-selection.ts": {
 		"32cfc9595ce987b4": {
 			"line": 43,
@@ -933,11 +1302,43 @@
 			"equivalent": "the attribute read has no schema default: reading with or without the defaults gives the same value"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/layers/function/clone-function.ts": {
+		"882549c93249c7c5": {
+			"line": 118,
+			"mutation": "StringLiteral: 'templateUuid' -> \"\"",
+			"equivalent": "only an extract omits the key: it pours into what the same extract created, whose children carry no lineage of the source's uuids, so no key finds one"
+		},
+		"efdfaa91b7ebd9f2": {
+			"line": 118,
+			"mutation": "LogicalOperator: params.matchKey ?? 'templateUuid' -> params.matchKey && 'templateUuid'",
+			"equivalent": "every scenario that places functions through a placement passes the instantiate key, templateUuid: the default and the key coincide"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/layers/topology/ensure-topology-frame.ts": {
 		"33071acae3eb2aea": {
 			"line": 81,
 			"mutation": "ConditionalExpression: params.placementLevels -> true",
 			"equivalent": "the condition predates the refusal (only the callee changed): a level created outside a placement lands under a level the frame creates too, where its name is free"
+		},
+		"b43c952e5faf9714": {
+			"line": 106,
+			"mutation": "StringLiteral: 'templateUuid' -> \"\"",
+			"equivalent": "only an extract omits the key: it pours into what the same extract created, whose children carry no lineage of the source's uuids, so no key finds one"
+		},
+		"395882b71170c4ab": {
+			"line": 106,
+			"mutation": "LogicalOperator: params.matchKey ?? 'templateUuid' -> params.matchKey && 'templateUuid'",
+			"equivalent": "every scenario that places a frame passes the instantiate key, templateUuid: the default and the key coincide"
+		},
+		"659d955d7e4b196e": {
+			"line": 111,
+			"mutation": "MethodExpression: ownContent.redirectMappings.filter((redirect) => redirect.target.id !== target.id) -> ownContent.redirectMappings",
+			"equivalent": "the level's own landing names the element step 1 already maps it onto: listed twice, it redirects the same"
+		},
+		"53f48470348c7bc8": {
+			"line": 111,
+			"mutation": "ConditionalExpression: redirect.target.id !== target.id -> true",
+			"equivalent": "the level's own landing names the element step 1 already maps it onto: listed twice, it redirects the same"
 		},
 		"3a9fcd8d54f1cd8a": {
 			"line": 172,
@@ -1296,6 +1697,73 @@
 			"equivalent": "every instance of the application has its selection in the map"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/report/query/report-shared-functions.ts": {
+		"8f27407b42b3fb1b": {
+			"line": 35,
+			"mutation": "ObjectLiteral: { mappings: [], placed: [...functionRefs], taken: [] } -> {}",
+			"equivalent": "unreachable: a first placement's report refuses an anchor the project does not hold before it reads what the application stands on (the placement is resolved from it first)"
+		},
+		"a541488b219158ff": {
+			"line": 35,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "unreachable: a first placement's report refuses an anchor the project does not hold before it reads what the application stands on (the placement is resolved from it first)"
+		},
+		"ec5fb2a46bb49669": {
+			"line": 35,
+			"mutation": "ArrayDeclaration: [...functionRefs] -> []",
+			"equivalent": "unreachable: a first placement's report refuses an anchor the project does not hold before it reads what the application stands on (the placement is resolved from it first)"
+		},
+		"442b4b197d9d11a1": {
+			"line": 35,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "unreachable: a first placement's report refuses an anchor the project does not hold before it reads what the application stands on (the placement is resolved from it first)"
+		},
+		"c0880d16a28ffcec": {
+			"line": 35,
+			"mutation": "ConditionalExpression: !anchor || !anchorRecord -> false",
+			"equivalent": "unreachable: a first placement's report refuses an anchor the project does not hold before it reads what the application stands on (the placement is resolved from it first)"
+		},
+		"a2b9d4b11baa5e58": {
+			"line": 35,
+			"mutation": "LogicalOperator: !anchor || !anchorRecord -> !anchor && !anchorRecord",
+			"equivalent": "unreachable: a first placement's report refuses an anchor the project does not hold before it reads what the application stands on (the placement is resolved from it first)"
+		},
+		"cf66cab024f52704": {
+			"line": 39,
+			"mutation": "ObjectLiteral: { mappings: [], placed: [...functionRefs], taken: [] } -> {}",
+			"equivalent": "unreachable: the landing is a level of the structure read from the anchor, a record of the project"
+		},
+		"1d7ee0f28a1b6592": {
+			"line": 39,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "unreachable: the landing is a level of the structure read from the anchor, a record of the project"
+		},
+		"11cddc09bed662bf": {
+			"line": 39,
+			"mutation": "ArrayDeclaration: [...functionRefs] -> []",
+			"equivalent": "unreachable: the landing is a level of the structure read from the anchor, a record of the project"
+		},
+		"d090aea27d528281": {
+			"line": 39,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "unreachable: the landing is a level of the structure read from the anchor, a record of the project"
+		},
+		"be8628f691405ead": {
+			"line": 39,
+			"mutation": "ConditionalExpression: !placedFor -> false",
+			"equivalent": "unreachable: the landing is a level of the structure read from the anchor, a record of the project"
+		},
+		"078d4f77fd0449c8": {
+			"line": 60,
+			"mutation": "OptionalChaining: standing?.kind -> standing.kind",
+			"equivalent": "the standing rule answers for every instance it is asked about: the standing is always there"
+		},
+		"350d0caa084b3f41": {
+			"line": 63,
+			"mutation": "ConditionalExpression: !choice -> true",
+			"equivalent": "the report keeps one mapping per element and placement: the mapping of the function taken carries the choice's id and is listed once (measured: one function mapping either way)"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/report/query/report-ssd.ts": {
 		"779639dcdc552258": {
 			"line": 77,
@@ -1303,7 +1771,24 @@
 			"equivalent": "the report built for no scope lists no instance: the junk root names no record and is read by nothing"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/report/query/report-topology-frame.ts": {
+		"f11c1bb67121d429": {
+			"line": 118,
+			"mutation": "BooleanLiteral: true -> false",
+			"equivalent": "differs only for a reference naming an element the same contribution lands on by lineage, which the report and the apply both list as new today (a landing is not fed back within one contribution)"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/report/query/satellite-companions.ts": {
+		"dadf19b52b5eebc0": {
+			"line": 224,
+			"mutation": "OptionalChaining: params.resolveForeignScope?.() -> params.resolveForeignScope()",
+			"equivalent": "every report reading a satellite with an instance passes its foreign scope"
+		},
+		"8334d9481a1545f4": {
+			"line": 226,
+			"mutation": "LogicalOperator: instance && foreignScope -> instance || foreignScope",
+			"equivalent": "the foreign scope is read only when there is an instance: it is absent whenever the instance is"
+		},
 		"110d79da5e43ef5c": {
 			"line": 264,
 			"mutation": "BooleanLiteral: false -> true",

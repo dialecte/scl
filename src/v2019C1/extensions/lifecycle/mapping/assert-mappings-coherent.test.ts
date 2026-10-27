@@ -20,7 +20,6 @@ function reportedMapping(overrides: Partial<ReportMapping> = {}): ReportMapping 
 		mapping: { existing: projectRole },
 		reason: 'name',
 		ambiguous: false,
-		selectable: true,
 		locked: false,
 		candidates: [
 			{ ref: otherProjectRole, title: 'Gateway', path: 'S1/Gateway' },
@@ -70,13 +69,6 @@ describe('assertMappingsCoherent', () => {
 				tagName: 'AllocationRole',
 				chosen: { tagName: 'Bay', id: 'bay-t' },
 			},
-		},
-		"a choice for an element whose mapping is not the consumer's to change → rejected": {
-			reportMappings: [reportedMapping({ selectable: false })],
-			chosen: [['role-s', { create: {} }]],
-			expectedRejection: 'cannot be chosen',
-			expectedKey: 'MAPPING_CHOICE_NOT_SELECTABLE',
-			expectedMeta: { sourceId: 'role-s', tagName: 'AllocationRole' },
 		},
 		'a choice for an element the instance being updated already carries a mapping for → rejected': {
 			reportMappings: [reportedMapping({ reason: 'lineage', locked: true })],
