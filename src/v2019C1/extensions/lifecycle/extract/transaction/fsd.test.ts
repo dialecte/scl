@@ -1,10 +1,21 @@
 import { fsd } from './fsd'
 
-import { describe } from 'vitest'
+import { toDialecteError } from '@dialecte/core'
+import { describe, expect, it } from 'vitest'
 
-import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import {
+	ALL_XMLNS_NAMESPACES,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	createSclTestProject,
+	runSclTestCases,
+} from '@/v2019C1/test'
 
-import type { FunctionSection, FunctionSections } from './extract.types'
+import type {
+	FunctionPlacement,
+	FunctionSection,
+	FunctionSections,
+	TemplateLink,
+} from './extract.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
@@ -193,6 +204,16 @@ const SECTION_QUERIES: Readonly<Record<FunctionSection, { present: string; absen
 	},
 }
 
+/** The sections a function holds at its own level (not in its logical nodes), and its categories: all left out. */
+const FUNCTION_LEVEL_SECTIONS_OFF: FunctionSections = {
+	labels: false,
+	processResources: false,
+	powerSystemRelations: false,
+	behaviorDescriptions: false,
+	variables: false,
+	categories: false,
+}
+
 /** A section left out takes with it what names only it: the relation to the function's equipment. */
 const GOES_WITH: Readonly<Partial<Record<FunctionSection, readonly FunctionSection[]>>> = {
 	equipment: ['powerSystemRelations'],
@@ -326,10 +347,295 @@ describe('fsd: the optional sections of the function', () => {
 	runSclTestCases.withExport<ExtractFunctionCase>({ testCases, act: extractFunction })
 })
 
+/** A function at each level of a substation, the bay's with a subfunction. */
+const levelsXml = /* xml */ `
+	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+		<Substation ${id}="sub1" name="S1">
+			<VoltageLevel ${id}="vl1" name="V1">
+				<Bay ${id}="bay1" name="B1">
+					<Function ${id}="bay-fn" name="Prot" uuid="prot-uuid">
+						<LNode iedName="None" lnClass="PTOC" lnInst="1" uuid="ptoc-uuid" ${id}="ptoc"/>
+						<SubFunction ${id}="trip" name="Trip" uuid="trip-uuid">
+							<LNode iedName="None" lnClass="PTRC" lnInst="1" uuid="ptrc-uuid" ${id}="ptrc"/>
+						</SubFunction>
+					</Function>
+				</Bay>
+				<Function ${id}="vl-fn" name="Busbar" uuid="busbar-uuid"/>
+			</VoltageLevel>
+			<Function ${id}="sub-fn" name="Station" uuid="station-uuid"/>
+		</Substation>
+	</SCL>
+`
+
+describe('fsd: where the function is placed', () => {
+	const testCases: SclTest.TestCases<ExtractFunctionCase> = {
+		'a bay function → below the TEMPLATE substation, voltage level and bay': {
+			sourceXml: levelsXml,
+			targetXml: emptyTargetXml,
+			functionId: 'bay-fn',
+			expectedQueries: [
+				'/default:SCL/default:Substation[@name="TEMPLATE"]/default:VoltageLevel[@name="TEMPLATE"]/default:Bay[@name="TEMPLATE"]/default:Function[@name="Prot"]/default:SubFunction[@name="Trip"]',
+			],
+			unexpectedQueries: ['/default:SCL/default:Substation/default:Function'],
+		},
+		'a voltage level function → below the TEMPLATE voltage level, not in its bay': {
+			sourceXml: levelsXml,
+			targetXml: emptyTargetXml,
+			functionId: 'vl-fn',
+			expectedQueries: [
+				'/default:SCL/default:Substation[@name="TEMPLATE"]/default:VoltageLevel[@name="TEMPLATE"]/default:Function[@name="Busbar"]',
+			],
+			unexpectedQueries: ['//default:Bay/default:Function'],
+		},
+		'a substation function → below the TEMPLATE substation, not in its voltage level': {
+			sourceXml: levelsXml,
+			targetXml: emptyTargetXml,
+			functionId: 'sub-fn',
+			expectedQueries: [
+				'/default:SCL/default:Substation[@name="TEMPLATE"]/default:Function[@name="Station"]',
+			],
+			unexpectedQueries: ['//default:VoltageLevel/default:Function'],
+		},
+		'a subfunction → a function at the level of the function holding it': {
+			sourceXml: levelsXml,
+			targetXml: emptyTargetXml,
+			functionId: 'trip',
+			functionTag: 'SubFunction',
+			expectedQueries: [
+				'/default:SCL/default:Substation/default:VoltageLevel/default:Bay[@name="TEMPLATE"]/default:Function[@name="Trip"]',
+			],
+			unexpectedQueries: ['//default:SubFunction'],
+		},
+		"placement 'substation' → below the TEMPLATE substation, whatever its level": {
+			sourceXml: levelsXml,
+			targetXml: emptyTargetXml,
+			functionId: 'bay-fn',
+			placement: 'substation',
+			expectedQueries: [
+				'/default:SCL/default:Substation[@name="TEMPLATE"]/default:Function[@name="Prot"]/default:SubFunction[@name="Trip"]',
+			],
+			unexpectedQueries: ['//default:Bay/default:Function'],
+		},
+		"placement 'function-template' → a function template with no parent level, its subfunction a subfunction template":
+			{
+				sourceXml: levelsXml,
+				targetXml: emptyTargetXml,
+				functionId: 'bay-fn',
+				placement: 'function-template',
+				expectedQueries: [
+					'/default:SCL/default:Private[@type="eIEC61850-6-100"]/v2019C1:FunctionTemplate[@name="Prot"]/v2019C1:LNode[@lnClass="PTOC"]',
+					'//v2019C1:FunctionTemplate[@name="Prot"]/v2019C1:SubFunctionTemplate[@name="Trip"]/v2019C1:LNode[@lnClass="PTRC"]',
+				],
+				unexpectedQueries: ['//default:Substation', '//default:Function'],
+			},
+	}
+
+	runSclTestCases.withExport<ExtractFunctionCase>({ testCases, act: extractFunction })
+})
+
+/** The bay function placed from an FSD: it records the file and carries the lineage. */
+const fromFsdXml = levelsXml.replace(
+	`<Function ${id}="bay-fn" name="Prot" uuid="prot-uuid">`,
+	[
+		`<Function ${id}="bay-fn" name="Prot" uuid="prot-uuid" templateUuid="prot-template">`,
+		`<Private type="eIEC61850-6-100" ${id}="prot-private">`,
+		`<eIEC61850-6-100:FunctionSclRef ${id}="prot-ref">`,
+		`<eIEC61850-6-100:SclFileReference fileName="PROT" fileType="FSD" ${id}="prot-file"/>`,
+		`</eIEC61850-6-100:FunctionSclRef>`,
+		`</Private>`,
+	].join(''),
+)
+
+describe('fsd: a function that sits in a line or a process', () => {
+	for (const container of ['Line', 'Process'] as const) {
+		it(`in a ${container}, at its own level → not available yet, nothing written`, async () => {
+			const { source, target } = await createSclTestProject({
+				sourceXml: levelsXml.replace(
+					`</Substation>`,
+					`</Substation><${container} name="L1" ${id}="container"><Function name="Feed" uuid="feed-uuid" ${id}="container-fn"/></${container}>`,
+				),
+				targetXml: emptyTargetXml,
+			})
+			if (!target) throw new Error('target required')
+
+			const refusal = await target.document
+				.transaction(async function extractAtItsLevel(tx) {
+					await fsd(tx, {
+						sourceQuery: source.document.query,
+						functionRef: { tagName: 'Function', id: 'container-fn' },
+						tool: 'TEST',
+						who: 'test',
+					})
+				})
+				.catch((error: unknown) => toDialecteError(error))
+
+			expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
+				key: 'OPTION_NOT_AVAILABLE',
+				meta: { option: 'placement', value: 'source-level' },
+			})
+			expect(await target.document.query.getRecordsByTagName('Header')).toEqual([])
+		})
+	}
+})
+
+describe("fsd: placement 'function-template' and what a function template cannot hold", () => {
+	it('a function classified in a category, a behaviour description, a vendor Private → refused, nothing written', async () => {
+		const { source, target } = await createSclTestProject({
+			sourceXml: fullFunctionXml.replace(
+				`<Private type="eIEC61850-6-100" ${id}="fn-private">`,
+				`<Private type="ACME-Id" ${id}="fn-acme">42</Private><Private type="eIEC61850-6-100" ${id}="fn-private">`,
+			),
+			targetXml: emptyTargetXml,
+		})
+		if (!target) throw new Error('target required')
+
+		const refusal = await target.document
+			.transaction(async function extractAsFunctionTemplate(tx) {
+				await fsd(tx, {
+					sourceQuery: source.document.query,
+					functionRef: { tagName: 'Function', id: 'func1' },
+					tool: 'TEST',
+					who: 'test',
+					placement: 'function-template',
+				})
+			})
+			.catch((error: unknown) => toDialecteError(error))
+
+		expect(refusal?.key).toBe('FUNCTION_TEMPLATE_CANNOT_HOLD')
+		expect(refusal?.meta?.tags).toEqual([
+			'BehaviorDescription',
+			'FunctionCategory',
+			'Labels',
+			'PowerSystemRelations',
+			'Private',
+			'ProcessResources',
+			'Variable',
+		])
+		expect(await target.document.query.getRecordsByTagName('Header')).toEqual([])
+	})
+
+	it('the same function, those sections left out but the vendor Private → refused with the Private alone', async () => {
+		const { source, target } = await createSclTestProject({
+			sourceXml: fullFunctionXml.replace(
+				`<Private type="eIEC61850-6-100" ${id}="fn-private">`,
+				`<Private type="ACME-Id" ${id}="fn-acme">42</Private><Private type="eIEC61850-6-100" ${id}="fn-private">`,
+			),
+			targetXml: emptyTargetXml,
+		})
+		if (!target) throw new Error('target required')
+
+		const refusal = await target.document
+			.transaction(async function extractAsFunctionTemplate(tx) {
+				await fsd(tx, {
+					sourceQuery: source.document.query,
+					functionRef: { tagName: 'Function', id: 'func1' },
+					tool: 'TEST',
+					who: 'test',
+					placement: 'function-template',
+					sections: FUNCTION_LEVEL_SECTIONS_OFF,
+				})
+			})
+			.catch((error: unknown) => toDialecteError(error))
+
+		expect(refusal?.meta?.tags).toEqual(['Private'])
+	})
+
+	it('a subfunction holding a vendor Private and the file it was placed from → refused with both', async () => {
+		const { source, target } = await createSclTestProject({
+			sourceXml: levelsXml.replace(
+				`<SubFunction ${id}="trip" name="Trip" uuid="trip-uuid">`,
+				[
+					`<SubFunction ${id}="trip" name="Trip" uuid="trip-uuid" templateUuid="trip-template">`,
+					`<Private type="ACME-Id" ${id}="trip-acme">7</Private>`,
+					`<Private type="eIEC61850-6-100" ${id}="trip-private">`,
+					`<eIEC61850-6-100:FunctionSclRef ${id}="trip-ref">`,
+					`<eIEC61850-6-100:SclFileReference fileName="TRIP" fileType="FSD" ${id}="trip-file"/>`,
+					`</eIEC61850-6-100:FunctionSclRef>`,
+					`</Private>`,
+				].join(''),
+			),
+			targetXml: emptyTargetXml,
+		})
+		if (!target) throw new Error('target required')
+
+		const refusal = await target.document
+			.transaction(async function extractAsFunctionTemplate(tx) {
+				await fsd(tx, {
+					sourceQuery: source.document.query,
+					functionRef: { tagName: 'Function', id: 'bay-fn' },
+					tool: 'TEST',
+					who: 'test',
+					placement: 'function-template',
+				})
+			})
+			.catch((error: unknown) => toDialecteError(error))
+
+		expect(refusal?.meta?.tags).toEqual(['FunctionSclRef', 'Private'])
+	})
+
+	it('a function placed from an FSD, its template link kept → refused: its file reference has no place', async () => {
+		const { source, target } = await createSclTestProject({
+			sourceXml: fromFsdXml,
+			targetXml: emptyTargetXml,
+		})
+		if (!target) throw new Error('target required')
+
+		const refusal = await target.document
+			.transaction(async function extractAsFunctionTemplate(tx) {
+				await fsd(tx, {
+					sourceQuery: source.document.query,
+					functionRef: { tagName: 'Function', id: 'bay-fn' },
+					tool: 'TEST',
+					who: 'test',
+					placement: 'function-template',
+					templateLink: 'keep',
+				})
+			})
+			.catch((error: unknown) => toDialecteError(error))
+
+		expect(refusal?.meta?.tags).toEqual(['FunctionSclRef'])
+	})
+
+	const sectionsOffCases: SclTest.TestCases<ExtractFunctionCase> = {
+		'a function placed from an FSD, its template link broken → a function template without the file reference':
+			{
+				sourceXml: fromFsdXml,
+				targetXml: emptyTargetXml,
+				functionId: 'bay-fn',
+				placement: 'function-template',
+				templateLink: 'break',
+				expectedQueries: ['//v2019C1:FunctionTemplate[@name="Prot"][not(@templateUuid)]'],
+				unexpectedQueries: ['//v2019C1:SclFileReference'],
+			},
+		'the sections held at the function left out → a function template keeping what its logical nodes specify':
+			{
+				sourceXml: fullFunctionXml,
+				targetXml: emptyTargetXml,
+				functionId: 'func1',
+				placement: 'function-template',
+				sections: FUNCTION_LEVEL_SECTIONS_OFF,
+				expectedQueries: [
+					'//v2019C1:FunctionTemplate[@name="Prot"]/v2019C1:LNode/default:Private/v2019C1:DOS[@name="Pos"]',
+					'//v2019C1:FunctionTemplate[@name="Prot"]/v2019C1:LNode/default:Private/v2019C1:LNodeInputs/v2019C1:SourceRef',
+					'//v2019C1:FunctionTemplate[@name="Prot"]/v2019C1:GeneralEquipment[@name="GE1"]',
+				],
+				unexpectedQueries: ['//v2019C1:FunctionCategory', '//default:Substation'],
+			},
+	}
+
+	runSclTestCases.withExport<ExtractFunctionCase>({
+		testCases: sectionsOffCases,
+		act: extractFunction,
+	})
+})
+
 type ExtractFunctionCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	functionId: string
+	functionTag?: 'Function' | 'SubFunction'
 	sections?: FunctionSections
+	placement?: FunctionPlacement
+	templateLink?: TemplateLink
 }
 
 async function extractFunction({
@@ -341,10 +647,12 @@ async function extractFunction({
 	await target.transaction(async function extractFsd(tx) {
 		await fsd(tx, {
 			sourceQuery: source.query,
-			functionRef: { tagName: 'Function', id: testCase.functionId },
+			functionRef: { tagName: testCase.functionTag ?? 'Function', id: testCase.functionId },
 			tool: 'TEST',
 			who: 'test',
 			...(testCase.sections ? { sections: testCase.sections } : {}),
+			...(testCase.placement ? { placement: testCase.placement } : {}),
+			...(testCase.templateLink ? { templateLink: testCase.templateLink } : {}),
 		})
 	})
 	return { assertOn: 'target' }

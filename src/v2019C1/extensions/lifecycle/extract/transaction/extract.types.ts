@@ -1,5 +1,6 @@
 import type { Scl } from '@/v2019C1/config'
 import type { FileStart } from '@/v2019C1/extensions/history/transaction/start-file.types'
+import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction/structure.types'
 
 /** Whether the element extracted stays an instance of the template it was made from. */
 export type TemplateLink = 'keep' | 'break'
@@ -59,14 +60,31 @@ export type FunctionSection =
 /** The sections of a function an extract writes: every one unless set `false`. */
 export type FunctionSections = { readonly [GenericSection in FunctionSection]?: boolean }
 
+/**
+ * Where an FSD holds its function: at the level it sits at in the source, below `TEMPLATE` levels (`source-level`: the
+ * highest level it may be placed at); below the `TEMPLATE` substation whatever its level (`substation`); or as a function
+ * template with no parent level, which may be placed at every level (`function-template`).
+ */
+export type FunctionPlacement = 'source-level' | 'substation' | 'function-template'
+
 /** What `extract.fsd` takes besides the common options. */
 export type FsdExtractOptions = ExtractOptions & {
 	/** The sections of the function written; every one by default. */
 	sections?: FunctionSections
+	/** Where the FSD holds the function; `source-level` by default. */
+	placement?: FunctionPlacement
 }
 
 /** What `extract.asd` takes besides the common options. */
 export type AsdExtractOptions = ExtractOptions & {
 	/** The sections of the functions written: the equipment they hold, kept by default. */
 	sections?: Pick<FunctionSections, 'equipment'>
+}
+
+/** Where an FSD's function is written: its parent, the `TEMPLATE` levels its categories land at, and its form. */
+export type FunctionFrame = {
+	parent: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'> | Scl.Ref<'SCL'>
+	structure: TargetStructure
+	/** Written as a function template with no parent level. */
+	asTemplate: boolean
 }

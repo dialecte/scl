@@ -33,17 +33,22 @@ tx.lifecycle.extract.fsd(params: {
   as?: 'new' | 'revision'           // default 'new' — see Options
   templateLink?: 'keep' | 'break'   // default 'break' — see Options
   sections?: FunctionSections       // every section kept by default — see Options
+  placement?: 'source-level' | 'substation' | 'function-template' // default 'source-level' — see below
 }): Promise<void>
 ```
 
 Steps:
 
-1. Ensure the TEMPLATE substation structure.
-2. Write the FSD history header (`fileType: 'FSD'`, via [`history.startFile`](./history#startfile)).
-3. Clone the function via `cloneFunction` (layers/function) — promote `SubFunction`→`Function`, leave out the sections the caller leaves out, import the type closure.
-4. Clone the referenced `FunctionCategory` trees at their structural level (unless `sections.categories` is `false`).
-5. Write the identity ([`identity.writeIdentity`](./identity#writeidentity) in `strip` mode): the function extracted is a new template, its template link (`templateUuid`) is broken and the file it was placed from (its own `FunctionSclRef`) is no longer recorded; what it holds and its categories keep their lineage, and a subfunction placed from another FSD keeps its `FunctionSclRef`. The cloned uuid references are repointed.
-6. Run post-extraction clean-up (orphan UUID refs, reset LNode bindings to `None`, prune empty containers).
+1. Write the FSD history header (`fileType: 'FSD'`, via [`history.startFile`](./history#startfile)).
+2. With `placement: 'function-template'`, refuse what a function template cannot hold (below): the transaction is refused, nothing is written.
+3. Place the function (`placement`):
+   - `'source-level'` (default): at the level it sits at in the source — a bay function below the `TEMPLATE` bay, a voltage-level function below the `TEMPLATE` voltage level, a substation function below the `TEMPLATE` substation (a subfunction at the level of the function holding it). The level an FSD's function sits at is the highest level it may be placed at; the `TEMPLATE` substation, voltage level and bay are written whatever the level (a substation holds a voltage level, a voltage level a bay). A function in a line or a process is refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'placement', value: 'source-level' }`): an FSD holding it at such a level is not written yet; extract it below the `TEMPLATE` substation or as a function template.
+   - `'substation'`: below the `TEMPLATE` substation, whatever its level.
+   - `'function-template'`: as a `FunctionTemplate` (its subfunctions as `SubFunctionTemplate`) in the document root's `eIEC61850-6-100` `Private`, with no level: a template that may be placed at every level. The dialecte writes in a function template its logical nodes (with what they specify), its subfunction templates and its equipment, and no `Private` yet: a function holding anything else at its own or a subfunction's level (labels, process resources, power system relations, behaviour descriptions, variables, a subfunction's `FunctionSclRef`, a vendor `Private`), or classified in a category (a category has no level to sit at), is refused with `FUNCTION_TEMPLATE_CANNOT_HOLD` (`SCL2004`, `meta: { tags }`), nothing written: leave those sections out, or place it at a level. The function's own `FunctionSclRef` is refused while its template link is kept; with `templateLink: 'break'` it goes with the link.
+4. Clone the function via `cloneFunction` (layers/function) — promote `SubFunction`→`Function`, leave out the sections the caller leaves out, import the type closure.
+5. Clone the referenced `FunctionCategory` trees at their structural level (unless `sections.categories` is `false`).
+6. Write the identity ([`identity.writeIdentity`](./identity#writeidentity) in `strip` mode): the function extracted is a new template, its template link (`templateUuid`) is broken and the file it was placed from (its own `FunctionSclRef`) is no longer recorded; what it holds and its categories keep their lineage, and a subfunction placed from another FSD keeps its `FunctionSclRef`. The cloned uuid references are repointed.
+7. Run post-extraction clean-up (orphan UUID refs, reset LNode bindings to `None`, prune empty containers).
 
 ```ts
 await targetDoc.transaction(async (tx) => {
@@ -113,7 +118,7 @@ Returns the warnings gathered while extracting (`ExtractWarning`, a `code` and i
 
 ### Options
 
-The three extracts take `as` and `templateLink` (`ExtractOptions`); `extract.fsd` and `extract.asd` take `sections` too:
+The three extracts take `as` and `templateLink` (`ExtractOptions`); `extract.fsd` and `extract.asd` take `sections` too, `extract.fsd` `placement` (see its steps):
 
 - `as` — the file written. `'new'` (default): a new template, a `Header` with a uuid of its own, version `0`, revision `1`. `'revision'`: a new revision of the template the element came from (its uuid, the next revision) — not available yet, refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'as', value: 'revision' }`) before anything is written.
 - `sections` (`extract.fsd`; `extract.asd` takes `equipment` only) — what the function holds besides its logical nodes and subfunctions, each optional in an FSD, each written unless set `false` (`FunctionSections`):
@@ -173,6 +178,7 @@ lifecycle/
     fsd.ts , asd.ts , ssd.ts  file-type extractors
     ensure-substation-structure.ts , post-extraction-cleanup.ts
     function-sections.ts      the sections of a function an extract leaves out
+    function-placement.ts     where an FSD holds its function, what a function template cannot hold
 ```
 
 > `transplant.deep` is the **mechanism**; `layers/` hold the per-layer **take-over**; `extract` adds the extract-direction **policy** (pruning, TEMPLATE placement, history, the root's template link broken, clean-up). The type engine it composes is [`dataModel.importTypes`](./data-model#importtypes); the content-addressing behind that is [`signature.elementSignature`](./signature).

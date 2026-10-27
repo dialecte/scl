@@ -56,8 +56,9 @@ export const SCL_ERRORS = defineErrors({
 		message: 'The previous revision given is another file',
 	},
 	/**
-	 * An option is given a value the operation does not offer yet (an extract writing a new revision of the file
-	 * the element came from). `meta: { option, value }`
+	 * An option takes a value the operation does not offer yet, given or by default: an extract writing a new revision
+	 * of the file the element came from (`as: 'revision'`), an FSD holding a function of a line or a process at its own
+	 * level (`placement: 'source-level'`, the default). `meta: { option, value }`
 	 */
 	OPTION_NOT_AVAILABLE: {
 		code: 'SCL1009',
@@ -122,6 +123,16 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL2003',
 		message:
 			'The template holds several elements to instantiate: the one to act on is to be chosen',
+	},
+	/**
+	 * A function extracted as a function template (an FSD whose function has no parent level) holds what a function
+	 * template cannot hold: an element at the function's own level, or categories classifying it, which have no level
+	 * to sit at. Nothing is written; the caller leaves those sections out or places the function at a level.
+	 * `meta: { tags }` — the elements in question, by tag, sorted.
+	 */
+	FUNCTION_TEMPLATE_CANNOT_HOLD: {
+		code: 'SCL2004',
+		message: 'A function template cannot hold what the function holds',
 	},
 	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).

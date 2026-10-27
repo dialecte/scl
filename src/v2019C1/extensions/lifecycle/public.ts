@@ -52,6 +52,7 @@ export type {
 	ExtractOptions,
 	ExtractWarning,
 	FsdExtractOptions,
+	FunctionPlacement,
 	FunctionSection,
 	FunctionSections,
 	TemplateLink,

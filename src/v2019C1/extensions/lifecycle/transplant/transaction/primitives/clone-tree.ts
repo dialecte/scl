@@ -3,6 +3,7 @@ import { stripAttributes } from '@dialecte/core/helpers'
 import {
 	holdsTemplateOnlyElement,
 	toInstanceTree,
+	toTemplateTree,
 } from '@/v2019C1/extensions/lifecycle/engine/instance-tag'
 
 import type { StripConfig, RetagRootConfig } from './clone-tree.types'
@@ -12,7 +13,7 @@ import type { OmitEntry } from '@dialecte/core'
 
 /**
  * Clone pipeline: getTree -> template-only elements as what they are instantiated as -> optional
- * retag root tagName -> optional attribute filter -> deepClone.
+ * retag root tagName -> optional template form -> optional attribute filter -> deepClone.
  *
  * The clone is faithful: every attribute is copied as the source holds it, the lineage (`templateUuid` /
  * `originUuid`) included — what the clone's lineage becomes is decided by the identity writer the caller runs over
@@ -33,9 +34,11 @@ export async function cloneTree(
 		strip?: StripConfig | false
 		/** Source records not cloned, with what they hold (record ids). */
 		leaveOut?: ReadonlySet<string>
+		/** Written as a template with no parent level: a function as a function template. */
+		asTemplate?: boolean
 	},
 ): Promise<Core.CloneResult<Config, Exclude<Scl.ElementsOf, 'SCL'>> | undefined> {
-	const { sourceQuery, ref, targetParent, omit, retagRoot, strip, leaveOut } = params
+	const { sourceQuery, ref, targetParent, omit, retagRoot, strip, leaveOut, asTemplate } = params
 
 	// A clone must be a faithful copy: keep transparent `Private` wrappers in the tree
 	// (`unwrap: []` disables the default transparent-element unwrap) so vendor privates —
@@ -51,10 +54,13 @@ export async function cloneTree(
 		? toInstanceTree({ tree, parentTagName: targetParent.tagName })
 		: tree
 
-	const retagged =
+	const rooted =
 		retagRoot && instantiable.tagName === retagRoot.from
 			? { ...instantiable, tagName: retagRoot.to }
 			: instantiable
+	const retagged = asTemplate
+		? toTemplateTree({ tree: rooted, parentTagName: targetParent.tagName })
+		: rooted
 
 	let result = retagged
 	if (strip) {

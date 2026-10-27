@@ -43,6 +43,7 @@ export async function deep(
 		strip = false,
 		retagRoot,
 		leaveOut,
+		asTemplate,
 	} = params
 
 	const mergeTarget = await resolveExistingPrivateMergeTarget(tx, {
@@ -79,6 +80,7 @@ export async function deep(
 			strip,
 			retagRoot,
 			leaveOut,
+			asTemplate,
 		})
 		if (!clone) {
 			throwDialecteError('ELEMENT_NOT_FOUND', {

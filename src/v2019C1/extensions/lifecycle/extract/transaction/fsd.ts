@@ -1,4 +1,4 @@
-import { ensureSubstationTemplateStructure } from './ensure-substation-structure'
+import { assertFunctionTemplateHolds, placeFunction } from './function-placement'
 import { keepsSection, omitOfSections } from './function-sections'
 import { postExtractionCleanup } from './post-extraction-cleanup'
 
@@ -25,7 +25,9 @@ export async function fsd(
 	} & FsdExtractOptions,
 ): Promise<void> {
 	const { sourceQuery, functionRef, tool, who, nameStructure, sections } = params
-	const { as = 'new', templateLink = 'break' } = params
+	const { as = 'new', templateLink = 'break', placement = 'source-level' } = params
+	const omit = omitOfSections({ sections })
+	const withCategories = keepsSection({ sections, section: 'categories' })
 
 	const functionName =
 		(await sourceQuery.getAttribute(functionRef, { name: 'name' })) || 'Unnamed Function'
@@ -45,23 +47,31 @@ export async function fsd(
 		},
 	})
 
-	const structure = await ensureSubstationTemplateStructure(tx)
-	const substationRef = {
-		tagName: structure.Substation.tagName,
-		id: structure.Substation.id,
-	} as const
+	if (placement === 'function-template') {
+		const withOwnProvenance = templateLink === 'keep'
+		await assertFunctionTemplateHolds(sourceQuery, {
+			functionRef,
+			omit,
+			withCategories,
+			withOwnProvenance,
+		})
+	}
+
+	const { parent, structure, asTemplate } = await placeFunction(tx, {
+		sourceQuery,
+		functionRef,
+		placement,
+	})
 
 	const functionMappings = await cloneFunction(tx, {
 		sourceQuery,
 		functionRef,
-		targetParentRef: substationRef,
-		omit: omitOfSections({ sections }),
+		targetParentRef: parent,
+		omit,
+		asTemplate,
 	})
 
-	const { cloneMappings: categoryMappings, redirectMappings } = keepsSection({
-		sections,
-		section: 'categories',
-	})
+	const { cloneMappings: categoryMappings, redirectMappings } = withCategories
 		? await cloneFunctionCategories(tx, { sourceQuery, functionRef, structure })
 		: { cloneMappings: [], redirectMappings: [] }
 

@@ -31,6 +31,8 @@ export type ImportDeepParams = {
 	retagRoot?: RetagRootConfig
 	/** Source records not cloned, with what they hold (record ids): what the instance's selection of variants leaves out. */
 	leaveOut?: ReadonlySet<string>
+	/** Write the subtree as a template with no parent level: a function as a function template. */
+	asTemplate?: boolean
 }
 
 export type ImportDeepResult = {

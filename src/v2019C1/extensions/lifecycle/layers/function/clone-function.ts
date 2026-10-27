@@ -43,12 +43,18 @@ export async function cloneFunction(
 	params: {
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
-		targetParentRef: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
+		targetParentRef:
+			| Scl.Ref<'Substation'>
+			| Scl.Ref<'VoltageLevel'>
+			| Scl.Ref<'Bay'>
+			| Scl.Ref<'SCL'>
 		omit?: OmitEntry<Config>[]
 		keepNameTypesFrom?: KeepNameTypesFrom
+		/** Written as a function template with no parent level (placed below the document root). */
+		asTemplate?: boolean
 	},
 ): Promise<Scl.CloneMapping[]> {
-	const { sourceQuery, functionRef, targetParentRef, omit, keepNameTypesFrom } = params
+	const { sourceQuery, functionRef, targetParentRef, omit, keepNameTypesFrom, asTemplate } = params
 
 	// `deep` is a faithful subtree copy (no forward uuid closure); the function's own
 	// satellites (FunctionCategory, ProcessResource, etc.) are placed at their source
@@ -61,6 +67,7 @@ export async function cloneFunction(
 		omit,
 		retagRoot: { from: 'SubFunction', to: 'Function' },
 		withTypes: { keepNameFrom: keepNameTypesFrom },
+		asTemplate,
 	})
 
 	return cloneMappings
@@ -90,7 +97,7 @@ export async function cloneFunctionCategories(
 	// a category classifying several functions of one operation is placed once
 	const placedCategories = params.placedCategories ?? new Map<string, Scl.Ref<'FunctionCategory'>>()
 
-	const categoryIds = await collectReferencedCategoryIds(sourceQuery, functionRef)
+	const categoryIds = await findFunctionCategoryIds(sourceQuery, { functionRef })
 	const policy = findMappingPolicy('FunctionCategory')
 	const scope = await resolveContributionScope(sourceQuery, { roots: [functionRef] })
 
@@ -142,11 +149,12 @@ export async function cloneFunctionCategories(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function collectReferencedCategoryIds(
+/** The categories classifying a function or one of its subfunctions (record ids). */
+export async function findFunctionCategoryIds(
 	sourceQuery: Core.Query<Config>,
-	functionRef: SourceFunctionRef,
+	params: { functionRef: SourceFunctionRef },
 ): Promise<Set<string>> {
-	const refs = await findRefsForFunctionTree(sourceQuery, functionRef)
+	const refs = await findRefsForFunctionTree(sourceQuery, params.functionRef)
 
 	const categoryIds = new Set<string>()
 	for (const { container } of refs) {
