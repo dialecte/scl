@@ -12,6 +12,8 @@ import type * as Core from '@dialecte/core'
 /**
  * Import an element subtree into a target document together with its type closure (the data
  * types its LN / LNode use), returning the root it wrote into, the type id remap and the clone mappings.
+ * Uuid references are not followed: repoint them afterwards with `tx.reference.applyUuidRemap` over the
+ * returned clone mappings.
  *
  * Two steps:
  * 1. clone the subtree under `targetParent` (with optional `omit` / `strip` /
