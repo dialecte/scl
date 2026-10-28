@@ -83,5 +83,62 @@
 		"vitepress-mermaid-renderer": "^1.1.21",
 		"vitepress-plugin-llms": "^1.13.1",
 		"vitest": "^4.1.10"
+	},
+	"dialecte": {
+		"gate": {
+			"fast": [
+				{
+					"name": "check",
+					"run": "npm run check"
+				},
+				{
+					"name": "skills",
+					"run": "npm run skills:check"
+				},
+				{
+					"name": "tests",
+					"run": "npx vitest run --project unit --changed",
+					"counts": "tests",
+					"changedOnly": true
+				}
+			],
+			"full": [
+				{
+					"name": "check",
+					"run": "npm run check"
+				},
+				{
+					"name": "skills",
+					"run": "npm run skills:check"
+				},
+				{
+					"name": "build",
+					"run": "npm run build"
+				},
+				{
+					"name": "tests",
+					"run": "nice -n 10 npx vitest run --project unit --no-file-parallelism",
+					"counts": "tests"
+				},
+				{
+					"name": "docs",
+					"run": "npm run doc:build",
+					"restoresGeneratedDocs": true
+				},
+				{
+					"name": "type-bench",
+					"run": "npm run type-bench:check"
+				}
+			]
+		},
+		"generatedDocs": [
+			".vitepress/data/elements-catalog.json",
+			"doc/v2019C1/api/elements.md"
+		],
+		"referencePatterns": [
+			"61850-[0-9]+ ?§",
+			"9[0]-30",
+			"7-[0-9] ?§"
+		]
 	}
 }
