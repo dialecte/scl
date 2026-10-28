@@ -1,5 +1,4 @@
 import path from 'node:path'
-/// <reference types="vite/client" />
 import { fileURLToPath, URL } from 'node:url'
 
 // VITE
@@ -24,7 +23,7 @@ export default defineConfig({
 		exclude: ['@dialecte/core'],
 	},
 	build: {
-		sourcemap: import.meta.env?.DEV,
+		sourcemap: process.env.NODE_ENV === 'development',
 		lib: {
 			entry: {
 				'v2019C1/index': fileURLToPath(new URL('./src/v2019C1/index.ts', import.meta.url)),
