@@ -34,10 +34,14 @@ directly; do not re-alias them.
 
 ## Business verbs: check here before writing
 
-Search [references/api.md](references/api.md) first: every verb by what it is for ("label or
-title of an element", "find who references an element", "copy an IED with its types"), with its
-JSDoc summary. The map below is the compact list. Read a verb's JSDoc and tests before ruling it
-out; a short name hides a lot.
+Ask the cli first, by what the verb is for: `npx @dialecte/cli api find "copy an IED with its types"`
+(add `--package @dialecte/scl` to see only scl's verbs), then `npx @dialecte/cli api show <route>` for the
+chosen verb's signature, summary and one call. For what an SCL element may hold or where it may sit,
+`npx @dialecte/cli schema <Tag>` (`schema IED`, `schema Bay`) answers from the installed definition; never
+read `definition.generated.ts` or the XSD for it. Without the cli, search
+[references/api.md](references/api.md): every verb by what it is for ("label or title of an
+element", "find who references an element"), with its JSDoc summary. The map below is the compact
+list. Read a verb's JSDoc and tests before ruling it out; a short name hides a lot.
 
 <!-- dialecte-skills:generated extensions -->
 
