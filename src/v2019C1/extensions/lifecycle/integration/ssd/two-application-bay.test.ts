@@ -11,10 +11,15 @@ import {
 } from '@/v2019C1/test'
 import { readRevisionTwin } from '@/v2019C1/test/revision-twins'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DiffNode, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DecisionGroup,
+	DiffNode,
+	DiffReport,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
+import type * as Core from '@dialecte/core'
 
 // Bays of two applications each, their functions classified by categories the bays share: each bay placed brings the
 // references to what it places into the shared categories, none twice; the newer revision has the breaker application
@@ -52,6 +57,10 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	steps: Step[]
 	/** What each step's report lists added: `<category references> <function references>`, by source element. */
 	listed: string[]
+	/** The function groups of each step's report, by the name of the source function, sorted. */
+	functionGroups?: string[][]
+	/** What each application group of each step's report depends on: `<application>: <functions>`, sorted. */
+	applicationDependencies?: string[][]
 }
 
 const APPLICATION_MANAGEMENT = '//v2019C1:FunctionCategory[@name="APPLICATION MANAGEMENT"]'
@@ -114,6 +123,8 @@ describe('ssd: bays of two applications sharing their categories', () => {
 				targetXml: projectXml,
 				steps: [{ bay: 'BAY1', scenario: 'instantiate', revision: 2 }],
 				listed: ['4 6'],
+				functionGroups: [['CBR1_Fn', 'P21_Fn']],
+				applicationDependencies: [['CBR1_App: CBR1_Fn, P21_Fn', 'P21_App: P21_Fn']],
 				expectedQueries: [
 					`${APPLICATION_MANAGEMENT}[count(v2019C1:FunctionCatRef)=2]`,
 					`${GENERIC_FUNCTION}[count(v2019C1:FunctionCatRef)=2]`,
@@ -131,6 +142,8 @@ describe('ssd: bays of two applications sharing their categories', () => {
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		const listed: string[] = []
+		const functionGroups: string[][] = []
+		const applicationDependencies: string[][] = []
 		for (const step of testCase.steps) {
 			const template =
 				(step.revision ?? (step.scenario === 'template' ? 2 : 1)) === 2
@@ -152,8 +165,19 @@ describe('ssd: bays of two applications sharing their categories', () => {
 				},
 			})
 			listed.push(describeListed(report))
+			const groups = await listFunctionGroups({ report, sourceQuery: template.query })
+			functionGroups.push(groups)
+			const dependencies = await listApplicationDependencies({
+				report,
+				sourceQuery: template.query,
+			})
+			applicationDependencies.push(dependencies)
 		}
 		expect(listed, 'report').toEqual(testCase.listed)
+		if (testCase.functionGroups) expect(functionGroups, 'report').toEqual(testCase.functionGroups)
+		if (testCase.applicationDependencies) {
+			expect(applicationDependencies, 'report').toEqual(testCase.applicationDependencies)
+		}
 		return { assertOn: 'target' }
 	}
 
@@ -175,6 +199,47 @@ function describeListed(report: DiffReport): string {
 	const categoryReferences = countOf({ tagName: 'FunctionCatRef' })
 	const functionReferences = countOf({ tagName: 'FunctionRef' })
 	return `${categoryReferences} ${functionReferences}`
+}
+
+/** The function groups a report lists, by the name of their source function, sorted. */
+async function listFunctionGroups(params: {
+	report: DiffReport
+	sourceQuery: Core.Query<Config>
+}): Promise<string[]> {
+	const names: string[] = []
+	for (const group of allGroups(params.report)) {
+		const { tagName, sourceRef } = group.primary
+		if (tagName !== 'Function' || !sourceRef) continue
+		names.push((await params.sourceQuery.any.getAttribute(sourceRef, { name: 'name' })) ?? '')
+	}
+	return names.sort()
+}
+
+/** The functions each application group of a report depends on: `<application>: <functions>`, by name, sorted. */
+async function listApplicationDependencies(params: {
+	report: DiffReport
+	sourceQuery: Core.Query<Config>
+}): Promise<string[]> {
+	const { report, sourceQuery } = params
+	const groups = allGroups(report)
+	async function nameOf(group: DecisionGroup): Promise<string> {
+		if (!group.primary.sourceRef) return ''
+		return (await sourceQuery.any.getAttribute(group.primary.sourceRef, { name: 'name' })) ?? ''
+	}
+	const listed: string[] = []
+	for (const group of groups) {
+		if (group.primary.tagName !== 'Application') continue
+		const functions: string[] = []
+		for (const dependency of groups) {
+			const isFunction = dependency.primary.tagName === 'Function'
+			if (!isFunction || !group.dependsOn.includes(dependency.id)) continue
+			const functionName = await nameOf(dependency)
+			functions.push(functionName)
+		}
+		const applicationName = await nameOf(group)
+		listed.push(`${applicationName}: ${functions.sort().join(', ')}`)
+	}
+	return listed.sort()
 }
 
 /** A report node and every node below it, each with the tag of the node holding it. */

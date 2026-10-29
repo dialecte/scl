@@ -9,4 +9,6 @@ export type PlacementListing = {
 	scope: ContributionScope
 	/** The satellites listed, each with the first primary it applies to. */
 	satellites: Set<string>
+	/** The functions listed, each with the first application composing it. */
+	functions: Set<string>
 }

@@ -176,7 +176,8 @@ export async function reportSsd(
 	// the primaries are reported from where the template lands: the deepest level of the project
 	// its unit sits on or below — the element the consumer started from when there is none
 	const landing = findLanding({ placementLevels, levelId: root.id }) ?? targetParent
-	// a first placement places what applies to the unit, and what its levels hold, once
+	// a first placement places what applies to the unit, what its levels hold, and a function its applications share,
+	// once
 	const placementListing = firstPlacement
 		? {
 				scope: await resolveContributionScope(sourceQuery, {
@@ -184,6 +185,7 @@ export async function reportSsd(
 					leftOut: scope.leftOut,
 				}),
 				satellites: new Set<string>(),
+				functions: new Set<string>(),
 			}
 		: undefined
 

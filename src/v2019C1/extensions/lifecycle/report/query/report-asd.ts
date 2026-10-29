@@ -483,10 +483,14 @@ async function reportComposedFunctions(
 
 	const reportInstances: ReportInstance[] = []
 	if (applicationInstances.length === 0) {
-		// a function stood on is listed as the mapping it is; the others are placed
+		// a function stood on is listed as the mapping it is; the others are placed — one another application of the
+		// placement composes too once, with the first
 		const composed = await findComposedFunctionRefs(sourceQuery, applicationRef)
 		const placed = params.shared?.placed ?? composed
+		const listedFunctions = params.placementListing?.functions
 		for (const functionRef of placed) {
+			if (listedFunctions?.has(functionRef.id)) continue
+			listedFunctions?.add(functionRef.id)
 			reportInstances.push(
 				await reportComposedFunction(query, {
 					...params,
