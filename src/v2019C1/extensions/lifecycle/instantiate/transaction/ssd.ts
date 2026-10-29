@@ -4,7 +4,10 @@ import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
-import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
+import {
+	cloneAppliedSatellites,
+	collectClonedIds,
+} from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import {
@@ -82,18 +85,21 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 	if (params.leftOut?.size && contentMappings.length === 0)
 		return { scopeRef: root, cloneMappings: [] }
 
-	// External cross-cutting satellites (Variable / BehaviorDescription) applying to any
-	// element in the scope subtree travel with it, placed at the scope's reproduced level, one of each per instance.
+	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element in the scope subtree travel with
+	// it, those a level of it holds too, placed at their reproduced level, one of each per instance
 	const scopeStructure = await resolveFrameStructure(tx, sourceQuery, root, frameIndex)
 	// what their references may name: what the scope places
 	const placementScope = await resolveContributionScope(sourceQuery, { roots: [root], leftOut })
 	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: root,
+		// one a role of an application refers to is placed with the application already
+		alreadyCloned: collectClonedIds({ cloneMappings: contentMappings }),
 		structure: scopeStructure,
 		leftOut,
 		bumpsCollisions: policy.bumpsCollisions,
 		scope: placementScope,
+		frame: { cloneMappings: contentMappings, redirectMappings },
 	})
 
 	const allMappings = [...contentMappings, ...applied.cloneMappings]

@@ -37,6 +37,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/mapping'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
+import type { PlacementListing } from './placement-listing.types'
 import type {
 	ReportedSharedFunctions,
 	ReportSharedFunctionsParams,
@@ -111,6 +112,8 @@ export async function reportAsd(
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
+		/** On a first placement, the larger one it is part of (a unit of a substation template): see `PlacementListing`. */
+		placementListing?: PlacementListing
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings } = params
@@ -174,8 +177,10 @@ export async function reportAsd(
 					matchKey,
 				})
 			: undefined
+	const placementListing = firstPlacement ? params.placementListing : undefined
 	if (firstPlacement) {
 		const instanceDiff = await reportApplicationInstance(query, {
+			placementListing,
 			pass: params.pass,
 			sourceQuery,
 			applicationRef,
@@ -236,6 +241,7 @@ export async function reportAsd(
 	}
 
 	const composedFunctions = await reportComposedFunctions(query, {
+		placementListing,
 		pass: params.pass,
 		sourceQuery,
 		applicationRef,
@@ -323,6 +329,8 @@ async function reportApplicationInstance(
 		selection?: VariantSelection
 		/** On a first placement, the functions it composes that it stands on: a reference to one names that function. */
 		stoodOn?: readonly RedirectMapping[]
+		/** The first placement it is part of: see `PlacementListing`. */
+		placementListing?: PlacementListing
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, applicationRef, instance } = params
@@ -407,6 +415,7 @@ async function reportApplicationInstance(
 	// in the Application subtree travel with the application group
 	await foldCrossCuttingSatellites(query, {
 		scope,
+		placementListing: params.placementListing,
 		pass: params.pass,
 		sourceQuery,
 		primaryRef: applicationRef,
@@ -461,6 +470,8 @@ async function reportComposedFunctions(
 		selections: ReadonlyMap<string, VariantSelection>
 		/** On a first placement merging shared functions, what the application stands on and what it places. */
 		shared?: ReportedSharedFunctions
+		/** On a first placement, the one the functions are part of: see `PlacementListing`. */
+		placementListing?: PlacementListing
 	},
 ): Promise<{
 	instances: ReportInstance[]
@@ -575,10 +586,13 @@ async function reportComposedFunction(
 		namesFollow: NamesFollow
 		/** What the selection of variants of the instances composing it leaves out. */
 		selection?: VariantSelection
+		/** On a first placement, the one it is part of: see `PlacementListing`. */
+		placementListing?: PlacementListing
 	},
 ): Promise<ReportInstance> {
 	const { sourceQuery, functionRef, instance, policy } = params
 	const instanceDiff = await reportFunction(query, {
+		placementListing: params.placementListing,
 		pass: params.pass,
 		sourceQuery,
 		functionRef,

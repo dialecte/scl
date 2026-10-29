@@ -1,6 +1,6 @@
 import { asd } from './asd'
 
-import { describe } from 'vitest'
+import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
@@ -40,6 +40,91 @@ describe('asd', () => {
 		})
 		return { assertOn: 'target' }
 	}
+
+	// ── what applies to its functions from two bays ─────────────────────────
+
+	describe('what applies to the functions of an application from two bays', () => {
+		/** An application composing a function of each of two bays, each bay holding a variable of one name applying to it. */
+		const twoBaysXml = /* xml */ `
+			<SCL ${ns} ${id}="project">
+				<Header id="project" uuid="project-file" ${id}="project-header"/>
+				<Substation name="S1" ${id}="project-substation">
+					<VoltageLevel name="V1" ${id}="project-voltage-level">
+						<Bay name="B1" ${id}="bay-1">
+							<Private type="eIEC61850-6-100" ${id}="bay-1-private">
+								<eIEC61850-6-100:Application name="P_App" uuid="application-uuid" ${id}="application">
+									<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="root-role">
+										<eIEC61850-6-100:FunctionRoleContent ${id}="root-content">
+											<eIEC61850-6-100:FunctionRef function="S1/V1/B1/F1" functionUuid="f1-uuid" ${id}="f1-ref"/>
+											<eIEC61850-6-100:FunctionRef function="S1/V1/B2/F2" functionUuid="f2-uuid" ${id}="f2-ref"/>
+										</eIEC61850-6-100:FunctionRoleContent>
+									</eIEC61850-6-100:FunctionRole>
+								</eIEC61850-6-100:Application>
+								<eIEC61850-6-100:Variable name="VX" value="1" uuid="vx-1-uuid" ${id}="vx-1">
+									<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/F1" elementUuid="f1-uuid" ${id}="vx-1-apply"/>
+								</eIEC61850-6-100:Variable>
+							</Private>
+							<ConductingEquipment name="QA1" type="CBR" uuid="qa1-uuid" ${id}="qa1">
+								<Private type="eIEC61850-6-100" ${id}="qa1-private">
+									<eIEC61850-6-100:Variable name="VQA" value="3" uuid="vqa-uuid" ${id}="vqa">
+										<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/F1" elementUuid="f1-uuid" ${id}="vqa-apply"/>
+									</eIEC61850-6-100:Variable>
+								</Private>
+							</ConductingEquipment>
+							<Function name="F1" uuid="f1-uuid" ${id}="f1"/>
+						</Bay>
+						<Bay name="B2" ${id}="bay-2">
+							<Private type="eIEC61850-6-100" ${id}="bay-2-private">
+								<eIEC61850-6-100:Variable name="VX" value="2" uuid="vx-2-uuid" ${id}="vx-2">
+									<eIEC61850-6-100:VariableApplyTo element="S1/V1/B2/F2" elementUuid="f2-uuid" ${id}="vx-2-apply"/>
+								</eIEC61850-6-100:Variable>
+							</Private>
+							<Function name="F2" uuid="f2-uuid" ${id}="f2"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+			</SCL>
+		`
+
+		const testCases: SclTest.TestCases<TestCase> = {
+			'a variable of one name in each bay, one held by a breaker → all in the bay of the file, the second numbered, each told':
+				{
+					sourceXml: twoBaysXml,
+					targetXml: emptyTargetXml,
+					applicationId: 'application',
+					expectedQueries: [
+						'//default:Bay/default:Private[v2019C1:Variable[@name="VX"][@value="1"]][v2019C1:Variable[@name="VX_1"][@value="2"]]',
+					],
+				},
+		}
+
+		async function extractWarnings({
+			source,
+			target,
+		}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+			if (!target) throw new Error('target required')
+			const { warnings } = await target.transaction(async function extractTheApplication(tx) {
+				return asd(tx, {
+					sourceQuery: source.query,
+					applicationRef: { tagName: 'Application', id: 'application' } as Scl.Ref<'Application'>,
+					tool: 'TEST',
+					who: 'test',
+				})
+			})
+			expect(
+				warnings.map(function describeWarning(warning) {
+					if (warning.code === 'satellite-renamed')
+						return `${warning.code} ${warning.name} > ${warning.as}`
+					if (warning.code === 'satellite-moved')
+						return `${warning.code} ${warning.from} > ${warning.to}`
+					return warning.code
+				}),
+			).toEqual(['satellite-moved ConductingEquipment > Bay', 'satellite-renamed VX > VX_1'])
+			return { assertOn: 'target' }
+		}
+
+		runSclTestCases.withExport({ testCases, act: extractWarnings })
+	})
 
 	// ── LNodeOutputRef / LNodeInputRef preservation ──────────────────────────
 

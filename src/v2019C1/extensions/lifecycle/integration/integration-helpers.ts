@@ -1,6 +1,9 @@
+import { BAY_PATH_TAGS, DESCRIBED_TARGET_TAGS } from './integration-helpers.constants'
+
 import { CUSTOM_RECORD_ID_ATTRIBUTE_NAME } from '@dialecte/core/helpers'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
+import { CROSS_CUTTING_SATELLITE_CONTAINERS } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.constants'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 
@@ -180,4 +183,49 @@ export function listAttributeChanges(report: DiffReport): string[] {
 			),
 		)
 		.sort()
+}
+
+/**
+ * Every variable and behaviour description of a document, with the element holding it and what it applies to:
+ * `<tag> <name> @<holder>: <what it applies to>`, sorted.
+ */
+export async function describeSatellites(query: Core.Query<Config>): Promise<string[]> {
+	const described: string[] = []
+	for (const tagName of CROSS_CUTTING_SATELLITE_CONTAINERS) {
+		for (const satellite of await query.getRecordsByTagName(tagName)) {
+			const name = await query.any.getAttribute(satellite, { name: 'name' })
+			const [, holder] = await query.any.findAncestors(satellite)
+			const holderName = holder ? await query.any.getAttribute(holder, { name: 'name' }) : undefined
+			const targets: string[] = []
+			const tree = await query.any.getTree(satellite)
+			for (const reference of tree?.tree ?? []) {
+				const { elementUuid, lnodeUuid } = await query.any.getAttributes(reference)
+				const target = await describeElement({ query, uuid: elementUuid ?? lnodeUuid })
+				targets.push(target)
+			}
+			described.push(`${tagName} ${name} @${holderName}: ${targets.sort().join(', ')}`)
+		}
+	}
+	return described.sort()
+}
+
+/** An element named by its uuid, as the bay path of its names (a logical node by its class and instance). */
+async function describeElement(params: {
+	query: Core.Query<Config>
+	uuid: string | undefined
+}): Promise<string> {
+	const { query, uuid } = params
+	for (const tagName of DESCRIBED_TARGET_TAGS) {
+		const [element] = await query.findByAttributes({ tagName, attributes: { uuid: uuid ?? '' } })
+		if (!element) continue
+		const { name, lnClass, lnInst } = await query.any.getAttributes(element)
+		const names = [name ?? `${lnClass}${lnInst}`]
+		for (const ancestor of await query.any.findAncestors(element)) {
+			if (!BAY_PATH_TAGS.has(ancestor.tagName)) continue
+			const ancestorName = await query.any.getAttribute(ancestor, { name: 'name' })
+			names.unshift(ancestorName ?? '')
+		}
+		return names.join('/')
+	}
+	return `nothing (${uuid})`
 }

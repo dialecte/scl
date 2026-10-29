@@ -1,10 +1,19 @@
 import { readScopeInstanceContent } from './instance-content'
 import { postExtractionCleanup } from './post-extraction-cleanup'
+import { satelliteWarnings } from './satellite-warnings'
 
 import { TEMPLATE_NAME } from '@/v2019C1/constants'
 import { history } from '@/v2019C1/extensions/history'
+import {
+	cloneAppliedSatellites,
+	collectClonedIds,
+} from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
-import { cloneTopologyContent } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import {
+	cloneTopologyContent,
+	resolveFrameStructure,
+} from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type { ExtractOptions, ExtractWarning, SsdExtractScope } from './extract.types'
@@ -16,7 +25,8 @@ import type * as Core from '@dialecte/core'
  *
  * Records an SSD `Header`, then `cloneTopologyContent` REPRODUCES the scope's structural frame
  * (Substation/VoltageLevel/Bay + BayType + equipment) and CONSUMES the application layer (each
- * `Application` + its composed `Function`s + type closure + satellites). The levels above the units
+ * `Application` + its composed `Function`s + type closure + satellites), with what its levels hold and what applies
+ * to it from outside (a variable, a behaviour description). The levels above the units
  * are then TEMPLATE-named (the scaffolding marker: the first named levels below it are the
  * instantiable units): the levels above a voltage level or a bay, which is the unit; a substation
  * itself, whose voltage levels are the units. The scaffolding loses its template link; the scope
@@ -58,11 +68,30 @@ export async function ssd(
 		},
 	})
 
-	const { cloneMappings, frameIndex, redirectMappings } = await cloneTopologyContent(tx, {
+	const content = await cloneTopologyContent(tx, {
 		sourceQuery,
 		scopeRef,
 		targetParent: root,
 	})
+	const { frameIndex, redirectMappings } = content
+
+	// what applies to the scope from outside it, and what its levels hold (a variable, a behaviour description), travels
+	// with it, each where the file holds it, applying only to what the extract places
+	const structure = await resolveFrameStructure(tx, sourceQuery, scopeRef, frameIndex)
+	const scope = await resolveContributionScope(sourceQuery, { roots: [scopeRef] })
+	const applied = await cloneAppliedSatellites(tx, {
+		sourceQuery,
+		primaryRef: scopeRef,
+		// one a role of an application refers to is placed with the application already
+		alreadyCloned: collectClonedIds({ cloneMappings: content.cloneMappings }),
+		structure,
+		// one held by an element of another level may land beside one of its name: numbered — one landing in the copy of
+		// its holder is placed first, and keeps its name
+		bumpsCollisions: true,
+		scope,
+		frame: { cloneMappings: content.cloneMappings, redirectMappings },
+	})
+	const cloneMappings = [...content.cloneMappings, ...applied.cloneMappings]
 
 	// the levels above the units are the template's scaffolding, TEMPLATE-named: the levels above the scope, and the
 	// scope itself when it is a substation (the top element of a template is named TEMPLATE, its voltage levels are the
@@ -85,7 +114,7 @@ export async function ssd(
 
 	await postExtractionCleanup(tx)
 
-	return { warnings }
+	return { warnings: [...warnings, ...satelliteWarnings({ applied })] }
 }
 
 /**

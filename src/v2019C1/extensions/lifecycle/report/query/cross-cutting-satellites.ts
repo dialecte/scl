@@ -2,10 +2,11 @@ import { foldSatelliteCompanions } from './satellite-companions'
 
 import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 
+import type { SatelliteFoldTarget } from './cross-cutting-satellites.types'
+import type { PlacementListing } from './placement-listing.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
-import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
@@ -25,6 +26,9 @@ import type * as Core from '@dialecte/core'
  * `instancePrimaryRef` is the target-side primary (for removal detection); pass it
  * when an instance exists. Layer-owned satellites (FunctionCategory, AllocationRole)
  * are folded separately by their own layer finder.
+ *
+ * Within one first placement (`placementListing`), a satellite is listed with the first primary it applies to, its
+ * references naming what the placement places: as the apply places it, once.
  */
 export async function foldCrossCuttingSatellites(
 	query: Core.Query<Config>,
@@ -32,7 +36,7 @@ export async function foldCrossCuttingSatellites(
 		sourceQuery: Core.Query<Config>
 		primaryRef: Scl.Ref<Scl.ElementsOf>
 		instancePrimaryRef?: Scl.Ref<Scl.ElementsOf>
-		report: InstanceDiff
+		report: SatelliteFoldTarget
 		/** The project element the primary is placed under. */
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		/** How an instance element carries its source element's uuid. Default `templateUuid`. */
@@ -53,19 +57,30 @@ export async function foldCrossCuttingSatellites(
 		selection?: VariantSelection
 		/** What the satellites' references may name: what the placement places or the instance holds. */
 		scope: ContributionScope
+		/** The first placement the primary is part of: see {@link PlacementListing}. */
+		placementListing?: PlacementListing
+		/** The primary is a topology frame: what its levels hold is folded too (see `resolveAppliedSatellites`). */
+		frame?: boolean
+		/** The source elements the placement leaves out (record ids). Default: what the selection leaves out of the template. */
+		leftOut?: ReadonlySet<string>
 	},
-): Promise<InstanceDiff> {
-	const { sourceQuery, primaryRef, instancePrimaryRef, report } = params
+): Promise<void> {
+	const { sourceQuery, primaryRef, instancePrimaryRef, report, placementListing } = params
 
-	const satelliteRefs = await resolveAppliedSatellites(sourceQuery, {
+	const resolved = await resolveAppliedSatellites(sourceQuery, {
 		primaryRef,
-		leftOut: params.selection?.within,
+		leftOut: params.leftOut ?? params.selection?.within,
+		frame: params.frame,
 	})
+	// one the placement listed with another primary is placed once: listed there only
+	const satelliteRefs = placementListing
+		? claimUnlisted({ satelliteRefs: resolved, listed: placementListing.satellites })
+		: resolved
 	const instanceSatelliteRefs = instancePrimaryRef
 		? await resolveAppliedSatellites(query, { primaryRef: instancePrimaryRef })
 		: []
 
-	return foldSatelliteCompanions(query, {
+	await foldSatelliteCompanions(query, {
 		pass: params.pass,
 		sourceQuery,
 		primaryRef,
@@ -82,6 +97,22 @@ export async function foldCrossCuttingSatellites(
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		notSelected: params.selection?.leftOut,
-		scope: params.scope,
+		scope: placementListing?.scope ?? params.scope,
 	})
+}
+
+/** The satellites a placement has not listed yet, each listed now: the first primary it applies to lists it. */
+function claimUnlisted(params: {
+	satelliteRefs: readonly Scl.Ref<Scl.ElementsOf>[]
+	listed: Set<string>
+}): Scl.Ref<Scl.ElementsOf>[] {
+	const { satelliteRefs, listed } = params
+	const claimed: Scl.Ref<Scl.ElementsOf>[] = []
+	for (const satelliteRef of satelliteRefs) {
+		const satelliteId = satelliteRef.id ?? ''
+		if (listed.has(satelliteId)) continue
+		listed.add(satelliteId)
+		claimed.push(satelliteRef)
+	}
+	return claimed
 }

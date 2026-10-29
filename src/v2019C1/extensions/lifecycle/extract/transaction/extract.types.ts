@@ -25,10 +25,28 @@ export type ExtractOptions = {
  * What an extract left out and says so: `sections-not-carried` — the `IED` and `Communication` sections of the source,
  * which an SSD does not carry yet, with their count.
  */
-export type ExtractWarning = {
-	code: 'sections-not-carried'
-	counts: { IED: number; Communication: number }
-}
+export type ExtractWarning =
+	| {
+			code: 'sections-not-carried'
+			counts: { IED: number; Communication: number }
+	  }
+	| {
+			/**
+			 * A variable or a behaviour description written elsewhere than in the copy of the element holding it (`from`, its
+			 * tag), on `to`: what its relative paths start from moved.
+			 */
+			code: 'satellite-moved'
+			element: Scl.Ref<Scl.ElementsOf>
+			from: string
+			to: string
+	  }
+	| {
+			/** A variable or a behaviour description numbered beside a sibling of its `name`, `as`: what names it by name names another. */
+			code: 'satellite-renamed'
+			element: Scl.Ref<Scl.ElementsOf>
+			name: string
+			as: string
+	  }
 
 /** The element an SSD is extracted from: a substation, a voltage level or a bay. */
 export type SsdExtractScope = Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>

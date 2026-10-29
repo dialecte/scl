@@ -70,7 +70,7 @@ export async function foldCarriedSatellites(
 				primaryRef: toRef(instance) as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
 			})
 		: []
-	return foldSatelliteCompanions(query, {
+	await foldSatelliteCompanions(query, {
 		pass: params.pass,
 		sourceQuery,
 		primaryRef: functionRef,
@@ -92,4 +92,5 @@ export async function foldCarriedSatellites(
 		notSelected: params.selection?.leftOut,
 		scope: params.scope,
 	})
+	return report
 }

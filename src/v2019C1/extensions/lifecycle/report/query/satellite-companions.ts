@@ -15,6 +15,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/mapping'
 import { holdsPairingByName } from '@/v2019C1/extensions/lifecycle/report/report-warnings'
 
+import type { SatelliteFoldTarget } from './cross-cutting-satellites.types'
 import type { SatelliteDiffParams } from './satellite-companions.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -65,7 +66,7 @@ export async function foldSatelliteCompanions(
 		primaryRef: Scl.Ref<Scl.ElementsOf>
 		satelliteRefs: Scl.Ref<Scl.ElementsOf>[]
 		instanceSatelliteRefs?: Scl.Ref<Scl.ElementsOf>[]
-		report: InstanceDiff
+		report: SatelliteFoldTarget
 		/** Instance scope for a standalone satellite group (primary-unchanged case). */
 		instanceScopeId?: string
 		/** The consumer's choices for shared satellites, by source record id. */
@@ -103,7 +104,7 @@ export async function foldSatelliteCompanions(
 		/** On a first placement, source elements it places onto elements the project holds (a function stood on). */
 		redirectMappings?: readonly RedirectMapping[]
 	},
-): Promise<InstanceDiff> {
+): Promise<void> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
 		params
 	const matchKey = params.matchKey ?? 'templateUuid'
@@ -207,8 +208,6 @@ export async function foldSatelliteCompanions(
 			}
 		}
 	}
-
-	return report
 }
 
 /**

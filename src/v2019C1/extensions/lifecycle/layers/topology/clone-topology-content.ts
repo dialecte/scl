@@ -78,13 +78,17 @@ export async function cloneTopologyContent(
 	const placedRoots: Scl.Ref<Scl.ElementsOf>[] = []
 	const redirectMappings: RedirectMapping[] = [...frame.redirectMappings]
 	// what is placed so far (source record id -> its clone): an application composing a function another one placed,
-	// or referring to what such a function holds, refers to that clone
+	// or referring to what such a function or the frame holds, refers to that clone — or places it below it
 	const placed = new Map<string, Scl.Ref<Scl.ElementsOf>>()
-	function record(added: Scl.CloneMapping[]): void {
+	function remember(added: readonly Scl.CloneMapping[]): void {
 		for (const mapping of added) {
-			cloneMappings.push(mapping)
 			if (mapping.source.id) placed.set(mapping.source.id, mapping.target)
 		}
+	}
+	remember(frame.cloneMappings)
+	function record(added: Scl.CloneMapping[]): void {
+		cloneMappings.push(...added)
+		remember(added)
 	}
 
 	// 1. Applications - consume the application layer (brings their composed Functions).

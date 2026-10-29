@@ -9,7 +9,7 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test'
 
-import type { SsdExtractScope, TemplateLink } from './extract.types'
+import type { ExtractWarning, SsdExtractScope, TemplateLink } from './extract.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
@@ -24,6 +24,8 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	scope?: SsdExtractScope
 	templateLink?: TemplateLink
+	/** The warnings of the extract about the satellites it moved or numbered, `<code> <before> > <after>`. */
+	satelliteWarnings?: string[]
 }
 
 // Extract a bay-typical from a project: the produced SSD has an SSD Header, a TEMPLATE process
@@ -207,6 +209,204 @@ async function extractBay({
 	})
 	return { assertOn: 'target' }
 }
+
+// A bay whose bay holds a variable applying to its function and a behaviour description of the function's logical node,
+// whose breaker holds a variable applying to itself, beside a function placed from its own file; the substation holds a
+// variable applying to the function, one applying to the function from its own file and one applying to another bay only;
+// the function from its own file comes after the breaker and before the bay's function: two variables apply to it and
+// to one of those.
+const levelSatellitesXml = /* xml */ `
+	<SCL ${ns} ${id}="scl-src">
+		<Substation name="S1" ${id}="sub-1">
+			<Private type="eIEC61850-6-100" ${id}="sub-priv">
+				<eIEC61850-6-100:Variable name="VSUB" value="1" uuid="vsub-uuid" templateUuid="vsub-tmpl-uuid" ${id}="vsub">
+					<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot" elementUuid="fn-src-uuid" ${id}="vsub-apply-to"/>
+				</eIEC61850-6-100:Variable>
+				<eIEC61850-6-100:Variable name="VLIB" value="6" uuid="vlib-uuid" templateUuid="vlib-tmpl-uuid" ${id}="vlib">
+					<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Lib" elementUuid="lib-uuid" ${id}="vlib-apply-to"/>
+				</eIEC61850-6-100:Variable>
+				<eIEC61850-6-100:Variable name="VMIX" value="7" uuid="vmix-uuid" templateUuid="vmix-tmpl-uuid" ${id}="vmix">
+					<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Lib" elementUuid="lib-uuid" ${id}="vmix-lib"/>
+					<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot" elementUuid="fn-src-uuid" ${id}="vmix-prot"/>
+				</eIEC61850-6-100:Variable>
+				<eIEC61850-6-100:Variable name="VMIX2" value="8" uuid="vmix2-uuid" templateUuid="vmix2-tmpl-uuid" ${id}="vmix2">
+					<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/QA1" elementUuid="qa1-uuid" ${id}="vmix2-qa1"/>
+					<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Lib" elementUuid="lib-uuid" ${id}="vmix2-lib"/>
+				</eIEC61850-6-100:Variable>
+				<eIEC61850-6-100:Variable name="VOTHER" value="2" uuid="vother-uuid" ${id}="vother">
+					<eIEC61850-6-100:VariableApplyTo element="S1/V1/B2" elementUuid="bay-2-uuid" ${id}="vother-apply-to"/>
+				</eIEC61850-6-100:Variable>
+			</Private>
+			<VoltageLevel name="V1" ${id}="vl-1">
+				<Bay name="B1" uuid="bay-1-uuid" templateUuid="bay-tmpl-uuid" ${id}="bay-1">
+					<Private type="eIEC61850-6-100" ${id}="bay-priv">
+						<eIEC61850-6-100:Variable name="PICKUP" value="3" uuid="pickup-uuid" templateUuid="pickup-tmpl-uuid" ${id}="pickup">
+							<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot" elementUuid="fn-src-uuid" ${id}="pickup-apply-to"/>
+						</eIEC61850-6-100:Variable>
+						<eIEC61850-6-100:BehaviorDescription name="BD1" uuid="bd-uuid" templateUuid="bd-tmpl-uuid" ${id}="bd">
+							<eIEC61850-6-100:InputVar varName="in1" dataName="S1/V1/B1/Prot/CSWI1" lnodeUuid="ln-src-uuid" doName="Pos" ${id}="bd-input"/>
+						</eIEC61850-6-100:BehaviorDescription>
+					</Private>
+					<ConductingEquipment name="QA1" type="CBR" uuid="qa1-uuid" ${id}="qa1">
+						<Private type="eIEC61850-6-100" ${id}="qa1-priv">
+							<eIEC61850-6-100:Variable name="VQA1" value="4" uuid="vqa1-uuid" ${id}="vqa1">
+								<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/QA1" elementUuid="qa1-uuid" ${id}="vqa1-apply-to"/>
+							</eIEC61850-6-100:Variable>
+						</Private>
+					</ConductingEquipment>
+					<Function name="Lib" uuid="lib-uuid" templateUuid="lib-tmpl-uuid" ${id}="lib-1">
+						<Private type="eIEC61850-6-100" ${id}="lib-priv">
+							<eIEC61850-6-100:FunctionSclRef ${id}="lib-file">
+								<eIEC61850-6-100:SclFileReference fileName="Lib" fileType="FSD" ${id}="lib-file-ref"/>
+							</eIEC61850-6-100:FunctionSclRef>
+						</Private>
+					</Function>
+					<Function name="Prot" uuid="fn-src-uuid" templateUuid="fn-tmpl-uuid" ${id}="fn-1">
+						<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" uuid="ln-src-uuid" ${id}="lnode-1"/>
+					</Function>
+				</Bay>
+				<Bay name="B2" uuid="bay-2-uuid" ${id}="bay-2"/>
+			</VoltageLevel>
+		</Substation>
+		<DataTypeTemplates ${id}="dtt-1">
+			<LNodeType id="CSWI_Type" lnClass="CSWI" ${id}="lnt-1">
+				<DO name="Pos" type="DPC_Type" ${id}="do-1"/>
+			</LNodeType>
+			<DOType id="DPC_Type" cdc="DPC" ${id}="dot-1">
+				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="dot-da-1"/>
+			</DOType>
+		</DataTypeTemplates>
+	</SCL>
+`
+
+// The same bay, its function composed by an application whose role refers to the behaviour description of the bay.
+const roleReferenceXml = levelSatellitesXml.replace(
+	`<Private type="eIEC61850-6-100" ${id}="bay-priv">`,
+	[
+		`<Private type="eIEC61850-6-100" ${id}="bay-priv">`,
+		`<eIEC61850-6-100:Application name="P_App" uuid="app-uuid" ${id}="app-1">`,
+		`<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="root-role">`,
+		`<eIEC61850-6-100:FunctionRoleContent ${id}="root-content">`,
+		`<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot" functionUuid="fn-src-uuid" ${id}="app-fref"/>`,
+		`</eIEC61850-6-100:FunctionRoleContent>`,
+		`</eIEC61850-6-100:FunctionRole>`,
+		`<eIEC61850-6-100:FunctionRole name="ENGINEERING ELEMENTS" ${id}="engineering-role">`,
+		`<eIEC61850-6-100:FunctionRoleContent ${id}="engineering-content">`,
+		`<eIEC61850-6-100:BehaviorDescriptionRef behaviorDescription="S1/V1/B1/BD1" behaviorDescriptionUuid="bd-uuid" ${id}="bd-ref"/>`,
+		`</eIEC61850-6-100:FunctionRoleContent>`,
+		`</eIEC61850-6-100:FunctionRole>`,
+		`</eIEC61850-6-100:Application>`,
+	].join(''),
+)
+
+// A bay whose voltage level holds a variable applying to its function, and another voltage level, read first, one of
+// that name applying to it too: both land on the voltage level the file holds.
+const twoLevelsXml = /* xml */ `
+	<SCL ${ns} ${id}="scl-src">
+		<Substation name="S1" ${id}="sub-1">
+			<VoltageLevel name="V2" ${id}="vl-2">
+				<Private type="eIEC61850-6-100" ${id}="vl-2-priv">
+					<eIEC61850-6-100:Variable name="VX" value="2" uuid="vx-2-uuid" ${id}="a-vx-2">
+						<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot" elementUuid="fn-src-uuid" ${id}="a-vx-2-apply-to"/>
+					</eIEC61850-6-100:Variable>
+				</Private>
+			</VoltageLevel>
+			<VoltageLevel name="V1" ${id}="vl-1">
+				<Private type="eIEC61850-6-100" ${id}="vl-1-priv">
+					<eIEC61850-6-100:Variable name="VX" value="1" uuid="vx-1-uuid" ${id}="vx-1">
+						<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot" elementUuid="fn-src-uuid" ${id}="vx-1-apply-to"/>
+					</eIEC61850-6-100:Variable>
+				</Private>
+				<Bay name="B1" uuid="bay-1-uuid" ${id}="bay-1">
+					<Function name="Prot" uuid="fn-src-uuid" ${id}="fn-1"/>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
+const PICKUP = '//default:Bay[@name="B1"]/default:Private/v2019C1:Variable[@name="PICKUP"]'
+const BD1 = '//default:Bay[@name="B1"]/default:Private/v2019C1:BehaviorDescription[@name="BD1"]'
+const VSUB = '//default:Substation/default:Private/v2019C1:Variable[@name="VSUB"]'
+const PROT_UUID = '//default:Function[@name="Prot"]/@uuid'
+
+/** What a level of the bay holds is the bay's; what applies to it from above travels with it. */
+describe('extract.ssd - what the levels hold', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'the bay extracted → its variable, its behaviour description and its breaker variable, the one above applying to its function; not the one applying to another bay':
+			{
+				sourceXml: levelSatellitesXml,
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				expectedQueries: [
+					`${PICKUP}[@templateUuid="pickup-tmpl-uuid"]/v2019C1:VariableApplyTo[@elementUuid=${PROT_UUID}]`,
+					`${BD1}/v2019C1:InputVar[@lnodeUuid=//default:Function[@name="Prot"]/default:LNode/@uuid]`,
+					'//default:ConductingEquipment[@name="QA1"]/default:Private/v2019C1:Variable[@name="VQA1"]/v2019C1:VariableApplyTo[@elementUuid=//default:ConductingEquipment[@name="QA1"]/@uuid]',
+					`${VSUB}[@templateUuid="vsub-tmpl-uuid"]/v2019C1:VariableApplyTo[@elementUuid=${PROT_UUID}]`,
+				],
+				unexpectedQueries: ['//v2019C1:Variable[@name="VOTHER"]'],
+			},
+		"an application's role refers to the bay's behaviour description → extracted once, the role naming it":
+			{
+				sourceXml: roleReferenceXml,
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				expectedQueries: [
+					'//default:Bay[@name="B1"][count(.//v2019C1:BehaviorDescription)=1]',
+					`//v2019C1:BehaviorDescriptionRef[@behaviorDescriptionUuid=${BD1}/@uuid]`,
+				],
+			},
+		'two variables of one name applying to the bay from two voltage levels → both on the voltage level extracted, the one moved there numbered and told':
+			{
+				sourceXml: twoLevelsXml,
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				expectedQueries: [
+					'//default:VoltageLevel/default:Private[v2019C1:Variable[@name="VX"][@value="1"]][v2019C1:Variable[@name="VX_1"][@value="2"]]',
+				],
+				satelliteWarnings: [
+					'satellite-moved VoltageLevel > VoltageLevel',
+					'satellite-renamed VX > VX_1',
+				],
+			},
+		'templateLink break: what the levels hold and what applies to the bay lose their link': {
+			sourceXml: levelSatellitesXml,
+			targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+			templateLink: 'break',
+			expectedQueries: [
+				`${PICKUP}[not(@templateUuid)]`,
+				`${BD1}[not(@templateUuid)]`,
+				`${VSUB}[not(@templateUuid)]`,
+				// what applies only to a function placed from its own file is that file's instance: it keeps its link
+				'//v2019C1:Variable[@name="VLIB"][@templateUuid="vlib-tmpl-uuid"]',
+				// one applying to the function from its own file and to the bay's came with the bay's instance too
+				'//v2019C1:Variable[@name="VMIX"][not(@templateUuid)]',
+				// whichever of its elements comes first or last
+				'//v2019C1:Variable[@name="VMIX2"][not(@templateUuid)]',
+			],
+		},
+	}
+
+	async function act({
+		source,
+		target,
+		testCase,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		const { warnings } = await target.transaction(async function extractBay(tx) {
+			return ssd(tx, {
+				sourceQuery: source.query,
+				scopeRef,
+				tool: 'TEST',
+				who: 'test',
+				...(testCase.templateLink ? { templateLink: testCase.templateLink } : {}),
+			})
+		})
+		expect(describeSatelliteWarnings({ warnings }), 'extract').toEqual(
+			testCase.satelliteWarnings ?? [],
+		)
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
 
 /** A bay's application composes a function of the substation: it came with the bay's instance. */
 describe('extract.ssd - a bay, the template link', () => {
@@ -438,3 +638,15 @@ describe('extract.ssd - what it does not carry', () => {
 		expect(result.warnings).toEqual([])
 	})
 })
+
+/** The warnings of an extract about the satellites it moved or numbered, `<code> <before> > <after>`, sorted. */
+function describeSatelliteWarnings(params: { warnings: readonly ExtractWarning[] }): string[] {
+	const described: string[] = []
+	for (const warning of params.warnings) {
+		if (warning.code === 'satellite-moved')
+			described.push(`${warning.code} ${warning.from} > ${warning.to}`)
+		if (warning.code === 'satellite-renamed')
+			described.push(`${warning.code} ${warning.name} > ${warning.as}`)
+	}
+	return described.sort()
+}

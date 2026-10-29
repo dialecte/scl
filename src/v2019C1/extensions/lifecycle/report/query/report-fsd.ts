@@ -21,6 +21,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
+import type { PlacementListing } from './placement-listing.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -73,6 +74,8 @@ export async function reportFsd(
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
+		/** On a first placement, the larger one it is part of (a unit of a substation template): see `PlacementListing`. */
+		placementListing?: PlacementListing
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, functionRef, targetParent, scenario, targetInstance, decisionMappings } =
@@ -130,6 +133,7 @@ export async function reportFsd(
 			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 			placeholderLineages: params.placeholderLineages,
 			namesFollow,
+			placementListing: params.placementListing,
 		})
 		const reportInstance = await buildReportInstance(query, {
 			instanceDiff,

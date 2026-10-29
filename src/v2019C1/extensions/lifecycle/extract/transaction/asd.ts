@@ -2,6 +2,7 @@ import { ensureSubstationTemplateStructure } from './ensure-substation-structure
 import { omitOfSections } from './function-sections'
 import { readInstanceContent } from './instance-content'
 import { postExtractionCleanup } from './post-extraction-cleanup'
+import { satelliteWarnings } from './satellite-warnings'
 
 import { history } from '@/v2019C1/extensions/history'
 import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
@@ -14,6 +15,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { removeOwnProvenance } from '@/v2019C1/extensions/reference/transaction'
 
+import type { ExtractWarning } from './extract.types'
 import type { AsdExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -27,7 +29,7 @@ export async function asd(
 		who: Scl.AttributesValueObjectOf<'Hitem'>['who']
 		nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
 	} & AsdExtractOptions,
-): Promise<void> {
+): Promise<{ warnings: ExtractWarning[] }> {
 	const { sourceQuery, applicationRef, tool, who, nameStructure, sections } = params
 	const { as = 'new', templateLink = 'keep' } = params
 
@@ -70,7 +72,8 @@ export async function asd(
 		composedRefs,
 		alreadyCloned,
 		structure,
-		bumpsCollisions: false,
+		// two held by elements of different levels may land on one level of the file: the second is numbered
+		bumpsCollisions: true,
 		scope,
 	})
 	const cloneMappings = [...content.cloneMappings, ...applied.cloneMappings]
@@ -89,6 +92,8 @@ export async function asd(
 	if (root && templateLink === 'break') await removeOwnProvenance(tx, { element: root })
 
 	await postExtractionCleanup(tx)
+
+	return { warnings: satelliteWarnings({ applied }) }
 }
 
 /**

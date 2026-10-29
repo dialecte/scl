@@ -1,9 +1,11 @@
+import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
 import { reportAsd } from './report-asd'
 import { reportFsd } from './report-fsd'
 import { reportTopologyFrame } from './report-topology-frame'
 
 import { toRef } from '@dialecte/core/helpers'
 
+import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { addDroppedGroups, placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { linkPlacementDependencies } from '@/v2019C1/extensions/lifecycle/engine/link-placement-dependencies'
@@ -22,6 +24,8 @@ import {
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
+import type { SatelliteFoldTarget } from './cross-cutting-satellites.types'
+import type { FoldFrameSatellitesParams } from './report-ssd.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -45,7 +49,9 @@ import type * as Core from '@dialecte/core'
  * per-primary reports for the scope's Applications (each cascading to its composed Functions,
  * via {@link reportAsd}) and its standalone Functions ({@link reportFsd}). The instances are
  * merged into one {@link DiffReport}, so `groups` covers every primary and the fast/full
- * classification holds across the whole SSD.
+ * classification holds across the whole SSD. On a first placement, a variable or a behaviour description is
+ * listed once, with the first primary it applies to; what applies to the levels only, or what they hold applying to
+ * no primary, with the frame.
  *
  * The scope is the element the consumer names, the unit its `TEMPLATE` scaffolding holds when it names that; several
  * units there and none chosen is refused with `SSD_SCOPE_AMBIGUOUS`.
@@ -170,6 +176,16 @@ export async function reportSsd(
 	// the primaries are reported from where the template lands: the deepest level of the project
 	// its unit sits on or below — the element the consumer started from when there is none
 	const landing = findLanding({ placementLevels, levelId: root.id }) ?? targetParent
+	// a first placement places what applies to the unit, and what its levels hold, once
+	const placementListing = firstPlacement
+		? {
+				scope: await resolveContributionScope(sourceQuery, {
+					roots: [root],
+					leftOut: scope.leftOut,
+				}),
+				satellites: new Set<string>(),
+			}
+		: undefined
 
 	// on an update, a primary the template gained is placed in each instance of the unit: listed once
 	// per instance (for the level the instance sits on), each decided on its own — as the apply
@@ -186,6 +202,7 @@ export async function reportSsd(
 		})
 		for (const { parent, placedFor } of places) {
 			const report = await reportAsd(query, {
+				placementListing,
 				pass: params.pass,
 				sourceQuery,
 				applicationRef,
@@ -213,6 +230,7 @@ export async function reportSsd(
 		})
 		for (const { parent, placedFor } of places) {
 			const report = await reportFsd(query, {
+				placementListing,
 				pass: params.pass,
 				sourceQuery,
 				functionRef,
@@ -229,6 +247,23 @@ export async function reportSsd(
 		}
 	}
 
+	// what applies to the levels only, and what they hold applying to no primary placed, goes with the frame
+	if (placedFrame && placementListing) {
+		await foldFrameSatellites(query, {
+			sourceQuery,
+			placedFrame,
+			scopeRef: root,
+			anchor: landing,
+			matchKey,
+			removalBase,
+			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			placeholderLineages: params.placeholderLineages,
+			namesFollow,
+			leftOut: scope.leftOut,
+			placementListing,
+		})
+	}
+
 	// what lands in a level the placement adds goes with it, a reference with what it points at
 	for (const scope of listPlacementScopes({ firstPlacement, frameInstances, primaryInstances })) {
 		await linkPlacementDependencies(sourceQuery, { instances: scope })
@@ -243,6 +278,39 @@ export async function reportSsd(
 	// the unit named came with the units linked to it: the report says which it acts on
 	if (scope.units.length > 1) report.scopeUnits = scope.units
 	return report
+}
+
+/**
+ * Fold into the placed frame the satellites the placement places that no primary listed: what applies to its levels or
+ * their equipment only, what they hold applying to them. The report of the frame is folded in place.
+ */
+async function foldFrameSatellites(
+	query: Core.Query<Config>,
+	params: FoldFrameSatellitesParams,
+): Promise<void> {
+	const { placedFrame } = params
+	const frameReport: SatelliteFoldTarget = {
+		root: placedFrame.tree,
+		groups: placedFrame.groups,
+		mappings: placedFrame.mappings,
+	}
+	await foldCrossCuttingSatellites(query, {
+		sourceQuery: params.sourceQuery,
+		primaryRef: params.scopeRef,
+		report: frameReport,
+		anchor: params.anchor,
+		matchKey: params.matchKey,
+		removalBase: params.removalBase,
+		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		placeholderLineages: params.placeholderLineages,
+		namesFollow: params.namesFollow,
+		scope: params.placementListing.scope,
+		placementListing: params.placementListing,
+		frame: true,
+		leftOut: params.leftOut,
+	})
+	placedFrame.mappings = frameReport.mappings ?? []
+	placedFrame.upToDate = placedFrame.groups.length === 0
 }
 
 /**

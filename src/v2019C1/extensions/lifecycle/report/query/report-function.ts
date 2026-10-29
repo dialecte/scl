@@ -7,6 +7,7 @@ import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { foreignScopeResolver } from '@/v2019C1/extensions/lifecycle/instance'
 
+import type { PlacementListing } from './placement-listing.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -55,6 +56,8 @@ export async function reportFunction(
 		namesFollow: NamesFollow
 		/** What the selection of functional variants of the instances this is for leaves out of the template. */
 		selection?: VariantSelection
+		/** The first placement the function is part of: see `PlacementListing`. */
+		placementListing?: PlacementListing
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
@@ -107,8 +110,9 @@ export async function reportFunction(
 		namesFollow: params.namesFollow,
 		selection: params.selection,
 	})
-	return foldCrossCuttingSatellites(query, {
+	await foldCrossCuttingSatellites(query, {
 		scope,
+		placementListing: params.placementListing,
 		pass: params.pass,
 		sourceQuery,
 		primaryRef: functionRef,
@@ -123,4 +127,5 @@ export async function reportFunction(
 		namesFollow: params.namesFollow,
 		selection: params.selection,
 	})
+	return withLayerSatellites
 }

@@ -1,10 +1,15 @@
-import { CROSS_CUTTING_SATELLITE_CONTAINERS } from './applied-satellites.constants'
+import {
+	CROSS_CUTTING_SATELLITE_CONTAINERS,
+	CROSS_CUTTING_SATELLITE_TAGS,
+	FRAME_CARRIED_TAGS,
+} from './applied-satellites.constants'
 
 import { toRef } from '@dialecte/core/helpers'
 
 import { reference } from '@/v2019C1/extensions/reference'
 import { readAttribute } from '@/v2019C1/helpers'
 
+import type { AppliedSatellite, ResolveAppliedSatellitesParams } from './applied-satellites.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
@@ -13,22 +18,28 @@ import type { AnyTreeRecord } from '@dialecte/core'
  * Resolve the cross-cutting satellites that apply to ANY element within the
  * primary's subtree, and within the subtrees of what it composes (`composedRefs`: the functions an application composes
  * travel with it): for every uuid-bearing element there, find the containers (e.g. `Variable`) referencing it.
- * Excludes containers that live INSIDE those subtrees (internal — already carried by their clone/diff). This
- * is layer-agnostic: any verb passes its primary and gets the applied satellites.
+ * Excludes containers that live INSIDE those subtrees (internal — already carried by their clone/diff), but, for a
+ * topology frame, those its levels hold (`frame`). This is layer-agnostic: any verb passes its primary and gets the
+ * applied satellites.
  */
 export async function resolveAppliedSatellites(
 	query: Core.Query<Config>,
-	params: {
-		primaryRef: Scl.Ref<Scl.ElementsOf>
-		/** What travels with the primary (the functions an application composes): what applies to them is resolved too. */
-		composedRefs?: readonly Scl.Ref<Scl.ElementsOf>[]
-		/**
-		 * Elements left out (record ids): a satellite applying only to them, or only through references left out, is not
-		 * resolved.
-		 */
-		leftOut?: ReadonlySet<string>
-	},
+	params: ResolveAppliedSatellitesParams,
 ): Promise<Scl.Ref<Scl.ElementsOf>[]> {
+	const applied = await resolveAppliedSatelliteTargets(query, params)
+	return applied.map(function satelliteOf(satellite) {
+		return satellite.satelliteRef
+	})
+}
+
+/**
+ * The satellites {@link resolveAppliedSatellites} resolves, each with what it applies to among the targets read (record
+ * ids): what a caller tells instances apart by.
+ */
+export async function resolveAppliedSatelliteTargets(
+	query: Core.Query<Config>,
+	params: ResolveAppliedSatellitesParams,
+): Promise<AppliedSatellite[]> {
 	const { primaryRef, composedRefs = [], leftOut } = params
 	const tree = await query.any.getTree(primaryRef)
 	if (!tree) return []
@@ -45,8 +56,11 @@ export async function resolveAppliedSatellites(
 		collectTargets({ node: composedTree, subtreeIds, targets: collected })
 	}
 
-	const seen = new Set<string>()
-	const satellites: Scl.Ref<Scl.ElementsOf>[] = []
+	// what a level of a frame holds is left out of its clone
+	const levelHeld = new Set<string>()
+	if (params.frame) collectLevelHeld({ node: tree, levelHeld })
+
+	const satellites = new Map<string, AppliedSatellite>()
 
 	for (const target of targets) {
 		if (leftOut?.has(target.id)) continue
@@ -56,15 +70,19 @@ export async function resolveAppliedSatellites(
 				containerTagName: containerTag as Scl.ElementsOf,
 			})
 			for (const { ref, container } of refs) {
-				if (!container || seen.has(container.id) || leftOut?.has(ref.id)) continue
+				if (!container || leftOut?.has(ref.id)) continue
 				// internal/external guard: a satellite inside the subtree is already carried
-				if (subtreeIds.has(container.id)) continue
-				seen.add(container.id)
-				satellites.push(toRef(container) as Scl.Ref<Scl.ElementsOf>)
+				if (subtreeIds.has(container.id) && !levelHeld.has(container.id)) continue
+				const known = satellites.get(container.id)
+				if (known) known.targetIds.push(target.id)
+				else {
+					const satelliteRef = toRef(container) as Scl.Ref<Scl.ElementsOf>
+					satellites.set(container.id, { satelliteRef, targetIds: [target.id] })
+				}
 			}
 		}
 	}
-	return satellites
+	return [...satellites.values()]
 }
 
 function collectTargets(params: {
@@ -80,4 +98,13 @@ function collectTargets(params: {
 	)
 		targets.push(node)
 	for (const child of node.tree) collectTargets({ node: child, subtreeIds, targets })
+}
+
+/** The satellites the levels of a frame hold: below it, but in what it places with all it holds (a function). */
+function collectLevelHeld(params: { node: AnyTreeRecord; levelHeld: Set<string> }): void {
+	const { node, levelHeld } = params
+	for (const child of node.tree) {
+		if (CROSS_CUTTING_SATELLITE_TAGS.has(child.tagName)) levelHeld.add(child.id)
+		else if (!FRAME_CARRIED_TAGS.has(child.tagName)) collectLevelHeld({ node: child, levelHeld })
+	}
 }

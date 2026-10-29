@@ -192,3 +192,75 @@ describe('resolveAppliedSatellites with what the primary composes', () => {
 
 	runSclTestCases.withoutExport({ testCases, act })
 })
+
+/** A bay whose breaker holds an equipment function, a variable of which applies to it; a function holds its own. */
+const equipmentFunctionXml = /* xml */ `
+	<SCL ${ns} ${id}="ssd">
+		<Substation name="TEMPLATE" ${id}="sub-s">
+			<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+				<Bay name="B1" ${id}="bay-s">
+					<ConductingEquipment name="QA1" type="CBR" ${id}="qa1">
+						<EqFunction name="Interlock" uuid="interlock-uuid" ${id}="interlock">
+							<Private type="eIEC61850-6-100" ${id}="interlock-priv">
+								<eIEC61850-6-100:Variable name="ON_INTERLOCK" uuid="on-interlock-uuid" ${id}="on-interlock">
+									<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/B1/QA1/Interlock" elementUuid="interlock-uuid" ${id}="on-interlock-apply"/>
+								</eIEC61850-6-100:Variable>
+							</Private>
+						</EqFunction>
+					</ConductingEquipment>
+					<Function name="F1" uuid="f1-uuid" ${id}="f1">
+						<Private type="eIEC61850-6-100" ${id}="f1-priv">
+							<eIEC61850-6-100:Variable name="IN_F1" uuid="in-f1-uuid" ${id}="in-f1">
+								<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/B1/QA1/Interlock" elementUuid="interlock-uuid" ${id}="in-f1-apply"/>
+							</eIEC61850-6-100:Variable>
+						</Private>
+					</Function>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
+type FrameCase = SclTest.BaseXmlTestCase & {
+	frame?: true
+	leftOut?: string[]
+	/** The satellites resolved, by record id, sorted. */
+	expectedIds: string[]
+}
+
+describe('resolveAppliedSatellites for a topology frame', () => {
+	const testCases: SclTest.TestCases<FrameCase> = {
+		'the bay as a primary → what it holds is its own: nothing': {
+			sourceXml: composedXml,
+			expectedIds: [],
+		},
+		'the bay as a frame → what it holds, but what lives inside a function it places': {
+			sourceXml: composedXml,
+			frame: true,
+			expectedIds: ['on-f1', 'on-f2'],
+		},
+		"the bay as a frame → what an equipment function holds is the frame's, what a function holds its own":
+			{
+				sourceXml: equipmentFunctionXml,
+				frame: true,
+				expectedIds: ['on-interlock'],
+			},
+		'the bay as a frame, the first function left out → what applies to the second': {
+			sourceXml: composedXml,
+			frame: true,
+			leftOut: ['f1'],
+			expectedIds: ['on-f2'],
+		},
+	}
+
+	async function act({ testCase, source }: SclTest.ActParams<FrameCase>): Promise<void> {
+		const satellites = await resolveAppliedSatellites(source.query, {
+			primaryRef: bayRef,
+			...(testCase.frame ? { frame: true } : {}),
+			...(testCase.leftOut ? { leftOut: new Set(testCase.leftOut) } : {}),
+		})
+		expect(satellites.map((ref) => ref.id).sort()).toEqual(testCase.expectedIds)
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})

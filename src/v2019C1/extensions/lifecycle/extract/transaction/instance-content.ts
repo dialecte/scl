@@ -1,3 +1,4 @@
+import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 import { holdsOwnProvenance } from '@/v2019C1/extensions/reference/query/provenance/find-own-provenance'
 import { PROVENANCE_ANCHOR_KIND_BY_TAG } from '@/v2019C1/extensions/reference/query/provenance/get-provenance.constants'
 // read from their files: the query module of the extension holds the queries a document is asked
@@ -43,10 +44,11 @@ export async function readInstanceContent(
 }
 
 /**
- * What came with the instance of an SSD scope: the scope and what it holds, and the functions its applications compose
- * wherever they sit (above a bay, for a bay's application). An application recording a file of its own is another
- * template's instance: it keeps its lineage, and so do the functions it composes (they record no file of their own, the
- * application's is theirs), wherever they sit — even when an application of the scope composes them too.
+ * What came with the instance of an SSD scope: the scope and what it holds, the functions its applications compose
+ * wherever they sit (above a bay, for a bay's application), and what applies to the scope from outside it. An
+ * application recording a file of its own is another template's instance: it keeps its lineage, and so do the
+ * functions it composes (they record no file of their own, the application's is theirs), wherever they sit — even when
+ * an application of the scope composes them too.
  */
 export async function readScopeInstanceContent(
 	sourceQuery: Core.Query<Config>,
@@ -77,7 +79,26 @@ export async function readScopeInstanceContent(
 	}
 	const companionUuids = [...ownedUuids].filter((uuid) => !foreignUuids.has(uuid))
 	const companions = await findFunctionsByUuid(sourceQuery, { uuids: companionUuids })
-	return readInstanceContent(sourceQuery, { roots: [scopeRef], companions, foreignIds })
+	const content = await readInstanceContent(sourceQuery, {
+		roots: [scopeRef],
+		companions,
+		foreignIds,
+	})
+	// what applies to that content from outside the scope (a variable, a behaviour description) came with it too; what
+	// applies to another instance's elements only did not
+	const scopeIds = new Set<string>()
+	collectIds({ node: tree, ids: scopeIds })
+	const otherInstances = new Set(
+		[...scopeIds].filter(function isOtherInstance(scopeId) {
+			return !content.has(scopeId)
+		}),
+	)
+	const satellites = await resolveAppliedSatellites(sourceQuery, {
+		primaryRef: scopeRef,
+		leftOut: otherInstances,
+	})
+	const satelliteContent = await readInstanceContent(sourceQuery, { roots: satellites })
+	return new Set([...content, ...satelliteContent])
 }
 
 function collectInstanceContent(params: {
