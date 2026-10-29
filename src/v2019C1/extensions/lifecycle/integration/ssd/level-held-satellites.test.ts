@@ -151,6 +151,115 @@ const namesakesXml = /* xml */ `
 	</SCL>
 `
 
+// A project bay holding the copy of the template bay's variable, applying to the bay.
+const heldCopyXml = /* xml */ `
+	<SCL ${ns} ${id}="project">
+		<Header id="project" uuid="project-file-uuid" ${id}="project-header"/>
+		<Substation name="S1" ${id}="project-substation">
+			<VoltageLevel name="V1" ${id}="project-voltage-level">
+				<Bay name="B1" uuid="project-bay-uuid" ${id}="project-bay">
+					<Private type="eIEC61850-6-100" ${id}="project-bay-private">
+						<eIEC61850-6-100:Variable name="VBAY" value="9" uuid="project-vbay-uuid" templateUuid="vbay-source-uuid" ${id}="project-vbay">
+							<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1" elementUuid="project-bay-uuid" ${id}="project-vbay-apply-to"/>
+						</eIEC61850-6-100:Variable>
+					</Private>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
+// The same bay, its breaker holding a logical node its behaviour description reads instead.
+const breakerLogicXml = bayTemplateXml
+	.replace(
+		`<eIEC61850-6-100:InputVar varName="in1" dataName="TEMPLATE/TEMPLATE/B1/Prot/CSWI1" lnodeUuid="lnode-source-uuid" doName="Pos" ${id}="input-s"/>`,
+		`<eIEC61850-6-100:InputVar varName="in1" dataName="TEMPLATE/TEMPLATE/B1/QA1/XCBR1" lnodeUuid="xcbr-source-uuid" doName="Pos" ${id}="input-s"/>`,
+	)
+	.replace(
+		`</Private>
+					</ConductingEquipment>`,
+		`</Private>
+						<LNode iedName="None" lnClass="XCBR" lnInst="1" uuid="xcbr-source-uuid" ${id}="xcbr-s"/>
+					</ConductingEquipment>`,
+	)
+
+// A project bay holding the breaker with the copy of its logical node, and the copy of the behaviour description
+// reading it.
+const breakerLogicCopyXml = /* xml */ `
+	<SCL ${ns} ${id}="project">
+		<Header id="project" uuid="project-file-uuid" ${id}="project-header"/>
+		<Substation name="S1" ${id}="project-substation">
+			<VoltageLevel name="V1" ${id}="project-voltage-level">
+				<Bay name="B1" uuid="project-bay-uuid" ${id}="project-bay">
+					<Private type="eIEC61850-6-100" ${id}="project-bay-private">
+						<eIEC61850-6-100:BehaviorDescription name="BD1" uuid="project-behaviour-uuid" templateUuid="behaviour-source-uuid" ${id}="project-behaviour">
+							<eIEC61850-6-100:InputVar varName="in1" dataName="S1/V1/B1/QA1/XCBR1" lnodeUuid="project-xcbr-uuid" doName="Pos" ${id}="project-input"/>
+						</eIEC61850-6-100:BehaviorDescription>
+					</Private>
+					<ConductingEquipment name="QA1" type="CBR" uuid="project-breaker-uuid" ${id}="project-breaker">
+						<LNode iedName="None" lnClass="XCBR" lnInst="1" uuid="project-xcbr-uuid" templateUuid="xcbr-source-uuid" ${id}="project-xcbr"/>
+					</ConductingEquipment>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
+// The same bay, its breaker holding a function of its own and a variable applying to that function.
+const breakerFunctionXml = bayTemplateXml.replace(
+	`</Private>
+					</ConductingEquipment>`,
+	`<eIEC61850-6-100:Variable name="VEQF" value="4" uuid="veqf-source-uuid" ${id}="veqf-s">
+								<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/B1/QA1/EQF" elementUuid="eqf-source-uuid" ${id}="veqf-apply-to-s"/>
+							</eIEC61850-6-100:Variable>
+						</Private>
+						<EqFunction name="EQF" uuid="eqf-source-uuid" ${id}="eqf-s"/>
+					</ConductingEquipment>`,
+)
+
+// A project bay whose breaker holds the copies of the breaker's variables, applying to it and to its function.
+const breakerCopiesXml = /* xml */ `
+	<SCL ${ns} ${id}="project">
+		<Header id="project" uuid="project-file-uuid" ${id}="project-header"/>
+		<Substation name="S1" ${id}="project-substation">
+			<VoltageLevel name="V1" ${id}="project-voltage-level">
+				<Bay name="B1" uuid="project-bay-uuid" ${id}="project-bay">
+					<ConductingEquipment name="QA1" type="CBR" uuid="project-breaker-uuid" ${id}="project-breaker">
+						<Private type="eIEC61850-6-100" ${id}="project-breaker-private">
+							<eIEC61850-6-100:Variable name="VQA1" value="3" uuid="project-vqa1-uuid" templateUuid="vqa1-source-uuid" ${id}="project-vqa1">
+								<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/QA1" elementUuid="project-breaker-uuid" ${id}="project-vqa1-apply-to"/>
+							</eIEC61850-6-100:Variable>
+							<eIEC61850-6-100:Variable name="VEQF" value="4" uuid="project-veqf-uuid" templateUuid="veqf-source-uuid" ${id}="project-veqf">
+								<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/QA1/EQF" elementUuid="project-eqf-uuid" ${id}="project-veqf-apply-to"/>
+							</eIEC61850-6-100:Variable>
+						</Private>
+						<EqFunction name="EQF" uuid="project-eqf-uuid" templateUuid="eqf-source-uuid" ${id}="project-eqf"/>
+					</ConductingEquipment>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
+// A project bay holding an earlier copy of the template's function, with the copy of the variable applying to it.
+const earlierFunctionXml = /* xml */ `
+	<SCL ${ns} ${id}="project">
+		<Header id="project" uuid="project-file-uuid" ${id}="project-header"/>
+		<Substation name="S1" ${id}="project-substation">
+			<VoltageLevel name="V1" ${id}="project-voltage-level">
+				<Bay name="B1" uuid="project-bay-uuid" ${id}="project-bay">
+					<Private type="eIEC61850-6-100" ${id}="project-bay-private">
+						<eIEC61850-6-100:Variable name="PICKUP" value="1" uuid="project-pickup-uuid" templateUuid="pickup-source-uuid" ${id}="project-pickup">
+							<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot" elementUuid="project-prot-uuid" ${id}="project-pickup-apply-to"/>
+						</eIEC61850-6-100:Variable>
+					</Private>
+					<Function name="Prot" uuid="project-prot-uuid" templateUuid="prot-source-uuid" ${id}="project-prot"/>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	/** How many times the bay is placed under the voltage level. */
@@ -350,6 +459,127 @@ describe('lifecycle — what a level of a substation template holds travels with
 						'Variable PICKUP @B1: B1/Prot',
 						'Variable VBAY @B1: B1',
 						'Variable VBAY_1 @B1: B1',
+						'Variable VQA1 @QA1: B1/QA1',
+					],
+					listed: [
+						'added BehaviorDescription',
+						'added InputVar',
+						'added Variable',
+						'added Variable',
+						'added Variable',
+						'added VariableApplyTo',
+						'added VariableApplyTo',
+						'added VariableApplyTo',
+					],
+				},
+			},
+		"the bay placed on a project bay holding the copy of the bay's variable applying to it → that variable neither listed nor written again":
+			{
+				sourceXml: bayTemplateXml,
+				targetXml: heldCopyXml,
+				placements: 1,
+				onProjectBay: true,
+				expected: {
+					groups: [
+						'BehaviorDescription BD1 with Function Prot',
+						'Variable PICKUP with Function Prot',
+						'Variable VQA1 with Variable VQA1',
+					],
+					held: [
+						'BehaviorDescription BD1 @B1: B1/Prot/CSWI1',
+						'Variable PICKUP @B1: B1/Prot',
+						'Variable VBAY @B1: B1',
+						'Variable VQA1 @QA1: B1/QA1',
+					],
+					listed: [
+						'added BehaviorDescription',
+						'added InputVar',
+						'added Variable',
+						'added Variable',
+						'added VariableApplyTo',
+						'added VariableApplyTo',
+					],
+				},
+			},
+		"the bay placed on a project bay holding the copy of its breaker's logical node and of the behaviour description reading it → the bay gets its own, reading that logical node":
+			{
+				sourceXml: breakerLogicXml,
+				targetXml: breakerLogicCopyXml,
+				placements: 1,
+				onProjectBay: true,
+				expected: {
+					groups: [
+						'BehaviorDescription BD1 with BehaviorDescription BD1',
+						'Variable PICKUP with Function Prot',
+						'Variable VBAY with Variable VBAY',
+						'Variable VQA1 with Variable VQA1',
+					],
+					held: [
+						'BehaviorDescription BD1 @B1: B1/XCBR1',
+						'BehaviorDescription BD1_1 @B1: B1/XCBR1',
+						'Variable PICKUP @B1: B1/Prot',
+						'Variable VBAY @B1: B1',
+						'Variable VQA1 @QA1: B1/QA1',
+					],
+					listed: [
+						'added BehaviorDescription',
+						'added InputVar',
+						'added Variable',
+						'added Variable',
+						'added Variable',
+						'added VariableApplyTo',
+						'added VariableApplyTo',
+						'added VariableApplyTo',
+					],
+				},
+			},
+		"the bay placed on a project bay whose breaker holds the copies of the breaker's variables → neither listed nor written again":
+			{
+				sourceXml: breakerFunctionXml,
+				targetXml: breakerCopiesXml,
+				placements: 1,
+				onProjectBay: true,
+				expected: {
+					groups: [
+						'BehaviorDescription BD1 with Function Prot',
+						'Variable PICKUP with Function Prot',
+						'Variable VBAY with Variable VBAY',
+					],
+					held: [
+						'BehaviorDescription BD1 @B1: B1/Prot/CSWI1',
+						'Variable PICKUP @B1: B1/Prot',
+						'Variable VBAY @B1: B1',
+						'Variable VEQF @QA1: B1/EQF',
+						'Variable VQA1 @QA1: B1/QA1',
+					],
+					listed: [
+						'added BehaviorDescription',
+						'added InputVar',
+						'added Variable',
+						'added Variable',
+						'added VariableApplyTo',
+						'added VariableApplyTo',
+					],
+				},
+			},
+		'the bay placed on a project bay holding an earlier copy of its function, with the copy of the variable applying to it → a new copy of each, the variable applying to the new function':
+			{
+				sourceXml: bayTemplateXml,
+				targetXml: earlierFunctionXml,
+				placements: 1,
+				onProjectBay: true,
+				expected: {
+					groups: [
+						'BehaviorDescription BD1 with Function Prot',
+						'Variable PICKUP with Function Prot',
+						'Variable VBAY with Variable VBAY',
+						'Variable VQA1 with Variable VQA1',
+					],
+					held: [
+						'BehaviorDescription BD1 @B1: B1/Prot_1/CSWI1',
+						'Variable PICKUP @B1: B1/Prot',
+						'Variable PICKUP_1 @B1: B1/Prot_1',
+						'Variable VBAY @B1: B1',
 						'Variable VQA1 @QA1: B1/QA1',
 					],
 					listed: [

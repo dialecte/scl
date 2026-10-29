@@ -1,15 +1,18 @@
 import { findFrameInstances } from './find-frame-instances'
 
+import { collectContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import {
 	collectComposedFunctionUuids,
+	findComposedFunctionRefs,
 	findInstancesByTemplateUuid,
 } from '@/v2019C1/extensions/lifecycle/instance'
 
-import type { TopologyReconcilables } from './scope-content.types'
+import type { TopologyReconcilables, UnitPlacement } from './scope-content.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
+import type { AnyTreeRecord } from '@dialecte/core'
 
 /** Applications whose structural ancestry includes `scopeRef` (Substation / VoltageLevel / Bay). */
 export async function applicationsUnderScope(
@@ -26,6 +29,67 @@ export async function applicationsUnderScope(
 		}
 	}
 	return inScope
+}
+
+/**
+ * What a unit of a substation template places beyond its own subtree, and as a contribution scope: the functions its
+ * applications compose wherever they sit — but those left out, whatever the applications composing them —, and the unit
+ * with what it holds and those functions, but what is left out: what the references of what travels with it (a role, a
+ * variable, a behaviour description) may name.
+ */
+export async function resolveUnitPlacement(
+	query: Core.Query<Config>,
+	params: {
+		scopeRef: Scl.Ref<TopologyStructuralTag>
+		/** The applications of the unit: a function one composes is placed as its own decision says, whatever the application's. */
+		applicationRefs: readonly Scl.Ref<'Application'>[]
+		/** What the placement leaves out (record ids). */
+		leftOut?: ReadonlySet<string>
+	},
+): Promise<UnitPlacement> {
+	const { scopeRef, applicationRefs, leftOut } = params
+	const composedRefs: Scl.Ref<'Function'>[] = []
+	for (const applicationRef of applicationRefs) {
+		const composed = await findComposedFunctionRefs(query, applicationRef)
+		composedRefs.push(
+			...composed.filter(function isPlaced(functionRef) {
+				return !leftOut?.has(functionRef.id)
+			}),
+		)
+	}
+	// each tree read once: the scope, and what the functions placed hold
+	const scope = new Set<string>()
+	const functionContentIds = new Set<string>()
+	const functionTrees = new Map<string, AnyTreeRecord>()
+	for (const root of [scopeRef, ...composedRefs]) {
+		const tree = await query.any.getTree(root)
+		if (!tree) continue
+		collectContributionScope({ node: tree, leftOut, scope })
+		if (root === scopeRef) collectFunctionTrees({ node: tree, leftOut, trees: functionTrees })
+		else functionTrees.set(tree.id, tree)
+	}
+	for (const tree of functionTrees.values()) collectIds({ node: tree, ids: functionContentIds })
+	return { scope, composedRefs, functionContentIds, functionTrees: [...functionTrees.values()] }
+}
+
+/** The functions below a node, by record id: but a function left out. */
+function collectFunctionTrees(params: {
+	node: AnyTreeRecord
+	leftOut: ReadonlySet<string> | undefined
+	trees: Map<string, AnyTreeRecord>
+}): void {
+	const { node, leftOut, trees } = params
+	for (const child of node.tree) {
+		if (child.tagName !== 'Function') collectFunctionTrees({ ...params, node: child })
+		else if (!leftOut?.has(child.id)) trees.set(child.id, child)
+	}
+}
+
+/** The record ids of a tree. */
+function collectIds(params: { node: AnyTreeRecord; ids: Set<string> }): void {
+	const { node, ids } = params
+	ids.add(node.id)
+	for (const child of node.tree) collectIds({ node: child, ids })
 }
 
 /** Top-level Functions whose structural ancestry includes `scopeRef`. */

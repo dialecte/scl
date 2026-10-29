@@ -64,9 +64,10 @@ describe('report warnings', () => {
 			],
 		})
 
-		const warnings = collectReportWarnings(report).map(
-			(warning) =>
-				`${warning.code} ${warning.reference.id} ${warning.source?.id} ${warning.lineage}`,
+		const warnings = collectReportWarnings(report).map((warning) =>
+			warning.code === 'reference-paired-by-name'
+				? `${warning.code} ${warning.reference.id} ${warning.source?.id} ${warning.lineage}`
+				: warning.code,
 		)
 
 		expect(warnings.sort()).toEqual([

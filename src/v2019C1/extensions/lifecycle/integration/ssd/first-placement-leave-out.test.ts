@@ -42,6 +42,34 @@ const sourceXml = /* xml */ `
 	</SCL>
 `
 
+// The same, Prot holding a variable the application's role refers to.
+const roleVariableXml = sourceXml
+	.replace(
+		`<Function name="Prot" uuid="protection-source-uuid" ${id}="protection-s"/>`,
+		[
+			`<Function name="Prot" uuid="protection-source-uuid" ${id}="protection-s">`,
+			`<Private type="eIEC61850-6-100" ${id}="protection-private-s">`,
+			`<eIEC61850-6-100:Variable name="VPROT" value="1" uuid="vprot-source-uuid" ${id}="vprot-s">`,
+			`<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/Feeder/Prot" elementUuid="protection-source-uuid" ${id}="vprot-apply-s"/>`,
+			`</eIEC61850-6-100:Variable>`,
+			`</Private>`,
+			`</Function>`,
+		].join(''),
+	)
+	.replace(
+		`</eIEC61850-6-100:FunctionRole>
+						</eIEC61850-6-100:Application>`,
+		[
+			`</eIEC61850-6-100:FunctionRole>`,
+			`<eIEC61850-6-100:FunctionRole name="ENGINEERING ELEMENTS" ${id}="hmi-engineering-s">`,
+			`<eIEC61850-6-100:FunctionRoleContent ${id}="hmi-engineering-content-s">`,
+			`<eIEC61850-6-100:VariableRef variable="TEMPLATE/TEMPLATE/Feeder/Prot/VPROT" variableUuid="vprot-source-uuid" ${id}="hmi-vprot-ref-s"/>`,
+			`</eIEC61850-6-100:FunctionRoleContent>`,
+			`</eIEC61850-6-100:FunctionRole>`,
+			`</eIEC61850-6-100:Application>`,
+		].join(''),
+	)
+
 // Two voltage levels: where the typical's voltage level lands is the consumer's to choose (V1).
 const projectXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
@@ -112,6 +140,14 @@ describe('first placement of a bay typical — every leave-out is honoured, a le
 			],
 			unexpectedQueries: ['//default:Function[@name="Prot"]'],
 		},
+		"a function left out holding a variable the application's role refers to, the application kept → refused: the application depends on it":
+			{
+				sourceXml: roleVariableXml,
+				targetXml: projectXml,
+				leftOut: ['protection-s'],
+				refused: true,
+				unexpectedQueries: ['//default:Bay', '//v2019C1:Variable'],
+			},
 		'a composed function left out with the application referring to it → the bay keeps the rest': {
 			sourceXml,
 			targetXml: projectXml,

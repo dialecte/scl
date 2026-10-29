@@ -18,12 +18,13 @@ export async function resolveContributionScope(
 	const scope = new Set<string>()
 	for (const root of params.roots) {
 		const tree = await sourceQuery.any.getTree(root)
-		if (tree) collectScope({ node: tree, leftOut: params.leftOut, scope })
+		if (tree) collectContributionScope({ node: tree, leftOut: params.leftOut, scope })
 	}
 	return scope
 }
 
-function collectScope(params: {
+/** `resolveContributionScope` over a tree the caller read already: the uuids below it, but what `leftOut` names. */
+export function collectContributionScope(params: {
 	node: AnyTreeRecord
 	leftOut: ReadonlySet<string> | undefined
 	scope: Set<string>
@@ -32,7 +33,7 @@ function collectScope(params: {
 	if (leftOut?.has(node.id)) return
 	const uuid = readAttribute({ record: node, name: 'uuid', defaults: 'none' })
 	if (uuid) scope.add(uuid)
-	for (const child of node.tree) collectScope({ node: child, leftOut, scope })
+	for (const child of node.tree) collectContributionScope({ node: child, leftOut, scope })
 }
 
 /**
@@ -49,9 +50,19 @@ export async function findOutOfScopeReferences(
 	},
 ): Promise<ReadonlySet<string>> {
 	const { scope, omit } = params
-	const outOfScope = new Set<string>()
 	const tree = await sourceQuery.any.getTree(params.root)
-	if (!tree) return outOfScope
+	if (!tree) return new Set()
+	return collectOutOfScopeReferences({ tree, scope, omit })
+}
+
+/** `findOutOfScopeReferences` over a tree the caller read already: the references below its root. */
+export function collectOutOfScopeReferences(params: {
+	tree: AnyTreeRecord
+	scope: ContributionScope
+	omit?: readonly string[]
+}): Set<string> {
+	const { tree, scope, omit } = params
+	const outOfScope = new Set<string>()
 	const pending: AnyTreeRecord[] = [...tree.tree]
 	while (pending.length > 0) {
 		const node = pending.pop() as AnyTreeRecord

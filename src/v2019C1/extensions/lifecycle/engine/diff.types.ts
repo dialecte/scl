@@ -194,6 +194,12 @@ export type ReportInstance = {
 	 * listed as changes; there is nothing to decide. Absent when the instance selected nothing.
 	 */
 	variantsNotSelected?: AnyRefOrRecord[]
+	/**
+	 * On a first placement of an application, what its roles refer to that is not placed (a variable applying to nothing
+	 * the placement places or lands on; a variable or a behaviour description inside a function the application stands
+	 * on that holds no copy of it): neither it nor the reference to it is written. Absent when there is none.
+	 */
+	satellitesNotPlaced?: AnyRefOrRecord[]
 }
 
 /** An element a report names: its tag and record id. */
@@ -266,12 +272,22 @@ export type DiffReport = {
  * names of what both name, their uuids disagreeing: the project's target carries the placeholder `lineage`, which the
  * consumer lets pair by name (`Resolution.referencesByName: 'placeholders'`).
  */
-export type ReportWarning = {
-	code: 'reference-paired-by-name'
-	reference: AnyRefOrRecord
-	source?: AnyRefOrRecord
-	lineage: string
-}
+export type ReportWarning =
+	| {
+			code: 'reference-paired-by-name'
+			reference: AnyRefOrRecord
+			source?: AnyRefOrRecord
+			lineage: string
+	  }
+	| {
+			/**
+			 * What an application's role refers to that is not placed: a variable applying to nothing the placement places
+			 * or lands on, or what a function the application stands on holds no copy of.
+			 */
+			code: 'satellite-not-placed'
+			/** The template's variable or behaviour description: neither it nor the role's reference to it is written. */
+			source: AnyRefOrRecord
+	  }
 
 /**
  * A user's choice on one decision group. Either a plain accept/skip, or an object

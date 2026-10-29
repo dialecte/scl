@@ -22,8 +22,8 @@ export type ExtractOptions = {
 }
 
 /**
- * What an extract left out and says so: `sections-not-carried` — the `IED` and `Communication` sections of the source,
- * which an SSD does not carry yet, with their count.
+ * What an extract left out or moved and says so: `sections-not-carried` — the `IED` and `Communication` sections of the
+ * source, which an SSD does not carry yet, with their count —, a satellite moved, renamed, or not placed.
  */
 export type ExtractWarning =
 	| {
@@ -46,6 +46,15 @@ export type ExtractWarning =
 			element: Scl.Ref<Scl.ElementsOf>
 			name: string
 			as: string
+	  }
+	| {
+			/**
+			 * A variable a role of an application refers to that applies to nothing the file holds: the extract places
+			 * neither it nor the role's reference to it.
+			 */
+			code: 'satellite-not-placed'
+			/** The source's variable. */
+			source: Scl.Ref<Scl.ElementsOf>
 	  }
 
 /** The element an SSD is extracted from: a substation, a voltage level or a bay. */

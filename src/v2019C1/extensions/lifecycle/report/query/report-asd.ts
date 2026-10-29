@@ -1,9 +1,14 @@
 import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
+import { createPlacementListing } from './placement-listing'
 import { reportFunction } from './report-function'
 import { buildReportInstance } from './report-instance'
 import { reportSharedFunctions } from './report-shared-functions'
 import { foldSatelliteCompanions } from './satellite-companions'
 
+import { toRef } from '@dialecte/core/helpers'
+
+import { readSatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
+import { readHeldApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications'
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { addDroppedGroups, placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { linkPlacementDependencies } from '@/v2019C1/extensions/lifecycle/engine/link-placement-dependencies'
@@ -16,6 +21,7 @@ import {
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
 import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
+import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/resolve-target-structure'
 import {
 	findDroppedComposedFunctions,
 	NO_VARIANT_SELECTION,
@@ -24,12 +30,16 @@ import {
 	resolveApplicationSatellites,
 	resolveApplicationScope,
 	resolveComposedFunctions,
+	resolveRoleSatellites,
 	sharedSelection,
+	withoutHeldSatellites,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
 	describePlacementMappings,
 	findLanding,
+	resolveLandedLevels,
 	resolvePrimaryPlacement,
+	withLandedLevels,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import {
 	resolveSatelliteMappings,
@@ -38,6 +48,7 @@ import {
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { PlacementListing } from './placement-listing.types'
+import type { ReportedApplicationInstance } from './report-asd.types'
 import type {
 	ReportedSharedFunctions,
 	ReportSharedFunctionsParams,
@@ -46,16 +57,17 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SharedFunctions } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { SatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
 import type {
 	DecisionGroup,
 	DiffReport,
-	InstanceDiff,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { StandingPlacement } from '@/v2019C1/extensions/lifecycle/engine/standing'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
+import type { PlacementLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type {
 	DecisionMappings,
 	ReportMapping,
@@ -112,8 +124,13 @@ export async function reportAsd(
 		boundLogicalNodeTypes?: BoundLogicalNodeTypes
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
-		/** On a first placement, the larger one it is part of (a unit of a substation template): see `PlacementListing`. */
+		/**
+		 * On a first placement, the larger one it is part of (a unit of a substation template): see `PlacementListing`.
+		 * Default: the application's own, with the functions it composes.
+		 */
 		placementListing?: PlacementListing
+		/** The satellites of the template, read once by the larger report it is part of. Default: the listing's, or read. */
+		index?: SatelliteIndex
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings } = params
@@ -144,14 +161,14 @@ export async function reportAsd(
 	// a first placement: where the application and its functions land is where the consumer
 	// started, or — started above a level one of them was made for — the levels their template says
 	const firstPlacement = applicationInstances.length === 0
+	const composedFunctionRefs = firstPlacement
+		? await findComposedFunctionRefs(sourceQuery, applicationRef)
+		: []
 	const placement =
 		firstPlacement && params.resolvePlacement && params.anchor
 			? await resolvePrimaryPlacement(query, {
 					sourceQuery,
-					primaryRefs: [
-						applicationRef,
-						...(await findComposedFunctionRefs(sourceQuery, applicationRef)),
-					],
+					primaryRefs: [applicationRef, ...composedFunctionRefs],
 					anchor: params.anchor,
 					decisionMappings,
 				})
@@ -177,9 +194,23 @@ export async function reportAsd(
 					matchKey,
 				})
 			: undefined
-	const placementListing = firstPlacement ? params.placementListing : undefined
+	// a first placement places what applies to the application and the functions it composes, and what its roles refer
+	// to, once
+	const placementListing = firstPlacement
+		? (params.placementListing ??
+			(await listApplicationPlacement(query, {
+				sourceQuery,
+				applicationRef,
+				composedFunctionRefs,
+				anchor,
+				placementLevels: placement.levels,
+				placedFunctionRefs: shared?.placed,
+				stoodOn: shared?.taken,
+				matchKey,
+			})))
+		: undefined
 	if (firstPlacement) {
-		const instanceDiff = await reportApplicationInstance(query, {
+		const { instanceDiff, satellitesNotPlaced } = await reportApplicationInstance(query, {
 			placementListing,
 			pass: params.pass,
 			sourceQuery,
@@ -203,6 +234,7 @@ export async function reportAsd(
 		// the levels are listed first, the shared elements follow
 		const placementMappings = await describePlacementMappings(query, { levels: placement.levels })
 		reportInstance.mappings = [...placementMappings, ...reportInstance.mappings]
+		if (satellitesNotPlaced.length > 0) reportInstance.satellitesNotPlaced = satellitesNotPlaced
 		reportInstances.push(reportInstance)
 	} else {
 		// an element the instances share (a role) holds one reference per instance: each instance
@@ -213,7 +245,7 @@ export async function reportAsd(
 		for (const instance of applicationInstances) {
 			const selection = await readVariantSelection(query, { template, instance, matchKey })
 			selections.set(instance.id, selection)
-			const instanceDiff = await reportApplicationInstance(query, {
+			const { instanceDiff } = await reportApplicationInstance(query, {
 				pass: params.pass,
 				sourceQuery,
 				applicationRef,
@@ -268,7 +300,10 @@ export async function reportAsd(
 					.filter((placement) => placement.placedFor === referrer.rootRef?.id)
 					.map((placement) => placement.reportInstance),
 			])
-	for (const instances of placements) await linkPlacementDependencies(sourceQuery, { instances })
+	// the satellites of the template, read once for every placement
+	const index = placementListing?.index ?? params.index ?? (await readSatelliteIndex(sourceQuery))
+	for (const instances of placements)
+		await linkPlacementDependencies(sourceQuery, { instances, index })
 	// which function an instance stands on, where several qualify: listed with that instance
 	for (const choice of composedFunctions.choices) {
 		const owner = reportInstances.find(
@@ -332,7 +367,7 @@ async function reportApplicationInstance(
 		/** The first placement it is part of: see `PlacementListing`. */
 		placementListing?: PlacementListing
 	},
-): Promise<InstanceDiff> {
+): Promise<ReportedApplicationInstance> {
 	const { sourceQuery, applicationRef, instance } = params
 
 	// application-layer satellites (e.g. a referenced AllocationRole) travel with
@@ -362,12 +397,35 @@ async function reportApplicationInstance(
 		resolvedMappings,
 	})
 
-	// what the references of its satellites may name: the application and the functions it composes, but what the
-	// selection leaves out
-	const scope = await resolveApplicationScope(sourceQuery, {
-		applicationRef,
-		leftOut: params.selection?.leftOut,
-	})
+	// what the references of its satellites may name: what the placement places — by default the application and the
+	// functions it composes, but what the selection leaves out
+	const scope =
+		params.placementListing?.scope ??
+		(await resolveApplicationScope(sourceQuery, {
+			applicationRef,
+			leftOut: params.selection?.leftOut,
+		}))
+	// what its roles refer to, on a first placement: placed whole, but what another clone of the placement places and
+	// what a function stood on holds; a variable applying to nothing reached is not placed, nor the references to it
+	const roleSatellites = instance
+		? undefined
+		: await resolveRoleSatellites(sourceQuery, {
+				applicationRef,
+				scope,
+				carriedIds: params.placementListing?.satellites ?? new Set(),
+				carried: params.placementListing?.carried,
+				held: params.placementListing?.held,
+				index: params.placementListing?.index,
+				stoodOn: {
+					functions: params.stoodOn ?? [],
+					projectQuery: query,
+					matchKey: params.matchKey ?? 'templateUuid',
+				},
+			})
+	const notSelected = new Set([
+		...(params.selection?.leftOut ?? []),
+		...(roleSatellites?.unplacedReferenceIds ?? []),
+	])
 	const applicationReport = await diff({
 		sourceQuery,
 		targetQuery: query,
@@ -379,7 +437,7 @@ async function reportApplicationInstance(
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
-		notSelected: params.selection?.leftOut,
+		notSelected,
 	})
 
 	async function resolveForeignScope(): Promise<ReadonlySet<string>> {
@@ -412,8 +470,13 @@ async function reportApplicationInstance(
 	})
 
 	// cross-cutting satellites (Variable / BehaviorDescription) applying to any element
-	// in the Application subtree travel with the application group
+	// in the Application subtree travel with the application group, and, placed, those its roles refer to
+	const referencedRefs = roleSatellites
+		? await withoutHeldSatellites(query, { roleSatellites })
+		: []
 	await foldCrossCuttingSatellites(query, {
+		referencedRefs,
+		referencedLeaveOut: roleSatellites?.leaveOut,
 		scope,
 		placementListing: params.placementListing,
 		pass: params.pass,
@@ -433,7 +496,80 @@ async function reportApplicationInstance(
 		selection: params.selection,
 	})
 
-	return applicationReport
+	return { instanceDiff: applicationReport, satellitesNotPlaced: roleSatellites?.unplaced ?? [] }
+}
+
+/**
+ * The listing of the first placement of an application on its own: the application and the functions it composes, what
+ * the references of what travels with it may name — what it places, and the levels of the template it lands on (those
+ * of the structure where it lands, and the ones its placement adds).
+ */
+async function listApplicationPlacement(
+	query: Core.Query<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		applicationRef: Scl.Ref<'Application'>
+		composedFunctionRefs: readonly Scl.Ref<'Function'>[]
+		/** Where the application lands. */
+		anchor: Scl.Ref<Scl.ElementsOf> | undefined
+		placementLevels: readonly PlacementLevel[]
+		/** Merging shared functions, those it places (not those it stands on). Default: every function it composes. */
+		placedFunctionRefs?: readonly Scl.Ref<'Function'>[]
+		/** Merging shared functions, those it stands on: a reference to one names the project's function. */
+		stoodOn?: readonly RedirectMapping[]
+		matchKey: MatchKey
+	},
+): Promise<PlacementListing> {
+	const { sourceQuery, applicationRef, composedFunctionRefs, anchor, placementLevels } = params
+	const structure = anchor ? await resolveTargetStructure(query, anchor) : {}
+	const landedTags = new Set<string>(
+		placementLevels.map(function tagOf(level) {
+			return level.sourceRef.tagName
+		}),
+	)
+	for (const tagName of Object.keys(structure)) landedTags.add(tagName)
+	const landedLevels = await resolveLandedLevels(sourceQuery, {
+		primaryRef: applicationRef,
+		landsOn: function landsWhereItLands(level) {
+			return landedTags.has(level.tagName)
+		},
+	})
+	const applicationScope = await resolveApplicationScope(sourceQuery, { applicationRef })
+	const scope = withLandedLevels({ scope: applicationScope, levels: landedLevels })
+	// a function stood on is no primary of this placement: what applies to it is no primary's to list
+	const placedFunctionIds = new Set(
+		(params.placedFunctionRefs ?? composedFunctionRefs).map(function idOf(functionRef) {
+			return functionRef.id
+		}),
+	)
+	// each landed level onto the project's element of its tag where the application lands (a level its placement maps
+	// onto an element of the project moved the anchor there; one it creates lands on nothing the project holds)
+	const landings = landedLevels.flatMap(function landingOf(level): RedirectMapping[] {
+		const target = structure[level.tagName as keyof typeof structure]
+		return target
+			? [{ sourceUuid: level.uuid, target: toRef(target) as Scl.Ref<Scl.ElementsOf> }]
+			: []
+	})
+	// what the project holds applying to the levels it lands on and to the functions it stands on
+	const held = await readHeldApplications({
+		landings: [...landings, ...(params.stoodOn ?? [])],
+		projectQuery: query,
+		matchKey: params.matchKey,
+	})
+	return createPlacementListing(sourceQuery, {
+		scope,
+		held,
+		primaryRefs: [applicationRef, ...composedFunctionRefs],
+		stoodOnIds: new Set(
+			composedFunctionRefs
+				.filter(function isStoodOn(functionRef) {
+					return !placedFunctionIds.has(functionRef.id)
+				})
+				.map(function idOf(functionRef) {
+					return functionRef.id
+				}),
+		),
+	})
 }
 
 /**

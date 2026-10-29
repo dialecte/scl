@@ -369,6 +369,11 @@
 			"line": 18,
 			"mutation": "ConditionalExpression: outcome.status !== 'unresolvable' -> false",
 			"equivalent": "re-reading an element numbered or free finds no collision on a key nothing can change: only more reads"
+		},
+		"52f76d871ea92573": {
+			"line": 21,
+			"mutation": "ConditionalExpression: outcome.status === 'unresolvable' -> true",
+			"equivalent": "an ok or resolved outcome leaves no identity collision: the only parent declaring two keys over one child tag is EnumType > EnumVal (uniqueOrdInEnumType, uniqueEnumValue; checked over DEFINITION), which no placement numbers, so asking assertNoIdentityCollision after either refuses nothing (red attempt: every placement row passes with it always asked)"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/constraints/resolve-placement-collision.ts": {
@@ -381,6 +386,23 @@
 			"line": 91,
 			"mutation": "OptionalChaining: (await query.getRecord(parent as Scl.Ref<Scl.ElementsOf>))?.parent -> (await query.getRecord(parent as Scl.Ref<Scl.ElementsOf>)).parent",
 			"equivalent": "the walk reads the parents of a stored element: each record it reads exists"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.constants.ts": {
+		"0a2a8adf78032327": {
+			"line": 45,
+			"mutation": "BlockStatement: {\n\t\treturn pairs.flatMap(function namesSatellite(pair) {\n\t\t\tconst namesSatellitesOnly = pair.target.every(function isSatelliteTag(target) {\n\t\t\t\t",
+			"equivalent": "a static mutant: the constant is computed when the module loads, before Stryker switches a mutant on, so no run can see it (a tooling limit, not an equivalence); applied-satellites.constants.test.ts pins its value"
+		},
+		"84047ec6bd06546c": {
+			"line": 46,
+			"mutation": "BlockStatement: {\n\t\t\tconst namesSatellitesOnly = pair.target.every(function isSatelliteTag(target) {\n\t\t\t\treturn CROSS_CUTTING_SATELLITE_TAGS.has(target)\n\t\t\t})\n\t",
+			"equivalent": "a static mutant: the constant is computed when the module loads, before Stryker switches a mutant on, so no run can see it (a tooling limit, not an equivalence); applied-satellites.constants.test.ts pins its value"
+		},
+		"d3fafcfed2a94bb2": {
+			"line": 52,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a static mutant: the constant is computed when the module loads, before Stryker switches a mutant on, so no run can see it (a tooling limit, not an equivalence); applied-satellites.constants.test.ts pins its value"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.ts": {
@@ -408,14 +430,71 @@
 			"line": 44,
 			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
 			"equivalent": "the targets of a function not placed are collected into a list nothing reads"
+		},
+		"aaf2ed441afe50e3": {
+			"line": 76,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid has no schema default: it reads the same either way"
+		},
+		"3735e2e18219363d": {
+			"line": 85,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a ref read from the store: it always carries its record id, the fallback is never read"
+		},
+		"ba07895f9da7728a": {
+			"line": 130,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid, a name or a lineage key has no schema default: it reads the same either way"
+		},
+		"da70e9b9b17bca61": {
+			"line": 131,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid, a name or a lineage key has no schema default: it reads the same either way"
+		},
+		"7acd676ea8ec5a81": {
+			"line": 133,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a uuid no satellite carries joins the lineages of a template reference: no copy carries it, so it names none"
+		},
+		"b60e2701d325f8da": {
+			"line": 152,
+			"mutation": "ConditionalExpression: !owner -> false",
+			"equivalent": "the schema puts a VariableApplyTo, an InputVar, an OutputVar or a BehaviorReference in a satellite only, and every satellite is read above: its owner is always found, the guard never taken"
+		},
+		"faa97d75d2233824": {
+			"line": 154,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid has no schema default: it reads the same either way"
+		},
+		"10015052b8c57864": {
+			"line": 181,
+			"mutation": "ObjectLiteral: { uuid: uuids } -> {}",
+			"equivalent": "only the candidates' uuids are compared with what is read, and the import stamps a uuid on every satellite: reading every element of the tag gives the same held set"
+		},
+		"582c6bb50e1af622": {
+			"line": 184,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid has no schema default: it reads the same either way"
+		},
+		"9cc1c9f31f2420f9": {
+			"line": 188,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a ref read from the store: it always carries its record id, the fallback is never read"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/cross-cutting/carried-satellites.ts": {
+		"352cbb0c6bf5b76a": {
+			"line": 43,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite resolved from the store: its ref carries its record id"
+		},
+		"1faf5408587058e3": {
+			"line": 104,
+			"mutation": "ConditionalExpression: duplicate.copy -> true",
+			"equivalent": "with no copy the map holds `undefined` for it: the role reads no copy either way and falls to the variable not placed"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites.ts": {
-		"81780df88cdd2034": {
-			"line": 45,
-			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
-			"equivalent": "a left-out id no element carries leaves nothing more out"
-		},
 		"69e7a5f19eaae68a": {
 			"line": 47,
 			"mutation": "ConditionalExpression: !clone -> false",
@@ -430,6 +509,66 @@
 			"line": 51,
 			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
 			"equivalent": "a satellite is a record: its id is always set"
+		},
+		"81780df88cdd2034": {
+			"line": 53,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a left-out id no element carries leaves nothing more out"
+		},
+		"bb22f1a87f734942": {
+			"line": 86,
+			"mutation": "ObjectLiteral: { stopAtTagName: 'Substation' } -> {}",
+			"equivalent": "the ancestors above the substation (the document root) are neither a holder nor a level of a target structure: the holder and the level are found below it either way"
+		},
+		"37917f48e470b457": {
+			"line": 86,
+			"mutation": "StringLiteral: 'Substation' -> \"\"",
+			"equivalent": "the ancestors above the substation (the document root) are neither a holder nor a level of a target structure: the holder and the level are found below it either way"
+		},
+		"a3b9dd9c0fd117c3": {
+			"line": 94,
+			"mutation": "OptionalChaining: holder?.tagName -> holder.tagName",
+			"equivalent": "a satellite sits in a Private under an element: its holder is always read"
+		},
+		"26a9bf1f32a2aade": {
+			"line": 119,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a record id no element of the template carries: it leaves nothing out"
+		},
+		"944ddd027c3ad965": {
+			"line": 120,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a record id no element of the template carries: it leaves nothing out"
+		},
+		"5a104cbc1750df82": {
+			"line": 127,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a record id no element of the template carries: it leaves nothing out"
+		},
+		"622e97c34cb4bbc8": {
+			"line": 131,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "every satellite sits in a Private under an element: its holder's tag is always read, the fallback never"
+		},
+		"53ba2c580b6e8b7e": {
+			"line": 133,
+			"mutation": "ConditionalExpression: !bumpsCollisions -> false",
+			"equivalent": "every caller numbers a satellite beside a namesake: each scenario's policy and both extracts pass true"
+		},
+		"4bd25a88ba698000": {
+			"line": 145,
+			"mutation": "ConditionalExpression: mapping.source.id -> true",
+			"equivalent": "a clone mapping's source is a record: its id is always set"
+		},
+		"061e4c3f8958f4fb": {
+			"line": 177,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value: an absent uuid reads empty either way and finds no landing"
+		},
+		"9fd38c0d5146a22d": {
+			"line": 183,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite resolved from the store: its ref always carries its record id"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity.ts": {
@@ -447,6 +586,38 @@
 			"line": 44,
 			"mutation": "StringLiteral: `finalizeClonedIdentity: unhandled identity mode ${String(write satisfies never)}` -> ``",
 			"equivalent": "exhaustive switch over a closed union: the default arm and its assertion are unreachable (the type checker refuses a new member without its arm)"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/cross-cutting/held-applications.ts": {
+		"960a943599e2efe7": {
+			"line": 25,
+			"mutation": "ConditionalExpression: landings.length === 0 -> false",
+			"equivalent": "with no landing nothing lands on a project element: the copies read below are never looked up, the early return only saves the read"
+		},
+		"5d18c3603608074b": {
+			"line": 36,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid, a name or a lineage key has no schema default: it reads the same either way"
+		},
+		"13934424ef6229bb": {
+			"line": 37,
+			"mutation": "ConditionalExpression: uuid -> true",
+			"equivalent": "a landing of no uuid lands under '': no reference names an element by an empty uuid (an index keeps only the uuids it reads), so nothing is looked up there"
+		},
+		"8e54d229383c468a": {
+			"line": 43,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "an entry no copy carries: a lineage it is matched on is a uuid, never this text, so it matches nothing"
+		},
+		"5ca9102833828e71": {
+			"line": 72,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "an entry no copy carries: a lineage it is matched on is a uuid, never this text, so it matches nothing"
+		},
+		"137ad3c79e7f77ee": {
+			"line": 72,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "an entry no copy carries: a lineage it is matched on is a uuid, never this text, so it matches nothing"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/engine/contribute.ts": {
@@ -492,10 +663,20 @@
 			"mutation": "ConditionalExpression: tree -> true",
 			"equivalent": "a root of the scope is an element the caller just read: its tree is always there"
 		},
+		"21efc63c90448ede": {
+			"line": 21,
+			"mutation": "ConditionalExpression: tree -> true",
+			"equivalent": "a root the caller read from the store: its tree is always read"
+		},
 		"86730915a121033a": {
 			"line": 33,
 			"mutation": "StringLiteral: 'none' -> \"\"",
 			"equivalent": "`defaults` only fills a missing value: an absent uuid reads empty either way and is not added"
+		},
+		"314eda364e5a90bd": {
+			"line": 54,
+			"mutation": "ConditionalExpression: !tree -> false",
+			"equivalent": "the root is a stored element the caller read: its tree is always read"
 		},
 		"531a1b929c84aac7": {
 			"line": 54,
@@ -659,6 +840,18 @@
 			"line": 12,
 			"mutation": "ArrowFunction: ([template, instance]) => [instance, template] -> () => undefined",
 			"equivalent": "a module constant derived once when the module loads, before a mutant is switched on (the fast tier imports once); the function-template rows read the reversed map"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/engine/link-placement-dependencies.ts": {
+		"5bbc056c60a36750": {
+			"line": 65,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a node a placement adds is read from the template: it always carries its source ref (red attempt: every placement row passes with the ref read unguarded)"
+		},
+		"c3c9e7c5e0ebb983": {
+			"line": 65,
+			"mutation": "OptionalChaining: node.sourceRef?.id -> node.sourceRef.id",
+			"equivalent": "a node a placement adds is read from the template: it always carries its source ref (red attempt: every placement row passes with the ref read unguarded)"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/engine/match-child.ts": {
@@ -1240,6 +1433,11 @@
 			"line": 108,
 			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
 			"equivalent": "a clone mapping's source is a record: its id is always set"
+		},
+		"a7c865f76c5156c5": {
+			"line": 123,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a clone mapping's source is a stored record: its id is always set, the fallback never read"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts": {
@@ -1281,6 +1479,31 @@
 			"line": 75,
 			"mutation": "ConditionalExpression: !record -> false",
 			"equivalent": "test helper: every case names an element its file holds"
+		},
+		"18ca2880aea7fa6d": {
+			"line": 201,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "test helper: every satellite it describes is stored, its tree is always there"
+		},
+		"784e386bc62dd87e": {
+			"line": 201,
+			"mutation": "OptionalChaining: tree?.tree -> tree.tree",
+			"equivalent": "test helper: every satellite it describes is stored, its tree is always there"
+		},
+		"778ee2857da53013": {
+			"line": 219,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "test helper: every reference it describes carries an elementUuid or an lnodeUuid"
+		},
+		"ff8667350935e9c9": {
+			"line": 226,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "test helper: every level of a bay path in the fixtures is named"
+		},
+		"78c2d7e2f5e4c060": {
+			"line": 230,
+			"mutation": "StringLiteral: `nothing (${uuid})` -> ``",
+			"equivalent": "test helper: the description of a reference naming nothing, which no passing case writes"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/layers/application/clone-application.ts": {
@@ -1298,6 +1521,31 @@
 			"line": 110,
 			"mutation": "CallExpression: cloneIndex.set(sourceId, target) -> ;",
 			"equivalent": "the index places the application's referenced targets under the function holding them; the function references are skipped here, and an application refers to nothing else inside a function it stands on"
+		},
+		"fcf0e1c7ceae80e0": {
+			"line": 156,
+			"mutation": "LogicalOperator: params.index ?? (await readSatelliteIndex(sourceQuery)) -> params.index && (await readSatelliteIndex(sourceQuery))",
+			"equivalent": "every caller passes the operation's index: read again, it is the same index"
+		},
+		"721bf473b1b2bbbd": {
+			"line": 207,
+			"mutation": "ObjectLiteral: { satelliteRefs: [], leaveOut: new Set() } -> {}",
+			"equivalent": "an application left out returns before its roles are read: no caller reads it (instantiate.asd and extract.asd fall back to none, an SSD unit skips an application left out before placing it, extract.asd never leaves its application out)"
+		},
+		"f2f8ffcee1941464": {
+			"line": 208,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "an application left out returns before its roles are read: no caller reads it (instantiate.asd and extract.asd fall back to none, an SSD unit skips an application left out before placing it, extract.asd never leaves its application out)"
+		},
+		"36021851e06d4719": {
+			"line": 218,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a record id no element of the template carries: it skips nothing"
+		},
+		"3d11de6439eca7b9": {
+			"line": 266,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite resolved from the store: its ref carries its record id"
 		},
 		"7dffb91997e2ba79": {
 			"line": 303,
@@ -1338,6 +1586,158 @@
 			"line": 351,
 			"mutation": "OptionalChaining: standing?.kind -> standing.kind",
 			"equivalent": "the standing rule answers for every instance it is asked about: the standing is always there"
+		},
+		"f78b0347535b1cde": {
+			"line": 468,
+			"mutation": "ConditionalExpression: tree -> true",
+			"equivalent": "a function the template composes, found by its reference, reads as a tree"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/layers/application/referenced-satellites.ts": {
+		"3747ffedd7936e90": {
+			"line": 49,
+			"mutation": "ConditionalExpression: tree -> true",
+			"equivalent": "the application is read from the store by its ref: its tree is always there"
+		},
+		"053574939c7ff76f": {
+			"line": 50,
+			"mutation": "ConditionalExpression: references.size === 0 -> false",
+			"equivalent": "with no reference to a satellite, the loop below finds nothing: the return only saves reading the satellites (red attempt: every role row passes without it)"
+		},
+		"7b5b0b40613a0795": {
+			"line": 109,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a ref read from the store: it always carries its record id, the fallback is never read"
+		},
+		"c03df510180dfb13-1": {
+			"line": 128,
+			"mutation": "CallExpression: satellites.copiedIds.add(satelliteId) -> ;",
+			"equivalent": "one carried is among carriedIds, which the clone of the referenced targets skips already: copiedIds adds nothing for it"
+		},
+		"5c0545aa48861289": {
+			"line": 189,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "every satellite placed has its uuid recorded by record id: the fallbacks are never read"
+		},
+		"d02bff0ca4993820": {
+			"line": 189,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "every satellite placed has its uuid recorded by record id: the fallbacks are never read"
+		},
+		"581e295374a2b9cd": {
+			"line": 193,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a ref read from the store: it always carries its record id, the fallback is never read"
+		},
+		"14e98bbe5eb2c63e": {
+			"line": 216,
+			"mutation": "ConditionalExpression: functions.length === 0 || referenced.length === 0 -> false",
+			"equivalent": "with no function stood on, or nothing referred to, the loops below read nothing: the early return only saves the reads"
+		},
+		"8f47ce4d7501956b": {
+			"line": 216,
+			"mutation": "LogicalOperator: functions.length === 0 || referenced.length === 0 -> functions.length === 0 && referenced.length === 0",
+			"equivalent": "with no function stood on, or nothing referred to, the loops below read nothing: the early return only saves the reads"
+		},
+		"7f40048018839d4b": {
+			"line": 216,
+			"mutation": "ConditionalExpression: referenced.length === 0 -> false",
+			"equivalent": "with no function stood on, or nothing referred to, the loops below read nothing: the early return only saves the reads"
+		},
+		"c01cafde5d3dcf7c": {
+			"line": 216,
+			"mutation": "ConditionalExpression: functions.length === 0 -> false",
+			"equivalent": "with no function stood on, or nothing referred to, the loops below read nothing: the early return only saves the reads"
+		},
+		"54b0c00a32a6cf31": {
+			"line": 219,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite resolved from the store: its ref always carries its record id"
+		},
+		"bd7b10b6d3bb056b": {
+			"line": 235,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid, a name or a lineage key has no schema default: it reads the same either way"
+		},
+		"1914d1d762f7516f": {
+			"line": 240,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "an entry that is no record has no id: no satellite referred to matches it"
+		},
+		"b904d4fc61324780": {
+			"line": 245,
+			"mutation": "ConditionalExpression: sourceTree -> true",
+			"equivalent": "a function stood on is read from the template and the project by refs to stored elements: both trees exist"
+		},
+		"caaf4b9364e7d228": {
+			"line": 246,
+			"mutation": "ConditionalExpression: projectTree -> true",
+			"equivalent": "a function stood on is read from the template and the project by refs to stored elements: both trees exist"
+		},
+		"62dd868191bb29c5": {
+			"line": 253,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid, a name or a lineage key has no schema default: it reads the same either way"
+		},
+		"bfd8db95f383903f": {
+			"line": 254,
+			"mutation": "ConditionalExpression: lineage -> true",
+			"equivalent": "a copy of no lineage is kept under an empty key, and no satellite uuid is empty: it is never looked up"
+		},
+		"c8f37db7e0653112": {
+			"line": 257,
+			"mutation": "ConditionalExpression: !referencedIds.has(satellite.id) -> false",
+			"equivalent": "only the satellites the roles refer to are read back from what is collected: the others change nothing"
+		},
+		"89b750799d7fec87": {
+			"line": 260,
+			"mutation": "ConditionalExpression: copy -> true",
+			"equivalent": "a missing copy recorded as undefined reads as no copy"
+		},
+		"9f54e21e1eb53e69": {
+			"line": 273,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite resolved from the index carries its record id: the fallback is never read"
+		},
+		"5b6e4eb813decc34": {
+			"line": 277,
+			"mutation": "ConditionalExpression: applyingOnly.length === 0 -> false",
+			"equivalent": "with nothing applying only to a function stood on, the loop below finds nothing: the return only saves reading the project's satellites"
+		},
+		"01c9fb92afc4e93d": {
+			"line": 280,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite resolved from the index carries its record id: the fallback is never read"
+		},
+		"b05f4c1bbc171a1a": {
+			"line": 306,
+			"mutation": "ConditionalExpression: copy -> true",
+			"equivalent": "a missing copy kept as undefined reads as no copy: the satellite is not placed either way"
+		},
+		"59335e8de20e3279": {
+			"line": 353,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a value the schema defaults; a uuid has none: an absent one reads '' either way"
+		},
+		"292f890e0ad53347": {
+			"line": 354,
+			"mutation": "ConditionalExpression: uuid -> true",
+			"equivalent": "an empty uuid among the functions' uuids matches nothing: a satellite's references never name an empty uuid"
+		},
+		"ef71fcc020dc90c6": {
+			"line": 356,
+			"mutation": "ConditionalExpression: CROSS_CUTTING_SATELLITE_TAGS.has(child.tagName) -> true",
+			"equivalent": "every child collected is filtered by what the roles refer to: collecting more than the satellites adds nothing (red attempt: collecting none fails the inside-and-bay row)"
+		},
+		"d0586308b30393da": {
+			"line": 370,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value: a reference uuid attribute has none, so it reads the same either way"
+		},
+		"554011ee568bbb33": {
+			"line": 373,
+			"mutation": "ConditionalExpression: uuid -> true",
+			"equivalent": "the import fills a reference's uuid from its path: one left empty names no satellite, and the lookup by an empty uuid finds nothing"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/layers/application/resolve-shared-functions.ts": {
@@ -1537,10 +1937,35 @@
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/layers/topology/clone-topology-content.ts": {
+		"d34d5ff7dea337d2": {
+			"line": 76,
+			"mutation": "StringLiteral: 'templateUuid' -> \"\"",
+			"equivalent": "instantiate.ssd passes the scenario's match key; extract.ssd passes no placement levels, so nothing lands and the key is never read"
+		},
 		"15066156ad39b0eb": {
-			"line": 86,
+			"line": 126,
 			"mutation": "ConditionalExpression: mapping.source.id -> true",
 			"equivalent": "a clone mapping's source is a record: its id is always set"
+		},
+		"aae07feb81318728": {
+			"line": 192,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite resolved from the store: its ref always carries its record id"
+		},
+		"1a1a2319ff65c9d4": {
+			"line": 196,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite resolved from the store: its ref always carries its record id"
+		},
+		"13312c0d833cbb97": {
+			"line": 261,
+			"mutation": "ObjectLiteral: { uuid: [...uuidsById.values()] } -> {}",
+			"equivalent": "with no filter every function of the project is read: the uuids kept are matched against those asked, so the same functions are found"
+		},
+		"4d7243983ce0bee4": {
+			"line": 265,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid, a name or a lineage key has no schema default: it reads the same either way"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/layers/topology/ensure-topology-frame.ts": {
@@ -1644,6 +2069,48 @@
 			"equivalent": "walking into an identified element finds what it holds placed in the same level: the level found is the same"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/frame-landings.ts": {
+		"23ed3f1135cde5ef": {
+			"line": 39,
+			"mutation": "ConditionalExpression: sourceUuid -> true",
+			"equivalent": "a landing of no uuid lands under '': no reference names an element by an empty uuid (an index keeps only the uuids it reads), so nothing is looked up there"
+		},
+		"5dd962e29eb07e62": {
+			"line": 44,
+			"mutation": "ConditionalExpression: !sourceTree || !instanceTree -> false",
+			"equivalent": "a level of the template and the project element it is mapped onto are read from the store: both trees are always read"
+		},
+		"c36b350fde1e8dac": {
+			"line": 44,
+			"mutation": "LogicalOperator: !sourceTree || !instanceTree -> !sourceTree && !instanceTree",
+			"equivalent": "a level of the template and the project element it is mapped onto are read from the store: both trees are always read"
+		},
+		"be124117337f3288": {
+			"line": 45,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid, a name or a lineage key has no schema default: it reads the same either way"
+		},
+		"23ed3f1135cde5ef-1": {
+			"line": 46,
+			"mutation": "ConditionalExpression: sourceUuid -> true",
+			"equivalent": "a landing of no uuid lands under '': no reference names an element by an empty uuid (an index keeps only the uuids it reads), so nothing is looked up there"
+		},
+		"e191257a08b1c038": {
+			"line": 90,
+			"mutation": "CallExpression: matchedInstanceIds.add(match.record.id) -> ;",
+			"equivalent": "two template siblings never pair with one project element: each pairs by its own uuid as lineage, or by its name, which no sibling of its tag shares"
+		},
+		"e1185eace0eecaf3": {
+			"line": 91,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid, a name or a lineage key has no schema default: it reads the same either way"
+		},
+		"0e78fbd545c41aa3": {
+			"line": 92,
+			"mutation": "ConditionalExpression: sourceUuid -> true",
+			"equivalent": "a landing of no uuid lands under '': no reference names an element by an empty uuid (an index keeps only the uuids it reads), so nothing is looked up there"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/layers/topology/group-linked-units.constants.ts": {
 		"0780b2c659b69a31": {
 			"line": 9,
@@ -1691,6 +2158,33 @@
 			"line": 79,
 			"mutation": "ConditionalExpression: child -> true",
 			"equivalent": "a child ref read from its parent record always resolves to a record"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/landed-levels.ts": {
+		"27fc8aa4951ef2a7": {
+			"line": 25,
+			"mutation": "ObjectLiteral: { stopAtTagName: 'Substation' } -> {}",
+			"equivalent": "the ancestors above the substation (the document root) are no topology level: filtered out either way"
+		},
+		"f84d5520c90b0254": {
+			"line": 25,
+			"mutation": "StringLiteral: 'Substation' -> \"\"",
+			"equivalent": "the ancestors above the substation (the document root) are no topology level: filtered out either way"
+		},
+		"661139071e2e14b7": {
+			"line": 29,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a missing value; a uuid, a name or a lineage key has no schema default: it reads the same either way"
+		},
+		"ae0c03c4c3696eca": {
+			"line": 30,
+			"mutation": "ConditionalExpression: uuid -> true",
+			"equivalent": "a level without uuid adds an empty uuid to the scope, which no reference carries"
+		},
+		"1c577d85e1fe0806": {
+			"line": 73,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "the levels resolved are those the structure holds a level of their tag for (the same lookup): a target is always found"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/layers/topology/resolve-held-levels.ts": {
@@ -1809,6 +2303,13 @@
 			"equivalent": "a named unit always has a parent; a substation's parent, the SCL root, carries no name, so the TEMPLATE test on the next line returns the unit alone either way"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/layers/topology/scope-content.ts": {
+		"abe3110ab82d32f5": {
+			"line": 66,
+			"mutation": "ConditionalExpression: !tree -> false",
+			"equivalent": "the unit and the functions its applications compose are read from the store: each tree is always read"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/mapping/pair-instance-satellites.ts": {
 		"f869085cab19b413": {
 			"line": 74,
@@ -1902,6 +2403,110 @@
 			"equivalent": "an empty lineage reads no source element of an empty uuid, and is classified as the project's own below: the same removal"
 		}
 	},
+	"src/v2019C1/extensions/lifecycle/report/query/cross-cutting-satellites.ts": {
+		"af0e107016f9bfd6": {
+			"line": 92,
+			"mutation": "LogicalOperator: placementListing?.scope ?? params.scope -> placementListing?.scope && params.scope",
+			"equivalent": "a first placement's listing carries the scope the caller passes: both name one scope"
+		},
+		"9240f32b52a2fed3": {
+			"line": 93,
+			"mutation": "LogicalOperator: params.index ?? placementListing?.index -> params.index && placementListing?.index",
+			"equivalent": "the folds receive no index of their own: the listing's, or none (then read), either way the same index"
+		},
+		"92d40b1f0d60cd8f": {
+			"line": 102,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite resolved from the store: its ref carries its record id"
+		},
+		"e56dc3ba9a37f696": {
+			"line": 111,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite is resolved from the store: its ref always carries its record id"
+		},
+		"296d3dcec0c8c0bb": {
+			"line": 113,
+			"mutation": "OptionalChaining: placementListing?.appliedToPrimaries -> placementListing.appliedToPrimaries",
+			"equivalent": "referencedRefs are passed on a first placement only, which always carries its listing"
+		},
+		"d8453d2b597149cd": {
+			"line": 114,
+			"mutation": "OptionalChaining: placementListing?.framed -> placementListing.framed",
+			"equivalent": "referencedRefs are passed on a first placement only, which always carries its listing"
+		},
+		"e56dc3ba9a37f696-1": {
+			"line": 161,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite resolved from the store: its ref carries its record id"
+		},
+		"58fe152a92c9b299": {
+			"line": 190,
+			"mutation": "ConditionalExpression: !referenced?.size && !carried?.size && !duplicates?.size -> false",
+			"equivalent": "with nothing to add, the set built is the selection's own content: the fold leaves out the same ids"
+		},
+		"2873c6d015a820d3": {
+			"line": 190,
+			"mutation": "BooleanLiteral: !carried?.size -> carried?.size",
+			"equivalent": "with nothing to add, the set built is the selection's own content: the fold leaves out the same ids"
+		},
+		"758371615e8fd17b": {
+			"line": 192,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a record id no element of the template carries: it leaves nothing out"
+		},
+		"26a7eb02599c117c": {
+			"line": 193,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a record id no element of the template carries: it leaves nothing out"
+		},
+		"ab43d3e89e053349": {
+			"line": 194,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a record id no element of the template carries: it leaves nothing out"
+		},
+		"d8c73a8138eb507e": {
+			"line": 195,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a record id no element of the template carries: it leaves nothing out"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/report/query/placement-listing.ts": {
+		"09041551572513c3": {
+			"line": 47,
+			"mutation": "ConditionalExpression: !tree -> false",
+			"equivalent": "a primary the report read from the store: its tree is always read"
+		},
+		"5fbe7856e88bd533": {
+			"line": 51,
+			"mutation": "ConditionalExpression: tree.tagName === 'Function' -> true",
+			"equivalent": "the primaries of a placement are applications and functions: an application's tree holds no satellite (its roles refer to them), so scoping it adds nothing"
+		},
+		"35b71bc5f185ef4a": {
+			"line": 82,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "an entry that is no name has no uuid: it names no primary"
+		},
+		"34d6da657cd0e28c": {
+			"line": 87,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a ref read from the store: it always carries its record id, the fallback is never read"
+		},
+		"ce5f623cd15d0de1": {
+			"line": 96,
+			"mutation": "StringLiteral: '' -> \"Stryker was here!\"",
+			"equivalent": "a satellite resolved from the store: its ref carries its record id"
+		},
+		"b0a2e121f85ba3ac": {
+			"line": 109,
+			"mutation": "StringLiteral: 'none' -> \"\"",
+			"equivalent": "`defaults` only fills a value the schema defaults; a uuid and a template reference have none: an absent one reads '' either way"
+		},
+		"3e7e50cd32fd343d": {
+			"line": 110,
+			"mutation": "ConditionalExpression: uuid -> true",
+			"equivalent": "a satellite's references name non-empty uuids only (the index keeps none empty): an empty uuid among the primaries' matches nothing"
+		}
+	},
 	"src/v2019C1/extensions/lifecycle/report/query/removal-side-effects.ts": {
 		"ab51c62691eeecd0": {
 			"line": 38,
@@ -1920,10 +2525,102 @@
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/report/query/report-asd.ts": {
+		"89b117cee02d0148-1": {
+			"line": 163,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "the composed functions are read on a first placement only: the empty list of another report is never read"
+		},
+		"a77d0a33338434bb": {
+			"line": 304,
+			"mutation": "LogicalOperator: placementListing?.index ?? params.index -> placementListing?.index && params.index",
+			"equivalent": "both are the satellite index of the template, read from the same document: only the number of reads changes"
+		},
+		"52460e3d0d7b6099": {
+			"line": 403,
+			"mutation": "OptionalChaining: params.selection?.leftOut -> params.selection.leftOut",
+			"equivalent": "a first placement passes its listing, an update the instance's selection: the scope is resolved from a selection that is always there"
+		},
+		"fc9fec7d0fc97db5": {
+			"line": 412,
+			"mutation": "LogicalOperator: params.placementListing?.satellites ?? new Set() -> params.placementListing?.satellites && new Set()",
+			"equivalent": "without the listing's satellites the role decides each one a placed primary carries by its own rule, which is the carried scoping's rule (the same scope, the same duplicate rule: findDuplicateApplications), so it names the same copy or leaves out the same one; anything it then places is pre-claimed by the listing, so nothing is listed twice"
+		},
+		"93f7264a6bc60b72": {
+			"line": 412,
+			"mutation": "OptionalChaining: params.placementListing?.satellites -> params.placementListing.satellites",
+			"equivalent": "a first placement always carries a listing (reportAsd makes its own when none is passed): the fallback is never read"
+		},
+		"aeda5e14141bf884": {
+			"line": 413,
+			"mutation": "OptionalChaining: params.placementListing?.carried -> params.placementListing.carried",
+			"equivalent": "the role's satellites are resolved on a first placement only, which always carries its listing"
+		},
+		"bfa31a56c0567979": {
+			"line": 414,
+			"mutation": "OptionalChaining: params.placementListing?.held -> params.placementListing.held",
+			"equivalent": "the role's satellites are resolved on a first placement only, which always carries its listing"
+		},
+		"799e4d4ab34dd17c": {
+			"line": 415,
+			"mutation": "OptionalChaining: params.placementListing?.index -> params.placementListing.index",
+			"equivalent": "the role's satellites are resolved on a first placement only, which always carries its listing"
+		},
+		"7f862ebdb60c61c0": {
+			"line": 417,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "an entry naming no function finds no source function to read"
+		},
+		"3f68ae3203264f68": {
+			"line": 419,
+			"mutation": "StringLiteral: 'templateUuid' -> \"\"",
+			"equivalent": "every caller passes the scenario's match key: the fallback is never read"
+		},
+		"afce3a1b5cfe8042": {
+			"line": 419,
+			"mutation": "LogicalOperator: params.matchKey ?? 'templateUuid' -> params.matchKey && 'templateUuid'",
+			"equivalent": "every caller passes the scenario's match key: the fallback is never read"
+		},
+		"5a54dc91fd8bed5e": {
+			"line": 423,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a record id no element of the template carries: it leaves nothing out"
+		},
+		"c0344ce884454678": {
+			"line": 424,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a record id no element of the template carries: it leaves nothing out"
+		},
 		"c9b84b015e7bcdd7": {
 			"line": 462,
 			"mutation": "OptionalChaining: selection?.leftOut -> selection.leftOut",
 			"equivalent": "every instance of the application has its selection in the map"
+		},
+		"3e02b5016b347722": {
+			"line": 496,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "on an update the instance's satellites not placed are not read: only a first placement lists them"
+		},
+		"080371c6c7c2c385": {
+			"line": 623,
+			"mutation": "OptionalChaining: params.placementListing?.functions -> params.placementListing.functions",
+			"equivalent": "a first placement always carries a listing (reportAsd makes its own when none is passed): the composed functions are reported on a first placement only"
+		},
+		"75bfb8d01c042081": {
+			"line": 625,
+			"mutation": "OptionalChaining: listedFunctions?.has -> listedFunctions.has",
+			"equivalent": "a first placement always carries a listing (reportAsd makes its own when none is passed): the composed functions are reported on a first placement only"
+		},
+		"6f059d449b12e45b": {
+			"line": 626,
+			"mutation": "OptionalChaining: listedFunctions?.add -> listedFunctions.add",
+			"equivalent": "a first placement always carries a listing (reportAsd makes its own when none is passed): the composed functions are reported on a first placement only"
+		}
+	},
+	"src/v2019C1/extensions/lifecycle/report/query/report-function.ts": {
+		"bee1026737c46522": {
+			"line": 144,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "a record id no element of the template carries: it leaves nothing out"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/report/query/report-shared-functions.ts": {
@@ -1995,9 +2692,14 @@
 	},
 	"src/v2019C1/extensions/lifecycle/report/query/report-ssd.ts": {
 		"779639dcdc552258": {
-			"line": 77,
+			"line": 98,
 			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
 			"equivalent": "the report built for no scope lists no instance: the junk root names no record and is read by nothing"
+		},
+		"73c8ae7e7a65c71f": {
+			"line": 379,
+			"mutation": "ArrayDeclaration: [] -> [\"Stryker was here\"]",
+			"equivalent": "the fold starts from the placed frame's mappings, a list every report instance carries, and only adds to it: the fallback is never read"
 		}
 	},
 	"src/v2019C1/extensions/lifecycle/report/query/report-topology-frame.ts": {

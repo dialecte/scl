@@ -221,6 +221,84 @@ describe('instantiate.asd', () => {
 	runSclTestCases.withExport({ testCases, act })
 })
 
+/** Started on a level its template holds no level of the application's tag below: that level lands nowhere. */
+describe('instantiate.asd - started above the level of the application', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		"a role refers to a variable applying to the function and to the template's bay → it applies to the function only":
+			{
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${id}="asd">
+						<Header id="asd-header" uuid="asd-doc-uuid" version="3" revision="C" ${id}="hdr-s"/>
+						<Substation name="TEMPLATE" ${id}="sub-s">
+							<VoltageLevel name="TEMPLATE" ${id}="vl-s">
+								<Bay name="TEMPLATE" uuid="tmpl-bay-uuid" ${id}="bay-s">
+									<Private type="eIEC61850-6-100" ${id}="bay-priv-s">
+										<eIEC61850-6-100:Application name="HMI" uuid="app-src-uuid" ${id}="app-s">
+											<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="fr-s">
+												<eIEC61850-6-100:FunctionRoleContent ${id}="frc-s">
+													<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="fn-src-uuid" ${id}="app-fref-s"/>
+												</eIEC61850-6-100:FunctionRoleContent>
+											</eIEC61850-6-100:FunctionRole>
+											<eIEC61850-6-100:FunctionRole name="ENGINEERING ELEMENTS" ${id}="er-s">
+												<eIEC61850-6-100:FunctionRoleContent ${id}="erc-s">
+													<eIEC61850-6-100:VariableRef variable="TEMPLATE/TEMPLATE/TEMPLATE/VBOTH" variableUuid="vboth-uuid" ${id}="vboth-ref"/>
+												</eIEC61850-6-100:FunctionRoleContent>
+											</eIEC61850-6-100:FunctionRole>
+										</eIEC61850-6-100:Application>
+										<eIEC61850-6-100:Variable name="VBOTH" value="1" uuid="vboth-uuid" ${id}="vboth">
+											<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/TEMPLATE/Prot" elementUuid="fn-src-uuid" ${id}="vboth-prot"/>
+											<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/TEMPLATE" elementUuid="tmpl-bay-uuid" ${id}="vboth-bay"/>
+										</eIEC61850-6-100:Variable>
+									</Private>
+									<Function name="Prot" uuid="fn-src-uuid" ${id}="fn-1"/>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				targetXml: /* xml */ `
+					<SCL ${ns} ${id}="scd">
+						<Substation name="S1" ${id}="sub-t">
+							<VoltageLevel name="V1" ${id}="vl-t">
+								<Bay name="B1" ${id}="bay-t"/>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
+				applicationId: 'app-s',
+				targetParentId: 'vl-t',
+				expectedQueries: [
+					'//v2019C1:Variable[@name="VBOTH"][count(v2019C1:VariableApplyTo)=1]/v2019C1:VariableApplyTo[@elementUuid=//default:Function[@name="Prot"]/@uuid]',
+				],
+				unexpectedQueries: ['//v2019C1:VariableApplyTo[@elementUuid="tmpl-bay-uuid"]'],
+			},
+	}
+
+	async function act({
+		testCase,
+		source,
+		target,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		await target.transaction(async function instantiateOnTheLevel(tx) {
+			await asd(tx, {
+				sourceQuery: source.query,
+				applicationRef: {
+					tagName: 'Application',
+					id: testCase.applicationId,
+				} as Scl.Ref<'Application'>,
+				targetParent: {
+					tagName: 'VoltageLevel',
+					id: testCase.targetParentId,
+				} as Scl.Ref<'VoltageLevel'>,
+			})
+		})
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
 describe('instantiate.asd return value', () => {
 	it('returns the instantiated application ref, its composed function refs, and mappings', async () => {
 		const sourceXml = /* xml */ `

@@ -1,11 +1,11 @@
-import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 import { holdsOwnProvenance } from '@/v2019C1/extensions/reference/query/provenance/find-own-provenance'
 import { PROVENANCE_ANCHOR_KIND_BY_TAG } from '@/v2019C1/extensions/reference/query/provenance/get-provenance.constants'
 // read from their files: the query module of the extension holds the queries a document is asked
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type { SsdExtractScope } from './extract.types'
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
+import type { AppliedSatellite } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -45,14 +45,21 @@ export async function readInstanceContent(
 
 /**
  * What came with the instance of an SSD scope: the scope and what it holds, the functions its applications compose
- * wherever they sit (above a bay, for a bay's application), and what applies to the scope from outside it. An
+ * wherever they sit (above a bay, for a bay's application), what applies to either from outside the scope, and what
+ * the roles of its applications refer to. An
  * application recording a file of its own is another template's instance: it keeps its lineage, and so do the
  * functions it composes (they record no file of their own, the application's is theirs), wherever they sit — even when
  * an application of the scope composes them too.
  */
 export async function readScopeInstanceContent(
 	sourceQuery: Core.Query<Config>,
-	params: { scopeRef: SsdExtractScope },
+	params: {
+		scopeRef: SsdExtractScope
+		/** What applies to the scope or to what its applications compose, with what each applies to. */
+		satellites: readonly AppliedSatellite[]
+		/** What the roles of its applications refer to, by application (record id). */
+		referencedBy: ReadonlyMap<string, readonly Scl.Ref<Scl.ElementsOf>[]>
+	},
 ): Promise<Set<string>> {
 	const { scopeRef } = params
 	const tree = await sourceQuery.any.getTree(scopeRef)
@@ -60,8 +67,14 @@ export async function readScopeInstanceContent(
 
 	const ownedUuids = new Set<string>()
 	const foreignUuids = new Set<string>()
+	// what the roles of its own applications refer to came with it too (what a function the scope places holds is placed
+	// with that function, and none of it)
+	const referenced: Scl.Ref<Scl.ElementsOf>[] = []
 	for (const application of collectTagged({ node: tree, tagName: 'Application' })) {
-		const composed = holdsOwnProvenance({ tree: application }) ? foreignUuids : ownedUuids
+		const foreign = holdsOwnProvenance({ tree: application })
+		const referredTo = params.referencedBy.get(application.id)
+		if (!foreign && referredTo) referenced.push(...referredTo)
+		const composed = foreign ? foreignUuids : ownedUuids
 		for (const functionRef of collectTagged({ node: application, tagName: 'FunctionRef' })) {
 			const functionUuid = readAttribute({
 				record: functionRef,
@@ -84,20 +97,20 @@ export async function readScopeInstanceContent(
 		companions,
 		foreignIds,
 	})
-	// what applies to that content from outside the scope (a variable, a behaviour description) came with it too; what
-	// applies to another instance's elements only did not
-	const scopeIds = new Set<string>()
-	collectIds({ node: tree, ids: scopeIds })
-	const otherInstances = new Set(
-		[...scopeIds].filter(function isOtherInstance(scopeId) {
-			return !content.has(scopeId)
-		}),
-	)
-	const satellites = await resolveAppliedSatellites(sourceQuery, {
-		primaryRef: scopeRef,
-		leftOut: otherInstances,
+	// what applies to that content from outside it (a variable, a behaviour description, as the extract resolved them)
+	// came with it too; what applies to another instance's elements only did not
+	const satellites = params.satellites
+		.filter(function appliesToContent(satellite) {
+			return satellite.targetIds.some(function isContent(targetId) {
+				return content.has(targetId)
+			})
+		})
+		.map(function satelliteOf(satellite) {
+			return satellite.satelliteRef
+		})
+	const satelliteContent = await readInstanceContent(sourceQuery, {
+		roots: [...satellites, ...referenced],
 	})
-	const satelliteContent = await readInstanceContent(sourceQuery, { roots: satellites })
 	return new Set([...content, ...satelliteContent])
 }
 

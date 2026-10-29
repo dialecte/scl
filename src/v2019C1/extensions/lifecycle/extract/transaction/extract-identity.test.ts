@@ -239,6 +239,69 @@ describe('extract, templateLink break: the element and its own content lose thei
 				],
 				unexpectedQueries: ['//default:Bay[@templateUuid]'],
 			},
+		'asd: a variable applying to a function the application owns and to one placed from its file came with the application: it loses its link':
+			{
+				sourceXml: projectXml
+					.replace(
+						`<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot" functionUuid="function-uuid" ${id}="project-function-ref"/>`,
+						[
+							`<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot" functionUuid="function-uuid" ${id}="project-function-ref"/>`,
+							`<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Own" functionUuid="own-uuid" ${id}="project-own-ref"/>`,
+						].join(''),
+					)
+					.replace(
+						`</eIEC61850-6-100:Application>`,
+						[
+							`</eIEC61850-6-100:Application>`,
+							`<eIEC61850-6-100:Variable name="VMIX" value="1" uuid="vmix-uuid" templateUuid="vmix-template" ${id}="project-vmix">`,
+							`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot" elementUuid="function-uuid" ${id}="project-vmix-prot"/>`,
+							`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Own" elementUuid="own-uuid" ${id}="project-vmix-own"/>`,
+							`</eIEC61850-6-100:Variable>`,
+						].join(''),
+					)
+					.replace(
+						`<Function name="Prot" uuid="function-uuid"`,
+						`<Function name="Own" uuid="own-uuid" templateUuid="own-template" ${id}="project-own"/><Function name="Prot" uuid="function-uuid"`,
+					),
+				targetXml: emptyTargetXml,
+				verb: 'asd',
+				options: { templateLink: 'break' },
+				expectedQueries: [
+					'//v2019C1:Variable[@name="VMIX"][not(@templateUuid)]',
+					'//default:Function[@name="Prot"][@templateUuid="function-template"]',
+				],
+			},
+		'ssd: what the role of an application placed from its file refers to, above the bay, came with that application: it keeps its link':
+			{
+				sourceXml: projectXml
+					.replace(
+						`<eIEC61850-6-100:AllocationRoleRef allocationRole="S1/HMI_PC" allocationRoleUuid="role-uuid" ${id}="project-role-ref"/>`,
+						[
+							`<eIEC61850-6-100:FunctionRole name="ENGINEERING ELEMENTS" ${id}="project-engineering-role">`,
+							`<eIEC61850-6-100:FunctionRoleContent ${id}="project-engineering-content">`,
+							`<eIEC61850-6-100:VariableRef variable="S1/VREF" variableUuid="vref-uuid" ${id}="project-vref-ref"/>`,
+							`</eIEC61850-6-100:FunctionRoleContent>`,
+							`</eIEC61850-6-100:FunctionRole>`,
+							`<eIEC61850-6-100:AllocationRoleRef allocationRole="S1/HMI_PC" allocationRoleUuid="role-uuid" ${id}="project-role-ref"/>`,
+						].join(''),
+					)
+					.replace(
+						`<Private type="eIEC61850-6-100" ${id}="project-substation-private">`,
+						[
+							`<Private type="eIEC61850-6-100" ${id}="project-substation-private">`,
+							`<eIEC61850-6-100:Variable name="VREF" value="1" uuid="vref-uuid" templateUuid="vref-template" ${id}="project-vref">`,
+							`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot" elementUuid="function-uuid" ${id}="project-vref-prot"/>`,
+							`</eIEC61850-6-100:Variable>`,
+						].join(''),
+					),
+				targetXml: emptyTargetXml,
+				verb: 'ssd',
+				options: { templateLink: 'break' },
+				expectedQueries: [
+					'//v2019C1:Application[@name="HMI"][@templateUuid="application-template"]',
+					'//v2019C1:Variable[@name="VREF"][@templateUuid="vref-template"]',
+				],
+			},
 		'asd: a composed function recording no file of its own came with the application: it loses its link too':
 			{
 				sourceXml: projectXml.replace(

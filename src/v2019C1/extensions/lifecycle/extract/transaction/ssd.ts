@@ -4,12 +4,8 @@ import { satelliteWarnings } from './satellite-warnings'
 
 import { TEMPLATE_NAME } from '@/v2019C1/constants'
 import { history } from '@/v2019C1/extensions/history'
-import {
-	cloneAppliedSatellites,
-	collectClonedIds,
-} from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
+import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
-import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import {
 	cloneTopologyContent,
 	resolveFrameStructure,
@@ -73,23 +69,27 @@ export async function ssd(
 		scopeRef,
 		targetParent: root,
 	})
-	const { frameIndex, redirectMappings } = content
+	const { frameIndex, redirectMappings, unit } = content
 
-	// what applies to the scope from outside it, and what its levels hold (a variable, a behaviour description), travels
-	// with it, each where the file holds it, applying only to what the extract places
+	// what applies to the scope from outside it, what its levels hold and what the roles of its applications refer to (a
+	// variable, a behaviour description) travels with it, each where the file holds it, applying only to what the extract
+	// places; resolved once
 	const structure = await resolveFrameStructure(tx, sourceQuery, scopeRef, frameIndex)
-	const scope = await resolveContributionScope(sourceQuery, { roots: [scopeRef] })
+	const { satellites } = content
 	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: scopeRef,
-		// one a role of an application refers to is placed with the application already
-		alreadyCloned: collectClonedIds({ cloneMappings: content.cloneMappings }),
+		satellites,
+		carried: content.carried,
+		index: content.index,
 		structure,
 		// one held by an element of another level may land beside one of its name: numbered — one landing in the copy of
 		// its holder is placed first, and keeps its name
 		bumpsCollisions: true,
-		scope,
+		scope: unit.scope,
 		frame: { cloneMappings: content.cloneMappings, redirectMappings },
+		// what the roles of its applications refer to, each whole
+		referenced: content.referenced,
 	})
 	const cloneMappings = [...content.cloneMappings, ...applied.cloneMappings]
 
@@ -99,7 +99,11 @@ export async function ssd(
 	const scaffoldingIds = await readScaffoldingIds(sourceQuery, { scopeRef })
 	const unlinked =
 		templateLink === 'break'
-			? await readScopeInstanceContent(sourceQuery, { scopeRef })
+			? await readScopeInstanceContent(sourceQuery, {
+					scopeRef,
+					satellites,
+					referencedBy: content.referencedBy,
+				})
 			: new Set<string>()
 	for (const levelId of scaffoldingIds) {
 		unlinked.add(levelId)
@@ -114,7 +118,12 @@ export async function ssd(
 
 	await postExtractionCleanup(tx)
 
-	return { warnings: [...warnings, ...satelliteWarnings({ applied })] }
+	return {
+		warnings: [
+			...warnings,
+			...satelliteWarnings({ applied, notPlaced: content.satellitesNotPlaced }),
+		],
+	}
 }
 
 /**

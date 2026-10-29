@@ -1,11 +1,17 @@
 import { foldSatelliteCompanions } from './satellite-companions'
 
-import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
+import {
+	findHeldSatelliteIds,
+	resolveAppliedSatellites,
+	resolveAppliedSatelliteTargets,
+} from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
+import { collectDuplicateApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications'
 
 import type { SatelliteFoldTarget } from './cross-cutting-satellites.types'
 import type { PlacementListing } from './placement-listing.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { SatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -27,8 +33,9 @@ import type * as Core from '@dialecte/core'
  * when an instance exists. Layer-owned satellites (FunctionCategory, AllocationRole)
  * are folded separately by their own layer finder.
  *
- * Within one first placement (`placementListing`), a satellite is listed with the first primary it applies to, its
- * references naming what the placement places: as the apply places it, once.
+ * Within one first placement (`placementListing`), a satellite is listed with the first primary it applies to — one
+ * a primary holds, with that primary's own content —, its references naming what the placement places: as the apply
+ * places it, once.
  */
 export async function foldCrossCuttingSatellites(
 	query: Core.Query<Config>,
@@ -61,17 +68,62 @@ export async function foldCrossCuttingSatellites(
 		placementListing?: PlacementListing
 		/** The primary is a topology frame: what its levels hold is folded too (see `resolveAppliedSatellites`). */
 		frame?: boolean
-		/** The source elements the placement leaves out (record ids). Default: what the selection leaves out of the template. */
+		/**
+		 * The source elements the placement leaves out (record ids). Default: the first placement's, else what the selection
+		 * leaves out of the template.
+		 */
 		leftOut?: ReadonlySet<string>
+		/**
+		 * On a first placement, what the primary refers to (what the roles of an application name): listed with it,
+		 * whatever it applies to.
+		 */
+		referencedRefs?: readonly Scl.Ref<Scl.ElementsOf>[]
+		/** The references below what the primary refers to that its placement leaves out (record ids). */
+		referencedLeaveOut?: ReadonlySet<string>
+		/** The satellites of the template, read once by the report: see `readSatelliteIndex`. Default: the listing's. */
+		index?: SatelliteIndex
 	},
 ): Promise<void> {
 	const { sourceQuery, primaryRef, instancePrimaryRef, report, placementListing } = params
 
-	const resolved = await resolveAppliedSatellites(sourceQuery, {
+	const resolvedTargets = await resolveAppliedSatelliteTargets(sourceQuery, {
 		primaryRef,
-		leftOut: params.leftOut ?? params.selection?.within,
+		leftOut: params.leftOut ?? placementListing?.leftOut ?? params.selection?.within,
 		frame: params.frame,
+		scope: placementListing?.scope ?? params.scope,
+		index: params.index ?? placementListing?.index,
 	})
+	// on a first placement, one the project holds by its uuid already is not placed again, nor listed; nor one left
+	// applying to nothing, the project's copy making each of its applications already
+	const held = placementListing
+		? await findHeldSatelliteIds(query, { satellites: resolvedTargets })
+		: new Set<string>()
+	// what applies where the project's copy of it applies already does not apply there twice, as the apply places it
+	const duplicates = placementListing
+		? collectDuplicateApplications({
+				satellites: resolvedTargets,
+				index: placementListing.index,
+				held: placementListing.held,
+			})
+		: undefined
+	const applied = resolvedTargets
+		.filter(function isPlaced(satellite) {
+			const satelliteId = satellite.satelliteRef.id ?? ''
+			return !held.has(satelliteId) && !placementListing?.carried.notPlaced.has(satelliteId)
+		})
+		.map(function satelliteOf(satellite) {
+			return satellite.satelliteRef
+		})
+	// what the primary refers to first — but what applies to a primary the placement places, listed with the first it
+	// applies to, and what its frame places —, then what applies to it: the placement's listing claims each once
+	const referenced = (params.referencedRefs ?? []).filter(function isTheReferrers(satelliteRef) {
+		const satelliteId = satelliteRef.id ?? ''
+		return (
+			!placementListing?.appliedToPrimaries.has(satelliteId) &&
+			!placementListing?.framed.has(satelliteId)
+		)
+	})
+	const resolved = [...referenced, ...applied]
 	// one the placement listed with another primary is placed once: listed there only
 	const satelliteRefs = placementListing
 		? claimUnlisted({ satelliteRefs: resolved, listed: placementListing.satellites })
@@ -96,7 +148,14 @@ export async function foldCrossCuttingSatellites(
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
-		notSelected: params.selection?.leftOut,
+		// what the selection leaves out, the references what the primary refers to is placed without, and those the
+		// placement's scoping leaves out
+		notSelected: readNotSelected({
+			selection: params.selection?.leftOut,
+			referenced: params.referencedLeaveOut,
+			carried: placementListing?.carried.leaveOut,
+			duplicates,
+		}),
 		scope: placementListing?.scope ?? params.scope,
 	})
 }
@@ -115,4 +174,24 @@ function claimUnlisted(params: {
 		claimed.push(satelliteRef)
 	}
 	return claimed
+}
+
+/**
+ * What the fold leaves out of the satellites' content: the selection's, the role's, the placement's scoping, the
+ * applications the project's copies make already.
+ */
+function readNotSelected(params: {
+	selection: ReadonlySet<string> | undefined
+	referenced: ReadonlySet<string> | undefined
+	carried: ReadonlySet<string> | undefined
+	duplicates: ReadonlySet<string> | undefined
+}): ReadonlySet<string> | undefined {
+	const { selection, referenced, carried, duplicates } = params
+	if (!referenced?.size && !carried?.size && !duplicates?.size) return selection
+	return new Set([
+		...(selection ?? []),
+		...(referenced ?? []),
+		...(carried ?? []),
+		...(duplicates ?? []),
+	])
 }

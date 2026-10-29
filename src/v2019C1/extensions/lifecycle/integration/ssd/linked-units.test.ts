@@ -3,6 +3,7 @@ import { findByName, listGroups, reportAndApply } from '../integration-helpers'
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { ssd as instantiateSsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import {
 	ALL_XMLNS_NAMESPACES,
@@ -487,6 +488,115 @@ describe('instantiate.ssd called on its own with a unit of a linked pair', () =>
 				leftOut: testCase.leftOut && new Set(testCase.leftOut),
 			})
 		})
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+// What the scaffolding of the pair holds of its own stays out with it: what applies from it to the pair is not
+// placed; what the pair's roles refer to there is placed whole, naming what the pair places, and listed so.
+describe('ssd: what the scaffolding of a unit holds of its own is left out with it', () => {
+	type LeftOutHeldCase = SclTest.BaseXmlTestCase & {
+		targetXml: string
+		/** What the report lists of the variables and behaviour descriptions: `<tag>: <its references>`. */
+		listed: string[]
+	}
+
+	/** An equipment of the voltage level holding the content given — in a function of it, when asked —, before the pair. */
+	function levelEquipment(params: { content: string; inFunction?: true }): string[] {
+		const held = [
+			`<Private type="eIEC61850-6-100" ${id}="level-equipment-private">`,
+			params.content,
+			`</Private>`,
+		]
+		const holder = params.inFunction
+			? [
+					`<EqFunction name="EF1" uuid="ef-uuid" ${id}="level-equipment-function">`,
+					...held,
+					`</EqFunction>`,
+				]
+			: held
+		return [
+			`<GeneralEquipment name="GE1" type="AXN" uuid="ge-uuid" ${id}="level-equipment">`,
+			...holder,
+			`</GeneralEquipment>`,
+			`<Bay name="B1" uuid="b1-uuid" ${id}="bay-1">`,
+		]
+	}
+	const firstBay = `<Bay name="B1" uuid="b1-uuid" ${id}="bay-1">`
+
+	const variableOnFunction = [
+		`<eIEC61850-6-100:Variable name="VGE" value="1" uuid="vge-uuid" ${id}="level-variable">`,
+		`<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/B1/F3" elementUuid="f3-uuid" ${id}="level-variable-apply"/>`,
+		`</eIEC61850-6-100:Variable>`,
+	].join('')
+	const logicOnLogicalNode = [
+		`<eIEC61850-6-100:BehaviorDescription name="BDGE" uuid="bdge-uuid" ${id}="level-logic">`,
+		`<eIEC61850-6-100:InputVar varName="pos" dataName="TEMPLATE/TEMPLATE/B1/F3/CSWI1" lnodeUuid="f3-lnode-uuid" doName="Pos" ${id}="level-logic-input"/>`,
+		`</eIEC61850-6-100:BehaviorDescription>`,
+	].join('')
+	const engineeringRole = [
+		`</eIEC61850-6-100:FunctionRole>`,
+		`<eIEC61850-6-100:FunctionRole name="ENGINEERING ELEMENTS" ${id}="engineering-role-3">`,
+		`<eIEC61850-6-100:FunctionRoleContent ${id}="engineering-content-3">`,
+		`<eIEC61850-6-100:BehaviorDescriptionRef behaviorDescription="TEMPLATE/TEMPLATE/GE1/EF1/BDGE" behaviorDescriptionUuid="bdge-uuid" ${id}="bdge-ref"/>`,
+		`</eIEC61850-6-100:FunctionRoleContent>`,
+		`</eIEC61850-6-100:FunctionRole>`,
+	].join('')
+	const pairXml = baysXml({ linked: true, third: true, applicationIn: 'B1' })
+
+	const testCases: SclTest.TestCases<LeftOutHeldCase> = {
+		'an equipment of the voltage level holds a variable applying to a function of the pair → neither listed nor placed':
+			{
+				sourceXml: pairXml.replace(
+					firstBay,
+					levelEquipment({ content: variableOnFunction }).join(''),
+				),
+				targetXml: levelProjectXml,
+				listed: [],
+				expectedQueries: ['//default:Bay[@name="B1"]/default:Function[@name="F3"]'],
+				unexpectedQueries: ['//v2019C1:Variable'],
+			},
+		"the application's role refers to a behaviour description a function of that equipment holds → listed and placed whole, naming the pair's logical node":
+			{
+				sourceXml: pairXml
+					.replace(
+						`<Function name="F3" uuid="f3-uuid" ${id}="function-3"/>`,
+						`<Function name="F3" uuid="f3-uuid" ${id}="function-3"><LNode iedName="None" lnClass="CSWI" lnInst="1" uuid="f3-lnode-uuid" ${id}="function-3-lnode"/></Function>`,
+					)
+					.replace(`</eIEC61850-6-100:FunctionRole>`, engineeringRole)
+					.replace(
+						firstBay,
+						levelEquipment({ content: logicOnLogicalNode, inFunction: true }).join(''),
+					),
+				targetXml: levelProjectXml,
+				listed: ['BehaviorDescription: 1'],
+				expectedQueries: [
+					'//v2019C1:BehaviorDescription[@name="BDGE"]/v2019C1:InputVar[@lnodeUuid=//default:Function[@name="F3"]/default:LNode/@uuid]',
+				],
+			},
+	}
+
+	async function act({
+		source,
+		target,
+		testCase,
+	}: SclTest.ActParams<LeftOutHeldCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		const pair = await findByName(source.query, { tagName: 'Bay', name: 'B1' })
+		const placement = scopeTarget({
+			sourceQuery: source.query,
+			ref: pair,
+			anchor: projectVoltageLevel,
+			scenario: 'instantiate',
+		})
+		const { report } = await reportAndApply({ document: target, lifecycle: placement })
+		const listed = allGroups(report)
+			.flatMap((group) => [group.primary, ...group.companions])
+			.filter((node) => node.tagName === 'Variable' || node.tagName === 'BehaviorDescription')
+			.map((node) => `${node.tagName}: ${node.children.length}`)
+		expect(listed, 'report').toEqual(testCase.listed)
 		return { assertOn: 'target' }
 	}
 

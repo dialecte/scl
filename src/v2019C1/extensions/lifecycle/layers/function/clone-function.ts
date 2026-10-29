@@ -52,6 +52,8 @@ export async function cloneFunction(
 		keepNameTypesFrom?: KeepNameTypesFrom
 		/** Written as a function template with no parent level (placed below the document root). */
 		asTemplate?: boolean
+		/** Source records not cloned, with what they hold (record ids): what the placement scopes out of it. */
+		leaveOut?: ReadonlySet<string>
 	},
 ): Promise<Scl.CloneMapping[]> {
 	const { sourceQuery, functionRef, targetParentRef, omit, keepNameTypesFrom, asTemplate } = params
@@ -68,6 +70,7 @@ export async function cloneFunction(
 		retagRoot: { from: 'SubFunction', to: 'Function' },
 		withTypes: { keepNameFrom: keepNameTypesFrom },
 		asTemplate,
+		leaveOut: params.leaveOut,
 	})
 
 	return cloneMappings

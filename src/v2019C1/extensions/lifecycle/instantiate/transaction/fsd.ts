@@ -4,6 +4,7 @@ import { resolveTargetStructure } from './resolve-target-structure'
 import { throwDialecteError } from '@dialecte/core'
 
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
+import { readSatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
@@ -86,12 +87,14 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	// to any element in the function subtree also travel with it, one of each per instance
 	// what their references may name: the function placed
 	const scope = await resolveContributionScope(sourceQuery, { roots: [functionRef] })
+	const index = await readSatelliteIndex(sourceQuery)
 	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: functionRef,
 		structure,
 		bumpsCollisions: policy.bumpsCollisions,
 		scope,
+		index,
 	})
 
 	const allMappings = [

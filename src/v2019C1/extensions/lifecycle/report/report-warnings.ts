@@ -6,7 +6,8 @@ import type {
 
 /**
  * What the report did that the consumer should know of, read from its nodes: each reference paired by name, once,
- * wherever the report lists it (an instance's tree, a group's primary or companions).
+ * wherever the report lists it (an instance's tree, a group's primary or companions); and each satellite an
+ * application's role refers to that its placement does not place.
  */
 export function collectReportWarnings(report: DiffReport): ReportWarning[] {
 	const warnings = new Map<string, ReportWarning>()
@@ -27,7 +28,12 @@ export function collectReportWarnings(report: DiffReport): ReportWarning[] {
 			lineage: node.pairedByName,
 		})
 	}
-	return [...warnings.values()]
+	const notPlaced: ReportWarning[] = report.instances.flatMap(function notPlacedOf(instance) {
+		return (instance.satellitesNotPlaced ?? []).map(function warnOf(source): ReportWarning {
+			return { code: 'satellite-not-placed', source }
+		})
+	})
+	return [...warnings.values(), ...notPlaced]
 }
 
 /** Whether a node, or one below it, is a reference paired by name: what the report lists even when nothing changed. */

@@ -140,8 +140,10 @@ describe('update of an application whose role allocates a function of a placehol
 			for (const node of nodes) collectRoleReferences({ node, out: roleReferences })
 		}
 		expect([...roleReferences].sort(), 'report').toEqual(testCase.expected.listed)
-		const warnings = listed.warnings?.map(
-			(warning) => `${warning.code} ${warning.reference.id} ${warning.lineage}`,
+		const warnings = listed.warnings?.map((warning) =>
+			warning.code === 'reference-paired-by-name'
+				? `${warning.code} ${warning.reference.id} ${warning.lineage}`
+				: warning.code,
 		)
 		// a report that paired nothing by name carries no warnings at all
 		expect(warnings, 'report: warnings').toEqual(

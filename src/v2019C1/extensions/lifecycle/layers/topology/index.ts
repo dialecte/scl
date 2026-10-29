@@ -6,10 +6,18 @@ export type {
 	SsdScopeUnit,
 } from './resolve-ssd-scope.types'
 export { cloneTopologyContent } from './clone-topology-content'
+export { landOnStructure, resolveLandedLevels, withLandedLevels } from './landed-levels'
+export type { LandedLevel } from './landed-levels.types'
 export { ensureTopologyFrame, resolveFrameStructure } from './ensure-topology-frame'
+export { resolveFrameLandings } from './frame-landings'
 export { reconcileTopologyFrame } from './reconcile-topology-frame'
 export type { FrameReconciliation } from './reconcile-topology-frame.types'
-export { hasScopeInstance, resolveTopologyReconcilables } from './scope-content'
+export {
+	functionsUnderScope,
+	hasScopeInstance,
+	resolveTopologyReconcilables,
+	resolveUnitPlacement,
+} from './scope-content'
 export { resolvePlacementMappings } from './resolve-placement-mappings'
 export { resolvePrimaryPlacement } from './resolve-primary-placement'
 export { landPrimaries } from './land-primaries'
@@ -29,7 +37,7 @@ export {
 } from './resolve-instance-levels'
 export { resolvePrimaryParents } from './resolve-primary-parents'
 export { findHeldLevel, resolveHeldLevels } from './resolve-held-levels'
-export type { TopologyReconcilables } from './scope-content.types'
+export type { TopologyReconcilables, UnitPlacement } from './scope-content.types'
 export type {
 	EnsureTopologyFrameParams,
 	EnsureTopologyFrameResult,

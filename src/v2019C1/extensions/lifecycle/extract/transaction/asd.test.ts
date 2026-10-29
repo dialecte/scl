@@ -4,7 +4,7 @@ import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
-import type { AsdExtractOptions } from './extract.types'
+import type { AsdExtractOptions, TemplateLink } from './extract.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
@@ -86,7 +86,56 @@ describe('asd', () => {
 			</SCL>
 		`
 
+		// The same, each bay's variable applying to the other bay's function: the one applying to the first function keeps its
+		// name, wherever the file holds it.
+		const crossedXml = twoBaysXml
+			.replace(
+				`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/F1" elementUuid="f1-uuid" ${id}="vx-1-apply"/>`,
+				`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B2/F2" elementUuid="f2-uuid" ${id}="vx-1-apply"/>`,
+			)
+			.replace(
+				`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B2/F2" elementUuid="f2-uuid" ${id}="vx-2-apply"/>`,
+				`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/F1" elementUuid="f1-uuid" ${id}="vx-2-apply"/>`,
+			)
+
+		// The same, the first bay's variable applying to the logical node of its function, the second bay's to both functions:
+		// the second applies to the first element read, so it keeps its name.
+		const spreadXml = twoBaysXml
+			.replace(
+				`<Function name="F1" uuid="f1-uuid" ${id}="f1"/>`,
+				`<Function name="F1" uuid="f1-uuid" ${id}="f1"><LNode iedName="None" lnClass="PTOC" lnInst="1" uuid="f1-ln-uuid" ${id}="f1-ln"/></Function>`,
+			)
+			.replace(
+				`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/F1" elementUuid="f1-uuid" ${id}="vx-1-apply"/>`,
+				`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/F1/PTOC1" elementUuid="f1-ln-uuid" ${id}="vx-1-apply"/>`,
+			)
+			.replace(
+				`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B2/F2" elementUuid="f2-uuid" ${id}="vx-2-apply"/>`,
+				[
+					`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B2/F2" elementUuid="f2-uuid" ${id}="vx-2-apply"/>`,
+					`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/F1" elementUuid="f1-uuid" ${id}="vx-2-apply-f1"/>`,
+				].join(''),
+			)
+
 		const testCases: SclTest.TestCases<TestCase> = {
+			'one variable applying to a logical node of the first function, the other to both functions → the other keeps its name':
+				{
+					sourceXml: spreadXml,
+					targetXml: emptyTargetXml,
+					applicationId: 'application',
+					expectedQueries: [
+						'//default:Bay/default:Private[v2019C1:Variable[@name="VX"][@value="2"]][v2019C1:Variable[@name="VX_1"][@value="1"]]',
+					],
+				},
+			'each variable applying to the function of the other bay → the one applying to the first function keeps its name':
+				{
+					sourceXml: crossedXml,
+					targetXml: emptyTargetXml,
+					applicationId: 'application',
+					expectedQueries: [
+						'//default:Bay/default:Private[v2019C1:Variable[@name="VX"][@value="2"]][v2019C1:Variable[@name="VX_1"][@value="1"]]',
+					],
+				},
 			'a variable of one name in each bay, one held by a breaker → all in the bay of the file, the second numbered, each told':
 				{
 					sourceXml: twoBaysXml,
@@ -120,6 +169,158 @@ describe('asd', () => {
 					return warning.code
 				}),
 			).toEqual(['satellite-moved ConductingEquipment > Bay', 'satellite-renamed VX > VX_1'])
+			return { assertOn: 'target' }
+		}
+
+		runSclTestCases.withExport({ testCases, act: extractWarnings })
+	})
+
+	// ── what the roles of an application refer to ───────────────────────────
+
+	describe('what the roles of an application refer to', () => {
+		type RoleCase = SclTest.BaseXmlTestCase & {
+			targetXml: string
+			templateLink?: TemplateLink
+			expectedWarnings: string[]
+		}
+
+		/**
+		 * An application composing a function of each of two bays, whose role refers to a variable of one name in each bay,
+		 * to one applying to its bay only, and to one applying to a function of the second bay it does not compose.
+		 */
+		const rolesXml = /* xml */ `
+			<SCL ${ns} ${id}="project">
+				<Header id="project" uuid="project-file" ${id}="project-header"/>
+				<Substation name="S1" ${id}="project-substation">
+					<VoltageLevel name="V1" ${id}="project-voltage-level">
+						<Bay name="B1" uuid="bay-1-uuid" ${id}="bay-1">
+							<Private type="eIEC61850-6-100" ${id}="bay-1-private">
+								<eIEC61850-6-100:Application name="P_App" uuid="application-uuid" ${id}="application">
+									<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="root-role">
+										<eIEC61850-6-100:FunctionRoleContent ${id}="root-content">
+											<eIEC61850-6-100:FunctionRef function="S1/V1/B1/F1" functionUuid="f1-uuid" ${id}="f1-ref"/>
+											<eIEC61850-6-100:FunctionRef function="S1/V1/B2/F2" functionUuid="f2-uuid" ${id}="f2-ref"/>
+										</eIEC61850-6-100:FunctionRoleContent>
+									</eIEC61850-6-100:FunctionRole>
+									<eIEC61850-6-100:FunctionRole name="ENGINEERING ELEMENTS" ${id}="role">
+										<eIEC61850-6-100:FunctionRoleContent ${id}="role-content">
+											<eIEC61850-6-100:VariableRef variable="S1/V1/B1/VR" variableUuid="vr-1-uuid" ${id}="vr-1-ref"/>
+											<eIEC61850-6-100:VariableRef variable="S1/V1/B2/VR" variableUuid="vr-2-uuid" ${id}="vr-2-ref"/>
+											<eIEC61850-6-100:VariableRef variable="S1/V1/B1/VBAY" variableUuid="vbay-uuid" ${id}="vbay-ref"/>
+											<eIEC61850-6-100:VariableRef variable="S1/V1/B2/VAWAY" variableUuid="vaway-uuid" ${id}="vaway-ref"/>
+										</eIEC61850-6-100:FunctionRoleContent>
+									</eIEC61850-6-100:FunctionRole>
+								</eIEC61850-6-100:Application>
+								<eIEC61850-6-100:Variable name="VR" value="1" uuid="vr-1-uuid" ${id}="vr-1">
+									<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/F1" elementUuid="f1-uuid" ${id}="vr-1-apply"/>
+								</eIEC61850-6-100:Variable>
+								<eIEC61850-6-100:Variable name="VBAY" value="3" uuid="vbay-uuid" templateUuid="vbay-tmpl-uuid" ${id}="vbay">
+									<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1" elementUuid="bay-1-uuid" ${id}="vbay-apply"/>
+								</eIEC61850-6-100:Variable>
+							</Private>
+							<Function name="F1" uuid="f1-uuid" ${id}="f1"/>
+						</Bay>
+						<Bay name="B2" uuid="bay-2-uuid" ${id}="bay-2">
+							<Private type="eIEC61850-6-100" ${id}="bay-2-private">
+								<eIEC61850-6-100:Variable name="VR" value="2" uuid="vr-2-uuid" ${id}="vr-2">
+									<eIEC61850-6-100:VariableApplyTo element="S1/V1/B2/F2" elementUuid="f2-uuid" ${id}="vr-2-apply"/>
+								</eIEC61850-6-100:Variable>
+								<eIEC61850-6-100:Variable name="VAWAY" value="4" uuid="vaway-uuid" ${id}="vaway">
+									<eIEC61850-6-100:VariableApplyTo element="S1/V1/B2/F9" elementUuid="f9-uuid" ${id}="vaway-apply"/>
+								</eIEC61850-6-100:Variable>
+							</Private>
+							<Function name="F2" uuid="f2-uuid" ${id}="f2"/>
+							<Function name="F9" uuid="f9-uuid" ${id}="f9"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+			</SCL>
+		`
+		const TEMPLATE_BAY = '//default:Bay[@name="TEMPLATE"]'
+
+		// The same, a line of the file holding a variable applying to the application's first function.
+		const lineXml = rolesXml.replace(
+			`</Substation>`,
+			[
+				`</Substation>`,
+				`<Line name="L1" ${id}="line-1">`,
+				`<Private type="eIEC61850-6-100" ${id}="line-1-private">`,
+				`<eIEC61850-6-100:Variable name="VLINE" value="5" uuid="vline-uuid" ${id}="vline">`,
+				`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/F1" elementUuid="f1-uuid" ${id}="vline-apply"/>`,
+				`</eIEC61850-6-100:Variable>`,
+				`</Private>`,
+				`</Line>`,
+			].join(''),
+		)
+
+		const testCases: SclTest.TestCases<RoleCase> = {
+			'a variable of one name in each bay, one applying to its bay, one applying to what the file does not hold → the second numbered, the bay one applying to the bay of the file, the last not placed, each told':
+				{
+					sourceXml: rolesXml,
+					targetXml: emptyTargetXml,
+					expectedQueries: [
+						`${TEMPLATE_BAY}/default:Private[v2019C1:Variable[@name="VR"][@value="1"]][v2019C1:Variable[@name="VR_1"][@value="2"]]`,
+						`${TEMPLATE_BAY}/default:Private/v2019C1:Variable[@name="VBAY"]/v2019C1:VariableApplyTo[@element="TEMPLATE/TEMPLATE/TEMPLATE"][@elementUuid=${TEMPLATE_BAY}/@uuid]`,
+						`//v2019C1:VariableRef[@variableUuid=//v2019C1:Variable[@name="VBAY"]/@uuid]`,
+						'//v2019C1:Variable[@name="VBAY"][@templateUuid="vbay-tmpl-uuid"]',
+					],
+					unexpectedQueries: [
+						'//v2019C1:Variable[@name="VAWAY"]',
+						'//v2019C1:VariableRef[@variableUuid="vaway-uuid"]',
+						'//v2019C1:VariableApplyTo[@elementUuid="bay-1-uuid"]',
+					],
+					expectedWarnings: ['satellite-not-placed vaway', 'satellite-renamed VR > VR_1'],
+				},
+			'a variable a line holds applying to its function → on the substation of the file, told moved':
+				{
+					sourceXml: lineXml,
+					targetXml: emptyTargetXml,
+					expectedQueries: [
+						'//default:Substation[@name="TEMPLATE"]/default:Private/v2019C1:Variable[@name="VLINE"]/v2019C1:VariableApplyTo[@elementUuid=//default:Function[@name="F1"]/@uuid]',
+					],
+					expectedWarnings: [
+						'satellite-moved Line > Substation',
+						'satellite-not-placed vaway',
+						'satellite-renamed VR > VR_1',
+					],
+				},
+			'templateLink break: what the roles refer to came with the instance → it loses its link': {
+				sourceXml: rolesXml,
+				targetXml: emptyTargetXml,
+				templateLink: 'break',
+				expectedQueries: ['//v2019C1:Variable[@name="VBAY"][not(@templateUuid)]'],
+				expectedWarnings: ['satellite-not-placed vaway', 'satellite-renamed VR > VR_1'],
+			},
+		}
+
+		async function extractWarnings({
+			source,
+			target,
+			testCase,
+		}: SclTest.ActParams<RoleCase>): Promise<SclTest.ActResult> {
+			if (!target) throw new Error('target required')
+			const { warnings } = await target.transaction(async function extractTheApplication(tx) {
+				return asd(tx, {
+					sourceQuery: source.query,
+					applicationRef: { tagName: 'Application', id: 'application' } as Scl.Ref<'Application'>,
+					tool: 'TEST',
+					who: 'test',
+					...(testCase.templateLink ? { templateLink: testCase.templateLink } : {}),
+				})
+			})
+			expect(
+				warnings
+					.map(function describeWarning(warning) {
+						if (warning.code === 'satellite-renamed')
+							return `${warning.code} ${warning.name} > ${warning.as}`
+						if (warning.code === 'satellite-moved')
+							return `${warning.code} ${warning.from} > ${warning.to}`
+						if (warning.code === 'satellite-not-placed')
+							return `${warning.code} ${warning.source.id}`
+						return warning.code
+					})
+					.sort(),
+			).toEqual(testCase.expectedWarnings)
 			return { assertOn: 'target' }
 		}
 

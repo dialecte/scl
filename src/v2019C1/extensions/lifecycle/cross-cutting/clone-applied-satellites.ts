@@ -1,13 +1,12 @@
-import { resolveAppliedSatellites } from './applied-satellites'
+import { findHeldSatelliteIds, resolveAppliedSatelliteTargets } from './applied-satellites'
+import { collectDuplicateApplications } from './held-applications'
 
 import { toRef } from '@dialecte/core/helpers'
 
+import { TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
-import { leaveOutOfScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
-import {
-	cloneTree,
-	resolveStructureRef,
-} from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+import { collectOutOfScopeReferences } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import { cloneTree } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
@@ -20,15 +19,15 @@ import type {
 	SatellitePlacement,
 } from './clone-applied-satellites.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
  * Places the external CROSS-CUTTING satellites (e.g. `Variable`,
  * `BehaviorDescription`) that apply to any element in the primary subtree, or in what it composes (`composedRefs`) —
- * for a topology frame, those its levels hold too (`frame`) —,
- * but those the operation placed already (`alreadyCloned`) and what applies only to what it composes and does not place
- * (`notPlaced`). Tag-agnostic: whatever
+ * for a topology frame, those its levels hold too (`frame`) —, and what the roles of the applications placed refer to
+ * (`referenced`), but what applies only to what it composes and does not place (`notPlaced`). Tag-agnostic: whatever
  * `resolveAppliedSatellites` returns is placed by its own tag. Satellites living
  * inside the subtree are cloned by `deep`, not here (the resolver excludes them).
  *
@@ -44,34 +43,64 @@ export async function cloneAppliedSatellites(
 	tx: Core.Transaction<Config>,
 	params: CloneAppliedSatellitesParams,
 ): Promise<CloneAppliedSatellitesResult> {
-	const { sourceQuery, primaryRef, composedRefs, alreadyCloned, structure, leftOut } = params
+	const { sourceQuery, primaryRef, composedRefs, structure, leftOut } = params
 	const { bumpsCollisions, scope, notPlaced } = params
 
-	const satellites =
-		params.satelliteRefs ??
-		(await resolveAppliedSatellites(sourceQuery, {
+	const { index } = params
+	const resolved =
+		params.satellites ??
+		(await resolveAppliedSatelliteTargets(sourceQuery, {
 			primaryRef,
 			composedRefs,
 			leftOut: notPlaced ? new Set([...(leftOut ?? []), ...notPlaced]) : leftOut,
-			frame: params.frame !== undefined,
+			index,
+			scope,
 		}))
+	// what a role refers to is placed whole, its references left out as the roles' rule says; once, when it applies to
+	// what is placed too
+	const referenced = params.referenced?.satelliteRefs ?? []
+	const referencedLeaveOut = params.referenced?.leaveOut
+	const referencedIds = new Set(referenced.map(readRecordId))
+	// one its scoping leaves applying to nothing is not placed
+	const applied = resolved.filter(function isPlaced(satellite) {
+		const satelliteId = readRecordId(satellite.satelliteRef)
+		return !referencedIds.has(satelliteId) && !params.carried?.notPlaced.has(satelliteId)
+	})
+	// one the project holds by its uuid already is not placed again
+	const held = await findHeldSatelliteIds(tx, { satellites: applied })
+	// one applying where the project's copy of it applies already does not apply there twice
+	const duplicates = params.held
+		? collectDuplicateApplications({ satellites: applied, index, held: params.held })
+		: undefined
+	const satellites = [
+		...referenced,
+		...applied
+			.filter(function isNotHeld(satellite) {
+				return !held.has(readRecordId(satellite.satelliteRef))
+			})
+			.map(function satelliteOf(satellite) {
+				return satellite.satelliteRef
+			}),
+	]
 
 	// one an element of the frame holds goes where that element landed, as the file holds it — first: in a file the
 	// operation makes it keeps its name —; another at its structural level, numbered beside a sibling of its name
 	const landings = params.frame ? indexFrameLandings(params.frame) : undefined
 	const placements: SatellitePlacement[] = []
 	for (const satelliteRef of satellites) {
-		// one the application refers to is placed with it already
-		if (alreadyCloned?.has(satelliteRef.id ?? '')) continue
-		const holder = await readHolder(sourceQuery, { satelliteRef })
+		// one read: the element holding it (the parent of its Private) and its structural level
+		const ancestors = await sourceQuery.findAncestors(satelliteRef, { stopAtTagName: 'Substation' })
+		const holder = ancestors.find(function isHolder(ancestor) {
+			return ancestor.tagName !== 'Private'
+		})
 		const holderLanding = landings && holder ? findHolderLanding({ holder, landings }) : undefined
-		const targetParent =
-			holderLanding ?? (await resolveStructureRef(sourceQuery, satelliteRef, structure))
+		const targetParent = holderLanding ?? readStructureLevel({ ancestors, structure })
 		placements.push({
 			satelliteRef,
 			holderTag: holder?.tagName,
 			targetParent,
 			landed: Boolean(holderLanding),
+			leaveOut: referencedIds.has(readRecordId(satelliteRef)) ? referencedLeaveOut : undefined,
 		})
 	}
 	placements.sort(function landedFirst(first, second) {
@@ -81,13 +110,25 @@ export async function cloneAppliedSatellites(
 	const cloneMappings: Scl.CloneMapping[] = []
 	const moved: MovedSatellite[] = []
 	const renamed: RenamedSatellite[] = []
-	for (const { satelliteRef, holderTag, targetParent, landed } of placements) {
-		const leaveOut = await leaveOutOfScope(sourceQuery, { root: satelliteRef, scope, leftOut })
+	for (const placement of placements) {
+		const { satelliteRef, holderTag, targetParent, landed } = placement
 		const clone = await cloneTree(tx, {
 			sourceQuery,
 			ref: satelliteRef,
 			targetParent,
-			leaveOut,
+			// what its references name outside the scope, read from the tree the clone reads, and those making an
+			// application the project's copy makes already
+			leaveOutOf: function outOfScope(tree) {
+				return (
+					placement.leaveOut ??
+					new Set([
+						...(leftOut ?? []),
+						...(params.carried?.leaveOut ?? []),
+						...(duplicates ?? []),
+						...collectOutOfScopeReferences({ tree, scope }),
+					])
+				)
+			},
 		})
 		if (!clone) continue
 		cloneMappings.push(...clone.mappings)
@@ -97,10 +138,9 @@ export async function cloneAppliedSatellites(
 			moved.push({ element, from: holderTag ?? '', to: targetParent.tagName })
 		}
 		if (!bumpsCollisions) continue
-		const name = (await tx.getAttribute(element, { name: 'name' })) ?? ''
-		await placeUniquely(tx, { ref: element, parentRef: targetParent })
-		const placedAs = (await tx.getAttribute(element, { name: 'name' })) ?? ''
-		if (placedAs !== name) renamed.push({ element, name, as: placedAs })
+		// a satellite is told apart from its siblings by its name: the field numbered
+		const placed = await placeUniquely(tx, { ref: element, parentRef: targetParent })
+		if (placed.status === 'resolved') renamed.push({ element, name: placed.from, as: placed.to })
 	}
 	return { cloneMappings, moved, renamed }
 }
@@ -116,17 +156,23 @@ function indexFrameLandings(frame: FramePlacement): FrameLandings {
 	return { byId, byUuid }
 }
 
-/** The element holding a satellite: the parent of its `Private`, walked up record by record. */
-async function readHolder(
-	sourceQuery: Core.Query<Config>,
-	params: { satelliteRef: Scl.Ref<Scl.ElementsOf> },
-): Promise<AnyTrackedRecord | undefined> {
-	const satellite = await sourceQuery.any.getRecord(params.satelliteRef)
-	let holder = satellite?.parent ? await sourceQuery.any.getRecord(satellite.parent) : undefined
-	while (holder?.tagName === 'Private') {
-		holder = holder.parent ? await sourceQuery.any.getRecord(holder.parent) : undefined
-	}
-	return holder
+/**
+ * The level of the target structure a satellite's nearest structural ancestor maps onto, as `resolveStructureRef`; one
+ * held outside the substations (a line, a process) goes to the outermost level of the structure.
+ */
+function readStructureLevel(params: {
+	ancestors: readonly AnyTrackedRecord[]
+	structure: TargetStructure
+}): Scl.Ref<Scl.ElementsOf> {
+	const { ancestors, structure } = params
+	const level = ancestors.find(function isMapped(ancestor) {
+		return ancestor.tagName in structure
+	})
+	const outermost = TOPOLOGY_STRUCTURAL_TAGS.map(function levelOf(tagName) {
+		return structure[tagName]
+	}).find(Boolean)
+	const target = level ? structure[level.tagName as keyof TargetStructure] : outermost
+	return toRef(target as AnyTrackedRecord) as Scl.Ref<Scl.ElementsOf>
 }
 
 /** Where the element holding a satellite landed, when the frame placed it. */
@@ -139,13 +185,7 @@ function findHolderLanding(params: {
 	return landings.byId.get(holder.id) ?? (uuid ? landings.byUuid.get(uuid) : undefined)
 }
 
-/** The source records clone mappings copy (record ids): what an operation placed already. */
-export function collectClonedIds(params: {
-	cloneMappings: readonly Scl.CloneMapping[]
-}): Set<string> {
-	const cloned = new Set<string>()
-	for (const mapping of params.cloneMappings) {
-		if (mapping.source.id) cloned.add(mapping.source.id)
-	}
-	return cloned
+/** The record id of a stored element's ref. */
+function readRecordId(ref: Scl.Ref<Scl.ElementsOf>): string {
+	return ref.id ?? ''
 }

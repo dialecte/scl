@@ -1,3 +1,6 @@
+import type { AppliedSatellite, SatelliteIndex } from './applied-satellites.types'
+import type { CarriedScoping } from './carried-satellites.types'
+import type { HeldApplications } from './held-applications.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -9,8 +12,6 @@ export type CloneAppliedSatellitesParams = {
 	primaryRef: Scl.Ref<Scl.ElementsOf>
 	/** What travels with the primary (the functions an application composes): what applies to them is placed too. */
 	composedRefs?: readonly Scl.Ref<Scl.ElementsOf>[]
-	/** The source records the operation placed already (a satellite the application refers to, cloned with it). */
-	alreadyCloned?: ReadonlySet<string>
 	/**
 	 * What it composes and does not place (record ids: a function stood on, another application placed it): nothing
 	 * applying to it alone is placed, nor what it holds.
@@ -22,12 +23,27 @@ export type CloneAppliedSatellitesParams = {
 	/** A satellite placed beside a sibling of its name is numbered: the scenario tells placed elements apart. */
 	bumpsCollisions: boolean
 	/** The satellites, resolved already by the caller: nothing is resolved again. */
-	satelliteRefs?: readonly Scl.Ref<Scl.ElementsOf>[]
+	satellites?: readonly AppliedSatellite[]
+	/**
+	 * What the caller scoped of them (see `scopeCarriedSatellites`): the references left out, and the variables left
+	 * applying to nothing, not placed.
+	 */
+	carried?: CarriedScoping
+	/** What the roles of the applications placed refer to: placed with the rest, each whole. */
+	referenced?: ReferencedSatellites
+	/** The satellites of the template, read once by the operation: see `readSatelliteIndex`. */
+	index: SatelliteIndex
+	/**
+	 * What the project held, before the placement wrote anything, applying to what it lands on (see
+	 * `readHeldApplications`): a satellite applying where the project's copy of it applies already does not apply there
+	 * twice.
+	 */
+	held?: HeldApplications
 	/** What a satellite's references may name: what the placement places. */
 	scope: ContributionScope
 	/**
-	 * The primary is a topology frame: what its levels hold is placed too (see `resolveAppliedSatellites`), each in the
-	 * element the one holding it landed on.
+	 * The primary is a topology frame: what its levels hold is placed too — resolved by the caller (`satellites`, see
+	 * `resolveAppliedSatellites`) —, each in the element the one holding it landed on.
 	 */
 	frame?: FramePlacement
 }
@@ -65,4 +81,15 @@ export type SatellitePlacement = {
 	holderTag: string | undefined
 	targetParent: Scl.Ref<Scl.ElementsOf>
 	landed: boolean
+	/** The references it is written without, when the caller read them already (one a role refers to). */
+	leaveOut: ReadonlySet<string> | undefined
+}
+
+/**
+ * What the roles of an application refer to (a variable, a behaviour description), each placed whole: the satellites,
+ * and the references below them that name what the placement neither places nor lands on (record ids), left out.
+ */
+export type ReferencedSatellites = {
+	satelliteRefs: readonly Scl.Ref<Scl.ElementsOf>[]
+	leaveOut: ReadonlySet<string>
 }

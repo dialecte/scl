@@ -1,5 +1,15 @@
 export { resolveApplicationScope } from './application-scope'
 export { cloneApplicationContent } from './clone-application'
+export {
+	resolveReferencedSatellites,
+	resolveRoleSatellites,
+	withoutHeldSatellites,
+} from './referenced-satellites'
+export type {
+	ReferencedSatellite,
+	RoleSatellites,
+	StoodOnFunction,
+} from './referenced-satellites.types'
 export { resolveApplicationSatellites } from './satellites'
 export { resolveComposedFunctions } from './resolve-composed-functions'
 export { resolveSharedFunctions } from './resolve-shared-functions'

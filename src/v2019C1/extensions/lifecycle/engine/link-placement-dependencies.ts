@@ -4,6 +4,7 @@ import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 
 import type { DecisionGroup, DiffNode, ReportInstance } from './diff.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { SatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -11,7 +12,8 @@ import type * as Core from '@dialecte/core'
  *  - a group placing an element inside an element another group adds depends on it — a level
  *    takes what it holds with it;
  *  - a group adding a reference to an element another group places depends on that group — a
- *    reference goes with what it points at.
+ *    reference goes with what it points at: its primary, or a variable or a behaviour description it lists (a role
+ *    referring to one a function's group lists depends on that function's group).
  *
  * Leaving out the level, or what is referred to, while keeping what depends on it is then refused
  * (`assertDecisionsCoherent`): nothing lands in a level that is not written, no reference points at
@@ -20,10 +22,17 @@ import type * as Core from '@dialecte/core'
  */
 export async function linkPlacementDependencies(
 	sourceQuery: Core.Query<Config>,
-	params: { instances: readonly ReportInstance[] },
+	params: {
+		instances: readonly ReportInstance[]
+		/** The satellites of the template, read once by the report: see `readSatelliteIndex`. */
+		index: SatelliteIndex
+	},
 ): Promise<void> {
 	const groups = params.instances.flatMap((instance) => instance.groups)
-	const { holders, placers } = await indexAddedElements(sourceQuery, groups)
+	const { holders, placers } = await indexAddedElements(sourceQuery, {
+		groups,
+		index: params.index,
+	})
 
 	for (const group of groups) {
 		const holder = await findHolder(sourceQuery, { group, holders })
@@ -41,16 +50,20 @@ export async function linkPlacementDependencies(
  */
 async function indexAddedElements(
 	sourceQuery: Core.Query<Config>,
-	groups: readonly DecisionGroup[],
+	params: { groups: readonly DecisionGroup[]; index: SatelliteIndex },
 ): Promise<{
 	holders: Map<string, DecisionGroup>
 	placers: Map<string, DecisionGroup>
 }> {
 	const holders = new Map<string, DecisionGroup>()
 	const placers = new Map<string, DecisionGroup>()
+	// a group listing a satellite of the template places it
+	const { groups, index } = params
 	for (const group of groups) {
 		for (const node of addedNodes(group)) {
 			if (node.sourceRef?.id) holders.set(node.sourceRef.id, group)
+			const satellite = index.get(node.sourceRef?.id ?? '')
+			if (satellite && !placers.has(satellite.uuid)) placers.set(satellite.uuid, group)
 		}
 		const { primary } = group
 		if (primary.change !== 'added' || !primary.sourceRef) continue

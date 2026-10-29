@@ -2,4 +2,10 @@
 export const BAY_PATH_TAGS: ReadonlySet<string> = new Set(['Bay', 'Function'])
 
 /** The tags of what a variable or a behaviour description of a test applies to. */
-export const DESCRIBED_TARGET_TAGS = ['Bay', 'ConductingEquipment', 'Function', 'LNode'] as const
+export const DESCRIBED_TARGET_TAGS = [
+	'Bay',
+	'ConductingEquipment',
+	'EqFunction',
+	'Function',
+	'LNode',
+] as const

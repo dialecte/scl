@@ -9,7 +9,7 @@ import {
 import type { StripConfig, RetagRootConfig } from './clone-tree.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
-import type { OmitEntry } from '@dialecte/core'
+import type { AnyTreeRecord, OmitEntry } from '@dialecte/core'
 
 /**
  * Clone pipeline: getTree -> template-only elements as what they are instantiated as -> optional
@@ -34,11 +34,13 @@ export async function cloneTree(
 		strip?: StripConfig | false
 		/** Source records not cloned, with what they hold (record ids). */
 		leaveOut?: ReadonlySet<string>
+		/** `leaveOut` read from the source tree the clone reads, in place of `leaveOut`: one read. */
+		leaveOutOf?: (tree: AnyTreeRecord) => ReadonlySet<string>
 		/** Written as a template with no parent level: a function as a function template. */
 		asTemplate?: boolean
 	},
 ): Promise<Core.CloneResult<Config, Exclude<Scl.ElementsOf, 'SCL'>> | undefined> {
-	const { sourceQuery, ref, targetParent, omit, retagRoot, strip, leaveOut, asTemplate } = params
+	const { sourceQuery, ref, targetParent, omit, retagRoot, strip, asTemplate } = params
 
 	// A clone must be a faithful copy: keep transparent `Private` wrappers in the tree
 	// (`unwrap: []` disables the default transparent-element unwrap) so vendor privates —
@@ -46,6 +48,7 @@ export async function cloneTree(
 	// reach `deepClone` instead of being flattened away.
 	const read = await sourceQuery.getTree(ref, { omit, unwrap: [] })
 	if (!read) return undefined
+	const leaveOut = params.leaveOutOf ? params.leaveOutOf(read) : params.leaveOut
 	const tree = leaveOut && leaveOut.size > 0 ? withoutLeftOut({ tree: read, leaveOut }) : read
 
 	// a subtree holding template-only elements (a function template) is cloned as what it is

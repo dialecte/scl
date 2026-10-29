@@ -2,6 +2,7 @@ import { nameCreatedSharedElements } from './name-created-shared-elements'
 import { resolveTargetStructure } from './resolve-target-structure'
 
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
+import { readSatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance'
@@ -9,7 +10,11 @@ import {
 	cloneApplicationContent,
 	resolveApplicationScope,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
-import { landPrimaries } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import {
+	landOnStructure,
+	landPrimaries,
+	withLandedLevels,
+} from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import {
 	findMissingReferencedRecords,
@@ -87,8 +92,16 @@ export async function placeApplication(
 			})
 		: undefined
 	const structure = landing?.structure ?? (await resolveTargetStructure(tx, targetParent))
+	// the levels of the template above the application land on the levels of the structure: a reference to one names it
+	const landed = await landOnStructure(sourceQuery, { primaryRef: applicationRef, structure })
+	// what the references of what travels with it may name: the application and the functions it composes, as placed,
+	// and the levels it lands on
+	const applicationScope = await resolveApplicationScope(sourceQuery, { applicationRef, leftOut })
+	const scope = withLandedLevels({ scope: applicationScope, levels: landed.levels })
 
-	const { cloneMappings: contentMappings, redirectMappings } = await cloneApplicationContent(tx, {
+	// the satellites of the template, read once for what the roles refer to and what applies to the application
+	const index = await readSatelliteIndex(sourceQuery)
+	const content = await cloneApplicationContent(tx, {
 		sourceQuery,
 		applicationRef,
 		structure,
@@ -97,28 +110,33 @@ export async function placeApplication(
 		leftOut,
 		matchKey: policy.matchKey,
 		sharedFunctions: params.sharedFunctions,
+		scope,
+		index,
+		landings: landed.redirects,
 	})
+	const { cloneMappings: contentMappings, redirectMappings } = content
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) applying to
 	// any element in the Application subtree or in a function it places travel with it, one of each per instance
-	// what their references may name: the application and the functions it composes, as placed
-	const scope = await resolveApplicationScope(sourceQuery, { applicationRef, leftOut })
 	// what the operation placed: a function it does not place (left out, or stood on — another application placed it)
 	// keeps the satellites it has, and what it holds applies to nothing placed here
-	const alreadyCloned = new Set(contentMappings.flatMap((mapping) => mapping.source.id ?? []))
+	const placedIds = new Set(contentMappings.flatMap((mapping) => mapping.source.id ?? []))
 	const notPlaced = composedFunctionRefs
-		.filter((ref) => !alreadyCloned.has(ref.id))
+		.filter((ref) => !placedIds.has(ref.id))
 		.map((ref) => ref.id)
 	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: applicationRef,
 		composedRefs: composedFunctionRefs,
-		alreadyCloned,
 		structure,
 		leftOut,
 		notPlaced: new Set(notPlaced),
 		bumpsCollisions: policy.bumpsCollisions,
 		scope,
+		// what its roles refer to, each whole
+		referenced: content.referenced,
+		index,
+		held: content.held,
 	})
 
 	const allMappings = [
@@ -131,7 +149,11 @@ export async function placeApplication(
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
 		mode: policy.placementIdentity,
-		redirectMappings: [...(landing?.redirectMappings ?? []), ...redirectMappings],
+		redirectMappings: [
+			...(landing?.redirectMappings ?? []),
+			...landed.redirects,
+			...redirectMappings,
+		],
 	})
 
 	// resolve a name collision for each placed composed Function at its own structural

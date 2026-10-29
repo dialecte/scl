@@ -72,7 +72,11 @@ export async function reportFunction(
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
-		notSelected: params.selection?.leftOut,
+		// on a first placement, what the function carries is scoped as its clone is
+		notSelected: readNotSelected({
+			leftOut: params.selection?.leftOut,
+			carried: params.placementListing?.carried.leaveOut,
+		}),
 	})
 	// On FIRST-TIME (no instance) the satellites are still created via the clone path,
 	// so they must be folded as `added` companions too — otherwise the merge-review
@@ -128,4 +132,14 @@ export async function reportFunction(
 		selection: params.selection,
 	})
 	return withLayerSatellites
+}
+
+/** What a function's report leaves out: what the selection leaves out, and what its scoping leaves out of its clone. */
+function readNotSelected(params: {
+	leftOut: ReadonlySet<string> | undefined
+	carried: ReadonlySet<string> | undefined
+}): ReadonlySet<string> | undefined {
+	const { leftOut, carried } = params
+	if (!carried) return leftOut
+	return new Set([...(leftOut ?? []), ...carried])
 }

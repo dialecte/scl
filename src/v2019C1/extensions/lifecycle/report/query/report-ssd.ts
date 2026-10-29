@@ -1,11 +1,13 @@
 import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
+import { createPlacementListing } from './placement-listing'
 import { reportAsd } from './report-asd'
 import { reportFsd } from './report-fsd'
 import { reportTopologyFrame } from './report-topology-frame'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import { readSatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
+import { readHeldApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications'
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { addDroppedGroups, placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { linkPlacementDependencies } from '@/v2019C1/extensions/lifecycle/engine/link-placement-dependencies'
@@ -20,11 +22,16 @@ import {
 	resolveSsdScope,
 	resolvePlacementMappings,
 	resolvePrimaryParents,
+	resolveFrameLandings,
+	resolveLandedLevels,
 	resolveTopologyReconcilables,
+	resolveUnitPlacement,
+	withLandedLevels,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { SatelliteFoldTarget } from './cross-cutting-satellites.types'
+import type { PlacementListing } from './placement-listing.types'
 import type { FoldFrameSatellitesParams } from './report-ssd.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
@@ -41,7 +48,9 @@ import type {
 	PrimaryPlace,
 	ResolvePrimaryParentsParams,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import type { PlacementLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -179,15 +188,19 @@ export async function reportSsd(
 	// a first placement places what applies to the unit, what its levels hold, and a function its applications share,
 	// once
 	const placementListing = firstPlacement
-		? {
-				scope: await resolveContributionScope(sourceQuery, {
-					roots: [root],
-					leftOut: scope.leftOut,
-				}),
-				satellites: new Set<string>(),
-				functions: new Set<string>(),
-			}
+		? await listUnitPlacement(query, {
+				sourceQuery,
+				matchKey,
+				scopeRef: root,
+				applicationRefs: applications,
+				standaloneFunctions,
+				leftOut: scope.leftOut,
+				placementLevels,
+			})
 		: undefined
+
+	// the satellites of the template, read once for every primary and every placement
+	const index = placementListing?.index ?? (await readSatelliteIndex(sourceQuery))
 
 	// on an update, a primary the template gained is placed in each instance of the unit: listed once
 	// per instance (for the level the instance sits on), each decided on its own — as the apply
@@ -217,6 +230,7 @@ export async function reportSsd(
 				removalBase,
 				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 				placeholderLineages: params.placeholderLineages,
+				index,
 			})
 			primaryInstances.push(...placedInstances({ instances: report.instances, placedFor }))
 		}
@@ -268,7 +282,7 @@ export async function reportSsd(
 
 	// what lands in a level the placement adds goes with it, a reference with what it points at
 	for (const scope of listPlacementScopes({ firstPlacement, frameInstances, primaryInstances })) {
-		await linkPlacementDependencies(sourceQuery, { instances: scope })
+		await linkPlacementDependencies(sourceQuery, { instances: scope, index })
 	}
 
 	const report = assembleReport({
@@ -280,6 +294,57 @@ export async function reportSsd(
 	// the unit named came with the units linked to it: the report says which it acts on
 	if (scope.units.length > 1) report.scopeUnits = scope.units
 	return report
+}
+
+/**
+ * The listing of a first placement of the unit: what it places — its applications, the functions they compose
+ * wherever they sit, its standalone functions —, what the references of what travels with it may name, what it leaves
+ * out.
+ */
+async function listUnitPlacement(
+	query: Core.Query<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		matchKey: MatchKey
+		scopeRef: Scl.Ref<TopologyStructuralTag>
+		applicationRefs: readonly Scl.Ref<'Application'>[]
+		standaloneFunctions: readonly Scl.Ref<'Function'>[]
+		leftOut: ReadonlySet<string>
+		/** Where each level of the template lands: a reference to a level above the unit names where it landed. */
+		placementLevels: readonly PlacementLevel[]
+	},
+): Promise<PlacementListing> {
+	const { sourceQuery, scopeRef, applicationRefs, standaloneFunctions, leftOut } = params
+	const unit = await resolveUnitPlacement(sourceQuery, { scopeRef, applicationRefs, leftOut })
+	const landingIds = new Set(
+		params.placementLevels.map(function sourceIdOf(level) {
+			return level.sourceRef.id
+		}),
+	)
+	const landedLevels = await resolveLandedLevels(sourceQuery, {
+		primaryRef: scopeRef,
+		landsOn: function landsSomewhere(level) {
+			return landingIds.has(level.id)
+		},
+	})
+	// what the project holds applying to what the placement lands on, as the apply reads it
+	const landings = await resolveFrameLandings(query, {
+		sourceQuery,
+		placementLevels: params.placementLevels,
+		matchKey: params.matchKey,
+	})
+	const held = await readHeldApplications({
+		landings,
+		projectQuery: query,
+		matchKey: params.matchKey,
+	})
+	return createPlacementListing(sourceQuery, {
+		scope: withLandedLevels({ scope: unit.scope, levels: landedLevels }),
+		held,
+		primaryRefs: [...applicationRefs, ...standaloneFunctions, ...unit.composedRefs],
+		leftOut,
+		frame: { primaryRef: scopeRef, composedRefs: unit.composedRefs },
+	})
 }
 
 /**

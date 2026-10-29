@@ -24,7 +24,10 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	scope?: SsdExtractScope
 	templateLink?: TemplateLink
-	/** The warnings of the extract about the satellites it moved or numbered, `<code> <before> > <after>`. */
+	/**
+	 * The warnings of the extract about the satellites it moved or numbered, `<code> <before> > <after>`, or did not place,
+	 * `<code> <source id>`.
+	 */
 	satelliteWarnings?: string[]
 }
 
@@ -325,6 +328,95 @@ const twoLevelsXml = /* xml */ `
 	</SCL>
 `
 
+// The same, the role referring instead to a variable of the bay's name the other bay holds, applying to the bay's function.
+const roleNamesakeXml = roleReferenceXml
+	.replace(
+		`<Bay name="B2" uuid="bay-2-uuid" ${id}="bay-2"/>`,
+		[
+			`<Bay name="B2" uuid="bay-2-uuid" ${id}="bay-2">`,
+			`<Private type="eIEC61850-6-100" ${id}="bay-2-priv">`,
+			`<eIEC61850-6-100:Variable name="PICKUP" value="9" uuid="pickup-2-uuid" ${id}="pickup-2">`,
+			`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B1/Prot" elementUuid="fn-src-uuid" ${id}="pickup-2-apply-to"/>`,
+			`</eIEC61850-6-100:Variable>`,
+			`</Private>`,
+			`</Bay>`,
+		].join(''),
+	)
+	.replace(
+		`<eIEC61850-6-100:BehaviorDescriptionRef behaviorDescription="S1/V1/B1/BD1" behaviorDescriptionUuid="bd-uuid" ${id}="bd-ref"/>`,
+		`<eIEC61850-6-100:VariableRef variable="S1/V1/B2/PICKUP" variableUuid="pickup-2-uuid" ${id}="pickup-2-ref"/>`,
+	)
+
+// The same, the role referring instead to two variables of the other bay applying to the voltage level — one to that bay
+// too: nothing that applies to the bay reaches them.
+const roleLevelXml = roleReferenceXml
+	.replace(
+		`<VoltageLevel name="V1" ${id}="vl-1">`,
+		`<VoltageLevel name="V1" uuid="vl-1-uuid" ${id}="vl-1">`,
+	)
+	.replace(
+		`<Bay name="B2" uuid="bay-2-uuid" ${id}="bay-2"/>`,
+		[
+			`<Bay name="B2" uuid="bay-2-uuid" ${id}="bay-2">`,
+			`<Private type="eIEC61850-6-100" ${id}="bay-2-priv">`,
+			`<eIEC61850-6-100:Variable name="VVL" value="9" uuid="vvl-uuid" templateUuid="vvl-tmpl-uuid" ${id}="vvl">`,
+			`<eIEC61850-6-100:VariableApplyTo element="S1/V1" elementUuid="vl-1-uuid" ${id}="vvl-apply-to"/>`,
+			`</eIEC61850-6-100:Variable>`,
+			`<eIEC61850-6-100:Variable name="VVL2" value="8" uuid="vvl-2-uuid" templateUuid="vvl-2-tmpl-uuid" ${id}="vvl-2">`,
+			`<eIEC61850-6-100:VariableApplyTo element="S1/V1" elementUuid="vl-1-uuid" ${id}="vvl-2-apply-to-vl"/>`,
+			`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B2" elementUuid="bay-2-uuid" ${id}="vvl-2-apply-to-bay"/>`,
+			`</eIEC61850-6-100:Variable>`,
+			`</Private>`,
+			`</Bay>`,
+		].join(''),
+	)
+	.replace(
+		`<eIEC61850-6-100:BehaviorDescriptionRef behaviorDescription="S1/V1/B1/BD1" behaviorDescriptionUuid="bd-uuid" ${id}="bd-ref"/>`,
+		[
+			`<eIEC61850-6-100:VariableRef variable="S1/V1/B2/VVL" variableUuid="vvl-uuid" ${id}="vvl-ref"/>`,
+			`<eIEC61850-6-100:VariableRef variable="S1/V1/B2/VVL2" variableUuid="vvl-2-uuid" ${id}="vvl-2-ref"/>`,
+		].join(''),
+	)
+const VVL = '//default:Bay[@name="B1"]/default:Private/v2019C1:Variable[@name="VVL"]'
+const VVL2 = '//default:Bay[@name="B1"]/default:Private/v2019C1:Variable[@name="VVL2"]'
+
+// The same, two applications of the bay whose roles refer to a variable of the bay applying to a function of the other
+// bay only, the second's to another such variable too.
+const roleAwayXml = roleReferenceXml
+	.replace(
+		`<Bay name="B2" uuid="bay-2-uuid" ${id}="bay-2"/>`,
+		`<Bay name="B2" uuid="bay-2-uuid" ${id}="bay-2"><Function name="F2X" uuid="f2x-uuid" ${id}="f2x"/></Bay>`,
+	)
+	.replace(
+		`<eIEC61850-6-100:BehaviorDescriptionRef behaviorDescription="S1/V1/B1/BD1" behaviorDescriptionUuid="bd-uuid" ${id}="bd-ref"/>`,
+		`<eIEC61850-6-100:VariableRef variable="S1/V1/B1/VAWAY" variableUuid="vaway-uuid" ${id}="vaway-ref"/>`,
+	)
+	.replace(
+		`</eIEC61850-6-100:Application>`,
+		[
+			`</eIEC61850-6-100:Application>`,
+			`<eIEC61850-6-100:Application name="P_App2" uuid="app-2-uuid" ${id}="app-2">`,
+			`<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="root-role-2">`,
+			`<eIEC61850-6-100:FunctionRoleContent ${id}="root-content-2">`,
+			`<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot" functionUuid="fn-src-uuid" ${id}="app-2-fref"/>`,
+			`</eIEC61850-6-100:FunctionRoleContent>`,
+			`</eIEC61850-6-100:FunctionRole>`,
+			`<eIEC61850-6-100:FunctionRole name="ENGINEERING ELEMENTS" ${id}="engineering-role-2">`,
+			`<eIEC61850-6-100:FunctionRoleContent ${id}="engineering-content-2">`,
+			`<eIEC61850-6-100:VariableRef variable="S1/V1/B1/VAWAY" variableUuid="vaway-uuid" ${id}="vaway-ref-2"/>`,
+			`<eIEC61850-6-100:VariableRef variable="S1/V1/B1/VAWAY2" variableUuid="vaway-2-uuid" ${id}="vaway-2-ref"/>`,
+			`</eIEC61850-6-100:FunctionRoleContent>`,
+			`</eIEC61850-6-100:FunctionRole>`,
+			`</eIEC61850-6-100:Application>`,
+			`<eIEC61850-6-100:Variable name="VAWAY" value="5" uuid="vaway-uuid" ${id}="vaway">`,
+			`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B2/F2X" elementUuid="f2x-uuid" ${id}="vaway-apply-to"/>`,
+			`</eIEC61850-6-100:Variable>`,
+			`<eIEC61850-6-100:Variable name="VAWAY2" value="6" uuid="vaway-2-uuid" ${id}="vaway-2">`,
+			`<eIEC61850-6-100:VariableApplyTo element="S1/V1/B2/F2X" elementUuid="f2x-uuid" ${id}="vaway-2-apply-to"/>`,
+			`</eIEC61850-6-100:Variable>`,
+		].join(''),
+	)
+
 const PICKUP = '//default:Bay[@name="B1"]/default:Private/v2019C1:Variable[@name="PICKUP"]'
 const BD1 = '//default:Bay[@name="B1"]/default:Private/v2019C1:BehaviorDescription[@name="BD1"]'
 const VSUB = '//default:Substation/default:Private/v2019C1:Variable[@name="VSUB"]'
@@ -353,6 +445,48 @@ describe('extract.ssd - what the levels hold', () => {
 					'//default:Bay[@name="B1"][count(.//v2019C1:BehaviorDescription)=1]',
 					`//v2019C1:BehaviorDescriptionRef[@behaviorDescriptionUuid=${BD1}/@uuid]`,
 				],
+			},
+		"an application's role refers to a variable of the other bay, of the name of the bay's own → the bay's keeps its name, the other numbered beside it, both told":
+			{
+				sourceXml: roleNamesakeXml,
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				expectedQueries: [
+					'//default:Bay[@name="B1"]/default:Private[v2019C1:Variable[@name="PICKUP"][@value="3"]][v2019C1:Variable[@name="PICKUP_1"][@value="9"]]',
+					'//v2019C1:VariableRef[@variableUuid=//v2019C1:Variable[@name="PICKUP_1"]/@uuid]',
+				],
+				satelliteWarnings: ['satellite-moved Bay > Bay', 'satellite-renamed PICKUP > PICKUP_1'],
+			},
+		"an application's role refers to two variables of the other bay applying to the voltage level → in the bay, applying to the voltage level of the file only, their link kept":
+			{
+				sourceXml: roleLevelXml,
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				expectedQueries: [
+					`${VVL}[@templateUuid="vvl-tmpl-uuid"]/v2019C1:VariableApplyTo[@elementUuid=//default:VoltageLevel/@uuid]`,
+					`${VVL2}[@templateUuid="vvl-2-tmpl-uuid"][count(v2019C1:VariableApplyTo)=1]/v2019C1:VariableApplyTo[@elementUuid=//default:VoltageLevel/@uuid]`,
+				],
+				satelliteWarnings: ['satellite-moved Bay > Bay', 'satellite-moved Bay > Bay'],
+			},
+		'two applications whose roles refer to a variable applying to a function of another bay only, one to a second such → neither placed, nor referred to, each told once':
+			{
+				sourceXml: roleAwayXml,
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				expectedQueries: [
+					'//v2019C1:Application[@name="P_App2"]',
+					'//default:Bay[@name="B1"][not(.//v2019C1:VariableRef)]',
+				],
+				unexpectedQueries: [
+					'//v2019C1:Variable[@name="VAWAY"]',
+					'//v2019C1:Variable[@name="VAWAY2"]',
+				],
+				satelliteWarnings: ['satellite-not-placed vaway', 'satellite-not-placed vaway-2'],
+			},
+		"templateLink break: what an application's role refers to came with the bay's instance → it loses its link":
+			{
+				sourceXml: roleLevelXml,
+				targetXml: /* xml */ `<SCL ${ns} ${id}="scl-tgt"/>`,
+				templateLink: 'break',
+				expectedQueries: [`${VVL}[not(@templateUuid)]`, `${VVL2}[not(@templateUuid)]`],
+				satelliteWarnings: ['satellite-moved Bay > Bay', 'satellite-moved Bay > Bay'],
 			},
 		'two variables of one name applying to the bay from two voltage levels → both on the voltage level extracted, the one moved there numbered and told':
 			{
@@ -647,6 +781,8 @@ function describeSatelliteWarnings(params: { warnings: readonly ExtractWarning[]
 			described.push(`${warning.code} ${warning.from} > ${warning.to}`)
 		if (warning.code === 'satellite-renamed')
 			described.push(`${warning.code} ${warning.name} > ${warning.as}`)
+		if (warning.code === 'satellite-not-placed')
+			described.push(`${warning.code} ${warning.source.id}`)
 	}
 	return described.sort()
 }

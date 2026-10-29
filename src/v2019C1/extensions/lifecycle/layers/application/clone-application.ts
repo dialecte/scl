@@ -1,4 +1,4 @@
-import { resolveApplicationScope } from './application-scope'
+import { resolveRoleSatellites, withoutHeldSatellites } from './referenced-satellites'
 import { resolveSharedFunctions } from './resolve-shared-functions'
 import { resolveApplicationSatellites } from './satellites'
 
@@ -6,6 +6,9 @@ import { toRef } from '@dialecte/core/helpers'
 import { invariant } from '@dialecte/core/utils'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
+import { readSatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
+import { scopeCarriedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/carried-satellites'
+import { readHeldApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications'
 import { contribute } from '@/v2019C1/extensions/lifecycle/engine/contribute'
 import { leaveOutOfScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import {
@@ -34,12 +37,16 @@ import type {
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { SharedFunctions } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { SatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
+import type { CarriedScoping } from '@/v2019C1/extensions/lifecycle/cross-cutting/carried-satellites.types'
+import type { HeldApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications.types'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
+import type { AnyTreeRecord } from '@dialecte/core'
 import type { OmitEntry } from '@dialecte/core'
 
 /**
@@ -80,6 +87,28 @@ export async function cloneApplicationContent(
 		 * refers to that clone.
 		 */
 		alreadyPlaced?: ReadonlyMap<string, Scl.Ref<Scl.ElementsOf>>
+		/**
+		 * What the placement places and lands on — the application and the functions it composes, but those left out, or
+		 * the larger placement it is part of (a unit of a substation template) —: what the references of its roles, and of
+		 * what they refer to, may name.
+		 */
+		scope: ContributionScope
+		/**
+		 * What the larger placement places with another of its primaries after this application (record ids: what the
+		 * functions of a substation template's unit hold): what the roles refer to there is placed with that primary.
+		 */
+		placedLater?: ReadonlySet<string>
+		/** The satellites of the template, read already by the operation: see `readSatelliteIndex`. */
+		index?: SatelliteIndex
+		/** What the larger placement carries with other clones, scoped: see `scopeCarriedSatellites`. Default: its own. */
+		carried?: CarriedScoping
+		/** Where the levels of the template the placement lands on land in the project (by source uuid). */
+		landings?: readonly RedirectMapping[]
+		/**
+		 * What the project held, before the larger placement wrote anything, applying to what it lands on: see
+		 * `readHeldApplications`. Default: read from `landings` and the functions stood on.
+		 */
+		held?: HeldApplications
 	},
 ): Promise<CloneApplicationContentResult> {
 	const { sourceQuery, applicationRef, structure, omit, keepNameTypesFrom, leftOut } = params
@@ -117,6 +146,25 @@ export async function cloneApplicationContent(
 	const takenIds = new Set(shared.taken.map((taken) => taken.sourceId))
 	const missingFunctions = placedFunctions.filter((ref) => !takenIds.has(ref.id))
 	for (const { sourceId, target } of shared.taken) cloneIndex.set(sourceId, target)
+	// a reference to a function stood on names it
+	const takenRedirectMappings: RedirectMapping[] = shared.taken.map(({ sourceUuid, target }) => ({
+		sourceUuid,
+		target,
+	}))
+	// the satellites of the template, and what the project holds applying to what the placement lands on, read before
+	// anything is written
+	const index = params.index ?? (await readSatelliteIndex(sourceQuery))
+	const held =
+		params.held ??
+		(await readHeldApplications({
+			landings: [...(params.landings ?? []), ...takenRedirectMappings],
+			projectQuery: tx,
+			matchKey,
+		}))
+	// what the functions carry is scoped as what the roles refer to is: references to what is not placed left out
+	const carried =
+		params.carried ??
+		(await scopeOwnCarried(sourceQuery, { missingFunctions, scope: params.scope, index, held }))
 	for (const ref of missingFunctions) {
 		const targetParentRef = await resolveStructureRef(sourceQuery, ref, structure)
 		const cloneMappings = await cloneFunction(tx, {
@@ -125,6 +173,7 @@ export async function cloneApplicationContent(
 			targetParentRef,
 			omit,
 			keepNameTypesFrom,
+			leaveOut: carried.leaveOut,
 		})
 		allMappings.push(...cloneMappings)
 		for (const mapping of cloneMappings) {
@@ -150,18 +199,34 @@ export async function cloneApplicationContent(
 	}
 
 	// the application left out: its functions are placed without it, nothing it refers to is
-	// a reference to a function stood on names it
-	const takenRedirectMappings: RedirectMapping[] = shared.taken.map(({ sourceUuid, target }) => ({
-		sourceUuid,
-		target,
-	}))
 	const redirectMappings = [...categoryRedirectMappings, ...takenRedirectMappings]
-	if (leftOut?.has(applicationRef.id)) return { cloneMappings: allMappings, redirectMappings }
+	if (leftOut?.has(applicationRef.id)) {
+		return {
+			cloneMappings: allMappings,
+			redirectMappings,
+			referenced: { satelliteRefs: [], leaveOut: new Set() },
+			satellitesNotPlaced: [],
+			held,
+		}
+	}
 
-	// the references of the roles it refers to name what this placement places only: the application and the
-	// functions it composes, but those left out
-	const scope = await resolveApplicationScope(sourceQuery, { applicationRef, leftOut })
-	const leaveOut = await leaveOutOfApplicationScope(sourceQuery, { applicationRef, scope, leftOut })
+	// the references of the roles it refers to, and of what they refer to (a variable, a behaviour description), name
+	// what this placement places or lands on only
+	const { scope } = params
+	// what the roles refer to: placed whole by the caller, but what another clone of the placement places (a function it
+	// composes or places later) and the copies the functions stood on hold; a variable applying to nothing reached is not
+	// placed
+	const carriedIds = new Set([...cloneIndex.keys(), ...(params.placedLater ?? [])])
+	const roleSatellites = await resolveRoleSatellites(sourceQuery, {
+		applicationRef,
+		scope,
+		carriedIds,
+		stoodOn: { functions: takenRedirectMappings, projectQuery: tx, matchKey },
+		index,
+		carried,
+		held,
+	})
+	const leaveOut = await leaveOutOfRolesScope(sourceQuery, { applicationRef, scope, leftOut })
 
 	// 3. All other referenced targets - derived from UUID_REFERENCE_PAIRS and DESCENDANTS.
 	// Each is placed by mirroring its source hierarchy (under its owning function when it
@@ -192,28 +257,49 @@ export async function cloneApplicationContent(
 		scopeTagName: 'Application',
 		scopeRef: applicationRef,
 		resolveTargetParent: createAncestryResolver({ sourceQuery, structure, cloneIndex }),
-		alreadyCloned: new Set(cloneIndex.keys()),
+		alreadyCloned: new Set([
+			// a role mapped onto one of the project is not placed again
+			...cloneIndex.keys(),
+			...carriedIds,
+			...roleSatellites.copiedIds,
+			// what the roles refer to is placed by the caller, or not at all
+			...[...roleSatellites.placed, ...roleSatellites.unplaced].map(function idOf(satelliteRef) {
+				return satelliteRef.id ?? ''
+			}),
+		]),
 		skip: REFS_ALREADY_HANDLED,
 		omit,
 		leaveOut,
 	})
 	allMappings.push(...referencedMappings)
 
-	// 4. Clone Application tree
+	// what the roles refer to that the project holds by its uuid already is not placed again
+	const referencedRefs = await withoutHeldSatellites(tx, { roleSatellites })
+
+	// 4. Clone Application tree, but the references to what is not placed
 	const targetParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
 	const applicationClone = await cloneTree(tx, {
 		sourceQuery,
 		ref: applicationRef,
 		targetParent,
 		omit,
+		leaveOut: roleSatellites.unplacedReferenceIds,
 	})
 	if (applicationClone) allMappings.push(...applicationClone.mappings)
 
 	// References to a mapped role still carry the source uuid: the caller's remap repoints them
 	// through `redirectMappings` (the role itself was not cloned, so no clone mapping covers it).
 	redirectMappings.push(...roleReuse.flatMap((reuse) => reuse.redirectMappings))
+	// a role's reference to what a function stood on holds names the copy it holds
+	redirectMappings.push(...roleSatellites.copies)
 
-	return { cloneMappings: allMappings, redirectMappings }
+	return {
+		cloneMappings: allMappings,
+		redirectMappings,
+		referenced: { satelliteRefs: referencedRefs, leaveOut: roleSatellites.leaveOut },
+		satellitesNotPlaced: roleSatellites.unplaced,
+		held,
+	}
 }
 
 /**
@@ -296,10 +382,10 @@ async function mapAllocationRoles(
 }
 
 /**
- * The references below the elements the application refers to (its roles) that name what its placement does not
- * place, with what the consumer left out: what is cloned of them is cloned without these.
+ * The references below the roles the application refers to that name what its placement neither places nor lands on
+ * (`scope`, which leaves out what the consumer leaves out).
  */
-async function leaveOutOfApplicationScope(
+async function leaveOutOfRolesScope(
 	sourceQuery: Core.Query<Config>,
 	params: {
 		applicationRef: Scl.Ref<'Application'>
@@ -308,11 +394,11 @@ async function leaveOutOfApplicationScope(
 	},
 ): Promise<ReadonlySet<string>> {
 	const { applicationRef, scope, leftOut } = params
-	const satelliteRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef, leftOut })
-	const leaveOut = new Set(leftOut ?? [])
-	for (const satelliteRef of satelliteRefs) {
+	const leaveOut = new Set<string>()
+	const roleRefs = await resolveApplicationSatellites(sourceQuery, { applicationRef, leftOut })
+	for (const roleRef of roleRefs) {
 		const outOfScope = await leaveOutOfScope(sourceQuery, {
-			root: satelliteRef,
+			root: roleRef,
 			scope,
 			leftOut: undefined,
 		})
@@ -365,4 +451,27 @@ async function standOnSharedFunctions(
 		})
 	}
 	return { taken }
+}
+
+/** What the functions an application places on its own carry, scoped: one read per function. */
+async function scopeOwnCarried(
+	sourceQuery: Core.Query<Config>,
+	params: {
+		missingFunctions: readonly Scl.Ref<Scl.ElementsOf>[]
+		scope: ContributionScope
+		index: SatelliteIndex
+		held: HeldApplications
+	},
+): Promise<CarriedScoping> {
+	const trees: AnyTreeRecord[] = []
+	for (const ref of params.missingFunctions) {
+		const tree = await sourceQuery.any.getTree(ref)
+		if (tree) trees.push(tree)
+	}
+	return scopeCarriedSatellites({
+		trees,
+		scope: params.scope,
+		index: params.index,
+		held: params.held,
+	})
 }
