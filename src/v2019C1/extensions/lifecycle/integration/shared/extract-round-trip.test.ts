@@ -93,12 +93,6 @@ const projectXml = /* xml */ `
 	</SCL>
 `
 
-/** The same project, its bay holding no variable. */
-const noVariableXml = projectXml.replace(
-	/<eIEC61850-6-100:Variable [\s\S]*?<\/eIEC61850-6-100:Variable>/,
-	'',
-)
-
 /** A project of the same names, the bay empty: where the template is instantiated. */
 const emptyBayXml = /* xml */ `
 	<SCL ${ns} ${id}="other">
@@ -161,8 +155,9 @@ describe('extract, then instantiate: the element comes back, modulo its identity
 				{ tagName: 'Variable', name: 'PICKUP' },
 			],
 		},
+		// the bay's variable is the bay's: it comes back with it
 		'ssd: the bay': {
-			sourceXml: noVariableXml,
+			sourceXml: projectXml,
 			targetXml: emptyVoltageLevelXml,
 			extract: { verb: 'ssd' },
 			elements: [{ tagName: 'Bay', name: 'B1' }],
