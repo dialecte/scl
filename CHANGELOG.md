@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.11.0] - 2026-10-30
+
 ### Added
 
 - **`ReportWarning` `satellite-not-placed`, `ReportInstance.satellitesNotPlaced`**: on a first placement of an application, what its roles refer to that is not placed, nor the role's reference to it — a variable applying to nothing the placement places or lands on, or a variable or a behaviour description inside a function the application stands on that holds no copy of it —; the report lists it on the application's instance and warns. `ReportWarning` becomes a union of codes (see Changed). `ExtractWarning` `satellite-not-placed` (`source`): a variable an application's role refers to that applies to nothing the extracted file holds, placed neither, nor the reference to it.
