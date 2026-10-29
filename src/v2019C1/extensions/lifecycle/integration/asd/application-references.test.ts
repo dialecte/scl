@@ -1,4 +1,9 @@
-import { findByName, reportAndApply } from '../integration-helpers'
+import {
+	findByName,
+	listAttributeChanges,
+	listGroups,
+	reportAndApply,
+} from '../integration-helpers'
 
 import { describe, expect } from 'vitest'
 
@@ -310,13 +315,14 @@ describe('asd: what applies to a function the application composes travels with 
 
 describe('asd: what applies to a composed function, updated after its first placement', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'the newer revision updated → one variable and one behaviour description still, none placed again':
+		'the instance configures the variable, the newer revision changes its value and its description → one variable still, none placed again; the value kept as the instance configured it, listed so, the description written':
 			{
 				sourceXml: applyingToFunctionXml,
 				targetXml: projectXml,
 				expectedQueries: [
 					'//default:Bay[@name="B1"][count(default:Private/v2019C1:Variable)=1]',
 					'//default:Bay[@name="B1"][count(default:Private/v2019C1:BehaviorDescription)=1]',
+					'//v2019C1:Variable[@name="PICKUP"][@value="1.3"][@desc="revision 2"]',
 				],
 				extractedQueries: [],
 			},
@@ -334,13 +340,19 @@ describe('asd: what applies to a composed function, updated after its first plac
 			document: target,
 			lifecycle: { verb: 'asd', sourceQuery: source.query, ref, anchor, scenario: 'instantiate' },
 		})
+		// the instance configures its variable
+		const [placedVariable] = await target.query.getRecordsByTagName('Variable')
+		if (!placedVariable) throw new Error('the placement wrote the variable')
+		await target.transaction(async function configure(tx) {
+			await tx.update(placedVariable, { attributes: { value: '1.3' } })
+		})
 		const newer = await openSclDocument({
 			project,
-			xml: applyingToFunctionXml.replace('value="1.2"', 'value="1.5"'),
+			xml: applyingToFunctionXml.replace('value="1.2"', 'value="1.5" desc="revision 2"'),
 			label: 'next revision',
 		})
 		const newerRef = await findByName(newer.query, { tagName: 'Application', name: 'P51_App' })
-		await reportAndApply({
+		const { report } = await reportAndApply({
 			document: target,
 			lifecycle: {
 				verb: 'asd',
@@ -350,6 +362,15 @@ describe('asd: what applies to a composed function, updated after its first plac
 				scenario: 'template',
 			},
 		})
+		// the change it keeps is listed with the change it brings, in the group writing it
+		expect(
+			listKept({
+				nodes: allGroups(report).flatMap((group) => [group.primary, ...group.companions]),
+			}),
+			'report',
+		).toEqual(['Variable.value: 1.3 -> 1.5 (instance-configuration)'])
+		expect(listGroups(report), 'report').toEqual(['modified Variable'])
+		expect(listAttributeChanges(report), 'report').toEqual(['desc: - -> revision 2'])
 		return { assertOn: 'target' }
 	}
 
@@ -519,6 +540,20 @@ describe('asd: what a function placed from its own file holds keeps its link whe
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+/** The differences a report lists as kept: `<tag>.<name>: <before> -> <after> (<reason>)`, sorted. */
+function listKept(params: { nodes: readonly DiffNode[] }): string[] {
+	const kept: string[] = []
+	for (const node of params.nodes) {
+		for (const change of node.keptAttributeChanges ?? []) {
+			kept.push(
+				`${node.tagName}.${change.name}: ${change.before} -> ${change.after} (${change.reason})`,
+			)
+		}
+		kept.push(...listKept({ nodes: node.children }))
+	}
+	return kept.sort()
+}
 
 /** The variables and behaviour descriptions a report lists added, by tag, sorted. */
 function listedSatellites(params: { nodes: readonly DiffNode[] }): string[] {
