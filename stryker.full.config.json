@@ -2,7 +2,7 @@
 	"$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
 	"testRunner": "command",
 	"commandRunner": {
-		"command": "npx vitest run --project unit --bail=1 --maxWorkers=2"
+		"command": "npx vitest run --project browser-all --bail=1 --maxWorkers=2"
 	},
 	"coverageAnalysis": "off",
 	"mutate": [],

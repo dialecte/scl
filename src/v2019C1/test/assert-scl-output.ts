@@ -5,7 +5,6 @@ import {
 import {
 	SCHEMA_LINE_CODE,
 	SCHEMA_LINE_CODE_UNKNOWN,
-	SCL_CHILD_ORDER,
 	SCL_OUTPUT_CHECK,
 	SCL_XSD_CODE,
 	SCL_XSD_CODE_MESSAGES,
@@ -43,6 +42,7 @@ import type {
 	SclOutputViolation,
 	SclXsdCode,
 } from './assert-scl-output.types'
+import type { CollectSclXsdViolationsParams } from './scl-xsd.types'
 import type { AnyTreeRecord, ResolvedDefinition } from '@dialecte/core'
 
 /**
@@ -61,22 +61,20 @@ export async function collectSclOutputViolations(
 ): Promise<SclOutputReport> {
 	const { project, document, asTestDocument = false } = params
 
-	const { xmlDocument } = await project.export({
-		documentId: document.documentId,
-		indent: false,
-		xmlDocument: true,
-	})
-	if (asTestDocument) supplyMissingHeader(xmlDocument)
-	const xml = new XMLSerializer().serializeToString(xmlDocument)
+	const { file } = await project.export({ documentId: document.documentId, indent: false })
+	const xml = await file.text()
 	const tree = await document.query.getSnapshot({ as: 'tree' })
 	const identityWarnings = await checkTemplateUuids(document.query)
-	const xsd = await collectXsdViolations({ xml })
+	const xsd = await collectXsdViolations({
+		xml,
+		missingHeader: asTestDocument ? TEST_HEADER : undefined,
+	})
 
 	const violations: SclOutputViolation[] = [
 		...collectSchemaViolations({ xml }),
 		...(xsd ?? []),
 		...collectUniquenessViolations({ tree }),
-		...collectReferenceViolations({ xml }).map((violation) =>
+		...collectReferenceViolations({ tree }).map((violation) =>
 			describedBy({
 				check: SCL_OUTPUT_CHECK.references,
 				code: violation.kind,
@@ -232,11 +230,10 @@ function collectSchemaViolations(params: { xml: string }): SclOutputViolation[] 
 }
 
 /** The findings of the XSD validator, `undefined` when it did not run (no schema files). */
-async function collectXsdViolations(params: {
-	xml: string
-}): Promise<SclOutputViolation[] | undefined> {
-	const { xml } = params
-	const report = await collectSclXsdViolations({ xml })
+async function collectXsdViolations(
+	params: CollectSclXsdViolationsParams,
+): Promise<SclOutputViolation[] | undefined> {
+	const report = await collectSclXsdViolations(params)
 	if (!report.ran) return undefined
 	return report.violations.map(({ message }) => ({
 		check: SCL_OUTPUT_CHECK.xsd,
@@ -343,20 +340,6 @@ export function xsdCodeOf(message: string): SclXsdCode {
 function pathSegmentOf(node: AnyTreeRecord): string {
 	const name = readAttribute({ record: node, name: 'name', defaults: 'none' })
 	return name ? `${node.tagName}[${name}]` : node.tagName
-}
-
-/** Give the document the Header it lacks, where the schema places it among the root's children. */
-function supplyMissingHeader(xmlDocument: XMLDocument): void {
-	const root = xmlDocument.documentElement
-	const children = [...root.children]
-	if (children.some((child) => child.localName === 'Header')) return
-
-	const header = xmlDocument.createElementNS(root.namespaceURI, 'Header')
-	header.setAttribute('id', TEST_HEADER.id)
-	header.setAttribute('uuid', TEST_HEADER.uuid)
-	const headerPosition = SCL_CHILD_ORDER.indexOf('Header')
-	const next = children.find((child) => SCL_CHILD_ORDER.indexOf(child.localName) > headerPosition)
-	root.insertBefore(header, next ?? null)
 }
 
 /**

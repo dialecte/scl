@@ -2,14 +2,19 @@ import { listGroups, reportAndApply } from '../integration-helpers'
 
 import { describe, expect, it } from 'vitest'
 
+import { readAttribute } from '@/v2019C1/helpers'
 import {
 	ALL_XMLNS_NAMESPACES,
+	assertExpectedElementQueries,
+	assertUnexpectedElementQueries,
 	createSclTestProject,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 } from '@/v2019C1/test'
 import { readRevisionTwin, readRevisionTwinInstance } from '@/v2019C1/test/revision-twins'
+import { treeEntriesOf } from '@/v2019C1/test/tree-entries'
 
 import type { Scl } from '@/v2019C1/config'
+import type { AnyTreeRecord } from '@dialecte/core'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -226,34 +231,43 @@ async function updated(params: {
 		},
 	})
 	const xml = (await target.document.query.getSnapshot({ as: 'xml' })) as string
-	return { report, xml }
+	const tree = await target.document.query.getSnapshot({ as: 'tree' })
+	return { report, xml, tree }
 }
 
-/** The elements of a tag in a document, `<parent name>/<name or record id>`, sorted. */
-function elementsOf(params: { xml: string; localName: string }): string[] {
-	const document = new DOMParser().parseFromString(params.xml, 'application/xml')
-	return [...document.getElementsByTagName('*')]
-		.filter((element) => element.localName === params.localName)
-		.map((element) => {
-			const parent = element.parentElement
-			const label = (node: Element | null) =>
-				node?.getAttribute('name') ?? node?.getAttribute('function') ?? node?.localName ?? ''
-			return `${label(parent)}/${label(element)}`
-		})
+/** The elements of a tag in a document's record tree, `<parent name>/<name or tag>`, sorted. */
+function elementsOf(params: { tree: AnyTreeRecord; localName: string }): string[] {
+	return treeEntriesOf(params.tree)
+		.filter((entry) => entry.record.tagName === params.localName)
+		.map(
+			(entry) =>
+				`${labelOf({ record: entry.ancestors.at(-1) })}/${labelOf({ record: entry.record })}`,
+		)
 		.sort()
+}
+
+/** How an element is listed: its name, else the function it names, else its tag; nothing for no element. */
+function labelOf(params: { record: AnyTreeRecord | undefined }): string {
+	const { record } = params
+	if (!record) return ''
+	return (
+		readAttribute({ record, name: 'name', defaults: 'none', fullObject: true })?.value ??
+		readAttribute({ record, name: 'function', defaults: 'none', fullObject: true })?.value ??
+		record.tagName
+	)
 }
 
 describe('update: an instance whose variants were selected is compared with the template as its selection reads it', () => {
 	it('the template unchanged: nothing to add, the variant not selected listed', async () => {
-		const { report, xml } = await updated({ bays: [{ bay: 'B1', selected: 'V1' }] })
+		const { report, tree } = await updated({ bays: [{ bay: 'B1', selected: 'V1' }] })
 
 		expect(listGroups(report), 'nothing the selection left out comes back').toEqual([])
 		expect(report.summary.added).toBe(0)
 		const [application] = report.instances
 		expect(application.variantsNotSelected?.map((variant) => variant.id)).toEqual(['s-V2'])
-		expect(elementsOf({ xml, localName: 'FunctionalVariantRef' })).toEqual([])
-		expect(elementsOf({ xml, localName: 'SubFunction' })).toEqual(['Prot/A', 'Prot/C'])
-		expect(elementsOf({ xml, localName: 'FunctionCatRef' })).toEqual(['CAT/S1/V1/B1/Prot/A'])
+		expect(elementsOf({ tree, localName: 'FunctionalVariantRef' })).toEqual([])
+		expect(elementsOf({ tree, localName: 'SubFunction' })).toEqual(['Prot/A', 'Prot/C'])
+		expect(elementsOf({ tree, localName: 'FunctionCatRef' })).toEqual(['CAT/S1/V1/B1/Prot/A'])
 	})
 
 	it('a change inside what the selection kept reaches the instance', async () => {
@@ -267,13 +281,13 @@ describe('update: an instance whose variants were selected is compared with the 
 	})
 
 	it('an element the selection leaves out that the project kept is compared as any: what it gains reaches it', async () => {
-		const { report, xml } = await updated({
+		const { report, tree } = await updated({
 			change: { gainedInB: `<SubFunction name="B2" uuid="B2-uuid" ${id}="s-B2"/>` },
 			bays: [{ bay: 'B1', selected: 'V1 keeping B' }],
 		})
 
 		expect(listGroups(report)).toEqual(['added SubFunction'])
-		expect(elementsOf({ xml, localName: 'SubFunction' })).toEqual([
+		expect(elementsOf({ tree, localName: 'SubFunction' })).toEqual([
 			'B/B2',
 			'Prot/A',
 			'Prot/B',
@@ -282,18 +296,18 @@ describe('update: an instance whose variants were selected is compared with the 
 	})
 
 	it('a change inside what only the variant not selected brings does not', async () => {
-		const { report, xml } = await updated({
+		const { report, xml, tree } = await updated({
 			change: { descB: 'revised' },
 			bays: [{ bay: 'B1', selected: 'V1' }],
 		})
 
 		expect(listGroups(report)).toEqual([])
 		expect(xml).not.toContain('desc="revised"')
-		expect(elementsOf({ xml, localName: 'SubFunction' })).toEqual(['Prot/A', 'Prot/C'])
+		expect(elementsOf({ tree, localName: 'SubFunction' })).toEqual(['Prot/A', 'Prot/C'])
 	})
 
 	it('an element the template gains that the selection keeps is added without the markers the selection consumed', async () => {
-		const { report, xml } = await updated({
+		const { report, tree } = await updated({
 			change: {
 				gainedSubFunctions: `<SubFunction name="D" uuid="D-uuid" ${id}="s-D"/>`,
 				gainedReferences: `<${E}:FunctionRef function="${TEMPLATE}/Prot/D" functionUuid="D-uuid" ${id}="s-fr-D">${marker({ variant: 'V2', update: 'remove', record: 's-m-D' })}<${E}:SignalRole name="Trip" uuid="signal-D-uuid" ${id}="s-signal-D"/></${E}:FunctionRef>`,
@@ -302,15 +316,15 @@ describe('update: an instance whose variants were selected is compared with the 
 		})
 
 		expect(listGroups(report)).toEqual(['added FunctionRef', 'added SubFunction'])
-		expect(elementsOf({ xml, localName: 'SubFunction' })).toEqual(['Prot/A', 'Prot/C', 'Prot/D'])
-		expect(elementsOf({ xml, localName: 'FunctionalVariantRef' })).toEqual([])
-		expect(elementsOf({ xml, localName: 'SignalRole' }), 'what it holds besides').toEqual([
+		expect(elementsOf({ tree, localName: 'SubFunction' })).toEqual(['Prot/A', 'Prot/C', 'Prot/D'])
+		expect(elementsOf({ tree, localName: 'FunctionalVariantRef' })).toEqual([])
+		expect(elementsOf({ tree, localName: 'SignalRole' }), 'what it holds besides').toEqual([
 			'S1/V1/B1/Prot/D/Trip',
 		])
 	})
 
 	it('a subfunction the template gains that the selection keeps is added without the one inside it the selection leaves out', async () => {
-		const { report, xml } = await updated({
+		const { report, tree } = await updated({
 			change: {
 				gainedSubFunctions: `<SubFunction name="Outer" uuid="outer-uuid" ${id}="s-outer"><SubFunction name="Inner" uuid="inner-uuid" ${id}="s-inner"/></SubFunction>`,
 				gainedReferences: `<${E}:FunctionRef function="${TEMPLATE}/Prot/Outer" functionUuid="outer-uuid" ${id}="s-fr-outer"/><${E}:FunctionRef function="${TEMPLATE}/Prot/Outer/Inner" functionUuid="inner-uuid" ${id}="s-fr-inner">${marker({ variant: 'V2', update: 'add', record: 's-m-inner' })}</${E}:FunctionRef>`,
@@ -319,7 +333,7 @@ describe('update: an instance whose variants were selected is compared with the 
 		})
 
 		expect(listGroups(report)).toEqual(['added FunctionRef', 'added SubFunction'])
-		expect(elementsOf({ xml, localName: 'SubFunction' })).toEqual([
+		expect(elementsOf({ tree, localName: 'SubFunction' })).toEqual([
 			'Prot/A',
 			'Prot/C',
 			'Prot/Outer',
@@ -327,7 +341,7 @@ describe('update: an instance whose variants were selected is compared with the 
 	})
 
 	it('a function the template gains, taken where the project holds one: what it gains comes without what the selection leaves out', async () => {
-		const { report, xml } = await updated({
+		const { report, tree } = await updated({
 			change: {
 				gainedFunctions: `<Function name="Ctrl" uuid="Ctrl-uuid" ${id}="s-ctrl"><SubFunction name="CQ" uuid="CQ-uuid" ${id}="s-CQ"><SubFunction name="CQ1" uuid="CQ1-uuid" ${id}="s-CQ1"/></SubFunction></Function>`,
 				gainedReferences: `<${E}:FunctionRef function="${TEMPLATE}/Ctrl" functionUuid="Ctrl-uuid" ${id}="s-fr-ctrl"/><${E}:FunctionRef function="${TEMPLATE}/Ctrl/CQ" functionUuid="CQ-uuid" ${id}="s-fr-CQ"/><${E}:FunctionRef function="${TEMPLATE}/Ctrl/CQ/CQ1" functionUuid="CQ1-uuid" ${id}="s-fr-CQ1">${marker({ variant: 'V2', update: 'add', record: 's-m-CQ1' })}</${E}:FunctionRef>`,
@@ -342,15 +356,15 @@ describe('update: an instance whose variants were selected is compared with the 
 		})
 
 		expect(listGroups(report)).toContain('added SubFunction')
-		expect(elementsOf({ xml, localName: 'Function' }), 'the one the project held, taken').toEqual([
+		expect(elementsOf({ tree, localName: 'Function' }), 'the one the project held, taken').toEqual([
 			'B1/Ctrl',
 			'B1/Prot',
 		])
-		expect(elementsOf({ xml, localName: 'SubFunction' })).toEqual(['Ctrl/CQ', 'Prot/A', 'Prot/C'])
+		expect(elementsOf({ tree, localName: 'SubFunction' })).toEqual(['Ctrl/CQ', 'Prot/A', 'Prot/C'])
 	})
 
 	it('a function the template gains that only a variant not selected composes is not placed', async () => {
-		const { report, xml } = await updated({
+		const { report, tree } = await updated({
 			change: {
 				gainedFunctions: `<Function name="Extra" uuid="Extra-uuid" ${id}="s-extra"/>`,
 				gainedReferences: `<${E}:FunctionRef function="${TEMPLATE}/Extra" functionUuid="Extra-uuid" ${id}="s-fr-extra">${marker({ variant: 'V2', update: 'add', record: 's-m-extra' })}</${E}:FunctionRef>`,
@@ -359,31 +373,31 @@ describe('update: an instance whose variants were selected is compared with the 
 		})
 
 		expect(listGroups(report)).toEqual([])
-		expect(elementsOf({ xml, localName: 'Function' })).toEqual(['B1/Prot'])
+		expect(elementsOf({ tree, localName: 'Function' })).toEqual(['B1/Prot'])
 	})
 
 	it('an allocation role the application refers to only with a variant not selected is not placed', async () => {
-		const { report, xml } = await updated({
+		const { report, tree } = await updated({
 			change: { allocationWithV2: true },
 			bays: [{ bay: 'B1', selected: 'V1' }],
 		})
 
 		expect(listGroups(report)).toEqual([])
-		expect(elementsOf({ xml, localName: 'AllocationRole' })).toEqual([])
+		expect(elementsOf({ tree, localName: 'AllocationRole' })).toEqual([])
 	})
 
 	it('a variable applying only to what the selection left out is not placed', async () => {
-		const { report, xml } = await updated({
+		const { report, tree } = await updated({
 			change: { variableOnB: true },
 			bays: [{ bay: 'B1', selected: 'V1' }],
 		})
 
 		expect(listGroups(report)).toEqual([])
-		expect(elementsOf({ xml, localName: 'Variable' })).toEqual([])
+		expect(elementsOf({ tree, localName: 'Variable' })).toEqual([])
 	})
 
 	it('a variant the template gains is not added: listed with the others not selected', async () => {
-		const { report, xml } = await updated({
+		const { report, tree } = await updated({
 			change: {
 				gainedVariants: `<${E}:FunctionalVariant name="V3" uuid="V3-uuid" ${id}="s-V3"/>`,
 			},
@@ -393,7 +407,7 @@ describe('update: an instance whose variants were selected is compared with the 
 		expect(listGroups(report)).toEqual([])
 		const [application] = report.instances
 		expect(application.variantsNotSelected?.map((variant) => variant.id)).toEqual(['s-V2', 's-V3'])
-		expect(elementsOf({ xml, localName: 'FunctionalVariant' })).toEqual(['G/V1'])
+		expect(elementsOf({ tree, localName: 'FunctionalVariant' })).toEqual(['G/V1'])
 	})
 
 	it('an instance holding every variant has selected nothing yet: a change of any variant reaches it', async () => {
@@ -408,7 +422,7 @@ describe('update: an instance whose variants were selected is compared with the 
 	})
 
 	it('two instances, two selections: each compared with the template as its own selection reads it', async () => {
-		const { report, xml } = await updated({
+		const { report, tree } = await updated({
 			bays: [
 				{ bay: 'B1', selected: 'V1' },
 				{ bay: 'B2', selected: 'V2' },
@@ -416,8 +430,8 @@ describe('update: an instance whose variants were selected is compared with the 
 		})
 
 		expect(listGroups(report)).toEqual([])
-		expect(elementsOf({ xml, localName: 'FunctionalVariantRef' })).toEqual([])
-		expect(elementsOf({ xml, localName: 'SubFunction' })).toEqual([
+		expect(elementsOf({ tree, localName: 'FunctionalVariantRef' })).toEqual([])
+		expect(elementsOf({ tree, localName: 'SubFunction' })).toEqual([
 			'Prot/A',
 			'Prot/B',
 			'Prot/C',
@@ -448,31 +462,42 @@ describe('update of the variant twin: an instance with one variant of each group
 			},
 		})
 		const xml = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+		const tree = await target.document.query.getSnapshot({ as: 'tree' })
 		const notSelected = await Promise.all(
 			(report.instances[0].variantsNotSelected ?? []).map(
 				async (variant) => (await source.document.query.any.getAttributes(variant)).name,
 			),
 		)
-		return { report, xml, notSelected }
+		return { report, xml, tree, notSelected }
 	}
 
 	it('the revision it was made from: only what the project lacks, the tool element inside its wrapper', async () => {
-		const { report, xml, notSelected } = await updatedFrom(1)
+		const { report, xml, tree, notSelected } = await updatedFrom(1)
 
 		expect(listGroups(report)).toEqual(['added LabelInfo'])
 		expect(notSelected.sort()).toEqual(['Subtype 01', 'Subtype 03', 'Three pole'])
-		expect(elementsOf({ xml, localName: 'LabelInfo' }), 'in the tool wrapper').toEqual([
-			'Private/Object_1',
-		])
-		expect(elementsOf({ xml, localName: 'SubFunction' })).toEqual([
+		// the store keeps no wrapper (a transparent element): the exported text shows where the tool element sits
+		assertExpectedElementQueries({
+			xml,
+			queries: ["//default:Private/*[local-name()='LabelInfo'][@name='Object_1']"],
+		})
+		assertUnexpectedElementQueries({
+			xml,
+			queries: [
+				"//*[local-name()='LabelInfo'][not(parent::default:Private) or not(@name='Object_1')]",
+				// exactly one: no LabelInfo after another one
+				"//*[local-name()='LabelInfo'][preceding::*[local-name()='LabelInfo'] or ancestor::*[local-name()='LabelInfo']]",
+			],
+		})
+		expect(elementsOf({ tree, localName: 'SubFunction' })).toEqual([
 			'Protection_Fn/Distance zone 1',
 			'Protection_Fn/Trip conditioning',
 		])
-		expect(elementsOf({ xml, localName: 'FunctionalVariantRef' })).toEqual([])
+		expect(elementsOf({ tree, localName: 'FunctionalVariantRef' })).toEqual([])
 	})
 
 	it('the next revision: the change inside the selection, not the one outside it nor the variant it gains; the behaviour file kept', async () => {
-		const { report, xml, notSelected } = await updatedFrom(2)
+		const { report, xml, tree, notSelected } = await updatedFrom(2)
 
 		expect(listGroups(report)).toEqual(['added LabelInfo', 'modified SubFunction'])
 		expect(notSelected.sort()).toEqual(['Subtype 01', 'Subtype 03', 'Subtype 04', 'Three pole'])
@@ -480,7 +505,7 @@ describe('update of the variant twin: an instance with one variant of each group
 		expect(xml).not.toContain('desc="Channel revised"')
 		expect(report.summary.kept, 'the instance keeps its behaviour file').toBe(1)
 		expect(xml).toContain('fileReference="00000000-0000-4000-8000-000000000490"')
-		expect(elementsOf({ xml, localName: 'FunctionalVariant' })).toEqual([
+		expect(elementsOf({ tree, localName: 'FunctionalVariant' })).toEqual([
 			'Breaker subtype/Single pole',
 			'Protection subtype/Subtype 02',
 		])

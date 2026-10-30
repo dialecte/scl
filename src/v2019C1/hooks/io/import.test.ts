@@ -1,9 +1,13 @@
 import { createDiagnostic } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
 
-import { createSclProject } from '@/v2019C1/dialecte'
 import { INCOHERENT_REFERENCE_RELATED, SCL_IMPORT_DIAGNOSTICS } from '@/v2019C1/errors'
-import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, assertValidSclXml } from '@/v2019C1/test'
+import {
+	ALL_XMLNS_NAMESPACES,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	assertValidSclXml,
+	createSclTestProject,
+} from '@/v2019C1/test'
 
 import type { SclImportDiagnostic } from '@/v2019C1/errors'
 import type { ImportEntry } from '@dialecte/core'
@@ -14,6 +18,9 @@ const ns = ALL_XMLNS_NAMESPACES
 const L1 = '00000000-0000-4000-8000-000000000001'
 const L2 = '00000000-0000-4000-8000-000000000002'
 const L9 = '00000000-0000-4000-8000-000000000009'
+
+/** The source of the test project the files are imported into: a document holding nothing. */
+const EMPTY_SCL = /* xml */ `<SCL ${ns}></SCL>`
 
 /** A bay holding a terminal and the connectivity nodes `L1` (unless left out) and `L2`. */
 function substationWith(params: { terminal: string; withFirstNode?: boolean }): string {
@@ -373,30 +380,24 @@ describe('import of an SCL file through a project', () => {
 				if (!file.malformed)
 					assertValidSclXml({ xml: file.xml, label: file.name, requireComplete: false })
 			}
-			const project = await createSclProject({ storage: { type: 'inMemory' } }).open(
-				`scl-import-${crypto.randomUUID()}`,
+			const { project } = await createSclTestProject({ sourceXml: EMPTY_SCL })
+			const imported = await project.import(
+				testCase.files.map((file) => new File([file.xml], file.name, { type: 'text/xml' })),
+				{ useCustomRecordsIds: true },
 			)
-			try {
-				const imported = await project.import(
-					testCase.files.map((file) => new File([file.xml], file.name, { type: 'text/xml' })),
-					{ useCustomRecordsIds: true },
-				)
 
-				expect(imported.map(toExpectedShape)).toEqual(testCase.expectedEntries)
+			expect(imported.map(toExpectedShape)).toEqual(testCase.expectedEntries)
 
-				for (const expected of testCase.expectedAttributes ?? []) {
-					const entry = imported.find((candidate) => candidate.fileName === expected.fileName)
-					if (entry?.status !== 'imported') throw new Error(`${expected.fileName} not imported`)
-					const value = await project
-						.openDocument(entry.documentId)
-						.query.getAttribute(
-							{ tagName: 'Terminal', id: expected.terminalId },
-							{ name: expected.name },
-						)
-					expect(value).toBe(expected.value)
-				}
-			} finally {
-				await project.destroy()
+			for (const expected of testCase.expectedAttributes ?? []) {
+				const entry = imported.find((candidate) => candidate.fileName === expected.fileName)
+				if (entry?.status !== 'imported') throw new Error(`${expected.fileName} not imported`)
+				const value = await project
+					.openDocument(entry.documentId)
+					.query.getAttribute(
+						{ tagName: 'Terminal', id: expected.terminalId },
+						{ name: expected.name },
+					)
+				expect(value).toBe(expected.value)
 			}
 		})
 	})

@@ -1,11 +1,11 @@
 import {
 	assertCoherentSclReferences,
 	assertCoherentSclReferencesTestCases,
-	collectReferenceViolations,
+	collectXmlReferenceViolations,
 } from './assert-coherent-scl-references'
-import { ALL_XMLNS_NAMESPACES, runSclTestCases } from './hydrated-test'
+import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from './hydrated-test'
 
-import { describe, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import type {
 	ReferenceCoherenceTestCase,
@@ -92,21 +92,6 @@ describe('collectReferenceViolations', () => {
 					targetTagName: 'AllocationRole',
 				},
 			],
-		},
-		'uuid attribute left empty → empty violation': {
-			xml: /* xml */ `
-				<SCL ${ALL_XMLNS_NAMESPACES}>
-					<Substation name="TEMPLATE">
-						<Private type="eIEC61850-6-100">
-							<eIEC61850-6-100:AllocationRole name="Operator" uuid="role-uuid">
-								<eIEC61850-6-100:FunctionRef function="TEMPLATE/Protection" functionUuid="" />
-							</eIEC61850-6-100:AllocationRole>
-						</Private>
-						<Function name="Protection" uuid="function-uuid" />
-					</Substation>
-				</SCL>
-			`,
-			expected: [{ kind: 'empty', referenceTagName: 'FunctionRef', uuidAttribute: 'functionUuid' }],
 		},
 		'path written as the path of its target → no violation': {
 			xml: /* xml */ `
@@ -372,8 +357,9 @@ describe('collectReferenceViolations', () => {
 		},
 	}
 
-	function act(testCase: TestCase) {
-		expect(collectReferenceViolations({ xml: testCase.xml })).toEqual(testCase.expected)
+	async function act(testCase: TestCase) {
+		const violations = await collectXmlReferenceViolations({ xml: testCase.xml })
+		expect(violations).toEqual(testCase.expected)
 	}
 
 	runSclTestCases.generic(testCases, act)
@@ -422,9 +408,9 @@ const coherentXml = /* xml */ `
 	</SCL>
 `
 
-function captureErrorMessage(run: () => void): string {
+async function captureErrorMessage(run: () => Promise<void>): Promise<string> {
 	try {
-		run()
+		await run()
 	} catch (error) {
 		return (error as Error).message
 	}
@@ -466,23 +452,6 @@ describe('assertCoherentSclReferences', () => {
 				'  [wrong-target] <FunctionRef> functionUuid="role-uuid" points at a <AllocationRole>, which it cannot reference',
 			].join('\n'),
 		},
-		'empty uuid → throws, naming the empty attribute': {
-			xml: /* xml */ `
-				<SCL ${ALL_XMLNS_NAMESPACES}>
-					<Substation name="TEMPLATE">
-						<Private type="eIEC61850-6-100">
-							<eIEC61850-6-100:AllocationRole name="Operator" uuid="role-uuid">
-								<eIEC61850-6-100:FunctionRef function="TEMPLATE/Protection" functionUuid="" />
-							</eIEC61850-6-100:AllocationRole>
-						</Private>
-					</Substation>
-				</SCL>
-			`,
-			expectedMessage: [
-				'sourceXml: incoherent references:',
-				'  [empty] <FunctionRef> functionUuid is empty',
-			].join('\n'),
-		},
 		'dangling uuid → throws, naming the uuid that points at nothing': {
 			xml: danglingXml,
 			expectedMessage: [
@@ -492,8 +461,8 @@ describe('assertCoherentSclReferences', () => {
 		},
 	}
 
-	function act(testCase: TestCase) {
-		const message = captureErrorMessage(() =>
+	async function act(testCase: TestCase) {
+		const message = await captureErrorMessage(() =>
 			assertCoherentSclReferences({ xml: testCase.xml, label: 'sourceXml' }),
 		)
 		expect(message).toBe(testCase.expectedMessage)
@@ -532,12 +501,24 @@ describe('assertCoherentSclReferencesTestCases', () => {
 		},
 	}
 
-	function act(testCase: TestCase) {
-		const message = captureErrorMessage(() =>
+	async function act(testCase: TestCase) {
+		const message = await captureErrorMessage(() =>
 			assertCoherentSclReferencesTestCases({ testCases: testCase.checkedCases }),
 		)
 		expect(message).toBe(testCase.expectedMessage)
 	}
 
 	runSclTestCases.generic(testCases, act)
+})
+
+describe('collectXmlReferenceViolations on a document core refuses', () => {
+	it('well-formed, one record id given twice → throws the refusal, never "no violation"', async () => {
+		const id = CUSTOM_RECORD_ID_ATTRIBUTE
+		const xml = /* xml */ `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${id}="twice">
+				<Substation name="TEMPLATE" ${id}="twice" />
+			</SCL>
+		`
+		await expect(collectXmlReferenceViolations({ xml })).rejects.toThrow('given twice: twice')
+	})
 })

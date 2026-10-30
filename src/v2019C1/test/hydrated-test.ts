@@ -10,7 +10,7 @@ import {
 	readOutputBaseline,
 	withOutputGate,
 } from './output-gate'
-import { SCL_TEST_SETUP } from './scl-test-setup.constants'
+import { FIXTURE_REFERENCES_CHECK_TIMEOUT_MS, SCL_TEST_SETUP } from './scl-test-setup.constants'
 
 import { CUSTOM_RECORD_ID_ATTRIBUTE, CUSTOM_RECORD_ID_ATTRIBUTE_NAME } from '@dialecte/core/helpers'
 import {
@@ -19,10 +19,11 @@ import {
 	createXmlAssertions,
 	createTestRunner,
 } from '@dialecte/core/test'
-import { onTestFinished } from 'vitest'
+import { beforeAll, onTestFinished } from 'vitest'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 
+import type { AssertCoherentSclReferencesTestCasesParams } from './assert-coherent-scl-references.types'
 import type { SclOutputOptOut } from './assert-scl-output.types'
 import type { SclTest } from './hydrated-test.types'
 import type { GatedDocument, ProjectOutputBaseline } from './output-gate.types'
@@ -52,7 +53,7 @@ export const runSclTestCases: typeof rawRunSclTestCases = {
 	...rawRunSclTestCases,
 	withExport(params) {
 		assertValidSclTestCases({ testCases: params.testCases })
-		assertCoherentSclReferencesTestCases({ testCases: params.testCases })
+		checkReferencesBeforeTheSuite({ testCases: params.testCases })
 		assertOutputGateTestCases({ testCases: params.testCases })
 		rawRunSclTestCases.withExport({
 			...params,
@@ -61,13 +62,24 @@ export const runSclTestCases: typeof rawRunSclTestCases = {
 	},
 	withoutExport(params) {
 		assertValidSclTestCases({ testCases: params.testCases })
-		assertCoherentSclReferencesTestCases({ testCases: params.testCases })
+		checkReferencesBeforeTheSuite({ testCases: params.testCases })
 		assertOutputGateTestCases({ testCases: params.testCases })
 		rawRunSclTestCases.withoutExport({
 			...params,
 			act: withOutputGate({ act: params.act, testCases: params.testCases }),
 		})
 	},
+}
+
+/**
+ * Check the references of every case before the suite's first case runs, all incoherent cases in one failure: the
+ * check reads each fixture through a test project, which a suite being collected cannot await.
+ */
+function checkReferencesBeforeTheSuite(params: AssertCoherentSclReferencesTestCasesParams): void {
+	const { testCases } = params
+	beforeAll(async function checkFixtureReferences() {
+		await assertCoherentSclReferencesTestCases({ testCases })
+	}, FIXTURE_REFERENCES_CHECK_TIMEOUT_MS)
 }
 
 /**
@@ -90,8 +102,8 @@ export async function createSclTestProject(params: {
 	assertValidSclXml({ xml: sourceXml, label: 'sourceXml', requireComplete: false })
 	if (targetXml) assertValidSclXml({ xml: targetXml, label: 'targetXml', requireComplete: false })
 	if (!allowIncoherentReferences) {
-		assertCoherentSclReferences({ xml: sourceXml, label: 'sourceXml' })
-		if (targetXml) assertCoherentSclReferences({ xml: targetXml, label: 'targetXml' })
+		await assertCoherentSclReferences({ xml: sourceXml, label: 'sourceXml' })
+		if (targetXml) await assertCoherentSclReferences({ xml: targetXml, label: 'targetXml' })
 	}
 
 	// core destroys the project when the test ends, whatever happens after it is opened

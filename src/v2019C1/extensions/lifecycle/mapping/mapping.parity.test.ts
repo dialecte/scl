@@ -209,8 +209,8 @@ describe('shared-element mapping — the report says what apply does', () => {
 		expect(roleNames.sort()).toEqual(testCase.expected.roleNames)
 
 		// whatever the role landed on, every reference of the project points at a project element
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

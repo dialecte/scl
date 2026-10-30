@@ -107,7 +107,7 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_RENAMES)))(
 				anchor,
 			})
 			await reportAndApply({ document: target.document, lifecycle: firstFork })
-			const placed = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+			const placedTree = await target.document.query.getSnapshot({ as: 'tree' })
 
 			const secondFork = await applicationFork({
 				revision: second,
@@ -156,10 +156,10 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_RENAMES)))(
 				anchor,
 			})
 			await reportAndApply({ document: target.document, lifecycle: backFork })
-			const back = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+			const backTree = await target.document.query.getSnapshot({ as: 'tree' })
 			for (const uuid of [applicationUuid, functionUuid]) {
-				expect(canonicalElement({ xml: back, uuid }), 'back as first placed').toBe(
-					canonicalElement({ xml: placed, uuid }),
+				expect(canonicalElement({ tree: backTree, uuid }), 'back as first placed').toBe(
+					canonicalElement({ tree: placedTree, uuid }),
 				)
 			}
 		})
@@ -188,7 +188,7 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_GAINS)))(
 			const [fn] = await source.document.query.getRecordsByTagName('Function')
 			const { uuid: functionUuid = '' } = await source.document.query.getAttributes(fn)
 			const [bay] = await target.document.query.getRecordsByTagName('Bay')
-			const before = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+			const beforeTree = await target.document.query.getSnapshot({ as: 'tree' })
 			const anchor = { tagName: 'Bay', id: bay.id } as Scl.Ref<'Bay'>
 
 			const gainedFork = await applicationFork({
@@ -213,10 +213,10 @@ describe.skipIf(!areCorpusRevisionsSynced(Object.values(APPLICATION_GAINS)))(
 				anchor,
 			})
 			await reportAndApply({ document: target.document, lifecycle: backFork })
-			const after = (await target.document.query.getSnapshot({ as: 'xml' })) as string
+			const afterTree = await target.document.query.getSnapshot({ as: 'tree' })
 			for (const uuid of [applicationUuid, functionUuid]) {
-				expect(canonicalElement({ xml: after, uuid }), 'as it was').toBe(
-					canonicalElement({ xml: before, uuid }),
+				expect(canonicalElement({ tree: afterTree, uuid }), 'as it was').toBe(
+					canonicalElement({ tree: beforeTree, uuid }),
 				)
 			}
 		})

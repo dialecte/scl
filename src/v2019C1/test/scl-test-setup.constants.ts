@@ -12,3 +12,9 @@ export const SCL_TEST_SETUP = {
 	extensions: { base: SCL_EXTENSION_MODULES },
 	hooks: { createImportSession: createSclImportSession, ...HOOKS },
 }
+
+/**
+ * How long the check of a runner call's fixtures may take before its first case runs: each fixture is imported into
+ * a test project of its own, a few milliseconds each in node, more on a browser's store under load.
+ */
+export const FIXTURE_REFERENCES_CHECK_TIMEOUT_MS = 120_000

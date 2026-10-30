@@ -1,12 +1,14 @@
 import { SCL_XSD_ENTRY_FILE, SCL_XSD_FILE_NAMES, SCL_XSD_FOLDER } from './scl-xsd.constants'
+import { HEADER, SCL_ROOT_CHILD_ORDER } from './supply-header.constants'
 
 import type {
 	CollectSclXsdViolationsParams,
 	SclXsdReport,
 	SclXsdSchemaSource,
 	SclXsdViolation,
+	SuppliedHeader,
 } from './scl-xsd.types'
-import type { XsdValidator } from 'libxml2-wasm'
+import type { XmlDocument, XmlElement, XsdValidator } from 'libxml2-wasm'
 
 /** Where the schema files are, as the test setup says. */
 let schemaSource: SclXsdSchemaSource | undefined
@@ -38,21 +40,20 @@ export function isSclXsdConfigured(): boolean {
 export async function collectSclXsdViolations(
 	params: CollectSclXsdViolationsParams,
 ): Promise<SclXsdReport> {
-	const { xml } = params
 	if (!schemaSource) return { ran: false }
 
-	const violations = await validate({ xml })
+	const violations = await validate(params)
 	return { ran: true, violations }
 }
 
-async function validate(params: { xml: string }): Promise<SclXsdViolation[]> {
-	const { xml } = params
+async function validate(params: CollectSclXsdViolationsParams): Promise<SclXsdViolation[]> {
+	const { xml, missingHeader } = params
 	const libxml2 = await importLibxml2()
 	sclXsdValidator ??= readSclXsdValidator()
 	const validator = await sclXsdValidator
-	let document: InstanceType<typeof libxml2.XmlDocument> | undefined
+	let document: XmlDocument | undefined
 	try {
-		document = libxml2.XmlDocument.fromString(xml)
+		document = parseToValidate({ libxml2, xml, missingHeader })
 		validator.validate(document)
 		return []
 	} catch (error) {
@@ -61,6 +62,52 @@ async function validate(params: { xml: string }): Promise<SclXsdViolation[]> {
 	} finally {
 		document?.dispose()
 	}
+}
+
+/**
+ * The document the validator reads: `xml` parsed, given the `missingHeader` when its root has no Header. The Header is
+ * added to the parser's tree, never to the text, then that tree is written out and read again: libxml2 sets an
+ * attribute of an element in the default namespace in that namespace, which no schema allows, and its writer prints
+ * it as the plain attribute the schema asks for.
+ */
+function parseToValidate(params: {
+	libxml2: typeof import('libxml2-wasm')
+	xml: string
+	missingHeader: CollectSclXsdViolationsParams['missingHeader']
+}): XmlDocument {
+	const { libxml2, xml, missingHeader } = params
+	const parsed = libxml2.XmlDocument.fromString(xml)
+	if (!missingHeader || !supplyHeader({ libxml2, root: parsed.root, header: missingHeader })) {
+		return parsed
+	}
+	const withHeader = parsed.toString({ format: false })
+	parsed.dispose()
+	return libxml2.XmlDocument.fromString(withHeader)
+}
+
+/**
+ * Give the parsed root the Header it lacks, where the schema places it: before its first child the schema puts after
+ * the Header, else last. Whether it added one.
+ */
+function supplyHeader(params: {
+	libxml2: typeof import('libxml2-wasm')
+	root: XmlElement
+	header: SuppliedHeader
+}): boolean {
+	const { libxml2, root, header } = params
+	const children: XmlElement[] = []
+	for (let child = root.firstChild; child; child = child.next) {
+		if (child instanceof libxml2.XmlElement) children.push(child)
+	}
+	if (children.some((child) => child.name === HEADER)) return false
+
+	const headerPosition = SCL_ROOT_CHILD_ORDER.indexOf(HEADER)
+	const next = children.find((child) => SCL_ROOT_CHILD_ORDER.indexOf(child.name) > headerPosition)
+	const prefix = root.prefix || undefined
+	const added = next ? next.prependElement(HEADER, prefix) : root.addElement(HEADER, prefix)
+	added.setAttr('id', header.id)
+	added.setAttr('uuid', header.uuid)
+	return true
 }
 
 async function readSclXsdValidator(): Promise<XsdValidator> {

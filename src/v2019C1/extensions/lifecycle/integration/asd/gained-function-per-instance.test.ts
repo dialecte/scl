@@ -187,8 +187,8 @@ describe('update of an application placed in two bays — a function its templat
 			await apply(tx, { ...lifecycleTarget, report: updateReport, resolution: { decisions } })
 		})
 
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml })).toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree })).toEqual([])
 
 		return { assertOn: 'target' }
 	}
@@ -450,8 +450,8 @@ describe('update of an application placed in two bays — a function of the gain
 		}
 		expect(functions.sort(), 'apply').toEqual(testCase.expected.functions)
 
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

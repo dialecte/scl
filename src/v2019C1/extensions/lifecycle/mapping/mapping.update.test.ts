@@ -907,8 +907,8 @@ describe('shared-element mapping — an update finds the mapping the instantiate
 		expect(roleAllocations.sort(), 'apply').toEqual(testCase.expected.roleAllocations)
 
 		// whatever the role landed on, every reference of the project points at a project element
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
@@ -1060,8 +1060,8 @@ describe('shared-element mapping — an update of a bay typical brings a role th
 		}
 		expect(applicationRoles.sort(), 'apply').toEqual(testCase.expected.applicationRoles)
 
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

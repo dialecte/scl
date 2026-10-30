@@ -12,7 +12,7 @@ import type { Scl } from '@/v2019C1/config'
 export async function openSclDocument(params: OpenSclDocumentParams): Promise<Scl.Document> {
 	const { project, xml, label, allowIncoherentReferences } = params
 	assertValidSclXml({ xml, label, requireComplete: false })
-	if (!allowIncoherentReferences) assertCoherentSclReferences({ xml, label })
+	if (!allowIncoherentReferences) await assertCoherentSclReferences({ xml, label })
 
 	const [entry] = await project.import([new File([xml], `${label}.xml`, { type: 'text/xml' })], {
 		useCustomRecordsIds: true,

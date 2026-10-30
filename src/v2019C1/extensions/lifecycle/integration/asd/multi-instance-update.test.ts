@@ -333,8 +333,8 @@ describe('lifecycle.apply — an update reaches every instance of an application
 			})
 		})
 
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml })).toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree })).toEqual([])
 
 		return { assertOn: 'target' }
 	}

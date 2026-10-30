@@ -1,15 +1,17 @@
 import { createSclImportSession } from './io-hooks'
 
 import { createDiagnostic } from '@dialecte/core'
+import { createTestProject } from '@dialecte/core/test'
 import { describe, it, expect } from 'vitest'
 
-import { Scl, SCL_NAMESPACES } from '@/v2019C1/config'
+import { Scl, SCL_DIALECTE_CONFIG, SCL_NAMESPACES } from '@/v2019C1/config'
 import { INCOHERENT_REFERENCE_RELATED, SCL_IMPORT_DIAGNOSTICS } from '@/v2019C1/errors'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { IncoherentReferenceDiagnostic, SclImportDiagnostic } from '@/v2019C1'
+import type { Config } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
-import type { AnyRawRecord } from '@dialecte/core'
+import type { AfterImportResult, AnyRawRecord, ImportSession } from '@dialecte/core'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -728,39 +730,39 @@ describe('import of the data names beside an LNode uuid written from a path', ()
 // ── Helpers ──────────────────────────────────────────────────────────
 
 /**
- * The updates and diagnostics the import session gives for `xml`, its records handed over as an import
- * pass does: each record once complete, its children first, with the elements above it. The ids
- * are the `CUSTOM_RECORD_ID_ATTRIBUTE` of the elements; the targets carry their uuid in the XML.
+ * The updates and diagnostics the import session gives for `xml`, the file imported as a project imports it (the
+ * records handed over as the parser closes them) into a test project holding the session and no other hook. The
+ * record ids are the `CUSTOM_RECORD_ID_ATTRIBUTE` of the elements; the targets carry their uuid in the XML.
  */
-async function importOutcomeOf(xml: string) {
-	const hooks = createSclImportSession()
-	const root = new DOMParser().parseFromString(xml, 'application/xml').documentElement
-	handOverRecords({ hooks, element: root, ancestry: [] })
-	return hooks.afterImport!()
+async function importOutcomeOf(xml: string): Promise<AfterImportResult<SclImportDiagnostic>> {
+	const outcomes: AfterImportResult<SclImportDiagnostic>[] = []
+	const { project } = await createTestProject<Config>({
+		sourceXml: xml,
+		dialecteConfig: SCL_DIALECTE_CONFIG,
+		hooks: { createImportSession: observedImportSessions({ outcomes }) },
+	})
+	await project.destroy()
+	const [outcome] = outcomes
+	if (!outcome) throw new Error('the import ran no session')
+	return outcome
 }
 
-function handOverRecords(params: {
-	hooks: ReturnType<typeof createSclImportSession>
-	element: Element
-	ancestry: readonly AnyRawRecord[]
-}): void {
-	const { hooks, element, ancestry } = params
-	const parent = ancestry.at(-1)
-	const record: AnyRawRecord = {
-		id: element.getAttribute(id) ?? crypto.randomUUID(),
-		tagName: element.localName,
-		namespace: { prefix: element.prefix ?? '', uri: element.namespaceURI ?? '' },
-		attributes: [...element.attributes]
-			.filter((attribute) => attribute.name !== id && !attribute.name.startsWith('xmlns'))
-			.map((attribute) => ({ name: attribute.localName, value: attribute.value })),
-		value: '',
-		parent: parent ? { id: parent.id, tagName: parent.tagName } : null,
-		children: [],
+/** A factory of scl import sessions, each pushing what its `afterImport` gives to `outcomes`. */
+function observedImportSessions(params: {
+	outcomes: AfterImportResult<SclImportDiagnostic>[]
+}): () => ImportSession<SclImportDiagnostic> {
+	const { outcomes } = params
+	return function createObservedImportSession() {
+		const session = createSclImportSession()
+		return {
+			...session,
+			async afterImport() {
+				const outcome = await session.afterImport!()
+				outcomes.push(outcome)
+				return outcome
+			},
+		}
 	}
-	for (const child of element.children) {
-		handOverRecords({ hooks, element: child, ancestry: [...ancestry, record] })
-	}
-	hooks.beforeImportRecord!({ record, ancestry })
 }
 
 /** The `LNodeSpecNaming` an LNode of the file carries. */

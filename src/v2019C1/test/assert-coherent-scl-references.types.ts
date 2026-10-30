@@ -1,3 +1,5 @@
+import type { AnyTreeRecord } from '@dialecte/core'
+
 /** One incoherent reference found in a test XML document. */
 export type ReferenceViolation =
 	| {
@@ -20,7 +22,6 @@ export type ReferenceViolation =
 			/** The tag of the element carrying that uuid, which the reference cannot point at. */
 			targetTagName: string
 	  }
-	| { kind: 'empty'; referenceTagName: string; uuidAttribute: string }
 	| {
 			kind: 'derived'
 			elementTagName: string
@@ -32,6 +33,12 @@ export type ReferenceViolation =
 	  }
 
 export type CollectReferenceViolationsParams = {
+	/** The document's record tree, as `query.getSnapshot({ as: 'tree' })` gives it. */
+	tree: AnyTreeRecord
+}
+
+export type CollectXmlReferenceViolationsParams = {
+	/** A test XML document, read as written. */
 	xml: string
 }
 

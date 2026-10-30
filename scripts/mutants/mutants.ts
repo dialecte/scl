@@ -6,7 +6,7 @@
  * - `npm run mutants:fast -- <file | file:line-line>… [--diff <ref>] [--record] [--force]`: the node tier (the
  *   `mutation` vitest project) on the files and ranges named, or on the lines changed since `<ref>`; the mutants that
  *   timed out run again alone, and stay timeouts only when they time out again; then the verdict.
- * - `npm run mutants:full [-- --record]`: the browser tier (the `unit` project) on the fast run's unlisted survivors,
+ * - `npm run mutants:full [-- --record]`: the browser tier (the `browser-all` project) on the fast run's unlisted survivors,
  *   each at its range; a kill in either tier is a kill; then the verdict.
  * - `npm run mutants -- …`: the fast tier, then the full tier when unlisted survivors remain.
  *

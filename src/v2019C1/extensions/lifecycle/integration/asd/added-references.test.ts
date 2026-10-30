@@ -226,8 +226,8 @@ describe('lifecycle.apply — the references an update adds point at the element
 			})
 		})
 
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml })).toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree })).toEqual([])
 
 		return { assertOn: 'target' }
 	}

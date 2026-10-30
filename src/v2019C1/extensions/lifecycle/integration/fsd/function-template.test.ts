@@ -188,7 +188,8 @@ describe('lifecycle scenario — an FSD whose function is a template with no par
 		expect(appliedXml, 'apply').not.toContain('FunctionTemplate')
 		// every element is in the namespace the schema declares for it where it now sits
 		assertValidSclXml({ xml: appliedXml })
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
@@ -350,7 +351,8 @@ describe('lifecycle scenario — updating the instance of a function template', 
 		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
 		expect(appliedXml, 'apply').not.toContain('FunctionTemplate')
 		assertValidSclXml({ xml: appliedXml })
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

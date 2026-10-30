@@ -47,9 +47,6 @@ export const TEST_UUID = /^[a-z0-9-]+$/
  */
 export const TEST_HEADER = { id: 'test', uuid: 'ffffffff-ffff-4fff-bfff-ffffffffffff' } as const
 
-/** The children of the root, in the order the schema sets: the Header goes before what follows it there. */
-export const SCL_CHILD_ORDER: readonly string[] = DEFINITION.SCL.children.sequence
-
 /** The kinds of finding of the XSD validator, each with the start of its messages. */
 export const SCL_XSD_CODE = {
 	pattern: 'pattern',

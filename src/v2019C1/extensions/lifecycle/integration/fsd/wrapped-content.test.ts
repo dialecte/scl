@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	ALL_XMLNS_NAMESPACES,
+	assertExpectedElementQueries,
+	assertUnexpectedElementQueries,
 	createSclTestProject,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 } from '@/v2019C1/test'
@@ -108,30 +110,31 @@ async function update(params: {
 	return { xml, groups: listGroups(report) }
 }
 
-/** The tags of a wrapper of the tool's type holding `name`, under the element a selector names, and the count of wrappers there. */
-function wrappedIn(params: { xml: string; parentLocalName: string; name: string }): {
-	wrapperTypes: string[]
-	wrappersOfToolType: number
-	directChildren: number
-} {
+/**
+ * Assert, on the exported text, that the tool element `name` under the element `parentLocalName` sits in a wrapper of
+ * the tool's type, the only wrapper of that type there, and that no tool element sits there unwrapped. The store
+ * keeps no wrapper (a transparent element): only the exported text shows them.
+ */
+function assertWrappedInToolWrapper(params: {
+	xml: string
+	parentLocalName: string
+	name: string
+}): void {
 	const { xml, parentLocalName, name } = params
-	const document = new DOMParser().parseFromString(xml, 'application/xml')
-	const [parent] = [...document.getElementsByTagName('*')].filter(
-		(element) => element.localName === parentLocalName,
-	)
-	const children = [...parent.children]
-	const holding = children.filter((child) =>
-		[...child.children].some(
-			(grandChild) => grandChild.localName === 'Info' && grandChild.getAttribute('name') === name,
-		),
-	)
-	return {
-		wrapperTypes: holding.map((wrapper) => `${wrapper.localName} ${wrapper.getAttribute('type')}`),
-		wrappersOfToolType: children.filter(
-			(child) => child.localName === 'Private' && child.getAttribute('type') === TOOL.wrapperType,
-		).length,
-		directChildren: children.filter((child) => child.localName === 'Info').length,
-	}
+	const parent = `//*[local-name()='${parentLocalName}']`
+	const holdsIt = `[*[local-name()='Info'][@name='${name}']]`
+	assertExpectedElementQueries({
+		xml,
+		queries: [`${parent}/default:Private[@type='${TOOL.wrapperType}']${holdsIt}`],
+	})
+	assertUnexpectedElementQueries({
+		xml,
+		queries: [
+			`${parent}/default:Private[not(@type='${TOOL.wrapperType}')]${holdsIt}`,
+			`${parent}/default:Private[@type='${TOOL.wrapperType}'][2]`,
+			`${parent}/*[local-name()='Info']`,
+		],
+	})
 }
 
 describe('update: what the template holds in a wrapper lands in the instance wrapper of its type', () => {
@@ -141,11 +144,7 @@ describe('update: what the template holds in a wrapper lands in the instance wra
 			target: { inFunction: '', inLabels: '' },
 		})
 		expect(groups, 'the element the template gained').toEqual(['added Info'])
-		expect(wrappedIn({ xml, parentLocalName: 'Labels', name: 'a' })).toEqual({
-			wrapperTypes: [`Private ${TOOL.wrapperType}`],
-			wrappersOfToolType: 1,
-			directChildren: 0,
-		})
+		assertWrappedInToolWrapper({ xml, parentLocalName: 'Labels', name: 'a' })
 	})
 
 	it('a labels element gains a tool element in a wrapper the instance holds: that wrapper takes it', async () => {
@@ -156,11 +155,7 @@ describe('update: what the template holds in a wrapper lands in the instance wra
 			},
 			target: { inFunction: '', inLabels: toolWrapper(toolLabel('a'), 't-tool') },
 		})
-		expect(wrappedIn({ xml, parentLocalName: 'Labels', name: 'b' })).toEqual({
-			wrapperTypes: [`Private ${TOOL.wrapperType}`],
-			wrappersOfToolType: 1,
-			directChildren: 0,
-		})
+		assertWrappedInToolWrapper({ xml, parentLocalName: 'Labels', name: 'b' })
 	})
 
 	it("a labels element gains a tool element, the instance holding another tool's wrapper only: a wrapper of its type is made", async () => {
@@ -171,11 +166,7 @@ describe('update: what the template holds in a wrapper lands in the instance wra
 				inLabels: `<Private type="Other-Tool" ${id}="t-other-tool">other data</Private>`,
 			},
 		})
-		expect(wrappedIn({ xml, parentLocalName: 'Labels', name: 'a' })).toEqual({
-			wrapperTypes: [`Private ${TOOL.wrapperType}`],
-			wrappersOfToolType: 1,
-			directChildren: 0,
-		})
+		assertWrappedInToolWrapper({ xml, parentLocalName: 'Labels', name: 'a' })
 		expect(xml).toContain('other data')
 	})
 
@@ -188,11 +179,7 @@ describe('update: what the template holds in a wrapper lands in the instance wra
 			target: { inFunction: '', inLabels: '' },
 		})
 		for (const name of ['a', 'b'])
-			expect(wrappedIn({ xml, parentLocalName: 'Labels', name }), name).toEqual({
-				wrapperTypes: [`Private ${TOOL.wrapperType}`],
-				wrappersOfToolType: 1,
-				directChildren: 0,
-			})
+			assertWrappedInToolWrapper({ xml, parentLocalName: 'Labels', name })
 	})
 
 	it('a function gains a tool element in a wrapper: the wrapper is made under the function, of the same type', async () => {
@@ -200,10 +187,6 @@ describe('update: what the template holds in a wrapper lands in the instance wra
 			source: { inFunction: toolWrapper(toolLabel('c'), 's-tool'), inLabels: '' },
 			target: { inFunction: '', inLabels: '' },
 		})
-		expect(wrappedIn({ xml, parentLocalName: 'Function', name: 'c' })).toEqual({
-			wrapperTypes: [`Private ${TOOL.wrapperType}`],
-			wrappersOfToolType: 1,
-			directChildren: 0,
-		})
+		assertWrappedInToolWrapper({ xml, parentLocalName: 'Function', name: 'c' })
 	})
 })

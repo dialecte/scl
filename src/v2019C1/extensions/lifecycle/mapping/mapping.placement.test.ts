@@ -821,8 +821,8 @@ describe('placement mapping — where the levels of an SSD land', () => {
 			expect(bayLineage || undefined, 'apply').toBeUndefined()
 		}
 
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
@@ -1171,8 +1171,8 @@ describe('placement mapping — an update finds where the instance was placed', 
 			expect(functions.sort(), 'apply').toEqual(testCase.expected.functions)
 		}
 
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
@@ -1337,8 +1337,8 @@ describe('placement mapping — a level the template gains on an update is a cho
 		const ownLineage = await target.query.getAttribute(ownBayRef, { name: 'templateUuid' })
 		expect(ownLineage || undefined, 'apply').toBeUndefined()
 
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

@@ -1,4 +1,4 @@
-import { collectReferenceViolations } from '../assert-coherent-scl-references'
+import { collectXmlReferenceViolations } from '../assert-coherent-scl-references'
 import { collectSclOutputViolations } from '../assert-scl-output'
 import { assertValidSclXml } from '../assert-valid-scl-xml'
 import { SCL_TEST_SETUP } from '../scl-test-setup.constants'
@@ -71,7 +71,8 @@ export async function assertCorpusFileValid(params: CorpusFileCheckParams): Prom
 	assertValidSclXml({ xml, label: file, requireComplete: false })
 	const xsd = await collectSclXsdViolations({ xml })
 	expect(xsd, 'the XSD validator on the file').toEqual({ ran: true, violations: [] })
-	expect(collectReferenceViolations({ xml }), 'the references of the file').toEqual([])
+	const references = await collectXmlReferenceViolations({ xml })
+	expect(references, 'the references of the file').toEqual([])
 }
 
 /**

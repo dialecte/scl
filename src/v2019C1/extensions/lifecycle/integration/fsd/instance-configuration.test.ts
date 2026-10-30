@@ -2,11 +2,13 @@ import { listAttributeChanges, listGroups, reportAndApply } from '../integration
 
 import { describe, expect, it } from 'vitest'
 
+import { readAttributes } from '@/v2019C1/helpers'
 import {
 	ALL_XMLNS_NAMESPACES,
 	createSclTestProject,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 } from '@/v2019C1/test'
+import { treeEntriesOf } from '@/v2019C1/test/tree-entries'
 
 import type { Scl } from '@/v2019C1/config'
 import type { DiffNode, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -91,17 +93,16 @@ async function placedAndConfigured() {
 }
 
 async function configuredValues(document: Scl.Document): Promise<string[]> {
-	const xml = (await document.query.getSnapshot({ as: 'xml' })) as string
-	const parsed = new DOMParser().parseFromString(xml, 'application/xml')
-	return [...parsed.getElementsByTagName('*')]
-		.filter(
-			(element) => element.localName === 'Variable' || element.localName === 'BehaviorDescription',
-		)
-		.map((element) =>
-			element.localName === 'Variable'
-				? `Variable ${element.getAttribute('name')} ${element.getAttribute('value')} ${element.getAttribute('desc') ?? ''}`.trim()
-				: `BehaviorDescription ${element.getAttribute('name')} ${element.getAttribute('fileReference')} ${element.getAttribute('desc') ?? ''}`.trim(),
-		)
+	const tree = await document.query.getSnapshot({ as: 'tree' })
+	return treeEntriesOf(tree)
+		.map((entry) => entry.record)
+		.filter((record) => record.tagName === 'Variable' || record.tagName === 'BehaviorDescription')
+		.map((record) => {
+			const { name, value, fileReference, desc } = readAttributes({ record, defaults: 'none' })
+			return record.tagName === 'Variable'
+				? `Variable ${name} ${value} ${desc ?? ''}`.trim()
+				: `BehaviorDescription ${name} ${fileReference} ${desc ?? ''}`.trim()
+		})
 		.sort()
 }
 

@@ -6,8 +6,19 @@ export type SclXsdViolation = {
 	xpath?: string
 }
 
+/** The Header given to a test document that has none: its `id` and `uuid`. */
+export type SuppliedHeader = {
+	readonly id: string
+	readonly uuid: string
+}
+
 export type CollectSclXsdViolationsParams = {
 	xml: string
+	/**
+	 * The Header to give the parsed document when it has none, before it is validated (a hand-made test document):
+	 * without one the validator checks nothing past the root's first child. The text itself is left as it is.
+	 */
+	missingHeader?: SuppliedHeader
 }
 
 /**

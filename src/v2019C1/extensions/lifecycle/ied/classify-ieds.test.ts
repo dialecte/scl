@@ -2,8 +2,12 @@ import { classifyIeds } from './classify-ieds'
 
 import { describe, expect, it } from 'vitest'
 
-import { createSclProject } from '@/v2019C1/dialecte'
-import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import {
+	ALL_XMLNS_NAMESPACES,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	createSclTestProject,
+	runSclTestCases,
+} from '@/v2019C1/test'
 
 import type { IedClassification } from './classify-ieds.types'
 import type { SclTest } from '@/v2019C1/test'
@@ -88,19 +92,15 @@ describe('classifyIeds', () => {
 
 describe('classifyIeds in an ICD file', () => {
 	it('an IED without source files in an .icd document → implemented, by the file it is in', async () => {
-		const project = await createSclProject().open(`classify-ieds-${crypto.randomUUID()}`)
-		try {
-			const xml = scl(`<IED name="Device" manufacturer="ABB" ${id}="ied-1"/>`)
-			const imported = await project.importFile(new File([xml], 'device.icd', { type: 'text/xml' }))
-			const document = project.openDocument(imported.documentId)
+		const { project } = await createSclTestProject({ sourceXml: scl('') })
+		const xml = scl(`<IED name="Device" manufacturer="ABB" ${id}="ied-1"/>`)
+		const imported = await project.importFile(new File([xml], 'device.icd', { type: 'text/xml' }))
+		const document = project.openDocument(imported.documentId)
 
-			const classifications = await classifyIeds(document.query)
+		const classifications = await classifyIeds(document.query)
 
-			expect(classifications.map(({ name, kind, basis }) => ({ name, kind, basis }))).toEqual([
-				{ name: 'Device', kind: 'implemented', basis: 'icd-file' },
-			])
-		} finally {
-			await project.destroy()
-		}
+		expect(classifications.map(({ name, kind, basis }) => ({ name, kind, basis }))).toEqual([
+			{ name: 'Device', kind: 'implemented', basis: 'icd-file' },
+		])
 	})
 })

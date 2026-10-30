@@ -425,8 +425,8 @@ describe('shared-element mapping — a function category', () => {
 		}
 
 		// whatever the category landed on, every reference of the project points at a project element
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
@@ -825,8 +825,8 @@ describe('shared-element mapping — an update finds the category the instantiat
 		expect(classifications.sort(), 'apply').toEqual(testCase.expected.classifications)
 
 		// whatever the category landed on, every reference of the project points at a project element
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
@@ -1001,8 +1001,8 @@ describe('shared-element mapping — an application selecting a function categor
 		}
 		expect(classifies.sort(), 'apply').toEqual(testCase.expected.selectedCategoryClassifies)
 
-		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
-		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
+		const appliedTree = await target.query.getSnapshot({ as: 'tree' })
+		expect(collectReferenceViolations({ tree: appliedTree }), 'apply').toEqual([])
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

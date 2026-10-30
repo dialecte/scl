@@ -6,6 +6,8 @@ import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { CROSS_CUTTING_SATELLITE_CONTAINERS } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.constants'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
+import { readAttribute } from '@/v2019C1/helpers'
+import { treeEntriesOf } from '@/v2019C1/test/tree-entries'
 
 import type {
 	DescribedGroup,
@@ -149,29 +151,33 @@ export function listCompanions(report: DiffReport): string[] {
 }
 
 /**
- * The element carrying a uuid in an XML document, as a comparable string: its tag, its attributes sorted, its
- * children in order, whitespace and record ids left out — and an empty `Private`, a wrapper that holds nothing (the
- * removal of what it held leaves it behind). Undefined when no element carries the uuid.
+ * The element carrying a uuid in a document's record tree (`query.getSnapshot({ as: 'tree' })`), as a comparable
+ * string: its tag, its attributes sorted, its children in order, whitespace and record ids left out — and an empty
+ * `Private`, a wrapper that holds nothing (the removal of what it held leaves it behind). Undefined when no element
+ * carries the uuid.
  */
-export function canonicalElement(params: { xml: string; uuid: string }): string | undefined {
-	const { xml, uuid } = params
-	const document = new DOMParser().parseFromString(xml, 'application/xml')
-	const element = [...document.getElementsByTagName('*')].find(
-		(candidate) => candidate.getAttribute('uuid') === uuid,
+export function canonicalElement(params: {
+	tree: Core.AnyTreeRecord
+	uuid: string
+}): string | undefined {
+	const { tree, uuid } = params
+	const element = treeEntriesOf(tree).find(
+		(candidate) =>
+			readAttribute({ record: candidate.record, name: 'uuid', defaults: 'none' }) === uuid,
 	)
-	return element ? canonicalize(element) : undefined
+	return element ? canonicalize(element.record) : undefined
 }
 
-function canonicalize(element: Element): string {
-	const attributes = [...element.attributes]
-		.filter((attribute) => !attribute.localName.endsWith(RECORD_ID_SUFFIX))
-		.map((attribute) => `${attribute.localName}="${attribute.value}"`)
+function canonicalize(element: Core.AnyTreeRecord): string {
+	const attributes = element.attributes
+		.filter((attribute) => !attribute.name.endsWith(RECORD_ID_SUFFIX))
+		.map((attribute) => `${attribute.name}="${attribute.value}"`)
 		.sort()
-	const children = [...element.children]
-		.filter((child) => child.localName !== 'Private' || child.children.length > 0)
+	const children = element.tree
+		.filter((child) => child.tagName !== 'Private' || child.tree.length > 0)
 		.map((child) => canonicalize(child))
-	const text = element.children.length === 0 ? (element.textContent ?? '').trim() : ''
-	return `<${element.localName} ${attributes.join(' ')}>${text}${children.join('')}</${element.localName}>`
+	const text = element.tree.length === 0 ? element.value.trim() : ''
+	return `<${element.tagName} ${attributes.join(' ')}>${text}${children.join('')}</${element.tagName}>`
 }
 
 /** The attribute changes every group's primary lists, `<name>: <before> -> <after>`, sorted. */

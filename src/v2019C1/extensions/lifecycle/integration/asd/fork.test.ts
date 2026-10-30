@@ -590,7 +590,7 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 
 		const openRevision = async (xml: string | undefined, label: string) =>
 			xml ? openSclDocument({ project, xml, label }) : undefined
-		const before = (await target.query.getSnapshot({ as: 'xml' })) as string
+		const before = await target.query.getSnapshot({ as: 'tree' })
 
 		const base = await openRevision(testCase.baseXml, 'previous revision')
 		const { report } = await reportAndApply({
@@ -621,10 +621,10 @@ describe('asd fork: the newer revision of the same file, its uuids kept', () => 
 			})
 		}
 
-		const after = (await target.query.getSnapshot({ as: 'xml' })) as string
+		const after = await target.query.getSnapshot({ as: 'tree' })
 		for (const uuid of testCase.expectedAsBefore ?? []) {
-			expect(canonicalElement({ xml: after, uuid }), uuid).toBe(
-				canonicalElement({ xml: before, uuid }),
+			expect(canonicalElement({ tree: after, uuid }), uuid).toBe(
+				canonicalElement({ tree: before, uuid }),
 			)
 		}
 
