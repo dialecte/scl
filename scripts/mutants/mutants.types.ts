@@ -47,9 +47,6 @@ export type Verdict = {
 	readonly stale: readonly { readonly file: string; readonly key: string }[]
 }
 
-/** A test file the node stand-ins cannot carry: only the browser tier runs it. */
-export type BrowserOnlyTest = { readonly file: string; readonly reason: string }
-
 /** A `--mutate` target: a file, whole or within a range (lines 1-based, columns 0-based as `--mutate` counts them). */
 export type MutateTarget = {
 	readonly file: string

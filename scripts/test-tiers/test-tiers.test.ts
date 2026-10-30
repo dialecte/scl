@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { existsSync, globSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,29 +9,40 @@ import {
 	NODE_ONLY_TEST_FILES,
 	PRODUCTION_FACTORY_TEST_FILES,
 } from '../../vitest.config.constants'
+import { MUTANTS_PATHS, MUTATION_RUN_ENVIRONMENT } from '../mutants/mutants.constants'
+import { printedProjectsOf } from './printed-projects'
 import {
 	BROWSER_ALL_SCRIPT,
+	BROWSER_GLOBAL_SET_BY_HAND,
 	BROWSER_ONLY_XML_APIS,
 	COMMAND_SEPARATOR,
 	CORPUS_TEST_FILE_PATTERNS,
-	DOM_STAND_INS,
 	GUARD_FOLDER,
+	GUARD_TEST_FILE,
 	IGNORED_FOLDERS,
 	IMPORT_SPECIFIER,
 	IN_MEMORY_STORAGE_CALL,
+	LOGGING_CONFIG_FIXTURE,
+	LOGGING_CONFIG_PROJECT,
 	NODE_PROJECT_NAME,
 	NPM_RUN_COMMAND,
 	NPM_TEST_COMMAND,
 	PRODUCTION_ENTRY,
 	PRODUCTION_FACTORY_CALL,
 	PROJECT_FLAG,
+	PROJECTS_PRINTER,
+	PROJECTS_PRINTER_TIMEOUT,
 	PULL_REQUEST_TRIGGER,
 	PULL_REQUEST_WORKFLOW,
 	RESOLVED_SUFFIXES,
 	RUN_ALL_COMMAND,
+	SOURCE_FILE_PATTERNS,
+	STAND_IN_PACKAGE_IMPORTERS,
+	STAND_IN_PACKAGES,
 	STORE_NAMED,
 	TEST_ENTRY,
 	TEST_WORKFLOW,
+	TYPES_SCOPE,
 	UNIT_TEST_FILE_PATTERNS,
 	WORKFLOW_RUN_LINE,
 } from './test-tiers.constants'
@@ -38,7 +50,13 @@ import {
 import { describe, expect, it } from 'vitest'
 
 import type { DeclaredTestFile } from '../../vitest.config.types'
-import type { ConfiguredProject, PackageManifest, TierRun } from './test-tiers.types'
+import type {
+	ConfiguredProject,
+	MutationRunConfig,
+	PackageManifest,
+	TierRun,
+	TierShape,
+} from './test-tiers.types'
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 
@@ -72,6 +90,7 @@ function toProject(project: unknown): ConfiguredProject {
 		exclude: stringsOf(test.exclude),
 		setupFiles: stringsOf(test.setupFiles),
 		environment: typeof test.environment === 'string' ? test.environment : undefined,
+		isolate: typeof test.isolate === 'boolean' ? test.isolate : undefined,
 		inBrowser: recordOf(test.browser).enabled === true,
 	}
 }
@@ -290,6 +309,118 @@ function testHelpers(): string[] {
 	)
 }
 
+/** What a project runs, as two tiers are compared. */
+function tierShapeOf(project: ConfiguredProject | undefined): TierShape {
+	return {
+		files: filesOfProject(project),
+		setupFiles: project?.setupFiles ?? [],
+		environment: project?.environment,
+		isolate: project?.isolate,
+		inBrowser: isInBrowser(project),
+	}
+}
+
+function readMutationRunConfig(path: string): MutationRunConfig {
+	return JSON.parse(readText(path)) as MutationRunConfig
+}
+
+/** The vitest-runner mutation runs: the driver names the mutation project in their environment. */
+const VITEST_MUTATION_RUNS = [MUTANTS_PATHS.fastConfig, MUTANTS_PATHS.timeoutsConfig]
+
+/** What the projects printer wrote: the projects as the guard reads them, or its stdout when that is no JSON list. */
+function readPrinted(stdout: string): ConfiguredProject[] | string {
+	try {
+		const printed: unknown = JSON.parse(stdout)
+		return Array.isArray(printed) ? printed.map(toProject) : stdout
+	} catch {
+		return stdout
+	}
+}
+
+/** The projects printer's output on a config, in the environment given, bounded in time. */
+function printProjects(params: {
+	configFile: string
+	environment: Readonly<Record<string, string>>
+}): ConfiguredProject[] | string {
+	const { configFile, environment } = params
+	const printed = spawnSync(process.execPath, ['--import', 'tsx', PROJECTS_PRINTER, configFile], {
+		cwd: ROOT,
+		encoding: 'utf8',
+		env: { ...process.env, ...environment },
+		timeout: PROJECTS_PRINTER_TIMEOUT,
+	})
+	if (printed.error !== undefined || printed.status !== 0)
+		throw new Error(
+			`the projects of ${configFile} could not be read: status ${printed.status}, signal ${printed.signal}, ${printed.error?.message ?? ''} ${printed.stderr ?? ''}`,
+		)
+	return readPrinted(printed.stdout)
+}
+
+const printedProjects = new Map<string, ConfiguredProject[]>()
+
+/** The projects a vitest-runner mutation run loads: its vitest config, in the environment the driver gives it. */
+function projectsOfMutationRun(path: string): ConfiguredProject[] {
+	const configFile = readMutationRunConfig(path).vitest?.configFile
+	if (configFile === undefined) return []
+	const known = printedProjects.get(configFile)
+	if (known) return known
+	const projects = printProjects({ configFile, environment: MUTATION_RUN_ENVIRONMENT })
+	if (typeof projects === 'string')
+		throw new Error(`the projects printer wrote no JSON list for ${configFile}: ${projects}`)
+	printedProjects.set(configFile, projects)
+	return projects
+}
+
+/** The projects every node-environment run uses: the configured ones and the mutation runs'. */
+function nodeEnvironmentProjects(): ConfiguredProject[] {
+	return [...configuredProjects(), ...VITEST_MUTATION_RUNS.flatMap(projectsOfMutationRun)].filter(
+		function runsInNode(project) {
+			return project.environment === 'node'
+		},
+	)
+}
+
+/** The stand-in packages a specifier names, a subpath (`fake-indexeddb/auto`) or a scope's package included. */
+function standInPackagesOf(specifier: string): string[] {
+	return STAND_IN_PACKAGES.filter(function isNamed(name) {
+		return specifier === name || specifier.startsWith(`${name}/`)
+	})
+}
+
+/** The stand-in packages a dependency of package.json is, its type package (`@types/jsdom`) counting as the package. */
+function standInPackagesListedAs(dependency: string): string[] {
+	return standInPackagesOf(
+		dependency.startsWith(TYPES_SCOPE) ? dependency.slice(TYPES_SCOPE.length) : dependency,
+	)
+}
+
+/** The stand-ins a source installs: the stand-in packages it imports, and browser globals it sets by hand. */
+function standInsInstalledBy(source: string): string[] {
+	const packages = [...source.matchAll(IMPORT_SPECIFIER)].flatMap(function named(match) {
+		return standInPackagesOf(match[1])
+	})
+	return BROWSER_GLOBAL_SET_BY_HAND.pattern.test(source)
+		? [...packages, BROWSER_GLOBAL_SET_BY_HAND.name]
+		: packages
+}
+
+/** The declared importers naming no file, or saying no why. */
+function staleImporters(): DeclaredTestFile[] {
+	return STAND_IN_PACKAGE_IMPORTERS.filter(function isStale(entry) {
+		return !existsSync(`${ROOT}${entry.path}`) || entry.why.trim() === ''
+	})
+}
+
+/** The package's own source files: every file a test, a script or a config can import from, the guard's test file left out (its samples name the packages it bans). */
+function sourceFiles(): string[] {
+	return sorted(
+		globSync([...SOURCE_FILE_PATTERNS], {
+			cwd: ROOT,
+			exclude: [...IGNORED_FOLDERS, GUARD_TEST_FILE],
+		}),
+	)
+}
+
 /** The browser-only XML APIs a source uses. */
 function browserOnlyXmlApisOf(source: string): string[] {
 	return BROWSER_ONLY_XML_APIS.filter(function isUsed(api) {
@@ -375,18 +506,135 @@ describe('test tiers', () => {
 		})
 	})
 
-	it('the node project setup installs no DOM stand-in', () => {
-		const setupFiles = projectNamed(NODE_PROJECT_NAME)?.setupFiles ?? []
-		expect(
-			[...reachedFrom(setupFiles)].flatMap(function standInsOf(file) {
-				const source = readText(file)
-				return DOM_STAND_INS.filter(function isInstalled(standIn) {
-					return standIn.pattern.test(source)
-				}).map(function offender(standIn) {
-					return `${file}: ${standIn.name}`
+	it(
+		'no node-environment project installs a DOM, XPath or IndexedDB stand-in, the mutation runs included',
+		{
+			timeout: 30_000,
+		},
+		() => {
+			const setupFiles = nodeEnvironmentProjects().flatMap(setupFilesOf)
+			expect(
+				[...reachedFrom(setupFiles)].flatMap(function standInsOf(file) {
+					return standInsInstalledBy(readText(file)).map(function offender(standIn) {
+						return `${file}: ${standIn}`
+					})
+				}),
+			).toEqual([])
+		},
+	)
+
+	it(
+		"the fast mutation runs test the node project's files on its setup, in node",
+		{ timeout: 30_000 },
+		() => {
+			const nodeTier = tierShapeOf(projectNamed(NODE_PROJECT_NAME))
+			expect(
+				VITEST_MUTATION_RUNS.map(function runOf(path) {
+					const config = readMutationRunConfig(path)
+					return {
+						path,
+						testRunner: config.testRunner,
+						related: config.vitest?.related,
+						projects: projectsOfMutationRun(path).map(tierShapeOf),
+					}
+				}),
+			).toEqual(
+				VITEST_MUTATION_RUNS.map(function nodeRunOf(path) {
+					return { path, testRunner: 'vitest', related: false, projects: [nodeTier] }
+				}),
+			)
+		},
+	)
+
+	it(
+		'the projects printer writes the JSON alone on stdout when the config logs',
+		{
+			timeout: 30_000,
+		},
+		() => {
+			expect(printProjects({ configFile: LOGGING_CONFIG_FIXTURE, environment: {} })).toEqual([
+				LOGGING_CONFIG_PROJECT,
+			])
+		},
+	)
+
+	it('the projects printer reads a config as the guard reads it in process', () => {
+		expect(printedProjectsOf({ config: vitestConfig }).map(toProject)).toEqual(configuredProjects())
+	})
+
+	it('the full mutation run tests the projects of test:browser:all', () => {
+		const command = readMutationRunConfig(MUTANTS_PATHS.fullConfig).commandRunner?.command ?? ''
+		expect(projectsNamedBy(command)).toEqual(
+			projectsRunBy([readManifest().scripts[BROWSER_ALL_SCRIPT] ?? '']),
+		)
+	})
+
+	it('no stand-in package is listed or imported, but by a declared importer', () => {
+		const declared = new Set(STAND_IN_PACKAGE_IMPORTERS.map(pathOf))
+		const importers = sourceFiles().filter(function importsAStandIn(file) {
+			return [...readText(file).matchAll(IMPORT_SPECIFIER)].some(function namesAStandIn(match) {
+				return standInPackagesOf(match[1]).length > 0
+			})
+		})
+		const imported = new Set(
+			STAND_IN_PACKAGE_IMPORTERS.flatMap(function packagesOf(entry) {
+				return [...readText(entry.path).matchAll(IMPORT_SPECIFIER)].flatMap(function named(match) {
+					return standInPackagesOf(match[1])
 				})
 			}),
-		).toEqual([])
+		)
+		const { dependencies, devDependencies, peerDependencies } = readManifest()
+		const listed = Object.keys({ ...dependencies, ...devDependencies, ...peerDependencies })
+		expect({
+			undeclaredImporters: importers.filter(function isUndeclared(file) {
+				return !declared.has(file)
+			}),
+			listedWithoutImporter: listed.filter(function isUnimportedStandIn(name) {
+				return standInPackagesListedAs(name).some(function isUnimported(standIn) {
+					return !imported.has(standIn)
+				})
+			}),
+			staleEntries: staleImporters(),
+		}).toEqual({ undeclaredImporters: [], listedWithoutImporter: [], staleEntries: [] })
+	})
+
+	it('the stand-in check sees each package it bans, a subpath, a scope, a require call and a type package included', () => {
+		const installed = standInsInstalledBy(
+			[
+				"import { JSDOM } from 'jsdom'",
+				"import { Window } from 'happy-dom'",
+				"import { GlobalRegistrator } from '@happy-dom/global-registrator'",
+				"const { indexedDB } = require('fake-indexeddb')",
+				"const localRequire = createRequire(import.meta.url); localRequire('fake-indexeddb/auto')",
+				"import { select } from 'xpath'",
+				"const xpathPath = require.resolve('xpath')",
+				'Object.assign(globalThis, { document })',
+			].join('\n'),
+		)
+		expect({
+			installed,
+			distinct: [...new Set(installed)].sort(),
+			listed: [
+				'@types/jsdom',
+				'happy-dom',
+				'@happy-dom/global-registrator',
+				'xpath-ts',
+				'vitest',
+			].map(standInPackagesListedAs),
+		}).toEqual({
+			installed: [
+				'jsdom',
+				'happy-dom',
+				'@happy-dom',
+				'fake-indexeddb',
+				'fake-indexeddb',
+				'xpath',
+				'xpath',
+				BROWSER_GLOBAL_SET_BY_HAND.name,
+			],
+			distinct: [...new Set([...STAND_IN_PACKAGES, BROWSER_GLOBAL_SET_BY_HAND.name])].sort(),
+			listed: [['jsdom'], ['happy-dom'], ['@happy-dom'], [], []],
+		})
 	})
 
 	it('the browser projects never select the in-memory store', () => {

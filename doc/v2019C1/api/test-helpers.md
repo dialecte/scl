@@ -535,18 +535,18 @@ npm run mutants -- --diff main --force        # both in turn, every mutant teste
 npm run test:mutants                          # the tests of the gate itself
 ```
 
-- **fast** runs every unit test in node (the `mutation` vitest project: jsdom for the XML parser and serializer, the
-  `xpath` package for XPath, `fake-indexeddb` for the store, the output check on). StrykerJS's vitest runner runs, for
-  each mutant, only the tests that reach it, in workers it keeps warm; the test files of a worker share their
-  modules, so a state one test file leaves in a module (a cache, the store) is seen by the next: a test that depends
-  on such a state can make a kill the browser would not. A mutant that timed out runs again alone, with a longer limit: it stays a timeout only when it times out
+- **fast** runs the node tier: the files of the `node` vitest project, on its setup (the in-memory store, the output
+  check on), under the name `mutation` the mutation config selects. No browser stand-in: the test helpers read XML
+  with libxml2 and the store tree, in node as in a browser. StrykerJS's vitest runner runs, for each mutant, only the
+  tests that reach it, in workers it keeps warm; the test files of a worker share their modules, as in the `node`
+  project. A mutant that timed out runs again alone, with a longer limit: it stays a timeout only when it times out
   again. Without `--force` the results of a mutant whose code and tests did not change are taken from the last run;
-  a change elsewhere (another source file, the vitest config, the node stand-ins, a dependency) is not seen, so the
-  run before a commit takes `--force`.
-- **full** runs the browser `unit` project, the reference, on each survivor the records do not list, at its location
-  (with the mutants nested in it). A mutant either tier kills is killed. It refuses to run when a mutated file changed
-  since the fast run. The test files the node stand-ins cannot carry are listed with their reason in
-  `MUTATION_BROWSER_ONLY_TESTS` (`scripts/mutants/mutants.constants.ts`): only the full tier runs them.
+  a change elsewhere (another source file, the vitest config, a dependency) is not seen, so the run before a commit
+  takes `--force`.
+- **full** runs the `browser-all` project (the whole suite in Chromium, as `npm run test:browser:all`) on each
+  survivor the records do not list, at its location (with the mutants nested in it). A mutant either tier kills is
+  killed. It refuses to run when a mutated file changed since the fast run. The browser-only test files
+  (`BROWSER_ONLY_TEST_FILES` in `vitest.config.constants.ts`) run in the full tier only.
 
 Every survivor is either killed by a new test or recorded in `scripts/mutants/equivalent-mutants.json`, with the reason
 no output can differ. The gate fails on a survivor of the run the records do not list with a reason, and on a recorded

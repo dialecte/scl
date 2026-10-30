@@ -1,12 +1,7 @@
 import { existsSync, globSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-import {
-	MUTATION_BROWSER_ONLY_TESTS,
-	MUTATION_PROJECT_ENV,
-	MUTATION_PROJECT_NAME,
-	NODE_STAND_INS_SETUP,
-} from './scripts/mutants/mutants.constants'
+import { MUTATION_PROJECT_ENV, MUTATION_PROJECT_NAME } from './scripts/mutants/mutants.constants'
 import { CORPUS_SMOKE_FOLDER } from './src/v2019C1/test/corpus/corpus.constants'
 import { SCL_XSD_FILE_NAMES, SCL_XSD_FIXTURE_FOLDER } from './src/v2019C1/test/scl-xsd.constants'
 import viteConfig from './vite.config'
@@ -120,34 +115,41 @@ function corpusExcludedProject() {
 }
 
 /**
- * The project of the mutation runs (`npm run mutants:fast`): every unit test in node, the browser globals stood in
- * for, so the mutation runner runs only the tests reaching each mutant and keeps its workers warm. The test files of a
- * worker share their modules (no isolation): the modules the setup imports and the package load once per worker, not
- * once per file, five times faster, with the browser's verdicts on the mutants compared. Only when the driver asks for
- * it (`SCL_MUTATION_PROJECT`), never in a plain run: the `node` project and the browser projects stay the check.
+ * The node tier under a name: every unit test file but the browser-only ones, in node on the in-memory store (the test
+ * helpers' default, set by the first setup file). The files share their modules: the same verdicts as isolated files,
+ * in a quarter of the time.
+ */
+function nodeTierProject(params: { name: string }) {
+	return {
+		resolve: viteConfig.resolve,
+		plugins: [],
+		define: ACTIVE_MUTANT_DEFINE,
+		test: {
+			name: params.name,
+			environment: 'node' as const,
+			isolate: false,
+			include: UNIT_TESTS,
+			exclude: [
+				...configDefaults.exclude,
+				CORPUS_TESTS,
+				CORPUS_EXCLUDED_TESTS,
+				...browserOnlyPaths,
+			],
+			root: ROOT,
+			setupFiles: [IN_MEMORY_STORAGE_SETUP, ...SETUP_FILES],
+		},
+	}
+}
+
+/**
+ * The project of the vitest-runner mutation runs (`npm run mutants:fast`): the node tier as it is, under the name the
+ * mutation config selects, so the mutation runner runs only the tests reaching each mutant and keeps its workers warm.
+ * A mutant only a browser-only test reaches is the full tier's (`npm run mutants:full`). Only when the driver asks for
+ * it (`SCL_MUTATION_PROJECT`), never in a plain run.
  */
 function mutationProject() {
 	if (!process.env[MUTATION_PROJECT_ENV]) return []
-	return [
-		{
-			resolve: viteConfig.resolve,
-			plugins: [],
-			test: {
-				name: MUTATION_PROJECT_NAME,
-				environment: 'node' as const,
-				isolate: false,
-				include: ['src/**/*.test.{js,ts,jsx,tsx}', 'scripts/**/*.test.ts'],
-				exclude: [
-					...configDefaults.exclude,
-					CORPUS_TESTS,
-					CORPUS_EXCLUDED_TESTS,
-					...MUTATION_BROWSER_ONLY_TESTS.map(({ file }) => file),
-				],
-				root: ROOT,
-				setupFiles: [NODE_STAND_INS_SETUP, ...SETUP_FILES],
-			},
-		},
-	]
+	return [nodeTierProject({ name: MUTATION_PROJECT_NAME })]
 }
 
 export default mergeConfig(
@@ -157,28 +159,7 @@ export default mergeConfig(
 			watch: false,
 			testTimeout: 5_000,
 			projects: [
-				{
-					// every unit test file but the browser-only ones, in node on the in-memory store: the test helpers'
-					// default, set by the first setup file. The files share their modules: the same verdicts as isolated
-					// files, in a quarter of the time
-					resolve: viteConfig.resolve,
-					plugins: [],
-					define: ACTIVE_MUTANT_DEFINE,
-					test: {
-						name: NODE_PROJECT,
-						environment: 'node' as const,
-						isolate: false,
-						include: UNIT_TESTS,
-						exclude: [
-							...configDefaults.exclude,
-							CORPUS_TESTS,
-							CORPUS_EXCLUDED_TESTS,
-							...browserOnlyPaths,
-						],
-						root: ROOT,
-						setupFiles: [IN_MEMORY_STORAGE_SETUP, ...SETUP_FILES],
-					},
-				},
+				nodeTierProject({ name: NODE_PROJECT }),
 				{
 					// the browser-only test files, on the local store
 					resolve: viteConfig.resolve,

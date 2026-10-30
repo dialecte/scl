@@ -16,7 +16,6 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, relative, resolve, sep } from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 import {
 	diffRanges,
@@ -30,9 +29,10 @@ import {
 } from './judge'
 import {
 	KILLED_STATUS,
+	PACKAGE_ROOT,
 	MUTANTS_PATHS,
 	MUTANTS_TIERS,
-	MUTATION_PROJECT_ENV,
+	MUTATION_RUN_ENVIRONMENT,
 	SURVIVING_STATUSES,
 	TIMEOUT_STATUS,
 } from './mutants.constants'
@@ -45,8 +45,6 @@ import type {
 	MutationReport,
 	StrykerConfig,
 } from './mutants.types'
-
-const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
 function main(): number {
 	const args = parseArguments({ argv: process.argv.slice(2) })
@@ -100,13 +98,12 @@ function runFastTier(params: { args: MutantsArguments }): FastVerdict | undefine
 		process.stderr.write(`mutants: no such file: ${missing.map(({ file }) => file).join(', ')}\n`)
 		return undefined
 	}
-	const mutationProject = { [MUTATION_PROJECT_ENV]: '1' }
 	if (
 		stryker({
 			config: MUTANTS_PATHS.fastConfig,
 			mutate,
 			force: args.force,
-			env: mutationProject,
+			env: MUTATION_RUN_ENVIRONMENT,
 		}) !== 0
 	)
 		return undefined
@@ -124,8 +121,11 @@ function runFastTier(params: { args: MutantsArguments }): FastVerdict | undefine
 	if (timeouts.length > 0) {
 		process.stdout.write(`mutants: ${timeouts.length} timed out, each run again alone\n`)
 		if (
-			stryker({ config: MUTANTS_PATHS.timeoutsConfig, mutate: timeouts, env: mutationProject }) !==
-			0
+			stryker({
+				config: MUTANTS_PATHS.timeoutsConfig,
+				mutate: timeouts,
+				env: MUTATION_RUN_ENVIRONMENT,
+			}) !== 0
 		)
 			return undefined
 		report = withLoneTimeouts({

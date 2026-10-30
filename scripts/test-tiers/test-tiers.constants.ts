@@ -1,3 +1,5 @@
+import type { DeclaredTestFile } from '../../vitest.config.types'
+
 /** Every unit test file of the package, wherever it lives. */
 export const UNIT_TEST_FILE_PATTERNS: readonly string[] = [
 	'src/**/*.test.{js,ts,jsx,tsx}',
@@ -53,8 +55,15 @@ export const TEST_ENTRY = 'src/v2019C1/test/index.ts'
 /** This guard's own folder: its constants name the APIs it bans. */
 export const GUARD_FOLDER = 'scripts/test-tiers/'
 
-/** A module specifier of an import or re-export (static or dynamic). */
-export const IMPORT_SPECIFIER = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)['"]([^'"]+)['"]/g
+/** This guard's test file: its samples name the packages it bans, so the package scan leaves it out. */
+export const GUARD_TEST_FILE = 'scripts/test-tiers/test-tiers.test.ts'
+
+/**
+ * A module specifier of an import or re-export (static or dynamic), or of a require call: `require`, a function made by
+ * `createRequire` and named after it (`localRequire`), and `require.resolve`.
+ */
+export const IMPORT_SPECIFIER =
+	/(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\b\w*[Rr]equire(?:\.resolve)?\s*\(\s*)['"]([^'"]+)['"]/g
 
 /** The extensions an import without one resolves to, in vite's order. */
 export const RESOLVED_SUFFIXES: readonly string[] = [
@@ -86,17 +95,27 @@ export const BROWSER_ONLY_XML_APIS = [
 	},
 ] as const
 
-/** A setup standing in for the browser: a DOM library, fake IndexedDB, or browser globals set by hand. */
-export const DOM_STAND_INS = [
-	{ name: 'jsdom', pattern: /['"]jsdom['"]/ },
-	{ name: 'happy-dom', pattern: /['"]happy-dom['"]|['"]@happy-dom\// },
-	{ name: 'fake-indexeddb', pattern: /['"]fake-indexeddb/ },
-	{
-		name: 'a browser global set by hand',
-		pattern:
-			/globalThis\s*(?:\.\s*\w+|\[[^\]]+\])\s*=|Object\.(?:assign|defineProperty|defineProperties)\(\s*globalThis\b|vi\.stubGlobal\(/,
-	},
-] as const
+/**
+ * The packages that stand in for the browser in node - DOM libraries, fake IndexedDB, an XPath engine - each a package
+ * name or a scope (`@happy-dom`): a setup importing one stands in for the browser, and the node tier lists none.
+ */
+export const STAND_IN_PACKAGES: readonly string[] = [
+	'jsdom',
+	'happy-dom',
+	'@happy-dom',
+	'fake-indexeddb',
+	'xpath',
+]
+
+/** The type package of a package (`@types/jsdom`): listed for its package, it counts as that package. */
+export const TYPES_SCOPE = '@types/'
+
+/** A setup standing in for the browser without a package: browser globals set by hand. */
+export const BROWSER_GLOBAL_SET_BY_HAND = {
+	name: 'a browser global set by hand',
+	pattern:
+		/globalThis\s*(?:\.\s*\w+|\[[^\]]+\])\s*=|Object\.(?:assign|defineProperty|defineProperties)\(\s*globalThis\b|vi\.stubGlobal\(/,
+} as const
 
 /** The workflow a pull request runs, and the test workflow it calls. */
 export const PULL_REQUEST_WORKFLOW = '.github/workflows/pr.yml'
@@ -107,3 +126,29 @@ export const PULL_REQUEST_TRIGGER = /^\s+pull_request:/m
 
 /** A workflow step's `run:` line: its command, or `|` / `>` when a block follows. */
 export const WORKFLOW_RUN_LINE = /^(\s*)(?:-\s+)?run:\s*(.*)$/
+
+/** The files allowed to import a stand-in package, each with why: a stand-in package is listed only while one exists. */
+export const STAND_IN_PACKAGE_IMPORTERS: readonly DeclaredTestFile[] = []
+
+/** The package's own source files, wherever they live: what may import a package. */
+export const SOURCE_FILE_PATTERNS: readonly string[] = ['**/*.{ts,mts,cts,tsx,js,mjs,cjs,jsx,vue}']
+
+/** The script printing a vitest config's projects as a run in its own environment loads them. */
+export const PROJECTS_PRINTER = 'scripts/test-tiers/print-vitest-projects.ts'
+
+/** The longest the projects printer may take: loading a config takes about a second. */
+export const PROJECTS_PRINTER_TIMEOUT = 20_000
+
+/** A config that logs while it loads: the projects printer must keep its stdout to the JSON. */
+export const LOGGING_CONFIG_FIXTURE = 'scripts/test-tiers/fixtures/logging.vitest.config.ts'
+
+/** The one project of the logging config, as the guard reads it. */
+export const LOGGING_CONFIG_PROJECT = {
+	name: 'logged',
+	include: ['scripts/test-tiers/fixtures/none.test.ts'],
+	exclude: [],
+	setupFiles: [],
+	environment: 'node',
+	isolate: false,
+	inBrowser: false,
+} as const
