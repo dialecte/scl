@@ -95,10 +95,10 @@ await doc.transaction(async (tx) => {
 
 ## Step 6 — Export to file
 
-`project.export` serialises a document back to XML. Pass `withDownload: true` to trigger a browser download automatically.
+`project.export` writes a document back to an XML file. Pass `download: true` to save it as well (the save dialog where the browser has one, a download otherwise).
 
 ```ts
-const { xmlDocument } = await project.export(documentId, { withDownload: true })
+const { file, filename } = await project.export({ documentId, download: true })
 ```
 
 ## Full example
@@ -132,7 +132,7 @@ await doc.transaction(async (tx) => {
 })
 
 // 6. Export
-await project.export(documentId, { withDownload: true })
+await project.export({ documentId, download: true })
 ```
 
 ## Next Steps

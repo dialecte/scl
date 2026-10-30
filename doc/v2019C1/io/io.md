@@ -52,18 +52,22 @@ const { documentId, recordCount, diagnostics } = await project.importFile(scdFil
 
 ## `project.export`
 
-Serializes a stored document back to an SCL file. Optionally triggers a browser download.
+Writes a stored document back to an SCL file. Optionally answers its DOM, or saves the file.
 
 ```ts
-const { xmlDocument, filename } = await project.export(documentId)
+const { file, filename } = await project.export({ documentId })
+const { xmlDocument } = await project.export({ documentId, indent: false, xmlDocument: true })
+await project.export({ documentId, download: true })
 ```
 
-**Params**
+**Params** — one object:
 
-| Param             | Type      | Description                                                   |
-| ----------------- | --------- | ------------------------------------------------------------- |
-| `documentId`      | `string`  | Document id as returned by `project.import`                   |
-| `withDownload`    | `boolean` | Trigger browser file download. Default: `false`               |
-| `withDatabaseIds` | `boolean` | Include internal database IDs in the output. Default: `false` |
+| Param             | Type                              | Description                                                                                                                                                        |
+| ----------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `documentId`      | `string`                          | Document id as returned by `project.import`                                                                                                                        |
+| `indent`          | `boolean`                         | The file formatted (4 spaces, CRLF); `false` = compact. Default: `true`                                                                                            |
+| `withDatabaseIds` | `boolean`                         | Include internal database IDs in the output. Default: `false`                                                                                                      |
+| `xmlDocument`     | `boolean`                         | Also answer the DOM, parsed from the compact file in the page (pass `indent: false` to export once). Default: `false`                                              |
+| `download`        | `boolean \| { filename: string }` | Also save the formatted file: the save dialog where the browser has one, a download otherwise, under the document's filename unless one is given. Default: `false` |
 
-**Returns** `Promise<{ xmlDocument: XMLDocument; filename: string }>`
+**Returns** `Promise<{ file: Blob; filename: string }>`, with `xmlDocument: XMLDocument` too when `xmlDocument: true`.

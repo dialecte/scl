@@ -5,6 +5,8 @@ import type { Config } from '@/v2019C1/config/dialecte.config'
 import type * as CoreTest from '@dialecte/core/test'
 
 export namespace SclTest {
+	/** The extensions every SCL test project is opened with. */
+	export type Modules = typeof SCL_EXTENSION_MODULES
 	export type BaseTestCase = CoreTest.BaseTestCase
 	export type BaseXmlTestCase = CoreTest.BaseXmlTestCase & {
 		/**

@@ -251,14 +251,17 @@ const record = createSclTestRecord({
 
 ## XML assertions
 
-`assertExpectedElementQueries` and `assertUnexpectedElementQueries` run XPath assertions against an `XMLDocument`. Both use the SCL namespace map.
+`assertExpectedElementQueries` and `assertUnexpectedElementQueries` run XPath assertions against XML text, parsed once per call. Both use the SCL namespace map. A caller holding a page `Document` serializes it first.
 
-Use directly when calling `createSclTestProject` and exporting manually via `project.export(documentId)`.
+Use directly when calling `createSclTestProject` and reading the XML yourself, for example with `document.query.getSnapshot({ as: 'xml' })`.
 
 ```ts
-assertExpectedElementQueries({ xmlDocument, queries: ['//default:Substation[@name="S1"]'] })
-assertUnexpectedElementQueries({ xmlDocument, queries: ['//default:Bay[@name="deleted"]'] })
+const xml = (await document.query.getSnapshot({ as: 'xml' })) as string
+assertExpectedElementQueries({ xml, queries: ['//default:Substation[@name="S1"]'] })
+assertUnexpectedElementQueries({ xml, queries: ['//default:Bay[@name="deleted"]'] })
 ```
+
+A failure says why in labelled lines: the steps of the query that matched, the step that failed, where the last match sits and what the failing step finds there without its predicates. Text that is not well-formed fails as `queried XML: malformed XML - <line>:<column> <reason>`.
 
 ---
 
@@ -335,17 +338,18 @@ What is skipped:
 How failures are reported:
 
 - `runSclTestCases` checks **every** case of the suite before it runs and fails once, listing the violations of all invalid cases, each attributed to its case name and to `sourceXml` / `targetXml` — a suite's fixtures are fixed in one round;
+- text that is not well-formed fails as `<label>: malformed XML - <line>:<column> <reason>`;
 - an XML declaration (`<?xml … ?>`) that is not the very first characters of the string is malformed XML. A template-literal snippet starts with a newline, so drop the declaration from inline fixtures — the message says so instead of relaying the parser's error.
 
 Not enforced on fixtures: attribute value facets (uuid pattern, enums) and cross-element constraints (unique keys, keyref resolution). The documents a test leaves are held to them (see [The documents a test leaves are checked too](#the-documents-a-test-leaves-are-checked-too)).
 
-Required-attribute completeness is checked by `assertValidSclXml` unless `{ requireComplete: false }` is passed. `createSclTestProject` and `runSclTestCases` pass `false` for their fixtures, so a minimal fixture may omit e.g. the `<SCL>` `version` / `revision` / `release`:
+Required-attribute completeness is checked by `assertValidSclXml` unless `requireComplete: false` is passed. `createSclTestProject` and `runSclTestCases` pass `false` for their fixtures, so a minimal fixture may omit e.g. the `<SCL>` `version` / `revision` / `release`:
 
 ```ts
 import { assertValidSclXml } from '@dialecte/scl/v2019C1/test'
 
-assertValidSclXml(xml, 'my snippet') // required attributes checked
-assertValidSclXml(xml, 'my snippet', { requireComplete: false })
+assertValidSclXml({ xml, label: 'my snippet' }) // required attributes checked
+assertValidSclXml({ xml, label: 'my snippet', requireComplete: false })
 ```
 
 ## Test XML is checked for coherent references

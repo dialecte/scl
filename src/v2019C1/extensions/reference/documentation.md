@@ -313,7 +313,7 @@ Post-import XPath evaluation in phase 2 (afterImport), once all records are in t
 
 1. Detect XPath values (starts with `.` or `//`) during phase 1 → store context element + raw XPath in a pending list
 2. In phase 2, for each pending XPath:
-   - Decompose into steps (reuse `splitXpathIntoSteps` from assert-xml helper)
+   - Decompose into location steps
    - Walk the record tree from the context element: `/` → children by tagName, `//` → descendants by tagName, `[@attr="value"]` → attribute filter
    - Result = set of matching records (1 or many)
    - Write `elementUuid` for each match

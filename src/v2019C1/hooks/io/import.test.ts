@@ -370,7 +370,8 @@ describe('import of an SCL file through a project', () => {
 	entries.forEach(([description, testCase]) => {
 		it(description, async () => {
 			for (const file of testCase.files) {
-				if (!file.malformed) assertValidSclXml(file.xml, file.name, { requireComplete: false })
+				if (!file.malformed)
+					assertValidSclXml({ xml: file.xml, label: file.name, requireComplete: false })
 			}
 			const project = await createSclProject({ storage: { type: 'inMemory' } }).open(
 				`scl-import-${crypto.randomUUID()}`,

@@ -68,7 +68,7 @@ async function readCorpusFile(file: string): Promise<string> {
 /** The check of a corpus file itself: its structure, the XSD validator, its references. Throws on the first that fails. */
 export async function assertCorpusFileValid(params: CorpusFileCheckParams): Promise<void> {
 	const { file, xml } = params
-	assertValidSclXml(xml, file, { requireComplete: false })
+	assertValidSclXml({ xml, label: file, requireComplete: false })
 	const xsd = await collectSclXsdViolations({ xml })
 	expect(xsd, 'the XSD validator on the file').toEqual({ ran: true, violations: [] })
 	expect(collectReferenceViolations({ xml }), 'the references of the file').toEqual([])
@@ -134,7 +134,7 @@ async function openCorpusProject() {
 	}
 
 	async function exportXml(documentId: string): Promise<string> {
-		const { xmlDocument } = await project.export(documentId, { withDatabaseIds: false })
+		const { xmlDocument } = await project.export({ documentId, indent: false, xmlDocument: true })
 		return new XMLSerializer().serializeToString(xmlDocument)
 	}
 

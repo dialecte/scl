@@ -26,7 +26,9 @@ describe('assertValidSclXml', () => {
 					</Substation>
 				</SCL>
 			`
-			expect(() => assertValidSclXml(xml, 'snippet', { requireComplete: false })).not.toThrow()
+			expect(() =>
+				assertValidSclXml({ xml, label: 'snippet', requireComplete: false }),
+			).not.toThrow()
 		})
 
 		it('a foreign-namespace element whose local name collides with a schema element', () => {
@@ -39,7 +41,9 @@ describe('assertValidSclXml', () => {
 					</Substation>
 				</SCL>
 			`
-			expect(() => assertValidSclXml(xml, 'snippet', { requireComplete: false })).not.toThrow()
+			expect(() =>
+				assertValidSclXml({ xml, label: 'snippet', requireComplete: false }),
+			).not.toThrow()
 		})
 
 		it('the colliding children of a foreign-namespace element', () => {
@@ -56,7 +60,9 @@ describe('assertValidSclXml', () => {
 					</Substation>
 				</SCL>
 			`
-			expect(() => assertValidSclXml(xml, 'snippet', { requireComplete: false })).not.toThrow()
+			expect(() =>
+				assertValidSclXml({ xml, label: 'snippet', requireComplete: false }),
+			).not.toThrow()
 		})
 	})
 
@@ -68,7 +74,7 @@ describe('assertValidSclXml', () => {
 				</SCL>
 			`
 			const message = captureErrorMessage(() =>
-				assertValidSclXml(xml, 'snippet', { requireComplete: false }),
+				assertValidSclXml({ xml, label: 'snippet', requireComplete: false }),
 			)
 			expect(message).toContain('[namespace] <SCL>')
 			expect(message).toContain('[namespace] <Substation> under <SCL>')
@@ -87,7 +93,7 @@ describe('assertValidSclXml', () => {
 				</SCL>
 			`
 			const message = captureErrorMessage(() =>
-				assertValidSclXml(xml, 'snippet', { requireComplete: false }),
+				assertValidSclXml({ xml, label: 'snippet', requireComplete: false }),
 			)
 			expect(message).toContain('[namespace] <eIEC61850-6-100:Function>')
 		})
@@ -105,7 +111,7 @@ describe('assertValidSclXml', () => {
 				</SCL>
 			`
 			const message = captureErrorMessage(() =>
-				assertValidSclXml(xml, 'snippet', { requireComplete: false }),
+				assertValidSclXml({ xml, label: 'snippet', requireComplete: false }),
 			)
 			expect(message).toContain('[containment] <P> is not a valid child of <TimeSyncProt>')
 		})
@@ -117,9 +123,17 @@ describe('assertValidSclXml', () => {
 				</SCL>
 			`
 			const message = captureErrorMessage(() =>
-				assertValidSclXml(xml, 'snippet', { requireComplete: false }),
+				assertValidSclXml({ xml, label: 'snippet', requireComplete: false }),
 			)
 			expect(message).toContain("[attribute] <Substation> has unknown attribute 'templateUUID'")
+		})
+
+		it('text that is not well-formed, naming where the parser stopped', () => {
+			const xml = /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES}><Substation name="Substation1"></SCL>`
+			const message = captureErrorMessage(() =>
+				assertValidSclXml({ xml, label: 'snippet', requireComplete: false }),
+			)
+			expect(message).toMatch(/^snippet: malformed XML - \d+:\d+ \S/)
 		})
 
 		it('an XML declaration preceded by whitespace, saying how to fix it', () => {
@@ -128,7 +142,7 @@ describe('assertValidSclXml', () => {
 				<SCL ${ALL_XMLNS_NAMESPACES} />
 			`
 			const message = captureErrorMessage(() =>
-				assertValidSclXml(xml, 'snippet', { requireComplete: false }),
+				assertValidSclXml({ xml, label: 'snippet', requireComplete: false }),
 			)
 			expect(message).toContain('snippet: malformed XML')
 			expect(message).toContain('must be the very first characters')

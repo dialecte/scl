@@ -61,7 +61,11 @@ export async function collectSclOutputViolations(
 ): Promise<SclOutputReport> {
 	const { project, document, asTestDocument = false } = params
 
-	const { xmlDocument } = await project.export(document.documentId, { withDatabaseIds: false })
+	const { xmlDocument } = await project.export({
+		documentId: document.documentId,
+		indent: false,
+		xmlDocument: true,
+	})
 	if (asTestDocument) supplyMissingHeader(xmlDocument)
 	const xml = new XMLSerializer().serializeToString(xmlDocument)
 	const tree = await document.query.getSnapshot({ as: 'tree' })
@@ -213,7 +217,7 @@ function newViolations(params: {
 function collectSchemaViolations(params: { xml: string }): SclOutputViolation[] {
 	const { xml } = params
 	try {
-		assertValidSclXml(xml, 'output', { requireComplete: false })
+		assertValidSclXml({ xml, label: 'output', requireComplete: false })
 		return []
 	} catch (error) {
 		const [, ...lines] = String(error instanceof Error ? error.message : error).split('\n')

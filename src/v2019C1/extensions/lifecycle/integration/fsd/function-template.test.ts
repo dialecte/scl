@@ -173,18 +173,21 @@ describe('lifecycle scenario — an FSD whose function is a template with no par
 			await apply(tx, { ...lifecycleTarget, report: lifecycleReport })
 		})
 
-		expect(await listFunctions(target.query), 'apply').toEqual(testCase.expected.functions)
+		const functions = await listFunctions(target.query)
+		expect(functions, 'apply').toEqual(testCase.expected.functions)
 
 		// nothing of the template's own kind reaches the project, and its types came along
-		expect(await target.query.getRecordsByTagName('FunctionTemplate'), 'apply').toEqual([])
-		expect(await target.query.getRecordsByTagName('SubFunctionTemplate'), 'apply').toEqual([])
+		const functionTemplates = await target.query.getRecordsByTagName('FunctionTemplate')
+		expect(functionTemplates, 'apply').toEqual([])
+		const subFunctionTemplates = await target.query.getRecordsByTagName('SubFunctionTemplate')
+		expect(subFunctionTemplates, 'apply').toEqual([])
 		const lnodeTypes = await target.query.getRecordsByTagName('LNodeType')
 		expect(lnodeTypes.length, 'apply').toBe(2)
 
 		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
 		expect(appliedXml, 'apply').not.toContain('FunctionTemplate')
 		// every element is in the namespace the schema declares for it where it now sits
-		assertValidSclXml(appliedXml)
+		assertValidSclXml({ xml: appliedXml })
 		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
 	}
 
@@ -346,7 +349,7 @@ describe('lifecycle scenario — updating the instance of a function template', 
 
 		const appliedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
 		expect(appliedXml, 'apply').not.toContain('FunctionTemplate')
-		assertValidSclXml(appliedXml)
+		assertValidSclXml({ xml: appliedXml })
 		expect(collectReferenceViolations({ xml: appliedXml }), 'apply').toEqual([])
 	}
 

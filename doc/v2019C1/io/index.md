@@ -19,7 +19,7 @@ SCL file (.scd / .icd / ...)
         └─ project.openDocument(id)    ← API layer (IndexedDB → Document)
               ├─ doc.query.*               (reads)
               └─ doc.transaction()         (writes)
-                    └─ project.export(id)   ← IO layer (IndexedDB → SCL file)
+                    └─ project.export({ documentId })   ← IO layer (IndexedDB → SCL file)
 ```
 
 ## Typical workflow
@@ -39,7 +39,7 @@ await doc.transaction(async (tx) => {
 })
 
 // 3. Export
-const { xmlDocument } = await project.export(documentId)
+const { file, filename } = await project.export({ documentId })
 ```
 
 ## Further reading

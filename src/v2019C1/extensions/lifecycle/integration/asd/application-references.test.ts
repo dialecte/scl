@@ -170,7 +170,7 @@ describe('asd: the behaviour descriptions an application refers to travel with i
 		})
 		const xml = (await extracted.query.getSnapshot({ as: 'xml' })) as string
 		assertExpectedElementQueries({
-			xmlDocument: new DOMParser().parseFromString(xml, 'application/xml'),
+			xml,
 			queries: testCase.extractedQueries,
 		})
 		return { assertOn: 'target' }
@@ -287,7 +287,7 @@ describe('asd: what applies to a function the application composes travels with 
 		).toEqual(['BehaviorDescription', 'Variable'])
 		const placedXml = (await target.query.getSnapshot({ as: 'xml' })) as string
 		assertExpectedElementQueries({
-			xmlDocument: new DOMParser().parseFromString(placedXml, 'application/xml'),
+			xml: placedXml,
 			queries: applyingToThePlacedFunction,
 		})
 
@@ -304,7 +304,7 @@ describe('asd: what applies to a function the application composes travels with 
 		})
 		const xml = (await extracted.query.getSnapshot({ as: 'xml' })) as string
 		assertExpectedElementQueries({
-			xmlDocument: new DOMParser().parseFromString(xml, 'application/xml'),
+			xml,
 			queries: testCase.extractedQueries,
 		})
 		return { assertOn: 'target' }
@@ -532,7 +532,7 @@ describe('asd: what a function placed from its own file holds keeps its link whe
 		})
 		const xml = (await extracted.query.getSnapshot({ as: 'xml' })) as string
 		assertExpectedElementQueries({
-			xmlDocument: new DOMParser().parseFromString(xml, 'application/xml'),
+			xml,
 			queries: testCase.extractedQueries,
 		})
 		return { assertOn: 'target' }
