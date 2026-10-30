@@ -26,6 +26,8 @@ import type * as Core from '@dialecte/core'
  *
  * For an `LN` / `LN0` target, the `DOS` / `SDS` / `DAS` it implements by default (they
  * carry no `mappedLnUuid`) are included too.
+ *
+ * @intent find who references an element, list references to a target before deleting or renaming, usages of a data type (LNodeType/DOType/DAType), where an LNode or Function is used
  */
 export async function findRefsPointingTo(
 	query: Core.Query<Config>,

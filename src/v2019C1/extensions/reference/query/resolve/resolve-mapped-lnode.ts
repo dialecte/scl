@@ -17,6 +17,8 @@ import type * as Core from '@dialecte/core'
  * {@link resolveElementPath}. Returns `undefined` for unmapped LNodes or when
  * the path does not resolve to an `LN`/`LN0`.
  *
+ * @intent LN that implements an LNode, go from a function LNode to its IED LN/LN0, follow an LNode binding into the IED section
+ *
  * @example
  * const ln = await resolveMappedLNode(query, lnodeRecord)
  * // → TrackedRecord<'LN' | 'LN0'> for the implementing LN, or undefined

@@ -13,6 +13,8 @@ import type * as Core from '@dialecte/core'
  * Query extension: what subscribes to a control block. Its registrations (the `IEDName` and
  * `ClientLN` it holds), each with how precisely it names its subscriber; the ExtRefs naming it, by
  * uuid or by names; and the dataflows of those ExtRefs, specified or not.
+ *
+ * @intent who subscribes to a GOOSE/SV/report control block, IEDName and ClientLN registrations of a control block, ExtRefs naming a control block
  */
 export async function subscribersOf(
 	query: Core.Query<Config>,

@@ -28,6 +28,8 @@ import type * as Core from '@dialecte/core'
  * itself, whose voltage levels are the units. The scaffolding loses its template link; the scope
  * keeps its own unless the consumer breaks it, which reaches what came with its instance. Uuid refs
  * are repointed and orphans cleaned up.
+ *
+ * @intent extract a bay typical into an SSD template, create an SSD from a bay or voltage level of a project, save a process section as a reusable template
  */
 export async function ssd(
 	tx: Core.Transaction<Config>,

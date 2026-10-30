@@ -8,6 +8,8 @@ import type * as Core from '@dialecte/core'
  * - Target found → keep as-is
  * - Target absent + keep-on-orphan → clear uuid/path/companion attrs
  * - Target absent + delete-on-orphan → delete record
+ *
+ * @intent clean dangling uuid references after a delete, remove or clear references whose target is gone, fix orphaned references
  */
 export async function orphanUuidRefs(tx: Core.Transaction<Config>): Promise<void> {
 	for (const refTagName of REFERENCE_TAGS) {

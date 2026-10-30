@@ -9,6 +9,8 @@ import type * as Core from '@dialecte/core'
  * specify a device (`specification`). An IED is implemented when an ICD or IID file is among its
  * own source files (`IEDSourceFiles`, a reference in the document header does not count), or when
  * the document itself is an ICD file; any other IED is a specification IED.
+ *
+ * @intent which IEDs are real devices and which are specification IEDs, is an IED implemented (ICD/IID source), S-IED or real IED instead of reading manufacturer
  */
 export async function classifyIeds(query: Core.Query<Config>): Promise<IedClassification[]> {
 	const root = await query.getTree(

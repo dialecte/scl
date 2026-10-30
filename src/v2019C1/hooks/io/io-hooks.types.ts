@@ -1,6 +1,7 @@
+import type { IncoherentPathName } from '@/v2019C1/errors/import-diagnostics.types'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
 import type { ElementPath } from '@/v2019C1/extensions/reference/query/build'
-import type { AnyRawRecord, ImportWarning } from '@dialecte/core'
+import type { AnyRawRecord } from '@dialecte/core'
 
 /**
  * A reference written with a path: parsed and looked up once the whole file is read, when the
@@ -41,15 +42,10 @@ export type AttributeChanges = {
 	incoherent: IncoherentPathName[]
 }
 
-/** An attribute written from a path that the file gave another value: `expected` is the path's. */
-export type IncoherentPathName = {
-	name: string
-	value: string
-	expected: string | undefined
-}
-
 /** A target element of the file, indexed by its uuid. */
 export type IndexedTarget = {
+	/** The id of its record: what a diagnostic naming it points at. */
+	recordId: string
 	tagName: string
 	path: ElementPath
 	/** The logical node type a logical node (an LNode, an LN) names: what its data paths are read against. */
@@ -92,82 +88,3 @@ export type OtherPaths = {
 	underStandardParent: [path: string, uuid: string][]
 	underOwnNaming: [path: string, uuid: string][]
 }
-
-export type UnresolvedReferenceWarning = ImportWarning & {
-	type: 'unresolved-reference'
-	details: {
-		elementTag: string
-		uuidAttribute: string
-		pathValue: string
-		triedKeys: string[]
-	}
-}
-
-export type UnsupportedXPathWarning = ImportWarning & {
-	type: 'unsupported-xpath-reference'
-	details: {
-		elementTag: string
-		pathAttribute: string
-		uuidAttribute: string
-		pathValue: string
-	}
-}
-
-export type IncoherentReferenceWarning = ImportWarning & {
-	type: 'incoherent-reference'
-	details: {
-		elementTag: string
-		pathAttribute: string
-		pathValue: string | undefined
-		uuidAttribute: string
-		uuidValue: string | undefined
-	}
-}
-
-/**
- * Attributes written from a path (a terminal's level names, a connectivity node's `pathName`) that
- * disagree with that path: they were written again from it.
- */
-export type IncoherentPathNamesWarning = ImportWarning & {
-	type: 'incoherent-path-names'
-	details: {
-		elementTag: string
-		attributes: IncoherentPathName[]
-	}
-}
-
-/**
- * An LNode bound to an IED had no `LNodeSpecNaming`: it was given one from the naming of the
- * logical node it is bound to (prefix, class, instance), the IED and LD names left out.
- */
-export type DerivedSpecificationNamingWarning = ImportWarning & {
-	type: 'derived-specification-naming'
-	details: {
-		iedName: string
-		specifiedNaming: readonly { name: string; value: string }[]
-	}
-}
-
-/**
- * A reference written with the path of an LNode could not be given the data-object name that a data
- * reference by uuid carries: the data path is not split by the data model of the file (no
- * type, a name the data model lacks, a path reaching a data attribute where only a data object is
- * held). The reference is left as read, without the uuid.
- */
-export type DataPathNotSplitWarning = ImportWarning & {
-	type: 'data-path-not-split'
-	details: {
-		elementTag: string
-		pathAttribute: string
-		pathValue: string
-	}
-}
-
-/** Every warning the import of an SCL file reports: its `type` is a key of `SCL_IMPORT_WARNINGS`. */
-export type SclImportWarning =
-	| UnresolvedReferenceWarning
-	| UnsupportedXPathWarning
-	| IncoherentReferenceWarning
-	| IncoherentPathNamesWarning
-	| DataPathNotSplitWarning
-	| DerivedSpecificationNamingWarning

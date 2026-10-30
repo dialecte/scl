@@ -10,6 +10,8 @@ import type * as Core from '@dialecte/core'
  * instantiated from, or the header for document-level source files. Consumers
  * use it to show which templates (and versions) a document was built from and
  * to decide whether a file is compatible with a given scenario.
+ *
+ * @intent which templates (FSD/ASD/SSD) a document was built from, source files and versions of a document, template origin of a Function/Application/IED
  */
 export async function getProvenance(query: Core.Query<Config>): Promise<ProvenanceEntry[]> {
 	const references = await query.getRecordsByTagName('SclFileReference')

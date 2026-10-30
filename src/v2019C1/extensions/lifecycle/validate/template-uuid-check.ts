@@ -7,14 +7,20 @@ type Bearers = { tagNames: Set<string>; refs: AnyRefOrRecord[] }
 type Owner = { tagName: string; ref: AnyRefOrRecord }
 
 /**
- * `query.lifecycle.checkTemplateUuids` — a generic, read-only SCL identity-integrity check across
- * the whole document. Every rule is a DEFINITIVE SCL identity invariant, not a heuristic:
+ * List the uuid integrity problems of the whole document: a `uuid` held by two or more elements, and
+ * a `templateUuid` shared across element types or naming an element of another type.
+ *
+ * `query.lifecycle.checkTemplateUuids` is generic and read-only. Every rule is a definitive SCL
+ * identity invariant, not a heuristic:
  *  - `cross-type-template-uuid`: one `templateUuid` on elements of ≥2 element TYPES — impossible, a
  *    `templateUuid` identifies a single template element (one type);
- *  - `duplicate-instance-uuid`: a `uuid` used by ≥2 elements — "every instance UUID shall be unique";
+ *  - `duplicate-instance-uuid`: a `uuid` held by two or more elements — an instance uuid identifies
+ *    one element only;
  *  - `template-uuid-type-mismatch`: a `templateUuid` that resolves IN-FILE to an element of a
  *    different type than the bearer — an instance cannot derive from a template of another type.
  * Legit same-type `templateUuid` sharing (multi-instance) and unique values are never reported.
+ *
+ * @intent check uuid integrity of a document, find duplicate uuids, find a templateUuid shared across element types or pointing at the wrong type
  */
 export async function checkTemplateUuids(
 	query: Core.Query<Config>,

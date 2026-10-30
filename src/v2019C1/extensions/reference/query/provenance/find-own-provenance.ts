@@ -10,6 +10,8 @@ import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
  * anchor is the element — the file a function or an application was placed from. The references of the elements it
  * holds that are anchors of their own (a subfunction placed from a function file, a function inside an application)
  * are theirs, not this one's. One read of the element's tree.
+ *
+ * @intent which file an element was placed from, the source-file references a function or an application records for itself
  */
 export async function findOwnProvenance(
 	reader: Core.Query<Config> | Core.Transaction<Config>,

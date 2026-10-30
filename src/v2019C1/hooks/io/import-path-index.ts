@@ -45,6 +45,7 @@ export function buildImportPathIndex(params: {
 		if (!standard || standard.segments.at(-1)?.ref.id !== record.id) continue
 		index.byPath.set(standard.path, uuid)
 		index.targetsByUuid.set(uuid, {
+			recordId: record.id,
 			tagName: record.tagName,
 			path: standard,
 			lnType: readAttribute({

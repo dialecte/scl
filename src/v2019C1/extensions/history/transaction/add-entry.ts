@@ -6,6 +6,13 @@ import type { AddEntryParams } from './add-entry.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
+/**
+ * Records a change in the document history: adds a `Hitem` (who, what, why) under
+ * `Header > History`, creating both when missing, and moves the header to the next revision (and
+ * the next version with `version: 'increment'`).
+ *
+ * @intent add a History entry, record who changed the document and why, bump the version or revision of an SCL file, create the Header of a new file
+ */
 export async function addEntry(
 	tx: Core.Transaction<Config>,
 	params: AddEntryParams,

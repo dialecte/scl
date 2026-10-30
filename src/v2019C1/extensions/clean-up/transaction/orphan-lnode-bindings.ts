@@ -34,6 +34,8 @@ import type * as Core from '@dialecte/core'
  *
  * `templateUuid` is kept in every case: it records the template the LNode was instantiated from,
  * whatever implements it.
+ *
+ * @intent release LNodes bound to a missing LN, clean up LNode bindings after an IED or LN is deleted, clear dangling data mappings and signal implementations
  */
 export async function resetLNodes(
 	tx: Core.Transaction<Config>,

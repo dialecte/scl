@@ -14,8 +14,9 @@ export async function openSclDocument(params: OpenSclDocumentParams): Promise<Sc
 	assertValidSclXml(xml, label, { requireComplete: false })
 	if (!allowIncoherentReferences) assertCoherentSclReferences({ xml, label })
 
-	const [imported] = await project.import([new File([xml], `${label}.xml`, { type: 'text/xml' })], {
+	const [entry] = await project.import([new File([xml], `${label}.xml`, { type: 'text/xml' })], {
 		useCustomRecordsIds: true,
 	})
-	return project.openDocument(imported.documentId)
+	if (entry.status === 'failed') throw entry.error
+	return project.openDocument(entry.documentId)
 }

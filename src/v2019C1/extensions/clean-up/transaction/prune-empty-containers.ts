@@ -13,6 +13,8 @@ import type * as Core from '@dialecte/core'
  * up: the wrapper a deleted category leaves empty goes too. Deleted through the transaction, so the delete hooks clean
  * what refers to a container removed. What a transaction empties is pruned at its commit anyway; this reaches what the
  * document held empty before (an extracted file).
+ *
+ * @intent remove empty containers left after deletes (reference containers, wrappers, Private elements), tidy up a document or an extracted file
  */
 export async function pruneEmptyContainers(tx: Core.Transaction<Config>): Promise<void> {
 	for (const tagName of PRUNED_WHEN_EMPTY_TAGS) {

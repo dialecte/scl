@@ -1,0 +1,7 @@
+schema_version: '1.1'
+name: bay-labels-reuse-element-path
+expected_outcome: |
+  Finds the existing verb for the need instead of composing the path by hand: builds each label with
+  reference.buildElementPath (the path of an element from the root), knows info.of / ofEach give an
+  element's own title only, and names the verbs it considered. Attributes, when read, go through
+  getAttributes / readAttributes.

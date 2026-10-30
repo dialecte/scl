@@ -1,7 +1,7 @@
 import { Scl } from './config'
 import { SCL_DIALECTE_CONFIG } from './config/dialecte.config'
 import { SCL_EXTENSION_MODULES } from './extensions'
-import { HOOKS, createSclIoHooks } from './hooks'
+import { HOOKS, createSclImportSession } from './hooks'
 
 import { Project } from '@dialecte/core'
 
@@ -22,7 +22,7 @@ export function createSclProject<
 		defaultConfigKey: 'scl',
 		storage,
 		extensions: { base: SCL_EXTENSION_MODULES, custom: extensions },
-		// All hooks on the instance: io hooks (fresh per project) + record hooks.
-		hooks: { ...createSclIoHooks(), ...HOOKS },
+		// All hooks on the instance: the import session (one per file imported) + record hooks.
+		hooks: { createImportSession: createSclImportSession, ...HOOKS },
 	}) as Scl.Project<CustomModules>
 }

@@ -26,6 +26,8 @@ import type * as Core from '@dialecte/core'
  * name-path, which is a coherent single-target form (a simple name-path is also a
  * valid XPath) and keeps uuid + name references in agreement.
  *
+ * @intent compute the path value of a reference (SourceRef, FunctionRef, ...) to a target, write a reference attribute pointing at an element, refresh a stale reference path
+ *
  * @param query   - Active document query
  * @param params  - reference (the REF element) + target (the element it points to), the
  *                  target's path when the caller already read it (several references to one target),

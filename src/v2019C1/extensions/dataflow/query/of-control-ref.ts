@@ -8,6 +8,8 @@ import type * as Core from '@dialecte/core'
 /**
  * Query extension: the dataflow a ControlRef describes, an output of its LNode: which logical node
  * it controls data of, where the two are implemented, and the ExtCtrl implementing it.
+ *
+ * @intent dataflow of a ControlRef, what an LNode output controls and the ExtCtrl implementing it, describe one control signal
  */
 export async function ofControlRef(
 	query: Core.Query<Config>,

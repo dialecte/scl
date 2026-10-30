@@ -45,6 +45,8 @@ import type * as Core from '@dialecte/core'
  * Returns the instantiated root ref (retagged if applicable) and the clone mappings of
  * everything the operation cloned, so a consumer can drive follow-up rules
  * against the fresh instance without re-querying by templateUuid.
+ *
+ * @intent instantiate an FSD into a project, add a Function from a template under a Bay or Function, place a function template
  */
 export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Promise<FsdResult> {
 	const { sourceQuery, functionRef, overrides, keepNameTypesFrom } = params

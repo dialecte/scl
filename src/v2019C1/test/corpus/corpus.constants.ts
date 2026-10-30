@@ -1,4 +1,4 @@
-import type { CorpusExclusion, ImportWarningCounts } from './corpus.types'
+import type { CorpusExclusion, ImportDiagnosticCounts } from './corpus.types'
 
 /** Where the corpus is synced, from the package root: the files the smoke runs. */
 export const CORPUS_SMOKE_FOLDER = 'src/v2019C1/test/fixtures/corpus/smoke'
@@ -621,10 +621,10 @@ export const CORPUS_EXCLUDED: Readonly<Record<string, CorpusExclusion>> = {
 }
 
 /**
- * The import warnings a corpus file is known to give, counted by type; a file not listed gives none. A new warning,
- * or one fewer, fails its case.
+ * The import diagnostics a corpus file is known to give, counted by code; a file not listed gives none. A new
+ * diagnostic, or one fewer, fails its case.
  */
-export const CORPUS_EXPECTED_WARNINGS: Readonly<Record<string, ImportWarningCounts>> = {
+export const CORPUS_EXPECTED_DIAGNOSTICS: Readonly<Record<string, ImportDiagnosticCounts>> = {
 	// a signal path written without its logical node, data names written as the logical node alone
 	'3 - ASD files/P51_Light/P51_Appv0r2.asd': { 'incoherent-reference': 3 },
 }

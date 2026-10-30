@@ -12,6 +12,8 @@ import type * as Core from '@dialecte/core'
  * data they name: the far side). A dataflow no element implements yet is seen through the IEDs its
  * two LNodes are mapped to (the holder's for the subscribed list, the other's for the published
  * one). A dataflow inside the IED is in both. In the order of `all`.
+ *
+ * @intent inputs and outputs of an IED, what an IED subscribes to and publishes, dataflows of one IED
  */
 export async function ofIed(
 	query: Core.Query<Config>,

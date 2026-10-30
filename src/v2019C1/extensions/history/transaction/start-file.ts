@@ -13,6 +13,8 @@ import type * as Core from '@dialecte/core'
  * `Header` with a uuid of its own, version `0` and revision `1` (a `Header` the document holds is kept). A new
  * revision of an existing file (`as: 'revision'`) is not available yet: refused with `OPTION_NOT_AVAILABLE` before
  * anything is written.
+ *
+ * @intent start a new file in a document, give it a Header with its first history item before an operation writes it
  */
 export async function startFile(
 	tx: Core.Transaction<Config>,

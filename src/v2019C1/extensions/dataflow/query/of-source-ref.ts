@@ -9,6 +9,8 @@ import type * as Core from '@dialecte/core'
  * Query extension: the dataflow a SourceRef describes, an input of its LNode: what it takes from
  * which logical node, where the two are implemented, and the ExtRef, control block and registration
  * implementing it.
+ *
+ * @intent dataflow of a SourceRef, where an LNode input takes its data from, ExtRef and control block implementing a signal, describe one input signal
  */
 export async function ofSourceRef(
 	query: Core.Query<Config>,

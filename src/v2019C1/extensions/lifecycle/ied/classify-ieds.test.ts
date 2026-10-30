@@ -91,7 +91,7 @@ describe('classifyIeds in an ICD file', () => {
 		const project = await createSclProject().open(`classify-ieds-${crypto.randomUUID()}`)
 		try {
 			const xml = scl(`<IED name="Device" manufacturer="ABB" ${id}="ied-1"/>`)
-			const [imported] = await project.import([new File([xml], 'device.icd', { type: 'text/xml' })])
+			const imported = await project.importFile(new File([xml], 'device.icd', { type: 'text/xml' }))
 			const document = project.openDocument(imported.documentId)
 
 			const classifications = await classifyIeds(document.query)

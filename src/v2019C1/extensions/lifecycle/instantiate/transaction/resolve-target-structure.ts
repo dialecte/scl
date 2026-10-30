@@ -18,6 +18,8 @@ import type * as Core from '@dialecte/core'
  * actually exist on the parent's ancestry (inclusive of the parent itself);
  * levels absent from the target are omitted. Callers that need a specific level
  * (a satellite scoped to it) get a clear failure from `resolveStructureRef`.
+ *
+ * @intent find the Substation/VoltageLevel/Bay above an instantiation target, structure levels of a target parent for placing satellites
  */
 export async function resolveTargetStructure(
 	tx: Core.Query<Config> | Core.Transaction<Config>,

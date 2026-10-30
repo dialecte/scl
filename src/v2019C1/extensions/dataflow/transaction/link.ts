@@ -13,6 +13,8 @@ import type * as Core from '@dialecte/core'
  * the hooks write from that uuid follows where the element sits relative to the signal's LNode.
  * Whatever address the signal held is removed with the write, so one the hooks cannot compose (an
  * element without an internal address) does not stay.
+ *
+ * @intent connect a signal (SourceRef/ControlRef) to its ExtRef/ExtCtrl, implement a signal, link a dataflow to its implementation
  */
 export async function link(tx: Core.Transaction<Config>, params: LinkParams): Promise<void> {
 	const { signal, implementation } = params

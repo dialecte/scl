@@ -1,0 +1,9 @@
+schema_version: '1.1'
+name: new-scl-query-with-tests
+expected_outcome: |
+  Places the verb as an scl extension (extensions/<ns>/query/<verb>.ts exported via index), first
+  param Core.Query<Config> then one object param, named function declarations, types in a
+  .types.ts file, uses core traversal (findDescendants / getTree / findByAttributes) not ancestor
+  walks, table-driven runSclTestCases tests with inline XML and dev:db-id, red-first; HANDOVER
+  lists npm run check, oxfmt, build, test, doc:build, docs + CHANGELOG UNRELEASED, and a commit-
+  by-lots script without committing or pushing.

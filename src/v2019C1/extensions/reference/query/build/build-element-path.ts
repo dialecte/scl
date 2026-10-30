@@ -10,6 +10,13 @@ import type { ElementPath } from './path-segment.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
+/**
+ * The path of an element from the document root, as reference paths write it (`S1/V1/B1/CE1`,
+ * `IED1/LD0/XCBR1.Pos`), with the element each segment names. `null` when the element has no
+ * segment of its own (a transparent container such as `AccessPoint`).
+ *
+ * @intent path or label of an element from the root like Substation/VoltageLevel/Bay, breadcrumb path of a Bay/LNode/DO, full name path instead of walking ancestors, inverse of resolveElementPath
+ */
 export async function buildElementPath(
 	query: Core.Query<Config>,
 	ref: Scl.Ref<Scl.ElementsOf>,

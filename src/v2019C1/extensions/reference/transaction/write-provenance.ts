@@ -30,6 +30,8 @@ import type { AnyRawRecord, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/co
  *   version: the files newly imported are appended, in the order they were.
  *
  * `version` / `revision` fall back to empty strings when the (optional) Header attributes are absent.
+ *
+ * @intent record which template file an instance came from, add an SclFileReference to a Function/Application/Header, write source file provenance
  */
 export async function writeProvenance(
 	tx: Core.Transaction<Config>,

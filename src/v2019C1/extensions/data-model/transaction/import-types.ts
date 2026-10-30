@@ -42,7 +42,9 @@ export type {
 
 /**
  * Import the type closure of `records` into the target `DataTypeTemplates`,
- * content-addressed. For each type, bottom-up:
+ * content-addressed: an equal type is reused, a free id is kept, a taken id is forked.
+ *
+ * For each type, bottom-up:
  *
  * - **R1** structurally-equal type already in the target → reuse its id (dedup);
  * - **R2** no match and the source id is free → clone, preserving the id;
@@ -66,6 +68,8 @@ export type {
  * followers, a fork reused for a source type takes the source id back once it is
  * free — so a type only the followers named is updated in place, one anything
  * else names is forked.
+ *
+ * @intent copy data types (LNodeType/DOType/DAType/EnumType) into another document, import a type closure with dedup and id collision handling, merge DataTypeTemplates
  */
 export async function importTypes(
 	tx: Core.Transaction<Config>,

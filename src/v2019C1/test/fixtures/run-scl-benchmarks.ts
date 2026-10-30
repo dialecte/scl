@@ -26,14 +26,14 @@ import { Project } from '@dialecte/core'
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { SCL_EXTENSION_MODULES } from '@/v2019C1/extensions'
 import { importTypes } from '@/v2019C1/extensions/data-model/transaction/import-types'
-import { HOOKS, createSclIoHooks } from '@/v2019C1/hooks'
+import { HOOKS, createSclImportSession } from '@/v2019C1/hooks'
 
 import type { Config } from '@/v2019C1/config/dialecte.config'
 import type { Document } from '@dialecte/core'
 
 const DEFAULT_SIZES_MB = [5, 10, 50]
 const EMPTY_SCL = `<SCL xmlns="http://www.iec.ch/61850/2003/SCL" __id="scl-target"></SCL>`
-const SCL_HOOKS = { ...createSclIoHooks(), ...HOOKS }
+const SCL_HOOKS = { createImportSession: createSclImportSession, ...HOOKS }
 type SclModules = typeof SCL_EXTENSION_MODULES
 
 /** Live handles a benchmark reads from, prepared once per fixture. */
@@ -55,11 +55,9 @@ const BENCHMARKS: Benchmark[] = [
 		name: 'importTypes(all LNodes → empty target)',
 		instruments: ['scl::importTypes', 'scl::importTypes::sourceLoop'],
 		run: async ({ project, sourceDoc, lnodes }) => {
-			const [target] = await project.import(
-				[new File([EMPTY_SCL], 't.scd', { type: 'text/xml' })],
-				{
-					useCustomRecordsIds: true,
-				},
+			const target = await project.importFile(
+				new File([EMPTY_SCL], 't.scd', { type: 'text/xml' }),
+				{ useCustomRecordsIds: true },
 			)
 			const targetDoc = project.openDocument(target.documentId)
 			await targetDoc.transaction(async (tx) => {
@@ -100,7 +98,7 @@ async function benchmarkFixture(mb: number, dataDir: string): Promise<void> {
 	performance.clearMeasures()
 
 	const importStart = performance.now()
-	const [imported] = await project.import([new File([xml], 'src.scd', { type: 'text/xml' })], {
+	const imported = await project.importFile(new File([xml], 'src.scd', { type: 'text/xml' }), {
 		useCustomRecordsIds: true,
 	})
 	const importMs = performance.now() - importStart
@@ -145,7 +143,12 @@ async function main(): Promise<void> {
 	for (const mb of sizes) await benchmarkFixture(mb, dataDir)
 }
 
-main().catch((err) => {
-	console.error(err)
-	process.exit(1)
-})
+// Exit once every fixture is measured: `Project.destroy()` of @dialecte/core 0.7.0 leaves the
+// project's stale-import sweep interval running, which would keep node alive.
+main().then(
+	() => process.exit(0),
+	(err) => {
+		console.error(err)
+		process.exit(1)
+	},
+)

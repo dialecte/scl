@@ -11,6 +11,8 @@ import type * as Core from '@dialecte/core'
  * A dataflow's sides are the IED holding what implements it and the IED it takes its data from or
  * controls; a side the set does not hold - an IED the document lacks included - is outside. A
  * dataflow between two IEDs of the set, or between two IEDs outside it, does not cross it.
+ *
+ * @intent dataflows entering or leaving a set of IEDs, signals crossing the boundary of a group of IEDs, external interfaces of a selection
  */
 export async function crossing(
 	query: Core.Query<Config>,

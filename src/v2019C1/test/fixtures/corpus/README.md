@@ -38,8 +38,8 @@ npm run test:corpus
 
 With an empty folder, or without the schema files, the project skips (the vitest config logs one line). Each file gets
 two cases, and every smoke file must pass both (the pairs are read by fork tests only). **The file**: valid by
-structure, by the XSD validator and for coherent references. **Import and export**: it imports with the warnings it is
-known to give (`CORPUS_EXPECTED_WARNINGS`), the imported document holds nothing a real file could not, its export is a
+structure, by the XSD validator and for coherent references. **Import and export**: it imports with the diagnostics it is
+known to give (`CORPUS_EXPECTED_DIAGNOSTICS`), the imported document holds nothing a real file could not, its export is a
 fixed point and keeps every uuid and element of the file.
 
 ## The excluded files, again

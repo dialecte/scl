@@ -1,5 +1,5 @@
-import type { IncoherentReferenceWarning } from './io-hooks.types'
 import type { TupleReferencePair } from '@/v2019C1/constants'
+import type { IncoherentReferenceDiagnostic } from '@/v2019C1/errors/import-diagnostics.types'
 import type { TupleTargetParts } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.types'
 import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
 
@@ -10,12 +10,13 @@ export type TupleReferenceImport = {
 	 * After the pass: the uuid of each tuple reference written without it, from the element its names
 	 * name; the names of each one whose uuid names another element, from that element.
 	 */
-	resolve(): { updates: RecordPatch[]; warnings: IncoherentReferenceWarning[] }
+	resolve(): { updates: RecordPatch[]; diagnostics: IncoherentReferenceDiagnostic[] }
 }
 
-/** An element a tuple reference may name, kept by its uuid: its tag, its address and the parts of it. */
+/** An element a tuple reference may name, kept by its uuid: its tag, its record id, its address and the parts of it. */
 export type CollectedTupleTarget = {
 	tagName: string
+	recordId: string
 	address: string
 	parts: TupleTargetParts
 }

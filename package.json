@@ -9,7 +9,9 @@
 	},
 	"source": "src/index.ts",
 	"files": [
-		"dist"
+		"dist",
+		"skills",
+		"!skills/*/evals"
 	],
 	"type": "module",
 	"exports": {
@@ -46,6 +48,8 @@
 		"test:mutants": "SCL_MUTATION_PROJECT=1 vitest run --project mutation scripts/mutants/",
 		"//====== CHECK ======//": "",
 		"check": "run-p type-check type-check:test type-check:node lint:check format:check",
+		"skills:generate": "dialecte skills generate",
+		"skills:check": "dialecte skills check",
 		"type-check": "tsc -p tsconfig.build.json --noEmit",
 		"type-check:test": "tsc -p tsconfig.vitest.json --noEmit",
 		"type-check:node": "tsc -p tsconfig.node.json --noEmit",
@@ -65,7 +69,7 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.6.4"
+		"@dialecte/core": "0.7.0"
 	},
 	"devDependencies": {
 		"@dialecte/cli": "0.1.0",
@@ -107,5 +111,62 @@
 		"vitest": {
 			"optional": true
 		}
+	},
+	"dialecte": {
+		"gate": {
+			"fast": [
+				{
+					"name": "check",
+					"run": "npm run check"
+				},
+				{
+					"name": "skills",
+					"run": "npm run skills:check"
+				},
+				{
+					"name": "tests",
+					"run": "npx vitest run --project unit --changed",
+					"counts": "tests",
+					"changedOnly": true
+				}
+			],
+			"full": [
+				{
+					"name": "check",
+					"run": "npm run check"
+				},
+				{
+					"name": "skills",
+					"run": "npm run skills:check"
+				},
+				{
+					"name": "build",
+					"run": "npm run build"
+				},
+				{
+					"name": "tests",
+					"run": "nice -n 10 npx vitest run --project unit --no-file-parallelism",
+					"counts": "tests"
+				},
+				{
+					"name": "docs",
+					"run": "npm run doc:build",
+					"restoresGeneratedDocs": true
+				},
+				{
+					"name": "type-bench",
+					"run": "npm run type-bench:check"
+				}
+			]
+		},
+		"generatedDocs": [
+			".vitepress/data/elements-catalog.json",
+			"doc/v2019C1/api/elements.md"
+		],
+		"referencePatterns": [
+			"61850-[0-9]+ ?§",
+			"9[0]-30",
+			"7-[0-9] ?§"
+		]
 	}
 }

@@ -10,8 +10,12 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
- * Import an element subtree into a target document together with its type closure:
+ * Import an element subtree into a target document together with its type closure (the data
+ * types its LN / LNode use), returning the root it wrote into, the type id remap and the clone mappings.
+ * Uuid references are not followed: repoint them afterwards with `tx.reference.applyUuidRemap` over the
+ * returned clone mappings.
  *
+ * Two steps:
  * 1. clone the subtree under `targetParent` (with optional `omit` / `strip` /
  *    `retagRoot`);
  * 2. `withTypes` (default `true`) — content-addressed **type** closure: reconcile
@@ -29,6 +33,8 @@ import type * as Core from '@dialecte/core'
  * satellites by ancestry; cross-domain/lineage rewiring is plan-driven). Uuid
  * references inside the clone are repointed by the caller via `reference.applyUuidRemap`
  * over the returned `cloneMappings`.
+ *
+ * @intent copy a subtree (IED, Bay, Function) from another document with its data types, import an IED from an ICD, clone an element across documents
  */
 export async function deep(
 	tx: Core.Transaction<Config>,

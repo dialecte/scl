@@ -8,12 +8,14 @@ import type * as Core from '@dialecte/core'
 /**
  * Mechanically rewrite every type-id reference attribute (`lnType`, `DO.type`,
  * `SDO.type`, `DA.type`, `BDA.type`) in `records` whose current value appears in
- * `idRemap`. Registry-driven via {@link TYPE_ID_REF_ATTRIBUTES} (no hardcoded
- * tag list). Counterpart of {@link applyUuidRemap} (the uuid-ref remap), but for
+ * `idRemap`. Registry-driven via `TYPE_ID_REF_ATTRIBUTES` (no hardcoded
+ * tag list). Counterpart of `tx.reference.applyUuidRemap` (the uuid-ref remap), but for
  * the id-string type-reference system.
  *
  * Idempotent: an attribute whose value is not a key of `idRemap` (or maps to
  * itself) is left untouched.
+ *
+ * @intent rename data type ids and repoint lnType/type references, rewrite type references after an id change
  */
 export async function applyTypeIdRemap(
 	tx: Core.Transaction<Config>,

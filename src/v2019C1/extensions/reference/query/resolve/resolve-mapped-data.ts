@@ -12,6 +12,8 @@ import type * as Core from '@dialecte/core'
  * node. Otherwise the record follows its default: its parent data, or for a `DOS` the
  * logical node its `LNode` is mapped to, extended by its own name.
  * Returns `undefined` when nothing implements it.
+ *
+ * @intent which DO/DA implements a DOS/SDS/DAS, data a data specification is mapped to, follow mappedLnUuid/mappedDoName/mappedDaName
  */
 export async function resolveMappedData(
 	query: Core.Query<Config> | Core.Transaction<Config>,

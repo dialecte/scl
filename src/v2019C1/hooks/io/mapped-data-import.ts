@@ -4,14 +4,24 @@ import { buildMappedLNodePath } from '@/v2019C1/extensions/reference/query/build
 import { splitLnodeQualifier } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { resolveMappedDataFrom } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-data-from'
 import { readAttributes } from '@/v2019C1/helpers'
+import {
+	incoherentReferenceDiagnostic,
+	incoherentReferenceRelated,
+	unresolvedReferenceDiagnostic,
+} from '@/v2019C1/hooks/io/import-diagnostic-builders'
 
 import type {
 	ImportedLNode,
 	ImportedMappedDataNode,
 	MappedDataImport,
+	MappedDataImportDiagnostic,
 } from './mapped-data-import.types'
+import type {
+	IncoherentReferenceDiagnostic,
+	UnresolvedReferenceDiagnostic,
+} from '@/v2019C1/errors/import-diagnostics.types'
 import type { MappedDataSource } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-data-from.types'
-import type { AnyRawRecord, ImportWarning, RecordPatch } from '@dialecte/core'
+import type { AnyRawRecord, DiagnosticRef, RecordPatch } from '@dialecte/core'
 
 const DATA_TAGS: ReadonlySet<string> = new Set(['DOS', 'SDS'])
 
@@ -24,14 +34,16 @@ const DATA_TAGS: ReadonlySet<string> = new Set(['DOS', 'SDS'])
 export function createMappedDataImport(): MappedDataImport {
 	const nodes = new Map<string, ImportedMappedDataNode>()
 	const lnodes = new Map<string, ImportedLNode>()
-	const lnUuids = new Set<string>()
+	/** Every `LN` / `LN0` of the file with a uuid, by uuid: what a diagnostic naming one points at. */
+	const lnsByUuid = new Map<string, DiagnosticRef>()
 
 	function collect(params: { record: AnyRawRecord; ancestry: readonly AnyRawRecord[] }): void {
 		const { record, ancestry } = params
 		const attributes = readAttributes({ record, defaults: 'none' })
 
 		if (record.tagName === 'LN' || record.tagName === 'LN0') {
-			if (attributes.uuid) lnUuids.add(attributes.uuid)
+			if (attributes.uuid)
+				lnsByUuid.set(attributes.uuid, { tagName: record.tagName, id: record.id })
 			return
 		}
 
@@ -55,14 +67,13 @@ export function createMappedDataImport(): MappedDataImport {
 		})
 	}
 
-	async function resolve(params: { pathIndex: ReadonlyMap<string, string> }): Promise<{
-		updates: RecordPatch[]
-		warnings: ImportWarning[]
-	}> {
+	async function resolve(params: {
+		pathIndex: ReadonlyMap<string, string>
+	}): ReturnType<MappedDataImport['resolve']> {
 		const { pathIndex } = params
 
 		function findLnByUuid(uuid: string): string | undefined {
-			return lnUuids.has(uuid) ? uuid : undefined
+			return lnsByUuid.has(uuid) ? uuid : undefined
 		}
 
 		function findLnByPath(path: string): string | undefined {
@@ -91,7 +102,7 @@ export function createMappedDataImport(): MappedDataImport {
 		}
 
 		const updates: RecordPatch[] = []
-		const warnings: ImportWarning[] = []
+		const diagnostics: MappedDataImportDiagnostic[] = []
 
 		for (const [recordId, node] of nodes) {
 			if (!node.mappedName && !node.mappedLnUuid) continue
@@ -100,7 +111,7 @@ export function createMappedDataImport(): MappedDataImport {
 
 			const { mappedData, defaultData } = await resolveMappedDataFrom(source, { node: recordId })
 			if (mappedData?.origin !== 'own') {
-				warnings.push(unresolvedWarning({ recordId, node, attributeNames }))
+				diagnostics.push(unresolvedDiagnostic({ recordId, node, attributeNames }))
 				continue
 			}
 
@@ -108,7 +119,17 @@ export function createMappedDataImport(): MappedDataImport {
 			if (node.mappedName?.includes('/') && node.mappedLnUuid) {
 				const namedLn = findLnByPath(splitLnodeQualifier(node.mappedName).path)
 				if (namedLn && namedLn !== node.mappedLnUuid) {
-					warnings.push(incoherentWarning({ recordId, node, attributeNames }))
+					diagnostics.push(
+						incoherentDiagnostic({
+							recordId,
+							tagName: node.tagName,
+							attributeNames,
+							pathValue: node.mappedName,
+							uuidValue: node.mappedLnUuid,
+							uuidTarget: lnsByUuid.get(node.mappedLnUuid),
+							pathTarget: lnsByUuid.get(namedLn),
+						}),
+					)
 				}
 			}
 
@@ -140,45 +161,53 @@ export function createMappedDataImport(): MappedDataImport {
 			})
 		}
 
-		return { updates, warnings }
+		return { updates, diagnostics }
 	}
 
 	return { collect, resolve }
 }
 
-function unresolvedWarning(params: {
+/**
+ * Mapped data whose implementation the file does not hold: on its name attribute, or on its uuid
+ * attribute when it is named by its uuid alone.
+ */
+function unresolvedDiagnostic(params: {
 	recordId: string
 	node: ImportedMappedDataNode
 	attributeNames: { path: string; uuid: string }
-}): ImportWarning {
+}): UnresolvedReferenceDiagnostic {
 	const { recordId, node, attributeNames } = params
-	return {
-		type: 'unresolved-reference',
-		recordId,
-		details: {
-			elementTag: node.tagName,
+	return unresolvedReferenceDiagnostic({
+		ref: {
+			tagName: node.tagName,
+			id: recordId,
+			attribute: node.mappedName ? attributeNames.path : attributeNames.uuid,
+		},
+		meta: {
 			uuidAttribute: attributeNames.uuid,
 			pathValue: node.mappedName ?? node.mappedLnUuid ?? '',
 			triedKeys: [],
 		},
-	}
+	})
 }
 
-function incoherentWarning(params: {
+/**
+ * Mapped data whose absolute name names another logical node than its uuid, with the logical nodes
+ * involved, each when the file holds it.
+ */
+function incoherentDiagnostic(params: {
 	recordId: string
-	node: ImportedMappedDataNode
+	tagName: string
 	attributeNames: { path: string; uuid: string }
-}): ImportWarning {
-	const { recordId, node, attributeNames } = params
-	return {
-		type: 'incoherent-reference',
-		recordId,
-		details: {
-			elementTag: node.tagName,
-			pathAttribute: attributeNames.path,
-			pathValue: node.mappedName,
-			uuidAttribute: attributeNames.uuid,
-			uuidValue: node.mappedLnUuid,
-		},
-	}
+	pathValue: string
+	uuidValue: string
+	uuidTarget: DiagnosticRef | undefined
+	pathTarget: DiagnosticRef | undefined
+}): IncoherentReferenceDiagnostic {
+	const { recordId, tagName, attributeNames, pathValue, uuidValue, uuidTarget, pathTarget } = params
+	return incoherentReferenceDiagnostic({
+		ref: { tagName, id: recordId, attribute: attributeNames.path },
+		meta: { uuidAttribute: attributeNames.uuid, pathValue, uuidValue },
+		related: incoherentReferenceRelated({ uuidTarget, pathTarget }),
+	})
 }

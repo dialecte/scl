@@ -63,22 +63,52 @@ The errors the dialecte declares (`SCL_ERRORS`), beside those of the core catalo
 
 Anything else the lifecycle or the dataflow raises uses a key of the core catalogue (`ELEMENT_NOT_FOUND`, `UNIQUE_CONSTRAINT_VIOLATION`, `ASSERTION_FAILED`) — an internal inconsistency rather than something the consumer passed.
 
-## Import warnings
+## Import diagnostics
 
-The import reports warnings instead of refusing a file. Their type is exported as `SclImportWarning` (a union, one member per `type`; `SclImportWarningType` is the union of the codes). `type` is the code, `details` the data; the default wording of each type is in `SCL_IMPORT_WARNINGS`.
+The import says what it found in a file instead of refusing it: each imported file's entry carries `diagnostics`, `[]` when there is nothing to say (`project.import(files)` returns one entry per file, `project.importFile(file)` the imported document). A diagnostic is core's [`Diagnostic`](https://dialecte.github.io/core/io/hooks#diagnostics), plain data: `code`, `severity`, `source` (`'scl'`), `message`, `ref` (the element, and the attribute when it is about one), `related` (the other elements involved) and `meta` (the values concerned). The codes, with their severity, family and default wording, are in `SCL_IMPORT_DIAGNOSTICS`; `SclImportDiagnosticCode` is the union of the codes.
 
-| `type`                         | Reported when                                                                                                                                                | `details`                                                                |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `unresolved-reference`         | a reference written as a path names no element of the file                                                                                                   | `elementTag`, `uuidAttribute`, `pathValue`, `triedKeys`                  |
-| `unsupported-xpath-reference`  | a reference is written in a form that is not resolved                                                                                                        | `elementTag`, `pathAttribute`, `uuidAttribute`, `pathValue`              |
-| `incoherent-reference`         | the path and the uuid of a reference name two different elements: the uuid wins, the path is written from it                                                 | `elementTag`, `pathAttribute`, `pathValue`, `uuidAttribute`, `uuidValue` |
-| `incoherent-path-names`        | names written from a path disagree with it (a terminal's level names, a node's `pathName`): written again from it                                            | `elementTag`, `attributes` (`name`, `value`, `expected`)                 |
-| `data-path-not-split`          | a reference written with the path of an LNode could not be given the data-object name a data reference by uuid carries: it is left as read, without the uuid | `elementTag`, `pathAttribute`, `pathValue`                               |
-| `derived-specification-naming` | an LNode bound to an IED had no `LNodeSpecNaming`: it got one from the LN it is bound to (prefix, class, instance)                                           | `iedName`, `specifiedNaming`                                             |
+A `warning` says the file is not what it says (a reference is left without its uuid, or written again from the element its uuid names); an `information` says the file was corrected on import (nothing is wrong once it is stored).
 
-For a reference of the IED section named by attributes ([`TUPLE_REFERENCE_PAIRS`](../extensions/reference#references-of-the-ied-section-named-by-their-attributes)), an `incoherent-reference` warning gives in `pathAttribute` the attributes naming the target, space-separated (`iedName ldInst prefix lnClass lnInst`), and in `pathValue` what they named (`P1/LD0/LLN0`). Its names are written from the element the uuid names, unless that element is one the reference cannot point at (another tag, such as a logical node for an `apUuid`; another kind of control block than its service; another IED than the one it names by where it sits) or no names can name every uuid it holds and keep its other names: it is then left as read.
+| `code`                         | Severity      | Reported when                                                                                                                                                | `ref`                             | `meta`                                     |
+| ------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- | ------------------------------------------ |
+| `unresolved-reference`         | `warning`     | a reference written as a path names no element of the file                                                                                                   | the reference, its path attribute | `uuidAttribute`, `pathValue`, `triedKeys`  |
+| `unsupported-xpath-reference`  | `warning`     | a reference is written in a form that is not resolved                                                                                                        | the reference, its path attribute | `uuidAttribute`, `pathValue`               |
+| `incoherent-reference`         | `warning`     | the path and the uuid of a reference name two different elements: the uuid wins, the path is written from it                                                 | the reference, its path attribute | `uuidAttribute`, `pathValue`, `uuidValue`  |
+| `data-path-not-split`          | `warning`     | a reference written with the path of an LNode could not be given the data-object name a data reference by uuid carries: it is left as read, without the uuid | the reference, its path attribute | `pathValue`                                |
+| `incoherent-path-names`        | `information` | names written from a path disagree with it (a terminal's level names, a node's `pathName`): written again from it                                            | the element holding them          | `attributes` (`name`, `value`, `expected`) |
+| `derived-specification-naming` | `information` | an LNode bound to an IED had no `LNodeSpecNaming`: it got one from the LN it is bound to (prefix, class, instance)                                           | the LNode                         | `iedName`, `specifiedNaming`               |
 
-Each member is exported under its own name, to narrow a warning by its `type`: `UnresolvedReferenceWarning`, `UnsupportedXPathWarning`, `IncoherentReferenceWarning`, `IncoherentPathNamesWarning` (each attribute an `IncoherentPathName`), `DataPathNotSplitWarning`, `DerivedSpecificationNamingWarning`.
+Mapped data (`DOS`, `SDS`, `DAS`) has its `unresolved-reference` with empty `triedKeys`; named by its uuid alone, the diagnostic is on its uuid attribute and `pathValue` holds that uuid. An `incoherent-reference` lists in `related` the element its uuid names, then the element its path names, each when the file holds it; the `message` of each is a value of `INCOHERENT_REFERENCE_RELATED` (`uuidTarget`, `pathTarget`).
+
+For a reference of the IED section named by attributes ([`TUPLE_REFERENCE_PAIRS`](../extensions/reference#references-of-the-ied-section-named-by-their-attributes)), an `incoherent-reference` diagnostic gives in `ref.attribute` the attributes naming the target, space-separated (`iedName ldInst prefix lnClass lnInst`), and in `meta.pathValue` what they named (`P1/LD0/LLN0`). Its names are written from the element the uuid names, unless that element is one the reference cannot point at (another tag, such as a logical node for an `apUuid`; another kind of control block than its service; another IED than the one it names by where it sits) or no names can name every uuid it holds and keep its other names: it is then left as read.
+
+`isSclImportDiagnostic(diagnostic)` narrows a diagnostic to the typed union `SclImportDiagnostic` (it checks `source` and `code`), so a `switch` on `code` reads that code's `meta`. Each member is exported under its own name: `UnresolvedReferenceDiagnostic`, `UnsupportedXPathDiagnostic`, `IncoherentReferenceDiagnostic` (each related element an `IncoherentReferenceRelated`), `DataPathNotSplitDiagnostic`, `IncoherentPathNamesDiagnostic` (each attribute an `IncoherentPathName`), `DerivedSpecificationNamingDiagnostic`.
+
+```ts
+import { createSclProject, isSclImportDiagnostic } from '@dialecte/scl/v2019C1'
+
+const project = await createSclProject().open('my-project')
+const entries = await project.import(files)
+for (const entry of entries) {
+	if (entry.status === 'failed') continue // entry.error: the file was not imported
+	for (const diagnostic of entry.diagnostics) {
+		if (!isSclImportDiagnostic(diagnostic)) continue
+		switch (diagnostic.code) {
+			case 'unresolved-reference':
+				console.warn(`${diagnostic.ref.tagName} ${diagnostic.meta.pathValue}: not in the file`)
+				break
+			case 'incoherent-reference':
+				console.warn(
+					diagnostic.message,
+					diagnostic.related.map(({ ref }) => ref.id),
+				)
+				break
+		}
+	}
+}
+```
+
+Up to 0.11 these were warnings (`SclImportWarning`, `SCL_IMPORT_WARNINGS`) that core dropped: `type` is now `code`, `recordId` is `ref.id`, `details.elementTag` is `ref.tagName`, `details.pathAttribute` is `ref.attribute`, and the rest of `details` is `meta`.
 
 ## Identity warnings
 

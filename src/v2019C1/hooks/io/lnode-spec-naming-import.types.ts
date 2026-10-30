@@ -1,4 +1,4 @@
-import type { DerivedSpecificationNamingWarning } from './io-hooks.types'
+import type { DerivedSpecificationNamingDiagnostic } from '@/v2019C1/errors/import-diagnostics.types'
 import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
 
 export type SpecNamingImport = {
@@ -6,13 +6,13 @@ export type SpecNamingImport = {
 	collect(params: { record: AnyRawRecord; ancestry: readonly AnyRawRecord[] }): void
 	/**
 	 * After the pass: the records giving every LNode without `LNodeSpecNaming` its own, and a
-	 * warning for each one taken from the naming of the logical node the LNode is bound to.
+	 * diagnostic for each one taken from the naming of the logical node the LNode is bound to.
 	 */
 	resolve(): {
 		/** The `LNodeSpecNaming` of every LNode, by LNode id: the file's and the ones made here. */
 		namings: ReadonlyMap<string, AnyRawRecord>
 		creates: AnyRawRecord[]
 		updates: RecordPatch[]
-		warnings: DerivedSpecificationNamingWarning[]
+		diagnostics: DerivedSpecificationNamingDiagnostic[]
 	}
 }

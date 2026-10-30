@@ -5,6 +5,8 @@ import type * as Core from '@dialecte/core'
 
 /**
  * Query extension: returns the latest Hitem by version/revision.
+ *
+ * @intent latest History entry of a document, current version and revision, last Hitem
  */
 export async function getLatestHitem(
 	query: Core.Query<Config>,

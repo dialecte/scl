@@ -14,6 +14,8 @@ import type * as Core from '@dialecte/core'
  *
  * The tool a consumer calls after giving an element the name it wants, so that the engine alone
  * decides how a taken name is told apart.
+ *
+ * @intent make a name unique among siblings, fix a duplicate name after a rename or paste, number a taken name (_1, _2) instead of choosing a suffix by hand
  */
 export async function makeUnique(
 	tx: Core.Transaction<Config>,

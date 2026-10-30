@@ -4,25 +4,23 @@ import { assertValidSclXml } from '../assert-valid-scl-xml'
 import { SCL_TEST_SETUP } from '../scl-test-setup.constants'
 import { collectSclXsdViolations, isSclXsdConfigured } from '../scl-xsd'
 import { CORPUS_LOADERS } from './corpus-loaders.constants'
-import { CORPUS_EXPECTED_WARNINGS, CORPUS_FILES, CORPUS_KIND_FOLDERS } from './corpus.constants'
+import { CORPUS_EXPECTED_DIAGNOSTICS, CORPUS_FILES, CORPUS_KIND_FOLDERS } from './corpus.constants'
 
 import { Project } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
 
-import { createSclIoHooks } from '@/v2019C1/hooks'
-
 import type {
 	CorpusFileCheckParams,
 	CorpusKind,
-	ImportWarningCounts,
+	ImportDiagnosticCounts,
 	RunCorpusSmokeParams,
 } from './corpus.types'
 import type { Config } from '@/v2019C1/config/dialecte.config'
-import type { ImportWarning } from '@dialecte/core'
+import type { Diagnostic } from '@dialecte/core'
 
 /**
  * Two cases per corpus file of `kind`. The file: valid by structure, by the XSD validator and for coherent
- * references. Its import and export: it imports with the warnings it is known to give, the imported document holds
+ * references. Its import and export: it imports with the diagnostics it is known to give, the imported document holds
  * nothing a real file could not, its export is a fixed point (exported, imported again and exported, it does not
  * change), and the export keeps every uuid and every element of the file. Every smoke file must pass both.
  * Skipped when the corpus is not synced.
@@ -77,7 +75,7 @@ export async function assertCorpusFileValid(params: CorpusFileCheckParams): Prom
 }
 
 /**
- * The check of a corpus file's import and export: its known warnings, an imported document holding no violation, an
+ * The check of a corpus file's import and export: its known diagnostics, an imported document holding no violation, an
  * export that is a fixed point and keeps every uuid and element. Throws on the first that fails.
  */
 export async function assertCorpusFileImport(params: CorpusFileCheckParams): Promise<void> {
@@ -86,8 +84,8 @@ export async function assertCorpusFileImport(params: CorpusFileCheckParams): Pro
 	const corpus = await openCorpusProject()
 	try {
 		const imported = await corpus.importXml({ xml, fileName: fileNameOf(file) })
-		expect(countWarnings(imported.warnings), 'the import warnings').toEqual(
-			CORPUS_EXPECTED_WARNINGS[file] ?? {},
+		expect(countDiagnostics(imported.diagnostics), 'the import diagnostics').toEqual(
+			CORPUS_EXPECTED_DIAGNOSTICS[file] ?? {},
 		)
 
 		const { violations } = await collectSclOutputViolations({
@@ -113,36 +111,25 @@ export async function assertCorpusFileImport(params: CorpusFileCheckParams): Pro
 	}
 }
 
-/** A project opened as an application opens one, keeping aside the warnings each import gives. */
+/** A project opened as an application opens one: each import answers its file's diagnostics. */
 async function openCorpusProject() {
-	const warnings: ImportWarning[] = []
-	const ioHooks = createSclIoHooks()
-	const afterImport = ioHooks.afterImport
 	const project = await new Project<Config, typeof SCL_TEST_SETUP.extensions.base>({
 		configs: { default: SCL_TEST_SETUP.dialecteConfig },
 		defaultConfigKey: 'default',
 		storage: { type: 'local' },
 		extensions: SCL_TEST_SETUP.extensions,
-		hooks: {
-			...SCL_TEST_SETUP.hooks,
-			...ioHooks,
-			async afterImport() {
-				const result = afterImport ? await afterImport() : {}
-				warnings.push(...(result.warnings ?? []))
-				return result
-			},
-		},
+		hooks: SCL_TEST_SETUP.hooks,
 	}).open(`corpus-${crypto.randomUUID()}`)
 
 	async function importXml(params: { xml: string; fileName: string }) {
 		const { xml, fileName } = params
-		const before = warnings.length
 		const file = new File([xml], fileName, { type: 'application/xml' })
-		const [result] = await project.import([file])
+		const [entry] = await project.import([file])
+		if (entry.status === 'failed') throw entry.error
 		return {
-			documentId: result.documentId,
-			document: project.openDocument(result.documentId),
-			warnings: warnings.slice(before),
+			documentId: entry.documentId,
+			document: project.openDocument(entry.documentId),
+			diagnostics: entry.diagnostics,
 		}
 	}
 
@@ -154,9 +141,9 @@ async function openCorpusProject() {
 	return { project, importXml, exportXml }
 }
 
-function countWarnings(warnings: readonly ImportWarning[]): ImportWarningCounts {
+function countDiagnostics(diagnostics: readonly Diagnostic[]): ImportDiagnosticCounts {
 	const counts: Record<string, number> = {}
-	for (const { type } of warnings) counts[type] = (counts[type] ?? 0) + 1
+	for (const { code } of diagnostics) counts[code] = (counts[code] ?? 0) + 1
 	return counts
 }
 

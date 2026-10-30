@@ -26,6 +26,8 @@ import type { AnyRef, AnyRefOrRecord, AnyTrackedRecord } from '@dialecte/core'
  *   `templateUuid`; otherwise its lineage goes, and so, by the same rule, does the lineage of what it holds.
  * - `strip` (extract): the elements named in `unlinked` lose their template link (`templateUuid`, `originUuid`);
  *   every other element keeps its lineage.
+ *
+ * @intent stamp templateUuid/originUuid on cloned elements, set instance lineage after a clone, strip template lineage on extract
  */
 export async function writeIdentity(
 	tx: Core.Transaction<Config>,

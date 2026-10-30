@@ -1,3 +1,8 @@
+import {
+	incoherentReferenceDiagnostic,
+	incoherentReferenceRelated,
+} from './import-diagnostic-builders'
+
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { iedNameOf } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-name-of'
 import { TUPLE_ROLES } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
@@ -16,7 +21,6 @@ import {
 } from '@/v2019C1/extensions/reference/query/ied-tuple/tuple-reference-write'
 import { readAttribute } from '@/v2019C1/helpers'
 
-import type { IncoherentReferenceWarning } from './io-hooks.types'
 import type {
 	CollectedTuplePair,
 	CollectedTupleTarget,
@@ -26,6 +30,7 @@ import type {
 	TupleReferenceImport,
 } from './tuple-reference-import.types'
 import type { TupleReferencePair } from '@/v2019C1/constants'
+import type { IncoherentReferenceDiagnostic } from '@/v2019C1/errors/import-diagnostics.types'
 import type { TupleReferenceWrite } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.types'
 import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
 
@@ -86,21 +91,18 @@ export function createTupleReferenceImport(): TupleReferenceImport {
 		const address = parts ? tupleAddressOf({ parts }) : undefined
 		if (!parts || !address) return
 		targetsByAddress.set(targetKey({ address, tagName: record.tagName }), uuid)
-		targetsByUuid.set(uuid, { tagName: record.tagName, address, parts })
+		targetsByUuid.set(uuid, { tagName: record.tagName, recordId: record.id, address, parts })
 	}
 
-	function resolve(): { updates: RecordPatch[]; warnings: IncoherentReferenceWarning[] } {
+	function resolve(): { updates: RecordPatch[]; diagnostics: IncoherentReferenceDiagnostic[] } {
 		const updates: RecordPatch[] = []
-		const warnings: IncoherentReferenceWarning[] = []
+		const diagnostics: IncoherentReferenceDiagnostic[] = []
 		for (const referrer of referrers) {
 			const outcome = resolveReferrer({ referrer, targetsByAddress, targetsByUuid })
 			if (outcome.update) updates.push(outcome.update)
-			warnings.push(...outcome.warnings)
+			diagnostics.push(...outcome.diagnostics)
 		}
-		targetsByAddress.clear()
-		targetsByUuid.clear()
-		referrers.length = 0
-		return { updates, warnings }
+		return { updates, diagnostics }
 	}
 
 	return { collect, resolve }
@@ -111,14 +113,14 @@ export function createTupleReferenceImport(): TupleReferenceImport {
  * uuid names another element than its names, the names of every pair whose uuid names an element,
  * written from it in one `tupleReferenceWrite`. Nothing more when no names can name every uuid and
  * keep the other names: after the write, each pair it follows must name the element its uuid names,
- * and each other pair the address it named as read. One `incoherent-reference` warning per pair that
+ * and each other pair the address it named as read. One `incoherent-reference` diagnostic per pair that
  * disagreed or cannot follow its uuid.
  */
 function resolveReferrer(params: {
 	referrer: PendingTupleReferrer
 	targetsByAddress: ReadonlyMap<string, string>
 	targetsByUuid: ReadonlyMap<string, CollectedTupleTarget>
-}): { update?: RecordPatch; warnings: IncoherentReferenceWarning[] } {
+}): { update?: RecordPatch; diagnostics: IncoherentReferenceDiagnostic[] } {
 	const { referrer, targetsByAddress, targetsByUuid } = params
 	const { record, ancestry } = referrer
 	const fills = fillsOf({ referrer, targetsByAddress })
@@ -132,11 +134,22 @@ function resolveReferrer(params: {
 		const reading = pairReadingOf({ collected, target, record, ancestry })
 		return [{ collected, uuid, target, reading }]
 	})
-	const warnings = readings.flatMap(({ collected, reading }) =>
-		reading === 'follows' ? [] : [incoherentTupleReferenceWarning({ record, collected })],
+	const diagnostics = readings.flatMap(({ collected, uuid, target, reading }) =>
+		reading === 'follows'
+			? []
+			: [
+					incoherentTupleReferenceDiagnostic({
+						record,
+						collected,
+						uuid,
+						target,
+						targetsByAddress,
+						targetsByUuid,
+					}),
+				],
 	)
 	if (!readings.some(({ reading }) => reading === 'disagrees'))
-		return { update: recordPatchOf({ record, write: fillsOnly }), warnings }
+		return { update: recordPatchOf({ record, write: fillsOnly }), diagnostics }
 
 	const followed = readings.filter(({ reading }) => reading !== 'cannot-follow')
 	const names = tupleReferenceWrite({
@@ -152,12 +165,12 @@ function resolveReferrer(params: {
 		return address === (target ? target.address : collected.address)
 	})
 	if (!names || !keepsEveryAddress)
-		return { update: recordPatchOf({ record, write: fillsOnly }), warnings }
+		return { update: recordPatchOf({ record, write: fillsOnly }), diagnostics }
 	const write: TupleReferenceWrite = {
 		attributes: { ...fills, ...names.attributes },
 		value: names.value,
 	}
-	return { update: recordPatchOf({ record, write }), warnings }
+	return { update: recordPatchOf({ record, write }), diagnostics }
 }
 
 /**
@@ -219,26 +232,41 @@ function recordPatchOf(params: {
 }
 
 /**
- * The `incoherent-reference` warning of a tuple reference: `pathAttribute` lists the attributes
- * naming its target (space-separated), `pathValue` is what they name (`P1/LD0/LLN0`).
+ * The `incoherent-reference` diagnostic of a tuple reference: `ref.attribute` lists the attributes
+ * naming its target (space-separated), `meta.pathValue` is what they name (`P1/LD0/LLN0`); `related`
+ * names the element its uuid names, then the one its names name when the file holds exactly one.
  */
-function incoherentTupleReferenceWarning(params: {
+function incoherentTupleReferenceDiagnostic(params: {
 	record: AnyRawRecord
 	collected: CollectedTuplePair
-}): IncoherentReferenceWarning {
-	const { record, collected } = params
-	const { pair, address, uuid } = collected
-	return {
-		type: 'incoherent-reference',
-		recordId: record.id,
-		details: {
-			elementTag: record.tagName,
-			pathAttribute: namingAttributesOf({ pair }).join(' '),
-			pathValue: address.slice(address.indexOf(':') + 1),
+	uuid: string
+	target: CollectedTupleTarget
+	targetsByAddress: ReadonlyMap<string, string>
+	targetsByUuid: ReadonlyMap<string, CollectedTupleTarget>
+}): IncoherentReferenceDiagnostic {
+	const { record, collected, uuid, target, targetsByAddress, targetsByUuid } = params
+	const { pair, address } = collected
+	const pathUuids = collected.targetTags.flatMap((tagName) => {
+		const found = targetsByAddress.get(targetKey({ address, tagName }))
+		return found ? [found] : []
+	})
+	const pathTarget = pathUuids.length === 1 ? targetsByUuid.get(pathUuids[0]) : undefined
+	return incoherentReferenceDiagnostic({
+		ref: {
+			tagName: record.tagName,
+			id: record.id,
+			attribute: namingAttributesOf({ pair }).join(' '),
+		},
+		meta: {
 			uuidAttribute: pair.attribute.uuid,
+			pathValue: address.slice(address.indexOf(':') + 1),
 			uuidValue: uuid,
 		},
-	}
+		related: incoherentReferenceRelated({
+			uuidTarget: { tagName: target.tagName, id: target.recordId },
+			pathTarget: pathTarget && { tagName: pathTarget.tagName, id: pathTarget.recordId },
+		}),
+	})
 }
 
 /** The attributes of a referrer naming its target in a pair: its IED (when an attribute), then each part. */

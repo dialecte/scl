@@ -6,8 +6,8 @@ export type CorpusKind = keyof typeof CORPUS_KIND_FOLDERS
 /** Reads one corpus file's text; the files load one at a time. */
 export type CorpusLoader = () => Promise<string>
 
-/** The import warnings of a file, counted by type. */
-export type ImportWarningCounts = Readonly<Record<string, number>>
+/** The import diagnostics of a file, counted by code. */
+export type ImportDiagnosticCounts = Readonly<Record<string, number>>
 
 /** Why a file of the source is left out of the corpus, and since when. */
 export type CorpusExclusion = {

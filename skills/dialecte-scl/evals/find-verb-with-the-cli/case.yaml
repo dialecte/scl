@@ -1,0 +1,7 @@
+schema_version: '1.1'
+name: find-verb-with-the-cli
+expected_outcome: |
+  Finds the scl verbs with the cli instead of reading the extension folders: `npx @dialecte/cli api find` with the
+  words of the need (scl's verbs rank first), `npx @dialecte/cli api show` for the chosen verb's contract, and
+  `npx @dialecte/cli schema` for what an SCL element may hold. Picks tx.lifecycle.transplant.deep then
+  tx.reference.applyUuidRemap for the copy, and names what it ruled out.

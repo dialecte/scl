@@ -24,7 +24,9 @@ import type { ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
- * `query.lifecycle.report` — the generic read-only classify surface.
+ * `query.lifecycle.report` answers what instantiating or updating from an FSD / ASD / SSD would
+ * change, per instance, and whether a human must decide before it is applied (`needsDecisions`).
+ * Read-only: nothing is written.
  *
  * Dispatches on `verb` to the per-layer report and returns a {@link DiffReport} (one
  * {@link ReportInstance} per instance). `report.needsDecisions` tells the consumer the
@@ -37,6 +39,8 @@ import type * as Core from '@dialecte/core'
  * A fork reads the previous revision of the file it is given (`baseQuery`) once: an element the
  * project holds that the newer revision lacks is listed as removed when the previous revision held
  * it, as the project's own otherwise; `report.revisionBase` says whether it was given.
+ *
+ * @intent preview what instantiating or updating from an FSD/ASD/SSD would change, diff a project against a newer template, decisions to review before a template update
  */
 export async function report(
 	query: Core.Query<Config>,

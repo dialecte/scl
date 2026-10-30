@@ -16,7 +16,7 @@ SCL files are the exchange format between engineering tools in the substation au
 
 ### 1. Generated definition
 
-The SCL definition is produced from the **IEC 61850-6 v2019C1 XSD** by `@dialecte/create` (0.1 and later) and read through `@dialecte/core` 0.6. Every element, attribute, parent–child constraint, and namespace declared in the standard is captured in a typed config object. The version is reflected in the import path:
+The SCL definition is produced from the **IEC 61850-6 v2019C1 XSD** by `@dialecte/create` (0.1 and later) and read through `@dialecte/core` 0.7. Every element, attribute, parent–child constraint, and namespace declared in the standard is captured in a typed config object. The version is reflected in the import path:
 
 ```ts
 import { createSclProject } from '@dialecte/scl/v2019C1'
@@ -79,7 +79,9 @@ Hooks enforce SCL-specific invariants automatically — no application code need
 
 **IO hooks (import pipeline):**
 
-| Hook                 | Trigger              | What it does                                                                                                                                               |
-| -------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `beforeImportRecord` | For each XML element | On the already-standardized record (uuid enforced by `afterStandardizedRecord`): indexes path → uuid for targets; queues pending UUID resolutions for refs |
-| `afterImport`        | After all elements   | Resolves queued path references to UUID values; emits `UnresolvedReferenceWarning` when unresolvable                                                       |
+Through `createImportSession`, core creates one SCL import session per file; its two hooks keep that file's state only:
+
+| Hook                 | Trigger              | What it does                                                                                                                                                   |
+| -------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `beforeImportRecord` | For each XML element | On the already-standardized record (uuid enforced by `afterStandardizedRecord`): indexes path → uuid for targets; queues pending UUID resolutions for refs     |
+| `afterImport`        | After all elements   | Resolves queued path references to UUID values; returns an `unresolved-reference` diagnostic when unresolvable (see [IO hooks](/v2019C1/io/hooks#diagnostics)) |

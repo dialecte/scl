@@ -63,10 +63,10 @@ import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
- * `update.fromFsd` — reconcile a project against a (possibly newer) FSD.
+ * `tx.lifecycle.update.fsd` — reconcile a project against a (possibly newer) FSD.
  *
  * Unifies instantiate and update (instantiate is the first-time case of update):
- *  - no instance under `targetParent` -> instantiate fresh (`instantiate.fsd`);
+ *  - no instance under `targetParent` -> instantiate fresh (`tx.lifecycle.instantiate.fsd`);
  *  - one or more instances (elements whose `templateUuid` equals the source
  *    function's `uuid`) -> reconcile the updated template ONTO EACH.
  *
@@ -74,6 +74,8 @@ import type { AnyTrackedRecord } from '@dialecte/core'
  * `report` + `decisions` are passed through, and each instance is gated by ONLY
  * its own groups (partitioned by `instanceScopeId`) so the user can update a
  * SUBSET. Both the FSD surface and the ASD composed-function cascade drive it this way.
+ *
+ * @intent update a project from a newer FSD, reconcile Function instances with their template, instantiate or update a function template
  */
 export async function fsd(
 	tx: Core.Transaction<Config>,

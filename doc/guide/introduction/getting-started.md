@@ -14,6 +14,10 @@ $ pnpm add @dialecte/scl
 
 :::
 
+Working with a coding agent? The package ships the `dialecte-scl` skill (SCL verbs, what the hooks
+keep coherent); `npx @dialecte/cli skills sync` installs it with core's skills for your agent. See
+[Working with AI agents](https://dialecte.github.io/core/guide/introduction/ai-agents).
+
 ## Step 1 — Create a project
 
 `createSclProject` returns a [`Project`](https://dialecte.github.io/core/api/project) pre-configured with the SCL config, extensions, and hooks. Call `.open(name)` to initialize storage and hydrate state.
@@ -26,20 +30,21 @@ const project = await createSclProject({ storage: { type: 'local' } }).open('my-
 
 ## Step 2 — Import an SCL file
 
-`project.import` parses one or more SCL files using a streaming SAX parser and stores each one as a document in the project. It returns one entry per file, including the generated `documentId`.
+`project.importFile` parses one SCL file using a streaming SAX parser and stores it as a document in the project. It returns the imported document, with its generated `documentId` and what the import had to say about the file (`diagnostics`), or throws what failed.
 
 Supports `.fsd`, `.asd`, `.ssd`, `.scd`, `.isd`, `.icd`, `.iid` and `.xml`.
 
 ```ts
 // Browser File object — e.g. from an <input type="file"> or FileDialog
-const [{ documentId }] = await project.import([scdFile])
+const { documentId, diagnostics } = await project.importFile(scdFile)
 ```
 
-To import multiple files at once:
+To import several files, one after the other, use `project.import`. A file that fails is its own entry; the others are still imported:
 
 ```ts
-const imported = await project.import(Array.from(fileList))
-// → [{ documentId, recordCount }, ...]
+const entries = await project.import(Array.from(fileList))
+// → [{ status: 'imported', fileName, documentId, recordCount, diagnostics }
+//    | { status: 'failed', fileName, error }, ...]
 ```
 
 ## Step 3 — Open a document
@@ -105,7 +110,7 @@ import { createSclProject } from '@dialecte/scl/v2019C1'
 const project = await createSclProject({ storage: { type: 'local' } }).open('my-project')
 
 // 2. Import
-const [{ documentId }] = await project.import([scdFile])
+const { documentId } = await project.importFile(scdFile)
 
 // 3. Open
 const doc = project.openDocument(documentId)
