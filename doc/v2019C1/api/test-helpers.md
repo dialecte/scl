@@ -356,9 +356,14 @@ assertValidSclXml({ xml, label: 'my snippet', requireComplete: false })
 
 `createSclTestProject` and `runSclTestCases` also check that the references written in a fixture are ones a real file could contain, right after the schema check and before the test runs. A fixture that writes a path no element has, or a uuid nothing carries, otherwise exercises reference handling on data that cannot occur.
 
+The fixture is read as written: imported into a test project of its own, with no hook (nothing fills or repairs a
+reference), and its record tree checked; the project goes after. Text that is not well-formed gives no reference
+finding (the schema check reports it); any other refusal of the import (one record id given twice) is thrown. The
+check is asynchronous: `await assertCoherentSclReferences({ xml, label })` - a call left un-awaited checks nothing.
+An empty attribute is stored as absent, so an empty uuid reads as no uuid.
+
 What is checked, for every reference that carries a uuid (`functionUuid`, `allocationRoleUuid`, `sourceLNodeUuid`, …):
 
-- **empty** — the uuid attribute is an empty string;
 - **dangling** — no element of the same document carries that uuid;
 - **wrong-target** — the uuid is carried by an element the reference cannot point at (a `FunctionRef` whose `functionUuid` is the uuid of an `AllocationRole`);
 - **path** — the written path is not the path of the element the uuid points at. The message gives the path to write:
@@ -374,7 +379,9 @@ What is left alone:
 - **the path of a data or signal reference** — a path that carries a data qualifier or addresses a dataflow input or output (`SourceRef`, `ControlRef`, `LNodeInputRef`, `LNodeOutputRef`, `DOS` / `SDS` / `DAS` mappings, …). Their uuid is still checked;
 - **elements in a namespace the SCL config does not declare**, as for the schema check.
 
-Like the schema check, `runSclTestCases` checks every case of the suite first and fails once, listing every incoherent reference under its case name and `sourceXml` / `targetXml`.
+`runSclTestCases` checks every case of the suite in a `beforeAll`, before the first case runs (bounded at two minutes),
+and fails once, listing every incoherent reference under its case name and `sourceXml` / `targetXml`. The
+documents a test leaves are checked on their record tree (`document.query.getSnapshot({ as: 'tree' })`), with no parse.
 
 ### A case that needs an incoherent reference
 
@@ -521,6 +528,25 @@ assertNoNewSclOutputViolations({
 	label: 'my case › target',
 })
 ```
+
+## Test tiers of this package
+
+The helpers need no browser API: they read XML with libxml2 (`libxml2-wasm`) and documents through the store. This
+package runs its tests in two tiers (`vitest.config.ts`):
+
+| Command                                | Project       | Runs                                                                                        | When                     |
+| -------------------------------------- | ------------- | ------------------------------------------------------------------------------------------- | ------------------------ |
+| `npx vitest run --project node <path>` | `node`        | every unit test file but the browser-only list, in node, on the in-memory store             | each step                |
+| `npm run test:node`                    | `node`        | the same, whole                                                                             | each step, the fast gate |
+| `npm run test:browser`                 | `browser`     | the browser-only list (`BROWSER_ONLY_TEST_FILES` in `vitest.config.constants.ts`), Chromium | the full gate            |
+| `npm test`                             | both          | `test:node`, then `test:browser`                                                            | the commit hook          |
+| `npm run test:browser:all`             | `browser-all` | every unit test file but the node-only list, in Chromium, on the local store                | before a merge (CI)      |
+
+The `node` project's setup (`src/v2019C1/test/in-memory-storage.setup.ts`) calls core's
+`useTestStorage({ type: 'inMemory' })`: the runner chooses the store, a test never names it. A browser-only file
+says why (`{ path, why }`): a browser API (the page's IndexedDB). A test that passes in one tier and fails in the other
+is a store or assertion bug to fix, never a file moved to the browser list. A package using the test helpers in node
+gives its own node project the same setup line.
 
 ## Mutation testing of this package
 
