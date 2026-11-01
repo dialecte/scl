@@ -40,8 +40,12 @@ export function collectReferenceViolations(
 }
 
 /**
- * Assert every reference of a test XML document is coherent. Throws with every violation
- * when one is not.
+ * Assert every reference of a test XML document is coherent: no empty uuid, no uuid pointing at nothing or at an
+ * element the reference cannot target, no written path or derived attribute that disagrees with the element the uuid
+ * points at.
+ * Throws with every violation when one is not.
+ *
+ * @intent check a test fixture's references before using it, find dangling uuid references in SCL XML, assert written paths match their targets
  */
 export function assertCoherentSclReferences(params: AssertCoherentSclReferencesParams): void {
 	const { xml, label = 'test XML' } = params

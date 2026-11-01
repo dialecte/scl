@@ -79,6 +79,12 @@ export const runSclTestCases: typeof rawRunSclTestCases = {
  * until it finishes; then the documents it leaves are checked (a violation the test added fails it unless the test
  * failed already or `allowInvalidOutput` lists it; a stale opt-out fails it too) and the project is destroyed. Call it inside a test, and
  * do not destroy the project yourself.
+ *
+ * The output check validates against the XSD only once `configureSclXsdSchemas` has said where the schema files are;
+ * without them that check is skipped silently, and the structure (namespaces, allowed children, known attributes),
+ * key uniqueness among siblings, coherent references and uuid identity are still checked.
+ *
+ * @intent open an SCL project in a test with fixtures imported, get source and target SCL documents to test against, assert the SCL output is valid against the XSD in a test
  */
 export async function createSclTestProject(params: {
 	sourceXml: string
@@ -127,9 +133,32 @@ export async function createSclTestProject(params: {
 	return result
 }
 
+/**
+ * Build a typed SCL record for a unit test (raw by default, or `type: 'tracked'` / `'tree'`): the tag names and
+ * attributes are SCL's, and the record is standardized as the store would hold it.
+ *
+ * @intent build an SCL record for a unit test, test a pure function or helper on an SCL record without a project
+ */
 export const createSclTestRecord = createTestRecordFactory<Config>(SCL_DIALECTE_CONFIG)
-export const { assertExpectedElementQueries, assertUnexpectedElementQueries } = createXmlAssertions(
-	{
-		namespaces: SCL_DIALECTE_CONFIG.namespaces,
-	},
-)
+
+const sclXmlAssertions = createXmlAssertions({ namespaces: SCL_DIALECTE_CONFIG.namespaces })
+
+/**
+ * Assert that each XPath query matches at least one element of a parsed SCL document (`{ xmlDocument, queries }`, the
+ * `XMLDocument` an export gives), the prefixes already bound to SCL's namespaces (`default:` for SCL, `v2019C1:` for
+ * 6-100): no namespace resolver to pass. A failure names the step that matched nothing and shows the XML of the last
+ * match.
+ *
+ * @intent assert an exported SCL document holds an element, check an exported SCL document with XPath in a test, query SCL elements by namespace prefix
+ */
+export const assertExpectedElementQueries = sclXmlAssertions.assertExpectedElementQueries
+
+/**
+ * Assert that no XPath query matches an element of a parsed SCL document (`{ xmlDocument, queries }`, the
+ * `XMLDocument` an export gives), the prefixes already bound to SCL's namespaces (`default:` for SCL, `v2019C1:` for
+ * 6-100). Every step but the last must still match: a missing ancestor fails the assertion instead of passing it for
+ * the wrong reason.
+ *
+ * @intent assert an exported SCL document no longer holds an element, check an SCL element was removed, assert absence with XPath in a test
+ */
+export const assertUnexpectedElementQueries = sclXmlAssertions.assertUnexpectedElementQueries

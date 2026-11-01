@@ -2,6 +2,285 @@
 	"package": "@dialecte/scl",
 	"methods": [
 		{
+			"path": "@dialecte/scl/v2019C1.createSclProject",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "<CustomModules extends ExtensionModules = Record<never, never>>(params?: { storage?: StorageParam; extensions?: CustomModules; }) => Scl.Project<CustomModules>",
+			"summary": "Create an SCL project with pre-configured config, extensions, and hooks. Call .open(name) to initialize the store and hydrate state.",
+			"intents": [
+				"open an SCL project",
+				"work on SCD/SSD/FSD/ASD files",
+				"import and edit SCL documents",
+				"register custom extensions on an SCL project"
+			],
+			"declaredAt": "src/v2019C1/dialecte.ts:17"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1.getPathSegment",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "(record: AnyRawRecord, context?: PathSegmentContext) => PathSegment | null",
+			"summary": "The segment one SCL element adds to a reference path (its name and the separator before it), with no query: read from the record and, when given, its `context` (`siblings` to name a signal among its parent's children, the LNode's `specNaming` to name an LNode by its LNodeSpecNaming); `null` for an element a path passes through (AccessPoint, Server) or one with nothing to name it.",
+			"intents": [
+				"name of an element inside a reference path",
+				"path segment of a record without a query",
+				"build a path label in a custom extension"
+			],
+			"declaredAt": "src/v2019C1/extensions/reference/query/build/path-segment.ts:204"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1.isNamespaceWrapper",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "(params: { record: ReadAttributeParams['record']; }) => boolean",
+			"summary": "Whether an element is a transparent wrapper of the dialecte's own elements: a `Private` whose `type` is a namespace the dialecte declares (`NAMESPACE_WRAPPER_TYPES`), as opposed to a tool's private data.",
+			"intents": [
+				"tell a namespace Private from a tool's private data",
+				"is this Private a wrapper of 6-100 elements",
+				"walk through a Private wrapper"
+			],
+			"declaredAt": "src/v2019C1/helpers/pruned-when-empty.ts:23"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1.isSclImportDiagnostic",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "(diagnostic: Diagnostic) => diagnostic is SclImportDiagnostic",
+			"summary": "Whether a diagnostic is one the import of an SCL file returns (`source: 'scl'` and a code of `SCL_IMPORT_DIAGNOSTICS`): it is then narrowed to its typed member, so a `switch` on `code` reads that code's `meta` (and `related`).",
+			"intents": [
+				"narrow the diagnostics of an SCL import",
+				"read the typed warnings an SCL import returns",
+				"switch on SCL import diagnostic codes"
+			],
+			"declaredAt": "src/v2019C1/errors/import-diagnostics.ts:15"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1.isTopologyLevel",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "(tagName: string) => tagName is TopologyStructuralTag",
+			"summary": "Whether a tag is a level of the topology: a `Substation`, a `VoltageLevel` or a `Bay`; narrows the tag.",
+			"intents": [
+				"is this element a topology level (Substation, VoltageLevel, Bay)",
+				"find the topology levels among ancestors",
+				"filter structural levels"
+			],
+			"declaredAt": "src/v2019C1/helpers/topology-levels.ts:10"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1.isTypeIdTarget",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "(tagName: string) => tagName is TypeIdTarget",
+			"summary": "Whether a tag is a DataTypeTemplates type element (target of a type-id reference); narrows the tag.",
+			"intents": [
+				"is this element a data type template",
+				"can a type reference point at this tag",
+				"filter LNodeType/DOType/DAType/EnumType elements"
+			],
+			"declaredAt": "src/v2019C1/extensions/reference/guards.ts:10"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1.presentationScope",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "(target: Pick<LifecycleTarget, 'verb'>) => PresentationScope",
+			"summary": "Where to root the structural tree of a lifecycle merge (FSD, ASD or SSD) and which top-level sections to omit or include beside it, for the verb of the merge.",
+			"intents": [
+				"show a lifecycle merge as a tree",
+				"which part of the document a merge review displays",
+				"root and sections of a merge view"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/report/presentation-scope.ts:18"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1.readAttribute",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "(params: ReadAttributeParams & { fullObject?: false; }) => string\n(params: ReadAttributeParams & { fullObject: true; }) => AnyAttribute | undefined",
+			"summary": "Read one attribute of an SCL record you hold (raw, tracked or tree) the way `query.getAttribute` reads it - same `namespace` scope, same `defaults` fill, same `''` for an absent attribute - with no query and no configuration to pass: synchronous, for an import pass or a pure composer.",
+			"intents": [
+				"read an attribute of an SCL record you already hold",
+				"read an attribute of a record you hold while importing",
+				"read an SCL attribute in a pure function with no query"
+			],
+			"declaredAt": "src/v2019C1/helpers/read-attributes.ts:28"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1.readAttributes",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "(params: ReadAttributesParams & { fullObject?: false; }) => Record<string, string>\n(params: Omit<ReadAttributesParams, 'namespace'> & { fullObject: true; }) => AnyAttribute[]",
+			"summary": "Read the attributes of an SCL record you hold (raw, tracked or tree) the way `query.getAttributes` reads them - each under the name it is stored by, or keyed by local name in a `namespace` scope, absent schema attributes filled per `defaults` - with no query and no configuration to pass. `fullObject: true` returns the attribute objects.",
+			"intents": [
+				"read the attributes of an SCL record you already hold",
+				"read the attributes of a record you hold while importing",
+				"read SCL attributes with defaults in a pure function with no query"
+			],
+			"declaredAt": "src/v2019C1/helpers/read-attributes.ts:56",
+			"example": "readAttributes({ record })                      // → { lnClass: 'XCBR', iedName: 'None', ... }\nreadAttributes({ record, defaults: 'none' })    // → stored only"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1/test.assertCoherentSclReferences",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1/test",
+			"otherRoutes": [],
+			"signature": "(params: AssertCoherentSclReferencesParams) => void",
+			"summary": "Assert every reference of a test XML document is coherent: no empty uuid, no uuid pointing at nothing or at an element the reference cannot target, no written path or derived attribute that disagrees with the element the uuid points at. Throws with every violation when one is not.",
+			"intents": [
+				"check a test fixture's references before using it",
+				"find dangling uuid references in SCL XML",
+				"assert written paths match their targets"
+			],
+			"declaredAt": "src/v2019C1/test/assert-coherent-scl-references.ts:50"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1/test.assertExpectedElementQueries",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1/test",
+			"otherRoutes": [],
+			"signature": "(params: { xmlDocument: XMLDocument; queries: string[]; }) => void",
+			"summary": "Assert that each XPath query matches at least one element of a parsed SCL document (`{ xmlDocument, queries }`, the `XMLDocument` an export gives), the prefixes already bound to SCL's namespaces (`default:` for SCL, `v2019C1:` for 6-100): no namespace resolver to pass. A failure names the step that matched nothing and shows the XML of the last match.",
+			"intents": [
+				"assert an exported SCL document holds an element",
+				"check an exported SCL document with XPath in a test",
+				"query SCL elements by namespace prefix"
+			],
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:154"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1/test.assertNoNewSclOutputViolations",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1/test",
+			"otherRoutes": [],
+			"signature": "(params: AssertNoNewSclOutputViolationsParams) => void",
+			"summary": "Throw with every violation of `after` that `before` did not hold (compared by key, each occurrence counted: a second copy of a violation already there is new), unless `carried` holds it: a violation of the documents the act read from, copied as it was, each copy counted. A case's opt-out tolerates the violations it lists, and only those; a tolerance no added violation matches, for a check that ran, fails the case (the opt-out is stale). An opt-out with an empty reason or no violation is refused.",
+			"intents": [
+				"fail a test that leaves an invalid SCL document",
+				"compare output violations before and after an act",
+				"tolerate known violations with a reason"
+			],
+			"declaredAt": "src/v2019C1/test/assert-scl-output.ts:107"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1/test.assertUnexpectedElementQueries",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1/test",
+			"otherRoutes": [],
+			"signature": "(params: { xmlDocument: XMLDocument; queries: string[]; }) => void",
+			"summary": "Assert that no XPath query matches an element of a parsed SCL document (`{ xmlDocument, queries }`, the `XMLDocument` an export gives), the prefixes already bound to SCL's namespaces (`default:` for SCL, `v2019C1:` for 6-100). Every step but the last must still match: a missing ancestor fails the assertion instead of passing it for the wrong reason.",
+			"intents": [
+				"assert an exported SCL document no longer holds an element",
+				"check an SCL element was removed",
+				"assert absence with XPath in a test"
+			],
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:164"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1/test.assertValidSclXml",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1/test",
+			"otherRoutes": [],
+			"signature": "(xml: string, label?: string | undefined, options?: AssertValidXmlOptions | undefined) => void",
+			"summary": "Assert the structure of an XML text against scl's generated definition and SCL's namespaces (`assertValidSclXml(xml, label?, { requireComplete? })`): elements in the right namespace and allowed under their parent, attributes known to their element and, unless `requireComplete: false`, every required attribute present. Throws with every violation, under `label`. It reads no schema file and checks no attribute value: the schema-file check is `collectSclOutputViolations`, once `configureSclXsdSchemas` has said where the files are.",
+			"intents": [
+				"check the structure of an SCL test fixture before using it",
+				"assert allowed children and known attributes of SCL XML",
+				"check a hand-written SCL snippet"
+			],
+			"declaredAt": "src/v2019C1/test/assert-valid-scl-xml.ts:33"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1/test.collectSclOutputViolations",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1/test",
+			"otherRoutes": [],
+			"signature": "(params: CollectSclOutputViolationsParams) => Promise<SclOutputReport>",
+			"summary": "Everything on a document that a real file could not hold, in the order of `SCL_OUTPUT_CHECK`: its exported XML checked structurally, by the XSD validator and for coherent references; its tree for two children of one parent with one key; its uuids and template uuids. The report lists the checks that ran: without the schema files (see `configureSclXsdSchemas`) the XSD validator does not, and the other checks still do.",
+			"intents": [
+				"check the SCL output against the XSD in a test",
+				"list the violations of an SCL document (XSD and output rules)"
+			],
+			"declaredAt": "src/v2019C1/test/assert-scl-output.ts:61"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1/test.configureSclXsdSchemas",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1/test",
+			"otherRoutes": [],
+			"signature": "(source: SclXsdSchemaSource) => void",
+			"summary": "Say where the SCL schema files are, once, in a setup file of the test project, before any test validates: the output check of the test helpers validates every document a test leaves against them. The files are not shipped with the package.",
+			"intents": [
+				"turn on XSD validation in SCL tests",
+				"point the test helpers at the SCL schema files",
+				"configure libxml2 validation in a setup file"
+			],
+			"declaredAt": "src/v2019C1/test/scl-xsd.ts:24"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1/test.createSclTestProject",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1/test",
+			"otherRoutes": [],
+			"signature": "(params: { sourceXml: string; targetXml?: string; dev?: { perf?: boolean; }; allowIncoherentReferences?: string; allowInvalidOutput?: SclOutputOptOut; }) => Promise<TestProjectResult<Config, { cleanUp: { transaction: typeof import(\"../extensions/clean-up/transaction\"); }; dataflow: { query: typeof import(\"../extensions/dataflow/query\"); transaction: typeof import(\"../extensions/dataflow/transaction\"); }; ... 6 more ...; info: { ...; }; }>>",
+			"summary": "Open a test project with `sourceXml` (and `targetXml`) imported, the fixtures checked first. The test owns it until it finishes; then the documents it leaves are checked (a violation the test added fails it unless the test failed already or `allowInvalidOutput` lists it; a stale opt-out fails it too) and the project is destroyed. Call it inside a test, and do not destroy the project yourself.",
+			"intents": [
+				"open an SCL project in a test with fixtures imported",
+				"get source and target SCL documents to test against",
+				"assert the SCL output is valid against the XSD in a test"
+			],
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:89"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1/test.createSclTestRecord",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1/test",
+			"otherRoutes": [],
+			"signature": "(params: { record: TestRecord<Config>; }) => RawRecord<Config, \"SCL\" | \"Communication\" | \"DataTypeTemplates\" | \"Header\" | \"History\" | \"Private\" | \"AccessControl\" | ... 202 more ... | \"VoltageLevel\">\n(params: { type: \"raw\"; record: TestRecord<Config>; }) => RawRecord<Config, \"SCL\" | \"Communication\" | \"DataTypeTemplates\" | \"Header\" | \"History\" | \"Private\" | ... 203 more ... | \"VoltageLevel\">\n(params: { type: \"tracked\"; record: TestRecord<Config>; }) => TrackedRecord<Config, \"SCL\" | \"Communication\" | \"DataTypeTemplates\" | \"Header\" | \"History\" | \"Private\" | ... 203 more ... | \"VoltageLevel\">\n(params: { type: \"tree\"; record: TestRecord<Config>; }) => TreeRecord<Config, \"SCL\" | \"Communication\" | \"DataTypeTemplates\" | \"Header\" | \"History\" | \"Private\" | ... 203 more ... | \"VoltageLevel\">",
+			"summary": "Build a typed SCL record for a unit test (raw by default, or `type: 'tracked'` / `'tree'`): the tag names and attributes are SCL's, and the record is standardized as the store would hold it.",
+			"intents": [
+				"build an SCL record for a unit test",
+				"test a pure function or helper on an SCL record without a project"
+			],
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:142"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1/test.isSclXsdConfigured",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1/test",
+			"otherRoutes": [],
+			"signature": "() => boolean",
+			"summary": "Whether the schema files are configured: the XSD validator runs only then.",
+			"intents": [
+				"skip a test when the SCL schema files are absent",
+				"know whether XSD validation runs"
+			],
+			"declaredAt": "src/v2019C1/test/scl-xsd.ts:34"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1/test.openSclDocument",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1/test",
+			"otherRoutes": [],
+			"signature": "(params: OpenSclDocumentParams) => Promise<Scl.Document>",
+			"summary": "Import one more document into a test project — a previous revision of a file, a third file the act reads — and open it. Its XML is checked as a fixture is (by structure, then for coherent references), and its records keep the ids the XML names, like the source and the target. The project owns it: it goes when the project goes.",
+			"intents": [
+				"open a third document in a test project",
+				"import a previous revision in a test",
+				"test an act that reads several SCL files"
+			],
+			"declaredAt": "src/v2019C1/test/open-scl-document.ts:14"
+		},
+		{
 			"path": "doc.query.dataflow.all",
 			"root": "q",
 			"otherRoutes": [],
