@@ -55,6 +55,8 @@ import type { AnyTreeRecord, ResolvedDefinition } from '@dialecte/core'
  * it the validator checks nothing past the root's first child), and a test uuid (see {@link TEST_UUID}) is read as
  * a uuid, with the validator's notes on the keys that could not read it. Any other
  * value the schema refuses as a uuid is still reported.
+ *
+ * @intent check the SCL output against the XSD in a test, list the violations of an SCL document (XSD and output rules)
  */
 export async function collectSclOutputViolations(
 	params: CollectSclOutputViolationsParams,
@@ -99,6 +101,8 @@ export async function collectSclOutputViolations(
  * act read from, copied as it was, each copy counted. A case's opt-out tolerates the violations it lists, and only
  * those; a tolerance no added violation matches, for a check that ran, fails the case (the opt-out is stale). An
  * opt-out with an empty reason or no violation is refused.
+ *
+ * @intent fail a test that leaves an invalid SCL document, compare output violations before and after an act, tolerate known violations with a reason
  */
 export function assertNoNewSclOutputViolations(params: AssertNoNewSclOutputViolationsParams): void {
 	const { before, after, carried = [], label, allowInvalidOutput, checks } = params

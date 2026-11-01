@@ -11,6 +11,8 @@ import type { StorageParam, ExtensionModules } from '@dialecte/core'
 /**
  * Create an SCL project with pre-configured config, extensions, and hooks.
  * Call .open(name) to initialize the store and hydrate state.
+ *
+ * @intent open an SCL project, work on SCD/SSD/FSD/ASD files, import and edit SCL documents, register custom extensions on an SCL project
  */
 export function createSclProject<
 	CustomModules extends ExtensionModules = Record<never, never>,

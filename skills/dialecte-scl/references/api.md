@@ -12,181 +12,239 @@ ruled out and why in your hand-over.
 
 <!-- dialecte-skills:generated intents -->
 
-| When you need to...                                                                                         | Use                                                      |
-| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| accept or skip changes from a newer FSD/ASD/SSD                                                             | `tx.lifecycle.apply`                                     |
-| add a bay typical or process section from a template                                                        | `tx.lifecycle.instantiate.ssd`                           |
-| add a Function from a template under a Bay or Function                                                      | `tx.lifecycle.instantiate.fsd`                           |
-| add a History entry                                                                                         | `tx.history.addEntry`                                    |
-| add an Application from a template                                                                          | `tx.lifecycle.instantiate.asd`                           |
-| add an SclFileReference to a Function/Application/Header                                                    | `tx.reference.writeProvenance`                           |
-| all signals with the ExtRef/ExtCtrl implementing them                                                       | `doc.query.dataflow.all`                                 |
-| apply a template instantiation or update after review                                                       | `tx.lifecycle.apply`                                     |
-| are two element identities the same element                                                                 | `doc.query.identity.identityEquals`                      |
-| breadcrumb path of a Bay/LNode/DO                                                                           | `doc.query.reference.buildElementPath`                   |
-| bump the version or revision of an SCL file                                                                 | `tx.history.addEntry`                                    |
-| can the data model or lnType of an LNode be edited                                                          | `doc.query.dataModel.isLNodeLocked`                      |
-| check uuid integrity of a document                                                                          | `doc.query.lifecycle.checkTemplateUuids`                 |
-| clean dangling uuid references after a delete                                                               | `tx.cleanUp.orphanUuidRefs`                              |
-| clean up LNode bindings after an IED or LN is deleted                                                       | `tx.cleanUp.resetLNode`                                  |
-| clear dangling data mappings and signal implementations                                                     | `tx.cleanUp.resetLNode`                                  |
-| clone an element across documents                                                                           | `tx.lifecycle.transplant.deep`                           |
-| collect the DataTypeTemplates of a selection                                                                | `doc.query.dataModel.resolve`                            |
-| compare identities from resolveIdentity                                                                     | `doc.query.identity.identityEquals`                      |
-| compare two subtrees structurally ignoring ids and uuids                                                    | `doc.query.signature.elementSignature`                   |
-| compose iedName/ldInst/prefix/lnClass/lnInst                                                                | `doc.query.reference.buildMappedLNodePath`               |
-| compute the path value of a reference (SourceRef, FunctionRef, ...) to a target                             | `doc.query.reference.buildReferencePath`                 |
-| connect a signal (SourceRef/ControlRef) to its ExtRef/ExtCtrl                                               | `tx.dataflow.link`                                       |
-| content key of an element for dedup                                                                         | `doc.query.signature.elementSignature`                   |
-| copy a subtree (IED, Bay, Function) from another document with its data types                               | `tx.lifecycle.transplant.deep`                           |
-| copy data types (LNodeType/DOType/DAType/EnumType) into another document                                    | `tx.dataModel.importTypes`                               |
-| create an ASD from a project                                                                                | `tx.lifecycle.extract.asd`                               |
-| create an FSD from a project                                                                                | `tx.lifecycle.extract.fsd`                               |
-| create an SSD from a bay or voltage level of a project                                                      | `tx.lifecycle.extract.ssd`                               |
-| create the Header of a new file                                                                             | `tx.history.addEntry`                                    |
-| create the TEMPLATE Substation/VoltageLevel/Bay skeleton of a template file                                 | `tx.lifecycle.extract.ensureSubstationTemplateStructure` |
-| current version and revision                                                                                | `doc.query.history.getLatestHitem`                       |
-| data a data specification is mapped to                                                                      | `doc.query.reference.resolveMappedData`                  |
-| data types used by an LNode or LN                                                                           | `doc.query.dataModel.resolve`                            |
-| dataflow of a ControlRef                                                                                    | `doc.query.dataflow.ofControlRef`                        |
-| dataflow of a SourceRef                                                                                     | `doc.query.dataflow.ofSourceRef`                         |
-| dataflow table of the whole SCL                                                                             | `doc.query.dataflow.all`                                 |
-| dataflows entering or leaving a set of IEDs                                                                 | `doc.query.dataflow.crossing`                            |
-| dataflows of one IED                                                                                        | `doc.query.dataflow.ofIed`                               |
-| deallocate an LNode                                                                                         | `tx.dataModel.unlockLNode`                               |
-| decisions to review before a template update                                                                | `doc.query.lifecycle.report`                             |
-| describe one control signal                                                                                 | `doc.query.dataflow.ofControlRef`                        |
-| describe one input signal                                                                                   | `doc.query.dataflow.ofSourceRef`                         |
-| detect equivalent or duplicate data types                                                                   | `doc.query.signature.elementSignature`                   |
-| diff a project against a newer template                                                                     | `doc.query.lifecycle.report`                             |
-| disconnect a signal (SourceRef/ControlRef) from its ExtRef/ExtCtrl                                          | `tx.dataflow.unlink`                                     |
-| display name of a Bay/IED/LNode/ExtRef                                                                      | `doc.query.info.of`                                      |
-| document history in order                                                                                   | `doc.query.history.getSortedHitems`                      |
-| element a SourceRef/ControlRef/FunctionRef path points to                                                   | `doc.query.reference.resolveReferencePath`               |
-| external interfaces of a selection                                                                          | `doc.query.dataflow.crossing`                            |
-| extract a bay typical into an SSD template                                                                  | `tx.lifecycle.extract.ssd`                               |
-| extract a Function into an FSD template                                                                     | `tx.lifecycle.extract.fsd`                               |
-| extract an Application into an ASD template                                                                 | `tx.lifecycle.extract.asd`                               |
-| ExtRef and control block implementing a signal                                                              | `doc.query.dataflow.ofSourceRef`                         |
-| ExtRefs naming a control block                                                                              | `doc.query.dataflow.subscribersOf`                       |
-| find a templateUuid shared across element types or pointing at the wrong type                               | `doc.query.lifecycle.checkTemplateUuids`                 |
-| find an element by its path string like S1/V1/B1/CE1                                                        | `doc.query.reference.resolveElementPath`                 |
-| find duplicate uuids                                                                                        | `doc.query.lifecycle.checkTemplateUuids`                 |
-| find the Substation/VoltageLevel/Bay above an instantiation target                                          | `tx.lifecycle.instantiate.resolveTargetStructure`        |
-| find who references an element                                                                              | `doc.query.reference.findRefsPointingTo`                 |
-| fix a duplicate name after a rename or paste                                                                | `tx.lifecycle.makeUnique`                                |
-| fix orphaned references                                                                                     | `tx.cleanUp.orphanUuidRefs`                              |
-| follow a reference to its target                                                                            | `doc.query.reference.resolveReferencePath`               |
-| follow an LNode binding into the IED section                                                                | `doc.query.reference.resolveMappedLNode`                 |
-| follow mappedLnUuid/mappedDoName/mappedDaName                                                               | `doc.query.reference.resolveMappedData`                  |
-| forget which file an element was placed from                                                                | `tx.reference.removeOwnProvenance`                       |
-| fork a revision with the same identities                                                                    | `tx.identity.restoreClonedUuids`                         |
-| full name path instead of walking ancestors                                                                 | `doc.query.reference.buildElementPath`                   |
-| get the scaffolding of an FSD/ASD                                                                           | `tx.lifecycle.extract.ensureSubstationTemplateStructure` |
-| give it a Header with its first history item before an operation writes it                                  | `tx.history.startFile`                                   |
-| go from a function LNode to its IED LN/LN0                                                                  | `doc.query.reference.resolveMappedLNode`                 |
-| Hitem entries sorted by version and revision                                                                | `doc.query.history.getSortedHitems`                      |
-| identity of an element (uuid or key fields)                                                                 | `doc.query.identity.resolveIdentity`                     |
-| IED/LD/LN address string from LNode attributes                                                              | `doc.query.reference.buildMappedLNodePath`               |
-| IEDName and ClientLN registrations of a control block                                                       | `doc.query.dataflow.subscribersOf`                       |
-| implement a signal                                                                                          | `tx.dataflow.link`                                       |
-| import a type closure with dedup and id collision handling                                                  | `tx.dataModel.importTypes`                               |
-| import an IED from an ICD                                                                                   | `tx.lifecycle.transplant.deep`                           |
-| inputs and outputs of an IED                                                                                | `doc.query.dataflow.ofIed`                               |
-| instantiate an ASD into a project                                                                           | `tx.lifecycle.instantiate.asd`                           |
-| instantiate an FSD into a project                                                                           | `tx.lifecycle.instantiate.fsd`                           |
-| instantiate an SSD into a project                                                                           | `tx.lifecycle.instantiate.ssd`                           |
-| instantiate or update a function template                                                                   | `tx.lifecycle.update.fsd`                                |
-| instantiate or update an application template                                                               | `tx.lifecycle.update.asd`                                |
-| instead of calling info.of in a loop                                                                        | `doc.query.info.ofEach`                                  |
-| inverse of buildElementPath                                                                                 | `doc.query.reference.resolveElementPath`                 |
-| inverse of resolveElementPath                                                                               | `doc.query.reference.buildElementPath`                   |
-| is an IED implemented (ICD/IID source)                                                                      | `doc.query.lifecycle.classifyIeds`                       |
-| is an LNode bound to an IED                                                                                 | `doc.query.dataModel.isLNodeLocked`                      |
-| keep source uuids on a fork                                                                                 | `tx.identity.restoreClonedUuids`                         |
-| key to match an element across two documents                                                                | `doc.query.identity.resolveIdentity`                     |
-| Labels translations of an element                                                                           | `doc.query.info.of`                                      |
-| last Hitem                                                                                                  | `doc.query.history.getLatestHitem`                       |
-| latest History entry of a document                                                                          | `doc.query.history.getLatestHitem`                       |
-| link a dataflow to its implementation                                                                       | `tx.dataflow.link`                                       |
-| list every dataflow of a document                                                                           | `doc.query.dataflow.all`                                 |
-| list references to a target before deleting or renaming                                                     | `doc.query.reference.findRefsPointingTo`                 |
-| LN that implements an LNode                                                                                 | `doc.query.reference.resolveMappedLNode`                 |
-| LNode lock check                                                                                            | `doc.query.dataModel.isLNodeLocked`                      |
-| LNodeType/DOType/DAType/EnumType closure of a logical node                                                  | `doc.query.dataModel.resolve`                            |
-| look up by name path instead of walking children                                                            | `doc.query.reference.resolveElementPath`                 |
-| make a name unique among siblings                                                                           | `tx.lifecycle.makeUnique`                                |
-| make references inside copied elements point at the copies                                                  | `tx.reference.applyUuidRemap`                            |
-| make the data model of an LNode editable again                                                              | `tx.dataModel.unlockLNode`                               |
-| map a DOS/SDS/DAS to the DO/DA that implements it                                                           | `tx.reference.setMappedData`                             |
-| match elements across documents                                                                             | `doc.query.identity.identityEquals`                      |
-| merge DataTypeTemplates                                                                                     | `tx.dataModel.importTypes`                               |
-| number a taken name (_1, _2) instead of choosing a suffix by hand                                           | `tx.lifecycle.makeUnique`                                |
-| own title or display name of an element                                                                     | `doc.query.info.of`                                      |
-| own titles or display names of many elements in one call                                                    | `doc.query.info.ofEach`                                  |
-| path of the LN implementing an LNode                                                                        | `doc.query.reference.buildMappedLNodePath`               |
-| path or label of an element from the root like Substation/VoltageLevel/Bay                                  | `doc.query.reference.buildElementPath`                   |
-| path to record                                                                                              | `doc.query.reference.resolveElementPath`                 |
-| place a function template                                                                                   | `tx.lifecycle.instantiate.fsd`                           |
-| place an application template under a Bay                                                                   | `tx.lifecycle.instantiate.asd`                           |
-| preview what instantiating or updating from an FSD/ASD/SSD would change                                     | `doc.query.lifecycle.report`                             |
-| propagate an SSD change                                                                                     | `tx.lifecycle.update.ssd`                                |
-| reconcile a bay typical with its template                                                                   | `tx.lifecycle.update.ssd`                                |
-| reconcile Application instances with their template                                                         | `tx.lifecycle.update.asd`                                |
-| reconcile Function instances with their template                                                            | `tx.lifecycle.update.fsd`                                |
-| record which template file an instance came from                                                            | `tx.reference.writeProvenance`                           |
-| record who changed the document and why                                                                     | `tx.history.addEntry`                                    |
-| refresh a stale reference path                                                                              | `doc.query.reference.buildReferencePath`                 |
-| release LNodes bound to a missing LN                                                                        | `tx.cleanUp.resetLNode`                                  |
-| remove empty containers left after deletes (reference containers, wrappers, Private elements)               | `tx.cleanUp.pruneEmptyContainers`                        |
-| remove its own source-file references after it stops being that file's                                      | `tx.reference.removeOwnProvenance`                       |
-| remove or clear references whose target is gone                                                             | `tx.cleanUp.orphanUuidRefs`                              |
-| remove the DOI/SDI/DAI instantiating its data and unlink its SourceRef/ControlRef from their ExtRef/ExtCtrl | `tx.dataModel.unlockLNode`                               |
-| remove the implementation link of a signal                                                                  | `tx.dataflow.unlink`                                     |
-| rename data type ids and repoint lnType/type references                                                     | `tx.reference.applyTypeIdRemap`                          |
-| repoint uuid references after a clone                                                                       | `tx.reference.applyUuidRemap`                            |
-| reset a data mapping to its default                                                                         | `tx.reference.setMappedData`                             |
-| resolve a path attribute to a record                                                                        | `doc.query.reference.resolveReferencePath`               |
-| restore element uuids after forking a document                                                              | `tx.identity.restoreClonedUuids`                         |
-| revision log of an SCL file                                                                                 | `doc.query.history.getSortedHitems`                      |
-| rewrite refs from source to target uuids                                                                    | `tx.reference.applyUuidRemap`                            |
-| rewrite type references after an id change                                                                  | `tx.reference.applyTypeIdRemap`                          |
-| S-IED or real IED instead of reading manufacturer                                                           | `doc.query.lifecycle.classifyIeds`                       |
-| save a function as a reusable template                                                                      | `tx.lifecycle.extract.fsd`                               |
-| save a process section as a reusable template                                                               | `tx.lifecycle.extract.ssd`                               |
-| save an application as a reusable template                                                                  | `tx.lifecycle.extract.asd`                               |
-| set instance lineage after a clone                                                                          | `tx.identity.writeIdentity`                              |
-| set mappedDoName/mappedDaName/mappedLnUuid                                                                  | `tx.reference.setMappedData`                             |
-| signals crossing the boundary of a group of IEDs                                                            | `doc.query.dataflow.crossing`                            |
-| source files and versions of a document                                                                     | `doc.query.reference.getProvenance`                      |
-| stamp templateUuid/originUuid on cloned elements                                                            | `tx.identity.writeIdentity`                              |
-| start a new file in a document                                                                              | `tx.history.startFile`                                   |
-| state of an LNode or signal (locked, mapped, connected, implemented)                                        | `doc.query.info.of`                                      |
-| states of many LNodes or signals                                                                            | `doc.query.info.ofEach`                                  |
-| strip template lineage on extract                                                                           | `tx.identity.writeIdentity`                              |
-| structure levels of a target parent for placing satellites                                                  | `tx.lifecycle.instantiate.resolveTargetStructure`        |
-| template origin of a Function/Application/IED                                                               | `doc.query.reference.getProvenance`                      |
-| the source-file references a function or an application records for itself                                  | `doc.query.reference.findOwnProvenance`                  |
-| tidy up a document or an extracted file                                                                     | `tx.cleanUp.pruneEmptyContainers`                        |
-| unbind an LNode from its IED                                                                                | `tx.dataModel.unlockLNode`                               |
-| update a project from a newer ASD                                                                           | `tx.lifecycle.update.asd`                                |
-| update a project from a newer FSD                                                                           | `tx.lifecycle.update.fsd`                                |
-| update a project from a newer SSD                                                                           | `tx.lifecycle.update.ssd`                                |
-| usages of a data type (LNodeType/DOType/DAType)                                                             | `doc.query.reference.findRefsPointingTo`                 |
-| use an SSD as a project base                                                                                | `tx.lifecycle.instantiate.ssd`                           |
-| what an IED subscribes to and publishes                                                                     | `doc.query.dataflow.ofIed`                               |
-| what an LNode output controls and the ExtCtrl implementing it                                               | `doc.query.dataflow.ofControlRef`                        |
-| what makes an element the same element                                                                      | `doc.query.identity.resolveIdentity`                     |
-| where an LNode input takes its data from                                                                    | `doc.query.dataflow.ofSourceRef`                         |
-| where an LNode or Function is used                                                                          | `doc.query.reference.findRefsPointingTo`                 |
-| which DO/DA implements a DOS/SDS/DAS                                                                        | `doc.query.reference.resolveMappedData`                  |
-| which file an element was placed from                                                                       | `doc.query.reference.findOwnProvenance`                  |
-| which IEDs are real devices and which are specification IEDs                                                | `doc.query.lifecycle.classifyIeds`                       |
-| which templates (FSD/ASD/SSD) a document was built from                                                     | `doc.query.reference.getProvenance`                      |
-| who subscribes to a GOOSE/SV/report control block                                                           | `doc.query.dataflow.subscribersOf`                       |
-| write a lifecycle report with user decisions                                                                | `tx.lifecycle.apply`                                     |
-| write a reference attribute pointing at an element                                                          | `doc.query.reference.buildReferencePath`                 |
-| write source file provenance                                                                                | `tx.reference.writeProvenance`                           |
+| When you need to...                                                                                         | Use                                                         |
+| ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| accept or skip changes from a newer FSD/ASD/SSD                                                             | `tx.lifecycle.apply`                                        |
+| add a bay typical or process section from a template                                                        | `tx.lifecycle.instantiate.ssd`                              |
+| add a Function from a template under a Bay or Function                                                      | `tx.lifecycle.instantiate.fsd`                              |
+| add a History entry                                                                                         | `tx.history.addEntry`                                       |
+| add an Application from a template                                                                          | `tx.lifecycle.instantiate.asd`                              |
+| add an SclFileReference to a Function/Application/Header                                                    | `tx.reference.writeProvenance`                              |
+| all signals with the ExtRef/ExtCtrl implementing them                                                       | `doc.query.dataflow.all`                                    |
+| apply a template instantiation or update after review                                                       | `tx.lifecycle.apply`                                        |
+| are two element identities the same element                                                                 | `doc.query.identity.identityEquals`                         |
+| assert absence with XPath in a test                                                                         | `@dialecte/scl/v2019C1/test.assertUnexpectedElementQueries` |
+| assert allowed children and known attributes of SCL XML                                                     | `@dialecte/scl/v2019C1/test.assertValidSclXml`              |
+| assert an exported SCL document holds an element                                                            | `@dialecte/scl/v2019C1/test.assertExpectedElementQueries`   |
+| assert an exported SCL document no longer holds an element                                                  | `@dialecte/scl/v2019C1/test.assertUnexpectedElementQueries` |
+| assert the SCL output is valid against the XSD in a test                                                    | `@dialecte/scl/v2019C1/test.createSclTestProject`           |
+| assert written paths match their targets                                                                    | `@dialecte/scl/v2019C1/test.assertCoherentSclReferences`    |
+| breadcrumb path of a Bay/LNode/DO                                                                           | `doc.query.reference.buildElementPath`                      |
+| build a path label in a custom extension                                                                    | `@dialecte/scl/v2019C1.getPathSegment`                      |
+| build an SCL record for a unit test                                                                         | `@dialecte/scl/v2019C1/test.createSclTestRecord`            |
+| bump the version or revision of an SCL file                                                                 | `tx.history.addEntry`                                       |
+| can a type reference point at this tag                                                                      | `@dialecte/scl/v2019C1.isTypeIdTarget`                      |
+| can the data model or lnType of an LNode be edited                                                          | `doc.query.dataModel.isLNodeLocked`                         |
+| check a hand-written SCL snippet                                                                            | `@dialecte/scl/v2019C1/test.assertValidSclXml`              |
+| check a test fixture's references before using it                                                           | `@dialecte/scl/v2019C1/test.assertCoherentSclReferences`    |
+| check an exported SCL document with XPath in a test                                                         | `@dialecte/scl/v2019C1/test.assertExpectedElementQueries`   |
+| check an SCL element was removed                                                                            | `@dialecte/scl/v2019C1/test.assertUnexpectedElementQueries` |
+| check the SCL output against the XSD in a test                                                              | `@dialecte/scl/v2019C1/test.collectSclOutputViolations`     |
+| check the structure of an SCL test fixture before using it                                                  | `@dialecte/scl/v2019C1/test.assertValidSclXml`              |
+| check uuid integrity of a document                                                                          | `doc.query.lifecycle.checkTemplateUuids`                    |
+| clean dangling uuid references after a delete                                                               | `tx.cleanUp.orphanUuidRefs`                                 |
+| clean up LNode bindings after an IED or LN is deleted                                                       | `tx.cleanUp.resetLNode`                                     |
+| clear dangling data mappings and signal implementations                                                     | `tx.cleanUp.resetLNode`                                     |
+| clone an element across documents                                                                           | `tx.lifecycle.transplant.deep`                              |
+| collect the DataTypeTemplates of a selection                                                                | `doc.query.dataModel.resolve`                               |
+| compare identities from resolveIdentity                                                                     | `doc.query.identity.identityEquals`                         |
+| compare output violations before and after an act                                                           | `@dialecte/scl/v2019C1/test.assertNoNewSclOutputViolations` |
+| compare two subtrees structurally ignoring ids and uuids                                                    | `doc.query.signature.elementSignature`                      |
+| compose iedName/ldInst/prefix/lnClass/lnInst                                                                | `doc.query.reference.buildMappedLNodePath`                  |
+| compute the path value of a reference (SourceRef, FunctionRef, ...) to a target                             | `doc.query.reference.buildReferencePath`                    |
+| configure libxml2 validation in a setup file                                                                | `@dialecte/scl/v2019C1/test.configureSclXsdSchemas`         |
+| connect a signal (SourceRef/ControlRef) to its ExtRef/ExtCtrl                                               | `tx.dataflow.link`                                          |
+| content key of an element for dedup                                                                         | `doc.query.signature.elementSignature`                      |
+| copy a subtree (IED, Bay, Function) from another document with its data types                               | `tx.lifecycle.transplant.deep`                              |
+| copy data types (LNodeType/DOType/DAType/EnumType) into another document                                    | `tx.dataModel.importTypes`                                  |
+| create an ASD from a project                                                                                | `tx.lifecycle.extract.asd`                                  |
+| create an FSD from a project                                                                                | `tx.lifecycle.extract.fsd`                                  |
+| create an SSD from a bay or voltage level of a project                                                      | `tx.lifecycle.extract.ssd`                                  |
+| create the Header of a new file                                                                             | `tx.history.addEntry`                                       |
+| create the TEMPLATE Substation/VoltageLevel/Bay skeleton of a template file                                 | `tx.lifecycle.extract.ensureSubstationTemplateStructure`    |
+| current version and revision                                                                                | `doc.query.history.getLatestHitem`                          |
+| data a data specification is mapped to                                                                      | `doc.query.reference.resolveMappedData`                     |
+| data types used by an LNode or LN                                                                           | `doc.query.dataModel.resolve`                               |
+| dataflow of a ControlRef                                                                                    | `doc.query.dataflow.ofControlRef`                           |
+| dataflow of a SourceRef                                                                                     | `doc.query.dataflow.ofSourceRef`                            |
+| dataflow table of the whole SCL                                                                             | `doc.query.dataflow.all`                                    |
+| dataflows entering or leaving a set of IEDs                                                                 | `doc.query.dataflow.crossing`                               |
+| dataflows of one IED                                                                                        | `doc.query.dataflow.ofIed`                                  |
+| deallocate an LNode                                                                                         | `tx.dataModel.unlockLNode`                                  |
+| decisions to review before a template update                                                                | `doc.query.lifecycle.report`                                |
+| describe one control signal                                                                                 | `doc.query.dataflow.ofControlRef`                           |
+| describe one input signal                                                                                   | `doc.query.dataflow.ofSourceRef`                            |
+| detect equivalent or duplicate data types                                                                   | `doc.query.signature.elementSignature`                      |
+| diff a project against a newer template                                                                     | `doc.query.lifecycle.report`                                |
+| disconnect a signal (SourceRef/ControlRef) from its ExtRef/ExtCtrl                                          | `tx.dataflow.unlink`                                        |
+| display name of a Bay/IED/LNode/ExtRef                                                                      | `doc.query.info.of`                                         |
+| document history in order                                                                                   | `doc.query.history.getSortedHitems`                         |
+| element a SourceRef/ControlRef/FunctionRef path points to                                                   | `doc.query.reference.resolveReferencePath`                  |
+| external interfaces of a selection                                                                          | `doc.query.dataflow.crossing`                               |
+| extract a bay typical into an SSD template                                                                  | `tx.lifecycle.extract.ssd`                                  |
+| extract a Function into an FSD template                                                                     | `tx.lifecycle.extract.fsd`                                  |
+| extract an Application into an ASD template                                                                 | `tx.lifecycle.extract.asd`                                  |
+| ExtRef and control block implementing a signal                                                              | `doc.query.dataflow.ofSourceRef`                            |
+| ExtRefs naming a control block                                                                              | `doc.query.dataflow.subscribersOf`                          |
+| fail a test that leaves an invalid SCL document                                                             | `@dialecte/scl/v2019C1/test.assertNoNewSclOutputViolations` |
+| filter LNodeType/DOType/DAType/EnumType elements                                                            | `@dialecte/scl/v2019C1.isTypeIdTarget`                      |
+| filter structural levels                                                                                    | `@dialecte/scl/v2019C1.isTopologyLevel`                     |
+| find a templateUuid shared across element types or pointing at the wrong type                               | `doc.query.lifecycle.checkTemplateUuids`                    |
+| find an element by its path string like S1/V1/B1/CE1                                                        | `doc.query.reference.resolveElementPath`                    |
+| find dangling uuid references in SCL XML                                                                    | `@dialecte/scl/v2019C1/test.assertCoherentSclReferences`    |
+| find duplicate uuids                                                                                        | `doc.query.lifecycle.checkTemplateUuids`                    |
+| find the Substation/VoltageLevel/Bay above an instantiation target                                          | `tx.lifecycle.instantiate.resolveTargetStructure`           |
+| find the topology levels among ancestors                                                                    | `@dialecte/scl/v2019C1.isTopologyLevel`                     |
+| find who references an element                                                                              | `doc.query.reference.findRefsPointingTo`                    |
+| fix a duplicate name after a rename or paste                                                                | `tx.lifecycle.makeUnique`                                   |
+| fix orphaned references                                                                                     | `tx.cleanUp.orphanUuidRefs`                                 |
+| follow a reference to its target                                                                            | `doc.query.reference.resolveReferencePath`                  |
+| follow an LNode binding into the IED section                                                                | `doc.query.reference.resolveMappedLNode`                    |
+| follow mappedLnUuid/mappedDoName/mappedDaName                                                               | `doc.query.reference.resolveMappedData`                     |
+| forget which file an element was placed from                                                                | `tx.reference.removeOwnProvenance`                          |
+| fork a revision with the same identities                                                                    | `tx.identity.restoreClonedUuids`                            |
+| full name path instead of walking ancestors                                                                 | `doc.query.reference.buildElementPath`                      |
+| get source and target SCL documents to test against                                                         | `@dialecte/scl/v2019C1/test.createSclTestProject`           |
+| get the scaffolding of an FSD/ASD                                                                           | `tx.lifecycle.extract.ensureSubstationTemplateStructure`    |
+| give it a Header with its first history item before an operation writes it                                  | `tx.history.startFile`                                      |
+| go from a function LNode to its IED LN/LN0                                                                  | `doc.query.reference.resolveMappedLNode`                    |
+| Hitem entries sorted by version and revision                                                                | `doc.query.history.getSortedHitems`                         |
+| identity of an element (uuid or key fields)                                                                 | `doc.query.identity.resolveIdentity`                        |
+| IED/LD/LN address string from LNode attributes                                                              | `doc.query.reference.buildMappedLNodePath`                  |
+| IEDName and ClientLN registrations of a control block                                                       | `doc.query.dataflow.subscribersOf`                          |
+| implement a signal                                                                                          | `tx.dataflow.link`                                          |
+| import a previous revision in a test                                                                        | `@dialecte/scl/v2019C1/test.openSclDocument`                |
+| import a type closure with dedup and id collision handling                                                  | `tx.dataModel.importTypes`                                  |
+| import an IED from an ICD                                                                                   | `tx.lifecycle.transplant.deep`                              |
+| import and edit SCL documents                                                                               | `@dialecte/scl/v2019C1.createSclProject`                    |
+| inputs and outputs of an IED                                                                                | `doc.query.dataflow.ofIed`                                  |
+| instantiate an ASD into a project                                                                           | `tx.lifecycle.instantiate.asd`                              |
+| instantiate an FSD into a project                                                                           | `tx.lifecycle.instantiate.fsd`                              |
+| instantiate an SSD into a project                                                                           | `tx.lifecycle.instantiate.ssd`                              |
+| instantiate or update a function template                                                                   | `tx.lifecycle.update.fsd`                                   |
+| instantiate or update an application template                                                               | `tx.lifecycle.update.asd`                                   |
+| instead of calling info.of in a loop                                                                        | `doc.query.info.ofEach`                                     |
+| inverse of buildElementPath                                                                                 | `doc.query.reference.resolveElementPath`                    |
+| inverse of resolveElementPath                                                                               | `doc.query.reference.buildElementPath`                      |
+| is an IED implemented (ICD/IID source)                                                                      | `doc.query.lifecycle.classifyIeds`                          |
+| is an LNode bound to an IED                                                                                 | `doc.query.dataModel.isLNodeLocked`                         |
+| is this element a data type template                                                                        | `@dialecte/scl/v2019C1.isTypeIdTarget`                      |
+| is this element a topology level (Substation, VoltageLevel, Bay)                                            | `@dialecte/scl/v2019C1.isTopologyLevel`                     |
+| is this Private a wrapper of 6-100 elements                                                                 | `@dialecte/scl/v2019C1.isNamespaceWrapper`                  |
+| keep source uuids on a fork                                                                                 | `tx.identity.restoreClonedUuids`                            |
+| key to match an element across two documents                                                                | `doc.query.identity.resolveIdentity`                        |
+| know whether XSD validation runs                                                                            | `@dialecte/scl/v2019C1/test.isSclXsdConfigured`             |
+| Labels translations of an element                                                                           | `doc.query.info.of`                                         |
+| last Hitem                                                                                                  | `doc.query.history.getLatestHitem`                          |
+| latest History entry of a document                                                                          | `doc.query.history.getLatestHitem`                          |
+| link a dataflow to its implementation                                                                       | `tx.dataflow.link`                                          |
+| list every dataflow of a document                                                                           | `doc.query.dataflow.all`                                    |
+| list references to a target before deleting or renaming                                                     | `doc.query.reference.findRefsPointingTo`                    |
+| list the violations of an SCL document (XSD and output rules)                                               | `@dialecte/scl/v2019C1/test.collectSclOutputViolations`     |
+| LN that implements an LNode                                                                                 | `doc.query.reference.resolveMappedLNode`                    |
+| LNode lock check                                                                                            | `doc.query.dataModel.isLNodeLocked`                         |
+| LNodeType/DOType/DAType/EnumType closure of a logical node                                                  | `doc.query.dataModel.resolve`                               |
+| look up by name path instead of walking children                                                            | `doc.query.reference.resolveElementPath`                    |
+| make a name unique among siblings                                                                           | `tx.lifecycle.makeUnique`                                   |
+| make references inside copied elements point at the copies                                                  | `tx.reference.applyUuidRemap`                               |
+| make the data model of an LNode editable again                                                              | `tx.dataModel.unlockLNode`                                  |
+| map a DOS/SDS/DAS to the DO/DA that implements it                                                           | `tx.reference.setMappedData`                                |
+| match elements across documents                                                                             | `doc.query.identity.identityEquals`                         |
+| merge DataTypeTemplates                                                                                     | `tx.dataModel.importTypes`                                  |
+| name of an element inside a reference path                                                                  | `@dialecte/scl/v2019C1.getPathSegment`                      |
+| narrow the diagnostics of an SCL import                                                                     | `@dialecte/scl/v2019C1.isSclImportDiagnostic`               |
+| number a taken name (_1, _2) instead of choosing a suffix by hand                                           | `tx.lifecycle.makeUnique`                                   |
+| open a third document in a test project                                                                     | `@dialecte/scl/v2019C1/test.openSclDocument`                |
+| open an SCL project                                                                                         | `@dialecte/scl/v2019C1.createSclProject`                    |
+| open an SCL project in a test with fixtures imported                                                        | `@dialecte/scl/v2019C1/test.createSclTestProject`           |
+| own title or display name of an element                                                                     | `doc.query.info.of`                                         |
+| own titles or display names of many elements in one call                                                    | `doc.query.info.ofEach`                                     |
+| path of the LN implementing an LNode                                                                        | `doc.query.reference.buildMappedLNodePath`                  |
+| path or label of an element from the root like Substation/VoltageLevel/Bay                                  | `doc.query.reference.buildElementPath`                      |
+| path segment of a record without a query                                                                    | `@dialecte/scl/v2019C1.getPathSegment`                      |
+| path to record                                                                                              | `doc.query.reference.resolveElementPath`                    |
+| place a function template                                                                                   | `tx.lifecycle.instantiate.fsd`                              |
+| place an application template under a Bay                                                                   | `tx.lifecycle.instantiate.asd`                              |
+| point the test helpers at the SCL schema files                                                              | `@dialecte/scl/v2019C1/test.configureSclXsdSchemas`         |
+| preview what instantiating or updating from an FSD/ASD/SSD would change                                     | `doc.query.lifecycle.report`                                |
+| propagate an SSD change                                                                                     | `tx.lifecycle.update.ssd`                                   |
+| query SCL elements by namespace prefix                                                                      | `@dialecte/scl/v2019C1/test.assertExpectedElementQueries`   |
+| read an attribute of a record you hold while importing                                                      | `@dialecte/scl/v2019C1.readAttribute`                       |
+| read an attribute of an SCL record you already hold                                                         | `@dialecte/scl/v2019C1.readAttribute`                       |
+| read an SCL attribute in a pure function with no query                                                      | `@dialecte/scl/v2019C1.readAttribute`                       |
+| read SCL attributes with defaults in a pure function with no query                                          | `@dialecte/scl/v2019C1.readAttributes`                      |
+| read the attributes of a record you hold while importing                                                    | `@dialecte/scl/v2019C1.readAttributes`                      |
+| read the attributes of an SCL record you already hold                                                       | `@dialecte/scl/v2019C1.readAttributes`                      |
+| read the typed warnings an SCL import returns                                                               | `@dialecte/scl/v2019C1.isSclImportDiagnostic`               |
+| reconcile a bay typical with its template                                                                   | `tx.lifecycle.update.ssd`                                   |
+| reconcile Application instances with their template                                                         | `tx.lifecycle.update.asd`                                   |
+| reconcile Function instances with their template                                                            | `tx.lifecycle.update.fsd`                                   |
+| record which template file an instance came from                                                            | `tx.reference.writeProvenance`                              |
+| record who changed the document and why                                                                     | `tx.history.addEntry`                                       |
+| refresh a stale reference path                                                                              | `doc.query.reference.buildReferencePath`                    |
+| register custom extensions on an SCL project                                                                | `@dialecte/scl/v2019C1.createSclProject`                    |
+| release LNodes bound to a missing LN                                                                        | `tx.cleanUp.resetLNode`                                     |
+| remove empty containers left after deletes (reference containers, wrappers, Private elements)               | `tx.cleanUp.pruneEmptyContainers`                           |
+| remove its own source-file references after it stops being that file's                                      | `tx.reference.removeOwnProvenance`                          |
+| remove or clear references whose target is gone                                                             | `tx.cleanUp.orphanUuidRefs`                                 |
+| remove the DOI/SDI/DAI instantiating its data and unlink its SourceRef/ControlRef from their ExtRef/ExtCtrl | `tx.dataModel.unlockLNode`                                  |
+| remove the implementation link of a signal                                                                  | `tx.dataflow.unlink`                                        |
+| rename data type ids and repoint lnType/type references                                                     | `tx.reference.applyTypeIdRemap`                             |
+| repoint uuid references after a clone                                                                       | `tx.reference.applyUuidRemap`                               |
+| reset a data mapping to its default                                                                         | `tx.reference.setMappedData`                                |
+| resolve a path attribute to a record                                                                        | `doc.query.reference.resolveReferencePath`                  |
+| restore element uuids after forking a document                                                              | `tx.identity.restoreClonedUuids`                            |
+| revision log of an SCL file                                                                                 | `doc.query.history.getSortedHitems`                         |
+| rewrite refs from source to target uuids                                                                    | `tx.reference.applyUuidRemap`                               |
+| rewrite type references after an id change                                                                  | `tx.reference.applyTypeIdRemap`                             |
+| root and sections of a merge view                                                                           | `@dialecte/scl/v2019C1.presentationScope`                   |
+| S-IED or real IED instead of reading manufacturer                                                           | `doc.query.lifecycle.classifyIeds`                          |
+| save a function as a reusable template                                                                      | `tx.lifecycle.extract.fsd`                                  |
+| save a process section as a reusable template                                                               | `tx.lifecycle.extract.ssd`                                  |
+| save an application as a reusable template                                                                  | `tx.lifecycle.extract.asd`                                  |
+| set instance lineage after a clone                                                                          | `tx.identity.writeIdentity`                                 |
+| set mappedDoName/mappedDaName/mappedLnUuid                                                                  | `tx.reference.setMappedData`                                |
+| show a lifecycle merge as a tree                                                                            | `@dialecte/scl/v2019C1.presentationScope`                   |
+| signals crossing the boundary of a group of IEDs                                                            | `doc.query.dataflow.crossing`                               |
+| skip a test when the SCL schema files are absent                                                            | `@dialecte/scl/v2019C1/test.isSclXsdConfigured`             |
+| source files and versions of a document                                                                     | `doc.query.reference.getProvenance`                         |
+| stamp templateUuid/originUuid on cloned elements                                                            | `tx.identity.writeIdentity`                                 |
+| start a new file in a document                                                                              | `tx.history.startFile`                                      |
+| state of an LNode or signal (locked, mapped, connected, implemented)                                        | `doc.query.info.of`                                         |
+| states of many LNodes or signals                                                                            | `doc.query.info.ofEach`                                     |
+| strip template lineage on extract                                                                           | `tx.identity.writeIdentity`                                 |
+| structure levels of a target parent for placing satellites                                                  | `tx.lifecycle.instantiate.resolveTargetStructure`           |
+| switch on SCL import diagnostic codes                                                                       | `@dialecte/scl/v2019C1.isSclImportDiagnostic`               |
+| tell a namespace Private from a tool's private data                                                         | `@dialecte/scl/v2019C1.isNamespaceWrapper`                  |
+| template origin of a Function/Application/IED                                                               | `doc.query.reference.getProvenance`                         |
+| test a pure function or helper on an SCL record without a project                                           | `@dialecte/scl/v2019C1/test.createSclTestRecord`            |
+| test an act that reads several SCL files                                                                    | `@dialecte/scl/v2019C1/test.openSclDocument`                |
+| the source-file references a function or an application records for itself                                  | `doc.query.reference.findOwnProvenance`                     |
+| tidy up a document or an extracted file                                                                     | `tx.cleanUp.pruneEmptyContainers`                           |
+| tolerate known violations with a reason                                                                     | `@dialecte/scl/v2019C1/test.assertNoNewSclOutputViolations` |
+| turn on XSD validation in SCL tests                                                                         | `@dialecte/scl/v2019C1/test.configureSclXsdSchemas`         |
+| unbind an LNode from its IED                                                                                | `tx.dataModel.unlockLNode`                                  |
+| update a project from a newer ASD                                                                           | `tx.lifecycle.update.asd`                                   |
+| update a project from a newer FSD                                                                           | `tx.lifecycle.update.fsd`                                   |
+| update a project from a newer SSD                                                                           | `tx.lifecycle.update.ssd`                                   |
+| usages of a data type (LNodeType/DOType/DAType)                                                             | `doc.query.reference.findRefsPointingTo`                    |
+| use an SSD as a project base                                                                                | `tx.lifecycle.instantiate.ssd`                              |
+| walk through a Private wrapper                                                                              | `@dialecte/scl/v2019C1.isNamespaceWrapper`                  |
+| what an IED subscribes to and publishes                                                                     | `doc.query.dataflow.ofIed`                                  |
+| what an LNode output controls and the ExtCtrl implementing it                                               | `doc.query.dataflow.ofControlRef`                           |
+| what makes an element the same element                                                                      | `doc.query.identity.resolveIdentity`                        |
+| where an LNode input takes its data from                                                                    | `doc.query.dataflow.ofSourceRef`                            |
+| where an LNode or Function is used                                                                          | `doc.query.reference.findRefsPointingTo`                    |
+| which DO/DA implements a DOS/SDS/DAS                                                                        | `doc.query.reference.resolveMappedData`                     |
+| which file an element was placed from                                                                       | `doc.query.reference.findOwnProvenance`                     |
+| which IEDs are real devices and which are specification IEDs                                                | `doc.query.lifecycle.classifyIeds`                          |
+| which part of the document a merge review displays                                                          | `@dialecte/scl/v2019C1.presentationScope`                   |
+| which templates (FSD/ASD/SSD) a document was built from                                                     | `doc.query.reference.getProvenance`                         |
+| who subscribes to a GOOSE/SV/report control block                                                           | `doc.query.dataflow.subscribersOf`                          |
+| work on SCD/SSD/FSD/ASD files                                                                               | `@dialecte/scl/v2019C1.createSclProject`                    |
+| write a lifecycle report with user decisions                                                                | `tx.lifecycle.apply`                                        |
+| write a reference attribute pointing at an element                                                          | `doc.query.reference.buildReferencePath`                    |
+| write source file provenance                                                                                | `tx.reference.writeProvenance`                              |
 
 <!-- /dialecte-skills:generated -->
 
@@ -254,5 +312,35 @@ ruled out and why in your hand-over.
 | `tx.reference.removeOwnProvenance`                       | Remove the source-file references an element records for itself (its own `FunctionSclRef` / `ApplicationSclRef`, see `findOwnProvenance`): the element is no longer what that file placed. The references of the elements it holds are left.                                                                                                                                                                                                                                                                                                                                                                                                    | forget which file an element was placed from; remove its own source-file references after it stops being that file's                                                                                           |
 | `tx.reference.setMappedData`                             | Transaction extension: state which data implements a `DOS` / `SDS` / `DAS`, and get back what was stored.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | map a DOS/SDS/DAS to the DO/DA that implements it; set mappedDoName/mappedDaName/mappedLnUuid; reset a data mapping to its default                                                                             |
 | `tx.reference.writeProvenance`                           | Records the source file an element or the document was made from: an `SclFileReference` sourced from the source `Header` (`version` / `revision` / `fileUuid`) and store (`fileName`). The same writer serves a placement and an update, so a reference always names the file version the element was last made from.                                                                                                                                                                                                                                                                                                                           | record which template file an instance came from; add an SclFileReference to a Function/Application/Header; write source file provenance                                                                       |
+
+### `@dialecte/scl/v2019C1`
+
+| Function                | What it answers                                                                                                                                                                                                                                                                                                                                                                                | Reach for it to                                                                                                                                                                     |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createSclProject`      | Create an SCL project with pre-configured config, extensions, and hooks. Call .open(name) to initialize the store and hydrate state.                                                                                                                                                                                                                                                           | open an SCL project; work on SCD/SSD/FSD/ASD files; import and edit SCL documents; register custom extensions on an SCL project                                                     |
+| `getPathSegment`        | The segment one SCL element adds to a reference path (its name and the separator before it), with no query: read from the record and, when given, its `context` (`siblings` to name a signal among its parent's children, the LNode's `specNaming` to name an LNode by its LNodeSpecNaming); `null` for an element a path passes through (AccessPoint, Server) or one with nothing to name it. | name of an element inside a reference path; path segment of a record without a query; build a path label in a custom extension                                                      |
+| `isNamespaceWrapper`    | Whether an element is a transparent wrapper of the dialecte's own elements: a `Private` whose `type` is a namespace the dialecte declares (`NAMESPACE_WRAPPER_TYPES`), as opposed to a tool's private data.                                                                                                                                                                                    | tell a namespace Private from a tool's private data; is this Private a wrapper of 6-100 elements; walk through a Private wrapper                                                    |
+| `isSclImportDiagnostic` | Whether a diagnostic is one the import of an SCL file returns (`source: 'scl'` and a code of `SCL_IMPORT_DIAGNOSTICS`): it is then narrowed to its typed member, so a `switch` on `code` reads that code's `meta` (and `related`).                                                                                                                                                             | narrow the diagnostics of an SCL import; read the typed warnings an SCL import returns; switch on SCL import diagnostic codes                                                       |
+| `isTopologyLevel`       | Whether a tag is a level of the topology: a `Substation`, a `VoltageLevel` or a `Bay`; narrows the tag.                                                                                                                                                                                                                                                                                        | is this element a topology level (Substation, VoltageLevel, Bay); find the topology levels among ancestors; filter structural levels                                                |
+| `isTypeIdTarget`        | Whether a tag is a DataTypeTemplates type element (target of a type-id reference); narrows the tag.                                                                                                                                                                                                                                                                                            | is this element a data type template; can a type reference point at this tag; filter LNodeType/DOType/DAType/EnumType elements                                                      |
+| `presentationScope`     | Where to root the structural tree of a lifecycle merge (FSD, ASD or SSD) and which top-level sections to omit or include beside it, for the verb of the merge.                                                                                                                                                                                                                                 | show a lifecycle merge as a tree; which part of the document a merge review displays; root and sections of a merge view                                                             |
+| `readAttribute`         | Read one attribute of an SCL record you hold (raw, tracked or tree) the way `query.getAttribute` reads it - same `namespace` scope, same `defaults` fill, same `''` for an absent attribute - with no query and no configuration to pass: synchronous, for an import pass or a pure composer.                                                                                                  | read an attribute of an SCL record you already hold; read an attribute of a record you hold while importing; read an SCL attribute in a pure function with no query                 |
+| `readAttributes`        | Read the attributes of an SCL record you hold (raw, tracked or tree) the way `query.getAttributes` reads them - each under the name it is stored by, or keyed by local name in a `namespace` scope, absent schema attributes filled per `defaults` - with no query and no configuration to pass. `fullObject: true` returns the attribute objects.                                             | read the attributes of an SCL record you already hold; read the attributes of a record you hold while importing; read SCL attributes with defaults in a pure function with no query |
+
+### `@dialecte/scl/v2019C1/test`
+
+| Function                         | What it answers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Reach for it to                                                                                                                                                     |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assertCoherentSclReferences`    | Assert every reference of a test XML document is coherent: no empty uuid, no uuid pointing at nothing or at an element the reference cannot target, no written path or derived attribute that disagrees with the element the uuid points at. Throws with every violation when one is not.                                                                                                                                                                                                                                                             | check a test fixture's references before using it; find dangling uuid references in SCL XML; assert written paths match their targets                               |
+| `assertExpectedElementQueries`   | Assert that each XPath query matches at least one element of a parsed SCL document (`{ xmlDocument, queries }`, the `XMLDocument` an export gives), the prefixes already bound to SCL's namespaces (`default:` for SCL, `v2019C1:` for 6-100): no namespace resolver to pass. A failure names the step that matched nothing and shows the XML of the last match.                                                                                                                                                                                      | assert an exported SCL document holds an element; check an exported SCL document with XPath in a test; query SCL elements by namespace prefix                       |
+| `assertNoNewSclOutputViolations` | Throw with every violation of `after` that `before` did not hold (compared by key, each occurrence counted: a second copy of a violation already there is new), unless `carried` holds it: a violation of the documents the act read from, copied as it was, each copy counted. A case's opt-out tolerates the violations it lists, and only those; a tolerance no added violation matches, for a check that ran, fails the case (the opt-out is stale). An opt-out with an empty reason or no violation is refused.                                  | fail a test that leaves an invalid SCL document; compare output violations before and after an act; tolerate known violations with a reason                         |
+| `assertUnexpectedElementQueries` | Assert that no XPath query matches an element of a parsed SCL document (`{ xmlDocument, queries }`, the `XMLDocument` an export gives), the prefixes already bound to SCL's namespaces (`default:` for SCL, `v2019C1:` for 6-100). Every step but the last must still match: a missing ancestor fails the assertion instead of passing it for the wrong reason.                                                                                                                                                                                       | assert an exported SCL document no longer holds an element; check an SCL element was removed; assert absence with XPath in a test                                   |
+| `assertValidSclXml`              | Assert the structure of an XML text against scl's generated definition and SCL's namespaces (`assertValidSclXml(xml, label?, { requireComplete? })`): elements in the right namespace and allowed under their parent, attributes known to their element and, unless `requireComplete: false`, every required attribute present. Throws with every violation, under `label`. It reads no schema file and checks no attribute value: the schema-file check is `collectSclOutputViolations`, once `configureSclXsdSchemas` has said where the files are. | check the structure of an SCL test fixture before using it; assert allowed children and known attributes of SCL XML; check a hand-written SCL snippet               |
+| `collectSclOutputViolations`     | Everything on a document that a real file could not hold, in the order of `SCL_OUTPUT_CHECK`: its exported XML checked structurally, by the XSD validator and for coherent references; its tree for two children of one parent with one key; its uuids and template uuids. The report lists the checks that ran: without the schema files (see `configureSclXsdSchemas`) the XSD validator does not, and the other checks still do.                                                                                                                   | check the SCL output against the XSD in a test; list the violations of an SCL document (XSD and output rules)                                                       |
+| `configureSclXsdSchemas`         | Say where the SCL schema files are, once, in a setup file of the test project, before any test validates: the output check of the test helpers validates every document a test leaves against them. The files are not shipped with the package.                                                                                                                                                                                                                                                                                                       | turn on XSD validation in SCL tests; point the test helpers at the SCL schema files; configure libxml2 validation in a setup file                                   |
+| `createSclTestProject`           | Open a test project with `sourceXml` (and `targetXml`) imported, the fixtures checked first. The test owns it until it finishes; then the documents it leaves are checked (a violation the test added fails it unless the test failed already or `allowInvalidOutput` lists it; a stale opt-out fails it too) and the project is destroyed. Call it inside a test, and do not destroy the project yourself.                                                                                                                                           | open an SCL project in a test with fixtures imported; get source and target SCL documents to test against; assert the SCL output is valid against the XSD in a test |
+| `createSclTestRecord`            | Build a typed SCL record for a unit test (raw by default, or `type: 'tracked'` / `'tree'`): the tag names and attributes are SCL's, and the record is standardized as the store would hold it.                                                                                                                                                                                                                                                                                                                                                        | build an SCL record for a unit test; test a pure function or helper on an SCL record without a project                                                              |
+| `isSclXsdConfigured`             | Whether the schema files are configured: the XSD validator runs only then.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | skip a test when the SCL schema files are absent; know whether XSD validation runs                                                                                  |
+| `openSclDocument`                | Import one more document into a test project — a previous revision of a file, a third file the act reads — and open it. Its XML is checked as a fixture is (by structure, then for coherent references), and its records keep the ids the XML names, like the source and the target. The project owns it: it goes when the project goes.                                                                                                                                                                                                              | open a third document in a test project; import a previous revision in a test; test an act that reads several SCL files                                             |
 
 <!-- /dialecte-skills:generated -->
