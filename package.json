@@ -144,7 +144,7 @@
 				},
 				{
 					"name": "tests",
-					"run": "nice -n 10 npx vitest run --project node --maxWorkers=2",
+					"run": "npx vitest run --project node",
 					"counts": "tests"
 				},
 				{
