@@ -152,3 +152,9 @@ export const LOGGING_CONFIG_PROJECT = {
 	isolate: false,
 	inBrowser: false,
 } as const
+
+/**
+ * How long one guard case may take: each reads every source file of the package, and a commit hook runs it beside the
+ * whole node suite on a loaded machine (5 s was crossed there while the same case takes under a second alone).
+ */
+export const TIER_GUARD_CASE_TIMEOUT_MS = 30_000

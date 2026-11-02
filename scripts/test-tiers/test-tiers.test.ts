@@ -12,6 +12,7 @@ import {
 import { MUTANTS_PATHS, MUTATION_RUN_ENVIRONMENT } from '../mutants/mutants.constants'
 import { printedProjectsOf } from './printed-projects'
 import {
+	TIER_GUARD_CASE_TIMEOUT_MS,
 	BROWSER_ALL_SCRIPT,
 	BROWSER_GLOBAL_SET_BY_HAND,
 	BROWSER_ONLY_XML_APIS,
@@ -434,7 +435,7 @@ function usesInMemoryStore(file: string): boolean {
 	return IN_MEMORY_STORAGE_CALL.test(readText(file))
 }
 
-describe('test tiers', () => {
+describe('test tiers', { timeout: TIER_GUARD_CASE_TIMEOUT_MS }, () => {
 	it('the node project runs every unit test file but the browser-only list', () => {
 		expect(filesOfProject(projectNamed(NODE_PROJECT_NAME))).toEqual(
 			without({ files: unitTestFiles(), left: BROWSER_ONLY_TEST_FILES }),
