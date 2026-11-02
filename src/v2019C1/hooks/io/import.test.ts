@@ -208,6 +208,49 @@ describe('import of an SCL file through a project', () => {
 					},
 				],
 			},
+		'a connected access point whose names name one access point and uuid another → one incoherent-reference naming both access points':
+			{
+				files: [
+					{
+						name: 'incoherent-tuple.scd',
+						xml: /* xml */ `
+							<SCL ${ns} ${id}="root">
+								<Communication ${id}="communication">
+									<SubNetwork name="W1" ${id}="subnetwork">
+										<ConnectedAP iedName="P1" apName="AP1" apUuid="${L2}" ${id}="connected-ap"/>
+									</SubNetwork>
+								</Communication>
+								<IED name="P1" ${id}="p1">
+									<AccessPoint name="AP1" uuid="${L1}" ${id}="ap1"/>
+									<AccessPoint name="AP2" uuid="${L2}" ${id}="ap2"/>
+								</IED>
+							</SCL>
+						`,
+					},
+				],
+				expectedEntries: [
+					{
+						status: 'imported',
+						fileName: 'incoherent-tuple.scd',
+						diagnostics: [
+							createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'incoherent-reference', {
+								ref: { tagName: 'ConnectedAP', id: 'connected-ap', attribute: 'iedName apName' },
+								meta: { uuidAttribute: 'apUuid', pathValue: 'P1/AP1', uuidValue: L2 },
+								related: [
+									{
+										ref: { tagName: 'AccessPoint', id: 'ap2' },
+										message: INCOHERENT_REFERENCE_RELATED.uuidTarget,
+									},
+									{
+										ref: { tagName: 'AccessPoint', id: 'ap1' },
+										message: INCOHERENT_REFERENCE_RELATED.pathTarget,
+									},
+								],
+							}),
+						],
+					},
+				],
+			},
 		'a source naming a logical node only by its path → one data-path-not-split, on its path attribute':
 			{
 				files: [
