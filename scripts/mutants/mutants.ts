@@ -32,7 +32,6 @@ import {
 	PACKAGE_ROOT,
 	MUTANTS_PATHS,
 	MUTANTS_TIERS,
-	MUTATION_RUN_ENVIRONMENT,
 	SURVIVING_STATUSES,
 	TIMEOUT_STATUS,
 } from './mutants.constants'
@@ -103,7 +102,6 @@ function runFastTier(params: { args: MutantsArguments }): FastVerdict | undefine
 			config: MUTANTS_PATHS.fastConfig,
 			mutate,
 			force: args.force,
-			env: MUTATION_RUN_ENVIRONMENT,
 		}) !== 0
 	)
 		return undefined
@@ -124,7 +122,6 @@ function runFastTier(params: { args: MutantsArguments }): FastVerdict | undefine
 			stryker({
 				config: MUTANTS_PATHS.timeoutsConfig,
 				mutate: timeouts,
-				env: MUTATION_RUN_ENVIRONMENT,
 			}) !== 0
 		)
 			return undefined
@@ -224,17 +221,12 @@ function git(params: { args: readonly string[] }): string {
 	return run.stdout
 }
 
-function stryker(params: {
-	config: string
-	mutate: readonly string[]
-	force?: boolean
-	env?: Readonly<Record<string, string>>
-}): number {
-	const { config, mutate, force = false, env = {} } = params
+function stryker(params: { config: string; mutate: readonly string[]; force?: boolean }): number {
+	const { config, mutate, force = false } = params
 	const run = spawnSync(
 		process.execPath,
 		[strykerBin(), 'run', config, '--mutate', mutate.join(','), ...(force ? ['--force'] : [])],
-		{ cwd: PACKAGE_ROOT, stdio: 'inherit', env: { ...process.env, ...env } },
+		{ cwd: PACKAGE_ROOT, stdio: 'inherit' },
 	)
 	return run.status ?? 1
 }

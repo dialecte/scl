@@ -158,3 +158,91 @@ export const LOGGING_CONFIG_PROJECT = {
  * whole node suite on a loaded machine (5 s was crossed there while the same case takes under a second alone).
  */
 export const TIER_GUARD_CASE_TIMEOUT_MS = 30_000
+
+/** The variable that once gated the `mutation` project: gone from the package, named here to check it stays gone. */
+export const LEGACY_MUTATION_PROJECT_ENV = 'SCL_MUTATION_PROJECT'
+
+/** The vitest config the declared fast mutation run names. */
+export const MUTATION_FAST_CONFIG = 'scripts/mutants/vitest.mutation.config.ts'
+
+/** What the mutation scope leaves out, whatever else it lists. */
+export const MUTATION_EXCLUDE_GLOBS: readonly string[] = [
+	'**/*.constants.ts',
+	'**/errors/**',
+	'**/test/**',
+	'**/*.test.ts',
+]
+
+/** The committed records of the mutation runs (the legacy file they were migrated from is `MUTANTS_PATHS.records`). */
+export const MUTATION_RECORDS_FILE = '.dialecte/mutation-records.json'
+
+/** What a "no environment" run of a mutation config unsets: the variable that once gated the project, wherever it came from. */
+export const UNSET_FOR_NO_MUTATION_ENVIRONMENT: readonly string[] = [LEGACY_MUTATION_PROJECT_ENV]
+
+/** How a failed projects printer run starts its text. */
+export const PRINTER_FAILURE_PREFIX = 'the projects of '
+
+/**
+ * Glob syntax the cli refuses in a scope or exclude glob (braces, classes, extglobs): UNSUPPORTED_GLOB_SYNTAX in
+ * cli-mutation-l2a src/lib/mutation/mutation.constants.ts:96, used by declaration.ts:31-39 (the cli reads `*` as one
+ * segment and `**` as crossing segments, see the refusal text there).
+ */
+export const UNSUPPORTED_GLOB_SYNTAX = /[{[]|[!?+*@]\(/
+
+/** Files the cli never mutates, whatever the scope says: NEVER_MUTABLE in the same constants file, line 28-29. */
+export const NEVER_MUTABLE =
+	/(?:\.test|\.types|\.d|\.generated|\.setup)\.ts$|(?:^|\/)(?:fixtures|__tests__)\//
+
+/**
+ * Every file of the package the gating variable must not appear in, dot folders included (a plain `**` never enters
+ * them, so `.*\/**` names them: .github, .husky, .vitepress, .dialecte), whatever the extension.
+ */
+export const PACKAGE_FILE_PATTERNS: readonly string[] = ['**', '.*/**']
+
+/** Folders outside the package's own files, and the guard's own files (they name the variable on purpose). */
+export const VARIABLE_SCAN_EXCLUDED: readonly string[] = [
+	'**/.git/**',
+	'scripts/test-tiers/test-tiers.test.ts',
+	'scripts/test-tiers/test-tiers.constants.ts',
+]
+
+/** The `--config` flag of a vitest command. */
+export const CONFIG_FLAG = /--config[ =](\S+)/
+
+/** The config a vitest command without `--config` runs on. */
+export const DEFAULT_VITEST_CONFIG = 'vitest.config.ts'
+
+/**
+ * The families a mutation record may carry (a record with another family does not count for the cli):
+ * MUTATION_FAMILIES, cli-mutation-l2a src/lib/mutation/mutation.constants.ts:4-14 (MUT-4). `mutants migrate` writes
+ * `unclassified`; the cli's record verb writes the family it judged.
+ */
+export const MUTATION_FAMILIES: readonly string[] = [
+	'invariant-guard',
+	'fallback-never-taken',
+	'exhaustive-default',
+	'no-op-on-empty',
+	'perf-shortcut',
+	'static-init',
+	'schema-default-read',
+	'wording',
+	'unclassified',
+]
+
+/** The keys `dialecte.mutation` may hold: MUTATION_DECLARATION_KEYS, cli-mutation-l2a src/lib/mutation/mutation.constants.ts:19 (declaration.ts:23-53, MUT-4). */
+export const MUTATION_DECLARATION_KEYS: readonly string[] = [
+	'scope',
+	'exclude',
+	'errorFactories',
+	'fast',
+	'full',
+]
+
+/** The keys `dialecte.mutation.fast` may hold: MUTATION_FAST_KEYS, cli-mutation-l2a mutation.constants.ts:70 (declaration.ts:44-47). */
+export const MUTATION_FAST_KEYS: readonly string[] = ['vitestConfig']
+
+/** The keys `dialecte.mutation.full` may hold: MUTATION_FULL_KEYS, cli-mutation-l2a mutation.constants.ts:71 (declaration.ts:48-52). */
+export const MUTATION_FULL_KEYS: readonly string[] = ['command']
+
+/** The only source extension the cli mutates: MUTABLE_EXTENSION, cli-mutation-l2a mutation.constants.ts:78. */
+export const MUTABLE_EXTENSION = /\.ts$/

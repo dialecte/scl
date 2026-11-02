@@ -9,14 +9,6 @@ export const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..
 /** The vitest project of the mutation runs: the node tier, under the name the mutation config selects. */
 export const MUTATION_PROJECT_NAME = 'mutation'
 
-/** Set by the mutation driver: the `mutation` project exists only then, a plain test run never runs it. */
-export const MUTATION_PROJECT_ENV = 'SCL_MUTATION_PROJECT'
-
-/** The environment the driver gives the vitest-runner mutation runs: it names the mutation project. */
-export const MUTATION_RUN_ENVIRONMENT: Readonly<Record<string, string>> = {
-	[MUTATION_PROJECT_ENV]: '1',
-}
-
 /** Statuses that are no kill: the mutant ran and no test failed, or no test ran it. */
 export const SURVIVING_STATUSES: ReadonlySet<string> = new Set(['Survived', 'NoCoverage'])
 

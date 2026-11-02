@@ -48,7 +48,7 @@
 		"mutants": "tsx scripts/mutants/mutants.ts all",
 		"mutants:fast": "tsx scripts/mutants/mutants.ts fast",
 		"mutants:full": "tsx scripts/mutants/mutants.ts full",
-		"test:mutants": "SCL_MUTATION_PROJECT=1 vitest run --project mutation scripts/mutants/",
+		"test:mutants": "vitest run --config scripts/mutants/vitest.mutation.config.ts scripts/mutants/",
 		"//====== CHECK ======//": "",
 		"check": "run-p type-check type-check:test type-check:node lint:check format:check",
 		"skills:generate": "dialecte skills generate",
@@ -175,6 +175,43 @@
 			"production": [
 				"src/v2019C1/test"
 			]
+		},
+		"mutation": {
+			"scope": [
+				"src/v2019C1/extensions/lifecycle/engine/**",
+				"src/v2019C1/extensions/lifecycle/layers/**",
+				"src/v2019C1/extensions/lifecycle/report/**",
+				"src/v2019C1/extensions/lifecycle/apply/**",
+				"src/v2019C1/extensions/lifecycle/update/**",
+				"src/v2019C1/extensions/lifecycle/extract/**",
+				"src/v2019C1/extensions/lifecycle/instantiate/**",
+				"src/v2019C1/extensions/lifecycle/instance/**",
+				"src/v2019C1/extensions/lifecycle/integration/**",
+				"src/v2019C1/extensions/lifecycle/mapping/**",
+				"src/v2019C1/extensions/lifecycle/transplant/**",
+				"src/v2019C1/extensions/lifecycle/constraints/**",
+				"src/v2019C1/extensions/lifecycle/cross-cutting/**",
+				"src/v2019C1/extensions/identity/**",
+				"src/v2019C1/extensions/reference/transaction/apply-uuid-remap.ts",
+				"src/v2019C1/extensions/reference/transaction/apply-type-id-remap.ts"
+			],
+			"exclude": [
+				"**/*.constants.ts",
+				"**/errors/**",
+				"**/test/**",
+				"**/*.test.ts"
+			],
+			"errorFactories": [
+				"throwDialecteError",
+				"createDialecteError",
+				"invariant"
+			],
+			"fast": {
+				"vitestConfig": "scripts/mutants/vitest.mutation.config.ts"
+			},
+			"full": {
+				"command": "npx vitest run --project browser-all --bail=1 --maxWorkers=2"
+			}
 		}
 	}
 }
