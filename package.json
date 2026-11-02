@@ -72,7 +72,7 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.7.0"
+		"@dialecte/core": "0.8.0"
 	},
 	"devDependencies": {
 		"@dialecte/cli": "0.1.0",
