@@ -191,12 +191,15 @@ const PATH_EXTRACTORS: Record<string, PathExtractor> = Object.fromEntries(
 // ── Public Methods ───────────────────────────────────────────────────
 
 /**
- * Returns the path segment for an SCL element.
+ * The segment one SCL element adds to a reference path (its name and the separator before it), with no query: read
+ * from the record and, when given, its `context` (`siblings` to name a signal among its parent's children, the
+ * LNode's `specNaming` to name an LNode by its LNodeSpecNaming); `null` for an element a path passes through
+ * (AccessPoint, Server) or one with nothing to name it.
  *
  * Uses a strategy map for element-specific extraction (SourceRef, ControlRef,
  * LDevice, ExtRef, ExtCtrl).
- * Returns null for transparent containers (AccessPoint, Server) and
- * elements without identifiable attributes.
+ *
+ * @intent name of an element inside a reference path, path segment of a record without a query, build a path label in a custom extension
  */
 export function getPathSegment(
 	record: AnyRawRecord,

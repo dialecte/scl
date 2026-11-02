@@ -19,6 +19,8 @@ import type { AnyAttribute } from '@dialecte/core'
  * Reads the record as you hold it. Inside a transaction use `tx.getAttribute`, which sees the transaction's staged
  * writes.
  *
+ * @intent read an attribute of an SCL record you already hold, read an attribute of a record you hold while importing, read an SCL attribute in a pure function with no query
+ *
  * @example
  * readAttribute({ record, name: 'iedName' })                                      // → 'B1', or 'None' when absent
  * readAttribute({ record, name: 'iedName', defaults: 'none', fullObject: true }) // → undefined when absent
@@ -44,6 +46,8 @@ export function readAttribute(
  *
  * Reads the record as you hold it. Inside a transaction use `tx.getAttributes`, which sees the transaction's staged
  * writes.
+ *
+ * @intent read the attributes of an SCL record you already hold, read the attributes of a record you hold while importing, read SCL attributes with defaults in a pure function with no query
  *
  * @example
  * readAttributes({ record })                      // → { lnClass: 'XCBR', iedName: 'None', ... }

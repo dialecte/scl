@@ -20,13 +20,19 @@ let sclXsdValidator: Promise<XsdValidator> | undefined
  * Say where the SCL schema files are, once, in a setup file of the test project, before any test validates: the
  * output check of the test helpers validates every document a test leaves against them. The files are not shipped
  * with the package.
+ *
+ * @intent turn on XSD validation in SCL tests, point the test helpers at the SCL schema files, configure libxml2 validation in a setup file
  */
 export function configureSclXsdSchemas(source: SclXsdSchemaSource): void {
 	schemaSource = source
 	sclXsdValidator = undefined
 }
 
-/** Whether the schema files are configured: the XSD validator runs only then. */
+/**
+ * Whether the schema files are configured: the XSD validator runs only then.
+ *
+ * @intent skip a test when the SCL schema files are absent, know whether XSD validation runs
+ */
 export function isSclXsdConfigured(): boolean {
 	return schemaSource !== undefined
 }

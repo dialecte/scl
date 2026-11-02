@@ -17,6 +17,8 @@ export function isPrunedWhenEmpty(record: Scl.RawRecord<Scl.ElementsOf>): boolea
 /**
  * Whether an element is a transparent wrapper of the dialecte's own elements: a `Private` whose `type` is a namespace
  * the dialecte declares (`NAMESPACE_WRAPPER_TYPES`), as opposed to a tool's private data.
+ *
+ * @intent tell a namespace Private from a tool's private data, is this Private a wrapper of 6-100 elements, walk through a Private wrapper
  */
 export function isNamespaceWrapper(params: { record: ReadAttributeParams['record'] }): boolean {
 	const { record } = params
