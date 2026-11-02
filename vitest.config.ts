@@ -1,7 +1,6 @@
 import { existsSync, globSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-import { MUTATION_PROJECT_ENV, MUTATION_PROJECT_NAME } from './scripts/mutants/mutants.constants'
 import { CORPUS_SMOKE_FOLDER } from './src/v2019C1/test/corpus/corpus.constants'
 import { SCL_XSD_FILE_NAMES, SCL_XSD_FIXTURE_FOLDER } from './src/v2019C1/test/scl-xsd.constants'
 import viteConfig from './vite.config'
@@ -115,11 +114,12 @@ function corpusExcludedProject() {
 }
 
 /**
- * The node tier under a name: every unit test file but the browser-only ones, in node on the in-memory store (the test
- * helpers' default, set by the first setup file). The files share their modules: the same verdicts as isolated files,
- * in a quarter of the time.
+ * The node tier under a name (the `node` project here, the `mutation` project of
+ * `scripts/mutants/vitest.mutation.config.ts`): every unit test file but the browser-only ones, in node on the in-memory
+ * store (the test helpers' default, set by the first setup file). The files share their modules: the same verdicts as
+ * isolated files, in a quarter of the time. A mutant only a browser-only test reaches is the full tier's.
  */
-function nodeTierProject(params: { name: string }) {
+export function nodeTierProject(params: { name: string }) {
 	return {
 		resolve: viteConfig.resolve,
 		plugins: [],
@@ -139,17 +139,6 @@ function nodeTierProject(params: { name: string }) {
 			setupFiles: [IN_MEMORY_STORAGE_SETUP, ...SETUP_FILES],
 		},
 	}
-}
-
-/**
- * The project of the vitest-runner mutation runs (`npm run mutants:fast`): the node tier as it is, under the name the
- * mutation config selects, so the mutation runner runs only the tests reaching each mutant and keeps its workers warm.
- * A mutant only a browser-only test reaches is the full tier's (`npm run mutants:full`). Only when the driver asks for
- * it (`SCL_MUTATION_PROJECT`), never in a plain run.
- */
-function mutationProject() {
-	if (!process.env[MUTATION_PROJECT_ENV]) return []
-	return [nodeTierProject({ name: MUTATION_PROJECT_NAME })]
 }
 
 export default mergeConfig(
@@ -206,7 +195,6 @@ export default mergeConfig(
 					},
 				},
 				...corpusExcludedProject(),
-				...mutationProject(),
 			],
 		},
 	}),

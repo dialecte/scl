@@ -57,3 +57,8 @@ src/v2019C1/test/fixtures/xsd/*
 
 # mutation testing: the report and the sandbox, never published
 .tmp/
+
+# the lot declaration (.dialecte/lot.json) is never committed; the mutation records are (dialecte mutants)
+!.dialecte/
+.dialecte/*
+!.dialecte/mutation-records.json

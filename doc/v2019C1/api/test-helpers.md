@@ -561,6 +561,13 @@ npm run mutants -- --diff main --force        # both in turn, every mutant teste
 npm run test:mutants                          # the tests of the gate itself
 ```
 
+The package also declares its mutation scope (`dialecte.mutation` in `package.json`: the source globs, the exclusions,
+the error factories, the fast config and the full command) for the cli's runner (`@dialecte/cli` >= 0.2.0):
+`npx dialecte mutants run --mode changed|audit`, `npx dialecte mutants status`. Its records live in
+`.dialecte/mutation-records.json`. The scl scripts above (`npm run mutants*`) keep working until the cli runner replaces
+them. While both exist, every record of `scripts/mutants/equivalent-mutants.json` is also in the records file (the
+tier guard checks it: same key, reason, line and mutation); the records file may hold more, the ones the cli writes.
+
 - **fast** runs the node tier: the files of the `node` vitest project, on its setup (the in-memory store, the output
   check on), under the name `mutation` the mutation config selects. No browser stand-in: the test helpers read XML
   with libxml2 and the store tree, in node as in a browser. StrykerJS's vitest runner runs, for each mutant, only the

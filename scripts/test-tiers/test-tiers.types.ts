@@ -64,3 +64,8 @@ export type TierShape = {
 	readonly isolate: boolean | undefined
 	readonly inBrowser: boolean
 }
+
+/** A records file as JSON holds it: file -> mutant key -> record fields. */
+export type RecordsByFile = Readonly<
+	Record<string, Readonly<Record<string, Readonly<Record<string, unknown>>>>>
+>

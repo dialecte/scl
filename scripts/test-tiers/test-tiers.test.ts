@@ -9,8 +9,9 @@ import {
 	NODE_ONLY_TEST_FILES,
 	PRODUCTION_FACTORY_TEST_FILES,
 } from '../../vitest.config.constants'
-import { MUTANTS_PATHS, MUTATION_RUN_ENVIRONMENT } from '../mutants/mutants.constants'
+import { MUTANTS_PATHS, MUTATION_PROJECT_NAME } from '../mutants/mutants.constants'
 import { printedProjectsOf } from './printed-projects'
+import { legacyRecordsMissing } from './records-agree'
 import {
 	TIER_GUARD_CASE_TIMEOUT_MS,
 	BROWSER_ALL_SCRIPT,
@@ -23,13 +24,27 @@ import {
 	IGNORED_FOLDERS,
 	IMPORT_SPECIFIER,
 	IN_MEMORY_STORAGE_CALL,
+	CONFIG_FLAG,
+	DEFAULT_VITEST_CONFIG,
+	LEGACY_MUTATION_PROJECT_ENV,
 	LOGGING_CONFIG_FIXTURE,
 	LOGGING_CONFIG_PROJECT,
+	MUTATION_EXCLUDE_GLOBS,
+	MUTATION_FAST_CONFIG,
+	MUTATION_RECORDS_FILE,
+	NEVER_MUTABLE,
 	NODE_PROJECT_NAME,
 	NPM_RUN_COMMAND,
 	NPM_TEST_COMMAND,
 	PRODUCTION_ENTRY,
 	PRODUCTION_FACTORY_CALL,
+	PACKAGE_FILE_PATTERNS,
+	MUTABLE_EXTENSION,
+	MUTATION_DECLARATION_KEYS,
+	MUTATION_FAMILIES,
+	MUTATION_FAST_KEYS,
+	MUTATION_FULL_KEYS,
+	PRINTER_FAILURE_PREFIX,
 	PROJECT_FLAG,
 	PROJECTS_PRINTER,
 	PROJECTS_PRINTER_TIMEOUT,
@@ -44,10 +59,15 @@ import {
 	TEST_ENTRY,
 	TEST_WORKFLOW,
 	TYPES_SCOPE,
+	UNSET_FOR_NO_MUTATION_ENVIRONMENT,
+	UNSUPPORTED_GLOB_SYNTAX,
 	UNIT_TEST_FILE_PATTERNS,
+	VARIABLE_SCAN_EXCLUDED,
 	WORKFLOW_RUN_LINE,
 } from './test-tiers.constants'
 
+import * as dialecteCore from '@dialecte/core'
+import * as dialecteCoreUtils from '@dialecte/core/utils'
 import { describe, expect, it } from 'vitest'
 
 import type { DeclaredTestFile } from '../../vitest.config.types'
@@ -55,6 +75,7 @@ import type {
 	ConfiguredProject,
 	MutationRunConfig,
 	PackageManifest,
+	RecordsByFile,
 	TierRun,
 	TierShape,
 } from './test-tiers.types'
@@ -325,7 +346,7 @@ function readMutationRunConfig(path: string): MutationRunConfig {
 	return JSON.parse(readText(path)) as MutationRunConfig
 }
 
-/** The vitest-runner mutation runs: the driver names the mutation project in their environment. */
+/** The vitest-runner mutation runs: each one's vitest config is loaded with no environment. */
 const VITEST_MUTATION_RUNS = [MUTANTS_PATHS.fastConfig, MUTANTS_PATHS.timeoutsConfig]
 
 /** What the projects printer wrote: the projects as the guard reads them, or its stdout when that is no JSON list. */
@@ -338,47 +359,90 @@ function readPrinted(stdout: string): ConfiguredProject[] | string {
 	}
 }
 
-/** The projects printer's output on a config, in the environment given, bounded in time. */
+/** The projects printer's output on a config in the environment given, or the text of its failure; bounded in time. */
+function printProjectsOutcome(params: {
+	configFile: string
+	environment: Readonly<Record<string, string>>
+	unset?: readonly string[]
+}): ConfiguredProject[] | string {
+	const { configFile, environment, unset = [] } = params
+	const inherited = Object.fromEntries(
+		Object.entries(process.env).filter(function isKept([name]) {
+			return !unset.includes(name)
+		}),
+	)
+	const printed = spawnSync(process.execPath, ['--import', 'tsx', PROJECTS_PRINTER, configFile], {
+		cwd: ROOT,
+		encoding: 'utf8',
+		env: { ...inherited, ...environment },
+		timeout: PROJECTS_PRINTER_TIMEOUT,
+	})
+	if (printed.error !== undefined || printed.status !== 0)
+		return `${PRINTER_FAILURE_PREFIX}${configFile} could not be read: status ${printed.status}, signal ${printed.signal}, ${printed.error?.message ?? ''} ${printed.stderr ?? ''}`
+	return readPrinted(printed.stdout)
+}
+
+/** The projects printer's output on a config, in the environment given; a printer that fails throws. */
 function printProjects(params: {
 	configFile: string
 	environment: Readonly<Record<string, string>>
 }): ConfiguredProject[] | string {
-	const { configFile, environment } = params
-	const printed = spawnSync(process.execPath, ['--import', 'tsx', PROJECTS_PRINTER, configFile], {
-		cwd: ROOT,
-		encoding: 'utf8',
-		env: { ...process.env, ...environment },
-		timeout: PROJECTS_PRINTER_TIMEOUT,
-	})
-	if (printed.error !== undefined || printed.status !== 0)
-		throw new Error(
-			`the projects of ${configFile} could not be read: status ${printed.status}, signal ${printed.signal}, ${printed.error?.message ?? ''} ${printed.stderr ?? ''}`,
-		)
-	return readPrinted(printed.stdout)
+	const outcome = printProjectsOutcome(params)
+	if (typeof outcome === 'string' && outcome.startsWith(PRINTER_FAILURE_PREFIX))
+		throw new Error(outcome)
+	return outcome
 }
 
-const printedProjects = new Map<string, ConfiguredProject[]>()
+const printedProjects = new Map<string, ConfiguredProject[] | string>()
 
-/** The projects a vitest-runner mutation run loads: its vitest config, in the environment the driver gives it. */
-function projectsOfMutationRun(path: string): ConfiguredProject[] {
-	const configFile = readMutationRunConfig(path).vitest?.configFile
-	if (configFile === undefined) return []
+/** The projects a vitest-runner mutation run loads, or why it could not: its vitest config, with no environment. */
+function outcomeOfVitestConfig(configFile: string): ConfiguredProject[] | string {
 	const known = printedProjects.get(configFile)
 	if (known) return known
-	const projects = printProjects({ configFile, environment: MUTATION_RUN_ENVIRONMENT })
-	if (typeof projects === 'string')
-		throw new Error(`the projects printer wrote no JSON list for ${configFile}: ${projects}`)
-	printedProjects.set(configFile, projects)
-	return projects
+	const outcome = printProjectsOutcome({
+		configFile,
+		environment: {},
+		unset: UNSET_FOR_NO_MUTATION_ENVIRONMENT,
+	})
+	const read =
+		typeof outcome === 'string'
+			? `the projects printer wrote no JSON list for ${configFile}: ${outcome}`
+			: outcome
+	printedProjects.set(configFile, read)
+	return read
 }
 
-/** The projects every node-environment run uses: the configured ones and the mutation runs'. */
-function nodeEnvironmentProjects(): ConfiguredProject[] {
-	return [...configuredProjects(), ...VITEST_MUTATION_RUNS.flatMap(projectsOfMutationRun)].filter(
-		function runsInNode(project) {
-			return project.environment === 'node'
-		},
-	)
+function outcomeOfMutationRun(path: string): ConfiguredProject[] | string {
+	const configFile = readMutationRunConfig(path).vitest?.configFile
+	return configFile === undefined ? [] : outcomeOfVitestConfig(configFile)
+}
+
+/** The node-environment projects: the configured projects and those of the mutation runs that load; the text of the runs that do not. */
+function nodeEnvironmentRuns(): { projects: ConfiguredProject[]; unreadable: string[] } {
+	const outcomes = VITEST_MUTATION_RUNS.map(outcomeOfMutationRun)
+	return {
+		projects: [...configuredProjects(), ...outcomes.filter(isProjects).flat()].filter(
+			function runsInNode(project) {
+				return project.environment === 'node'
+			},
+		),
+		unreadable: outcomes.filter(isString),
+	}
+}
+
+function isProjects(outcome: ConfiguredProject[] | string): outcome is ConfiguredProject[] {
+	return typeof outcome !== 'string'
+}
+
+/** What a project is as the mutation project must be: the node tier's shape under its own name. */
+function namedShapeOf(
+	project: ConfiguredProject | undefined,
+): TierShape & { name: string | undefined } {
+	return { name: project?.name, ...tierShapeOf(project) }
+}
+
+function readDeclaration(): Record<string, unknown> {
+	return recordOf(recordOf(recordOf(readManifest()).dialecte).mutation)
 }
 
 /** The stand-in packages a specifier names, a subpath (`fake-indexeddb/auto`) or a scope's package included. */
@@ -510,38 +574,46 @@ describe('test tiers', { timeout: TIER_GUARD_CASE_TIMEOUT_MS }, () => {
 	it(
 		'no node-environment project installs a DOM, XPath or IndexedDB stand-in, the mutation runs included',
 		{
-			timeout: 30_000,
+			timeout: TIER_GUARD_CASE_TIMEOUT_MS,
 		},
 		() => {
-			const setupFiles = nodeEnvironmentProjects().flatMap(setupFilesOf)
-			expect(
-				[...reachedFrom(setupFiles)].flatMap(function standInsOf(file) {
+			const { projects, unreadable } = nodeEnvironmentRuns()
+			const setupFiles = projects.flatMap(setupFilesOf)
+			expect({
+				unreadable,
+				offenders: [...reachedFrom(setupFiles)].flatMap(function standInsOf(file) {
 					return standInsInstalledBy(readText(file)).map(function offender(standIn) {
 						return `${file}: ${standIn}`
 					})
 				}),
-			).toEqual([])
+			}).toEqual({ unreadable: [], offenders: [] })
 		},
 	)
 
 	it(
 		"the fast mutation runs test the node project's files on its setup, in node",
-		{ timeout: 30_000 },
+		{ timeout: TIER_GUARD_CASE_TIMEOUT_MS },
 		() => {
 			const nodeTier = tierShapeOf(projectNamed(NODE_PROJECT_NAME))
 			expect(
 				VITEST_MUTATION_RUNS.map(function runOf(path) {
 					const config = readMutationRunConfig(path)
+					const outcome = outcomeOfMutationRun(path)
 					return {
 						path,
 						testRunner: config.testRunner,
 						related: config.vitest?.related,
-						projects: projectsOfMutationRun(path).map(tierShapeOf),
+						projects: isProjects(outcome) ? outcome.map(namedShapeOf) : outcome,
 					}
 				}),
 			).toEqual(
 				VITEST_MUTATION_RUNS.map(function nodeRunOf(path) {
-					return { path, testRunner: 'vitest', related: false, projects: [nodeTier] }
+					return {
+						path,
+						testRunner: 'vitest',
+						related: false,
+						projects: [{ name: MUTATION_PROJECT_NAME, ...nodeTier }],
+					}
 				}),
 			)
 		},
@@ -568,6 +640,212 @@ describe('test tiers', { timeout: TIER_GUARD_CASE_TIMEOUT_MS }, () => {
 		expect(projectsNamedBy(command)).toEqual(
 			projectsRunBy([readManifest().scripts[BROWSER_ALL_SCRIPT] ?? '']),
 		)
+	})
+
+	it(
+		'the mutation config, loaded with no environment, holds the node tier under the name mutation alone',
+		{ timeout: TIER_GUARD_CASE_TIMEOUT_MS },
+		() => {
+			const outcome = outcomeOfVitestConfig(MUTATION_FAST_CONFIG)
+			expect(isProjects(outcome) ? outcome.map(namedShapeOf) : outcome).toEqual([
+				{ name: MUTATION_PROJECT_NAME, ...tierShapeOf(projectNamed(NODE_PROJECT_NAME)) },
+			])
+		},
+	)
+
+	it(
+		'the package config holds no mutation project, whatever the environment',
+		{ timeout: TIER_GUARD_CASE_TIMEOUT_MS },
+		() => {
+			function mutationNamesOf(outcome: ConfiguredProject[] | string): string[] | string {
+				return isProjects(outcome)
+					? outcome
+							.map(function nameOf(project) {
+								return project.name
+							})
+							.filter(isMutationName)
+					: outcome
+			}
+			function isMutationName(name: string): boolean {
+				return name === MUTATION_PROJECT_NAME
+			}
+			expect({
+				inProcess: mutationNamesOf(configuredProjects()),
+				noEnv: mutationNamesOf(
+					printProjectsOutcome({
+						configFile: DEFAULT_VITEST_CONFIG,
+						environment: {},
+						unset: UNSET_FOR_NO_MUTATION_ENVIRONMENT,
+					}),
+				),
+				legacyEnv: mutationNamesOf(
+					printProjectsOutcome({
+						configFile: DEFAULT_VITEST_CONFIG,
+						environment: { [LEGACY_MUTATION_PROJECT_ENV]: '1' },
+					}),
+				),
+			}).toEqual({ inProcess: [], noEnv: [], legacyEnv: [] })
+		},
+	)
+
+	it(
+		'every npm script naming a vitest project runs it on a config that holds it, loaded with no environment',
+		{ timeout: TIER_GUARD_CASE_TIMEOUT_MS },
+		() => {
+			const offenders = Object.entries(readManifest().scripts).flatMap(function offendersOf([
+				script,
+				line,
+			]) {
+				return line.split(COMMAND_SEPARATOR).flatMap(function offendersOfCommand(command) {
+					const projects = projectsNamedBy(command)
+					if (projects.length === 0) return []
+					const configFile = CONFIG_FLAG.exec(command)?.[1] ?? DEFAULT_VITEST_CONFIG
+					const outcome = outcomeOfVitestConfig(configFile)
+					const held = isProjects(outcome)
+						? outcome.map(function nameOf(project) {
+								return project.name
+							})
+						: []
+					return projects
+						.filter(function isNotHeld(project) {
+							return !held.includes(project)
+						})
+						.map(function offender(project) {
+							return `${script}: --project ${project} on ${configFile}${isProjects(outcome) ? '' : ` (${outcome})`}`
+						})
+				})
+			})
+			expect(offenders).toEqual([])
+		},
+	)
+
+	it('the package no longer names the variable that gated the mutation project', () => {
+		expect(
+			globSync([...PACKAGE_FILE_PATTERNS], {
+				cwd: ROOT,
+				exclude: [...IGNORED_FOLDERS, ...VARIABLE_SCAN_EXCLUDED],
+			})
+				.filter(function isFile(file) {
+					return statSync(`${ROOT}${file}`).isFile()
+				})
+				.filter(function namesTheVariable(file) {
+					const bytes = readFileSync(`${ROOT}${file}`)
+					return !bytes.includes(0) && bytes.toString('utf8').includes(LEGACY_MUTATION_PROJECT_ENV)
+				}),
+		).toEqual([])
+	})
+
+	it('package.json declares the fast mutation run on the mutation config', () => {
+		const fast = recordOf(readDeclaration().fast)
+		expect(fast.vitestConfig).toBe(MUTATION_FAST_CONFIG)
+	})
+
+	it(
+		"the declared fast mutation run tests the node project's files on its setup, in node, with no environment",
+		{ timeout: TIER_GUARD_CASE_TIMEOUT_MS },
+		() => {
+			const configFile = recordOf(readDeclaration().fast).vitestConfig
+			const outcome = typeof configFile === 'string' ? outcomeOfVitestConfig(configFile) : []
+			expect(isProjects(outcome) ? outcome.map(tierShapeOf) : outcome).toEqual([
+				tierShapeOf(projectNamed(NODE_PROJECT_NAME)),
+			])
+		},
+	)
+
+	it('the declared full mutation run tests the projects of test:browser:all', () => {
+		const command = recordOf(readDeclaration().full).command
+		expect(typeof command === 'string' ? projectsRunBy([command]) : command).toEqual(
+			projectsRunBy([readManifest().scripts[BROWSER_ALL_SCRIPT] ?? '']),
+		)
+	})
+
+	it('the declared full mutation command is the full run of the scl runner while both live', () => {
+		expect(recordOf(readDeclaration().full).command).toBe(
+			readMutationRunConfig(MUTANTS_PATHS.fullConfig).commandRunner?.command,
+		)
+	})
+
+	it('every declared mutation glob uses syntax the cli reads, and every scope glob names a file left to mutate', () => {
+		const { scope: declaredScope, exclude: declaredExclude } = readDeclaration()
+		const scope = stringsOf(declaredScope)
+		const exclude = stringsOf(declaredExclude)
+		expect({
+			declared: scope.length > 0,
+			unsupported: [...scope, ...exclude].filter(function isUnsupported(glob) {
+				return UNSUPPORTED_GLOB_SYNTAX.test(glob)
+			}),
+			naming_no_mutable_file: scope.filter(function namesNoMutableFile(glob) {
+				return !globSync(glob, { cwd: ROOT, exclude: [...IGNORED_FOLDERS, ...exclude] }).some(
+					function isMutable(file) {
+						return MUTABLE_EXTENSION.test(file) && !NEVER_MUTABLE.test(file)
+					},
+				)
+			}),
+		}).toEqual({ declared: true, unsupported: [], naming_no_mutable_file: [] })
+	})
+
+	it('the declaration is one the cli accepts: string lists, a scope, only known keys', () => {
+		const declaration = readDeclaration()
+		function unknownKeysOf(params: { value: unknown; known: readonly string[] }): string[] {
+			const { value, known } = params
+			return Object.keys(recordOf(value)).filter(function isUnknown(key) {
+				return !known.includes(key)
+			})
+		}
+		function isStringList(value: unknown): boolean {
+			return Array.isArray(value) && value.every(isString)
+		}
+		expect({
+			scopeIsStringList: isStringList(declaration.scope),
+			scopeNonEmpty: stringsOf(declaration.scope).length > 0,
+			excludeIsStringList: isStringList(declaration.exclude),
+			errorFactoriesIsStringList: isStringList(declaration.errorFactories),
+			unknownKeys: unknownKeysOf({ value: declaration, known: MUTATION_DECLARATION_KEYS }),
+			unknownFastKeys: unknownKeysOf({ value: declaration.fast, known: MUTATION_FAST_KEYS }),
+			unknownFullKeys: unknownKeysOf({ value: declaration.full, known: MUTATION_FULL_KEYS }),
+		}).toEqual({
+			scopeIsStringList: true,
+			scopeNonEmpty: true,
+			excludeIsStringList: true,
+			errorFactoriesIsStringList: true,
+			unknownKeys: [],
+			unknownFastKeys: [],
+			unknownFullKeys: [],
+		})
+	})
+
+	it('the declared mutation exclusions hold constants, errors, test folders and test files', () => {
+		expect(stringsOf(readDeclaration().exclude)).toEqual(
+			expect.arrayContaining([...MUTATION_EXCLUDE_GLOBS]),
+		)
+	})
+
+	it('every declared error factory is a function the core exports', () => {
+		// the ignorer reads the names as callee identifiers: cli-mutation-l2a src/lib/mutation/ignorers.ts:85-101
+		const exported = new Map<string, unknown>([
+			...Object.entries(dialecteCore),
+			...Object.entries(dialecteCoreUtils),
+		])
+		const names = stringsOf(readDeclaration().errorFactories)
+		expect({
+			declared: names.length > 0,
+			notFunctions: names.filter(function isNoFunction(name) {
+				return typeof exported.get(name) !== 'function'
+			}),
+		}).toEqual({ declared: true, notFunctions: [] })
+	})
+
+	it('every legacy equivalent mutant is in the migrated mutation records, which may hold more', () => {
+		function readRecords(path: string): RecordsByFile {
+			return existsSync(`${ROOT}${path}`) ? (JSON.parse(readText(path)) as RecordsByFile) : {}
+		}
+		expect(
+			legacyRecordsMissing({
+				legacy: readRecords(MUTANTS_PATHS.records),
+				migrated: readRecords(MUTATION_RECORDS_FILE),
+				families: MUTATION_FAMILIES,
+			}),
+		).toEqual([])
 	})
 
 	it('no stand-in package is listed or imported, but by a declared importer', () => {
