@@ -585,12 +585,12 @@ async function computeAttributeChanges(
 	const sourceAttributes = await sourceQuery.any.getAttributes(sourceNode)
 	const instanceAttributes = await targetQuery.any.getAttributes(instanceNode)
 	const desired = visibleAttributes({
-		tagName: sourceNode.tagName,
+		record: sourceNode,
 		attributes: sourceAttributes,
 		namesFollow,
 	})
 	const current = visibleAttributes({
-		tagName: instanceNode.tagName,
+		record: instanceNode,
 		attributes: instanceAttributes,
 		namesFollow,
 	})

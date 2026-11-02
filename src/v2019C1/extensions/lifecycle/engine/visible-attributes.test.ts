@@ -55,7 +55,18 @@ describe('visibleAttributes', () => {
 				lnType: 'CSWI_Type',
 				desc: 'controller',
 			},
-			expected: { iedName: 'None', lnClass: 'CSWI', lnInst: '1', desc: 'controller' },
+			// `iedName="None"` is its schema default: the same as no iedName
+			expected: { lnClass: 'CSWI', lnInst: '1', desc: 'controller' },
+		},
+		'LNode with an empty lnInst, its schema default → left out, as an absent lnInst': {
+			tagName: 'LNode',
+			attributes: { iedName: 'P1', lnClass: 'LLN0', lnInst: '' },
+			expected: { iedName: 'P1', lnClass: 'LLN0' },
+		},
+		'an empty desc, its schema default → left out, as an absent desc': {
+			tagName: 'Bay',
+			attributes: { name: 'B1', desc: '' },
+			expected: {},
 		},
 		'names following the source → the name compared too': {
 			tagName: 'Bay',
@@ -73,7 +84,7 @@ describe('visibleAttributes', () => {
 
 	function act(testCase: TestCase): void {
 		const visible = visibleAttributes({
-			tagName: testCase.tagName,
+			record: { tagName: testCase.tagName, parent: null, attributes: [] },
 			attributes: testCase.attributes,
 			namesFollow: testCase.namesFollow ?? 'project',
 		})

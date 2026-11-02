@@ -621,14 +621,14 @@ async function updateMatchedAttributes(
 	const instanceAttributes = await tx.any.getAttributes(instanceRecord)
 	const desired = {
 		...visibleAttributes({
-			tagName: sourceNode.tagName,
+			record: sourceNode,
 			attributes: sourceAttributes,
 			namesFollow,
 		}),
 		...overrides?.get(sourceNode.id),
 	}
 	const current = visibleAttributes({
-		tagName: instanceRecord.tagName,
+		record: instanceRecord,
 		attributes: instanceAttributes,
 		namesFollow,
 	})
@@ -645,7 +645,9 @@ async function updateMatchedAttributes(
 	// (`undefined` removes it) — otherwise a reconcile would leave a stale instance value.
 	const updates: Record<string, string | undefined> = {}
 	for (const name of new Set([...Object.keys(desired), ...Object.keys(current)])) {
-		const next = name in desired ? desired[name] : undefined
+		// a template value equal to its schema default is folded out of `desired` to compare, but written as the
+		// template holds it: a required attribute with a fixed value is never removed
+		const next = name in desired ? desired[name] : sourceAttributes[name]
 		if (owned.attributes.has(name)) continue
 		if (current[name] !== next) updates[name] = next
 	}

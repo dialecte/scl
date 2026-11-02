@@ -1,5 +1,7 @@
 import { throwDialecteError } from '@dialecte/core'
+import { isSchemaDefaultValue } from '@dialecte/core/utils'
 
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import {
 	DERIVED_ATTRIBUTES_BY_TAG,
@@ -7,6 +9,7 @@ import {
 } from '@/v2019C1/extensions/reference/constants'
 
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
+import type { ResolvableRecord } from '@dialecte/core/utils'
 
 const IDENTITY_ATTRS = new Set(['uuid', 'templateUuid', 'originUuid'])
 
@@ -32,11 +35,13 @@ const REFERENCE_ATTRS: ReadonlySet<string> = new Set(
  * a revision's renames are compared and written (`namesFollow: 'source'`, a fork).
  */
 export function visibleAttributes(params: {
-	tagName: string
+	/** The element: its tag, and its parent for the rules of its definition there. */
+	record: ResolvableRecord
 	attributes: Record<string, string>
 	namesFollow: NamesFollow
 }): Record<string, string> {
-	const { tagName, attributes, namesFollow } = params
+	const { record, attributes, namesFollow } = params
+	const { tagName } = record
 	const derived = DERIVED_ATTRIBUTES_BY_TAG.get(tagName)?.attributes ?? []
 	const typeReferences = TYPE_ID_REF_ATTRIBUTES.get(tagName) ?? []
 	const namesCompared = comparesNames(namesFollow)
@@ -46,6 +51,16 @@ export function visibleAttributes(params: {
 		if (typeReferences.includes(name)) continue
 		if (name === 'name' && !namesCompared) continue
 		if (derived.some((attribute) => attribute.name === name)) continue
+		// a value equal to the schema default reads as the attribute left out: `lnInst=""` and no `lnInst` are one
+		if (
+			isSchemaDefaultValue({
+				dialecteConfig: SCL_DIALECTE_CONFIG,
+				record,
+				attributeName: name,
+				value,
+			})
+		)
+			continue
 		visible[name] = value
 	}
 	return visible

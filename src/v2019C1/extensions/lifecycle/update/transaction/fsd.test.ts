@@ -100,6 +100,20 @@ describe('update.fsd (engine: instantiate-or-reconcile)', () => {
 			],
 		},
 
+		'a template going back to its default desc="" → the instance takes the template value, the attribute kept':
+			{
+				sourceXml: sourceWithDescXml,
+				targetXml,
+				preInstantiate: true,
+				mutate: async (tx) => {
+					await tx.update(functionRef, { attributes: { desc: '' } })
+				},
+				expectedQueries: [
+					// the template's own value is written, as for an attribute whose default is fixed
+					'//default:Bay[@name="B1"]/default:Function[@name="Prot"][@templateUuid="fn-src-uuid"][@desc=""]',
+				],
+			},
+
 		'reconciles onto the existing instance: updates in place + adds new, no duplicate': {
 			sourceXml,
 			targetXml,
