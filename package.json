@@ -45,10 +45,6 @@
 		"corpus:sync": "tsx scripts/sync-corpus.ts",
 		"corpus:check-excluded": "tsx scripts/sync-corpus.ts --check-excluded",
 		"xsd:sync": "tsx scripts/sync-xsd.ts",
-		"mutants": "tsx scripts/mutants/mutants.ts all",
-		"mutants:fast": "tsx scripts/mutants/mutants.ts fast",
-		"mutants:full": "tsx scripts/mutants/mutants.ts full",
-		"test:mutants": "vitest run --config scripts/mutants/vitest.mutation.config.ts scripts/mutants/",
 		"//====== CHECK ======//": "",
 		"check": "run-p type-check type-check:test type-check:node lint:check format:check",
 		"skills:generate": "dialecte skills generate",
@@ -75,7 +71,7 @@
 		"@dialecte/core": "0.8.0"
 	},
 	"devDependencies": {
-		"@dialecte/cli": "0.1.0",
+		"@dialecte/cli": "0.2.0",
 		"@stryker-mutator/core": "10.0.0",
 		"@stryker-mutator/vitest-runner": "10.0.0",
 		"@tsconfig/node24": "^24.0.4",

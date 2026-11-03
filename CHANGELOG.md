@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **The package declares its mutation scope for `dialecte mutants`** (`dialecte.mutation` in `package.json`); its equivalent-mutant records moved to `.dialecte/mutation-records.json`.
+- **Mutation testing runs through `dialecte mutants` alone** (tooling of this repository; nothing changes for a consumer): the package's own runner and its `npm run mutants*` scripts are gone; `@dialecte/cli` 0.2.0 is the dev dependency that runs it.
 
 ## [0.11.0] - 2026-11-02
 

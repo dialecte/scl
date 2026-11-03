@@ -9,9 +9,8 @@ import {
 	NODE_ONLY_TEST_FILES,
 	PRODUCTION_FACTORY_TEST_FILES,
 } from '../../vitest.config.constants'
-import { MUTANTS_PATHS, MUTATION_PROJECT_NAME } from '../mutants/mutants.constants'
+import { MUTATION_PROJECT_NAME } from '../mutants/mutants.constants'
 import { printedProjectsOf } from './printed-projects'
-import { legacyRecordsMissing } from './records-agree'
 import {
 	TIER_GUARD_CASE_TIMEOUT_MS,
 	BROWSER_ALL_SCRIPT,
@@ -27,11 +26,17 @@ import {
 	CONFIG_FLAG,
 	DEFAULT_VITEST_CONFIG,
 	LEGACY_MUTATION_PROJECT_ENV,
+	CLI_PACKAGE,
+	FIRST_CLI_WITH_MUTANTS,
+	EXACT_VERSION,
+	MUTATION_FOLDER,
+	MUTATION_FOLDER_FILES,
+	OWN_RUNNER_CONFIGS,
+	OWN_RUNNER_SCRIPT,
 	LOGGING_CONFIG_FIXTURE,
 	LOGGING_CONFIG_PROJECT,
 	MUTATION_EXCLUDE_GLOBS,
 	MUTATION_FAST_CONFIG,
-	MUTATION_RECORDS_FILE,
 	NEVER_MUTABLE,
 	NODE_PROJECT_NAME,
 	NPM_RUN_COMMAND,
@@ -41,7 +46,6 @@ import {
 	PACKAGE_FILE_PATTERNS,
 	MUTABLE_EXTENSION,
 	MUTATION_DECLARATION_KEYS,
-	MUTATION_FAMILIES,
 	MUTATION_FAST_KEYS,
 	MUTATION_FULL_KEYS,
 	PRINTER_FAILURE_PREFIX,
@@ -71,14 +75,7 @@ import * as dialecteCoreUtils from '@dialecte/core/utils'
 import { describe, expect, it } from 'vitest'
 
 import type { DeclaredTestFile } from '../../vitest.config.types'
-import type {
-	ConfiguredProject,
-	MutationRunConfig,
-	PackageManifest,
-	RecordsByFile,
-	TierRun,
-	TierShape,
-} from './test-tiers.types'
+import type { ConfiguredProject, PackageManifest, TierRun, TierShape } from './test-tiers.types'
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 
@@ -342,13 +339,6 @@ function tierShapeOf(project: ConfiguredProject | undefined): TierShape {
 	}
 }
 
-function readMutationRunConfig(path: string): MutationRunConfig {
-	return JSON.parse(readText(path)) as MutationRunConfig
-}
-
-/** The vitest-runner mutation runs: each one's vitest config is loaded with no environment. */
-const VITEST_MUTATION_RUNS = [MUTANTS_PATHS.fastConfig, MUTANTS_PATHS.timeoutsConfig]
-
 /** What the projects printer wrote: the projects as the guard reads them, or its stdout when that is no JSON list. */
 function readPrinted(stdout: string): ConfiguredProject[] | string {
 	try {
@@ -412,14 +402,11 @@ function outcomeOfVitestConfig(configFile: string): ConfiguredProject[] | string
 	return read
 }
 
-function outcomeOfMutationRun(path: string): ConfiguredProject[] | string {
-	const configFile = readMutationRunConfig(path).vitest?.configFile
-	return configFile === undefined ? [] : outcomeOfVitestConfig(configFile)
-}
-
-/** The node-environment projects: the configured projects and those of the mutation runs that load; the text of the runs that do not. */
+/** The node-environment projects: the configured projects and those of the declared fast mutation run; its text when it does not load. */
 function nodeEnvironmentRuns(): { projects: ConfiguredProject[]; unreadable: string[] } {
-	const outcomes = VITEST_MUTATION_RUNS.map(outcomeOfMutationRun)
+	const outcomes = stringsOf(recordOf(readDeclaration().fast).vitestConfig).map(
+		outcomeOfVitestConfig,
+	)
 	return {
 		projects: [...configuredProjects(), ...outcomes.filter(isProjects).flat()].filter(
 			function runsInNode(project) {
@@ -591,35 +578,6 @@ describe('test tiers', { timeout: TIER_GUARD_CASE_TIMEOUT_MS }, () => {
 	)
 
 	it(
-		"the fast mutation runs test the node project's files on its setup, in node",
-		{ timeout: TIER_GUARD_CASE_TIMEOUT_MS },
-		() => {
-			const nodeTier = tierShapeOf(projectNamed(NODE_PROJECT_NAME))
-			expect(
-				VITEST_MUTATION_RUNS.map(function runOf(path) {
-					const config = readMutationRunConfig(path)
-					const outcome = outcomeOfMutationRun(path)
-					return {
-						path,
-						testRunner: config.testRunner,
-						related: config.vitest?.related,
-						projects: isProjects(outcome) ? outcome.map(namedShapeOf) : outcome,
-					}
-				}),
-			).toEqual(
-				VITEST_MUTATION_RUNS.map(function nodeRunOf(path) {
-					return {
-						path,
-						testRunner: 'vitest',
-						related: false,
-						projects: [{ name: MUTATION_PROJECT_NAME, ...nodeTier }],
-					}
-				}),
-			)
-		},
-	)
-
-	it(
 		'the projects printer writes the JSON alone on stdout when the config logs',
 		{
 			timeout: 30_000,
@@ -633,13 +591,6 @@ describe('test tiers', { timeout: TIER_GUARD_CASE_TIMEOUT_MS }, () => {
 
 	it('the projects printer reads a config as the guard reads it in process', () => {
 		expect(printedProjectsOf({ config: vitestConfig }).map(toProject)).toEqual(configuredProjects())
-	})
-
-	it('the full mutation run tests the projects of test:browser:all', () => {
-		const command = readMutationRunConfig(MUTANTS_PATHS.fullConfig).commandRunner?.command ?? ''
-		expect(projectsNamedBy(command)).toEqual(
-			projectsRunBy([readManifest().scripts[BROWSER_ALL_SCRIPT] ?? '']),
-		)
 	})
 
 	it(
@@ -759,12 +710,6 @@ describe('test tiers', { timeout: TIER_GUARD_CASE_TIMEOUT_MS }, () => {
 		)
 	})
 
-	it('the declared full mutation command is the full run of the scl runner while both live', () => {
-		expect(recordOf(readDeclaration().full).command).toBe(
-			readMutationRunConfig(MUTANTS_PATHS.fullConfig).commandRunner?.command,
-		)
-	})
-
 	it('every declared mutation glob uses syntax the cli reads, and every scope glob names a file left to mutate', () => {
 		const { scope: declaredScope, exclude: declaredExclude } = readDeclaration()
 		const scope = stringsOf(declaredScope)
@@ -821,7 +766,7 @@ describe('test tiers', { timeout: TIER_GUARD_CASE_TIMEOUT_MS }, () => {
 	})
 
 	it('every declared error factory is a function the core exports', () => {
-		// the ignorer reads the names as callee identifiers: cli-mutation-l2a src/lib/mutation/ignorers.ts:85-101
+		// the ignorer reads the names as callee identifiers: @dialecte/cli 0.2.0 src/lib/mutation/ignorers.ts:85-101
 		const exported = new Map<string, unknown>([
 			...Object.entries(dialecteCore),
 			...Object.entries(dialecteCoreUtils),
@@ -835,17 +780,34 @@ describe('test tiers', { timeout: TIER_GUARD_CASE_TIMEOUT_MS }, () => {
 		}).toEqual({ declared: true, notFunctions: [] })
 	})
 
-	it('every legacy equivalent mutant is in the migrated mutation records, which may hold more', () => {
-		function readRecords(path: string): RecordsByFile {
-			return existsSync(`${ROOT}${path}`) ? (JSON.parse(readText(path)) as RecordsByFile) : {}
-		}
-		expect(
-			legacyRecordsMissing({
-				legacy: readRecords(MUTANTS_PATHS.records),
-				migrated: readRecords(MUTATION_RECORDS_FILE),
-				families: MUTATION_FAMILIES,
+	it('the package runs no mutation runner of its own: no Stryker config, no mutants script, only the mutation config', () => {
+		expect({
+			configs: globSync(OWN_RUNNER_CONFIGS, { cwd: ROOT }),
+			scripts: Object.keys(readManifest().scripts).filter(function isOwnRunner(script) {
+				return OWN_RUNNER_SCRIPT.test(script)
 			}),
-		).toEqual([])
+			mutationFolder: sorted(globSync(`${MUTATION_FOLDER}/**`, { cwd: ROOT })).filter(
+				function isFile(file) {
+					return statSync(`${ROOT}${file}`).isFile()
+				},
+			),
+		}).toEqual({ configs: [], scripts: [], mutationFolder: sorted(MUTATION_FOLDER_FILES) })
+	})
+
+	it('the cli is a dev dependency pinned exactly at a version that has dialecte mutants', () => {
+		const pinned = readManifest().devDependencies?.[CLI_PACKAGE] ?? ''
+		const parts = EXACT_VERSION.exec(pinned)?.slice(1).map(Number) ?? []
+		function isAtLeast(params: { version: readonly number[]; least: readonly number[] }): boolean {
+			const { version, least } = params
+			const differing = least.findIndex(function differs(part, index) {
+				return version[index] !== part
+			})
+			return differing === -1 || (version[differing] ?? -1) > (least[differing] ?? 0)
+		}
+		expect({
+			exact: parts.length === FIRST_CLI_WITH_MUTANTS.length,
+			hasMutants: parts.length > 0 && isAtLeast({ version: parts, least: FIRST_CLI_WITH_MUTANTS }),
+		}).toEqual({ exact: true, hasMutants: true })
 	})
 
 	it('no stand-in package is listed or imported, but by a declared importer', () => {

@@ -17,7 +17,6 @@ export const NODE_ONLY_TEST_FILES: readonly DeclaredTestFile[] = [
 		path: 'scripts/test-tiers/test-tiers.test.ts',
 		why: 'reads the vitest config, package.json, the workflows and the sources from disk',
 	},
-	{ path: 'scripts/mutants/judge.test.ts', why: 'imports node:crypto' },
 ]
 
 /**

@@ -49,13 +49,6 @@ export type PrintedProject = {
 	}
 }
 
-/** The part of a StrykerJS config the guard reads: the vitest config of a vitest run, the command of a command run. */
-export type MutationRunConfig = {
-	readonly testRunner: string
-	readonly vitest?: { readonly configFile: string; readonly related?: boolean }
-	readonly commandRunner?: { readonly command: string }
-}
-
 /** What a tier runs: its files, its setup, its environment, and whether a browser runs them. */
 export type TierShape = {
 	readonly files: readonly string[]
@@ -64,8 +57,3 @@ export type TierShape = {
 	readonly isolate: boolean | undefined
 	readonly inBrowser: boolean
 }
-
-/** A records file as JSON holds it: file -> mutant key -> record fields. */
-export type RecordsByFile = Readonly<
-	Record<string, Readonly<Record<string, Readonly<Record<string, unknown>>>>>
->
