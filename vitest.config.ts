@@ -29,7 +29,7 @@ const SETUP_FILES = [
 	'src/v2019C1/test/fixtures/xsd/use-fixture-schemas.setup.ts',
 	'src/v2019C1/test/active-mutant.setup.ts',
 ]
-/** The mutant a mutation run tests (`npm run mutants`), named in the command's environment: none otherwise. */
+/** The mutant a mutation run tests (`dialecte mutants run`), named in the command's environment: none otherwise. */
 const ACTIVE_MUTANT_DEFINE = {
 	__STRYKER_ACTIVE_MUTANT__: JSON.stringify(process.env.__STRYKER_ACTIVE_MUTANT__ ?? ''),
 }
