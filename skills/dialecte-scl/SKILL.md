@@ -22,8 +22,9 @@ Exact signatures: in the scl repo, the extension's folder under `src/v2019C1/ext
 
 ```ts
 import { createSclProject, readAttribute, readAttributes } from '@dialecte/scl/v2019C1'
-import type { Scl } from '@dialecte/scl/v2019C1'
 import { runSclTestCases, createSclTestProject } from '@dialecte/scl/v2019C1/test'
+
+import type { Scl } from '@dialecte/scl/v2019C1'
 ```
 
 `readAttribute(s)` from the scl entry needs no config (prefer it over core's). `SCL_DIALECTE_CONFIG`

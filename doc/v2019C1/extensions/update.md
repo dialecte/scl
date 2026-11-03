@@ -51,7 +51,7 @@ with what it is asked for and, whatever the track and before anything is written
   field that differs, `'report'` when there is no target);
 - a report naming an element the document no longer holds — an instance it covers (`templateInstances`), the
   element a mapping lands on, the element a mapping choice names — with `REPORT_STALE` (`meta: { element, kind:
-'instance' | 'mapping' }`): the project changed since, report again.
+  'instance' | 'mapping' }`): the project changed since, report again.
 
 A report applied a second time stays safe: a first placement finds its instance and writes nothing more, an update
 finds nothing left to change.
@@ -170,7 +170,9 @@ accept/skip or an object carrying **edited values** for the group's `editableAtt
 
 ```ts
 type GroupDecision =
-	'accept' | 'skip' | { action: 'accept' | 'skip'; values?: Record<string, string> }
+	| 'accept'
+	| 'skip'
+	| { action: 'accept' | 'skip'; values?: Record<string, string> }
 ```
 
 A group absent from the map defaults to its `suggestedAction` — `accept` for most changes (so an

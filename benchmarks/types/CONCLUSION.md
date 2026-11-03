@@ -126,7 +126,7 @@ Highlights:
 - **C6 (recursive)** additionally on `getTree`, `findDescendants`, `deepClone`.
 - **C2/C4 (the ~200-member element-union explosion)** is what you observed in real editor hovers on
   `getAttribute`/`getTree`. Note: `typeToString` renders the _folded_ form (`RefOrRecord<Config,
-ElementsOf<Config>>`), so the explosion is the **editor's quickinfo expansion** of a distributive
+  ElementsOf<Config>>`), so the explosion is the **editor's quickinfo expansion** of a distributive
   `Ref` over `ElementsOf<Config>` — i.e. it's display-time, fixable by naming/non-distributive input,
   not an inherent instantiation cost (consistent with section B).
 

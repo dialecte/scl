@@ -42,12 +42,13 @@ Two methods enforce the right contract at call-site.
 Use when `act` asserts directly on query results via `expect`. No XML export needed.
 
 ```ts
-import { describe, expect } from 'vitest'
 import {
 	runSclTestCases,
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
 } from '@dialecte/scl/v2019C1/test'
+import { describe, expect } from 'vitest'
+
 import type { SclTest } from '@dialecte/scl/v2019C1/test'
 
 type TestCase = SclTest.BaseTestCase & {
@@ -99,8 +100,9 @@ describe('getSortedHitems', () => {
 Use when `act` performs transactions and assertions must run on the exported XML via XPath. `act` returns an optional `ActResult` to choose which document to assert on (defaults to `source`) and toggle `withDatabaseIds`.
 
 ```ts
-import { describe } from 'vitest'
 import { runSclTestCases, ALL_XMLNS_NAMESPACES } from '@dialecte/scl/v2019C1/test'
+import { describe } from 'vitest'
+
 import type { SclTest } from '@dialecte/scl/v2019C1/test'
 
 type TestCase = SclTest.BaseXmlTestCase & {

@@ -25,8 +25,9 @@ const doc = project.openDocument(documentId)
 Pass your own extension modules via the `extensions` parameter. They are merged on top of the SCL built-ins — no direct core dependency needed.
 
 ```ts
-import { createSclProject } from '@dialecte/scl/v2019C1'
 import { myFeature } from './extensions/my-feature'
+
+import { createSclProject } from '@dialecte/scl/v2019C1'
 
 const project = await createSclProject({
 	storage: { type: 'local' },
