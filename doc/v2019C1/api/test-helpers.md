@@ -552,43 +552,31 @@ gives its own node project the same setup line.
 
 ## Mutation testing of this package
 
-This package's own tests are mutation-tested (StrykerJS): each change of the code a test should notice is made one at
-a time, and the tests that reach it run. Two tiers, run from the package root:
+This package's own tests are mutation-tested: each change of the code a test should notice is made one at a time, and
+the tests that reach it run. The cli's runner does it (`@dialecte/cli`, a dev dependency, on StrykerJS), on the scope
+`package.json` declares (`dialecte.mutation`: the source globs, the exclusions, the error factories, the fast config
+and the full command). Run from the package root:
 
 ```sh
-npm run mutants:fast -- src/v2019C1/extensions/lifecycle/apply/apply.ts src/v2019C1/extensions/reference/transaction/write-provenance.ts:9-30
-npm run mutants:fast -- --diff main          # the lines changed since main, the new source files whole
-npm run mutants:full                          # the browser tier on what the fast tier left
-npm run mutants -- --diff main --force        # both in turn, every mutant tested again
-npm run test:mutants                          # the tests of the gate itself
+npx dialecte mutants run                  # the lines of the scope changed since main (when the change touches it)
+npx dialecte mutants run --mode audit     # the whole scope, in the background: it takes a while
+npx dialecte mutants status               # running runs, the survivors no record lists yet
+npx dialecte mutants judge --file <file>  # per survivor: the code around it, its tests, the commands that close it
 ```
 
-The package also declares its mutation scope (`dialecte.mutation` in `package.json`: the source globs, the exclusions,
-the error factories, the fast config and the full command) for the cli's runner (`@dialecte/cli` >= 0.2.0):
-`npx dialecte mutants run --mode changed|audit`, `npx dialecte mutants status`. Its records live in
-`.dialecte/mutation-records.json`. The scl scripts above (`npm run mutants*`) keep working until the cli runner replaces
-them. While both exist, every record of `scripts/mutants/equivalent-mutants.json` is also in the records file (the
-tier guard checks it: same key, reason, line and mutation); the records file may hold more, the ones the cli writes.
-
 - **fast** runs the node tier: the files of the `node` vitest project, on its setup (the in-memory store, the output
-  check on), under the name `mutation` the mutation config selects. No browser stand-in: the test helpers read XML
-  with libxml2 and the store tree, in node as in a browser. StrykerJS's vitest runner runs, for each mutant, only the
-  tests that reach it, in workers it keeps warm; the test files of a worker share their modules, as in the `node`
-  project. A mutant that timed out runs again alone, with a longer limit: it stays a timeout only when it times out
-  again. Without `--force` the results of a mutant whose code and tests did not change are taken from the last run;
-  a change elsewhere (another source file, the vitest config, a dependency) is not seen, so the run before a commit
-  takes `--force`.
+  check on), under the name `mutation` that `scripts/mutants/vitest.mutation.config.ts` gives it. StrykerJS's vitest
+  runner runs, for each mutant, only the tests that reach it. A mutant that timed out runs again alone, with a longer
+  limit.
 - **full** runs the `browser-all` project (the whole suite in Chromium, as `npm run test:browser:all`) on each
-  survivor the records do not list, at its location (with the mutants nested in it). A mutant either tier kills is
-  killed. It refuses to run when a mutated file changed since the fast run. The browser-only test files
+  survivor the records do not list. A mutant either tier kills is killed. The browser-only test files
   (`BROWSER_ONLY_TEST_FILES` in `vitest.config.constants.ts`) run in the full tier only.
 
-Every survivor is either killed by a new test or recorded in `scripts/mutants/equivalent-mutants.json`, with the reason
-no output can differ. The gate fails on a survivor of the run the records do not list with a reason, and on a recorded
-mutant the run killed (or, in a file mutated whole, no longer finds). `--record` writes the new survivors with an empty
-reason to fill, and drops those stale records. A record is keyed by what the mutant changed (file, mutator, original
-code, replacement, the text of its line), so moving a line keeps it; a second identical line is numbered. The reports
-go to `.tmp/stryker/` (ignored).
+Every survivor is either killed by a new test or recorded in `.dialecte/mutation-records.json` with its family and
+the reason no output can differ (`npx dialecte mutants record --key <key> --family <family> --reason <text>`). A
+survivor no record lists stays pending in `mutants status` until a test kills it, a record lists it or it is scheduled
+as a follow-up (`npx dialecte mutants schedule <follow-up> <key>...`); a run never fails on survivors. The reports and
+sandboxes go to `.tmp/mutants/<run id>/` (ignored), removed once the run reports.
 
 ---
 

@@ -165,6 +165,30 @@ export const LEGACY_MUTATION_PROJECT_ENV = 'SCL_MUTATION_PROJECT'
 /** The vitest config the declared fast mutation run names. */
 export const MUTATION_FAST_CONFIG = 'scripts/mutants/vitest.mutation.config.ts'
 
+/** The folder of the mutation config: the cli runs mutation testing, nothing else of a runner lives here. */
+export const MUTATION_FOLDER = 'scripts/mutants'
+
+/** What the mutation folder holds: the config the declared fast run names and the constants it reads. */
+export const MUTATION_FOLDER_FILES: readonly string[] = [
+	MUTATION_FAST_CONFIG,
+	'scripts/mutants/mutants.constants.ts',
+]
+
+/** The StrykerJS config files a runner of the package's own would read, at the package root, whatever the format. */
+export const OWN_RUNNER_CONFIGS = 'stryker*.{json,js,cjs,mjs,ts}'
+
+/** The npm scripts of a runner of the package's own: `mutants`, `mutants:<tier>`, `test:mutants`. */
+export const OWN_RUNNER_SCRIPT = /^(?:mutants(?::.*)?|test:mutants)$/
+
+/** The package that runs mutation testing (`dialecte mutants`). */
+export const CLI_PACKAGE = '@dialecte/cli'
+
+/** The first release of the cli with `dialecte mutants`: major, minor, patch. */
+export const FIRST_CLI_WITH_MUTANTS: readonly number[] = [0, 2, 0]
+
+/** An exact version, its three parts captured: no range, no tag, no path. */
+export const EXACT_VERSION = /^(\d+)\.(\d+)\.(\d+)$/
+
 /** What the mutation scope leaves out, whatever else it lists. */
 export const MUTATION_EXCLUDE_GLOBS: readonly string[] = [
 	'**/*.constants.ts',
@@ -172,9 +196,6 @@ export const MUTATION_EXCLUDE_GLOBS: readonly string[] = [
 	'**/test/**',
 	'**/*.test.ts',
 ]
-
-/** The committed records of the mutation runs (the legacy file they were migrated from is `MUTANTS_PATHS.records`). */
-export const MUTATION_RECORDS_FILE = '.dialecte/mutation-records.json'
 
 /** What a "no environment" run of a mutation config unsets: the variable that once gated the project, wherever it came from. */
 export const UNSET_FOR_NO_MUTATION_ENVIRONMENT: readonly string[] = [LEGACY_MUTATION_PROJECT_ENV]
@@ -184,7 +205,7 @@ export const PRINTER_FAILURE_PREFIX = 'the projects of '
 
 /**
  * Glob syntax the cli refuses in a scope or exclude glob (braces, classes, extglobs): UNSUPPORTED_GLOB_SYNTAX in
- * cli-mutation-l2a src/lib/mutation/mutation.constants.ts:96, used by declaration.ts:31-39 (the cli reads `*` as one
+ * @dialecte/cli 0.2.0 src/lib/mutation/mutation.constants.ts:96, used by declaration.ts:34-41 (the cli reads `*` as one
  * segment and `**` as crossing segments, see the refusal text there).
  */
 export const UNSUPPORTED_GLOB_SYNTAX = /[{[]|[!?+*@]\(/
@@ -212,24 +233,7 @@ export const CONFIG_FLAG = /--config[ =](\S+)/
 /** The config a vitest command without `--config` runs on. */
 export const DEFAULT_VITEST_CONFIG = 'vitest.config.ts'
 
-/**
- * The families a mutation record may carry (a record with another family does not count for the cli):
- * MUTATION_FAMILIES, cli-mutation-l2a src/lib/mutation/mutation.constants.ts:4-14 (MUT-4). `mutants migrate` writes
- * `unclassified`; the cli's record verb writes the family it judged.
- */
-export const MUTATION_FAMILIES: readonly string[] = [
-	'invariant-guard',
-	'fallback-never-taken',
-	'exhaustive-default',
-	'no-op-on-empty',
-	'perf-shortcut',
-	'static-init',
-	'schema-default-read',
-	'wording',
-	'unclassified',
-]
-
-/** The keys `dialecte.mutation` may hold: MUTATION_DECLARATION_KEYS, cli-mutation-l2a src/lib/mutation/mutation.constants.ts:19 (declaration.ts:23-53, MUT-4). */
+/** The keys `dialecte.mutation` may hold: MUTATION_DECLARATION_KEYS, @dialecte/cli 0.2.0 src/lib/mutation/mutation.constants.ts:19 (declaration.ts:23-53). */
 export const MUTATION_DECLARATION_KEYS: readonly string[] = [
 	'scope',
 	'exclude',
@@ -238,11 +242,11 @@ export const MUTATION_DECLARATION_KEYS: readonly string[] = [
 	'full',
 ]
 
-/** The keys `dialecte.mutation.fast` may hold: MUTATION_FAST_KEYS, cli-mutation-l2a mutation.constants.ts:70 (declaration.ts:44-47). */
+/** The keys `dialecte.mutation.fast` may hold: MUTATION_FAST_KEYS, @dialecte/cli 0.2.0 mutation.constants.ts:68 (declaration.ts:42-46). */
 export const MUTATION_FAST_KEYS: readonly string[] = ['vitestConfig']
 
-/** The keys `dialecte.mutation.full` may hold: MUTATION_FULL_KEYS, cli-mutation-l2a mutation.constants.ts:71 (declaration.ts:48-52). */
+/** The keys `dialecte.mutation.full` may hold: MUTATION_FULL_KEYS, @dialecte/cli 0.2.0 mutation.constants.ts:69 (declaration.ts:47-53). */
 export const MUTATION_FULL_KEYS: readonly string[] = ['command']
 
-/** The only source extension the cli mutates: MUTABLE_EXTENSION, cli-mutation-l2a mutation.constants.ts:78. */
+/** The only source extension the cli mutates: MUTABLE_EXTENSION, @dialecte/cli 0.2.0 mutation.constants.ts:78. */
 export const MUTABLE_EXTENSION = /\.ts$/
