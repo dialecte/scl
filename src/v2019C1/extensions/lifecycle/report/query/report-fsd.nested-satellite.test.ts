@@ -3,6 +3,7 @@ import { reportFsd } from './report-fsd'
 import { describe, expect } from 'vitest'
 
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
@@ -68,10 +69,14 @@ const targetXml = /* xml */ `
 `
 
 /** Depth-first search for a changed node of the given tag anywhere in a companion subtree. */
-function findInTree(node: DiffNode, predicate: (node: DiffNode) => boolean): DiffNode | undefined {
+function findInTree(params: {
+	node: DiffNode
+	predicate: (node: DiffNode) => boolean
+}): DiffNode | undefined {
+	const { node, predicate } = params
 	if (predicate(node)) return node
 	for (const child of node.children) {
-		const found = findInTree(child, predicate)
+		const found = findInTree({ node: child, predicate })
 		if (found) return found
 	}
 	return undefined
@@ -110,6 +115,7 @@ describe('reportFsd — adding a ref into an already-existing FunctionCategory s
 
 		const report = await reportFsd(target.query, {
 			sourceQuery: source.query,
+			diffPolicy: readDiffPolicy({}),
 			functionRef,
 			targetParent: bayRef,
 		})
@@ -123,10 +129,10 @@ describe('reportFsd — adding a ref into an already-existing FunctionCategory s
 		expect(category, 'FunctionCategory folded as a structured companion').toBeDefined()
 		expect(category!.instanceRef?.id, 'category anchored to its existing instance').toBeDefined()
 
-		const addedRef = findInTree(
-			category!,
-			(node) => node.tagName === 'FunctionCatRef' && node.change === 'added',
-		)
+		const addedRef = findInTree({
+			node: category!,
+			predicate: (node) => node.tagName === 'FunctionCatRef' && node.change === 'added',
+		})
 		expect(addedRef, 'the added ref is nested under the existing category').toBeDefined()
 
 		// it must NOT be flattened to a top-level companion (no container to anchor to)

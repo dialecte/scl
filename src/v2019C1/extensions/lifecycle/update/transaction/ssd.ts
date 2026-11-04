@@ -33,20 +33,14 @@ import {
 } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
+import type { WrittenApplications } from './asd.types'
+import type { UpdateSsdParams } from './ssd.types'
 import type { Scl, Config } from '@/v2019C1/config'
-import type { TopologyStructuralTag } from '@/v2019C1/constants'
-import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
-import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
-import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type {
+	AppliedFunction,
+	AppliedInstance,
+} from '@/v2019C1/extensions/lifecycle/apply/apply.types'
 import type * as Core from '@dialecte/core'
-
-type UpdateSsdResult = {
-	applications: Scl.Ref<'Application'>[]
-	functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
-}
 
 /**
  * `tx.lifecycle.update.ssd` - reconcile a project against a (possibly newer) SSD.
@@ -61,31 +55,15 @@ type UpdateSsdResult = {
  * `report` + `decisions` gate every write, partitioned per instance by the sub-verbs. The scope is the element
  * the consumer names, the unit its `TEMPLATE` scaffolding holds when it names that (see `resolveSsdScope`).
  *
+ * Returns its applications and functions, each `placed` or `reconciled`, as `update.asd` and `update.fsd` return
+ * them: given decisions only those written to, without decisions every one it placed or matched.
+ *
  * @intent update a project from a newer SSD, reconcile a bay typical with its template, propagate an SSD change
  */
 export async function ssd(
 	tx: Core.Transaction<Config>,
-	params: {
-		sourceQuery: Core.Query<Config>
-		/** The element of the SSD the consumer names; none: read from the file (see `resolveSsdScope`). */
-		scopeRef?: Scl.Ref<TopologyStructuralTag>
-		targetParent: Scl.Ref<Scl.ElementsOf>
-		scenario?: LifecycleScenario
-		/** The previous revision of the file, for a fork: see {@link LifecycleRevisionBase}. Refused by another scenario. */
-		baseQuery?: Core.Query<Config>
-		/** What tells a dropped element from the project's own, when the caller read it already (once per apply). */
-		removalBase?: RemovalBase
-		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
-		placeholderLineages?: PlaceholderLineages
-		report?: DiffReport
-		decisions?: DecisionMap
-		keepNameTypesFrom?: KeepNameTypesFrom
-		/** Multi-instance anchor: scope to ONE placed Bay (frame + fn/app under it). Absent = all. */
-		targetInstance?: Scl.Ref<Scl.ElementsOf>
-		/** The consumer's choices for the shared elements the applications refer to. */
-		decisionMappings?: DecisionMappings
-	},
-): Promise<UpdateSsdResult> {
+	params: UpdateSsdParams,
+): Promise<WrittenApplications> {
 	const {
 		sourceQuery,
 		scopeRef,
@@ -149,8 +127,8 @@ export async function ssd(
 		return collectInstances(cloneMappings)
 	}
 
-	const applications: Scl.Ref<'Application'>[] = []
-	const functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[] = []
+	const applications: AppliedInstance<'Application'>[] = []
+	const functions: AppliedFunction[] = []
 
 	// reconcile the topology frame's OWN content (BayType/equipment/attrs) before the fn/app
 	// cascade; the fn/app tags are a boundary, so the cascade below owns them. Each frame
@@ -267,16 +245,19 @@ export async function ssd(
 	return { applications, functions }
 }
 
-/** The instantiated Application / Function roots, read off the clone mappings by tag. */
-function collectInstances(cloneMappings: readonly Scl.CloneMapping[]): UpdateSsdResult {
-	const applications: Scl.Ref<'Application'>[] = []
-	const functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[] = []
+/** The instantiated Application / Function roots, read off the clone mappings by tag: each placed. */
+function collectInstances(cloneMappings: readonly Scl.CloneMapping[]): WrittenApplications {
+	const applications: AppliedInstance<'Application'>[] = []
+	const functions: AppliedFunction[] = []
 
 	for (const mapping of cloneMappings) {
 		if (mapping.target.tagName === 'Application') {
-			applications.push(mapping.target as Scl.Ref<'Application'>)
+			applications.push({ ref: mapping.target as Scl.Ref<'Application'>, placement: 'placed' })
 		} else if (mapping.target.tagName === 'Function' || mapping.target.tagName === 'SubFunction') {
-			functions.push(mapping.target as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)
+			functions.push({
+				ref: mapping.target as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>,
+				placement: 'placed',
+			})
 		}
 	}
 

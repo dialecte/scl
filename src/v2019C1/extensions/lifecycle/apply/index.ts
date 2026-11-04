@@ -1,2 +1,7 @@
 export { apply } from './apply'
-export type { AppliedInstances, ApplyResult } from './apply.types'
+export type {
+	AppliedInstance,
+	AppliedInstances,
+	AppliedPlacement,
+	ApplyResult,
+} from './apply.types'

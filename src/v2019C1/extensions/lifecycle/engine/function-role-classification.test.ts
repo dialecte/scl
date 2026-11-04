@@ -1,23 +1,19 @@
 import { diff } from './diff'
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect } from 'vitest'
 
-import {
-	ALL_XMLNS_NAMESPACES,
-	createSclTestProject,
-	CUSTOM_RECORD_ID_ATTRIBUTE,
-} from '@/v2019C1/test'
+import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
+import type { SclTest } from '@/v2019C1/test'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-// A `FunctionRole` (and its `FunctionRoleContent`) is tool-generated grouping — a consumer's
-// application assignment creates one named after a function's highest `FunctionCategory`,
-// from scratch (a `uuid` filled by hooks, NO `templateUuid`).
-// So an instance `FunctionRole` with no template lineage is NOT author DATA content: it must
-// never be reported as a `target-only` "keep/remove" decision (which would offer to delete it).
+// A `FunctionRole` carries its own lineage (`uuid` / `templateUuid` / `originUuid`): one an instance holds
+// with NO lineage of the template (a `uuid`, no `templateUuid`) is the project's own, whoever created it —
+// listed as `target-only` (kept by default). A consumer that creates such roles itself (a grouping it
+// maintains) names the tags in `consumerManagedTags`: the engine then lists nothing for them.
 const sourceXml = /* xml */ `
 	<SCL ${ns} ${id}="asd-src">
 		<Substation name="TEMPLATE" ${id}="sub-s">
@@ -36,8 +32,9 @@ const sourceXml = /* xml */ `
 	</SCL>
 `
 
-// The instance matches the template `Application` (templateUuid) and its `FunctionRole`,
-// PLUS carries an extra tool-generated `FunctionRole name="Measurement"` with no templateUuid.
+// The instance matches the template `Application` (templateUuid) and its `FunctionRole`, PLUS carries an
+// extra `FunctionRole name="Measurement"` with a uuid of its own and no templateUuid: the project's own
+// role, unless a consumer names `FunctionRole` among its `consumerManagedTags`.
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="asd-tgt">
 		<Substation name="S1" ${id}="sub-t">
@@ -57,23 +54,53 @@ const targetXml = /* xml */ `
 	</SCL>
 `
 
-describe('engine.diff — FunctionRole is engine-managed grouping, never target-only', () => {
-	it('does not classify a lineage-less instance FunctionRole as a target-only change', async () => {
-		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+type TestCase = SclTest.BaseXmlTestCase & {
+	targetXml: string
+	/** The element tags the consumer names as its own (the diff policy); absent = no option. */
+	consumerManagedTags?: readonly string[]
+	/** The groups the diff lists, `<change> <tag>`. */
+	groups: string[]
+}
+
+describe("engine.diff — a FunctionRole an instance holds without lineage is the project's own unless the consumer names it", () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'no option → a lineage-less instance FunctionRole is listed as target-only': {
+			sourceXml,
+			targetXml,
+			groups: ['target-only FunctionRole'],
+		},
+		'consumerManagedTags names FunctionRole and FunctionRoleContent → it is not listed, nothing changed':
+			{
+				sourceXml,
+				targetXml,
+				consumerManagedTags: ['FunctionRole', 'FunctionRoleContent'],
+				groups: [],
+			},
+	}
+
+	async function act({
+		testCase,
+		source,
+		target,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 
 		const report = await diff({
-			sourceQuery: source.document.query,
-			targetQuery: target.document.query,
+			sourceQuery: source.query,
+			targetQuery: target.query,
 			sourceRootRef: { tagName: 'Application', id: 'app-s' } as Scl.Ref<'Application'>,
 			instanceRootRef: { tagName: 'Application', id: 'app-i' } as Scl.Ref<'Application'>,
+			diffPolicy: testCase.consumerManagedTags && {
+				boundLogicalNodeTypes: 'follow',
+				consumerManagedTags: new Set(testCase.consumerManagedTags),
+			},
 		})
 
-		const targetOnlyRoles = report.groups.filter(
-			(group) => group.change === 'target-only' && group.primary.tagName === 'FunctionRole',
+		expect(report.groups.map((group) => `${group.change} ${group.primary.tagName}`)).toEqual(
+			testCase.groups,
 		)
-		expect(targetOnlyRoles).toHaveLength(0)
-		// nothing genuinely changed → fast track
-		expect(report.groups).toHaveLength(0)
-	})
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
 })

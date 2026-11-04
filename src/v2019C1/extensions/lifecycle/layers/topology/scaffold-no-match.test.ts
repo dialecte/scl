@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { reportTopologyFrame } from '@/v2019C1/extensions/lifecycle/report/query/report-topology-frame'
 import {
 	ALL_XMLNS_NAMESPACES,
@@ -49,6 +50,7 @@ describe('topology frame — no name adoption of a scaffold TEMPLATE bay', () =>
 
 		const { instances: frame } = await reportTopologyFrame(target.document.query, {
 			sourceQuery: source.document.query,
+			diffPolicy: readDiffPolicy({}),
 			scopeRef: { tagName: 'Bay', id: 'bay-s' } as Scl.Ref<'Bay'>,
 			matchKey: 'templateUuid',
 			firstPlacement: false,

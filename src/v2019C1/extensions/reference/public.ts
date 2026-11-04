@@ -2,7 +2,12 @@ export * from './constants'
 export type * from './constants'
 export * from './guards'
 export type { MappedData, ResolvedReference, ResolveMappedDataParams } from './query'
-export type { SetMappedDataParams, SetMappedDataResult } from './transaction'
+export type {
+	SetMappedDataParams,
+	SetMappedDataResult,
+	WriteProvenanceParams,
+	WriteProvenanceResult,
+} from './transaction'
 
 // what a path can address, read from a record alone — no query
 export { getPathSegment } from './query/build/path-segment'

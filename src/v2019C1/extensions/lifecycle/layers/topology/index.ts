@@ -1,8 +1,9 @@
-export { resolveSsdScope } from './resolve-ssd-scope'
+export { readSsdScope, resolveSsdScope } from './resolve-ssd-scope'
 export type {
 	ResolveSsdScopeParams,
 	SsdScope,
 	SsdScopeCandidate,
+	SsdScopeRead,
 	SsdScopeUnit,
 } from './resolve-ssd-scope.types'
 export { cloneTopologyContent } from './clone-topology-content'

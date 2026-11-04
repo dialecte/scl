@@ -1,4 +1,5 @@
 import { fsd as updateFsd } from './fsd'
+import { writesToInstance } from './writes-to-instance'
 
 import { toRef } from '@dialecte/core/helpers'
 import { invariant } from '@dialecte/core/utils'
@@ -17,6 +18,7 @@ import type {
 	ComposedFunctionsCascade,
 } from './cascade-composed-functions.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { AppliedFunction } from '@/v2019C1/extensions/lifecycle/apply/apply.types'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -44,7 +46,11 @@ export async function cascadeComposedFunctions(
 ): Promise<ComposedFunctionsCascade> {
 	const { sourceQuery, applicationRef, targetParent, applicationInstances, targetInstance } = params
 
-	const cascade: ComposedFunctionsCascade = { functions: [], redirectMappings: new Map() }
+	const cascade: ComposedFunctionsCascade = {
+		functions: [],
+		redirectMappings: new Map(),
+		standsOn: new Map(),
+	}
 	// what stands for each composed function, per instance: the answer the report announced
 	const composedFunctions = await resolveComposedFunctions(tx, {
 		sourceQuery,
@@ -62,7 +68,9 @@ export async function cascadeComposedFunctions(
 		const reconcilables = new Map<string, AnyTrackedRecord>()
 		// the selections of the instances of the application standing on each function of the project
 		const standers = new Map<string, VariantSelection[]>()
-		for (const { instance, written } of applicationInstances) {
+		for (const { instance, accepted } of applicationInstances) {
+			// the instance's own groups write to it: what it gains, takes or chooses waits for that
+			const written = writesToInstance({ accepted })
 			const standing = standings.get(instance.id)
 			if (!standing) continue
 			const selection = params.selections?.get(instance.id) ?? NO_VARIANT_SELECTION
@@ -70,15 +78,30 @@ export async function cascadeComposedFunctions(
 				for (const owned of standing.elements) {
 					reconcilables.set(owned.id, owned)
 					standers.set(owned.id, [...(standers.get(owned.id) ?? []), selection])
+					standOn({ standsOn: cascade.standsOn, instance, functionId: owned.id })
 				}
 				continue
 			}
-			// a function the instance takes is one it stands on, written or not: as the report reads it
-			if (standing.kind === 'taken')
-				standers.set(standing.element.id, [...(standers.get(standing.element.id) ?? []), selection])
+			// a function the instance takes is one it stands on, written or not, as the report reads it: reconciled
+			// where it sits, decided by its own groups whatever the instance's own — the reference to it may be declined
+			if (standing.kind === 'taken') {
+				const taken = standing.element
+				reconcilables.set(taken.id, taken)
+				standers.set(taken.id, [...(standers.get(taken.id) ?? []), selection])
+				standOn({ standsOn: cascade.standsOn, instance, functionId: taken.id })
+				// the reference the instance gains to it is repointed only when the instance is written
+				if (sourceUuid && written)
+					redirectFor({
+						cascade,
+						instance,
+						sourceUuid,
+						target: toRef(taken) as Scl.Ref<Scl.ElementsOf>,
+					})
+				continue
+			}
 			if (!sourceUuid) continue
 			// a function placed for the instance is decided by its own groups, whatever the instance's own: the reference
-			// to it may be declined; taking one, or choosing one, waits for a write to the instance
+			// to it may be declined; choosing one waits for a write to the instance
 			if (!written && standing.kind !== 'placed') continue
 			// several qualify where the instance lives: nothing is written until the consumer chose
 			invariant(standing.kind !== 'undecided', {
@@ -86,39 +109,30 @@ export async function cascadeComposedFunctions(
 				meta: { sourceId: functionRef.id, tagName: functionRef.tagName, kind: 'shared' },
 				detail: `which <Function> "${functionRef.id}" the application instance "${instance.id}" stands on is not decided: several functions of that lineage qualify, choose one or have a new one placed`,
 			})
-
-			let standsFor: Scl.Ref<Scl.ElementsOf>
-			if (standing.kind === 'taken') {
-				reconcilables.set(standing.element.id, standing.element)
-				standsFor = toRef(standing.element) as Scl.Ref<Scl.ElementsOf>
-			} else {
-				// a function the template gained that the instance's selection leaves out is not placed for it
-				if (selection.leftOut.has(functionRef.id)) continue
-				const [placed] = await updateFsd(tx, {
-					sourceQuery,
-					functionRef,
-					targetParent: standing.level,
-					// a fresh one, whatever another instance holds
-					scenario: params.scenario,
-					placesFresh: true,
-					removalBase: params.removalBase,
-					placeholderLineages: params.placeholderLineages,
-					// placed as part of the application template: its provenance is the application's
-					partOfTemplate: true,
-					// listed by the report once per instance of the application
-					placedFor: toRef(instance) as Scl.Ref<Scl.ElementsOf>,
-					report: params.report,
-					decisions: params.decisions,
-					keepNameTypesFrom: params.keepNameTypesFrom,
-					decisionMappings: params.decisionMappings,
-				})
-				if (!placed?.id) continue
-				cascade.functions.push(placed)
-				standsFor = placed
-			}
-			const instanceRedirects = cascade.redirectMappings.get(instance.id) ?? []
-			instanceRedirects.push({ sourceUuid, target: standsFor })
-			cascade.redirectMappings.set(instance.id, instanceRedirects)
+			// a function the template gained that the instance's selection leaves out is not placed for it
+			if (selection.leftOut.has(functionRef.id)) continue
+			const [placed] = await updateFsd(tx, {
+				sourceQuery,
+				functionRef,
+				targetParent: standing.level,
+				// a fresh one, whatever another instance holds
+				scenario: params.scenario,
+				placesFresh: true,
+				removalBase: params.removalBase,
+				placeholderLineages: params.placeholderLineages,
+				// placed as part of the application template: its provenance is the application's
+				partOfTemplate: true,
+				// listed by the report once per instance of the application
+				placedFor: toRef(instance) as Scl.Ref<Scl.ElementsOf>,
+				report: params.report,
+				decisions: params.decisions,
+				keepNameTypesFrom: params.keepNameTypesFrom,
+				decisionMappings: params.decisionMappings,
+			})
+			if (!placed?.ref.id) continue
+			cascade.functions.push(placed)
+			standOn({ standsOn: cascade.standsOn, instance, functionId: placed.ref.id })
+			redirectFor({ cascade, instance, sourceUuid, target: placed.ref })
 		}
 		for (const unowned of unclaimed) reconcilables.set(unowned.id, unowned)
 
@@ -150,7 +164,7 @@ async function reconcileWhereItSits(
 		functionInstance: AnyTrackedRecord
 		selection: VariantSelection
 	},
-): Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]> {
+): Promise<AppliedFunction[]> {
 	const { params, functionRef, functionInstance, selection } = context
 
 	const functionInstanceRef = {
@@ -176,4 +190,29 @@ async function reconcileWhereItSits(
 		decisionMappings: params.decisionMappings,
 		selection,
 	})
+}
+
+/** Record that an instance of the application stands on a function of the project. */
+function standOn(params: {
+	standsOn: Map<string, Set<string>>
+	instance: AnyTrackedRecord
+	functionId: string
+}): void {
+	const { standsOn, instance, functionId } = params
+	const functions = standsOn.get(instance.id) ?? new Set<string>()
+	functions.add(functionId)
+	standsOn.set(instance.id, functions)
+}
+
+/** The function that stands, for an instance of the application, for a function the template gained. */
+function redirectFor(params: {
+	cascade: ComposedFunctionsCascade
+	instance: AnyTrackedRecord
+	sourceUuid: string
+	target: Scl.Ref<Scl.ElementsOf>
+}): void {
+	const { cascade, instance, sourceUuid, target } = params
+	const instanceRedirects = cascade.redirectMappings.get(instance.id) ?? []
+	instanceRedirects.push({ sourceUuid, target })
+	cascade.redirectMappings.set(instance.id, instanceRedirects)
 }

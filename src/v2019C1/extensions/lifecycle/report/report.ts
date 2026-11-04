@@ -7,6 +7,7 @@ import { throwDialecteError } from '@dialecte/core'
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
 import { acceptedCollisions } from '@/v2019C1/extensions/lifecycle/engine'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { resolvePlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { assertMappingsCoherent, createReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -17,6 +18,7 @@ import {
 
 import type { Config } from '@/v2019C1/config'
 import type { LifecycleReportParams } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -59,7 +61,15 @@ export async function report(
 	const placeholderLineages = await resolvePlaceholderLineages(query, {
 		referencesByName: target.resolution?.referencesByName,
 	})
-	const report = await reportVerb(query, { target, pass, removalBase, placeholderLineages })
+	// what the resolution tells every diff of the report, read once as well
+	const diffPolicy = readDiffPolicy({ resolution: target.resolution })
+	const report = await reportVerb(query, {
+		target,
+		pass,
+		removalBase,
+		placeholderLineages,
+		diffPolicy,
+	})
 	// what the report is made for: apply refuses it for another target
 	report.target = await reportTargetOf(query, target)
 	const warnings = collectReportWarnings(report)
@@ -108,9 +118,10 @@ async function reportVerb(
 		pass: ReportPass
 		removalBase: RemovalBase
 		placeholderLineages: PlaceholderLineages
+		diffPolicy: DiffPolicy
 	},
 ): Promise<DiffReport> {
-	const { target, pass, removalBase, placeholderLineages } = params
+	const { target, pass, removalBase, placeholderLineages, diffPolicy } = params
 	switch (target.verb) {
 		case 'fsd':
 			return reportFsd(query, {
@@ -121,7 +132,7 @@ async function reportVerb(
 				scenario: target.scenario,
 				targetInstance: target.targetInstance,
 				decisionMappings: target.resolution?.mappings,
-				boundLogicalNodeTypes: target.resolution?.boundLogicalNodeTypes,
+				diffPolicy,
 				placeholderLineages,
 				resolvePlacement: true,
 				removalBase,
@@ -135,7 +146,7 @@ async function reportVerb(
 				scenario: target.scenario,
 				targetInstance: target.targetInstance,
 				decisionMappings: target.resolution?.mappings,
-				boundLogicalNodeTypes: target.resolution?.boundLogicalNodeTypes,
+				diffPolicy,
 				placeholderLineages,
 				removalBase,
 			})
@@ -147,7 +158,7 @@ async function reportVerb(
 				scenario: target.scenario,
 				targetInstance: target.targetInstance,
 				decisionMappings: target.resolution?.mappings,
-				boundLogicalNodeTypes: target.resolution?.boundLogicalNodeTypes,
+				diffPolicy,
 				placeholderLineages,
 				anchor: target.anchor,
 				resolvePlacement: true,

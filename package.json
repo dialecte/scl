@@ -1,6 +1,6 @@
 {
 	"name": "@dialecte/scl",
-	"version": "0.12.1",
+	"version": "0.13.0",
 	"description": "Dialecte - SCL (Substation Configuration Language) sdk",
 	"license": "MIT",
 	"repository": {
@@ -181,6 +181,8 @@
 				"src/v2019C1/extensions/lifecycle/transplant/**",
 				"src/v2019C1/extensions/lifecycle/constraints/**",
 				"src/v2019C1/extensions/lifecycle/cross-cutting/**",
+				"src/v2019C1/extensions/lifecycle/source-root/**",
+				"src/v2019C1/extensions/lifecycle/validate/**",
 				"src/v2019C1/extensions/identity/**",
 				"src/v2019C1/extensions/reference/transaction/apply-uuid-remap.ts",
 				"src/v2019C1/extensions/reference/transaction/apply-type-id-remap.ts"

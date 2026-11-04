@@ -3,6 +3,7 @@ import { fsd as updateFsd } from './fsd'
 import { describe, expect, it } from 'vitest'
 
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { reference } from '@/v2019C1/extensions/reference'
 import {
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
@@ -207,7 +208,7 @@ describe('update.fsd — returns the applied instance roots', () => {
 		})
 
 		expect(result).toHaveLength(1)
-		expect(result?.[0]?.tagName).toBe('Function')
+		expect(result?.[0]?.ref.tagName).toBe('Function')
 	})
 
 	it('reconcile scenario: returns the matched existing instance root', async () => {
@@ -232,6 +233,34 @@ describe('update.fsd — returns the applied instance roots', () => {
 		})
 
 		expect(result).toHaveLength(1)
-		expect(result?.[0]?.tagName).toBe('Function')
+		expect(result?.[0]?.ref.tagName).toBe('Function')
+	})
+
+	it('called without decisions from the revision it already names: the matched instance is returned as reconciled, its file reference as it was', async () => {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		if (!target) throw new Error('target required')
+
+		await target.document.transaction(async (tx) => {
+			await instantiateFsd(tx, {
+				sourceQuery: source.document.query,
+				functionRef,
+				targetParent: bayRef,
+			})
+		})
+		const provenanceBefore = await reference.query.getProvenance(target.document.query)
+
+		let result: Awaited<ReturnType<typeof updateFsd>> | undefined
+		await target.document.transaction(async (tx) => {
+			result = await updateFsd(tx, {
+				sourceQuery: source.document.query,
+				functionRef,
+				targetParent: bayRef,
+			})
+		})
+		const provenanceAfter = await reference.query.getProvenance(target.document.query)
+
+		expect(result?.map((instance) => instance.placement)).toEqual(['reconciled'])
+		expect(provenanceBefore).toHaveLength(1)
+		expect(provenanceAfter).toEqual(provenanceBefore)
 	})
 })

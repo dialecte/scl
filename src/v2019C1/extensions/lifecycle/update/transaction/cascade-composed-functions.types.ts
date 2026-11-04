@@ -1,6 +1,8 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
+import type { AppliedFunction } from '@/v2019C1/extensions/lifecycle/apply/apply.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -13,8 +15,8 @@ import type { AnyTrackedRecord } from '@dialecte/core'
 /** One instance of the application the update goes through. */
 export type ApplicationInstance = {
 	instance: AnyTrackedRecord
-	/** The update wrote to it: an instance whose every group was skipped is left as it is. */
-	written: boolean
+	/** What its own groups let the update write: absent without decisions (everything is written). */
+	accepted: AcceptedIds | undefined
 }
 
 export type CascadeComposedFunctionsParams = {
@@ -39,11 +41,16 @@ export type CascadeComposedFunctionsParams = {
 }
 
 export type ComposedFunctionsCascade = {
-	/** The functions reconciled or placed. */
-	functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
+	/** The functions written, each placed or reconciled: one the update wrote nothing to is not listed. */
+	functions: AppliedFunction[]
 	/**
 	 * For each instance of the application, by its record id: the function that stands, for that
 	 * instance, for a function the template gained.
 	 */
 	redirectMappings: Map<string, RedirectMapping[]>
+	/**
+	 * For each instance of the application, by its record id: the record ids of the functions of the project it stands
+	 * on — those it owns, takes where it stands, and those placed for it — whether this update wrote them or not.
+	 */
+	standsOn: Map<string, Set<string>>
 }

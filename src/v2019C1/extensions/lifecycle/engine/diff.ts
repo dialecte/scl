@@ -1,3 +1,4 @@
+import { readDiffPolicy } from './diff-policy'
 import { ENGINE_MANAGED_TAGS } from './diff.constants'
 import { groupChanges } from './group'
 import { markIdentityCollisions } from './identity-collisions'
@@ -24,6 +25,7 @@ import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/re
 import { numberRenames } from '@/v2019C1/extensions/lifecycle/constraints/number-renames'
 
 import type { ReportMapping } from '../mapping/mapping.types'
+import type { DiffPolicy } from './diff-policy.types'
 import type {
 	AddedChild,
 	AttributeChange,
@@ -141,10 +143,13 @@ export async function diff(params: {
 	 * nothing in the instance is neither listed nor written, at any depth; one the instance holds is compared as any.
 	 */
 	notSelected?: ReadonlySet<string>
-	/** Whether a bound logical node takes the type the template gives it. Default: `follow`. */
-	boundLogicalNodeTypes?: BoundLogicalNodeTypes
 	/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. Default none. */
 	placeholderLineages?: PlaceholderLineages
+	/**
+	 * What the consumer's resolution tells the diff, read once: see {@link DiffPolicy}. A report states it; only an
+	 * engine test leaves it out (default: `readDiffPolicy` of no resolution).
+	 */
+	diffPolicy?: DiffPolicy
 	/** The source is the project itself (a copy): a uuid both name is one element, never a reference this walk wrote. */
 	sourceIsProject?: boolean
 }): Promise<InstanceDiff> {
@@ -181,7 +186,8 @@ export async function diff(params: {
 		params.redirectMappings,
 	)
 
-	const root = await diffMatched(sourceQuery, {
+	const root = await diffMatched({
+		sourceQuery,
 		targetQuery,
 		sourceNode: sourceTree,
 		instanceNode: instanceTree,
@@ -202,13 +208,14 @@ export async function diff(params: {
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected,
 		typeComparison: createTypeComparison(),
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes ?? 'follow',
+		diffPolicy: params.diffPolicy ?? readDiffPolicy({}),
 		placeholderLineages: params.placeholderLineages ?? new Set(),
 		sourceIsProject: params.sourceIsProject ?? false,
 	})
 	// a rename of the instance itself is numbered among its siblings, as the apply numbers it
 	if (instanceTree.parent) {
-		await numberRenamedNodes(targetQuery, {
+		await numberRenamedNodes({
+			targetQuery,
 			parentRef: toRef(instanceTree.parent) as Scl.Ref<Scl.ElementsOf>,
 			renamed: [{ node: root, child: instanceTree }],
 		})
@@ -218,40 +225,46 @@ export async function diff(params: {
 	return { root, groups, summary }
 }
 
-async function diffMatched(
-	sourceQuery: Core.Query<Config>,
-	params: {
-		targetQuery: Core.Query<Config>
-		sourceNode: AnyTreeRecord
-		instanceNode: AnyTreeRecord
-		index: Map<string, AnyTreeRecord>
-		sourceUuids: ReadonlySet<string>
-		keepLeftoverRefs: boolean
-		leftoverRefPolicy?: LeftoverRefPolicy
-		refsAlwaysAdded?: boolean
-		matchKey: MatchKey
-		removalBase: RemovalBase
-		namesFollow: NamesFollow
-		omit?: readonly string[]
-		/** Leave this node's own attributes uncompared. */
-		skipOwnAttributes?: boolean
-		/** The node sits in an element of the project a source element is mapped onto. */
-		withinProjectOwned?: boolean
-		/** First placement: no container of the subtree has its attributes compared. */
-		contributeOnly?: boolean
-		redirectedSourceUuids?: RedirectedSourceUuids
-		pinnedMatches?: PinnedMatches
-		foreignInstanceIds?: ReadonlySet<string>
-		notSelected?: ReadonlySet<string>
-		/** The types read on each side so far: one run for the whole diff. */
-		typeComparison: TypeComparison
-		boundLogicalNodeTypes: BoundLogicalNodeTypes
-		placeholderLineages: PlaceholderLineages
-		sourceIsProject: boolean
-	},
-): Promise<DiffNode> {
-	const { targetQuery, sourceNode, instanceNode, index, sourceUuids, keepLeftoverRefs, matchKey } =
-		params
+async function diffMatched(params: {
+	sourceQuery: Core.Query<Config>
+	targetQuery: Core.Query<Config>
+	sourceNode: AnyTreeRecord
+	instanceNode: AnyTreeRecord
+	index: Map<string, AnyTreeRecord>
+	sourceUuids: ReadonlySet<string>
+	keepLeftoverRefs: boolean
+	leftoverRefPolicy?: LeftoverRefPolicy
+	refsAlwaysAdded?: boolean
+	matchKey: MatchKey
+	removalBase: RemovalBase
+	namesFollow: NamesFollow
+	omit?: readonly string[]
+	/** Leave this node's own attributes uncompared. */
+	skipOwnAttributes?: boolean
+	/** The node sits in an element of the project a source element is mapped onto. */
+	withinProjectOwned?: boolean
+	/** First placement: no container of the subtree has its attributes compared. */
+	contributeOnly?: boolean
+	redirectedSourceUuids?: RedirectedSourceUuids
+	pinnedMatches?: PinnedMatches
+	foreignInstanceIds?: ReadonlySet<string>
+	notSelected?: ReadonlySet<string>
+	/** The types read on each side so far: one run for the whole diff. */
+	typeComparison: TypeComparison
+	diffPolicy: DiffPolicy
+	placeholderLineages: PlaceholderLineages
+	sourceIsProject: boolean
+}): Promise<DiffNode> {
+	const {
+		sourceQuery,
+		targetQuery,
+		sourceNode,
+		instanceNode,
+		index,
+		sourceUuids,
+		keepLeftoverRefs,
+		matchKey,
+	} = params
 	const { removalBase, namesFollow } = params
 	const leftoverRefPolicy = params.leftoverRefPolicy
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
@@ -264,13 +277,14 @@ async function diffMatched(
 		kept,
 	} = params.skipOwnAttributes
 		? { changes: [], typeChanges: [], kept: [] }
-		: await computeAttributeChanges(sourceQuery, {
+		: await computeAttributeChanges({
+				sourceQuery,
 				targetQuery,
 				sourceNode,
 				instanceNode,
 				namesFollow,
 				typeComparison: params.typeComparison,
-				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+				boundLogicalNodeTypes: params.diffPolicy.boundLogicalNodeTypes,
 			})
 	// a text the template changed is a change of the element, as an attribute is; so is the vendor data one of its
 	// wrappers holds as text
@@ -313,13 +327,15 @@ async function diffMatched(
 				withinProjectOwned &&
 				!REFERENCE_TAG_NAMES.has(sourceChild.tagName) &&
 				(contributeOnly ||
-					!(await carriesLineageOf(sourceQuery, {
+					!(await carriesLineageOf({
+						sourceQuery,
 						targetQuery,
 						sourceNode: sourceChild,
 						instanceNode: matched,
 						matchKey,
 					})))
-			const matchedNode = await diffMatched(sourceQuery, {
+			const matchedNode = await diffMatched({
+				sourceQuery,
 				targetQuery,
 				sourceNode: sourceChild,
 				instanceNode: matched,
@@ -340,7 +356,7 @@ async function diffMatched(
 				contributeOnly,
 				notSelected: params.notSelected,
 				typeComparison: params.typeComparison,
-				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+				diffPolicy: params.diffPolicy,
 				placeholderLineages: params.placeholderLineages,
 				sourceIsProject: params.sourceIsProject,
 			})
@@ -369,7 +385,8 @@ async function diffMatched(
 	// identity matches a template ref of the same tag, OR unconditionally for a SHARED satellite
 	// (`keepLeftoverRefs`) whose extra refs belong to other primaries and cannot be resolved back to
 	// this template (mismatched `templateUuid` + de-duped names).
-	const sourceRefIdentities = await collectSourceRefIdentities(sourceQuery, {
+	const sourceRefIdentities = await collectSourceRefIdentities({
+		sourceQuery,
 		sourceNode,
 		byName: params.placeholderLineages.size > 0,
 	})
@@ -389,7 +406,17 @@ async function diffMatched(
 				removalBase,
 			})
 			if (unmatched === 'removed') children.push(removedNode(instanceChild))
-			else if (unmatched === 'target-only') pushInstanceOnly(instanceChild, children)
+			else if (unmatched === 'target-only') {
+				// it carries a lineage: the consumer's tags hide it only when the previous revision proves it is not the
+				// template's — else it may be the template's own the newer revision dropped (a level of the unit, a fork
+				// given no previous revision), listed so that its removal stays the consumer's to accept
+				pushInstanceOnly({
+					node: instanceChild,
+					out: children,
+					policy: params.diffPolicy,
+					mayBeTemplates: removalBase.kind !== 'revision',
+				})
+			}
 			continue
 		}
 		if (
@@ -398,7 +425,8 @@ async function diffMatched(
 		) {
 			const sibling = keepLeftoverRefs
 				? { sibling: true }
-				: await readMultiInstanceSibling(targetQuery, {
+				: await readMultiInstanceSibling({
+						targetQuery,
 						instanceChild,
 						sourceRefIdentities,
 						matchKey,
@@ -420,10 +448,16 @@ async function diffMatched(
 		}
 		// what a project-owned element holds besides is the project's: not an author addition to an instance
 		if (withinProjectOwned) continue
-		pushInstanceOnly(instanceChild, children)
+		pushInstanceOnly({
+			node: instanceChild,
+			out: children,
+			policy: params.diffPolicy,
+			mayBeTemplates: false,
+		})
 	}
 
-	await numberRenamedNodes(targetQuery, {
+	await numberRenamedNodes({
+		targetQuery,
 		parentRef: toRef(instanceNode) as Scl.Ref<Scl.ElementsOf>,
 		renamed,
 	})
@@ -476,10 +510,12 @@ function unchangedRefNode(node: AnyTreeRecord): DiffNode {
  * reference may pair by name (`byName`), by the names of their targets. A leftover instance reference whose identity
  * is among them is a multi-instance sibling (another instance's link to the same template target), not a removal.
  */
-async function collectSourceRefIdentities(
-	sourceQuery: Core.Query<Config>,
-	params: { sourceNode: AnyTreeRecord; byName: boolean },
-): Promise<SourceRefIdentities> {
+async function collectSourceRefIdentities(params: {
+	sourceQuery: Core.Query<Config>
+	sourceNode: AnyTreeRecord
+	byName: boolean
+}): Promise<SourceRefIdentities> {
+	const { sourceQuery } = params
 	const identities: SourceRefIdentities = { uuids: new Set(), names: new Set() }
 	for (const child of params.sourceNode.tree) {
 		if (!REFERENCE_TAG_NAMES.has(child.tagName)) continue
@@ -496,16 +532,14 @@ async function collectSourceRefIdentities(
  * Whether an unmatched instance reference is a multi-instance sibling of a template reference: by the uuids it names,
  * or by the names of its targets where one carries a placeholder lineage the consumer lets pair by name (`pairedByName`).
  */
-async function readMultiInstanceSibling(
-	targetQuery: Core.Query<Config>,
-	params: {
-		instanceChild: AnyTreeRecord
-		sourceRefIdentities: SourceRefIdentities
-		matchKey: MatchKey
-		placeholderLineages: PlaceholderLineages
-	},
-): Promise<MultiInstanceSibling> {
-	const { instanceChild, sourceRefIdentities, matchKey, placeholderLineages } = params
+async function readMultiInstanceSibling(params: {
+	targetQuery: Core.Query<Config>
+	instanceChild: AnyTreeRecord
+	sourceRefIdentities: SourceRefIdentities
+	matchKey: MatchKey
+	placeholderLineages: PlaceholderLineages
+}): Promise<MultiInstanceSibling> {
+	const { targetQuery, instanceChild, sourceRefIdentities, matchKey, placeholderLineages } = params
 	if (sourceRefIdentities.uuids.size === 0 && sourceRefIdentities.names.size === 0) {
 		return { sibling: false }
 	}
@@ -532,32 +566,40 @@ function targetOnlyNode(node: AnyTreeRecord): DiffNode {
 }
 
 /**
- * Classify an unmatched, uuid-less, non-reference instance child. Engine-managed
- * metadata is ignored (preserved silently); the transparent `Private` wrapper is
- * unwrapped so genuine author children inside it are still surfaced; anything else is
- * an author-added `target-only` element.
+ * Classify an unmatched instance child the template does not know as the project's own. What the engine itself
+ * creates (its naming and provenance) is ignored (preserved silently), and so is an element of a tag the consumer
+ * maintains itself (`consumerManagedTags`) when it is known not to be the template's; the transparent `Private`
+ * wrapper is unwrapped so genuine author children inside it are still surfaced; anything else is an author-added
+ * `target-only` element. An element that may be the template's own, dropped by the newer revision (`mayBeTemplates`:
+ * it carries a lineage the engine cannot tell from the project's own — a level of the unit, a fork given no previous
+ * revision), is listed whatever the consumer's tags.
  */
-function pushInstanceOnly(node: AnyTreeRecord, out: DiffNode[]): void {
+function pushInstanceOnly(params: {
+	node: AnyTreeRecord
+	out: DiffNode[]
+	policy: DiffPolicy
+	mayBeTemplates: boolean
+}): void {
+	const { node, out, policy, mayBeTemplates } = params
 	if (ENGINE_MANAGED_TAGS.has(node.tagName)) return
+	if (!mayBeTemplates && policy.consumerManagedTags.has(node.tagName)) return
 	if (node.tagName === 'Private') {
-		for (const child of node.tree) pushInstanceOnly(child, out)
+		for (const child of node.tree) pushInstanceOnly({ node: child, out, policy, mayBeTemplates })
 		return
 	}
 	out.push(targetOnlyNode(node))
 }
 
-async function computeAttributeChanges(
-	sourceQuery: Core.Query<Config>,
-	params: {
-		targetQuery: Core.Query<Config>
-		sourceNode: AnyTreeRecord
-		instanceNode: AnyTreeRecord
-		namesFollow: NamesFollow
-		typeComparison: TypeComparison
-		boundLogicalNodeTypes: BoundLogicalNodeTypes
-	},
-): Promise<AttributeComparison> {
-	const { targetQuery, sourceNode, instanceNode, namesFollow, typeComparison } = params
+async function computeAttributeChanges(params: {
+	sourceQuery: Core.Query<Config>
+	targetQuery: Core.Query<Config>
+	sourceNode: AnyTreeRecord
+	instanceNode: AnyTreeRecord
+	namesFollow: NamesFollow
+	typeComparison: TypeComparison
+	boundLogicalNodeTypes: BoundLogicalNodeTypes
+}): Promise<AttributeComparison> {
+	const { sourceQuery, targetQuery, sourceNode, instanceNode, namesFollow, typeComparison } = params
 	const sourceAttributes = await sourceQuery.any.getAttributes(sourceNode)
 	const instanceAttributes = await targetQuery.any.getAttributes(instanceNode)
 	const desired = visibleAttributes({
@@ -672,16 +714,14 @@ function collectReportMappings(instances: readonly ReportInstance[]): ReportMapp
 }
 
 /** Whether an instance element was created from a source element: it carries its uuid as lineage. */
-async function carriesLineageOf(
-	sourceQuery: Core.Query<Config>,
-	params: {
-		targetQuery: Core.Query<Config>
-		sourceNode: AnyTreeRecord
-		instanceNode: AnyTreeRecord
-		matchKey: MatchKey
-	},
-): Promise<boolean> {
-	const { targetQuery, sourceNode, instanceNode, matchKey } = params
+async function carriesLineageOf(params: {
+	sourceQuery: Core.Query<Config>
+	targetQuery: Core.Query<Config>
+	sourceNode: AnyTreeRecord
+	instanceNode: AnyTreeRecord
+	matchKey: MatchKey
+}): Promise<boolean> {
+	const { sourceQuery, targetQuery, sourceNode, instanceNode, matchKey } = params
 	const sourceUuid = await sourceQuery.any.getAttribute(sourceNode, { name: 'uuid' })
 	if (!sourceUuid) return false
 	const lineage = await targetQuery.any.getAttribute(instanceNode, { name: matchKey })
@@ -694,7 +734,11 @@ export function allGroups(report: DiffReport): DecisionGroup[] {
 }
 
 /** All element ids in a diff tree, by side (`instanceRef` for staged/existing, `sourceRef` for added). */
-export function collectTreeIds(root: DiffNode, side: 'instanceRef' | 'sourceRef'): string[] {
+export function collectTreeIds(params: {
+	root: DiffNode
+	side: 'instanceRef' | 'sourceRef'
+}): string[] {
+	const { root, side } = params
 	const ids: string[] = []
 	function visit(node: DiffNode): void {
 		const id = node[side]?.id
@@ -722,11 +766,12 @@ function summarize(root: DiffNode): DiffSummary {
  * The name a rename ends with where a sibling holds it: numbered as the apply numbers it once every rename of the
  * parent is written (`numberRenames`), the change listing the name written.
  */
-async function numberRenamedNodes(
-	targetQuery: Core.Query<Config>,
-	params: { parentRef: Scl.Ref<Scl.ElementsOf>; renamed: readonly RenamedNode[] },
-): Promise<void> {
-	const { parentRef } = params
+async function numberRenamedNodes(params: {
+	targetQuery: Core.Query<Config>
+	parentRef: Scl.Ref<Scl.ElementsOf>
+	renamed: readonly RenamedNode[]
+}): Promise<void> {
+	const { targetQuery, parentRef } = params
 	const renames = params.renamed.flatMap(({ node, child }) => {
 		const change = node.attributeChanges?.find((attributeChange) => attributeChange.name === 'name')
 		return change?.after ? [{ node, child, change, name: change.after }] : []

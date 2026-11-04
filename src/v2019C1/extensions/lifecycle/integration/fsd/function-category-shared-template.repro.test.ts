@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { reportFsd } from '@/v2019C1/extensions/lifecycle/report/query/report-fsd'
@@ -87,16 +88,19 @@ describe('repro — FunctionCategory satellite folding', () => {
 
 		const rep = await reportFsd(target.document.query, {
 			sourceQuery: source.document.query,
+			diffPolicy: readDiffPolicy({}),
 			functionRef,
 			targetParent: bayRef,
 			scenario: 'instantiate',
 		})
 
 		const groups = allGroups(rep)
-		const functionGroup = groups.find((g) => g.primary.tagName === 'Function')
+		const functionGroup = groups.find((group) => group.primary.tagName === 'Function')
 		expect(functionGroup, 'function decision group present').toBeDefined()
 
-		const catCompanion = functionGroup?.companions.find((c) => c.tagName === 'FunctionCategory')
+		const catCompanion = functionGroup?.companions.find(
+			(companion) => companion.tagName === 'FunctionCategory',
+		)
 		expect(catCompanion, 'FunctionCategory folded as companion of the function group').toBeDefined()
 	})
 
@@ -124,10 +128,10 @@ describe('repro — FunctionCategory satellite folding', () => {
 		})
 
 		const falselyRemoved = allGroups(rep).filter(
-			(g) => g.change === 'removed' || g.change === 'target-only',
+			(group) => group.change === 'removed' || group.change === 'target-only',
 		)
 		expect(
-			falselyRemoved.map((g) => `${g.change}:${g.primary.tagName}`),
+			falselyRemoved.map((group) => `${group.change}:${group.primary.tagName}`),
 			'unchanged template must not classify anything removed/target-only',
 		).toEqual([])
 	})

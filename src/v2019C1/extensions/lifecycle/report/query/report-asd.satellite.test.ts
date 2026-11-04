@@ -3,6 +3,7 @@ import { reportAsd } from './report-asd'
 import { describe, expect } from 'vitest'
 
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
@@ -87,7 +88,11 @@ describe('reportAsd — carried FunctionCategory on a composed function', () => 
 		})
 		await source.transaction(testCase.mutate)
 
-		const report = await reportAsd(target.query, { sourceQuery: source.query, applicationRef })
+		const report = await reportAsd(target.query, {
+			sourceQuery: source.query,
+			applicationRef,
+			diffPolicy: readDiffPolicy({}),
+		})
 
 		const functionGroup = allGroups(report).find((group) => group.primary.tagName === 'Function')
 		expect(functionGroup).toBeDefined()

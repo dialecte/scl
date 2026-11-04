@@ -3,6 +3,7 @@ import { reportFsd } from './report-fsd'
 import { describe, expect } from 'vitest'
 
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { fsd as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
@@ -84,6 +85,7 @@ describe('reportFsd — FunctionCategory carried by a SubFunction', () => {
 
 		const report = await reportFsd(target.query, {
 			sourceQuery: source.query,
+			diffPolicy: readDiffPolicy({}),
 			functionRef,
 			targetParent: bayRef,
 		})

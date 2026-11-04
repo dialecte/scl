@@ -25,6 +25,16 @@ export type SclFileReferenceValues = {
 	fileUuid: string
 }
 
+/** What `writeProvenance` did. */
+export type WriteProvenanceResult = {
+	/**
+	 * Whether it changed what is recorded: a reference added, or one brought to another version, or a second reference
+	 * to the same file removed. `false` when the element records that file version already, as its only reference to
+	 * that file (or the `Header` lists that file version already).
+	 */
+	changed: boolean
+}
+
 export type WriteProvenanceParams = {
 	/** Query over the source document the provenance is sourced from (Header + file name). */
 	sourceQuery: Core.Query<Config>

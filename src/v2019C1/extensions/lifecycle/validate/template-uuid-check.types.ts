@@ -44,3 +44,13 @@ export type TemplateUuidWarningInfo = {
 	/** How the engine still proceeds despite it (the recovery / fallback strategy). */
 	fallback: string
 }
+
+/** The elements bearing one `templateUuid`: their tags, the types those count as, and the elements. */
+export type TemplateUuidBearers = {
+	tagNames: Set<string>
+	families: Set<string>
+	refs: AnyRefOrRecord[]
+}
+
+/** An element bearing a `uuid`. */
+export type UuidOwner = { tagName: string; ref: AnyRefOrRecord }

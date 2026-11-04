@@ -56,3 +56,58 @@ describe('placeholder lineages', () => {
 
 	runSclTestCases.withoutExport({ testCases, act })
 })
+
+// A value shared by the function forms is the lineage of one template placed several ways: no placeholder, nothing to
+// pair by name on. The same value on a function and a logical node still is.
+const FUNCTION_FAMILY = '44444444-4444-4444-8444-444444444444'
+
+function familyProjectXml(params: { lnodeXml?: string }): string {
+	const { lnodeXml = '' } = params
+	return /* xml */ `
+		<SCL ${ns} ${id}="project">
+			<Substation name="S1" ${id}="substation-t">
+				<VoltageLevel name="V1" ${id}="voltage-level-t">
+					<Bay name="B1" ${id}="bay-t">
+						<Function name="Prot" uuid="function-project" templateUuid="${FUNCTION_FAMILY}" ${id}="function-t">
+							${lnodeXml}
+							<SubFunction name="Trip" uuid="sub-function-project" templateUuid="${FUNCTION_FAMILY}" ${id}="sub-function-t"/>
+						</Function>
+					</Bay>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+}
+
+describe('placeholder lineages — the function forms are one type', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'a value shared by a function and a subfunction -> not flagged': {
+			sourceXml: familyProjectXml({}),
+			referencesByName: 'placeholders',
+			expected: [],
+		},
+		'a value shared by a function, a subfunction and a logical node -> flagged': {
+			sourceXml: familyProjectXml({
+				lnodeXml: `<LNode iedName="None" lnClass="CSWI" lnInst="1" uuid="lnode-project" templateUuid="${FUNCTION_FAMILY}" ${id}="lnode-t"/>`,
+			}),
+			referencesByName: 'placeholders',
+			expected: [FUNCTION_FAMILY],
+		},
+		'a value shared by a function and a subfunction, naming a logical node -> flagged': {
+			sourceXml: familyProjectXml({
+				lnodeXml: `<LNode iedName="None" lnClass="CSWI" lnInst="1" uuid="${FUNCTION_FAMILY}" ${id}="lnode-t"/>`,
+			}),
+			referencesByName: 'placeholders',
+			expected: [FUNCTION_FAMILY],
+		},
+	}
+
+	async function act({ testCase, source }: SclTest.ActParams<TestCase>): Promise<void> {
+		const lineages = await resolvePlaceholderLineages(source.query, {
+			referencesByName: testCase.referencesByName,
+		})
+		expect([...lineages].sort()).toEqual(testCase.expected)
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})

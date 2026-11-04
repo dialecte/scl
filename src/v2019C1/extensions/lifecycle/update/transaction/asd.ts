@@ -5,6 +5,7 @@ import {
 	reconcileCrossCuttingSatellites,
 } from './cross-cutting-satellites'
 import { reconcileSatellites } from './satellite-reconcile'
+import { writesToInstance } from './writes-to-instance'
 
 import {
 	annotateInstance,
@@ -54,19 +55,17 @@ import {
 } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
+import type { UpdateAsdParams, WrittenApplications } from './asd.types'
 import type { ApplicationInstance } from './cascade-composed-functions.types'
 import type { Scl, Config } from '@/v2019C1/config'
-import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { SharedFunctions } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	AppliedFunction,
+	AppliedInstance,
+} from '@/v2019C1/extensions/lifecycle/apply/apply.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
-import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { DroppedElement } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
-import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
-import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -90,49 +89,17 @@ import type * as Core from '@dialecte/core'
  * ONLY its own groups (partitioned by `instanceScopeId`) so the user can update a
  * subset of instances across both layers.
  *
+ * Returns its roots, each saying how: `placed` for a first placement (the application, the functions it composes,
+ * a function an instance gains), `reconciled` for a matched instance (an application, a function it composes or takes
+ * where it stands). Given decisions, only those it wrote to; without decisions it writes everything the template
+ * brings and returns every instance it matched.
+ *
  * @intent update a project from a newer ASD, reconcile Application instances with their template, instantiate or update an application template
  */
 export async function asd(
 	tx: Core.Transaction<Config>,
-	params: {
-		sourceQuery: Core.Query<Config>
-		applicationRef: Scl.Ref<'Application'>
-		targetParent: Scl.Ref<Scl.ElementsOf>
-		/** `instantiate` forces a fresh instance; `template` (default) reconciles. */
-		scenario?: LifecycleScenario
-		/** Placed afresh by a larger operation: a new instance whatever the project holds. */
-		placesFresh?: boolean
-		/** The previous revision of the file, for a fork: see {@link LifecycleRevisionBase}. Refused by another scenario. */
-		baseQuery?: Core.Query<Config>
-		/** Whether a first placement stands on a function another application placed there: see `Resolution.sharedFunctions`. */
-		sharedFunctions?: SharedFunctions
-		/** What tells a dropped element from the project's own, when the caller read it already (once per apply). */
-		removalBase?: RemovalBase
-		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
-		placeholderLineages?: PlaceholderLineages
-		report?: DiffReport
-		decisions?: DecisionMap
-		/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */
-		keepNameTypesFrom?: KeepNameTypesFrom
-		/** Multi-instance anchor: scope to ONE target instance (or its subtree). Absent = all. */
-		targetInstance?: Scl.Ref<Scl.ElementsOf>
-		/** The consumer's choices for the shared elements the application refers to. */
-		decisionMappings?: DecisionMappings
-		/** The application is placed by this operation alone (an ASD): see `instantiate.asd`. */
-		resolvePlacement?: boolean
-		/** Placed as part of a larger template: see `instantiate.asd`. */
-		partOfTemplate?: boolean
-		/**
-		 * What a first placement is made for, when the report lists it once per instance of the unit
-		 * of a larger template: that instance (the level it sits on) — the same before and after the
-		 * write. Default: `targetParent`.
-		 */
-		placedFor?: Scl.Ref<Scl.ElementsOf>
-	},
-): Promise<{
-	applications: Scl.Ref<'Application'>[]
-	functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
-}> {
+	params: UpdateAsdParams,
+): Promise<WrittenApplications> {
 	const {
 		sourceQuery,
 		applicationRef,
@@ -206,16 +173,14 @@ export async function asd(
 		for (const reportInstance of firstTimeReportInstances(report, { placedFor })) {
 			annotateInstance({ reportInstance, added })
 		}
-		return { applications: application ? [application] : [], functions: composedFunctionRefs }
+		return {
+			applications: application ? [{ ref: application, placement: 'placed' }] : [],
+			functions: composedFunctionRefs.map(placedFunction),
+		}
 	}
 
 	const structure = await resolveTargetStructure(tx, targetParent)
 
-	// The instances this write actually reconciled. A fully-skipped instance (all its
-	// groups skipped) is left untouched, so it is NOT an applied root and is excluded
-	// from the returned `applications` — otherwise a consumer's post-apply policy
-	// would run against instances the user chose to skip.
-	const writtenInstances: Scl.Ref<'Application'>[] = []
 	// what the update added to each instance, repointed once the composed functions exist (below)
 	const additions: InstanceAdditions[] = []
 	// every instance the update went through, for the function-layer cascade
@@ -248,13 +213,7 @@ export async function asd(
 			? collisionOverrides({ groups: instanceGroups, decisions })
 			: undefined
 
-		// fast track (no decisions) always writes; a decided instance writes only when at
-		// least one of its groups is accepted.
-		const wasWritten = !accepted || accepted.sourceIds.size > 0 || accepted.instanceIds.size > 0
-		if (wasWritten) {
-			writtenInstances.push({ tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>)
-		}
-		applicationInstances.push({ instance, written: wasWritten })
+		applicationInstances.push({ instance, accepted })
 		const selection = await readVariantSelection(tx, { template, instance, matchKey })
 		selections.set(instance.id, selection)
 		// what the application refers to outside it, but through what the selection leaves out
@@ -425,24 +384,43 @@ export async function asd(
 	}
 
 	// 4. each instance now holds this revision of its template — unless every change the update brought to it and the
-	// functions it composes is declined: its own reference names it (an application placed as part of a larger template
-	// records that template's file, not its own)
+	// functions it stands on is declined: its own reference names it (an application placed as part of a larger
+	// template records that template's file, not its own)
+	const rotated = new Set<string>()
 	if (policy.writesProvenance && !params.partOfTemplate) {
 		for (const instance of instances) {
-			const brought = await groupsOfApplicationInstance(tx, { report, instance })
+			const brought = groupsOfApplicationInstance({
+				report,
+				instance,
+				standsOn: cascade.standsOn.get(instance.id) ?? new Set(),
+			})
 			if (!followsSource({ groups: brought, decisions })) continue
-			await writeProvenance(tx, {
+			const { changed } = await writeProvenance(tx, {
 				sourceQuery,
 				target: {
 					anchor: 'application',
 					root: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
 				},
 			})
+			if (changed) rotated.add(instance.id)
 		}
 	}
 
-	return {
-		applications: writtenInstances,
-		functions: cascade.functions,
+	// the instances this write reconciled: one it wrote nothing to (see `writesToInstance`) is not an applied root —
+	// else a consumer's post-apply step would run on an instance the user chose to leave as it is
+	const applications: AppliedInstance<'Application'>[] = []
+	for (const { instance, accepted } of applicationInstances) {
+		const wrote = writesToInstance({ accepted, provenanceChanged: rotated.has(instance.id) })
+		if (!wrote) continue
+		applications.push({
+			ref: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
+			placement: 'reconciled',
+		})
 	}
+	return { applications, functions: cascade.functions }
+}
+
+/** A function a first placement of the application placed with it. */
+function placedFunction(ref: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>): AppliedFunction {
+	return { ref, placement: 'placed' }
 }

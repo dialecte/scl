@@ -182,10 +182,8 @@ function emptyInstances(verb: LifecycleTarget['verb']): AppliedInstances {
 }
 
 /**
- * Delegate to the per-layer update verb. The FSD verb owns the multi-instance loop,
- * so it receives the `report` + `decisions` and partitions gating per instance. The
- * ASD verb still takes a pre-computed `accepted`/`overrides` (single-instance path;
- * Phase B unifies it).
+ * Delegate to the per-layer update, which owns the multi-instance loop: it receives the `report` + `decisions`,
+ * partitions the gate per instance, and says of each root it wrote whether it placed or reconciled it.
  */
 async function runVerb(
 	tx: Core.Transaction<Config>,
