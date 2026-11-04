@@ -23,9 +23,9 @@ import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { PlacementListing } from './placement-listing.types'
 import type { Scl, Config } from '@/v2019C1/config'
-import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -70,8 +70,8 @@ export async function reportFsd(
 		 * Default: the scenario's, a fork given no previous revision.
 		 */
 		removalBase?: RemovalBase
-		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
-		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** What the consumer's resolution tells the diff, read once: see `DiffPolicy`. */
+		diffPolicy: DiffPolicy
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
 		/** On a first placement, the larger one it is part of (a unit of a substation template): see `PlacementListing`. */
@@ -130,7 +130,7 @@ export async function reportFsd(
 			decisionMappings,
 			anchor: landing,
 			removalBase,
-			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			diffPolicy: params.diffPolicy,
 			placeholderLineages: params.placeholderLineages,
 			namesFollow,
 			placementListing: params.placementListing,
@@ -163,18 +163,17 @@ export async function reportFsd(
 			decisionMappings,
 			anchor: targetParent,
 			removalBase,
-			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			diffPolicy: params.diffPolicy,
 			placeholderLineages: params.placeholderLineages,
 			namesFollow,
 		})
-		reportInstances.push(
-			await buildReportInstance(query, {
-				instanceDiff,
-				instance,
-				sourceQuery,
-				sourceRef: functionRef,
-			}),
-		)
+		const reportInstance = await buildReportInstance(query, {
+			instanceDiff,
+			instance,
+			sourceQuery,
+			sourceRef: functionRef,
+		})
+		reportInstances.push(reportInstance)
 	}
 	return assembleReport({ instances: reportInstances, templateRoots: reportInstances })
 }

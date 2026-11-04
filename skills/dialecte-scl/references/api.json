@@ -481,7 +481,7 @@
 				"find duplicate uuids",
 				"find a templateUuid shared across element types or pointing at the wrong type"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/validate/template-uuid-check.ts:25",
+			"declaredAt": "src/v2019C1/extensions/lifecycle/validate/template-uuid-check.ts:32",
 			"example": "await doc.query.lifecycle.checkTemplateUuids()"
 		},
 		{
@@ -509,7 +509,47 @@
 				"diff a project against a newer template",
 				"decisions to review before a template update"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:45"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:47"
+		},
+		{
+			"path": "doc.query.lifecycle.sourceRoot.asd",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "() => Promise<SourceRoot<'asd'>>",
+			"summary": "What an ASD template file holds to instantiate, read-only and never throwing on the shape of the file: the one application (`found`), none, or several to choose from.",
+			"intents": [
+				"which application of an ASD template file to instantiate",
+				"root of an application template file",
+				"is the ASD file ambiguous"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/source-root/source-root.ts:56",
+			"example": "doc.query.lifecycle.sourceRoot.asd()"
+		},
+		{
+			"path": "doc.query.lifecycle.sourceRoot.fsd",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "() => Promise<SourceRoot<'fsd'>>",
+			"summary": "What an FSD template file holds to instantiate, read-only and never throwing on the shape of the file: the one function (`found`), none, several to choose from, or an equipment function (`unsupported`). The placeable roots (a function, a function template) are judged first; an equipment function counts only when the file holds no placeable root. A function and an equipment function resolve to the function.",
+			"intents": [
+				"which function of an FSD template file to instantiate",
+				"root of a function template file",
+				"is the FSD file ambiguous"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/source-root/source-root.ts:28"
+		},
+		{
+			"path": "doc.query.lifecycle.sourceRoot.ssd",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "() => Promise<SourceRoot<'ssd'>>",
+			"summary": "What an SSD template file holds to instantiate, read-only and never throwing on the shape of the file: the one unit, or the scaffolding of units linked together (`found`), none, or several to choose from, each with the units linked to it. A scaffolding with nothing named below it is found at its deepest level.",
+			"intents": [
+				"which unit of an SSD template file to instantiate",
+				"root of a substation template file",
+				"is the SSD file ambiguous"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/source-root/source-root.ts:75"
 		},
 		{
 			"path": "doc.query.reference.buildElementPath",
@@ -965,40 +1005,40 @@
 			"path": "tx.lifecycle.update.asd",
 			"root": "tx",
 			"otherRoutes": [],
-			"signature": "(params: { sourceQuery: Core.Query<Config>; applicationRef: Scl.Ref<'Application'>; targetParent: Scl.Ref<Scl.ElementsOf>; scenario?: LifecycleScenario; placesFresh?: boolean; baseQuery?: Core.Query<Config>; sharedFunctions?: SharedFunctions; removalBase?: RemovalBase; placeholderLineages?: PlaceholderLineages; report?: DiffReport; decisions?: DecisionMap; keepNameTypesFrom?: KeepNameTypesFrom; targetInstance?: Scl.Ref<Scl.ElementsOf>; decisionMappings?: DecisionMappings; resolvePlacement?: boolean; partOfTemplate?: boolean; placedFor?: Scl.Ref<Scl.ElementsOf>; }) => Promise<{ applications: Scl.Ref<'Application'>[]; functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]; }>",
+			"signature": "(params: UpdateAsdParams) => Promise<WrittenApplications>",
 			"summary": "`tx.lifecycle.update.asd` — reconcile a project against a (possibly newer) ASD.",
 			"intents": [
 				"update a project from a newer ASD",
 				"reconcile Application instances with their template",
 				"instantiate or update an application template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/asd.ts:95"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/asd.ts:99"
 		},
 		{
 			"path": "tx.lifecycle.update.fsd",
 			"root": "tx",
 			"otherRoutes": [],
-			"signature": "(params: { sourceQuery: Core.Query<Config>; functionRef: FsdFunctionRef; targetParent: Scl.Ref<Scl.ElementsOf>; scenario?: LifecycleScenario; placesFresh?: boolean; baseQuery?: Core.Query<Config>; removalBase?: RemovalBase; placeholderLineages?: PlaceholderLineages; report?: DiffReport; decisions?: DecisionMap; keepNameTypesFrom?: KeepNameTypesFrom; targetInstance?: Scl.Ref<Scl.ElementsOf>; decisionMappings?: DecisionMappings; resolvePlacement?: boolean; partOfTemplate?: boolean; placedFor?: Scl.Ref<Scl.ElementsOf>; selection?: VariantSelection; }) => Promise<(Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]>",
+			"signature": "(params: UpdateFsdParams) => Promise<AppliedFunction[]>",
 			"summary": "`tx.lifecycle.update.fsd` — reconcile a project against a (possibly newer) FSD.",
 			"intents": [
 				"update a project from a newer FSD",
 				"reconcile Function instances with their template",
 				"instantiate or update a function template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/fsd.ts:80"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/fsd.ts:75"
 		},
 		{
 			"path": "tx.lifecycle.update.ssd",
 			"root": "tx",
 			"otherRoutes": [],
-			"signature": "(params: { sourceQuery: Core.Query<Config>; scopeRef?: Scl.Ref<TopologyStructuralTag>; targetParent: Scl.Ref<Scl.ElementsOf>; scenario?: LifecycleScenario; baseQuery?: Core.Query<Config>; removalBase?: RemovalBase; placeholderLineages?: PlaceholderLineages; report?: DiffReport; decisions?: DecisionMap; keepNameTypesFrom?: KeepNameTypesFrom; targetInstance?: Scl.Ref<Scl.ElementsOf>; decisionMappings?: DecisionMappings; }) => Promise<UpdateSsdResult>",
+			"signature": "(params: UpdateSsdParams) => Promise<WrittenApplications>",
 			"summary": "`tx.lifecycle.update.ssd` - reconcile a project against a (possibly newer) SSD.",
 			"intents": [
 				"update a project from a newer SSD",
 				"reconcile a bay typical with its template",
 				"propagate an SSD change"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/ssd.ts:66"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/ssd.ts:63"
 		},
 		{
 			"path": "tx.reference.applyTypeIdRemap",
@@ -1054,14 +1094,14 @@
 			"path": "tx.reference.writeProvenance",
 			"root": "tx",
 			"otherRoutes": [],
-			"signature": "(params: WriteProvenanceParams) => Promise<void>",
+			"signature": "(params: WriteProvenanceParams) => Promise<WriteProvenanceResult>",
 			"summary": "Records the source file an element or the document was made from: an `SclFileReference` sourced from the source `Header` (`version` / `revision` / `fileUuid`) and store (`fileName`). The same writer serves a placement and an update, so a reference always names the file version the element was last made from.",
 			"intents": [
 				"record which template file an instance came from",
 				"add an SclFileReference to a Function/Application/Header",
 				"write source file provenance"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/transaction/write-provenance.ts:36"
+			"declaredAt": "src/v2019C1/extensions/reference/transaction/write-provenance.ts:39"
 		}
 	]
 }

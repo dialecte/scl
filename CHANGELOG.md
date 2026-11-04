@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`query.lifecycle.sourceRoot.fsd()` / `.asd()` / `.ssd()` read the root of a template file** as data, without throwing on the shape of the file: `{ kind: 'found', ref }` (the ref the verb takes), `{ kind: 'several', candidates }` (in document order, each `{ ref, name, linked }`, `linked` listing the units placed together with it for an SSD), `{ kind: 'none' }`, and for an FSD `{ kind: 'unsupported', ref }` when the file holds an equipment function and no function. A file holding a function and an equipment function resolves to the function. An SSD answers as the verbs do: linked units are one candidate, and a scaffolding with nothing named below it is found at its deepest `TEMPLATE` level. The types (`SourceRoot`, `SourceRootCandidate`, `SourceRootRef`, `SourceRootUnsupported`, `SourceRootVerb`) are exported. The SSD verbs read the file the same way: the candidates their `SSD_SCOPE_AMBIGUOUS` error lists (`meta.candidates`) now follow the file's order too.
+
+- **`tx.reference.writeProvenance` returns `{ changed }`** (`WriteProvenanceResult`): whether it changed what the element, or the `Header`, records — `false` when the element records that file version already, as its only reference to that file, or the `Header` lists it already.
+
+### Changed
+
+- **Breaking: an instance's `FunctionRole` / `FunctionRoleContent` without the template's lineage is listed as the project's own** (`target-only`, kept unless its removal is accepted), unless the consumer names its tags in `resolution.consumerManagedTags`: a consumer that writes such elements itself on the instances it places passes `consumerManagedTags: ['FunctionRole', 'FunctionRoleContent']` to `report` to get the previous behaviour (the report then lists nothing for them, and `apply` writes what the report lists). The option takes any tag of the schema and is read once for every diff of a report; a tag it names never hides an element the template holds or one that may be the template's own the newer revision dropped (it carries the template's lineage, or, in a fork given no previous revision, a uuid).
+
+- **Breaking: each applied instance is `{ ref, placement }`**: every entry of `AppliedInstances` (the `instances` `tx.lifecycle.apply` returns, and what `resolution.afterApply` receives) and every root the direct verbs `tx.lifecycle.update.fsd`, `.asd` and `.ssd` return names its element in `ref` and says how the apply wrote it in `placement` — `'placed'` for a first placement (an instantiate, a first placement through an update, a function an application gains), `'reconciled'` for an instance the update matched and wrote to (an application, a function it composes or takes where it stands, a function a fork finds by its own uuid). Read `entry.ref` where the entry was the ref. The types `AppliedInstance` and `AppliedPlacement` are exported.
+
+### Fixed
+
+- **An update returns the instances it wrote to, and only those**: `tx.lifecycle.apply` with an FSD (and `tx.lifecycle.update.fsd` given decisions) listed every instance it matched. An instance is now returned when a change of it is accepted, or when the file reference it records (`FunctionSclRef` / `ApplicationSclRef`) is brought to the newer revision. It is left out when no change of it is written (every one declined, or none brought: an element the project added and kept is no change) and its reference already names that revision or the update writes none on it (a fork, an element updated as part of a larger template; see the update page's Apply result). So `resolution.afterApply` no longer runs on an instance the apply left as it is. An ASD update now also returns an application whose only write is its file reference (for instance the newer revision a function it stands on brought). A direct update verb called without decisions still writes everything the template brings and returns every instance it matched.
+
+- **An application's provenance counts a function it stands on, and that function's accepted change is written**: when an application update finds a function of the gained lineage free where the instance lives and takes it, the change the report lists for that function is written when accepted even if the reference the application gains to it is declined and nothing of the application itself is written; the application's `ApplicationSclRef` then names the newer revision. With every change declined it keeps the revision it holds.
+
+- **One function placed as a function and as a subfunction no longer warns** (`checkTemplateUuids`): a `Function`, `SubFunction`, `EqFunction`, `EqSubFunction`, `FunctionTemplate` and `SubFunctionTemplate` are read as one element type, so a `templateUuid` shared by several of these forms, or naming one form from another, is neither `cross-type-template-uuid` nor `template-uuid-type-mismatch`, and `referencesByName: 'placeholders'` no longer treats such a value as a placeholder. A value shared with an element outside that family (a `LNode`) is still reported, with the real tags in `tagNames`.
+
 ## [0.12.1] - 2026-11-04
 
 ### Changed

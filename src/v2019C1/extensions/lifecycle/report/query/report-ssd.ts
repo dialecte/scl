@@ -35,8 +35,8 @@ import type { PlacementListing } from './placement-listing.types'
 import type { FoldFrameSatellitesParams } from './report-ssd.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
-import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type {
 	DecisionGroup,
 	DiffReport,
@@ -86,8 +86,8 @@ export async function reportSsd(
 		 * Default: the scenario's, a fork given no previous revision.
 		 */
 		removalBase?: RemovalBase
-		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
-		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** What the consumer's resolution tells the diff, read once: see `DiffPolicy`. */
+		diffPolicy: DiffPolicy
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
 	},
@@ -156,7 +156,7 @@ export async function reportSsd(
 		pinnedMatches,
 		decisionMappings,
 		removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow,
 		leftOut: scope.leftOut,
@@ -228,7 +228,7 @@ export async function reportSsd(
 				decisionMappings,
 				anchor: parent ?? placedFor ?? landing,
 				removalBase,
-				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+				diffPolicy: params.diffPolicy,
 				placeholderLineages: params.placeholderLineages,
 				index,
 			})
@@ -256,7 +256,7 @@ export async function reportSsd(
 				targetInstance,
 				decisionMappings,
 				removalBase,
-				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+				diffPolicy: params.diffPolicy,
 				placeholderLineages: params.placeholderLineages,
 			})
 			primaryInstances.push(...placedInstances({ instances: report.instances, placedFor }))
@@ -272,7 +272,7 @@ export async function reportSsd(
 			anchor: landing,
 			matchKey,
 			removalBase,
-			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			diffPolicy: params.diffPolicy,
 			placeholderLineages: params.placeholderLineages,
 			namesFollow,
 			leftOut: scope.leftOut,
@@ -368,7 +368,7 @@ async function foldFrameSatellites(
 		anchor: params.anchor,
 		matchKey: params.matchKey,
 		removalBase: params.removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		scope: params.placementListing.scope,

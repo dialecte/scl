@@ -9,8 +9,8 @@ import { foreignScopeResolver } from '@/v2019C1/extensions/lifecycle/instance'
 
 import type { PlacementListing } from './placement-listing.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -48,8 +48,8 @@ export async function reportFunction(
 		pass?: ReportPass
 		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
-		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
-		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** What the consumer's resolution tells the diff, read once: see `DiffPolicy`. */
+		diffPolicy: DiffPolicy
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
@@ -69,7 +69,7 @@ export async function reportFunction(
 		instanceRootRef: instance,
 		matchKey: params.matchKey,
 		removalBase: params.removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		// on a first placement, what the function carries is scoped as its clone is
@@ -109,7 +109,7 @@ export async function reportFunction(
 		matchKey: params.matchKey,
 		resolveForeignScope,
 		removalBase: params.removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		selection: params.selection,
@@ -126,7 +126,7 @@ export async function reportFunction(
 		matchKey: params.matchKey,
 		resolveForeignScope,
 		removalBase: params.removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		selection: params.selection,

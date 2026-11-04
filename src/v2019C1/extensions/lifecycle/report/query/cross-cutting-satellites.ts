@@ -10,9 +10,9 @@ import { collectDuplicateApplications } from '@/v2019C1/extensions/lifecycle/cro
 import type { SatelliteFoldTarget } from './cross-cutting-satellites.types'
 import type { PlacementListing } from './placement-listing.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
+import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
@@ -54,8 +54,8 @@ export async function foldCrossCuttingSatellites(
 		pass?: ReportPass
 		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
-		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
-		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** What the consumer's resolution tells the diff, read once: see `DiffPolicy`. */
+		diffPolicy: DiffPolicy
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
@@ -145,7 +145,7 @@ export async function foldCrossCuttingSatellites(
 		instancePrimaryRef,
 		resolveForeignScope: params.resolveForeignScope,
 		removalBase: params.removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		// what the selection leaves out, the references what the primary refers to is placed without, and those the

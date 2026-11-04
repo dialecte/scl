@@ -4,6 +4,7 @@ import * as extractTransaction from './extract'
 import { classifyIeds } from './ied'
 import * as instantiateTransaction from './instantiate'
 import { report } from './report'
+import { sourceRoot } from './source-root'
 import { deep } from './transplant'
 import * as updateTransaction from './update'
 import { checkTemplateUuids } from './validate'
@@ -40,6 +41,7 @@ export const lifecycle = {
 		report,
 		checkTemplateUuids,
 		classifyIeds,
+		sourceRoot,
 	},
 	transaction: {
 		extract: extractTransaction,

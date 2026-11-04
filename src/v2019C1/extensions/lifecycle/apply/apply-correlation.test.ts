@@ -23,10 +23,11 @@ const ns = ALL_XMLNS_NAMESPACES
 const functionRef = { tagName: 'Function', id: 'fn-1' } as Scl.Ref<'Function'>
 const bayRef = { tagName: 'Bay', id: 'bay-t' } as Scl.Ref<'Bay'>
 
-function findNode(node: DiffNode, tagName: string): DiffNode | undefined {
+function findNode(params: { node: DiffNode; tagName: string }): DiffNode | undefined {
+	const { node, tagName } = params
 	if (node.tagName === tagName) return node
 	for (const child of node.children) {
-		const found = findNode(child, tagName)
+		const found = findNode({ node: child, tagName })
 		if (found) return found
 	}
 	return undefined
@@ -86,11 +87,11 @@ describe('apply — appliedRef correlation on the report', () => {
 				report: rep,
 			})
 			placedFunctionId =
-				result.instances.verb === 'fsd' ? result.instances.functions[0]?.id : undefined
+				result.instances.verb === 'fsd' ? result.instances.functions[0]?.ref.id : undefined
 		})
 
 		const rootNode = rep.instances[0]!.tree
-		const lnodeNode = findNode(rootNode, 'LNode')
+		const lnodeNode = findNode({ node: rootNode, tagName: 'LNode' })
 
 		// root added Function -> the placed function root
 		expect(rootNode.change).toBe('added')
@@ -100,7 +101,7 @@ describe('apply — appliedRef correlation on the report', () => {
 
 		// every applied id actually exists in the applied document
 		const applied = await target.document.query.getRecordsByTagName('LNode')
-		expect(applied.map((r) => r.id)).toContain(lnodeNode?.appliedRef?.id)
+		expect(applied.map((record) => record.id)).toContain(lnodeNode?.appliedRef?.id)
 	})
 
 	it('reconcile update: matched node keeps its instance element, an added child gets its clone', async () => {
@@ -150,7 +151,7 @@ describe('apply — appliedRef correlation on the report', () => {
 		})
 
 		const rootNode = rep.instances[0]!.tree
-		const lnodeNode = findNode(rootNode, 'LNode')
+		const lnodeNode = findNode({ node: rootNode, tagName: 'LNode' })
 
 		// the Function matched in place -> its appliedRef IS its own instance element
 		expect(rootNode.appliedRef?.id).toBe(rootNode.instanceRef?.id)
@@ -160,7 +161,7 @@ describe('apply — appliedRef correlation on the report', () => {
 		expect(lnodeNode?.appliedRef?.id).toBeDefined()
 		expect(lnodeNode?.appliedRef?.id).not.toBe('lnode-1')
 		const applied = await target.document.query.getRecordsByTagName('LNode')
-		expect(applied.map((r) => r.id)).toContain(lnodeNode?.appliedRef?.id)
+		expect(applied.map((record) => record.id)).toContain(lnodeNode?.appliedRef?.id)
 	})
 })
 
@@ -222,14 +223,18 @@ describe('apply — appliedRef across composed instances (ASD)', () => {
 			})
 		})
 
-		const appInstance = rep.instances.find((i) => i.tree.tagName === 'Application')
-		const fnInstance = rep.instances.find((i) => i.tree.tagName === 'Function')
+		const appInstance = rep.instances.find((instance) => instance.tree.tagName === 'Application')
+		const fnInstance = rep.instances.find((instance) => instance.tree.tagName === 'Function')
 		expect(appInstance).toBeDefined()
 		expect(fnInstance).toBeDefined()
 
 		// both first-time roots resolve to real applied elements
-		const appIds = (await target.document.query.getRecordsByTagName('Application')).map((r) => r.id)
-		const fnIds = (await target.document.query.getRecordsByTagName('Function')).map((r) => r.id)
+		const appIds = (await target.document.query.getRecordsByTagName('Application')).map(
+			(record) => record.id,
+		)
+		const fnIds = (await target.document.query.getRecordsByTagName('Function')).map(
+			(record) => record.id,
+		)
 		expect(appIds).toContain(appInstance!.tree.appliedRef?.id)
 		expect(fnIds).toContain(fnInstance!.tree.appliedRef?.id)
 	})
@@ -275,7 +280,9 @@ describe('apply — SSD frame appliedRef lands on the NEW bay, not the existing 
 				targetParent: targetVl,
 			})
 		})
-		const seededBayIds = (await target.document.query.getRecordsByTagName('Bay')).map((r) => r.id)
+		const seededBayIds = (await target.document.query.getRecordsByTagName('Bay')).map(
+			(record) => record.id,
+		)
 
 		// report + apply the SECOND instantiate
 		const rep = await report(target.document.query, {
@@ -298,12 +305,14 @@ describe('apply — SSD frame appliedRef lands on the NEW bay, not the existing 
 		})
 
 		// the frame report instance (Bay root) must resolve to the NEW bay, never the seeded one
-		const frameInstance = rep.instances.find((i) => i.tree.tagName === 'Bay')
+		const frameInstance = rep.instances.find((instance) => instance.tree.tagName === 'Bay')
 		expect(frameInstance).toBeDefined()
 		const newBayId = frameInstance!.tree.appliedRef?.id
 		expect(newBayId).toBeDefined()
 		expect(seededBayIds).not.toContain(newBayId) // NOT conflated with the existing bay
-		const allBayIds = (await target.document.query.getRecordsByTagName('Bay')).map((r) => r.id)
+		const allBayIds = (await target.document.query.getRecordsByTagName('Bay')).map(
+			(record) => record.id,
+		)
 		expect(allBayIds).toContain(newBayId) // it IS a real bay in the applied doc
 		expect(allBayIds.length).toBe(2) // seeded + new
 	})

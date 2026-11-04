@@ -11,6 +11,7 @@ import type {
 	SclFileReferenceValues,
 	SclFileType,
 	WriteProvenanceParams,
+	WriteProvenanceResult,
 } from './write-provenance.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -29,17 +30,22 @@ import type { AnyRawRecord, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/co
  * - `document` — appended to the target `Header > SourceFiles` (SSD / SCD), unless the Header already lists that file
  *   version: the files newly imported are appended, in the order they were.
  *
- * `version` / `revision` fall back to empty strings when the (optional) Header attributes are absent.
+ * `version` / `revision` fall back to empty strings when the (optional) Header attributes are absent. Returns whether
+ * it changed what is recorded (`changed`): an element that records that file version already, as its only reference
+ * to that file, is left as it is.
  *
  * @intent record which template file an instance came from, add an SclFileReference to a Function/Application/Header, write source file provenance
  */
 export async function writeProvenance(
 	tx: Core.Transaction<Config>,
 	params: WriteProvenanceParams,
-): Promise<void> {
+): Promise<WriteProvenanceResult> {
 	const { sourceQuery, target } = params
 
-	const attributes = await buildSclFileReferenceAttributes(sourceQuery, fileTypeOf(target))
+	const attributes = await buildSclFileReferenceAttributes({
+		sourceQuery,
+		fileType: fileTypeOf(target),
+	})
 
 	if (target.anchor === 'document') {
 		const header = await tx.getRecord({ tagName: 'Header' })
@@ -50,9 +56,11 @@ export async function writeProvenance(
 		}
 		const sourceFiles = await tx.ensureChild(header, { tagName: 'SourceFiles' })
 		const listed = await tx.getChildren(sourceFiles, 'SclFileReference')
-		if (listed.some((reference) => namesSameVersion({ reference, attributes }))) return
+		if (listed.some((reference) => namesSameVersion({ reference, attributes }))) {
+			return { changed: false }
+		}
 		await tx.addChild(sourceFiles, { tagName: 'SclFileReference', attributes })
-		return
+		return { changed: true }
 	}
 
 	const { tag } = ROOT_ANCHORS[target.anchor]
@@ -63,22 +71,25 @@ export async function writeProvenance(
 	if (!recorded) {
 		const sclRef = await tx.addChild(target.root, { tagName: tag })
 		await tx.addChild(sclRef, { tagName: 'SclFileReference', attributes })
-		return
+		return { changed: true }
 	}
-	if (!namesSameVersion({ reference: recorded.reference, attributes })) {
+	const rewritten = !namesSameVersion({ reference: recorded.reference, attributes })
+	if (rewritten) {
 		// a source the store gives no name keeps the name the reference holds
 		const fileName =
 			attributes.fileName || heldValue({ reference: recorded.reference, name: 'fileName' }) || ''
 		await tx.any.update(recorded.reference, { attributes: { ...attributes, fileName } })
 	}
 	for (const { wrapper } of duplicates) await tx.any.delete(wrapper)
+	return { changed: rewritten || duplicates.length > 0 }
 }
 
 /** Source the shared `SclFileReference` payload from the source document (single source of truth). */
-async function buildSclFileReferenceAttributes(
-	sourceQuery: Core.Query<Config>,
-	fileType: SclFileType,
-): Promise<SclFileReferenceValues> {
+async function buildSclFileReferenceAttributes(params: {
+	sourceQuery: Core.Query<Config>
+	fileType: SclFileType
+}): Promise<SclFileReferenceValues> {
+	const { sourceQuery, fileType } = params
 	const [header] = await sourceQuery.getRecordsByTagName('Header')
 	const headerAttributes = header ? await sourceQuery.getAttributes(header) : undefined
 

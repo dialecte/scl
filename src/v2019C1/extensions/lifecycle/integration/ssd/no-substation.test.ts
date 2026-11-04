@@ -1,6 +1,7 @@
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
 
+import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { ssd as instantiateSsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { reportSsd } from '@/v2019C1/extensions/lifecycle/report/query'
 import { ssd as updateSsd } from '@/v2019C1/extensions/lifecycle/update/transaction'
@@ -44,6 +45,7 @@ describe('ssd verbs on a file holding no substation, no scope named', () => {
 		const before = await target.document.query.getSnapshot({ as: 'xml' })
 		const reported = await reportSsd(target.document.query, {
 			sourceQuery: source.document.query,
+			diffPolicy: readDiffPolicy({}),
 			targetParent: projectSubstation,
 		})
 		expect({ instances: reported.instances, templateRoots: reported.templateInstances }).toEqual({
@@ -54,7 +56,8 @@ describe('ssd verbs on a file holding no substation, no scope named', () => {
 			return updateSsd(tx, { sourceQuery: source.document.query, targetParent: projectSubstation })
 		})
 		expect(written).toEqual({ applications: [], functions: [] })
-		expect(await target.document.query.getSnapshot({ as: 'xml' })).toBe(before)
+		const after = await target.document.query.getSnapshot({ as: 'xml' })
+		expect(after).toBe(before)
 	})
 
 	it('the instantiate is refused: the template holds nothing to instantiate', async function refuseNothing() {
@@ -69,7 +72,8 @@ describe('ssd verbs on a file holding no substation, no scope named', () => {
 				targetParent: projectSubstation,
 			})
 		})
-		const refusal = toDialecteError(await placed.catch((error: unknown) => error))
+		const caught = await placed.catch((error: unknown) => error)
+		const refusal = toDialecteError(caught)
 		expect(refusal?.key).toBe('TEMPLATE_ROOT_NOT_FOUND')
 	})
 })

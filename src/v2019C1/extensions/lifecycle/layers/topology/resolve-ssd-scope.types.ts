@@ -36,3 +36,14 @@ export type SsdScope = {
 	/** The record ids under the root the operation leaves out: the units the group does not hold, and what they hold. */
 	leftOut: ReadonlySet<string>
 }
+
+/**
+ * What {@link readSsdScope} reads: the scope (`scope`), the candidates when several elements could be instantiated
+ * and none is chosen (`ambiguous`), nothing when nothing is named and the file holds no substation (`none`), or the
+ * element named that the file does not hold (`absent`).
+ */
+export type SsdScopeRead =
+	| { kind: 'scope'; scope: SsdScope }
+	| { kind: 'ambiguous'; candidates: SsdScopeCandidate[] }
+	| { kind: 'none' }
+	| { kind: 'absent'; ref: Scl.Ref<TopologyStructuralTag> }

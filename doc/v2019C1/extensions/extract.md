@@ -15,6 +15,8 @@ tx.lifecycle.extract.ssd(...)
 tx.lifecycle.extract.ensureSubstationTemplateStructure()
 ```
 
+The file an extract writes holds its root where [`query.lifecycle.sourceRoot.<verb>()`](./instantiate#the-root-of-a-template-file) reads it: the function, application or unit a later instantiate takes as its `ref`.
+
 ## Transaction methods
 
 Access via `tx.lifecycle.extract` inside a `doc.transaction()` callback. Every method opens a cross-document transaction: it reads from `sourceQuery` and writes into the current `tx`.

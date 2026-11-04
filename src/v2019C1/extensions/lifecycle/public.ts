@@ -45,7 +45,7 @@ export type {
 	LifecycleVerb,
 } from './contract.types'
 
-export type { AppliedInstances, ApplyResult } from './apply'
+export type { AppliedInstance, AppliedInstances, AppliedPlacement, ApplyResult } from './apply'
 
 export type {
 	AsdExtractOptions,
@@ -69,6 +69,14 @@ export type {
 
 export { presentationScope } from './report/public'
 export type { PresentationScope } from './report/public'
+
+export type {
+	SourceRoot,
+	SourceRootCandidate,
+	SourceRootRef,
+	SourceRootUnsupported,
+	SourceRootVerb,
+} from './source-root'
 
 export { TEMPLATE_UUID_WARNING_INFO } from './validate'
 export type {

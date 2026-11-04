@@ -33,13 +33,14 @@ The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & 
 - `scenario`: `'instantiate'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`);
 - `anchor`: the target parent the instance lives under / is placed into.
 - `baseQuery`: for a `fork` only, the **previous revision** of the file — the one the project was forked from. An element the project holds that the newer revision lacks is removed when the previous revision held it, and is the project's own otherwise (see [the fork](#scenario-—-instantiate-vs-template-vs-fork)). `report` and `apply` each read it once. Refused with `REVISION_BASE_OTHER_FILE` when its `Header` names another file than the newer revision's (both carry a `uuid`, and they differ); another scenario given one is refused with `REVISION_BASE_WITHOUT_FORK`.
-- `resolution`: what the consumer resolved, as one object — `{ decisions?, mappings?, keepNameTypesFrom?, boundLogicalNodeTypes?, referencesByName?, sharedFunctions?, afterApply? }` (type `Resolution`). `apply` reads all of it but `boundLogicalNodeTypes`; `report` reads `mappings`, `boundLogicalNodeTypes`, `referencesByName` and `sharedFunctions`, so the report is re-derived from the consumer's choices and shows their consequence:
+- `resolution`: what the consumer resolved, as one object — `{ decisions?, mappings?, keepNameTypesFrom?, boundLogicalNodeTypes?, referencesByName?, sharedFunctions?, consumerManagedTags?, afterApply? }` (type `Resolution`). `apply` reads all of it but `boundLogicalNodeTypes` and `consumerManagedTags`; `report` reads `mappings`, `boundLogicalNodeTypes`, `referencesByName`, `sharedFunctions` and `consumerManagedTags`, so the report is re-derived from the consumer's choices and shows their consequence:
   - `decisions`: accept / skip (and edited values) per decision group — see [Decision groups](#decision-groups-full-track);
   - `mappings`: where a shared element lands, per source element — see [Shared-element mappings](#shared-element-mappings);
   - `keepNameTypesFrom`: on a type-dedup name clash, which side keeps the type name — `'target'` (default, destination is the naming authority) or `'source'` (the incoming template);
   - `boundLogicalNodeTypes`: whether an `LNode` bound to an IED takes the type a newer template gives it — `'follow'` (default) or `'keep'` (`BoundLogicalNodeTypes`, see [the bound `LNode`](#decision-groups-full-track)). `apply` writes the type changes the report lists, so the report alone reads it;
   - `referencesByName`: whether a reference of the project whose uuids disagree with the template's pairs with it by the names of what both name — `'never'` (default) or `'placeholders'` (`ReferencesByName`, see [Child matching](#child-matching-—-one-shared-matcher)). `report` and `apply` read it alike;
   - `sharedFunctions`: whether a first placement of an application stands on a function the level already holds for another application, with an identical template reference — `'clone'` (default) or `'merge'` (`SharedFunctions`, see [functions applications share](./instantiate#functions-applications-share)), for `verb: 'asd'`. `report` and `apply` read it alike;
+  - `consumerManagedTags`: the element tags the consumer creates on instances and maintains itself, any tag of the schema (default none; `readonly Scl.ElementsOf[]`). An instance element of such a tag that the template does not know is not listed as the project's own (`target-only`), whatever the report says of it otherwise, and `apply` writes what the report lists, so nothing for it. Without the option, a `FunctionRole` or a `FunctionRoleContent` an instance holds without the template's lineage is the project's own like any other element: listed `target-only`, kept unless its removal is accepted. The option hides only what is known not to be the template's: an element the template holds, and one that may be the template's own the newer revision dropped, are listed as for any tag — an element carrying the template's lineage (a level of the unit), and, in a fork given no previous revision, any element carrying a uuid (nothing tells there an element the consumer added from one the newer revision dropped; given the previous revision, `baseQuery`, an element it did not hold is hidden). The tags are not inherited: naming `FunctionRole` leaves a `FunctionRoleContent` the project added inside a role of the template listed. The report reads the option once for every diff it makes;
   - `afterApply`: the consumer's own step, run once after the apply — see [below](#the-consumer-s-step-after-the-apply-—-resolution-afterapply).
 
 **A report is applied to the target it was made for.** `report` writes what it was made for on `report.target`
@@ -64,8 +65,30 @@ finds nothing left to change.
 produced or reconciled. A consumer acts on the roots **in the same transaction** (name, wire, select,
 chain) without re-deriving them. Flat arrays are scenario-honest — `instantiate` yields one root set;
 `template`/`fork` may reconcile several instances of one template; the not-decided-yet track yields empty arrays.
-On the full track a matched instance whose changes are **all skipped** is left untouched, so it is
-excluded from the returned roots — only instances actually reconciled are returned.
+
+Each root is an `AppliedInstance`: the element (`ref`) and how the apply wrote it (`placement`, type
+`AppliedPlacement`):
+
+- `'placed'` — written for the first time: what an instantiate places (the function, the application and
+  the functions it composes, the applications and functions of a substation template), a first placement
+  through an update, a function an application gains in an update (placed for that instance);
+- `'reconciled'` — an instance the update matched and wrote to: an application, a function it composes,
+  a free function of the gained lineage it takes where it stands, a function a fork finds by its own uuid.
+
+An instance is written to when a change of it is accepted, or when the update brings the file reference it
+records (its `FunctionSclRef` / `ApplicationSclRef`, see [Provenance after an update](#provenance-after-an-update))
+to the newer revision: a template update of an FSD or an ASD the newer revision changes nothing in but its
+revision returns the instance. A matched instance the write left as it is is not returned, by `apply` or by a
+direct update verb given decisions: every change of it declined, or none brought (an element the project added, kept, is no change), and no file
+reference brought to the newer revision — the instance names that revision already (the same revision applied
+again), or the update writes no reference on it (a fork; a function or an application updated as part of a
+larger template, which keeps the references it holds). Nor is a function an application stands on without this
+run placing it or writing to it.
+
+A direct update verb (`tx.lifecycle.update.fsd` / `.asd` / `.ssd`) called **without** decisions is not gated: it
+writes everything the template brings and returns every instance it matched, `reconciled`, beside what it placed.
+`apply` always passes decisions (the consumer's, or an empty map: each group at its suggested action), so it returns
+only what it wrote.
 
 ```ts
 type ApplyResult = {
@@ -74,17 +97,20 @@ type ApplyResult = {
 }
 
 type AppliedInstances =
-	| { verb: 'fsd'; functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[] }
+	| { verb: 'fsd'; functions: AppliedInstance<'Function' | 'SubFunction'>[] }
 	| {
 			verb: 'asd'
-			applications: Scl.Ref<'Application'>[]
-			functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
+			applications: AppliedInstance<'Application'>[]
+			functions: AppliedInstance<'Function' | 'SubFunction'>[]
 	  }
 	| {
 			verb: 'ssd'
-			applications: Scl.Ref<'Application'>[]
-			functions: (Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>)[]
+			applications: AppliedInstance<'Application'>[]
+			functions: AppliedInstance<'Function' | 'SubFunction'>[]
 	  }
+
+type AppliedInstance<Tag> = { ref: Scl.Ref<Tag>; placement: AppliedPlacement }
+type AppliedPlacement = 'placed' | 'reconciled'
 ```
 
 Beyond the roots, `apply` **enriches the returned `report`**: it fills each `DiffNode`'s `appliedRef` —
@@ -375,7 +401,9 @@ An instance records the revision of the file it holds. After a template update, 
 its `SclFileReference` is brought to the source `Header`'s `version` and `revision` in place, one
 reference per file (the references it records of other files are left). It is not rewritten when
 every change the update brings to that instance is declined (for an application, to the functions it
-composes and to the functions placed for it too); an instance the newer revision changes nothing for records it all the same. A function
+stands on and to the functions placed for it too: a function it composes, and a free function it takes where it
+stands even when the reference the update gives it to that function is declined — that function's accepted change is
+written all the same); an instance the newer revision changes nothing for records it all the same. A function
 or an application updated as part of a larger template keeps the references it holds (a function of an application keeps the `FunctionSclRef` of its FSD).
 An SSD update — template or fork — appends the newer revision to the project's `Header > SourceFiles`
 after the ones listed, unless that file version is listed already. A fork records no file on an element.
@@ -466,10 +494,12 @@ does it in its own step, passed with what it resolved:
 
 ```ts
 async function afterApply(tx: Scl.Transaction, { instances }: { instances: AppliedInstances }) {
-	for (const application of instances.verb === 'fsd' ? [] : instances.applications) {
-		const name = await tx.getAttribute(application, { name: 'name' })
-		await tx.update(application, { attributes: { name: `${name}_App` } })
-		await tx.lifecycle.makeUnique({ ref: application })
+	for (const { ref, placement } of instances.verb === 'fsd' ? [] : instances.applications) {
+		// name only what this apply placed: a reconciled instance keeps the name it has
+		if (placement !== 'placed') continue
+		const name = await tx.getAttribute(ref, { name: 'name' })
+		await tx.update(ref, { attributes: { name: `${name}_App` } })
+		await tx.lifecycle.makeUnique({ ref })
 	}
 }
 
@@ -480,7 +510,8 @@ await doc.prepare((tx) =>
 
 - It runs **once**, after the whole apply, in the **same transaction**: what it writes is previewed
   (`doc.prepare`) and committed with the rest, and a consumer calling `apply` without a review gets it too.
-  It receives the instances the apply placed or reconciled — only those it wrote. It does not run when
+  It receives the instances the apply placed or reconciled — only those it wrote to, a changed file
+  reference included (see [Apply result](#apply-result)), each saying which (`placement`), so a step that names what it places leaves a reconciled instance alone. It does not run when
   nothing is written (decisions still to take).
 - The engine knows nothing of what the step does. To tell a name apart from a taken one, the step calls
   **`tx.lifecycle.makeUnique({ ref })`** (`MakeUniqueParams`): the element is made unique where it sits in
@@ -556,7 +587,7 @@ Access via `tx.lifecycle.update` inside a `doc.transaction()` callback.
 - if the target already holds an instance of this Function (an element under `targetParent` whose `templateUuid` equals the source Function's `uuid`, carrying the tag the placement writes: a `SubFunction` under a function or a subfunction, else a `Function`), reconcile the updated template onto it;
 - otherwise instantiate it fresh (via [`instantiate.fsd`](./instantiate#fsd)).
 
-This unifies instantiate and update — instantiation is the first-time case of update. The read-only counterpart `doc.query.lifecycle.report({ verb: 'fsd', sourceQuery, ref: functionRef, anchor: targetParent })` returns a `DiffReport` (see [Engine](#engine)) without mutating.
+This unifies instantiate and update — instantiation is the first-time case of update. It returns its roots, each an `AppliedInstance` (`{ ref, placement }`): given decisions, the functions it wrote, as `apply` returns them in `instances.functions`; without, every function it placed or matched (see [Apply result](#apply-result)). The read-only counterpart `doc.query.lifecycle.report({ verb: 'fsd', sourceQuery, ref: functionRef, anchor: targetParent })` returns a `DiffReport` (see [Engine](#engine)) without mutating.
 
 ## `tx.lifecycle.update.asd`
 
@@ -569,7 +600,7 @@ This unifies instantiate and update — instantiation is the first-time case of 
    - a function that belongs to no instance is reconciled when it sits where the consumer started;
    - a function an instance composes that the newer ASD **no longer composes** is removed with the reference to it: the report lists its removal as a group of its own that depends on the group removing the reference. It is kept, and not listed, while another application of the project still composes it (functions may be shared by several applications), and when it records a function file of its own (placed from that file, not as part of the application). In a fork, the previous revision decides as for any element (`baseQuery`).
 
-The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQuery, ref: applicationRef })`.
+It returns `{ applications, functions }`, each root an `AppliedInstance` (`{ ref, placement }`): given decisions, the roots it wrote, as `apply` returns them; without, every root it placed or matched (see [Apply result](#apply-result)). The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQuery, ref: applicationRef })`.
 
 > Cascade principle: an update layer = reconcile its own subtree **+** for each referenced child-layer root, delegate to that child layer's update verb with the child's own resolved structural parent. `update.ssd` below applies it one layer up.
 
@@ -584,6 +615,8 @@ The read-only counterpart is `doc.query.lifecycle.report({ verb: 'asd', sourceQu
   3. **function cascade** — each standalone `Function` (not composed by any `Application`), via [`update.fsd`](#tx-lifecycle-update-fsd).
 
 A part added by the newer SSD is instantiated; an existing one is reconciled — never blindly re-added. An application or a function on a level of the unit that the newer SSD **dropped** is removed — the update replaces the unit's applications with the newer ones: the report lists each removal as a group of its own, scoped to the level's instance. A function's removal depends on the removal of the dropped applications composing it. Only what sits on the unit's own levels counts: a level placed there by another template (a bay-typical in a voltage level) or a level of the project the unit was mapped onto keeps what it holds. A level of the instance the newer SSD does not hold — one it dropped, or one another template placed there — is listed as the project's own (`target-only`), kept unless its removal is accepted. A function another application of the project still composes is kept and not listed, as is an element recording a file of its own (an ASD or FSD placed there on its own). In a fork, the previous revision decides (`baseQuery`): without it they are listed as the project's own and kept. An SSD with no application or function (levels and equipment only) is updated like any: the level it was placed on is its instance.
+
+It returns `{ applications, functions }`, each root an `AppliedInstance` (`{ ref, placement }`): given decisions, the roots it wrote, as `apply` returns them; without, every root it placed or matched (see [Apply result](#apply-result)).
 
 The read-only counterpart is `doc.query.lifecycle.report({ verb: 'ssd', sourceQuery, ref, anchor: targetParent })`, assembled the same way: the topology frame's own diff plus the union of the per-primary `reportAsd`/`reportFsd` reports, merged into one `DiffReport` so the groups of `report.instances` cover the whole scope and the fast/full classification holds across it.
 
@@ -646,7 +679,7 @@ The update verbs are built on two engine primitives in `extensions/lifecycle/eng
 - new source element → add its subtree (via [`transplant.deep`](./transplant) + `identity.writeIdentity` stamp), then auto-resolve a name [collision](#placement-collision-resolution) on the added element against its instance parent. An element the template holds inside a transparent wrapper (a `Private`, which the compared trees show through) is added inside the instance parent's wrapper of the same `type` — the one it holds, else a new one with the template wrapper's attributes —, never beside it;
 - instance element whose template lineage is gone from the source → delete — except a level of the topology (a `Substation`, `VoltageLevel` or `Bay`) in a template update: its lineage names the template level it was made from, not the template that placed it, and another template placed in a level of the unit carries one too. Such a level is **target-only**, kept unless its removal is accepted (a fork given its previous revision removes a level that revision held);
 - instance **reference** element (a uuid-less link such as a dropped `AllocationRoleRef`) with no matching source child → removed, so the link disappears when the template drops it.
-- instance element with **no** template lineage that the pipeline did not create (an author-added element such as a `DOS`/`DAS` added to an `LNode` after instantiation) → **target-only**: reported as its own decision group defaulting to keep, preserved by default and deleted only when that group is explicitly accepted. Pipeline-created naming/provenance (`LNodeSpecNaming`, `FunctionSclRef`, …) is excluded and the transparent `Private` wrapper is unwrapped.
+- instance element with **no** template lineage that the pipeline did not create (an author-added element such as a `DOS`/`DAS` added to an `LNode` after instantiation) → **target-only**: reported as its own decision group defaulting to keep, preserved by default and deleted only when that group is explicitly accepted. What the pipeline itself creates (naming and provenance: `LNodeSpecNaming`, `FunctionSclRef`, `ApplicationSclRef`, `SclFileReference`) and the elements of the tags the consumer names in `resolution.consumerManagedTags` are excluded, and the transparent `Private` wrapper is unwrapped.
 
 Because the instance is already in instance-space, comparing template to instance is clean once identity and the project-owned `name` are excluded (a fork compares the `name` too: its names follow the revision, `namesFollow`) — no attribute-suppression heuristics. A type reference (`lnType`) is the exception: an id of each document, compared by the type it names (see [Decision groups](#decision-groups-full-track)); a matched element whose type changed is pointed at the type the template's closure resolves to, imported once the reconcile is done.
 
@@ -735,6 +768,8 @@ type TemplateUuidWarning = {
 ```
 
 Legitimate same-type `templateUuid` sharing (multi-instance) and unique values are never reported.
+
+The function forms are **one element type**: a `Function`, a `SubFunction`, an `EqFunction`, an `EqSubFunction`, a `FunctionTemplate` and a `SubFunctionTemplate` (the elements a `FunctionRef` may name, and the templates they are placed from) are compared as one, since one function written once may be placed as any of them and keeps its `templateUuid`. A value shared by a function and a subfunction, or naming one form from another, is no placeholder and is not reported. Any other element (a `LNode`, say) is outside the family: a value it shares with a function is still reported, and `tagNames` always lists the real tags involved.
 
 Each warning's `message` describes one offending occurrence. To explain the violation **class** and
 the engine's recovery, render `TEMPLATE_UUID_WARNING_INFO[warning.code]` — a per-code

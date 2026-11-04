@@ -1,0 +1,5 @@
+/** The tag of an equipment function: a conformant FSD root the function verbs do not handle yet. */
+export const FSD_UNSUPPORTED_ROOT_TAG = 'EqFunction'
+
+/** The element an ASD template file is instantiated from. */
+export const ASD_ROOT_TAG = 'Application'

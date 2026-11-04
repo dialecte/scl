@@ -5,6 +5,7 @@ import { throwDialecteError } from '@dialecte/core'
 import { widen } from '@dialecte/core/helpers'
 
 import { TEMPLATE_NAME, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
+import { ROOT_ELEMENT } from '@/v2019C1/definition/constants.generated'
 import { SCL_ERRORS } from '@/v2019C1/errors'
 import { isTopologyLevel, readAttribute } from '@/v2019C1/helpers'
 import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
@@ -14,6 +15,7 @@ import type {
 	ResolveSsdScopeParams,
 	SsdScope,
 	SsdScopeCandidate,
+	SsdScopeRead,
 	SsdScopeUnit,
 } from './resolve-ssd-scope.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -21,7 +23,27 @@ import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type * as Core from '@dialecte/core'
 
 /**
- * What an SSD operation acts on.
+ * What an SSD operation acts on: {@link readSsdScope} read as the verbs need it, refusing what the read reports as
+ * data. Several elements at the first named level are refused with `SSD_SCOPE_AMBIGUOUS`, listing one candidate per
+ * element (a unit, with the units linked to it), so the consumer asks again naming one; an element named the file does
+ * not hold is refused with `TEMPLATE_ROOT_NOT_FOUND`.
+ *
+ * Returns `undefined` when nothing is named and the file holds no substation.
+ */
+export async function resolveSsdScope(
+	query: Core.Query<Config>,
+	params: ResolveSsdScopeParams,
+): Promise<SsdScope | undefined> {
+	const read = await readSsdScope(query, params)
+	if (read.kind === 'scope') return read.scope
+	if (read.kind === 'ambiguous') return refuseAmbiguous({ candidates: read.candidates })
+	if (read.kind === 'absent') return refuseAbsent({ ref: read.ref })
+	return undefined
+}
+
+/**
+ * What an SSD operation acts on, read as data and never refusing: the scope, the candidates when several elements
+ * could be instantiated, nothing, or the element named that the file does not hold.
  *
  * The first level of the template holding a named element holds the units to instantiate. Units joined by a reference
  * (a terminal of one on a connectivity node of the other, an input of one fed by the other) are one element: they are
@@ -29,42 +51,42 @@ import type * as Core from '@dialecte/core'
  *
  * A named level the consumer names is the scope, with the units it is linked to (a unit of a linked group selects the
  * group). The `TEMPLATE` scaffolding — named, or the file's substations when nothing is named — is walked down
- * `Substation -> VoltageLevel -> Bay` to that first level: one element there is the scope; several are refused with
- * `SSD_SCOPE_AMBIGUOUS`, listing one candidate per element (a unit, with the units linked to it), so the consumer asks
- * again naming one. A scaffolding with no named element below it is its deepest `TEMPLATE` level.
+ * `Substation -> VoltageLevel -> Bay` to that first level: one element there is the scope; several are `ambiguous`,
+ * one candidate per element. A scaffolding with no named element below it is its deepest `TEMPLATE` level.
  *
- * Returns `undefined` when nothing is named and the file holds no substation; an element named the file does not hold
- * is refused with `TEMPLATE_ROOT_NOT_FOUND`.
+ * @intent read the scope of an SSD template without refusing, which unit of an SSD template file is instantiated
  */
-export async function resolveSsdScope(
+export async function readSsdScope(
 	query: Core.Query<Config>,
 	params: ResolveSsdScopeParams,
-): Promise<SsdScope | undefined> {
+): Promise<SsdScopeRead> {
 	const { ref } = params
 	const starts = ref ? await namedElements(query, { refs: [ref] }) : await substations(query)
-	if (starts.length === 0 && ref) refuseAbsent({ ref })
-	if (starts.length === 0) return undefined
+	if (starts.length === 0 && ref) return { kind: 'absent', ref }
+	if (starts.length === 0) return { kind: 'none' }
 
 	const [named] = starts
-	if (ref && named.name !== TEMPLATE_NAME) return scopeOfNamedUnit(query, { unit: named })
+	if (ref && named.name !== TEMPLATE_NAME) {
+		return { kind: 'scope', scope: await scopeOfNamedUnit(query, { unit: named }) }
+	}
 
 	let level = starts
 	let scaffolding: SsdScopeUnit | undefined
 	while (true) {
 		const units = level.filter((element) => element.name !== TEMPLATE_NAME)
-		if (units.length === 1) return unitScope(units[0])
+		if (units.length === 1) return { kind: 'scope', scope: unitScope(units[0]) }
 		if (units.length > 1) {
 			// with no scaffolding above them (several named substations) units cannot be placed together
-			if (!scaffolding) refuseAmbiguous({ groups: units.map((unit) => [unit]) })
+			if (!scaffolding) return ambiguous({ groups: units.map((unit) => [unit]) })
 			const groups = await groupLinkedUnits(query, { units })
-			if (groups.length > 1) refuseAmbiguous({ groups })
-			return groupScope(query, { scaffolding, group: groups[0] })
+			if (groups.length > 1) return ambiguous({ groups })
+			return { kind: 'scope', scope: await groupScope(query, { scaffolding, group: groups[0] }) }
 		}
 
 		// a level holds at most one TEMPLATE element: the scaffolding goes on below it
 		const [template] = level
 		const children = await childLevels(query, { parent: template })
-		if (children.length === 0) return unitScope(template)
+		if (children.length === 0) return { kind: 'scope', scope: unitScope(template) }
 		scaffolding = template
 		level = children
 	}
@@ -156,9 +178,9 @@ async function parentLevel(
 	return level
 }
 
-/** The file's substations, each with its name. */
+/** The file's substations, in document order, each with its name. */
 async function substations(query: Core.Query<Config>): Promise<SsdScopeUnit[]> {
-	const records = await query.getRecordsByTagName('Substation')
+	const records = await query.getChildren({ tagName: ROOT_ELEMENT }, 'Substation')
 	const refs = records.map((record) => ({ tagName: 'Substation', id: record.id }) as const)
 	return namedElements(query, { refs })
 }
@@ -195,11 +217,16 @@ function toScope(element: SsdScopeUnit): Scl.Ref<TopologyStructuralTag> {
 	return { tagName: element.tagName, id: element.id }
 }
 
-function refuseAmbiguous(params: { groups: readonly SsdScopeUnit[][] }): never {
+function ambiguous(params: { groups: readonly SsdScopeUnit[][] }): SsdScopeRead {
 	const candidates: SsdScopeCandidate[] = params.groups.map(([unit, ...linked]) => ({
 		...unit,
 		linked,
 	}))
+	return { kind: 'ambiguous', candidates }
+}
+
+function refuseAmbiguous(params: { candidates: readonly SsdScopeCandidate[] }): never {
+	const { candidates } = params
 	return throwDialecteError(SCL_ERRORS.SSD_SCOPE_AMBIGUOUS, {
 		meta: { candidates },
 		detail: `the template holds ${candidates.length} elements to instantiate at its first named level (${candidates

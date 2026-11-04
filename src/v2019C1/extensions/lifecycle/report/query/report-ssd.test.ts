@@ -3,6 +3,7 @@ import { reportSsd } from './report-ssd'
 import { describe, expect } from 'vitest'
 
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { ssd as instantiateSsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
@@ -122,6 +123,7 @@ describe('reportSsd (topology scope = applications + standalone functions)', () 
 
 		const report = await reportSsd(target.query, {
 			sourceQuery: source.query,
+			diffPolicy: readDiffPolicy({}),
 			scopeRef,
 			targetParent: bayRef,
 		})

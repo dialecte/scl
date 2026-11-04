@@ -22,7 +22,7 @@ import {
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
-import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type { ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PinnedMatches } from '@/v2019C1/extensions/lifecycle/engine/match-child.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
@@ -68,8 +68,8 @@ export async function reportTopologyFrame(
 		decisionMappings?: DecisionMappings
 		/** What tells an element the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
-		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
-		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** What the consumer's resolution tells the diff, read once: see `DiffPolicy`. */
+		diffPolicy: DiffPolicy
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
@@ -106,7 +106,7 @@ export async function reportTopologyFrame(
 			instanceRootRef: mappedOnto,
 			matchKey,
 			removalBase: params.removalBase,
-			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			diffPolicy: params.diffPolicy,
 			placeholderLineages: params.placeholderLineages,
 			namesFollow: params.namesFollow,
 			omit: FRAME_OMIT_CHILD_TAGS,
@@ -168,7 +168,7 @@ export async function reportTopologyFrame(
 			instanceRootRef: instance,
 			matchKey,
 			removalBase: params.removalBase,
-			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			diffPolicy: params.diffPolicy,
 			placeholderLineages: params.placeholderLineages,
 			namesFollow: params.namesFollow,
 			omit: FRAME_OMIT_CHILD_TAGS,

@@ -8,6 +8,36 @@ Instantiate template content into a target document — the inverse direction of
 
 Each operation takes `scenario` (`LifecycleScenario`, default `'instantiate'`), the identity it places with: `'instantiate'` (and `'template'`) places a **new instance** — a fresh `uuid` on every element, the template's as its `templateUuid`, the provenance of the file it came from, and a name collision numbered; `'fork'` places the **file's own elements** — their `uuid`s kept, no lineage stamped, no `FunctionSclRef` / `ApplicationSclRef` of their own; a name a sibling of the project already holds is numbered there too. An SSD placement records the file in the project's `Header` in every scenario. The update verbs place with their own scenario when the project holds no instance yet (see [Update](./update#scenario-—-instantiate-vs-template-vs-fork)).
 
+## The root of a template file
+
+`doc.query.lifecycle.sourceRoot.fsd()` / `.asd()` / `.ssd()` read, from the template file, the element a verb takes as its `ref`. They only read, and they never throw on the shape of a file: the answer is data, so a pre-flight can show it before any report is asked for.
+
+```ts
+const root = await templateFile.query.lifecycle.sourceRoot.fsd()
+if (root.kind === 'found') {
+	await project.transaction(async (tx) => {
+		await tx.lifecycle.instantiate.fsd({
+			sourceQuery: templateFile.query,
+			functionRef: root.ref,
+			targetParent: { tagName: 'Bay', id: 'bay-1' },
+		})
+	})
+}
+```
+
+| `kind`        | Meaning                                                                                                                                      |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `found`       | The one root: `ref` is the ref the verb takes.                                                                                               |
+| `several`     | The file holds several: `candidates`, in document order, each `{ ref, name, linked }`; the consumer picks one and passes its `ref`.          |
+| `none`        | The file holds no root.                                                                                                                      |
+| `unsupported` | `fsd` only: the file holds an equipment function (`EqFunction`) and no function; `ref` is the first in document order. Not instantiable yet. |
+
+What each verb finds:
+
+- **`fsd`** — a `Function` at a level of the `TEMPLATE` scaffolding, or a `FunctionTemplate` in the `Private` of the document root. A subfunction is not a root. A file holding a function template and a function, or two functions, holds several. A `Function` plus an `EqFunction` resolves to the `Function`: the placeable roots are judged first, and an equipment function counts only when the file holds none.
+- **`asd`** — an `Application`. A function alone is not an application: `none`.
+- **`ssd`** — the first named level below the `TEMPLATE` scaffolding, as the SSD verbs resolve it: units joined by a reference (a terminal of one on a connectivity node of the other, an input fed by the other) are one element, found as the scaffolding holding them; a scaffolding with nothing named below it is found at its deepest `TEMPLATE` level; several unlinked units are `several`, each candidate listing the units linked to it in `linked` (`{ ref, name }`). `linked` is empty for `fsd` and `asd`.
+
 ## fsd
 
 Access via `tx.lifecycle.instantiate` inside a `doc.transaction()` callback.

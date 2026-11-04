@@ -18,8 +18,8 @@ import { holdsPairingByName } from '@/v2019C1/extensions/lifecycle/report/report
 import type { SatelliteFoldTarget } from './cross-cutting-satellites.types'
 import type { SatelliteDiffParams } from './satellite-companions.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
+import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type {
 	DiffNode,
 	InstanceDiff,
@@ -94,8 +94,8 @@ export async function foldSatelliteCompanions(
 		pass?: ReportPass
 		/** What tells a satellite the source dropped from one the project added: see `classifyUnmatched`. */
 		removalBase: RemovalBase
-		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
-		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** What the consumer's resolution tells the diff, read once: see `DiffPolicy`. */
+		diffPolicy: DiffPolicy
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
@@ -254,7 +254,7 @@ async function diffSatellite(
 		foreignInstanceIds,
 		matchKey,
 		removalBase: params.removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		notSelected: leftOut,
@@ -330,7 +330,11 @@ async function buildLeftoverRefPolicy(
 	// Template targets the SOURCE satellite still references (its own ref children's target uuids).
 	const sourceTree = await sourceQuery.any.getTree(satelliteRef)
 	const sourceReferencedUuids = new Set<string>()
-	if (sourceTree) await collectReferencedUuids(sourceQuery, sourceTree, sourceReferencedUuids)
+	if (sourceTree)
+		await collectReferencedUuids(sourceQuery, {
+			node: sourceTree,
+			out: sourceReferencedUuids,
+		})
 
 	return async (instanceChild) => {
 		const pairs = UUID_REFERENCE_PAIRS[instanceChild.tagName as keyof typeof UUID_REFERENCE_PAIRS]
@@ -338,12 +342,13 @@ async function buildLeftoverRefPolicy(
 		for (const pair of pairs) {
 			const uuidValue = await query.any.getAttribute(instanceChild, { name: pair.attribute.uuid })
 			if (!uuidValue) continue
-			const target = await findByUuid(query, uuidValue, pair.target)
+			const target = await findByUuid(query, { uuid: uuidValue, targetTags: pair.target })
 			if (!target) continue
 			const targetLineage = await query.any.getAttribute(target, { name: matchKey })
 			if (!targetLineage) continue
 			// in-scope: the target's lineage is an element of the SOURCE being updated
-			if (!(await findByUuid(sourceQuery, targetLineage, pair.target))) continue
+			if (!(await findByUuid(sourceQuery, { uuid: targetLineage, targetTags: pair.target })))
+				continue
 			// still referenced by the SOURCE satellite -> multi-instance sibling -> keep
 			if (sourceReferencedUuids.has(targetLineage)) continue
 			return 'removed'
@@ -355,9 +360,9 @@ async function buildLeftoverRefPolicy(
 /** Collect the target uuids referenced by every reference child in a satellite subtree. */
 async function collectReferencedUuids(
 	query: Core.Query<Config>,
-	node: AnyTreeRecord,
-	out: Set<string>,
+	params: { node: AnyTreeRecord; out: Set<string> },
 ): Promise<void> {
+	const { node, out } = params
 	const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS]
 	if (pairs) {
 		for (const pair of pairs) {
@@ -365,14 +370,14 @@ async function collectReferencedUuids(
 			if (uuidValue) out.add(uuidValue)
 		}
 	}
-	for (const child of node.tree) await collectReferencedUuids(query, child, out)
+	for (const child of node.tree) await collectReferencedUuids(query, { node: child, out })
 }
 
 async function findByUuid(
 	query: Core.Query<Config>,
-	uuid: string,
-	targetTags: readonly string[],
+	params: { uuid: string; targetTags: readonly string[] },
 ): Promise<AnyTreeRecord | undefined> {
+	const { uuid, targetTags } = params
 	for (const tagName of targetTags) {
 		const [match] = await query.any.findByAttributes({
 			tagName: tagName as Parameters<typeof query.any.findByAttributes>[0]['tagName'],

@@ -2,6 +2,11 @@ export { applyTypeIdRemap } from './apply-type-id-remap'
 export { applyUuidRemap } from './apply-uuid-remap'
 export { removeOwnProvenance } from './remove-own-provenance'
 export { writeProvenance } from './write-provenance'
-export type { ProvenanceTarget, SclFileType, WriteProvenanceParams } from './write-provenance.types'
+export type {
+	ProvenanceTarget,
+	SclFileType,
+	WriteProvenanceParams,
+	WriteProvenanceResult,
+} from './write-provenance.types'
 export { setMappedData } from './set-mapped-data'
 export type { SetMappedDataParams, SetMappedDataResult } from './set-mapped-data.types'

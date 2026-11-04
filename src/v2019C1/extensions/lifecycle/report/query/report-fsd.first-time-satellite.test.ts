@@ -3,6 +3,7 @@ import { reportFsd } from './report-fsd'
 import { describe, expect } from 'vitest'
 
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
@@ -72,6 +73,7 @@ describe('reportFsd — first-time instantiate carries the FunctionCategory sate
 
 		const report = await reportFsd(target.query, {
 			sourceQuery: source.query,
+			diffPolicy: readDiffPolicy({}),
 			functionRef,
 			targetParent: bayRef,
 			scenario: 'instantiate',

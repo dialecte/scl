@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { asd as instantiateAsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
+import { reference } from '@/v2019C1/extensions/reference'
 import {
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
@@ -226,9 +227,9 @@ describe('update.asd — returns the applied instance roots', () => {
 		})
 
 		expect(result?.applications).toHaveLength(1)
-		expect(result?.applications[0]?.tagName).toBe('Application')
+		expect(result?.applications[0]?.ref.tagName).toBe('Application')
 		expect(result?.functions).toHaveLength(1)
-		expect(result?.functions[0]?.tagName).toBe('Function')
+		expect(result?.functions[0]?.ref.tagName).toBe('Function')
 	})
 
 	it('gate: a matched instance whose groups are all skipped is not returned in applications', async () => {
@@ -261,7 +262,9 @@ describe('update.asd — returns the applied instance roots', () => {
 			ref: applicationRef,
 			anchor: bayRef,
 		})
-		const decisions = new Map(allGroups(rep).map((g) => [g.id, 'skip'] as const)) as DecisionMap
+		const decisions = new Map(
+			allGroups(rep).map((group) => [group.id, 'skip'] as const),
+		) as DecisionMap
 
 		let result: Awaited<ReturnType<typeof updateAsd>> | undefined
 		await target.document.transaction(async (tx) => {
@@ -276,5 +279,34 @@ describe('update.asd — returns the applied instance roots', () => {
 
 		// the instance was fully skipped -> nothing was written -> not an applied root
 		expect(result?.applications).toHaveLength(0)
+	})
+
+	it('called without decisions from the revision it already names: the matched application and function are returned as reconciled, the file references as they were', async () => {
+		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
+		if (!target) throw new Error('target required')
+
+		await target.document.transaction(async (tx) => {
+			await instantiateAsd(tx, {
+				sourceQuery: source.document.query,
+				applicationRef,
+				targetParent: bayRef,
+			})
+		})
+		const provenanceBefore = await reference.query.getProvenance(target.document.query)
+
+		let result: Awaited<ReturnType<typeof updateAsd>> | undefined
+		await target.document.transaction(async (tx) => {
+			result = await updateAsd(tx, {
+				sourceQuery: source.document.query,
+				applicationRef,
+				targetParent: bayRef,
+			})
+		})
+		const provenanceAfter = await reference.query.getProvenance(target.document.query)
+
+		expect(result?.applications.map((instance) => instance.placement)).toEqual(['reconciled'])
+		expect(result?.functions.map((instance) => instance.placement)).toEqual(['reconciled'])
+		expect(provenanceBefore.length).toBeGreaterThan(0)
+		expect(provenanceAfter).toEqual(provenanceBefore)
 	})
 })

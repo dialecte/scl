@@ -1,7 +1,7 @@
 import type { PlacementListing } from './placement-listing.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
-import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type { ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -18,7 +18,7 @@ export type FoldFrameSatellitesParams = {
 	anchor: Scl.Ref<Scl.ElementsOf>
 	matchKey: MatchKey
 	removalBase: RemovalBase
-	boundLogicalNodeTypes?: BoundLogicalNodeTypes
+	diffPolicy: DiffPolicy
 	placeholderLineages?: PlaceholderLineages
 	namesFollow: NamesFollow
 	/** The units of the scaffolding the scope leaves out (record ids). */

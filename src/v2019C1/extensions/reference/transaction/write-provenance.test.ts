@@ -9,7 +9,7 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test/hydrated-test'
 
-import type { SclFileType } from './write-provenance.types'
+import type { ProvenanceTarget, SclFileType } from './write-provenance.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
@@ -17,6 +17,8 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	target:
 		| { anchor: 'function' | 'application'; rootTag: Scl.ElementsOf; rootId: string }
 		| { anchor: 'document'; fileType: SclFileType }
+	/** The `changed` flag the writer returns: whether it altered what the document records. */
+	expectedChanged: boolean
 }
 
 describe('writeProvenance', () => {
@@ -38,6 +40,7 @@ describe('writeProvenance', () => {
 				</SCL>
 			`,
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+			expectedChanged: true,
 			expectedQueries: [
 				'//default:Function[@name="Prot"]//v2019C1:FunctionSclRef/v2019C1:SclFileReference[@fileType="FSD"][@fileUuid="doc-uuid"][@version="2"][@revision="B"]',
 			],
@@ -60,6 +63,7 @@ describe('writeProvenance', () => {
 				</SCL>
 			`,
 			target: { anchor: 'application', rootTag: 'Application', rootId: 'app-1' },
+			expectedChanged: true,
 			expectedQueries: [
 				'//v2019C1:Application[@name="HMI"]//v2019C1:ApplicationSclRef/v2019C1:SclFileReference[@fileType="ASD"][@fileUuid="doc-uuid"][@version="3"][@revision="C"]',
 			],
@@ -74,6 +78,7 @@ describe('writeProvenance', () => {
 				</SCL>
 			`,
 			target: { anchor: 'document', fileType: 'SSD' },
+			expectedChanged: true,
 			expectedQueries: [
 				'//default:Header/default:SourceFiles/default:SclFileReference[@fileType="SSD"][@fileUuid="ssd-uuid"][@version="0"][@revision="14"]',
 			],
@@ -94,6 +99,7 @@ describe('writeProvenance', () => {
 					</SCL>
 				`,
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+				expectedChanged: true,
 				expectedQueries: [
 					'//default:Function[@name="Prot"]//v2019C1:FunctionSclRef/v2019C1:SclFileReference[@fileType="FSD"][@version=""][@revision=""]',
 				],
@@ -120,6 +126,7 @@ describe('writeProvenance', () => {
 				</SCL>
 			`,
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+			expectedChanged: true,
 			expectedQueries: [
 				// the preserved composition ref is untouched
 				'//default:Function[@name="Prot"]//v2019C1:SclFileReference[@fileName="existing.fsd"][@version="9"][@revision="Z"]',
@@ -145,6 +152,7 @@ describe('writeProvenance', () => {
 					</SCL>
 				`,
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+				expectedChanged: true,
 				expectedQueries: [
 					'//default:Function[@name="Prot"]/default:Private[@type="eIEC61850-6-100"]/v2019C1:FunctionSclRef/v2019C1:SclFileReference[@fileUuid="doc-uuid"]',
 					'//default:Function[@name="Prot"]/default:Private[@type="ACME"][.="vendor data"]',
@@ -157,10 +165,12 @@ describe('writeProvenance', () => {
 
 		'a reference the function records of the same file is brought to the source version, in place':
 			{
-				sourceXml: functionRecording(
-					'fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="1" revision="A"',
-				),
+				sourceXml: functionRecording({
+					first:
+						'fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="1" revision="A"',
+				}),
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+				expectedChanged: true,
 				expectedQueries: [
 					'//default:Function[@name="Prot"]//v2019C1:SclFileReference[@fileUuid="doc-uuid"][@version="2"][@revision="B"]',
 				],
@@ -171,31 +181,36 @@ describe('writeProvenance', () => {
 			},
 		'a reference of the same file and revision but another version is brought to the source version':
 			{
-				sourceXml: functionRecording(
-					'fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="1" revision="B"',
-				),
+				sourceXml: functionRecording({
+					first:
+						'fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="1" revision="B"',
+				}),
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+				expectedChanged: true,
 				expectedQueries: [
 					'//v2019C1:SclFileReference[@fileUuid="doc-uuid"][@version="2"][@revision="B"]',
 				],
 				unexpectedQueries: ['//v2019C1:SclFileReference[@version="1"]'],
 			},
 		'a reference of the same file version under another file name is left as it is': {
-			sourceXml: functionRecording(
-				'fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="2" revision="B"',
-			),
+			sourceXml: functionRecording({
+				first:
+					'fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="2" revision="B"',
+			}),
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+			expectedChanged: false,
 			expectedQueries: [
 				'//v2019C1:SclFileReference[@fileName="old-name.fsd"][@version="2"][@revision="B"]',
 			],
 			unexpectedQueries: ['(//v2019C1:FunctionSclRef)[2]'],
 		},
 		'two references of the same file: one is kept, brought to the source version': {
-			sourceXml: functionRecording(
-				'fileType="FSD" fileName="a.fsd" fileUuid="doc-uuid" version="1" revision="A"',
-				'fileType="FSD" fileName="b.fsd" fileUuid="doc-uuid" version="1" revision="C"',
-			),
+			sourceXml: functionRecording({
+				first: 'fileType="FSD" fileName="a.fsd" fileUuid="doc-uuid" version="1" revision="A"',
+				second: 'fileType="FSD" fileName="b.fsd" fileUuid="doc-uuid" version="1" revision="C"',
+			}),
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+			expectedChanged: true,
 			expectedQueries: [
 				'//v2019C1:SclFileReference[@fileUuid="doc-uuid"][@version="2"][@revision="B"]',
 			],
@@ -204,11 +219,28 @@ describe('writeProvenance', () => {
 				'//v2019C1:SclFileReference[@version="1"]',
 			],
 		},
+		'two references of the same file, the first already at the source version: the other is removed':
+			{
+				sourceXml: functionRecording({
+					first: 'fileType="FSD" fileName="a.fsd" fileUuid="doc-uuid" version="2" revision="B"',
+					second: 'fileType="FSD" fileName="b.fsd" fileUuid="doc-uuid" version="1" revision="C"',
+				}),
+				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+				expectedChanged: true,
+				expectedQueries: [
+					'//v2019C1:SclFileReference[@fileName="a.fsd"][@version="2"][@revision="B"]',
+				],
+				unexpectedQueries: [
+					'(//v2019C1:FunctionSclRef)[2]',
+					'//v2019C1:SclFileReference[@fileName="b.fsd"]',
+				],
+			},
 		'a reference of another file type of the same uuid is not the source file: one is added': {
-			sourceXml: functionRecording(
-				'fileType="ASD" fileName="other.asd" fileUuid="doc-uuid" version="1" revision="A"',
-			),
+			sourceXml: functionRecording({
+				first: 'fileType="ASD" fileName="other.asd" fileUuid="doc-uuid" version="1" revision="A"',
+			}),
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+			expectedChanged: true,
 			expectedQueries: [
 				'//v2019C1:SclFileReference[@fileType="ASD"][@version="1"][@revision="A"]',
 				'//v2019C1:SclFileReference[@fileType="FSD"][@version="2"][@revision="B"]',
@@ -216,12 +248,13 @@ describe('writeProvenance', () => {
 		},
 		'source without uuid: the reference of the same file name without uuid is brought to its version':
 			{
-				sourceXml: functionRecording(
-					'fileType="FSD" fileName="source" version="0" revision="1"',
-					'fileType="FSD" fileName="elsewhere" version="0" revision="1"',
-					{ header: false },
-				),
+				sourceXml: functionRecording({
+					first: 'fileType="FSD" fileName="source" version="0" revision="1"',
+					second: 'fileType="FSD" fileName="elsewhere" version="0" revision="1"',
+					header: false,
+				}),
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+				expectedChanged: true,
 				expectedQueries: [
 					'//v2019C1:SclFileReference[@fileName="source"][@version=""][@revision=""]',
 					'//v2019C1:SclFileReference[@fileName="elsewhere"][@version="0"][@revision="1"]',
@@ -229,12 +262,12 @@ describe('writeProvenance', () => {
 				unexpectedQueries: ['(//v2019C1:FunctionSclRef)[3]'],
 			},
 		'source without uuid: a reference naming a uuid is another file': {
-			sourceXml: functionRecording(
-				'fileType="FSD" fileName="source" fileUuid="other-uuid" version="0" revision="1"',
-				undefined,
-				{ header: false },
-			),
+			sourceXml: functionRecording({
+				first: 'fileType="FSD" fileName="source" fileUuid="other-uuid" version="0" revision="1"',
+				header: false,
+			}),
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+			expectedChanged: true,
 			expectedQueries: [
 				'//v2019C1:SclFileReference[@fileUuid="other-uuid"][@revision="1"]',
 				'//v2019C1:SclFileReference[not(@fileUuid)][@version=""]',
@@ -245,6 +278,7 @@ describe('writeProvenance', () => {
 				'fileType="SSD" fileName="x" fileUuid="ssd-uuid" version="0" revision="14"',
 			),
 			target: { anchor: 'document', fileType: 'SSD' },
+			expectedChanged: false,
 			expectedQueries: ['//default:SourceFiles/default:SclFileReference[@revision="14"]'],
 			unexpectedQueries: ['//default:SourceFiles/default:SclFileReference[2]'],
 		},
@@ -253,6 +287,7 @@ describe('writeProvenance', () => {
 				'fileType="SSD" fileName="x" fileUuid="ssd-uuid" version="0" revision="13"',
 			),
 			target: { anchor: 'document', fileType: 'SSD' },
+			expectedChanged: true,
 			expectedQueries: [
 				'//default:SourceFiles/default:SclFileReference[1][@revision="13"]',
 				'//default:SourceFiles/default:SclFileReference[2][@revision="14"]',
@@ -263,22 +298,23 @@ describe('writeProvenance', () => {
 				'fileType="SCD" fileName="x" fileUuid="ssd-uuid" version="0" revision="14"',
 			),
 			target: { anchor: 'document', fileType: 'SSD' },
+			expectedChanged: true,
 			expectedQueries: ['//default:SourceFiles/default:SclFileReference[2][@fileType="SSD"]'],
 		},
 	}
 
 	/** A function recording the files the attributes name, in a document whose Header is version 2 revision B. */
-	function functionRecording(
-		first: string,
-		second?: string,
-		options: { header: boolean } = { header: true },
-	): string {
-		const reference = (attributes: string, index: number) => /* xml */ `
-			<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-${index}">
-				<eIEC61850-6-100:SclFileReference ${attributes} ${ID}="fnscl-${index}"/>
-			</eIEC61850-6-100:FunctionSclRef>
-		`
-		const header = options.header
+	function functionRecording(params: { first: string; second?: string; header?: boolean }): string {
+		const { first, second, header: withHeader = true } = params
+		function reference(referenceParams: { attributes: string; index: number }): string {
+			const { attributes, index } = referenceParams
+			return /* xml */ `
+				<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-${index}">
+					<eIEC61850-6-100:SclFileReference ${attributes} ${ID}="fnscl-${index}"/>
+				</eIEC61850-6-100:FunctionSclRef>
+			`
+		}
+		const header = withHeader
 			? `<Header id="h" uuid="doc-uuid" version="2" revision="B" ${ID}="hdr-1"/>`
 			: ''
 		return /* xml */ `
@@ -289,8 +325,8 @@ describe('writeProvenance', () => {
 						<Bay name="B1" ${ID}="bay-1">
 							<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
 								<Private type="eIEC61850-6-100" ${ID}="priv-1">
-									${reference(first, 1)}
-									${second ? reference(second, 2) : ''}
+									${reference({ attributes: first, index: 1 })}
+									${second ? reference({ attributes: second, index: 2 }) : ''}
 								</Private>
 							</Function>
 						</Bay>
@@ -318,35 +354,29 @@ describe('writeProvenance', () => {
 		testCase,
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		await source.transaction(async (tx) => {
-			const t = testCase.target
-			if (t.anchor === 'document') {
-				await writeProvenance(tx, {
-					sourceQuery: source.query,
-					target: { anchor: 'document', fileType: t.fileType },
-				})
-				return
-			}
-			if (t.anchor === 'function') {
-				await writeProvenance(tx, {
-					sourceQuery: source.query,
-					target: {
-						anchor: 'function',
-						root: { tagName: t.rootTag, id: t.rootId } as unknown as Scl.Ref<'Function'>,
-					},
-				})
-				return
-			}
-			await writeProvenance(tx, {
+		const result = await source.transaction(async (tx) => {
+			return writeProvenance(tx, {
 				sourceQuery: source.query,
-				target: {
-					anchor: 'application',
-					root: { tagName: t.rootTag, id: t.rootId } as unknown as Scl.Ref<'Application'>,
-				},
+				target: provenanceTargetOf(testCase.target),
 			})
 		})
+		expect(result.changed, 'changed').toBe(testCase.expectedChanged)
 
 		return { assertOn: 'source' }
+	}
+
+	function provenanceTargetOf(target: TestCase['target']): ProvenanceTarget {
+		if (target.anchor === 'document') return { anchor: 'document', fileType: target.fileType }
+		if (target.anchor === 'function') {
+			return {
+				anchor: 'function',
+				root: { tagName: target.rootTag, id: target.rootId } as unknown as Scl.Ref<'Function'>,
+			}
+		}
+		return {
+			anchor: 'application',
+			root: { tagName: target.rootTag, id: target.rootId } as unknown as Scl.Ref<'Application'>,
+		}
 	}
 
 	runSclTestCases.withExport({ testCases, act })

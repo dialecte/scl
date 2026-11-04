@@ -1,3 +1,4 @@
+import type { FSD_PLACEABLE_ROOT_TAGS } from './contract.constants'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
@@ -34,11 +35,8 @@ export type UpdateMode = 'template' | 'fork'
  */
 export type LifecycleScenario = 'instantiate' | UpdateMode
 
-/**
- * The function an FSD carries: a `Function` placed at a level of the template, or a
- * `FunctionTemplate` — a function with no parent level, which is instantiated as a function too.
- */
-export type FsdFunctionRef = Scl.Ref<'Function'> | Scl.Ref<'FunctionTemplate'>
+/** The function an FSD carries: one of {@link FSD_PLACEABLE_ROOT_TAGS}. */
+export type FsdFunctionRef = Scl.Ref<(typeof FSD_PLACEABLE_ROOT_TAGS)[number]>
 
 /** A function of a source file the function layer reads: any of the forms a template gives it. */
 export type SourceFunctionRef = FsdFunctionRef | Scl.Ref<'SubFunction'>
@@ -144,6 +142,10 @@ export type SharedFunctions = 'clone' | 'merge'
  *    (default `'never'`); `report` and `apply` read it alike;
  *  - `sharedFunctions` — whether a first placement of an application merges a function it composes into one another
  *    application placed there (default `'clone'`); `report` and `apply` read it alike;
+ *  - `consumerManagedTags` — the element tags the consumer creates on instances and maintains itself (default none).
+ *    Read by `report`: an instance element of such a tag known not to be the template's is not listed as the
+ *    project's own (`target-only`) — one that may be the template's own, dropped (it carries the template's lineage, or
+ *    a uuid in a fork given no previous revision), still is; `apply` writes what the report lists;
  *  - `afterApply` — the consumer's own step, run by `apply` once it wrote (see {@link AfterApplyHook}).
  */
 export type Resolution = {
@@ -153,6 +155,7 @@ export type Resolution = {
 	boundLogicalNodeTypes?: BoundLogicalNodeTypes
 	referencesByName?: ReferencesByName
 	sharedFunctions?: SharedFunctions
+	consumerManagedTags?: readonly Scl.ElementsOf[]
 	afterApply?: AfterApplyHook
 }
 

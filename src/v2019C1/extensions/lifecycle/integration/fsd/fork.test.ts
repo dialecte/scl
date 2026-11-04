@@ -39,6 +39,8 @@ type ForkTestCase = SclTest.BaseXmlTestCase & {
 	targetInstance?: Scl.Ref<Scl.ElementsOf>
 	/** The record ids of the project elements the report matched, one per instance (none: a first placement). */
 	expectedInstances: (string | undefined)[]
+	/** The record ids of the instances the apply wrote, when it writes none of a listed instance (default: the listed ones). */
+	expectedApplied?: string[]
 	/** The groups of the report, `<change> <tag>`, sorted. */
 	expectedGroups: string[]
 	/** The attribute changes the report lists, `<name>: <before> -> <after>`, when the case says. */
@@ -112,15 +114,22 @@ function projectWithEmptyBay(elsewhere = ''): string {
 	`
 }
 
-const droppedLNode = (side: string) =>
-	/* xml */ `<LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="CSWI_Type" uuid="dropped-lnode-uuid" ${id}="${side}-dropped-lnode"/>`
+function droppedLNode(side: string) {
+	return /* xml */ `<LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="CSWI_Type" uuid="dropped-lnode-uuid" ${id}="${side}-dropped-lnode"/>`
+}
 const userLNode = /* xml */ `<LNode iedName="None" lnClass="GGIO" lnInst="9" lnType="CSWI_Type" uuid="user-lnode-uuid" ${id}="project-user-lnode"/>`
 
 /** Two subfunctions of the function, named in this order. */
-const swappedPair = (side: string, [first, second]: [string, string]) => /* xml */ `
-	<SubFunction name="${first}" uuid="first-subfunction-uuid" ${id}="${side}-first-subfunction"/>
-	<SubFunction name="${second}" uuid="second-subfunction-uuid" ${id}="${side}-second-subfunction"/>
-`
+function swappedPair(params: { side: string; names: [string, string] }) {
+	const {
+		side,
+		names: [first, second],
+	} = params
+	return /* xml */ `
+		<SubFunction name="${first}" uuid="first-subfunction-uuid" ${id}="${side}-first-subfunction"/>
+		<SubFunction name="${second}" uuid="second-subfunction-uuid" ${id}="${side}-second-subfunction"/>
+	`
+}
 
 const gainedSubFunction = /* xml */ `
 	<SubFunction name="Sub" uuid="subfunction-uuid" ${id}="source-subfunction">
@@ -128,27 +137,33 @@ const gainedSubFunction = /* xml */ `
 	</SubFunction>
 `
 
-const category = (side: string, desc: string) => /* xml */ `
-	<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" desc="${desc}" uuid="category-uuid" ${id}="${side}-category">
-		<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="function-uuid" ${id}="${side}-category-ref"/>
-	</eIEC61850-6-100:FunctionCategory>
-`
+function category(side: string, desc: string) {
+	return /* xml */ `
+		<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" desc="${desc}" uuid="category-uuid" ${id}="${side}-category">
+			<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="function-uuid" ${id}="${side}-category-ref"/>
+		</eIEC61850-6-100:FunctionCategory>
+	`
+}
 
-const variable = (side: string, desc: string) => /* xml */ `
-	<eIEC61850-6-100:Variable name="Prefix" value="DVNAME" desc="${desc}" uuid="variable-uuid" ${id}="${side}-variable">
-		<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/Prot/CSWI1" elementUuid="lnode-uuid" ${id}="${side}-variable-apply"/>
-	</eIEC61850-6-100:Variable>
-`
+function variable(side: string, desc: string) {
+	return /* xml */ `
+		<eIEC61850-6-100:Variable name="Prefix" value="DVNAME" desc="${desc}" uuid="variable-uuid" ${id}="${side}-variable">
+			<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/Prot/CSWI1" elementUuid="lnode-uuid" ${id}="${side}-variable-apply"/>
+		</eIEC61850-6-100:Variable>
+	`
+}
 
 /** What an instance configures: a variable's value and a behaviour description's file, of one revision. */
-const configured = (side: string, revision: string) => /* xml */ `
-	<eIEC61850-6-100:Variable name="Prefix" value="value-${revision}" uuid="variable-uuid" ${id}="${side}-variable">
-		<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/Prot/CSWI1" elementUuid="lnode-uuid" ${id}="${side}-variable-apply"/>
-	</eIEC61850-6-100:Variable>
-	<eIEC61850-6-100:BehaviorDescription name="Logic" fileReference="logic-${revision}.xml" uuid="behavior-uuid" ${id}="${side}-behavior">
-		<eIEC61850-6-100:InputVar dataName="TEMPLATE/Prot/CSWI1" lnodeUuid="lnode-uuid" doName="Pos" ${id}="${side}-behavior-input"/>
-	</eIEC61850-6-100:BehaviorDescription>
-`
+function configured(side: string, revision: string) {
+	return /* xml */ `
+		<eIEC61850-6-100:Variable name="Prefix" value="value-${revision}" uuid="variable-uuid" ${id}="${side}-variable">
+			<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/Prot/CSWI1" elementUuid="lnode-uuid" ${id}="${side}-variable-apply"/>
+		</eIEC61850-6-100:Variable>
+		<eIEC61850-6-100:BehaviorDescription name="Logic" fileReference="logic-${revision}.xml" uuid="behavior-uuid" ${id}="${side}-behavior">
+			<eIEC61850-6-100:InputVar dataName="TEMPLATE/Prot/CSWI1" lnodeUuid="lnode-uuid" doName="Pos" ${id}="${side}-behavior-input"/>
+		</eIEC61850-6-100:BehaviorDescription>
+	`
+}
 
 describe('fsd fork: the newer revision of the same file, its uuids kept', () => {
 	const testCases: SclTest.TestCases<ForkTestCase> = {
@@ -187,6 +202,7 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 			baseXml: fsdRevision({ side: 'base' }),
 			anchor: { tagName: 'Bay', id: 'project-bay' },
 			expectedInstances: ['project-function'],
+			expectedApplied: [],
 			expectedGroups: ['target-only LNode'],
 			expectedQueries: [
 				'//default:Function[@uuid="function-uuid"]/default:LNode[@uuid="user-lnode-uuid"]',
@@ -198,6 +214,7 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 				targetXml: fsdRevision({ side: 'project', inside: droppedLNode('project') }),
 				anchor: { tagName: 'Bay', id: 'project-bay' },
 				expectedInstances: ['project-function'],
+				expectedApplied: [],
 				expectedGroups: ['target-only LNode'],
 				expectedQueries: [
 					'//default:Function[@uuid="function-uuid"]/default:LNode[@uuid="dropped-lnode-uuid"]',
@@ -443,11 +460,11 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 		'two subfunctions the newer revision swapped names of trade them, numbered by none': {
 			sourceXml: fsdRevision({
 				side: 'source',
-				inside: swappedPair('source', ['Second', 'First']),
+				inside: swappedPair({ side: 'source', names: ['Second', 'First'] }),
 			}),
 			targetXml: fsdRevision({
 				side: 'project',
-				inside: swappedPair('project', ['First', 'Second']),
+				inside: swappedPair({ side: 'project', names: ['First', 'Second'] }),
 			}),
 			anchor: { tagName: 'Bay', id: 'project-bay' },
 			expectedInstances: ['project-function'],
@@ -537,11 +554,12 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 			testCase.expectedInstances,
 		)
 		// the apply wrote the elements the report matched
-		if (testCase.expectedInstances.every((instance) => instance !== undefined)) {
+		const expectedApplied = testCase.expectedApplied ?? testCase.expectedInstances
+		if (expectedApplied.every((instance) => instance !== undefined)) {
 			const { instances } = applied
-			expect(instances.verb === 'fsd' ? instances.functions.map((ref) => ref.id) : []).toEqual(
-				testCase.expectedInstances,
-			)
+			expect(
+				instances.verb === 'fsd' ? instances.functions.map((entry) => entry.ref.id) : [],
+			).toEqual(expectedApplied)
 		}
 		expect(listGroups(report)).toEqual(testCase.expectedGroups)
 		if (testCase.expectedAttributeChanges) {
@@ -568,11 +586,12 @@ describe('fsd fork: the newer revision of the same file, its uuids kept', () => 
 })
 
 describe('fsd fork: the previous revision it is given', () => {
-	const withHeader = (xml: string, fileUuid: string) =>
-		xml.replace(
+	function withHeader(xml: string, fileUuid: string) {
+		return xml.replace(
 			'<Substation name="TEMPLATE"',
 			`<Header id="function-file" uuid="${fileUuid}" version="1" revision="2"/><Substation name="TEMPLATE"`,
 		)
+	}
 
 	it('is refused when it is another file: both name their file, and the names differ', async () => {
 		const { project, source, target } = await createSclTestProject({
@@ -595,7 +614,8 @@ describe('fsd fork: the previous revision it is given', () => {
 			baseQuery: base.query,
 		})
 		await expect(refused).rejects.toThrow()
-		const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+		const caught = await refused.catch((error: unknown) => error)
+		const refusal = toDialecteError(caught)
 		expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
 			key: 'REVISION_BASE_OTHER_FILE',
 			meta: { fileUuid: 'function-file-uuid', baseFileUuid: 'other-file-uuid' },
@@ -647,7 +667,8 @@ describe('fsd fork: the previous revision it is given', () => {
 			})
 		})
 		await expect(refused).rejects.toThrow()
-		const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+		const caught = await refused.catch((error: unknown) => error)
+		const refusal = toDialecteError(caught)
 		expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
 			key: 'REVISION_BASE_WITHOUT_FORK',
 			meta: { scenario: 'template' },
@@ -693,7 +714,8 @@ describe('fsd fork: the previous revision it is given', () => {
 			await apply(tx, params)
 		})
 		await expect(refused).rejects.toThrow()
-		const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+		const caught = await refused.catch((error: unknown) => error)
+		const refusal = toDialecteError(caught)
 		expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
 			key: 'REVISION_BASE_WITHOUT_FORK',
 			meta: { scenario: 'template' },

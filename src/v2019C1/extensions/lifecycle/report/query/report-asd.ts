@@ -54,10 +54,10 @@ import type {
 	ReportSharedFunctionsParams,
 } from './report-shared-functions.types'
 import type { Scl, Config } from '@/v2019C1/config'
-import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SharedFunctions } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
+import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type {
 	DecisionGroup,
 	DiffReport,
@@ -120,8 +120,8 @@ export async function reportAsd(
 		removalBase?: RemovalBase
 		/** Whether a first placement stands on a function another application placed there: see `Resolution.sharedFunctions`. */
 		sharedFunctions?: SharedFunctions
-		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
-		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** What the consumer's resolution tells the diff, read once: see `DiffPolicy`. */
+		diffPolicy: DiffPolicy
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
 		/**
@@ -220,7 +220,7 @@ export async function reportAsd(
 			decisionMappings,
 			anchor,
 			removalBase,
-			boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+			diffPolicy: params.diffPolicy,
 			placeholderLineages: params.placeholderLineages,
 			namesFollow,
 			stoodOn: shared?.taken,
@@ -255,7 +255,7 @@ export async function reportAsd(
 				anchor,
 				foreignScope: foreignScopes.get(instance.id),
 				removalBase,
-				boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+				diffPolicy: params.diffPolicy,
 				placeholderLineages: params.placeholderLineages,
 				namesFollow,
 				selection,
@@ -283,7 +283,7 @@ export async function reportAsd(
 		decisionMappings,
 		anchor,
 		removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow,
 		selections,
@@ -354,8 +354,8 @@ async function reportApplicationInstance(
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
 		removalBase: RemovalBase
-		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
-		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** What the consumer's resolution tells the diff, read once: see `DiffPolicy`. */
+		diffPolicy: DiffPolicy
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
@@ -434,7 +434,7 @@ async function reportApplicationInstance(
 		matchKey: params.matchKey,
 		redirectMappings,
 		removalBase: params.removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		notSelected,
@@ -463,7 +463,7 @@ async function reportApplicationInstance(
 			: undefined,
 		resolveForeignScope,
 		removalBase: params.removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		notSelected: params.selection?.leftOut,
@@ -490,7 +490,7 @@ async function reportApplicationInstance(
 		matchKey: params.matchKey,
 		resolveForeignScope,
 		removalBase: params.removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		selection: params.selection,
@@ -596,8 +596,8 @@ async function reportComposedFunctions(
 		/** What the whole report already listed and named. */
 		pass?: ReportPass
 		removalBase: RemovalBase
-		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
-		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** What the consumer's resolution tells the diff, read once: see `DiffPolicy`. */
+		diffPolicy: DiffPolicy
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
@@ -627,13 +627,12 @@ async function reportComposedFunctions(
 		for (const functionRef of placed) {
 			if (listedFunctions?.has(functionRef.id)) continue
 			listedFunctions?.add(functionRef.id)
-			reportInstances.push(
-				await reportComposedFunction(query, {
-					...params,
-					functionRef,
-					instance: undefined,
-				}),
-			)
+			const reportInstance = await reportComposedFunction(query, {
+				...params,
+				functionRef,
+				instance: undefined,
+			})
+			reportInstances.push(reportInstance)
 		}
 		return { instances: reportInstances, choices: params.shared?.mappings ?? [], placements: [] }
 	}
@@ -652,7 +651,9 @@ async function reportComposedFunctions(
 		const functionRef = child.ref as Scl.Ref<'Function'>
 		for (const instance of applicationInstances) {
 			const choice = instanceChoices.get(instance.id)
-			if (choice) choices.push(await describeStandingChoice(query, { child, instance, choice }))
+			if (!choice) continue
+			const standingChoice = await describeStandingChoice(query, { child, instance, choice })
+			choices.push(standingChoice)
 		}
 		const reconciled = new Map<string, AnyTrackedRecord>()
 		// the selections of the instances of the application standing on each function of the project
@@ -691,15 +692,14 @@ async function reportComposedFunctions(
 			targetInstance: params.targetInstance,
 		})
 		for (const functionInstance of scoped) {
-			reportInstances.push(
-				await reportComposedFunction(query, {
-					...params,
-					functionRef,
-					instance: functionInstance,
-					// a function several instances compose leaves out only what none of them uses
-					selection: sharedSelection(standers.get(functionInstance.id) ?? []),
-				}),
-			)
+			const reportInstance = await reportComposedFunction(query, {
+				...params,
+				functionRef,
+				instance: functionInstance,
+				// a function several instances compose leaves out only what none of them uses
+				selection: sharedSelection(standers.get(functionInstance.id) ?? []),
+			})
+			reportInstances.push(reportInstance)
 		}
 	}
 	return { instances: reportInstances, choices, placements }
@@ -718,8 +718,8 @@ async function reportComposedFunction(
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		pass?: ReportPass
 		removalBase: RemovalBase
-		/** Whether a bound logical node takes the type the template gives it: see `Resolution.boundLogicalNodeTypes`. */
-		boundLogicalNodeTypes?: BoundLogicalNodeTypes
+		/** What the consumer's resolution tells the diff, read once: see `DiffPolicy`. */
+		diffPolicy: DiffPolicy
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 		placeholderLineages?: PlaceholderLineages
 		/** Whose names an update follows: see `visibleAttributes`. */
@@ -741,7 +741,7 @@ async function reportComposedFunction(
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
 		removalBase: params.removalBase,
-		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
+		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 		namesFollow: params.namesFollow,
 		selection: params.selection,
