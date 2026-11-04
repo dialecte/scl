@@ -4,7 +4,7 @@ title: Instantiate
 
 # Instantiate
 
-Instantiate template content into a target document — the inverse direction of the [extract](./extract) operation. Each operation clones a template subtree together with its type closure and stamps instance lineage.
+Instantiate template content into a target document — the inverse direction of the [extract](./extract) operation. Each operation clones a template subtree together with its type closure and stamps instance lineage. The types written are the closure of the logical nodes placed: a logical node the operation does not place brings no type. The mechanism is [`transplant.deep`](./transplant), which imports the closure of the logical nodes it cloned.
 
 Each operation takes `scenario` (`LifecycleScenario`, default `'instantiate'`), the identity it places with: `'instantiate'` (and `'template'`) places a **new instance** — a fresh `uuid` on every element, the template's as its `templateUuid`, the provenance of the file it came from, and a name collision numbered; `'fork'` places the **file's own elements** — their `uuid`s kept, no lineage stamped, no `FunctionSclRef` / `ApplicationSclRef` of their own; a name a sibling of the project already holds is numbered there too. An SSD placement records the file in the project's `Header` in every scenario. The update verbs place with their own scenario when the project holds no instance yet (see [Update](./update#scenario-—-instantiate-vs-template-vs-fork)).
 
@@ -30,7 +30,7 @@ await project.transaction(async (tx) => {
 })
 ```
 
-The clone's uuid references are repointed by [`reference.applyUuidRemap`](./reference#applyuuidremap) over the recipe's combined clone mappings — deep clone itself is purely structural. The function records the FSD it was placed from: the engine writes its `FunctionSclRef` → `SclFileReference` (the FSD's `Header` `uuid`, `version`, `revision`, and the file name), unless the function is placed as part of a larger template or by a fork. SET-specific policy — naming conventions, application assignment — is applied by consumer-registered hooks, not by the operation.
+The clone's uuid references are repointed by [`reference.applyUuidRemap`](./reference#applyuuidremap) over the recipe's combined clone mappings — deep clone itself is purely structural. The function records the FSD it was placed from: the engine writes its `FunctionSclRef` → `SclFileReference` (the FSD's `Header` `uuid`, `version`, `revision`, and the file name), unless the function is placed as part of a larger template or by a fork. A consumer applies its own policy — naming conventions, application assignment — through the hooks it registers, not the operation.
 
 Returns `{ functionRef, cloneMappings }` — the instantiated root (retagged to `SubFunction` when placed under a `(Sub)Function`) and `cloneMappings`: each source record and the copy made of it, for everything the operation cloned (the function subtree and the categories, variables and behaviour descriptions carried with it), so a caller can act on the placed function without re-querying by `templateUuid`.
 
@@ -70,7 +70,7 @@ await project.transaction(async (tx) => {
 })
 ```
 
-`asd` is the exact application-layer counterpart of [`extract.asd`](./extract#asd): both compose the same `layers/application` take-over, differing only in direction (extract breaks the root's link, instantiate stamps). The engine writes the `ApplicationSclRef` naming the ASD on the placed `Application` (the functions it composes keep the `FunctionSclRef` of the FSD each was placed from); SET policy (assign-to-application) is applied by consumer hooks.
+`asd` is the exact application-layer counterpart of [`extract.asd`](./extract#asd): both compose the same `layers/application` take-over, differing only in direction (extract breaks the root's link, instantiate stamps). The engine writes the `ApplicationSclRef` naming the ASD on the placed `Application` (the functions it composes keep the `FunctionSclRef` of the FSD each was placed from); a consumer applies its own policy (application assignment) through the hooks it registers.
 
 Returns `{ applicationRef, composedFunctionRefs, cloneMappings }` — the instantiated `Application`, its composed root Functions, and `cloneMappings`: each source record and the copy made of it, for everything the operation cloned (a shared element mapped onto a project element is not cloned, so it has no entry).
 

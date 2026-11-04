@@ -1,5 +1,5 @@
 ---
-description: Clean-up extension for @dialecte/scl v2019C1 -- post-mutation integrity helpers for orphan refs, LNode bindings, and empty containers.
+description: Clean-up extension for @dialecte/scl v2019C1 -- post-mutation integrity helpers for orphan refs, LNode bindings, empty containers, and unused data types.
 ---
 
 # Clean-up
@@ -13,12 +13,14 @@ Post-mutation integrity helpers accessible via `tx.cleanUp`. Also called interna
 | `orphanUuidRefs`       | Clear or delete UUID reference attributes pointing to missing targets                                   |
 | `resetLNode`           | Release the LNodes, data and signals that name a logical node or an ExtRef / ExtCtrl the document lacks |
 | `pruneEmptyContainers` | Delete the containers left holding nothing that have no reason to stay then                             |
+| `pruneUnusedTypes`     | Delete the data types nothing in the document names, with the types only they name                      |
 
 ```ts
 await doc.transaction(async (tx) => {
 	await tx.cleanUp.orphanUuidRefs()
 	await tx.cleanUp.resetLNode()
 	await tx.cleanUp.pruneEmptyContainers()
+	await tx.cleanUp.pruneUnusedTypes()
 })
 ```
 
@@ -38,6 +40,26 @@ pruneEmptyContainers(): Promise<void>
 It judges every container of the document, deleted through the transaction (the delete hooks clean what refers to it): the extract clean-up runs it on the file it writes, whose containers may have been empty already.
 
 What a transaction leaves holding nothing goes at its commit, whatever wrote — a delete, `tx.lifecycle.apply`, an extract: the parent of every element it deleted and every wrapper it created are judged by the same rule, once everything is written (a category whose reference the transaction swaps stays), and deleted with what refers to them, as a delete does. The delete hook removes the references naming what is deleted, and the references naming those in turn.
+
+The same commit removes the data types the transaction left unused (below), then judges the containers: a `DataTypeTemplates` left holding nothing goes in that commit.
+
+## `pruneUnusedTypes`
+
+An `LNodeType`, `DOType`, `DAType` or `EnumType` that nothing in the document names goes, then the types it alone named: the `DOType`s of its data objects, their `DAType`s, their `EnumType`s. A type is named by the `lnType` of an `LN`, `LN0` or `LNode` (bound to an IED or not), the `type` of a `DO` or `SDO`, the `type` of a `DA` or `BDA` whatever its `bType`. Every record inside a removed type goes with it, a `Private` and the content of a tool included. A cycle of types naming each other (two `DOType`s whose `SDO` name one another) stays.
+
+```ts
+pruneUnusedTypes(): Promise<void>
+```
+
+It judges every type of the document, deleted through the transaction (the delete hooks run): use it to tidy a document that holds types nothing names, a file as it was imported. An import keeps a file as written, and so does an extract: neither calls it.
+
+What a transaction leaves unused goes at its commit, with no call — a delete of the last element naming a type, a `lnType` or `type` changed to another value, `tx.lifecycle.apply`, any plain edit. Only a type that **lost a referrer in this transaction** is judged, on the document as the transaction leaves it:
+
+- a type nothing named before the transaction stays, and keeps what it names;
+- a type the transaction created stays, named or not;
+- a type whose last referrer is deleted and another created naming it in the same transaction stays, as does a name changed away and back.
+
+A replace in two transactions (delete the element naming a type, create another naming it later) therefore names a type that is gone: create the new element first, or in the same transaction. A type deleted by hand does not make the elements naming it dangle any less: they keep their `lnType` / `type`, and the types only it named go.
 
 ## `resetLNode`
 

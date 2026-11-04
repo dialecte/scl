@@ -1,0 +1,6 @@
+schema_version: '1.1'
+name: lnode-type-gone-after-delete
+expected_outcome: |
+  Says the removal is intended: the commit removes a type the transaction left with no element
+  naming it, with the types only it named; to name it again later, create the new LNode first or in
+  the same transaction as the delete, or bring the type back before naming it.

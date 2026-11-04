@@ -641,3 +641,106 @@ describe('importTypes', () => {
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+// the keep test of a prune reads the schema's key reference, which has no condition on `bType`
+describe('importTypes: a displaced type is kept while a data attribute of any bType names it', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		// the keep test of a prune reads the schema's key reference, which has no condition on `bType`: a DA naming the
+		// old enumeration with another `bType` still names it, so the old type is not displaced for good
+		'reclaim: a displaced type still named by a DA of another bType is kept, its fork stands under its hashed id':
+			{
+				sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">
+				<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="sub-1">
+					<VoltageLevel name="V1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="vl-1">
+						<Bay name="B1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="bay-1">
+							<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="SHARED" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnode-1"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-s">
+					<LNodeType id="SHARED" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-s">
+						<DO name="Pos" type="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-s"/>
+					</LNodeType>
+					<DOType id="DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-s">
+						<DA name="stVal" bType="Enum" type="E_KIND" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-s"/>
+					</DOType>
+					<EnumType id="E_KIND" ${CUSTOM_RECORD_ID_ATTRIBUTE}="et-s">
+						<EnumVal ord="1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ev-s">on</EnumVal>
+					</EnumType>
+				</DataTypeTemplates>
+			</SCL>`,
+				targetXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-t">
+				<IED name="T1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ied-t">
+					<AccessPoint name="AP1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ap-t">
+						<Server ${CUSTOM_RECORD_ID_ATTRIBUTE}="srv-t">
+							<LDevice inst="LD0" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ld-t">
+								<LN lnClass="CSWI" inst="1" lnType="SHARED" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ln-t"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-t">
+					<LNodeType id="SHARED" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-t">
+						<DO name="Pos" type="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-t"/>
+					</LNodeType>
+					<DOType id="DPC" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-t">
+						<DA name="stVal" bType="Enum" type="E_KIND" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-t"/>
+					</DOType>
+					<DOType id="OTHER" cdc="INS" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-o">
+						<DA name="stVal" bType="INT32" type="E_KIND" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-o"/>
+					</DOType>
+					<EnumType id="E_KIND" ${CUSTOM_RECORD_ID_ATTRIBUTE}="et-t">
+						<EnumVal ord="1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ev-t">off</EnumVal>
+					</EnumType>
+				</DataTypeTemplates>
+			</SCL>`,
+				sourceRef: { tagName: 'LNode', id: 'lnode-1' },
+				cloneTargets: [{ tagName: 'LN', id: 'ln-t' }],
+				// the LNodeType and the DOType are displaced and reclaim their ids; the enumeration stays where it is
+				expectedStats: { forked: 3, reclaimed: 2 },
+				expectedQueries: [
+					'//default:DataTypeTemplates/default:EnumType[@id="E_KIND"]/default:EnumVal[.="off"]',
+					'//default:DataTypeTemplates/default:EnumType[starts-with(@id, "PRJ_E_KIND_")]/default:EnumVal[.="on"]',
+					'//default:DataTypeTemplates/default:DOType[@id="DPC"]/default:DA[starts-with(@type, "PRJ_E_KIND_")]',
+					'//default:DataTypeTemplates/default:DOType[@id="OTHER"]/default:DA[@type="E_KIND"]',
+					'//default:LN[@lnType="SHARED"]',
+				],
+				unexpectedQueries: [
+					'//default:DataTypeTemplates/default:LNodeType[starts-with(@id, "PRJ_")]',
+					'//default:DataTypeTemplates/default:DOType[starts-with(@id, "PRJ_")]',
+				],
+			},
+	}
+
+	async function act({
+		testCase,
+		source,
+		target,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+
+		const lnodeRecord = await source.query.getRecord(testCase.sourceRef)
+		if (!lnodeRecord) throw new Error('LNode not found')
+
+		let stats: ImportTypesStats | undefined
+		await target.transaction(async (tx) => {
+			const result = await importTypes(tx, {
+				sourceQuery: source.query,
+				records: [lnodeRecord],
+				cloneMappings: testCase.cloneTargets?.map((cloneTarget) => ({
+					source: { ...cloneTarget, attributes: [] },
+					target: cloneTarget,
+				})),
+				forkPrefix: 'PRJ_',
+			})
+			stats = result.stats
+		})
+
+		if (testCase.expectedStats) expect(stats).toMatchObject(testCase.expectedStats)
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})

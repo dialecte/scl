@@ -1,3 +1,4 @@
+import { ENGINE_MANAGED_TAGS } from './diff.constants'
 import { groupChanges } from './group'
 import { markIdentityCollisions } from './identity-collisions'
 import { instanceTagOf } from './instance-tag'
@@ -32,6 +33,7 @@ import type {
 	DiffReport,
 	DiffSummary,
 	InstanceDiff,
+	LeftoverRefPolicy,
 	MultiInstanceSibling,
 	RenamedNode,
 	ReportInstance,
@@ -50,32 +52,6 @@ import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.ty
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
-
-/**
- * Instance-only metadata the lifecycle pipeline itself creates (naming + provenance) or
- * tool-generated structural grouping, NOT author content. These must never be classified
- * as `target-only` (they would then surface as spurious "keep/remove" decisions and could
- * be deleted). `FunctionRole`/`FunctionRoleContent` are SET's `assign-to-application`
- * grouping — created from scratch (no `templateUuid`) and re-derived
- * idempotently, so they are reconciled structurally, never offered for author-removal.
- * The transparent `Private` wrapper is unwrapped so genuine author children inside it
- * (e.g. a `DOS`) are still classified.
- */
-const ENGINE_MANAGED_TAGS = new Set<string>([
-	'LNodeSpecNaming',
-	'FunctionSclRef',
-	'ApplicationSclRef',
-	'SclFileReference',
-	'FunctionRole',
-	'FunctionRoleContent',
-])
-
-/**
- * Provenance decision for a kept-leftover reference child of a shared satellite: `'removed'` when it
- * is a GENUINE removal (its target is in the source's own scope and the source no longer references
- * it), `'keep'` otherwise (another primary's link / indeterminate). See {@link diff}.
- */
-export type LeftoverRefPolicy = (instanceChild: AnyTreeRecord) => Promise<'keep' | 'removed'>
 
 /**
  * Engine diff: compares an (updated) template subtree against the
@@ -720,7 +696,7 @@ export function allGroups(report: DiffReport): DecisionGroup[] {
 /** All element ids in a diff tree, by side (`instanceRef` for staged/existing, `sourceRef` for added). */
 export function collectTreeIds(root: DiffNode, side: 'instanceRef' | 'sourceRef'): string[] {
 	const ids: string[] = []
-	const visit = (node: DiffNode): void => {
+	function visit(node: DiffNode): void {
 		const id = node[side]?.id
 		if (id) ids.push(id)
 		for (const child of node.children) visit(child)
@@ -731,7 +707,7 @@ export function collectTreeIds(root: DiffNode, side: 'instanceRef' | 'sourceRef'
 
 function summarize(root: DiffNode): DiffSummary {
 	const summary: DiffSummary = { added: 0, removed: 0, modified: 0, kept: 0 }
-	const visit = (node: DiffNode): void => {
+	function visit(node: DiffNode): void {
 		if (node.change === 'added') summary.added++
 		else if (node.change === 'removed') summary.removed++
 		else if (node.change === 'modified') summary.modified++

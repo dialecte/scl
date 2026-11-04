@@ -120,7 +120,7 @@ const testCases: SclTest.TestCases<TestCase> = {
 	'adds Hitem under History → Hitem present in export': {
 		sourceXml: `
 			<SCL ${ALL_XMLNS_NAMESPACES}>
-				<Header id="my-id" toolID="SET" fileType="SCD" uuid="u1" version="1" revision="A"/>
+				<Header id="my-id" toolID="my-tool" fileType="SCD" uuid="u1" version="1" revision="A"/>
 			</SCL>
 		`,
 		params: { version: '2', revision: 'B', when: '2026-01-01', who: 'user', what: 'init', why: '' },

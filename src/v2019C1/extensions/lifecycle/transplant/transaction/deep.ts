@@ -11,7 +11,8 @@ import type * as Core from '@dialecte/core'
 
 /**
  * Import an element subtree into a target document together with its type closure (the data
- * types its LN / LNode use), returning the root it wrote into, the type id remap and the clone mappings.
+ * types the LN / LNode it cloned use: a logical node `omit` or `leaveOut` leaves out brings none), returning the root
+ * it wrote into, the type id remap and the clone mappings.
  * Uuid references are not followed: repoint them afterwards with `tx.reference.applyUuidRemap` over the
  * returned clone mappings.
  *
@@ -100,7 +101,10 @@ export async function deep(
 
 	let typeIdRemap = new Map<string, string>()
 	if (withTypes) {
-		const records = await collectLogicalNodes(sourceQuery, ref)
+		const cloned = new Set(cloneMappings.map((mapping) => mapping.source.id))
+		const records = (await collectLogicalNodes(sourceQuery, ref)).filter((record) =>
+			cloned.has(record.id),
+		)
 		if (records.length > 0) {
 			const keepNameTypesFrom = typeof withTypes === 'object' ? withTypes.keepNameFrom : undefined
 			const result = await importTypes(tx, {
@@ -144,7 +148,7 @@ async function resolveExistingPrivateMergeTarget(
 	return undefined
 }
 
-/** All `LNode`/`LN`/`LN0` records under (and including) the imported subtree. */
+/** All `LNode`/`LN`/`LN0` records under (and including) the source subtree: the ones the clone left out are among them. */
 async function collectLogicalNodes(
 	sourceQuery: Core.Query<Config>,
 	ref: Scl.Ref<Scl.ElementsOf>,

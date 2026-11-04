@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest'
 import { Scl, SCL_DIALECTE_CONFIG, SCL_NAMESPACES } from '@/v2019C1/config'
 import { INCOHERENT_REFERENCE_RELATED, SCL_IMPORT_DIAGNOSTICS } from '@/v2019C1/errors'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import { expectExportedQueries } from '@/v2019C1/test/expect-exported-queries'
 
 import type { IncoherentReferenceDiagnostic, SclImportDiagnostic } from '@/v2019C1'
 import type { Config } from '@/v2019C1/config'
@@ -1073,12 +1074,12 @@ describe('import diagnostics for a signal role path in another form', () => {
 		`
 	}
 
-	const testCases: Record<string, { sourceRef: string; expectedPath: string }> = {
+	/** `expectedPath` is the path the import writes; absent, the path is already the standard one and nothing is written. */
+	const testCases: Record<string, { sourceRef: string; expectedPath?: string }> = {
 		'the absolute path with the instance and data attribute, beside its uuid -> no diagnostic, written relative':
-			{ sourceRef: 'S1/F1/PDIS1.AmpSv(1).instMag.i', expectedPath: 'PDIS1/AmpSv' },
-		'the relative path joined with "." beside its uuid -> no diagnostic, written with "/"': {
+			{ sourceRef: 'S1/F1/PDIS1.AmpSv(1).instMag.i', expectedPath: 'PDIS1.AmpSv' },
+		'the relative path joined with "." beside its uuid -> no diagnostic, kept as written': {
 			sourceRef: 'PDIS1.AmpSv',
-			expectedPath: 'PDIS1/AmpSv',
 		},
 	}
 
@@ -1090,10 +1091,14 @@ describe('import diagnostics for a signal role path in another form', () => {
 				),
 			)
 			expect(outcome.diagnostics ?? []).toEqual([])
-			expect(outcome.updates?.find((update) => update.recordId === 'input-ref')).toEqual({
-				recordId: 'input-ref',
-				attributes: [{ name: 'sourceRef', value: testCase.expectedPath }],
-			})
+			expect(outcome.updates?.find((update) => update.recordId === 'input-ref')).toEqual(
+				testCase.expectedPath === undefined
+					? undefined
+					: {
+							recordId: 'input-ref',
+							attributes: [{ name: 'sourceRef', value: testCase.expectedPath }],
+						},
+			)
 		})
 	}
 })
@@ -1231,7 +1236,7 @@ describe('import outcome of a reference read in its scope or by another name', (
 				recordId: 'input-ref',
 				expectedAttributes: [
 					{ name: 'sourceRefUuid', value: 'free-amp-uuid' },
-					{ name: 'sourceRef', value: 'PDIS2/AmpSv' },
+					{ name: 'sourceRef', value: 'PDIS2.AmpSv' },
 				],
 				expectedDiagnostics: [],
 			},
@@ -1629,11 +1634,17 @@ describe('import of paths through an LNode bound to an IED', () => {
 					</Substation>
 				</SCL>
 			`,
-			expectedQueries: ['//v2019C1:LNodeInputRef[@sourceRef="PTRC1/Trip"]'],
+			expectedQueries: ['//v2019C1:LNodeInputRef[@sourceRef="PTRC1.Trip"]'],
 		},
 	}
 
-	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
+	runSclTestCases.withExport({
+		testCases,
+		act: async (params) => {
+			await expectExportedQueries({ act: params })
+			return { assertOn: 'source' }
+		},
+	})
 })
 
 describe('import of an IED reference named by a tuple', () => {

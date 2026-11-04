@@ -18,7 +18,7 @@ Raw data: `baseline.json`, `readability-audit.md`.
   `ParentsOf ⊆ ElementsOf`, `DescendantsOf<'SCL'> ∋ 'LNode'`, …).
 - **Hooks** — all hook signatures statically scanned (below); cost confirmed via the trace.
 - **Not audited:** core's `Store` internals and a handful of non-consumer exports — not the SCL
-  surface SET consumes. The kitchen-sink is a representative sample, used only for the consumer-delta
+  surface a consumer uses. The kitchen-sink is a representative sample, used only for the consumer-delta
   number — not for coverage.
 
 ## TL;DR verdict
@@ -30,7 +30,7 @@ Raw data: `baseline.json`, `readability-audit.md`.
 2. **There is exactly one material perf win, and it's non-breaking.** A single internal hook
    (`hooks/after-created/private-wrapper.ts:57`) accounts for **~1046ms — roughly half of scl's
    whole-program check time** — via a 143-way type comparison. It's library-internal, so fixing it
-   needs no API change and no SET migration.
+   needs no API change and no consumer migration.
 3. **The real problem is readability / developer experience, not compiler speed.** Every public
    method renders at **3,500–7,600 characters** (universal `import("…")` module-noise = cause C1), and
    editor hovers additionally explode the element union into ~200 members (C2/C4, as seen on
@@ -115,7 +115,7 @@ Highlights:
 - **All core Query/Transaction verbs render at 3,500–7,600 chars; every one flagged C1**
   (`import("…/extensions/…/index")` references baked into the bound-extension types). Heaviest:
   `findDescendants` (7,611), `getAttribute` (7,548), `getAttributes` (7,367), `findAncestors` (7,128).
-- **Project** (used across SET): `openDocument` renders at **915 chars, flagged C1** — this is the
+- **Project** (used across consumers): `openDocument` renders at **915 chars, flagged C1** — this is the
   `Document<Config, MergedExtensions<{…import(…)…}>>` you saw on `testdocument`. `queryFirst`/`queryAll`
   ~480–500 chars; `import`/`export`/blob methods are small.
 - **`Scl.ElementsOf` is itself a 3,432-char union** (and `ChildrenOf`/`DescendantsOf<ElementsOf>`
@@ -163,21 +163,21 @@ small** — the techniques are worth applying mainly where they _also_ improve r
   `Project.openDocument`/factory returns with the named `Scl.Document`/`Scl.Project`, and convert
   `Scl.Document`/`Query`/`Transaction` to `interface … extends`. This is the single biggest hover-
   quality win and removes the `import("…")`/intersection noise from all 27 methods. Structural →
-  Iteration 3, but low risk per the SET audit (skipLibCheck, no namespace augmentation).
+  Iteration 3, but low risk per the consumer audit (skipLibCheck, no namespace augmentation).
 - **R2 — `Prettify` on record return types (C5, non-breaking).** Removes `RawRecord & { status }`
   seams so results render as `TrackedRecord<Config, "DOS">`.
 - **R3 — Name the element union (C4, non-breaking).** `type SclElementName = ElementsOf<Config>` so
   `tagName`/`omit`/`unwrap` render by name instead of a 200-literal union.
 - **R4 — Non-distributive / narrowed record input (C2/C3).** The structural fix for the
   `getAttribute`/`getTree` hover explosion (`Ref` distributing over `ElementsOf<Config>` + the 6-way
-  `RefOrRecord`). Most design-sensitive (touches the universal input param) → Iteration 3 + SET gate;
+  `RefOrRecord`). Most design-sensitive (touches the universal input param) → Iteration 3 + consumer gate;
   `toRef` already normalises inputs at runtime, so the runtime contract is unchanged.
 
 ## Gate
 
 **Stop here and review.** Headline: perf is fine (one easy non-breaking win in a hook); the work
 worth doing is readability. Iteration 2 = P1 + R2 + R3 (+ P2 hygiene), all non-breaking; Iteration 3
-= R1 + R4 behind structural-equality assertions and the SET type-check gate.
+= R1 + R4 behind structural-equality assertions and the consumer type-check gate.
 
 ---
 
@@ -196,7 +196,7 @@ call.
 | import baseline instantiations | 113,047  | 107,196   | −5.2% |
 
 Non-breaking: hooks are internal (not in scl's public export surface), no public `.d.ts` change, no
-SET impact. Narrowing net green; baseline.json updated.
+consumer impact. Narrowing net green; baseline.json updated.
 
 **Core pass — investigated locally, outcome below.** scl consumes core as a _published package_
 (`node_modules/@dialecte/core`), so core edits reach scl only via a release. Each candidate was
@@ -220,7 +220,7 @@ changes should be validated in the core repo's own CI, then released.
 
 **Net Iteration 2:** the one measured win is **P1** (scl, shipped here, −55% check time). The
 non-breaking _core_ levers don't materially help (variance neutral, Prettify regresses, merge
-marginal). The substantive readability wins (R1/R4) are Iteration 3 — structural, behind the SET gate.
+marginal). The substantive readability wins (R1/R4) are Iteration 3 — structural, behind the consumer gate.
 
 ---
 

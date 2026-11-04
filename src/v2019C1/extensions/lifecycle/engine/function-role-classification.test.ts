@@ -13,8 +13,8 @@ import type { Scl } from '@/v2019C1/config'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-// A `FunctionRole` (and its `FunctionRoleContent`) is tool-generated grouping — SET's
-// `assign-to-application` creates one named after a function's highest `FunctionCategory`,
+// A `FunctionRole` (and its `FunctionRoleContent`) is tool-generated grouping — a consumer's
+// application assignment creates one named after a function's highest `FunctionCategory`,
 // from scratch (a `uuid` filled by hooks, NO `templateUuid`).
 // So an instance `FunctionRole` with no template lineage is NOT author DATA content: it must
 // never be reported as a `target-only` "keep/remove" decision (which would offer to delete it).

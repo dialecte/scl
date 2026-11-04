@@ -1,0 +1,7 @@
+schema_version: '1.1'
+name: staged-delete-commit-question
+expected_outcome: |
+  Says the plan is not enough: the Terminal's own children (Text, Private and what it holds) stay
+  in the store, and the commit refuses it with CHILD_LEFT_BEHIND. The step must stage a delete for
+  every record of the Terminal's subtree, read with scl's readSubtreeRecords, besides the parent
+  update.

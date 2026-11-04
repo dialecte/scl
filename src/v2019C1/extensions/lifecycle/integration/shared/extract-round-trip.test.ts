@@ -4,7 +4,9 @@ import { describe, expect } from 'vitest'
 
 import { LINEAGE } from '@/v2019C1/extensions/lifecycle/constraints/classify-attribute.constants'
 import { asd, fsd, ssd } from '@/v2019C1/extensions/lifecycle/extract/transaction'
+import { TYPE_ID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference/constants/type-id-pairs'
 import { ROOT_ANCHORS } from '@/v2019C1/extensions/reference/transaction/write-provenance.constants'
+import { readAttribute } from '@/v2019C1/helpers'
 import {
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
@@ -13,7 +15,10 @@ import {
 } from '@/v2019C1/test'
 
 import type { Config, Scl } from '@/v2019C1/config'
-import type { FunctionPlacement } from '@/v2019C1/extensions/lifecycle/extract/transaction/extract.types'
+import type {
+	FunctionPlacement,
+	FunctionSections,
+} from '@/v2019C1/extensions/lifecycle/extract/transaction/extract.types'
 import type { SclTest } from '@/v2019C1/test'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
@@ -206,6 +211,163 @@ describe('extract, then instantiate: the element comes back, modulo its identity
 	runSclTestCases.withExport({ testCases, act })
 })
 
+/**
+ * The project with a breaker inside the function, holding a logical node of a type of its own (its data object type
+ * with it): the types an extract writes depend on what it clones of the function.
+ */
+const projectWithBreakerLogicalNodeXml = projectXml
+	.replace(
+		`<GeneralEquipment name="GE1" type="AXN" uuid="ge1" ${id}="ge1"/>`,
+		`<GeneralEquipment name="GE1" type="AXN" uuid="ge1" ${id}="ge1"/>
+						<ConductingEquipment name="QF1" type="CBR" uuid="qf1" ${id}="qf1">
+							<LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_Type" uuid="xcbr" ${id}="xcbr"/>
+						</ConductingEquipment>`,
+	)
+	.replace(
+		`<DOType id="ACT_Type"`,
+		`<LNodeType id="XCBR_Type" lnClass="XCBR" ${id}="xcbr-type">
+				<DO name="Pos" type="DPC_Type" ${id}="xcbr-pos"/>
+			</LNodeType>
+			<DOType id="ACT_Type"`,
+	)
+	.replace(
+		`</DataTypeTemplates>`,
+		`<DOType id="DPC_Type" cdc="DPC" ${id}="dpc-type">
+				<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="dpc-stval"/>
+			</DOType>
+		</DataTypeTemplates>`,
+	)
+
+describe('extract: the file holds no type that nothing in it names', () => {
+	type TypesCase = SclTest.BaseXmlTestCase & {
+		targetXml: string
+		extract:
+			| { verb: 'fsd'; placement: FunctionPlacement; sections?: FunctionSections }
+			| { verb: 'asd'; sections?: FunctionSections }
+			| { verb: 'ssd' }
+		/** The logical node types the file holds: the invariant says nothing of a file holding no type at all. */
+		expectedLogicalNodeTypes: string[]
+	}
+
+	const allThree = ['PTOC_Type', 'PTRC_Type', 'XCBR_Type']
+	const withoutBreaker = ['PTOC_Type', 'PTRC_Type']
+
+	const testCases: SclTest.TestCases<TypesCase> = {
+		'fsd, at its own level, every section → the breaker and its type are written': {
+			sourceXml: projectWithBreakerLogicalNodeXml,
+			targetXml: emptyXml,
+			extract: { verb: 'fsd', placement: 'source-level' },
+			expectedLogicalNodeTypes: allThree,
+		},
+		'fsd, below the TEMPLATE substation, every section → the breaker and its type are written': {
+			sourceXml: projectWithBreakerLogicalNodeXml,
+			targetXml: emptyXml,
+			extract: { verb: 'fsd', placement: 'substation' },
+			expectedLogicalNodeTypes: allThree,
+		},
+		'fsd, as a function template, every section → the breaker and its type are written': {
+			sourceXml: projectWithBreakerLogicalNodeXml,
+			targetXml: emptyXml,
+			extract: { verb: 'fsd', placement: 'function-template' },
+			expectedLogicalNodeTypes: allThree,
+		},
+		'asd, every section → the breaker and its type are written': {
+			sourceXml: projectWithBreakerLogicalNodeXml,
+			targetXml: emptyXml,
+			extract: { verb: 'asd' },
+			expectedLogicalNodeTypes: allThree,
+		},
+		'ssd: the bay → the breaker and its type are written': {
+			sourceXml: projectWithBreakerLogicalNodeXml,
+			targetXml: emptyXml,
+			extract: { verb: 'ssd' },
+			expectedLogicalNodeTypes: allThree,
+		},
+		'fsd, equipment left out → no type of the breaker is written': {
+			sourceXml: projectWithBreakerLogicalNodeXml,
+			targetXml: emptyXml,
+			extract: { verb: 'fsd', placement: 'source-level', sections: { equipment: false } },
+			expectedLogicalNodeTypes: withoutBreaker,
+		},
+		'asd, equipment left out → no type of the breaker is written': {
+			sourceXml: projectWithBreakerLogicalNodeXml,
+			targetXml: emptyXml,
+			extract: { verb: 'asd', sections: { equipment: false } },
+			expectedLogicalNodeTypes: withoutBreaker,
+		},
+	}
+
+	async function act({
+		testCase,
+		project,
+		source,
+	}: SclTest.ActParams<TypesCase>): Promise<SclTest.ActResult> {
+		const extracted = await openSclDocument({ project, xml: emptyXml, label: 'extracted' })
+		const { extract } = testCase
+		await extracted.transaction(async function extractTemplate(tx) {
+			const common = { sourceQuery: source.query, tool: 'TEST', who: 'test' }
+			if (extract.verb === 'fsd') {
+				const functionRef = await findByName(source.query, { tagName: 'Function', name: 'Prot' })
+				await fsd(tx, {
+					...common,
+					functionRef,
+					placement: extract.placement,
+					sections: extract.sections,
+				})
+			} else if (extract.verb === 'asd') {
+				const applicationRef = await findByName(source.query, {
+					tagName: 'Application',
+					name: 'Feeder',
+				})
+				await asd(tx, { ...common, applicationRef, sections: extract.sections })
+			} else {
+				const scopeRef = await findByName(source.query, { tagName: 'Bay', name: 'B1' })
+				await ssd(tx, { ...common, scopeRef })
+			}
+		})
+
+		const typesNamedByNothing = await typesWithoutReferrer(extracted.query)
+		expect(typesNamedByNothing, 'types nothing in the file names').toEqual([])
+		const logicalNodeTypes = await extracted.query.getRecordsByTagName('LNodeType')
+		expect(
+			logicalNodeTypes
+				.map((record) => readAttribute({ record, name: 'id', defaults: 'none' }))
+				.sort(),
+			'the types the file holds',
+		).toEqual(testCase.expectedLogicalNodeTypes)
+		return { assertOn: 'source' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+/**
+ * The types of a document nothing names, `<tag> <id>`, sorted: a type is named by the referrers of the registry of type
+ * references (a logical node, a data object, a data attribute), whatever the other attributes of the referrer say.
+ */
+async function typesWithoutReferrer(query: Core.Query<Config>): Promise<string[]> {
+	const named = new Set<string>()
+	const targets = new Set<string>()
+	for (const [referrerTag, pairs] of Object.entries(TYPE_ID_REFERENCE_PAIRS)) {
+		const referrers = await query.getRecordsByTagName(referrerTag as Scl.ElementsOf)
+		for (const pair of pairs) {
+			targets.add(pair.target)
+			for (const record of referrers) {
+				const typeId = readAttribute({ record, name: pair.attribute, defaults: 'none' })
+				if (typeId) named.add(`${pair.target} ${typeId}`)
+			}
+		}
+	}
+	const unused: string[] = []
+	for (const target of targets) {
+		for (const record of await query.getRecordsByTagName(target as Scl.ElementsOf)) {
+			const key = `${target} ${readAttribute({ record, name: 'id', defaults: 'none' })}`
+			if (!named.has(key)) unused.push(key)
+		}
+	}
+	return unused.sort()
+}
+
 /** The instantiation of the extracted file: its element, at the level of the project it was extracted from. */
 async function instantiationTarget(params: {
 	testCase: TestCase
@@ -291,7 +453,8 @@ async function canonicalize(
 ): Promise<CanonicalElement> {
 	const { node, paths } = params
 	const attributes: Record<string, string> = {}
-	for (const [name, value] of Object.entries(await query.any.getAttributes(node))) {
+	const nodeAttributes = await query.any.getAttributes(node)
+	for (const [name, value] of Object.entries(nodeAttributes)) {
 		if (value === undefined || LINEAGE.has(name)) continue
 		attributes[name] = name.endsWith('Uuid')
 			? (paths.get(String(value)) ?? 'names nothing')
@@ -300,7 +463,8 @@ async function canonicalize(
 	const children: CanonicalElement[] = []
 	for (const child of node.tree) {
 		if (PROVENANCE_TAGS.has(child.tagName)) continue
-		children.push(await canonicalize(query, { node: child, paths }))
+		const canonicalChild = await canonicalize(query, { node: child, paths })
+		children.push(canonicalChild)
 	}
 	return { tagName: node.tagName, attributes, value: node.value ?? '', children }
 }

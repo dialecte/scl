@@ -20,7 +20,7 @@ const emptyXml = `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="sc
 const NEW_FILE: StartFileParams = {
 	as: 'new',
 	filename: 'FSD_Prot',
-	header: { fileType: 'FSD', tool: 'SET' },
+	header: { fileType: 'FSD', tool: 'my-tool' },
 	item: { who: 'user', what: 'FSD initialization', why: 'extracted' },
 }
 
@@ -30,7 +30,7 @@ describe('startFile', () => {
 			sourceXml: emptyXml,
 			params: NEW_FILE,
 			expectedQueries: [
-				'//default:Header[@id="fsd_prot"][@fileType="FSD"][@toolID="SET"][@uuid][@version="0"][@revision="1"]/default:History/default:Hitem[@version="0"][@revision="1"][@what="FSD initialization"]',
+				'//default:Header[@id="fsd_prot"][@fileType="FSD"][@toolID="my-tool"][@uuid][@version="0"][@revision="1"]/default:History/default:Hitem[@version="0"][@revision="1"][@what="FSD initialization"]',
 			],
 		},
 		'a document holding a history already: its Header and version kept, the next revision': {
@@ -68,7 +68,8 @@ describe('startFile', () => {
 			await startFile(tx, { ...NEW_FILE, as: 'revision' })
 		})
 		await expect(refused).rejects.toThrow()
-		const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+		const caught = await refused.catch((error: unknown) => error)
+		const refusal = toDialecteError(caught)
 		expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
 			key: 'OPTION_NOT_AVAILABLE',
 			meta: { option: 'as', value: 'revision' },

@@ -1,0 +1,7 @@
+schema_version: '1.1'
+name: replace-lnode-across-transactions
+expected_outcome: |
+  Sees that the first commit removes the LNode's type when it was the last element naming it (with
+  the types only it named), so the replacement created in a later transaction names a missing
+  type; the helpers create the replacement first or in the same transaction (or bring the type back
+  before naming it).

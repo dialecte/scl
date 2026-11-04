@@ -175,6 +175,16 @@ logical node type the LNode names. When the names cannot be written (no exact sp
 object already there) the reference is left as read, without the uuid, and the import reports a
 `data-path-not-split` diagnostic.
 
+A signal role reference (`LNodeInputRef`, `LNodeOutputRef`, `LNodeDataRef`) is read from the function the
+`FunctionRef` holding it names (a `Function`, `SubFunction`, `EqFunction` or `EqSubFunction`), that function
+left out: `PTRC1.Trip`, `SF1/XCBR1.Oper`, with `.` before the signal. The keys are tried in order: the path below
+that function as written, with its last `/` turned into `.`, the same two below the `Function` or `EqFunction` nearest above it
+(the base an earlier version wrote from), then the path as written (the absolute form). A path resolved through
+any key but the first is written again in the form above, also next to its uuid.
+A former-form value naming an element outside that function resolves, by that order, to a same-named element inside it
+when there is one (beside its uuid it is an `incoherent-reference`). A FunctionRef whose uuid names nothing but whose path names a function takes that function as the base. A FunctionRef whose uuid and path name no function gives no base: the
+paths below it are written absolute and read as written.
+
 ---
 
 Why two phases?
@@ -362,7 +372,7 @@ await tx.reference.writeProvenance({ sourceQuery, target: { anchor: 'function', 
 await tx.reference.writeProvenance({ sourceQuery, target: { anchor: 'document', fileType: 'SSD' } })
 ```
 
-The kernel **self-sources** every field from the source document — no SET dependency:
+The kernel **self-sources** every field from the source document — no consumer dependency:
 
 | `SclFileReference` attr | Source                                                         |
 | ----------------------- | -------------------------------------------------------------- |

@@ -26,7 +26,7 @@ type TestCase = SclTest.BaseXmlTestCase & {
 
 const BASE_PARAMS: TestCase['params'] = {
 	filename: 'project.scd',
-	header: { fileType: 'SCD', version: 'keep', tool: 'SET' },
+	header: { fileType: 'SCD', version: 'keep', tool: 'my-tool' },
 	item: { who: 'user', what: 'change', why: 'reason' },
 }
 

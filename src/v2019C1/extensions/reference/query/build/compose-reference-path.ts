@@ -1,12 +1,13 @@
 import { splitLnodeQualifier } from '../resolve/parse-path'
 import { dataCompanionsOf } from './data-companions'
 import { isFunctionScoped, pathBelowFunction } from './function-scope'
+import { localSegments } from './local-segments'
 import { joinPathParts } from './path-segment'
 
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 
 import type { ReferencePathParts, ReferrerContext } from './compose-reference-path.types'
-import type { ElementPath, PathSegmentWithRef } from './path-segment.types'
+import type { ElementPath } from './path-segment.types'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
 
 /**
@@ -23,7 +24,9 @@ import type { ReferencePair } from '@/v2019C1/extensions/reference'
  * - `ancestor-name`: the target's bare name (a ProcessResource named from a placeholder below it).
  * - `scoped-name`: the target's bare name, unique in its scope (a variant in its Application).
  * - a function-scoped pair (`scope: 'function'`, the references of a signal role): the same, from
- *   the target's Function down, the Function left out, every level joined with "/".
+ *   the function the referrer's FunctionRef names (`functionBase`) down, that function left out,
+ *   the levels joined with "/" down to the LNode and "." before the signal (`SF1/XCBR1.Oper`);
+ *   the target's absolute path when it is not below that function.
  * - `behavior-description`: the local path from the BehaviorDescription's parent down to the
  *   target, that parent left out (`Trip` from the LNode holding the input, `PTRC1.Trip` from its
  *   Function), then the companions' DO[.DA] for `dataName`; `null` when the target is not below
@@ -31,10 +34,13 @@ import type { ReferencePair } from '@/v2019C1/extensions/reference'
  */
 export function composeReferencePath(parts: ReferencePathParts): string | null {
 	const { pair, referenceAttributes, behaviorContext } = parts
-	// A signal role's reference names the target from its Function down, the Function left out.
-	const targetPath = isFunctionScoped(pair)
-		? (pathBelowFunction(parts.targetPath) ?? parts.targetPath)
-		: parts.targetPath
+	// A signal role's reference names the target from the function its FunctionRef names down, that
+	// function left out; the absolute path when the target is not below it.
+	const targetPath =
+		isFunctionScoped(pair) && parts.functionBase
+			? (pathBelowFunction({ targetPath: parts.targetPath, base: parts.functionBase }) ??
+				parts.targetPath)
+			: parts.targetPath
 
 	if (pair.resolution === RESOLUTION_TYPE.behaviorDescription) {
 		if (!behaviorContext) return null
@@ -106,16 +112,6 @@ function composeBehaviorLocalPath(
 		qualifierFromCompanions(referenceAttributes, pair),
 	].filter((piece): piece is string => Boolean(piece))
 	return pieces.length > 0 ? pieces.join('.') : null
-}
-
-/** The segments of `segments` below `context`, or `null` when `context` is not their prefix. */
-function localSegments(params: {
-	context: readonly PathSegmentWithRef[]
-	segments: readonly PathSegmentWithRef[]
-}): PathSegmentWithRef[] | null {
-	const { context, segments } = params
-	const isPrefix = context.every((part, index) => segments[index]?.ref.id === part.ref.id)
-	return isPrefix ? segments.slice(context.length) : null
 }
 
 /**

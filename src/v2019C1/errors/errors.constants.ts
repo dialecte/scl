@@ -9,6 +9,7 @@ import { defineErrors } from '@dialecte/core'
  * `SCL1xxx` — lifecycle: the decisions and mapping choices a consumer passes.
  * `SCL2xxx` — lifecycle: what a template or a project must hold.
  * `SCL3xxx` — dataflow: a signal linked to an element that cannot implement it.
+ * `SCL4xxx` — commit checks: a transaction that would leave the store incoherent.
  */
 export const SCL_ERRORS = defineErrors({
 	/** A mapping choice for a source element the report does not list. `meta: { sourceId }` */
@@ -142,7 +143,13 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL3001',
 		message: 'The signal cannot be implemented by an element of this kind',
 	},
+	/**
+	 * A commit deletes a record and leaves one of its children in the store without a parent: a bug of a hook that
+	 * staged a delete without the subtree. `meta: { record: { tagName, id }, child: { tagName, id } }` — the first
+	 * pair found.
+	 */
+	CHILD_LEFT_BEHIND: {
+		code: 'SCL4001',
+		message: 'The commit deletes a record and leaves one of its children behind',
+	},
 })
-
-/** A key of {@link SCL_ERRORS}. */
-export type SclErrorKey = keyof typeof SCL_ERRORS

@@ -319,3 +319,10 @@ export type SourceRefIdentities = { uuids: Set<string>; names: Set<string> }
 
 /** Whether a leftover instance reference is another instance's link, and the placeholder that paired it by name. */
 export type MultiInstanceSibling = { sibling: boolean; pairedByName?: string }
+
+/**
+ * Provenance decision for a kept-leftover reference child of a shared satellite: `'removed'` when it
+ * is a GENUINE removal (its target is in the source's own scope and the source no longer references
+ * it), `'keep'` otherwise (another primary's link / indeterminate). See {@link diff}.
+ */
+export type LeftoverRefPolicy = (instanceChild: AnyTreeRecord) => Promise<'keep' | 'removed'>

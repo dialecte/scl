@@ -1,7 +1,17 @@
-import { describe } from 'vitest'
+import { beforeCommit } from './before-commit'
+
+import { toDialecteError } from '@dialecte/core'
+import { describe, expect } from 'vitest'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
-import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import {
+	ALL_XMLNS_NAMESPACES,
+	assertExpectedElementQueries,
+	assertUnexpectedElementQueries,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	createSclTestRecord,
+	runSclTestCases,
+} from '@/v2019C1/test'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
@@ -203,6 +213,114 @@ describe('an LNode always has its LNodeSpecNaming', () => {
 		testCases,
 		act: async ({ source, testCase }) => {
 			await testCase.act(source)
+			return { assertOn: 'source' }
+		},
+	})
+})
+
+describe('the commit refuses to leave a child behind', () => {
+	const sourceXml = /* xml */ `
+		<SCL ${ns} ${id}="root">
+			<Substation ${id}="substation" name="S1">
+				<Function ${id}="function" name="F1">
+					<LNode ${id}="lnode" iedName="None" lnClass="XCBR" lnInst="1" />
+				</Function>
+			</Substation>
+		</SCL>
+	`
+
+	// a transaction cannot reach this alone (core stages the subtree of a delete): the log is the one of a hook that
+	// staged a bare delete
+	runSclTestCases.withoutExport({
+		testCases: {
+			'a log deleting a function, not the logical node it holds → refused, naming both': {
+				sourceXml,
+			},
+		},
+		act: async ({ source }) => {
+			const bareDelete: Scl.Operation = {
+				status: 'deleted',
+				oldRecord: createSclTestRecord({
+					record: {
+						tagName: 'Function',
+						id: 'function',
+						parent: { tagName: 'Substation', id: 'substation' },
+						children: [{ tagName: 'LNode', id: 'lnode' }],
+					},
+				}),
+				newRecord: undefined,
+			}
+			const refusal = await beforeCommit({ operations: [bareDelete], query: source.query }).catch(
+				(error: unknown) => toDialecteError(error),
+			)
+			expect(refusal).toMatchObject({
+				key: 'CHILD_LEFT_BEHIND',
+				meta: {
+					record: { tagName: 'Function', id: 'function' },
+					child: { tagName: 'LNode', id: 'lnode' },
+				},
+			})
+		},
+	})
+})
+
+// One commit, both passes: the naming of the LNode the transaction created, and the type its old LNode left unused.
+describe('the commit writes the naming and removes the type a replaced LNode left unused', () => {
+	const sourceXml = /* xml */ `
+		<SCL ${ns} ${id}="root">
+			<Substation ${id}="substation" name="S1">
+				<VoltageLevel name="V1" ${id}="voltage-level"><Bay name="B1" ${id}="bay"/></VoltageLevel>
+				<Function ${id}="function" name="F1">
+					<LNode ${id}="old-lnode" iedName="None" lnClass="XCBR" lnInst="1" lnType="T" />
+				</Function>
+			</Substation>
+			<DataTypeTemplates ${id}="dtt">
+				<LNodeType ${id}="lnt-T" id="T" lnClass="XCBR">
+					<DO ${id}="do-T" name="Beh" type="D" />
+				</LNodeType>
+				<LNodeType ${id}="lnt-S" id="S" lnClass="XCBR">
+					<DO ${id}="do-S" name="Beh" type="DS" />
+				</LNodeType>
+				<DOType ${id}="dot-D" id="D" cdc="SPS" />
+				<DOType ${id}="dot-DS" id="DS" cdc="SPS" />
+			</DataTypeTemplates>
+		</SCL>
+	`
+
+	runSclTestCases.withExport({
+		testCases: {
+			'a new LNode created and the old one deleted in one transaction → the new one has its naming, the old type is gone':
+				{
+					sourceXml,
+				},
+		},
+		act: async ({ source }) => {
+			await source.transaction(async function replaceTheLNode(tx) {
+				await tx.addChild(
+					{ tagName: 'Function', id: 'function' },
+					{
+						tagName: 'LNode',
+						attributes: { iedName: 'None', lnClass: 'XCBR', lnInst: '2', lnType: 'S' },
+					},
+				)
+				await tx.delete({ tagName: 'LNode', id: 'old-lnode' })
+			})
+			const xml = (await source.query.getSnapshot({ as: 'xml' })) as string
+			expect(() =>
+				assertExpectedElementQueries({
+					xml,
+					queries: [
+						'//default:LNode[@lnType="S"]/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sLnClass="XCBR"][@sLnInst="2"]',
+						'//default:LNodeType[@id="S"]',
+					],
+				}),
+			).not.toThrow()
+			expect(() =>
+				assertUnexpectedElementQueries({
+					xml,
+					queries: ['//default:LNodeType[@id="T"]', '//default:DOType[@id="D"]'],
+				}),
+			).not.toThrow()
 			return { assertOn: 'source' }
 		},
 	})

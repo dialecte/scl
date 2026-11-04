@@ -25,11 +25,16 @@ export async function pruneEmptiedContainers(params: {
 	query: Core.Query<Config>
 	/** The records the commit's other operations write: a container they give a child is not judged empty. */
 	pending: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
+	/**
+	 * Record ids the commit's other operations delete and `query` still reads (the types the commit prunes): they count
+	 * as gone when a container is judged, so a container holding only them is empty.
+	 */
+	gone?: ReadonlySet<string>
 }): Promise<Scl.Operation[]> {
 	const { operations, query, pending } = params
 	const kept = new Set<string>()
 	for (const record of pending.values()) if (record.parent) kept.add(record.parent.id)
-	const gone = new Set<string>()
+	const gone = new Set<string>(params.gone)
 	const roots: Scl.TrackedRecord<Scl.ElementsOf>[] = []
 	for (const candidate of emptiedCandidates(operations)) {
 		if (gone.has(candidate.id) || kept.has(candidate.id)) continue
@@ -37,7 +42,8 @@ export async function pruneEmptiedContainers(params: {
 		if (!record || !isPrunedWhenEmpty(record) || !holdsNothingBut({ record, gone })) continue
 		gone.add(record.id)
 		roots.push(record)
-		roots.push(...(await collectEmptiedAbove(query, { record, gone, kept })))
+		const emptiedAbove = await collectEmptiedAbove(query, { record, gone, kept })
+		roots.push(...emptiedAbove)
 	}
 	if (roots.length === 0) return []
 	const cascade = await collectDeleteCascade(query, { roots, emptiesContainers: true, kept })

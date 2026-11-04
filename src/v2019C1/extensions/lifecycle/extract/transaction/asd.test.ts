@@ -2,11 +2,13 @@ import { asd } from './asd'
 
 import { describe, expect } from 'vitest'
 
+import { readAttribute } from '@/v2019C1/helpers'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { AsdExtractOptions, TemplateLink } from './extract.types'
-import type { Scl } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
+import type * as Core from '@dialecte/core'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -20,11 +22,11 @@ describe('asd', () => {
 		sections?: AsdExtractOptions['sections']
 	}
 
-	const act = async ({
+	async function act({
 		source,
 		target,
 		testCase,
-	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		await target.transaction(async (tx) => {
 			await asd(tx, {
@@ -659,6 +661,98 @@ describe('asd', () => {
 		runSclTestCases.withExport<TestCase>({ testCases, act })
 	})
 
+	// ── the types of the functions the application composes ───────────────────
+
+	describe('the types the file holds are those of the logical nodes it places', () => {
+		type TypesCase = TestCase & {
+			/** The ids of the types the extracted file holds, per tag: `LNodeType`, then `DOType`. */
+			expectedTypes: { LNodeType: string[]; DOType: string[] }
+		}
+
+		/** A function holding a logical node, and a breaker holding a logical node of its own type. */
+		const breakerLogicalNodeXml = /* xml */ `
+			<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<Substation name="S1" ${id}="sub-s">
+					<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
+						<eIEC61850-6-100:Application name="Feeder" uuid="app-uuid" ${id}="app-s">
+							<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="fr-s">
+								<eIEC61850-6-100:FunctionRoleContent ${id}="frc-s">
+									<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot" functionUuid="fn-uuid" ${id}="fref-s"/>
+								</eIEC61850-6-100:FunctionRoleContent>
+							</eIEC61850-6-100:FunctionRole>
+						</eIEC61850-6-100:Application>
+					</Private>
+					<VoltageLevel name="V1" ${id}="vl-s">
+						<Bay name="B1" ${id}="bay-s">
+							<Function name="Prot" uuid="fn-uuid" ${id}="fn-s">
+								<LNode iedName="None" lnClass="PTOC" lnInst="1" lnType="PTOC_T" uuid="ptoc-uuid" ${id}="ptoc-s"/>
+								<ConductingEquipment name="QA1" type="CBR" ${id}="qa1-s">
+									<LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T" uuid="xcbr-uuid" ${id}="xcbr-s"/>
+								</ConductingEquipment>
+							</Function>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+				<DataTypeTemplates ${id}="dtt-s">
+					<LNodeType id="PTOC_T" lnClass="PTOC" ${id}="ptoc-t">
+						<DO name="Op" type="ACT_T" ${id}="ptoc-do"/>
+					</LNodeType>
+					<LNodeType id="XCBR_T" lnClass="XCBR" ${id}="xcbr-t">
+						<DO name="Pos" type="DPC_T" ${id}="xcbr-do"/>
+					</LNodeType>
+					<DOType id="ACT_T" cdc="ACT" ${id}="act-t">
+						<DA name="general" bType="BOOLEAN" fc="ST" ${id}="act-da"/>
+					</DOType>
+					<DOType id="DPC_T" cdc="DPC" ${id}="dpc-t">
+						<DA name="stVal" bType="BOOLEAN" fc="ST" ${id}="dpc-da"/>
+					</DOType>
+				</DataTypeTemplates>
+			</SCL>
+		`
+
+		const testCases: SclTest.TestCases<TypesCase> = {
+			'equipment left out, a breaker of the function holding a logical node of its own type → that type is not written, nor the data types it alone names':
+				{
+					sourceXml: breakerLogicalNodeXml,
+					targetXml: emptyTargetXml,
+					applicationId: 'app-s',
+					sections: { equipment: false },
+					expectedTypes: { LNodeType: ['PTOC_T'], DOType: ['ACT_T'] },
+				},
+			'no sections given, the same → the breaker and its type are written with the function': {
+				sourceXml: breakerLogicalNodeXml,
+				targetXml: emptyTargetXml,
+				applicationId: 'app-s',
+				expectedTypes: { LNodeType: ['PTOC_T', 'XCBR_T'], DOType: ['ACT_T', 'DPC_T'] },
+			},
+		}
+
+		async function extractAndReadTypes({
+			testCase,
+			source,
+			target,
+		}: SclTest.ActParams<TypesCase>): Promise<SclTest.ActResult> {
+			if (!target) throw new Error('target required')
+			await target.transaction(async function extractTheApplication(tx) {
+				await asd(tx, {
+					sourceQuery: source.query,
+					applicationRef: { tagName: 'Application', id: 'app-s' } as Scl.Ref<'Application'>,
+					tool: 'TEST',
+					who: 'test',
+					...(testCase.sections ? { sections: testCase.sections } : {}),
+				})
+			})
+			const logicalNodeTypeIds = await typeIdsOf(target.query, { tagName: 'LNodeType' })
+			const dataObjectTypeIds = await typeIdsOf(target.query, { tagName: 'DOType' })
+			expect({ LNodeType: logicalNodeTypeIds, DOType: dataObjectTypeIds }).toEqual(
+				testCase.expectedTypes,
+			)
+			return { assertOn: 'target' }
+		}
+
+		runSclTestCases.withExport({ testCases, act: extractAndReadTypes })
+	})
+
 	// ── AllocationRole cloning ───────────────────────────────────────────────
 
 	describe('AllocationRole referenced by Application → cloned to target', () => {
@@ -707,3 +801,12 @@ describe('asd', () => {
 		})
 	})
 })
+
+/** The ids of the types of a tag a document holds, sorted. */
+async function typeIdsOf(
+	query: Core.Query<Config>,
+	params: { tagName: 'LNodeType' | 'DOType' | 'DAType' | 'EnumType' },
+): Promise<string[]> {
+	const records = await query.getRecordsByTagName(params.tagName)
+	return records.map((record) => readAttribute({ record, name: 'id', defaults: 'none' })).sort()
+}
