@@ -23,11 +23,17 @@ const TEMPLATE = 'TEMPLATE/TEMPLATE/TEMPLATE'
 
 const applicationRef = { tagName: 'Application', id: 'app' } as Scl.Ref<'Application'>
 
-const lnode = (params: { lnClass: string; uuid: string; record: string; lineage?: string }) =>
-	`<LNode iedName="None" lnClass="${params.lnClass}" lnInst="1" uuid="${params.uuid}" ${params.lineage ? `templateUuid="${params.lineage}"` : ''} ${id}="${params.record}"/>`
+function lnode(params: { lnClass: string; uuid: string; record: string; lineage?: string }) {
+	return `<LNode iedName="None" lnClass="${params.lnClass}" lnInst="1" uuid="${params.uuid}" ${params.lineage ? `templateUuid="${params.lineage}"` : ''} ${id}="${params.record}"/>`
+}
 
-const marker = (params: { variant: string; update: 'add' | 'remove'; record: string }) =>
-	`<${E}:FunctionalVariantRef functionalVariant="${params.variant}" update="${params.update}" ${id}="${params.record}"/>`
+function typedLNode(params: { lnClass: string; lnType: string; uuid: string; record: string }) {
+	return `<LNode iedName="None" lnClass="${params.lnClass}" lnInst="1" lnType="${params.lnType}" uuid="${params.uuid}" ${id}="${params.record}"/>`
+}
+
+function marker(params: { variant: string; update: 'add' | 'remove'; record: string }) {
+	return `<${E}:FunctionalVariantRef functionalVariant="${params.variant}" update="${params.update}" ${id}="${params.record}"/>`
+}
 
 /** What a case changes in the template, on top of the first revision. */
 type TemplateChange = {
@@ -47,6 +53,8 @@ type TemplateChange = {
 	allocationWithV2?: boolean
 	/** A variable beside the function, applying only to the logical node of B. */
 	variableOnB?: boolean
+	/** The data type templates of the file, after the substation: the types its logical nodes name. */
+	dataTypeTemplates?: string
 }
 
 /**
@@ -112,6 +120,7 @@ function templateXml(change: TemplateChange = {}): string {
 					</Bay>
 				</VoltageLevel>
 			</Substation>
+			${change.dataTypeTemplates ?? ''}
 		</SCL>
 	`
 }
@@ -139,14 +148,15 @@ function bayXml(params: { bay: string; selected: Selected; free?: string }): str
 				`<SubFunction name="${name}" uuid="${bay}-${name}" templateUuid="${name}-uuid" ${id}="${bay}-${name}">${lnode({ lnClass: lnClass[name], uuid: `${bay}-ln-${name}`, lineage: `ln-${name}-uuid`, record: `${bay}-ln-${name}` })}</SubFunction>`,
 		)
 		.join('')
-	const markers = (name: 'A' | 'B') =>
-		selected === 'both'
+	function markers(name: 'A' | 'B') {
+		return selected === 'both'
 			? marker({
 					variant: 'V2',
 					update: name === 'A' ? 'remove' : 'add',
 					record: `${bay}-m-${name}`,
 				})
 			: ''
+	}
 	const references = held
 		.map(
 			(name) =>
@@ -246,6 +256,14 @@ function elementsOf(params: { tree: AnyTreeRecord; localName: string }): string[
 		.sort()
 }
 
+/** The ids of the types of a tag the tree holds (`LNodeType`, `DOType`, ...), sorted. */
+function typeIdsOf(params: { tree: AnyTreeRecord; localName: string }): string[] {
+	return treeEntriesOf(params.tree)
+		.filter((entry) => entry.record.tagName === params.localName)
+		.map((entry) => readAttribute({ record: entry.record, name: 'id', defaults: 'none' }))
+		.sort()
+}
+
 /** How an element is listed: its name, else the function it names, else its tag; nothing for no element. */
 function labelOf(params: { record: AnyTreeRecord | undefined }): string {
 	const { record } = params
@@ -338,6 +356,34 @@ describe('update: an instance whose variants were selected is compared with the 
 			'Prot/C',
 			'Prot/Outer',
 		])
+	})
+
+	it('a subfunction the template gains that the selection keeps is added with the types of its logical nodes only, not those of the one inside it the selection leaves out', async () => {
+		const { tree } = await updated({
+			change: {
+				gainedSubFunctions: `<SubFunction name="Outer" uuid="outer-uuid" ${id}="s-outer">${typedLNode({ lnClass: 'PTOC', lnType: 'OUTER_T', uuid: 'ln-outer-uuid', record: 's-ln-outer' })}<SubFunction name="Inner" uuid="inner-uuid" ${id}="s-inner">${typedLNode({ lnClass: 'PTRC', lnType: 'INNER_T', uuid: 'ln-inner-uuid', record: 's-ln-inner' })}</SubFunction></SubFunction>`,
+				gainedReferences: `<${E}:FunctionRef function="${TEMPLATE}/Prot/Outer" functionUuid="outer-uuid" ${id}="s-fr-outer"/><${E}:FunctionRef function="${TEMPLATE}/Prot/Outer/Inner" functionUuid="inner-uuid" ${id}="s-fr-inner">${marker({ variant: 'V2', update: 'add', record: 's-m-inner' })}</${E}:FunctionRef>`,
+				dataTypeTemplates: /* xml */ `
+					<DataTypeTemplates ${id}="s-types">
+						<LNodeType id="OUTER_T" lnClass="PTOC" ${id}="s-outer-t"><DO name="Op" type="ACT_OUTER" ${id}="s-outer-do"/></LNodeType>
+						<LNodeType id="INNER_T" lnClass="PTRC" ${id}="s-inner-t"><DO name="Tr" type="ACT_INNER" ${id}="s-inner-do"/></LNodeType>
+						<DOType id="ACT_OUTER" cdc="ACT" ${id}="s-outer-dot"><DA name="general" bType="BOOLEAN" fc="ST" ${id}="s-outer-da"/></DOType>
+						<DOType id="ACT_INNER" cdc="ACT" ${id}="s-inner-dot"><DA name="general" bType="BOOLEAN" fc="ST" ${id}="s-inner-da"/></DOType>
+					</DataTypeTemplates>
+				`,
+			},
+			bays: [{ bay: 'B1', selected: 'V1' }],
+		})
+
+		expect(elementsOf({ tree, localName: 'SubFunction' })).toEqual([
+			'Prot/A',
+			'Prot/C',
+			'Prot/Outer',
+		])
+		expect(typeIdsOf({ tree, localName: 'LNodeType' }), 'the types the project holds').toEqual([
+			'OUTER_T',
+		])
+		expect(typeIdsOf({ tree, localName: 'DOType' })).toEqual(['ACT_OUTER'])
 	})
 
 	it('a function the template gains, taken where the project holds one: what it gains comes without what the selection leaves out', async () => {

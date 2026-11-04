@@ -1,4 +1,6 @@
 import { resolve } from '../query'
+import { collectUnusedTypes } from '../query/unused-types'
+import { TYPE_TAGS } from './import-types.constants'
 
 import { TYPE_ID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
 import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
@@ -7,6 +9,7 @@ import { elementSignature } from '@/v2019C1/extensions/signature/query'
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ResolvedDataModel } from '../query/resolve.types'
+import type { LostTypeNames } from '../query/unused-types.types'
 import type {
 	ImportTypesParams,
 	ImportTypesResult,
@@ -16,7 +19,7 @@ import type {
 	TypeRecord,
 } from './import-types.types'
 import type { Scl, Config } from '@/v2019C1/config'
-import type { TypeIdReferencePair, TypeIdRefTagName } from '@/v2019C1/extensions/reference'
+import type { TypeIdReferencePair, TypeIdTarget } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
 
 /** A fork that displaced a pre-existing target type under the same id. */
@@ -207,7 +210,7 @@ export async function importTypes(
 	// Third pass: reclaim the ids of types a fork superseded, when the displaced old
 	// type is left with no file-wide referrers — and prune the types the followers
 	// left that nothing names any more.
-	if (collisions.length > 0 || leftTypes.length > 0) {
+	if (collisions.length > 0 || leftTypes.size > 0) {
 		tx.progress.nextStep('Reclaiming ids…')
 		tx.perf.start('scl::importTypes::reclaim')
 		await reclaimSupersededTypes(tx, {
@@ -242,8 +245,6 @@ async function ensureDataTypeTemplates(
 function collectTypesBottomUp(resolved: ResolvedDataModel): TypeRecord[] {
 	return [...resolved.enumTypes, ...resolved.daTypes, ...resolved.doTypes, ...resolved.lnodeTypes]
 }
-
-const TYPE_TAGS = ['EnumType', 'DAType', 'DOType', 'LNodeType'] as const
 
 /** signature -> id of the types already present in the target, first occurrence wins. */
 async function buildPreExistingSignatureIndex(
@@ -323,8 +324,6 @@ function collectRefs(node: Scl.TreeRecord<Scl.ElementsOf>, out: Scl.Ref<Scl.Elem
 	for (const child of node.tree ?? []) collectRefs(child, out)
 }
 
-const refKey = (ref: Scl.Ref<Scl.ElementsOf>): string => `${ref.tagName}#${ref.id}`
-
 /**
  * Reclaim the ids of types displaced by a fork. A collision's old target type that
  * ends up with no file-wide referrers is pruned (cascading, refcount-based) and the
@@ -337,7 +336,7 @@ async function reclaimSupersededTypes(
 	params: {
 		collisions: Collision[]
 		/** The types the followers stopped naming: pruned with the displaced ones when nothing names them. */
-		leftTypes: Scl.Ref<Scl.ElementsOf>[]
+		leftTypes: LostTypeNames
 		idRemap: Map<string, string>
 		referrerRecords: Scl.Ref<Scl.ElementsOf>[]
 		stats: ImportTypesStats
@@ -375,120 +374,41 @@ async function reclaimSupersededTypes(
 }
 
 /**
- * Prune the displaced old types that are no longer referenced anywhere in the file,
- * cascading to descendant types that lose their last referrer once a parent is
- * deleted. Refcount-based (never chain-based): a descendant still shared elsewhere
- * survives. Returns the set of collision ids that were actually freed.
+ * Prune the displaced old types and the types the followers left that are no longer named anywhere in the file, with
+ * the types only they named ({@link collectUnusedTypes}: refcount-based, never chain-based, so a type still shared
+ * elsewhere survives). Returns the set of collision ids that were actually freed.
  */
 async function pruneDeadSupersededTypes(
 	tx: Core.Transaction<Config>,
-	params: { collisions: Collision[]; leftTypes: Scl.Ref<Scl.ElementsOf>[] },
+	params: { collisions: Collision[]; leftTypes: LostTypeNames },
 ): Promise<Set<string>> {
 	const { collisions, leftTypes } = params
-	const freedOldIds = new Set<string>()
-	// Map a candidate ref back to the collision id it may free (only the displaced
-	// old roots carry one; cascade-discovered descendants free nothing to reclaim).
-	const collidedIdByRef = new Map<string, string>(
-		collisions.map((c) => [refKey(c.oldRef), c.oldId]),
-	)
-
-	const worklist: Scl.Ref<Scl.ElementsOf>[] = collisions.map((c) => c.oldRef)
-	const queued = new Set<string>(worklist.map(refKey))
-	for (const left of leftTypes) {
-		if (queued.has(refKey(left))) continue
-		worklist.push(left)
-		queued.add(refKey(left))
-	}
-	const deleted = new Set<string>()
-
-	let progressed = true
-	while (progressed) {
-		progressed = false
-		for (const ref of worklist) {
-			const key = refKey(ref)
-			if (deleted.has(key)) continue
-			const referrers = await findRefsPointingTo(tx, { target: ref })
-			if (referrers.length > 0) continue // still consumed — keep it (and its fork)
-
-			// Gather the child types it references before deleting (delete cascades and
-			// removes its own DO/DA children, dropping their referrers to child types).
-			const tree = await tx.getTree(ref)
-			const childTypeRefs = tree ? await referencedTypeRefs(tx, tree) : []
-
-			await tx.delete(ref)
-			deleted.add(key)
-			progressed = true
-			const collidedId = collidedIdByRef.get(key)
-			if (collidedId !== undefined) freedOldIds.add(collidedId)
-
-			// Re-evaluate the child types it referenced now that this parent is gone; a
-			// child that is itself a displaced old root is already in `collidedIdByRef`.
-			for (const childRef of childTypeRefs) {
-				const childKey = refKey(childRef)
-				if (!queued.has(childKey)) {
-					worklist.push(childRef)
-					queued.add(childKey)
-				}
-			}
-		}
+	const names = new Map<string, readonly TypeIdTarget[]>(leftTypes)
+	for (const collision of collisions) {
+		const targets = names.get(collision.oldId) ?? []
+		names.set(collision.oldId, [...targets, collision.oldRef.tagName as TypeIdTarget])
 	}
 
-	return freedOldIds
-}
-
-/** Resolve every type-id reference (`lnType`, `DO/SDO.type`, `DA/BDA.type`) in a type's subtree to the target record it points at. */
-async function referencedTypeRefs(
-	tx: Core.Transaction<Config>,
-	tree: Scl.TreeRecord<Scl.ElementsOf>,
-): Promise<Scl.Ref<Scl.ElementsOf>[]> {
-	const out: Scl.Ref<Scl.ElementsOf>[] = []
-	const seen = new Set<string>()
-
-	async function walk(node: Scl.TreeRecord<Scl.ElementsOf>): Promise<void> {
-		const pairs = TYPE_ID_REFERENCE_PAIRS[node.tagName as TypeIdRefTagName] as
-			| readonly TypeIdReferencePair[]
-			| undefined
-		for (const pair of pairs ?? []) {
-			if (!matchesWhen(node, pair)) continue
-			const value = readAttribute({ record: node, name: pair.attribute, defaults: 'none' })
-			if (!value) continue
-			const [record] = await tx.findByAttributes({
-				tagName: pair.target as Scl.ElementsOf,
-				attributes: { id: value },
-			})
-			if (!record) continue
-			const ref = toRef(pair.target, record.id)
-			const key = refKey(ref)
-			if (!seen.has(key)) {
-				seen.add(key)
-				out.push(ref)
-			}
-		}
-		for (const child of node.tree ?? []) await walk(child)
-	}
-
-	await walk(tree)
-	return out
-}
-
-function matchesWhen(node: Scl.TreeRecord<Scl.ElementsOf>, pair: TypeIdReferencePair): boolean {
-	if (!pair.when) return true
-	return (
-		readAttribute({ record: node, name: pair.when.attribute, defaults: 'none' }) ===
-		pair.when.equals
+	const { trees } = await collectUnusedTypes({ query: tx, names, gone: new Set() })
+	const deleted = new Set(trees.map((tree) => tree.root.id))
+	for (const { root } of trees) await tx.delete(toRef(root.tagName, root.id))
+	return new Set(
+		collisions
+			.filter(({ oldRef }) => oldRef.id !== undefined && deleted.has(oldRef.id))
+			.map((collision) => collision.oldId),
 	)
 }
 
 /**
- * Point each follower at the id its source's type resolves to. Returns the types they stopped naming (those the
- * target holds).
+ * Point each follower at the id its source's type resolves to. Returns the type names they stopped naming, each with
+ * the tag of type that carries it.
  */
 async function retargetFollowers(
 	tx: Core.Transaction<Config>,
 	params: { followers: readonly TypeFollower[]; idRemap: ReadonlyMap<string, string> },
-): Promise<Scl.Ref<Scl.ElementsOf>[]> {
+): Promise<LostTypeNames> {
 	const { followers, idRemap } = params
-	const left: Scl.Ref<Scl.ElementsOf>[] = []
+	const left = new Map<string, TypeIdTarget[]>()
 	for (const { source, target } of followers) {
 		const record = await tx.getRecord(target)
 		if (!record) continue
@@ -504,11 +424,7 @@ async function retargetFollowers(
 			if (resolvedId === current) continue
 			updates[pair.attribute] = resolvedId
 			if (!current) continue
-			const [leftType] = await tx.findByAttributes({
-				tagName: pair.target as Scl.ElementsOf,
-				attributes: { id: current },
-			})
-			if (leftType) left.push(toRef(leftType.tagName, leftType.id))
+			left.set(current, [...(left.get(current) ?? []), pair.target])
 		}
 		// `update` removes an attribute given `undefined`; its parameter is typed string-only
 		if (Object.keys(updates).length > 0) {

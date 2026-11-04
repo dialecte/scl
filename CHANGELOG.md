@@ -9,13 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`tx.cleanUp.pruneUnusedTypes()` removes the data types nothing names**: every `LNodeType`, `DOType`, `DAType` and `EnumType` of the document that no `lnType` or `type` names goes, then the types it alone named, through the transaction (the delete hooks run), with every record inside them. A type is named by an `LN`, `LN0` or `LNode` (`lnType`), a `DO` or `SDO`, a `DA` or `BDA` (`type`, whatever its `bType`); a cycle of types naming each other stays. An import and an extract keep a file as written and do not call it: it is for a document that holds types nothing names (an imported file) when the caller wants them gone.
+
 - **A commit that deletes a record and leaves one of its children behind is refused** (`CHILD_LEFT_BEHIND`, `SCL4001`, `meta: { record, child }`). The check runs on every commit, over the transaction's operations and the ones the commit hooks stage, and reads the store, in one batch, only for a child of a deleted record that no operation mentions; a hook that stages a delete without the subtree now fails at once instead of corrupting the store.
 
 ### Changed
 
+- **A type a write leaves unused goes at the commit** (breaking for a caller that removes the last element naming a type and names it again in a later transaction: create the new element first, or in the same transaction). When a transaction leaves an `LNodeType`, `DOType`, `DAType` or `EnumType` that an element named before it and no element names now, the commit removes it, then the types it alone named, with every record inside them; a `DataTypeTemplates` left empty goes in the same commit. It applies to every write — a delete, a changed `lnType` / `type`, `tx.lifecycle.apply` (instantiate, update, fork), an extract, a plain edit — and a preview (`document.prepare`) shows it. Only a type that lost a referrer in the transaction is judged: a type nothing named before stays and keeps what it names, a type the transaction created stays, and a type named again in the same transaction stays. An import keeps the file as written.
+
+- **`dataModel.importTypes` keeps a displaced type that a data attribute of any `bType` still names**: a superseded type was removed only when no data attribute naming it with a matching `bType` was left; it now stays while any `DA` / `BDA` `type` names it, as the schema's key reference reads it, and its fork keeps the hashed id. On a file where that happens, `reclaimed` of the returned stats is lower than before.
+
+- **`DecisionGroup.sideEffects` lists the data types a removal leaves unused**, `deleted`, before the containers and references: the types the removed elements were the last to name, with the types only they name. A group is judged on its own, so for a report of several groups the list is not what `apply` removes for all of them; for one group it is.
+
 - **The package declares its mutation scope for `dialecte mutants`** (`dialecte.mutation` in `package.json`); its equivalent-mutant records moved to `.dialecte/mutation-records.json`.
 
 ### Fixed
+
+- **Update and extract write only the types of the logical nodes they place**: a logical node left out of the clone — a functional variant the instance did not select on an update, a section an extract leaves out (equipment holding logical nodes) — no longer brings its types into the document, where nothing named them. `transplant.deep` imports the closure of the logical nodes it cloned, so what it leaves out (`leaveOut`, `omit`) brings none.
 
 - **A reference a delete removes no longer leaves what it held in the store**: the `SignalRole` of a `FunctionRef`, the `Text` and the `Private` of a `Terminal` stayed in the store with no parent and were still returned by queries (never exported). They go with their reference, also when the commit's container prune deletes the reference, and a kept reference inside one (a `SourceRef` in a terminal's `Private`) goes with it instead of being cleared. A removal's report lists what a delete takes by itself, not what a reference holds, and no longer lists a kept reference inside a removed one as cleared.
 

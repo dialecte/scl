@@ -11,7 +11,9 @@ const DEFINITION: AnyDefinition = SCL_DIALECTE_CONFIG.definition
  * from the definition: a list with no identity of its own (no key fields, no uuid: a `PowerSystemRelations`, a
  * `ProcessResources`, a `DataTypeTemplates`), or a set of references (every child it needs is a reference: a category
  * and its `FunctionCatRef`, a `Variable` and its `VariableApplyTo`). An element of its own that needs a child (an
- * `IED`, an `LNodeType`, an `Application`) is the project's to remove, and so is a level of the topology.
+ * `IED`, an `LNodeType`, an `Application`) is the project's to remove, and so is a level of the topology: an
+ * `LNodeType` left holding nothing stays (this rule never removes it), and one nothing names goes by the unused-type
+ * rule of the commit instead.
  */
 export const CHILD_REQUIRED_TAGS: ReadonlySet<string> = new Set(
 	Object.entries(DEFINITION)

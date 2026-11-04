@@ -48,7 +48,7 @@ list. Read a verb's JSDoc and tests before ruling it out; a short name hides a l
 
 | Namespace   | On `doc.query.<ns>`                                                                                                                                                                                                   | On `tx.<ns>` (writes)                                                                                                                                                                                                                                                       |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cleanUp`   | -                                                                                                                                                                                                                     | `orphanUuidRefs`, `pruneEmptyContainers`, `resetLNode`                                                                                                                                                                                                                      |
+| `cleanUp`   | -                                                                                                                                                                                                                     | `orphanUuidRefs`, `pruneEmptyContainers`, `pruneUnusedTypes`, `resetLNode`                                                                                                                                                                                                  |
 | `dataModel` | `isLNodeLocked`, `resolve`                                                                                                                                                                                            | `importTypes`, `unlockLNode`                                                                                                                                                                                                                                                |
 | `dataflow`  | `all`, `crossing`, `ofControlRef`, `ofIed`, `ofSourceRef`, `subscribersOf`                                                                                                                                            | `link`, `unlink`                                                                                                                                                                                                                                                            |
 | `history`   | `getLatestHitem`, `getSortedHitems`                                                                                                                                                                                   | `addEntry`, `startFile`                                                                                                                                                                                                                                                     |
@@ -70,7 +70,7 @@ Reach for a namespace when you need to...
 - `info`: a display title and state labels for an element
 - `signature`: structural equality / fingerprint of a subtree
 - `history`: Header / History entries
-- `cleanUp`: remove dangling references, empty containers
+- `cleanUp`: remove dangling references, empty containers, data types nothing names
 
 Known primitives people re-implement by mistake:
 
@@ -106,15 +106,20 @@ Every write through a transaction and every import runs them (see
 - **Deleting** an element clears or deletes the references pointing into its subtree, per the
   orphan rules (beforeDelete); a deleted reference goes with everything it holds (a FunctionRef's
   SignalRole, a Terminal's Text and Private); signal sibling paths are rebuilt (afterDelete).
-- **At commit** (beforeCommit): LNodes get their `LNodeSpecNaming`, once children exist; the
-  containers the transaction left empty are pruned; last, a commit that deletes a record and leaves
-  one of its children in the store is refused (`SCL_ERRORS.CHILD_LEFT_BEHIND`). In an app,
-  `tx.delete` already takes the whole subtree. Inside scl, a hook (or any code staging operations
-  by hand) that deletes a record stages a delete for every record of its subtree, read level by
-  level with `readSubtreeRecords`, never `findDescendants`; `buildCascadeOperations` deletes only
-  the roots it is given and what refers into them, not what the roots hold, so stage the rest
-  yourself. Both are scl internals (`hooks/before-delete`, not exported by the package): use them
-  only when changing scl itself.
+- **At commit** (beforeCommit): LNodes get their `LNodeSpecNaming`, once children exist; an
+  `LNodeType` / `DOType` / `DAType` / `EnumType` the transaction left with no element naming it
+  (it had one before) goes, with the types only it named and every record inside them; the
+  containers the transaction left empty are pruned (an emptied `DataTypeTemplates` among them);
+  last, a commit that deletes a record and leaves one of its children in the store is refused
+  (`SCL_ERRORS.CHILD_LEFT_BEHIND`). So removing the last element naming a type and naming it
+  again in a later transaction names a missing type: create the new one first, or in the same
+  transaction. An import keeps a file's unused types; `tx.cleanUp.pruneUnusedTypes()` sweeps
+  them on demand. In an app, `tx.delete` already takes the whole subtree. Inside scl, a hook (or
+  any code staging operations by hand) that deletes a record stages a delete for every record of
+  its subtree, read level by level with `readSubtreeRecords`, never `findDescendants`;
+  `buildCascadeOperations` deletes only the roots it is given and what refers into them, not
+  what the roots hold, so stage the rest yourself. Both are scl internals (`hooks/before-delete`,
+  not exported by the package): use them only when changing scl itself.
 - **Import** (two passes, no store reads): resolves path ↔ uuid both ways, fills missing paths,
   indexes legacy paths, and reports unresolved / incoherent / unsupported references instead of
   failing: they come back with each imported file as diagnostics (`SCL_IMPORT_DIAGNOSTICS`,

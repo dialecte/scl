@@ -685,6 +685,18 @@
 			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/prune-empty-containers.ts:19"
 		},
 		{
+			"path": "tx.cleanUp.pruneUnusedTypes",
+			"root": "tx",
+			"otherRoutes": [],
+			"signature": "() => Promise<void>",
+			"summary": "Delete every type of the document nothing names (an `LNodeType`, `DOType`, `DAType` or `EnumType`), then the types they alone named, through the transaction so the delete hooks run. What a transaction leaves unused is pruned at its commit anyway; this reaches what the document held unused before (an imported file).",
+			"intents": [
+				"remove the data types nothing in the document uses",
+				"tidy up the DataTypeTemplates of an imported file"
+			],
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/prune-unused-types.ts:16"
+		},
+		{
 			"path": "tx.cleanUp.resetLNode",
 			"root": "tx",
 			"otherRoutes": [],
@@ -734,7 +746,7 @@
 				"import a type closure with dedup and id collision handling",
 				"merge DataTypeTemplates"
 			],
-			"declaredAt": "src/v2019C1/extensions/data-model/transaction/import-types.ts:74"
+			"declaredAt": "src/v2019C1/extensions/data-model/transaction/import-types.ts:77"
 		},
 		{
 			"path": "tx.dataModel.unlockLNode",
@@ -941,13 +953,13 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: ImportDeepParams) => Promise<ImportDeepResult>",
-			"summary": "Import an element subtree into a target document together with its type closure (the data types its LN / LNode use), returning the root it wrote into, the type id remap and the clone mappings. Uuid references are not followed: repoint them afterwards with `tx.reference.applyUuidRemap` over the returned clone mappings.",
+			"summary": "Import an element subtree into a target document together with its type closure (the data types the LN / LNode it cloned use: a logical node `omit` or `leaveOut` leaves out brings none), returning the root it wrote into, the type id remap and the clone mappings. Uuid references are not followed: repoint them afterwards with `tx.reference.applyUuidRemap` over the returned clone mappings.",
 			"intents": [
 				"copy a subtree (IED, Bay, Function) from another document with its data types",
 				"import an IED from an ICD",
 				"clone an element across documents"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/transplant/transaction/deep.ts:39"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/transplant/transaction/deep.ts:40"
 		},
 		{
 			"path": "tx.lifecycle.update.asd",

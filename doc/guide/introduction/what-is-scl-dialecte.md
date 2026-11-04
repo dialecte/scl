@@ -44,18 +44,18 @@ await doc.transaction(async (tx) => {
 })
 ```
 
-| Module      | Kind        | Methods                                                        | What it does                                                                    |
-| ----------- | ----------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `history`   | query       | `getSortedHitems()`, `getLatestHitem()`                        | `Hitem` records sorted by version/revision                                      |
-| `history`   | transaction | `addEntry(params)`                                             | Ensures `Header` + `History`, increments version, appends Hitem                 |
-| `dataModel` | query       | `resolve(params)`, `isLNodeLocked(...)`                        | Walks `lnType` → `LNodeType` → `DOType` → `DAType`/`EnumType`; LNode lock state |
-| `dataModel` | transaction | `importTypes(params)`, `unlockLNode(params)`                   | Content-addressed import of data-model types; unbinding an LNode from its IED   |
-| `info`      | query       | `of(ref, options?)`, `ofEach(refs, options?)`                  | What a UI shows about an element: title, state, labels                          |
-| `reference` | query / tx  | `buildElementPath`, `resolveReferencePath`, `setMappedData`, … | Reference paths: building, resolving, reverse lookup, remapping                 |
-| `identity`  | query / tx  | `resolveIdentity`, `writeIdentity`, …                          | Instance lineage (`uuid` / `templateUuid` / `originUuid`)                       |
-| `signature` | query       | `elementSignature(params)`                                     | Structural, id-independent signature of a subtree                               |
-| `lifecycle` | query / tx  | `report`, `apply`, `extract.*`, `instantiate.*`, `update.*`, … | FSD / ASD / SSD templates: extract, instantiate, update                         |
-| `cleanUp`   | transaction | `orphanUuidRefs()`, `resetLNode()`, `pruneEmptyContainers()`   | Post-mutation integrity helpers                                                 |
+| Module      | Kind        | Methods                                                                            | What it does                                                                    |
+| ----------- | ----------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `history`   | query       | `getSortedHitems()`, `getLatestHitem()`                                            | `Hitem` records sorted by version/revision                                      |
+| `history`   | transaction | `addEntry(params)`                                                                 | Ensures `Header` + `History`, increments version, appends Hitem                 |
+| `dataModel` | query       | `resolve(params)`, `isLNodeLocked(...)`                                            | Walks `lnType` → `LNodeType` → `DOType` → `DAType`/`EnumType`; LNode lock state |
+| `dataModel` | transaction | `importTypes(params)`, `unlockLNode(params)`                                       | Content-addressed import of data-model types; unbinding an LNode from its IED   |
+| `info`      | query       | `of(ref, options?)`, `ofEach(refs, options?)`                                      | What a UI shows about an element: title, state, labels                          |
+| `reference` | query / tx  | `buildElementPath`, `resolveReferencePath`, `setMappedData`, …                     | Reference paths: building, resolving, reverse lookup, remapping                 |
+| `identity`  | query / tx  | `resolveIdentity`, `writeIdentity`, …                                              | Instance lineage (`uuid` / `templateUuid` / `originUuid`)                       |
+| `signature` | query       | `elementSignature(params)`                                                         | Structural, id-independent signature of a subtree                               |
+| `lifecycle` | query / tx  | `report`, `apply`, `extract.*`, `instantiate.*`, `update.*`, …                     | FSD / ASD / SSD templates: extract, instantiate, update                         |
+| `cleanUp`   | transaction | `orphanUuidRefs()`, `resetLNode()`, `pruneEmptyContainers()`, `pruneUnusedTypes()` | Post-mutation integrity helpers                                                 |
 
 See the [Extensions API](/v2019C1/extensions/) for full signatures.
 
