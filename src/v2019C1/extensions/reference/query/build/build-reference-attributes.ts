@@ -8,6 +8,7 @@ import type { ReferrerContext } from './compose-reference-path.types'
 import type { ElementPath } from './path-segment.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DerivedAttributeValue } from '@/v2019C1/extensions/reference'
+import type { FunctionBases } from '@/v2019C1/extensions/reference/query/resolve/resolve-reference-path.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -15,7 +16,8 @@ import type * as Core from '@dialecte/core'
  * writes from the target's path (a terminal's level names). Empty when the reference has no pair
  * to that target or the target has no path. Pass `targetPath` when several references share it,
  * so it is read once; pass `referrerContext` when the mapping of the referrer's LNode is held as the
- * store does not yet.
+ * store does not yet; pass `functionBases` when several signal role references below one FunctionRef
+ * share where their path starts.
  */
 export async function buildReferenceAttributes(
 	query: Core.Query<Config>,
@@ -24,9 +26,10 @@ export async function buildReferenceAttributes(
 		target: Scl.Ref<Scl.ElementsOf>
 		targetPath?: ElementPath
 		referrerContext?: ReferrerContext
+		functionBases?: FunctionBases
 	},
 ): Promise<DerivedAttributeValue[]> {
-	const { reference, target, referrerContext } = params
+	const { reference, target, referrerContext, functionBases } = params
 	const pair = PAIRS_BY_REF.get(reference.tagName)?.find((entry) =>
 		entry.targetTagNames.includes(target.tagName),
 	)
@@ -35,7 +38,13 @@ export async function buildReferenceAttributes(
 	const targetPath = params.targetPath ?? (await buildElementPath(query, target))
 	if (!targetPath) return []
 
-	const path = await buildReferencePath(query, { reference, target, targetPath, referrerContext })
+	const path = await buildReferencePath(query, {
+		reference,
+		target,
+		targetPath,
+		referrerContext,
+		functionBases,
+	})
 	const derived = derivedAttributesFollowing({
 		tagName: reference.tagName,
 		follows: pair.pathAttr,

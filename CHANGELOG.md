@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`DecisionGroup.sideEffects` lists the data types a removal leaves unused**, `deleted`, before the containers and references: the types the removed elements were the last to name, with the types only they name. A group is judged on its own, so for a report of several groups the list is not what `apply` removes for all of them; for one group it is.
 
+- **A signal role path starts at the function its `FunctionRef` names and joins the signal to its LNode with `.`.** `LNodeInputRef@sourceRef` and `LNodeOutputRef@controlRef` are written from that function (a `Function`, `SubFunction`, `EqFunction` or `EqSubFunction`), the function left out, with `/` down to the LNode and `.` before the signal: `PTRC1.Trip`, `SF1/XCBR1.Oper` from a `Function`, `XCBR1.Oper` from the `SubFunction` `SF1`; `LNodeDataRef@data` takes the same base. The 0.11.0 form `SF1/PDIS1/AmpSv` is now written `SF1/PDIS1.AmpSv`. Values written before are still read, the path with `/` before the signal and the path from the nearest `Function` or `EqFunction` above the one the `FunctionRef` names, and written again in the new form on import, also next to a uuid. A signal outside the function the `FunctionRef` names keeps its absolute path. A query resolving such a path tries the keys in the same order, so `PTRC1.A/B` names the input `A/B` even when an input `A.B` comes first in the document.
+
 - **The package declares its mutation scope for `dialecte mutants`** (`dialecte.mutation` in `package.json`); its equivalent-mutant records moved to `.dialecte/mutation-records.json`.
 
 ### Fixed

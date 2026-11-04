@@ -18,6 +18,7 @@ import {
 	reconcileMappedData,
 	reconcileMappedDataBelow,
 	reconcileReferrerRefPaths,
+	reconcileSignalRolePaths,
 	reconcileSignalAddresses,
 	rebuildPathsOfNamedLNode,
 	specifiedNamingChanged,
@@ -39,7 +40,8 @@ import type * as Core from '@dialecte/core'
  * the same for every record below that names its implementation. When it
  * is any other referrer whose binding attributes (target uuid or companion DO/DA
  * names) changed, rebuilds its own path so name and uuid references stay in
- * agreement (the referrer-side counterpart of the after-created hook).
+ * agreement (the referrer-side counterpart of the after-created hook). A `FunctionRef` whose target
+ * changed rebuilds the signal role paths below it.
  */
 export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(params: {
 	query: Core.Query<Config>
@@ -64,7 +66,8 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 			names: mappedDataDefaultAttributes,
 		})
 	) {
-		operations.push(...(await reconcileMappedDataBelow(query, { record: current })))
+		const mappedDataBelowOps = await reconcileMappedDataBelow(query, { record: current })
+		operations.push(...mappedDataBelowOps)
 	}
 
 	const lnodeBindingOps = await reconcileLNodeBinding({
@@ -79,9 +82,8 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 		pendingOperations: lnodeBindingOps,
 	})
 	operations.push(...signalAddressOps)
-	operations.push(
-		...(await mirrorSpecifiedNaming(query, { oldRecord: previous, newRecord: current })),
-	)
+	const mirrorOps = await mirrorSpecifiedNaming(query, { oldRecord: previous, newRecord: current })
+	operations.push(...mirrorOps)
 
 	const referrerOps = await reconcileReferrerRefPaths({
 		oldRecord: previous,
@@ -89,6 +91,12 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 		query,
 	})
 	operations.push(...referrerOps)
+	const signalRoleOps = await reconcileSignalRolePaths({
+		oldRecord: previous,
+		newRecord: current,
+		query,
+	})
+	operations.push(...signalRoleOps)
 
 	const target = { tagName: newRecord.tagName, id: newRecord.id } as Scl.Ref<Scl.ElementsOf>
 	const referenceOps = await rebuildReferencesTo(query, { target })
@@ -105,7 +113,8 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 	}
 
 	if (specifiedNamingChanged({ oldRecord: previous, newRecord: current })) {
-		operations.push(...(await rebuildPathsOfNamedLNode(query, { specNaming: current })))
+		const namedLNodeOps = await rebuildPathsOfNamedLNode(query, { specNaming: current })
+		operations.push(...namedLNodeOps)
 	}
 
 	const tupleOperations = await followTupleTargetRename(query, {
@@ -113,12 +122,11 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 		newRecord: current,
 	})
 	operations.push(...tupleOperations)
-	operations.push(
-		...(await reconcileSignalAddressesOfFollowing(query, {
-			followed: tupleOperations,
-			pendingOperations: operations,
-		})),
-	)
+	const followingAddressOps = await reconcileSignalAddressesOfFollowing(query, {
+		followed: tupleOperations,
+		pendingOperations: operations,
+	})
+	operations.push(...followingAddressOps)
 	const dataSetOperations = await followDataSetRename(query, {
 		oldRecord: previous,
 		newRecord: current,

@@ -1,6 +1,9 @@
+import { toRawRecord } from '@dialecte/core/helpers'
+
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { RESOLUTION_TYPE, MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference'
 import { buildReferenceAttributes } from '@/v2019C1/extensions/reference/query/build/build-reference-attributes'
+import { buildSignalRoleAttributes } from '@/v2019C1/extensions/reference/query/build/build-signal-role-attributes'
 import { derivedAttributesFollowing } from '@/v2019C1/extensions/reference/query/build/compose-derived-attributes'
 import {
 	hasAttributeChange,
@@ -56,6 +59,37 @@ export async function reconcileReferrerRefPaths(params: {
 	}
 	if (attributes === newRecord.attributes) return []
 	return [updatedOperation(newRecord, attributes)]
+}
+
+/**
+ * When a `FunctionRef` is retargeted (its target uuid or its path changes), rebuild the signal role
+ * references below it: their paths start at the function it names, so they follow it, whatever the
+ * order the FunctionRef and the references were written in.
+ */
+export async function reconcileSignalRolePaths(params: {
+	oldRecord: Scl.RawRecord<Scl.ElementsOf>
+	newRecord: Scl.RawRecord<Scl.ElementsOf>
+	query: Core.Query<Config>
+}): Promise<Scl.Operation[]> {
+	const { oldRecord, newRecord, query } = params
+	const [pair] = UUID_REFERENCE_PAIRS.FunctionRef
+	if (newRecord.tagName !== 'FunctionRef') return []
+	if (
+		!hasAttributeChange({ oldRecord, newRecord, names: [pair.attribute.uuid, pair.attribute.path] })
+	) {
+		return []
+	}
+
+	const rebuilt = await buildSignalRoleAttributes(query, {
+		functionRef: { tagName: newRecord.tagName, id: newRecord.id } as Scl.Ref<Scl.ElementsOf>,
+	})
+	const operations: Scl.Operation[] = []
+	for (const { record, values } of rebuilt) {
+		const raw = toRawRecord(record)
+		const attributes = withAttributeValues(raw.attributes, values)
+		if (attributes !== raw.attributes) operations.push(updatedOperation(raw, attributes))
+	}
+	return operations
 }
 
 /**
