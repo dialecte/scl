@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-11-04
+
+### Changed
+
+- **The repository's tooling runs on `@dialecte/cli` 0.3.0** (nothing changes for a consumer): the package declares the contributor profile, so the docs build and the type bench run in `dialecte contrib` instead of the gate; the browser tests run with the runner's defaults; the commit hook checks types, lint and format (`npm run check`, no longer `format:fix`), runs the tests through `dialecte gate --hook` (answered by a green `gate --full` of the committed tree), then builds.
+
 ## [0.12.0] - 2026-11-04
 
 ### Added
