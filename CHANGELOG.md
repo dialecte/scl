@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-04
+
 ### Added
 
 - **`tx.cleanUp.pruneUnusedTypes()` removes the data types nothing names**: every `LNodeType`, `DOType`, `DAType` and `EnumType` of the document that no `lnType` or `type` names goes, then the types it alone named, through the transaction (the delete hooks run), with every record inside them. A type is named by an `LN`, `LN0` or `LNode` (`lnType`), a `DO` or `SDO`, a `DA` or `BDA` (`type`, whatever its `bType`); a cycle of types naming each other stays. An import and an extract keep a file as written and do not call it: it is for a document that holds types nothing names (an imported file) when the caller wants them gone.
