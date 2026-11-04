@@ -1,14 +1,20 @@
 import { buildElementPath } from './build-element-path'
 import { buildMappedLNodePath } from './build-mapped-lnode-path'
 import { composeReferencePath } from './compose-reference-path'
+import { isFunctionScoped } from './function-scope'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { RESOLUTION_TYPE, MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference/constants'
+import { functionBasesOfReferrer } from '@/v2019C1/extensions/reference/query/resolve/resolve-reference-path'
 
 import type { ReferrerContext } from './compose-reference-path.types'
 import type { ElementPath, PathSegmentWithRef } from './path-segment.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
+import type {
+	FunctionBases,
+	FunctionBasesCache,
+} from '@/v2019C1/extensions/reference/query/resolve/resolve-reference-path.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -26,13 +32,18 @@ import type * as Core from '@dialecte/core'
  * name-path, which is a coherent single-target form (a simple name-path is also a
  * valid XPath) and keeps uuid + name references in agreement.
  *
+ * A signal role's reference (`scope: 'function'`) is written below the function the FunctionRef
+ * holding it names, read through the query too.
+ *
  * @intent compute the path value of a reference (SourceRef, FunctionRef, ...) to a target, write a reference attribute pointing at an element, refresh a stale reference path
  *
  * @param query   - Active document query
  * @param params  - reference (the REF element) + target (the element it points to), the
  *                  target's path when the caller already read it (several references to one target),
- *                  and where the referrer's LNode is mapped when the caller holds it as the store
- *                  does not yet (an `ied-address` path)
+ *                  where the referrer's LNode is mapped when the caller holds it as the store
+ *                  does not yet (an `ied-address` path), and where its signal role path starts
+ *                  (`functionBases`) when the caller read it for several references below one FunctionRef, or a
+ *                  `functionBasesCache` shared by the references of a loop
  * @returns The computed path value, or null if unresolvable
  */
 export async function buildReferencePath(
@@ -42,6 +53,8 @@ export async function buildReferencePath(
 		target: Scl.Ref<Scl.ElementsOf>
 		targetPath?: ElementPath
 		referrerContext?: ReferrerContext
+		functionBases?: FunctionBases
+		functionBasesCache?: FunctionBasesCache
 	},
 ): Promise<string | null> {
 	const { reference, target } = params
@@ -69,12 +82,22 @@ export async function buildReferencePath(
 			? await referrerContextOf(query, referenceRecord.parent as Scl.Ref<Scl.ElementsOf>)
 			: undefined)
 
+	const functionBases =
+		params.functionBases ??
+		(isFunctionScoped(pair) && referenceRecord
+			? await functionBasesOfReferrer(query, {
+					record: referenceRecord,
+					cache: params.functionBasesCache,
+				})
+			: undefined)
+
 	return composeReferencePath({
 		pair,
 		referenceAttributes: referenceRecord?.attributes ?? [],
 		targetPath,
 		behaviorContext,
 		referrerContext,
+		functionBase: functionBases?.functionPath.segments,
 	})
 }
 

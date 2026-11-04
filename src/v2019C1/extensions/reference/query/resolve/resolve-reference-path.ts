@@ -15,7 +15,11 @@ import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ElementPath, PathSegment } from '../build/path-segment.types'
-import type { ResolveResult } from './resolve-reference-path.types'
+import type {
+	FunctionBases,
+	FunctionBasesCache,
+	ResolveResult,
+} from './resolve-reference-path.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { ReferencePair, ResolutionType } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
@@ -81,10 +85,10 @@ export async function resolveReferencePath(
 		specNamings = await readSpecNamings(query, { records: ancestry })
 	}
 
-	const functionBase = isFunctionScoped(pair)
-		? await functionBaseOfReferrer(query, { record })
+	// a FunctionRef naming nothing gives no base: the path is then read as written, the absolute form
+	const functionBases = isFunctionScoped(pair)
+		? await functionBasesOfReferrer(query, { record })
 		: undefined
-	if (isFunctionScoped(pair) && functionBase === undefined) return undefined
 
 	const parsed = parseReferencePath({
 		resolution: pair.resolution as ResolutionType,
@@ -92,7 +96,8 @@ export async function resolveReferencePath(
 		pathValue,
 		ancestry,
 		specNamings,
-		functionBase,
+		functionBase: functionBases?.functionPath.path,
+		formerFunctionBase: functionBases?.formerBase,
 		nameScope: nameScopeOf(pair),
 	})
 	if (!parsed) return undefined
@@ -137,27 +142,54 @@ export async function resolveReferencePath(
 }
 
 /**
- * The path of the Function a signal role's reference starts below: the Function, or the nearest
- * one above the SubFunction, that its `FunctionRef` names.
+ * Where a signal role's reference starts its path: see `functionBasesOfFunctionRef`, for the
+ * `FunctionRef` above `params.record`. `undefined` when the referrer has no FunctionRef. A loop over
+ * the references of one operation passes a `cache` so the bases are read once per FunctionRef.
  */
-async function functionBaseOfReferrer(
+export async function functionBasesOfReferrer(
 	query: Core.Query<Config> | Core.Transaction<Config>,
-	params: { record: Scl.TrackedRecord<Scl.ElementsOf> },
-): Promise<string | undefined> {
-	const ancestors = await query.findAncestors(params.record)
-	const functionRef = ancestors.find((ancestor) => ancestor.tagName === 'FunctionRef')
-	if (!functionRef) return undefined
-	const named = await resolveReferencePath(
+	params: { record: Scl.TrackedRecord<Scl.ElementsOf>; cache?: FunctionBasesCache },
+): Promise<FunctionBases | undefined> {
+	// parent by parent: a signal role reference is two levels below its FunctionRef
+	const functionRefRef = await nearestAncestorOfTag({
 		query,
-		functionRef as Scl.TrackedRecord<Scl.ElementsOf>,
-		'function',
-	)
+		record: params.record,
+		tagName: 'FunctionRef',
+	})
+	const functionRef = functionRefRef ? await query.getRecord(functionRefRef) : undefined
+	if (!functionRef) return undefined
+
+	// keyed by what the FunctionRef names, so a FunctionRef retargeted meanwhile is read again
+	const key = JSON.stringify([
+		functionRef.id,
+		readAttribute({ record: functionRef, name: 'functionUuid', defaults: 'none' }),
+		readAttribute({ record: functionRef, name: 'function', defaults: 'none' }),
+	])
+	const { cache } = params
+	if (cache?.has(key)) return cache.get(key)
+	const bases = await functionBasesOfFunctionRef(query, { functionRef })
+	cache?.set(key, bases)
+	return bases
+}
+
+/**
+ * Where the signal role references below a `FunctionRef` start their path: the path of the function
+ * it names (a Function, SubFunction, EqFunction or EqSubFunction), and the path of the Function (or
+ * EqFunction) nearest above it, or at it, the base an earlier version wrote the path from.
+ * `undefined` when the FunctionRef names nothing.
+ */
+export async function functionBasesOfFunctionRef(
+	query: Core.Query<Config> | Core.Transaction<Config>,
+	params: { functionRef: Scl.TrackedRecord<Scl.ElementsOf> },
+): Promise<FunctionBases | undefined> {
+	const named = await resolveReferencePath(query, params.functionRef, 'function')
 	if (!named) return undefined
 	const functionPath = await buildElementPath(query, {
 		tagName: named.record.tagName,
 		id: named.record.id,
 	} as Scl.Ref<Scl.ElementsOf>)
-	return functionPath ? (functionBaseOf(functionPath) ?? undefined) : undefined
+	if (!functionPath) return undefined
+	return { functionPath, formerBase: functionBaseOf(functionPath) ?? undefined }
 }
 
 /**
@@ -223,7 +255,7 @@ function findReferencePair(tagName: string, pathAttribute: string): ReferencePai
  * This is exact and handles all disambiguation cases (e.g. same input
  * name with different pDA).
  */
-async function resolveByUuid(
+export async function resolveByUuid(
 	query: Core.Query<Config> | Core.Transaction<Config>,
 	record: Scl.TrackedRecord<Scl.ElementsOf>,
 	pair: ReferencePair,
@@ -354,8 +386,9 @@ async function findLnClassTarget(params: {
 }
 
 /**
- * The signal whose path, built among its siblings, is one of `paths`, or whose path with its full
- * name (its instance and data attribute, whatever its siblings) is.
+ * The signal named by the first of `paths` that names one, the keys in order: a signal's path, built
+ * among its siblings, or with its full name (its instance and data attribute, whatever its siblings)
+ * is the key. Among the signals of one key, the first in the document.
  */
 async function findSignalByPath(params: {
 	query: Core.Query<Config> | Core.Transaction<Config>
@@ -364,19 +397,25 @@ async function findSignalByPath(params: {
 }): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
 	const { query, targets, paths } = params
 
+	let best: { keyIndex: number; record: Scl.TrackedRecord<Scl.ElementsOf> } | undefined
 	for (const tagName of targets) {
 		const records = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
 		for (const record of records) {
 			const elementPath = await buildElementPath(query, record as Scl.Ref<Scl.ElementsOf>)
 			if (!elementPath) continue
 			const fullPath = fullSignalPath({ record: toRawRecord(record), elementPath })
-			if (paths.includes(elementPath.path) || (fullPath && paths.includes(fullPath))) {
-				return record as Scl.TrackedRecord<Scl.ElementsOf>
-			}
+			const keyIndex = [elementPath.path, fullPath]
+				.map((path) => (path === null ? -1 : paths.indexOf(path)))
+				.filter((index) => index !== -1)
+				.reduce((first, index) => Math.min(first, index), paths.length)
+			if (keyIndex === paths.length || (best && keyIndex >= best.keyIndex)) continue
+			best = { keyIndex, record: record as Scl.TrackedRecord<Scl.ElementsOf> }
+			// the first key names it: no later signal can name it better
+			if (keyIndex === 0) return best.record
 		}
 	}
 
-	return undefined
+	return best?.record
 }
 
 /** The path of a signal named with its full name below its LNode, `null` when it has none. */

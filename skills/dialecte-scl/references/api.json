@@ -543,14 +543,14 @@
 			"path": "doc.query.reference.buildReferencePath",
 			"root": "q",
 			"otherRoutes": [],
-			"signature": "(params: { reference: Scl.Ref<Scl.ElementsOf>; target: Scl.Ref<Scl.ElementsOf>; targetPath?: ElementPath; referrerContext?: ReferrerContext; }) => Promise<string | null>",
+			"signature": "(params: { reference: Scl.Ref<Scl.ElementsOf>; target: Scl.Ref<Scl.ElementsOf>; targetPath?: ElementPath; referrerContext?: ReferrerContext; functionBases?: FunctionBases; functionBasesCache?: FunctionBasesCache; }) => Promise<string | null>",
 			"summary": "Build the path value to store on a REF element's path attribute when pointing at a given target.",
 			"intents": [
 				"compute the path value of a reference (SourceRef, FunctionRef, ...) to a target",
 				"write a reference attribute pointing at an element",
 				"refresh a stale reference path"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/build/build-reference-path.ts:38"
+			"declaredAt": "src/v2019C1/extensions/reference/query/build/build-reference-path.ts:49"
 		},
 		{
 			"path": "doc.query.reference.findOwnProvenance",
@@ -643,7 +643,7 @@
 				"element a SourceRef/ControlRef/FunctionRef path points to",
 				"resolve a path attribute to a record"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-reference-path.ts:40"
+			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-reference-path.ts:44"
 		},
 		{
 			"path": "doc.query.signature.elementSignature",
@@ -1011,7 +1011,7 @@
 				"make references inside copied elements point at the copies",
 				"rewrite refs from source to target uuids"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/transaction/apply-uuid-remap.ts:36"
+			"declaredAt": "src/v2019C1/extensions/reference/transaction/apply-uuid-remap.ts:37"
 		},
 		{
 			"path": "tx.reference.removeOwnProvenance",

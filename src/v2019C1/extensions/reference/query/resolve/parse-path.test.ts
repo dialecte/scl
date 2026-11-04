@@ -766,6 +766,147 @@ describe('reference-parsing', () => {
 		})
 	})
 
+	describe('parseReferencePath for a function-scoped path', () => {
+		type TestCase = {
+			element: string
+			attribute: string
+			value: string
+			/** The path of the function the FunctionRef names. */
+			functionBase: string
+			/** The path of the Function nearest above it: the base an earlier version read from. */
+			formerFunctionBase: string
+			expected: { lookupKey: string; fallbackLookupKeys: string[]; qualifier?: string }
+		}
+
+		const testCases: Record<string, TestCase> = {
+			'a path below a SubFunction with "." before the signal, base the Function -> as written below the base first, then its last "/" turned into ".", then as written':
+				{
+					element: 'LNodeInputRef',
+					attribute: 'sourceRef',
+					value: 'SF1/XCBR1.Oper',
+					functionBase: 'S1/F1',
+					formerFunctionBase: 'S1/F1',
+					expected: {
+						lookupKey: 'S1/F1/SF1/XCBR1.Oper',
+						fallbackLookupKeys: ['S1/F1/SF1.XCBR1.Oper', 'SF1/XCBR1.Oper'],
+					},
+				},
+			'a signal joined with ".", base a SubFunction -> below that base, then below the Function above it, then as written':
+				{
+					element: 'LNodeOutputRef',
+					attribute: 'controlRef',
+					value: 'XCBR1.Oper',
+					functionBase: 'S1/F1/SF1',
+					formerFunctionBase: 'S1/F1',
+					expected: {
+						lookupKey: 'S1/F1/SF1/XCBR1.Oper',
+						fallbackLookupKeys: ['S1/F1/XCBR1.Oper', 'XCBR1.Oper'],
+					},
+				},
+			'a signal joined with "/", base a SubFunction -> both bases, each as written then with its last "/" turned into ".", then as written':
+				{
+					element: 'LNodeOutputRef',
+					attribute: 'controlRef',
+					value: 'XCBR1/Oper',
+					functionBase: 'S1/F1/SF1',
+					formerFunctionBase: 'S1/F1',
+					expected: {
+						lookupKey: 'S1/F1/SF1/XCBR1/Oper',
+						fallbackLookupKeys: [
+							'S1/F1/SF1/XCBR1.Oper',
+							'S1/F1/XCBR1/Oper',
+							'S1/F1/XCBR1.Oper',
+							'XCBR1/Oper',
+						],
+					},
+				},
+			'a path from the nearest Function, base a SubFunction below it -> the SubFunction base first, the Function base reaches the target':
+				{
+					element: 'LNodeOutputRef',
+					attribute: 'controlRef',
+					value: 'SF1/XCBR1.Oper',
+					functionBase: 'S1/F1/SF1',
+					formerFunctionBase: 'S1/F1',
+					expected: {
+						lookupKey: 'S1/F1/SF1/SF1/XCBR1.Oper',
+						fallbackLookupKeys: [
+							'S1/F1/SF1/SF1.XCBR1.Oper',
+							'S1/F1/SF1/XCBR1.Oper',
+							'S1/F1/SF1.XCBR1.Oper',
+							'SF1/XCBR1.Oper',
+						],
+					},
+				},
+			'a signal named with a "/" joined with "." (PTRC1 holds "A/B" and "A.B") -> the name as written is the first key, the "/" turned into "." the next':
+				{
+					element: 'LNodeInputRef',
+					attribute: 'sourceRef',
+					value: 'PTRC1.A/B',
+					functionBase: 'S1/F1',
+					formerFunctionBase: 'S1/F1',
+					expected: {
+						lookupKey: 'S1/F1/PTRC1.A/B',
+						fallbackLookupKeys: ['S1/F1/PTRC1.A.B', 'PTRC1.A/B'],
+					},
+				},
+			'LNodeDataRef.data, base a SubFunction -> the LNode below that base and the qualifier, then below the Function above it, then as written':
+				{
+					element: 'LNodeDataRef',
+					attribute: 'data',
+					value: 'XCBR1.Pos.stVal',
+					functionBase: 'S1/F1/SF1',
+					formerFunctionBase: 'S1/F1',
+					expected: {
+						lookupKey: 'S1/F1/SF1/XCBR1',
+						qualifier: 'Pos.stVal',
+						fallbackLookupKeys: ['S1/F1/XCBR1', 'XCBR1'],
+					},
+				},
+			'LNodeDataRef.data, base the Function (the Function above it is the same) -> the base once, then as written':
+				{
+					element: 'LNodeDataRef',
+					attribute: 'data',
+					value: 'SF1/XCBR1.Pos.stVal',
+					functionBase: 'S1/F1',
+					formerFunctionBase: 'S1/F1',
+					expected: {
+						lookupKey: 'S1/F1/SF1/XCBR1',
+						qualifier: 'Pos.stVal',
+						fallbackLookupKeys: ['SF1/XCBR1'],
+					},
+				},
+			'LNodeDataRef.data from the nearest Function, base a SubFunction below it -> the SubFunction base first, the Function base reaches the LNode':
+				{
+					element: 'LNodeDataRef',
+					attribute: 'data',
+					value: 'SF1/XCBR1.Pos.stVal',
+					functionBase: 'S1/F1/SF1',
+					formerFunctionBase: 'S1/F1',
+					expected: {
+						lookupKey: 'S1/F1/SF1/SF1/XCBR1',
+						qualifier: 'Pos.stVal',
+						fallbackLookupKeys: ['S1/F1/SF1/XCBR1', 'SF1/XCBR1'],
+					},
+				},
+		}
+
+		Object.entries(testCases).forEach(([description, tc]) => {
+			it(description, () => {
+				const resolution = getResolutionType(tc.element, tc.attribute)
+				if (!resolution) throw new Error(`${tc.element}.${tc.attribute} has no resolution`)
+				expect(
+					parseReferencePath({
+						resolution,
+						pathAttribute: tc.attribute,
+						pathValue: tc.value,
+						functionBase: tc.functionBase,
+						formerFunctionBase: tc.formerFunctionBase,
+					}),
+				).toEqual(tc.expected)
+			})
+		})
+	})
+
 	describe('getResolutionType', () => {
 		type TestCase = {
 			element: string

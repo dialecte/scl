@@ -16,6 +16,11 @@ export type ReferencePathParts = {
 	behaviorContext?: readonly PathSegmentWithRef[]
 	/** `ied-address` pairs only: where the referrer's LNode is mapped. */
 	referrerContext?: ReferrerContext
+	/**
+	 * Function-scoped pairs only: the path segments of the function the referrer's FunctionRef names,
+	 * the base the target's path is written below.
+	 */
+	functionBase?: readonly PathSegmentWithRef[]
 }
 
 /** What an `ied-address` path reads of the referrer: the logical node its LNode is mapped to. */

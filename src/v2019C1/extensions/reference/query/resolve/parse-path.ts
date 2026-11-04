@@ -110,20 +110,34 @@ export function parseReferencePath(params: {
 	/** The `LNodeSpecNaming` of each LNode of `ancestry`, by LNode id: names those LNodes. */
 	specNamings?: ReadonlyMap<string, AnyRawRecord>
 	/**
-	 * For a function-scoped pair (a signal role's reference): the path of the Function its path
-	 * starts below. The path is read relative to it, and as written, the absolute form an earlier
-	 * version wrote.
+	 * For a function-scoped pair (a signal role's reference): the path of the function its
+	 * FunctionRef names, the base its path starts below. The path is read relative to it, then
+	 * relative to `formerFunctionBase`, then as written, the absolute form an earlier version wrote.
 	 */
 	functionBase?: string
+	/**
+	 * For a function-scoped pair: the path of the Function (or EqFunction) nearest above, or at, the
+	 * function `functionBase` names, the base an earlier version read the path from. Read like
+	 * `functionBase`, after it.
+	 */
+	formerFunctionBase?: string
 	/** For a `scoped-name` pair, the tag of the ancestor its name is unique in. */
 	nameScope?: string
 }): ParsedReference | null {
-	const { resolution, pathAttribute, pathValue, ancestry, specNamings, functionBase, nameScope } =
-		params
+	const {
+		resolution,
+		pathAttribute,
+		pathValue,
+		ancestry,
+		specNamings,
+		functionBase,
+		formerFunctionBase,
+		nameScope,
+	} = params
 	if (!resolution || resolution === RESOLUTION_TYPE.unsupported) return null
 
 	if (functionBase !== undefined)
-		return parseFunctionScopedPath({ resolution, pathValue, functionBase })
+		return parseFunctionScopedPath({ resolution, pathValue, functionBase, formerFunctionBase })
 
 	if (resolution === RESOLUTION_TYPE.direct) return { lookupKey: pathValue }
 
@@ -177,35 +191,48 @@ function parseScopedNamePath(params: {
 // ── function-scoped paths ────────────────────────────────────────────
 
 /**
- * A path from a Function down, the Function left out, every level joined with "/": the absolute
- * key puts the Function's path in front, and joins a signal to its LNode with "." (`SF1/PTRC1/Trip`
- * below `S1/F1` is `S1/F1/SF1/PTRC1.Trip`); a data path keeps its qualifier. The keys tried next: the
- * path below the Function as written, for a signal already joined to its LNode with "."
- * (`SF1/PTRC1.Trip`), then the path as written, the absolute form an earlier version wrote.
+ * A path from the function the referrer's FunctionRef names down, that function left out, the levels
+ * joined with "/" down to the LNode and "." before the signal (`SF1/PTRC1.Trip` below `S1/F1`; a data
+ * path keeps its qualifier). Keys, a duplicate dropped, from the form written now to the oldest:
+ * the path below the function as written, then with its last "/" turned into "." (a signal joined to
+ * its LNode with "/", the form an earlier version wrote), the same two below the Function nearest
+ * above it (`formerFunctionBase`, the base an earlier version wrote the path from), then the path as
+ * written, the absolute form.
  */
 function parseFunctionScopedPath(params: {
 	resolution: ResolutionType
 	pathValue: string
 	functionBase: string
+	formerFunctionBase?: string
 }): ParsedReference | null {
-	const { resolution, pathValue, functionBase } = params
+	const { resolution, pathValue, functionBase, formerFunctionBase } = params
+	const bases = [functionBase, formerFunctionBase].filter(
+		(base): base is string => base !== undefined,
+	)
+
 	if (resolution === RESOLUTION_TYPE.lnode) {
-		const relative = parseLnodePath(`${functionBase}/${pathValue}`)
-		const asWritten = parseLnodePath(pathValue)
-		return { ...relative, fallbackLookupKeys: [asWritten.lookupKey] }
+		const keys = [...bases.map((base) => `${base}/${pathValue}`), pathValue].map(parseLnodePath)
+		const [first, ...rest] = keys
+		return {
+			...first,
+			fallbackLookupKeys: [...new Set(rest.map((key) => key.lookupKey))].filter(
+				(key) => key !== first.lookupKey,
+			),
+		}
 	}
 	if (resolution !== RESOLUTION_TYPE.direct) return null
+
 	const lastSlash = pathValue.lastIndexOf('/')
-	const signalPath =
+	const withLastDot =
 		lastSlash === -1
 			? pathValue
 			: `${pathValue.slice(0, lastSlash)}.${pathValue.slice(lastSlash + 1)}`
-	const lookupKey = `${functionBase}/${signalPath}`
-	const asWrittenBelow = `${functionBase}/${pathValue}`
-	return {
-		lookupKey,
-		fallbackLookupKeys: asWrittenBelow === lookupKey ? [pathValue] : [asWrittenBelow, pathValue],
-	}
+	const keys = [
+		...bases.flatMap((base) => [`${base}/${pathValue}`, `${base}/${withLastDot}`]),
+		pathValue,
+	]
+	const [lookupKey, ...fallbackLookupKeys] = [...new Set(keys)]
+	return { lookupKey, fallbackLookupKeys }
 }
 
 // ── ancestor-name strategy ───────────────────────────────────────────

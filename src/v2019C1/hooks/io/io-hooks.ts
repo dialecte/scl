@@ -175,7 +175,8 @@ export function createSclImportSession(): ImportSession<SclImportDiagnostic> {
 					referenceAttributes: record.attributes,
 					ancestry:
 						pair.resolution === RESOLUTION_TYPE.behaviorDescription ||
-						pair.resolution === RESOLUTION_TYPE.iedAddress
+						pair.resolution === RESOLUTION_TYPE.iedAddress ||
+						isFunctionScoped(pair)
 							? localAncestry
 							: undefined,
 				})
@@ -280,6 +281,7 @@ function fillPath(params: {
 			? behaviorContextFromAncestry({ ancestry: fill.ancestry, specNamings })
 			: undefined,
 		referrerContext: referrerContextFromAncestry({ pair: fill.pair, ancestry: fill.ancestry }),
+		functionBase: functionBaseSegmentsOf({ pair: fill.pair, ancestry: fill.ancestry, index }),
 	})
 	if (!path) return { diagnostics: [] }
 	const changes = derivedChangesOf({
@@ -347,17 +349,18 @@ function resolvePending(params: {
 }): { update?: RecordPatch; diagnostics: SclImportDiagnostic[] } {
 	const { pending, index, specNamings, dataTypes } = params
 	const scoped = isFunctionScoped(pending.pair)
-	const functionBase = scoped
-		? functionBaseOfReferrer({ ancestry: pending.ancestry, index })
+	// a FunctionRef naming nothing gives no base: the path is then read as written, the absolute form
+	const functionPath = scoped
+		? functionRefTargetPathOf({ ancestry: pending.ancestry, index })
 		: undefined
-	if (scoped && functionBase === undefined) return { diagnostics: [] }
 	const parsed = parseReferencePath({
 		resolution: pending.pair.resolution,
 		pathAttribute: pending.pair.attribute.path,
 		pathValue: pending.pathValue,
 		ancestry: pending.ancestry,
 		specNamings,
-		functionBase,
+		functionBase: functionPath?.path,
+		formerFunctionBase: functionPath ? (functionBaseOf(functionPath) ?? undefined) : undefined,
 		nameScope: nameScopeOf(pending.pair),
 	})
 	// a name read in a scope the reference is not in (a variant reference outside an Application):
@@ -460,8 +463,11 @@ function dataNamesOfPath(params: {
 	const { pending, qualifier, lnType, dataTypes } = params
 	const { doAttribute, daAttribute, doRequired } = dataCompanionsOf(pending.pair)
 	if (!doAttribute) return []
-	const held = (name: string | undefined) =>
-		pending.referenceAttributes.find((attribute) => attribute.name === name)?.value || undefined
+	function held(name: string | undefined): string | undefined {
+		return (
+			pending.referenceAttributes.find((attribute) => attribute.name === name)?.value || undefined
+		)
+	}
 	if (held(doAttribute)) return []
 
 	const daHeld = held(daAttribute)
@@ -674,6 +680,7 @@ function standardPathOf(params: {
 			pair: pending.pair,
 			ancestry: pending.ancestry,
 		}),
+		functionBase: functionBaseSegmentsOf({ pair: pending.pair, ancestry: pending.ancestry, index }),
 	})
 	if (!path || path === pending.pathValue) return []
 	return [{ name: pending.pair.attribute.path, value: path }]
@@ -715,24 +722,47 @@ function referrerContextFromAncestry(params: {
 }
 
 /**
- * The path of the Function a signal role's reference starts below: the Function, or the nearest one
- * above the SubFunction, that its `FunctionRef` names (by uuid, else by path).
+ * The path of the function a signal role's reference starts below: the one its `FunctionRef` names, by
+ * uuid, else, when the uuid is absent or names no function of the file, by path: the order and the
+ * kinds the query reads it in (only the tags the FunctionRef's pair targets count). `undefined` when
+ * it has no FunctionRef or the FunctionRef names no function of the file.
  */
-function functionBaseOfReferrer(params: {
+function functionRefTargetPathOf(params: {
 	ancestry: readonly AnyRawRecord[] | undefined
 	index: ImportPathIndex
-}): string | undefined {
+}): ElementPath | undefined {
 	const { ancestry, index } = params
 	const functionRef = ancestry?.findLast((ancestor) => ancestor.tagName === 'FunctionRef')
 	if (!functionRef) return undefined
-	const functionPath = readAttribute({ record: functionRef, name: 'function' })
-	const uuid =
-		readAttribute({
-			record: functionRef,
-			name: 'functionUuid',
-			defaults: 'none',
-			fullObject: true,
-		})?.value ?? (functionPath ? index.byPath.get(functionPath) : undefined)
-	const target = uuid ? index.targetsByUuid.get(uuid) : undefined
-	return target ? (functionBaseOf(target.path) ?? undefined) : undefined
+	const [functionPair] = UUID_REFERENCE_PAIRS.FunctionRef
+	const functionTags: readonly string[] = functionPair.target
+	function functionPathOfUuid(uuid: string | undefined): ElementPath | undefined {
+		const target = uuid ? index.targetsByUuid.get(uuid) : undefined
+		return target && functionTags.includes(target.tagName) ? target.path : undefined
+	}
+
+	const uuid = readAttribute({
+		record: functionRef,
+		name: functionPair.attribute.uuid,
+		defaults: 'none',
+		fullObject: true,
+	})?.value
+	const byUuid = functionPathOfUuid(uuid)
+	if (byUuid) return byUuid
+	const functionPath = readAttribute({ record: functionRef, name: functionPair.attribute.path })
+	return functionPathOfUuid(functionPath ? index.byPath.get(functionPath) : undefined)
+}
+
+/**
+ * The path segments of the function a function-scoped pair's path starts below, as the record hooks
+ * read them through a query. `undefined` for any other reference.
+ */
+function functionBaseSegmentsOf(params: {
+	pair: ReferencePair
+	ancestry: readonly AnyRawRecord[] | undefined
+	index: ImportPathIndex
+}): PathSegmentWithRef[] | undefined {
+	const { pair, ancestry, index } = params
+	if (!isFunctionScoped(pair)) return undefined
+	return functionRefTargetPathOf({ ancestry, index })?.segments
 }

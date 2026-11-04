@@ -9,6 +9,7 @@ import { TUPLE_REFERENCE_PAIRS, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type { TupleTargetParts } from '../query/ied-tuple/ied-tuple.types'
+import type { FunctionBasesCache } from '../query/resolve/resolve-reference-path.types'
 import type { RedirectMapping } from './apply-uuid-remap.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TupleReferencePair } from '@/v2019C1/constants'
@@ -68,6 +69,7 @@ export async function applyUuidRemap(
 	if (uuidMap.size === 0) return
 
 	// 2. Repoint each cloned ref-holder's uuid attrs and recompute its paths.
+	const functionBasesCache: FunctionBasesCache = new Map()
 	for (const { target } of cloneMappings) {
 		if (!(target.tagName in UUID_REFERENCE_PAIRS)) continue
 		const refRecord = await tx.getRecord(target)
@@ -94,6 +96,7 @@ export async function applyUuidRemap(
 			const newPath = await buildReferencePath(tx, {
 				reference: { tagName: target.tagName, id: refRecord.id } as Scl.Ref<Scl.ElementsOf>,
 				target: { tagName: targetMeta.tagName, id: targetMeta.id } as Scl.Ref<Scl.ElementsOf>,
+				functionBasesCache,
 			})
 			const currentPath = readAttribute({
 				record: refRecord,

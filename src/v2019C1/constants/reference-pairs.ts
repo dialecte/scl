@@ -9,9 +9,9 @@
  * - `uuid`: the corresponding UUID attribute that identifies the same target
  * - `target`: the element tag(s) the UUID resolves to
  * - `companions`: attributes that must/may be set when the UUID is used
- * - `scope`: `'function'` when the path is relative to the target's Function (`FUNCTION_SCOPE_TAGS`),
- *   the Function left out: the references of a signal role (`LNodeInputRef`, `LNodeOutputRef`,
- *   `LNodeDataRef`)
+ * - `scope`: `'function'` when the path is relative to the function the referrer's `FunctionRef`
+ *   names, that function left out: the references of a signal role (`LNodeInputRef`,
+ *   `LNodeOutputRef`, `LNodeDataRef`)
  * - `nameScope`: for a `scoped-name` pair, the tag of the ancestor of the referrer the name is
  *   unique in: a variant reference names a variant of its Application by the variant's name
  */
@@ -21,8 +21,9 @@ import type { TupleReferencePairsShape } from './reference-pairs.types'
 import type { Scl } from '@/v2019C1/config'
 
 /**
- * The elements a function-scoped path (`scope: 'function'`) starts below: the nearest of them above
- * the target is its Function, never a SubFunction.
+ * The elements an earlier version started a function-scoped path (`scope: 'function'`) below: the
+ * nearest of them above the target was its Function, never a SubFunction. Now only the former base
+ * a path is still read from.
  */
 export const FUNCTION_SCOPE_TAGS: ReadonlySet<string> = new Set(['Function', 'EqFunction'])
 
