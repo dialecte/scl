@@ -1,7 +1,13 @@
+import { findLeftChildren } from './left-children'
+import { LEFT_CHILDREN_PERF_SPAN } from './left-children.constants'
 import { pruneEmptiedContainers } from './prune-emptied-containers'
 
+import { throwDialecteError } from '@dialecte/core'
+
+import { SCL_ERRORS } from '@/v2019C1/errors'
 import { ensureLNodeSpecNaming } from '@/v2019C1/hooks/shared'
 
+import type { LeftChild } from './left-children.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -10,7 +16,9 @@ import type * as Core from '@dialecte/core'
  * `LNodeSpecNaming`: one brought by a copy or added by the caller is kept, the others get one from
  * the LNode's own naming. Run here, not on create: when an LNode is created, its children (a copied
  * `LNodeSpecNaming` among them) are not added yet. Then the containers the transaction left holding
- * nothing go ({@link pruneEmptiedContainers}), whatever wrote: a delete, an apply, an extract.
+ * nothing go ({@link pruneEmptiedContainers}), whatever wrote: a delete, an apply, an extract. Last, over the
+ * transaction's operations and the ones staged here, a record deleted with a child left in the store refuses the
+ * commit ({@link findLeftChildren}).
  */
 export async function beforeCommit(params: {
 	operations: ReadonlyArray<Scl.Operation>
@@ -26,7 +34,8 @@ export async function beforeCommit(params: {
 
 	const ensured: Scl.Operation[] = []
 	for (const id of created) {
-		ensured.push(...(await ensureLNodeSpecNaming(query, { lnode: { tagName: 'LNode', id } })))
+		const naming = await ensureLNodeSpecNaming(query, { lnode: { tagName: 'LNode', id } })
+		ensured.push(...naming)
 	}
 	// what the transaction left holding nothing goes, read with what the naming just wrote
 	const pending = new Map<string, Scl.RawRecord<Scl.ElementsOf>>()
@@ -34,5 +43,28 @@ export async function beforeCommit(params: {
 		if (operation.status !== 'deleted') pending.set(operation.newRecord.id, operation.newRecord)
 	}
 	const pruned = await pruneEmptiedContainers({ operations, query, pending })
-	return [...ensured, ...pruned]
+	const staged = [...ensured, ...pruned]
+	await assertNoChildLeftBehind({ operations: [...operations, ...staged], query })
+	return staged
+}
+
+/** Refuse the commit when the operations delete a record and leave one of its children in the store. */
+async function assertNoChildLeftBehind(params: {
+	operations: ReadonlyArray<Scl.Operation>
+	query: Core.Query<Config>
+}): Promise<void> {
+	const { query } = params
+	query.perf.start(LEFT_CHILDREN_PERF_SPAN)
+	let left: LeftChild[]
+	try {
+		left = await findLeftChildren(params)
+	} finally {
+		query.perf.stop(LEFT_CHILDREN_PERF_SPAN)
+	}
+	const [first] = left
+	if (!first) return
+	throwDialecteError(SCL_ERRORS.CHILD_LEFT_BEHIND, {
+		meta: { record: first.record, child: first.child },
+		detail: `the commit deletes ${first.record.tagName} "${first.record.id}" and leaves its child ${first.child.tagName} "${first.child.id}" in the store`,
+	})
 }

@@ -676,6 +676,8 @@ Some attributes are written from a path every time that path is, and never given
 | a terminal pointed at another node (`cNodeUuid` changed) | its path and names follow that node; a level name edited by hand is written again from the node               |
 | a node deleted (or a level holding it)                   | the terminals connected to it are deleted, the equipment stays: an equipment that is not connected has none   |
 
+A reference a delete removes goes with everything it holds: a terminal deleted with its node takes its `Text` and its `Private` (a vendor's elements included), a `FunctionRef` deleted with its function takes its `SignalRole` and the signal references in it. Those records leave the store, not only the exported file, so a query no longer returns them; the same holds for a reference the commit deletes while it removes an emptied container. A kept reference inside a removed one (a `SourceRef` in a terminal's `Private`) goes with it instead of being cleared. The commit refuses (`CHILD_LEFT_BEHIND`, [errors](../api/errors)) a transaction that deletes a record and leaves one of its children in the store.
+
 The lifecycle verbs follow from it: an extracted bay-typical names its nodes under the `TEMPLATE` scaffolding, and a terminal on a node outside the extracted scope is removed; an instantiated or updated one names the nodes placed with it, under the project's levels. A template's paths and level names are never copied onto an instance.
 
 **Every `LNode` carries its `LNodeSpecNaming`** (in its `eIEC61850-6-100` `Private`), the naming it was specified with, kept while an IED identity is stamped on the `LNode`:

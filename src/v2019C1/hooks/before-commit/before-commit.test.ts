@@ -1,7 +1,15 @@
-import { describe } from 'vitest'
+import { beforeCommit } from './before-commit'
+
+import { toDialecteError } from '@dialecte/core'
+import { describe, expect } from 'vitest'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
-import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import {
+	ALL_XMLNS_NAMESPACES,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	createSclTestRecord,
+	runSclTestCases,
+} from '@/v2019C1/test'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
@@ -204,6 +212,52 @@ describe('an LNode always has its LNodeSpecNaming', () => {
 		act: async ({ source, testCase }) => {
 			await testCase.act(source)
 			return { assertOn: 'source' }
+		},
+	})
+})
+
+describe('the commit refuses to leave a child behind', () => {
+	const sourceXml = /* xml */ `
+		<SCL ${ns} ${id}="root">
+			<Substation ${id}="substation" name="S1">
+				<Function ${id}="function" name="F1">
+					<LNode ${id}="lnode" iedName="None" lnClass="XCBR" lnInst="1" />
+				</Function>
+			</Substation>
+		</SCL>
+	`
+
+	// a transaction cannot reach this alone (core stages the subtree of a delete): the log is the one of a hook that
+	// staged a bare delete
+	runSclTestCases.withoutExport({
+		testCases: {
+			'a log deleting a function, not the logical node it holds → refused, naming both': {
+				sourceXml,
+			},
+		},
+		act: async ({ source }) => {
+			const bareDelete: Scl.Operation = {
+				status: 'deleted',
+				oldRecord: createSclTestRecord({
+					record: {
+						tagName: 'Function',
+						id: 'function',
+						parent: { tagName: 'Substation', id: 'substation' },
+						children: [{ tagName: 'LNode', id: 'lnode' }],
+					},
+				}),
+				newRecord: undefined,
+			}
+			const refusal = await beforeCommit({ operations: [bareDelete], query: source.query }).catch(
+				(error: unknown) => toDialecteError(error),
+			)
+			expect(refusal).toMatchObject({
+				key: 'CHILD_LEFT_BEHIND',
+				meta: {
+					record: { tagName: 'Function', id: 'function' },
+					child: { tagName: 'LNode', id: 'lnode' },
+				},
+			})
 		},
 	})
 })

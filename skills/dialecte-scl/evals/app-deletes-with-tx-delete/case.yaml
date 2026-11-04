@@ -1,0 +1,7 @@
+schema_version: '1.1'
+name: app-deletes-with-tx-delete
+expected_outcome: |
+  The app helper deletes the Terminal with tx.delete, which takes its whole subtree (and the scl
+  delete hooks clean what refers into it), and stages no operations by hand. It does not import
+  scl internals such as readSubtreeRecords, buildCascadeOperations or collectDeleteCascade, which
+  the package does not export.

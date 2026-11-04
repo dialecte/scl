@@ -104,8 +104,17 @@ Every write through a transaction and every import runs them (see
 - **Namespaced elements** from an extension namespace are wrapped in the right `<Private>`
   automatically (afterCreated).
 - **Deleting** an element clears or deletes the references pointing into its subtree, per the
-  orphan rules (beforeDelete); signal sibling paths are rebuilt (afterDelete).
-- **LNodes** get their `LNodeSpecNaming` at commit (beforeCommit), once children exist.
+  orphan rules (beforeDelete); a deleted reference goes with everything it holds (a FunctionRef's
+  SignalRole, a Terminal's Text and Private); signal sibling paths are rebuilt (afterDelete).
+- **At commit** (beforeCommit): LNodes get their `LNodeSpecNaming`, once children exist; the
+  containers the transaction left empty are pruned; last, a commit that deletes a record and leaves
+  one of its children in the store is refused (`SCL_ERRORS.CHILD_LEFT_BEHIND`). In an app,
+  `tx.delete` already takes the whole subtree. Inside scl, a hook (or any code staging operations
+  by hand) that deletes a record stages a delete for every record of its subtree, read level by
+  level with `readSubtreeRecords`, never `findDescendants`; `buildCascadeOperations` deletes only
+  the roots it is given and what refers into them, not what the roots hold, so stage the rest
+  yourself. Both are scl internals (`hooks/before-delete`, not exported by the package): use them
+  only when changing scl itself.
 - **Import** (two passes, no store reads): resolves path ↔ uuid both ways, fills missing paths,
   indexes legacy paths, and reports unresolved / incoherent / unsupported references instead of
   failing: they come back with each imported file as diagnostics (`SCL_IMPORT_DIAGNOSTICS`,

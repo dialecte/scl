@@ -1,9 +1,13 @@
 import { describe, expect } from 'vitest'
 
+import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { reportAndApply } from '@/v2019C1/extensions/lifecycle/integration/integration-helpers'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
+import type { Scl } from '@/v2019C1/config'
+import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionGroup } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
@@ -162,6 +166,197 @@ describe('report: what the removal of a group makes the delete hooks do outside 
 		})
 		const sideEffects = allGroups(reported).map((group) => describeSideEffects(group))
 		expect(sideEffects).toEqual(testCase.expectedSideEffects)
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+/**
+ * What the application holds of the `Trip` sub-function with a signal role: an output reference to the control
+ * reference of its logical node, an input reference to the source reference of the breaker's logical node.
+ */
+const tripReferenceWithSignalRole = /* xml */ `
+	<eIEC61850-6-100:FunctionRef function="S1/V1/B1/Prot/Trip" functionUuid="trip-uuid" ${id}="hmi-trip-ref-t">
+		<eIEC61850-6-100:SignalRole name="Signals" ${id}="hmi-signal-role-t">
+			<eIEC61850-6-100:LNodeInputRef sourceRef="XCBR1/Trip" sourceRefUuid="trip-input-uuid" ${id}="hmi-input-ref-t"/>
+			<eIEC61850-6-100:LNodeOutputRef controlRef="Trip/PTRC1/Trip" controlRefUuid="trip-control-uuid" ${id}="hmi-output-ref-t"/>
+		</eIEC61850-6-100:SignalRole>
+	</eIEC61850-6-100:FunctionRef>
+`
+const tripControlReference = /* xml */ `
+	<Private type="eIEC61850-6-100" ${id}="ptrc-private-t">
+		<eIEC61850-6-100:LNodeOutputs ${id}="ptrc-outputs-t">
+			<eIEC61850-6-100:ControlRef output="Trip" uuid="trip-control-uuid" ${id}="ptrc-control-ref-t"/>
+		</eIEC61850-6-100:LNodeOutputs>
+	</Private>
+`
+
+/** The project fixture with the logical node of the `Trip` sub-function holding `content`. */
+function projectWithTripLNodeContent(params: {
+	applicationReference: string
+	content: string
+}): string {
+	const { applicationReference, content } = params
+	return projectWith({ applicationReference }).replace(
+		/(uuid="ptrc-uuid" templateUuid="ptrc-template-uuid" [^>]*?)\/>/,
+		`$1>${content}</LNode>`,
+	)
+}
+
+// A removal takes the references to it, and what they hold goes with them: the report lists the references only, as
+// the elements apply deletes beyond the group are.
+describe('report: what a reference the removal deletes holds is not a side effect of its own', () => {
+	type SignalRoleCase = SclTest.BaseXmlTestCase & {
+		targetXml: string
+		/** Each group of the report with what its removal makes the delete hooks do outside it. */
+		expectedSideEffects: string[]
+	}
+
+	const testCases: SclTest.TestCases<SignalRoleCase> = {
+		'an application refers to it with a signal role: only the reference is listed deleted, not the signal role nor the references in it, and apply deletes the same':
+			{
+				sourceXml: functionTemplate,
+				targetXml: projectWithTripLNodeContent({
+					applicationReference: tripReferenceWithSignalRole,
+					content: tripControlReference,
+				}),
+				expectedSideEffects: ['removed SubFunction | FunctionRef deleted'],
+			},
+	}
+
+	async function act({
+		testCase,
+		source,
+		target,
+	}: SclTest.ActParams<SignalRoleCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		const lifecycle = {
+			verb: 'fsd' as const,
+			sourceQuery: source.query,
+			ref: { tagName: 'Function', id: 'prot-s' } as const,
+			anchor: { tagName: 'Bay', id: 'bay-t' } as const,
+			scenario: 'template' as const,
+		}
+		const reported = await report(target.query, lifecycle)
+		const groups = allGroups(reported)
+		expect(groups.map((group) => describeSideEffects(group))).toEqual(testCase.expectedSideEffects)
+
+		const listed = groups
+			.flatMap((group) => group.sideEffects ?? [])
+			.filter((sideEffect) => sideEffect.effect === 'deleted')
+			.map((sideEffect) => sideEffect.element.id)
+		const removedByGroups = groups
+			.flatMap((group) => [group.primary, ...group.companions])
+			.filter((node) => node.change === 'removed' || node.change === 'target-only')
+			.flatMap((node) => (node.instanceRef?.id ? [node.instanceRef.id] : []))
+		const decisions = new Map(groups.map((group) => [group.id, 'accept' as const]))
+		const prepared = await target.prepare(async function applyEverything(tx) {
+			await apply(tx, { ...lifecycle, report: reported, resolution: { decisions } })
+		})
+		const deleted = prepared.operations
+			.filter((operation) => operation.status === 'deleted')
+			.map((operation) => operation.oldRecord)
+		prepared.discard()
+		const deletedIds = new Set(deleted.map((record) => record.id))
+		const roots = deleted
+			.filter((record) => !record.parent || !deletedIds.has(record.parent.id))
+			.map((record) => record.id)
+			.filter((recordId) => !removedByGroups.includes(recordId))
+		expect(roots.sort()).toEqual(listed.sort())
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+/**
+ * A voltage level template: a coupler whose breaker has a terminal on the node of the busbar bay, the terminal holding
+ * in its Private a source reference to the logical node of that bay.
+ */
+const levelTemplateXml = /* xml */ `
+	<SCL ${ns} ${id}="level-template">
+		<Header id="level" uuid="level-file-uuid" version="0" revision="1" ${id}="level-header"/>
+		<Substation name="TEMPLATE" ${id}="level-substation">
+			<VoltageLevel name="HV" uuid="level-uuid" ${id}="level-voltage-level">
+				<Bay name="Coupler" uuid="coupler-uuid" ${id}="level-coupler">
+					<ConductingEquipment name="QA1" type="CBR" uuid="qa1-uuid" ${id}="level-breaker">
+						<Terminal connectivityNode="TEMPLATE/HV/Busbar/BB1" substationName="TEMPLATE" voltageLevelName="HV" bayName="Busbar" cNodeName="BB1" cNodeUuid="bb1-uuid" ${id}="level-terminal">
+							<Private type="eIEC61850-6-100" ${id}="level-terminal-private">
+								<eIEC61850-6-100:SourceRef input="Trip" source="TEMPLATE/HV/Busbar/PTRC1.Tr.general" sourceLNodeUuid="ptrc-uuid" sourceDoName="Tr" sourceDaName="general" ${id}="level-source-ref"/>
+							</Private>
+						</Terminal>
+					</ConductingEquipment>
+				</Bay>
+				<Bay name="Busbar" uuid="busbar-uuid" ${id}="level-busbar">
+					<LNode iedName="None" lnClass="PTRC" lnInst="1" uuid="ptrc-uuid" ${id}="level-lnode"/>
+					<ConnectivityNode name="BB1" pathName="TEMPLATE/HV/Busbar/BB1" uuid="bb1-uuid" ${id}="level-node"/>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
+const projectSubstationXml = /* xml */ `
+	<SCL ${ns} ${id}="project">
+		<Header id="project" uuid="project-file-uuid" ${id}="project-header"/>
+		<Substation name="S1" ${id}="project-substation"/>
+	</SCL>
+`
+
+// The terminal a removed bay's node takes with it holds what it holds: a kept reference in it goes with it, it is not
+// cleared.
+describe('report: a kept reference inside a reference the removal deletes', () => {
+	type LevelCase = SclTest.BaseXmlTestCase & {
+		targetXml: string
+		/** The groups of the update that remove an element, `<group> | <tag> <effect>, …`. */
+		expectedSideEffects: string[]
+	}
+
+	const testCases: SclTest.TestCases<LevelCase> = {
+		"the newer level template drops its busbar bay, a terminal of the project's coupler names its node and holds a source reference to its logical node: the terminal is listed deleted, the source reference is not listed cleared":
+			{
+				sourceXml: levelTemplateXml,
+				targetXml: projectSubstationXml,
+				expectedSideEffects: ['target-only Bay | Terminal deleted'],
+			},
+	}
+
+	function levelTarget(params: {
+		sourceQuery: Scl.Query
+		scenario: 'instantiate' | 'template'
+	}): LifecycleTarget {
+		const { sourceQuery, scenario } = params
+		return {
+			verb: 'ssd',
+			sourceQuery,
+			ref: { tagName: 'VoltageLevel', id: 'level-voltage-level' },
+			anchor: { tagName: 'Substation', id: 'project-substation' },
+			scenario,
+		}
+	}
+
+	async function act({
+		testCase,
+		source,
+		target,
+	}: SclTest.ActParams<LevelCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		await reportAndApply({
+			document: target,
+			lifecycle: levelTarget({ sourceQuery: source.query, scenario: 'instantiate' }),
+		})
+		await source.transaction(async function dropTheBusbar(tx) {
+			await tx.delete({ tagName: 'Bay', id: 'level-busbar' })
+		})
+		const reported = await report(
+			target.query,
+			levelTarget({ sourceQuery: source.query, scenario: 'template' }),
+		)
+		const removing = allGroups(reported).filter((group) => group.sideEffects !== undefined)
+		expect(removing.map((group) => describeSideEffects(group))).toEqual(
+			testCase.expectedSideEffects,
+		)
 		return { assertOn: 'target' }
 	}
 

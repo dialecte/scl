@@ -1,6 +1,7 @@
-import { describe } from 'vitest'
+import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import { storedAmong } from '@/v2019C1/test/stored-among'
 
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
@@ -274,3 +275,75 @@ async function addALogicalNodeAndDeleteItsInputs(tx: Scl.Transaction): Promise<v
 	await tx.addChild(inputs, { tagName: 'SourceRef', attributes: { input: 'Trip' } })
 	await tx.delete(inputs)
 }
+
+/**
+ * A category classifying F1 through one reference, and an application whose role content holds a reference to the
+ * category with a variant reference in it.
+ */
+const categoryReferenceXml = /* xml */ `
+	<SCL ${ns} ${id}="root">
+		<Substation ${id}="substation" name="S1">
+			<Private ${id}="substation-private" type="eIEC61850-6-100">
+				<eIEC61850-6-100:FunctionCategory ${id}="category" name="C1" uuid="uuid-category">
+					<eIEC61850-6-100:FunctionCatRef ${id}="category-ref" function="S1/F1" functionUuid="uuid-f1" />
+				</eIEC61850-6-100:FunctionCategory>
+				<eIEC61850-6-100:Application ${id}="application" name="A1" uuid="uuid-application">
+					<eIEC61850-6-100:FunctionalVariantGroup ${id}="variant-group" name="G1">
+						<eIEC61850-6-100:FunctionalVariant ${id}="variant" name="FV1" uuid="uuid-variant" />
+					</eIEC61850-6-100:FunctionalVariantGroup>
+					<eIEC61850-6-100:FunctionRole ${id}="role" name="R1">
+						<eIEC61850-6-100:FunctionRoleContent ${id}="content">
+							<eIEC61850-6-100:FunctionCategoryRef ${id}="category-reference" functionCategory="S1/C1" functionCategoryUuid="uuid-category">
+								<eIEC61850-6-100:FunctionalVariantRef ${id}="variant-reference" functionalVariant="FV1" functionalVariantUuid="uuid-variant" />
+							</eIEC61850-6-100:FunctionCategoryRef>
+						</eIEC61850-6-100:FunctionRoleContent>
+					</eIEC61850-6-100:FunctionRole>
+				</eIEC61850-6-100:Application>
+			</Private>
+			<Function ${id}="function" name="F1" uuid="uuid-f1"/>
+		</Substation>
+	</SCL>
+`
+
+// A reference the commit's own cascade deletes (the reference to a category it prunes) takes what it holds with it.
+describe('the commit deletes what a reference it removes held', () => {
+	type CascadeCase = SclTest.BaseXmlTestCase & {
+		/** The elements deleted, in one transaction. */
+		deleted: Scl.Ref<Scl.ElementsOf>[]
+		/** The records that must be out of the store, not only out of the exported tree. */
+		removed: Scl.Ref<Scl.ElementsOf>[]
+	}
+
+	const testCases: SclTest.TestCases<CascadeCase> = {
+		'the last reference of a category deleted → the category pruned, the reference to it and the variant reference in it leave the store':
+			{
+				sourceXml: categoryReferenceXml,
+				deleted: [{ tagName: 'FunctionCatRef', id: 'category-ref' }],
+				removed: [
+					{ tagName: 'FunctionCategory', id: 'category' },
+					{ tagName: 'FunctionCategoryRef', id: 'category-reference' },
+					{ tagName: 'FunctionalVariantRef', id: 'variant-reference' },
+				],
+				expectedQueries: [
+					'//v2019C1:Application[@name="A1"]//v2019C1:FunctionalVariant[@name="FV1"]',
+				],
+				unexpectedQueries: [
+					'//v2019C1:FunctionCategory',
+					'//v2019C1:FunctionCategoryRef',
+					'//v2019C1:FunctionalVariantRef',
+				],
+			},
+	}
+
+	runSclTestCases.withExport({
+		testCases,
+		act: async function deleteThenReadTheStore({ testCase, source }) {
+			await source.transaction(async function deleteEach(tx) {
+				for (const ref of testCase.deleted) await tx.delete(ref)
+			})
+			const stored = await storedAmong({ document: source, refs: testCase.removed })
+			expect(stored).toEqual([])
+			return { assertOn: 'source' }
+		},
+	})
+})

@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A commit that deletes a record and leaves one of its children behind is refused** (`CHILD_LEFT_BEHIND`, `SCL4001`, `meta: { record, child }`). The check runs on every commit, over the transaction's operations and the ones the commit hooks stage, and reads the store, in one batch, only for a child of a deleted record that no operation mentions; a hook that stages a delete without the subtree now fails at once instead of corrupting the store.
+
 ### Changed
 
 - **The package declares its mutation scope for `dialecte mutants`** (`dialecte.mutation` in `package.json`); its equivalent-mutant records moved to `.dialecte/mutation-records.json`.
+
+### Fixed
+
+- **A reference a delete removes no longer leaves what it held in the store**: the `SignalRole` of a `FunctionRef`, the `Text` and the `Private` of a `Terminal` stayed in the store with no parent and were still returned by queries (never exported). They go with their reference, also when the commit's container prune deletes the reference, and a kept reference inside one (a `SourceRef` in a terminal's `Private`) goes with it instead of being cleared. A removal's report lists what a delete takes by itself, not what a reference holds, and no longer lists a kept reference inside a removed one as cleared.
 
 ## [0.11.0] - 2026-11-02
 

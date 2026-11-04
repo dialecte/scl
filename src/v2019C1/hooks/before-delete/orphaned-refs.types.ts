@@ -17,11 +17,14 @@ export type OrphanedRef = {
 
 /**
  * Everything deleting some elements (the roots) does beyond their subtrees: the references deleted, the containers
- * those deletions leave holding nothing, and what refers to those containers in turn (`deleted`, the roots left out);
- * the references cleared (`cleared`). `gone` holds every record id that disappears, the roots' subtrees included.
+ * those deletions leave holding nothing, and what refers to those containers in turn (`deleted`, the roots left out,
+ * and what a delete takes by itself: a record inside a deleted reference is not listed); the records inside each
+ * deleted reference, the reference itself left out (`within`); the references cleared (`cleared`). `gone` holds every
+ * record id that disappears, the roots' subtrees and `within` included.
  */
 export type DeleteCascade = {
 	gone: ReadonlySet<string>
 	deleted: Scl.TrackedRecord<Scl.ElementsOf>[]
+	within: Scl.RawRecord<Scl.ElementsOf>[]
 	cleared: OrphanedRef[]
 }

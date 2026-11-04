@@ -1,0 +1,7 @@
+schema_version: '1.1'
+name: hook-delete-stages-subtree
+expected_outcome: |
+  The hand-staged removal deletes the FunctionRef together with every record of its subtree (its
+  SignalRole and what that holds), read with scl's readSubtreeRecords rather than findDescendants
+  or a per-record query loop, and the approach knows that a commit deleting a record while leaving
+  one of its children in the store is refused (CHILD_LEFT_BEHIND).
