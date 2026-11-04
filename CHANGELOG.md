@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-04
+
 ### Added
 
 - **`query.lifecycle.sourceRoot.fsd()` / `.asd()` / `.ssd()` read the root of a template file** as data, without throwing on the shape of the file: `{ kind: 'found', ref }` (the ref the verb takes), `{ kind: 'several', candidates }` (in document order, each `{ ref, name, linked }`, `linked` listing the units placed together with it for an SSD), `{ kind: 'none' }`, and for an FSD `{ kind: 'unsupported', ref }` when the file holds an equipment function and no function. A file holding a function and an equipment function resolves to the function. An SSD answers as the verbs do: linked units are one candidate, and a scaffolding with nothing named below it is found at its deepest `TEMPLATE` level. The types (`SourceRoot`, `SourceRootCandidate`, `SourceRootRef`, `SourceRootUnsupported`, `SourceRootVerb`) are exported. The SSD verbs read the file the same way: the candidates their `SSD_SCOPE_AMBIGUOUS` error lists (`meta.candidates`) now follow the file's order too.
