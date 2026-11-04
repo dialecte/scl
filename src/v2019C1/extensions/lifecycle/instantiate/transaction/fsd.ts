@@ -39,8 +39,8 @@ import type * as Core from '@dialecte/core'
  *
  * The clone's uuid references are repointed by `reference.applyUuidRemap` over the
  * combined mappings. The instantiation provenance link (`FunctionSclRef` -> `SclFileReference` back to
- * the FSD) is written on the cloned root by `reference.writeProvenance`; SET
- * policy (naming, application assignment) is applied by consumer hooks, not here.
+ * the FSD) is written on the cloned root by `reference.writeProvenance`; a consumer applies
+ * its own policy (naming, application assignment) through the hooks it registers, not here.
  *
  * Returns the instantiated root ref (retagged if applicable) and the clone mappings of
  * everything the operation cloned, so a consumer can drive follow-up rules

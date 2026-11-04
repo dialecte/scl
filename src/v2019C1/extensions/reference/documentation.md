@@ -372,7 +372,7 @@ await tx.reference.writeProvenance({ sourceQuery, target: { anchor: 'function', 
 await tx.reference.writeProvenance({ sourceQuery, target: { anchor: 'document', fileType: 'SSD' } })
 ```
 
-The kernel **self-sources** every field from the source document — no SET dependency:
+The kernel **self-sources** every field from the source document — no consumer dependency:
 
 | `SclFileReference` attr | Source                                                         |
 | ----------------------- | -------------------------------------------------------------- |

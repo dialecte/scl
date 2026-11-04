@@ -20,8 +20,11 @@ import type { SatelliteDiffParams } from './satellite-companions.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
-import type { LeftoverRefPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff'
-import type { DiffNode, InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DiffNode,
+	InstanceDiff,
+	LeftoverRefPolicy,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
