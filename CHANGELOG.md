@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.2] - 2026-11-05
+
+### Changed
+
+- Requires `@dialecte/core` 0.8.1 (pinned exactly, was 0.8.0). Nothing changes in the engine; the core skills an agent syncs from this package's dependencies are 0.8.1's.
+
 ## [0.13.1] - 2026-11-04
 
 ### Changed
