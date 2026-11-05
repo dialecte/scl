@@ -1,13 +1,13 @@
 import { collectXmlReferenceViolations } from '../assert-coherent-scl-references'
 import { collectSclOutputViolations } from '../assert-scl-output'
 import { assertValidSclXml } from '../assert-valid-scl-xml'
-import { SCL_TEST_SETUP } from '../scl-test-setup.constants'
 import { collectSclXsdViolations, isSclXsdConfigured } from '../scl-xsd'
 import { CORPUS_LOADERS } from './corpus-loaders.constants'
 import { CORPUS_EXPECTED_DIAGNOSTICS, CORPUS_FILES, CORPUS_KIND_FOLDERS } from './corpus.constants'
 
-import { Project } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
+
+import { createSclProject } from '@/v2019C1/dialecte'
 
 import type {
 	CorpusFileCheckParams,
@@ -15,7 +15,6 @@ import type {
 	ImportDiagnosticCounts,
 	RunCorpusSmokeParams,
 } from './corpus.types'
-import type { Config } from '@/v2019C1/config/dialecte.config'
 import type { Diagnostic } from '@dialecte/core'
 
 /**
@@ -114,13 +113,7 @@ export async function assertCorpusFileImport(params: CorpusFileCheckParams): Pro
 
 /** A project opened as an application opens one: each import answers its file's diagnostics. */
 async function openCorpusProject() {
-	const project = await new Project<Config, typeof SCL_TEST_SETUP.extensions.base>({
-		configs: { default: SCL_TEST_SETUP.dialecteConfig },
-		defaultConfigKey: 'default',
-		storage: { type: 'local' },
-		extensions: SCL_TEST_SETUP.extensions,
-		hooks: SCL_TEST_SETUP.hooks,
-	}).open(`corpus-${crypto.randomUUID()}`)
+	const project = await createSclProject().open(`corpus-${crypto.randomUUID()}`)
 
 	async function importXml(params: { xml: string; fileName: string }) {
 		const { xml, fileName } = params

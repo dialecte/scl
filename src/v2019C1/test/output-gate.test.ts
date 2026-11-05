@@ -5,16 +5,16 @@ import {
 	readOutputBaseline,
 	withOutputGate,
 } from './output-gate'
-import { SCL_TEST_SETUP } from './scl-test-setup.constants'
 import { isSclXsdConfigured } from './scl-xsd'
 
 import { createTestProject } from '@dialecte/core/test'
 import { describe, expect } from 'vitest'
 
+import { SCL_DIALECTE } from '@/v2019C1/declaration.constants'
+
 import type { SclOutputOptOut } from './assert-scl-output.types'
 import type { SclTest } from './hydrated-test.types'
 import type { OutputGateTestCase } from './output-gate.types'
-import type { Config } from '@/v2019C1/config/dialecte.config'
 
 const FUNCTION_UUID = '5b1f6c2e-3a4d-4e8f-9a0b-1c2d3e4f5a01'
 const LNODE_UUID = '5b1f6c2e-3a4d-4e8f-9a0b-1c2d3e4f5a02'
@@ -78,10 +78,7 @@ function invalidDocumentMessage(params: {
 }
 
 async function openProject() {
-	return createTestProject<Config, typeof SCL_TEST_SETUP.extensions.base>({
-		sourceXml: SOURCE_XML,
-		...SCL_TEST_SETUP,
-	})
+	return createTestProject({ dialecte: SCL_DIALECTE, sourceXml: SOURCE_XML })
 }
 
 describe('withOutputGate', () => {
@@ -286,6 +283,13 @@ describe('runSclTestCases', () => {
 	const expectedMessage =
 		'silent case: allowInvalidOutput needs the reason the case leaves an invalid document, not an empty string'
 
+	const invalidCases = {
+		'invalid case': {
+			sourceXml: /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES}><Substation notAnAttribute="S1"/></SCL>`,
+		},
+	}
+	const expectedInvalidMessage = 'invalid case › sourceXml: not valid SCL'
+
 	const testCases: Record<string, TestCase> = {
 		'withExport, a case whose opt-out gives no reason → refused when registered': {
 			register: () => runSclTestCases.withExport({ testCases: silentCases, act: async () => {} }),
@@ -295,6 +299,15 @@ describe('runSclTestCases', () => {
 			register: () =>
 				runSclTestCases.withoutExport({ testCases: silentCases, act: async () => {} }),
 			expectedMessage,
+		},
+		'withExport, a case the SCL schema refuses → refused when registered': {
+			register: () => runSclTestCases.withExport({ testCases: invalidCases, act: async () => {} }),
+			expectedMessage: expectedInvalidMessage,
+		},
+		'withoutExport, a case the SCL schema refuses → refused when registered': {
+			register: () =>
+				runSclTestCases.withoutExport({ testCases: invalidCases, act: async () => {} }),
+			expectedMessage: expectedInvalidMessage,
 		},
 	}
 
@@ -468,10 +481,11 @@ describe('withOutputGate — the documents of the project', () => {
 	}
 
 	async function act(testCase: TestCase) {
-		const { project, source, target } = await createTestProject<
-			Config,
-			typeof SCL_TEST_SETUP.extensions.base
-		>({ sourceXml, targetXml, ...SCL_TEST_SETUP })
+		const { project, source, target } = await createTestProject({
+			dialecte: SCL_DIALECTE,
+			sourceXml,
+			targetXml,
+		})
 		try {
 			const gatedCase: OutputGateTestCase = { sourceXml, targetXml }
 			const gatedAct = withOutputGate({

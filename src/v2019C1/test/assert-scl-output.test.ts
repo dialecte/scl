@@ -5,11 +5,12 @@ import {
 } from './assert-scl-output'
 import { SCL_OUTPUT_CHECK } from './assert-scl-output.constants'
 import { ALL_XMLNS_NAMESPACES, runSclTestCases } from './hydrated-test'
-import { SCL_TEST_SETUP } from './scl-test-setup.constants'
 import { isSclXsdConfigured } from './scl-xsd'
 
 import { createTestProject } from '@dialecte/core/test'
 import { describe, expect } from 'vitest'
+
+import { SCL_DIALECTE } from '@/v2019C1/declaration.constants'
 
 import type {
 	SclOutputCheck,
@@ -18,7 +19,6 @@ import type {
 	SclXsdCode,
 } from './assert-scl-output.types'
 import type { SclTest } from './hydrated-test.types'
-import type { Config } from '@/v2019C1/config/dialecte.config'
 
 const FUNCTION_UUID = '0f9a2c55-7c39-4f4e-9d6a-2a7b8c1d0e01'
 const LNODE_UUID = '0f9a2c55-7c39-4f4e-9d6a-2a7b8c1d0e02'
@@ -213,12 +213,9 @@ describe('collectSclOutputViolations', () => {
 	}
 
 	async function act(testCase: TestCase) {
-		const { project, source } = await createTestProject<
-			Config,
-			typeof SCL_TEST_SETUP.extensions.base
-		>({
+		const { project, source } = await createTestProject({
+			dialecte: SCL_DIALECTE,
 			sourceXml: testCase.sourceXml,
-			...SCL_TEST_SETUP,
 		})
 		try {
 			const { checks, violations } = await collectSclOutputViolations({

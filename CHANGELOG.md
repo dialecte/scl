@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`SCL_DIALECTE`, the dialecte's declaration, exported from `@dialecte/scl/v2019C1`**: its id (`scl/v2019C1`), the package version, its config, its extensions and `createHooks()`. `createSclProject` and the test helpers are built from it; pass it to what core derives from a declaration, such as `createTestHelpers`. `createSclProject` keeps its entry and its parameters; its projects now carry the dialecte's id and version (`project.dialecteId`).
+
+### Changed
+
+- **The test helpers of `@dialecte/scl/v2019C1/test` open their projects from the declaration**: a test project's config key is now `scl`, the dialecte's own, so a call passing `configKey: 'default'` is refused `UNKNOWN_CONFIG_KEY`: leave it out or pass `scl`.
+
 ## [0.13.1] - 2026-11-04
 
 ### Changed

@@ -20,6 +20,17 @@ const doc = project.openDocument(documentId)
 
 `createSclProject` returns a [`Project`](https://dialecte.github.io/core/api/project) pre-configured with the SCL config, extensions, and hooks. `project.openDocument(id)` returns a `Document` typed with the full SCL element set and all registered extensions.
 
+## The declaration
+
+`SCL_DIALECTE` is the dialecte declared once with core's [`defineDialecte`](https://dialecte.github.io/core/api/dialecte): its id (`scl/v2019C1`), the package version, its config, its extensions and how its hooks are made, a new instance per project. `createSclProject` and the test helpers are built from it. Pass it to what core derives from a declaration:
+
+```ts
+import { createTestHelpers } from '@dialecte/core/test'
+import { SCL_DIALECTE } from '@dialecte/scl/v2019C1'
+
+const { runTestCases, createTestProject } = createTestHelpers({ dialecte: SCL_DIALECTE })
+```
+
 ## Adding custom extensions
 
 Pass your own extension modules via the `extensions` parameter. They are merged on top of the SCL built-ins — no direct core dependency needed.

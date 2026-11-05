@@ -9,7 +9,7 @@ import { beforeDelete } from './before-delete'
 import { Scl } from '@/v2019C1/config'
 
 // Record-lifecycle hooks, fully typed against the SCL config with no cast: they
-// are provided on the Project instance (see createSclProject), not stored on the
+// are provided on the Project instance (see the declaration), not stored on the
 // config, so there is no Config→hooks self-reference.
 export const HOOKS: Scl.TransactionHooks = {
 	beforeClone,
@@ -21,5 +21,5 @@ export const HOOKS: Scl.TransactionHooks = {
 	beforeCommit,
 }
 
-// Re-exported so createSclProject hands core the factory of the import session, one per file.
+// Re-exported so the declaration hands core the factory of the import session, one per file.
 export { createSclImportSession } from './io'

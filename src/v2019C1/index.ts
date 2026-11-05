@@ -1,3 +1,4 @@
+export * from './declaration.constants'
 export * from './dialecte'
 export * from './config'
 export * from './constants'

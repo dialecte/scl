@@ -1,15 +1,12 @@
-import { Scl } from './config'
-import { SCL_DIALECTE_CONFIG } from './config/dialecte.config'
-import { SCL_EXTENSION_MODULES } from './extensions'
-import { HOOKS, createSclImportSession } from './hooks'
+import { SCL_DIALECTE } from './declaration.constants'
 
 import { Project } from '@dialecte/core'
 
-import type { Config } from './config'
+import type { Config, Scl } from './config'
 import type { StorageParam, ExtensionModules } from '@dialecte/core'
 
 /**
- * Create an SCL project with pre-configured config, extensions, and hooks.
+ * Create an SCL project: every part of it comes from the dialecte's declaration (`SCL_DIALECTE`).
  * Call .open(name) to initialize the store and hydrate state.
  *
  * @intent open an SCL project, work on SCD/SSD/FSD/ASD files, import and edit SCL documents, register custom extensions on an SCL project
@@ -20,11 +17,12 @@ export function createSclProject<
 	const { storage = { type: 'local' }, extensions } = params ?? {}
 
 	return new Project<Config, CustomModules>({
-		configs: { scl: SCL_DIALECTE_CONFIG },
-		defaultConfigKey: 'scl',
+		configs: SCL_DIALECTE.configs,
+		defaultConfigKey: SCL_DIALECTE.defaultConfigKey,
+		dialecteId: SCL_DIALECTE.id,
+		dialecteVersion: SCL_DIALECTE.version,
 		storage,
-		extensions: { base: SCL_EXTENSION_MODULES, custom: extensions },
-		// All hooks on the instance: the import session (one per file imported) + record hooks.
-		hooks: { createImportSession: createSclImportSession, ...HOOKS },
+		extensions: { base: SCL_DIALECTE.extensions, custom: extensions },
+		hooks: SCL_DIALECTE.createHooks(),
 	}) as Scl.Project<CustomModules>
 }
