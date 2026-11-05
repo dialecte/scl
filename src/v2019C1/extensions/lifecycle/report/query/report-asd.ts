@@ -41,10 +41,7 @@ import {
 	resolvePrimaryPlacement,
 	withLandedLevels,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
-import {
-	resolveSatelliteMappings,
-	toRedirectMappings,
-} from '@/v2019C1/extensions/lifecycle/mapping'
+import { readLinkedSections } from '@/v2019C1/extensions/lifecycle/linked-sections/read'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { PlacementListing } from './placement-listing.types'
@@ -382,21 +379,6 @@ async function reportApplicationInstance(
 			})
 		: []
 
-	// where the shared ones land is resolved FIRST: the application's references to an element of
-	// the project a source element is mapped onto are the template's references to that element
-	const resolvedMappings = await resolveSatelliteMappings(query, {
-		sourceQuery,
-		satelliteRefs,
-		instanceSatelliteRefs,
-		decisionMappings: params.decisionMappings,
-		matchKey: params.matchKey,
-	})
-	const redirectMappings = await toRedirectMappings({
-		sourceQuery,
-		satelliteRefs,
-		resolvedMappings,
-	})
-
 	// what the references of its satellites may name: what the placement places — by default the application and the
 	// functions it composes, but what the selection leaves out
 	const scope =
@@ -405,6 +387,15 @@ async function reportApplicationInstance(
 			applicationRef,
 			leftOut: params.selection?.leftOut,
 		}))
+	// read the shared mappings before comparing the application's references to those elements
+	const reading = await readLinkedSections(query, {
+		sourceQuery,
+		description: { satelliteRefs, instanceSatelliteRefs, scope },
+		instancePrimaryRef: instance,
+		decisionMappings: params.decisionMappings,
+		matchKey: params.matchKey,
+		removalBase: params.removalBase,
+	})
 	// what its roles refer to, on a first placement: placed whole, but what another clone of the placement places and
 	// what a function stood on holds; a variable applying to nothing reached is not placed, nor the references to it
 	const roleSatellites = instance
@@ -432,7 +423,7 @@ async function reportApplicationInstance(
 		sourceRootRef: applicationRef,
 		instanceRootRef: instance,
 		matchKey: params.matchKey,
-		redirectMappings,
+		redirectMappings: reading.redirectMappings,
 		removalBase: params.removalBase,
 		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
@@ -457,7 +448,7 @@ async function reportApplicationInstance(
 		decisionMappings: params.decisionMappings,
 		anchor: params.anchor,
 		matchKey: params.matchKey,
-		resolvedMappings,
+		reading,
 		instancePrimaryRef: instance
 			? ({ tagName: 'Application', id: instance.id } as Scl.Ref<Scl.ElementsOf>)
 			: undefined,

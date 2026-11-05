@@ -1,14 +1,9 @@
 import { reconcileSatellites } from './satellite-reconcile'
 
 import { resolveAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
-import {
-	resolveSatelliteMappings,
-	resolveSatelliteRemovals,
-	toRedirectMappings,
-} from '@/v2019C1/extensions/lifecycle/mapping'
+import { readLinkedSections } from '@/v2019C1/extensions/lifecycle/linked-sections/read'
 
 import type { ReconcileCrossCuttingSatellitesResult } from './cross-cutting-satellites.types'
-import type { SatelliteReading } from './satellite-reading.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
@@ -16,6 +11,7 @@ import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
+import type { LinkedSectionReading } from '@/v2019C1/extensions/lifecycle/linked-sections/description.types'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -47,7 +43,7 @@ export async function readCrossCuttingSatellites(
 		/** What the satellites' references may name: what the instance holds or the update brings. */
 		scope: ContributionScope
 	},
-): Promise<SatelliteReading> {
+): Promise<LinkedSectionReading> {
 	const { sourceQuery, primaryRef, instancePrimaryRef, matchKey } = params
 
 	const satelliteRefs = await resolveAppliedSatellites(sourceQuery, {
@@ -58,23 +54,13 @@ export async function readCrossCuttingSatellites(
 		? await resolveAppliedSatellites(tx, { primaryRef: instancePrimaryRef })
 		: []
 
-	const resolvedMappings = await resolveSatelliteMappings(tx, {
+	return readLinkedSections(tx, {
 		sourceQuery,
-		satelliteRefs,
-		instanceSatelliteRefs,
+		description: { satelliteRefs, instanceSatelliteRefs, scope: params.scope },
+		instancePrimaryRef,
 		matchKey,
+		removalBase: params.removalBase,
 	})
-	const removals = instancePrimaryRef
-		? await resolveSatelliteRemovals(tx, {
-				sourceQuery,
-				instancePrimaryRef,
-				instanceSatelliteRefs,
-				resolvedMappings,
-				removalBase: params.removalBase,
-				matchKey,
-			})
-		: []
-	return { satelliteRefs, resolvedMappings, removals, scope: params.scope }
 }
 
 /**
@@ -88,7 +74,7 @@ export async function reconcileCrossCuttingSatellites(
 	params: {
 		sourceQuery: Core.Query<Config>
 		/** What the update read of the instance's satellites before writing. */
-		reading: SatelliteReading
+		reading: LinkedSectionReading
 		structure: TargetStructure
 		accepted?: AcceptedIds
 		matchKey: MatchKey
@@ -108,11 +94,6 @@ export async function reconcileCrossCuttingSatellites(
 ): Promise<ReconcileCrossCuttingSatellitesResult> {
 	const { sourceQuery, reading } = params
 
-	const redirectMappings = await toRedirectMappings({
-		sourceQuery,
-		satelliteRefs: reading.satelliteRefs,
-		resolvedMappings: reading.resolvedMappings,
-	})
 	const cloneMappings = await reconcileSatellites(tx, {
 		sourceQuery,
 		satelliteRefs: reading.satelliteRefs,
@@ -131,5 +112,5 @@ export async function reconcileCrossCuttingSatellites(
 		scope: reading.scope,
 	})
 
-	return { cloneMappings, redirectMappings }
+	return { cloneMappings, redirectMappings: reading.redirectMappings }
 }

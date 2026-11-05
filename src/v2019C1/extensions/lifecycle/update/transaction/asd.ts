@@ -43,12 +43,8 @@ import {
 	resolveApplicationSatellites,
 	resolveApplicationScope,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
-import {
-	assertMappingsDecided,
-	resolveSatelliteMappings,
-	resolveSatelliteRemovals,
-	toRedirectMappings,
-} from '@/v2019C1/extensions/lifecycle/mapping'
+import { readLinkedSections } from '@/v2019C1/extensions/lifecycle/linked-sections/read'
+import { assertMappingsDecided } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	assertRevisionBaseFits,
 	scenarioPolicy,
@@ -232,41 +228,27 @@ export async function asd(
 		// where the shared satellites land — the answer the report read. Resolved before the
 		// application reconcile: its references to a project element a source element is mapped
 		// onto are the template's references to that element.
-		const resolvedMappings = await resolveSatelliteMappings(tx, {
-			sourceQuery,
-			satelliteRefs,
-			instanceSatelliteRefs,
-			decisionMappings: params.decisionMappings,
-			matchKey,
-		})
-		// a shared element nothing is decided for: nothing is written until the consumer chose
-		assertMappingsDecided({ satelliteRefs, resolvedMappings })
-		const redirectMappings = await toRedirectMappings({
-			sourceQuery,
-			satelliteRefs,
-			resolvedMappings,
-		})
-
-		// what goes of the satellites the template no longer brings anything for — read from the
-		// instance as it is before the reconcile below changes its references, as the report read it
-		const removals = await resolveSatelliteRemovals(tx, {
-			sourceQuery,
-			instancePrimaryRef: instance,
-			instanceSatelliteRefs,
-			resolvedMappings,
-			removalBase,
-			matchKey,
-		})
-		droppedFunctions.push({ dropped: droppedByInstance.get(instance.id) ?? [], accepted })
-
-		// 1. application layer
-		// the cross-cutting satellites as the report read them, before the reconcile below
 		// what the satellites' references may name: the application and the functions it composes, but what the
 		// selection leaves out
 		const scope = await resolveApplicationScope(sourceQuery, {
 			applicationRef,
 			leftOut: selection.leftOut,
 		})
+		const reading = await readLinkedSections(tx, {
+			sourceQuery,
+			description: { satelliteRefs, instanceSatelliteRefs, scope },
+			instancePrimaryRef: instance,
+			decisionMappings: params.decisionMappings,
+			removalBase,
+			matchKey,
+		})
+		const { resolvedMappings, removals, redirectMappings } = reading
+		// a shared element nothing is decided for: nothing is written until the consumer chose
+		assertMappingsDecided({ satelliteRefs, resolvedMappings })
+		droppedFunctions.push({ dropped: droppedByInstance.get(instance.id) ?? [], accepted })
+
+		// 1. application layer
+		// the cross-cutting satellites as the report read them, before the reconcile below
 		const crossCutting = await readCrossCuttingSatellites(tx, {
 			sourceQuery,
 			primaryRef: applicationRef,
