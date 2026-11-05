@@ -44,6 +44,10 @@ src/documentation/
 
 AGENTS.md
 
+# Local agent skill links and sync state
+/.agents/skills/
+/.github/skills/
+
 .vitepress/dist
 .vitepress/cache
 # real-file corpus: synced from the expert's test system folder, never published (see its README)
