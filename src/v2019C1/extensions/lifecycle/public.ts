@@ -86,3 +86,4 @@ export type {
 } from './validate'
 
 export type { IedClassification, IedClassificationBasis, IedKind } from './ied/public'
+export type { IedExtractParams } from './extract/transaction/ied.types'

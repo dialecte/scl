@@ -1,4 +1,4 @@
-import { DATA_SET_USER_TAGS } from './data-set-rename.constants'
+import { findDataSetUsers } from './find-data-set-users'
 import { updatedOperation, upsertAttribute } from './record-ops'
 
 import { toRawRecord } from '@dialecte/core/helpers'
@@ -22,9 +22,11 @@ export async function followDataSetRename(
 	const newName = readAttribute({ record: newRecord, name: 'name' })
 	if (!oldName || !newName || oldName === newName) return []
 
-	const parent = await query.getRecord(newRecord.parent as Scl.Ref<Scl.ElementsOf>)
-	const users = (parent?.children ?? []).filter((child) => DATA_SET_USER_TAGS.has(child.tagName))
-	const records = await query.getRecords(users as Scl.Ref<Scl.ElementsOf>[])
+	// The stored record may already carry the new name; the users still name the old one.
+	const records = await findDataSetUsers(query, {
+		dataSet: { tagName: 'DataSet', id: newRecord.id },
+		name: oldName,
+	})
 
 	const operations: Scl.Operation[] = []
 	for (const record of records) {

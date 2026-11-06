@@ -1,25 +1,27 @@
 ---
-description: Extract extension for @dialecte/scl v2019C1 — the FSD/ASD/SSD template extractors (built on the transplant engine + layers) plus the TEMPLATE-structure helper.
+description: Extract extension for @dialecte/scl v2019C1 - FSD/ASD/SSD template extractors, the in-progress IED instance copy and the TEMPLATE-structure helper.
 ---
 
 # Extract
 
-The `extract` verb copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.lifecycle.transplant.deep`) and the shared `layers/` take-over, adding three named extractors (`fsd`, `asd`, `ssd`) that produce template FSD/ASD/SSD documents. It also exposes the `ensureSubstationTemplateStructure` helper `fsd`/`asd` use to seed their scaffold — `ssd` reproduces its own frame instead (see [below](#ssd)).
+The `extract` verb copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.lifecycle.transplant.deep`) and the shared `layers/` take-over, adding three named extractors (`fsd`, `asd`, `ssd`) that produce template FSD/ASD/SSD documents. The in-progress [`ied`](#ied-in-progress) method currently copies selected instance IED content and its scoped Communication only; it does not yet produce a complete ISD export. It also exposes the `ensureSubstationTemplateStructure` helper `fsd`/`asd` use to seed their scaffold — `ssd` reproduces its own frame instead (see [below](#ssd)).
 
 ```ts
 // named extractors (compose the transplant engine + layers with extract policy)
 tx.lifecycle.extract.fsd(...)
 tx.lifecycle.extract.asd(...)
 tx.lifecycle.extract.ssd(...)
+// in progress: selected IED instance content and scoped Communication only
+tx.lifecycle.extract.ied(...)
 // helper
 tx.lifecycle.extract.ensureSubstationTemplateStructure()
 ```
 
-The file an extract writes holds its root where [`query.lifecycle.sourceRoot.<verb>()`](./instantiate#the-root-of-a-template-file) reads it: the function, application or unit a later instantiate takes as its `ref`.
+The file a template extract writes holds its root where [`query.lifecycle.sourceRoot.<verb>()`](./instantiate#the-root-of-a-template-file) reads it: the function, application or unit a later instantiate takes as its `ref`.
 
 ## Transaction methods
 
-Access via `tx.lifecycle.extract` inside a `doc.transaction()` callback. Every method opens a cross-document transaction: it reads from `sourceQuery` and writes into the current `tx`.
+Access via `tx.lifecycle.extract` inside a `doc.transaction()` callback. The extractors read from `sourceQuery` and write into the current `tx`; the enclosing transaction commits or rolls back their writes together.
 
 ### `fsd`
 
@@ -121,9 +123,50 @@ Returns the warnings gathered while extracting (`ExtractWarning`, a `code` and i
 { code: 'satellite-not-placed', source: Ref }
 ```
 
+### `ied` (in progress)
+
+The currently implemented slice copies one selected specification IED into an empty target, preserving its name and instance identity, initializing the ISD Header/history and recording its known source. Explicitly pass `kind: 'instance'` and `inputs: 'none'`. Omitted `kind` or `inputs`, and `inputs: 'later-binding'`, are refused with `OPTION_NOT_AVAILABLE` before writes; optional fields in the public type do not imply implemented input defaults.
+
+```ts
+await targetDoc.transaction(async (tx) => {
+	const { warnings } = await tx.lifecycle.extract.ied({
+		sourceQuery: sourceDoc.query,
+		iedRef: { tagName: 'IED', id: 'selected-ied' },
+		fileType: 'ISD',
+		kind: 'instance',
+		inputs: 'none',
+		issuer: 'Issuer',
+		tool: 'Tool name',
+		who: 'user@example.com',
+	})
+	// warnings contain source refs and data for the caller to word.
+})
+```
+
+Returns `Promise<{ warnings: ExtractWarning[] }>`, not a new IED ref.
+
+- Copies LN0, ordinary LNs, datasets, controls, values, labels and vendor `Private` content through `transplant.deep`. Imports only the reachable logical-node/data-type closure of the surviving nodes, retaining source type names.
+- Leaves out `Inputs` and supervision LNs (`LGOS`, `LSVS`). Each supervision LN produces `{ code: 'supervision-left-out', source: Scl.Ref<'LN'> }`.
+- Removes native FCDA references to omitted supervision nodes, using UUID twins first and names only when the twin is absent. A mixed DataSet retains its remaining FCDA, attributes and opaque payload; an affected DataSet with no remaining native FCDA is removed, including its payload. Vendor elements sharing SCL local names are not candidates.
+- Retains affected ReportControl, GSEControl, SampledValueControl and LogControl identities. A surviving DataSet keeps its `datSet` associations; removal clears them. Each affected Report/GSE/SV control gets exactly one `confRev` increment of `10000`, a product convention. Each affected LogControl gets `logEna="false"`. Unaffected controls remain unchanged. Missing or invalid uint32 counters refuse with `EXTRACTION_CONF_REV_INVALID`; adding `10000` beyond `4294967295` refuses with `EXTRACTION_CONF_REV_OVERFLOW`. Both diagnostics identify the source control and precede output writes. This policy applies only to extraction, not generic deletion.
+- Leaves out foreign `IEDName`, `ClientLN`, `Association` and `KDC` entries without removing their owners. Each produces `{ code: 'ied-reference-left-out', source, iedName }`; ordinary self references stay.
+- These exclusions and warnings apply only to schema-qualified SCL elements. Opaque vendor content with the same local names (`Inputs`, `ExtRef`, `LN`, `IEDName`, `ClientLN`, `Association`, `KDC`) remains unchanged and produces no omission warnings.
+- Copies Communication only when it holds connections for the selected IED's access points, matched by the complete IED/access-point name pair. Keeps only those connections and their subnetworks, preserving network metadata and connection payload. Routine foreign Communication exclusions produce no warnings.
+- Preserves access-point UUIDs. A names-only source connection can remain names-only or acquire the correct cloned access-point UUID through existing hooks.
+- Initializes the output file through `history.startFile`: replaces any existing target Header with an ISD Header with a fresh UUID, version `0`, revision `1`, `toolID` from `tool`, and one initial history item with `who` and the current timestamp. Previous target history contributes only labelled inner text to that item, not old file versions or Header attributes. `nameStructure` is passed to initialization; `as` defaults to `'new'`. A revision start is unavailable and refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'as', value: 'revision' }`) before writes.
+- Writes `issuer` as the output IED's `manufacturer`, without changing its name or instance UUID.
+- Records the source at both `Header > SourceFiles` and the selected `IED > IEDSourceFiles` through `reference.writeProvenance`. Already listed source versions are not appended again; older IED source references stay. The references take `version`, `revision` and `fileUuid` from the source Header and `fileName` from its registered document `name`, not a reconstructed full filename.
+- Resolves source type once from the registered document extension, case-insensitively: `.ssd` means `SSD`; `.scd`, `.xml` or no extension means `SCD`. Both provenance anchors use that type. `Header@fileType` never overrides it, even when the Header disagrees. For example, `project.ssd` with Header `fileType="SCD"` records `SSD`; an XML or extensionless document with Header `fileType="SSD"` records `SCD`. This default is a product convention, not type inference required by the standard.
+- Refuses other registered extensions with `OPTION_NOT_AVAILABLE` before writes (`meta: { option: 'sourceExtension', value: extension }`, carrying the actual registered extension). Source Header, XML and document metadata remain unchanged; no caller source-type override is offered.
+- Refuses a selected implemented IED with `IED_NOT_SPECIFICATION` (`SCL2005`); an unrelated implemented sibling does not block extraction. A target already holding an IED is refused with `EXTRACTION_TARGET_NOT_EMPTY` (`SCL2006`). These guards precede writes.
+- Leaves no `MinRequestedSCDFiles` in the output, including wrappers generated by existing clone/update hooks.
+- Reads the source without changing its XML or document metadata. Writes belong to the enclosing target transaction and roll back with it.
+
+**Not a complete ISD export yet.** Bound process content, template export, input conversion/defaults and internal-service conversion are not implemented.
+
 ### Options
 
-The three extracts take `as` and `templateLink` (`ExtractOptions`); `extract.fsd` and `extract.asd` take `sections` too, `extract.fsd` `placement` (see its steps):
+The three template extracts take `as` and `templateLink` (`ExtractOptions`); `extract.fsd` and `extract.asd` take `sections` too, `extract.fsd` `placement` (see its steps):
 
 - `as` — the file written. `'new'` (default): a new template, a `Header` with a uuid of its own, version `0`, revision `1`. `'revision'`: a new revision of the template the element came from (its uuid, the next revision) — not available yet, refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'as', value: 'revision' }`) before anything is written.
 - `sections` (`extract.fsd`; `extract.asd` takes `equipment` only) — what the function holds besides its logical nodes and subfunctions, each optional in an FSD, each written unless set `false` (`FunctionSections`):
@@ -179,8 +222,11 @@ lifecycle/
     topology/                 root selection + frame reproduction + cloneTopologyContent (SSD take-over)
       ensure-topology-frame.ts    reproduces the structural frame by position (Substation/VL/Bay)
       reconcile-topology-frame.ts reconciles the frame's own content onto an existing instance
+    ied/                      instance content exclusions and scoped Communication discovery
+  linked-sections/            shared linked-section reading; discovery and placement stay with the caller
   extract/transaction/        the extract operation (this extension)
     fsd.ts , asd.ts , ssd.ts  file-type extractors
+    ied.ts                    in-progress IED instance copy via deep + leaveOut + keep identity
     ensure-substation-structure.ts , post-extraction-cleanup.ts
     function-sections.ts      the sections of a function an extract leaves out
     function-placement.ts     where an FSD holds its function, what a function template cannot hold
@@ -190,6 +236,8 @@ lifecycle/
 > `transplant.deep` is the **mechanism**; `layers/` hold the per-layer **take-over**; `extract` adds the extract-direction **policy** (the sections left out, the placement, history, the template link kept or broken, clean-up). The type engine it composes is [`dataModel.importTypes`](./data-model#importtypes); the content-addressing behind that is [`signature.elementSignature`](./signature).
 
 ## Exported types
+
+`IedExtractParams` and `ExtractWarning` are exported from `@dialecte/scl/v2019C1`. The IED parameters include reserved fields for unfinished extraction behavior; see the current limitations above.
 
 The [`transplant`](./transplant) module exposes the parameter/result shapes of `deep` and its clone-policy configs for typing call sites.
 

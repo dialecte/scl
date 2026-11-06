@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **In-progress `tx.lifecycle.extract.ied` instance extraction**: explicitly selecting `kind: 'instance'` and `inputs: 'none'` copies the selected specification IED, its surviving type closure and scoped Communication, preserving instance identity and reporting omitted supervision nodes and foreign IED references. Initializes ISD Header/history, assigns the issuer, records source provenance at both Header and IED, and leaves no minimum-requested-file wrappers. Source type follows the registered extension, ignoring Header `fileType`: `.ssd` means SSD; `.scd`, `.xml` or no extension means SCD, a product convention. Other extensions, implemented selected IEDs, targets already holding an IED and revision starts are refused before writes. This is not yet a complete ISD export: process content and other input/export modes remain unfinished.
+
+- **`tx.reference.writeProvenance` accepts an IED anchor**: records source-file history under the selected IED, appending each distinct file type, identity, version and revision while retaining earlier entries.
+
+### Fixed
+
+- **New extractions replace the target Header**: FSD, ASD, SSD and ISD starts receive a fresh file identity and one initial `0`/`1` history item with current creation metadata. Earlier target history contributes only labelled inner text, not old version identities or Header attributes. Ordinary history appends are unchanged.
+
+- **IED extraction cleans supervision DataSet dependencies without replacing controls**: removes affected FCDA and DataSets left without native FCDA, retaining mixed DataSet payload. Retained Report/GSE/SV controls increment `confRev` by `10000` once; affected LogControls are disabled, and only removed DataSet associations are cleared. Missing/invalid counters or overflow refuse before output writes. Generic deletion is unchanged.
+
+- **IED extraction preserves opaque vendor elements sharing SCL local names**: input, supervision and foreign-reference exclusions now check schema namespace identity, leaving vendor payload intact without false omission warnings.
+
 ## [0.13.1] - 2026-11-04
 
 ### Changed

@@ -20,7 +20,7 @@ import type { AnyRawRecord, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/co
 /**
  * Records the source file an element or the document was made from: an `SclFileReference` sourced from the source
  * `Header` (`version` / `revision` / `fileUuid`) and store (`fileName`). The same writer serves a placement and an
- * update, so a reference always names the file version the element was last made from.
+ * update; function/application references name the latest source version, while IED/document references retain history.
  *
  * The anchor is chosen by `target`:
  * - `function` / `application` — the root's own `FunctionSclRef` / `ApplicationSclRef` naming the source file (the
@@ -29,12 +29,14 @@ import type { AnyRawRecord, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/co
  *   files (the file its template was made from) are left.
  * - `document` — appended to the target `Header > SourceFiles` (SSD / SCD), unless the Header already lists that file
  *   version: the files newly imported are appended, in the order they were.
+ * - `ied` — appended to the selected IED's `IEDSourceFiles`, unless that file type, identity, version and revision
+ *   are already listed. Older versions and other files are retained in order; the target Header is left unchanged.
  *
  * `version` / `revision` fall back to empty strings when the (optional) Header attributes are absent. Returns whether
  * it changed what is recorded (`changed`): an element that records that file version already, as its only reference
- * to that file, is left as it is.
+ * to that file, is left as it is. An IED or document already listing that file version is also left unchanged.
  *
- * @intent record which template file an instance came from, add an SclFileReference to a Function/Application/Header, write source file provenance
+ * @intent record which template file an instance came from, add an SclFileReference to a Function/Application/IED/Header, write source file provenance
  */
 export async function writeProvenance(
 	tx: Core.Transaction<Config>,
@@ -46,6 +48,16 @@ export async function writeProvenance(
 		sourceQuery,
 		fileType: fileTypeOf(target),
 	})
+
+	if (target.anchor === 'ied') {
+		const sourceFiles = await tx.ensureChild(target.root, { tagName: 'IEDSourceFiles' })
+		const listed = await tx.getChildren(sourceFiles, 'SclFileReference')
+		if (listed.some((reference) => namesSameVersion({ reference, attributes }))) {
+			return { changed: false }
+		}
+		await tx.addChild(sourceFiles, { tagName: 'SclFileReference', attributes })
+		return { changed: true }
+	}
 
 	if (target.anchor === 'document') {
 		const header = await tx.getRecord({ tagName: 'Header' })
@@ -143,5 +155,7 @@ function heldValue(params: {
 }
 
 function fileTypeOf(target: ProvenanceTarget): SclFileType {
-	return target.anchor === 'document' ? target.fileType : ROOT_ANCHORS[target.anchor].fileType
+	return target.anchor === 'document' || target.anchor === 'ied'
+		? target.fileType
+		: ROOT_ANCHORS[target.anchor].fileType
 }

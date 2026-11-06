@@ -27,6 +27,15 @@ export type ExtractOptions = {
  */
 export type ExtractWarning =
 	| {
+			code: 'supervision-left-out'
+			source: Scl.Ref<'LN'>
+	  }
+	| {
+			code: 'ied-reference-left-out'
+			source: Scl.Ref<'IEDName' | 'ClientLN' | 'Association' | 'KDC'>
+			iedName: string
+	  }
+	| {
 			code: 'sections-not-carried'
 			counts: { IED: number; Communication: number }
 	  }

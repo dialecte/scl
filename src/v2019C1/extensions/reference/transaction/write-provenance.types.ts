@@ -10,10 +10,13 @@ export type SclFileType = 'FSD' | 'ASD' | 'SSD' | 'ISD' | 'ICD' | 'IID' | 'SCD' 
  *   root (FSD / ASD); the `fileType` is implied by the anchor.
  * - `document` — a `Header > SourceFiles > SclFileReference` recording the whole source file for the
  *   document (SSD / SCD / …), appended to the target `Header` (no per-root wrapper exists).
+ * - `ied` — an `IEDSourceFiles > SclFileReference` appended under the selected IED, retaining previous
+ *   source versions; the caller supplies the source file type.
  */
 export type ProvenanceTarget =
 	| { anchor: 'function'; root: Scl.Ref<'Function'> | Scl.Ref<'SubFunction'> }
 	| { anchor: 'application'; root: Scl.Ref<'Application'> }
+	| { anchor: 'ied'; root: Scl.Ref<'IED'>; fileType: SclFileType }
 	| { anchor: 'document'; fileType: SclFileType }
 
 /** The attributes of a source-file reference, as the writer builds them from the source (an absent value empty). */
@@ -30,7 +33,7 @@ export type WriteProvenanceResult = {
 	/**
 	 * Whether it changed what is recorded: a reference added, or one brought to another version, or a second reference
 	 * to the same file removed. `false` when the element records that file version already, as its only reference to
-	 * that file (or the `Header` lists that file version already).
+	 * that file (or the IED or `Header` lists that file version already).
 	 */
 	changed: boolean
 }
