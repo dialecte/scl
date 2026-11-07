@@ -1,4 +1,4 @@
-import { assertValidSclTestCases, assertValidSclXml } from './assert-valid-scl-xml'
+import { assertValidSclXml } from './assert-valid-scl-xml'
 import { ALL_XMLNS_NAMESPACES } from './hydrated-test'
 
 import { describe, expect, it } from 'vitest'
@@ -147,44 +147,5 @@ describe('assertValidSclXml', () => {
 			expect(message).toContain('snippet: malformed XML')
 			expect(message).toContain('must be the very first characters')
 		})
-	})
-})
-
-describe('assertValidSclTestCases', () => {
-	it('passes when every case is valid', () => {
-		const testCases = {
-			'passing case': {
-				sourceXml: /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES} />`,
-			},
-		}
-		expect(() => assertValidSclTestCases({ testCases })).not.toThrow()
-	})
-
-	it('reports the violations of every invalid case at once, attributed to the case name', () => {
-		const testCases = {
-			'passing case': {
-				sourceXml: /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES} />`,
-			},
-			'first invalid case': {
-				sourceXml: /* xml */ `
-					<SCL>
-						<Substation name="Substation1" />
-					</SCL>
-				`,
-			},
-			'second invalid case': {
-				sourceXml: /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES} />`,
-				targetXml: /* xml */ `
-					<SCL ${ALL_XMLNS_NAMESPACES}>
-						<Substation name="Substation1" templateUUID="not-a-schema-attribute" />
-					</SCL>
-				`,
-			},
-		}
-		const message = captureErrorMessage(() => assertValidSclTestCases({ testCases }))
-		expect(message).toContain('first invalid case › sourceXml')
-		expect(message).toContain('second invalid case › targetXml')
-		expect(message).toContain("unknown attribute 'templateUUID'")
-		expect(message).not.toContain('passing case')
 	})
 })
