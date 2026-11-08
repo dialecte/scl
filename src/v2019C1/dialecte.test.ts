@@ -1,4 +1,5 @@
 import packageJson from '../../package.json'
+import { SCL_DIALECTE } from './declaration.constants'
 import { createSclProject } from './dialecte'
 
 import { createDiagnostic } from '@dialecte/core'
@@ -94,5 +95,46 @@ describe('createSclProject', () => {
 			pathWrittenByRecordHook: 'S1/VL1/B1/L2',
 			customAnswer: 42,
 		})
+	})
+})
+
+/**
+ * How many documents an SCL project of that name holds on in-memory storage, read by opening it: the realm keeps a
+ * closed project's in-memory state, by dialecte and name, until it is destroyed.
+ */
+async function countInMemoryDocuments(name: string): Promise<number> {
+	const project = createSclProject({ storage: { type: 'inMemory' } })
+	await project.open(name)
+	try {
+		return (await project.getDocuments()).length
+	} finally {
+		await project.close()
+	}
+}
+
+/**
+ * The documents of an in-memory SCL project of a fresh name, before and after `createSclProject.destroyProject` named
+ * it: the project holds one document, closed before the destroy.
+ */
+async function readDestroyProject(): Promise<{ before: number; after: number }> {
+	const name = `scl-factory-destroy-${crypto.randomUUID()}`
+	const project = createSclProject({ storage: { type: 'inMemory' } })
+	await project.open(name)
+	await project.initEmptyDocument()
+	await project.close()
+	const before = await countInMemoryDocuments(name)
+	await createSclProject.destroyProject({ name, storage: { type: 'inMemory' } })
+	const after = await countInMemoryDocuments(name)
+	await createSclProject.destroyProject({ name, storage: { type: 'inMemory' } })
+	return { before, after }
+}
+
+describe('createSclProject, the factory of the declaration', () => {
+	it('carries the SCL declaration it makes its projects from', () => {
+		expect(createSclProject.dialecte).toBe(SCL_DIALECTE)
+	})
+
+	it('destroyProject deletes the SCL project of that name on the storage named, without opening it', async () => {
+		await expect(readDestroyProject()).resolves.toEqual({ before: 1, after: 0 })
 	})
 })

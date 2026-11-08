@@ -1,7 +1,8 @@
-import '@dialecte/core/sqlite'
 import { SCL_DIALECTE } from './declaration.constants'
+import engineUrl from './test/scl-engine.worker?worker&url'
 
 import { createDiagnostic, createProjectFactory } from '@dialecte/core'
+import { registerSqliteEngine } from '@dialecte/core/sqlite'
 import { describe, expect, it } from 'vitest'
 
 import { SCL_IMPORT_DIAGNOSTICS } from '@/v2019C1/errors'
@@ -33,14 +34,11 @@ function substationWith(params: { terminal: string }): string {
 	`
 }
 
-/** The test suites' SCL engine worker, served by the dev server as a module. */
-const ENGINE_URL = new URL('./test/scl-engine.worker.ts', import.meta.url).href
+// the page tells once where its SQLite engine runs: the test suites' SCL worker
+registerSqliteEngine({ url: engineUrl, dialectes: [SCL_DIALECTE] })
 
-/** The SCL declaration's project factory, its engine the test suites' SCL worker. */
-const createSclEngineProject = createProjectFactory({
-	dialecte: SCL_DIALECTE,
-	engineUrl: ENGINE_URL,
-})
+/** The SCL declaration's project factory: a project on SQLite storage runs in the engine registered above. */
+const createSclEngineProject = createProjectFactory({ dialecte: SCL_DIALECTE })
 
 /**
  * The file imported into a new SQLite project of the declaration, through its engine worker; the project destroyed

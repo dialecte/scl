@@ -6,15 +6,16 @@
 			"root": "export",
 			"entry": "@dialecte/scl/v2019C1",
 			"otherRoutes": [],
-			"signature": "<CustomModules extends ExtensionModules = Record<never, never>>(params?: { storage?: StorageParam; extensions?: CustomModules; }) => Scl.Project<CustomModules>",
-			"summary": "Create an SCL project: every part of it comes from the dialecte's declaration (`SCL_DIALECTE`). Call .open(name) to initialize the store and hydrate state.",
+			"signature": "<CustomModules extends ExtensionModules = Record<never, never>>(params?: CreateProjectParams<CustomModules> | undefined) => Project<Config, { cleanUp: { ...; }; ... 7 more ...; info: { ...; }; } & CustomModules, Store>",
+			"summary": "Create an SCL project: every part of it comes from the dialecte's declaration (`SCL_DIALECTE`). Call .open(name) to initialize the store and hydrate state. The factory carries the declaration (`createSclProject.dialecte`) and deletes an SCL project without opening it (`createSclProject.destroyProject({ name, storage })`).",
 			"intents": [
 				"open an SCL project",
 				"work on SCD/SSD/FSD/ASD files",
 				"import and edit SCL documents",
-				"register custom extensions on an SCL project"
+				"register custom extensions on an SCL project",
+				"delete an SCL project without opening it"
 			],
-			"declaredAt": "src/v2019C1/dialecte.ts:14"
+			"declaredAt": "src/v2019C1/dialecte.ts:15"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1.getPathSegment",
