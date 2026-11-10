@@ -1,12 +1,15 @@
-import { resolveElementPath } from './resolve-element-path'
+import { findNativeLnByPath } from './find-native-ln-by-path'
+import { findNativeLnByUuid } from './find-native-ln-by-uuid'
 import { resolveMappedDataFrom } from './resolve-mapped-data-from'
 import { resolveMappedLNode } from './resolve-mapped-lnode'
 
 import { MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference/constants'
 
-import type { MappedDataAndDefault } from './resolve-mapped-data-and-default.types'
+import type {
+	MappedDataAndDefault,
+	ResolveMappedDataAndDefaultParams,
+} from './resolve-mapped-data-and-default.types'
 import type { MappedDataSource } from './resolve-mapped-data-from.types'
-import type { ResolveMappedDataParams } from './resolve-mapped-data.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -21,12 +24,16 @@ type LnRef = Scl.Ref<'LN' | 'LN0'>
  */
 export async function resolveMappedDataAndDefault(
 	query: Reader,
-	params: ResolveMappedDataParams,
+	params: ResolveMappedDataAndDefaultParams,
 ): Promise<MappedDataAndDefault> {
-	return resolveMappedDataFrom(createQuerySource(query), { node: params.reference })
+	return resolveMappedDataFrom(createQuerySource(query, params), { node: params.reference })
 }
 
-function createQuerySource(query: Reader): MappedDataSource<DataRef, LnRef> {
+function createQuerySource(
+	query: Reader,
+	params: ResolveMappedDataAndDefaultParams,
+): MappedDataSource<DataRef, LnRef> {
+	const { mappedLNodes } = params
 	return {
 		async readNode(reference) {
 			const attributeNames = MAPPED_NAME_REFS.get(reference.tagName)
@@ -48,24 +55,19 @@ function createQuerySource(query: Reader): MappedDataSource<DataRef, LnRef> {
 			const ancestors = await query.findAncestors(reference)
 			const lnode = ancestors.find((ancestor) => ancestor.tagName === 'LNode')
 			if (!lnode) return undefined
-			const { lnUuid } = await query.getAttributes(lnode as Scl.TrackedRecord<'LNode'>)
-			if (lnUuid) return findLnByUuid(query, lnUuid)
+			if (mappedLNodes) return mappedLNodes.get(lnode.id)?.ln
 			const ln = await resolveMappedLNode(query, lnode as Scl.TrackedRecord<'LNode'>)
 			return ln && { tagName: ln.tagName, id: ln.id }
 		},
-		findLnByUuid: (uuid) => findLnByUuid(query, uuid),
+		findLnByUuid: (uuid) => findLnRefByUuid(query, uuid),
 		async findLnByPath(path) {
-			const record = await resolveElementPath(query, path)
-			if (record?.tagName !== 'LN' && record?.tagName !== 'LN0') return undefined
-			return { tagName: record.tagName, id: record.id }
+			const found = await findNativeLnByPath(query, { path })
+			return found && { tagName: found.ln.tagName, id: found.ln.id }
 		},
 	}
 }
 
-async function findLnByUuid(query: Reader, uuid: string): Promise<LnRef | undefined> {
-	for (const tagName of ['LN', 'LN0'] as const) {
-		const [match] = await query.findByAttributes({ tagName, attributes: { uuid } })
-		if (match) return { tagName, id: match.id }
-	}
-	return undefined
+async function findLnRefByUuid(query: Reader, uuid: string): Promise<LnRef | undefined> {
+	const found = await findNativeLnByUuid(query, { uuid })
+	return found && { tagName: found.ln.tagName, id: found.ln.id }
 }
