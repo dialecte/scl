@@ -6,6 +6,8 @@ import type { SectionNode } from './section-node.types'
  * document order by id, and the LNode holding each signal, by signal id.
  */
 export type ProcessSection = {
+	/** Every element of the section read, the document's own content only, a parent before its children. */
+	nodes: readonly SectionNode[]
 	/** Every LNode of the section, by id, in document order. */
 	lnodes: ReadonlyMap<string, SectionNode<'LNode'>>
 	lnodeByUuid: ReadonlyMap<string, SectionNode<'LNode'>>

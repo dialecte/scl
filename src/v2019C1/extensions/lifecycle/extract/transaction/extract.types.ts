@@ -27,6 +27,24 @@ export type ExtractOptions = {
  */
 export type ExtractWarning =
 	| {
+			/** An LNode of the IED implemented by a logical node the IED export leaves out (a supervision one): not written. */
+			code: 'process-lnode-left-out'
+			source: Scl.Ref<'LNode'>
+			reason: 'target-not-carried'
+	  }
+	| {
+			/** An input or output specification kept with its link to what the file does not hold cleared: the attributes removed. */
+			code: 'process-reference-cut'
+			source: Scl.Ref<'SourceRef' | 'ControlRef'>
+			attributes: string[]
+	  }
+	| {
+			/** A behaviour description using LNodes the file does not hold: left out whole. */
+			code: 'behavior-description-left-out'
+			source: Scl.Ref<'BehaviorDescription'>
+			reason: 'partly-mapped'
+	  }
+	| {
 			code: 'supervision-left-out'
 			source: Scl.Ref<'LN'>
 	  }

@@ -26,7 +26,8 @@ export async function readProcessSection(query: Core.Query<Config>): Promise<Pro
 	const signals = new Map<string, SectionNode<'SourceRef' | 'ControlRef'>>()
 	const uuidsByTag = new Map<string, Set<string>>()
 
-	for (const node of nativeSectionNodesOf(collected)) {
+	const nodes = nativeSectionNodesOf(collected)
+	for (const node of nodes) {
 		const { record, ancestry } = node
 		const nearestLNode = ancestry.findLast((ancestor) => ancestor.tagName === 'LNode')
 		if (SIGNAL_FURTHER_TARGET_TAGS.has(record.tagName)) {
@@ -46,7 +47,7 @@ export async function readProcessSection(query: Core.Query<Config>): Promise<Pro
 	}
 
 	const indexes = await indexLNodes(query, { lnodes, specNamings })
-	return { ...indexes, lnodes, uuidsByTag, signals, holderOfSignal }
+	return { ...indexes, nodes, lnodes, uuidsByTag, signals, holderOfSignal }
 }
 
 /** The LNodes by uuid and by path; an LNode is named by its specified naming once an IED is assigned to it. */

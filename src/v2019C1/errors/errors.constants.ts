@@ -140,10 +140,10 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL2005',
 		message: 'The selected IED is not a specification IED',
 	},
-	/** The target of an IED extraction already holds an IED. */
+	/** The target of an IED extraction already holds an IED or a process part (a substation, line or process). */
 	EXTRACTION_TARGET_NOT_EMPTY: {
 		code: 'SCL2006',
-		message: 'The extraction target already holds an IED',
+		message: 'The extraction target already holds an IED or a process part',
 	},
 	/** An affected extraction control has no valid unsigned 32-bit counter. `meta: { source, value? }` */
 	EXTRACTION_CONF_REV_INVALID: {

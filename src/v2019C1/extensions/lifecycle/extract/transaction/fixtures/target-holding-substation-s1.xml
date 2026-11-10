@@ -1,0 +1,7 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="target">
+	<Substation name="S1" dev:db-id="target-substation">
+		<VoltageLevel name="V1">
+			<Bay name="B1"/>
+		</VoltageLevel>
+	</Substation>
+</SCL>

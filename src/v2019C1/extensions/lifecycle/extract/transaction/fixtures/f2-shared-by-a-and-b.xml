@@ -1,0 +1,52 @@
+			<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="scl">
+				<Substation name="S1">
+					<VoltageLevel name="V1">
+						<Bay name="B1">
+							<Function name="F2">
+								<SubFunction name="Control">
+									<LNode iedName="A" ldInst="LD1" prefix="" lnClass="PTRC" lnInst="1" lnUuid="5a000000-0000-4000-8000-000000000001"/>
+								</SubFunction>
+								<SubFunction name="Interlock" dev:db-id="subfunction-on-b">
+									<LNode iedName="B" ldInst="LD1" prefix="" lnClass="CILO" lnInst="1" lnUuid="5b000000-0000-4000-8000-000000000001"/>
+								</SubFunction>
+							</Function>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+
+<IED name="A" uuid="20000000-0000-4000-8000-00000000000a" dev:db-id="ied-a">
+	<AccessPoint name="AP1">
+		<Server>
+			<Authentication/>
+			<LDevice inst="LD1">
+				<LN0 lnClass="LLN0" inst="" lnType="LN_T"/>
+				<LN lnClass="PTRC" inst="1" prefix="" lnType="LN_T" uuid="5a000000-0000-4000-8000-000000000001"/>
+				<LN lnClass="XCBR" inst="1" prefix="" lnType="LN_T" uuid="5a000000-0000-4000-8000-000000000004"/>
+				<LN lnClass="LGOS" inst="1" prefix="" lnType="LN_T" uuid="5a000000-0000-4000-8000-000000000005"/>
+			</LDevice>
+		</Server>
+	</AccessPoint>
+</IED>
+<IED name="B" uuid="20000000-0000-4000-8000-00000000000b" dev:db-id="ied-b">
+	<AccessPoint name="AP1">
+		<Server>
+			<Authentication/>
+			<LDevice inst="LD1">
+				<LN0 lnClass="LLN0" inst="" lnType="LN_T"/>
+				<LN lnClass="CILO" inst="1" prefix="" lnType="LN_T" uuid="5b000000-0000-4000-8000-000000000001"/>
+			</LDevice>
+		</Server>
+	</AccessPoint>
+</IED>
+
+
+<DataTypeTemplates>
+	<LNodeType id="LN_T" lnClass="PTRC">
+		<DO name="Op" type="ACT_T"/>
+	</LNodeType>
+	<DOType id="ACT_T" cdc="ACT">
+		<DA name="general" bType="BOOLEAN" fc="ST"/>
+	</DOType>
+</DataTypeTemplates>
+
+			</SCL>
