@@ -4,7 +4,6 @@ import { extCtrlState } from '@/v2019C1/extensions/dataflow/query/ext-ctrl-state
 import { extRefState } from '@/v2019C1/extensions/dataflow/query/ext-ref-state'
 import { namesTarget } from '@/v2019C1/extensions/dataflow/query/names-target'
 import { PAIRS_BY_REF, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
-import { resolveMappedLNode } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnode'
 
 import type {
 	ElementStateByTag,
@@ -13,9 +12,8 @@ import type {
 	SignalState,
 	StateRuleParams,
 } from './state.types'
-import type { Scl, Config } from '@/v2019C1/config'
+import type { Scl } from '@/v2019C1/config'
 import type { ExtCtrlState, ExtRefState } from '@/v2019C1/extensions/dataflow/dataflow.types'
-import type * as Core from '@dialecte/core'
 
 // ── State rules ──────────────────────────────────────────────────────
 // One rule per tag that has a state; a tag absent here has none. A rule reads the element's
@@ -72,32 +70,14 @@ async function lnodeState(params: StateRuleParams): Promise<LNodeState> {
  * holding that LN.
  */
 async function lnodeMapping(params: StateRuleParams): Promise<LNodeMapping> {
-	const { query, record, attributes, context } = params
+	const { record, attributes, context } = params
 	if (!attributes.iedName || attributes.iedName === UNALLOCATED_IED_NAME) return 'unmapped'
 
-	const ln = attributes.lnUuid
-		? (await context.lnByUuid()).get(attributes.lnUuid)
-		: await resolveMappedLNode(query, record as Scl.TrackedRecord<'LNode'>)
-	if (!ln) return 'unmapped'
+	const mapped = await context.mappedLNodeOf(record as Scl.TrackedRecord<'LNode'>)
+	if (!mapped) return 'unmapped'
 
-	const iedId = await findIedId(query, ln)
-	const kind = iedId ? (await context.iedKindById()).get(iedId) : undefined
+	const kind = (await context.iedKindById()).get(mapped.ied.id)
 	if (kind === 'implemented') return 'real-ied'
 	if (kind === 'specification') return 'specification-ied'
 	return 'unmapped'
-}
-
-/** The IED holding a record, climbing its parents one step at a time. */
-async function findIedId(
-	query: Core.Query<Config>,
-	ref: Scl.Ref<Scl.ElementsOf>,
-): Promise<string | undefined> {
-	let current = await query.getRecord(ref)
-	while (current) {
-		if (current.tagName === 'IED') return current.id
-		current = current.parent
-			? await query.getRecord(current.parent as Scl.Ref<Scl.ElementsOf>)
-			: undefined
-	}
-	return undefined
 }

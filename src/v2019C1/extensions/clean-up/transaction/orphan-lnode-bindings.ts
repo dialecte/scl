@@ -6,8 +6,11 @@ import {
 import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query'
 import { releaseLNodeBinding } from '@/v2019C1/extensions/data-model/transaction/release-lnode-binding'
-import { resolveMappedLNode } from '@/v2019C1/extensions/reference/query/resolve'
-import { LN_TARGETS } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnode.constants'
+import { IED_SECTION_SELECT } from '@/v2019C1/extensions/dataflow/constants/ied-section.constants'
+import { nativeSectionNodesOf } from '@/v2019C1/extensions/dataflow/query/section-nodes'
+import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
+import { resolveMappedLNodes } from '@/v2019C1/extensions/reference/query/resolve'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ResetLNodesParams } from './orphan-lnode-bindings.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -43,6 +46,7 @@ export async function resetLNodes(
 ): Promise<void> {
 	const lnodes = await readLNodes(tx, params)
 	const uuidsByTag = await collectTargetUuids(tx)
+	const mapped = await resolveMappedLNodes(tx, { lnodes })
 
 	for (const lnode of lnodes) {
 		if (!(await isLNodeLocked(tx, lnode))) {
@@ -50,8 +54,7 @@ export async function resetLNodes(
 			await tx.update(lnode, { attributes: { iedName: UNALLOCATED_IED_NAME } })
 			continue
 		}
-		const bound = await bindingResolves(tx, { lnode, uuidsByTag })
-		if (!bound) await releaseLNodeBinding(tx, { lnode })
+		if (!mapped.has(lnode.id)) await releaseLNodeBinding(tx, { lnode })
 	}
 
 	// read once the LNodes are released: what a release rewrote is read as it now stands
@@ -95,17 +98,16 @@ async function readReferrers(
 	return records.filter((record) => record !== undefined)
 }
 
-/** The uuids of every element an implementation can name, per tag, read once. */
+/** The uuids of every native element an implementation can name, per tag, read once. */
 async function collectTargetUuids(tx: Core.Transaction<Config>): Promise<Map<string, Set<string>>> {
+	const collected = await collectWithAncestry(tx, { select: IED_SECTION_SELECT })
 	const uuidsByTag = new Map<string, Set<string>>()
-	for (const tagName of IMPLEMENTATION_TARGET_TAGS) {
-		const uuids = new Set<string>()
-		const records = await tx.getRecordsByTagName(tagName as Scl.ElementsOf)
-		for (const record of records) {
-			const uuid = await tx.getAttribute(record, { name: 'uuid' })
-			if (uuid) uuids.add(uuid)
-		}
-		uuidsByTag.set(tagName, uuids)
+	for (const { record } of nativeSectionNodesOf(collected)) {
+		if (!IMPLEMENTATION_TARGET_TAGS.has(record.tagName)) continue
+		const uuids = uuidsByTag.get(record.tagName) ?? new Set<string>()
+		const uuid = readAttribute({ record, name: 'uuid', defaults: 'none' })
+		if (uuid) uuids.add(uuid)
+		uuidsByTag.set(record.tagName, uuids)
 	}
 	return uuidsByTag
 }
@@ -118,21 +120,6 @@ function isInDocument(params: {
 }): boolean {
 	const { uuid, tagNames, uuidsByTag } = params
 	return tagNames.some((tagName) => uuidsByTag.get(tagName)?.has(uuid))
-}
-
-/** Whether the LN an LNode is bound to is in the document: by its `lnUuid`, else by its naming. */
-async function bindingResolves(
-	tx: Core.Transaction<Config>,
-	params: {
-		lnode: Scl.TrackedRecord<'LNode'>
-		uuidsByTag: ReadonlyMap<string, ReadonlySet<string>>
-	},
-): Promise<boolean> {
-	const { lnode, uuidsByTag } = params
-	const lnUuid = await tx.getAttribute(lnode, { name: 'lnUuid' })
-	if (lnUuid) return isInDocument({ uuid: lnUuid, tagNames: [...LN_TARGETS], uuidsByTag })
-	const ln = await resolveMappedLNode(tx, lnode)
-	return ln !== undefined
 }
 
 /** Remove the names of a referrer's references whose uuid points at nothing in the document. */
