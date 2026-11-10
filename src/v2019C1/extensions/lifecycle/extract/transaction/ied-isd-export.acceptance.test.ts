@@ -8,8 +8,11 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test'
 
+import type { IedExtractParams } from './ied.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
+
+type TestCase = SclTest.BaseXmlTestCase & { options?: Partial<IedExtractParams> }
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -257,6 +260,27 @@ const projectXml = /* xml */ `
 
 const emptyIsd = /* xml */ `<SCL ${ns} ${id}="empty-isd"/>`
 
+/** The fixture holds no application, allocation role or power system relation: the options say only what is passed. */
+const specificationContextOff = {
+	applications: false,
+	allocationRoles: false,
+	powerSystemRelations: false,
+} as const
+const specificationExpected = [
+	'/default:SCL/default:Substation[@name="S1"]/default:VoltageLevel[@name="V1"][count(default:Bay)=1]/default:Bay[@name="B1"][count(default:Function)=2]',
+	'//default:Bay[@name="B1"]/default:Function[@name="F1"][@uuid="12000000-0000-4000-8000-000000000001"][count(default:LNode)=2][default:LNode[@iedName="A"][@lnClass="PTRC"][@uuid="80000000-0000-4000-8000-000000000001"]][default:LNode[@iedName="A"][@lnClass="RREC"][@uuid="80000000-0000-4000-8000-000000000002"]]/default:Private/v2019C1:BehaviorDescription[@name="ReclosingLogic"]',
+	'//default:Function[@name="F1"]/default:LNode[@lnClass="PTRC"]/default:Private/v2019C1:DOS[@name="Op"]/v2019C1:DAS[@name="general"]/v2019C1:Val[text()="false"]',
+	'//default:Bay[@name="B1"]/default:Function[@name="F2"][count(default:LNode)=0][count(default:SubFunction)=1]/default:SubFunction[@name="Control"]/default:LNode[@iedName="A"][@lnClass="CSWI"][@lnInst="1"]',
+	'//default:Bay[@name="B1"]/default:ConductingEquipment[@name="QA1"]/default:EqFunction[@name="BreakerControl"]/default:LNode[@iedName="A"][@lnClass="XCBR"]',
+]
+const specificationUnexpected = [
+	'//default:Bay[@name="B2"]',
+	'//default:Function[@name="F3"]',
+	'//default:SubFunction[@name="Interlock"]',
+	'//default:LNode[@iedName="B" or @iedName="None"]',
+	'//v2019C1:BehaviorDescription[@name="InterlockLogic"]',
+]
+
 const IED_A: Scl.Ref<'IED'> = { tagName: 'IED', id: 'ied-a' }
 const IED_R: Scl.Ref<'IED'> = { tagName: 'IED', id: 'ied-r' }
 
@@ -290,7 +314,7 @@ function exportParams(params: { sourceQuery: Scl.Query; iedRef: Scl.Ref<'IED'> }
 }
 
 describe('extract.ied as an ISD of an S-IED', () => {
-	const testCases: SclTest.TestCases = {
+	const testCases: SclTest.TestCases<TestCase> = {
 		'project with S-IED A and real IED R, export of A → the file holds A alone': {
 			sourceXml: projectXml,
 			targetXml: emptyIsd,
@@ -321,11 +345,31 @@ describe('extract.ied as an ISD of an S-IED', () => {
 					'//default:DOType[@id="ENA_T" or @id="ENC_T" or @id="IND_T" or @id="R_SPS_T" or @id="R_ACT_T"]',
 				],
 			},
+		'F1 on A, F2 on A and B, breaker on A, F3 on B, labels off → A part of the specification in its frame, no label':
+			{
+				sourceXml: projectXml,
+				targetXml: emptyIsd,
+				options: { labels: false, ...specificationContextOff },
+				expectedQueries: specificationExpected,
+				unexpectedQueries: [...specificationUnexpected, '//default:Labels'],
+			},
+		'F1 with a label, labels option left at its default → the same file plus the label of the exported function':
+			{
+				sourceXml: projectXml,
+				targetXml: emptyIsd,
+				options: { ...specificationContextOff },
+				expectedQueries: [
+					...specificationExpected,
+					'//default:Function[@name="F1"][count(default:LNode)=2]/default:Labels/default:Label[@id="F1"][@lang="en"][text()="Line protection"]',
+					'//default:IED[@name="A"]/default:Labels/default:Label[@id="A"][@lang="en"][text()="Bay controller"]',
+				],
+				unexpectedQueries: specificationUnexpected,
+			},
 		'A exported from P.ssd → the header references P.ssd': {
 			sourceXml: projectXml,
 			targetXml: emptyIsd,
 			expectedQueries: [
-				'/default:SCL/default:Header[@fileType="ISD"]/default:SourceFiles[count(default:SclFileReference)=1]/default:SclFileReference[@fileType="SSD"][@fileName="P" or @fileName="P.ssd"][@fileUuid="10000000-0000-4000-8000-000000000001"][@version="1"][@revision="A"]',
+				'/default:SCL/default:Header[@fileType="ISD"]/default:SourceFiles[count(default:SclFileReference)=1]/default:SclFileReference[@fileType="SSD"][@fileName="P.ssd"][@fileUuid="10000000-0000-4000-8000-000000000001"][@version="1"][@revision="A"]',
 			],
 		},
 	}
@@ -335,13 +379,14 @@ describe('extract.ied as an ISD of an S-IED', () => {
 		source,
 		target,
 		testCase,
-	}: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<SclTest.ActResult> {
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		const projectFile = await importProject({ project, source, testCase })
 		await target.transaction(async function exportIsd(tx) {
-			return tx.lifecycle.extract.ied(
-				exportParams({ sourceQuery: projectFile.query, iedRef: IED_A }),
-			)
+			return tx.lifecycle.extract.ied({
+				...exportParams({ sourceQuery: projectFile.query, iedRef: IED_A }),
+				...testCase.options,
+			})
 		})
 		return { assertOn: 'target' }
 	}
