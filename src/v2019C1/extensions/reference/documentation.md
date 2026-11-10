@@ -31,7 +31,7 @@ buildMappedLNodePath ↔ resolveMappedLNode     (mapped LNode ↔ implementing L
 - `resolveRefPath` vs `resolveElementPath` — resolveRefPath follows a REF record's stored attribute; resolveElementPath walks the tree directly from a string.
 - `findRefsTo` vs `resolveRefPath` — `resolveRefPath(ref)` gives you the target _of_ one ref; `findRefsTo(target)` gives you all refs _pointing at_ a target. Opposite direction.
 - `resolvesTo(ref, target)` would be a predicate (`boolean`) — not this function.
-- `resolveMappedLNode` vs `resolveElementPath` — a mapped `LNode` has no path attribute pointing to its `LN`; instead the implementing identity is spread across `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`. `resolveMappedLNode` composes the IED-section path from those attributes (via `buildMappedLNodePath`) and resolves it with `resolveElementPath`. Unmapped LNodes (`iedName="None"`) resolve to `undefined`.
+- `resolveMappedLNode` vs `resolveElementPath` — a mapped `LNode` has no path attribute pointing to its `LN`; instead the implementing identity is spread across `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`. `resolveMappedLNode` reads its `lnUuid`, else composes the IED-section path from those attributes. An LNode with `iedName="None"` and no `lnUuid` resolves to `undefined`; a valid `lnUuid` decides alone.
 
 ---
 

@@ -462,7 +462,7 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "(refsOrRecords: readonly AnyRefOrRecord[], options?: InfoOptions) => Promise<ElementInfo[]>",
-			"summary": "`of` for several elements, in the order given: each one's own title (not its path from the root, which is `reference.buildElementPath`) and state, with the document-wide facts a state needs (the kinds of the IEDs, the LNs by uuid) read once for the whole call.",
+			"summary": "`of` for several elements, in the order given: each one's own title (not its path from the root, which is `reference.buildElementPath`) and state, with the document-wide facts a state needs (the kinds of the IEDs, what implements each LNode) read once for the whole call.",
 			"intents": [
 				"own titles or display names of many elements in one call",
 				"states of many LNodes or signals",
@@ -664,13 +664,27 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "(lnode: Scl.TrackedRecord<'LNode'>) => Promise<Scl.TrackedRecord<'LN' | 'LN0'> | undefined>",
-			"summary": "Resolves a mapped `LNode` to the IED `LN` (or `LN0`) that implements it.",
+			"summary": "Resolves a mapped `LNode` to the IED `LN` (or `LN0`) that implements it, by the same rule as `resolveMappedLNodes`: a truthy `lnUuid` decides alone, even when it names nothing and whatever the names say; otherwise the complete name path, so an LNode with `iedName=\"None\"` and no `lnUuid` resolves to nothing. Vendor look-alikes in a `Private` are never the answer. One call does not read the document; for several LNodes, call `resolveMappedLNodes` once.",
 			"intents": [
 				"LN that implements an LNode",
 				"go from a function LNode to its IED LN/LN0",
 				"follow an LNode binding into the IED section"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnode.ts:26"
+			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnode.ts:19"
+		},
+		{
+			"path": "doc.query.reference.resolveMappedLNodes",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: ResolveMappedLNodesParams) => Promise<MappedLNodes>",
+			"summary": "What implements each of the LNodes given: the `LN` or `LN0` and the IED holding it, read in one go however many LNodes are asked about. A truthy `lnUuid` decides alone, even when it names nothing; without one the complete name path of the LNode (`iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst`) does. Only the document's own logical nodes count: what sits inside a `Private` is vendor payload, and an LNode never resolves to it. The LNodes asked about are answered from their own attributes, wherever they sit.",
+			"intents": [
+				"which LN and IED implement these LNodes",
+				"resolve many mapped LNodes at once",
+				"LNode to IED without one read per LNode"
+			],
+			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes.ts:32",
+			"example": "await doc.query.reference.resolveMappedLNodes({ lnodes })"
 		},
 		{
 			"path": "doc.query.reference.resolveReferencePath",
@@ -747,7 +761,7 @@
 				"clean up LNode bindings after an IED or LN is deleted",
 				"clear dangling data mappings and signal implementations"
 			],
-			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/orphan-lnode-bindings.ts:40",
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/orphan-lnode-bindings.ts:43",
 			"example": "await tx.cleanUp.resetLNode()"
 		},
 		{

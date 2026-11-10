@@ -9,11 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`query.reference.resolveMappedLNodes`**: answers which `LN` or `LN0` implements each of many LNodes, and in which IED, with one read of the document. A truthy `lnUuid` decides alone, even when it names nothing; otherwise the complete name path of the LNode. Logical nodes inside a `Private` are vendor payload and are never the answer.
+
 - **In-progress `tx.lifecycle.extract.ied` instance extraction**: explicitly selecting `kind: 'instance'` and `inputs: 'none'` copies the selected specification IED, its surviving type closure and scoped Communication, preserving instance identity and reporting omitted supervision nodes and foreign IED references. Initializes ISD Header/history, assigns the issuer, records source provenance at both Header and IED, and leaves no minimum-requested-file wrappers. Source type follows the registered extension, ignoring Header `fileType`: `.ssd` means SSD; `.scd`, `.xml` or no extension means SCD, a product convention. Other extensions, implemented selected IEDs, targets already holding an IED and revision starts are refused before writes. This is not yet a complete ISD export: process content and other input/export modes remain unfinished.
 
 - **`tx.reference.writeProvenance` accepts an IED anchor**: records source-file history under the selected IED, appending each distinct file type, identity, version and revision while retaining earlier entries.
 
+### Changed
+
+- **`query.reference.resolveMappedLNode` reads the `lnUuid` first and counts the document's own logical nodes only**: an LNode with a truthy `lnUuid` resolves to the logical node of that uuid, or to nothing when it names none, whatever its names say or its `iedName`. Without one the complete names decide. A logical node inside a vendor `Private` is no longer an answer, whether found by uuid or by names; `query.reference.resolveMappedData` follows the same rule.
+
+- **`tx.cleanUp.resetLNode` and `query.info` judge LNode bindings on native logical nodes**: an LNode naming only a logical node of a vendor payload, by uuid or by names, is released by the clean-up and reported `unmapped`. A data or signal reference whose target exists only in a vendor payload loses its names.
+
 ### Fixed
+
+- **Dataflow no longer reads vendor look-alikes as native content**: an element of a vendor payload in a `Private` (an `LNode`, `LN`, `IED`, signal, `LNodeSpecNaming` or the target of a signal's further reference) no longer counts in allocations and listings, and can no longer take the place of or rename a native element. `query.dataflow.ofSourceRef` and `ofControlRef` now throw `ELEMENT_NOT_FOUND` for a signal held by a vendor LNode. The extension content a `Private` legitimately holds, such as a function template or the inputs of an LNode, is read as before.
 
 - **New extractions replace the target Header**: FSD, ASD, SSD and ISD starts receive a fresh file identity and one initial `0`/`1` history item with current creation metadata. Earlier target history contributes only labelled inner text, not old version identities or Header attributes. Ordinary history appends are unchanged.
 
