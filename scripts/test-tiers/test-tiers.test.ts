@@ -505,13 +505,17 @@ describe('test tiers', { timeout: TIER_GUARD_CASE_TIMEOUT_MS }, () => {
 		expect(staleEntries([...BROWSER_ONLY_TEST_FILES, ...NODE_ONLY_TEST_FILES])).toEqual([])
 	})
 
-	it('no test file names its store: the runner chooses it', () => {
+	it('no test file names its store: the runner chooses it, but for a declared production-factory file', () => {
+		const declared = new Set(PRODUCTION_FACTORY_TEST_FILES.map(pathOf))
 		expect(
 			unitTestFiles().filter(function namesItsStore(file) {
 				const source = readText(file)
-				return STORE_NAMED.some(function matches(pattern) {
-					return pattern.test(source)
-				})
+				return (
+					!declared.has(file) &&
+					STORE_NAMED.some(function matches(pattern) {
+						return pattern.test(source)
+					})
+				)
 			}),
 		).toEqual([])
 	})

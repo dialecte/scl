@@ -5,7 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.14.0] - 2026-11-08
+
+### Added
+
+- **`SCL_DIALECTE`, the dialecte's declaration, exported from `@dialecte/scl/v2019C1`**: its id (`scl/v2019C1`), the package version, its config, its extensions and `createHooks()`. `createSclProject` and the test helpers are built from it; pass it to what core derives from a declaration, such as `createTestHelpers` or `serveSqliteEngine`. Its projects carry the dialecte's id and version (`project.dialecteId`), so a project's in-memory state is kept under the dialecte and the name: an in-memory project of another dialecte, or one made without a dialecte, no longer shares the state of an SCL project of the same name. A local project is unchanged.
+
+- **`createSclProject` is core's project factory of the declaration** (`createProjectFactory({ dialecte: SCL_DIALECTE })`): its calls and the projects it makes are unchanged. It carries the declaration (`createSclProject.dialecte`) and deletes the SCL project of a name on a storage without opening it: `createSclProject.destroyProject({ name, storage })`.
+
+### Changed
+
+- **Breaking: requires `@dialecte/core` 0.9.0** (pinned exactly, was 0.8.1). An app that opens SCL projects on SQLite storage assembles the engine itself: its one engine worker file calls `serveSqliteEngine({ dialectes: [SCL_DIALECTE] })` (with its other dialectes) from `@dialecte/core/sqlite`, and its page calls `registerSqliteEngine({ url, dialectes })` once, before the first project opens; this package ships no worker. A project on local or in-memory storage changes nothing. Keep one `@dialecte/core` in the app's lockfile: a copy of another version finds neither the SQLite storage kind (`PROJECT_STORAGE_NOT_REGISTERED`) nor the engine (`PROJECT_SQLITE_ENGINE_NOT_REGISTERED`).
+
+- **The test helpers of `@dialecte/scl/v2019C1/test` open their projects from the declaration**: a test project's config key is now `scl`, the dialecte's own, so a call passing `configKey: 'default'` is refused `UNKNOWN_CONFIG_KEY`: leave it out or pass `scl`.
+
+## [0.13.2] - 2026-11-05
+
+### Changed
+
+- Requires `@dialecte/core` 0.8.1 (pinned exactly, was 0.8.0). Nothing changes in the engine; the core skills an agent syncs from this package's dependencies are 0.8.1's.
 
 ### Changed
 

@@ -41,7 +41,11 @@ export const IN_MEMORY_STORAGE_CALL = /useTestStorage\(\s*\{\s*type:\s*'inMemory
 export const STORE_NAMED = [/\bstorage\s*:\s*\{\s*type\s*:/, /\buseTestStorage\s*\(/]
 
 /** A test opening a project with the production factory, past the test helpers and the runner's store. */
-export const PRODUCTION_FACTORY_CALL = [/\bcreateSclProject\s*\(/, /\bnew\s+Project\s*[<(]/]
+export const PRODUCTION_FACTORY_CALL = [
+	/\bcreateSclProject\s*\(/,
+	/\bcreateProjectFactory\s*\(/,
+	/\bnew\s+Project\s*[<(]/,
+]
 
 /** Folders a test file never lives in. */
 export const IGNORED_FOLDERS: readonly string[] = ['**/node_modules/**', '**/dist/**', '**/.tmp/**']

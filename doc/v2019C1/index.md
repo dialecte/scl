@@ -20,6 +20,46 @@ const doc = project.openDocument(documentId)
 
 `createSclProject` returns a [`Project`](https://dialecte.github.io/core/api/project) pre-configured with the SCL config, extensions, and hooks. `project.openDocument(id)` returns a `Document` typed with the full SCL element set and all registered extensions.
 
+`createSclProject` is core's [`createProjectFactory`](https://dialecte.github.io/core/api/dialecte) of `SCL_DIALECTE`. It carries the declaration (`createSclProject.dialecte`) and deletes an SCL project without opening it:
+
+```ts
+await createSclProject.destroyProject({ name: 'my-project', storage: { type: 'local' } })
+```
+
+## SQLite storage
+
+On SQLite storage, the app assembles the engine (core's [SQLite storage](https://dialecte.github.io/core/api/project#sqlite-storage)): this package ships no worker. The app's one engine worker file serves `SCL_DIALECTE` with its other dialectes, and its page says once where that worker is, before the first project opens:
+
+```ts
+// the app's engine worker file, src/engine.worker.ts
+import { serveSqliteEngine } from '@dialecte/core/sqlite'
+import { SCL_DIALECTE } from '@dialecte/scl/v2019C1'
+
+serveSqliteEngine({ dialectes: [SCL_DIALECTE] })
+```
+
+```ts
+// the app's entry
+import engineUrl from './engine.worker?worker&url'
+
+import { registerSqliteEngine } from '@dialecte/core/sqlite'
+import { SCL_DIALECTE, createSclProject } from '@dialecte/scl/v2019C1'
+
+registerSqliteEngine({ url: engineUrl, dialectes: [SCL_DIALECTE] })
+const project = await createSclProject({ storage: { type: 'sqlite' } }).open('my-project')
+```
+
+## The declaration
+
+`SCL_DIALECTE` is the dialecte declared once with core's [`defineDialecte`](https://dialecte.github.io/core/api/dialecte): its id (`scl/v2019C1`), the package version, its config, its extensions and how its hooks are made, a new instance per project. `createSclProject` and the test helpers are built from it. Pass it to what core derives from a declaration:
+
+```ts
+import { createTestHelpers } from '@dialecte/core/test'
+import { SCL_DIALECTE } from '@dialecte/scl/v2019C1'
+
+const { runTestCases, createTestProject } = createTestHelpers({ dialecte: SCL_DIALECTE })
+```
+
 ## Adding custom extensions
 
 Pass your own extension modules via the `extensions` parameter. They are merged on top of the SCL built-ins — no direct core dependency needed.

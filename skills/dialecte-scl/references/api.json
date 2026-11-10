@@ -6,15 +6,16 @@
 			"root": "export",
 			"entry": "@dialecte/scl/v2019C1",
 			"otherRoutes": [],
-			"signature": "<CustomModules extends ExtensionModules = Record<never, never>>(params?: { storage?: StorageParam; extensions?: CustomModules; }) => Scl.Project<CustomModules>",
-			"summary": "Create an SCL project with pre-configured config, extensions, and hooks. Call .open(name) to initialize the store and hydrate state.",
+			"signature": "<CustomModules extends ExtensionModules = Record<never, never>>(params?: CreateProjectParams<CustomModules> | undefined) => Project<Config, { cleanUp: { ...; }; ... 7 more ...; info: { ...; }; } & CustomModules, Store>",
+			"summary": "Create an SCL project: every part of it comes from the dialecte's declaration (`SCL_DIALECTE`). Call .open(name) to initialize the store and hydrate state. The factory carries the declaration (`createSclProject.dialecte`) and deletes an SCL project without opening it (`createSclProject.destroyProject({ name, storage })`).",
 			"intents": [
 				"open an SCL project",
 				"work on SCD/SSD/FSD/ASD files",
 				"import and edit SCL documents",
-				"register custom extensions on an SCL project"
+				"register custom extensions on an SCL project",
+				"delete an SCL project without opening it"
 			],
-			"declaredAt": "src/v2019C1/dialecte.ts:17"
+			"declaredAt": "src/v2019C1/dialecte.ts:15"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1.getPathSegment",
@@ -141,7 +142,7 @@
 				"find dangling uuid references in SCL XML",
 				"assert written paths match their targets"
 			],
-			"declaredAt": "src/v2019C1/test/assert-coherent-scl-references.ts:56"
+			"declaredAt": "src/v2019C1/test/assert-coherent-scl-references.ts:58"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.assertExpectedElementQueries",
@@ -155,7 +156,7 @@
 				"check an exported SCL document with XPath in a test",
 				"query SCL elements by namespace prefix"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:166"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:148"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.assertNoNewSclOutputViolations",
@@ -183,7 +184,7 @@
 				"check an SCL element was removed",
 				"assert absence with XPath in a test"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:177"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:159"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.assertValidSclXml",
@@ -197,7 +198,7 @@
 				"assert allowed children and known attributes of SCL XML",
 				"check a hand-written SCL snippet"
 			],
-			"declaredAt": "src/v2019C1/test/assert-valid-scl-xml.ts:33"
+			"declaredAt": "src/v2019C1/test/assert-valid-scl-xml.ts:12"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.collectSclOutputViolations",
@@ -238,7 +239,7 @@
 				"get source and target SCL documents to test against",
 				"assert the SCL output is valid against the XSD in a test"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:97"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:85"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.createSclTestRecord",
@@ -251,7 +252,7 @@
 				"build an SCL record for a unit test",
 				"test a pure function or helper on an SCL record without a project"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:154"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:137"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.isSclXsdConfigured",

@@ -3,32 +3,25 @@ import {
 	assertCoherentSclReferencesTestCases,
 } from './assert-coherent-scl-references'
 import { assertAllowInvalidOutputReason } from './assert-scl-output'
-import { assertValidSclTestCases, assertValidSclXml } from './assert-valid-scl-xml'
+import { assertValidSclXml } from './assert-valid-scl-xml'
 import {
 	assertOutputGateTestCases,
 	closeGatedTestProject,
 	readOutputBaseline,
 	withOutputGate,
 } from './output-gate'
-import { FIXTURE_REFERENCES_CHECK_TIMEOUT_MS, SCL_TEST_SETUP } from './scl-test-setup.constants'
+import { SCL_TEST_HELPERS } from './scl-test-helpers.constants'
+import { FIXTURE_REFERENCES_CHECK_TIMEOUT_MS } from './scl-test-setup.constants'
 
 import { CUSTOM_RECORD_ID_ATTRIBUTE, CUSTOM_RECORD_ID_ATTRIBUTE_NAME } from '@dialecte/core/helpers'
-import {
-	createTestProject,
-	createTestRecordFactory,
-	createXmlAssertions,
-	createTestRunner,
-} from '@dialecte/core/test'
 import { beforeAll, onTestFinished } from 'vitest'
-
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 
 import type { AssertCoherentSclReferencesTestCasesParams } from './assert-coherent-scl-references.types'
 import type { SclOutputOptOut } from './assert-scl-output.types'
 import type { SclTest } from './hydrated-test.types'
 import type { GatedDocument, ProjectOutputBaseline } from './output-gate.types'
 import type { Config } from '@/v2019C1/config/dialecte.config'
-import type { XmlAssertions } from '@dialecte/core/test'
+import type { TestHelpers, XmlAssertions } from '@dialecte/core/test'
 
 export {
 	ALL_XMLNS_NAMESPACES,
@@ -40,31 +33,26 @@ export { assertCoherentSclReferences } from './assert-coherent-scl-references'
 export { assertNoNewSclOutputViolations, collectSclOutputViolations } from './assert-scl-output'
 export { assertValidSclXml } from './assert-valid-scl-xml'
 
-const rawRunSclTestCases = createTestRunner<Config, SclTest.Modules>(SCL_TEST_SETUP)
-
 /**
- * `createTestRunner`, wrapped so every registered case's XML is checked before the suite runs —
- * against the SCL schema (see {@link assertValidSclTestCases}), then for coherent references
- * (see {@link assertCoherentSclReferencesTestCases}) — and the documents each case leaves are checked
- * after its act (see {@link withOutputGate}): a violation the act added fails the case. All failing
- * cases are reported at once.
+ * The declaration's test runner, which checks every registered case's XML against the SCL schema, wrapped so the
+ * cases are also checked for coherent references before the suite runs (see
+ * {@link assertCoherentSclReferencesTestCases}) and the documents each case leaves are checked after its act (see
+ * {@link withOutputGate}): a violation the act added fails the case. All failing cases are reported at once.
  */
-export const runSclTestCases: typeof rawRunSclTestCases = {
-	...rawRunSclTestCases,
+export const runSclTestCases: SclTest.TestRunner = {
+	...SCL_TEST_HELPERS.runTestCases,
 	withExport(params) {
-		assertValidSclTestCases({ testCases: params.testCases })
 		checkReferencesBeforeTheSuite({ testCases: params.testCases })
 		assertOutputGateTestCases({ testCases: params.testCases })
-		rawRunSclTestCases.withExport({
+		SCL_TEST_HELPERS.runTestCases.withExport({
 			...params,
 			act: withOutputGate({ act: params.act, testCases: params.testCases }),
 		})
 	},
 	withoutExport(params) {
-		assertValidSclTestCases({ testCases: params.testCases })
 		checkReferencesBeforeTheSuite({ testCases: params.testCases })
 		assertOutputGateTestCases({ testCases: params.testCases })
-		rawRunSclTestCases.withoutExport({
+		SCL_TEST_HELPERS.runTestCases.withoutExport({
 			...params,
 			act: withOutputGate({ act: params.act, testCases: params.testCases }),
 		})
@@ -113,12 +101,7 @@ export async function createSclTestProject(params: {
 	}
 
 	// core destroys the project when the test ends, whatever happens after it is opened
-	const result = await createTestProject<Config, SclTest.Modules>({
-		sourceXml,
-		targetXml,
-		...SCL_TEST_SETUP,
-		dev,
-	})
+	const result = await SCL_TEST_HELPERS.createTestProject({ sourceXml, targetXml, dev })
 
 	// the test's end runs its hooks last registered first: registered after core's, the check reads the documents
 	// before core destroys the project. Outside a running test vitest refuses the hook: the project goes, and so does
@@ -151,9 +134,8 @@ export async function createSclTestProject(params: {
  *
  * @intent build an SCL record for a unit test, test a pure function or helper on an SCL record without a project
  */
-export const createSclTestRecord = createTestRecordFactory<Config>(SCL_DIALECTE_CONFIG)
-
-const sclXmlAssertions = createXmlAssertions({ namespaces: SCL_DIALECTE_CONFIG.namespaces })
+export const createSclTestRecord: TestHelpers<Config, SclTest.Modules>['createTestRecord'] =
+	SCL_TEST_HELPERS.createTestRecord
 
 /**
  * Assert that each XPath query matches at least one element of an SCL document's XML text (`{ xml, queries }`, the
@@ -164,7 +146,7 @@ const sclXmlAssertions = createXmlAssertions({ namespaces: SCL_DIALECTE_CONFIG.n
  * @intent assert an exported SCL document holds an element, check an exported SCL document with XPath in a test, query SCL elements by namespace prefix
  */
 export const assertExpectedElementQueries: XmlAssertions['assertExpectedElementQueries'] =
-	sclXmlAssertions.assertExpectedElementQueries
+	SCL_TEST_HELPERS.assertExpectedElementQueries
 
 /**
  * Assert that no XPath query matches an element of an SCL document's XML text (`{ xml, queries }`, the text an
@@ -175,4 +157,4 @@ export const assertExpectedElementQueries: XmlAssertions['assertExpectedElementQ
  * @intent assert an exported SCL document no longer holds an element, check an SCL element was removed, assert absence with XPath in a test
  */
 export const assertUnexpectedElementQueries: XmlAssertions['assertUnexpectedElementQueries'] =
-	sclXmlAssertions.assertUnexpectedElementQueries
+	SCL_TEST_HELPERS.assertUnexpectedElementQueries

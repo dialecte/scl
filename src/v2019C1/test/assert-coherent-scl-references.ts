@@ -1,10 +1,12 @@
-import { SCL_NAMESPACE_URIS } from './assert-coherent-scl-references.constants'
+import {
+	SCL_FIXTURE_READING_DIALECTE,
+	SCL_NAMESPACE_URIS,
+} from './assert-coherent-scl-references.constants'
 import { treeEntriesOf } from './tree-entries'
 
 import { ERROR_CATALOG, toDialecteError } from '@dialecte/core'
 import { createTestProject } from '@dialecte/core/test'
 
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
@@ -128,9 +130,9 @@ async function openFixture(params: {
 	xml: string
 }): Promise<TestProjectResult<Config> | undefined> {
 	try {
-		return await createTestProject<Config>({
+		return await createTestProject({
+			dialecte: SCL_FIXTURE_READING_DIALECTE,
 			sourceXml: params.xml,
-			dialecteConfig: SCL_DIALECTE_CONFIG,
 		})
 	} catch (error) {
 		if (toDialecteError(error)?.code === ERROR_CATALOG.PARSE_ERROR.code) return undefined
