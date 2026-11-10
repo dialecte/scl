@@ -16,22 +16,20 @@ import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 type TestCase = SclTest.BaseXmlTestCase & {
 	fileType: SclFileType
 	expectedChanged: boolean
-	checkClassification?: boolean
-	checkProvenance?: boolean
 }
 
 describe('writeProvenance with an IED anchor', () => {
 	const id = CUSTOM_RECORD_ID_ATTRIBUTE
 	const ns = ALL_XMLNS_NAMESPACES
 
-	const testCases: SclTest.TestCases<TestCase> = {
+	const recordingCases: SclTest.TestCases<TestCase> = {
 		'IED without source files -> supplied source version recorded': {
 			sourceXml: sourceDocument({ fileType: 'ISD' }),
 			targetXml: targetDocument({}),
 			fileType: 'ISD',
 			expectedChanged: true,
 			expectedQueries: [
-				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=1]/default:SclFileReference[@fileType="ISD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
+				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=1]/default:SclFileReference[@fileType="ISD"][@fileName="source.xml"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
 			],
 		},
 		'IED already listing that exact version -> unchanged without a duplicate': {
@@ -54,7 +52,7 @@ describe('writeProvenance with an IED anchor', () => {
 			expectedChanged: true,
 			expectedQueries: [
 				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=2]/default:SclFileReference[1][@fileType="ISD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="A"]',
-				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles/default:SclFileReference[2][@fileType="ISD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
+				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles/default:SclFileReference[2][@fileType="ISD"][@fileName="source.xml"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
 			],
 		},
 		'IED listing another file -> existing entry retained before new entry': {
@@ -66,7 +64,7 @@ describe('writeProvenance with an IED anchor', () => {
 			expectedChanged: true,
 			expectedQueries: [
 				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=2]/default:SclFileReference[1][@fileType="SSD"][@fileName="original.ssd"][@fileUuid="22222222-2222-4222-8222-222222222222"][@version="9"][@revision="Z"]',
-				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles/default:SclFileReference[2][@fileType="ISD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
+				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles/default:SclFileReference[2][@fileType="ISD"][@fileName="source.xml"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
 			],
 		},
 		'IED listing another file UUID at the same type/version/revision -> new file appended': {
@@ -78,7 +76,7 @@ describe('writeProvenance with an IED anchor', () => {
 			expectedChanged: true,
 			expectedQueries: [
 				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=2]/default:SclFileReference[1][@fileType="ISD"][@fileName="source"][@fileUuid="22222222-2222-4222-8222-222222222222"][@version="2"][@revision="B"]',
-				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles/default:SclFileReference[2][@fileType="ISD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
+				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles/default:SclFileReference[2][@fileType="ISD"][@fileName="source.xml"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
 			],
 		},
 		'IED listing the same file/type/revision at another version -> new version appended': {
@@ -90,7 +88,7 @@ describe('writeProvenance with an IED anchor', () => {
 			expectedChanged: true,
 			expectedQueries: [
 				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=2]/default:SclFileReference[1][@fileType="ISD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="1"][@revision="B"]',
-				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles/default:SclFileReference[2][@fileType="ISD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
+				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles/default:SclFileReference[2][@fileType="ISD"][@fileName="source.xml"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
 			],
 		},
 		'IED listing the same file/version/revision at another file type -> supplied type appended': {
@@ -102,17 +100,19 @@ describe('writeProvenance with an IED anchor', () => {
 			expectedChanged: true,
 			expectedQueries: [
 				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=2]/default:SclFileReference[1][@fileType="SSD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
-				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles/default:SclFileReference[2][@fileType="ISD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
+				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles/default:SclFileReference[2][@fileType="ISD"][@fileName="source.xml"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
 			],
 		},
+	}
+
+	const classificationCases: SclTest.TestCases<TestCase> = {
 		'SSD source -> explicit source type preserved and specification classification unchanged': {
 			sourceXml: sourceDocument({ fileType: 'SSD' }),
 			targetXml: targetDocument({}),
 			fileType: 'SSD',
 			expectedChanged: true,
-			checkClassification: true,
 			expectedQueries: [
-				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=1]/default:SclFileReference[@fileType="SSD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
+				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=1]/default:SclFileReference[@fileType="SSD"][@fileName="source.xml"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
 			],
 		},
 		'SCD source -> explicit source type preserved and specification classification unchanged': {
@@ -120,19 +120,20 @@ describe('writeProvenance with an IED anchor', () => {
 			targetXml: targetDocument({}),
 			fileType: 'SCD',
 			expectedChanged: true,
-			checkClassification: true,
 			expectedQueries: [
-				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=1]/default:SclFileReference[@fileType="SCD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
+				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=1]/default:SclFileReference[@fileType="SCD"][@fileName="source.xml"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
 			],
 		},
+	}
+
+	const provenanceCases: SclTest.TestCases<TestCase> = {
 		'IED reference written -> getProvenance returns the exact IED anchor': {
 			sourceXml: sourceDocument({ fileType: 'ISD' }),
 			targetXml: targetDocument({}),
 			fileType: 'ISD',
 			expectedChanged: true,
-			checkProvenance: true,
 			expectedQueries: [
-				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=1]/default:SclFileReference[@fileType="ISD"][@fileName="source"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
+				'/default:SCL/default:IED[@name="TargetIED"]/default:IEDSourceFiles[count(default:SclFileReference)=1]/default:SclFileReference[@fileType="ISD"][@fileName="source.xml"][@fileUuid="11111111-1111-4111-8111-111111111111"][@version="2"][@revision="B"]',
 			],
 		},
 	}
@@ -166,7 +167,7 @@ describe('writeProvenance with an IED anchor', () => {
 		`
 	}
 
-	async function act({
+	async function recordIedProvenance({
 		testCase,
 		source,
 		target,
@@ -174,7 +175,6 @@ describe('writeProvenance with an IED anchor', () => {
 		if (!target) throw new Error('target document is required')
 		const sourceBefore = await source.query.getTree({ tagName: 'SCL' })
 		const targetBefore = await target.query.getTree({ tagName: 'SCL' })
-		const classificationsBefore = await classifyIeds(target.query)
 
 		await expect(
 			target.transaction(async function recordIedProvenance(tx) {
@@ -195,38 +195,6 @@ describe('writeProvenance with an IED anchor', () => {
 			const targetAfter = await target.query.getTree({ tagName: 'SCL' })
 			expect(targetAfter).toEqual(targetBefore)
 		}
-		if (testCase.checkClassification) {
-			expect(classificationsBefore).toEqual([
-				{
-					ied: { tagName: 'IED', id: 'other-ied' },
-					name: 'OtherIED',
-					kind: 'specification',
-					basis: 'no-provenance',
-				},
-				{
-					ied: { tagName: 'IED', id: 'target-ied' },
-					name: 'TargetIED',
-					kind: 'specification',
-					basis: 'no-provenance',
-				},
-			])
-			const classificationsAfter = await classifyIeds(target.query)
-			expect(classificationsAfter).toEqual(classificationsBefore)
-		}
-		if (testCase.checkProvenance) {
-			const provenance = await getProvenance(target.query)
-			expect(provenance).toEqual([
-				{
-					fileType: 'ISD',
-					fileName: 'source',
-					fileUuid: '11111111-1111-4111-8111-111111111111',
-					version: '2',
-					revision: 'B',
-					anchor: { kind: 'ied', ref: { tagName: 'IED', id: 'target-ied' } },
-				},
-			])
-		}
-
 		const containers = await target.query.getRecordsByTagName('IEDSourceFiles')
 		expect(containers).toHaveLength(1)
 		const ownContainers = await target.query.getChildren(
@@ -239,5 +207,56 @@ describe('writeProvenance with an IED anchor', () => {
 		return { assertOn: 'target' }
 	}
 
-	runSclTestCases.withExport({ testCases, act })
+	async function recordAndCheckClassification(
+		params: SclTest.ActParams<TestCase>,
+	): Promise<SclTest.ActResult> {
+		const { target } = params
+		if (!target) throw new Error('target document is required')
+		const classificationsBefore = await classifyIeds(target.query)
+		expect(classificationsBefore).toEqual([
+			{
+				ied: { tagName: 'IED', id: 'other-ied' },
+				name: 'OtherIED',
+				kind: 'specification',
+				basis: 'no-provenance',
+			},
+			{
+				ied: { tagName: 'IED', id: 'target-ied' },
+				name: 'TargetIED',
+				kind: 'specification',
+				basis: 'no-provenance',
+			},
+		])
+		const result = await recordIedProvenance(params)
+		const classificationsAfter = await classifyIeds(target.query)
+		expect(classificationsAfter).toEqual(classificationsBefore)
+		return result
+	}
+
+	async function recordAndCheckProvenance(
+		params: SclTest.ActParams<TestCase>,
+	): Promise<SclTest.ActResult> {
+		const { target } = params
+		if (!target) throw new Error('target document is required')
+		const result = await recordIedProvenance(params)
+		const provenance = await getProvenance(target.query)
+		expect(provenance).toEqual([
+			{
+				fileType: 'ISD',
+				fileName: 'source.xml',
+				fileUuid: '11111111-1111-4111-8111-111111111111',
+				version: '2',
+				revision: 'B',
+				anchor: { kind: 'ied', ref: { tagName: 'IED', id: 'target-ied' } },
+			},
+		])
+		return result
+	}
+
+	runSclTestCases.withExport({ testCases: recordingCases, act: recordIedProvenance })
+	runSclTestCases.withExport({
+		testCases: classificationCases,
+		act: recordAndCheckClassification,
+	})
+	runSclTestCases.withExport({ testCases: provenanceCases, act: recordAndCheckProvenance })
 })

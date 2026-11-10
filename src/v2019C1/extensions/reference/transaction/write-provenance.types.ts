@@ -28,6 +28,15 @@ export type SclFileReferenceValues = {
 	fileUuid: string
 }
 
+/**
+ * The source file as a reference names it: the attributes written, and the document's name alone, under which a
+ * reference recorded before the extension was kept may list it.
+ */
+export type SclFileReferenceSource = {
+	attributes: SclFileReferenceValues
+	nameWithoutExtension: string
+}
+
 /** What `writeProvenance` did. */
 export type WriteProvenanceResult = {
 	/**

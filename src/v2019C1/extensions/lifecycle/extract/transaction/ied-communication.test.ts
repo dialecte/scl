@@ -11,7 +11,6 @@ const ns = ALL_XMLNS_NAMESPACES
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	rollbackFirst?: boolean
-	namesOnly?: boolean
 }
 
 const emptyTarget = /* xml */ `<SCL ${ns} ${id}="empty-target"/>`
@@ -135,29 +134,6 @@ describe('extract IED Communication', () => {
 			],
 			unexpectedQueries: [...foreignQueries, '//default:SubNetwork[@name="ProcessBus"]'],
 		},
-		'Names-only connection -> selected without manufacturing UUID twin': {
-			sourceXml: sourceXml.replace(
-				'<!-- communication -->',
-				/* xml */ `
-					<Communication>
-						<SubNetwork name="StationBus">
-					${foreignConnection}
-					<ConnectedAP iedName="Selected" apName="AP1" ${id}="selected-connection"/>
-				</SubNetwork>
-					</Communication>
-				`,
-			),
-			targetXml: emptyTarget,
-			namesOnly: true,
-			expectedQueries: [
-				...selectedQueries,
-				'/default:SCL[count(default:Communication)=1]/default:Communication[count(default:SubNetwork)=1]/default:SubNetwork[@name="StationBus"][count(default:ConnectedAP)=1]/default:ConnectedAP[@iedName="Selected"][@apName="AP1"][not(@apUuid) or @apUuid=/default:SCL/default:IED[@name="Selected"]/default:AccessPoint[@name="AP1"]/@uuid]',
-			],
-			unexpectedQueries: [
-				...foreignQueries,
-				'//default:ConnectedAP[@iedName="Selected"][@apUuid][not(@apUuid=/default:SCL/default:IED[@name="Selected"]/default:AccessPoint[@name="AP1"]/@uuid)]',
-			],
-		},
 		'No selected connection -> Communication absent': {
 			sourceXml: sourceXml.replace(
 				'<!-- communication -->',
@@ -171,6 +147,50 @@ describe('extract IED Communication', () => {
 			expectedQueries: [...selectedQueries, '/default:SCL[count(default:Communication)=0]'],
 			unexpectedQueries: [...foreignQueries, '/default:SCL/default:Communication'],
 		},
+		'Vendor ConnectedAP inside a Private naming the selected IED, no native connection -> network and Communication not exported':
+			{
+				sourceXml: sourceXml.replace(
+					'<!-- communication -->',
+					/* xml */ `
+						<Communication>
+							<SubNetwork name="VendorBus">
+								<Private type="vendor.connection">
+									<!-- no native ConnectedAP beside the vendor look-alike -->
+									<vendor:ConnectedAP iedName="Selected" apName="AP1" ${id}="vendor-connection"/>
+								</Private>
+							</SubNetwork>
+						</Communication>
+					`,
+				),
+				targetXml: emptyTarget,
+				expectedQueries: [...selectedQueries, '/default:SCL[count(default:Communication)=0]'],
+				unexpectedQueries: [
+					...foreignQueries,
+					'//default:SubNetwork[@name="VendorBus"]',
+					'//*[local-name()="ConnectedAP"][namespace-uri()="urn:ied-communication:test"]',
+				],
+			},
+		'Vendor ConnectedAP directly in a network naming the selected IED, no native connection -> network and Communication not exported':
+			{
+				sourceXml: sourceXml.replace(
+					'<!-- communication -->',
+					/* xml */ `
+						<Communication>
+							<SubNetwork name="VendorBus">
+								<!-- no native ConnectedAP beside the vendor look-alike -->
+								<vendor:ConnectedAP iedName="Selected" apName="AP1" ${id}="vendor-connection"/>
+							</SubNetwork>
+						</Communication>
+					`,
+				),
+				targetXml: emptyTarget,
+				expectedQueries: [...selectedQueries, '/default:SCL[count(default:Communication)=0]'],
+				unexpectedQueries: [
+					...foreignQueries,
+					'//default:SubNetwork[@name="VendorBus"]',
+					'//*[local-name()="ConnectedAP"][namespace-uri()="urn:ied-communication:test"]',
+				],
+			},
 		'Selected communication payload -> metadata and children retained': {
 			sourceXml: sourceXml
 				.replace(
@@ -243,25 +263,37 @@ describe('extract IED Communication', () => {
 		},
 	}
 
-	async function act({
+	const namesOnlyCases: Record<string, TestCase> = {
+		'Names-only connection -> selected without manufacturing UUID twin': {
+			sourceXml: sourceXml.replace(
+				'<!-- communication -->',
+				/* xml */ `
+					<Communication>
+						<SubNetwork name="StationBus">
+					${foreignConnection}
+					<ConnectedAP iedName="Selected" apName="AP1" ${id}="selected-connection"/>
+				</SubNetwork>
+					</Communication>
+				`,
+			),
+			targetXml: emptyTarget,
+			expectedQueries: [
+				...selectedQueries,
+				'/default:SCL[count(default:Communication)=1]/default:Communication[count(default:SubNetwork)=1]/default:SubNetwork[@name="StationBus"][count(default:ConnectedAP)=1]/default:ConnectedAP[@iedName="Selected"][@apName="AP1"][not(@apUuid) or @apUuid=/default:SCL/default:IED[@name="Selected"]/default:AccessPoint[@name="AP1"]/@uuid]',
+			],
+			unexpectedQueries: [
+				...foreignQueries,
+				'//default:ConnectedAP[@iedName="Selected"][@apUuid][not(@apUuid=/default:SCL/default:IED[@name="Selected"]/default:AccessPoint[@name="AP1"]/@uuid)]',
+			],
+		},
+	}
+
+	async function extractSelectedIed({
 		source,
 		target,
 		testCase,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		if (testCase.namesOnly) {
-			await source.transaction(async function clearConnectionUuid(tx) {
-				await tx.update(
-					{ tagName: 'ConnectedAP', id: 'selected-connection' },
-					{ attributes: { apUuid: undefined } },
-				)
-			})
-			const connectionUuid = await source.query.getAttribute(
-				{ tagName: 'ConnectedAP', id: 'selected-connection' },
-				{ name: 'apUuid', defaults: 'none', fullObject: true },
-			)
-			expect(connectionUuid).toBeUndefined()
-		}
 		const sourceBefore = await source.query.getSnapshot({ as: 'xml' })
 		const sourceMetadata = await source.query.getDocumentInfo()
 		const sourceMetadataBefore = structuredClone(sourceMetadata)
@@ -313,5 +345,24 @@ describe('extract IED Communication', () => {
 		return { assertOn: 'target' }
 	}
 
-	runSclTestCases.withExport({ testCases, act })
+	async function clearConnectionUuidThenExtract(
+		params: SclTest.ActParams<TestCase>,
+	): Promise<SclTest.ActResult> {
+		const { source } = params
+		await source.transaction(async function clearConnectionUuid(tx) {
+			await tx.update(
+				{ tagName: 'ConnectedAP', id: 'selected-connection' },
+				{ attributes: { apUuid: undefined } },
+			)
+		})
+		const connectionUuid = await source.query.getAttribute(
+			{ tagName: 'ConnectedAP', id: 'selected-connection' },
+			{ name: 'apUuid', defaults: 'none', fullObject: true },
+		)
+		expect(connectionUuid).toBeUndefined()
+		return extractSelectedIed(params)
+	}
+
+	runSclTestCases.withExport({ testCases, act: extractSelectedIed })
+	runSclTestCases.withExport({ testCases: namesOnlyCases, act: clearConnectionUuidThenExtract })
 })

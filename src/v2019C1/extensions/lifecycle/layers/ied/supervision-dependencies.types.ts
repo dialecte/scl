@@ -9,3 +9,9 @@ export type SupervisionDependencyPlan = {
 		attributes: { datSet?: undefined; confRev?: string; logEna?: 'false' }
 	}[]
 }
+
+/** How left-out logical nodes are named: by uuid, or by tuple address when a reference holds no uuid. */
+export type OmittedLogicalNodes = { uuids: ReadonlySet<string>; addresses: ReadonlySet<string> }
+
+/** A surviving DataSet that loses members: some remain, it holds other content, or nothing is left. */
+export type AffectedDataSet = { id: string; outcome: 'kept' | 'payload' | 'empty' }

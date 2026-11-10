@@ -17,6 +17,7 @@ const ns = ALL_XMLNS_NAMESPACES
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	sourceExtension: '.ssd' | '.scd' | '.xml' | '' | '.bogus'
+	expectedFileName?: string
 	sourceHeaderType?: 'SSD' | 'SCD'
 	expectedSourceType?: 'SSD' | 'SCD'
 	unsupported?: boolean
@@ -43,6 +44,7 @@ describe('extract IED source extension policy', () => {
 			sourceXml,
 			targetXml: emptyTarget,
 			sourceExtension: '.ssd',
+			expectedFileName: 'project.ssd',
 			sourceHeaderType: 'SCD',
 			expectedSourceType: 'SSD',
 			expectedQueries: successQueries,
@@ -51,6 +53,7 @@ describe('extract IED source extension policy', () => {
 			sourceXml: sourceXml.replace('fileType="SCD"', 'fileType="SSD"'),
 			targetXml: emptyTarget,
 			sourceExtension: '.scd',
+			expectedFileName: 'project.scd',
 			sourceHeaderType: 'SSD',
 			expectedSourceType: 'SCD',
 			expectedQueries: successQueries,
@@ -59,6 +62,7 @@ describe('extract IED source extension policy', () => {
 			sourceXml: sourceXml.replace(' fileType="SCD"', ''),
 			targetXml: emptyTarget,
 			sourceExtension: '.xml',
+			expectedFileName: 'project.xml',
 			expectedSourceType: 'SCD',
 			expectedQueries: successQueries,
 		},
@@ -66,6 +70,7 @@ describe('extract IED source extension policy', () => {
 			sourceXml: sourceXml.replace('fileType="SCD"', 'fileType="SSD"'),
 			targetXml: emptyTarget,
 			sourceExtension: '.xml',
+			expectedFileName: 'project.xml',
 			sourceHeaderType: 'SSD',
 			expectedSourceType: 'SCD',
 			expectedQueries: successQueries,
@@ -74,6 +79,7 @@ describe('extract IED source extension policy', () => {
 			sourceXml: sourceXml.replace(' fileType="SCD"', ''),
 			targetXml: emptyTarget,
 			sourceExtension: '',
+			expectedFileName: 'extensionless',
 			expectedSourceType: 'SCD',
 			expectedQueries: successQueries,
 		},
@@ -81,6 +87,7 @@ describe('extract IED source extension policy', () => {
 			sourceXml: sourceXml.replace('fileType="SCD"', 'fileType="SSD"'),
 			targetXml: emptyTarget,
 			sourceExtension: '',
+			expectedFileName: 'extensionless',
 			sourceHeaderType: 'SSD',
 			expectedSourceType: 'SCD',
 			expectedQueries: successQueries,
@@ -208,7 +215,7 @@ describe('extract IED source extension policy', () => {
 					expect(reference).toMatchObject({
 						fileType: testCase.expectedSourceType,
 						fileUuid: '10000000-0000-4000-8000-000000000001',
-						fileName: sourceMetadataBefore.name,
+						fileName: testCase.expectedFileName,
 						version: '2',
 						revision: 'B',
 					})

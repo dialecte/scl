@@ -1,7 +1,8 @@
-import { toRef } from '@dialecte/core/helpers'
-import { resolveDefinition } from '@dialecte/core/utils'
+import { isNativeRecord } from './is-native-record'
 
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+import { toRef } from '@dialecte/core/helpers'
+
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { IedContentSelection } from './select-ied-content.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -26,10 +27,7 @@ export async function selectIedContent(
 	})
 	const sclCandidateIds = new Set(
 		[...Inputs, ...LN, ...IEDName, ...ClientLN, ...Association, ...KDC]
-			.filter((record) => {
-				const definition = resolveDefinition({ dialecteConfig: SCL_DIALECTE_CONFIG, record })
-				return record.namespace.uri === definition?.namespace.uri
-			})
+			.filter(isNativeRecord)
 			.map((record) => record.id),
 	)
 	const leaveOut = new Set(
@@ -38,7 +36,7 @@ export async function selectIedContent(
 	const warnings: ExtractWarning[] = []
 	for (const logicalNode of LN) {
 		if (!sclCandidateIds.has(logicalNode.id)) continue
-		const lnClass = await query.getAttribute(logicalNode, { name: 'lnClass' })
+		const lnClass = readAttribute({ record: logicalNode, name: 'lnClass' })
 		if (lnClass !== 'LGOS' && lnClass !== 'LSVS') continue
 		leaveOut.add(logicalNode.id)
 		warnings.push({
@@ -59,7 +57,7 @@ export async function selectIedContent(
 	}
 	for (const reference of [...ClientLN, ...Association, ...KDC]) {
 		if (!sclCandidateIds.has(reference.id)) continue
-		const name = await query.getAttribute(reference, { name: 'iedName' })
+		const name = readAttribute({ record: reference, name: 'iedName' })
 		if (!name || name === iedName) continue
 		leaveOut.add(reference.id)
 		warnings.push({

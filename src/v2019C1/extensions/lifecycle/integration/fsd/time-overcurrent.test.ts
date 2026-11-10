@@ -77,15 +77,14 @@ const targetXml = /* xml */ `
 	</SCL>
 `
 
-const skipAll =
-	() =>
-	(groups: DecisionGroup[]): DecisionMap =>
-		new Map(groups.map((g) => [g.id, 'skip'] as const))
+function skipAll(): (groups: DecisionGroup[]) => DecisionMap {
+	return (groups) => new Map(groups.map((group) => [group.id, 'skip'] as const))
+}
 
 // rev1 -> rev2: the function is updated (bumps its decision group) and the
 // FunctionCategory element is retired from the template. The deletion rides the
 // function group: accepted together, or neither.
-const toRev2 = async (tx: Scl.Transaction): Promise<void> => {
+async function toRev2(tx: Scl.Transaction): Promise<void> {
 	await tx.update(functionRef, { attributes: { desc: 'rev2 function' } })
 	await tx.delete(categoryRef)
 }
@@ -186,6 +185,8 @@ describe('lifecycle integration — Time Overcurrent FSD rev1 → rev2 (golden)'
 		)
 
 		const xml = await target.document.query.getSnapshot({ as: 'xml' })
+		// the source file is recorded by its full name, extension included
+		expect(xml).toContain('fileName="source.xml"')
 		expect(normalizeUuids(xml)).toMatchSnapshot()
 	})
 })

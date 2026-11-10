@@ -82,13 +82,12 @@ const targetXml = /* xml */ `
 	</SCL>
 `
 
-const skipAll =
-	() =>
-	(groups: DecisionGroup[]): DecisionMap =>
-		new Map(groups.map((g) => [g.id, 'skip'] as const))
+function skipAll(): (groups: DecisionGroup[]) => DecisionMap {
+	return (groups) => new Map(groups.map((group) => [group.id, 'skip'] as const))
+}
 
 // rev1 -> rev2: the template evolves the function + both satellites and adds a new LNode.
-const toRev2 = async (tx: Scl.Transaction): Promise<void> => {
+async function toRev2(tx: Scl.Transaction): Promise<void> {
 	await tx.update(functionRef, { attributes: { desc: 'rev2 function' } })
 	await tx.update(categoryRef, { attributes: { desc: 'rev2 category' } })
 	await tx.update(variableRef, { attributes: { value: 'rev2val' } })
@@ -214,6 +213,8 @@ describe('lifecycle integration — CB Interface FSD rev1 → rev2 (golden)', ()
 		)
 
 		const xml = await target.document.query.getSnapshot({ as: 'xml' })
+		// the source file is recorded by its full name, extension included
+		expect(xml).toContain('fileName="source.xml"')
 		expect(normalizeUuids(xml)).toMatchSnapshot()
 	})
 })
