@@ -6,6 +6,8 @@ import type { SectionNode } from './section-node.types'
  * document order by id, and the LNode holding each signal, by signal id.
  */
 export type ProcessSection = {
+	/** Every LNode of the section, by id, in document order. */
+	lnodes: ReadonlyMap<string, SectionNode<'LNode'>>
 	lnodeByUuid: ReadonlyMap<string, SectionNode<'LNode'>>
 	lnodeByPath: ReadonlyMap<string, SectionNode<'LNode'>>
 	/** The uuids of the elements the further references of the signals name, by tag. */

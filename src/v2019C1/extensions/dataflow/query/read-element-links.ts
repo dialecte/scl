@@ -15,7 +15,7 @@ export async function readElementLinks(params: {
 	context: DataflowContext
 }): Promise<{ attribute: string; found: boolean }[]> {
 	const { element, controlBlockFound, context } = params
-	const logicalNodes = await context.lnByUuid()
+	const { lnsByUuid } = await context.iedSection()
 	const pairs: readonly TupleReferencePair[] =
 		TUPLE_REFERENCE_PAIRS[element.record.tagName as keyof typeof TUPLE_REFERENCE_PAIRS] ?? []
 	const links: { attribute: string; found: boolean }[] = []
@@ -24,7 +24,7 @@ export async function readElementLinks(params: {
 		switch (tupleTargetKind(pair.tuple)) {
 			case 'ln': {
 				const uuid = await context.query.any.getAttribute(element.record, { name: attribute })
-				links.push({ attribute, found: logicalNodes.has(uuid) })
+				links.push({ attribute, found: lnsByUuid.has(uuid) })
 				break
 			}
 			case 'cb':

@@ -3,6 +3,7 @@ import type { ProcessSection } from './process-section.types'
 import type { Config } from '@/v2019C1/config'
 import type { DataTypes } from '@/v2019C1/extensions/data-model/query/data-types.types'
 import type { InfoContext } from '@/v2019C1/extensions/info/query/info-context.types'
+import type { MappedLNodes } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -19,4 +20,6 @@ export type DataflowContext = InfoContext & {
 	extRefsByControlBlock: () => Promise<ReadonlyMap<string, readonly IedNode<'ExtRef'>[]>>
 	/** The logical node types, data object types and data attribute types of the document. */
 	dataTypes: () => Promise<DataTypes>
+	/** What implements each LNode of the process section, by LNode id. */
+	mappedProcessLNodes: () => Promise<MappedLNodes>
 }

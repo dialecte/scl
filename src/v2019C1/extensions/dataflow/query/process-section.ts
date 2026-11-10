@@ -1,6 +1,6 @@
 import { PROCESS_SECTION_SELECT } from '../constants/process-section.constants'
 import { SIGNAL_FURTHER_TARGET_TAGS } from '../constants/signal-pairs.constants'
-import { sectionNodesOf } from './section-nodes'
+import { nativeSectionNodesOf } from './section-nodes'
 
 import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
@@ -13,7 +13,8 @@ import type * as Core from '@dialecte/core'
 
 /**
  * Reads the process section once: every substation, line, process and function template, whatever
- * their depth (an LNode sits at many of them), and from it every map a dataflow query needs.
+ * their depth (an LNode sits at many of them), and from it every map a dataflow query needs. Vendor
+ * payload is left out, whatever its tag.
  */
 export async function readProcessSection(query: Core.Query<Config>): Promise<ProcessSection> {
 	const collected = await collectWithAncestry(query, {
@@ -25,7 +26,7 @@ export async function readProcessSection(query: Core.Query<Config>): Promise<Pro
 	const signals = new Map<string, SectionNode<'SourceRef' | 'ControlRef'>>()
 	const uuidsByTag = new Map<string, Set<string>>()
 
-	for (const node of sectionNodesOf(collected)) {
+	for (const node of nativeSectionNodesOf(collected)) {
 		const { record, ancestry } = node
 		const nearestLNode = ancestry.findLast((ancestor) => ancestor.tagName === 'LNode')
 		if (SIGNAL_FURTHER_TARGET_TAGS.has(record.tagName)) {
@@ -37,15 +38,15 @@ export async function readProcessSection(query: Core.Query<Config>): Promise<Pro
 		if (record.tagName === 'LNodeSpecNaming' && nearestLNode) {
 			specNamings.set(nearestLNode.id, record)
 		}
-		if (SIGNAL_TAG_NAMES.has(record.tagName) && nearestLNode) {
-			const holder = lnodes.get(nearestLNode.id)
-			if (holder) holderOfSignal.set(record.id, holder)
+		const holder = nearestLNode && lnodes.get(nearestLNode.id)
+		if (SIGNAL_TAG_NAMES.has(record.tagName) && holder) {
+			holderOfSignal.set(record.id, holder)
 			signals.set(record.id, node as SectionNode<'SourceRef' | 'ControlRef'>)
 		}
 	}
 
 	const indexes = await indexLNodes(query, { lnodes, specNamings })
-	return { ...indexes, uuidsByTag, signals, holderOfSignal }
+	return { ...indexes, lnodes, uuidsByTag, signals, holderOfSignal }
 }
 
 /** The LNodes by uuid and by path; an LNode is named by its specified naming once an IED is assigned to it. */
