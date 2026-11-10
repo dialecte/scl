@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **IED extraction no longer treats vendor content as a connection**: a `SubNetwork` or `ConnectedAP` look-alike in another namespace, directly or inside a `Private`, no longer pulls its network and Communication into the extracted file.
+
+- **`SclFileReference@fileName` keeps the file's extension**: `tx.reference.writeProvenance`, and every extract or placement that records a source, now writes `P.ssd` for a source imported as `P.ssd`. A source with no uuid still matches a reference recorded earlier under the bare name `P`: a function or application reference at another version is rewritten in place with the new name and stays one reference, one at the same version keeps `P`, and the Header and IED lists keep `P` for the version they hold and append `P.ssd` for a new one.
+
 ### Added
 
 - **In-progress `tx.lifecycle.extract.ied` instance extraction**: explicitly selecting `kind: 'instance'` and `inputs: 'none'` copies the selected specification IED, its surviving type closure and scoped Communication, preserving instance identity and reporting omitted supervision nodes and foreign IED references. Initializes ISD Header/history, assigns the issuer, records source provenance at both Header and IED, and leaves no minimum-requested-file wrappers. Source type follows the registered extension, ignoring Header `fileType`: `.ssd` means SSD; `.scd`, `.xml` or no extension means SCD, a product convention. Other extensions, implemented selected IEDs, targets already holding an IED and revision starts are refused before writes. This is not yet a complete ISD export: process content and other input/export modes remain unfinished.

@@ -143,7 +143,7 @@ describe('extract IED into a target with prior Header history', () => {
 				expect(entry).toMatchObject({
 					fileUuid: sourceUuid,
 					fileType: 'SCD',
-					fileName: sourceMetadataBefore.name,
+					fileName: 'source.xml',
 					version: '2',
 					revision: 'B',
 				})

@@ -249,6 +249,21 @@ describe('writeProvenance', () => {
 		'source without uuid: the reference of the same file name without uuid is brought to its version':
 			{
 				sourceXml: functionRecording({
+					first: 'fileType="FSD" fileName="source.xml" version="0" revision="1"',
+					second: 'fileType="FSD" fileName="elsewhere" version="0" revision="1"',
+					header: false,
+				}),
+				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
+				expectedChanged: true,
+				expectedQueries: [
+					'//v2019C1:SclFileReference[@fileName="source.xml"][@version=""][@revision=""]',
+					'//v2019C1:SclFileReference[@fileName="elsewhere"][@version="0"][@revision="1"]',
+				],
+				unexpectedQueries: ['(//v2019C1:FunctionSclRef)[3]'],
+			},
+		'source without uuid: a reference holding the file name without its extension is rewritten with it, no second one':
+			{
+				sourceXml: functionRecording({
 					first: 'fileType="FSD" fileName="source" version="0" revision="1"',
 					second: 'fileType="FSD" fileName="elsewhere" version="0" revision="1"',
 					header: false,
@@ -256,10 +271,13 @@ describe('writeProvenance', () => {
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 				expectedChanged: true,
 				expectedQueries: [
-					'//v2019C1:SclFileReference[@fileName="source"][@version=""][@revision=""]',
+					'//v2019C1:SclFileReference[@fileName="source.xml"][@version=""][@revision=""]',
 					'//v2019C1:SclFileReference[@fileName="elsewhere"][@version="0"][@revision="1"]',
 				],
-				unexpectedQueries: ['(//v2019C1:FunctionSclRef)[3]'],
+				unexpectedQueries: [
+					'(//v2019C1:FunctionSclRef)[3]',
+					'//v2019C1:SclFileReference[@fileName="source"]',
+				],
 			},
 		'source without uuid: a reference naming a uuid is another file': {
 			sourceXml: functionRecording({

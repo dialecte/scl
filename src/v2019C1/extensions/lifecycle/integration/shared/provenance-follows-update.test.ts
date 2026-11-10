@@ -203,18 +203,24 @@ async function lifecycleFrom(params: {
 }): Promise<LifecycleTarget> {
 	const { testCase, sourceQuery, scenario, anchor = testCase.anchor } = params
 	const common = { sourceQuery, anchor, scenario }
-	if (testCase.verb === 'ssd') {
-		const [substation] = await sourceQuery.getRecordsByTagName('Substation')
-		const ref = testCase.unit
-			? await findByName(sourceQuery, testCase.unit)
-			: { tagName: 'Substation' as const, id: substation.id }
-		return { ...common, verb: 'ssd', ref }
+	const uuid = testCase.rootUuid ?? ''
+	switch (testCase.verb) {
+		case 'ssd': {
+			const [substation] = await sourceQuery.getRecordsByTagName('Substation')
+			const ref = testCase.unit
+				? await findByName(sourceQuery, testCase.unit)
+				: { tagName: 'Substation' as const, id: substation.id }
+			return { ...common, verb: 'ssd', ref }
+		}
+		case 'fsd': {
+			const ref = await findByUuid(sourceQuery, { tagName: 'Function', uuid })
+			return { ...common, verb: 'fsd', ref: ref as Scl.Ref<'Function'> }
+		}
+		case 'asd': {
+			const ref = await findByUuid(sourceQuery, { tagName: 'Application', uuid })
+			return { ...common, verb: 'asd', ref: ref as Scl.Ref<'Application'> }
+		}
 	}
-	const tagName = testCase.verb === 'fsd' ? 'Function' : 'Application'
-	const ref = await findByUuid(sourceQuery, { tagName, uuid: testCase.rootUuid ?? '' })
-	return testCase.verb === 'fsd'
-		? { ...common, verb: 'fsd', ref: ref as Scl.Ref<'Function'> }
-		: { ...common, verb: 'asd', ref: ref as Scl.Ref<'Application'> }
 }
 
 /** Every group of a report declined. */
@@ -285,7 +291,7 @@ describe('provenance follows an update: the instance records the revision of the
 			rootUuid: 'function-uuid',
 			anchor: projectBay,
 			next: { editSource: nextRevision({ version: '2', revision: 'B', changed: sourceFunction }) },
-			expectedProvenance: ['function source 2/B'],
+			expectedProvenance: ['function source.xml 2/B'],
 			expectedQueries: ['//default:Function[@name="Prot"][@desc="rev2"]'],
 		},
 		"asd: the application's reference names the newer version and revision; its function's FSD reference stays":
@@ -298,7 +304,7 @@ describe('provenance follows an update: the instance records the revision of the
 				next: {
 					editSource: nextRevision({ version: '2', revision: 'B', changed: sourceApplication }),
 				},
-				expectedProvenance: ['application source 2/B', 'function prot-library 3/1'],
+				expectedProvenance: ['application source.xml 2/B', 'function prot-library 3/1'],
 				expectedQueries: ['//v2019C1:Application[@name="HMI"][@desc="rev2"]'],
 			},
 		'an update from a revision that changes nothing for the instance still records it': {
@@ -314,7 +320,7 @@ describe('provenance follows an update: the instance records the revision of the
 					})
 				},
 			},
-			expectedProvenance: ['function source 1/B'],
+			expectedProvenance: ['function source.xml 1/B'],
 		},
 		'every change of the update declined: the instance still records the revision it holds': {
 			sourceXml: fsdXml,
@@ -324,7 +330,7 @@ describe('provenance follows an update: the instance records the revision of the
 			anchor: projectBay,
 			next: { editSource: nextRevision({ version: '2', revision: 'B', changed: sourceFunction }) },
 			declined: 'every change',
-			expectedProvenance: ['function source 1/A'],
+			expectedProvenance: ['function source.xml 1/A'],
 			unexpectedQueries: ['//default:Function[@desc="rev2"]'],
 		},
 		'asd, every change declined: the application still records the revision it holds': {
@@ -335,7 +341,7 @@ describe('provenance follows an update: the instance records the revision of the
 			anchor: projectBay,
 			next: { editSource: nextApplicationAndFunction },
 			declined: 'every change',
-			expectedProvenance: ['application source 1/A', 'function prot-library 3/1'],
+			expectedProvenance: ['application source.xml 1/A', 'function prot-library 3/1'],
 		},
 		'asd, the only change is in a function it composes, declined: the application still records the revision it holds':
 			{
@@ -348,7 +354,7 @@ describe('provenance follows an update: the instance records the revision of the
 					editSource: nextRevision({ version: '2', revision: 'B', changed: sourceFunction }),
 				},
 				declined: 'every change',
-				expectedProvenance: ['application source 1/A', 'function prot-library 3/1'],
+				expectedProvenance: ['application source.xml 1/A', 'function prot-library 3/1'],
 				unexpectedQueries: ['//default:Function[@desc="rev2"]'],
 			},
 		'asd, the change of a function it composes accepted, its own declined: the application records the newer revision':
@@ -360,7 +366,7 @@ describe('provenance follows an update: the instance records the revision of the
 				anchor: projectBay,
 				next: { editSource: nextApplicationAndFunction },
 				declined: 'the application changes',
-				expectedProvenance: ['application source 2/B', 'function prot-library 3/1'],
+				expectedProvenance: ['application source.xml 2/B', 'function prot-library 3/1'],
 				expectedQueries: ['//default:Function[@name="Prot"][@desc="rev2"]'],
 				unexpectedQueries: ['//v2019C1:Application[@desc="rev2"]'],
 			},
@@ -402,7 +408,7 @@ describe('provenance follows an update: the instance records the revision of the
 				}),
 			},
 			declined: 'every change',
-			expectedProvenance: ['document source 0/1'],
+			expectedProvenance: ['document source.xml 0/1'],
 		},
 		'fsd: an element the project added is not a change the newer revision brings: the reference names it':
 			{
@@ -428,7 +434,7 @@ describe('provenance follows an update: the instance records the revision of the
 						})
 					},
 				},
-				expectedProvenance: ['function source 1/B'],
+				expectedProvenance: ['function source.xml 1/B'],
 				expectedQueries: ['//default:Function/default:LNode[@uuid="user-lnode-uuid"]'],
 			},
 		'fsd updated by the update verb with the report and no decisions: every change written, the newer revision recorded':
@@ -442,7 +448,7 @@ describe('provenance follows an update: the instance records the revision of the
 					editSource: nextRevision({ version: '2', revision: 'B', changed: sourceFunction }),
 				},
 				updatedDirectly: true,
-				expectedProvenance: ['function source 2/B'],
+				expectedProvenance: ['function source.xml 2/B'],
 				expectedQueries: ['//default:Function[@name="Prot"][@desc="rev2"]'],
 			},
 		'asd, its only change declined: the application still records the revision it holds': {
@@ -455,7 +461,7 @@ describe('provenance follows an update: the instance records the revision of the
 				editSource: nextRevision({ version: '2', revision: 'B', changed: sourceApplication }),
 			},
 			declined: 'the application changes',
-			expectedProvenance: ['application source 1/A', 'function prot-library 3/1'],
+			expectedProvenance: ['application source.xml 1/A', 'function prot-library 3/1'],
 			unexpectedQueries: ['//v2019C1:Application[@desc="rev2"]'],
 		},
 		"asd, two instances, one function's change declined: that instance keeps its revision, the other records the newer":
@@ -471,8 +477,8 @@ describe('provenance follows an update: the instance records the revision of the
 				},
 				declined: 'the first function changes',
 				expectedProvenance: [
-					'application source 1/A',
-					'application source 2/B',
+					'application source.xml 1/A',
+					'application source.xml 2/B',
 					'function prot-library 3/1',
 					'function prot-library 3/1',
 				],
@@ -487,7 +493,7 @@ describe('provenance follows an update: the instance records the revision of the
 				anchor: projectBay,
 				next: { editSource: nextGainingControl },
 				declined: 'the new reference, not the placement',
-				expectedProvenance: ['application source 2/B', 'function prot-library 3/1'],
+				expectedProvenance: ['application source.xml 2/B', 'function prot-library 3/1'],
 				expectedQueries: ['//default:Function[@name="Ctrl"][@templateUuid="control-uuid"]'],
 				unexpectedQueries: ['//v2019C1:FunctionRef[contains(@function, "/Ctrl")]'],
 			},
@@ -502,8 +508,8 @@ describe('provenance follows an update: the instance records the revision of the
 				next: { editSource: nextGainingControl },
 				declined: 'the first instance, and the new reference of the other',
 				expectedProvenance: [
-					'application source 1/A',
-					'application source 2/B',
+					'application source.xml 1/A',
+					'application source.xml 2/B',
 					'function prot-library 3/1',
 					'function prot-library 3/1',
 				],
@@ -531,7 +537,7 @@ describe('provenance follows an update: the instance records the revision of the
 					}),
 				},
 				updatedTwice: true,
-				expectedProvenance: ['document source 0/1', 'document source 0/2'],
+				expectedProvenance: ['document source.xml 0/1', 'document source.xml 0/2'],
 				expectedQueries: [
 					'//default:Header/default:SourceFiles/default:SclFileReference[1][@revision="1"]',
 					'//default:Header/default:SourceFiles/default:SclFileReference[2][@revision="2"]',
@@ -550,7 +556,7 @@ describe('provenance follows an update: the instance records the revision of the
 					changed: { tagName: 'Bay', id: 'source-feeder' } as Scl.Ref<'Bay'>,
 				}),
 			},
-			expectedProvenance: ['document source 0/1', 'document source 0/2'],
+			expectedProvenance: ['document source.xml 0/1', 'document source.xml 0/2'],
 		},
 		'asd twin: the application gaining elements records its second revision, its subfunctions their FSDs':
 			{
@@ -561,7 +567,7 @@ describe('provenance follows an update: the instance records the revision of the
 				anchor: projectBay,
 				next: { sourceXml: readRevisionTwin({ twin: 'applicationGainsElements', revision: 2 }) },
 				expectedProvenance: [
-					'application next revision 0/2',
+					'application next revision.xml 0/2',
 					'function time-overcurrent 0/1',
 					'function trip-conditioning 0/1',
 				],
@@ -576,7 +582,7 @@ describe('provenance follows an update: the instance records the revision of the
 			rootUuid: '00000000-0000-4000-8000-000000000310',
 			anchor: projectBay,
 			next: { sourceXml: readRevisionTwin({ twin: 'functionTypeGainsData', revision: 2 }) },
-			expectedProvenance: ['function next revision 2/2'],
+			expectedProvenance: ['function next revision.xml 2/2'],
 		},
 		"ssd twin: the Header lists both revisions, the applications keep their application files' references":
 			{
@@ -592,8 +598,8 @@ describe('provenance follows an update: the instance records the revision of the
 					'application breaker_application 1/2',
 					'application breaker_application 1/2',
 					'application overcurrent_application 0/1',
-					'document next revision 0/2',
-					'document source 0/1',
+					'document next revision.xml 0/2',
+					'document source.xml 0/1',
 					'function breaker 2/2',
 					'function breaker 2/2',
 					'function conditioner 0/1',

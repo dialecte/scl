@@ -8,7 +8,7 @@ import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
 	ProvenanceTarget,
-	SclFileReferenceValues,
+	SclFileReferenceSource,
 	SclFileType,
 	WriteProvenanceParams,
 	WriteProvenanceResult,
@@ -19,14 +19,15 @@ import type { AnyRawRecord, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/co
 
 /**
  * Records the source file an element or the document was made from: an `SclFileReference` sourced from the source
- * `Header` (`version` / `revision` / `fileUuid`) and store (`fileName`). The same writer serves a placement and an
- * update; function/application references name the latest source version, while IED/document references retain history.
+ * `Header` (`version` / `revision` / `fileUuid`) and store (`fileName`, the document's name with its extension). The
+ * same writer serves a placement and an update; function/application references name the latest source version, while
+ * IED/document references retain history.
  *
  * The anchor is chosen by `target`:
  * - `function` / `application` — the root's own `FunctionSclRef` / `ApplicationSclRef` naming the source file (the
- *   same `fileUuid`, or the same `fileName` when the source names no uuid) is rewritten to the source's version and
- *   revision — the root records one reference per file; with none, one is added. The references it records of other
- *   files (the file its template was made from) are left.
+ *   same `fileUuid`, or the same `fileName`, with or without the extension, when the source names no uuid) is
+ *   rewritten to the source's version and revision — the root records one reference per file; with none, one is
+ *   added. The references it records of other files (the file its template was made from) are left.
  * - `document` — appended to the target `Header > SourceFiles` (SSD / SCD), unless the Header already lists that file
  *   version: the files newly imported are appended, in the order they were.
  * - `ied` — appended to the selected IED's `IEDSourceFiles`, unless that file type, identity, version and revision
@@ -44,15 +45,16 @@ export async function writeProvenance(
 ): Promise<WriteProvenanceResult> {
 	const { sourceQuery, target } = params
 
-	const attributes = await buildSclFileReferenceAttributes({
+	const sourceFile = await readSourceFileReference({
 		sourceQuery,
 		fileType: fileTypeOf(target),
 	})
+	const { attributes } = sourceFile
 
 	if (target.anchor === 'ied') {
 		const sourceFiles = await tx.ensureChild(target.root, { tagName: 'IEDSourceFiles' })
 		const listed = await tx.getChildren(sourceFiles, 'SclFileReference')
-		if (listed.some((reference) => namesSameVersion({ reference, attributes }))) {
+		if (listed.some((reference) => namesSameVersion({ reference, sourceFile }))) {
 			return { changed: false }
 		}
 		await tx.addChild(sourceFiles, { tagName: 'SclFileReference', attributes })
@@ -68,7 +70,7 @@ export async function writeProvenance(
 		}
 		const sourceFiles = await tx.ensureChild(header, { tagName: 'SourceFiles' })
 		const listed = await tx.getChildren(sourceFiles, 'SclFileReference')
-		if (listed.some((reference) => namesSameVersion({ reference, attributes }))) {
+		if (listed.some((reference) => namesSameVersion({ reference, sourceFile }))) {
 			return { changed: false }
 		}
 		await tx.addChild(sourceFiles, { tagName: 'SclFileReference', attributes })
@@ -78,14 +80,14 @@ export async function writeProvenance(
 	const { tag } = ROOT_ANCHORS[target.anchor]
 	const own = await findOwnProvenance(tx, { element: target.root })
 	const [recorded, ...duplicates] = own.filter(
-		({ wrapper, reference }) => wrapper.tagName === tag && namesSameFile({ reference, attributes }),
+		({ wrapper, reference }) => wrapper.tagName === tag && namesSameFile({ reference, sourceFile }),
 	)
 	if (!recorded) {
 		const sclRef = await tx.addChild(target.root, { tagName: tag })
 		await tx.addChild(sclRef, { tagName: 'SclFileReference', attributes })
 		return { changed: true }
 	}
-	const rewritten = !namesSameVersion({ reference: recorded.reference, attributes })
+	const rewritten = !namesSameVersion({ reference: recorded.reference, sourceFile })
 	if (rewritten) {
 		// a source the store gives no name keeps the name the reference holds
 		const fileName =
@@ -96,37 +98,47 @@ export async function writeProvenance(
 	return { changed: rewritten || duplicates.length > 0 }
 }
 
-/** Source the shared `SclFileReference` payload from the source document (single source of truth). */
-async function buildSclFileReferenceAttributes(params: {
+/**
+ * Source the shared `SclFileReference` payload from the source document (single source of truth). The file name
+ * carries the document's extension; a document with no name gives no file name.
+ */
+async function readSourceFileReference(params: {
 	sourceQuery: Core.Query<Config>
 	fileType: SclFileType
-}): Promise<SclFileReferenceValues> {
+}): Promise<SclFileReferenceSource> {
 	const { sourceQuery, fileType } = params
 	const [header] = await sourceQuery.getRecordsByTagName('Header')
 	const headerAttributes = header ? await sourceQuery.getAttributes(header) : undefined
 
-	const { name } = await sourceQuery.getDocumentInfo()
+	const { name, extension } = await sourceQuery.getDocumentInfo()
 
 	return {
-		fileType,
-		version: headerAttributes?.version ?? '',
-		revision: headerAttributes?.revision ?? '',
-		fileName: name,
-		fileUuid: headerAttributes?.uuid ?? '',
+		attributes: {
+			fileType,
+			version: headerAttributes?.version ?? '',
+			revision: headerAttributes?.revision ?? '',
+			fileName: name ? `${name}${extension}` : '',
+			fileUuid: headerAttributes?.uuid ?? '',
+		},
+		nameWithoutExtension: name,
 	}
 }
 
-/** Whether a reference names the source file: by its uuid, or by its name when the source names no uuid. */
+/**
+ * Whether a reference names the source file: by its uuid, or, when the source names no uuid, by its name with or
+ * without the extension (a reference recorded earlier may hold the name alone).
+ */
 function namesSameFile(params: {
 	reference: AnyRawRecord | AnyTrackedRecord | AnyTreeRecord
-	attributes: SclFileReferenceValues
+	sourceFile: SclFileReferenceSource
 }): boolean {
-	const { reference, attributes } = params
+	const { reference, sourceFile } = params
+	const { attributes, nameWithoutExtension } = sourceFile
 	if (heldValue({ reference, name: 'fileType' }) !== attributes.fileType) return false
-	return attributes.fileUuid
-		? heldValue({ reference, name: 'fileUuid' }) === attributes.fileUuid
-		: !heldValue({ reference, name: 'fileUuid' }) &&
-				heldValue({ reference, name: 'fileName' }) === attributes.fileName
+	if (attributes.fileUuid) return heldValue({ reference, name: 'fileUuid' }) === attributes.fileUuid
+	if (heldValue({ reference, name: 'fileUuid' })) return false
+	const heldName = heldValue({ reference, name: 'fileName' })
+	return heldName === attributes.fileName || heldName === nameWithoutExtension
 }
 
 /**
@@ -135,11 +147,12 @@ function namesSameFile(params: {
  */
 function namesSameVersion(params: {
 	reference: AnyRawRecord | AnyTrackedRecord | AnyTreeRecord
-	attributes: SclFileReferenceValues
+	sourceFile: SclFileReferenceSource
 }): boolean {
-	const { reference, attributes } = params
+	const { reference, sourceFile } = params
+	const { attributes } = sourceFile
 	return (
-		namesSameFile({ reference, attributes }) &&
+		namesSameFile({ reference, sourceFile }) &&
 		(heldValue({ reference, name: 'version' }) ?? '') === attributes.version &&
 		(heldValue({ reference, name: 'revision' }) ?? '') === attributes.revision
 	)

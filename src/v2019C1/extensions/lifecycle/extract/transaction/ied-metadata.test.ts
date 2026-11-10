@@ -15,12 +15,13 @@ const ns = ALL_XMLNS_NAMESPACES
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
-	sourceFilename?: 'project.ssd' | 'project.scd'
 	expectedSourceType?: 'SSD' | 'SCD'
+	expectedFileName?: string
 	expectedRefusal?: string
-	revision?: boolean
 	rollbackFirst?: boolean
 }
+
+type ImportedSourceCase = TestCase & { sourceFilename: 'project.ssd' | 'project.scd' }
 
 const emptyTarget = /* xml */ `<SCL ${ns} ${id}="empty-target"/>`
 const sourceXml = /* xml */ `
@@ -64,7 +65,7 @@ describe('extract IED metadata and guards', () => {
 					'<!-- selected provenance -->',
 					/* xml */ `
 						<IEDSourceFiles>
-							<SclFileReference fileType="SCD" fileName="source" fileUuid="10000000-0000-4000-8000-000000000001" version="2" revision="B"/>
+							<SclFileReference fileType="SCD" fileName="source.xml" fileUuid="10000000-0000-4000-8000-000000000001" version="2" revision="B"/>
 							<SclFileReference fileType="ISD" fileName="older" fileUuid="10000000-0000-4000-8000-000000000002" version="1" revision="A"/>
 						</IEDSourceFiles>
 						<MinRequestedSCDFiles>
@@ -85,32 +86,11 @@ describe('extract IED metadata and guards', () => {
 				),
 			targetXml: emptyTarget,
 			expectedSourceType: 'SCD',
+			expectedFileName: 'source.xml',
 			rollbackFirst: true,
 			expectedQueries: [
 				...successQueries,
 				'//default:IED[@name="Selected"]/default:IEDSourceFiles[count(default:SclFileReference)=2]/default:SclFileReference[@fileType="ISD"][@fileName="older"][@fileUuid="10000000-0000-4000-8000-000000000002"][@version="1"][@revision="A"]',
-			],
-			unexpectedQueries: absentQueries,
-		},
-		'Missing Header fileType in .ssd source -> SSD provenance at both anchors': {
-			sourceXml: sourceXml.replace(' fileType="SCD"', ''),
-			targetXml: emptyTarget,
-			sourceFilename: 'project.ssd',
-			expectedSourceType: 'SSD',
-			expectedQueries: [
-				...successQueries,
-				'//default:IED[@name="Selected"]/default:IEDSourceFiles[count(default:SclFileReference)=1]',
-			],
-			unexpectedQueries: absentQueries,
-		},
-		'Missing Header fileType in .scd source -> SCD provenance at both anchors': {
-			sourceXml: sourceXml.replace(' fileType="SCD"', ''),
-			targetXml: emptyTarget,
-			sourceFilename: 'project.scd',
-			expectedSourceType: 'SCD',
-			expectedQueries: [
-				...successQueries,
-				'//default:IED[@name="Selected"]/default:IEDSourceFiles[count(default:SclFileReference)=1]',
 			],
 			unexpectedQueries: absentQueries,
 		},
@@ -142,36 +122,52 @@ describe('extract IED metadata and guards', () => {
 			],
 			unexpectedQueries: ['//default:IED[@name="Selected"]'],
 		},
+	}
+
+	const importedSourceCases: Record<string, ImportedSourceCase> = {
+		'Missing Header fileType in .ssd source -> SSD provenance at both anchors': {
+			sourceXml: sourceXml.replace(' fileType="SCD"', ''),
+			targetXml: emptyTarget,
+			sourceFilename: 'project.ssd',
+			expectedSourceType: 'SSD',
+			expectedFileName: 'project.ssd',
+			expectedQueries: [
+				...successQueries,
+				'//default:IED[@name="Selected"]/default:IEDSourceFiles[count(default:SclFileReference)=1]',
+			],
+			unexpectedQueries: absentQueries,
+		},
+		'Missing Header fileType in .scd source -> SCD provenance at both anchors': {
+			sourceXml: sourceXml.replace(' fileType="SCD"', ''),
+			targetXml: emptyTarget,
+			sourceFilename: 'project.scd',
+			expectedSourceType: 'SCD',
+			expectedFileName: 'project.scd',
+			expectedQueries: [
+				...successQueries,
+				'//default:IED[@name="Selected"]/default:IEDSourceFiles[count(default:SclFileReference)=1]',
+			],
+			unexpectedQueries: absentQueries,
+		},
+	}
+
+	const revisionStartCases: Record<string, TestCase> = {
 		'Requested revision start -> OPTION_NOT_AVAILABLE without changes': {
 			sourceXml,
 			targetXml: emptyTarget,
-			revision: true,
 			expectedRefusal: 'OPTION_NOT_AVAILABLE',
 			expectedQueries: ['/default:SCL[count(*)=0]'],
 		},
 	}
 
-	async function act({
-		project,
-		source,
-		target,
-		testCase,
-	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		if (!target) throw new Error('target required')
-		let actualSource = source
-		if (testCase.sourceFilename) {
-			const imported = await project.importFile(
-				new File([testCase.sourceXml], testCase.sourceFilename, { type: 'text/xml' }),
-				{ useCustomRecordsIds: true },
-			)
-			actualSource = project.openDocument(imported.documentId)
-			const importedMetadata = await actualSource.query.getDocumentInfo()
-			expect(importedMetadata.extension).toBe(
-				testCase.sourceFilename === 'project.ssd' ? '.ssd' : '.scd',
-			)
-			const sourceReport = await collectSclOutputViolations({ project, document: actualSource })
-			expect(sourceReport.violations).toEqual([])
-		}
+	/** Extracts from `source`, checks the outcome the case states, and returns the refusal when there is one. */
+	async function extractAndCheck(extraction: {
+		source: SclTest.ActParams<TestCase>['source']
+		target: NonNullable<SclTest.ActParams<TestCase>['target']>
+		testCase: TestCase
+		as?: 'revision'
+	}): Promise<ReturnType<typeof toDialecteError>> {
+		const { source: actualSource, target, testCase, as } = extraction
 		const sourceBefore = await actualSource.query.getSnapshot({ as: 'xml' })
 		const sourceMetadata = await actualSource.query.getDocumentInfo()
 		const sourceMetadataBefore = structuredClone(sourceMetadata)
@@ -187,7 +183,7 @@ describe('extract IED metadata and guards', () => {
 			issuer: 'TEST_ISSUER',
 			tool: 'TEST',
 			who: 'test',
-			...(testCase.revision ? { as: 'revision' as const } : {}),
+			...(as ? { as } : {}),
 		} as const
 
 		try {
@@ -211,7 +207,7 @@ describe('extract IED metadata and guards', () => {
 					for (const attributes of currentReferences) {
 						expect(attributes).toMatchObject({
 							fileType: 'SCD',
-							fileName: sourceMetadataBefore.name,
+							fileName: testCase.expectedFileName,
 							version: '2',
 							revision: 'B',
 						})
@@ -232,71 +228,112 @@ describe('extract IED metadata and guards', () => {
 				expect(sourceAfterRollback).toBe(sourceBefore)
 				expect(sourceMetadataAfterRollback).toEqual(sourceMetadataBefore)
 			}
-			const extraction = target.transaction(async function extract(tx) {
+			const extracted = target.transaction(async function extract(tx) {
 				return tx.lifecycle.extract.ied(params)
 			})
 			if (testCase.expectedRefusal) {
-				await expect(extraction).rejects.toBeInstanceOf(Error)
-				const rejection = await extraction.catch((error: unknown) => error)
+				await expect(extracted).rejects.toBeInstanceOf(Error)
+				const rejection = await extracted.catch((error: unknown) => error)
 				const reported = toDialecteError(rejection)
 				expect(reported?.key).toBe(testCase.expectedRefusal)
-				if (testCase.revision) {
-					expect(reported?.meta).toEqual({ option: 'as', value: 'revision' })
-				}
 				const targetAfter = await target.query.getSnapshot({ as: 'xml' })
 				const targetMetadataAfter = await target.query.getDocumentInfo()
 				expect(targetAfter).toBe(targetBefore)
 				expect(targetMetadataAfter).toEqual(targetMetadataBefore)
-			} else {
-				await expect(extraction).resolves.toEqual({ warnings: [] })
-				const headers = await target.query.getRecordsByTagName('Header')
-				expect(headers).toHaveLength(1)
-				const headerUuid = await target.query.getAttribute(headers[0], { name: 'uuid' })
-				expect(headerUuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
-				expect(headerUuid).not.toBe('10000000-0000-4000-8000-000000000001')
-				const provenance = await target.query.reference.getProvenance()
-				const currentReferences = provenance.filter(
-					(reference) => reference.fileUuid === '10000000-0000-4000-8000-000000000001',
-				)
-				expect(currentReferences).toHaveLength(2)
-				expect(currentReferences.map((reference) => reference.anchor.kind).sort()).toEqual([
-					'document',
-					'ied',
-				])
-				for (const reference of currentReferences) {
-					expect(reference).toMatchObject({
-						fileType: testCase.expectedSourceType,
-						fileUuid: '10000000-0000-4000-8000-000000000001',
-						fileName: sourceMetadataBefore.name,
-						version: '2',
-						revision: 'B',
-					})
-					const anchorName = await target.query.getAttribute(reference.anchor.ref, {
-						name: reference.anchor.kind === 'ied' ? 'name' : 'fileType',
-					})
-					expect(anchorName).toBe(reference.anchor.kind === 'ied' ? 'Selected' : 'ISD')
-				}
-				expect(provenance).toHaveLength(testCase.rollbackFirst ? 3 : 2)
-				const classifications = await target.query.lifecycle.classifyIeds()
-				expect(classifications).toEqual([
-					{
-						ied: expect.objectContaining({ tagName: 'IED' }),
-						name: 'Selected',
-						kind: 'specification',
-						basis: 'no-provenance',
-					},
-				])
-				const minimumScdFiles = await target.query.getRecordsByTagName('MinRequestedSCDFiles')
-				expect(minimumScdFiles).toHaveLength(0)
+				return reported
 			}
+			await expect(extracted).resolves.toEqual({ warnings: [] })
+			const headers = await target.query.getRecordsByTagName('Header')
+			expect(headers).toHaveLength(1)
+			const headerUuid = await target.query.getAttribute(headers[0], { name: 'uuid' })
+			expect(headerUuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+			expect(headerUuid).not.toBe('10000000-0000-4000-8000-000000000001')
+			const provenance = await target.query.reference.getProvenance()
+			const currentReferences = provenance.filter(
+				(reference) => reference.fileUuid === '10000000-0000-4000-8000-000000000001',
+			)
+			expect(currentReferences).toHaveLength(2)
+			expect(currentReferences.map((reference) => reference.anchor.kind).sort()).toEqual([
+				'document',
+				'ied',
+			])
+			for (const reference of currentReferences) {
+				expect(reference).toMatchObject({
+					fileType: testCase.expectedSourceType,
+					fileUuid: '10000000-0000-4000-8000-000000000001',
+					fileName: testCase.expectedFileName,
+					version: '2',
+					revision: 'B',
+				})
+				const anchorName = await target.query.getAttribute(reference.anchor.ref, {
+					name: reference.anchor.kind === 'ied' ? 'name' : 'fileType',
+				})
+				expect(anchorName).toBe(reference.anchor.kind === 'ied' ? 'Selected' : 'ISD')
+			}
+			expect(provenance).toHaveLength(testCase.rollbackFirst ? 3 : 2)
+			const classifications = await target.query.lifecycle.classifyIeds()
+			expect(classifications).toEqual([
+				{
+					ied: expect.objectContaining({ tagName: 'IED' }),
+					name: 'Selected',
+					kind: 'specification',
+					basis: 'no-provenance',
+				},
+			])
+			const minimumScdFiles = await target.query.getRecordsByTagName('MinRequestedSCDFiles')
+			expect(minimumScdFiles).toHaveLength(0)
+			return undefined
 		} finally {
 			const sourceAfter = await actualSource.query.getSnapshot({ as: 'xml' })
 			const sourceMetadataAfter = await actualSource.query.getDocumentInfo()
 			expect(sourceAfter).toBe(sourceBefore)
 			expect(sourceMetadataAfter).toEqual(sourceMetadataBefore)
 		}
+	}
+
+	async function act({
+		source,
+		target,
+		testCase,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		await extractAndCheck({ source, target, testCase })
+		return { assertOn: 'target' }
+	}
+
+	async function importSourceThenExtract({
+		project,
+		target,
+		testCase,
+	}: SclTest.ActParams<ImportedSourceCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		const imported = await project.importFile(
+			new File([testCase.sourceXml], testCase.sourceFilename, { type: 'text/xml' }),
+			{ useCustomRecordsIds: true },
+		)
+		const importedSource = project.openDocument(imported.documentId)
+		const importedMetadata = await importedSource.query.getDocumentInfo()
+		expect(importedMetadata.extension).toBe(
+			testCase.sourceFilename === 'project.ssd' ? '.ssd' : '.scd',
+		)
+		const sourceReport = await collectSclOutputViolations({ project, document: importedSource })
+		expect(sourceReport.violations).toEqual([])
+		await extractAndCheck({ source: importedSource, target, testCase })
+		return { assertOn: 'target' }
+	}
+
+	async function requestRevisionStart({
+		source,
+		target,
+		testCase,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		const reported = await extractAndCheck({ source, target, testCase, as: 'revision' })
+		expect(reported?.meta).toEqual({ option: 'as', value: 'revision' })
 		return { assertOn: 'target' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })
+	runSclTestCases.withExport({ testCases: importedSourceCases, act: importSourceThenExtract })
+	runSclTestCases.withExport({ testCases: revisionStartCases, act: requestRevisionStart })
 })

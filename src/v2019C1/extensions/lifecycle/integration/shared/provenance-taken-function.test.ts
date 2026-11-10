@@ -153,13 +153,13 @@ describe('provenance follows an update: a function the application takes where i
 				sourceXml: asdXml,
 				targetXml: projectXml,
 				declined: 'the new reference',
-				expectedProvenance: ['application source 2/B', 'function prot-library 3/1'],
+				expectedProvenance: ['application source.xml 2/B', 'function prot-library 3/1'],
 			},
 		'every change declined → the application still records the revision it holds': {
 			sourceXml: asdXml,
 			targetXml: projectXml,
 			declined: 'every change',
-			expectedProvenance: ['application source 1/A', 'function prot-library 3/1'],
+			expectedProvenance: ['application source.xml 1/A', 'function prot-library 3/1'],
 		},
 	}
 

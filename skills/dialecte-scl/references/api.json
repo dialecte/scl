@@ -1107,13 +1107,13 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: WriteProvenanceParams) => Promise<WriteProvenanceResult>",
-			"summary": "Records the source file an element or the document was made from: an `SclFileReference` sourced from the source `Header` (`version` / `revision` / `fileUuid`) and store (`fileName`). The same writer serves a placement and an update; function/application references name the latest source version, while IED/document references retain history.",
+			"summary": "Records the source file an element or the document was made from: an `SclFileReference` sourced from the source `Header` (`version` / `revision` / `fileUuid`) and store (`fileName`, the document's name with its extension). The same writer serves a placement and an update; function/application references name the latest source version, while IED/document references retain history.",
 			"intents": [
 				"record which template file an instance came from",
 				"add an SclFileReference to a Function/Application/IED/Header",
 				"write source file provenance"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/transaction/write-provenance.ts:41"
+			"declaredAt": "src/v2019C1/extensions/reference/transaction/write-provenance.ts:42"
 		}
 	]
 }
