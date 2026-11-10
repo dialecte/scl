@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- `info.ofEach` reads its elements in one `getRecords` instead of one `getRecord` each, and reads the siblings of a signal (SourceRef, ControlRef) once per parent for the whole call instead of once per signal. Titles, states and labels are unchanged; an element handed over as a record is still described as stored, whatever `parent` or `children` it carries.
+
 ## [0.14.0] - 2026-11-08
 
 ### Added

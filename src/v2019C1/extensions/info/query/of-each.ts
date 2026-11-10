@@ -1,15 +1,18 @@
 import { createInfoContext } from './info-context'
-import { describeElement } from './of'
+import { describeRecord } from './of'
+
+import { toRef } from '@dialecte/core/helpers'
 
 import type { ElementInfo, InfoOptions } from './of.types'
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
  * `of` for several elements, in the order given: each one's own title (not its path from the root,
- * which is `reference.buildElementPath`) and state, with the document-wide facts a state needs (the
- * kinds of the IEDs, what implements each LNode) read once for the whole call.
+ * which is `reference.buildElementPath`) and state. The elements are read in one batch, and what
+ * they share is read once for the whole call: the kinds of the IEDs, what implements each LNode, and
+ * the siblings of each signal parent. An element given as a record is described as stored.
  *
  * @intent own titles or display names of many elements in one call, states of many LNodes or signals, instead of calling info.of in a loop
  */
@@ -24,9 +27,12 @@ export async function ofEach(
 			: [],
 	)
 	const context = createInfoContext(query, { lnodes })
+	// Read by ref: a caller's record may carry a rewritten parent or children, the stored one is described.
+	const refs = refsOrRecords.map((refOrRecord) => toRef(refOrRecord) as Scl.Ref<Scl.ElementsOf>)
+	const records = await query.getRecords(refs)
 	const infos: ElementInfo[] = []
-	for (const refOrRecord of refsOrRecords) {
-		const info = await describeElement({ query, refOrRecord, options, context })
+	for (const record of records) {
+		const info = await describeRecord({ query, record, options, context })
 		infos.push(info)
 	}
 	return infos
