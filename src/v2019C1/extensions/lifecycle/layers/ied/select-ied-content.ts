@@ -1,7 +1,6 @@
-import { isNativeRecord } from './is-native-record'
-
 import { toRef } from '@dialecte/core/helpers'
 
+import { isNativeRecord } from '@/v2019C1/extensions/reference/query/find/is-native-record'
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type { IedContentSelection } from './select-ied-content.types'

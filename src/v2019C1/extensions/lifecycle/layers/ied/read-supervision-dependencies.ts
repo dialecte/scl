@@ -1,8 +1,8 @@
 import { extractionConfRev } from './extraction-conf-rev'
-import { isNativeRecord } from './is-native-record'
 
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
+import { isNativeRecord } from '@/v2019C1/extensions/reference/query/find/is-native-record'
 import { referrerTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/referrer-tuple-address'
 import { targetTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
 import { readAttribute } from '@/v2019C1/helpers'
