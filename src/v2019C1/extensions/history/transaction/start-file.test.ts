@@ -13,7 +13,7 @@ import {
 import type { StartFileParams } from './start-file.types'
 import type { SclTest } from '@/v2019C1/test'
 
-type TestCase = SclTest.BaseXmlTestCase & { params: StartFileParams; freshHeader?: boolean }
+type TestCase = SclTest.BaseXmlTestCase & { params: StartFileParams }
 
 const emptyXml = `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1"></SCL>`
 
@@ -33,9 +33,11 @@ describe('startFile', () => {
 				'//default:Header[@id="fsd_prot"][@fileType="FSD"][@toolID="my-tool"][@uuid][@version="0"][@revision="1"]/default:History/default:Hitem[@version="0"][@revision="1"][@what="FSD initialization"]',
 			],
 		},
+	}
+
+	const documentWithHistoryCases: SclTest.TestCases<TestCase> = {
 		'a document holding a history already: a fresh Header and initialization, not the next revision':
 			{
-				freshHeader: true,
 				sourceXml: `
 				<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">
 					<Header id="kept" toolID="T" fileType="FSD" version="1" revision="2" uuid="40000000-0000-4000-8000-000000000001" ${CUSTOM_RECORD_ID_ATTRIBUTE}="header-1">
@@ -59,22 +61,32 @@ describe('startFile', () => {
 		await source.transaction(async function start(tx) {
 			await startFile(tx, testCase.params)
 		})
-		if (testCase.freshHeader) {
-			const header = await source.query.getRecord({ tagName: 'Header' })
-			expect(header).toBeDefined()
-			const attributes = await source.query.getAttributes(header!)
-			expect(attributes).toMatchObject({
-				id: 'fsd_prot',
-				toolID: 'my-tool',
-				fileType: 'FSD',
-				version: '0',
-				revision: '1',
-			})
-		}
 		return { assertOn: 'source' }
 	}
 
+	async function startAndReadFreshHeader(
+		params: SclTest.ActParams<TestCase>,
+	): Promise<SclTest.ActResult> {
+		const result = await act(params)
+		const { source } = params
+		const header = await source.query.getRecord({ tagName: 'Header' })
+		expect(header).toBeDefined()
+		const attributes = await source.query.getAttributes(header!)
+		expect(attributes).toMatchObject({
+			id: 'fsd_prot',
+			toolID: 'my-tool',
+			fileType: 'FSD',
+			version: '0',
+			revision: '1',
+		})
+		return result
+	}
+
 	runSclTestCases.withExport({ testCases, act })
+	runSclTestCases.withExport({
+		testCases: documentWithHistoryCases,
+		act: startAndReadFreshHeader,
+	})
 
 	it('a new revision of an existing file is refused as not available yet', async () => {
 		const { source } = await createSclTestProject({ sourceXml: emptyXml })

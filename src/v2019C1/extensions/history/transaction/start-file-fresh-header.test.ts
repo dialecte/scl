@@ -20,18 +20,16 @@ const oldHeader = /* xml */ `
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	fileType: 'ISD' | 'FSD' | 'ASD' | 'SSD'
-	hasHistory: boolean
 	rollback?: boolean
 }
 
 describe('startFile fresh target identity', () => {
-	const testCases: Record<string, TestCase> = Object.fromEntries(
+	const historyCases: Record<string, TestCase> = Object.fromEntries(
 		(['ISD', 'FSD', 'ASD', 'SSD'] as const).map((fileType) => [
 			`${fileType} with prior target history -> one fresh initialization with historical inner text`,
 			{
 				sourceXml: `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="target-root">${oldHeader}</SCL>`,
 				fileType,
-				hasHistory: true,
 				rollback: fileType === 'FSD',
 				expectedQueries: [
 					`/default:SCL[count(default:Header)=1]/default:Header[@id="${fileType.toLowerCase()}_new_target"][@fileType="${fileType}"][@toolID="CURRENT_TOOL"][@nameStructure="IEDName"][@version="0"][@revision="1"][not(@baseUuid)][not(default:Text)]/default:History[count(default:Hitem)=1]/default:Hitem[@version="0"][@revision="1"][@who="current-user"][@what="New initialization"][@why="New extraction"][string-length(@when)>0]`,
@@ -39,19 +37,21 @@ describe('startFile fresh target identity', () => {
 			},
 		]),
 	)
-	testCases['SSD with old Header but no History -> fresh identity without inherited attributes'] = {
-		sourceXml: `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="target-root">${oldHeader.replace(/<History>[\s\S]*<\/History>/, '')}</SCL>`,
-		fileType: 'SSD',
-		hasHistory: false,
-		expectedQueries: [
-			'/default:SCL[count(default:Header)=1]/default:Header[@id="ssd_new_target"][@fileType="SSD"][@toolID="CURRENT_TOOL"][@nameStructure="IEDName"][@version="0"][@revision="1"][not(@baseUuid)][not(default:Text)]/default:History[count(default:Hitem)=1]/default:Hitem[@version="0"][@revision="1"]',
-		],
+	const noHistoryCases: Record<string, TestCase> = {
+		'SSD with old Header but no History -> fresh identity without inherited attributes': {
+			sourceXml: `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="target-root">${oldHeader.replace(/<History>[\s\S]*<\/History>/, '')}</SCL>`,
+			fileType: 'SSD',
+			expectedQueries: [
+				'/default:SCL[count(default:Header)=1]/default:Header[@id="ssd_new_target"][@fileType="SSD"][@toolID="CURRENT_TOOL"][@nameStructure="IEDName"][@version="0"][@revision="1"][not(@baseUuid)][not(default:Text)]/default:History[count(default:Hitem)=1]/default:Hitem[@version="0"][@revision="1"]',
+			],
+		},
 	}
 
-	async function act({
+	/** Starts the file and returns its XML with, after a rollback, the XML staged before it. */
+	async function startFreshFile({
 		source,
 		testCase,
-	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+	}: SclTest.ActParams<TestCase>): Promise<{ xml: string; staged?: string }> {
 		const params: StartFileParams = {
 			as: 'new',
 			filename: `${testCase.fileType}_New Target.scl`,
@@ -133,19 +133,32 @@ describe('startFile fresh target identity', () => {
 		expect(initializedAt).toBeGreaterThanOrEqual(operationStart - TIMESTAMP_PRECISION_SLACK_MS)
 		expect(initializedAt).toBeLessThanOrEqual(operationEnd + TIMESTAMP_PRECISION_SLACK_MS)
 		const xml = await source.query.getSnapshot({ as: 'xml' })
-		if (testCase.hasHistory) {
-			for (const output of [xml, ...(staged ? [staged] : [])]) {
-				const text = output.match(/<Hitem\b[^>]*>([\s\S]*?)<\/Hitem>/)?.[1]?.replace(/\s+/g, ' ')
-				expect(text).toContain('First target history text.')
-				expect(text).toContain('Second target history text.')
-				expect(text!.indexOf('First target history text.')).toBeLessThan(
-					text!.indexOf('Second target history text.'),
-				)
-				expect(text).toMatch(/histor(?:y|ical).*context/i)
-			}
+		return { xml, staged }
+	}
+
+	async function startKeepingHistoricalText(
+		params: SclTest.ActParams<TestCase>,
+	): Promise<SclTest.ActResult> {
+		const { xml, staged } = await startFreshFile(params)
+		for (const output of [xml, ...(staged ? [staged] : [])]) {
+			const text = output.match(/<Hitem\b[^>]*>([\s\S]*?)<\/Hitem>/)?.[1]?.replace(/\s+/g, ' ')
+			expect(text).toContain('First target history text.')
+			expect(text).toContain('Second target history text.')
+			expect(text!.indexOf('First target history text.')).toBeLessThan(
+				text!.indexOf('Second target history text.'),
+			)
+			expect(text).toMatch(/histor(?:y|ical).*context/i)
 		}
 		return { assertOn: 'source' }
 	}
 
-	runSclTestCases.withExport({ testCases, act })
+	async function startWithoutHistory(
+		params: SclTest.ActParams<TestCase>,
+	): Promise<SclTest.ActResult> {
+		await startFreshFile(params)
+		return { assertOn: 'source' }
+	}
+
+	runSclTestCases.withExport({ testCases: historyCases, act: startKeepingHistoricalText })
+	runSclTestCases.withExport({ testCases: noHistoryCases, act: startWithoutHistory })
 })
