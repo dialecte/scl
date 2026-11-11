@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **An SSD template holding two elements named `TEMPLATE` side by side is refused** (breaking for a caller relying on the first one being placed). A template level holding several elements named `TEMPLATE` (two `TEMPLATE` substations in the file, two `TEMPLATE` voltage levels in a substation, two `TEMPLATE` bays in a voltage level) is not a valid file: names are unique among siblings. `report`, `apply`, `instantiate.ssd` and `update.ssd` placed what the first of them held and silently dropped the others; they are now refused with the new `SSD_TEMPLATE_NOT_UNIQUE` (`SCL2005`) before anything is written, `meta: { parent, duplicates }` naming the element holding them and each of them. `query.lifecycle.sourceRoot.ssd()` reads such a file as holding nothing to instantiate (`none`).
+
 ## [0.14.0] - 2026-11-08
 
 ### Added
