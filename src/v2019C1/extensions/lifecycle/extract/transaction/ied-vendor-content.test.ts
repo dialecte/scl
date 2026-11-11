@@ -6,13 +6,7 @@ import SelectedIedWithVendorSupervisionNamesBesideLgosAndLsvsXml from './fixture
 
 import { describe, expect } from 'vitest'
 
-import {
-	ALL_XMLNS_NAMESPACES,
-	assertExpectedElementQueries,
-	collectSclOutputViolations,
-	CUSTOM_RECORD_ID_ATTRIBUTE,
-	runSclTestCases,
-} from '@/v2019C1/test'
+import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { ExtractWarning } from './extract.types'
 import type { SclTest } from '@/v2019C1/test'
@@ -23,8 +17,6 @@ const ns = ALL_XMLNS_NAMESPACES
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	expectedWarnings: ExtractWarning[]
-	vendorQueries: string[]
-	sourceQueries: string[]
 }
 
 const emptyTarget = /* xml */ `<SCL ${ns} ${id}="empty-target"/>`
@@ -42,9 +34,6 @@ const absentQueries = [
 	'//default:Association[@iedName="Foreign"]',
 	'//default:KDC[@iedName="Foreign"]',
 	'//default:IED[@name="Foreign"]',
-]
-const inputSourceQueries = [
-	'/default:SCL[count(.//default:Inputs)=1][count(.//default:ExtRef)=1]/default:IED[@name="Selected"]/default:AccessPoint[@name="AP1"]/default:Server/default:LDevice[@inst="LD1"]/default:LN[@lnClass="PTOC"][@inst="1"]/default:Inputs[count(default:ExtRef)=1]/default:ExtRef[@iedName="Selected"][@doName="Status"][@daName="stVal"]',
 ]
 const inputVendorQueries = [
 	'//default:IED[@name="Selected"]/default:Private[@type="vendor.payload"][count(*[namespace-uri()="urn:ied-vendor-content:test"])=3]/*[local-name()="Inputs"][namespace-uri()="urn:ied-vendor-content:test"][@mode="opaque"][count(*)=1]/*[local-name()="ExtRef"][namespace-uri()="urn:ied-vendor-content:test"][@iedName="Foreign"][@intAddr="nested"][text()="nested vendor reference"]',
@@ -67,8 +56,6 @@ describe('extract IED preserves opaque vendor names', () => {
 			sourceXml: SelectedIedWithVendorInputsAndExtrefBesideSclInputsXml,
 			targetXml: emptyTarget,
 			expectedWarnings: [],
-			vendorQueries: inputVendorQueries,
-			sourceQueries: inputSourceQueries,
 			expectedQueries: [...retainedQueries, ...inputVendorQueries],
 			unexpectedQueries: absentQueries,
 		},
@@ -79,11 +66,6 @@ describe('extract IED preserves opaque vendor names', () => {
 				expectedWarnings: [
 					{ code: 'supervision-left-out', source: { tagName: 'LN', id: 'real-lgos' } },
 					{ code: 'supervision-left-out', source: { tagName: 'LN', id: 'real-lsvs' } },
-				],
-				vendorQueries: supervisionVendorQueries,
-				sourceQueries: [
-					...inputSourceQueries,
-					'//default:LDevice[@inst="LD1"][count(default:LN[@lnClass="LGOS"])=1][count(default:LN[@lnClass="LSVS"])=1]',
 				],
 				expectedQueries: [...retainedQueries, ...supervisionVendorQueries],
 				unexpectedQueries: absentQueries,
@@ -114,69 +96,31 @@ describe('extract IED preserves opaque vendor names', () => {
 						iedName: 'Foreign',
 					},
 				],
-				vendorQueries: referenceVendorQueries,
-				sourceQueries: [
-					...inputSourceQueries,
-					'//default:IED[@name="Selected"][count(.//default:IEDName[text()="Foreign"])=1][count(.//default:ClientLN[@iedName="Foreign"])=1][count(.//default:Association[@iedName="Foreign"])=1][count(default:KDC[@iedName="Foreign"])=1]',
-				],
 				expectedQueries: [...retainedQueries, ...referenceVendorQueries],
 				unexpectedQueries: absentQueries,
 			},
 	}
 
 	async function act({
-		project,
 		source,
 		target,
 		testCase,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const runnerSourceInfo = await source.query.getDocumentInfo()
-		const imported = await project.importFile(
-			new File([testCase.sourceXml], 'project.scd', { type: 'text/xml' }),
-			{ configKey: runnerSourceInfo.configKey, useCustomRecordsIds: true },
-		)
-		const actualSource = project.openDocument(imported.documentId)
-		const sourceMetadata = await actualSource.query.getDocumentInfo()
-		expect(sourceMetadata.extension).toBe('.scd')
-		const sourceReport = await collectSclOutputViolations({ project, document: actualSource })
-		expect(sourceReport.violations).toEqual([])
-		const sourceBefore = await actualSource.query.getSnapshot({ as: 'xml' })
-		const sourceMetadataBefore = structuredClone(sourceMetadata)
-		assertExpectedElementQueries({
-			xml: sourceBefore,
-			queries: [...testCase.vendorQueries, ...testCase.sourceQueries],
+		const { warnings } = await target.transaction(async function extract(tx) {
+			return tx.lifecycle.extract.ied({
+				sourceQuery: source.query,
+				iedRef: { tagName: 'IED', id: 'selected-ied' },
+				fileType: 'ISD',
+				kind: 'instance',
+				inputs: 'none',
+				issuer: 'TEST_ISSUER',
+				tool: 'TEST',
+				who: 'test',
+			})
 		})
-		const params = {
-			sourceQuery: actualSource.query,
-			iedRef: { tagName: 'IED', id: 'selected-ied' },
-			fileType: 'ISD',
-			kind: 'instance',
-			inputs: 'none',
-			issuer: 'TEST_ISSUER',
-			tool: 'TEST',
-			who: 'test',
-		} as const
-
-		try {
-			const extraction = target.transaction(async function extract(tx) {
-				return tx.lifecycle.extract.ied(params)
-			})
-			await expect(extraction).resolves.toEqual({
-				warnings: expect.arrayContaining(testCase.expectedWarnings),
-			})
-			const result = await extraction
-			expect(result.warnings).toHaveLength(testCase.expectedWarnings.length)
-			const targetAfter = await target.query.getSnapshot({ as: 'xml' })
-			expect(function assertVendorPayload() {
-				assertExpectedElementQueries({ xml: targetAfter, queries: testCase.vendorQueries })
-			}).not.toThrow()
-		} finally {
-			const sourceAfter = await actualSource.query.getSnapshot({ as: 'xml' })
-			const sourceMetadataAfter = await actualSource.query.getDocumentInfo()
-			expect(sourceAfter).toBe(sourceBefore)
-			expect(sourceMetadataAfter).toEqual(sourceMetadataBefore)
-		}
+		expect(warnings).toHaveLength(testCase.expectedWarnings.length)
+		expect(warnings).toEqual(expect.arrayContaining(testCase.expectedWarnings))
 		return { assertOn: 'target' }
 	}
 

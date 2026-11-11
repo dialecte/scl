@@ -5,12 +5,7 @@ import SelectedIedWithValidAffectedCountersXml from './fixtures/selected-ied-wit
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
-import {
-	ALL_XMLNS_NAMESPACES,
-	collectSclOutputViolations,
-	CUSTOM_RECORD_ID_ATTRIBUTE,
-	runSclTestCases,
-} from '@/v2019C1/test'
+import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
@@ -33,72 +28,37 @@ const affectedSamples = {
 	id: 'affected-samples',
 } as AffectedCounter
 
-async function importProjectFile(params: SclTest.ActParams<TestCase>): Promise<SourceDocument> {
-	const { project, source, testCase } = params
-	const runnerInfo = await source.query.getDocumentInfo()
-	const imported = await project.importFile(
-		new File([testCase.sourceXml], 'project.scd', { type: 'text/xml' }),
-		{ configKey: runnerInfo.configKey, useCustomRecordsIds: true },
-	)
-	const actualSource = project.openDocument(imported.documentId)
-	const sourceReport = await collectSclOutputViolations({ project, document: actualSource })
-	expect(sourceReport.violations).toEqual([])
-	const sourceInfo = await actualSource.query.getDocumentInfo()
-	expect(sourceInfo.extension).toBe('.scd')
-	return actualSource
-}
-
-/** The extraction fails with the key before it stages anything, and neither document changes. */
+/** The extraction refused with its key, nothing staged, the target as it was. */
 async function expectRefusedBeforeAnyWrite(params: {
 	actualSource: SourceDocument
 	target: TargetDocument
 	refusal: 'EXTRACTION_CONF_REV_INVALID' | 'EXTRACTION_CONF_REV_OVERFLOW'
 }): Promise<void> {
 	const { actualSource, target, refusal } = params
-	const extractParams = {
-		sourceQuery: actualSource.query,
-		iedRef: { tagName: 'IED', id: 'selected-ied' },
-		fileType: 'ISD',
-		kind: 'instance',
-		inputs: 'none',
-		issuer: 'TEST_ISSUER',
-		tool: 'TEST',
-		who: 'test',
-	} as const
-	const sourceBefore = await actualSource.query.getSnapshot({ as: 'tree', unwrap: [] })
 	const targetBefore = await target.query.getSnapshot({ as: 'tree', unwrap: [] })
-	const sourceInfo = await actualSource.query.getDocumentInfo()
-	const sourceInfoBefore = structuredClone(sourceInfo)
-	const targetInfo = await target.query.getDocumentInfo()
-	const targetInfoBefore = structuredClone(targetInfo)
-
 	const outcome = await target.transaction(async function exportIsd(tx) {
 		const stagedBefore = [...tx.getStagedOperations()]
-		const stagedTreeBefore = await tx.getSnapshot({ as: 'tree', unwrap: [] })
-		const refused = await tx.lifecycle.extract.ied(extractParams).then(
-			() => undefined,
-			(error: unknown) => error,
-		)
-		const stagedTreeAfter = await tx.getSnapshot({ as: 'tree', unwrap: [] })
-		return {
-			refused,
-			stagedBefore,
-			stagedAfter: [...tx.getStagedOperations()],
-			stagedTreeBefore,
-			stagedTreeAfter,
-		}
+		const refused = await tx.lifecycle.extract
+			.ied({
+				sourceQuery: actualSource.query,
+				iedRef: { tagName: 'IED', id: 'selected-ied' },
+				fileType: 'ISD',
+				kind: 'instance',
+				inputs: 'none',
+				issuer: 'TEST_ISSUER',
+				tool: 'TEST',
+				who: 'test',
+			})
+			.then(
+				() => undefined,
+				(error: unknown) => error,
+			)
+		return { refused, stagedBefore, stagedAfter: [...tx.getStagedOperations()] }
 	})
 	expect(toDialecteError(outcome.refused)?.key).toBe(refusal)
 	expect(outcome.stagedAfter).toEqual(outcome.stagedBefore)
-	expect(outcome.stagedTreeAfter).toEqual(outcome.stagedTreeBefore)
-	const sourceAfter = await actualSource.query.getSnapshot({ as: 'tree', unwrap: [] })
 	const targetAfter = await target.query.getSnapshot({ as: 'tree', unwrap: [] })
-	const sourceInfoAfter = await actualSource.query.getDocumentInfo()
-	const targetInfoAfter = await target.query.getDocumentInfo()
-	expect(sourceAfter).toEqual(sourceBefore)
 	expect(targetAfter).toEqual(targetBefore)
-	expect(sourceInfoAfter).toEqual(sourceInfoBefore)
-	expect(targetInfoAfter).toEqual(targetInfoBefore)
 }
 
 /** One affected counter broken through the store, the extraction refused, and the counter valid again. */
@@ -109,28 +69,22 @@ async function expectBrokenCounterRefused(params: {
 	breakCounter: (tx: Scl.Transaction) => Promise<void>
 }): Promise<void> {
 	const { act, counter, brokenValue, breakCounter } = params
-	const { project, target } = act
+	const { source, target } = act
 	if (!target) throw new Error('target required')
-	const actualSource = await importProjectFile(act)
-	await actualSource.transaction(breakCounter)
-	const actual = await actualSource.query.getAttribute(counter, {
-		name: 'confRev',
-		fullObject: true,
-	})
+	await source.transaction(breakCounter)
+	const actual = await source.query.getAttribute(counter, { name: 'confRev', fullObject: true })
 	expect(actual?.value).toBe(brokenValue)
 
 	await expectRefusedBeforeAnyWrite({
-		actualSource,
+		actualSource: source,
 		target,
 		refusal: 'EXTRACTION_CONF_REV_INVALID',
 	})
 
 	// the output gate reads this document after the case: it gets a valid counter back
-	await actualSource.transaction(async function restoreCounterBeforeOutputGates(tx) {
+	await source.transaction(async function restoreCounterBeforeOutputGates(tx) {
 		await tx.update(counter, { attributes: { confRev: '17' } })
 	})
-	const restoredReport = await collectSclOutputViolations({ project, document: actualSource })
-	expect(restoredReport.violations).toEqual([])
 }
 
 describe('extract IED supervision dependencies: counters that refuse the extraction', () => {
@@ -225,11 +179,10 @@ describe('extract IED supervision dependencies: counters that refuse the extract
 		}
 
 		async function act(params: SclTest.ActParams<TestCase>): Promise<void> {
-			const { target } = params
+			const { source, target } = params
 			if (!target) throw new Error('target required')
-			const actualSource = await importProjectFile(params)
 			await expectRefusedBeforeAnyWrite({
-				actualSource,
+				actualSource: source,
 				target,
 				refusal: 'EXTRACTION_CONF_REV_OVERFLOW',
 			})

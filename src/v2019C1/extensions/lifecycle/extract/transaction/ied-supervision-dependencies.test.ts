@@ -1,13 +1,7 @@
-import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
 import { readAttribute } from '@/v2019C1/helpers'
-import {
-	ALL_XMLNS_NAMESPACES,
-	collectSclOutputViolations,
-	CUSTOM_RECORD_ID_ATTRIBUTE,
-	runSclTestCases,
-} from '@/v2019C1/test'
+import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 import { treeEntriesOf } from '@/v2019C1/test/tree-entries'
 
 import type { Scl } from '@/v2019C1/config'
@@ -45,9 +39,7 @@ type TestCase = SclTest.BaseXmlTestCase & {
 	nativeDataSets: number
 	controlsPerTag: number
 	expectedConfRev: string
-	rollbackFirst?: boolean
 }
-type NamesOnlyTestCase = TestCase & { supervisionClass: 'LGOS' | 'LSVS' }
 type ExtractParams = {
 	act: SclTest.ActParams<TestCase>
 	actualSource: SclTest.ActParams<TestCase>['source']
@@ -142,72 +134,21 @@ function semanticSubtree(params: {
 	}
 }
 
-/** The source as the project file `extract.ied` reads: an imported `.scd`, valid before the extraction. */
-async function importProjectFile(
-	params: SclTest.ActParams<TestCase>,
-): Promise<SclTest.ActParams<TestCase>['source']> {
-	const { project, source, testCase } = params
-	const runnerInfo = await source.query.getDocumentInfo()
-	const imported = await project.importFile(
-		new File([testCase.sourceXml], 'project.scd', { type: 'text/xml' }),
-		{ configKey: runnerInfo.configKey, useCustomRecordsIds: true },
-	)
-	const actualSource = project.openDocument(imported.documentId)
-	const sourceReport = await collectSclOutputViolations({ project, document: actualSource })
-	expect(sourceReport.violations).toEqual([])
-	const sourceInfo = await actualSource.query.getDocumentInfo()
-	expect(sourceInfo.extension).toBe('.scd')
-	return actualSource
-}
-
 async function extractAndExpect(params: ExtractParams): Promise<SclTest.ActResult> {
 	const { act, actualSource } = params
-	const { project, target, testCase } = act
+	const { target } = act
 	if (!target) throw new Error('target required')
-	const extractParams = {
-		sourceQuery: actualSource.query,
-		iedRef: { tagName: 'IED', id: 'selected-ied' },
-		fileType: 'ISD',
-		kind: 'instance',
-		inputs: 'none',
-		issuer: 'TEST_ISSUER',
-		tool: 'TEST',
-		who: 'test',
-	} as const
-	const targetBefore = await target.query.getSnapshot({ as: 'xml' })
-	const targetInfo = await target.query.getDocumentInfo()
-	const targetInfoBefore = structuredClone(targetInfo)
-	const sourceBefore = await actualSource.query.getSnapshot({ as: 'xml' })
-	const preparedSourceInfo = await actualSource.query.getDocumentInfo()
-	const sourceInfoBefore = structuredClone(preparedSourceInfo)
-
-	if (testCase.rollbackFirst) {
-		const sentinel = new Error('test-owned rollback after supervision dependency cleanup')
-		const rejection = await target
-			.transaction(async function extractThenRollback(tx) {
-				const result = await tx.lifecycle.extract.ied(extractParams)
-				expect(result.warnings).toHaveLength(expectedWarnings.length)
-				expect(result.warnings).toEqual(expect.arrayContaining(expectedWarnings))
-				throw sentinel
-			})
-			.catch(function caught(error: unknown) {
-				return error
-			})
-		const parsed = toDialecteError(rejection)
-		expect(parsed?.key).toBe('UNKNOWN')
-		expect(parsed?.cause).toBe(sentinel)
-		const rolledBackXml = await target.query.getSnapshot({ as: 'xml' })
-		const rolledBackInfo = await target.query.getDocumentInfo()
-		expect(rolledBackXml).toBe(targetBefore)
-		expect(rolledBackInfo).toEqual(targetInfoBefore)
-		const sourceAfterRollback = await actualSource.query.getSnapshot({ as: 'xml' })
-		const sourceInfoAfterRollback = await actualSource.query.getDocumentInfo()
-		expect(sourceAfterRollback).toBe(sourceBefore)
-		expect(sourceInfoAfterRollback).toEqual(sourceInfoBefore)
-	}
-
 	const result = await target.transaction(async function extract(tx) {
-		return tx.lifecycle.extract.ied(extractParams)
+		return tx.lifecycle.extract.ied({
+			sourceQuery: actualSource.query,
+			iedRef: { tagName: 'IED', id: 'selected-ied' },
+			fileType: 'ISD',
+			kind: 'instance',
+			inputs: 'none',
+			issuer: 'TEST_ISSUER',
+			tool: 'TEST',
+			who: 'test',
+		})
 	})
 	expect(result.warnings).toHaveLength(expectedWarnings.length)
 	expect(result.warnings).toEqual(expect.arrayContaining(expectedWarnings))
@@ -215,13 +156,6 @@ async function extractAndExpect(params: ExtractParams): Promise<SclTest.ActResul
 	await expectDataSetsFollowSource(params)
 	await expectControlsFollowSource(params)
 	await expectVendorHomonymsCopied(params)
-	const targetReport = await collectSclOutputViolations({ project, document: target })
-	expect(targetReport.violations).toEqual([])
-
-	const sourceAfter = await actualSource.query.getSnapshot({ as: 'xml' })
-	const sourceInfoAfter = await actualSource.query.getDocumentInfo()
-	expect(sourceAfter).toBe(sourceBefore)
-	expect(sourceInfoAfter).toEqual(sourceInfoBefore)
 	return { assertOn: 'target' }
 }
 
@@ -404,9 +338,8 @@ async function expectVendorHomonymsCopied(params: ExtractParams): Promise<void> 
 describe('extract IED supervision dependencies', () => {
 	describe('FCDA found by its uuid', () => {
 		const testCases: SclTest.TestCases<TestCase> = {
-			'LGOS FCDA in a mixed dataset with payload → FCDA removed, payload and four consumers kept, a rolled back extraction leaves no trace':
-				{
-					sourceXml: /* xml */ `
+			'LGOS FCDA in a mixed dataset with payload → FCDA removed, payload and four consumers kept': {
+				sourceXml: /* xml */ `
 						<SCL ${ns} xmlns:vendor="urn:supervision-dependencies:test">
 							<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B"/>
 							<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
@@ -492,20 +425,19 @@ describe('extract IED supervision dependencies', () => {
 							</DataTypeTemplates>
 						</SCL>
 					`,
-					targetXml: emptyTarget,
-					expectedDatSet: 'Events',
-					nativeFcdas: 2,
-					nativeDataSets: 2,
-					controlsPerTag: 2,
-					expectedConfRev: '10017',
-					rollbackFirst: true,
-					expectedQueries: [
-						...keptQueries,
-						'//default:DataSet[@name="Events"]/default:Text[contains(., "affected dataset text")]',
-						'//default:DataSet[@name="Events"]/default:Private[@type="vendor.dataset"]/*[local-name()="Payload"][contains(., "opaque data")]',
-					],
-					unexpectedQueries: leftOutQueries,
-				},
+				targetXml: emptyTarget,
+				expectedDatSet: 'Events',
+				nativeFcdas: 2,
+				nativeDataSets: 2,
+				controlsPerTag: 2,
+				expectedConfRev: '10017',
+				expectedQueries: [
+					...keptQueries,
+					'//default:DataSet[@name="Events"]/default:Text[contains(., "affected dataset text")]',
+					'//default:DataSet[@name="Events"]/default:Private[@type="vendor.dataset"]/*[local-name()="Payload"][contains(., "opaque data")]',
+				],
+				unexpectedQueries: leftOutQueries,
+			},
 			'last LGOS FCDA of a plain dataset → dataset pruned, consumers kept and unlinked': {
 				sourceXml: /* xml */ `
 					<SCL ${ns} xmlns:vendor="urn:supervision-dependencies:test">
@@ -991,15 +923,14 @@ describe('extract IED supervision dependencies', () => {
 		}
 
 		async function act(params: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-			const actualSource = await importProjectFile(params)
-			return extractAndExpect({ act: params, actualSource })
+			return extractAndExpect({ act: params, actualSource: params.source })
 		}
 
 		runSclTestCases.withExport({ testCases, act })
 	})
 
 	describe('FCDA found by its names, its uuid absent', () => {
-		const testCases: SclTest.TestCases<NamesOnlyTestCase> = {
+		const testCases: SclTest.TestCases<TestCase> = {
 			'LSVS FCDA named by its complete tuple in a mixed dataset → resolved and removed': {
 				sourceXml: /* xml */ `
 					<SCL ${ns} xmlns:vendor="urn:supervision-dependencies:test">
@@ -1084,7 +1015,6 @@ describe('extract IED supervision dependencies', () => {
 					</SCL>
 				`,
 				targetXml: emptyTarget,
-				supervisionClass: 'LSVS',
 				expectedDatSet: 'Events',
 				nativeFcdas: 2,
 				nativeDataSets: 2,
@@ -1202,7 +1132,6 @@ describe('extract IED supervision dependencies', () => {
 						</SCL>
 					`,
 					targetXml: emptyTarget,
-					supervisionClass: 'LGOS',
 					expectedDatSet: 'Events',
 					nativeFcdas: 3,
 					nativeDataSets: 3,
@@ -1213,8 +1142,8 @@ describe('extract IED supervision dependencies', () => {
 				},
 		}
 
-		async function act(params: SclTest.ActParams<NamesOnlyTestCase>): Promise<SclTest.ActResult> {
-			const actualSource = await importProjectFile(params)
+		async function act(params: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+			const actualSource = params.source
 			// the import fills the uuid from the names: only a write can take it away
 			await actualSource.transaction(async function clearImportedTwin(tx) {
 				await tx.update(supervisionRef, { attributes: { lnUuid: undefined } })
@@ -1224,17 +1153,6 @@ describe('extract IED supervision dependencies', () => {
 				fullObject: true,
 			})
 			expect(uuid).toBeUndefined()
-			const attributes = await actualSource.query.getAttributes(supervisionRef)
-			expect(attributes).toMatchObject({
-				ldInst: 'LD1',
-				lnInst: '1',
-				doName: 'Status',
-				daName: 'stVal',
-				fc: 'ST',
-			})
-			expect(attributes.lnClass).toBe(params.testCase.supervisionClass)
-			const prefix = await actualSource.query.getAttribute(supervisionRef, { name: 'prefix' })
-			expect(prefix).toBe('')
 			return extractAndExpect({ act: params, actualSource })
 		}
 

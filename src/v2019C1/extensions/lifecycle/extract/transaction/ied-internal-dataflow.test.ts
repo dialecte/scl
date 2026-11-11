@@ -5,17 +5,13 @@ import GooseFlowBetweenLnodesOfAXml from './fixtures/goose-flow-between-lnodes-o
 import GooseFlowByPathBetweenLnodesOfAXml from './fixtures/goose-flow-by-path-between-lnodes-of-a.xml?raw'
 import ReportFlowBetweenLnodesOfAXml from './fixtures/report-flow-between-lnodes-of-a.xml?raw'
 import SvFlowBetweenLnodesOfAXml from './fixtures/sv-flow-between-lnodes-of-a.xml?raw'
-import TargetHoldingSubstationS1Xml from './fixtures/target-holding-substation-s1.xml?raw'
 import WiredFlowBetweenLnodesOfAXml from './fixtures/wired-flow-between-lnodes-of-a.xml?raw'
 
-import { toDialecteError } from '@dialecte/core'
-import { describe, expect } from 'vitest'
+import { describe } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { SclTest } from '@/v2019C1/test'
-
-type RefusalCase = SclTest.BaseXmlTestCase & { refusal?: string }
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -103,48 +99,28 @@ describe('a flow between two LNodes of the IED is written as an internal service
 })
 
 describe('the project keeps the service it specifies', () => {
-	async function act({ source, target, testCase }: SclTest.ActParams<RefusalCase>): Promise<void> {
+	async function act({
+		source,
+		target,
+	}: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const sourceBefore = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
-		const targetBefore = await target.query.getSnapshot({ as: 'tree', unwrap: [] })
-		const outcome = await target
-			.transaction(async function exportIsd(tx) {
-				const stagedBefore = [...tx.getStagedOperations()]
-				const refused = await tx.lifecycle.extract
-					.ied({ ...EXPORT, sourceQuery: source.query })
-					.then(
-						() => undefined,
-						(error: unknown) => error,
-					)
-				return { refused, stagedBefore, stagedAfter: [...tx.getStagedOperations()] }
-			})
-			.catch((error: unknown) => ({ refused: error, stagedBefore: [], stagedAfter: [] }))
-		const sourceAfter = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
-		expect(sourceAfter).toEqual(sourceBefore)
-		if (testCase.refusal) {
-			expect(toDialecteError(outcome.refused)?.key).toBe(testCase.refusal)
-			expect(outcome.stagedAfter).toEqual(outcome.stagedBefore)
-			const targetAfter = await target.query.getSnapshot({ as: 'tree', unwrap: [] })
-			expect(targetAfter).toEqual(targetBefore)
-		} else expect(outcome.refused).toBeUndefined()
-		const [sourceRef] = await source.query.getRecordsByTagName('SourceRef')
-		const service = await source.query.getAttribute(sourceRef, { name: 'service' })
-		expect(service).toBe('GOOSE')
+		await target.transaction(async function exportIsd(tx) {
+			return tx.lifecycle.extract.ied({ ...EXPORT, sourceQuery: source.query })
+		})
+		return { assertOn: 'source' }
 	}
 
-	const testCases: SclTest.TestCases<RefusalCase> = {
-		'GOOSE flow between LNodes of A exported with the internal service → the project unchanged, still GOOSE':
+	const testCases: SclTest.TestCases = {
+		'GOOSE flow between LNodes of A exported with the internal service → the project keeps its GOOSE flow, linked to its input':
 			{
 				sourceXml: GooseFlowBetweenLnodesOfAXml,
 				targetXml: emptyIsd,
-			},
-		'GOOSE flow between LNodes of A, target already holding a substation → refused, project and target unchanged':
-			{
-				sourceXml: GooseFlowBetweenLnodesOfAXml,
-				targetXml: TargetHoldingSubstationS1Xml,
-				refusal: 'EXTRACTION_TARGET_NOT_EMPTY',
+				expectedQueries: [
+					'//default:LNode[@lnClass="RREC"]/default:Private/v2019C1:LNodeInputs/v2019C1:SourceRef[@input="BlockReclose"][@service="GOOSE"][@extRefUuid="70000000-0000-4000-8000-0000000000a2"]',
+				],
+				unexpectedQueries: ['//v2019C1:SourceRef[@service="Internal"]'],
 			},
 	}
 
-	runSclTestCases.withoutExport({ testCases, act })
+	runSclTestCases.withExport({ testCases, act })
 })

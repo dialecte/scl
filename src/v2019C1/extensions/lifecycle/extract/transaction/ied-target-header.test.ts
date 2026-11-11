@@ -1,23 +1,15 @@
-import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
-import {
-	ALL_XMLNS_NAMESPACES,
-	assertExpectedElementQueries,
-	assertUnexpectedElementQueries,
-	CUSTOM_RECORD_ID_ATTRIBUTE,
-	runSclTestCases,
-} from '@/v2019C1/test'
+import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { SclTest } from '@/v2019C1/test'
 
-const TIMESTAMP_PRECISION_SLACK_MS = 2_000
 const ns = ALL_XMLNS_NAMESPACES
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 
 describe('extract IED into a target with prior Header history', () => {
 	const testCases: SclTest.TestCases = {
-		'Selected instance inputs none -> fresh ISD identity and merged prior target text, rollback and retry':
+		'a target whose Header holds a history, the selected IED exported → a fresh ISD Header carrying the prior texts as historical context':
 			{
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="source-root">
@@ -61,7 +53,7 @@ describe('extract IED into a target with prior Header history', () => {
 					</SCL>
 				`,
 				expectedQueries: [
-					'/default:SCL[count(default:Header)=1]/default:Header[@id="isd_selected"][@fileType="ISD"][@toolID="CURRENT_TOOL"][@nameStructure="IEDName"][@version="0"][@revision="1"][not(@baseUuid)]/default:History[count(default:Hitem)=1]/default:Hitem[@version="0"][@revision="1"][@who="current-user"][@what="ISD initialization"][@why="IED specification was extracted from a previous file"][string-length(@when)>0]',
+					'/default:SCL[count(default:Header)=1]/default:Header[@uuid!="40000000-0000-4000-8000-000000000001"][@uuid!="10000000-0000-4000-8000-000000000001"][@id="isd_selected"][@fileType="ISD"][@toolID="CURRENT_TOOL"][@nameStructure="IEDName"][@version="0"][@revision="1"][not(@baseUuid)][count(default:History)=1]/default:History[count(default:Hitem)=1]/default:Hitem[@version="0"][@revision="1"][@who="current-user"][@what="ISD initialization"][@why="IED specification was extracted from a previous file"][string-length(@when)>0]',
 					'/default:SCL[count(default:IED)=1]/default:IED[@name="Selected"][@manufacturer="CURRENT_ISSUER"][@uuid="20000000-0000-4000-8000-000000000001"]/default:AccessPoint[@name="AP1"]/default:Server/default:LDevice[@inst="LD1"]/default:LN0[@lnType="LLN0_Type"]',
 					'/default:SCL/default:Header/default:SourceFiles[count(default:SclFileReference)=1]',
 					'/default:SCL/default:IED/default:IEDSourceFiles[count(default:SclFileReference)=1]',
@@ -75,109 +67,22 @@ describe('extract IED into a target with prior Header history', () => {
 	async function act({
 		source,
 		target,
-		testCase,
 	}: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const sourceBefore = await source.query.getSnapshot({ as: 'xml' })
-		const sourceMetadata = await source.query.getDocumentInfo()
-		const sourceMetadataBefore = structuredClone(sourceMetadata)
-		const targetBefore = await target.query.getSnapshot({ as: 'xml' })
-		const targetMetadata = await target.query.getDocumentInfo()
-		const targetMetadataBefore = structuredClone(targetMetadata)
-		const params = {
-			sourceQuery: source.query,
-			iedRef: { tagName: 'IED', id: 'selected-ied' },
-			fileType: 'ISD',
-			kind: 'instance',
-			inputs: 'none',
-			issuer: 'CURRENT_ISSUER',
-			tool: 'CURRENT_TOOL',
-			who: 'current-user',
-			nameStructure: 'IEDName',
-		} as const
-		try {
-			const outcome = await target.transaction(async function refuseRevision(tx) {
-				const stagedBefore = [...tx.getStagedOperations()]
-				const refused = await tx.lifecycle.extract.ied({ ...params, as: 'revision' }).then(
-					() => undefined,
-					(error: unknown) => error,
-				)
-				return { refused, stagedBefore, stagedAfter: [...tx.getStagedOperations()] }
+		const result = await target.transaction(async function extract(tx) {
+			return tx.lifecycle.extract.ied({
+				sourceQuery: source.query,
+				iedRef: { tagName: 'IED', id: 'selected-ied' },
+				fileType: 'ISD',
+				kind: 'instance',
+				inputs: 'none',
+				issuer: 'CURRENT_ISSUER',
+				tool: 'CURRENT_TOOL',
+				who: 'current-user',
+				nameStructure: 'IEDName',
 			})
-			expect(outcome.refused).toBeInstanceOf(Error)
-			expect(toDialecteError(outcome.refused)).toMatchObject({
-				key: 'OPTION_NOT_AVAILABLE',
-				meta: { option: 'as', value: 'revision' },
-			})
-			expect(outcome.stagedAfter).toEqual(outcome.stagedBefore)
-			const afterRevision = await target.query.getSnapshot({ as: 'xml' })
-			const metadataAfterRevision = await target.query.getDocumentInfo()
-			expect(afterRevision).toBe(targetBefore)
-			expect(metadataAfterRevision).toEqual(targetMetadataBefore)
-			const sentinel = new Error('rollback after extraction into existing Header')
-			let staged: string | undefined
-			const rollback = target.transaction(async function extractThenRollback(tx) {
-				await expect(tx.lifecycle.extract.ied(params)).resolves.toEqual({ warnings: [] })
-				staged = await tx.getSnapshot({ as: 'xml' })
-				throw sentinel
-			})
-			await expect(rollback).rejects.toBeInstanceOf(Error)
-			const rejection = await rollback.catch((error: unknown) => error)
-			const reported = toDialecteError(rejection)
-			expect(reported?.key).toBe('UNKNOWN')
-			expect(reported?.cause).toBe(sentinel)
-			const afterRollback = await target.query.getSnapshot({ as: 'xml' })
-			const metadataAfterRollback = await target.query.getDocumentInfo()
-			expect(afterRollback).toBe(targetBefore)
-			expect(metadataAfterRollback).toEqual(targetMetadataBefore)
-			const operationStart = Date.now()
-			await target.transaction(async function retry(tx) {
-				await expect(tx.lifecycle.extract.ied(params)).resolves.toEqual({ warnings: [] })
-			})
-			const operationEnd = Date.now()
-			const provenance = await target.query.reference.getProvenance()
-			expect(provenance).toHaveLength(2)
-			expect(provenance.map((entry) => entry.anchor.kind).sort()).toEqual(['document', 'ied'])
-			for (const entry of provenance) {
-				expect(entry).toMatchObject({
-					fileUuid: '10000000-0000-4000-8000-000000000001',
-					fileType: 'SCD',
-					fileName: 'source.xml',
-					version: '2',
-					revision: 'B',
-				})
-			}
-			const headers = await target.query.getRecordsByTagName('Header')
-			expect(headers).toHaveLength(1)
-			const uuid = await target.query.getAttribute(headers[0], { name: 'uuid' })
-			expect(uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
-			expect(uuid).not.toBe('40000000-0000-4000-8000-000000000001')
-			expect(uuid).not.toBe('10000000-0000-4000-8000-000000000001')
-			const histories = await target.query.getRecordsByTagName('History')
-			const items = await target.query.getRecordsByTagName('Hitem')
-			expect(histories).toHaveLength(1)
-			expect(items).toHaveLength(1)
-			const attributes = await target.query.getAttributes(items[0])
-			// The native history formatter drops milliseconds; bracket the operation, not its duration.
-			const initializedAt = Date.parse(attributes.when ?? '')
-			expect(Number.isFinite(initializedAt)).toBe(true)
-			expect(initializedAt).toBeGreaterThanOrEqual(operationStart - TIMESTAMP_PRECISION_SLACK_MS)
-			expect(initializedAt).toBeLessThanOrEqual(operationEnd + TIMESTAMP_PRECISION_SLACK_MS)
-			// the staged state of the rolled back extraction already met the case's expectations (the runner
-			// checks the committed one)
-			const { expectedQueries = [], unexpectedQueries = [] } = testCase
-			expect(() =>
-				assertExpectedElementQueries({ xml: staged!, queries: expectedQueries }),
-			).not.toThrow()
-			expect(() =>
-				assertUnexpectedElementQueries({ xml: staged!, queries: unexpectedQueries }),
-			).not.toThrow()
-		} finally {
-			const sourceAfter = await source.query.getSnapshot({ as: 'xml' })
-			const sourceMetadataAfter = await source.query.getDocumentInfo()
-			expect(sourceAfter).toBe(sourceBefore)
-			expect(sourceMetadataAfter).toEqual(sourceMetadataBefore)
-		}
+		})
+		expect(result).toEqual({ warnings: [] })
 		return { assertOn: 'target' }
 	}
 

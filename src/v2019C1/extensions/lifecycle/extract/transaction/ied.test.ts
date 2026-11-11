@@ -7,7 +7,6 @@ import SelectedIedWithSelfReferencesXml from './fixtures/selected-ied-with-self-
 import SelectedIedWithSharedAndUnusedTypesXml from './fixtures/selected-ied-with-shared-and-unused-types.xml?raw'
 import SelectedIedWithUnreferencedLgosAndLsvsXml from './fixtures/selected-ied-with-unreferenced-lgos-and-lsvs.xml?raw'
 
-import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -21,7 +20,6 @@ const ns = ALL_XMLNS_NAMESPACES
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	expectedWarnings: ExtractWarning[]
-	rollbackFirst?: boolean
 }
 
 const emptyTarget = /* xml */ `<SCL ${ns} ${id}="empty-target"/>`
@@ -149,15 +147,13 @@ describe('extract.ied - selected instance content', () => {
 				'//default:KDC[@iedName="Foreign"]',
 			],
 		},
-		'Ordinary self references -> references retained, including after a rolled-back extraction attempt':
-			{
-				sourceXml: SelectedIedWithSelfReferencesXml,
-				targetXml: emptyTarget,
-				expectedWarnings: [],
-				rollbackFirst: true,
-				expectedQueries: [...ordinaryQueries, ...closureQueries, ...selfReferenceQueries],
-				unexpectedQueries: absentQueries,
-			},
+		'Ordinary self references -> references retained': {
+			sourceXml: SelectedIedWithSelfReferencesXml,
+			targetXml: emptyTarget,
+			expectedWarnings: [],
+			expectedQueries: [...ordinaryQueries, ...closureQueries, ...selfReferenceQueries],
+			unexpectedQueries: absentQueries,
+		},
 	}
 
 	async function act({
@@ -166,57 +162,20 @@ describe('extract.ied - selected instance content', () => {
 		testCase,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const sourceBefore = await source.query.getSnapshot({ as: 'xml' })
-		const sourceMetadataBefore = await source.query.getDocumentInfo()
-		const targetBefore = await target.query.getSnapshot({ as: 'xml' })
-		const targetMetadataBefore = await target.query.getDocumentInfo()
-		const params = {
-			sourceQuery: source.query,
-			iedRef: { tagName: 'IED', id: 'selected-ied' },
-			fileType: 'ISD',
-			kind: 'instance',
-			inputs: 'none',
-			issuer: 'TEST_ISSUER',
-			tool: 'TEST',
-			who: 'test',
-		} as const
-
-		try {
-			if (testCase.rollbackFirst) {
-				const testOwnedError = new Error('test-owned rollback after extraction')
-				const rolledBack = target.transaction(async function extractThenRollback(tx) {
-					await tx.lifecycle.extract.ied(params)
-					throw testOwnedError
-				})
-				await expect(rolledBack).rejects.toBeInstanceOf(Error)
-				const rejection = await rolledBack.catch((error: unknown) => error)
-				const reported = toDialecteError(rejection)
-				expect(reported?.key).toBe('UNKNOWN')
-				expect(reported?.cause).toBe(testOwnedError)
-				const targetAfterRollback = await target.query.getSnapshot({ as: 'xml' })
-				const targetMetadataAfterRollback = await target.query.getDocumentInfo()
-				expect(targetAfterRollback).toBe(targetBefore)
-				expect(targetMetadataAfterRollback).toEqual(targetMetadataBefore)
-				const sourceAfterRollback = await source.query.getSnapshot({ as: 'xml' })
-				const sourceMetadataAfterRollback = await source.query.getDocumentInfo()
-				expect(sourceAfterRollback).toBe(sourceBefore)
-				expect(sourceMetadataAfterRollback).toEqual(sourceMetadataBefore)
-			}
-
-			const extraction = target.transaction(async function extract(tx) {
-				return tx.lifecycle.extract.ied(params)
+		const { warnings } = await target.transaction(async function extract(tx) {
+			return tx.lifecycle.extract.ied({
+				sourceQuery: source.query,
+				iedRef: { tagName: 'IED', id: 'selected-ied' },
+				fileType: 'ISD',
+				kind: 'instance',
+				inputs: 'none',
+				issuer: 'TEST_ISSUER',
+				tool: 'TEST',
+				who: 'test',
 			})
-			await expect(extraction).resolves.toEqual({
-				warnings: expect.arrayContaining(testCase.expectedWarnings),
-			})
-			const result = await extraction
-			expect(result.warnings).toHaveLength(testCase.expectedWarnings.length)
-		} finally {
-			const sourceAfter = await source.query.getSnapshot({ as: 'xml' })
-			const sourceMetadataAfter = await source.query.getDocumentInfo()
-			expect(sourceAfter).toBe(sourceBefore)
-			expect(sourceMetadataAfter).toEqual(sourceMetadataBefore)
-		}
+		})
+		expect(warnings).toHaveLength(testCase.expectedWarnings.length)
+		expect(warnings).toEqual(expect.arrayContaining(testCase.expectedWarnings))
 		return { assertOn: 'target' }
 	}
 

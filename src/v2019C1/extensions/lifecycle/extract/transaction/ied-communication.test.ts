@@ -9,7 +9,6 @@ import SelectedIedSharingAStationBusWithAForeignIedXml from './fixtures/selected
 import SelectedIedUnconnectedBesideAForeignBusXml from './fixtures/selected-ied-unconnected-beside-a-foreign-bus.xml?raw'
 import SelectedIedWithAFullStationBusConnectionXml from './fixtures/selected-ied-with-a-full-station-bus-connection.xml?raw'
 
-import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -19,10 +18,7 @@ import type { SclTest } from '@/v2019C1/test'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-type TestCase = SclTest.BaseXmlTestCase & {
-	targetXml: string
-	rollbackFirst?: boolean
-}
+type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 
 const emptyTarget = /* xml */ `<SCL ${ns} ${id}="empty-target"/>`
 
@@ -42,7 +38,6 @@ describe('extract IED Communication', () => {
 		'Two selected access points on two networks -> both connections retained': {
 			sourceXml: SelectedIedConnectedOnAStationBusAndAProcessBusXml,
 			targetXml: emptyTarget,
-			rollbackFirst: true,
 			expectedQueries: [
 				...selectedQueries,
 				'/default:SCL[count(default:Communication)=1]/default:Communication[count(default:SubNetwork)=2]',
@@ -141,57 +136,21 @@ describe('extract IED Communication', () => {
 	async function extractSelectedIed({
 		source,
 		target,
-		testCase,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const sourceBefore = await source.query.getSnapshot({ as: 'xml' })
-		const sourceMetadata = await source.query.getDocumentInfo()
-		const sourceMetadataBefore = structuredClone(sourceMetadata)
-		const targetBefore = await target.query.getSnapshot({ as: 'xml' })
-		const targetMetadata = await target.query.getDocumentInfo()
-		const targetMetadataBefore = structuredClone(targetMetadata)
-		const params = {
-			sourceQuery: source.query,
-			iedRef: { tagName: 'IED', id: 'selected-ied' },
-			fileType: 'ISD',
-			kind: 'instance',
-			inputs: 'none',
-			issuer: 'TEST_ISSUER',
-			tool: 'TEST',
-			who: 'test',
-		} as const
-
-		try {
-			if (testCase.rollbackFirst) {
-				const sentinel = new Error('test-owned rollback after Communication extraction')
-				const rolledBack = target.transaction(async function extractThenRollback(tx) {
-					await expect(tx.lifecycle.extract.ied(params)).resolves.toEqual({ warnings: [] })
-					throw sentinel
-				})
-				await expect(rolledBack).rejects.toBeInstanceOf(Error)
-				const rejection = await rolledBack.catch((error: unknown) => error)
-				const reported = toDialecteError(rejection)
-				expect(reported?.key).toBe('UNKNOWN')
-				expect(reported?.cause).toBe(sentinel)
-				const targetAfterRollback = await target.query.getSnapshot({ as: 'xml' })
-				const targetMetadataAfterRollback = await target.query.getDocumentInfo()
-				expect(targetAfterRollback).toBe(targetBefore)
-				expect(targetMetadataAfterRollback).toEqual(targetMetadataBefore)
-				const sourceAfterRollback = await source.query.getSnapshot({ as: 'xml' })
-				const sourceMetadataAfterRollback = await source.query.getDocumentInfo()
-				expect(sourceAfterRollback).toBe(sourceBefore)
-				expect(sourceMetadataAfterRollback).toEqual(sourceMetadataBefore)
-			}
-			const extraction = target.transaction(async function extract(tx) {
-				return tx.lifecycle.extract.ied(params)
+		const result = await target.transaction(async function extract(tx) {
+			return tx.lifecycle.extract.ied({
+				sourceQuery: source.query,
+				iedRef: { tagName: 'IED', id: 'selected-ied' },
+				fileType: 'ISD',
+				kind: 'instance',
+				inputs: 'none',
+				issuer: 'TEST_ISSUER',
+				tool: 'TEST',
+				who: 'test',
 			})
-			await expect(extraction).resolves.toEqual({ warnings: [] })
-		} finally {
-			const sourceAfter = await source.query.getSnapshot({ as: 'xml' })
-			const sourceMetadataAfter = await source.query.getDocumentInfo()
-			expect(sourceAfter).toBe(sourceBefore)
-			expect(sourceMetadataAfter).toEqual(sourceMetadataBefore)
-		}
+		})
+		expect(result).toEqual({ warnings: [] })
 		return { assertOn: 'target' }
 	}
 

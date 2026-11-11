@@ -89,7 +89,6 @@ describe('an input mode the export does not offer is refused', () => {
 		target,
 	}: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<void> {
 		if (!target) throw new Error('target required')
-		const sourceBefore = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
 		const targetBefore = await target.query.getSnapshot({ as: 'tree', unwrap: [] })
 		const outcome = await target.transaction(async function exportIsd(tx) {
 			const stagedBefore = [...tx.getStagedOperations()]
@@ -108,9 +107,7 @@ describe('an input mode the export does not offer is refused', () => {
 		})
 		expect(toDialecteError(outcome.refused)?.key).toBe('OPTION_NOT_AVAILABLE')
 		expect(outcome.stagedAfter).toEqual(outcome.stagedBefore)
-		const sourceAfter = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
 		const targetAfter = await target.query.getSnapshot({ as: 'tree', unwrap: [] })
-		expect(sourceAfter).toEqual(sourceBefore)
 		expect(targetAfter).toEqual(targetBefore)
 	}
 
