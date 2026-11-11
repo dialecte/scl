@@ -18,8 +18,19 @@ export type IedExtractParams = {
 	fileType: 'ISD'
 	/** Explicit 'instance' required for now; no default is implemented. */
 	kind?: 'instance'
-	/** Explicit 'none' required for now; omitted/default and later-binding conversion are unavailable. */
+	/**
+	 * The inputs of the IED's logical nodes: none (`'none'`), or each in later-binding form (`'later-binding'`): its
+	 * description, internal address and expected data and service, its service type equal to the expected service, and
+	 * nothing of the source it is bound to (no IED, address or control block); a receiver or client naming the IED
+	 * itself is then left out, as no input subscribes any more (with `'none'` it stays, like other self references).
+	 * Required: no default.
+	 */
 	inputs?: 'none' | 'later-binding'
+	/**
+	 * A specified flow whose two LNodes are both written LNodes of the IED is written as an internal service, with no link
+	 * to the input implementing it; the source keeps the service it specifies. Off by default: the service as specified.
+	 */
+	internalService?: boolean
 	/** The labels of what the file holds, IED, data types and process part alike: kept by default, none with `false`. */
 	labels?: boolean
 	/** The applications holding a function the file holds, with only what they may still name: kept by default. */

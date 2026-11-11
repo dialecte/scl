@@ -38,6 +38,7 @@ export function planIedProcess(params: PlanIedProcessParams): IedProcessPlan {
 		kept,
 		lnodes: selected.ids,
 		iedUuids: scoped.iedUuids,
+		internalService: options.internalService === true,
 	})
 	return {
 		roots: index.roots

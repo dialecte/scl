@@ -1,0 +1,50 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="scl">
+	<!-- X publishes to Y over gcb1 of A, the flow naming X by its path only (no sourceLNodeUuid) -->
+	<Substation name="S1" uuid="11000000-0000-4000-8000-000000000001">
+		<VoltageLevel name="V1" uuid="11000000-0000-4000-8000-000000000002">
+			<Bay name="B1" uuid="11000000-0000-4000-8000-000000000003">
+				<Function name="F1" uuid="12000000-0000-4000-8000-000000000001">
+					<LNode iedName="A" ldInst="LD1" prefix="" lnClass="PTRC" lnInst="1" lnUuid="50000000-0000-4000-8000-0000000000a1" uuid="80000000-0000-4000-8000-000000000001" dev:db-id="x-lnode-on-a"/>
+					<LNode iedName="A" ldInst="LD1" prefix="" lnClass="RREC" lnInst="1" lnUuid="50000000-0000-4000-8000-0000000000a2" uuid="80000000-0000-4000-8000-000000000002" dev:db-id="y-lnode-on-a">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:SourceRef input="BlockReclose" service="GOOSE" pDO="Op" pDA="general" source="S1/V1/B1/F1/PTRC1.Op.general" extRefUuid="70000000-0000-4000-8000-0000000000a2" uuid="90000000-0000-4000-8000-000000000001" dev:db-id="flow-x-to-y"/>
+							</eIEC61850-6-100:LNodeInputs>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<IED name="A" uuid="20000000-0000-4000-8000-00000000000a" dev:db-id="ied-a">
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1">
+					<LN0 lnClass="LLN0" inst="" lnType="LN_T">
+						<DataSet name="DS1">
+							<FCDA ldInst="LD1" prefix="" lnClass="PTRC" lnInst="1" doName="Op" daName="general" fc="ST"/>
+						</DataSet>
+						<GSEControl name="gcb1" datSet="DS1" appID="A_gcb1" confRev="1" uuid="60000000-0000-4000-8000-0000000000a1">
+							<IEDName apRef="AP1" ldInst="LD1" prefix="" lnClass="RREC" lnInst="1" dev:db-id="gcb1-own-receiver">A</IEDName>
+						</GSEControl>
+					</LN0>
+					<LN lnClass="PTRC" inst="1" prefix="" lnType="LN_T" uuid="50000000-0000-4000-8000-0000000000a1"/>
+					<LN lnClass="RREC" inst="1" prefix="" lnType="LN_T" uuid="50000000-0000-4000-8000-0000000000a2">
+						<Inputs>
+							<ExtRef intAddr="BlockReclose" desc="Block reclose" pDO="Op" pDA="general" pServT="GOOSE" iedName="A" ldInst="LD1" prefix="" lnClass="PTRC" lnInst="1" lnUuid="50000000-0000-4000-8000-0000000000a1" doName="Op" daName="general" serviceType="GOOSE" srcLDInst="LD1" srcPrefix="" srcLNClass="LLN0" srcCBName="gcb1" srcCBUuid="60000000-0000-4000-8000-0000000000a1" uuid="70000000-0000-4000-8000-0000000000a2" dev:db-id="y-input"/>
+						</Inputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LN_T" lnClass="PTRC">
+			<DO name="Op" type="ACT_T"/>
+		</LNodeType>
+		<DOType id="ACT_T" cdc="ACT">
+			<DA name="general" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

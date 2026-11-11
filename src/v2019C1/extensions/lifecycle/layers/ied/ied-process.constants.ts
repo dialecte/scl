@@ -2,6 +2,7 @@ import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 
 import type { ProcessOptionTags } from './ied-process.types'
+import type { Scl } from '@/v2019C1/config'
 
 /** The roots of the process part an IED is exported with: a function template is no part of it. */
 export const PROCESS_ROOT_TAGS: ReadonlySet<string> = new Set(['Substation', 'Line', 'Process'])
@@ -54,3 +55,11 @@ export const FUNCTION_REFERENCE_HOLDER_TAGS: ReadonlySet<string> = new Set([
 	'FunctionRole',
 	'AllocationRole',
 ])
+
+/** The service of a specified flow both of whose LNodes the exported IED implements: no flow between devices. */
+export const INTERNAL_SERVICE = 'Internal' satisfies NonNullable<
+	Scl.AttributesValueObjectOf<'SourceRef'>['service']
+>
+
+/** The services a flow inside the exported IED keeps: already internal, or wired. */
+export const SERVICES_KEPT_INSIDE: ReadonlySet<string> = new Set([INTERNAL_SERVICE, 'Wired'])

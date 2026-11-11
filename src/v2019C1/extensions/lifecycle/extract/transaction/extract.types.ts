@@ -45,8 +45,15 @@ export type ExtractWarning =
 			reason: 'partly-mapped'
 	  }
 	| {
+			/** A logical node supervising subscriptions, or the capability declaring that such nodes exist: not written. */
 			code: 'supervision-left-out'
-			source: Scl.Ref<'LN'>
+			source: Scl.Ref<'LN' | 'SupSubscription'>
+	  }
+	| {
+			/** An input written in later-binding form without what a later binding needs (`desc`, `intAddr`, `pDO`): written as it is. */
+			code: 'input-incomplete'
+			source: Scl.Ref<'ExtRef'>
+			missing: string[]
 	  }
 	| {
 			code: 'ied-reference-left-out'

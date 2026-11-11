@@ -1,4 +1,4 @@
-import { EXPORTED_ROOT_TAGS } from './ied.constants'
+import { EXPORTED_ROOT_TAGS, INPUT_MODES } from './ied.constants'
 import { readIedSourceFileType } from './read-ied-source-file-type'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -8,6 +8,7 @@ import { startFile } from '@/v2019C1/extensions/history/transaction/start-file'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { classifyIeds } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds'
 import { applyIedProcessEdits } from '@/v2019C1/extensions/lifecycle/layers/ied/apply-ied-process-edits'
+import { applyRecordEdits } from '@/v2019C1/extensions/lifecycle/layers/ied/apply-record-edits'
 import { applySupervisionDependencies } from '@/v2019C1/extensions/lifecycle/layers/ied/apply-supervision-dependencies'
 import { cloneIedProcess } from '@/v2019C1/extensions/lifecycle/layers/ied/clone-ied-process'
 import { planIedProcess } from '@/v2019C1/extensions/lifecycle/layers/ied/plan-ied-process'
@@ -27,9 +28,15 @@ import type * as Core from '@dialecte/core'
 
 /**
  * Copy a selected IED instance, the process part it implements and its scoped Communication into an empty target (in
- * progress). Currently requires explicit `kind: 'instance'` and `inputs: 'none'`. Copies the surviving logical-node type
- * closure and preserves instance identity and vendor content. Supervision nodes and foreign receiver, client,
- * association and KDC entries are left out with source-record warnings.
+ * progress). Requires an explicit `kind: 'instance'` and an explicit input mode. Copies the surviving logical-node type
+ * closure and preserves instance identity and vendor content. Supervision nodes, a supervision capability declaring
+ * them, and foreign receiver, client, association and KDC entries are left out with source-record warnings.
+ * `inputs: 'none'` leaves the inputs out; `inputs: 'later-binding'` writes each in later-binding form: its description,
+ * internal address and expected data and service, an expected value it lacks taken from what it was bound to, its
+ * service type equal to its expected service, nothing of that source; an input still lacking its description or
+ * expected data is written as it is and listed. With later-binding inputs the IED is no receiver or client of its own
+ * control blocks. `internalService: true` writes a specified flow between two LNodes the file holds for the IED as an
+ * internal service with no link to its input; the source keeps the service it specifies.
  * Removes FCDA depending on omitted supervision, dropping DataSets with no surviving native FCDA. Retained affected
  * Report/GSE/SV controls increment confRev by 10000 once; affected LogControls are disabled. Removed DataSets are
  * unlinked without replacing controls. Missing/invalid or overflowing counters refuse before output writes.
@@ -46,9 +53,9 @@ import type * as Core from '@dialecte/core'
  * fileType. Other extensions are refused with OPTION_NOT_AVAILABLE before writes.
  * Refuses an implemented selected IED, a target already holding an IED or a process part (a substation, line or
  * process) and an unavailable revision start.
- * Input conversion and other export modes are not implemented yet.
+ * Other export modes are not implemented yet.
  *
- * @intent extract an IED into an ISD instance, copy an IED with its reachable data types, export an ISD with its process part
+ * @intent extract an IED into an ISD instance, copy an IED with its reachable data types, export an ISD with its process part, write the inputs of an ISD in later-binding form, mark a dataflow inside one IED as internal
  */
 export async function ied(
 	tx: Core.Transaction<Config>,
@@ -68,10 +75,10 @@ async function refuseUnavailableExtraction(
 	const { sourceQuery, iedRef } = params
 	for (const option of ['kind', 'inputs'] as const) {
 		const value = params[option]
-		if (value === (option === 'kind' ? 'instance' : 'none')) continue
+		if (option === 'kind' ? value === 'instance' : INPUT_MODES.has(String(value))) continue
 		throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
 			meta: { option, value: String(value) },
-			detail: `extract.ied: explicit instance extraction with no inputs is the only available mode`,
+			detail: `extract.ied: an explicit instance extraction and an explicit input mode are required`,
 		})
 	}
 	const source = await sourceQuery.getRecord(iedRef)
@@ -116,7 +123,7 @@ async function readIedExport(
 ): Promise<IedExport> {
 	const { sourceQuery, iedRef, iedName } = params
 	const sourceFileType = await readIedSourceFileType(sourceQuery)
-	const selection = await selectIedContent(sourceQuery, { iedRef, iedName })
+	const selection = await selectIedContent(sourceQuery, { iedRef, iedName, inputs: params.inputs })
 	const processSource = await readIedProcessSource(sourceQuery, { iedRef })
 	const process = planIedProcess({
 		source: processSource,
@@ -167,6 +174,7 @@ async function writeIedExport(
 		withTypes: { keepNameFrom: 'source' },
 		omit: ['MinRequestedSCDFiles'],
 	})
+	await applyRecordEdits(tx, { edits: read.selection.edits, cloneMappings: cloned.cloneMappings })
 	const cloneMappings: Scl.CloneMapping[] = [...cloned.cloneMappings]
 	for (const ref of read.linked.satelliteRefs) {
 		const communication = await deep(tx, {

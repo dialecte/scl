@@ -10,11 +10,13 @@ import type { MappedLNodes } from '@/v2019C1/extensions/reference/query/resolve/
 /** The export options that leave a part of the process part out. */
 export type ProcessOptions = Pick<
 	IedExtractParams,
-	'applications' | 'allocationRoles' | 'powerSystemRelations'
+	'applications' | 'allocationRoles' | 'powerSystemRelations' | 'internalService'
 >
 
 /** The element each export option leaves out, by option. */
-export type ProcessOptionTags = Readonly<Record<keyof ProcessOptions, string>>
+export type ProcessOptionTags = Readonly<
+	Record<Exclude<keyof ProcessOptions, 'internalService'>, string>
+>
 
 /** What the process part of an IED export is planned from, read from the source once. */
 export type IedProcessSource = {
@@ -70,7 +72,7 @@ export type ProcessScope = {
 export type ProcessStepResult = { leaveOut: ReadonlySet<string>; warnings: ExtractWarning[] }
 
 /** An attribute change on a written element, by its source record. */
-export type ProcessEdit = {
+export type RecordEdit = {
 	ref: Scl.Ref<Scl.ElementsOf>
 	attributes: Readonly<Record<string, string | undefined>>
 }
@@ -88,7 +90,7 @@ export type IedProcessPlan = {
 	roots: readonly Scl.Ref<Scl.ElementsOf>[]
 	/** What the clones leave out, with what it holds (record ids). */
 	leaveOut: ReadonlySet<string>
-	edits: readonly ProcessEdit[]
+	edits: readonly RecordEdit[]
 	namings: readonly ProcessNaming[]
 	warnings: ExtractWarning[]
 }

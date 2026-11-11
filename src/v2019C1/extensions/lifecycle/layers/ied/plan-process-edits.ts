@@ -1,4 +1,6 @@
 import { MAPPING_DOCUMENTATION_TAGS, SPECIFICATION_LINK_TAGS } from './ied-process.constants'
+import { internalFlowEdit } from './internal-flow-edit'
+import { linkTarget } from './link-target'
 
 import { toRef } from '@dialecte/core/helpers'
 
@@ -11,7 +13,7 @@ import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 
 import type {
 	ReferencePair,
-	ProcessEdit,
+	RecordEdit,
 	ProcessIndex,
 	ProcessNaming,
 	ProcessStepResult,
@@ -25,24 +27,27 @@ import type { AnyRawRecord } from '@dialecte/core'
  * echo naming what the file does not hold keeps its expected data and loses that link (its uuid, its path and what
  * names the data there); an input or output specification gets the expected data it lacked from what it named, and is
  * said. A data specification loses its mapping to the implementing logical node. A written LNode gets its own naming as
- * its specified naming.
+ * its specified naming. With `internalService`, a flow between two written LNodes of the IED is an internal service.
  */
 export function planProcessEdits(params: {
 	index: ProcessIndex
 	kept: ReadonlySet<string>
 	lnodes: ReadonlySet<string>
 	iedUuids: ReadonlySet<string>
-}): Pick<ProcessStepResult, 'warnings'> & { edits: ProcessEdit[]; namings: ProcessNaming[] } {
-	const { index, kept, lnodes } = params
+	/** A flow between two written LNodes of the IED written as an internal service. */
+	internalService: boolean
+}): Pick<ProcessStepResult, 'warnings'> & { edits: RecordEdit[]; namings: ProcessNaming[] } {
+	const { index, kept, lnodes, internalService } = params
 	const written = writtenUuids({ index, kept, iedUuids: params.iedUuids })
-	const edits: ProcessEdit[] = []
+	const edits: RecordEdit[] = []
 	const warnings: ProcessStepResult['warnings'] = []
 	for (const id of kept) {
 		const node = index.byId.get(id)
 		if (!node) continue
 		const cut = cutLinks({ node, index, kept, written })
+		const internal = internalService ? internalFlowEdit({ node, index, lnodes }) : undefined
 		const mapping = mappingRemoval(node.record)
-		const attributes = { ...cut?.attributes, ...mapping }
+		const attributes = { ...cut?.attributes, ...internal, ...mapping }
 		if (Object.keys(attributes).length === 0) continue
 		edits.push({ ref: node.ref, attributes })
 		if (cut && SPECIFICATION_LINK_TAGS.has(node.record.tagName))
@@ -115,11 +120,10 @@ function cutTarget(params: {
 }): 'written' | SectionNode | undefined {
 	const { record, pair, index, kept, written } = params
 	const uuid = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
-	const path = readAttribute({ record, name: pair.attribute.path, defaults: 'none' })
 	if (uuid) return written.has(uuid) ? 'written' : index.byUuid.get(uuid)
-	if (!path) return 'written'
-	const target = index.byPath.get(path)
-	return target && kept.has(target.record.id) ? 'written' : target
+	const { named, node } = linkTarget({ record, pair, index })
+	if (!named) return 'written'
+	return node && kept.has(node.record.id) ? 'written' : node
 }
 
 /** The expected data an input or output specification lacks, from the LNode its cut link named. */
