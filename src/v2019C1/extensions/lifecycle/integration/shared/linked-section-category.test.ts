@@ -1,4 +1,4 @@
-import { reportAndApply } from '../integration-helpers'
+import { findByName, reportAndApply } from '../integration-helpers'
 
 import { describe, expect } from 'vitest'
 
@@ -72,7 +72,6 @@ describe('lifecycle - a linked category read from the project keeps its contribu
 
 	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const sourceBefore = await source.query.getSnapshot({ as: 'xml' })
 		const placement: LifecycleTarget = {
 			verb: 'fsd',
 			scenario: 'instantiate',
@@ -85,9 +84,6 @@ describe('lifecycle - a linked category read from the project keeps its contribu
 			document: target,
 			lifecycle: { ...placement, anchor: { tagName: 'Bay', id: 'second-bay' } as Scl.Ref<'Bay'> },
 		})
-		// the template file is only read
-		const sourceAfter = await source.query.getSnapshot({ as: 'xml' })
-		expect(sourceAfter).toBe(sourceBefore)
 		// the project's own element, not a look-alike written in its place
 		const [category] = await target.query.getRecordsByTagName('FunctionCategory')
 		expect(category?.id).toBe('project-category')
@@ -95,4 +91,79 @@ describe('lifecycle - a linked category read from the project keeps its contribu
 	}
 
 	runSclTestCases.withExport({ testCases, act })
+})
+
+describe('lifecycle - placing, forking and updating from a template file only reads it', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'function template placed in a bay, forked into another, its first instance updated → the template file as it was':
+			{
+				sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="template">
+					<Substation name="TEMPLATE">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:FunctionCategory name="PROTECTION" uuid="category-source">
+								<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="function-source"/>
+							</eIEC61850-6-100:FunctionCategory>
+						</Private>
+						<VoltageLevel name="TEMPLATE">
+							<Bay name="TEMPLATE">
+								<Function name="Prot" uuid="function-source" ${id}="template-function"/>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+				targetXml: /* xml */ `
+				<SCL ${ns} ${id}="project">
+					<Header id="project" uuid="project-file"/>
+					<Substation name="S1">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:FunctionCategory name="PROTECTION" desc="project category" uuid="category-project" ${id}="project-category">
+								<eIEC61850-6-100:FunctionCatRef function="S1/V1/B1/Local" functionUuid="local-function"/>
+							</eIEC61850-6-100:FunctionCategory>
+						</Private>
+						<VoltageLevel name="V1">
+							<Bay name="B1" ${id}="first-bay">
+								<Private type="eIEC61850-6-100">
+									<eIEC61850-6-100:AllocationRole name="PIU" desc="project role" uuid="role-project"/>
+								</Private>
+								<Function name="Local" uuid="local-function"/>
+							</Bay>
+							<Bay name="B2" ${id}="second-bay"/>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+			},
+	}
+
+	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<void> {
+		if (!target) throw new Error('target required')
+		const templateBefore = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
+		const placement: LifecycleTarget = {
+			verb: 'fsd',
+			scenario: 'instantiate',
+			sourceQuery: source.query,
+			ref: { tagName: 'Function', id: 'template-function' } as Scl.Ref<'Function'>,
+			anchor: { tagName: 'Bay', id: 'first-bay' } as Scl.Ref<'Bay'>,
+		}
+		await reportAndApply({ document: target, lifecycle: placement })
+		await reportAndApply({
+			document: target,
+			lifecycle: {
+				...placement,
+				scenario: 'fork',
+				anchor: { tagName: 'Bay', id: 'second-bay' } as Scl.Ref<'Bay'>,
+			},
+		})
+		const targetInstance = await findByName(target.query, { tagName: 'Function', name: 'Prot' })
+		await reportAndApply({
+			document: target,
+			lifecycle: { ...placement, scenario: 'template', targetInstance },
+		})
+		const templateAfter = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
+		expect(templateAfter).toEqual(templateBefore)
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
 })

@@ -72,7 +72,6 @@ describe('lifecycle - a repeated fork reuses the identity of the source', () => 
 
 	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const sourceBefore = await source.query.getSnapshot({ as: 'xml' })
 		const placement: LifecycleTarget = {
 			verb: 'fsd',
 			scenario: 'instantiate',
@@ -94,11 +93,9 @@ describe('lifecycle - a repeated fork reuses the identity of the source', () => 
 			},
 		})
 
-		// the earlier placement keeps its identity; the template file is only read
+		// the earlier placement keeps its identity
 		const placedAfter = await target.query.getAttributes(placed)
 		expect(placedAfter).toEqual(placedBefore)
-		const sourceAfter = await source.query.getSnapshot({ as: 'xml' })
-		expect(sourceAfter).toBe(sourceBefore)
 		return { assertOn: 'target' }
 	}
 

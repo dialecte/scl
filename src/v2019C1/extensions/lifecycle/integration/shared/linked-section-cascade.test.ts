@@ -180,7 +180,6 @@ describe('lifecycle - a bay cascade links its satellites to the functions it pla
 			target,
 		}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 			if (!target) throw new Error('target required')
-			const sourceBefore = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
 			const lifecycle = placeTemplateBay(source)
 			const listed = await report(target.query, lifecycle)
 			const required = allGroups(listed).filter(
@@ -199,8 +198,6 @@ describe('lifecycle - a bay cascade links its satellites to the functions it pla
 					return apply(tx, { ...lifecycle, report: listed, resolution: { decisions: new Map() } })
 				}),
 			).resolves.toHaveProperty('report')
-			const sourceAfter = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
-			expect(sourceAfter).toEqual(sourceBefore)
 			return { assertOn: 'target' }
 		}
 
@@ -257,7 +254,6 @@ describe('lifecycle - a bay cascade links its satellites to the functions it pla
 			target,
 		}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 			if (!target) throw new Error('target required')
-			const sourceBefore = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
 			const lifecycle = placeTemplateBay(source)
 			await reportAndApply({ document: target, lifecycle })
 			const placedBay = await findByName(target.query, { tagName: 'Bay', name: 'B9' })
@@ -277,11 +273,57 @@ describe('lifecycle - a bay cascade links its satellites to the functions it pla
 
 			const placedBayAfter = await target.query.getTree(placedBay)
 			expect(placedBayAfter).toEqual(placedBayBefore)
-			const sourceAfter = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
-			expect(sourceAfter).toEqual(sourceBefore)
 			return { assertOn: 'target' }
 		}
 
 		runSclTestCases.withExport({ testCases, act })
+	})
+
+	describe('the template file is only read', () => {
+		const testCases: SclTest.TestCases<TestCase> = {
+			'bay template placed with its cascade → the template file as it was': {
+				sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="template">
+					<Header id="template" uuid="template-file" version="0" revision="1"/>
+					<Substation name="TEMPLATE">
+						<VoltageLevel name="TEMPLATE">
+							<Bay name="B9" uuid="bay-source" ${id}="template-bay">
+								<Private type="eIEC61850-6-100">
+									<eIEC61850-6-100:Application name="P_App" uuid="application-source">
+										<eIEC61850-6-100:FunctionRole name="ROOT">
+											<eIEC61850-6-100:FunctionRoleContent>
+												<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/B9/Prot" functionUuid="function-source"/>
+											</eIEC61850-6-100:FunctionRoleContent>
+										</eIEC61850-6-100:FunctionRole>
+										<eIEC61850-6-100:FunctionRole name="ENGINEERING ELEMENTS">
+											<eIEC61850-6-100:FunctionRoleContent>
+												<eIEC61850-6-100:VariableRef variable="TEMPLATE/TEMPLATE/B9/PICKUP" variableUuid="variable-source"/>
+											</eIEC61850-6-100:FunctionRoleContent>
+										</eIEC61850-6-100:FunctionRole>
+									</eIEC61850-6-100:Application>
+									<eIEC61850-6-100:Variable name="PICKUP" value="1" uuid="variable-source">
+										<eIEC61850-6-100:VariableApplyTo element="TEMPLATE/TEMPLATE/B9/Alone" elementUuid="alone-source"/>
+									</eIEC61850-6-100:Variable>
+								</Private>
+								<Function name="Prot" uuid="function-source"/>
+								<Function name="Alone" uuid="alone-source"/>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+				targetXml: projectXml,
+			},
+		}
+
+		async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<void> {
+			if (!target) throw new Error('target required')
+			const templateBefore = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
+			await reportAndApply({ document: target, lifecycle: placeTemplateBay(source) })
+			const templateAfter = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
+			expect(templateAfter).toEqual(templateBefore)
+		}
+
+		runSclTestCases.withoutExport({ testCases, act })
 	})
 })

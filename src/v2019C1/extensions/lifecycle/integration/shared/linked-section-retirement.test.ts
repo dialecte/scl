@@ -73,7 +73,6 @@ describe('lifecycle - updating one instance out of a retired category keeps the 
 
 	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const sourceBefore = await source.query.getSnapshot({ as: 'xml' })
 		const placement: LifecycleTarget = {
 			verb: 'fsd',
 			scenario: 'instantiate',
@@ -86,8 +85,6 @@ describe('lifecycle - updating one instance out of a retired category keeps the 
 			document: target,
 			lifecycle: { ...placement, anchor: { tagName: 'Bay', id: 'second-bay' } as Scl.Ref<'Bay'> },
 		})
-		const sourceAfterPlacement = await source.query.getSnapshot({ as: 'xml' })
-		expect(sourceAfterPlacement).toBe(sourceBefore)
 
 		// the placed category also classifies a project function
 		const category = await findByName(target.query, {
@@ -106,7 +103,6 @@ describe('lifecycle - updating one instance out of a retired category keeps the 
 			await tx.delete({ tagName: 'FunctionCategory', id: 'retired-category' })
 			await tx.update(placement.ref, { attributes: { desc: 'revision 2' } })
 		})
-		const revisedSource = await source.query.getSnapshot({ as: 'xml' })
 		const { Function: firstBayFunctions = [] } = await target.query.findDescendants(
 			placement.anchor,
 			{ collect: 'Function' },
@@ -119,8 +115,6 @@ describe('lifecycle - updating one instance out of a retired category keeps the 
 			lifecycle: { ...placement, scenario: 'template', targetInstance },
 		})
 
-		const revisedSourceAfter = await source.query.getSnapshot({ as: 'xml' })
-		expect(revisedSourceAfter).toBe(revisedSource)
 		const categoryAfter = await target.query.getAttributes(category)
 		expect(categoryAfter).toEqual(categoryBefore)
 		const projectClassification = await target.query.getAttributes({

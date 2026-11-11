@@ -92,7 +92,6 @@ describe('lifecycle - satellites of two function instances keep one identity per
 
 	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const sourceBefore = await source.query.getSnapshot({ as: 'xml' })
 		const firstBay = { tagName: 'Bay', id: 'first-bay' } as Scl.Ref<'Bay'>
 		const secondBay = { tagName: 'Bay', id: 'second-bay' } as Scl.Ref<'Bay'>
 		const placement: LifecycleTarget = {
@@ -104,8 +103,6 @@ describe('lifecycle - satellites of two function instances keep one identity per
 		}
 		await reportAndApply({ document: target, lifecycle: placement })
 		await reportAndApply({ document: target, lifecycle: { ...placement, anchor: secondBay } })
-		const sourceAfterPlacement = await source.query.getSnapshot({ as: 'xml' })
-		expect(sourceAfterPlacement).toBe(sourceBefore)
 
 		const before = await readSatelliteState({ target, secondBay })
 		// the template's next revision describes both satellites
@@ -119,7 +116,6 @@ describe('lifecycle - satellites of two function instances keep one identity per
 				{ attributes: { desc: 'new behavior' } },
 			)
 		})
-		const revisedSource = await source.query.getSnapshot({ as: 'xml' })
 		const { Function: firstBayFunctions = [] } = await target.query.findDescendants(firstBay, {
 			collect: 'Function',
 		})
@@ -131,8 +127,6 @@ describe('lifecycle - satellites of two function instances keep one identity per
 			lifecycle: { ...placement, scenario: 'template', targetInstance },
 		})
 
-		const revisedSourceAfter = await source.query.getSnapshot({ as: 'xml' })
-		expect(revisedSourceAfter).toBe(revisedSource)
 		// beyond the new description, nothing of the satellites, their references or the second bay changed
 		const after = await readSatelliteState({ target, secondBay })
 		expect(after.secondBayTree).toEqual(before.secondBayTree)

@@ -95,7 +95,6 @@ describe('lifecycle - a linked allocation role read from the project keeps its a
 
 	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const sourceBefore = await source.query.getSnapshot({ as: 'xml' })
 		for (const applicationId of ['protection-application', 'control-application']) {
 			await reportAndApply({
 				document: target,
@@ -108,11 +107,93 @@ describe('lifecycle - a linked allocation role read from the project keeps its a
 				},
 			})
 		}
-		// the template file is only read
-		const sourceAfter = await source.query.getSnapshot({ as: 'xml' })
-		expect(sourceAfter).toBe(sourceBefore)
 		return { assertOn: 'target' }
 	}
 
 	runSclTestCases.withExport({ testCases, act })
+})
+
+describe('lifecycle - placing applications from a template file only reads it', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'two applications placed from the template → the template file as it was': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="template">
+					<Substation name="TEMPLATE">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:Application name="PROT_APP" type="Protection" uuid="protection-application" ${id}="protection-application">
+								<eIEC61850-6-100:FunctionRole name="ROOT">
+									<eIEC61850-6-100:FunctionRoleContent>
+										<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="function-source"/>
+									</eIEC61850-6-100:FunctionRoleContent>
+								</eIEC61850-6-100:FunctionRole>
+								<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/TEMPLATE/TEMPLATE/PIU" allocationRoleUuid="role-source"/>
+							</eIEC61850-6-100:Application>
+							<eIEC61850-6-100:Application name="CTRL_APP" type="Control" uuid="control-application" ${id}="control-application">
+								<eIEC61850-6-100:FunctionRole name="ROOT">
+									<eIEC61850-6-100:FunctionRoleContent>
+										<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Ctrl" functionUuid="control-source"/>
+									</eIEC61850-6-100:FunctionRoleContent>
+								</eIEC61850-6-100:FunctionRole>
+								<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/TEMPLATE/TEMPLATE/PIU" allocationRoleUuid="role-source"/>
+							</eIEC61850-6-100:Application>
+						</Private>
+						<VoltageLevel name="TEMPLATE">
+							<Bay name="TEMPLATE">
+								<Private type="eIEC61850-6-100">
+									<eIEC61850-6-100:AllocationRole name="PIU" uuid="role-source">
+										<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="function-source"/>
+										<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Ctrl" functionUuid="control-source"/>
+									</eIEC61850-6-100:AllocationRole>
+								</Private>
+								<Function name="Prot" uuid="function-source"/>
+								<Function name="Ctrl" uuid="control-source"/>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="project">
+					<Header id="project" uuid="project-file"/>
+					<Substation name="S1">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:FunctionCategory name="PROTECTION" desc="project category" uuid="category-project">
+								<eIEC61850-6-100:FunctionCatRef function="S1/V1/B1/Local" functionUuid="local-function"/>
+							</eIEC61850-6-100:FunctionCategory>
+						</Private>
+						<VoltageLevel name="V1">
+							<Bay name="B1" ${id}="first-bay">
+								<Private type="eIEC61850-6-100">
+									<eIEC61850-6-100:AllocationRole name="PIU" desc="project role" uuid="role-project"/>
+								</Private>
+								<Function name="Local" uuid="local-function"/>
+							</Bay>
+							<Bay name="B2"/>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+		},
+	}
+
+	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<void> {
+		if (!target) throw new Error('target required')
+		const templateBefore = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
+		for (const applicationId of ['protection-application', 'control-application']) {
+			await reportAndApply({
+				document: target,
+				lifecycle: {
+					verb: 'asd',
+					scenario: 'instantiate',
+					sourceQuery: source.query,
+					ref: { tagName: 'Application', id: applicationId },
+					anchor: { tagName: 'Bay', id: 'first-bay' } as Scl.Ref<'Bay'>,
+				},
+			})
+		}
+		const templateAfter = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
+		expect(templateAfter).toEqual(templateBefore)
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
 })
