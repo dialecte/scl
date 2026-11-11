@@ -266,6 +266,13 @@ const specificationContextOff = {
 	allocationRoles: false,
 	powerSystemRelations: false,
 } as const
+/** Every option the inputs and dataflow cases pass: later-binding inputs, the internal service, no label. */
+const fullOptions = {
+	inputs: 'later-binding',
+	internalService: true,
+	labels: false,
+	...specificationContextOff,
+} as const
 const specificationExpected = [
 	'/default:SCL/default:Substation[@name="S1"]/default:VoltageLevel[@name="V1"][count(default:Bay)=1]/default:Bay[@name="B1"][count(default:Function)=2]',
 	'//default:Bay[@name="B1"]/default:Function[@name="F1"][@uuid="12000000-0000-4000-8000-000000000001"][count(default:LNode)=2][default:LNode[@iedName="A"][@lnClass="PTRC"][@uuid="80000000-0000-4000-8000-000000000001"]][default:LNode[@iedName="A"][@lnClass="RREC"][@uuid="80000000-0000-4000-8000-000000000002"]]/default:Private/v2019C1:BehaviorDescription[@name="ReclosingLogic"]',
@@ -305,8 +312,7 @@ function exportParams(params: { sourceQuery: Scl.Query; iedRef: Scl.Ref<'IED'> }
 		...params,
 		fileType: 'ISD',
 		kind: 'instance',
-		// the only input mode available yet; no active case asserts on inputs
-		inputs: 'none',
+		inputs: 'later-binding',
 		issuer: 'TEST_ISSUER',
 		tool: 'TEST',
 		who: 'engineer',
@@ -364,6 +370,47 @@ describe('extract.ied as an ISD of an S-IED', () => {
 					'//default:IED[@name="A"]/default:Labels/default:Label[@id="A"][@lang="en"][text()="Bay controller"]',
 				],
 				unexpectedQueries: specificationUnexpected,
+			},
+		'GOOSE from X to Y, both on A, A receiver of gcb1, internal service on → Internal specification, open input, gcb1 without A':
+			{
+				sourceXml: projectXml,
+				targetXml: emptyIsd,
+				options: fullOptions,
+				expectedQueries: [
+					'//default:LNode[@lnClass="RREC"][@iedName="A"]/default:Private/v2019C1:LNodeInputs/v2019C1:SourceRef[@input="BlockReclose"][@service="Internal"][@sourceLNodeUuid="80000000-0000-4000-8000-000000000001"][not(@extRefUuid or @extRefAddr)]',
+					'//default:LN[@lnClass="RREC"]/default:Inputs/default:ExtRef[@intAddr="BlockReclose"][@desc="Block reclose"][@pDO="Op"][@pDA="general"][@pServT="GOOSE"][@serviceType="GOOSE"][not(@iedName or @ldInst or @prefix or @lnClass or @lnInst or @lnUuid or @doName or @daName)][not(@srcLDInst or @srcPrefix or @srcLNClass or @srcLNInst or @srcCBName or @srcCBUuid)]',
+					'//default:LN0/default:GSEControl[@name="gcb1"][@datSet="DS1"][@uuid="60000000-0000-4000-8000-0000000000a1"]',
+					'//default:LN0/default:DataSet[@name="DS1"]/default:FCDA[@lnClass="PTRC"][@doName="Op"][@daName="general"]',
+				],
+				unexpectedQueries: ['//default:GSEControl[@name="gcb1"]/default:IEDName'],
+			},
+		'GOOSE from X to Y, both on A, internal service left off → the specification keeps its GOOSE service':
+			{
+				sourceXml: projectXml,
+				targetXml: emptyIsd,
+				options: { inputs: 'later-binding', labels: false, ...specificationContextOff },
+				expectedQueries: [
+					'//default:LNode[@lnClass="RREC"][@iedName="A"]/default:Private/v2019C1:LNodeInputs/v2019C1:SourceRef[@input="BlockReclose"][@service="GOOSE"]',
+				],
+				unexpectedQueries: ['//v2019C1:SourceRef[@service="Internal"]'],
+			},
+		'inputs fed by R and by B, a behaviour across A and B, B a receiver of gcb1 → open inputs and references, service kept, nothing names B or R':
+			{
+				sourceXml: projectXml,
+				targetXml: emptyIsd,
+				options: fullOptions,
+				expectedQueries: [
+					'//default:LN[@lnClass="PTOC"]/default:Inputs/default:ExtRef[@intAddr="RemoteTrip"][@desc="Remote trip"][@pDO="Op"][@pDA="general"][@pServT="GOOSE"][@serviceType="GOOSE"][not(@iedName or @ldInst or @prefix or @lnClass or @lnInst or @lnUuid or @doName or @daName)][not(@srcLDInst or @srcPrefix or @srcLNClass or @srcLNInst or @srcCBName or @srcCBUuid)]',
+					'//default:LN[@lnClass="CSWI"]/default:Inputs/default:ExtRef[@intAddr="Interlock"][@desc="Interlock release"][@pDO="EnaOpn"][@pDA="stVal"][@pServT="GOOSE"][@serviceType="GOOSE"][not(@iedName or @ldInst or @prefix or @lnClass or @lnInst or @lnUuid or @doName or @daName)][not(@srcLDInst or @srcPrefix or @srcLNClass or @srcLNInst or @srcCBName or @srcCBUuid)]',
+					'//default:LNode[@lnClass="CSWI"]/default:Private/v2019C1:LNodeInputs/v2019C1:SourceRef[@input="Interlock"][@service="GOOSE"][@pDO="EnaOpn"][@pDA="stVal"][not(@source or @sourceLNodeUuid or @sourceDoName or @sourceDaName)]',
+					'//default:LNode[@lnClass="CSWI"]/default:Private/v2019C1:LNodeOutputs/v2019C1:ControlRef[@output="Release"][@pDO="Mod"][not(@controlled or @controlledLNodeUuid or @controlledDoName)]',
+				],
+				unexpectedQueries: [
+					'//*[@iedName="B" or @iedName="R"]',
+					'//default:IEDName[text()="B" or text()="R"]',
+					'//default:IED[@name="B" or @name="R"]',
+					'//v2019C1:BehaviorDescription[@name="InterlockLogic"]',
+				],
 			},
 		'A exported from P.ssd → the header references P.ssd': {
 			sourceXml: projectXml,
@@ -462,10 +509,11 @@ describe('extract.ied refuses a real IED', () => {
 
 describe('an exported ISD opened again', () => {
 	const testCases: SclTest.TestCases = {
-		'ISD of A saved and imported as a file → an ISD holding A, no import finding, no violation': {
-			sourceXml: projectXml,
-			targetXml: emptyIsd,
-		},
+		'ISD of A with its specification and an internal flow saved and imported as a file → an ISD holding A, no import finding, no violation':
+			{
+				sourceXml: projectXml,
+				targetXml: emptyIsd,
+			},
 	}
 
 	async function act({
@@ -477,9 +525,10 @@ describe('an exported ISD opened again', () => {
 		if (!target) throw new Error('target required')
 		const projectFile = await importProject({ project, source, testCase })
 		await target.transaction(async function exportIsd(tx) {
-			return tx.lifecycle.extract.ied(
-				exportParams({ sourceQuery: projectFile.query, iedRef: IED_A }),
-			)
+			return tx.lifecycle.extract.ied({
+				...exportParams({ sourceQuery: projectFile.query, iedRef: IED_A }),
+				...fullOptions,
+			})
 		})
 		const { file } = await project.export({ documentId: target.documentId })
 		const xml = await file.text()
@@ -495,6 +544,48 @@ describe('an exported ISD opened again', () => {
 		expect(ieds).toHaveLength(1)
 		const iedName = await document.query.getAttribute(ieds[0], { name: 'name' })
 		expect(iedName).toBe('A')
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
+
+describe('what an export of A leaves out is listed', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'behaviour across A and B, B a receiver of gcb1 → both are in the returned list': {
+			sourceXml: projectXml,
+			targetXml: emptyIsd,
+			options: fullOptions,
+		},
+	}
+
+	async function act({
+		project,
+		source,
+		target,
+		testCase,
+	}: SclTest.ActParams<TestCase>): Promise<void> {
+		if (!target) throw new Error('target required')
+		const projectFile = await importProject({ project, source, testCase })
+		const { warnings } = await target.transaction(async function exportIsd(tx) {
+			return tx.lifecycle.extract.ied({
+				...exportParams({ sourceQuery: projectFile.query, iedRef: IED_A }),
+				...testCase.options,
+			})
+		})
+		expect(warnings).toEqual(
+			expect.arrayContaining([
+				{
+					code: 'ied-reference-left-out',
+					source: { tagName: 'IEDName', id: 'gcb1-receiver-b' },
+					iedName: 'B',
+				},
+				{
+					code: 'behavior-description-left-out',
+					source: { tagName: 'BehaviorDescription', id: 'behaviour-across-a-b' },
+					reason: 'partly-mapped',
+				},
+			]),
+		)
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
