@@ -11,6 +11,8 @@ export type {
 	StoodOnFunction,
 } from './referenced-satellites.types'
 export { resolveApplicationSatellites } from './satellites'
+export { resolveRoleMappings } from './resolve-role-mappings'
+export type { ResolvedRole, RoleMappings } from './resolve-role-mappings.types'
 export { resolveComposedFunctions } from './resolve-composed-functions'
 export { resolveSharedFunctions } from './resolve-shared-functions'
 export { resolveInstanceHoldings } from './resolve-instance-holdings'

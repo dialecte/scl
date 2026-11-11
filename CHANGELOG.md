@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Applying an SSD whose bays each hold a role of the same name keeps one role per bay.** Two applications of a template, each referring to its own bay's role `PIU`, were written as one role by `instantiate.ssd` (and `apply` of an SSD report): both applications referred to the same bay's role, the other bay lost its own, and which bay kept it changed from run to run, while the report listed two new roles. Each role now lands where the report says, resolved once before anything is written.
+
 ## [0.14.0] - 2026-11-08
 
 ### Added

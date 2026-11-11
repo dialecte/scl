@@ -1,4 +1,5 @@
 import { resolveRoleSatellites, withoutHeldSatellites } from './referenced-satellites'
+import { resolveRoleMappings } from './resolve-role-mappings'
 import { resolveSharedFunctions } from './resolve-shared-functions'
 import { resolveApplicationSatellites } from './satellites'
 
@@ -15,11 +16,7 @@ import {
 	cloneFunction,
 	cloneFunctionCategories,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
-import {
-	assertMappingDecided,
-	findMappingPolicy,
-	resolveMapping,
-} from '@/v2019C1/extensions/lifecycle/mapping'
+import { assertMappingDecided } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	cloneAllReferencedTargets,
 	findMissingReferencedRecords,
@@ -27,13 +24,13 @@ import {
 	resolveStructureRef,
 	createAncestryResolver,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
-import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
 	AllocationRoleReuse,
 	CloneApplicationContentResult,
 	TakenFunction,
 } from './clone-application.types'
+import type { ResolvedRole } from './resolve-role-mappings.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { SharedFunctions } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -109,11 +106,20 @@ export async function cloneApplicationContent(
 		 * `readHeldApplications`. Default: read from `landings` and the functions stood on.
 		 */
 		held?: HeldApplications
+		/**
+		 * Where the roles the application refers to land, resolved before the larger placement wrote anything: see
+		 * `resolveRoleMappings`. Default: resolved before this application writes anything.
+		 */
+		roles?: readonly ResolvedRole[]
 	},
 ): Promise<CloneApplicationContentResult> {
 	const { sourceQuery, applicationRef, structure, omit, keepNameTypesFrom, leftOut } = params
 	const decisionMappings = params.decisionMappings
 	const matchKey = params.matchKey ?? 'templateUuid'
+	// where its roles land, read before anything is written, as the report reads it
+	const roles =
+		params.roles ??
+		(await resolveOwnRoles(tx, { sourceQuery, applicationRef, decisionMappings, matchKey }))
 
 	// Source record id -> cloned target ref, accumulated as functions are cloned, so
 	// step 3's satellites can be placed back under their owning function.
@@ -233,13 +239,12 @@ export async function cloneApplicationContent(
 	// has one), not flattened to Substation.
 	//
 	// AllocationRole is a SHARED element: an incoming role that maps onto a role of the target
-	// (see `resolveMapping`) is not cloned — its FunctionRef allocations are added to that role,
+	// (`roles`, resolved before anything was written) is not cloned — its FunctionRef allocations are added to that role,
 	// and the references to it are repointed by the caller's remap (returned as `redirectMappings`). A role with
 	// nothing to map onto is cloned like any referenced target.
 	const roleReuse = await mapAllocationRoles(tx, {
 		sourceQuery,
-		applicationRef,
-		decisionMappings,
+		roles,
 		matchKey,
 		scope,
 		leftOut,
@@ -302,6 +307,26 @@ export async function cloneApplicationContent(
 	}
 }
 
+/** Where the roles of one application land, resolved before it writes anything: see `resolveRoleMappings`. */
+async function resolveOwnRoles(
+	tx: Core.Transaction<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		applicationRef: Scl.Ref<'Application'>
+		decisionMappings: DecisionMappings | undefined
+		matchKey: MatchKey
+	},
+): Promise<readonly ResolvedRole[]> {
+	const { sourceQuery, applicationRef, decisionMappings, matchKey } = params
+	const roleMappings = await resolveRoleMappings(tx, {
+		sourceQuery,
+		applicationRefs: [applicationRef],
+		decisionMappings,
+		matchKey,
+	})
+	return roleMappings.get(applicationRef.id) ?? []
+}
+
 /**
  * Map each AllocationRole referenced by the Application onto the target role its mapping
  * resolves to, when there is one: what the source role contributes — its `FunctionRef` allocations
@@ -313,8 +338,8 @@ async function mapAllocationRoles(
 	tx: Core.Transaction<Config>,
 	params: {
 		sourceQuery: Core.Query<Config>
-		applicationRef: Scl.Ref<'Application'>
-		decisionMappings?: DecisionMappings
+		/** The roles the application refers to, and where each lands: see `resolveRoleMappings`. */
+		roles: readonly ResolvedRole[]
 		matchKey: MatchKey
 		/** What the roles' references may name: what the placement places. */
 		scope: ContributionScope
@@ -324,45 +349,18 @@ async function mapAllocationRoles(
 		redirectMappings: readonly RedirectMapping[]
 	},
 ): Promise<AllocationRoleReuse[]> {
-	const { sourceQuery, applicationRef, decisionMappings, matchKey, scope, leftOut } = params
-
-	const { AllocationRoleRef: refs = [] } = await sourceQuery.findDescendants(applicationRef, {
-		collect: 'AllocationRoleRef',
-	})
-
-	const policy = findMappingPolicy('AllocationRole')
-	if (!policy) return []
+	const { sourceQuery, roles, matchKey, scope, leftOut } = params
 
 	const reuse: AllocationRoleReuse[] = []
-	const seen = new Set<string>()
-	for (const ref of refs) {
-		const roleUuid = readAttribute({ record: ref, name: 'allocationRoleUuid' })
-		if (!roleUuid || seen.has(roleUuid)) continue
-		seen.add(roleUuid)
-
-		const [sourceRole] = await sourceQuery.findByAttributes({
-			tagName: 'AllocationRole',
-			attributes: { uuid: roleUuid },
-		})
-		if (!sourceRole) continue
-		const mapping = await resolveMapping(tx, {
-			sourceQuery,
-			sourceRef: { tagName: 'AllocationRole', id: sourceRole.id },
-			policy,
-			decision: decisionMappings?.get(sourceRole.id),
-			matchKey,
-		})
-		assertMappingDecided({
-			sourceRef: { tagName: 'AllocationRole', id: sourceRole.id },
-			resolved: mapping,
-		})
+	for (const { sourceRef, sourceUuid, mapping } of roles) {
+		assertMappingDecided({ sourceRef, resolved: mapping })
 		const existing = mapping.existing
 		if (!existing) continue
 
 		const existingRef: Scl.Ref<'AllocationRole'> = { tagName: 'AllocationRole', id: existing.id }
 		const contributed = await contribute(tx, {
 			sourceQuery,
-			source: { tagName: 'AllocationRole', id: sourceRole.id },
+			source: sourceRef,
 			target: existingRef,
 			scope,
 			matchKey,
@@ -371,8 +369,8 @@ async function mapAllocationRoles(
 		})
 
 		reuse.push({
-			sourceId: sourceRole.id,
-			sourceUuid: roleUuid,
+			sourceId: sourceRef.id,
+			sourceUuid,
 			existingRef,
 			contributedMappings: contributed.cloneMappings,
 			redirectMappings: contributed.redirectMappings,

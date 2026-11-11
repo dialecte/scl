@@ -266,3 +266,112 @@ describe('shared-element mapping — an SSD started above the level it lands on'
 
 	runSclTestCases.withoutExport({ testCases, act })
 })
+
+/**
+ * Apply writes where the report says each shared element lands: what the apply itself created for one application is
+ * not what another application's role maps onto.
+ */
+describe('shared-element mapping — an SSD whose bays each hold a role of the same name', () => {
+	// Each bay holds its own role "PIU", allocated by its own application's function.
+	const twoBaysSourceXml = /* xml */ `
+		<SCL ${ns} ${id}="ssd">
+			<Header id="ssd-header" uuid="ssd-document-uuid" version="0" revision="1" ${id}="header-s"/>
+			<Substation name="TEMPLATE" ${id}="substation-s">
+				<VoltageLevel name="V1" ${id}="voltage-level-s">
+					<Bay name="B1" ${id}="bay-1-s">
+						<Private type="eIEC61850-6-100" ${id}="private-1-s">
+							<eIEC61850-6-100:AllocationRole name="PIU" uuid="role-1-source-uuid" ${id}="role-1-s">
+								<eIEC61850-6-100:FunctionRef function="TEMPLATE/V1/B1/Prot" functionUuid="function-1-source-uuid" ${id}="role-1-function-ref-s"/>
+							</eIEC61850-6-100:AllocationRole>
+							<eIEC61850-6-100:Application name="Control_1" type="DCS" uuid="application-1-source-uuid" ${id}="application-1-s">
+								<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="function-role-1-s">
+									<eIEC61850-6-100:FunctionRoleContent ${id}="function-role-content-1-s">
+										<eIEC61850-6-100:FunctionRef function="TEMPLATE/V1/B1/Prot" functionUuid="function-1-source-uuid" ${id}="application-1-function-ref-s"/>
+									</eIEC61850-6-100:FunctionRoleContent>
+								</eIEC61850-6-100:FunctionRole>
+								<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/V1/B1/PIU" allocationRoleUuid="role-1-source-uuid" ${id}="role-ref-1-s"/>
+							</eIEC61850-6-100:Application>
+						</Private>
+						<Function name="Prot" uuid="function-1-source-uuid" ${id}="function-1-s"/>
+					</Bay>
+					<Bay name="B2" ${id}="bay-2-s">
+						<Private type="eIEC61850-6-100" ${id}="private-2-s">
+							<eIEC61850-6-100:AllocationRole name="PIU" uuid="role-2-source-uuid" ${id}="role-2-s">
+								<eIEC61850-6-100:FunctionRef function="TEMPLATE/V1/B2/Prot" functionUuid="function-2-source-uuid" ${id}="role-2-function-ref-s"/>
+							</eIEC61850-6-100:AllocationRole>
+							<eIEC61850-6-100:Application name="Control_2" type="DCS" uuid="application-2-source-uuid" ${id}="application-2-s">
+								<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="function-role-2-s">
+									<eIEC61850-6-100:FunctionRoleContent ${id}="function-role-content-2-s">
+										<eIEC61850-6-100:FunctionRef function="TEMPLATE/V1/B2/Prot" functionUuid="function-2-source-uuid" ${id}="application-2-function-ref-s"/>
+									</eIEC61850-6-100:FunctionRoleContent>
+								</eIEC61850-6-100:FunctionRole>
+								<eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/V1/B2/PIU" allocationRoleUuid="role-2-source-uuid" ${id}="role-ref-2-s"/>
+							</eIEC61850-6-100:Application>
+						</Private>
+						<Function name="Prot" uuid="function-2-source-uuid" ${id}="function-2-s"/>
+					</Bay>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase & { targetXml: string }> = {
+		'two bays each holding a role "PIU", no role in the project → each bay gets its own role, each application refers to it':
+			{
+				sourceXml: twoBaysSourceXml,
+				targetXml: /* xml */ `
+					<SCL ${ns} ${id}="scd">
+						<Header id="project" uuid="project-uuid" ${id}="header-t"/>
+						<!-- no AllocationRole anywhere: both roles are new -->
+						<Substation name="S1" ${id}="substation-t"/>
+					</SCL>
+				`,
+				expectedQueries: [
+					'//default:Bay[@name="B1"]/default:Private/v2019C1:AllocationRole[@name="PIU"]',
+					'//default:Bay[@name="B2"]/default:Private/v2019C1:AllocationRole[@name="PIU"]',
+					'//v2019C1:Application[@name="Control_1"]/v2019C1:AllocationRoleRef[@allocationRole="S1/V1/B1/PIU"]',
+					'//v2019C1:Application[@name="Control_2"]/v2019C1:AllocationRoleRef[@allocationRole="S1/V1/B2/PIU"]',
+					// the uuid each reference carries is its own bay's role
+					'//default:Bay[@name="B1"]//v2019C1:AllocationRoleRef[@allocationRoleUuid = //default:Bay[@name="B1"]//v2019C1:AllocationRole/@uuid]',
+					'//default:Bay[@name="B2"]//v2019C1:AllocationRoleRef[@allocationRoleUuid = //default:Bay[@name="B2"]//v2019C1:AllocationRole/@uuid]',
+					// each role allocates its own bay's function
+					'//default:Bay[@name="B1"]//v2019C1:AllocationRole/v2019C1:FunctionRef[@function="S1/V1/B1/Prot"]',
+					'//default:Bay[@name="B2"]//v2019C1:AllocationRole/v2019C1:FunctionRef[@function="S1/V1/B2/Prot"]',
+				],
+				unexpectedQueries: [
+					// one role per bay
+					'//default:Bay[@name="B1"]/default:Private/v2019C1:AllocationRole[2]',
+					'//default:Bay[@name="B2"]/default:Private/v2019C1:AllocationRole[2]',
+					'//default:Bay[@name="B1"]//v2019C1:AllocationRole/v2019C1:FunctionRef[@function="S1/V1/B2/Prot"]',
+					'//default:Bay[@name="B2"]//v2019C1:AllocationRole/v2019C1:FunctionRef[@function="S1/V1/B1/Prot"]',
+					'//v2019C1:Application[@name="Control_1"]/v2019C1:AllocationRoleRef[@allocationRole="S1/V1/B2/PIU"]',
+					'//v2019C1:Application[@name="Control_2"]/v2019C1:AllocationRoleRef[@allocationRole="S1/V1/B1/PIU"]',
+				],
+			},
+	}
+
+	async function act({
+		source,
+		target,
+	}: SclTest.ActParams<
+		SclTest.BaseXmlTestCase & { targetXml: string }
+	>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+
+		const lifecycleTarget = {
+			verb: 'ssd' as const,
+			scenario: 'instantiate' as const,
+			sourceQuery: source.query,
+			ref: substationRef,
+			anchor: { tagName: 'Substation', id: 'substation-t' } as Scl.Ref<'Substation'>,
+		}
+		const reported = await report(target.query, lifecycleTarget)
+		await target.transaction(async (tx) => {
+			await apply(tx, { ...lifecycleTarget, report: reported })
+		})
+
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
