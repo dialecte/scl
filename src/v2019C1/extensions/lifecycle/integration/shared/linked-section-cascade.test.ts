@@ -122,10 +122,6 @@ describe('lifecycle - a bay cascade links its satellites to the functions it pla
 	})
 
 	describe('accepted', () => {
-		const placedBay = '//default:Bay[@name="B9"]'
-		const application = `${placedBay}//v2019C1:Application[@name="P_App"]`
-		const variable = `${placedBay}//v2019C1:Variable[@name="PICKUP"]`
-
 		const testCases: SclTest.TestCases<TestCase> = {
 			'bay cascade refused for a skipped required function, the same report then applied with nothing skipped → the bay placed with its satellites bound to the placed functions':
 				{
@@ -162,19 +158,19 @@ describe('lifecycle - a bay cascade links its satellites to the functions it pla
 					targetXml: projectXml,
 					expectedQueries: [
 						// the bay holds one application, two functions and one variable
-						`${placedBay}[count(.//v2019C1:Application)=1][count(.//default:Function)=2][count(.//v2019C1:Variable)=1]`,
-						`${application}[@templateUuid="application-source"]`,
-						`${variable}[@value="1"][@templateUuid="variable-source"][@uuid != ""]`,
-						`${placedBay}/default:Function[@name="Prot"][@templateUuid="function-source"][@uuid != ""]`,
-						`${placedBay}/default:Function[@name="Alone"][@templateUuid="alone-source"][@uuid != ""]`,
+						`//default:Bay[@name="B9"][count(.//v2019C1:Application)=1][count(.//default:Function)=2][count(.//v2019C1:Variable)=1]`,
+						`//default:Bay[@name="B9"]//v2019C1:Application[@name="P_App"][@templateUuid="application-source"]`,
+						`//default:Bay[@name="B9"]//v2019C1:Variable[@name="PICKUP"][@value="1"][@templateUuid="variable-source"][@uuid != ""]`,
+						`//default:Bay[@name="B9"]/default:Function[@name="Prot"][@templateUuid="function-source"][@uuid != ""]`,
+						`//default:Bay[@name="B9"]/default:Function[@name="Alone"][@templateUuid="alone-source"][@uuid != ""]`,
 						// the application keeps its two roles and points at what the bay placed
-						`${application}[count(.//v2019C1:FunctionRole)=2]`,
-						`${application}//v2019C1:FunctionRole[@name="ROOT"]`,
-						`${application}//v2019C1:FunctionRole[@name="ENGINEERING ELEMENTS"]`,
-						`${application}[count(.//v2019C1:FunctionRef)=1]//v2019C1:FunctionRef[@function="S1/V1/B9/Prot"][@functionUuid = ${placedBay}/default:Function[@name="Prot"]/@uuid]`,
-						`${application}[count(.//v2019C1:VariableRef)=1]//v2019C1:VariableRef[@variable="S1/V1/B9/PICKUP"][@variableUuid = ${variable}/@uuid]`,
+						`//default:Bay[@name="B9"]//v2019C1:Application[@name="P_App"][count(.//v2019C1:FunctionRole)=2]`,
+						`//default:Bay[@name="B9"]//v2019C1:Application[@name="P_App"]//v2019C1:FunctionRole[@name="ROOT"]`,
+						`//default:Bay[@name="B9"]//v2019C1:Application[@name="P_App"]//v2019C1:FunctionRole[@name="ENGINEERING ELEMENTS"]`,
+						`//default:Bay[@name="B9"]//v2019C1:Application[@name="P_App"][count(.//v2019C1:FunctionRef)=1]//v2019C1:FunctionRef[@function="S1/V1/B9/Prot"][@functionUuid = //default:Bay[@name="B9"]/default:Function[@name="Prot"]/@uuid]`,
+						`//default:Bay[@name="B9"]//v2019C1:Application[@name="P_App"][count(.//v2019C1:VariableRef)=1]//v2019C1:VariableRef[@variable="S1/V1/B9/PICKUP"][@variableUuid = //default:Bay[@name="B9"]//v2019C1:Variable[@name="PICKUP"]/@uuid]`,
 						// the variable applies to the placed function
-						`${variable}[count(.//v2019C1:VariableApplyTo)=1]//v2019C1:VariableApplyTo[@element="S1/V1/B9/Alone"][@elementUuid = ${placedBay}/default:Function[@name="Alone"]/@uuid]`,
+						`//default:Bay[@name="B9"]//v2019C1:Variable[@name="PICKUP"][count(.//v2019C1:VariableApplyTo)=1]//v2019C1:VariableApplyTo[@element="S1/V1/B9/Alone"][@elementUuid = //default:Bay[@name="B9"]/default:Function[@name="Alone"]/@uuid]`,
 					],
 				},
 		}
@@ -212,9 +208,6 @@ describe('lifecycle - a bay cascade links its satellites to the functions it pla
 	})
 
 	describe('placed again without its application', () => {
-		const firstBay = '//default:Bay[@name="B9"]'
-		const secondBay = '//default:Bay[@name="B9_1"]'
-
 		const testCases: SclTest.TestCases<TestCase> = {
 			'bay template already placed, second placement skipping only the application → functions and variable kept and bound to the new bay, first bay unchanged':
 				{
@@ -250,12 +243,12 @@ describe('lifecycle - a bay cascade links its satellites to the functions it pla
 					`,
 					targetXml: projectXml,
 					expectedQueries: [
-						`${secondBay}[count(.//default:Function)=2][count(.//v2019C1:Variable)=1]`,
-						`${secondBay}/default:Function[@name="Prot"]`,
-						`${secondBay}/default:Function[@name="Alone"][@uuid != ""][@uuid != ${firstBay}/default:Function[@name="Alone"]/@uuid]`,
-						`${secondBay}//v2019C1:Variable[count(.//v2019C1:VariableApplyTo)=1]//v2019C1:VariableApplyTo[@element="S1/V1/B9_1/Alone"][@elementUuid = ${secondBay}/default:Function[@name="Alone"]/@uuid]`,
+						`//default:Bay[@name="B9_1"][count(.//default:Function)=2][count(.//v2019C1:Variable)=1]`,
+						`//default:Bay[@name="B9_1"]/default:Function[@name="Prot"]`,
+						`//default:Bay[@name="B9_1"]/default:Function[@name="Alone"][@uuid != ""][@uuid != //default:Bay[@name="B9"]/default:Function[@name="Alone"]/@uuid]`,
+						`//default:Bay[@name="B9_1"]//v2019C1:Variable[count(.//v2019C1:VariableApplyTo)=1]//v2019C1:VariableApplyTo[@element="S1/V1/B9_1/Alone"][@elementUuid = //default:Bay[@name="B9_1"]/default:Function[@name="Alone"]/@uuid]`,
 					],
-					unexpectedQueries: [`${secondBay}//v2019C1:Application`],
+					unexpectedQueries: [`//default:Bay[@name="B9_1"]//v2019C1:Application`],
 				},
 		}
 

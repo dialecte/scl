@@ -1,4 +1,7 @@
+/// <reference types="vite/client" />
+
 import { findByName, findByUuid, reportAndApply } from '../integration-helpers'
+import ProjectWithTwoBaysXml from './fixtures/project-with-two-bays.xml?raw'
 
 import { describe, expect } from 'vitest'
 
@@ -70,10 +73,6 @@ const projectXml = /* xml */ `
 	</SCL>
 `
 const projectBay = { tagName: 'Bay', id: 'project-bay' } as Scl.Ref<'Bay'>
-const twoBaysProjectXml = projectXml.replace(
-	'</VoltageLevel>',
-	`<Bay name="B2" ${id}="project-other-bay"/></VoltageLevel>`,
-)
 const projectOtherBay = { tagName: 'Bay', id: 'project-other-bay' } as Scl.Ref<'Bay'>
 const projectVoltageLevel = {
 	tagName: 'VoltageLevel',
@@ -467,7 +466,7 @@ describe('provenance follows an update: the instance records the revision of the
 		"asd, two instances, one function's change declined: that instance keeps its revision, the other records the newer":
 			{
 				sourceXml: asdXml,
-				targetXml: twoBaysProjectXml,
+				targetXml: ProjectWithTwoBaysXml,
 				verb: 'asd',
 				rootUuid: 'application-uuid',
 				anchor: projectBay,
@@ -500,7 +499,7 @@ describe('provenance follows an update: the instance records the revision of the
 		'asd, two instances gaining a function: the one declining it all keeps its revision, the one placing it without its reference records the newer':
 			{
 				sourceXml: asdXml,
-				targetXml: twoBaysProjectXml,
+				targetXml: ProjectWithTwoBaysXml,
 				verb: 'asd',
 				rootUuid: 'application-uuid',
 				anchor: projectBay,

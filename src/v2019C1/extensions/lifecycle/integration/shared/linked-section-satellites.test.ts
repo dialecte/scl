@@ -13,9 +13,6 @@ const ns = ALL_XMLNS_NAMESPACES
 
 type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 
-const firstInstance = '//default:Bay[@name="B1"]/default:Function[@templateUuid="function-source"]'
-const secondInstance = '//default:Bay[@name="B2"]/default:Function'
-
 describe('lifecycle - satellites of two function instances keep one identity per instance', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'two function instances with satellites → distinct identities and only the selected instance updated':
@@ -72,7 +69,7 @@ describe('lifecycle - satellites of two function instances keep one identity per
 				`,
 				expectedQueries: [
 					// two instances, each with its own identity
-					`${firstInstance}[@name="Prot"][@uuid != ${secondInstance}/@uuid]`,
+					`//default:Bay[@name="B1"]/default:Function[@templateUuid="function-source"][@name="Prot"][@uuid != //default:Bay[@name="B2"]/default:Function/@uuid]`,
 					'//default:Bay[@name="B2"][count(default:Function)=1]',
 					// two variables made from the template one, each its own element
 					'/default:SCL[count(.//v2019C1:Variable)=2][count(.//v2019C1:Variable[@templateUuid="variable-source"])=2]',
@@ -80,15 +77,15 @@ describe('lifecycle - satellites of two function instances keep one identity per
 					'/default:SCL[count(.//v2019C1:VariableApplyTo)=2]',
 					// the first instance's variable took the revision, the second's did not
 					'/default:SCL[count(.//v2019C1:Variable[@desc="new variable"])=1][count(.//v2019C1:Variable[not(@desc)])=1]',
-					`//v2019C1:Variable[@desc="new variable"]/v2019C1:VariableApplyTo[@elementUuid = ${firstInstance}/@uuid]`,
-					`//v2019C1:Variable[not(@desc)]/v2019C1:VariableApplyTo[@elementUuid = ${secondInstance}/@uuid]`,
+					`//v2019C1:Variable[@desc="new variable"]/v2019C1:VariableApplyTo[@elementUuid = //default:Bay[@name="B1"]/default:Function[@templateUuid="function-source"]/@uuid]`,
+					`//v2019C1:Variable[not(@desc)]/v2019C1:VariableApplyTo[@elementUuid = //default:Bay[@name="B2"]/default:Function/@uuid]`,
 					// the same for the behaviour descriptions, bound to each instance's LNode
 					'/default:SCL[count(.//v2019C1:BehaviorDescription)=2][count(.//v2019C1:BehaviorDescription[@templateUuid="behavior-source"])=2]',
 					'//v2019C1:BehaviorDescription[@uuid != following::v2019C1:BehaviorDescription/@uuid]',
 					'/default:SCL[count(.//v2019C1:InputVar)=2][count(.//default:LNode)=2]',
 					'/default:SCL[count(.//v2019C1:BehaviorDescription[@desc="new behavior"])=1][count(.//v2019C1:BehaviorDescription[not(@desc)])=1]',
-					`//v2019C1:BehaviorDescription[@desc="new behavior"]/v2019C1:InputVar[@lnodeUuid = ${firstInstance}/default:LNode/@uuid]`,
-					`//v2019C1:BehaviorDescription[not(@desc)]/v2019C1:InputVar[@lnodeUuid = ${secondInstance}/default:LNode/@uuid]`,
+					`//v2019C1:BehaviorDescription[@desc="new behavior"]/v2019C1:InputVar[@lnodeUuid = //default:Bay[@name="B1"]/default:Function[@templateUuid="function-source"]/default:LNode/@uuid]`,
+					`//v2019C1:BehaviorDescription[not(@desc)]/v2019C1:InputVar[@lnodeUuid = //default:Bay[@name="B2"]/default:Function/default:LNode/@uuid]`,
 				],
 			},
 	}

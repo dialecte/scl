@@ -24,14 +24,6 @@ type TestCase = SclTest.BaseXmlTestCase & {
 }
 
 const emptyTarget = /* xml */ `<SCL ${ns} ${id}="empty-target"/>`
-const sourceXml = /* xml */ `
-	<SCL ${ns} ${id}="source-root">
-		<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B" ${id}="source-header"/>
-		<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
-			<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001"/>
-		</IED>
-	</SCL>
-`
 
 const successQueries = [
 	'/default:SCL[count(default:Header)=1]/default:Header[@fileType="ISD"]/default:SourceFiles[count(default:SclFileReference)=1]',
@@ -41,7 +33,14 @@ const successQueries = [
 describe('extract IED source extension policy', () => {
 	const testCases: Record<string, TestCase> = {
 		'.ssd source with SCD Header -> SSD provenance': {
-			sourceXml,
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="source-root">
+					<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B" ${id}="source-header"/>
+					<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
+						<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001"/>
+					</IED>
+				</SCL>
+			`,
 			targetXml: emptyTarget,
 			sourceExtension: '.ssd',
 			expectedFileName: 'project.ssd',
@@ -50,7 +49,14 @@ describe('extract IED source extension policy', () => {
 			expectedQueries: successQueries,
 		},
 		'.scd source with SSD Header -> SCD provenance': {
-			sourceXml: sourceXml.replace('fileType="SCD"', 'fileType="SSD"'),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="source-root">
+					<Header id="ProjectSource" fileType="SSD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B" ${id}="source-header"/>
+					<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
+						<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001"/>
+					</IED>
+				</SCL>
+			`,
 			targetXml: emptyTarget,
 			sourceExtension: '.scd',
 			expectedFileName: 'project.scd',
@@ -59,7 +65,15 @@ describe('extract IED source extension policy', () => {
 			expectedQueries: successQueries,
 		},
 		'.xml source without Header type -> SCD provenance': {
-			sourceXml: sourceXml.replace(' fileType="SCD"', ''),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="source-root">
+					<!-- Header without fileType -->
+					<Header id="ProjectSource" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B" ${id}="source-header"/>
+					<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
+						<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001"/>
+					</IED>
+				</SCL>
+			`,
 			targetXml: emptyTarget,
 			sourceExtension: '.xml',
 			expectedFileName: 'project.xml',
@@ -67,7 +81,14 @@ describe('extract IED source extension policy', () => {
 			expectedQueries: successQueries,
 		},
 		'.xml source with SSD Header -> SCD provenance': {
-			sourceXml: sourceXml.replace('fileType="SCD"', 'fileType="SSD"'),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="source-root">
+					<Header id="ProjectSource" fileType="SSD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B" ${id}="source-header"/>
+					<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
+						<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001"/>
+					</IED>
+				</SCL>
+			`,
 			targetXml: emptyTarget,
 			sourceExtension: '.xml',
 			expectedFileName: 'project.xml',
@@ -76,7 +97,15 @@ describe('extract IED source extension policy', () => {
 			expectedQueries: successQueries,
 		},
 		'Actual extensionless source without Header type -> SCD provenance': {
-			sourceXml: sourceXml.replace(' fileType="SCD"', ''),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="source-root">
+					<!-- Header without fileType -->
+					<Header id="ProjectSource" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B" ${id}="source-header"/>
+					<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
+						<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001"/>
+					</IED>
+				</SCL>
+			`,
 			targetXml: emptyTarget,
 			sourceExtension: '',
 			expectedFileName: 'extensionless',
@@ -84,7 +113,14 @@ describe('extract IED source extension policy', () => {
 			expectedQueries: successQueries,
 		},
 		'Actual extensionless source with SSD Header -> SCD provenance': {
-			sourceXml: sourceXml.replace('fileType="SCD"', 'fileType="SSD"'),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="source-root">
+					<Header id="ProjectSource" fileType="SSD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B" ${id}="source-header"/>
+					<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
+						<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001"/>
+					</IED>
+				</SCL>
+			`,
 			targetXml: emptyTarget,
 			sourceExtension: '',
 			expectedFileName: 'extensionless',
@@ -93,7 +129,14 @@ describe('extract IED source extension policy', () => {
 			expectedQueries: successQueries,
 		},
 		'.bogus source with SSD Header -> unsupported source extension without changes': {
-			sourceXml: sourceXml.replace('fileType="SCD"', 'fileType="SSD"'),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="source-root">
+					<Header id="ProjectSource" fileType="SSD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B" ${id}="source-header"/>
+					<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
+						<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001"/>
+					</IED>
+				</SCL>
+			`,
 			targetXml: emptyTarget,
 			sourceExtension: '.bogus',
 			sourceHeaderType: 'SSD',
@@ -114,37 +157,29 @@ describe('extract IED source extension policy', () => {
 		let actualSource = source
 		let iedRef: Scl.Ref<'IED'> = { tagName: 'IED', id: 'selected-ied' }
 		if (testCase.sourceExtension === '' || testCase.sourceExtension === '.bogus') {
+			// An import refuses a file of an extension the config does not read: the case's source
+			// (Header, IED, AccessPoint) is copied as it is into a document of that extension.
+			const [caseHeader] = await source.query.getRecordsByTagName('Header')
+			const [caseIed] = await source.query.getRecordsByTagName('IED')
+			const [caseAccessPoint] = await source.query.getRecordsByTagName('AccessPoint')
+			const headerAttributes = await source.query.getAttributes(caseHeader, { defaults: 'none' })
+			const iedAttributes = await source.query.getAttributes(caseIed, { defaults: 'none' })
+			const accessPointAttributes = await source.query.getAttributes(caseAccessPoint, {
+				defaults: 'none',
+			})
 			const documentId = await project.initEmptyDocument({
 				configKey: runnerSourceInfo.configKey,
 				name: testCase.sourceExtension === '' ? 'extensionless' : 'unsupported',
 				extension: testCase.sourceExtension,
 			})
 			actualSource = project.openDocument(documentId)
-			iedRef = await actualSource.transaction(async function buildSource(tx) {
+			iedRef = await actualSource.transaction(async function copyCaseSource(tx) {
 				const root = await tx.getRoot()
-				await tx.addChild(root, {
-					tagName: 'Header',
-					attributes: {
-						id: 'ProjectSource',
-						uuid: '10000000-0000-4000-8000-000000000001',
-						version: '2',
-						revision: 'B',
-						...(testCase.sourceHeaderType ? { fileType: testCase.sourceHeaderType } : {}),
-					},
-				})
-				const selectedIed = await tx.addChild(root, {
-					tagName: 'IED',
-					attributes: {
-						name: 'Selected',
-						uuid: '20000000-0000-4000-8000-000000000001',
-					},
-				})
+				await tx.addChild(root, { tagName: 'Header', attributes: headerAttributes })
+				const selectedIed = await tx.addChild(root, { tagName: 'IED', attributes: iedAttributes })
 				await tx.addChild(selectedIed, {
 					tagName: 'AccessPoint',
-					attributes: {
-						name: 'AP1',
-						uuid: '30000000-0000-4000-8000-000000000001',
-					},
+					attributes: accessPointAttributes,
 				})
 				return { tagName: 'IED', id: selectedIed.id } as const
 			})
@@ -188,22 +223,30 @@ describe('extract IED source extension policy', () => {
 		} as const
 
 		try {
-			const extraction = target.transaction(async function extract(tx) {
-				return tx.lifecycle.extract.ied(params)
-			})
 			if (testCase.unsupported) {
-				await expect(extraction).rejects.toBeInstanceOf(Error)
-				const rejection = await extraction.catch((error: unknown) => error)
-				const reported = toDialecteError(rejection)
+				const outcome = await target.transaction(async function exportIsd(tx) {
+					const stagedBefore = [...tx.getStagedOperations()]
+					const refused = await tx.lifecycle.extract.ied(params).then(
+						() => undefined,
+						(error: unknown) => error,
+					)
+					return { refused, stagedBefore, stagedAfter: [...tx.getStagedOperations()] }
+				})
+				expect(outcome.refused).toBeInstanceOf(Error)
+				const reported = toDialecteError(outcome.refused)
 				expect({ key: reported?.key, meta: reported?.meta }).toEqual({
 					key: 'OPTION_NOT_AVAILABLE',
 					meta: { option: 'sourceExtension', value: '.bogus' },
 				})
+				expect(outcome.stagedAfter).toEqual(outcome.stagedBefore)
 				const targetAfter = await target.query.getSnapshot({ as: 'xml' })
 				const targetMetadataAfter = await target.query.getDocumentInfo()
 				expect(targetAfter).toBe(targetBefore)
 				expect(targetMetadataAfter).toEqual(targetMetadataBefore)
 			} else {
+				const extraction = target.transaction(async function extract(tx) {
+					return tx.lifecycle.extract.ied(params)
+				})
 				await expect(extraction).resolves.toEqual({ warnings: [] })
 				const provenance = await target.query.reference.getProvenance()
 				expect(provenance).toHaveLength(2)

@@ -12,8 +12,6 @@ const ns = ALL_XMLNS_NAMESPACES
 
 type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 
-const projectRole = '//v2019C1:AllocationRole[@uuid="role-project"]'
-
 describe('lifecycle - a linked allocation role read from the project keeps its allocations', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'two applications sharing a project role → each allocation retained once without overwriting the role':
@@ -78,15 +76,15 @@ describe('lifecycle - a linked allocation role read from the project keeps its a
 				expectedQueries: [
 					// the project role stays the only one, untouched
 					'/default:SCL[count(.//v2019C1:AllocationRole)=1]',
-					`${projectRole}[@desc="project role"]`,
+					`//v2019C1:AllocationRole[@uuid="role-project"][@desc="project role"]`,
 					// it allocates each placed function once
-					`${projectRole}[count(.//v2019C1:FunctionRef)=2]`,
-					`${projectRole}//v2019C1:FunctionRef[@function="S1/V1/B1/Prot"]`,
-					`${projectRole}//v2019C1:FunctionRef[@function="S1/V1/B1/Ctrl"]`,
+					`//v2019C1:AllocationRole[@uuid="role-project"][count(.//v2019C1:FunctionRef)=2]`,
+					`//v2019C1:AllocationRole[@uuid="role-project"]//v2019C1:FunctionRef[@function="S1/V1/B1/Prot"]`,
+					`//v2019C1:AllocationRole[@uuid="role-project"]//v2019C1:FunctionRef[@function="S1/V1/B1/Ctrl"]`,
 					'/default:SCL[count(.//default:Function[@templateUuid="function-source"])=1]',
 					'/default:SCL[count(.//default:Function[@templateUuid="control-source"])=1]',
-					`${projectRole}//v2019C1:FunctionRef[@functionUuid = //default:Function[@templateUuid="function-source"]/@uuid]`,
-					`${projectRole}//v2019C1:FunctionRef[@functionUuid = //default:Function[@templateUuid="control-source"]/@uuid]`,
+					`//v2019C1:AllocationRole[@uuid="role-project"]//v2019C1:FunctionRef[@functionUuid = //default:Function[@templateUuid="function-source"]/@uuid]`,
+					`//v2019C1:AllocationRole[@uuid="role-project"]//v2019C1:FunctionRef[@functionUuid = //default:Function[@templateUuid="control-source"]/@uuid]`,
 					// both applications point at the project role
 					'/default:SCL[count(.//v2019C1:AllocationRoleRef)=2]',
 					'//v2019C1:AllocationRoleRef[@allocationRoleUuid="role-project"]',

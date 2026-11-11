@@ -1,3 +1,12 @@
+/// <reference types="vite/client" />
+
+import SelectedIedAfterAForeignIedXml from './fixtures/selected-ied-after-a-foreign-ied.xml?raw'
+import SelectedIedWithForeignAssociationAndKdcXml from './fixtures/selected-ied-with-foreign-association-and-kdc.xml?raw'
+import SelectedIedWithForeignIednameAndClientlnXml from './fixtures/selected-ied-with-foreign-iedname-and-clientln.xml?raw'
+import SelectedIedWithSelfReferencesXml from './fixtures/selected-ied-with-self-references.xml?raw'
+import SelectedIedWithSharedAndUnusedTypesXml from './fixtures/selected-ied-with-shared-and-unused-types.xml?raw'
+import SelectedIedWithUnreferencedLgosAndLsvsXml from './fixtures/selected-ied-with-unreferenced-lgos-and-lsvs.xml?raw'
+
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
@@ -16,106 +25,6 @@ type TestCase = SclTest.BaseXmlTestCase & {
 }
 
 const emptyTarget = /* xml */ `<SCL ${ns} ${id}="empty-target"/>`
-
-const sourceXml = /* xml */ `
-	<SCL ${ns} xmlns:vendor="urn:ied-extract:test:vendor" ${id}="source-root">
-		<Header id="ProjectSource" fileType="SSD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="2" ${id}="source-header"/>
-		<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" templateUuid="20000000-0000-4000-8000-000000000002" desc="Selected specification" ${id}="selected-ied">
-			<Private type="vendor.test" ${id}="vendor-private">
-				<vendor:Settings mode="preserved">vendor payload</vendor:Settings>
-			</Private>
-			<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001" ${id}="selected-ap">
-				<Server ${id}="selected-server">
-					<Authentication none="true"/>
-					<LDevice inst="LD1" uuid="40000000-0000-4000-8000-000000000001" ${id}="selected-device">
-						<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000001" ${id}="selected-ln0">
-							<DataSet name="Events" ${id}="events-dataset">
-								<FCDA ldInst="LD1" lnClass="PTOC" lnInst="1" doName="Status" daName="stVal" fc="ST" ${id}="ordinary-fcda"/>
-							</DataSet>
-							<ReportControl name="ReportEvents" datSet="Events" confRev="1" ${id}="report-control">
-								<OptFields/>
-								<RptEnabled max="2">
-									<!-- clients -->
-								</RptEnabled>
-							</ReportControl>
-							<GSEControl name="GooseEvents" appID="Events" datSet="Events" confRev="1" ${id}="goose-control">
-								<!-- receivers -->
-							</GSEControl>
-						</LN0>
-						<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002" templateUuid="50000000-0000-4000-8000-000000000003" ${id}="ordinary-ln">
-							<DOI name="Status" ${id}="status-instance">
-								<DAI name="stVal" ${id}="status-value">
-									<Val>true</Val>
-								</DAI>
-							</DOI>
-						</LN>
-						<!-- supervision -->
-					</LDevice>
-					<!-- associations -->
-				</Server>
-			</AccessPoint>
-			<!-- key distribution -->
-			<Labels>
-				<Label lang="en" id="display">Selected device label</Label>
-			</Labels>
-		</IED>
-		<IED name="Foreign" uuid="20000000-0000-4000-8000-000000000003" ${id}="foreign-ied">
-			<AccessPoint name="AP2" uuid="30000000-0000-4000-8000-000000000002" ${id}="foreign-ap">
-				<Server>
-					<Authentication/>
-					<LDevice inst="LD2" ${id}="foreign-device">
-						<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" ${id}="foreign-ln0"/>
-						<LN lnClass="PTOC" inst="2" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000004" ${id}="foreign-ln"/>
-					</LDevice>
-				</Server>
-			</AccessPoint>
-		</IED>
-		<DataTypeTemplates ${id}="source-types">
-			<LNodeType id="LLN0_Type" lnClass="LLN0">
-				<DO name="Status" type="Status_Type"/>
-			</LNodeType>
-			<LNodeType id="PTOC_Type" lnClass="PTOC">
-				<DO name="Status" type="Status_Type"/>
-				<DO name="Config" type="Config_Type"/>
-			</LNodeType>
-			<!-- supervision types -->
-			<LNodeType id="Unused_LN" lnClass="GGIO">
-				<DO name="Unused" type="Unused_DO"/>
-			</LNodeType>
-			<DOType id="Status_Type" cdc="SPS">
-				<DA name="stVal" bType="BOOLEAN" fc="ST"/>
-			</DOType>
-			<DOType id="Config_Type" cdc="SPS">
-				<SDO name="Detail" type="Detail_Type"/>
-				<DA name="settings" bType="Struct" type="Settings_Type" fc="CF"/>
-			</DOType>
-			<DOType id="Detail_Type" cdc="SPS">
-				<DA name="stVal" bType="BOOLEAN" fc="ST"/>
-			</DOType>
-			<DOType id="Unused_DO" cdc="SPS">
-				<DA name="settings" bType="Struct" type="Unused_DA" fc="CF"/>
-			</DOType>
-			<!-- supervision data types -->
-			<DAType id="Settings_Type">
-				<BDA name="mode" bType="Enum" type="Mode_Type"/>
-				<BDA name="nested" bType="Struct" type="Nested_Type"/>
-			</DAType>
-			<DAType id="Nested_Type">
-				<BDA name="enabled" bType="BOOLEAN"/>
-			</DAType>
-			<DAType id="Unused_DA">
-				<BDA name="mode" bType="Enum" type="Unused_Enum"/>
-			</DAType>
-			<EnumType id="Mode_Type">
-				<EnumVal ord="0">off</EnumVal>
-				<EnumVal ord="1">on</EnumVal>
-			</EnumType>
-			<EnumType id="Unused_Enum">
-				<EnumVal ord="0">unused</EnumVal>
-			</EnumType>
-		</DataTypeTemplates>
-	</SCL>
-`
 
 const ordinaryQueries = [
 	'/default:SCL[count(default:IED)=1]/default:IED[@name="Selected"][@uuid="20000000-0000-4000-8000-000000000001"][@templateUuid="20000000-0000-4000-8000-000000000002"][@desc="Selected specification"]',
@@ -155,11 +64,6 @@ const absentQueries = [
 	'//default:EnumType[@id="Unused_Enum"]',
 ]
 
-const selfReceiver = /* xml */ `<IEDName apRef="AP1" ldInst="LD1" lnClass="PTOC" lnInst="1" ${id}="self-receiver">Selected</IEDName>`
-const selfClient = /* xml */ `<ClientLN iedName="Selected" apRef="AP1" ldInst="LD1" lnClass="PTOC" lnInst="1" ${id}="self-client"/>`
-const selfAssociation = /* xml */ `<Association kind="pre-established" associationID="Self" iedName="Selected" apRef="AP1" ldInst="LD1" lnClass="PTOC" lnInst="1" ${id}="self-association"/>`
-const selfKdc = /* xml */ `<KDC iedName="Selected" apName="AP1" ${id}="self-kdc"/>`
-
 const selfReferenceQueries = [
 	'//default:GSEControl[@name="GooseEvents"][count(default:IEDName)=1]/default:IEDName[@apRef="AP1"][@ldInst="LD1"][@lnClass="PTOC"][@lnInst="1"][@lnUuid=//default:LN[@lnClass="PTOC"]/@uuid][text()="Selected"]',
 	'//default:ReportControl[@name="ReportEvents"]/default:RptEnabled[count(default:ClientLN)=1]/default:ClientLN[@iedName="Selected"][@apRef="AP1"][@ldInst="LD1"][@lnClass="PTOC"][@lnInst="1"][@lnUuid=//default:LN[@lnClass="PTOC"]/@uuid]',
@@ -171,10 +75,7 @@ describe('extract.ied - selected instance content', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'Ordinary selected IED with LN0, values, labels and vendor content -> faithful instance copy only':
 			{
-				sourceXml: sourceXml.replace(
-					/(<IED name="Selected"[\s\S]*?<\/IED>)(\s*)(<IED name="Foreign"[\s\S]*?<\/IED>)/,
-					'$3$2$1',
-				),
+				sourceXml: SelectedIedAfterAForeignIedXml,
 				targetXml: emptyTarget,
 				expectedWarnings: [],
 				expectedQueries: ordinaryQueries,
@@ -182,7 +83,7 @@ describe('extract.ied - selected instance content', () => {
 			},
 		'Surviving logical nodes with nested/shared types and an unrelated type family -> exact reachable type closure':
 			{
-				sourceXml,
+				sourceXml: SelectedIedWithSharedAndUnusedTypesXml,
 				targetXml: emptyTarget,
 				expectedWarnings: [],
 				expectedQueries: [...ordinaryQueries, ...closureQueries],
@@ -190,50 +91,7 @@ describe('extract.ied - selected instance content', () => {
 			},
 		'Unreferenced LGOS and LSVS beside ordinary logical nodes -> supervision omitted and individually warned':
 			{
-				sourceXml: sourceXml
-					.replace(
-						'<!-- supervision -->',
-						/* xml */ `
-							<LN lnClass="LGOS" inst="1" lnType="LGOS_Type" ${id}="unreferenced-lgos">
-								<DOI name="Exclusive">
-									<DAI name="stVal">
-										<Val>false</Val>
-									</DAI>
-								</DOI>
-							</LN>
-							<LN lnClass="LSVS" inst="1" lnType="LSVS_Type" ${id}="unreferenced-lsvs">
-								<DOI name="Exclusive">
-									<DAI name="stVal">
-										<Val>false</Val>
-									</DAI>
-								</DOI>
-							</LN>
-						`,
-					)
-					.replace(
-						'<!-- supervision types -->',
-						/* xml */ `
-							<LNodeType id="LGOS_Type" lnClass="LGOS">
-								<DO name="Shared" type="Status_Type"/>
-								<DO name="Exclusive" type="LGOS_Only"/>
-							</LNodeType>
-							<LNodeType id="LSVS_Type" lnClass="LSVS">
-								<DO name="Shared" type="Status_Type"/>
-								<DO name="Exclusive" type="LSVS_Only"/>
-							</LNodeType>
-						`,
-					)
-					.replace(
-						'<!-- supervision data types -->',
-						/* xml */ `
-							<DOType id="LGOS_Only" cdc="SPS">
-								<DA name="stVal" bType="BOOLEAN" fc="ST"/>
-							</DOType>
-							<DOType id="LSVS_Only" cdc="SPS">
-								<DA name="stVal" bType="BOOLEAN" fc="ST"/>
-							</DOType>
-						`,
-					),
+				sourceXml: SelectedIedWithUnreferencedLgosAndLsvsXml,
 				targetXml: emptyTarget,
 				expectedWarnings: [
 					{ code: 'supervision-left-out', source: { tagName: 'LN', id: 'unreferenced-lgos' } },
@@ -248,15 +106,7 @@ describe('extract.ied - selected instance content', () => {
 				],
 			},
 		'Foreign IEDName and ClientLN entries -> entries omitted and individually warned': {
-			sourceXml: sourceXml
-				.replace(
-					'<!-- receivers -->',
-					`${selfReceiver}<IEDName apRef="AP2" ldInst="LD2" lnClass="PTOC" lnInst="2" ${id}="foreign-receiver">Foreign</IEDName>`,
-				)
-				.replace(
-					'<!-- clients -->',
-					`${selfClient}<ClientLN iedName="Foreign" apRef="AP2" ldInst="LD2" lnClass="PTOC" lnInst="2" ${id}="foreign-client"/>`,
-				),
+			sourceXml: SelectedIedWithForeignIednameAndClientlnXml,
 			targetXml: emptyTarget,
 			expectedWarnings: [
 				{
@@ -278,15 +128,7 @@ describe('extract.ied - selected instance content', () => {
 			],
 		},
 		'Foreign Association and KDC entries -> entries omitted and individually warned': {
-			sourceXml: sourceXml
-				.replace(
-					'<!-- associations -->',
-					`${selfAssociation}<Association kind="pre-established" associationID="Foreign" iedName="Foreign" apRef="AP2" ldInst="LD2" lnClass="PTOC" lnInst="2" ${id}="foreign-association"/>`,
-				)
-				.replace(
-					'<!-- key distribution -->',
-					`${selfKdc}<KDC iedName="Foreign" apName="AP2" ${id}="foreign-kdc"/>`,
-				),
+			sourceXml: SelectedIedWithForeignAssociationAndKdcXml,
 			targetXml: emptyTarget,
 			expectedWarnings: [
 				{
@@ -309,11 +151,7 @@ describe('extract.ied - selected instance content', () => {
 		},
 		'Ordinary self references -> references retained, including after a rolled-back extraction attempt':
 			{
-				sourceXml: sourceXml
-					.replace('<!-- receivers -->', selfReceiver)
-					.replace('<!-- clients -->', selfClient)
-					.replace('<!-- associations -->', selfAssociation)
-					.replace('<!-- key distribution -->', selfKdc),
+				sourceXml: SelectedIedWithSelfReferencesXml,
 				targetXml: emptyTarget,
 				expectedWarnings: [],
 				rollbackFirst: true,

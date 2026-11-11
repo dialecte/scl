@@ -1,0 +1,10 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="project">
+	<!-- a project with two empty bays B1 and B2 under one voltage level, no source file recorded yet -->
+	<Header id="project" uuid="project-file-uuid" dev:db-id="project-header"/>
+	<Substation name="S1" dev:db-id="project-substation">
+		<VoltageLevel name="V1" dev:db-id="project-voltage-level">
+			<Bay name="B1" dev:db-id="project-bay"/>
+			<Bay name="B2" dev:db-id="project-other-bay"/>
+		</VoltageLevel>
+	</Substation>
+</SCL>

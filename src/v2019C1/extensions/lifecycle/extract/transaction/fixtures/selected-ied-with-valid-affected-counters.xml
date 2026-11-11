@@ -1,0 +1,82 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:supervision-dependencies:test">
+	<!-- the counters of the control blocks reading DataSet Events (the affected ones) are all valid (confRev 17):
+	     each case breaks one through the store, because the fixture validators refuse a file holding a broken one -->
+	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B"/>
+	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="selected-ied">
+		<Private type="vendor.homonyms">
+			<vendor:LN lnClass="LGOS" inst="1">
+				<vendor:DataSet name="Events">
+					<vendor:FCDA lnUuid="50000000-0000-4000-8000-000000000003"/>
+				</vendor:DataSet>
+				<vendor:ReportControl name="ReportAffected" datSet="Events" confRev="4294967295"/>
+				<vendor:LogControl name="LogAffected" datSet="Events" logEna="true"/>
+			</vendor:LN>
+		</Private>
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type">
+						<DataSet name="Events">
+							<FCDA ldInst="LD1" prefix="" lnClass="LGOS" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000003" doName="Status" daName="stVal" fc="ST" dev:db-id="supervision-fcda"/>
+							<FCDA ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000002" doName="Status" daName="stVal" fc="ST"/>
+						</DataSet>
+						<DataSet name="Untouched">
+							<FCDA ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000002" doName="Status" daName="stVal" fc="ST"/>
+						</DataSet>
+						<ReportControl dev:db-id="affected-report" name="ReportAffected" datSet="Events" confRev="17">
+							<OptFields/>
+						</ReportControl>
+						<LogControl name="LogAffected" datSet="Events" logName="EventsLog" logEna="true">
+							<TrgOps dchg="true"/>
+						</LogControl>
+						<GSEControl dev:db-id="affected-goose" name="GooseAffected" datSet="Events" appID="EventsAffected" confRev="17"/>
+						<SampledValueControl dev:db-id="affected-samples" name="SamplesAffected" datSet="Events" smvID="EventsAffected" smpRate="80" nofASDU="1" confRev="17">
+							<SmvOpts/>
+						</SampledValueControl>
+						<ReportControl name="ReportUntouched" datSet="Untouched" confRev="4294967295">
+							<OptFields/>
+						</ReportControl>
+						<LogControl name="LogUntouched" datSet="Untouched" logName="EventsLog" logEna="true">
+							<TrgOps dchg="true"/>
+						</LogControl>
+						<GSEControl name="GooseUntouched" datSet="Untouched" appID="EventsUntouched" confRev="4294967295"/>
+						<SampledValueControl name="SamplesUntouched" datSet="Untouched" smvID="EventsUntouched" smpRate="80" nofASDU="1" confRev="4294967295">
+							<SmvOpts/>
+						</SampledValueControl>
+						<Log name="EventsLog"/>
+					</LN0>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002"/>
+					<LN lnClass="LGOS" inst="1" lnType="Supervision_Type" uuid="50000000-0000-4000-8000-000000000003" dev:db-id="omitted-supervision"></LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="Foreign" uuid="20000000-0000-4000-8000-000000000002">
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+					<LN lnClass="LGOS" inst="1" lnType="Supervision_Type" uuid="50000000-0000-4000-8000-000000000005"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="Supervision_Type" lnClass="LGOS">
+			<DO name="Status" type="Status_Type"/>
+			<DO name="Other" type="Status_Type"/>
+		</LNodeType>
+		<DOType id="Status_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+			<DA name="q" bType="Quality" fc="ST"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

@@ -1,3 +1,9 @@
+/// <reference types="vite/client" />
+
+import SelectedIedWithASelfInputOnLn0Xml from './fixtures/selected-ied-with-a-self-input-on-ln0.xml?raw'
+import SelectedIedWithAnInputOnLnFedByPublisherXml from './fixtures/selected-ied-with-an-input-on-ln-fed-by-publisher.xml?raw'
+import SelectedIedWithInputsAcrossTwoAccessPointsXml from './fixtures/selected-ied-with-inputs-across-two-access-points.xml?raw'
+
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
@@ -23,59 +29,6 @@ type TestCase = SclTest.BaseXmlTestCase & {
 }
 
 const emptyTarget = /* xml */ `<SCL ${ns} ${id}="empty-target"/>`
-const sourceXml = /* xml */ `
-	<SCL ${ns} xmlns:vendor="urn:ied-inputs:test" ${id}="source-root">
-		<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B"/>
-		<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
-			<Private type="vendor.outside">
-				<vendor:Settings mode="retained">outside payload</vendor:Settings>
-			</Private>
-			<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001">
-				<Server>
-					<Authentication/>
-					<LDevice inst="LD1">
-						<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000001" ${id}="selected-ln0">
-							<!-- ln0 inputs -->
-						</LN0>
-						<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002" ${id}="selected-ln">
-							<DOI name="Status">
-								<DAI name="stVal">
-									<Val>true</Val>
-								</DAI>
-							</DOI>
-							<!-- ln inputs -->
-						</LN>
-					</LDevice>
-				</Server>
-			</AccessPoint>
-			<!-- second access point -->
-		</IED>
-		<IED name="Publisher" uuid="20000000-0000-4000-8000-000000000002">
-			<AccessPoint name="AP1">
-				<Server>
-					<Authentication/>
-					<LDevice inst="PublisherLD">
-						<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
-						<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000003"/>
-					</LDevice>
-				</Server>
-			</AccessPoint>
-		</IED>
-		<DataTypeTemplates>
-			<LNodeType id="LLN0_Type" lnClass="LLN0">
-				<DO name="Status" type="Status_Type"/>
-			</LNodeType>
-			<LNodeType id="PTOC_Type" lnClass="PTOC">
-				<DO name="Status" type="Status_Type"/>
-			</LNodeType>
-			<DOType id="Status_Type" cdc="SPS">
-				<DA name="stVal" bType="BOOLEAN" fc="ST"/>
-			</DOType>
-		</DataTypeTemplates>
-	</SCL>
-`
-const selfRef = /* xml */ `<ExtRef iedName="Selected" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000002" doName="Status" daName="stVal" serviceType="Poll" intAddr="self"/>`
-const externalRef = /* xml */ `<ExtRef iedName="Publisher" ldInst="PublisherLD" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000003" doName="Status" daName="stVal" serviceType="Poll" intAddr="external"/>`
 const retainedQueries = [
 	'/default:SCL[count(default:IED)=1]/default:IED[@name="Selected"][@uuid="20000000-0000-4000-8000-000000000001"]',
 	'//default:IED[@name="Selected"]/default:AccessPoint[@name="AP1"]/default:Server/default:LDevice[@inst="LD1"][count(default:LN0)=1][count(default:LN)=1]/default:LN0[@lnClass="LLN0"][@uuid="50000000-0000-4000-8000-000000000001"][@lnType="LLN0_Type"]',
@@ -92,10 +45,7 @@ const absentQueries = [
 describe('extract IED with inputs none', () => {
 	const testCases: Record<string, TestCase> = {
 		'LN0 self input -> whole wrapper omitted with parent and sibling retained': {
-			sourceXml: sourceXml.replace(
-				'<!-- ln0 inputs -->',
-				/* xml */ `<Inputs ${id}="ln0-inputs">${selfRef}</Inputs>`,
-			),
+			sourceXml: SelectedIedWithASelfInputOnLn0Xml,
 			targetXml: emptyTarget,
 			locations: [{ inputId: 'ln0-inputs', parentId: 'selected-ln0', parentTag: 'LN0', refs: 1 }],
 			boundSelf: 1,
@@ -108,10 +58,7 @@ describe('extract IED with inputs none', () => {
 			unexpectedQueries: absentQueries,
 		},
 		'Ordinary LN external input -> wrapper omitted without dependency warning': {
-			sourceXml: sourceXml.replace(
-				'<!-- ln inputs -->',
-				/* xml */ `<Inputs ${id}="ln-inputs">${externalRef}</Inputs>`,
-			),
+			sourceXml: SelectedIedWithAnInputOnLnFedByPublisherXml,
 			targetXml: emptyTarget,
 			locations: [{ inputId: 'ln-inputs', parentId: 'selected-ln', parentTag: 'LN', refs: 1 }],
 			boundSelf: 0,
@@ -125,41 +72,7 @@ describe('extract IED with inputs none', () => {
 		},
 		'Inputs across two access points -> all wrappers omitted with unrelated vendor content retained':
 			{
-				sourceXml: sourceXml
-					.replace(
-						'<!-- ln0 inputs -->',
-						/* xml */ `
-							<Inputs ${id}="ln0-inputs">
-						<Text>input-only text</Text>
-						<Private type="vendor.inside"><vendor:Settings>input-only payload</vendor:Settings></Private>
-						${selfRef}<ExtRef intAddr="unbound1"/>
-					</Inputs>
-						`,
-					)
-					.replace(
-						'<!-- ln inputs -->',
-						/* xml */ `<Inputs ${id}="ln-inputs">${externalRef}</Inputs>`,
-					)
-					.replace(
-						'<!-- second access point -->',
-						/* xml */ `
-							<AccessPoint name="AP2" uuid="30000000-0000-4000-8000-000000000002">
-								<Server>
-									<Authentication/>
-									<LDevice inst="LD2">
-										<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000004" ${id}="second-ln0">
-											<Inputs ${id}="second-ln0-inputs">${selfRef}</Inputs>
-										</LN0>
-										<LN lnClass="PTOC" inst="2" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000005" ${id}="second-ln">
-											<Inputs ${id}="second-ln-inputs">
-												<ExtRef intAddr="unbound2"/>
-											</Inputs>
-										</LN>
-									</LDevice>
-								</Server>
-							</AccessPoint>
-						`,
-					),
+				sourceXml: SelectedIedWithInputsAcrossTwoAccessPointsXml,
 				targetXml: emptyTarget,
 				locations: [
 					{ inputId: 'ln0-inputs', parentId: 'selected-ln0', parentTag: 'LN0', refs: 2 },

@@ -165,10 +165,24 @@ describe('writeProvenance', () => {
 
 		'a reference the function records of the same file is brought to the source version, in place':
 			{
-				sourceXml: functionRecording({
-					first:
-						'fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="1" revision="A"',
-				}),
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${ID}="scl-1">
+						<Header id="h" uuid="doc-uuid" version="2" revision="B" ${ID}="hdr-1"/>
+						<Substation name="S1" ${ID}="sub-1">
+							<VoltageLevel name="V1" ${ID}="vl-1">
+								<Bay name="B1" ${ID}="bay-1">
+									<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
+										<Private type="eIEC61850-6-100" ${ID}="priv-1">
+											<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-1">
+												<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="1" revision="A" ${ID}="fnscl-1"/>
+											</eIEC61850-6-100:FunctionSclRef>
+										</Private>
+									</Function>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 				expectedChanged: true,
 				expectedQueries: [
@@ -181,10 +195,24 @@ describe('writeProvenance', () => {
 			},
 		'a reference of the same file and revision but another version is brought to the source version':
 			{
-				sourceXml: functionRecording({
-					first:
-						'fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="1" revision="B"',
-				}),
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${ID}="scl-1">
+						<Header id="h" uuid="doc-uuid" version="2" revision="B" ${ID}="hdr-1"/>
+						<Substation name="S1" ${ID}="sub-1">
+							<VoltageLevel name="V1" ${ID}="vl-1">
+								<Bay name="B1" ${ID}="bay-1">
+									<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
+										<Private type="eIEC61850-6-100" ${ID}="priv-1">
+											<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-1">
+												<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="1" revision="B" ${ID}="fnscl-1"/>
+											</eIEC61850-6-100:FunctionSclRef>
+										</Private>
+									</Function>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 				expectedChanged: true,
 				expectedQueries: [
@@ -193,10 +221,24 @@ describe('writeProvenance', () => {
 				unexpectedQueries: ['//v2019C1:SclFileReference[@version="1"]'],
 			},
 		'a reference of the same file version under another file name is left as it is': {
-			sourceXml: functionRecording({
-				first:
-					'fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="2" revision="B"',
-			}),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${ID}="scl-1">
+					<Header id="h" uuid="doc-uuid" version="2" revision="B" ${ID}="hdr-1"/>
+					<Substation name="S1" ${ID}="sub-1">
+						<VoltageLevel name="V1" ${ID}="vl-1">
+							<Bay name="B1" ${ID}="bay-1">
+								<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
+									<Private type="eIEC61850-6-100" ${ID}="priv-1">
+										<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-1">
+											<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="old-name.fsd" fileUuid="doc-uuid" version="2" revision="B" ${ID}="fnscl-1"/>
+										</eIEC61850-6-100:FunctionSclRef>
+									</Private>
+								</Function>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 			expectedChanged: false,
 			expectedQueries: [
@@ -205,10 +247,27 @@ describe('writeProvenance', () => {
 			unexpectedQueries: ['(//v2019C1:FunctionSclRef)[2]'],
 		},
 		'two references of the same file: one is kept, brought to the source version': {
-			sourceXml: functionRecording({
-				first: 'fileType="FSD" fileName="a.fsd" fileUuid="doc-uuid" version="1" revision="A"',
-				second: 'fileType="FSD" fileName="b.fsd" fileUuid="doc-uuid" version="1" revision="C"',
-			}),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${ID}="scl-1">
+					<Header id="h" uuid="doc-uuid" version="2" revision="B" ${ID}="hdr-1"/>
+					<Substation name="S1" ${ID}="sub-1">
+						<VoltageLevel name="V1" ${ID}="vl-1">
+							<Bay name="B1" ${ID}="bay-1">
+								<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
+									<Private type="eIEC61850-6-100" ${ID}="priv-1">
+										<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-1">
+											<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="a.fsd" fileUuid="doc-uuid" version="1" revision="A" ${ID}="fnscl-1"/>
+										</eIEC61850-6-100:FunctionSclRef>
+										<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-2">
+											<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="b.fsd" fileUuid="doc-uuid" version="1" revision="C" ${ID}="fnscl-2"/>
+										</eIEC61850-6-100:FunctionSclRef>
+									</Private>
+								</Function>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 			expectedChanged: true,
 			expectedQueries: [
@@ -221,10 +280,27 @@ describe('writeProvenance', () => {
 		},
 		'two references of the same file, the first already at the source version: the other is removed':
 			{
-				sourceXml: functionRecording({
-					first: 'fileType="FSD" fileName="a.fsd" fileUuid="doc-uuid" version="2" revision="B"',
-					second: 'fileType="FSD" fileName="b.fsd" fileUuid="doc-uuid" version="1" revision="C"',
-				}),
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${ID}="scl-1">
+						<Header id="h" uuid="doc-uuid" version="2" revision="B" ${ID}="hdr-1"/>
+						<Substation name="S1" ${ID}="sub-1">
+							<VoltageLevel name="V1" ${ID}="vl-1">
+								<Bay name="B1" ${ID}="bay-1">
+									<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
+										<Private type="eIEC61850-6-100" ${ID}="priv-1">
+											<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-1">
+												<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="a.fsd" fileUuid="doc-uuid" version="2" revision="B" ${ID}="fnscl-1"/>
+											</eIEC61850-6-100:FunctionSclRef>
+											<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-2">
+												<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="b.fsd" fileUuid="doc-uuid" version="1" revision="C" ${ID}="fnscl-2"/>
+											</eIEC61850-6-100:FunctionSclRef>
+										</Private>
+									</Function>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 				expectedChanged: true,
 				expectedQueries: [
@@ -236,9 +312,24 @@ describe('writeProvenance', () => {
 				],
 			},
 		'a reference of another file type of the same uuid is not the source file: one is added': {
-			sourceXml: functionRecording({
-				first: 'fileType="ASD" fileName="other.asd" fileUuid="doc-uuid" version="1" revision="A"',
-			}),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${ID}="scl-1">
+					<Header id="h" uuid="doc-uuid" version="2" revision="B" ${ID}="hdr-1"/>
+					<Substation name="S1" ${ID}="sub-1">
+						<VoltageLevel name="V1" ${ID}="vl-1">
+							<Bay name="B1" ${ID}="bay-1">
+								<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
+									<Private type="eIEC61850-6-100" ${ID}="priv-1">
+										<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-1">
+											<eIEC61850-6-100:SclFileReference fileType="ASD" fileName="other.asd" fileUuid="doc-uuid" version="1" revision="A" ${ID}="fnscl-1"/>
+										</eIEC61850-6-100:FunctionSclRef>
+									</Private>
+								</Function>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 			expectedChanged: true,
 			expectedQueries: [
@@ -248,11 +339,27 @@ describe('writeProvenance', () => {
 		},
 		'source without uuid: the reference of the same file name without uuid is brought to its version':
 			{
-				sourceXml: functionRecording({
-					first: 'fileType="FSD" fileName="source.xml" version="0" revision="1"',
-					second: 'fileType="FSD" fileName="elsewhere" version="0" revision="1"',
-					header: false,
-				}),
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${ID}="scl-1">
+						<!-- no Header -->
+						<Substation name="S1" ${ID}="sub-1">
+							<VoltageLevel name="V1" ${ID}="vl-1">
+								<Bay name="B1" ${ID}="bay-1">
+									<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
+										<Private type="eIEC61850-6-100" ${ID}="priv-1">
+											<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-1">
+												<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="source.xml" version="0" revision="1" ${ID}="fnscl-1"/>
+											</eIEC61850-6-100:FunctionSclRef>
+											<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-2">
+												<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="elsewhere" version="0" revision="1" ${ID}="fnscl-2"/>
+											</eIEC61850-6-100:FunctionSclRef>
+										</Private>
+									</Function>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 				expectedChanged: true,
 				expectedQueries: [
@@ -263,11 +370,27 @@ describe('writeProvenance', () => {
 			},
 		'source without uuid: a reference holding the file name without its extension is rewritten with it, no second one':
 			{
-				sourceXml: functionRecording({
-					first: 'fileType="FSD" fileName="source" version="0" revision="1"',
-					second: 'fileType="FSD" fileName="elsewhere" version="0" revision="1"',
-					header: false,
-				}),
+				sourceXml: /* xml */ `
+					<SCL ${ns} ${ID}="scl-1">
+						<!-- no Header -->
+						<Substation name="S1" ${ID}="sub-1">
+							<VoltageLevel name="V1" ${ID}="vl-1">
+								<Bay name="B1" ${ID}="bay-1">
+									<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
+										<Private type="eIEC61850-6-100" ${ID}="priv-1">
+											<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-1">
+												<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="source" version="0" revision="1" ${ID}="fnscl-1"/>
+											</eIEC61850-6-100:FunctionSclRef>
+											<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-2">
+												<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="elsewhere" version="0" revision="1" ${ID}="fnscl-2"/>
+											</eIEC61850-6-100:FunctionSclRef>
+										</Private>
+									</Function>
+								</Bay>
+							</VoltageLevel>
+						</Substation>
+					</SCL>
+				`,
 				target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 				expectedChanged: true,
 				expectedQueries: [
@@ -280,10 +403,24 @@ describe('writeProvenance', () => {
 				],
 			},
 		'source without uuid: a reference naming a uuid is another file': {
-			sourceXml: functionRecording({
-				first: 'fileType="FSD" fileName="source" fileUuid="other-uuid" version="0" revision="1"',
-				header: false,
-			}),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${ID}="scl-1">
+					<!-- no Header -->
+					<Substation name="S1" ${ID}="sub-1">
+						<VoltageLevel name="V1" ${ID}="vl-1">
+							<Bay name="B1" ${ID}="bay-1">
+								<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
+									<Private type="eIEC61850-6-100" ${ID}="priv-1">
+										<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-1">
+											<eIEC61850-6-100:SclFileReference fileType="FSD" fileName="source" fileUuid="other-uuid" version="0" revision="1" ${ID}="fnscl-1"/>
+										</eIEC61850-6-100:FunctionSclRef>
+									</Private>
+								</Function>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
 			target: { anchor: 'function', rootTag: 'Function', rootId: 'fn-1' },
 			expectedChanged: true,
 			expectedQueries: [
@@ -292,18 +429,32 @@ describe('writeProvenance', () => {
 			],
 		},
 		'SSD: a file version the Header lists already is not appended again': {
-			sourceXml: headerListing(
-				'fileType="SSD" fileName="x" fileUuid="ssd-uuid" version="0" revision="14"',
-			),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${ID}="scl-1">
+					<Header id="proj" uuid="ssd-uuid" version="0" revision="14" ${ID}="hdr-1">
+						<SourceFiles ${ID}="files-1">
+							<SclFileReference fileType="SSD" fileName="x" fileUuid="ssd-uuid" version="0" revision="14" ${ID}="listed-1"/>
+						</SourceFiles>
+					</Header>
+					<Substation name="S1" ${ID}="sub-1"/>
+				</SCL>
+			`,
 			target: { anchor: 'document', fileType: 'SSD' },
 			expectedChanged: false,
 			expectedQueries: ['//default:SourceFiles/default:SclFileReference[@revision="14"]'],
 			unexpectedQueries: ['//default:SourceFiles/default:SclFileReference[2]'],
 		},
 		'SSD: another revision of the file the Header lists is appended after it': {
-			sourceXml: headerListing(
-				'fileType="SSD" fileName="x" fileUuid="ssd-uuid" version="0" revision="13"',
-			),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${ID}="scl-1">
+					<Header id="proj" uuid="ssd-uuid" version="0" revision="14" ${ID}="hdr-1">
+						<SourceFiles ${ID}="files-1">
+							<SclFileReference fileType="SSD" fileName="x" fileUuid="ssd-uuid" version="0" revision="13" ${ID}="listed-1"/>
+						</SourceFiles>
+					</Header>
+					<Substation name="S1" ${ID}="sub-1"/>
+				</SCL>
+			`,
 			target: { anchor: 'document', fileType: 'SSD' },
 			expectedChanged: true,
 			expectedQueries: [
@@ -312,60 +463,20 @@ describe('writeProvenance', () => {
 			],
 		},
 		'SSD: the same version of another file type is appended': {
-			sourceXml: headerListing(
-				'fileType="SCD" fileName="x" fileUuid="ssd-uuid" version="0" revision="14"',
-			),
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${ID}="scl-1">
+					<Header id="proj" uuid="ssd-uuid" version="0" revision="14" ${ID}="hdr-1">
+						<SourceFiles ${ID}="files-1">
+							<SclFileReference fileType="SCD" fileName="x" fileUuid="ssd-uuid" version="0" revision="14" ${ID}="listed-1"/>
+						</SourceFiles>
+					</Header>
+					<Substation name="S1" ${ID}="sub-1"/>
+				</SCL>
+			`,
 			target: { anchor: 'document', fileType: 'SSD' },
 			expectedChanged: true,
 			expectedQueries: ['//default:SourceFiles/default:SclFileReference[2][@fileType="SSD"]'],
 		},
-	}
-
-	/** A function recording the files the attributes name, in a document whose Header is version 2 revision B. */
-	function functionRecording(params: { first: string; second?: string; header?: boolean }): string {
-		const { first, second, header: withHeader = true } = params
-		function reference(referenceParams: { attributes: string; index: number }): string {
-			const { attributes, index } = referenceParams
-			return /* xml */ `
-				<eIEC61850-6-100:FunctionSclRef ${ID}="fnref-${index}">
-					<eIEC61850-6-100:SclFileReference ${attributes} ${ID}="fnscl-${index}"/>
-				</eIEC61850-6-100:FunctionSclRef>
-			`
-		}
-		const header = withHeader
-			? `<Header id="h" uuid="doc-uuid" version="2" revision="B" ${ID}="hdr-1"/>`
-			: ''
-		return /* xml */ `
-			<SCL ${ns} ${ID}="scl-1">
-				${header}
-				<Substation name="S1" ${ID}="sub-1">
-					<VoltageLevel name="V1" ${ID}="vl-1">
-						<Bay name="B1" ${ID}="bay-1">
-							<Function name="Prot" uuid="fn-uuid" ${ID}="fn-1">
-								<Private type="eIEC61850-6-100" ${ID}="priv-1">
-									${reference({ attributes: first, index: 1 })}
-									${second ? reference({ attributes: second, index: 2 }) : ''}
-								</Private>
-							</Function>
-						</Bay>
-					</VoltageLevel>
-				</Substation>
-			</SCL>
-		`
-	}
-
-	/** A project of Header version 0 revision 14 already listing the file the attributes name. */
-	function headerListing(attributes: string): string {
-		return /* xml */ `
-			<SCL ${ns} ${ID}="scl-1">
-				<Header id="proj" uuid="ssd-uuid" version="0" revision="14" ${ID}="hdr-1">
-					<SourceFiles ${ID}="files-1">
-						<SclFileReference ${attributes} ${ID}="listed-1"/>
-					</SourceFiles>
-				</Header>
-				<Substation name="S1" ${ID}="sub-1"/>
-			</SCL>
-		`
 	}
 
 	async function act({
@@ -399,11 +510,21 @@ describe('writeProvenance', () => {
 
 	runSclTestCases.withExport({ testCases, act })
 
-	for (const { heldName, expected } of [
-		{ heldName: 'kept.fsd', expected: 'kept.fsd' },
-		{ heldName: undefined, expected: undefined },
+	for (const { title, heldName, expected } of [
+		{
+			title:
+				'a source document without a name: the reference keeps the file name it holds, its version follows',
+			heldName: 'kept.fsd',
+			expected: 'kept.fsd',
+		},
+		{
+			title:
+				'a source document without a name: the reference keeps no file name, its version follows',
+			heldName: undefined,
+			expected: undefined,
+		},
 	]) {
-		it(`a source document without a name: the reference keeps ${heldName ? 'the file name it holds' : 'no file name'}, its version follows`, async () => {
+		it(title, async () => {
 			const { project } = await createSclTestProject({
 				sourceXml: `<SCL ${ns} ${ID}="scl-1"></SCL>`,
 			})

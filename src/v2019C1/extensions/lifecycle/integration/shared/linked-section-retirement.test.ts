@@ -13,10 +13,6 @@ const ns = ALL_XMLNS_NAMESPACES
 
 type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 
-const firstInstance = '//default:Bay[@name="B1"]/default:Function[@templateUuid="function-source"]'
-const secondInstance = '//default:Bay[@name="B2"]/default:Function'
-const retiredCategory = '//v2019C1:FunctionCategory[@name="MEASUREMENT"]'
-
 describe('lifecycle - updating one instance out of a retired category keeps the other contributions', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'retired template category shared by two instances and a local function → only the selected contribution removed':
@@ -60,17 +56,17 @@ describe('lifecycle - updating one instance out of a retired category keeps the 
 				`,
 				expectedQueries: [
 					// two instances, each with its own identity
-					`${firstInstance}[@name="Prot"][@uuid != ${secondInstance}/@uuid]`,
+					`//default:Bay[@name="B1"]/default:Function[@templateUuid="function-source"][@name="Prot"][@uuid != //default:Bay[@name="B2"]/default:Function/@uuid]`,
 					'//default:Bay[@name="B2"][count(default:Function)=1]',
 					// the retired category keeps the second instance and the local function, nothing else
-					`${retiredCategory}[count(v2019C1:FunctionCatRef)=2]`,
-					`${retiredCategory}/v2019C1:FunctionCatRef[@functionUuid="local-function"]`,
-					`${retiredCategory}/v2019C1:FunctionCatRef[@functionUuid = ${secondInstance}/@uuid]`,
+					`//v2019C1:FunctionCategory[@name="MEASUREMENT"][count(v2019C1:FunctionCatRef)=2]`,
+					`//v2019C1:FunctionCategory[@name="MEASUREMENT"]/v2019C1:FunctionCatRef[@functionUuid="local-function"]`,
+					`//v2019C1:FunctionCategory[@name="MEASUREMENT"]/v2019C1:FunctionCatRef[@functionUuid = //default:Bay[@name="B2"]/default:Function/@uuid]`,
 					// the project category keeps its own classification
 					'//v2019C1:FunctionCategory[@uuid="category-project"]/v2019C1:FunctionCatRef[@functionUuid="local-function"]',
 				],
 				unexpectedQueries: [
-					`${retiredCategory}/v2019C1:FunctionCatRef[@functionUuid = ${firstInstance}/@uuid]`,
+					`//v2019C1:FunctionCategory[@name="MEASUREMENT"]/v2019C1:FunctionCatRef[@functionUuid = //default:Bay[@name="B1"]/default:Function[@templateUuid="function-source"]/@uuid]`,
 				],
 			},
 	}

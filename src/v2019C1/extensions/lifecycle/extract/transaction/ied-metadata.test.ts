@@ -1,3 +1,10 @@
+/// <reference types="vite/client" />
+
+import SelectedIedImplementedFromAnIidXml from './fixtures/selected-ied-implemented-from-an-iid.xml?raw'
+import SelectedIedSpecifiedByTheSourceScdBesideAnUnrelatedIedXml from './fixtures/selected-ied-specified-by-the-source-scd-beside-an-unrelated-ied.xml?raw'
+import SelectedIedUnderAHeaderWithoutFileTypeXml from './fixtures/selected-ied-under-a-header-without-file-type.xml?raw'
+import SelectedIedWithoutProvenanceXml from './fixtures/selected-ied-without-provenance.xml?raw'
+
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
@@ -24,32 +31,6 @@ type TestCase = SclTest.BaseXmlTestCase & {
 type ImportedSourceCase = TestCase & { sourceFilename: 'project.ssd' | 'project.scd' }
 
 const emptyTarget = /* xml */ `<SCL ${ns} ${id}="empty-target"/>`
-const sourceXml = /* xml */ `
-	<SCL ${ns} ${id}="source-root">
-		<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B" ${id}="source-header"/>
-		<IED name="Selected" manufacturer="SOURCE_ISSUER" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
-			<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001">
-				<Server>
-					<Authentication/>
-					<LDevice inst="LD1">
-						<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
-					</LDevice>
-				</Server>
-			</AccessPoint>
-			<!-- selected provenance -->
-		</IED>
-		<!-- unrelated IED -->
-		<DataTypeTemplates>
-			<LNodeType id="LLN0_Type" lnClass="LLN0">
-				<DO name="Status" type="Status_Type"/>
-			</LNodeType>
-			<DOType id="Status_Type" cdc="SPS">
-				<DA name="stVal" bType="BOOLEAN" fc="ST"/>
-			</DOType>
-		</DataTypeTemplates>
-	</SCL>
-`
-
 const successQueries = [
 	'/default:SCL[count(default:Header)=1]/default:Header[@fileType="ISD"][string-length(@id)>0][@version="0"][@revision="1"][@toolID="TEST"][@uuid!="10000000-0000-4000-8000-000000000001"]/default:History[count(default:Hitem)=1]/default:Hitem[@who="test"][@version="0"][@revision="1"][string-length(@when)>0]',
 	'/default:SCL[count(default:IED)=1]/default:IED[@name="Selected"][@uuid="20000000-0000-4000-8000-000000000001"][@manufacturer="TEST_ISSUER"]',
@@ -60,30 +41,7 @@ const absentQueries = ['//default:MinRequestedSCDFiles', '//default:IED[@name="U
 describe('extract IED metadata and guards', () => {
 	const testCases: Record<string, TestCase> = {
 		'Known SCD specification -> new ISD header, issuer and both provenance anchors': {
-			sourceXml: sourceXml
-				.replace(
-					'<!-- selected provenance -->',
-					/* xml */ `
-						<IEDSourceFiles>
-							<SclFileReference fileType="SCD" fileName="source.xml" fileUuid="10000000-0000-4000-8000-000000000001" version="2" revision="B"/>
-							<SclFileReference fileType="ISD" fileName="older" fileUuid="10000000-0000-4000-8000-000000000002" version="1" revision="A"/>
-						</IEDSourceFiles>
-						<MinRequestedSCDFiles>
-							<MinRequestedSCDFile fileType="SCD" fileName="source" fileUuid="10000000-0000-4000-8000-000000000001" version="2" revision="B"/>
-						</MinRequestedSCDFiles>
-					`,
-				)
-				.replace(
-					'<!-- unrelated IED -->',
-					/* xml */ `
-						<IED name="Unrelated" uuid="20000000-0000-4000-8000-000000000002">
-							<AccessPoint name="AP1"/>
-							<IEDSourceFiles>
-								<SclFileReference fileType="ICD" fileName="device" fileUuid="10000000-0000-4000-8000-000000000003" version="1" revision="0"/>
-							</IEDSourceFiles>
-						</IED>
-					`,
-				),
+			sourceXml: SelectedIedSpecifiedByTheSourceScdBesideAnUnrelatedIedXml,
 			targetXml: emptyTarget,
 			expectedSourceType: 'SCD',
 			expectedFileName: 'source.xml',
@@ -95,20 +53,13 @@ describe('extract IED metadata and guards', () => {
 			unexpectedQueries: absentQueries,
 		},
 		'Selected implemented IED -> structured refusal without changes': {
-			sourceXml: sourceXml.replace(
-				'<!-- selected provenance -->',
-				/* xml */ `
-					<IEDSourceFiles>
-						<SclFileReference fileType="IID" fileName="device" fileUuid="10000000-0000-4000-8000-000000000003" version="1" revision="0"/>
-					</IEDSourceFiles>
-				`,
-			),
+			sourceXml: SelectedIedImplementedFromAnIidXml,
 			targetXml: emptyTarget,
 			expectedRefusal: 'IED_NOT_SPECIFICATION',
 			expectedQueries: ['/default:SCL[count(*)=0]'],
 		},
 		'Target already contains an IED -> structured refusal without changes': {
-			sourceXml,
+			sourceXml: SelectedIedWithoutProvenanceXml,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="target-root">
 					<IED name="Existing" uuid="20000000-0000-4000-8000-000000000003">
@@ -126,7 +77,7 @@ describe('extract IED metadata and guards', () => {
 
 	const importedSourceCases: Record<string, ImportedSourceCase> = {
 		'Missing Header fileType in .ssd source -> SSD provenance at both anchors': {
-			sourceXml: sourceXml.replace(' fileType="SCD"', ''),
+			sourceXml: SelectedIedUnderAHeaderWithoutFileTypeXml,
 			targetXml: emptyTarget,
 			sourceFilename: 'project.ssd',
 			expectedSourceType: 'SSD',
@@ -138,7 +89,7 @@ describe('extract IED metadata and guards', () => {
 			unexpectedQueries: absentQueries,
 		},
 		'Missing Header fileType in .scd source -> SCD provenance at both anchors': {
-			sourceXml: sourceXml.replace(' fileType="SCD"', ''),
+			sourceXml: SelectedIedUnderAHeaderWithoutFileTypeXml,
 			targetXml: emptyTarget,
 			sourceFilename: 'project.scd',
 			expectedSourceType: 'SCD',
@@ -153,7 +104,7 @@ describe('extract IED metadata and guards', () => {
 
 	const revisionStartCases: Record<string, TestCase> = {
 		'Requested revision start -> OPTION_NOT_AVAILABLE without changes': {
-			sourceXml,
+			sourceXml: SelectedIedWithoutProvenanceXml,
 			targetXml: emptyTarget,
 			expectedRefusal: 'OPTION_NOT_AVAILABLE',
 			expectedQueries: ['/default:SCL[count(*)=0]'],
@@ -228,20 +179,28 @@ describe('extract IED metadata and guards', () => {
 				expect(sourceAfterRollback).toBe(sourceBefore)
 				expect(sourceMetadataAfterRollback).toEqual(sourceMetadataBefore)
 			}
-			const extracted = target.transaction(async function extract(tx) {
-				return tx.lifecycle.extract.ied(params)
-			})
 			if (testCase.expectedRefusal) {
-				await expect(extracted).rejects.toBeInstanceOf(Error)
-				const rejection = await extracted.catch((error: unknown) => error)
-				const reported = toDialecteError(rejection)
+				const outcome = await target.transaction(async function exportIsd(tx) {
+					const stagedBefore = [...tx.getStagedOperations()]
+					const refused = await tx.lifecycle.extract.ied(params).then(
+						() => undefined,
+						(error: unknown) => error,
+					)
+					return { refused, stagedBefore, stagedAfter: [...tx.getStagedOperations()] }
+				})
+				expect(outcome.refused).toBeInstanceOf(Error)
+				const reported = toDialecteError(outcome.refused)
 				expect(reported?.key).toBe(testCase.expectedRefusal)
+				expect(outcome.stagedAfter).toEqual(outcome.stagedBefore)
 				const targetAfter = await target.query.getSnapshot({ as: 'xml' })
 				const targetMetadataAfter = await target.query.getDocumentInfo()
 				expect(targetAfter).toBe(targetBefore)
 				expect(targetMetadataAfter).toEqual(targetMetadataBefore)
 				return reported
 			}
+			const extracted = target.transaction(async function extract(tx) {
+				return tx.lifecycle.extract.ied(params)
+			})
 			await expect(extracted).resolves.toEqual({ warnings: [] })
 			const headers = await target.query.getRecordsByTagName('Header')
 			expect(headers).toHaveLength(1)

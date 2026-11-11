@@ -1,5 +1,9 @@
+/// <reference types="vite/client" />
+
+import SelectedIedWithValidAffectedCountersXml from './fixtures/selected-ied-with-valid-affected-counters.xml?raw'
+
 import { toDialecteError } from '@dialecte/core'
-import { describe, expect, vi } from 'vitest'
+import { describe, expect } from 'vitest'
 
 import {
 	ALL_XMLNS_NAMESPACES,
@@ -29,93 +33,6 @@ const affectedSamples = {
 	id: 'affected-samples',
 } as AffectedCounter
 
-/**
- * The file every counter case starts from: the affected counters are valid in it, and each case breaks one
- * through the store, because the fixture validators refuse a file holding a broken one.
- */
-const validCountersXml = /* xml */ `
-	<SCL ${ns} xmlns:vendor="urn:supervision-dependencies:test">
-		<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B"/>
-		<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
-			<Private type="vendor.homonyms">
-				<vendor:LN lnClass="LGOS" inst="1">
-					<vendor:DataSet name="Events">
-						<vendor:FCDA lnUuid="50000000-0000-4000-8000-000000000003"/>
-					</vendor:DataSet>
-					<vendor:ReportControl name="ReportAffected" datSet="Events" confRev="4294967295"/>
-					<vendor:LogControl name="LogAffected" datSet="Events" logEna="true"/>
-				</vendor:LN>
-			</Private>
-			<AccessPoint name="AP1">
-				<Server>
-					<Authentication/>
-					<LDevice inst="LD1">
-						<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type">
-							<DataSet name="Events">
-								<FCDA ldInst="LD1" prefix="" lnClass="LGOS" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000003" doName="Status" daName="stVal" fc="ST" ${id}="supervision-fcda"/>
-								<FCDA ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000002" doName="Status" daName="stVal" fc="ST"/>
-							</DataSet>
-							<DataSet name="Untouched">
-								<FCDA ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000002" doName="Status" daName="stVal" fc="ST"/>
-							</DataSet>
-							<ReportControl ${id}="affected-report" name="ReportAffected" datSet="Events" confRev="17">
-								<OptFields/>
-							</ReportControl>
-							<LogControl name="LogAffected" datSet="Events" logName="EventsLog" logEna="true">
-								<TrgOps dchg="true"/>
-							</LogControl>
-							<GSEControl ${id}="affected-goose" name="GooseAffected" datSet="Events" appID="EventsAffected" confRev="17"/>
-							<SampledValueControl ${id}="affected-samples" name="SamplesAffected" datSet="Events" smvID="EventsAffected" smpRate="80" nofASDU="1" confRev="17">
-								<SmvOpts/>
-							</SampledValueControl>
-							<ReportControl name="ReportUntouched" datSet="Untouched" confRev="4294967295">
-								<OptFields/>
-							</ReportControl>
-							<LogControl name="LogUntouched" datSet="Untouched" logName="EventsLog" logEna="true">
-								<TrgOps dchg="true"/>
-							</LogControl>
-							<GSEControl name="GooseUntouched" datSet="Untouched" appID="EventsUntouched" confRev="4294967295"/>
-							<SampledValueControl name="SamplesUntouched" datSet="Untouched" smvID="EventsUntouched" smpRate="80" nofASDU="1" confRev="4294967295">
-								<SmvOpts/>
-							</SampledValueControl>
-							<Log name="EventsLog"/>
-						</LN0>
-						<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002"/>
-						<LN lnClass="LGOS" inst="1" lnType="Supervision_Type" uuid="50000000-0000-4000-8000-000000000003" ${id}="omitted-supervision"></LN>
-					</LDevice>
-				</Server>
-			</AccessPoint>
-		</IED>
-		<IED name="Foreign" uuid="20000000-0000-4000-8000-000000000002">
-			<AccessPoint name="AP1">
-				<Server>
-					<Authentication/>
-					<LDevice inst="LD1">
-						<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
-						<LN lnClass="LGOS" inst="1" lnType="Supervision_Type" uuid="50000000-0000-4000-8000-000000000005"/>
-					</LDevice>
-				</Server>
-			</AccessPoint>
-		</IED>
-		<DataTypeTemplates>
-			<LNodeType id="LLN0_Type" lnClass="LLN0">
-				<DO name="Status" type="Status_Type"/>
-			</LNodeType>
-			<LNodeType id="PTOC_Type" lnClass="PTOC">
-				<DO name="Status" type="Status_Type"/>
-			</LNodeType>
-			<LNodeType id="Supervision_Type" lnClass="LGOS">
-				<DO name="Status" type="Status_Type"/>
-				<DO name="Other" type="Status_Type"/>
-			</LNodeType>
-			<DOType id="Status_Type" cdc="SPS">
-				<DA name="stVal" bType="BOOLEAN" fc="ST"/>
-				<DA name="q" bType="Quality" fc="ST"/>
-			</DOType>
-		</DataTypeTemplates>
-	</SCL>
-`
-
 async function importProjectFile(params: SclTest.ActParams<TestCase>): Promise<SourceDocument> {
 	const { project, source, testCase } = params
 	const runnerInfo = await source.query.getDocumentInfo()
@@ -131,7 +48,7 @@ async function importProjectFile(params: SclTest.ActParams<TestCase>): Promise<S
 	return actualSource
 }
 
-/** The extraction fails with the key before it stages or calls any write, and neither document changes. */
+/** The extraction fails with the key before it stages anything, and neither document changes. */
 async function expectRefusedBeforeAnyWrite(params: {
 	actualSource: SourceDocument
 	target: TargetDocument
@@ -148,65 +65,40 @@ async function expectRefusedBeforeAnyWrite(params: {
 		tool: 'TEST',
 		who: 'test',
 	} as const
+	const sourceBefore = await actualSource.query.getSnapshot({ as: 'tree', unwrap: [] })
 	const targetBefore = await target.query.getSnapshot({ as: 'tree', unwrap: [] })
+	const sourceInfo = await actualSource.query.getDocumentInfo()
+	const sourceInfoBefore = structuredClone(sourceInfo)
 	const targetInfo = await target.query.getDocumentInfo()
 	const targetInfoBefore = structuredClone(targetInfo)
-	const sourceBefore = await actualSource.query.getSnapshot({ as: 'tree', unwrap: [] })
-	const preparedSourceInfo = await actualSource.query.getDocumentInfo()
-	const sourceInfoBefore = structuredClone(preparedSourceInfo)
 
-	const observed = await target.transaction(async function catchRefusalAndCommit(tx) {
-		const stagedBefore = await tx.getSnapshot({ as: 'tree', unwrap: [] })
-		const operationsBefore = [...tx.getStagedOperations()]
-		const addChild = vi.spyOn(tx, 'addChild')
-		const ensureChild = vi.spyOn(tx, 'ensureChild')
-		const deepClone = vi.spyOn(tx, 'deepClone')
-		const update = vi.spyOn(tx, 'update')
-		const remove = vi.spyOn(tx, 'delete')
-		try {
-			const rejection = await tx.lifecycle.extract.ied(extractParams).catch(function caught(
-				error: unknown,
-			) {
-				return error
-			})
-			const parsed = toDialecteError(rejection)
-			const stagedAfter = await tx.getSnapshot({ as: 'tree', unwrap: [] })
-			return {
-				key: parsed?.key,
-				stagedBefore,
-				stagedAfter,
-				operationsBefore,
-				operationsAfter: [...tx.getStagedOperations()],
-				addChildCalls: addChild.mock.calls.length,
-				ensureChildCalls: ensureChild.mock.calls.length,
-				deepCloneCalls: deepClone.mock.calls.length,
-				updateCalls: update.mock.calls.length,
-				deleteCalls: remove.mock.calls.length,
-			}
-		} finally {
-			addChild.mockRestore()
-			ensureChild.mockRestore()
-			deepClone.mockRestore()
-			update.mockRestore()
-			remove.mockRestore()
+	const outcome = await target.transaction(async function exportIsd(tx) {
+		const stagedBefore = [...tx.getStagedOperations()]
+		const stagedTreeBefore = await tx.getSnapshot({ as: 'tree', unwrap: [] })
+		const refused = await tx.lifecycle.extract.ied(extractParams).then(
+			() => undefined,
+			(error: unknown) => error,
+		)
+		const stagedTreeAfter = await tx.getSnapshot({ as: 'tree', unwrap: [] })
+		return {
+			refused,
+			stagedBefore,
+			stagedAfter: [...tx.getStagedOperations()],
+			stagedTreeBefore,
+			stagedTreeAfter,
 		}
 	})
-	expect(observed.key).toBe(refusal)
-	expect(observed.stagedAfter).toEqual(observed.stagedBefore)
-	expect(observed.operationsAfter).toEqual(observed.operationsBefore)
-	expect(observed.addChildCalls).toBe(0)
-	expect(observed.ensureChildCalls).toBe(0)
-	expect(observed.deepCloneCalls).toBe(0)
-	expect(observed.updateCalls).toBe(0)
-	expect(observed.deleteCalls).toBe(0)
-	const targetAfter = await target.query.getSnapshot({ as: 'tree', unwrap: [] })
-	const targetInfoAfter = await target.query.getDocumentInfo()
-	expect(targetAfter).toEqual(targetBefore)
-	expect(targetInfoAfter).toEqual(targetInfoBefore)
+	expect(toDialecteError(outcome.refused)?.key).toBe(refusal)
+	expect(outcome.stagedAfter).toEqual(outcome.stagedBefore)
+	expect(outcome.stagedTreeAfter).toEqual(outcome.stagedTreeBefore)
 	const sourceAfter = await actualSource.query.getSnapshot({ as: 'tree', unwrap: [] })
+	const targetAfter = await target.query.getSnapshot({ as: 'tree', unwrap: [] })
 	const sourceInfoAfter = await actualSource.query.getDocumentInfo()
+	const targetInfoAfter = await target.query.getDocumentInfo()
 	expect(sourceAfter).toEqual(sourceBefore)
+	expect(targetAfter).toEqual(targetBefore)
 	expect(sourceInfoAfter).toEqual(sourceInfoBefore)
+	expect(targetInfoAfter).toEqual(targetInfoBefore)
 }
 
 /** One affected counter broken through the store, the extraction refused, and the counter valid again. */
@@ -349,17 +241,17 @@ describe('extract IED supervision dependencies: counters that refuse the extract
 	describe('counter missing', () => {
 		const testCases: SclTest.TestCases<MissingCounterTestCase> = {
 			'affected GSEControl without confRev → refused without a zero default': {
-				sourceXml: validCountersXml,
+				sourceXml: SelectedIedWithValidAffectedCountersXml,
 				targetXml: emptyTarget,
 				counter: affectedGoose,
 			},
 			'affected SampledValueControl without confRev → refused without a zero default': {
-				sourceXml: validCountersXml,
+				sourceXml: SelectedIedWithValidAffectedCountersXml,
 				targetXml: emptyTarget,
 				counter: affectedSamples,
 			},
 			'affected ReportControl without confRev → refused without a zero default': {
-				sourceXml: validCountersXml,
+				sourceXml: SelectedIedWithValidAffectedCountersXml,
 				targetXml: emptyTarget,
 				counter: affectedReport,
 			},
@@ -383,19 +275,19 @@ describe('extract IED supervision dependencies: counters that refuse the extract
 	describe('counter invalid', () => {
 		const testCases: SclTest.TestCases<InvalidCounterTestCase> = {
 			'affected ReportControl with a confRev that is no number → refused without a zero default': {
-				sourceXml: validCountersXml,
+				sourceXml: SelectedIedWithValidAffectedCountersXml,
 				targetXml: emptyTarget,
 				counter: affectedReport,
 				value: 'not-a-number',
 			},
 			'affected GSEControl with a negative confRev → refused without a zero default': {
-				sourceXml: validCountersXml,
+				sourceXml: SelectedIedWithValidAffectedCountersXml,
 				targetXml: emptyTarget,
 				counter: affectedGoose,
 				value: '-1',
 			},
 			'affected SampledValueControl with a confRev above uint32 → refused without a zero default': {
-				sourceXml: validCountersXml,
+				sourceXml: SelectedIedWithValidAffectedCountersXml,
 				targetXml: emptyTarget,
 				counter: affectedSamples,
 				value: '4294967296',

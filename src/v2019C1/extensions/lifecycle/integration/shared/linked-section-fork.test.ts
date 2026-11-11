@@ -13,9 +13,6 @@ const ns = ALL_XMLNS_NAMESPACES
 
 type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 
-const templateInstance =
-	'//default:Bay[@name="B1"]/default:Function[@name="Prot"][@templateUuid="function-source"]'
-
 describe('lifecycle - a repeated fork reuses the identity of the source', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'template placement followed by repeated fork → fresh lineage then source identity reused without duplicates':
@@ -59,7 +56,7 @@ describe('lifecycle - a repeated fork reuses the identity of the source', () => 
 				`,
 				expectedQueries: [
 					// the template placement has a fresh identity and its lineage
-					`${templateInstance}[@uuid != ""][@uuid != "function-source"]`,
+					`//default:Bay[@name="B1"]/default:Function[@name="Prot"][@templateUuid="function-source"][@uuid != ""][@uuid != "function-source"]`,
 					// the fork keeps the source identity, once, however often it runs
 					'/default:SCL[count(.//default:Function[@uuid="function-source"])=1]',
 					'//default:Bay[@name="B2"]/default:Function[@uuid="function-source"]',
@@ -68,7 +65,7 @@ describe('lifecycle - a repeated fork reuses the identity of the source', () => 
 					'/default:SCL[count(.//v2019C1:FunctionCatRef)=3]',
 					'//v2019C1:FunctionCatRef[@functionUuid="local-function"]',
 					'//v2019C1:FunctionCatRef[@functionUuid="function-source"]',
-					`//v2019C1:FunctionCatRef[@functionUuid = ${templateInstance}/@uuid]`,
+					`//v2019C1:FunctionCatRef[@functionUuid = //default:Bay[@name="B1"]/default:Function[@name="Prot"][@templateUuid="function-source"]/@uuid]`,
 				],
 			},
 	}

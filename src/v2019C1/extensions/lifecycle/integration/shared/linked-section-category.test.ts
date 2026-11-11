@@ -13,9 +13,6 @@ const ns = ALL_XMLNS_NAMESPACES
 
 type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 
-const firstInstance = '//default:Bay[@name="B1"]/default:Function[@templateUuid="function-source"]'
-const secondInstance = '//default:Bay[@name="B2"]/default:Function'
-
 describe('lifecycle - a linked category read from the project keeps its contributions', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'shared project category with a local classification → two contributions added once without overwriting project content':
@@ -59,7 +56,7 @@ describe('lifecycle - a linked category read from the project keeps its contribu
 				`,
 				expectedQueries: [
 					// two instances, each with its own identity
-					`${firstInstance}[@name="Prot"][@uuid != ${secondInstance}/@uuid]`,
+					`//default:Bay[@name="B1"]/default:Function[@templateUuid="function-source"][@name="Prot"][@uuid != //default:Bay[@name="B2"]/default:Function/@uuid]`,
 					'//default:Bay[@name="B2"][count(default:Function)=1]',
 					// the project category stays the only one, untouched
 					'/default:SCL[count(.//v2019C1:FunctionCategory)=1]',
@@ -67,8 +64,8 @@ describe('lifecycle - a linked category read from the project keeps its contribu
 					// its classifications: the local one and one per instance, each once
 					'/default:SCL[count(.//v2019C1:FunctionCatRef)=3]',
 					'//v2019C1:FunctionCatRef[@functionUuid="local-function"]',
-					`//v2019C1:FunctionCatRef[@functionUuid = ${firstInstance}/@uuid]`,
-					`//v2019C1:FunctionCatRef[@functionUuid = ${secondInstance}/@uuid]`,
+					`//v2019C1:FunctionCatRef[@functionUuid = //default:Bay[@name="B1"]/default:Function[@templateUuid="function-source"]/@uuid]`,
+					`//v2019C1:FunctionCatRef[@functionUuid = //default:Bay[@name="B2"]/default:Function/@uuid]`,
 				],
 			},
 	}

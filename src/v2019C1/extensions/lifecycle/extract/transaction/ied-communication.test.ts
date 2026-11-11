@@ -1,3 +1,14 @@
+/// <reference types="vite/client" />
+
+import SelectedIedConnectedByNamesOnlyXml from './fixtures/selected-ied-connected-by-names-only.xml?raw'
+import SelectedIedConnectedOnAStationBusAndAProcessBusXml from './fixtures/selected-ied-connected-on-a-station-bus-and-a-process-bus.xml?raw'
+import SelectedIedNamedByAVendorConnectionInANetworkXml from './fixtures/selected-ied-named-by-a-vendor-connection-in-a-network.xml?raw'
+import SelectedIedNamedByAVendorConnectionInAPrivateXml from './fixtures/selected-ied-named-by-a-vendor-connection-in-a-private.xml?raw'
+import SelectedIedOnAStationBusBesideAForeignProcessBusXml from './fixtures/selected-ied-on-a-station-bus-beside-a-foreign-process-bus.xml?raw'
+import SelectedIedSharingAStationBusWithAForeignIedXml from './fixtures/selected-ied-sharing-a-station-bus-with-a-foreign-ied.xml?raw'
+import SelectedIedUnconnectedBesideAForeignBusXml from './fixtures/selected-ied-unconnected-beside-a-foreign-bus.xml?raw'
+import SelectedIedWithAFullStationBusConnectionXml from './fixtures/selected-ied-with-a-full-station-bus-connection.xml?raw'
+
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
@@ -15,54 +26,6 @@ type TestCase = SclTest.BaseXmlTestCase & {
 
 const emptyTarget = /* xml */ `<SCL ${ns} ${id}="empty-target"/>`
 
-const sourceXml = /* xml */ `
-	<SCL ${ns} xmlns:vendor="urn:ied-communication:test" ${id}="source-root">
-		<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="2" ${id}="source-header"/>
-		<!-- communication -->
-		<IED name="Foreign" uuid="20000000-0000-4000-8000-000000000002" ${id}="foreign-ied">
-			<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000003" ${id}="foreign-ap">
-				<Server>
-					<Authentication/>
-					<LDevice inst="ForeignLD">
-						<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
-					</LDevice>
-				</Server>
-			</AccessPoint>
-		</IED>
-		<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" ${id}="selected-ied">
-			<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001" ${id}="selected-ap1">
-				<Server>
-					<Authentication/>
-					<LDevice inst="LD1" uuid="40000000-0000-4000-8000-000000000001">
-						<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000001">
-							<!-- controls -->
-						</LN0>
-					</LDevice>
-				</Server>
-			</AccessPoint>
-			<AccessPoint name="AP2" uuid="30000000-0000-4000-8000-000000000002" ${id}="selected-ap2">
-				<Server>
-					<Authentication/>
-					<LDevice inst="LD2">
-						<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
-					</LDevice>
-				</Server>
-			</AccessPoint>
-		</IED>
-		<DataTypeTemplates>
-			<LNodeType id="LLN0_Type" lnClass="LLN0">
-				<DO name="Status" type="Status_Type"/>
-			</LNodeType>
-			<DOType id="Status_Type" cdc="SPS">
-				<DA name="stVal" bType="BOOLEAN" fc="ST"/>
-			</DOType>
-		</DataTypeTemplates>
-	</SCL>
-`
-
-const selectedConnection = /* xml */ `<ConnectedAP iedName="Selected" apName="AP1" apUuid="30000000-0000-4000-8000-000000000001" ${id}="selected-connection"/>`
-const foreignConnection = /* xml */ `<ConnectedAP iedName="Foreign" apName="AP1" apUuid="30000000-0000-4000-8000-000000000003" ${id}="foreign-connection"/>`
-
 const selectedQueries = [
 	'/default:SCL[count(default:IED)=1]/default:IED[@name="Selected"][@uuid="20000000-0000-4000-8000-000000000001"][count(default:AccessPoint)=2]',
 	'//default:IED[@name="Selected"]/default:AccessPoint[@name="AP1"][@uuid="30000000-0000-4000-8000-000000000001"]',
@@ -77,17 +40,7 @@ const foreignQueries = [
 describe('extract IED Communication', () => {
 	const testCases: Record<string, TestCase> = {
 		'Two selected access points on two networks -> both connections retained': {
-			sourceXml: sourceXml.replace(
-				'<!-- communication -->',
-				/* xml */ `
-					<Communication>
-						<SubNetwork name="StationBus">${selectedConnection}</SubNetwork>
-						<SubNetwork name="ProcessBus">
-							<ConnectedAP iedName="Selected" apName="AP2" apUuid="30000000-0000-4000-8000-000000000002"/>
-						</SubNetwork>
-					</Communication>
-				`,
-			),
+			sourceXml: SelectedIedConnectedOnAStationBusAndAProcessBusXml,
 			targetXml: emptyTarget,
 			rollbackFirst: true,
 			expectedQueries: [
@@ -100,16 +53,7 @@ describe('extract IED Communication', () => {
 			unexpectedQueries: foreignQueries,
 		},
 		'Shared network with foreign connection -> only selected connection retained': {
-			sourceXml: sourceXml.replace(
-				'<!-- communication -->',
-				/* xml */ `
-					<Communication>
-						<SubNetwork name="StationBus">
-					${foreignConnection}${selectedConnection}
-				</SubNetwork>
-					</Communication>
-				`,
-			),
+			sourceXml: SelectedIedSharingAStationBusWithAForeignIedXml,
 			targetXml: emptyTarget,
 			expectedQueries: [
 				...selectedQueries,
@@ -118,15 +62,7 @@ describe('extract IED Communication', () => {
 			unexpectedQueries: foreignQueries,
 		},
 		'Unrelated foreign network -> whole network excluded': {
-			sourceXml: sourceXml.replace(
-				'<!-- communication -->',
-				/* xml */ `
-					<Communication>
-						<SubNetwork name="ProcessBus">${foreignConnection}</SubNetwork>
-						<SubNetwork name="StationBus">${selectedConnection}</SubNetwork>
-					</Communication>
-				`,
-			),
+			sourceXml: SelectedIedOnAStationBusBesideAForeignProcessBusXml,
 			targetXml: emptyTarget,
 			expectedQueries: [
 				...selectedQueries,
@@ -135,33 +71,14 @@ describe('extract IED Communication', () => {
 			unexpectedQueries: [...foreignQueries, '//default:SubNetwork[@name="ProcessBus"]'],
 		},
 		'No selected connection -> Communication absent': {
-			sourceXml: sourceXml.replace(
-				'<!-- communication -->',
-				/* xml */ `
-					<Communication>
-						<SubNetwork name="ForeignBus">${foreignConnection}</SubNetwork>
-					</Communication>
-				`,
-			),
+			sourceXml: SelectedIedUnconnectedBesideAForeignBusXml,
 			targetXml: emptyTarget,
 			expectedQueries: [...selectedQueries, '/default:SCL[count(default:Communication)=0]'],
 			unexpectedQueries: [...foreignQueries, '/default:SCL/default:Communication'],
 		},
 		'Vendor ConnectedAP inside a Private naming the selected IED, no native connection -> network and Communication not exported':
 			{
-				sourceXml: sourceXml.replace(
-					'<!-- communication -->',
-					/* xml */ `
-						<Communication>
-							<SubNetwork name="VendorBus">
-								<Private type="vendor.connection">
-									<!-- no native ConnectedAP beside the vendor look-alike -->
-									<vendor:ConnectedAP iedName="Selected" apName="AP1" ${id}="vendor-connection"/>
-								</Private>
-							</SubNetwork>
-						</Communication>
-					`,
-				),
+				sourceXml: SelectedIedNamedByAVendorConnectionInAPrivateXml,
 				targetXml: emptyTarget,
 				expectedQueries: [...selectedQueries, '/default:SCL[count(default:Communication)=0]'],
 				unexpectedQueries: [
@@ -172,17 +89,7 @@ describe('extract IED Communication', () => {
 			},
 		'Vendor ConnectedAP directly in a network naming the selected IED, no native connection -> network and Communication not exported':
 			{
-				sourceXml: sourceXml.replace(
-					'<!-- communication -->',
-					/* xml */ `
-						<Communication>
-							<SubNetwork name="VendorBus">
-								<!-- no native ConnectedAP beside the vendor look-alike -->
-								<vendor:ConnectedAP iedName="Selected" apName="AP1" ${id}="vendor-connection"/>
-							</SubNetwork>
-						</Communication>
-					`,
-				),
+				sourceXml: SelectedIedNamedByAVendorConnectionInANetworkXml,
 				targetXml: emptyTarget,
 				expectedQueries: [...selectedQueries, '/default:SCL[count(default:Communication)=0]'],
 				unexpectedQueries: [
@@ -192,54 +99,7 @@ describe('extract IED Communication', () => {
 				],
 			},
 		'Selected communication payload -> metadata and children retained': {
-			sourceXml: sourceXml
-				.replace(
-					'<!-- communication -->',
-					/* xml */ `
-						<Communication>
-							<SubNetwork name="StationBus" type="8-MMS" desc="Selected station network">
-								<Text>station network text</Text>
-								<Private type="vendor.network">
-									<vendor:Network mode="retained">network payload</vendor:Network>
-								</Private>
-								<BitRate unit="b/s" multiplier="M">100</BitRate>
-								<ConnectedAP iedName="Selected" apName="AP1" apUuid="30000000-0000-4000-8000-000000000001" desc="Selected connection" ${id}="selected-connection">
-									<Text>selected connection text</Text>
-									<Private type="vendor.connection">
-										<vendor:Connection mode="retained">connection payload</vendor:Connection>
-									</Private>
-									<Address>
-										<P type="IP">10.0.0.1</P>
-									</Address>
-									<GSE ldInst="LD1" cbName="GooseEvents" cbUuid="60000000-0000-4000-8000-000000000001" desc="Selected GOOSE">
-										<Address>
-											<P type="MAC-Address">01-0C-CD-01-00-01</P>
-										</Address>
-										<MinTime unit="s" multiplier="m">4</MinTime>
-										<MaxTime unit="s" multiplier="m">1000</MaxTime>
-									</GSE>
-									<SMV ldInst="LD1" cbName="SampledEvents" cbUuid="60000000-0000-4000-8000-000000000002" desc="Selected samples">
-										<Address>
-											<P type="MAC-Address">01-0C-CD-04-00-01</P>
-										</Address>
-									</SMV>
-									<PhysConn type="Connection">
-										<P type="Port">1</P>
-									</PhysConn>
-								</ConnectedAP>
-							</SubNetwork>
-						</Communication>
-					`,
-				)
-				.replace(
-					'<!-- controls -->',
-					/* xml */ `
-						<GSEControl name="GooseEvents" appID="Events" confRev="1" uuid="60000000-0000-4000-8000-000000000001"/>
-						<SampledValueControl name="SampledEvents" smvID="Samples" smpRate="80" nofASDU="1" confRev="1" uuid="60000000-0000-4000-8000-000000000002">
-							<SmvOpts refreshTime="true" sampleSynchronized="true"/>
-						</SampledValueControl>
-					`,
-				),
+			sourceXml: SelectedIedWithAFullStationBusConnectionXml,
 			targetXml: emptyTarget,
 			expectedQueries: [
 				...selectedQueries,
@@ -265,17 +125,7 @@ describe('extract IED Communication', () => {
 
 	const namesOnlyCases: Record<string, TestCase> = {
 		'Names-only connection -> selected without manufacturing UUID twin': {
-			sourceXml: sourceXml.replace(
-				'<!-- communication -->',
-				/* xml */ `
-					<Communication>
-						<SubNetwork name="StationBus">
-					${foreignConnection}
-					<ConnectedAP iedName="Selected" apName="AP1" ${id}="selected-connection"/>
-				</SubNetwork>
-					</Communication>
-				`,
-			),
+			sourceXml: SelectedIedConnectedByNamesOnlyXml,
 			targetXml: emptyTarget,
 			expectedQueries: [
 				...selectedQueries,
