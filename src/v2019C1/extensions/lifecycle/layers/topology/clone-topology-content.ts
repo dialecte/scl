@@ -9,7 +9,10 @@ import {
 } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 import { scopeCarriedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/carried-satellites'
 import { readHeldApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications'
-import { cloneApplicationContent } from '@/v2019C1/extensions/lifecycle/layers/application'
+import {
+	cloneApplicationContent,
+	resolveRoleMappings,
+} from '@/v2019C1/extensions/lifecycle/layers/application'
 import {
 	cloneFunction,
 	cloneFunctionCategories,
@@ -73,7 +76,9 @@ export async function cloneTopologyContent(
 ): Promise<CloneTopologyContentResult> {
 	const { sourceQuery, scopeRef, targetParent, omit, decisionMappings, placementLevels } = params
 	const { leftOut } = params
-	const isLeftOut = (ref: Scl.Ref<Scl.ElementsOf>) => Boolean(leftOut?.has(ref.id ?? ''))
+	function isLeftOut(ref: Scl.Ref<Scl.ElementsOf>): boolean {
+		return Boolean(leftOut?.has(ref.id ?? ''))
+	}
 	const matchKey = params.matchKey ?? 'templateUuid'
 
 	// what the project holds applying to what the placement lands on, read before anything is written, as the report
@@ -84,6 +89,17 @@ export async function cloneTopologyContent(
 		matchKey,
 	})
 	const held = await readHeldApplications({ landings, projectQuery: tx, matchKey })
+	// where the roles of the applications land, read before anything is written, as the report reads it: a role placed
+	// for one application is not the one another application's role maps onto
+	const applicationRefs = await applicationsUnderScope(sourceQuery, scopeRef)
+	const roleMappings = await resolveRoleMappings(tx, {
+		sourceQuery,
+		applicationRefs: applicationRefs.filter(function isPlaced(applicationRef) {
+			return !isLeftOut(applicationRef)
+		}),
+		decisionMappings,
+		matchKey,
+	})
 
 	const frame = await ensureTopologyFrame(tx, {
 		sourceQuery,
@@ -96,7 +112,6 @@ export async function cloneTopologyContent(
 	const { frameIndex } = frame
 	// what the unit places beyond its subtree, and what the references of the applications' roles, and of what they
 	// refer to, may name
-	const applicationRefs = await applicationsUnderScope(sourceQuery, scopeRef)
 	const placedUnit = await resolveUnitPlacement(sourceQuery, { scopeRef, applicationRefs, leftOut })
 	// the levels above the unit land where the frame put them: a reference to one names it
 	const landedLevels = await resolveLandedLevels(sourceQuery, {
@@ -186,6 +201,7 @@ export async function cloneTopologyContent(
 			index,
 			carried,
 			held,
+			roles: roleMappings.get(applicationRef.id),
 		})
 		record(applicationContent.cloneMappings)
 		redirectMappings.push(...applicationContent.redirectMappings)
@@ -208,15 +224,14 @@ export async function cloneTopologyContent(
 		if (placed.has(functionRef.id) || heldFunctionIds.has(functionRef.id)) continue
 		const structure = await resolveFrameStructure(tx, sourceQuery, functionRef, frameIndex)
 		const targetParentRef = await resolveStructureRef(sourceQuery, functionRef, structure)
-		record(
-			await cloneFunction(tx, {
-				sourceQuery,
-				functionRef,
-				targetParentRef,
-				omit,
-				leaveOut: carried.leaveOut,
-			}),
-		)
+		const functionMappings = await cloneFunction(tx, {
+			sourceQuery,
+			functionRef,
+			targetParentRef,
+			omit,
+			leaveOut: carried.leaveOut,
+		})
+		record(functionMappings)
 		const categories = await cloneFunctionCategories(tx, {
 			sourceQuery,
 			functionRef,
