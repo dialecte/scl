@@ -15,8 +15,8 @@ import type { ExtractWarning } from '@/v2019C1/extensions/lifecycle/extract/tran
 /**
  * Each input of the IED in later-binding form: its description, internal address and expected data and service kept,
  * an expected value it lacks taken from the source it was bound to, its service type equal to its expected service, and
- * nothing of that source (its IED, address, data, control block, their uuids). An input still lacking its description
- * or what a later binding requires is written as it is, and said.
+ * nothing of that source (its IED, address, data, control block, their uuids). An input still lacking its description,
+ * what a later binding requires or a service (no expected service and no service type) is written as it is, and said.
  */
 export function planLaterBindingInputs(params: { extRefs: readonly Scl.RawRecord<'ExtRef'>[] }): {
 	edits: RecordEdit[]
@@ -33,7 +33,7 @@ export function planLaterBindingInputs(params: { extRefs: readonly Scl.RawRecord
 		const written = { ...current, ...attributes }
 		if (Object.keys(attributes).length > 0)
 			edits.push({ ref: { tagName: 'ExtRef', id: extRef.id }, attributes })
-		const missing = [INPUT_DESCRIPTION, ...EXT_REF_LATER_BINDING.required].filter(
+		const missing = [INPUT_DESCRIPTION, ...EXT_REF_LATER_BINDING.required, SERVICE_TYPE].filter(
 			function isMissing(name) {
 				return !written[name]
 			},

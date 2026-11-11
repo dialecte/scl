@@ -50,7 +50,7 @@ export type ExtractWarning =
 			source: Scl.Ref<'LN' | 'SupSubscription'>
 	  }
 	| {
-			/** An input written in later-binding form without what a later binding needs (`desc`, `intAddr`, `pDO`): written as it is. */
+			/** An input written in later-binding form without what a later binding needs (`desc`, `intAddr`, `pDO`, and a `serviceType` from itself or its `pServT`): written as it is. */
 			code: 'input-incomplete'
 			source: Scl.Ref<'ExtRef'>
 			missing: string[]

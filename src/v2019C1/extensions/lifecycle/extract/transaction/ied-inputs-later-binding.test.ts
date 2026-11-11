@@ -2,6 +2,7 @@
 
 import InputOfAExpectingGooseWithoutServiceTypeXml from './fixtures/input-of-a-expecting-goose-without-service-type.xml?raw'
 import InputOfAWithoutExpectedDataFedByRXml from './fixtures/input-of-a-without-expected-data-fed-by-r.xml?raw'
+import InputOfAWithoutExpectedServiceXml from './fixtures/input-of-a-without-expected-service.xml?raw'
 import InputsOfAFedByAAndByRXml from './fixtures/inputs-of-a-fed-by-a-and-by-r.xml?raw'
 import InputsOfAWithoutDescriptionOrExpectedDataXml from './fixtures/inputs-of-a-without-description-or-expected-data.xml?raw'
 
@@ -149,10 +150,21 @@ describe('an input lacking what a later binding needs is listed', () => {
 					{
 						code: 'input-incomplete',
 						source: { tagName: 'ExtRef', id: 'input-address-only' },
-						missing: ['desc', 'pDO'],
+						missing: ['desc', 'pDO', 'serviceType'],
 					},
 				],
 			},
+		'input with no expected service nor service type → listed, its service type missing': {
+			sourceXml: InputOfAWithoutExpectedServiceXml,
+			targetXml: emptyIsd,
+			expectedWarnings: [
+				{
+					code: 'input-incomplete',
+					source: { tagName: 'ExtRef', id: 'input-without-service' },
+					missing: ['serviceType'],
+				},
+			],
+		},
 		'input fed by gcbR of R with no expected data → nothing listed, the expected data is derived': {
 			sourceXml: InputOfAWithoutExpectedDataFedByRXml,
 			targetXml: emptyIsd,
