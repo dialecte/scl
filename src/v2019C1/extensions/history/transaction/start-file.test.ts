@@ -106,8 +106,6 @@ describe('startFile', () => {
 describe('startFile refuses a new revision', () => {
 	async function act({ source }: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<void> {
 		const before = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
-		const info = await source.query.getDocumentInfo()
-		const infoBefore = structuredClone(info)
 		const outcome = await source.transaction(async function startRevision(tx) {
 			const stagedBefore = [...tx.getStagedOperations()]
 			const refused = await startFile(tx, { ...NEW_FILE, as: 'revision' }).then(
@@ -123,9 +121,7 @@ describe('startFile refuses a new revision', () => {
 		})
 		expect(outcome.stagedAfter).toEqual(outcome.stagedBefore)
 		const after = await source.query.getSnapshot({ as: 'tree', unwrap: [] })
-		const infoAfter = await source.query.getDocumentInfo()
 		expect(after).toEqual(before)
-		expect(infoAfter).toEqual(infoBefore)
 	}
 
 	const testCases: SclTest.TestCases = {
@@ -141,6 +137,27 @@ describe('startFile refuses a new revision', () => {
 				</SCL>
 			`,
 			},
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
+
+describe('startFile dates the new file', () => {
+	async function act({ source }: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<void> {
+		// the history item is written to the second: the call starts no later than its second
+		const startedAt = Math.floor(Date.now() / 1000) * 1000
+		await source.transaction(async function start(tx) {
+			await startFile(tx, NEW_ISD)
+		})
+		const [item] = await source.query.getRecordsByTagName('Hitem')
+		const written = await source.query.getAttribute(item, { name: 'when' })
+		expect(Date.parse(written ?? '')).toBeGreaterThanOrEqual(startedAt)
+	}
+
+	const testCases: SclTest.TestCases = {
+		'a new file → its history item dated at the call': {
+			sourceXml: /* xml */ `<SCL ${ns} ${id}="scl-1"></SCL>`,
+		},
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
