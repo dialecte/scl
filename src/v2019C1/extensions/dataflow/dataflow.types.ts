@@ -5,7 +5,8 @@ import type { ResolutionType } from '@/v2019C1/extensions/reference'
  * The shape an `ExtRef` (an input of a logical node) is written in, when it is one of the four
  * documented ones:
  * - `later-binding`: it carries the internal address it will land on and the expected data object,
- *   nothing of a signal, a service or a control block;
+ *   nothing of a signal or a control block, and no service but the one it expects (`serviceType`
+ *   equal to `pServT`, the form an ISD writes its inputs in);
  * - `expected`: it names the signal, and neither an internal address nor a control block;
  * - `subscribed`: it names the signal, the service and the control block publishing it (a service
  *   published without a control block needs none), and lands nowhere yet;
@@ -48,13 +49,18 @@ export type SignalAttributes = {
 /**
  * The later-binding shape of an `ExtRef` / `ExtCtrl`: the attributes it carries (`required`: the
  * internal address, and for an `ExtRef` the expected data object) and the ones it must not (`forbidden`, those of a
- * signal and, for an `ExtRef`, of a service and a control block). An attribute that is neither is
- * not read.
+ * signal and, for an `ExtRef`, of a service and a control block). A forbidden attribute named in
+ * `allowedWhenExpected` is accepted when it holds the value of its expected attribute (an `ExtRef`'s
+ * service type equal to its expected service). An attribute that is none of these is not read.
  */
 export type LaterBindingAttributes = {
 	required: readonly string[]
 	forbidden: readonly string[]
+	allowedWhenExpected?: readonly ExpectedAttribute[]
 }
+
+/** A forbidden attribute (`attribute`) and the attribute holding the value it may repeat (`expected`). */
+export type ExpectedAttribute = { attribute: string; expected: string }
 
 /**
  * The attributes through which an `ExtRef` names its control block: it is named once one of `names`

@@ -91,10 +91,14 @@ export const EXT_REF_CONTROL_BLOCK: ControlBlockAttributes = {
 const EXPECTED_DATA_OBJECT_ATTRIBUTE = 'pDO' satisfies Scl.AttributesOf<'ExtRef'> &
 	Scl.AttributesOf<'ExtCtrl'>
 
+/** The service an ExtRef expects, set beside its expected data object; not a reference attribute either. */
+const EXPECTED_SERVICE_ATTRIBUTE = 'pServT' satisfies Scl.AttributesOf<'ExtRef'>
+
 /**
  * The later-binding shape of an ExtRef: the internal address and the expected data object, none of
  * its signal, nor its service, nor the attributes of its control block (its uuid, and the names the
- * control block is addressed by).
+ * control block is addressed by). Its service may be set when it is the service it expects, the form
+ * an ISD writes its inputs in.
  */
 export const EXT_REF_LATER_BINDING: LaterBindingAttributes = {
 	required: [INTERNAL_ADDRESS_ATTRIBUTE, EXPECTED_DATA_OBJECT_ATTRIBUTE],
@@ -103,6 +107,9 @@ export const EXT_REF_LATER_BINDING: LaterBindingAttributes = {
 		EXT_REF_CONTROL_BLOCK.serviceAttribute,
 		EXT_REF_CONTROL_BLOCK_PAIR.attribute.uuid,
 		...tupleAttributesOf(EXT_REF_CONTROL_BLOCK_PAIR),
+	],
+	allowedWhenExpected: [
+		{ attribute: EXT_REF_CONTROL_BLOCK.serviceAttribute, expected: EXPECTED_SERVICE_ATTRIBUTE },
 	],
 }
 
