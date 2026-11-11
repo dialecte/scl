@@ -5,13 +5,15 @@ import { toRawRecord } from '@dialecte/core/helpers'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
-/** The name of a signal (SourceRef / ControlRef) among its siblings, `null` when it has none. */
-export async function readSignalName(
-	query: Core.Query<Config>,
-	record: Core.AnyRawRecord,
-): Promise<string | null> {
-	const siblings = await readSiblings(query, record)
-	return getPathSegment(record, { siblings })?.segment ?? null
+/**
+ * The name of a signal (SourceRef / ControlRef) among its siblings already read (its parent's children,
+ * the signal included), `null` when it has none.
+ */
+export function nameAmongSiblings(params: {
+	record: Core.AnyRawRecord
+	siblings: Core.AnyRawRecord[]
+}): string | null {
+	return getPathSegment(params.record, { siblings: params.siblings })?.segment ?? null
 }
 
 /** The children of the record's parent, the record included. */

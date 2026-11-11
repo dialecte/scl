@@ -1,4 +1,5 @@
 import { classifyIeds } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds'
+import { readSiblings } from '@/v2019C1/extensions/reference/query/build/signal-name'
 import { findMappedLn } from '@/v2019C1/extensions/reference/query/resolve/find-mapped-ln'
 import { resolveMappedLNodes } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes'
 
@@ -22,6 +23,7 @@ export function createInfoContext(
 	const { lnodes } = params
 	let iedKinds: Promise<ReadonlyMap<string, IedKind>> | undefined
 	let mappedLNodes: Promise<MappedLNodes> | undefined
+	const siblingsByParent = new Map<string, Promise<Core.AnyRawRecord[]>>()
 
 	return {
 		iedKindById() {
@@ -33,6 +35,17 @@ export function createInfoContext(
 			mappedLNodes ??= resolveMappedLNodes(query, { lnodes })
 			const mapped = await mappedLNodes
 			return mapped.get(lnode.id)
+		},
+		// Keyed by the stored parent: a parent the store does not hold answers each signal alone, as
+		// `readSiblings` does, which names it by its own input whatever list it is reused for.
+		signalSiblingsOf(signal) {
+			const parentId = signal.parent?.id
+			if (parentId === undefined) return readSiblings(query, signal)
+			const known = siblingsByParent.get(parentId)
+			if (known) return known
+			const siblings = readSiblings(query, signal)
+			siblingsByParent.set(parentId, siblings)
+			return siblings
 		},
 	}
 }

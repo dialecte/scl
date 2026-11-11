@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `info.ofEach` reads its elements in one `getRecords` instead of one `getRecord` each, and reads the siblings of a signal (SourceRef, ControlRef) once per parent for the whole call instead of once per signal. Titles, states and labels are unchanged; an element handed over as a record is still described as stored, whatever `parent` or `children` it carries.
+
 - **An ExtRef carrying its expected service as its service type reads as later-binding**: `query.info` and the dataflow extension give the state `later-binding` to an `ExtRef` with an internal address and an expected data object, nothing of a source, and a `serviceType` equal to its `pServT`: the form an ISD writes its inputs in. A `serviceType` other than `pServT`, or one without a `pServT`, still gives no state.
 
 - **`SclFileReference@fileName` keeps the file's extension**: `tx.reference.writeProvenance`, and every extract or placement that records a source, now writes `P.ssd` for a source imported as `P.ssd`. A source with no uuid still matches a reference recorded earlier under the bare name `P`: a function or application reference at another version is rewritten in place with the new name and stays one reference, one at the same version keeps `P`, and the Header and IED lists keep `P` for the version they hold and append `P.ssd` for a new one.

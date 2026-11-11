@@ -30,7 +30,7 @@ const infos = await doc.query.info.ofEach(refs)
 // ElementInfo[], in the order of refs
 ```
 
-Prefer it over a loop of `of` for a tree or a list: the facts a state needs across the document (the kind of each IED, the LNs by uuid) are read once for the whole call.
+Prefer it over a loop of `of` for a tree or a list: the elements are read in one batch, and what they share is read once for the whole call: the facts a state needs across the document (the kind of each IED, what implements each LNode) and the siblings of each signal parent. An element given as a record is described as stored, whatever `parent` or `children` it carries.
 
 #### Options
 
