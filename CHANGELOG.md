@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.15.0] - 2026-11-11
 
 ### Added
 
@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`query.reference.resolveMappedLNodes`**: answers which `LN` or `LN0` implements each of many LNodes, and in which IED, with one read of the document. A truthy `lnUuid` decides alone, even when it names nothing; otherwise the complete name path of the LNode. Logical nodes inside a `Private` are vendor payload and are never the answer.
 
 ### Changed
+
+- Requires `@dialecte/core` 0.10.0 (pinned exactly, was 0.9.0). Nothing breaks: `getRecords` and `getChildren` read the records they ask by id in one store call, which `query.info.ofEach` relies on.
 
 - `info.ofEach` reads its elements in one `getRecords` instead of one `getRecord` each, and reads the siblings of a signal (SourceRef, ControlRef) once per parent for the whole call instead of once per signal. Titles, states and labels are unchanged; an element handed over as a record is still described as stored, whatever `parent` or `children` it carries.
 
