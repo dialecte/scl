@@ -27,14 +27,14 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
- * Copy a selected IED instance, the process part it implements and its scoped Communication into an empty target (in
- * progress). Requires an explicit `kind: 'instance'` and an explicit input mode. Copies the surviving logical-node type
+ * Export a specification IED into an ISD: the IED, the process part it implements and its scoped Communication, into an
+ * empty target. Requires an explicit `kind: 'instance'` and an explicit input mode. Copies the surviving logical-node type
  * closure and preserves instance identity and vendor content. Supervision nodes, a supervision capability declaring
  * them, and foreign receiver, client, association and KDC entries are left out with source-record warnings.
  * `inputs: 'none'` leaves the inputs out; `inputs: 'later-binding'` writes each in later-binding form: its description,
  * internal address and expected data and service, an expected value it lacks taken from what it was bound to, its
- * service type equal to its expected service, nothing of that source; an input still lacking its description or
- * expected data is written as it is and listed. With later-binding inputs the IED is no receiver or client of its own
+ * service type equal to its expected service, nothing of that source; an input still lacking its description,
+ * expected data or a service is written as it is and listed. With later-binding inputs the IED is no receiver or client of its own
  * control blocks. `internalService: true` writes a specified flow between two LNodes the file holds for the IED as an
  * internal service with no link to its input; the source keeps the service it specifies.
  * Removes FCDA depending on omitted supervision, dropping DataSets with no surviving native FCDA. Retained affected
@@ -53,7 +53,6 @@ import type * as Core from '@dialecte/core'
  * fileType. Other extensions are refused with OPTION_NOT_AVAILABLE before writes.
  * Refuses an implemented selected IED, a target already holding an IED or a process part (a substation, line or
  * process) and an unavailable revision start.
- * Other export modes are not implemented yet.
  *
  * @intent extract an IED into an ISD instance, copy an IED with its reachable data types, export an ISD with its process part, write the inputs of an ISD in later-binding form, mark a dataflow inside one IED as internal
  */

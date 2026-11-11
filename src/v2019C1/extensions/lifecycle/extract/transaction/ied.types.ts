@@ -8,7 +8,7 @@ import type { LinkedSectionReading } from '@/v2019C1/extensions/lifecycle/linked
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
 
-/** Parameters of the in-progress selected IED instance copy, not yet a complete ISD export. */
+/** Parameters of `extract.ied`: the ISD export of one specification IED. */
 export type IedExtractParams = {
 	/** Source type follows its registered extension; .xml or no extension uses SCD, ignoring Header fileType. */
 	sourceQuery: Core.Query<Config>

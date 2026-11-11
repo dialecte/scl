@@ -10,6 +10,11 @@ import type { MappingReader } from '@/v2019C1/extensions/lifecycle/mapping/mappi
 /**
  * Read where linked elements land and what the instance loses, before any primary writes. Discovery, placement and
  * identity stay with the caller; undecided mappings remain visible for reporting and are checked by the write path.
+ *
+ * The one mapping and retirement reading shared by satellite report folding and update reconciliation: each layer
+ * discovers its source and instance satellites and supplies the scope their references may name, through the existing
+ * mapping, removal and redirect readers. The description carries references and scope only, not a target structure:
+ * cardinality, first-placement ownership, contribution rules and the SSD → ASD → FSD cascades stay with the layers.
  */
 export async function readLinkedSections(
 	query: MappingReader,

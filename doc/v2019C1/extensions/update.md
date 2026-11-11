@@ -671,12 +671,6 @@ A layer-specific satellite is a shared element: where a source satellite lands i
 
 The update verbs are built on two engine primitives in `extensions/lifecycle/engine`.
 
-### Shared linked-section reading
-
-The private `extensions/lifecycle/linked-sections` seam shares the mapping and retirement reading used by satellite report folding and update reconciliation. Each layer discovers its source and instance satellites and supplies their reference scope. `readLinkedSections` uses the existing mapping, removal and redirect readers before the primary is written; reporting keeps undecided mappings visible, while the write path checks that the consumer decided them before reconciling.
-
-The description carries references and scope, not a target structure or a required Substation parent. Discovery, placement, cardinality and identity remain layer-owned. First-placement satellite ownership and scoping, contribution rules and the SSD → ASD → FSD cascades are unchanged. This internal seam adds no lifecycle verb or Communication handling.
-
 ### reconcile — apply-core
 
 `reconcile(tx, { sourceQuery, sourceRootRef, instanceRootRef, matchKey, identityMode, bumpsCollisions, removalBase, namesFollow })` reconciles an updated template subtree **onto** an existing instance, with the fields of the scenario's policy (the verbs derive it, `scenarioPolicy`). Elements match by the scenario's key: `templateUuid` (= the source element's `uuid`, immutable across template versions), `uuid` for a fork:

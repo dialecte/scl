@@ -17,8 +17,8 @@ import { checkTemplateUuids } from './validate'
  *
  * - `extract`     — pull an element out into a template FSD/ASD/SSD
  *                   (`tx.lifecycle.extract.fsd` / `.asd` / `.ssd` /
- *                   `.ensureSubstationTemplateStructure`); `.ied` is an in-progress selected IED instance
- *                   and scoped Communication copy, not yet a complete ISD export.
+ *                   `.ensureSubstationTemplateStructure`); `.ied` exports a specification IED
+ *                   into an ISD.
  * - `instantiate` — instantiate template content into a project
  *                   (`tx.lifecycle.instantiate.fsd` / `.asd`).
  * - `transplant`  — generic clone engine (`tx.lifecycle.transplant.deep`).

@@ -1,17 +1,17 @@
 ---
-description: Extract extension for @dialecte/scl v2019C1 - FSD/ASD/SSD template extractors, the in-progress IED instance copy and the TEMPLATE-structure helper.
+description: Extract extension for @dialecte/scl v2019C1 - FSD/ASD/SSD template extractors, the ISD export of an IED and the TEMPLATE-structure helper.
 ---
 
 # Extract
 
-The `extract` verb copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.lifecycle.transplant.deep`) and the shared `layers/` take-over, adding three named extractors (`fsd`, `asd`, `ssd`) that produce template FSD/ASD/SSD documents. The in-progress [`ied`](#ied-in-progress) method currently copies selected instance IED content and its scoped Communication only; it does not yet produce a complete ISD export. It also exposes the `ensureSubstationTemplateStructure` helper `fsd`/`asd` use to seed their scaffold — `ssd` reproduces its own frame instead (see [below](#ssd)).
+The `extract` verb copies an element _out_ of one document and _into_ another, together with its closures. It builds on the [`transplant`](./transplant) engine (`tx.lifecycle.transplant.deep`) and the shared `layers/` take-over, adding three named extractors (`fsd`, `asd`, `ssd`) that produce template FSD/ASD/SSD documents, and [`ied`](#ied), which exports a specification IED into an ISD. It also exposes the `ensureSubstationTemplateStructure` helper `fsd`/`asd` use to seed their scaffold — `ssd` reproduces its own frame instead (see [below](#ssd)).
 
 ```ts
 // named extractors (compose the transplant engine + layers with extract policy)
 tx.lifecycle.extract.fsd(...)
 tx.lifecycle.extract.asd(...)
 tx.lifecycle.extract.ssd(...)
-// in progress: selected IED instance content and scoped Communication only
+// ISD export of a specification IED
 tx.lifecycle.extract.ied(...)
 // helper
 tx.lifecycle.extract.ensureSubstationTemplateStructure()
@@ -123,9 +123,63 @@ Returns the warnings gathered while extracting (`ExtractWarning`, a `code` and i
 { code: 'satellite-not-placed', source: Ref }
 ```
 
-### `ied` (in progress)
+### `ied`
 
-The currently implemented slice copies one selected specification IED into an empty target, preserving its name and instance identity, initializing the ISD Header/history and recording its known source. Explicitly pass `kind: 'instance'` and an input mode, `inputs: 'none'` or `inputs: 'later-binding'`. An omitted `kind` or `inputs` is refused with `OPTION_NOT_AVAILABLE` before writes; optional fields in the public type do not imply implemented defaults.
+Extracts a specification `IED` into a new ISD document: the IED with the data types it uses, its connections, and the part of the specification it implements.
+
+```ts
+tx.lifecycle.extract.ied(params: {
+  sourceQuery: Scl.Query
+  iedRef: Scl.Ref<'IED'>
+  fileType: 'ISD'
+  kind: 'instance'                  // required, no default
+  inputs: 'none' | 'later-binding'  // required, no default
+  issuer: string                    // the IED's manufacturer in the file
+  tool: string
+  who: string
+  nameStructure?: string
+  as?: 'new' | 'revision'           // default 'new'; 'revision' is refused — see Options
+  internalService?: boolean         // default false
+  labels?: boolean                  // default true
+  applications?: boolean            // default true
+  allocationRoles?: boolean         // default true
+  powerSystemRelations?: boolean    // default true
+}): Promise<{ warnings: ExtractWarning[] }>
+```
+
+Steps:
+
+1. Refuse before anything is written: an omitted `kind` or `inputs`, or `as: 'revision'` (`OPTION_NOT_AVAILABLE`); a source registered with an extension other than `.ssd`, `.scd`, `.xml` or none (`OPTION_NOT_AVAILABLE`, `meta: { option: 'sourceExtension', value }`); an IED of a real device (`IED_NOT_SPECIFICATION`, `SCL2005`); a target already holding an `IED`, a `Substation`, a `Line` or a `Process` (`EXTRACTION_TARGET_NOT_EMPTY`, `SCL2006`); a control block whose `confRev` cannot take the increase of step 3 (`EXTRACTION_CONF_REV_INVALID`, `EXTRACTION_CONF_REV_OVERFLOW`).
+2. Write the ISD history header (`fileType: 'ISD'`, via [`history.startFile`](./history#startfile)) and record the source in the `Header` and the IED's source files ([`reference.writeProvenance`](./reference#writeprovenance)): its file name with its extension, its version and revision, and its type, `SSD` for a `.ssd` file and `SCD` for any other, whatever its `Header` says.
+3. Write the IED under its name and uuids, `issuer` as its `manufacturer`, with its logical nodes, data sets, control blocks, values and vendor content, and the data types its logical nodes use; the file holds no `MinRequestedSCDFiles`:
+   - supervision logical nodes (`LGOS`, `LSVS`) are left out, and so is a `SupSubscription` declaring a `maxGo` or `maxSv` above `0`; each is told (`supervision-left-out`). The data set members naming them go, and a data set left with none; each report, GOOSE or sampled-value control block whose data set changed gets `confRev` raised by `10000` once, a log control block `logEna="false"`;
+   - an `IEDName`, `ClientLN`, `Association` or `KDC` naming another IED is left out and told (`ied-reference-left-out`);
+   - `inputs: 'none'` leaves every `Inputs` out. `inputs: 'later-binding'` writes every `ExtRef` in later-binding form: `desc`, `intAddr`, `pLN`, `pDO`, `pDA` and `pServT`, and `serviceType` equal to `pServT`, nothing of the source it was bound to. An expected value it lacks is taken from that source (`pLN` from `lnClass`, `pDO` from `doName`, `pDA` from `daName`, `pServT` from `serviceType`). An input still lacking `desc`, `intAddr`, `pDO` or a service is written as it is and told (`input-incomplete`). The IED is then no receiver or client of its own control blocks; its control blocks and data sets stay.
+   - Content of another namespace is written as it is, even under the name of an SCL element.
+4. Write the `Communication` holding the connections of the IED's access points, with only those connections and their subnetworks.
+5. Write the process part: the LNodes the IED implements in their `Substation`, `Line` or `Process` frame, with the levels, equipment and functions above them, names and identifiers as in the source. A function holding none of them is left out; an equipment written keeps its parts and the connectivity nodes it connects to. Each LNode gets its own naming as its `LNodeSpecNaming`, and data specifications lose their mapping. Around them:
+   - an LNode implemented by a logical node step 3 leaves out is left out (`process-lnode-left-out`);
+   - a behaviour description goes only when all its LNodes do, else it is left out (`behavior-description-left-out`); variables and process resources go when they belong to the LNodes written;
+   - an input or output specification naming what the file does not hold keeps its expected data without that link (`process-reference-cut`);
+   - with `internalService: true`, a specified flow between two LNodes of the IED is written with `service="Internal"` and no link to its input, except a `Wired` one; the source keeps its service.
+
+Returns the warnings gathered while extracting, each with its source element for the caller to word:
+
+```ts
+{ code: 'supervision-left-out', source: Ref<'LN' | 'SupSubscription'> }
+{ code: 'ied-reference-left-out', source: Ref<'IEDName' | 'ClientLN' | 'Association' | 'KDC'>, iedName: string }
+{ code: 'input-incomplete', source: Ref<'ExtRef'>, missing: string[] }
+{ code: 'process-lnode-left-out', source: Ref<'LNode'>, reason: 'target-not-carried' }
+{ code: 'behavior-description-left-out', source: Ref<'BehaviorDescription'>, reason: 'partly-mapped' }
+{ code: 'process-reference-cut', source: Ref<'SourceRef' | 'ControlRef'>, attributes: string[] }
+```
+
+Options of `ied`, each `true` by default:
+
+- `labels`: `false` leaves no `Labels` in the file.
+- `applications`: an `Application` holding a function the file holds is written with only what it may still name. `false` leaves every application out.
+- `allocationRoles`: the same for an `AllocationRole`. `false` leaves them out.
+- `powerSystemRelations`: the relations of the written functions to written equipment. `false` leaves them out.
 
 ```ts
 await targetDoc.transaction(async (tx) => {
@@ -135,51 +189,12 @@ await targetDoc.transaction(async (tx) => {
 		fileType: 'ISD',
 		kind: 'instance',
 		inputs: 'later-binding',
-		internalService: true,
 		issuer: 'Issuer',
 		tool: 'Tool name',
 		who: 'user@example.com',
 	})
-	// warnings contain source refs and data for the caller to word.
 })
 ```
-
-Returns `Promise<{ warnings: ExtractWarning[] }>`, not a new IED ref.
-
-- Copies LN0, ordinary LNs, datasets, controls, values, labels (unless `labels: false`) and vendor `Private` content through `transplant.deep`. Imports only the reachable logical-node/data-type closure of the surviving nodes, retaining source type names.
-- Leaves out supervision LNs (`LGOS`, `LSVS`), and a `SupSubscription` declaring a `maxGo` or `maxSv` above `0` (it says such nodes exist). Each produces `{ code: 'supervision-left-out', source: Scl.Ref<'LN' | 'SupSubscription'> }`; a `SupSubscription` declaring `0` for both stays.
-- `inputs: 'none'` leaves out every `Inputs`. `inputs: 'later-binding'` writes every `ExtRef` of the IED in later-binding form, those fed by other IEDs included: `desc`, `intAddr`, `pLN`, `pDO`, `pDA` and `pServT` kept, and `serviceType` equal to `pServT`; `iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst`, `doName`, `daName`, every `src*` and the uuids `lnUuid` and `srcCBUuid` removed. An expected value the input lacks is taken from what it was bound to (`pLN` from `lnClass`, `pDO` from `doName`, `pDA` from `daName`, `pServT` from `serviceType`). An input still without `desc`, `intAddr` or `pDO` is written as it is and produces `{ code: 'input-incomplete', source: Scl.Ref<'ExtRef'>, missing: string[] }`.
-- Removes native FCDA references to omitted supervision nodes, using UUID twins first and names only when the twin is absent. A mixed DataSet retains its remaining FCDA, attributes and opaque payload; an affected DataSet with no remaining native FCDA is removed, including its payload. Vendor elements sharing SCL local names are not candidates.
-- Retains affected ReportControl, GSEControl, SampledValueControl and LogControl identities. A surviving DataSet keeps its `datSet` associations; removal clears them. Each affected Report/GSE/SV control gets exactly one `confRev` increment of `10000`, a product convention. Each affected LogControl gets `logEna="false"`. Unaffected controls remain unchanged. Missing or invalid uint32 counters refuse with `EXTRACTION_CONF_REV_INVALID`; adding `10000` beyond `4294967295` refuses with `EXTRACTION_CONF_REV_OVERFLOW`. Both diagnostics identify the source control and precede output writes. This policy applies only to extraction, not generic deletion.
-- Leaves out foreign `IEDName`, `ClientLN`, `Association` and `KDC` entries without removing their owners. Each produces `{ code: 'ied-reference-left-out', source, iedName }`. With `inputs: 'later-binding'` an `IEDName` or `ClientLN` naming the IED itself is left out too, silently: no input of the file subscribes to a control block any more. Other self references stay. Control blocks and data sets stay, those only the IED's own logical nodes use included.
-- These exclusions and warnings apply only to schema-qualified SCL elements. Opaque vendor content with the same local names (`Inputs`, `ExtRef`, `LN`, `IEDName`, `ClientLN`, `Association`, `KDC`) remains unchanged and produces no omission warnings.
-- Copies Communication only when it holds connections for the selected IED's access points, matched by the complete IED/access-point name pair. Vendor elements sharing the local name of a `SubNetwork` or `ConnectedAP` do not count, directly or inside a `Private`. Keeps only those connections and their subnetworks, preserving network metadata and connection payload. Routine foreign Communication exclusions produce no warnings.
-- Preserves access-point UUIDs. A names-only source connection can remain names-only or acquire the correct cloned access-point UUID through existing hooks.
-- Initializes the output file through `history.startFile`: replaces any existing target Header with an ISD Header with a fresh UUID, version `0`, revision `1`, `toolID` from `tool`, and one initial history item with `who` and the current timestamp. Previous target history contributes only labelled inner text to that item, not old file versions or Header attributes. `nameStructure` is passed to initialization; `as` defaults to `'new'`. A revision start is unavailable and refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'as', value: 'revision' }`) before writes.
-- Writes `issuer` as the output IED's `manufacturer`, without changing its name or instance UUID.
-- Records the source at both `Header > SourceFiles` and the selected `IED > IEDSourceFiles` through `reference.writeProvenance`. Already listed source versions are not appended again; older IED source references stay. The references take `version`, `revision` and `fileUuid` from the source Header and `fileName` from its registered document name with its extension (`project.ssd`); a document with no extension keeps its name alone.
-- Resolves source type once from the registered document extension, case-insensitively: `.ssd` means `SSD`; `.scd`, `.xml` or no extension means `SCD`. Both provenance anchors use that type. `Header@fileType` never overrides it, even when the Header disagrees. For example, `project.ssd` with Header `fileType="SCD"` records `SSD`; an XML or extensionless document with Header `fileType="SSD"` records `SCD`. This default is a product convention, not type inference required by the standard.
-- Refuses other registered extensions with `OPTION_NOT_AVAILABLE` before writes (`meta: { option: 'sourceExtension', value: extension }`, carrying the actual registered extension). Source Header, XML and document metadata remain unchanged; no caller source-type override is offered.
-- Refuses a selected implemented IED with `IED_NOT_SPECIFICATION` (`SCL2005`); an unrelated implemented sibling does not block extraction. A target already holding an IED, a `Substation`, a `Line` or a `Process` is refused with `EXTRACTION_TARGET_NOT_EMPTY` (`SCL2006`). These guards precede writes.
-- Leaves no `MinRequestedSCDFiles` in the output, including wrappers generated by existing clone/update hooks.
-- Writes the process part the IED implements: the LNodes its logical nodes implement (by `lnUuid` first, else by their complete names; a logical node inside a `Private` never counts) under a `Substation`, `Line` or `Process`, with the levels, equipment and functions above them, names and identifiers as in the source. A function or subfunction holding none of them is left out, as are the LNodes of other IEDs or of none, and the other bays, equipment and nodes. A level that must hold a child (a voltage level a bay, a line an equipment) keeps its first source child of that kind; an equipment written keeps its parts (windings, tap changers, sub-equipment) and the connectivity nodes its `Terminal`s name, with the levels above them and nothing else of them. An IED with no LNode allocated has no process part.
-- An LNode implemented by a logical node the IED part leaves out (`LGOS`, `LSVS`) is not written: `{ code: 'process-lnode-left-out', source: Scl.Ref<'LNode'>, reason: 'target-not-carried' }`.
-- Brings the data types each written LNode names (`lnType`), source names kept.
-- A behaviour description is written only when every variable of it names what the file holds. One naming some of it is left out whole: `{ code: 'behavior-description-left-out', source, reason: 'partly-mapped' }`; one naming none of it is left out silently. A variable keeps only its applications to a written LNode, to what that LNode holds, or to what the IED part writes (the LN implementing it); one applying to nothing of that kind, a level of the frame included, is left out. A process resource is written when the input, output or data specification of a written LNode names it. Any other reference naming an element of the process section the file does not hold (a function reference, a power system relation, a reference to a variable or role left out) is left out, and an element left without the child it must hold goes with it (a variable without applications, an empty set of relations), until nothing more changes.
-- An input or output specification (`SourceRef`, `ControlRef`) naming what the file does not hold (an LNode of another IED, an input of the IED with `inputs: 'none'`) stays, without that link: its uuid, path and data names are removed, its expected data (`pLN`, `pDO`, `pDA`) kept, or taken from the LNode it named when it had none. Each produces `{ code: 'process-reference-cut', source, attributes }`, the removed attribute names sorted. A link between two written LNodes stays.
-- Each written LNode gets its own naming (IED, logical device, prefix, class, instance) as its `LNodeSpecNaming`, replacing the one it had. Data specifications (`DOS`, `SDS`, `DAS`) lose their mapping to the implementing logical node (`mappedLnUuid`, `mappedDoName`, `mappedDaName`); their values stay.
-- Reads the source without changing its XML or document metadata. Writes belong to the enclosing target transaction and roll back with it.
-
-**Not a complete ISD export yet.** Template export and input defaults are not implemented.
-
-`internalService` (default `false`): a `SourceRef` whose LNode and source LNode are both written LNodes of the IED, whatever its service (GOOSE, report, sampled values, poll or none) except `Wired` and `Internal`, is written with `service="Internal"` and without its link to the input implementing it (`extRefUuid`, `extRefAddr`). The receiving input stays in its form, later binding with `inputs: 'later-binding'`. A `ControlRef` has no service and stays as it is. Only the file changes: the source keeps the service it specifies.
-
-Options of `ied`, each defaulting to `true`:
-
-- `labels`: `false` leaves no `Labels` in the file, in the IED part, the data types and the process part alike; what a `Private` holds is left as it is.
-- `applications`: an `Application` holding a function the file holds is written with only the references to what the file holds; a function role naming no written function is left out. `false` leaves every application out.
-- `allocationRoles`: the same for an `AllocationRole`. `false` leaves them out.
-- `powerSystemRelations`: the relations of the written functions to written equipment. `false` leaves every `PowerSystemRelations` out.
 
 ### Options
 
@@ -239,11 +254,11 @@ lifecycle/
     topology/                 root selection + frame reproduction + cloneTopologyContent (SSD take-over)
       ensure-topology-frame.ts    reproduces the structural frame by position (Substation/VL/Bay)
       reconcile-topology-frame.ts reconciles the frame's own content onto an existing instance
-    ied/                      instance content exclusions and scoped Communication discovery
+    ied/                      the IED part, the process part and the Communication of an ISD export
   linked-sections/            shared linked-section reading; discovery and placement stay with the caller
   extract/transaction/        the extract operation (this extension)
     fsd.ts , asd.ts , ssd.ts  file-type extractors
-    ied.ts                    in-progress IED instance copy via deep + leaveOut + keep identity
+    ied.ts                    ISD export of a specification IED: IED part, process part, Communication
     ensure-substation-structure.ts , post-extraction-cleanup.ts
     function-sections.ts      the sections of a function an extract leaves out
     function-placement.ts     where an FSD holds its function, what a function template cannot hold
