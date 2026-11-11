@@ -125,7 +125,7 @@ Returns the warnings gathered while extracting (`ExtractWarning`, a `code` and i
 
 ### `ied` (in progress)
 
-The currently implemented slice copies one selected specification IED into an empty target, preserving its name and instance identity, initializing the ISD Header/history and recording its known source. Explicitly pass `kind: 'instance'` and `inputs: 'none'`. Omitted `kind` or `inputs`, and `inputs: 'later-binding'`, are refused with `OPTION_NOT_AVAILABLE` before writes; optional fields in the public type do not imply implemented input defaults.
+The currently implemented slice copies one selected specification IED into an empty target, preserving its name and instance identity, initializing the ISD Header/history and recording its known source. Explicitly pass `kind: 'instance'` and an input mode, `inputs: 'none'` or `inputs: 'later-binding'`. An omitted `kind` or `inputs` is refused with `OPTION_NOT_AVAILABLE` before writes; optional fields in the public type do not imply implemented defaults.
 
 ```ts
 await targetDoc.transaction(async (tx) => {
@@ -134,7 +134,8 @@ await targetDoc.transaction(async (tx) => {
 		iedRef: { tagName: 'IED', id: 'selected-ied' },
 		fileType: 'ISD',
 		kind: 'instance',
-		inputs: 'none',
+		inputs: 'later-binding',
+		internalService: true,
 		issuer: 'Issuer',
 		tool: 'Tool name',
 		who: 'user@example.com',
@@ -146,10 +147,11 @@ await targetDoc.transaction(async (tx) => {
 Returns `Promise<{ warnings: ExtractWarning[] }>`, not a new IED ref.
 
 - Copies LN0, ordinary LNs, datasets, controls, values, labels (unless `labels: false`) and vendor `Private` content through `transplant.deep`. Imports only the reachable logical-node/data-type closure of the surviving nodes, retaining source type names.
-- Leaves out `Inputs` and supervision LNs (`LGOS`, `LSVS`). Each supervision LN produces `{ code: 'supervision-left-out', source: Scl.Ref<'LN'> }`.
+- Leaves out supervision LNs (`LGOS`, `LSVS`), and a `SupSubscription` declaring a `maxGo` or `maxSv` above `0` (it says such nodes exist). Each produces `{ code: 'supervision-left-out', source: Scl.Ref<'LN' | 'SupSubscription'> }`; a `SupSubscription` declaring `0` for both stays.
+- `inputs: 'none'` leaves out every `Inputs`. `inputs: 'later-binding'` writes every `ExtRef` of the IED in later-binding form, those fed by other IEDs included: `desc`, `intAddr`, `pLN`, `pDO`, `pDA` and `pServT` kept, and `serviceType` equal to `pServT`; `iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst`, `doName`, `daName`, every `src*` and the uuids `lnUuid` and `srcCBUuid` removed. An expected value the input lacks is taken from what it was bound to (`pLN` from `lnClass`, `pDO` from `doName`, `pDA` from `daName`, `pServT` from `serviceType`). An input still without `desc`, `intAddr` or `pDO` is written as it is and produces `{ code: 'input-incomplete', source: Scl.Ref<'ExtRef'>, missing: string[] }`.
 - Removes native FCDA references to omitted supervision nodes, using UUID twins first and names only when the twin is absent. A mixed DataSet retains its remaining FCDA, attributes and opaque payload; an affected DataSet with no remaining native FCDA is removed, including its payload. Vendor elements sharing SCL local names are not candidates.
 - Retains affected ReportControl, GSEControl, SampledValueControl and LogControl identities. A surviving DataSet keeps its `datSet` associations; removal clears them. Each affected Report/GSE/SV control gets exactly one `confRev` increment of `10000`, a product convention. Each affected LogControl gets `logEna="false"`. Unaffected controls remain unchanged. Missing or invalid uint32 counters refuse with `EXTRACTION_CONF_REV_INVALID`; adding `10000` beyond `4294967295` refuses with `EXTRACTION_CONF_REV_OVERFLOW`. Both diagnostics identify the source control and precede output writes. This policy applies only to extraction, not generic deletion.
-- Leaves out foreign `IEDName`, `ClientLN`, `Association` and `KDC` entries without removing their owners. Each produces `{ code: 'ied-reference-left-out', source, iedName }`; ordinary self references stay.
+- Leaves out foreign `IEDName`, `ClientLN`, `Association` and `KDC` entries without removing their owners. Each produces `{ code: 'ied-reference-left-out', source, iedName }`. With `inputs: 'later-binding'` an `IEDName` or `ClientLN` naming the IED itself is left out too, silently: no input of the file subscribes to a control block any more. Other self references stay. Control blocks and data sets stay, those only the IED's own logical nodes use included.
 - These exclusions and warnings apply only to schema-qualified SCL elements. Opaque vendor content with the same local names (`Inputs`, `ExtRef`, `LN`, `IEDName`, `ClientLN`, `Association`, `KDC`) remains unchanged and produces no omission warnings.
 - Copies Communication only when it holds connections for the selected IED's access points, matched by the complete IED/access-point name pair. Vendor elements sharing the local name of a `SubNetwork` or `ConnectedAP` do not count, directly or inside a `Private`. Keeps only those connections and their subnetworks, preserving network metadata and connection payload. Routine foreign Communication exclusions produce no warnings.
 - Preserves access-point UUIDs. A names-only source connection can remain names-only or acquire the correct cloned access-point UUID through existing hooks.
@@ -164,11 +166,13 @@ Returns `Promise<{ warnings: ExtractWarning[] }>`, not a new IED ref.
 - An LNode implemented by a logical node the IED part leaves out (`LGOS`, `LSVS`) is not written: `{ code: 'process-lnode-left-out', source: Scl.Ref<'LNode'>, reason: 'target-not-carried' }`.
 - Brings the data types each written LNode names (`lnType`), source names kept.
 - A behaviour description is written only when every variable of it names what the file holds. One naming some of it is left out whole: `{ code: 'behavior-description-left-out', source, reason: 'partly-mapped' }`; one naming none of it is left out silently. A variable keeps only its applications to a written LNode, to what that LNode holds, or to what the IED part writes (the LN implementing it); one applying to nothing of that kind, a level of the frame included, is left out. A process resource is written when the input, output or data specification of a written LNode names it. Any other reference naming an element of the process section the file does not hold (a function reference, a power system relation, a reference to a variable or role left out) is left out, and an element left without the child it must hold goes with it (a variable without applications, an empty set of relations), until nothing more changes.
-- An input or output specification (`SourceRef`, `ControlRef`) naming what the file does not hold (an LNode of another IED, an input of the IED: `Inputs` are not written) stays, without that link: its uuid, path and data names are removed, its expected data (`pLN`, `pDO`, `pDA`) kept, or taken from the LNode it named when it had none. Each produces `{ code: 'process-reference-cut', source, attributes }`, the removed attribute names sorted. A link between two written LNodes stays.
+- An input or output specification (`SourceRef`, `ControlRef`) naming what the file does not hold (an LNode of another IED, an input of the IED with `inputs: 'none'`) stays, without that link: its uuid, path and data names are removed, its expected data (`pLN`, `pDO`, `pDA`) kept, or taken from the LNode it named when it had none. Each produces `{ code: 'process-reference-cut', source, attributes }`, the removed attribute names sorted. A link between two written LNodes stays.
 - Each written LNode gets its own naming (IED, logical device, prefix, class, instance) as its `LNodeSpecNaming`, replacing the one it had. Data specifications (`DOS`, `SDS`, `DAS`) lose their mapping to the implementing logical node (`mappedLnUuid`, `mappedDoName`, `mappedDaName`); their values stay.
 - Reads the source without changing its XML or document metadata. Writes belong to the enclosing target transaction and roll back with it.
 
-**Not a complete ISD export yet.** Template export, input conversion/defaults and internal-service conversion are not implemented.
+**Not a complete ISD export yet.** Template export and input defaults are not implemented.
+
+`internalService` (default `false`): a `SourceRef` whose LNode and source LNode are both written LNodes of the IED, whatever its service (GOOSE, report, sampled values, poll or none) except `Wired` and `Internal`, is written with `service="Internal"` and without its link to the input implementing it (`extRefUuid`, `extRefAddr`). The receiving input stays in its form, later binding with `inputs: 'later-binding'`. A `ControlRef` has no service and stays as it is. Only the file changes: the source keeps the service it specifies.
 
 Options of `ied`, each defaulting to `true`:
 
