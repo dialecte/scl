@@ -16,4 +16,4 @@ export type StructureLanding = {
 }
 
 /** A Substation, VoltageLevel or Bay of a template, by its uuid and tag: read once per operation (`readTemplateLevels`). */
-export type TemplateLevel = { uuid: string; tagName: TopologyStructuralTag }
+export type TemplateLevel = { id: string; uuid: string; tagName: TopologyStructuralTag }

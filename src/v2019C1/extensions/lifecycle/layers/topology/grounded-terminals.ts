@@ -1,8 +1,6 @@
 import { GROUNDED_NODE_REFERRERS } from './grounded-terminals.constants'
+import { placeTemplateLevels, readTemplateLevels } from './landed-levels'
 
-import { toRef } from '@dialecte/core/helpers'
-
-import { TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { GROUNDED_CONNECTIVITY_NODE_NAME } from '@/v2019C1/constants/naming'
 import { buildElementPath } from '@/v2019C1/extensions/reference/query/build/build-element-path'
 import {
@@ -68,27 +66,15 @@ export async function landGroundedTerminals(
 
 /**
  * Where each Substation, VoltageLevel and Bay of a template was placed by an operation placing under `structure`: on
- * the structure's level of its tag, else on the nearest level above it the structure holds, as a clone is placed.
- * One read per tag.
+ * the structure's level of its tag, else on the nearest level above it the structure holds, as a clone is placed
+ * (`placeTemplateLevels`). One read per tag.
  */
 export async function placeLevelsOnStructure(
 	sourceQuery: Core.Query<Config>,
 	params: { structure: TargetStructure },
 ): Promise<Map<string, Scl.Ref<Scl.ElementsOf> | undefined>> {
-	const { structure } = params
-	const placed = new Map<string, Scl.Ref<Scl.ElementsOf> | undefined>()
-	for (const [index, tagName] of TOPOLOGY_STRUCTURAL_TAGS.entries()) {
-		const target = TOPOLOGY_STRUCTURAL_TAGS.slice(0, index + 1)
-			.reverse()
-			.map(function levelOf(tag) {
-				return structure[tag as keyof TargetStructure]
-			})
-			.find(Boolean)
-		const levels = await sourceQuery.getRecordsByTagName(tagName)
-		for (const level of levels)
-			placed.set(level.id, target ? (toRef(target) as Scl.Ref<Scl.ElementsOf>) : undefined)
-	}
-	return placed
+	const levels = await readTemplateLevels(sourceQuery)
+	return placeTemplateLevels({ levels, structure: params.structure })
 }
 
 /** The path of the grounded node of a placed level, segment by segment, as a node of that level reads it. */

@@ -182,8 +182,6 @@ export async function asd(
 		}
 	}
 
-	const structure = await resolveTargetStructure(tx, targetParent)
-
 	// what the update added to each instance, repointed once the composed functions exist (below)
 	const additions: InstanceAdditions[] = []
 	// every instance the update went through, for the function-layer cascade
@@ -336,7 +334,8 @@ export async function asd(
 		const cross = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
 			reading: crossCutting,
-			structure,
+			// a variable or a behaviour description the template gained is written where this instance sits
+			structure: instanceStructure,
 			accepted,
 			matchKey,
 			identityMode,

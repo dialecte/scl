@@ -37,7 +37,11 @@ import {
 	PLACED_FUNCTION_TAGS,
 	placedFunctionTag,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
-import { readTemplateLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import {
+	landGroundedTerminals,
+	placeTemplateLevels,
+	readTemplateLevels,
+} from '@/v2019C1/extensions/lifecycle/layers/topology'
 import {
 	assertRevisionBaseFits,
 	scenarioPolicy,
@@ -147,7 +151,6 @@ export async function fsd(
 		return [{ ref: root, placement: 'placed' }]
 	}
 
-	const structure = await resolveTargetStructure(tx, targetParent)
 	// the instances this write reconciled: one it wrote nothing to (see `writesToInstance`) is not returned
 	const reconciled: AppliedFunction[] = []
 	// the template's levels, read once: where they land for each instance is read from it
@@ -217,11 +220,13 @@ export async function fsd(
 			resolveForeignScope,
 			selection: params.selection,
 		})
+		// a variable or a behaviour description the template gained is written where this instance sits
+		const instanceStructure = await resolveTargetStructure(tx, instanceRef)
 		// cross-cutting satellites (Variable / BehaviorDescription applying to any subtree element)
 		const cross = await reconcileCrossCuttingSatellites(tx, {
 			sourceQuery,
 			reading: crossCutting,
-			structure,
+			structure: instanceStructure,
 			accepted: instanceAccepted,
 			matchKey,
 			identityMode,
@@ -231,6 +236,12 @@ export async function fsd(
 			placeholderLineages: params.placeholderLineages,
 			resolveForeignScope,
 			selection: params.selection,
+		})
+		// a terminal this instance gained on the predefined grounded node names the grounded node of its level
+		await landGroundedTerminals(tx, {
+			sourceQuery,
+			cloneMappings: reconcileMappings,
+			placedLevels: placeTemplateLevels({ levels: templateLevels, structure: instanceStructure }),
 		})
 		// carry the report->applied correlation onto this instance's report nodes
 		const addedMappings = [...reconcileMappings, ...carriedMappings, ...cross.cloneMappings]

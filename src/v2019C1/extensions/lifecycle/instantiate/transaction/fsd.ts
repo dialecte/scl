@@ -5,13 +5,10 @@ import { throwDialecteError } from '@dialecte/core'
 
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { readSatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
+import { scopeFunctionCarried } from '@/v2019C1/extensions/lifecycle/cross-cutting/carried-satellites'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
-import {
-	findUndeclaredNodeReferencesOf,
-	idOfOutside,
-	resolveContributionScope,
-} from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import {
 	cloneFunctionCategories,
 	placedFunctionTag,
@@ -20,6 +17,7 @@ import {
 import {
 	landGroundedTerminals,
 	landLevelsByTag,
+	landOnStructure,
 	landPrimaries,
 	placeLevelsOnStructure,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
@@ -85,15 +83,24 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 			? ({ from: 'Function', to: 'SubFunction' } as const)
 			: undefined
 
-	// what the function holds naming a node no file of it holds is not written: the report tells of it
-	const notPlaced = await findUndeclaredNodeReferencesOf(sourceQuery, { functionRef })
+	// the satellites of the template, read once for the placement
+	const index = await readSatelliteIndex(sourceQuery)
+	// what the function holds naming what it does not place (a node no file of it holds, another function) is not
+	// written, nor a variable it holds left applying to nothing: the report tells of each reference
+	// the levels of the template above it land on the levels of the structure: a reference to one names it
+	const landed = await landOnStructure(sourceQuery, { primaryRef: functionRef, structure })
+	const carried = await scopeFunctionCarried(sourceQuery, {
+		functionRef,
+		landedLevels: landed.levels,
+		index,
+	})
 	const { cloneMappings: functionMappings } = await deep(tx, {
 		sourceQuery,
 		ref: functionRef,
 		targetParent,
 		retagRoot,
 		withTypes: { keepNameFrom: keepNameTypesFrom },
-		leaveOut: new Set(notPlaced.map(idOfOutside)),
+		leaveOut: carried.leaveOut,
 	})
 
 	// An FSD also carries the FunctionCategory classification that references the
@@ -108,7 +115,6 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	// to any element in the function subtree also travel with it, one of each per instance
 	// what their references may name: the function placed
 	const scope = await resolveContributionScope(sourceQuery, { roots: [functionRef] })
-	const index = await readSatelliteIndex(sourceQuery)
 	const applied = await cloneAppliedSatellites(tx, {
 		sourceQuery,
 		primaryRef: functionRef,
@@ -130,7 +136,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: allMappings,
 		mode: policy.placementIdentity,
-		redirectMappings: [...landing.redirectMappings, ...redirectMappings],
+		redirectMappings: [...landing.redirectMappings, ...redirectMappings, ...landed.redirects],
 	})
 
 	// a shared element created here (no project element to map onto) is named at its structural level

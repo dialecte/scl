@@ -1,11 +1,20 @@
 import type { Scl } from '@/v2019C1/config'
-import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
+import type {
+	ContributionScope,
+	ReferenceOutsideScope,
+} from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 /** A reference naming a cross-cutting satellite by its uuid: the attribute holding the uuid, the satellite tags. */
 export type SatelliteReferenceLink = { uuid: string; targets: readonly string[] }
 
-/** The references of the registry named by a uuid, read loosely: per reference tag, its uuid attribute and targets. */
+/**
+ * The references of the registry named by a uuid, read loosely: per reference tag, its uuid and path attributes and
+ * targets.
+ */
 export type ReferencePairsByTag = Readonly<
-	Record<string, readonly { attribute: { uuid: string }; target: readonly string[] }[]>
+	Record<
+		string,
+		readonly { attribute: { uuid: string; path: string }; target: readonly string[] }[]
+	>
 >
 
 /** What `resolveAppliedSatellites` reads: the primary, what travels with it, what is left out. */
@@ -49,11 +58,17 @@ export type HeldReferenceTag = {
 	pairs: ReferencePairsByTag[string]
 }
 
-/** A reference a satellite holds: its record id, its tag, and each uuid it names with the tags it may name. */
+/**
+ * A reference a satellite holds: its record id, its tag, and each uuid it names with the tags it may name, the attribute
+ * naming it (its path, else its uuid) and the path written, when one is.
+ */
 export type HeldReference = {
 	id: string
 	tagName: string
-	names: readonly { uuid: string; targets: readonly string[] }[]
+	names: readonly ({ uuid: string; targets: readonly string[] } & Omit<
+		ReferenceOutsideScope,
+		'reference'
+	>)[]
 }
 
 /** A cross-cutting satellite of a document, read with the references it holds. */

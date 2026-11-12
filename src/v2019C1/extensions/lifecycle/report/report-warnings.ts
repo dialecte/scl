@@ -7,8 +7,8 @@ import type {
 /**
  * What the report did that the consumer should know of, read from its nodes: each reference paired by name, once,
  * wherever the report lists it (an instance's tree, a group's primary or companions); and each satellite an
- * application's role refers to that its placement does not place; and each reference of a placed frame naming what the
- * placement does not place.
+ * application's role refers to that its placement does not place; and each reference of what a placement places naming
+ * what it does not place, once.
  */
 export function collectReportWarnings(report: DiffReport): ReportWarning[] {
 	const warnings = new Map<string, ReportWarning>()

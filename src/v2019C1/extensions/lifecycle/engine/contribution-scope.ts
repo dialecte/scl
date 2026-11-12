@@ -88,7 +88,7 @@ export function collectOutOfScopeReferences(params: {
  * path written: what a placement leaves out and tells of. The subtrees of `omit` tags, and of what `leftOut` names
  * (record ids), are not walked.
  */
-function collectReferencesOutsideScope(params: {
+export function collectReferencesOutsideScope(params: {
 	tree: AnyTreeRecord
 	scope: ContributionScope
 	omit?: readonly string[]
@@ -198,13 +198,38 @@ export async function leaveOutOfScope(
 	return new Set([...params.leftOut, ...outOfScope])
 }
 
-/** `collectUndeclaredNodeReferences` over a function of the template: one read of its tree. */
-export async function findUndeclaredNodeReferencesOf(
+/**
+ * `leaveOutOfScope` with what it leaves out naming outside the scope, to be told of: what a comparison of a source element
+ * the project shares neither lists nor writes (`notSelected`), and those references with what each names
+ * (`referencesNotPlaced`).
+ */
+export async function leaveOutTellingOutOfScope(
 	sourceQuery: Core.Query<Config>,
-	params: { functionRef: Scl.Ref<Scl.ElementsOf> },
-): Promise<ReferenceOutsideScope[]> {
-	const tree = await sourceQuery.any.getTree(params.functionRef)
-	return tree ? collectUndeclaredNodeReferences({ tree }) : []
+	params: {
+		root: Scl.Ref<Scl.ElementsOf>
+		scope: ContributionScope
+		leftOut: ReadonlySet<string> | undefined
+		omit?: readonly string[]
+	},
+): Promise<{ notSelected: ReadonlySet<string>; referencesNotPlaced: ReferenceOutsideScope[] }> {
+	const referencesNotPlaced = await findReferencesOutsideScope(sourceQuery, params)
+	const notSelected = new Set([...(params.leftOut ?? []), ...referencesNotPlaced.map(idOfOutside)])
+	return { notSelected, referencesNotPlaced }
+}
+
+/**
+ * What a report holds (an instance's comparison, a report instance) with `referencesNotPlaced` added to the references it
+ * tells of already: none is dropped, whoever found it.
+ */
+export function withReferencesNotPlaced<
+	Told extends { referencesNotPlaced?: ReferenceOutsideScope[] },
+>(params: { told: Told; referencesNotPlaced: readonly ReferenceOutsideScope[] }): Told {
+	const { told, referencesNotPlaced } = params
+	if (referencesNotPlaced.length === 0) return told
+	return {
+		...told,
+		referencesNotPlaced: [...(told.referencesNotPlaced ?? []), ...referencesNotPlaced],
+	}
 }
 
 /**

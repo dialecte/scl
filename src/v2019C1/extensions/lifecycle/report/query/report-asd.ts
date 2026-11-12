@@ -9,6 +9,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { readSatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 import { readHeldApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications'
+import { withReferencesNotPlaced } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { addDroppedGroups, placeFor } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { linkPlacementDependencies } from '@/v2019C1/extensions/lifecycle/engine/link-placement-dependencies'
@@ -246,8 +247,9 @@ export async function reportAsd(
 		const carriedNotPlaced = params.placementListing
 			? []
 			: (placementListing?.carried.referencesNotPlaced ?? [])
-		if (carriedNotPlaced.length > 0) reportInstance.referencesNotPlaced = carriedNotPlaced
-		reportInstances.push(reportInstance)
+		reportInstances.push(
+			withReferencesNotPlaced({ told: reportInstance, referencesNotPlaced: carriedNotPlaced }),
+		)
 	} else {
 		// an element the instances share (a role) holds one reference per instance: each instance
 		// is compared with its own
@@ -519,7 +521,12 @@ async function reportApplicationInstance(
 		selection: params.selection,
 	})
 
-	return { instanceDiff: applicationReport, satellitesNotPlaced: roleSatellites?.unplaced ?? [] }
+	// what a satellite its roles refer to leaves out naming outside the placement: told of with the application
+	const instanceDiff = withReferencesNotPlaced({
+		told: applicationReport,
+		referencesNotPlaced: roleSatellites?.referencesNotPlaced ?? [],
+	})
+	return { instanceDiff, satellitesNotPlaced: roleSatellites?.unplaced ?? [] }
 }
 
 /**

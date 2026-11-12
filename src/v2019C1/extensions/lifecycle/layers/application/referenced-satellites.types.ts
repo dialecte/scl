@@ -1,5 +1,6 @@
 import type { Scl } from '@/v2019C1/config'
 import type { IndexedSatellite } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
+import type { ReferenceOutsideScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type { AnyTreeRecord } from '@dialecte/core'
 
@@ -24,6 +25,8 @@ export type RoleSatellites = {
 	unplacedReferenceIds: Set<string>
 	/** The references below the satellites placed that name what the placement neither places nor lands on. */
 	leaveOut: Set<string>
+	/** Those of `leaveOut` naming outside the placement, with what each names: told of. */
+	referencesNotPlaced: ReferenceOutsideScope[]
 	/** Where each satellite inside a function stood on is (the copy the function holds), as a redirect. */
 	copies: RedirectMapping[]
 	/** The satellites a copy stands for (record ids): not placed again. */

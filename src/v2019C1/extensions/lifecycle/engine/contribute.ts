@@ -1,4 +1,8 @@
-import { leaveOutOfScope } from './contribution-scope'
+import {
+	leaveOutOfScope,
+	leaveOutTellingOutOfScope,
+	withReferencesNotPlaced,
+} from './contribution-scope'
 import { diff } from './diff'
 import { reconcile } from './reconcile'
 
@@ -61,13 +65,14 @@ export async function describeContribution(
 	params: ContributionParams,
 ): Promise<InstanceDiff> {
 	const { sourceQuery, source, target } = params
-	const notSelected = await leaveOutOfScope(sourceQuery, {
+	// what names outside the placement is neither listed nor written: told of
+	const { notSelected, referencesNotPlaced } = await leaveOutTellingOutOfScope(sourceQuery, {
 		root: source,
 		scope: params.scope,
 		leftOut: params.leftOut,
 		omit: params.omit,
 	})
-	return diff({
+	const contribution = await diff({
 		sourceQuery,
 		targetQuery: query,
 		sourceRootRef: source,
@@ -85,4 +90,5 @@ export async function describeContribution(
 		placeholderLineages: params.placeholderLineages,
 		sourceIsProject: params.sourceIsProject,
 	})
+	return withReferencesNotPlaced({ told: contribution, referencesNotPlaced })
 }

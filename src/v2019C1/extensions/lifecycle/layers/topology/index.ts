@@ -11,6 +11,7 @@ export {
 	landAt,
 	landLevels,
 	landLevelsByTag,
+	placeTemplateLevels,
 	readTemplateLevels,
 	landOnStructure,
 	resolveLandedLevels,

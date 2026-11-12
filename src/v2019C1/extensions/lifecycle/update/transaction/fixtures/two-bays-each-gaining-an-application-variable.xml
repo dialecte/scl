@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="ssd" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="ssd-header" revision="2" uuid="ssd-document-uuid" version="0" dev:db-id="header-s"/>
+    <Substation name="TEMPLATE" uuid="s-substation-template" dev:db-id="substation-s">
+        <VoltageLevel name="V1" uuid="s-voltagelevel-v1" dev:db-id="voltage-level-s">
+            <Bay name="B1" uuid="s-bay-b1" dev:db-id="bay-1-s">
+                <Private type="eIEC61850-6-100" dev:db-id="private-1-s">
+                    <eIEC61850-6-100:AllocationRole name="PIU" uuid="role-1-source-uuid" dev:db-id="role-1-s">
+                        <eIEC61850-6-100:FunctionRef function="TEMPLATE/V1/B1/Prot" functionUuid="function-1-source-uuid" dev:db-id="role-1-function-ref-s"/>
+                    </eIEC61850-6-100:AllocationRole>
+                    <eIEC61850-6-100:Variable name="PICKUP" value="1" uuid="pickup-1-source-uuid" dev:db-id="pickup-1-s">
+                        <eIEC61850-6-100:VariableApplyTo element="TEMPLATE/V1/B1/Control_1" elementUuid="application-1-source-uuid" dev:db-id="pickup-1-apply-to-s"/>
+                    </eIEC61850-6-100:Variable>
+                    <eIEC61850-6-100:AllocationRole name="BAY_CTRL" uuid="bay-ctrl-1-source-uuid" dev:db-id="bay-ctrl-1-s">
+                        <eIEC61850-6-100:FunctionRef function="TEMPLATE/V1/B1/Prot" functionUuid="function-1-source-uuid" dev:db-id="bay-ctrl-1-function-ref-s"/>
+                    </eIEC61850-6-100:AllocationRole>
+                    <eIEC61850-6-100:Application name="Control_1" type="DCS" uuid="application-1-source-uuid" dev:db-id="application-1-s">
+                        <eIEC61850-6-100:FunctionRole name="ROOT" uuid="s-functionrole-root" dev:db-id="function-role-1-s">
+                            <eIEC61850-6-100:FunctionRoleContent dev:db-id="function-role-content-1-s">
+                                <eIEC61850-6-100:FunctionRef function="TEMPLATE/V1/B1/Prot" functionUuid="function-1-source-uuid" dev:db-id="application-1-function-ref-s"/>
+                            </eIEC61850-6-100:FunctionRoleContent>
+                        </eIEC61850-6-100:FunctionRole>
+                        <eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/V1/B1/PIU" allocationRoleUuid="role-1-source-uuid" dev:db-id="role-ref-1-s"/>
+                        <eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/V1/B1/BAY_CTRL" allocationRoleUuid="bay-ctrl-1-source-uuid" dev:db-id="bay-ctrl-ref-1-s"/>
+                    </eIEC61850-6-100:Application>
+                </Private>
+                <Function name="Prot" uuid="function-1-source-uuid" dev:db-id="function-1-s"/>
+            </Bay>
+            <Bay name="B2" uuid="s-bay-b2" dev:db-id="bay-2-s">
+                <Private type="eIEC61850-6-100" dev:db-id="private-2-s">
+                    <eIEC61850-6-100:AllocationRole name="PIU" uuid="role-2-source-uuid" dev:db-id="role-2-s">
+                        <eIEC61850-6-100:FunctionRef function="TEMPLATE/V1/B2/Prot" functionUuid="function-2-source-uuid" dev:db-id="role-2-function-ref-s"/>
+                    </eIEC61850-6-100:AllocationRole>
+                    <eIEC61850-6-100:Variable name="PICKUP" value="1" uuid="pickup-2-source-uuid" dev:db-id="pickup-2-s">
+                        <eIEC61850-6-100:VariableApplyTo element="TEMPLATE/V1/B2/Control_2" elementUuid="application-2-source-uuid" dev:db-id="pickup-2-apply-to-s"/>
+                    </eIEC61850-6-100:Variable>
+                    <eIEC61850-6-100:AllocationRole name="BAY_CTRL" uuid="bay-ctrl-2-source-uuid" dev:db-id="bay-ctrl-2-s">
+                        <eIEC61850-6-100:FunctionRef function="TEMPLATE/V1/B2/Prot" functionUuid="function-2-source-uuid" dev:db-id="bay-ctrl-2-function-ref-s"/>
+                    </eIEC61850-6-100:AllocationRole>
+                    <eIEC61850-6-100:Application name="Control_2" type="DCS" uuid="application-2-source-uuid" dev:db-id="application-2-s">
+                        <eIEC61850-6-100:FunctionRole name="ROOT" uuid="s-functionrole-root-2" dev:db-id="function-role-2-s">
+                            <eIEC61850-6-100:FunctionRoleContent dev:db-id="function-role-content-2-s">
+                                <eIEC61850-6-100:FunctionRef function="TEMPLATE/V1/B2/Prot" functionUuid="function-2-source-uuid" dev:db-id="application-2-function-ref-s"/>
+                            </eIEC61850-6-100:FunctionRoleContent>
+                        </eIEC61850-6-100:FunctionRole>
+                        <eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/V1/B2/PIU" allocationRoleUuid="role-2-source-uuid" dev:db-id="role-ref-2-s"/>
+                        <eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/V1/B2/BAY_CTRL" allocationRoleUuid="bay-ctrl-2-source-uuid" dev:db-id="bay-ctrl-ref-2-s"/>
+                    </eIEC61850-6-100:Application>
+                </Private>
+                <Function name="Prot" uuid="function-2-source-uuid" dev:db-id="function-2-s"/>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+</SCL>

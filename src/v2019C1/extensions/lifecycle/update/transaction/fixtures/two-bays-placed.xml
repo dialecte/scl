@@ -6,7 +6,7 @@
         </SourceFiles>
     </Header>
     <Substation name="S1" uuid="s1-uuid" dev:db-id="substation-t">
-        <VoltageLevel name="V1" templateUuid="s-voltagelevel-v1" uuid="t-voltagelevel-v1">
+        <VoltageLevel name="V1" templateUuid="s-voltagelevel-v1" uuid="t-voltagelevel-v1" dev:db-id="voltage-level-t">
             <Bay name="B1" templateUuid="s-bay-b1" uuid="t-bay-b1">
                 <Private type="eIEC61850-6-100">
                     <eIEC61850-6-100:AllocationRole name="PIU" templateUuid="role-1-source-uuid" uuid="t-allocationrole-piu">

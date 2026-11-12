@@ -265,7 +265,8 @@ export async function reportSsd(
 
 	// what applies to the levels only, and what they hold applying to no primary placed, goes with the frame
 	if (placedFrame && placementListing) {
-		// what the functions of the unit carry naming a node the template does not hold: not written, told of with the frame
+		// what the functions and the frame of the unit carry naming what the placement does not place (a node the template
+		// does not hold, an element left out): not written, told of with the frame
 		const carriedNotPlaced = placementListing.carried.referencesNotPlaced
 		if (carriedNotPlaced.length > 0) {
 			placedFrame.referencesNotPlaced = [
@@ -369,6 +370,7 @@ async function foldFrameSatellites(
 		root: placedFrame.tree,
 		groups: placedFrame.groups,
 		mappings: placedFrame.mappings,
+		referencesNotPlaced: placedFrame.referencesNotPlaced,
 	}
 	await foldCrossCuttingSatellites(query, {
 		sourceQuery: params.sourceQuery,
@@ -386,6 +388,8 @@ async function foldFrameSatellites(
 		leftOut: params.leftOut,
 	})
 	placedFrame.mappings = frameReport.mappings ?? []
+	if (frameReport.referencesNotPlaced)
+		placedFrame.referencesNotPlaced = frameReport.referencesNotPlaced
 	placedFrame.upToDate = placedFrame.groups.length === 0
 }
 

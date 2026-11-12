@@ -112,7 +112,10 @@ export type InstanceDiff = {
 	summary: DiffSummary
 	/** Where the shared source elements this instance refers to land in the project. */
 	mappings?: ReportMapping[]
-	/** Its references to a connectivity node no file of the template holds: neither listed nor written. */
+	/**
+	 * Its references naming what the placement does not place (a connectivity node no file of the template holds, an
+	 * element left out), with those of the shared elements it refers to: neither listed nor written, told of.
+	 */
 	referencesNotPlaced?: ReferenceOutsideScope[]
 }
 
@@ -204,9 +207,9 @@ export type ReportInstance = {
 	 */
 	satellitesNotPlaced?: AnyRefOrRecord[]
 	/**
-	 * On a first placement of a topology frame, its references naming what the placement does not place (a terminal on
-	 * a node of a bay the template does not hold): not written, they would name nothing in the project. Absent when
-	 * there is none.
+	 * The references of what it places naming what the placement does not place (a terminal on a node of a bay the
+	 * template does not hold, a reference by uuid to an element left out): not written, they would name nothing in the
+	 * project. Absent when there is none.
 	 */
 	referencesNotPlaced?: ReferenceOutsideScope[]
 }
@@ -290,9 +293,10 @@ export type ReportWarning =
 	  }
 	| {
 			/**
-			 * A reference of the template's frame naming what the placement does not place: neither the reference element nor
-			 * what it names is written. `attribute` is the attribute naming it (its path, else its uuid), `path` the path it
-			 * was written with, when one.
+			 * A reference of what the placement places naming what it does not place (a terminal on a node no file of the
+			 * template holds; a reference by uuid, of the frame, a role, a category, a variable or a behaviour description, to
+			 * an element the placement leaves out): the reference element is not written. `attribute` is the attribute naming
+			 * it (its path, else its uuid), `path` the path it was written with, when one.
 			 */
 			code: 'reference-not-placed'
 			/** The template's reference element. */

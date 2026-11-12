@@ -1,15 +1,24 @@
+import { readSatelliteIndex } from './applied-satellites'
 import { CROSS_CUTTING_SATELLITE_TAGS } from './applied-satellites.constants'
 import { findDuplicateApplications } from './held-applications'
+import { NO_HELD_APPLICATIONS } from './held-applications.constants'
 
 import {
-	collectOutOfScopeReferences,
+	collectContributionScope,
+	collectReferencesOutsideScope,
 	findUndeclaredNodeReference,
+	idOfOutside,
 } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 
-import type { IndexedSatellite, SatelliteIndex } from './applied-satellites.types'
+import type { HeldReference, IndexedSatellite, SatelliteIndex } from './applied-satellites.types'
 import type { CarriedScoping } from './carried-satellites.types'
 import type { DuplicateApplications, HeldApplications } from './held-applications.types'
-import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
+import type { Config, Scl } from '@/v2019C1/config'
+import type {
+	ContributionScope,
+	ReferenceOutsideScope,
+} from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
+import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
 
 /**
@@ -17,7 +26,8 @@ import type { AnyTreeRecord } from '@dialecte/core'
  * a frame places of what its levels hold (`satellites`) —, scoped as what a role refers to is: the references naming
  * what the placement neither places nor lands on are left out, and those making an application the project's copy makes
  * already (`held`); a variable left applying to nothing is not placed at all (`notPlaced`), with what it holds, but the
- * project's copy stands for it when there is one (`copies`). Read from what the caller read already, nothing more.
+ * project's copy stands for it when there is one (`copies`). A reference left out of a satellite placed, naming what the
+ * placement does not place, is told of (`referencesNotPlaced`). Read from what the caller read already, nothing more.
  */
 export function scopeCarriedSatellites(params: {
 	trees: readonly AnyTreeRecord[]
@@ -38,26 +48,48 @@ export function scopeCarriedSatellites(params: {
 	}
 	for (const tree of trees) collectCarried({ node: tree, scope, index, held, scoping })
 	for (const satellite of params.satellites ?? []) {
-		const outOfScope = new Set(
-			satellite.references
-				.filter(function namesOutside(reference) {
-					return reference.names.some(function isOutside(named) {
-						return !scope.has(named.uuid)
-					})
-				})
-				.map(readReferenceId),
-		)
 		scopeSatellite({
 			satelliteId: satellite.satelliteRef.id ?? '',
 			tagName: satellite.satelliteRef.tagName,
 			// what a variable holds of the references is its applications: the schema gives it no other
 			applications: satellite.references.map(readReferenceId),
-			outOfScope,
+			outOfScope: findHeldReferencesOutside({ references: satellite.references, scope }),
 			duplicate: findDuplicateApplications({ satellite, held }),
 			scoping,
 		})
 	}
 	return scoping
+}
+
+/**
+ * What a function placed on its own carries, scoped as a larger placement scopes what its functions carry (see
+ * `scopeCarriedSatellites`): what its references may name is the function, what it holds and the levels of the template
+ * it lands on. One read of its tree.
+ */
+export async function scopeFunctionCarried(
+	sourceQuery: Core.Query<Config>,
+	params: {
+		functionRef: Scl.Ref<Scl.ElementsOf>
+		/** The levels of the template it lands on: a reference to one names where it landed. */
+		landedLevels: readonly { uuid: string }[]
+		/** The satellites of the template, when read already: see `readSatelliteIndex`. */
+		index?: SatelliteIndex
+	},
+): Promise<CarriedScoping> {
+	const tree = await sourceQuery.any.getTree(params.functionRef)
+	const index = params.index ?? (await readSatelliteIndex(sourceQuery))
+	const scope = new Set<string>(
+		params.landedLevels.map(function uuidOf(level) {
+			return level.uuid
+		}),
+	)
+	if (tree) collectContributionScope({ node: tree, leftOut: undefined, scope })
+	return scopeCarriedSatellites({
+		trees: tree ? [tree] : [],
+		scope,
+		index,
+		held: NO_HELD_APPLICATIONS,
+	})
 }
 
 function collectCarried(params: {
@@ -89,7 +121,7 @@ function collectCarried(params: {
 			satelliteId: child.id,
 			tagName: child.tagName,
 			applications: child.tree.filter(isApplication).map(readReferenceId),
-			outOfScope: collectOutOfScopeReferences({ tree: child, scope }),
+			outOfScope: collectReferencesOutsideScope({ tree: child, scope }),
 			duplicate: findDuplicateApplications({ satellite: indexed, held }),
 			scoping,
 		})
@@ -102,11 +134,13 @@ function scopeSatellite(params: {
 	tagName: string
 	/** Its applications (record ids): what a variable applies to. */
 	applications: readonly string[]
-	outOfScope: ReadonlySet<string>
+	/** Its references naming what the placement neither places nor lands on. */
+	outOfScope: readonly ReferenceOutsideScope[]
 	duplicate: DuplicateApplications
 	scoping: CarriedScoping
 }): void {
-	const { satelliteId, outOfScope, duplicate, scoping } = params
+	const { satelliteId, duplicate, scoping } = params
+	const outOfScope = new Set(params.outOfScope.map(idOfOutside))
 	// a variable applies to something, or it is no variable
 	const appliesToNothing =
 		params.tagName === 'Variable' &&
@@ -115,11 +149,38 @@ function scopeSatellite(params: {
 		})
 	if (!appliesToNothing) {
 		for (const id of [...outOfScope, ...duplicate.referenceIds]) scoping.leaveOut.add(id)
+		// placed without them: what they named is not placed, told of — an application the project's copy makes already
+		// is made, not left out
+		scoping.referencesNotPlaced.push(...params.outOfScope)
 		return
 	}
 	scoping.notPlaced.add(satelliteId)
 	scoping.leaveOut.add(satelliteId)
+	// not placed for what it applies to is not placed: told of, reference by reference
+	scoping.referencesNotPlaced.push(...params.outOfScope)
 	if (duplicate.copy) scoping.copies.set(satelliteId, duplicate.copy)
+}
+
+/**
+ * The references a satellite holds naming an element outside `scope`, each with the attribute naming it and the path
+ * written: what a placement leaves out of it, and tells of when it places the satellite.
+ */
+export function findHeldReferencesOutside(params: {
+	references: readonly HeldReference[]
+	scope: ContributionScope
+}): ReferenceOutsideScope[] {
+	const { references, scope } = params
+	return references.flatMap(function outsideOf(reference): ReferenceOutsideScope[] {
+		const named = reference.names.find(function isOutside(name) {
+			return !scope.has(name.uuid)
+		})
+		if (!named) return []
+		const outside = {
+			reference: { tagName: reference.tagName, id: reference.id },
+			attribute: named.attribute,
+		}
+		return [named.path === undefined ? outside : { ...outside, path: named.path }]
+	})
 }
 
 function isApplication(reference: { tagName: string }): boolean {

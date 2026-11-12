@@ -7,6 +7,7 @@ import {
 	findReferencesOutsideScope,
 	idOfOutside,
 	resolveContributionScope,
+	withReferencesNotPlaced,
 } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
@@ -130,8 +131,8 @@ export async function reportTopologyFrame(
 			sourceQuery,
 			sourceRef: scopeRef,
 		})
-		if (notPlaced.length > 0) reportInstance.referencesNotPlaced = notPlaced
-		return { instances: [reportInstance], instanceLevelsList: [] }
+		const placed = withReferencesNotPlaced({ told: reportInstance, referencesNotPlaced: notPlaced })
+		return { instances: [placed], instanceLevelsList: [] }
 	}
 
 	const frameInstances = await findFrameInstances(query, {

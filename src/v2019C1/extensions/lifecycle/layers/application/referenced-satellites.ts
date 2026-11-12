@@ -8,8 +8,10 @@ import {
 	CROSS_CUTTING_SATELLITE_TAGS,
 	SATELLITE_REFERENCE_LINKS,
 } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.constants'
+import { findHeldReferencesOutside } from '@/v2019C1/extensions/lifecycle/cross-cutting/carried-satellites'
 import { findDuplicateApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications'
 import { NO_HELD_APPLICATIONS } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications.constants'
+import { idOfOutside } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
@@ -107,6 +109,7 @@ export async function resolveRoleSatellites(
 		unplaced: [],
 		unplacedReferenceIds: new Set(),
 		leaveOut: new Set(),
+		referencesNotPlaced: [],
 		copies: [],
 		copiedIds: new Set(),
 	}
@@ -138,17 +141,8 @@ export async function resolveRoleSatellites(
 			continue
 		}
 		// the references it holds naming what the placement neither places nor lands on
-		const outOfScope = new Set(
-			references
-				.filter(function namesOutside(reference) {
-					return reference.names.some(function isOutside(named) {
-						return !scope.has(named.uuid)
-					})
-				})
-				.map(function idOf(reference) {
-					return reference.id
-				}),
-		)
+		const outside = findHeldReferencesOutside({ references, scope })
+		const outOfScope = new Set(outside.map(idOfOutside))
 		// one application of a variable the project's copy of it (or of a template sibling) already makes is not made
 		// twice: two VariableApplyTo never apply to one value
 		const duplicate = findDuplicateApplications({
@@ -176,6 +170,8 @@ export async function resolveRoleSatellites(
 		satellites.placed.push(satelliteRef)
 		satellites.placedUuids.set(satelliteId, uuid)
 		for (const id of [...outOfScope, ...duplicate.referenceIds]) satellites.leaveOut.add(id)
+		// placed without them: what they named is not placed, told of
+		satellites.referencesNotPlaced.push(...outside)
 	}
 	return satellites
 }

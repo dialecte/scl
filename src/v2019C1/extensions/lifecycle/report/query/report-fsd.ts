@@ -3,10 +3,8 @@ import { buildReportInstance } from './report-instance'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import {
-	findUndeclaredNodeReferencesOf,
-	idOfOutside,
-} from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import { scopeFunctionCarried } from '@/v2019C1/extensions/lifecycle/cross-cutting/carried-satellites'
+import { withReferencesNotPlaced } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import {
@@ -14,6 +12,7 @@ import {
 	findInstancesUnder,
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
+import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/resolve-target-structure'
 import {
 	PLACED_FUNCTION_TAGS,
 	placedFunctionTag,
@@ -21,6 +20,7 @@ import {
 import {
 	describePlacementMappings,
 	findLanding,
+	resolveLandedLevels,
 	resolvePrimaryPlacement,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { readTemplateLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
@@ -30,10 +30,12 @@ import type { PlacementListing } from './placement-listing.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { CarriedScoping } from '@/v2019C1/extensions/lifecycle/cross-cutting/carried-satellites.types'
 import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { PlacementLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -128,10 +130,18 @@ export async function reportFsd(
 				findLanding({ placementLevels: placement.levels, levelId: templateLevel.sourceRef.id })) ||
 			targetParent
 
-		// placed on its own, what the function holds naming a node no file of it holds is not written, and told of
-		const notPlaced = params.placementListing
-			? []
-			: await findUndeclaredNodeReferencesOf(sourceQuery, { functionRef })
+		// placed on its own, what the function holds naming what it does not place (a node no file of it holds, another
+		// function) is not written, nor a variable it holds left applying to nothing: each reference told of; a reference
+		// to a level of the template it lands on (those of the structure where it lands, and the ones its placement adds)
+		// names where it landed
+		const carried = params.placementListing
+			? undefined
+			: await scopeFunctionPlacedAlone(query, {
+					sourceQuery,
+					functionRef,
+					landing,
+					placementLevels: placement.levels,
+				})
 		const instanceDiff = await reportFunction(query, {
 			templateLevels,
 			pass: params.pass,
@@ -141,7 +151,7 @@ export async function reportFsd(
 			matchKey,
 			decisionMappings,
 			anchor: landing,
-			notPlaced: new Set(notPlaced.map(idOfOutside)),
+			notPlaced: carried?.leaveOut ?? new Set(),
 			removalBase,
 			diffPolicy: params.diffPolicy,
 			placeholderLineages: params.placeholderLineages,
@@ -157,9 +167,13 @@ export async function reportFsd(
 		// the levels are listed first, the shared elements follow
 		const placementMappings = await describePlacementMappings(query, { levels: placement.levels })
 		reportInstance.mappings = [...placementMappings, ...reportInstance.mappings]
-		if (notPlaced.length > 0) reportInstance.referencesNotPlaced = notPlaced
+		// what the function carries naming a node the template does not hold, with what its satellites left out: told of
+		const placed = withReferencesNotPlaced({
+			told: reportInstance,
+			referencesNotPlaced: carried?.referencesNotPlaced ?? [],
+		})
 
-		const report = assembleReport({ instances: [reportInstance], templateRoots: [reportInstance] })
+		const report = assembleReport({ instances: [placed], templateRoots: [placed] })
 		report.offLevel = placement.offLevel
 		// a level nothing is decided for is the consumer's to choose before anything is written
 		if (placement.levels.some((level) => level.undecided)) report.needsDecisions = true
@@ -212,4 +226,35 @@ async function reportWhereKept(
 		reportInstances.push(...where.instances)
 	}
 	return assembleReport({ instances: reportInstances, templateRoots: reportInstances })
+}
+
+/**
+ * What a function placed on its own carries, scoped (`scopeFunctionCarried`) with the levels of the template above it
+ * that land on a level of the project: those of the structure where it lands, and the ones its placement adds — as its
+ * apply reads them once the levels are written.
+ */
+async function scopeFunctionPlacedAlone(
+	query: Core.Query<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		functionRef: FsdFunctionRef
+		landing: Scl.Ref<Scl.ElementsOf>
+		placementLevels: readonly PlacementLevel[]
+	},
+): Promise<CarriedScoping> {
+	const { sourceQuery, functionRef } = params
+	const structure = await resolveTargetStructure(query, params.landing)
+	const landedTags = new Set<string>(
+		params.placementLevels.map(function tagOf(level) {
+			return level.sourceRef.tagName
+		}),
+	)
+	for (const tagName of Object.keys(structure)) landedTags.add(tagName)
+	const landedLevels = await resolveLandedLevels(sourceQuery, {
+		primaryRef: functionRef,
+		landsOn: function landsWhereItLands(level) {
+			return landedTags.has(level.tagName)
+		},
+	})
+	return scopeFunctionCarried(sourceQuery, { functionRef, landedLevels })
 }

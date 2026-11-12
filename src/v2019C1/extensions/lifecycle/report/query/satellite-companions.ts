@@ -2,7 +2,10 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { describeContribution } from '@/v2019C1/extensions/lifecycle/engine/contribute'
-import { leaveOutOfScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import {
+	leaveOutTellingOutOfScope,
+	withReferencesNotPlaced,
+} from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { collectForeignReferenceIds } from '@/v2019C1/extensions/lifecycle/instance'
@@ -158,6 +161,13 @@ export async function foldSatelliteCompanions(
 						placeholderLineages: params.placeholderLineages,
 					})
 				: await diffSatellite(query, { ...params, satelliteRef, instance, projectOwned, matchKey })
+		// what the satellite leaves out naming outside the placement is told of with the primary
+		if (satelliteReport.referencesNotPlaced?.length) {
+			report.referencesNotPlaced = [
+				...(report.referencesNotPlaced ?? []),
+				...satelliteReport.referencesNotPlaced,
+			]
+		}
 		const changed =
 			satelliteReport.summary.added +
 				satelliteReport.summary.removed +
@@ -231,12 +241,15 @@ async function diffSatellite(
 		instance && foreignScope
 			? await collectForeignReferenceIds(query, { sharedRootRef: instance, foreignScope })
 			: undefined
-	// a reference naming what the placement does not place is neither listed nor written
-	const leftOut = await leaveOutOfScope(sourceQuery, {
-		root: satelliteRef,
-		scope: params.scope,
-		leftOut: params.notSelected,
-	})
+	// a reference naming what the placement does not place is neither listed nor written: told of
+	const { notSelected: leftOut, referencesNotPlaced } = await leaveOutTellingOutOfScope(
+		sourceQuery,
+		{
+			root: satelliteRef,
+			scope: params.scope,
+			leftOut: params.notSelected,
+		},
+	)
 	// Provenance override: a leftover ref IS a genuine removal when its target is in the source's own scope and the
 	// source satellite no longer references it (see below).
 	const leftoverRefPolicy = await buildLeftoverRefPolicy(query, {
@@ -244,7 +257,7 @@ async function diffSatellite(
 		satelliteRef,
 		matchKey,
 	})
-	return diff({
+	const satelliteDiff = await diff({
 		sourceQuery,
 		targetQuery: query,
 		sourceRootRef: satelliteRef,
@@ -262,6 +275,7 @@ async function diffSatellite(
 		namesFollow: params.namesFollow,
 		notSelected: leftOut,
 	})
+	return withReferencesNotPlaced({ told: satelliteDiff, referencesNotPlaced })
 }
 
 /**

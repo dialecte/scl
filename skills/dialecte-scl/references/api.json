@@ -947,7 +947,7 @@
 				"add a Function from a template under a Bay or Function",
 				"place a function template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts:61"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts:59"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.resolveTargetStructure",
@@ -1026,7 +1026,7 @@
 				"reconcile Function instances with their template",
 				"instantiate or update a function template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/fsd.ts:76"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/fsd.ts:80"
 		},
 		{
 			"path": "tx.lifecycle.update.ssd",

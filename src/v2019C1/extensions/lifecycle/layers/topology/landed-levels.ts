@@ -88,7 +88,7 @@ export async function readTemplateLevels(
 		const records = await sourceQuery.getRecordsByTagName(tagName)
 		for (const record of records) {
 			const uuid = readAttribute({ record, name: 'uuid', defaults: 'none' })
-			if (uuid) levels.push({ uuid, tagName })
+			if (uuid) levels.push({ id: record.id, uuid, tagName })
 		}
 	}
 	return levels
@@ -127,6 +127,23 @@ function nearestStructureLevel(params: {
 		if (target) return target
 	}
 	return undefined
+}
+
+/**
+ * Where each level of a template is placed by an operation placing under `structure`, by its record id: on the
+ * structure's level of its tag, else on the nearest level above it the structure holds, as a clone is placed. Pure.
+ */
+export function placeTemplateLevels(params: {
+	levels: readonly TemplateLevel[]
+	structure: TargetStructure
+}): Map<string, Scl.Ref<Scl.ElementsOf> | undefined> {
+	const { levels, structure } = params
+	return new Map(
+		levels.map(function placedOf(level) {
+			const target = nearestStructureLevel({ structure, tagName: level.tagName })
+			return [level.id, target ? (toRef(target) as Scl.Ref<Scl.ElementsOf>) : undefined] as const
+		}),
+	)
 }
 
 /** `landLevels` of the template read in one pass: see `readTemplateLevels`. */

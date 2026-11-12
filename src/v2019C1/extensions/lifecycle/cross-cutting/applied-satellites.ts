@@ -152,7 +152,12 @@ export async function readSatelliteIndex(query: Core.Query<Config>): Promise<Sat
 			if (!owner) continue
 			const names = pairs.flatMap(function nameOf(pair) {
 				const uuid = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
-				return uuid ? [{ uuid, targets: pair.target }] : []
+				if (!uuid) return []
+				const path = readAttribute({ record, name: pair.attribute.path, defaults: 'none' })
+				const written = path
+					? { attribute: pair.attribute.path, path }
+					: { attribute: pair.attribute.uuid }
+				return [{ uuid, targets: pair.target, ...written }]
 			})
 			owner.references.push({ id: record.id, tagName, names })
 		}

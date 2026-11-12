@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="fsd">
+    <Header id="fsd-header" revision="2" uuid="fsd-document-uuid" version="0" dev:db-id="header-s"/>
+    <Substation name="TEMPLATE" uuid="substation-source-uuid" dev:db-id="substation-s">
+        <VoltageLevel name="TEMPLATE" uuid="voltage-level-source-uuid" dev:db-id="voltage-level-s">
+            <Bay name="TEMPLATE" uuid="bay-source-uuid" dev:db-id="bay-s">
+                <Function name="Prot" uuid="function-source-uuid" dev:db-id="function-s">
+                    <ConductingEquipment name="CBR1" type="CBR" uuid="breaker-source-uuid" dev:db-id="breaker-s"/>
+                    <ConductingEquipment name="QC1" type="DIS" uuid="earthing-switch-source-uuid" dev:db-id="earthing-switch-s">
+                        <Terminal name="T1" connectivityNode="TEMPLATE/TEMPLATE/TEMPLATE/grounded" substationName="TEMPLATE" voltageLevelName="TEMPLATE" bayName="TEMPLATE" cNodeName="grounded" dev:db-id="terminal-grounded-s"/>
+                    </ConductingEquipment>
+                </Function>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+</SCL>
