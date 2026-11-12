@@ -1,0 +1,59 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2007" revision="C" release="5">
+	<!-- project South: substation South / E1 / Q01, nothing placed in Q01 yet; real IED R1 (from a supplier ICD) beside it, on the station bus -->
+	<Header id="South" fileType="SCD" uuid="f0000000-0000-4000-8000-000000000030" version="1" revision="A"/>
+	<Substation name="South" uuid="c0000000-0000-4000-8000-000000000001">
+		<VoltageLevel name="E1" uuid="c0000000-0000-4000-8000-000000000002">
+			<Bay name="Q01" uuid="c0000000-0000-4000-8000-000000000003"/>
+			<Bay name="Q02" uuid="c0000000-0000-4000-8000-000000000004">
+				<Function name="BusbarProtection" uuid="c0000000-0000-4000-8000-000000000005">
+					<LNode iedName="R1" ldInst="LD0" prefix="" lnClass="PDIF" lnInst="1" lnType="R1_PDIF" lnUuid="c0000000-0000-4000-8000-000000000021" uuid="c0000000-0000-4000-8000-000000000011">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="R1" sLdInst="LD0" sLnClass="PDIF" sLnInst="1"/>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<Communication>
+		<SubNetwork name="StationBus" type="8-MMS" uuid="c0000000-0000-4000-8000-000000000006">
+			<ConnectedAP iedName="R1" apName="S1">
+				<Address>
+					<P type="IP">10.0.2.11</P>
+				</Address>
+			</ConnectedAP>
+		</SubNetwork>
+	</Communication>
+	<IED name="R1" manufacturer="Supplier" uuid="c0000000-0000-4000-8000-000000000030">
+		<IEDSourceFiles>
+			<SclFileReference fileType="ICD" fileName="R1_supplier" fileUuid="f0000000-0000-4000-8000-000000000031" version="1" revision="A"/>
+		</IEDSourceFiles>
+		<AccessPoint name="S1" uuid="c0000000-0000-4000-8000-000000000031">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD0" uuid="c0000000-0000-4000-8000-000000000032">
+					<LN0 lnClass="LLN0" inst="" lnType="R1_LLN0" uuid="c0000000-0000-4000-8000-000000000020"/>
+					<LN lnClass="PDIF" inst="1" prefix="" lnType="R1_PDIF" uuid="c0000000-0000-4000-8000-000000000021"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="R1_LLN0" lnClass="LLN0">
+			<DO name="Beh" type="R1_ENS"/>
+		</LNodeType>
+		<LNodeType id="R1_PDIF" lnClass="PDIF">
+			<DO name="Op" type="R1_ACT"/>
+		</LNodeType>
+		<DOType id="R1_ENS" cdc="ENS">
+			<DA name="stVal" bType="Enum" type="R1_Beh" fc="ST"/>
+		</DOType>
+		<DOType id="R1_ACT" cdc="ACT">
+			<DA name="general" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+		<EnumType id="R1_Beh">
+			<EnumVal ord="1">on</EnumVal>
+			<EnumVal ord="5">off</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>

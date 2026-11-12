@@ -1,0 +1,113 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2007" revision="C" release="5">
+	<!-- project North: BCU1 placed in North / E1 / Q01 from the template ISD's first revision (every b... uuid carries its a... twin as templateUuid; the IED names the template ISD as a source file) -->
+	<Header id="North" fileType="SSD" uuid="f0000000-0000-4000-8000-000000000020" version="3" revision="B"/>
+	<Substation name="North" uuid="b0000000-0000-4000-8000-000000000001">
+		<VoltageLevel name="E1" uuid="b0000000-0000-4000-8000-000000000002">
+			<Bay name="Q01" uuid="b0000000-0000-4000-8000-000000000003">
+				<Function name="BayControl" templateUuid="a0000000-0000-4000-8000-000000000004" uuid="b0000000-0000-4000-8000-000000000004">
+					<LNode iedName="BCU1" ldInst="CTRL" prefix="" lnClass="CSWI" lnInst="1" lnType="CSWI_T" lnUuid="b0000000-0000-4000-8000-000000000021" templateUuid="a0000000-0000-4000-8000-000000000011" uuid="b0000000-0000-4000-8000-000000000011">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="BCU1" sLdInst="CTRL" sLnClass="CSWI" sLnInst="1"/>
+						</Private>
+					</LNode>
+					<LNode iedName="BCU1" ldInst="CTRL" prefix="" lnClass="CILO" lnInst="1" lnType="CILO_T" lnUuid="b0000000-0000-4000-8000-000000000022" templateUuid="a0000000-0000-4000-8000-000000000012" uuid="b0000000-0000-4000-8000-000000000012">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="BCU1" sLdInst="CTRL" sLnClass="CILO" sLnInst="1"/>
+						</Private>
+					</LNode>
+				</Function>
+				<Function name="LineProtection" templateUuid="a0000000-0000-4000-8000-000000000005" uuid="b0000000-0000-4000-8000-000000000005">
+					<LNode iedName="BCU1" ldInst="PROT" prefix="" lnClass="PTOC" lnInst="1" lnType="PTOC_T" lnUuid="b0000000-0000-4000-8000-000000000023" templateUuid="a0000000-0000-4000-8000-000000000013" uuid="b0000000-0000-4000-8000-000000000013">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="BCU1" sLdInst="PROT" sLnClass="PTOC" sLnInst="1"/>
+						</Private>
+					</LNode>
+					<LNode iedName="BCU1" ldInst="PROT" prefix="" lnClass="PTRC" lnInst="1" lnType="PTRC_T" lnUuid="b0000000-0000-4000-8000-000000000024" templateUuid="a0000000-0000-4000-8000-000000000014" uuid="b0000000-0000-4000-8000-000000000014">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="BCU1" sLdInst="PROT" sLnClass="PTRC" sLnInst="1"/>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<Communication>
+		<SubNetwork name="StationBus" type="8-MMS" uuid="b0000000-0000-4000-8000-000000000006">
+			<ConnectedAP iedName="BCU1" apName="AP1">
+				<Address>
+					<P type="IP">10.0.1.21</P>
+				</Address>
+			</ConnectedAP>
+		</SubNetwork>
+	</Communication>
+	<IED name="BCU1" templateUuid="a0000000-0000-4000-8000-000000000030" uuid="b0000000-0000-4000-8000-000000000030">
+		<IEDSourceFiles>
+			<SclFileReference fileType="ISD" fileName="BCU_Template.isd" fileUuid="f0000000-0000-4000-8000-000000000001" version="0" revision="1"/>
+		</IEDSourceFiles>
+		<AccessPoint name="AP1" templateUuid="a0000000-0000-4000-8000-000000000031" uuid="b0000000-0000-4000-8000-000000000031">
+			<Server>
+				<Authentication/>
+				<LDevice inst="CTRL" templateUuid="a0000000-0000-4000-8000-000000000032" uuid="b0000000-0000-4000-8000-000000000032">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" templateUuid="a0000000-0000-4000-8000-000000000020" uuid="b0000000-0000-4000-8000-000000000020">
+						<DataSet name="Positions" templateUuid="a0000000-0000-4000-8000-000000000035" uuid="b0000000-0000-4000-8000-000000000035">
+							<FCDA ldInst="CTRL" prefix="" lnClass="CSWI" lnInst="1" doName="Pos" daName="stVal" fc="ST"/>
+						</DataSet>
+						<GSEControl name="PositionGoose" datSet="Positions" appID="BCU_Pos" confRev="1" templateUuid="a0000000-0000-4000-8000-000000000033" uuid="b0000000-0000-4000-8000-000000000033"/>
+					</LN0>
+					<LN lnClass="CSWI" inst="1" prefix="" lnType="CSWI_T" templateUuid="a0000000-0000-4000-8000-000000000021" uuid="b0000000-0000-4000-8000-000000000021"/>
+					<LN lnClass="LPHD" inst="1" prefix="" lnType="LPHD_T" templateUuid="a0000000-0000-4000-8000-000000000027" uuid="b0000000-0000-4000-8000-000000000027"/>
+					<LN lnClass="CILO" inst="1" prefix="" lnType="CILO_T" templateUuid="a0000000-0000-4000-8000-000000000022" uuid="b0000000-0000-4000-8000-000000000022">
+						<Inputs>
+							<ExtRef intAddr="BusbarDisconnectorPos" desc="Position of the busbar disconnector" pLN="XSWI" pDO="Pos" pDA="stVal" pServT="GOOSE" templateUuid="a0000000-0000-4000-8000-000000000036" uuid="b0000000-0000-4000-8000-000000000036"/>
+						</Inputs>
+					</LN>
+				</LDevice>
+				<LDevice inst="PROT" templateUuid="a0000000-0000-4000-8000-000000000034" uuid="b0000000-0000-4000-8000-000000000034">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" templateUuid="a0000000-0000-4000-8000-000000000025" uuid="b0000000-0000-4000-8000-000000000025"/>
+					<LN lnClass="LPHD" inst="1" prefix="" lnType="LPHD_T" templateUuid="a0000000-0000-4000-8000-000000000028" uuid="b0000000-0000-4000-8000-000000000028"/>
+					<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_T" templateUuid="a0000000-0000-4000-8000-000000000023" uuid="b0000000-0000-4000-8000-000000000023">
+						<DOI name="OpDlTmms">
+							<DAI name="setVal">
+								<Val>100</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="PTRC" inst="1" prefix="" lnType="PTRC_T" templateUuid="a0000000-0000-4000-8000-000000000024" uuid="b0000000-0000-4000-8000-000000000024"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_T" lnClass="LLN0">
+			<DO name="Loc" type="SPS_T"/>
+		</LNodeType>
+		<LNodeType id="LPHD_T" lnClass="LPHD">
+			<DO name="Proxy" type="SPS_T"/>
+		</LNodeType>
+		<LNodeType id="CSWI_T" lnClass="CSWI">
+			<DO name="Pos" type="DPC_T"/>
+		</LNodeType>
+		<LNodeType id="CILO_T" lnClass="CILO">
+			<DO name="EnaOpn" type="SPS_T"/>
+		</LNodeType>
+		<LNodeType id="PTOC_T" lnClass="PTOC">
+			<DO name="Op" type="ACT_T"/>
+			<DO name="OpDlTmms" type="ING_T"/>
+		</LNodeType>
+		<LNodeType id="PTRC_T" lnClass="PTRC">
+			<DO name="Tr" type="ACT_T"/>
+		</LNodeType>
+		<DOType id="DPC_T" cdc="DPC">
+			<DA name="stVal" bType="Dbpos" fc="ST"/>
+		</DOType>
+		<DOType id="SPS_T" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+		<DOType id="ACT_T" cdc="ACT">
+			<DA name="general" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+		<DOType id="ING_T" cdc="ING">
+			<DA name="setVal" bType="INT32" fc="SP"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>
