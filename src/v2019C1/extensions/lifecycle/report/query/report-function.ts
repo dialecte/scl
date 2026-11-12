@@ -62,6 +62,8 @@ export async function reportFunction(
 		placementListing?: PlacementListing
 		/** The template's levels, read once per report: see `readTemplateLevels`. */
 		templateLevels: readonly TemplateLevel[]
+		/** On a first placement of its own, what of it is not written (record ids): see `collectUndeclaredNodeReferences`. */
+		notPlaced?: ReadonlySet<string>
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
@@ -79,7 +81,7 @@ export async function reportFunction(
 		// on a first placement, what the function carries is scoped as its clone is
 		notSelected: readNotSelected({
 			leftOut: params.selection?.leftOut,
-			carried: params.placementListing?.carried.leaveOut,
+			carried: params.placementListing?.carried.leaveOut ?? params.notPlaced,
 		}),
 	})
 	// On FIRST-TIME (no instance) the satellites are still created via the clone path,

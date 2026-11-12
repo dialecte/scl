@@ -37,6 +37,9 @@ export async function buildReportInstance(
 			tree: instanceDiff.root,
 			groups: instanceDiff.groups,
 			mappings: instanceDiff.mappings ?? [],
+			...(instanceDiff.referencesNotPlaced
+				? { referencesNotPlaced: instanceDiff.referencesNotPlaced }
+				: {}),
 		}
 	}
 
@@ -51,5 +54,8 @@ export async function buildReportInstance(
 		tree: instanceDiff.root,
 		groups: instanceDiff.groups,
 		mappings: instanceDiff.mappings ?? [],
+		...(instanceDiff.referencesNotPlaced
+			? { referencesNotPlaced: instanceDiff.referencesNotPlaced }
+			: {}),
 	}
 }

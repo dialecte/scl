@@ -3,6 +3,10 @@ import { buildReportInstance } from './report-instance'
 
 import { toRef } from '@dialecte/core/helpers'
 
+import {
+	findUndeclaredNodeReferencesOf,
+	idOfOutside,
+} from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { assembleReport } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import {
@@ -124,6 +128,10 @@ export async function reportFsd(
 				findLanding({ placementLevels: placement.levels, levelId: templateLevel.sourceRef.id })) ||
 			targetParent
 
+		// placed on its own, what the function holds naming a node no file of it holds is not written, and told of
+		const notPlaced = params.placementListing
+			? []
+			: await findUndeclaredNodeReferencesOf(sourceQuery, { functionRef })
 		const instanceDiff = await reportFunction(query, {
 			templateLevels,
 			pass: params.pass,
@@ -133,6 +141,7 @@ export async function reportFsd(
 			matchKey,
 			decisionMappings,
 			anchor: landing,
+			notPlaced: new Set(notPlaced.map(idOfOutside)),
 			removalBase,
 			diffPolicy: params.diffPolicy,
 			placeholderLineages: params.placeholderLineages,
@@ -148,6 +157,7 @@ export async function reportFsd(
 		// the levels are listed first, the shared elements follow
 		const placementMappings = await describePlacementMappings(query, { levels: placement.levels })
 		reportInstance.mappings = [...placementMappings, ...reportInstance.mappings]
+		if (notPlaced.length > 0) reportInstance.referencesNotPlaced = notPlaced
 
 		const report = assembleReport({ instances: [reportInstance], templateRoots: [reportInstance] })
 		report.offLevel = placement.offLevel

@@ -934,7 +934,7 @@
 				"add an Application from a template",
 				"place an application template under a Bay"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/asd.ts:50"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/asd.ts:52"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.fsd",
@@ -947,7 +947,7 @@
 				"add a Function from a template under a Bay or Function",
 				"place a function template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts:52"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts:61"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.resolveTargetStructure",
@@ -972,7 +972,7 @@
 				"add a bay typical or process section from a template",
 				"use an SSD as a project base"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/ssd.ts:41",
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/ssd.ts:42",
 			"example": "await tx.lifecycle.instantiate.ssd({ sourceQuery: source.query, targetParent: targetVl })"
 		},
 		{
@@ -1039,7 +1039,7 @@
 				"reconcile a bay typical with its template",
 				"propagate an SSD change"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/ssd.ts:63"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/ssd.ts:66"
 		},
 		{
 			"path": "tx.reference.applyTypeIdRemap",

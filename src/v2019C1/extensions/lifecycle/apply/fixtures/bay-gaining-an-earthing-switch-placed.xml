@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="scd">
+    <Header id="project" uuid="project-uuid" dev:db-id="header-t">
+        <SourceFiles>
+            <SclFileReference fileName="template" fileType="SSD" fileUuid="ssd-document-uuid" revision="1" version="0"/>
+        </SourceFiles>
+    </Header>
+    <Substation name="S1" uuid="s1-uuid" dev:db-id="substation-t">
+        <VoltageLevel name="15kV" uuid="v15-uuid" dev:db-id="voltage-level-t">
+            <Bay name="Bay_MV" templateUuid="bay-source-uuid" uuid="t-bay-bay-mv">
+                <ConductingEquipment name="CBR1" templateUuid="breaker-source-uuid" type="CBR" uuid="t-conductingequipment-cbr1"/>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+</SCL>
