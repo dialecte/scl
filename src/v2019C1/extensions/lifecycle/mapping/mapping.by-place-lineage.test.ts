@@ -153,7 +153,8 @@ describe('shared-element mapping — a role landing on the level above its own',
 								<Private type="eIEC61850-6-100" ${id}="private-t">
 									<eIEC61850-6-100:AllocationRole name="BAY_CTRL" uuid="role-here-uuid" ${id}="role-here-t"/>
 								</Private>
-								<!-- no bay: what the template's bay holds is written in the voltage level -->
+								<!-- no bay of the template's: what the template's bay holds is written in the voltage level -->
+								<Bay name="Other" ${id}="bay-other-t"/>
 							</VoltageLevel>
 						</Substation>
 					</SCL>
