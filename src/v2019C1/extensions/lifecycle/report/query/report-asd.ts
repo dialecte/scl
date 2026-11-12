@@ -235,6 +235,12 @@ export async function reportAsd(
 		const placementMappings = await describePlacementMappings(query, { levels: placement.levels })
 		reportInstance.mappings = [...placementMappings, ...reportInstance.mappings]
 		if (satellitesNotPlaced.length > 0) reportInstance.satellitesNotPlaced = satellitesNotPlaced
+		// what its functions carry naming a node the template does not hold: not written, told of — by the placement
+		// that listed it, when it is part of a larger one
+		const carriedNotPlaced = params.placementListing
+			? []
+			: (placementListing?.carried.referencesNotPlaced ?? [])
+		if (carriedNotPlaced.length > 0) reportInstance.referencesNotPlaced = carriedNotPlaced
 		reportInstances.push(reportInstance)
 	} else {
 		// an element the instances share (a role) holds one reference per instance: each instance

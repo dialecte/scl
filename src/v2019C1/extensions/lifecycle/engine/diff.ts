@@ -23,6 +23,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
 import { numberRenames } from '@/v2019C1/extensions/lifecycle/constraints/number-renames'
+import { leaveOutUndeclaredNodes } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { DiffPolicy } from './diff-policy.types'
@@ -160,19 +161,25 @@ export async function diff(params: {
 	const removalBase = params.removalBase ?? { kind: 'lineage' }
 	const namesFollow = params.namesFollow ?? 'project'
 	const omit = params.omit
-	const notSelected = params.notSelected
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	if (!sourceTree) {
 		throwDialecteError('ELEMENT_NOT_FOUND', { detail: 'diff: source subtree not found' })
 	}
+	// a terminal naming a node no file of the template holds would name nothing in the project: never added, told of
+	const { notSelected, referencesNotPlaced } = leaveOutUndeclaredNodes({
+		tree: sourceTree,
+		notSelected: params.notSelected,
+		omit,
+	})
+	const notPlaced = referencesNotPlaced.length > 0 ? { referencesNotPlaced } : {}
 
 	const instanceTree = instanceRootRef ? await targetQuery.any.getTree(instanceRootRef) : undefined
 
 	// no instance yet -> first-time instantiate: the whole template is added (fast)
 	if (!instanceTree) {
 		const root = addedNode({ node: sourceTree, omit, notSelected })
-		return { root, groups: groupChanges(root), summary: summarize(root) }
+		return { root, groups: groupChanges(root), summary: summarize(root), ...notPlaced }
 	}
 
 	const index = new Map<string, AnyTreeRecord>()
@@ -222,7 +229,7 @@ export async function diff(params: {
 	}
 	const summary = summarize(root)
 	const groups = groupChanges(root, instanceTree.id)
-	return { root, groups, summary }
+	return { root, groups, summary, ...notPlaced }
 }
 
 async function diffMatched(params: {

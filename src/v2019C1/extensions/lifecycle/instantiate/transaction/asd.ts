@@ -14,6 +14,8 @@ import {
 	landOnStructure,
 	landPrimaries,
 	withLandedLevels,
+	landGroundedTerminals,
+	placeLevelsOnStructure,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import {
@@ -181,6 +183,9 @@ export async function placeApplication(
 		resolveStructure: placementStructure,
 		decisionMappings,
 	})
+	// a terminal of a function's equipment on the predefined grounded node names the grounded node of its level as placed
+	const placedLevels = await placeLevelsOnStructure(sourceQuery, { structure })
+	await landGroundedTerminals(tx, { sourceQuery, cloneMappings: allMappings, placedLevels })
 
 	const composedFunctionInstanceRefs = composedFunctionRefs
 		.map(

@@ -1,7 +1,8 @@
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { readAttribute } from '@/v2019C1/helpers'
+import { namesGroundedNode } from '@/v2019C1/helpers/grounded-node'
 
-import type { ContributionScope } from './contribution-scope.types'
+import type { ContributionScope, ReferenceOutsideScope } from './contribution-scope.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
@@ -49,10 +50,28 @@ export async function findOutOfScopeReferences(
 		omit?: readonly string[]
 	},
 ): Promise<ReadonlySet<string>> {
-	const { scope, omit } = params
-	const tree = await sourceQuery.any.getTree(params.root)
-	if (!tree) return new Set()
-	return collectOutOfScopeReferences({ tree, scope, omit })
+	const { root, scope, omit } = params
+	const outside = await findReferencesOutsideScope(sourceQuery, { root, scope, omit })
+	return new Set(outside.map(idOfOutside))
+}
+
+/**
+ * `findOutOfScopeReferences` with what each reference names: the attribute naming it and the path written. The
+ * subtrees of what `leftOut` names (record ids) are not walked. One read of the root's tree.
+ */
+export async function findReferencesOutsideScope(
+	query: Core.Query<Config>,
+	params: {
+		root: Scl.Ref<Scl.ElementsOf>
+		scope: ContributionScope
+		omit?: readonly string[]
+		leftOut?: ReadonlySet<string>
+	},
+): Promise<ReferenceOutsideScope[]> {
+	const { scope, omit, leftOut } = params
+	const tree = await query.any.getTree(params.root)
+	if (!tree) return []
+	return collectReferencesOutsideScope({ tree, scope, omit, leftOut })
 }
 
 /** `findOutOfScopeReferences` over a tree the caller read already: the references below its root. */
@@ -61,30 +80,104 @@ export function collectOutOfScopeReferences(params: {
 	scope: ContributionScope
 	omit?: readonly string[]
 }): Set<string> {
-	const { tree, scope, omit } = params
-	const outOfScope = new Set<string>()
+	return new Set(collectReferencesOutsideScope(params).map(idOfOutside))
+}
+
+/**
+ * The references below a tree's root naming an element outside `scope`, each with the attribute naming it and the
+ * path written: what a placement leaves out and tells of. The subtrees of `omit` tags, and of what `leftOut` names
+ * (record ids), are not walked.
+ */
+function collectReferencesOutsideScope(params: {
+	tree: AnyTreeRecord
+	scope: ContributionScope
+	omit?: readonly string[]
+	leftOut?: ReadonlySet<string>
+}): ReferenceOutsideScope[] {
+	const { tree, scope, omit, leftOut } = params
+	const outside: ReferenceOutsideScope[] = []
 	const pending: AnyTreeRecord[] = [...tree.tree]
+	while (pending.length > 0) {
+		const node = pending.pop() as AnyTreeRecord
+		if (omit?.includes(node.tagName) || leftOut?.has(node.id)) continue
+		pending.push(...node.tree)
+		const named = findNamedOutsideScope({ reference: node, scope })
+		if (named) outside.push({ reference: { tagName: node.tagName, id: node.id }, ...named })
+	}
+	return outside
+}
+
+/**
+ * What a reference names outside the scope, if it does: by a uuid the scope does not hold, or, for a reference to a
+ * connectivity node only, by a path only (`findUndeclaredNodeReference`). This reads imported sources: a reference
+ * created in memory by its path alone keeps no uuid either.
+ */
+function findNamedOutsideScope(params: {
+	reference: AnyTreeRecord
+	scope: ContributionScope
+}): Omit<ReferenceOutsideScope, 'reference'> | undefined {
+	const { reference, scope } = params
+	const pairs = UUID_REFERENCE_PAIRS[reference.tagName as keyof typeof UUID_REFERENCE_PAIRS]
+	for (const pair of pairs ?? []) {
+		const uuid = readAttribute({ record: reference, name: pair.attribute.uuid, defaults: 'none' })
+		const path = readAttribute({ record: reference, name: pair.attribute.path, defaults: 'none' })
+		if (uuid && !scope.has(uuid))
+			return path ? { attribute: pair.attribute.path, path } : { attribute: pair.attribute.uuid }
+	}
+	return findUndeclaredNodeReference({ reference })
+}
+
+/**
+ * What a reference to a connectivity node only (a terminal, a neutral point) names when it is written by path only, with
+ * no uuid: the import gives a reference the uuid of the element its path names, so such a path names nothing the
+ * imported source holds — but the predefined `grounded` node, which no file declares. None for any other reference.
+ */
+export function findUndeclaredNodeReference(params: {
+	reference: AnyTreeRecord
+}): Omit<ReferenceOutsideScope, 'reference'> | undefined {
+	const { reference } = params
+	const pairs = UUID_REFERENCE_PAIRS[reference.tagName as keyof typeof UUID_REFERENCE_PAIRS]
+	for (const pair of pairs ?? []) {
+		const targets = pair.target as readonly string[]
+		if (!namesConnectivityNodeOnly(targets)) continue
+		const uuid = readAttribute({ record: reference, name: pair.attribute.uuid, defaults: 'none' })
+		const path = readAttribute({ record: reference, name: pair.attribute.path, defaults: 'none' })
+		if (!uuid && path && !namesGroundedNode({ targets, path }))
+			return { attribute: pair.attribute.path, path }
+	}
+	return undefined
+}
+
+/**
+ * The references below a tree's root to a connectivity node written by path only (`findUndeclaredNodeReference`): what
+ * a clone of the tree leaves out and tells of, wherever it is placed.
+ */
+export function collectUndeclaredNodeReferences(params: {
+	tree: AnyTreeRecord
+	/** Tags whose subtrees another pass reads: not walked. */
+	omit?: readonly string[]
+}): ReferenceOutsideScope[] {
+	const { omit } = params
+	const found: ReferenceOutsideScope[] = []
+	const pending: AnyTreeRecord[] = [params.tree]
 	while (pending.length > 0) {
 		const node = pending.pop() as AnyTreeRecord
 		if (omit?.includes(node.tagName)) continue
 		pending.push(...node.tree)
-		if (namesOutsideScope({ reference: node, scope })) outOfScope.add(node.id)
+		const named = findUndeclaredNodeReference({ reference: node })
+		if (named) found.push({ reference: { tagName: node.tagName, id: node.id }, ...named })
 	}
-	return outOfScope
+	return found
 }
 
-/** Whether a reference names, by uuid, an element outside the scope. */
-function namesOutsideScope(params: {
-	reference: AnyTreeRecord
-	scope: ContributionScope
-}): boolean {
-	const { reference, scope } = params
-	const pairs = UUID_REFERENCE_PAIRS[reference.tagName as keyof typeof UUID_REFERENCE_PAIRS]
-	if (!pairs) return false
-	return pairs.some((pair) => {
-		const uuid = readAttribute({ record: reference, name: pair.attribute.uuid, defaults: 'none' })
-		return Boolean(uuid) && !scope.has(uuid)
-	})
+/** Whether a reference names a connectivity node only: a terminal or a neutral point. */
+function namesConnectivityNodeOnly(targets: readonly string[]): boolean {
+	return targets.length === 1 && targets[0] === 'ConnectivityNode'
+}
+
+/** The record id of a reference outside the scope. */
+export function idOfOutside(outside: ReferenceOutsideScope): string {
+	return outside.reference.id
 }
 
 /**
@@ -103,4 +196,33 @@ export async function leaveOutOfScope(
 	const outOfScope = await findOutOfScopeReferences(sourceQuery, params)
 	if (!params.leftOut) return outOfScope
 	return new Set([...params.leftOut, ...outOfScope])
+}
+
+/** `collectUndeclaredNodeReferences` over a function of the template: one read of its tree. */
+export async function findUndeclaredNodeReferencesOf(
+	sourceQuery: Core.Query<Config>,
+	params: { functionRef: Scl.Ref<Scl.ElementsOf> },
+): Promise<ReferenceOutsideScope[]> {
+	const tree = await sourceQuery.any.getTree(params.functionRef)
+	return tree ? collectUndeclaredNodeReferences({ tree }) : []
+}
+
+/**
+ * What a comparison of a source tree with an instance leaves out, with the references to a connectivity node no file of
+ * the template holds (`collectUndeclaredNodeReferences`): never added, whoever compares or writes — the report's diff
+ * and the update's reconcile read the same set.
+ */
+export function leaveOutUndeclaredNodes(params: {
+	tree: AnyTreeRecord
+	notSelected: ReadonlySet<string> | undefined
+	omit?: readonly string[]
+}): { notSelected: ReadonlySet<string> | undefined; referencesNotPlaced: ReferenceOutsideScope[] } {
+	const { tree, omit } = params
+	const referencesNotPlaced = collectUndeclaredNodeReferences({ tree, omit })
+	if (referencesNotPlaced.length === 0)
+		return { notSelected: params.notSelected, referencesNotPlaced }
+	return {
+		notSelected: new Set([...(params.notSelected ?? []), ...referencesNotPlaced.map(idOfOutside)]),
+		referencesNotPlaced,
+	}
 }

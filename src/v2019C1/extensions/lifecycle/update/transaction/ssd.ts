@@ -1,6 +1,8 @@
 import { asd as updateAsd } from './asd'
 import { fsd as updateFsd } from './fsd'
 
+import { toRef } from '@dialecte/core/helpers'
+
 import {
 	annotateInstance,
 	sourceToTargetMap,
@@ -26,6 +28,7 @@ import {
 	resolvePrimaryParents,
 	reconcileTopologyFrame,
 	resolveTopologyReconcilables,
+	landGroundedTerminals,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import {
 	assertRevisionBaseFits,
@@ -232,9 +235,15 @@ export async function ssd(
 		}
 	}
 
-	// the references the frame gained can point at anything the cascade placed above
-	for (const { instanceRootRef, cloneMappings } of frameAdditions) {
+	// the references the frame gained can point at anything the cascade placed above; a terminal it gained on the
+	// predefined grounded node names the grounded node of its level in that instance
+	for (const [index, { instanceRootRef, cloneMappings }] of frameAdditions.entries()) {
 		await repointAddedReferences(tx, { cloneMappings, instanceRootRef, matchKey })
+		const placedLevels = new Map([
+			...(instanceLevelsList[index] ?? []),
+			[root.id, toRef(instanceRootRef) as Scl.Ref<Scl.ElementsOf>],
+		])
+		await landGroundedTerminals(tx, { sourceQuery, cloneMappings, placedLevels })
 	}
 
 	// the project now holds this revision of the file: its Header lists it, in every scenario

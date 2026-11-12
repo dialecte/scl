@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **A placed bay no longer carries a reference to what the template does not hold.** A template bay whose breaker terminal sits on a connectivity node of another bay, one the template does not hold, was placed with the terminal still naming that node by its template path (`TEMPLATE/TEMPLATE/Bay_HV/L2`), which names nothing in the project; an update of the placed bay added it again. A terminal or neutral point written by path only, with no uuid, now reads as naming a node the template does not hold (the predefined `grounded` node excepted): it is not written, on a first placement and on an update alike, whether it belongs to the bay's own equipment or to the equipment of a function placed with it (`report`, `apply`, `instantiate.*`, `update.*`). The report lists each one in `warnings`, with the new code `reference-not-placed`: the template's reference element, the attribute naming its target and the path it was written with.
+- **A terminal on the predefined grounded node names the bay it was placed as.** An earthing switch's terminal on `TEMPLATE/TEMPLATE/Bay_MV/grounded` kept that template path, and the template's level names, once its bay was placed. No file declares the grounded node, so no uuid repointed it: it now names the grounded node of the bay as placed (`S1/15kV/Bay_MV/grounded`, or `S1/15kV/Bay_MV_1/grounded` when the bay was numbered), with that bay's `substationName`, `voltageLevelName` and `bayName` — on an SSD placement and an SSD update of a bay, and on an FSD or ASD placement of a function holding the earthing switch.
+
 ## [0.14.0] - 2026-11-08
 
 ### Added

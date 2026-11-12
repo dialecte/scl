@@ -2,7 +2,6 @@ import { buildImportPathIndex } from './import-path-index'
 import { LOCAL_NAME_RESOLUTIONS } from './io-hooks.constants'
 
 import {
-	GROUNDED_CONNECTIVITY_NODE_NAME,
 	REFERENCE_TAG_NAMES,
 	TARGET_ELEMENT_TYPES,
 	UUID_REFERENCE_PAIRS,
@@ -26,6 +25,7 @@ import { nameScopeOf } from '@/v2019C1/extensions/reference/query/build/name-sco
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
 import { readAttribute, readAttributes } from '@/v2019C1/helpers'
+import { namesGroundedNode } from '@/v2019C1/helpers/grounded-node'
 import {
 	dataPathNotSplitDiagnostic,
 	incoherentPathNamesDiagnostic,
@@ -400,7 +400,8 @@ function resolvePending(params: {
 	}
 
 	if (!resolvedUuid || !matchedKey) {
-		if (namesUndeclaredGroundedNode(pending)) return { diagnostics: [] }
+		const targets = pending.pair.target as readonly string[]
+		if (namesGroundedNode({ targets, path: pending.pathValue })) return { diagnostics: [] }
 		return {
 			diagnostics: [
 				unresolvedReferenceDiagnostic({
@@ -546,12 +547,6 @@ function resolveWithUuid(params: {
 			}),
 		],
 	}
-}
-
-/** A terminal naming the predefined grounded node, which a file need not declare. */
-function namesUndeclaredGroundedNode(pending: PendingResolution): boolean {
-	const targetsNode = (pending.pair.target as readonly string[]).includes('ConnectivityNode')
-	return targetsNode && pending.pathValue.split('/').at(-1) === GROUNDED_CONNECTIVITY_NODE_NAME
 }
 
 /**

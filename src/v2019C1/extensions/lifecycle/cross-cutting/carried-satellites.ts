@@ -1,7 +1,10 @@
 import { CROSS_CUTTING_SATELLITE_TAGS } from './applied-satellites.constants'
 import { findDuplicateApplications } from './held-applications'
 
-import { collectOutOfScopeReferences } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import {
+	collectOutOfScopeReferences,
+	findUndeclaredNodeReference,
+} from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 
 import type { IndexedSatellite, SatelliteIndex } from './applied-satellites.types'
 import type { CarriedScoping } from './carried-satellites.types'
@@ -27,7 +30,12 @@ export function scopeCarriedSatellites(params: {
 	held: HeldApplications
 }): CarriedScoping {
 	const { trees, scope, index, held } = params
-	const scoping: CarriedScoping = { leaveOut: new Set(), notPlaced: new Set(), copies: new Map() }
+	const scoping: CarriedScoping = {
+		leaveOut: new Set(),
+		notPlaced: new Set(),
+		copies: new Map(),
+		referencesNotPlaced: [],
+	}
 	for (const tree of trees) collectCarried({ node: tree, scope, index, held, scoping })
 	for (const satellite of params.satellites ?? []) {
 		const outOfScope = new Set(
@@ -62,6 +70,16 @@ function collectCarried(params: {
 	const { node, scope, index, held, scoping } = params
 	for (const child of node.tree) {
 		if (!CROSS_CUTTING_SATELLITE_TAGS.has(child.tagName)) {
+			// a terminal of the function's equipment on a node the template does not hold: left out, told of
+			const undeclared = findUndeclaredNodeReference({ reference: child })
+			if (undeclared) {
+				scoping.leaveOut.add(child.id)
+				scoping.referencesNotPlaced.push({
+					reference: { tagName: child.tagName, id: child.id },
+					...undeclared,
+				})
+				continue
+			}
 			collectCarried({ ...params, node: child })
 			continue
 		}

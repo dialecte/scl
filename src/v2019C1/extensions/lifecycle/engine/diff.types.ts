@@ -2,6 +2,7 @@ import type { EditableAttribute, IdentityCollision } from '../constraints'
 import type { LifecycleScenario, LifecycleVerb } from '../contract.types'
 import type { OffLevel } from '../layers/topology/resolve-primary-placement.types'
 import type { ReportMapping } from '../mapping/mapping.types'
+import type { ReferenceOutsideScope } from './contribution-scope.types'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
 /** How a diffed element changed between the (updated) template and the instance. */
@@ -111,6 +112,8 @@ export type InstanceDiff = {
 	summary: DiffSummary
 	/** Where the shared source elements this instance refers to land in the project. */
 	mappings?: ReportMapping[]
+	/** Its references to a connectivity node no file of the template holds: neither listed nor written. */
+	referencesNotPlaced?: ReferenceOutsideScope[]
 }
 
 /**
@@ -200,6 +203,12 @@ export type ReportInstance = {
 	 * on that holds no copy of it): neither it nor the reference to it is written. Absent when there is none.
 	 */
 	satellitesNotPlaced?: AnyRefOrRecord[]
+	/**
+	 * On a first placement of a topology frame, its references naming what the placement does not place (a terminal on
+	 * a node of a bay the template does not hold): not written, they would name nothing in the project. Absent when
+	 * there is none.
+	 */
+	referencesNotPlaced?: ReferenceOutsideScope[]
 }
 
 /** An element a report names: its tag and record id. */
@@ -278,6 +287,18 @@ export type ReportWarning =
 			reference: AnyRefOrRecord
 			source?: AnyRefOrRecord
 			lineage: string
+	  }
+	| {
+			/**
+			 * A reference of the template's frame naming what the placement does not place: neither the reference element nor
+			 * what it names is written. `attribute` is the attribute naming it (its path, else its uuid), `path` the path it
+			 * was written with, when one.
+			 */
+			code: 'reference-not-placed'
+			/** The template's reference element. */
+			reference: AnyRefOrRecord
+			attribute: string
+			path?: string
 	  }
 	| {
 			/**

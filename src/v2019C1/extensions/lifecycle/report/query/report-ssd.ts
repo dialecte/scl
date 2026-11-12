@@ -265,6 +265,14 @@ export async function reportSsd(
 
 	// what applies to the levels only, and what they hold applying to no primary placed, goes with the frame
 	if (placedFrame && placementListing) {
+		// what the functions of the unit carry naming a node the template does not hold: not written, told of with the frame
+		const carriedNotPlaced = placementListing.carried.referencesNotPlaced
+		if (carriedNotPlaced.length > 0) {
+			placedFrame.referencesNotPlaced = [
+				...(placedFrame.referencesNotPlaced ?? []),
+				...carriedNotPlaced,
+			]
+		}
 		await foldFrameSatellites(query, {
 			sourceQuery,
 			placedFrame,

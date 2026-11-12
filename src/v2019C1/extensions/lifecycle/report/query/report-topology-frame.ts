@@ -4,7 +4,8 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { FRAME_OMIT_CHILD_TAGS } from '@/v2019C1/constants'
 import {
-	leaveOutOfScope,
+	findReferencesOutsideScope,
+	idOfOutside,
 	resolveContributionScope,
 } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
@@ -93,12 +94,14 @@ export async function reportTopologyFrame(
 			roots: [scopeRef],
 			leftOut: params.leftOut,
 		})
-		const notSelected = await leaveOutOfScope(sourceQuery, {
+		// a reference naming what the unit does not place would name nothing in the project: not written, told of
+		const notPlaced = await findReferencesOutsideScope(sourceQuery, {
 			root: scopeRef,
 			scope,
-			leftOut: params.leftOut,
 			omit: FRAME_OMIT_CHILD_TAGS,
+			leftOut: params.leftOut,
 		})
+		const notSelected = new Set([...(params.leftOut ?? []), ...notPlaced.map(idOfOutside)])
 		const instanceDiff = await diff({
 			sourceQuery,
 			targetQuery: query,
@@ -127,6 +130,7 @@ export async function reportTopologyFrame(
 			sourceQuery,
 			sourceRef: scopeRef,
 		})
+		if (notPlaced.length > 0) reportInstance.referencesNotPlaced = notPlaced
 		return { instances: [reportInstance], instanceLevelsList: [] }
 	}
 

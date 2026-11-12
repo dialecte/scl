@@ -18,6 +18,7 @@ import {
 	resolvePlacementCollision,
 } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
+import { leaveOutUndeclaredNodes } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
@@ -158,6 +159,12 @@ export async function reconcile(
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	const instanceTree = await tx.any.getTree(instanceRootRef)
 	if (!sourceTree || !instanceTree) return { cloneMappings: added, landedOn }
+	// a terminal naming a node no file of the template holds is never added: the report left it out the same way
+	const { notSelected } = leaveOutUndeclaredNodes({
+		tree: sourceTree,
+		notSelected: params.notSelected,
+		omit,
+	})
 
 	const index = new Map<string, AnyTreeRecord>()
 	await indexByMatchKey(tx, { node: instanceTree, index, matchKey })
@@ -214,7 +221,7 @@ export async function reconcile(
 		withinProjectOwned,
 		pinnedMatches: params.pinnedMatches,
 		foreignInstanceIds: params.foreignInstanceIds,
-		notSelected: params.notSelected,
+		notSelected,
 		typeFollowing,
 		placeholderLineages: params.placeholderLineages ?? new Set(),
 		contributeOnly,

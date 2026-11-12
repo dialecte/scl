@@ -9,6 +9,7 @@ import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cut
 import {
 	assertPlacementDecided,
 	cloneTopologyContent,
+	landGroundedTerminals,
 	resolveFrameStructure,
 	resolvePlacementMappings,
 	resolveSsdScope,
@@ -152,6 +153,13 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 			})
 		}
 	}
+
+	// a terminal on the predefined grounded node names it by the path of its bay as placed, now named
+	await landGroundedTerminals(tx, {
+		sourceQuery,
+		cloneMappings: allMappings,
+		placedLevels: frameIndex,
+	})
 
 	// a shared element created here (no project element to map onto) is named at its level of the frame
 	async function frameStructure(sourceRef: Scl.Ref<Scl.ElementsOf>): Promise<TargetStructure> {

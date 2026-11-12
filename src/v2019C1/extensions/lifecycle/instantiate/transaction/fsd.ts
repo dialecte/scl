@@ -7,12 +7,20 @@ import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { readSatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
-import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import {
+	findUndeclaredNodeReferencesOf,
+	idOfOutside,
+	resolveContributionScope,
+} from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import {
 	cloneFunctionCategories,
 	placedFunctionTag,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
-import { landPrimaries } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import {
+	landGroundedTerminals,
+	landPrimaries,
+	placeLevelsOnStructure,
+} from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
@@ -65,12 +73,15 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 			? ({ from: 'Function', to: 'SubFunction' } as const)
 			: undefined
 
+	// what the function holds naming a node no file of it holds is not written: the report tells of it
+	const notPlaced = await findUndeclaredNodeReferencesOf(sourceQuery, { functionRef })
 	const { cloneMappings: functionMappings } = await deep(tx, {
 		sourceQuery,
 		ref: functionRef,
 		targetParent,
 		retagRoot,
 		withTypes: { keepNameFrom: keepNameTypesFrom },
+		leaveOut: new Set(notPlaced.map(idOfOutside)),
 	})
 
 	// An FSD also carries the FunctionCategory classification that references the
@@ -124,6 +135,9 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		resolveStructure: placementStructure,
 		decisionMappings: params.decisionMappings,
 	})
+	// a terminal of the function's equipment on the predefined grounded node names the grounded node of its level as placed
+	const placedLevels = await placeLevelsOnStructure(sourceQuery, { structure })
+	await landGroundedTerminals(tx, { sourceQuery, cloneMappings: allMappings, placedLevels })
 
 	const rootMapping = functionMappings.find((mapping) => mapping.source.id === functionRef.id)
 	if (!rootMapping) {
