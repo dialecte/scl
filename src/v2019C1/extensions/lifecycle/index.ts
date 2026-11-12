@@ -15,9 +15,10 @@ import { checkTemplateUuids } from './validate'
  * stable, discoverable surface: `tx.lifecycle.<verb>.<recipe>` /
  * `query.lifecycle.<verb>.<recipe>`.
  *
- * - `extract`     — pull an element out into a template FSD/ASD
- *                   (`tx.lifecycle.extract.fsd` / `.asd` /
- *                   `.ensureSubstationTemplateStructure`).
+ * - `extract`     — pull an element out into a template FSD/ASD/SSD
+ *                   (`tx.lifecycle.extract.fsd` / `.asd` / `.ssd` /
+ *                   `.ensureSubstationTemplateStructure`); `.ied` exports a specification IED
+ *                   into an ISD.
  * - `instantiate` — instantiate template content into a project
  *                   (`tx.lifecycle.instantiate.fsd` / `.asd`).
  * - `transplant`  — generic clone engine (`tx.lifecycle.transplant.deep`).

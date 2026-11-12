@@ -100,23 +100,24 @@ const targetXml = /* xml */ `
 	</SCL>
 `
 
-const skipAll =
-	() =>
-	(groups: DecisionGroup[]): DecisionMap =>
-		new Map(groups.map((g) => [g.id, 'skip'] as const))
+function skipAll(): (groups: DecisionGroup[]) => DecisionMap {
+	return (groups) => new Map(groups.map((group) => [group.id, 'skip'] as const))
+}
 
 // Skip ONLY the composed-function decision group (primary is the Function), leaving
 // the application-layer group accepted. Exercises cascade gating across layers.
-const skipComposedFunction =
-	() =>
-	(groups: DecisionGroup[]): DecisionMap =>
+function skipComposedFunction(): (groups: DecisionGroup[]) => DecisionMap {
+	return (groups) =>
 		new Map(
-			groups.filter((g) => g.primary.tagName === 'Function').map((g) => [g.id, 'skip'] as const),
+			groups
+				.filter((group) => group.primary.tagName === 'Function')
+				.map((group) => [group.id, 'skip'] as const),
 		)
+}
 
 // rev1 -> rev2: the template evolves the application, its AllocationRole satellite,
 // the FunctionCategory satellite, and the composed Function.
-const toRev2 = async (tx: Scl.Transaction): Promise<void> => {
+async function toRev2(tx: Scl.Transaction): Promise<void> {
 	await tx.update(applicationRef, { attributes: { desc: 'rev2 app' } })
 	await tx.update(allocationRoleRef, { attributes: { desc: 'rev2 role' } })
 	await tx.update(categoryRef, { attributes: { desc: 'rev2 category' } })
@@ -257,6 +258,8 @@ describe('lifecycle integration — CB ASD rev1 → rev2 (golden)', () => {
 		)
 
 		const xml = await target.document.query.getSnapshot({ as: 'xml' })
+		// the source file is recorded by its full name, extension included
+		expect(xml).toContain('fileName="source.xml"')
 		expect(normalizeUuids(xml)).toMatchSnapshot()
 	})
 })

@@ -10,7 +10,8 @@ import type * as Core from '@dialecte/core'
 
 /**
  * Start the file an operation writes into the document, with its first history item. A new file (`as: 'new'`) gets a
- * `Header` with a uuid of its own, version `0` and revision `1` (a `Header` the document holds is kept). A new
+ * `Header` with a uuid of its own, version `0` and revision `1`, replacing any previous Header. Previous history
+ * inner text is carried as labelled historical context in the one new initialization item, not as file versions. A new
  * revision of an existing file (`as: 'revision'`) is not available yet: refused with `OPTION_NOT_AVAILABLE` before
  * anything is written.
  *
@@ -22,9 +23,26 @@ export async function startFile(
 ): Promise<void> {
 	const { as, filename, header, item } = params
 	switch (as) {
-		case 'new':
+		case 'new': {
+			const previousHeader = await tx.getRecord({ tagName: 'Header' })
+			const previousHistory = previousHeader
+				? await tx.getChild(previousHeader, 'History')
+				: undefined
+			const previousItems = previousHistory ? await tx.getChildren(previousHistory, 'Hitem') : []
+			const historicalText = previousItems
+				.map((previousItem) => previousItem.value)
+				.filter((value) => value !== undefined && value !== '')
+				.join('\n')
+			if (previousHeader) await tx.delete(previousHeader)
 			await addEntry(tx, { filename, header: { ...header, version: 'keep' }, item })
+			if (historicalText) {
+				const freshHeader = await tx.getRecord({ tagName: 'Header' })
+				const freshHistory = await tx.getChild(freshHeader, 'History')
+				const [initialItem] = await tx.getChildren(freshHistory, 'Hitem')
+				await tx.update(initialItem, { value: `Historical context:\n${historicalText}` })
+			}
 			return
+		}
 		case 'revision':
 			throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
 				meta: { option: 'as', value: as },

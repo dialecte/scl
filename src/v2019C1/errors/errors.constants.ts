@@ -135,6 +135,37 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL2004',
 		message: 'A function template cannot hold what the function holds',
 	},
+	/** The selected source IED describes an implemented device, not a specification. `meta: { ied }` */
+	IED_NOT_SPECIFICATION: {
+		code: 'SCL2005',
+		message: 'The selected IED is not a specification IED',
+	},
+	/** The target of an IED extraction already holds an IED or a process part (a substation, line or process). */
+	EXTRACTION_TARGET_NOT_EMPTY: {
+		code: 'SCL2006',
+		message: 'The extraction target already holds an IED or a process part',
+	},
+	/** An affected extraction control has no valid unsigned 32-bit counter. `meta: { source, value? }` */
+	EXTRACTION_CONF_REV_INVALID: {
+		code: 'SCL2007',
+		message: 'An affected extraction control has an invalid configuration revision',
+	},
+	/** The extraction increment would exceed the unsigned 32-bit limit. `meta: { source, value }` */
+	EXTRACTION_CONF_REV_OVERFLOW: {
+		code: 'SCL2008',
+		message: 'The extraction configuration revision increment would overflow',
+	},
+	/**
+	 * An SSD template one of whose levels holds several elements named `TEMPLATE` (two `TEMPLATE` substations in the
+	 * file, two `TEMPLATE` voltage levels in a substation, two `TEMPLATE` bays in a voltage level): names are unique
+	 * among siblings, so the file is not valid and nothing tells which of them to act on. Nothing is written.
+	 * `meta: { parent: { tagName, id, name? }, duplicates: [{ tagName, id, name }] }` — the element holding them (the
+	 * file's root for substations), and the elements named `TEMPLATE` there, in document order.
+	 */
+	SSD_TEMPLATE_NOT_UNIQUE: {
+		code: 'SCL2009',
+		message: 'A level of the template holds several elements named TEMPLATE',
+	},
 	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
 	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`

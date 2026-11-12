@@ -9,12 +9,11 @@ import {
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { groupChanges } from '@/v2019C1/extensions/lifecycle/engine/group'
 import { collectForeignReferenceIds } from '@/v2019C1/extensions/lifecycle/instance'
+import { readLinkedSections } from '@/v2019C1/extensions/lifecycle/linked-sections/read'
 import {
 	createReportPass,
 	describeMapping,
 	findMappingPolicy,
-	resolveSatelliteMappings,
-	resolveSatelliteRemovals,
 } from '@/v2019C1/extensions/lifecycle/mapping'
 import { holdsPairingByName } from '@/v2019C1/extensions/lifecycle/report/report-warnings'
 
@@ -31,12 +30,12 @@ import type {
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
+import type { LinkedSectionReading } from '@/v2019C1/extensions/lifecycle/linked-sections/description.types'
 import type {
 	DecisionMappings,
 	ReportMapping,
 	ReportPass,
 	ResolvedMapping,
-	ResolvedMappings,
 } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -81,8 +80,8 @@ export async function foldSatelliteCompanions(
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		/** How an instance element carries its source element's uuid. Default `templateUuid`. */
 		matchKey?: MatchKey
-		/** Where the shared satellites land, when the caller already resolved it. */
-		resolvedMappings?: ResolvedMappings
+		/** Reuse the linked-section reading the caller needed before comparing the primary. */
+		reading?: LinkedSectionReading
 		/**
 		 * The instance being updated, for the layer that owns shared satellites: what the instance
 		 * gave to a project element the template no longer brings anything for is then announced.
@@ -120,16 +119,22 @@ export async function foldSatelliteCompanions(
 
 	const group = report.groups.find((candidate) => candidate.primary.sourceRef?.id === primaryRef.id)
 
-	const resolvedMappings =
-		params.resolvedMappings ??
-		(await resolveSatelliteMappings(query, {
+	const reading =
+		params.reading ??
+		(await readLinkedSections(query, {
 			sourceQuery,
-			satelliteRefs,
-			instanceSatelliteRefs: firstTime ? [] : instanceSatelliteRefs,
+			description: {
+				satelliteRefs,
+				instanceSatelliteRefs: firstTime ? [] : instanceSatelliteRefs,
+				scope: params.scope,
+			},
+			instancePrimaryRef: params.instancePrimaryRef,
 			decisionMappings: params.decisionMappings,
-			matchKey: params.matchKey,
+			matchKey,
+			removalBase: params.removalBase,
 			landings: params.landings,
 		}))
+	const { resolvedMappings } = reading
 	// what the report already listed and named: the caller's, else this fold's own
 	const pass = params.pass ?? createReportPass()
 	for (const satelliteRef of satelliteRefs) {
@@ -203,15 +208,7 @@ export async function foldSatelliteCompanions(
 	// as a decision of its own when the primary is unchanged, one the project added kept by default;
 	// or, while something outside the instance names it, only what the instance gave it
 	if (params.instancePrimaryRef) {
-		const removals = await resolveSatelliteRemovals(query, {
-			sourceQuery,
-			instancePrimaryRef: params.instancePrimaryRef,
-			instanceSatelliteRefs: instanceSatelliteRefs ?? [],
-			resolvedMappings,
-			removalBase: params.removalBase,
-			matchKey,
-		})
-		for (const { satellite, change, whole, contributions } of removals) {
+		for (const { satellite, change, whole, contributions } of reading.removals) {
 			for (const removed of whole ? [satellite] : contributions) {
 				const node: DiffNode = {
 					change,

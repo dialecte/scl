@@ -1,0 +1,42 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="scl">
+	<!-- an input of A fed by gcbR of R that says nothing of the data it expects: no pLN, pDO, pDA or pServT -->
+	<IED name="A" uuid="20000000-0000-4000-8000-00000000000a" dev:db-id="ied-a">
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1">
+					<LN0 lnClass="LLN0" inst="" lnType="LN_T"/>
+					<LN lnClass="PTOC" inst="1" prefix="" lnType="LN_T" uuid="50000000-0000-4000-8000-0000000000a5">
+						<Inputs>
+							<ExtRef intAddr="RemoteTrip" desc="Remote trip" iedName="R" ldInst="LD1" prefix="" lnClass="PTRC" lnInst="1" lnUuid="50000000-0000-4000-8000-0000000000c1" doName="Op" daName="general" serviceType="GOOSE" srcLDInst="LD1" srcPrefix="" srcLNClass="LLN0" srcCBName="gcbR" srcCBUuid="60000000-0000-4000-8000-0000000000c1" uuid="70000000-0000-4000-8000-0000000000a5" dev:db-id="input-without-expected-data"/>
+						</Inputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="R" uuid="20000000-0000-4000-8000-00000000000c" dev:db-id="ied-r">
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1">
+					<LN0 lnClass="LLN0" inst="" lnType="LN_T">
+						<DataSet name="DSR">
+							<FCDA ldInst="LD1" prefix="" lnClass="PTRC" lnInst="1" doName="Op" daName="general" fc="ST"/>
+						</DataSet>
+						<GSEControl name="gcbR" datSet="DSR" appID="R_gcbR" confRev="1" uuid="60000000-0000-4000-8000-0000000000c1"/>
+					</LN0>
+					<LN lnClass="PTRC" inst="1" prefix="" lnType="LN_T" uuid="50000000-0000-4000-8000-0000000000c1"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LN_T" lnClass="PTRC">
+			<DO name="Op" type="ACT_T"/>
+		</LNodeType>
+		<DOType id="ACT_T" cdc="ACT">
+			<DA name="general" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

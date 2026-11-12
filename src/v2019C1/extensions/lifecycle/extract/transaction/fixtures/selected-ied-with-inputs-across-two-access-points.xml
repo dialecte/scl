@@ -1,0 +1,73 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:ied-inputs:test" dev:db-id="source-root">
+	<!-- IED Selected with inputs on the LN0 and the PTOC of AP1 (self, Publisher, unbound, with text and vendor content) and on the LN0 and the PTOC of AP2 (self, unbound) -->
+	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B"/>
+	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="selected-ied">
+		<Private type="vendor.outside">
+			<vendor:Settings mode="retained">outside payload</vendor:Settings>
+		</Private>
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000001" dev:db-id="selected-ln0">
+						<Inputs dev:db-id="ln0-inputs">
+							<Text>input-only text</Text>
+							<Private type="vendor.inside"><vendor:Settings>input-only payload</vendor:Settings></Private>
+							<ExtRef iedName="Selected" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000002" doName="Status" daName="stVal" serviceType="Poll" intAddr="self"/>
+							<ExtRef intAddr="unbound1"/>
+						</Inputs>
+					</LN0>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002" dev:db-id="selected-ln">
+						<DOI name="Status">
+							<DAI name="stVal">
+								<Val>true</Val>
+							</DAI>
+						</DOI>
+						<Inputs dev:db-id="ln-inputs">
+							<ExtRef iedName="Publisher" ldInst="PublisherLD" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000003" doName="Status" daName="stVal" serviceType="Poll" intAddr="external"/>
+						</Inputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+		<AccessPoint name="AP2" uuid="30000000-0000-4000-8000-000000000002">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD2">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000004" dev:db-id="second-ln0">
+						<Inputs dev:db-id="second-ln0-inputs">
+							<ExtRef iedName="Selected" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000002" doName="Status" daName="stVal" serviceType="Poll" intAddr="self"/>
+						</Inputs>
+					</LN0>
+					<LN lnClass="PTOC" inst="2" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000005" dev:db-id="second-ln">
+						<Inputs dev:db-id="second-ln-inputs">
+							<ExtRef intAddr="unbound2"/>
+						</Inputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="Publisher" uuid="20000000-0000-4000-8000-000000000002">
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="PublisherLD">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000003"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<DOType id="Status_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

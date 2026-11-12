@@ -16,8 +16,7 @@ export type ControlBlockNode = IedNode<'GSEControl' | 'SampledValueControl' | 'R
 
 /**
  * What one read of the IED section (every IED down to its logical nodes, their ExtRefs, ExtCtrls and
- * control blocks) gives: every ExtRef in document order, the ExtRefs and ExtCtrls by uuid and by path, the control blocks by uuid and by address, the logical
- * nodes by path and the IED of each, by logical node id.
+ * control blocks) gives: every ExtRef in document order, the ExtRefs and ExtCtrls by uuid and by path, and the control blocks by uuid and by address.
  */
 export type IedSection = {
 	extRefs: readonly IedNode<'ExtRef'>[]
@@ -42,6 +41,4 @@ export type IedSection = {
 	controlBlocksByUuid: ReadonlyMap<string, ControlBlockNode>
 	/** By `targetKey` of the tuple address and the tag. */
 	controlBlocksByAddress: ReadonlyMap<string, ControlBlockNode>
-	lnsByPath: ReadonlyMap<string, IedNode<'LN' | 'LN0'>>
-	iedOfLn: ReadonlyMap<string, Scl.Ref<'IED'>>
 }

@@ -4,13 +4,9 @@ import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers/function'
 import { landAt } from '@/v2019C1/extensions/lifecycle/layers/topology'
-import {
-	assertMappingsDecided,
-	resolveSatelliteMappings,
-	resolveSatelliteRemovals,
-} from '@/v2019C1/extensions/lifecycle/mapping'
+import { readLinkedSections } from '@/v2019C1/extensions/lifecycle/linked-sections/read'
+import { assertMappingsDecided } from '@/v2019C1/extensions/lifecycle/mapping'
 
-import type { SatelliteReading } from './satellite-reading.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { FsdFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
@@ -19,6 +15,7 @@ import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { TemplateLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import type { LinkedSectionReading } from '@/v2019C1/extensions/lifecycle/linked-sections/description.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -49,7 +46,7 @@ export async function readCarriedSatellites(
 		/** The template's levels, read once per update: see `readTemplateLevels`. */
 		templateLevels: readonly TemplateLevel[]
 	},
-): Promise<SatelliteReading> {
+): Promise<LinkedSectionReading> {
 	const { sourceQuery, functionRef, instanceRef, matchKey } = params
 
 	// the instance may have been placed as a SubFunction: keep the tag it carries
@@ -66,32 +63,25 @@ export async function readCarriedSatellites(
 		primaryRef: instancePrimaryRef,
 	})
 
-	// where the template's levels land for this instance: a category is found by name only there
-	const landings = await landAt(tx, { levels: params.templateLevels, at: instanceRef })
-	const resolvedMappings = await resolveSatelliteMappings(tx, {
-		sourceQuery,
-		satelliteRefs,
-		instanceSatelliteRefs,
-		decisionMappings: params.decisionMappings,
-		matchKey,
-		landings,
-	})
-	// a category nothing is decided for: nothing is written until the consumer chose
-	assertMappingsDecided({ satelliteRefs, resolvedMappings })
-	const removals = await resolveSatelliteRemovals(tx, {
-		sourceQuery,
-		instancePrimaryRef,
-		instanceSatelliteRefs,
-		resolvedMappings,
-		removalBase: params.removalBase,
-		matchKey,
-	})
 	// what their references may name: the function and what it holds, but what the selection leaves out
 	const scope = await resolveContributionScope(sourceQuery, {
 		roots: [functionRef],
 		leftOut: params.selection?.leftOut,
 	})
-	return { satelliteRefs, resolvedMappings, removals, scope }
+	// where the template's levels land for this instance: a category is found by name only there
+	const landings = await landAt(tx, { levels: params.templateLevels, at: instanceRef })
+	const reading = await readLinkedSections(tx, {
+		sourceQuery,
+		description: { satelliteRefs, instanceSatelliteRefs, scope },
+		instancePrimaryRef,
+		decisionMappings: params.decisionMappings,
+		removalBase: params.removalBase,
+		matchKey,
+		landings,
+	})
+	// a category nothing is decided for: nothing is written until the consumer chose
+	assertMappingsDecided({ satelliteRefs, resolvedMappings: reading.resolvedMappings })
+	return reading
 }
 
 /**
@@ -110,7 +100,7 @@ export async function reconcileCarriedSatellites(
 	params: {
 		sourceQuery: Core.Query<Config>
 		/** What the update read of the instance's satellites before writing. */
-		reading: SatelliteReading
+		reading: LinkedSectionReading
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		accepted?: AcceptedIds
 		/** The scenario's key an instance of a satellite carries its source satellite's uuid in. */

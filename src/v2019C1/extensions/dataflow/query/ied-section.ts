@@ -6,7 +6,7 @@ import {
 	LOGICAL_NODE_TAGS,
 } from '../constants/ied-section.constants'
 import { REGISTRATION_TAGS } from '../constants/registration.constants'
-import { sectionNodesOf } from './section-nodes'
+import { nativeSectionNodesOf } from './section-nodes'
 
 import {
 	buildPathFromAncestry,
@@ -24,7 +24,8 @@ import type * as Core from '@dialecte/core'
 /**
  * Reads the IED section once: every IED down to its logical nodes and what they hold, and from it
  * every map a dataflow query needs. Which IED, logical device and logical node holds an element
- * comes from the records read, never from walking up the document.
+ * comes from the records read, never from walking up the document. Vendor payload is not read as part
+ * of the section, whatever its tag.
  */
 export async function readIedSection(query: Core.Query<Config>): Promise<IedSection> {
 	const collected = await collectWithAncestry(query, {
@@ -44,11 +45,9 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 	const controlBlocks = new Map<string, ControlBlockNode>()
 	const controlBlocksByUuid = new Map<string, ControlBlockNode>()
 	const controlBlocksByAddress = new Map<string, ControlBlockNode>()
-	const lnsByPath = new Map<string, IedNode<'LN' | 'LN0'>>()
-	const iedOfLn = new Map<string, Scl.Ref<'IED'>>()
 	const registrationsOf = new Map<string, IedNode<'IEDName' | 'ClientLN'>[]>()
 
-	for (const sectionNode of sectionNodesOf(collected)) {
+	for (const sectionNode of nativeSectionNodesOf(collected)) {
 		const node = inIed(sectionNode)
 		if (!node) continue
 		const { tagName } = node.record
@@ -84,15 +83,12 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 
 		if (LOGICAL_NODE_TAGS.includes(tagName)) {
 			const logicalNode = node as IedNode<'LN' | 'LN0'>
-			const path = elementPath(node)
-			if (path) lnsByPath.set(path, logicalNode)
 			const address = targetTupleAddress({ record: node.record, ancestry: node.ancestry })
 			if (address) lnsByAddress.set(address, logicalNode)
 			if (uuid) {
 				lnsByUuid.set(uuid, logicalNode)
 				uuidById.set(node.record.id, uuid)
 			}
-			iedOfLn.set(node.record.id, node.ied)
 		}
 
 		if (CONTROL_BLOCK_TAGS.includes(tagName)) {
@@ -130,8 +126,6 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 		controlBlocks,
 		controlBlocksByUuid,
 		controlBlocksByAddress,
-		lnsByPath,
-		iedOfLn,
 	}
 }
 

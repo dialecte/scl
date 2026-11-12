@@ -30,7 +30,7 @@ const infos = await doc.query.info.ofEach(refs)
 // ElementInfo[], in the order of refs
 ```
 
-Prefer it over a loop of `of` for a tree or a list: the facts a state needs across the document (the kind of each IED, the LNs by uuid) are read once for the whole call.
+Prefer it over a loop of `of` for a tree or a list: the elements are read in one batch, and what they share is read once for the whole call: the facts a state needs across the document (the kind of each IED, what implements each LNode) and the siblings of each signal parent. An element given as a record is described as stored, whatever `parent` or `children` it carries.
 
 #### Options
 
@@ -61,14 +61,14 @@ const display = info.labels?.[currentLang]?.[''] ?? info.labels?.en?.[''] ?? inf
 
 An `ExtRef` and an `ExtCtrl` have a state in a single value, read from the shape the element is written in. A signal is _named_ once its logical node is named and its `doName` is given; the logical node is named by its uuid (`lnUuid`) or by its `iedName`, `ldInst` and `lnClass` (`prefix` and `lnInst` may be left out), a uuid naming the element standing for its names. A control block is _named_ the same way, by `srcCBUuid` or `srcCBName`. A logical node or a control block named by its uuid alone counts as named: a conforming file carries both the uuid and the names, and the tool writes both on create, rename, clone and import. An `ExtRef` needs its `serviceType` to be `subscribed` or `bound`. A service published without a control block (polling) needs none; the others need the control block named.
 
-| State           | `ExtRef`                                                                             | `ExtCtrl`                                           |
-| --------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------- |
-| `later-binding` | `intAddr` and `pDO` set, nothing of a signal, a service or a control block           | `intAddr` set (`pDO` optional), nothing of a signal |
-| `expected`      | the signal is named (with a `serviceType`, or none), no `intAddr`, no control block  | -                                                   |
-| `subscribed`    | the signal, a service and its control block (if needed) are named, no `intAddr`      | -                                                   |
-| `bound`         | the signal, a service, its control block (if needed) and the `intAddr` are all given | the signal and the `intAddr` are given              |
+| State           | `ExtRef`                                                                                                    | `ExtCtrl`                                           |
+| --------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `later-binding` | `intAddr` and `pDO` set, nothing of a signal or a control block, no `serviceType` but one equal to `pServT` | `intAddr` set (`pDO` optional), nothing of a signal |
+| `expected`      | the signal is named (with a `serviceType`, or none), no `intAddr`, no control block                         | -                                                   |
+| `subscribed`    | the signal, a service and its control block (if needed) are named, no `intAddr`                             | -                                                   |
+| `bound`         | the signal, a service, its control block (if needed) and the `intAddr` are all given                        | the signal and the `intAddr` are given              |
 
-A signal named with a `serviceType` (or none) and neither an `intAddr` nor a control block is `expected`. The later-binding shape carries the internal address and, for an `ExtRef`, the expected data object (an `ExtCtrl`'s `pDO` is optional), nothing of a signal or a control block; the attributes a shape does not use (`pDO`, `pDA`, `pServT` or `src*` on an `expected` element) are not read.
+A signal named with a `serviceType` (or none) and neither an `intAddr` nor a control block is `expected`. The later-binding shape carries the internal address and, for an `ExtRef`, the expected data object (an `ExtCtrl`'s `pDO` is optional), nothing of a signal or a control block, and an `ExtRef` no `serviceType` other than its `pServT` (an ISD writes its inputs with both, equal); the attributes a shape does not use (`pDO`, `pDA`, `pServT` or `src*` on an `expected` element) are not read.
 
 An element written in none of these shapes has no state: nothing written, an `intAddr` without a `pDO`, a signal named in part (with or without an `intAddr`), a control block named without a signal, a signal with an `intAddr` but no service or no control block for a service that needs one, a control block named without a service.
 

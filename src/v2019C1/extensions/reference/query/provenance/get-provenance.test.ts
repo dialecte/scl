@@ -12,6 +12,7 @@ const ns = ALL_XMLNS_NAMESPACES
 
 type ExpectedEntry = {
 	fileType: string
+	fileName?: string
 	fileUuid?: string
 	version: string
 	revision: string
@@ -108,6 +109,34 @@ describe('getProvenance', () => {
 			],
 		},
 
+		'IEDSourceFiles under an IED → ied anchor, that IED': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<IED ${id}="other-ied" name="OtherIED">
+						<AccessPoint ${id}="other-access-point" name="AP1"/>
+						<!-- no IEDSourceFiles -->
+					</IED>
+					<IED ${id}="target-ied" name="TargetIED">
+						<AccessPoint ${id}="target-access-point" name="AP1"/>
+						<IEDSourceFiles ${id}="iedsrcfiles">
+							<SclFileReference ${id}="sfr-i" fileType="ISD" fileName="source.xml" fileUuid="isd-uuid" version="2" revision="B"/>
+						</IEDSourceFiles>
+					</IED>
+				</SCL>
+			`,
+			expected: [
+				{
+					fileType: 'ISD',
+					fileName: 'source.xml',
+					fileUuid: 'isd-uuid',
+					version: '2',
+					revision: 'B',
+					anchorKind: 'ied',
+					anchorId: 'target-ied',
+				},
+			],
+		},
+
 		'multiple references → one entry each': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
@@ -161,6 +190,7 @@ describe('getProvenance', () => {
 		const entries = await getProvenance(source.query)
 		const actual = entries.map((entry) => ({
 			fileType: entry.fileType,
+			fileName: entry.fileName,
 			fileUuid: entry.fileUuid,
 			version: entry.version,
 			revision: entry.revision,
@@ -177,7 +207,7 @@ describe('getProvenance', () => {
 function sortEntries<GenericEntry extends { anchorId: string | undefined; fileType: string }>(
 	entries: GenericEntry[],
 ): GenericEntry[] {
-	return [...entries].sort((a, b) =>
-		`${a.anchorId}:${a.fileType}`.localeCompare(`${b.anchorId}:${b.fileType}`),
+	return [...entries].sort((left, right) =>
+		`${left.anchorId}:${left.fileType}`.localeCompare(`${right.anchorId}:${right.fileType}`),
 	)
 }

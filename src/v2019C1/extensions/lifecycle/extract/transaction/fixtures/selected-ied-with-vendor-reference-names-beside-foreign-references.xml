@@ -1,0 +1,66 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:ied-vendor-content:test" dev:db-id="source-root">
+	<!-- IED Selected whose vendor Private holds vendor IEDName, ClientLN, Association and KDC naming IED Foreign, beside real ones naming IED Foreign -->
+	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="B"/>
+	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="selected-ied">
+		<Private type="vendor.payload">
+			<vendor:IEDName mode="opaque" dev:db-id="vendor-receiver">Foreign</vendor:IEDName>
+			<vendor:ClientLN iedName="Foreign" mode="opaque" dev:db-id="vendor-client">vendor client</vendor:ClientLN>
+			<vendor:Association iedName="Foreign" mode="opaque" dev:db-id="vendor-association">vendor association</vendor:Association>
+			<vendor:KDC iedName="Foreign" mode="opaque" dev:db-id="vendor-kdc">vendor key data</vendor:KDC>
+			<vendor:Keep mode="retained">unrelated vendor payload</vendor:Keep>
+		</Private>
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type">
+						<ReportControl name="ReportEvents" confRev="1">
+							<OptFields/>
+							<RptEnabled max="2">
+								<ClientLN iedName="Foreign" apRef="AP2" ldInst="LD2" lnClass="PTOC" lnInst="2" dev:db-id="real-client"/>
+							</RptEnabled>
+						</ReportControl>
+						<GSEControl name="GooseEvents" appID="Events" confRev="1">
+							<IEDName apRef="AP2" ldInst="LD2" lnClass="PTOC" lnInst="2" dev:db-id="real-receiver">Foreign</IEDName>
+						</GSEControl>
+					</LN0>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000001">
+						<DOI name="Status">
+							<DAI name="stVal">
+								<Val>true</Val>
+							</DAI>
+						</DOI>
+						<Inputs dev:db-id="real-inputs">
+							<ExtRef iedName="Selected" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000001" doName="Status" daName="stVal" serviceType="Poll" intAddr="status"/>
+						</Inputs>
+					</LN>
+					<!-- no LGOS, no LSVS -->
+				</LDevice>
+				<Association kind="pre-established" associationID="ForeignAssociation" iedName="Foreign" apRef="AP2" ldInst="LD2" lnClass="PTOC" lnInst="2" dev:db-id="real-association"/>
+			</Server>
+		</AccessPoint>
+		<KDC iedName="Foreign" apName="AP2" dev:db-id="real-kdc"/>
+	</IED>
+	<IED name="Foreign" uuid="20000000-0000-4000-8000-000000000002">
+		<AccessPoint name="AP2" uuid="30000000-0000-4000-8000-000000000002">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD2">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+					<LN lnClass="PTOC" inst="2" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<DOType id="Status_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

@@ -1,0 +1,98 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:ied-extract:test:vendor" dev:db-id="source-root">
+	<!-- IED Selected whose associations and key distribution name itself and IED Foreign, then IED Foreign -->
+	<Header id="ProjectSource" fileType="SSD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="2" dev:db-id="source-header"/>
+	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" templateUuid="20000000-0000-4000-8000-000000000002" desc="Selected specification" dev:db-id="selected-ied">
+		<Private type="vendor.test" dev:db-id="vendor-private">
+			<vendor:Settings mode="preserved">vendor payload</vendor:Settings>
+		</Private>
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001" dev:db-id="selected-ap">
+			<Server dev:db-id="selected-server">
+				<Authentication none="true"/>
+				<LDevice inst="LD1" uuid="40000000-0000-4000-8000-000000000001" dev:db-id="selected-device">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000001" dev:db-id="selected-ln0">
+						<DataSet name="Events" dev:db-id="events-dataset">
+							<FCDA ldInst="LD1" lnClass="PTOC" lnInst="1" doName="Status" daName="stVal" fc="ST" dev:db-id="ordinary-fcda"/>
+						</DataSet>
+						<ReportControl name="ReportEvents" datSet="Events" confRev="1" dev:db-id="report-control">
+							<OptFields/>
+							<RptEnabled max="2">
+								<!-- no ClientLN -->
+							</RptEnabled>
+						</ReportControl>
+						<GSEControl name="GooseEvents" appID="Events" datSet="Events" confRev="1" dev:db-id="goose-control">
+							<!-- no IEDName -->
+						</GSEControl>
+					</LN0>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002" templateUuid="50000000-0000-4000-8000-000000000003" dev:db-id="ordinary-ln">
+						<DOI name="Status" dev:db-id="status-instance">
+							<DAI name="stVal" dev:db-id="status-value">
+								<Val>true</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<!-- no LGOS, no LSVS -->
+				</LDevice>
+				<Association kind="pre-established" associationID="Self" iedName="Selected" apRef="AP1" ldInst="LD1" lnClass="PTOC" lnInst="1" dev:db-id="self-association"/>
+				<Association kind="pre-established" associationID="Foreign" iedName="Foreign" apRef="AP2" ldInst="LD2" lnClass="PTOC" lnInst="2" dev:db-id="foreign-association"/>
+			</Server>
+		</AccessPoint>
+		<KDC iedName="Selected" apName="AP1" dev:db-id="self-kdc"/>
+		<KDC iedName="Foreign" apName="AP2" dev:db-id="foreign-kdc"/>
+		<Labels>
+			<Label lang="en" id="display">Selected device label</Label>
+		</Labels>
+	</IED>
+	<IED name="Foreign" uuid="20000000-0000-4000-8000-000000000003" dev:db-id="foreign-ied">
+		<AccessPoint name="AP2" uuid="30000000-0000-4000-8000-000000000002" dev:db-id="foreign-ap">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD2" dev:db-id="foreign-device">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" dev:db-id="foreign-ln0"/>
+					<LN lnClass="PTOC" inst="2" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000004" dev:db-id="foreign-ln"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates dev:db-id="source-types">
+		<LNodeType id="LLN0_Type" lnClass="LLN0">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC">
+			<DO name="Status" type="Status_Type"/>
+			<DO name="Config" type="Config_Type"/>
+		</LNodeType>
+		<LNodeType id="Unused_LN" lnClass="GGIO">
+			<DO name="Unused" type="Unused_DO"/>
+		</LNodeType>
+		<DOType id="Status_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+		<DOType id="Config_Type" cdc="SPS">
+			<SDO name="Detail" type="Detail_Type"/>
+			<DA name="settings" bType="Struct" type="Settings_Type" fc="CF"/>
+		</DOType>
+		<DOType id="Detail_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+		<DOType id="Unused_DO" cdc="SPS">
+			<DA name="settings" bType="Struct" type="Unused_DA" fc="CF"/>
+		</DOType>
+		<DAType id="Settings_Type">
+			<BDA name="mode" bType="Enum" type="Mode_Type"/>
+			<BDA name="nested" bType="Struct" type="Nested_Type"/>
+		</DAType>
+		<DAType id="Nested_Type">
+			<BDA name="enabled" bType="BOOLEAN"/>
+		</DAType>
+		<DAType id="Unused_DA">
+			<BDA name="mode" bType="Enum" type="Unused_Enum"/>
+		</DAType>
+		<EnumType id="Mode_Type">
+			<EnumVal ord="0">off</EnumVal>
+			<EnumVal ord="1">on</EnumVal>
+		</EnumType>
+		<EnumType id="Unused_Enum">
+			<EnumVal ord="0">unused</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>

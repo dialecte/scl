@@ -1,0 +1,48 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:ied-communication:test" dev:db-id="source-root">
+	<!-- AP1 of Foreign and AP1 of Selected both on StationBus -->
+	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="2" dev:db-id="source-header"/>
+	<Communication>
+		<SubNetwork name="StationBus">
+			<ConnectedAP iedName="Foreign" apName="AP1" apUuid="30000000-0000-4000-8000-000000000003" dev:db-id="foreign-connection"/>
+			<ConnectedAP iedName="Selected" apName="AP1" apUuid="30000000-0000-4000-8000-000000000001" dev:db-id="selected-connection"/>
+		</SubNetwork>
+	</Communication>
+	<IED name="Foreign" uuid="20000000-0000-4000-8000-000000000002" dev:db-id="foreign-ied">
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000003" dev:db-id="foreign-ap">
+			<Server>
+				<Authentication/>
+				<LDevice inst="ForeignLD">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="selected-ied">
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001" dev:db-id="selected-ap1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1" uuid="40000000-0000-4000-8000-000000000001">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000001">
+							<!-- no GSEControl, no SampledValueControl -->
+					</LN0>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+		<AccessPoint name="AP2" uuid="30000000-0000-4000-8000-000000000002" dev:db-id="selected-ap2">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD2">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<DOType id="Status_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

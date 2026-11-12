@@ -27,6 +27,40 @@ export type ExtractOptions = {
  */
 export type ExtractWarning =
 	| {
+			/** An LNode of the IED implemented by a logical node the IED export leaves out (a supervision one): not written. */
+			code: 'process-lnode-left-out'
+			source: Scl.Ref<'LNode'>
+			reason: 'target-not-carried'
+	  }
+	| {
+			/** An input or output specification kept with its link to what the file does not hold cleared: the attributes removed. */
+			code: 'process-reference-cut'
+			source: Scl.Ref<'SourceRef' | 'ControlRef'>
+			attributes: string[]
+	  }
+	| {
+			/** A behaviour description using LNodes the file does not hold: left out whole. */
+			code: 'behavior-description-left-out'
+			source: Scl.Ref<'BehaviorDescription'>
+			reason: 'partly-mapped'
+	  }
+	| {
+			/** A logical node supervising subscriptions, or the capability declaring that such nodes exist: not written. */
+			code: 'supervision-left-out'
+			source: Scl.Ref<'LN' | 'SupSubscription'>
+	  }
+	| {
+			/** An input written in later-binding form without what a later binding needs (`desc`, `intAddr`, `pDO`, and a `serviceType` from itself or its `pServT`): written as it is. */
+			code: 'input-incomplete'
+			source: Scl.Ref<'ExtRef'>
+			missing: string[]
+	  }
+	| {
+			code: 'ied-reference-left-out'
+			source: Scl.Ref<'IEDName' | 'ClientLN' | 'Association' | 'KDC'>
+			iedName: string
+	  }
+	| {
 			code: 'sections-not-carried'
 			counts: { IED: number; Communication: number }
 	  }

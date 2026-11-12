@@ -68,7 +68,8 @@ export async function asd(query: Core.Query<Config>): Promise<SourceRoot<'asd'>>
  * What an SSD template file holds to instantiate, read-only and never throwing on the shape of the
  * file: the one unit, or the scaffolding of units linked together (`found`), none, or several to choose
  * from, each with the units linked to it. A scaffolding with nothing named below it is found at its
- * deepest level.
+ * deepest level. A file whose scaffolding holds two elements named `TEMPLATE` side by side is not valid: it reads as
+ * none, and the verbs refuse it with `SSD_TEMPLATE_NOT_UNIQUE`.
  *
  * @intent which unit of an SSD template file to instantiate, root of a substation template file, is the SSD file ambiguous
  */

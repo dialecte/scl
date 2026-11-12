@@ -11,7 +11,8 @@ import type { ExtRefState } from '../dataflow.types'
 
 /**
  * The state of an ExtRef, read from its own attributes only: the internal address and the expected
- * data object, nothing of a signal, a service or a control block (`later-binding`); the signal alone (`expected`); the signal with its service and control block
+ * data object, nothing of a signal or a control block, and no service but the expected one
+ * (`later-binding`); the signal alone (`expected`); the signal with its service and control block
  * (`subscribed`; a service published without one needs none), and the internal address as well
  * (`bound`). Written in any other way, it has no state.
  */

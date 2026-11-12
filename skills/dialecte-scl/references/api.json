@@ -463,13 +463,13 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "(refsOrRecords: readonly AnyRefOrRecord[], options?: InfoOptions) => Promise<ElementInfo[]>",
-			"summary": "`of` for several elements, in the order given: each one's own title (not its path from the root, which is `reference.buildElementPath`) and state, with the document-wide facts a state needs (the kinds of the IEDs, the LNs by uuid) read once for the whole call.",
+			"summary": "`of` for several elements, in the order given: each one's own title (not its path from the root, which is `reference.buildElementPath`) and state. The elements are read in one batch, and what they share is read once for the whole call: the kinds of the IEDs, what implements each LNode, and the siblings of each signal parent. An element given as a record is described as stored.",
 			"intents": [
 				"own titles or display names of many elements in one call",
 				"states of many LNodes or signals",
 				"instead of calling info.of in a loop"
 			],
-			"declaredAt": "src/v2019C1/extensions/info/query/of-each.ts:16"
+			"declaredAt": "src/v2019C1/extensions/info/query/of-each.ts:19"
 		},
 		{
 			"path": "doc.query.lifecycle.checkTemplateUuids",
@@ -544,13 +544,13 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "() => Promise<SourceRoot<'ssd'>>",
-			"summary": "What an SSD template file holds to instantiate, read-only and never throwing on the shape of the file: the one unit, or the scaffolding of units linked together (`found`), none, or several to choose from, each with the units linked to it. A scaffolding with nothing named below it is found at its deepest level.",
+			"summary": "What an SSD template file holds to instantiate, read-only and never throwing on the shape of the file: the one unit, or the scaffolding of units linked together (`found`), none, or several to choose from, each with the units linked to it. A scaffolding with nothing named below it is found at its deepest level. A file whose scaffolding holds two elements named `TEMPLATE` side by side is not valid: it reads as none, and the verbs refuse it with `SSD_TEMPLATE_NOT_UNIQUE`.",
 			"intents": [
 				"which unit of an SSD template file to instantiate",
 				"root of a substation template file",
 				"is the SSD file ambiguous"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/source-root/source-root.ts:75"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/source-root/source-root.ts:76"
 		},
 		{
 			"path": "doc.query.reference.buildElementPath",
@@ -665,13 +665,27 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "(lnode: Scl.TrackedRecord<'LNode'>) => Promise<Scl.TrackedRecord<'LN' | 'LN0'> | undefined>",
-			"summary": "Resolves a mapped `LNode` to the IED `LN` (or `LN0`) that implements it.",
+			"summary": "Resolves a mapped `LNode` to the IED `LN` (or `LN0`) that implements it, by the same rule as `resolveMappedLNodes`: a truthy `lnUuid` decides alone, even when it names nothing and whatever the names say; otherwise the complete name path, so an LNode with `iedName=\"None\"` and no `lnUuid` resolves to nothing. Vendor look-alikes in a `Private` are never the answer. One call does not read the document; for several LNodes, call `resolveMappedLNodes` once.",
 			"intents": [
 				"LN that implements an LNode",
 				"go from a function LNode to its IED LN/LN0",
 				"follow an LNode binding into the IED section"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnode.ts:26"
+			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnode.ts:19"
+		},
+		{
+			"path": "doc.query.reference.resolveMappedLNodes",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: ResolveMappedLNodesParams) => Promise<MappedLNodes>",
+			"summary": "What implements each of the LNodes given: the `LN` or `LN0` and the IED holding it, read in one go however many LNodes are asked about. A truthy `lnUuid` decides alone, even when it names nothing; without one the complete name path of the LNode (`iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst`) does. Only the document's own logical nodes count: what sits inside a `Private` is vendor payload, and an LNode never resolves to it. The LNodes asked about are answered from their own attributes, wherever they sit.",
+			"intents": [
+				"which LN and IED implement these LNodes",
+				"resolve many mapped LNodes at once",
+				"LNode to IED without one read per LNode"
+			],
+			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes.ts:32",
+			"example": "await doc.query.reference.resolveMappedLNodes({ lnodes })"
 		},
 		{
 			"path": "doc.query.reference.resolveReferencePath",
@@ -748,7 +762,7 @@
 				"clean up LNode bindings after an IED or LN is deleted",
 				"clear dangling data mappings and signal implementations"
 			],
-			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/orphan-lnode-bindings.ts:40",
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/orphan-lnode-bindings.ts:43",
 			"example": "await tx.cleanUp.resetLNode()"
 		},
 		{
@@ -822,12 +836,12 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: StartFileParams) => Promise<void>",
-			"summary": "Start the file an operation writes into the document, with its first history item. A new file (`as: 'new'`) gets a `Header` with a uuid of its own, version `0` and revision `1` (a `Header` the document holds is kept). A new revision of an existing file (`as: 'revision'`) is not available yet: refused with `OPTION_NOT_AVAILABLE` before anything is written.",
+			"summary": "Start the file an operation writes into the document, with its first history item. A new file (`as: 'new'`) gets a `Header` with a uuid of its own, version `0` and revision `1`, replacing any previous Header. Previous history inner text is carried as labelled historical context in the one new initialization item, not as file versions. A new revision of an existing file (`as: 'revision'`) is not available yet: refused with `OPTION_NOT_AVAILABLE` before anything is written.",
 			"intents": [
 				"start a new file in a document",
 				"give it a Header with its first history item before an operation writes it"
 			],
-			"declaredAt": "src/v2019C1/extensions/history/transaction/start-file.ts:19"
+			"declaredAt": "src/v2019C1/extensions/history/transaction/start-file.ts:20"
 		},
 		{
 			"path": "tx.identity.restoreClonedUuids",
@@ -908,6 +922,21 @@
 				"save a function as a reusable template"
 			],
 			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/transaction/fsd.ts:28"
+		},
+		{
+			"path": "tx.lifecycle.extract.ied",
+			"root": "tx",
+			"otherRoutes": [],
+			"signature": "(params: IedExtractParams) => Promise<{ warnings: ExtractWarning[]; }>",
+			"summary": "Export a specification IED into an ISD: the IED, the process part it implements and its scoped Communication, into an empty target. Requires an explicit `kind: 'instance'` and an explicit input mode. Copies the surviving logical-node type closure and preserves instance identity and vendor content. Supervision nodes, a supervision capability declaring them, and foreign receiver, client, association and KDC entries are left out with source-record warnings. `inputs: 'none'` leaves the inputs out; `inputs: 'later-binding'` writes each in later-binding form: its description, internal address and expected data and service, an expected value it lacks taken from what it was bound to, its service type equal to its expected service, nothing of that source; an input still lacking its description, expected data or a service is written as it is and listed. With later-binding inputs the IED is no receiver or client of its own control blocks. `internalService: true` writes a specified flow between two LNodes the file holds for the IED as an internal service with no link to its input; the source keeps the service it specifies. Removes FCDA depending on omitted supervision, dropping DataSets with no surviving native FCDA. Retained affected Report/GSE/SV controls increment confRev by 10000 once; affected LogControls are disabled. Removed DataSets are unlinked without replacing controls. Missing/invalid or overflowing counters refuse before output writes. The process part holds the IED's LNodes in their substation, line or process frame, names and identifiers as in the source: a function or subfunction holding none of them is left out, the levels and equipment above them stay, an equipment of the frame keeps the connectivity node it connects to. A behaviour description goes only when all its LNodes do, variables and process resources when they belong to the LNodes written; applications, allocation roles and power system relations travel with what they name unless their option is `false`. A specification of an input or output naming what the file does not hold stays with its expected data and without that link. Each LNode gets its own naming as specified naming; data specifications lose their mapping. `labels: false` leaves no label in the file. Replaces the target ISD Header/history with a fresh identity and one initial item, retaining prior history only as labelled inner text. Assigns the issuer and records the source at the Header and IED. Source type follows the registered extension: .ssd is SSD; .scd, .xml or no extension is SCD, regardless of Header fileType. Other extensions are refused with OPTION_NOT_AVAILABLE before writes. Refuses an implemented selected IED, a target already holding an IED or a process part (a substation, line or process) and an unavailable revision start.",
+			"intents": [
+				"extract an IED into an ISD instance",
+				"copy an IED with its reachable data types",
+				"export an ISD with its process part",
+				"write the inputs of an ISD in later-binding form",
+				"mark a dataflow inside one IED as internal"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/transaction/ied.ts:59"
 		},
 		{
 			"path": "tx.lifecycle.extract.ssd",
@@ -1013,7 +1042,7 @@
 				"reconcile Application instances with their template",
 				"instantiate or update an application template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/asd.ts:102"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/asd.ts:98"
 		},
 		{
 			"path": "tx.lifecycle.update.fsd",
@@ -1096,13 +1125,13 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: WriteProvenanceParams) => Promise<WriteProvenanceResult>",
-			"summary": "Records the source file an element or the document was made from: an `SclFileReference` sourced from the source `Header` (`version` / `revision` / `fileUuid`) and store (`fileName`). The same writer serves a placement and an update, so a reference always names the file version the element was last made from.",
+			"summary": "Records the source file an element or the document was made from: an `SclFileReference` sourced from the source `Header` (`version` / `revision` / `fileUuid`) and store (`fileName`, the document's name with its extension). The same writer serves a placement and an update; function/application references name the latest source version, while IED/document references retain history.",
 			"intents": [
 				"record which template file an instance came from",
-				"add an SclFileReference to a Function/Application/Header",
+				"add an SclFileReference to a Function/Application/IED/Header",
 				"write source file provenance"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/transaction/write-provenance.ts:39"
+			"declaredAt": "src/v2019C1/extensions/reference/transaction/write-provenance.ts:42"
 		}
 	]
 }

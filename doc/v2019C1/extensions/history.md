@@ -104,5 +104,5 @@ startFile(params: {
 }): Promise<void>
 ```
 
-- `as: 'new'` — a new file: a `Header` with a uuid of its own, version `0`, revision `1`, then the first `Hitem` (as [`addEntry`](#addentry) with `version: 'keep'`; a `Header` the document already holds is kept).
+- `as: 'new'` — a new file: replaces any existing target `Header` with a fresh UUID, the requested file type, filename-derived ID, current tool and requested name structure. Header version/revision are `0`/`1`; exactly one initial `Hitem` has the same version/revision and the current operation timestamp. Previous target history items contribute only their inner text, combined in order under `Historical context:` inside that initial item. Their attributes, version identities and the old Header's identity/provenance are not carried forward. This also replaces a Header without history. Ordinary [`addEntry`](#addentry) still appends to existing history without replacing it.
 - `as: 'revision'` — a new revision of an existing file (its uuid, its version, the next revision): not available yet, refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'as', value: 'revision' }`) before anything is written.

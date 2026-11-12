@@ -7,7 +7,7 @@ import { toRawRecord } from '@dialecte/core/helpers'
 import { DEFINITION } from '@/v2019C1/definition'
 import { LINEAGE } from '@/v2019C1/extensions/lifecycle/constraints'
 import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
-import { readSignalName } from '@/v2019C1/extensions/reference/query/build/signal-name'
+import { nameAmongSiblings } from '@/v2019C1/extensions/reference/query/build/signal-name'
 
 import type { ConditionalTitle, TitleSpec } from '../constants/title.types'
 import type { InfoContext } from './info-context.types'
@@ -37,18 +37,22 @@ export async function of<GenericElement extends string = string>(
 	refOrRecord: AnyRefOrRecord & { readonly tagName: GenericElement },
 	options: InfoOptions = {},
 ): Promise<ElementInfo<GenericElement>> {
-	return describeElement({ query, refOrRecord, options, context: createInfoContext(query) })
+	const record = await query.getRecord(refOrRecord as Scl.Ref<Scl.ElementsOf>)
+	const context = createInfoContext(query)
+	return describeRecord<GenericElement>({ query, record, options, context })
 }
 
-/** `of`, with the document-wide facts of the call (`ofEach` shares one context). */
-export async function describeElement<GenericElement extends string = string>(params: {
+/**
+ * `of` for a record read from the store, with the document-wide facts of the call (`ofEach` reads its
+ * elements in one batch and shares one context).
+ */
+export async function describeRecord<GenericElement extends string = string>(params: {
 	query: Core.Query<Config>
-	refOrRecord: AnyRefOrRecord & { readonly tagName: GenericElement }
+	record: Scl.TrackedRecord<Scl.ElementsOf> | undefined
 	options: InfoOptions
 	context: InfoContext
 }): Promise<ElementInfo<GenericElement>> {
-	const { query, refOrRecord, options, context } = params
-	const record = await query.getRecord(refOrRecord as Scl.Ref<Scl.ElementsOf>)
+	const { query, record, options, context } = params
 	if (!record) return { title: '' }
 
 	const tag = record.tagName
@@ -56,7 +60,7 @@ export async function describeElement<GenericElement extends string = string>(pa
 	const attributes = await query.any.getAttributes(record)
 
 	const spec = TITLE_FIELDS_OVERRIDE[tag]
-	const specAttributes = await readSpecAttributes({ query, record, spec, attributes })
+	const specAttributes = await readSpecAttributes({ query, record, spec, attributes, context })
 
 	const title = resolveTitle({ tag, spec, mode, attributes, specAttributes, value: record.value })
 	const state = await readState({ query, record, attributes, context })
@@ -80,11 +84,14 @@ async function readSpecAttributes(params: {
 	record: Scl.TrackedRecord<Scl.ElementsOf>
 	spec: TitleSpec | undefined
 	attributes: Record<string, string>
+	context: InfoContext
 }): Promise<Record<string, string>> {
-	const { query, record, spec, attributes } = params
+	const { query, record, spec, attributes, context } = params
 	if (spec?.attributesFrom) return getChildAttributes(query, record, spec.attributesFrom)
 	if (!SIGNAL_TAG_NAMES.has(record.tagName)) return attributes
-	const signalName = await readSignalName(query, toRawRecord(record))
+	const raw = toRawRecord(record)
+	const siblings = await context.signalSiblingsOf(raw)
+	const signalName = nameAmongSiblings({ record: raw, siblings })
 	return { ...attributes, signalName: signalName ?? '' }
 }
 
@@ -143,7 +150,8 @@ async function collectLabels(
 	query: Core.Query<Config>,
 	record: Core.AnyRawRecord,
 ): Promise<Record<string, Record<string, string>>> {
-	return groupByLang(await fetchLabelEntries(query, record))
+	const entries = await fetchLabelEntries(query, record)
+	return groupByLang(entries)
 }
 
 type LabelEntry = { lang: string; id: string; text: string }

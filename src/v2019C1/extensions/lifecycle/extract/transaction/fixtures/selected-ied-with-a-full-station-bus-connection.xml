@@ -1,0 +1,78 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:ied-communication:test" dev:db-id="source-root">
+	<!-- StationBus and the ConnectedAP of AP1 of Selected carry metadata, text, private payloads, address, GSE, SMV and PhysConn; LD1 holds the GOOSE and SV controls they name -->
+	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="2" dev:db-id="source-header"/>
+	<Communication>
+		<SubNetwork name="StationBus" type="8-MMS" desc="Selected station network">
+			<Text>station network text</Text>
+			<Private type="vendor.network">
+				<vendor:Network mode="retained">network payload</vendor:Network>
+			</Private>
+			<BitRate unit="b/s" multiplier="M">100</BitRate>
+			<ConnectedAP iedName="Selected" apName="AP1" apUuid="30000000-0000-4000-8000-000000000001" desc="Selected connection" dev:db-id="selected-connection">
+				<Text>selected connection text</Text>
+				<Private type="vendor.connection">
+					<vendor:Connection mode="retained">connection payload</vendor:Connection>
+				</Private>
+				<Address>
+					<P type="IP">10.0.0.1</P>
+				</Address>
+				<GSE ldInst="LD1" cbName="GooseEvents" cbUuid="60000000-0000-4000-8000-000000000001" desc="Selected GOOSE">
+					<Address>
+						<P type="MAC-Address">01-0C-CD-01-00-01</P>
+					</Address>
+					<MinTime unit="s" multiplier="m">4</MinTime>
+					<MaxTime unit="s" multiplier="m">1000</MaxTime>
+				</GSE>
+				<SMV ldInst="LD1" cbName="SampledEvents" cbUuid="60000000-0000-4000-8000-000000000002" desc="Selected samples">
+					<Address>
+						<P type="MAC-Address">01-0C-CD-04-00-01</P>
+					</Address>
+				</SMV>
+				<PhysConn type="Connection">
+					<P type="Port">1</P>
+				</PhysConn>
+			</ConnectedAP>
+		</SubNetwork>
+	</Communication>
+	<IED name="Foreign" uuid="20000000-0000-4000-8000-000000000002" dev:db-id="foreign-ied">
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000003" dev:db-id="foreign-ap">
+			<Server>
+				<Authentication/>
+				<LDevice inst="ForeignLD">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="selected-ied">
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001" dev:db-id="selected-ap1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1" uuid="40000000-0000-4000-8000-000000000001">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000001">
+						<GSEControl name="GooseEvents" appID="Events" confRev="1" uuid="60000000-0000-4000-8000-000000000001"/>
+						<SampledValueControl name="SampledEvents" smvID="Samples" smpRate="80" nofASDU="1" confRev="1" uuid="60000000-0000-4000-8000-000000000002">
+							<SmvOpts refreshTime="true" sampleSynchronized="true"/>
+						</SampledValueControl>
+					</LN0>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+		<AccessPoint name="AP2" uuid="30000000-0000-4000-8000-000000000002" dev:db-id="selected-ap2">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD2">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<DOType id="Status_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

@@ -1,5 +1,5 @@
-import { resolveMappedData } from '../resolve/resolve-mapped-data'
-import { resolveMappedLNode } from '../resolve/resolve-mapped-lnode'
+import { resolveMappedDataAndDefault } from '../resolve/resolve-mapped-data-and-default'
+import { resolveMappedLNodes } from '../resolve/resolve-mapped-lnodes'
 
 import { MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference/constants'
 
@@ -20,8 +20,10 @@ export async function findMappedDataFollowingLn(
 	const { uuid } = await query.getAttributes(ln)
 	if (!uuid) return []
 
+	const lnodes = await query.getRecordsByTagName('LNode')
+	const mappedLNodes = await resolveMappedLNodes(query, { lnodes })
 	const roots = [
-		...(await findLNodesMappedTo(query, { ln, uuid })),
+		...lnodes.filter((lnode) => mappedLNodes.get(lnode.id)?.ln.id === ln.id),
 		...(await findDataNamingLn(query, { uuid })),
 	]
 
@@ -36,7 +38,10 @@ export async function findMappedDataFollowingLn(
 				const reference = { tagName: record.tagName, id: record.id } as Scl.Ref<
 					'DOS' | 'SDS' | 'DAS'
 				>
-				const mappedData = await resolveMappedData(query, { reference })
+				const { mappedData } = await resolveMappedDataAndDefault(query, {
+					reference,
+					mappedLNodes,
+				})
 				if (mappedData?.origin === 'default' && mappedData.ln.id === ln.id) {
 					found.set(record.id, record)
 				}
@@ -44,27 +49,6 @@ export async function findMappedDataFollowingLn(
 		}
 	}
 	return [...found.values()]
-}
-
-/** `LNode`s mapped to the logical node: by `lnUuid`, or by the identity they name. */
-async function findLNodesMappedTo(
-	query: Core.Query<Config>,
-	params: { ln: Scl.TrackedRecord<'LN' | 'LN0'>; uuid: string },
-): Promise<Scl.TrackedRecord<'LNode'>[]> {
-	const { ln, uuid } = params
-	const byUuid = await query.findByAttributes({ tagName: 'LNode', attributes: { lnUuid: uuid } })
-
-	const { lnClass } = await query.getAttributes(ln)
-	if (!lnClass) return byUuid
-	const sameClass = await query.findByAttributes({ tagName: 'LNode', attributes: { lnClass } })
-	const byIdentity: Scl.TrackedRecord<'LNode'>[] = []
-	for (const lnode of sameClass) {
-		const { lnUuid } = await query.getAttributes(lnode)
-		if (lnUuid) continue
-		const mappedLn = await resolveMappedLNode(query, lnode)
-		if (mappedLn?.id === ln.id) byIdentity.push(lnode)
-	}
-	return [...byUuid, ...byIdentity]
 }
 
 /** `DOS` / `SDS` whose own pair names the logical node: their children may follow it. */

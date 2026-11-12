@@ -29,6 +29,7 @@ buildMappedLNodePath <->  resolveMappedLNode     (mapped LNode <-> implementing 
 | `findRefsPointingTo`   | reverse   | target ref + optional container      | `ResolvedReference[]`                                    | find all REF records pointing to a given element              |
 | `buildMappedLNodePath` | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode` |
 | `resolveMappedLNode`   | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`       |
+| `resolveMappedLNodes`  | read      | many `LNode` refs                    | `LN`/`LN0` ref and IED ref, by LNode id                  | resolving many mapped `LNode`s with one read of the document  |
 | `resolveMappedData`    | read      | `DOS`/`SDS`/`DAS` ref                | `MappedData` (`LN` ref + data path + origin)             | finding the data that implements a specified data object      |
 | `getPathSegment`       | write     | a record (+ context)                 | `PathSegment` (segment + separator) or `null`            | the segment of one element, without a query                   |
 
@@ -37,7 +38,7 @@ buildMappedLNodePath <->  resolveMappedLNode     (mapped LNode <-> implementing 
 - **`buildElementPath`** vs **`buildReferencePath`** -- element path is the canonical address of an element; reference path is the value stored on a REF attribute (which may include a qualifier, e.g. `.Pos.stVal`).
 - **`resolveReferencePath`** vs **`resolveElementPath`** -- `resolveReferencePath` follows a REF record's stored attribute; `resolveElementPath` walks the tree directly from a raw string.
 - **`findRefsPointingTo`** vs **`resolveReferencePath`** -- `resolveReferencePath(ref)` gives you the target _of_ one ref; `findRefsPointingTo(target)` gives you all refs _pointing at_ a target. Opposite direction.
-- **`resolveMappedLNode`** vs **`resolveElementPath`** -- a mapped `LNode` has no path attribute pointing to its `LN`; the implementing identity is spread across `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`. `resolveMappedLNode` composes the IED-section path from those attributes (via `buildMappedLNodePath`) and resolves it with `resolveElementPath`.
+- **`resolveMappedLNode`** vs **`resolveElementPath`** -- a mapped `LNode` has no path attribute pointing to its `LN`; the implementing identity is spread across `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`. `resolveMappedLNode` reads its `lnUuid`, else composes the IED-section path from those attributes (via `buildMappedLNodePath`).
 
 ---
 
@@ -256,7 +257,27 @@ const ln = await reference.query.resolveMappedLNode(query, lnodeRecord)
 // -> TrackedRecord for the implementing LN, or undefined
 ```
 
-Reads `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` from the LNode, composes the IED-section path via `buildMappedLNodePath`, then resolves it with `resolveElementPath`. Returns `undefined` for unmapped LNodes or when the path does not resolve to an `LN`/`LN0`.
+A truthy `lnUuid` decides alone: one naming nothing resolves to `undefined`, whatever the names say, and one naming a logical node resolves to it even with `iedName="None"`. Without one, `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst` compose the IED-section path via `buildMappedLNodePath`, so an LNode with `iedName="None"` and no `lnUuid` resolves to `undefined`. A logical node of a vendor payload is never the answer. One call does not read the whole document; for several LNodes, call `resolveMappedLNodes` once.
+
+---
+
+## resolveMappedLNodes
+
+Which `LN` or `LN0` implements each of many LNodes, and in which IED, with one read of the document.
+
+```ts
+reference.query.resolveMappedLNodes(
+  query: Scl.Query | Scl.Transaction,
+  params: { lnodes: readonly Scl.Ref<'LNode'>[] },
+): Promise<ReadonlyMap<string, { ln: Scl.Ref<'LN' | 'LN0'>; ied: Scl.Ref<'IED'> }>>
+```
+
+```ts
+const mapped = await reference.query.resolveMappedLNodes(query, { lnodes })
+mapped.get(lnode.id)?.ied // -> the IED implementing that LNode, or undefined
+```
+
+The map is keyed by LNode id, an LNode nothing implements being absent. A truthy `lnUuid` decides alone, even when it names nothing; otherwise the complete name path of the LNode. A logical node inside a `Private` is vendor payload and is never the answer, wherever it sits and whatever it carries. The LNodes asked about are answered from their own attributes, wherever they sit: a caller that must leave out vendor LNodes chooses the ones it asks about.
 
 ---
 
@@ -483,10 +504,11 @@ await tx.reference.setMappedData({
 
 ### `writeProvenance`
 
-`writeProvenance({ sourceQuery, target })` records the source file an element or the document was made from: an `SclFileReference` sourced from the source `Header` (`version`, `revision`, `uuid` → `fileUuid`) and the source document's name (`fileName`). The lifecycle placements and updates write it. It returns `{ changed }` (`WriteProvenanceResult`): whether it changed what is recorded — `false` when the element records that file version already, as its only reference to that file, or when the `Header` lists that file version already; removing a second reference to the same file counts as a change.
+`writeProvenance({ sourceQuery, target })` records the source file an element or the document was made from: an `SclFileReference` sourced from the source `Header` (`version`, `revision`, `uuid` → `fileUuid`) and the source document's file name with its extension (`fileName`, `P.ssd`). The lifecycle placements and updates write it. It returns `{ changed }` (`WriteProvenanceResult`): whether it changed what is recorded — `false` when the function/application records that file version already, as its only reference to that file, or when the IED or `Header` lists that file version already; removing a second function/application reference to the same file counts as a change.
 
-- `target: { anchor: 'function' | 'application', root }` — the root's own `FunctionSclRef` / `ApplicationSclRef` naming the source file (the same `fileUuid`, or, for a source naming no uuid, the same `fileName` without uuid) is brought to the source's version in place; with none, one is added; a second one naming that file is removed. A reference the root records of another file is left.
+- `target: { anchor: 'function' | 'application', root }` — the root's own `FunctionSclRef` / `ApplicationSclRef` naming the source file (the same `fileUuid`, or, for a source naming no uuid, the same `fileName` without uuid, held with or without the extension) is brought to the source's version in place; with none, one is added; a second one naming that file is removed. A reference the root records of another file is left.
 - `target: { anchor: 'document', fileType }` — appended to `Header > SourceFiles`, unless the `Header` lists that file version already (same file, `version` and `revision`); refused with `TARGET_HEADER_MISSING` when the document has no `Header`.
+- `target: { anchor: 'ied', root, fileType }` — `root` is an `Scl.Ref<'IED'>`. Ensures its `IEDSourceFiles` container and appends the source version unless already listed. Duplicate matching includes `fileType`, file identity (uuid, or name without uuid), `version` and `revision`. Earlier versions and other files stay in order; existing entries are never rewritten or collapsed. `fileType` comes from the explicit argument, not the source Header. The source document and target Header stay unchanged; an SSD/SCD reference does not make a specification IED implemented.
 
 ### `removeOwnProvenance`
 

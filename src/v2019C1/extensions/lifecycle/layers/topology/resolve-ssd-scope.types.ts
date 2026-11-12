@@ -1,5 +1,6 @@
 import type { Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
+import type { ROOT_ELEMENT } from '@/v2019C1/definition/constants.generated'
 
 export type ResolveSsdScopeParams = {
 	/**
@@ -37,13 +38,22 @@ export type SsdScope = {
 	leftOut: ReadonlySet<string>
 }
 
+/** The element holding elements of the template: a level of the scaffolding, or the file's root for its substations. */
+export type SsdScopeParent = {
+	tagName: TopologyStructuralTag | typeof ROOT_ELEMENT
+	id: string
+	name?: string
+}
+
 /**
  * What {@link readSsdScope} reads: the scope (`scope`), the candidates when several elements could be instantiated
- * and none is chosen (`ambiguous`), nothing when nothing is named and the file holds no substation (`none`), or the
- * element named that the file does not hold (`absent`).
+ * and none is chosen (`ambiguous`), nothing when nothing is named and the file holds no substation (`none`), the
+ * element named that the file does not hold (`absent`), or a level of the scaffolding holding several elements
+ * named `TEMPLATE`, which a valid file never holds (`duplicate-templates`).
  */
 export type SsdScopeRead =
 	| { kind: 'scope'; scope: SsdScope }
 	| { kind: 'ambiguous'; candidates: SsdScopeCandidate[] }
 	| { kind: 'none' }
 	| { kind: 'absent'; ref: Scl.Ref<TopologyStructuralTag> }
+	| { kind: 'duplicate-templates'; parent: SsdScopeParent; duplicates: SsdScopeUnit[] }

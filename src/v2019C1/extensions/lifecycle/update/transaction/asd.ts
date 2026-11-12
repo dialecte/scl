@@ -46,12 +46,8 @@ import {
 	resolveApplicationScope,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
 import { landLevels, readTemplateLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
-import {
-	assertMappingsDecided,
-	resolveSatelliteMappings,
-	resolveSatelliteRemovals,
-	toRedirectMappings,
-} from '@/v2019C1/extensions/lifecycle/mapping'
+import { readLinkedSections } from '@/v2019C1/extensions/lifecycle/linked-sections/read'
+import { assertMappingsDecided } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	assertRevisionBaseFits,
 	scenarioPolicy,
@@ -232,52 +228,38 @@ export async function asd(
 			applicationRef: { tagName: 'Application', id: instance.id } as Scl.Ref<'Application'>,
 		})
 
-		// where the shared satellites land — the answer the report read. Resolved before the
-		// application reconcile: its references to a project element a source element is mapped
-		// onto are the template's references to that element.
-		// where the template's levels land for this instance: a shared satellite is found by name only there
 		// where this instance sits: what the template gained is written there, and found by name or lineage there only
 		const instanceStructure = await resolveTargetStructure(
 			tx,
 			toRef(instance) as Scl.Ref<Scl.ElementsOf>,
 		)
+		// where the template's levels land for this instance: a shared satellite is found by name only there
 		const landings = landLevels({ levels: templateLevels, structure: instanceStructure })
-		const resolvedMappings = await resolveSatelliteMappings(tx, {
-			sourceQuery,
-			satelliteRefs,
-			instanceSatelliteRefs,
-			decisionMappings: params.decisionMappings,
-			matchKey,
-			landings,
-		})
-		// a shared element nothing is decided for: nothing is written until the consumer chose
-		assertMappingsDecided({ satelliteRefs, resolvedMappings })
-		const redirectMappings = await toRedirectMappings({
-			sourceQuery,
-			satelliteRefs,
-			resolvedMappings,
-		})
-
-		// what goes of the satellites the template no longer brings anything for — read from the
-		// instance as it is before the reconcile below changes its references, as the report read it
-		const removals = await resolveSatelliteRemovals(tx, {
-			sourceQuery,
-			instancePrimaryRef: instance,
-			instanceSatelliteRefs,
-			resolvedMappings,
-			removalBase,
-			matchKey,
-		})
-		droppedFunctions.push({ dropped: droppedByInstance.get(instance.id) ?? [], accepted })
-
-		// 1. application layer
-		// the cross-cutting satellites as the report read them, before the reconcile below
 		// what the satellites' references may name: the application and the functions it composes, but what the
 		// selection leaves out
 		const scope = await resolveApplicationScope(sourceQuery, {
 			applicationRef,
 			leftOut: selection.leftOut,
 		})
+		// where the shared satellites land — the answer the report read. Resolved before the
+		// application reconcile: its references to a project element a source element is mapped
+		// onto are the template's references to that element.
+		const reading = await readLinkedSections(tx, {
+			sourceQuery,
+			description: { satelliteRefs, instanceSatelliteRefs, scope },
+			instancePrimaryRef: instance,
+			decisionMappings: params.decisionMappings,
+			removalBase,
+			matchKey,
+			landings,
+		})
+		const { resolvedMappings, removals, redirectMappings } = reading
+		// a shared element nothing is decided for: nothing is written until the consumer chose
+		assertMappingsDecided({ satelliteRefs, resolvedMappings })
+		droppedFunctions.push({ dropped: droppedByInstance.get(instance.id) ?? [], accepted })
+
+		// 1. application layer
+		// the cross-cutting satellites as the report read them, before the reconcile below
 		const crossCutting = await readCrossCuttingSatellites(tx, {
 			sourceQuery,
 			primaryRef: applicationRef,
