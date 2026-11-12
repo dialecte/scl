@@ -351,7 +351,7 @@ describe('lifecycle — what a level of a substation template holds travels with
 				expected: {
 					groups: [
 						'BehaviorDescription BD1 with Function Prot',
-						'Variable PICKUP with Function Ctl',
+						'Variable PICKUP with Function Prot',
 						'Variable VBAY with Bay B1',
 						'Variable VQA1 with Bay B1',
 					],
@@ -618,10 +618,8 @@ describe('lifecycle — what a level of a substation template holds travels with
 		if (!lastReport) throw new Error('a case places the bay at least once')
 
 		expect(listSatelliteNodes(lastReport), 'report').toEqual(testCase.expected.listed)
-		expect(
-			await listSatelliteGroups({ report: lastReport, sourceQuery: source.query }),
-			'report',
-		).toEqual(testCase.expected.groups)
+		const groups = await listSatelliteGroups({ report: lastReport, sourceQuery: source.query })
+		expect(groups, 'report').toEqual(testCase.expected.groups)
 		// an instance with nothing to decide is up to date, one with something is not
 		expect(
 			lastReport.instances.map((instance) => instance.upToDate === (instance.groups.length === 0)),
@@ -685,8 +683,9 @@ async function listSatelliteGroups(params: {
 		for (const node of [group.primary, ...group.companions]) visit(node)
 		const primary = `${group.primary.tagName} ${await nameOf(group.primary)}`
 		for (const node of satellites) {
-			if (node.change === 'added')
-				listed.push(`${node.tagName} ${await nameOf(node)} with ${primary}`)
+			if (node.change !== 'added') continue
+			const name = await nameOf(node)
+			listed.push(`${node.tagName} ${name} with ${primary}`)
 		}
 	}
 	return listed.sort()

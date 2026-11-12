@@ -2,13 +2,14 @@ import { cloneTree } from './clone-tree'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DESCENDANTS } from '@/v2019C1/definition'
+import { sortInDocumentOrder } from '@/v2019C1/extensions/lifecycle/source-root/document-order'
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ResolveTargetParent } from './clone-referenced.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { RefTagName, TargetOf } from '@/v2019C1/extensions/reference'
 import type * as Core from '@dialecte/core'
-import type { OmitEntry } from '@dialecte/core'
+import type { AnyTrackedRecord, OmitEntry } from '@dialecte/core'
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -16,7 +17,7 @@ import type { OmitEntry } from '@dialecte/core'
  * Collects unique target refs from `refTagName` descendants inside `scopeRef`
  * that do not yet exist in the target transaction.
  *
- * Returns source-side refs ready to be cloned.
+ * Returns source-side refs ready to be cloned, in document order.
  */
 export async function findMissingReferencedRecords<
 	Ref extends RefTagName,
@@ -51,7 +52,7 @@ export async function findMissingReferencedRecords<
 		if (uuid) uuids.add(uuid)
 	}
 
-	const missing: Scl.Ref<Target>[] = []
+	const missing: AnyTrackedRecord[] = []
 	for (const uuid of uuids) {
 		const uuidFilter = { uuid } as Scl.AttributesValueObjectOf<Target>
 
@@ -65,10 +66,14 @@ export async function findMissingReferencedRecords<
 		const [existing] = await tx.findByAttributes({ tagName: targetTagName, attributes: uuidFilter })
 		if (existing) continue
 
-		missing.push({ tagName: targetTagName, id: source.id } as Scl.Ref<Target>)
+		missing.push(source)
 	}
 
-	return missing
+	// a store lists the references by record id: the targets follow the document's order
+	const ordered = await sortInDocumentOrder(sourceQuery, { records: missing })
+	return ordered.map(function refOf(record) {
+		return { tagName: targetTagName, id: record.id } as Scl.Ref<Target>
+	})
 }
 
 /**

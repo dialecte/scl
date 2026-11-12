@@ -23,8 +23,8 @@ export { resolveFrameLandings } from './frame-landings'
 export { reconcileTopologyFrame } from './reconcile-topology-frame'
 export type { FrameReconciliation } from './reconcile-topology-frame.types'
 export {
-	functionsUnderScope,
 	hasScopeInstance,
+	primariesUnderScope,
 	resolveTopologyReconcilables,
 	resolveUnitPlacement,
 } from './scope-content'

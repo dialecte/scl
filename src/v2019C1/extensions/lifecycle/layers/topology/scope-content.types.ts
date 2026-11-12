@@ -2,6 +2,12 @@ import type { Scl } from '@/v2019C1/config'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type { AnyTreeRecord } from '@dialecte/core'
 
+/** The applications and top-level functions of a topology scope, each in document order (see `primariesUnderScope`). */
+export type ScopePrimaries = {
+	applications: Scl.Ref<'Application'>[]
+	functions: Scl.Ref<'Function'>[]
+}
+
 /** The reconcilable primaries of a topology scope (see `resolveTopologyReconcilables`). */
 export type TopologyReconcilables = {
 	applications: Scl.Ref<'Application'>[]

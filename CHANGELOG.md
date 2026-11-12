@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## UNRELEASED
+
+### Fixed
+
+- **What a placement writes follows the template's order, the same on every run.** Siblings of one tag that `apply`, `instantiate.*` and `update.*` write (the voltage levels of a substation, the applications and functions of a bay, the functions an application composes, the categories classifying a function and its subfunctions, the variables applying to one element or that a role refers to, what an update adds to a placed bay) came out in an order that changed from one run to the next with the same content: they were written in the order a store lists records, by their ids, and the ids of a document are new on every import. They are now written in the template's document order.
+
+- **The report lists a variable applying to several functions with the first of them in the template.** A variable applying to two functions of a bay was grouped with the function of the lower record id, which changed from one import to the next; it is now grouped with the function that comes first in the template.
+
 ## [0.16.0] - 2026-11-12
 
 ### Changed

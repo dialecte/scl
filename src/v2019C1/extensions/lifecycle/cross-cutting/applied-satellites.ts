@@ -7,6 +7,7 @@ import {
 
 import { toRef } from '@dialecte/core/helpers'
 
+import { sortInDocumentOrder } from '@/v2019C1/extensions/lifecycle/source-root/document-order'
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
@@ -18,7 +19,7 @@ import type {
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
 import type * as Core from '@dialecte/core'
-import type { AnyTreeRecord } from '@dialecte/core'
+import type { AnyRef, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 
 /**
  * Resolve the cross-cutting satellites that apply to ANY element within the
@@ -108,13 +109,58 @@ export async function resolveAppliedSatelliteTargets(
 			),
 		})
 	}
-	// in the order of the first target each applies to; in the document's order beside one another (a stable sort)
-	found.sort(function inTargetOrder(one, other) {
-		return one.first - other.first
+	return orderFound(query, { found })
+}
+
+/**
+ * The satellites found, in the order of the first target each applies to; in the document's order beside one another:
+ * a store lists the satellites by record id.
+ */
+async function orderFound(
+	query: Core.Query<Config>,
+	params: { found: readonly { satellite: AppliedSatellite; first: number }[] },
+): Promise<AppliedSatellite[]> {
+	const rank = await rankInDocumentOrder(query, {
+		refs: params.found.map(function refOf(entry) {
+			return entry.satellite.satelliteRef
+		}),
 	})
-	return found.map(function satelliteOf(entry) {
-		return entry.satellite
+	return [...params.found]
+		.sort(function inTargetOrder(one, other) {
+			return (
+				one.first - other.first ||
+				rankOf({ rank, satellite: one.satellite }) - rankOf({ rank, satellite: other.satellite })
+			)
+		})
+		.map(function satelliteOf(entry) {
+			return entry.satellite
+		})
+}
+
+/** Where a satellite stands in document order, among those ranked. */
+function rankOf(params: {
+	rank: ReadonlyMap<string, number>
+	satellite: AppliedSatellite
+}): number {
+	return params.rank.get(params.satellite.satelliteRef.id ?? '') ?? 0
+}
+
+/** The position of each record in document order (record id -> rank): the records read at once. */
+export async function rankInDocumentOrder(
+	query: Core.Query<Config>,
+	params: { refs: readonly Scl.Ref<Scl.ElementsOf>[] },
+): Promise<Map<string, number>> {
+	if (params.refs.length < 2) return new Map()
+	const read = await query.any.getRecords([...params.refs] as AnyRef[])
+	const records = read.filter(function isRead(record): record is AnyTrackedRecord {
+		return record !== undefined
 	})
+	const ordered = await sortInDocumentOrder(query, { records })
+	return new Map(
+		ordered.map(function rankedAt(record, position) {
+			return [record.id, position] as const
+		}),
+	)
 }
 
 /**

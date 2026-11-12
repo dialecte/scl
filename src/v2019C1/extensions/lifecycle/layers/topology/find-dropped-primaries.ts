@@ -1,4 +1,4 @@
-import { applicationsUnderScope, functionsUnderScope } from './scope-content'
+import { primariesUnderScope } from './scope-content'
 
 import { toRef } from '@dialecte/core/helpers'
 
@@ -93,10 +93,10 @@ async function readUnitUuids(
 	if (tree) await collectLevelUuids(sourceQuery, { node: tree, levels, leftOut })
 
 	const primaries = new Set<string>()
-	const sourcePrimaries = [
-		...(await applicationsUnderScope(sourceQuery, scopeRef)),
-		...(await functionsUnderScope(sourceQuery, scopeRef)),
-	].filter((primary) => !leftOut.has(primary.id))
+	const { applications, functions } = await primariesUnderScope(sourceQuery, { scopeRef, tree })
+	const sourcePrimaries = [...applications, ...functions].filter(
+		(primary) => !leftOut.has(primary.id),
+	)
 	for (const primary of sourcePrimaries) {
 		const uuid = await sourceQuery.any.getAttribute(primary, { name: 'uuid' })
 		if (uuid) primaries.add(uuid)

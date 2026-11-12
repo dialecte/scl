@@ -1,5 +1,5 @@
 import { groupLinkedUnits } from './group-linked-units'
-import { applicationsUnderScope, functionsUnderScope } from './scope-content'
+import { primariesUnderScope } from './scope-content'
 
 import { throwDialecteError } from '@dialecte/core'
 import { widen } from '@dialecte/core/helpers'
@@ -164,10 +164,8 @@ async function scaffoldingContent(
 		const child = await query.getRecord(childRef)
 		if (child) content.push(widen(child))
 	}
-	const primaries = [
-		...(await applicationsUnderScope(query, scaffolding)),
-		...(await functionsUnderScope(query, scaffolding)),
-	]
+	const { applications, functions } = await primariesUnderScope(query, { scopeRef: scaffolding })
+	const primaries = [...applications, ...functions]
 	for (const primary of primaries) {
 		const primaryRecord = await query.getRecord(primary)
 		if (primaryRecord) content.push(widen(primaryRecord))

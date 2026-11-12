@@ -4,6 +4,7 @@ import {
 	resolveContributionScope,
 } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { assertMappingDecided } from '@/v2019C1/extensions/lifecycle/mapping'
+import { sortInDocumentOrder } from '@/v2019C1/extensions/lifecycle/source-root/document-order'
 import {
 	deep as deepExtract,
 	cloneTree,
@@ -22,7 +23,7 @@ import type { ResolvedMapping } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
-import type { OmitEntry } from '@dialecte/core'
+import type { AnyTrackedRecord, OmitEntry } from '@dialecte/core'
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -140,18 +141,24 @@ export async function cloneFunctionCategories(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** The categories classifying a function or one of its subfunctions (record ids). */
+/** The categories classifying a function or one of its subfunctions (record ids), in document order. */
 export async function findFunctionCategoryIds(
 	sourceQuery: Core.Query<Config>,
 	params: { functionRef: SourceFunctionRef },
 ): Promise<Set<string>> {
 	const refs = await findRefsForFunctionTree(sourceQuery, params.functionRef)
 
-	const categoryIds = new Set<string>()
+	const categories = new Map<string, AnyTrackedRecord>()
 	for (const { container } of refs) {
-		if (container) categoryIds.add(container.id)
+		if (container) categories.set(container.id, container)
 	}
-	return categoryIds
+	// a store lists the references by record id: the categories are placed as the template orders them
+	const ordered = await sortInDocumentOrder(sourceQuery, { records: [...categories.values()] })
+	return new Set(
+		ordered.map(function idOf(category) {
+			return category.id
+		}),
+	)
 }
 
 async function findRefsForFunctionTree(

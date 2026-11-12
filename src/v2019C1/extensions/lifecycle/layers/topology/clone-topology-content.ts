@@ -1,7 +1,7 @@
 import { ensureTopologyFrame, resolveFrameStructure } from './ensure-topology-frame'
 import { resolveFrameLandings } from './frame-landings'
 import { resolveLandedLevels, withLandedLevels } from './landed-levels'
-import { applicationsUnderScope, functionsUnderScope, resolveUnitPlacement } from './scope-content'
+import { primariesUnderScope, resolveUnitPlacement } from './scope-content'
 
 import {
 	readSatelliteIndex,
@@ -92,7 +92,8 @@ export async function cloneTopologyContent(
 	const held = await readHeldApplications({ landings, projectQuery: tx, matchKey })
 	// where the roles of the applications land, read before anything is written, as the report reads it: a role placed
 	// for one application is not the one another application's role maps onto
-	const applicationRefs = await applicationsUnderScope(sourceQuery, scopeRef)
+	const primaries = await primariesUnderScope(sourceQuery, { scopeRef })
+	const applicationRefs = primaries.applications
 	const roleMappings = await resolveRoleMappings(tx, {
 		sourceQuery,
 		applicationRefs: applicationRefs.filter(function isPlaced(applicationRef) {
@@ -155,11 +156,9 @@ export async function cloneTopologyContent(
 	}
 
 	// what the functions of the unit hold is placed with them: a role referring to something there refers to that copy
-	const standaloneFunctions = (await functionsUnderScope(sourceQuery, scopeRef)).filter(
-		function isPlaced(functionRef) {
-			return !isLeftOut(functionRef)
-		},
-	)
+	const standaloneFunctions = primaries.functions.filter(function isPlaced(functionRef) {
+		return !isLeftOut(functionRef)
+	})
 	// the satellites of the template, read once for every application and for the caller
 	const index = await readSatelliteIndex(sourceQuery)
 	// what the frame places of what applies to the unit and of what its levels hold: placed by the caller, resolved once

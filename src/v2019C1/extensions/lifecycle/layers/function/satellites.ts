@@ -2,11 +2,13 @@ import { FUNCTION_SATELLITE_CONTAINERS } from './satellites.constants'
 
 import { toRef } from '@dialecte/core/helpers'
 
+import { sortInDocumentOrder } from '@/v2019C1/extensions/lifecycle/source-root/document-order'
 import { reference } from '@/v2019C1/extensions/reference'
 
 import type { Config, Scl } from '@/v2019C1/config'
 import type { SourceFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type * as Core from '@dialecte/core'
+import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
  * Resolve the function-layer satellites carried by a function: the external
@@ -33,9 +35,7 @@ export async function resolveFunctionSatellites(
 		targets.push({ tagName: 'SubFunction', id: subFunction.id })
 	}
 
-	const seen = new Set<string>()
-	const satellites: Scl.Ref<Scl.ElementsOf>[] = []
-
+	const containers = new Map<string, AnyTrackedRecord>()
 	for (const target of targets) {
 		for (const containerTag of FUNCTION_SATELLITE_CONTAINERS) {
 			const refs = await reference.query.findRefsPointingTo(query, {
@@ -43,11 +43,14 @@ export async function resolveFunctionSatellites(
 				containerTagName: containerTag,
 			})
 			for (const { ref, container } of refs) {
-				if (!container || seen.has(container.id) || leftOut?.has(ref.id)) continue
-				seen.add(container.id)
-				satellites.push(toRef(container) as Scl.Ref<Scl.ElementsOf>)
+				if (!container || containers.has(container.id) || leftOut?.has(ref.id)) continue
+				containers.set(container.id, container)
 			}
 		}
 	}
-	return satellites
+	// a store lists the subfunctions and the references by record id: the satellites follow the document's order
+	const ordered = await sortInDocumentOrder(query, { records: [...containers.values()] })
+	return ordered.map(function refOf(container) {
+		return toRef(container) as Scl.Ref<Scl.ElementsOf>
+	})
 }

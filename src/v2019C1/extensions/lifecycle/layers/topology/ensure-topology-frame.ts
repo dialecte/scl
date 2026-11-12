@@ -17,7 +17,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
-import type { AnyTrackedRecord } from '@dialecte/core'
+import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 
 /**
  * Reproduce the source topology frame into the target, keyed by structural POSITION (never by name).
@@ -218,21 +218,30 @@ export async function collectFrameElements(
 
 	result.push(scopeRef)
 
-	for (const tag of TOPOLOGY_STRUCTURAL_TAGS) {
-		for (const record of await sourceQuery.getRecordsByTagName(tag)) {
-			if (record.id === scopeRef.id) continue
-			if (result.some((ref) => ref.id === record.id)) continue
-			const recordAncestors = await sourceQuery.findAncestors(
-				{ tagName: tag, id: record.id } as Scl.Ref<Scl.ElementsOf>,
-				{ stopAtTagName: 'Substation' },
-			)
-			if (recordAncestors.some((ancestor) => ancestor.id === scopeRef.id)) {
-				result.push({ tagName: tag, id: record.id } as Scl.Ref<Scl.ElementsOf>)
-			}
-		}
+	// the levels below the scope, read with it down to the innermost level, each tag in the template's order
+	const structuralTags: readonly string[] = TOPOLOGY_STRUCTURAL_TAGS
+	const scopeLevel = structuralTags.indexOf(scopeRef.tagName)
+	const depth = structuralTags.length - 1 - scopeLevel
+	const tree =
+		scopeLevel >= 0 && depth > 0 ? await sourceQuery.any.getTree(scopeRef, { depth }) : undefined
+	for (const tag of structuralTags) {
+		if (tree) result.push(...collectLevelsOfTag({ node: tree, tagName: tag }))
 	}
 
 	return result
+}
+
+/** The structural levels of one tag below a node, in document order. */
+function collectLevelsOfTag(params: {
+	node: AnyTreeRecord
+	tagName: string
+}): Scl.Ref<Scl.ElementsOf>[] {
+	const { node, tagName } = params
+	return node.tree.flatMap(function levelsBelow(child): Scl.Ref<Scl.ElementsOf>[] {
+		if (!isTopologyLevel(child.tagName)) return []
+		const below = collectLevelsOfTag({ node: child, tagName })
+		return child.tagName === tagName ? [toRef(child) as Scl.Ref<Scl.ElementsOf>, ...below] : below
+	})
 }
 
 /**

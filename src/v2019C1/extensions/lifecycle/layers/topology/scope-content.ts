@@ -1,5 +1,7 @@
 import { findFrameInstances } from './find-frame-instances'
 
+import { toRef } from '@dialecte/core/helpers'
+
 import { collectContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import {
 	collectComposedFunctionUuids,
@@ -7,28 +9,32 @@ import {
 	findInstancesByTemplateUuid,
 } from '@/v2019C1/extensions/lifecycle/instance'
 
-import type { TopologyReconcilables, UnitPlacement } from './scope-content.types'
+import type { ScopePrimaries, TopologyReconcilables, UnitPlacement } from './scope-content.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
 
-/** Applications whose structural ancestry includes `scopeRef` (Substation / VoltageLevel / Bay). */
-export async function applicationsUnderScope(
+/**
+ * The applications and the top-level functions whose structural ancestry includes `scopeRef` (Substation / VoltageLevel /
+ * Bay), each in document order: one read of the scope, or none with its `tree` read already.
+ */
+export async function primariesUnderScope(
 	query: Core.Query<Config>,
-	scopeRef: Scl.Ref<TopologyStructuralTag>,
-): Promise<Scl.Ref<'Application'>[]> {
-	const applications = await query.getRecordsByTagName('Application')
-
-	const inScope: Scl.Ref<'Application'>[] = []
-	for (const application of applications) {
-		const ancestors = await query.findAncestors(application, { stopAtTagName: 'Substation' })
-		if (ancestors.some((ancestor) => ancestor.id === scopeRef.id)) {
-			inScope.push({ tagName: 'Application', id: application.id })
-		}
+	params: { scopeRef: Scl.Ref<TopologyStructuralTag>; tree?: AnyTreeRecord },
+): Promise<ScopePrimaries> {
+	const tree = params.tree ?? (await query.any.getTree(params.scopeRef))
+	if (!tree) return { applications: [], functions: [] }
+	const primaries = collectPrimaries({ node: tree })
+	return {
+		applications: primaries.filter(function isApplication(primary) {
+			return primary.tagName === 'Application'
+		}) as Scl.Ref<'Application'>[],
+		functions: primaries.filter(function isFunction(primary) {
+			return primary.tagName === 'Function'
+		}) as Scl.Ref<'Function'>[],
 	}
-	return inScope
 }
 
 /**
@@ -92,21 +98,13 @@ function collectIds(params: { node: AnyTreeRecord; ids: Set<string> }): void {
 	for (const child of node.tree) collectIds({ node: child, ids })
 }
 
-/** Top-level Functions whose structural ancestry includes `scopeRef`. */
-export async function functionsUnderScope(
-	query: Core.Query<Config>,
-	scopeRef: Scl.Ref<TopologyStructuralTag>,
-): Promise<Scl.Ref<'Function'>[]> {
-	const functions = await query.getRecordsByTagName('Function')
-
-	const inScope: Scl.Ref<'Function'>[] = []
-	for (const fn of functions) {
-		const ancestors = await query.findAncestors(fn, { stopAtTagName: 'Substation' })
-		if (ancestors.some((ancestor) => ancestor.id === scopeRef.id)) {
-			inScope.push({ tagName: 'Function', id: fn.id })
-		}
-	}
-	return inScope
+/** The applications and functions below a node, in document order: what one of them holds is not walked. */
+function collectPrimaries(params: { node: AnyTreeRecord }): Scl.Ref<Scl.ElementsOf>[] {
+	return params.node.tree.flatMap(function below(child): Scl.Ref<Scl.ElementsOf>[] {
+		if (child.tagName === 'Application' || child.tagName === 'Function')
+			return [toRef(child) as Scl.Ref<Scl.ElementsOf>]
+		return collectPrimaries({ node: child })
+	})
 }
 
 /**
@@ -123,9 +121,8 @@ export async function resolveTopologyReconcilables(
 	},
 ): Promise<TopologyReconcilables> {
 	const { scopeRef, leftOut } = params
-	const applications = (await applicationsUnderScope(query, scopeRef)).filter(
-		(application) => !leftOut.has(application.id),
-	)
+	const primaries = await primariesUnderScope(query, { scopeRef })
+	const applications = primaries.applications.filter((application) => !leftOut.has(application.id))
 
 	const composedUuids = new Set<string>()
 	for (const application of applications) {
@@ -135,7 +132,7 @@ export async function resolveTopologyReconcilables(
 	}
 
 	const standaloneFunctions: Scl.Ref<'Function'>[] = []
-	for (const functionRef of await functionsUnderScope(query, scopeRef)) {
+	for (const functionRef of primaries.functions) {
 		if (leftOut.has(functionRef.id)) continue
 		const { uuid } = await query.getAttributes(functionRef)
 		if (uuid && composedUuids.has(uuid)) continue

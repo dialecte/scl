@@ -2,6 +2,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import {
 	findHeldSatelliteIds,
+	rankInDocumentOrder,
 	readSatelliteIndex,
 } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 import {
@@ -59,7 +60,15 @@ export async function resolveReferencedSatellites(
 		if (!named?.targets.includes(indexed.satelliteRef.tagName)) continue
 		satellites.push({ ...indexed, referenceIds: named.referenceIds })
 	}
-	return satellites
+	// the index lists the satellites by record id: they follow the document's order
+	const rank = await rankInDocumentOrder(query, {
+		refs: satellites.map(function refOf(satellite) {
+			return satellite.satelliteRef
+		}),
+	})
+	return [...satellites].sort(function inDocumentOrder(one, other) {
+		return (rank.get(one.satelliteRef.id ?? '') ?? 0) - (rank.get(other.satelliteRef.id ?? '') ?? 0)
+	})
 }
 
 /**
