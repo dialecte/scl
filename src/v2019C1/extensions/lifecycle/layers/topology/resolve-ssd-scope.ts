@@ -15,6 +15,7 @@ import type {
 	ResolveSsdScopeParams,
 	SsdScope,
 	SsdScopeCandidate,
+	SsdScopeParent,
 	SsdScopeRead,
 	SsdScopeUnit,
 } from './resolve-ssd-scope.types'
@@ -26,7 +27,8 @@ import type * as Core from '@dialecte/core'
  * What an SSD operation acts on: {@link readSsdScope} read as the verbs need it, refusing what the read reports as
  * data. Several elements at the first named level are refused with `SSD_SCOPE_AMBIGUOUS`, listing one candidate per
  * element (a unit, with the units linked to it), so the consumer asks again naming one; an element named the file does
- * not hold is refused with `TEMPLATE_ROOT_NOT_FOUND`.
+ * not hold is refused with `TEMPLATE_ROOT_NOT_FOUND`; a level holding several elements named `TEMPLATE` with
+ * `SSD_TEMPLATE_NOT_UNIQUE`, naming the element holding them and each of them.
  *
  * Returns `undefined` when nothing is named and the file holds no substation.
  */
@@ -38,12 +40,15 @@ export async function resolveSsdScope(
 	if (read.kind === 'scope') return read.scope
 	if (read.kind === 'ambiguous') return refuseAmbiguous({ candidates: read.candidates })
 	if (read.kind === 'absent') return refuseAbsent({ ref: read.ref })
+	if (read.kind === 'duplicate-templates')
+		return refuseDuplicateTemplates({ parent: read.parent, duplicates: read.duplicates })
 	return undefined
 }
 
 /**
  * What an SSD operation acts on, read as data and never refusing: the scope, the candidates when several elements
- * could be instantiated, nothing, or the element named that the file does not hold.
+ * could be instantiated, nothing, the element named that the file does not hold, or a level of the scaffolding holding
+ * several elements named `TEMPLATE`.
  *
  * The first level of the template holding a named element holds the units to instantiate. Units joined by a reference
  * (a terminal of one on a connectivity node of the other, an input of one fed by the other) are one element: they are
@@ -52,7 +57,9 @@ export async function resolveSsdScope(
  * A named level the consumer names is the scope, with the units it is linked to (a unit of a linked group selects the
  * group). The `TEMPLATE` scaffolding — named, or the file's substations when nothing is named — is walked down
  * `Substation -> VoltageLevel -> Bay` to that first level: one element there is the scope; several are `ambiguous`,
- * one candidate per element. A scaffolding with no named element below it is its deepest `TEMPLATE` level.
+ * one candidate per element. A scaffolding with no named element below it is its deepest `TEMPLATE` level. A level
+ * of the scaffolding holding several `TEMPLATE` elements is read as such (`duplicate-templates`), whatever is named:
+ * names are unique among siblings, and nothing tells which scaffolding goes on.
  *
  * @intent read the scope of an SSD template without refusing, which unit of an SSD template file is instantiated
  */
@@ -61,6 +68,10 @@ export async function readSsdScope(
 	params: ResolveSsdScopeParams,
 ): Promise<SsdScopeRead> {
 	const { ref } = params
+	// a scaffolding with two TEMPLATE elements side by side is not a valid file, whatever is named
+	const duplicate = await findDuplicateTemplates(query)
+	if (duplicate) return duplicate
+
 	const starts = ref ? await namedElements(query, { refs: [ref] }) : await substations(query)
 	if (starts.length === 0 && ref) return { kind: 'absent', ref }
 	if (starts.length === 0) return { kind: 'none' }
@@ -83,8 +94,8 @@ export async function readSsdScope(
 			return { kind: 'scope', scope: await groupScope(query, { scaffolding, group: groups[0] }) }
 		}
 
-		// a level holds at most one TEMPLATE element: the scaffolding goes on below it
-		const [template] = level
+		// the one TEMPLATE element of the level (`findDuplicateTemplates`): the scaffolding goes on below it
+		const [template] = level.filter(isTemplate)
 		const children = await childLevels(query, { parent: template })
 		if (children.length === 0) return { kind: 'scope', scope: unitScope(template) }
 		scaffolding = template
@@ -178,6 +189,36 @@ async function parentLevel(
 	return level
 }
 
+/**
+ * The first level of the `TEMPLATE` scaffolding holding several elements named `TEMPLATE`, walked down from the file's
+ * substations, with the element holding them (the file's root for substations); none when each level holds one at
+ * most. One read per level.
+ */
+async function findDuplicateTemplates(
+	query: Core.Query<Config>,
+): Promise<Extract<SsdScopeRead, { kind: 'duplicate-templates' }> | undefined> {
+	let parent: SsdScopeParent = await fileRoot(query)
+	let level = await substations(query)
+	while (true) {
+		const templates = level.filter(isTemplate)
+		if (templates.length > 1) return { kind: 'duplicate-templates', parent, duplicates: templates }
+		const [template] = templates
+		if (!template) return undefined
+		parent = template
+		level = await childLevels(query, { parent: template })
+	}
+}
+
+function isTemplate(element: SsdScopeUnit): boolean {
+	return element.name === TEMPLATE_NAME
+}
+
+/** The file's root: what holds its substations. */
+async function fileRoot(query: Core.Query<Config>): Promise<SsdScopeParent> {
+	const root = await query.getRoot()
+	return { tagName: ROOT_ELEMENT, id: root.id }
+}
+
 /** The file's substations, in document order, each with its name. */
 async function substations(query: Core.Query<Config>): Promise<SsdScopeUnit[]> {
 	const records = await query.getChildren({ tagName: ROOT_ELEMENT }, 'Substation')
@@ -232,6 +273,18 @@ function refuseAmbiguous(params: { candidates: readonly SsdScopeCandidate[] }): 
 		detail: `the template holds ${candidates.length} elements to instantiate at its first named level (${candidates
 			.map((candidate) => `<${candidate.tagName}> "${candidate.name}"`)
 			.join(', ')}): name one of them as ref`,
+	})
+}
+
+function refuseDuplicateTemplates(params: {
+	parent: SsdScopeParent
+	duplicates: readonly SsdScopeUnit[]
+}): never {
+	const { parent, duplicates } = params
+	const holder = parent.name ? `<${parent.tagName}> "${parent.name}"` : 'the file'
+	return throwDialecteError(SCL_ERRORS.SSD_TEMPLATE_NOT_UNIQUE, {
+		meta: { parent, duplicates },
+		detail: `${holder} holds ${duplicates.length} <${duplicates[0].tagName}> named "${TEMPLATE_NAME}": a name is unique among siblings, keep one`,
 	})
 }
 

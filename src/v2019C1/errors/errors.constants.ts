@@ -156,6 +156,17 @@ export const SCL_ERRORS = defineErrors({
 		message: 'The extraction configuration revision increment would overflow',
 	},
 	/**
+	 * An SSD template one of whose levels holds several elements named `TEMPLATE` (two `TEMPLATE` substations in the
+	 * file, two `TEMPLATE` voltage levels in a substation, two `TEMPLATE` bays in a voltage level): names are unique
+	 * among siblings, so the file is not valid and nothing tells which of them to act on. Nothing is written.
+	 * `meta: { parent: { tagName, id, name? }, duplicates: [{ tagName, id, name }] }` — the element holding them (the
+	 * file's root for substations), and the elements named `TEMPLATE` there, in document order.
+	 */
+	SSD_TEMPLATE_NOT_UNIQUE: {
+		code: 'SCL2009',
+		message: 'A level of the template holds several elements named TEMPLATE',
+	},
+	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
 	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`
 	 */
