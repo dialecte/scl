@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="ssd" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="ssd-header" revision="1" uuid="ssd-document-uuid" version="0" dev:db-id="header-s"/>
+    <Substation name="TEMPLATE" uuid="substation-source-uuid" dev:db-id="substation-s">
+        <VoltageLevel name="E1" uuid="voltage-level-source-uuid" dev:db-id="voltage-level-s">
+            <Bay name="Q1" uuid="bay-source-uuid" dev:db-id="bay-s">
+                <Private type="eIEC61850-6-100" dev:db-id="private-s">
+                    <eIEC61850-6-100:AllocationRole name="PIU" uuid="piu-source-uuid" dev:db-id="piu-s">
+                        <eIEC61850-6-100:FunctionRef function="TEMPLATE/E1/Q1/Prot" functionUuid="prot-source-uuid" dev:db-id="piu-function-ref-s"/>
+                    </eIEC61850-6-100:AllocationRole>
+                    <eIEC61850-6-100:FunctionCategory name="MEASUREMENT" uuid="measurement-source-uuid" dev:db-id="measurement-s">
+                        <eIEC61850-6-100:FunctionCatRef function="TEMPLATE/E1/Q1/Prot" functionUuid="prot-source-uuid" dev:db-id="measurement-function-ref-s"/>
+                    </eIEC61850-6-100:FunctionCategory>
+                    <eIEC61850-6-100:Variable name="PICKUP" value="1" uuid="pickup-source-uuid" dev:db-id="pickup-s">
+                        <eIEC61850-6-100:VariableApplyTo element="TEMPLATE/E1/Q1/Prot" elementUuid="prot-source-uuid" dev:db-id="pickup-prot-s"/>
+                    </eIEC61850-6-100:Variable>
+                    <eIEC61850-6-100:Application name="Control" type="DCS" uuid="control-source-uuid" dev:db-id="control-s">
+                        <eIEC61850-6-100:FunctionRole name="ROOT" uuid="function-role-source-uuid" dev:db-id="function-role-s">
+                            <eIEC61850-6-100:FunctionRoleContent dev:db-id="function-role-content-s">
+                                <eIEC61850-6-100:FunctionRef function="TEMPLATE/E1/Q1/Prot" functionUuid="prot-source-uuid" dev:db-id="control-function-ref-s"/>
+                            </eIEC61850-6-100:FunctionRoleContent>
+                        </eIEC61850-6-100:FunctionRole>
+                        <eIEC61850-6-100:AllocationRoleRef allocationRole="TEMPLATE/E1/Q1/PIU" allocationRoleUuid="piu-source-uuid" dev:db-id="piu-ref-s"/>
+                    </eIEC61850-6-100:Application>
+                </Private>
+                <Function name="Prot" uuid="prot-source-uuid" dev:db-id="prot-s"/>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+</SCL>
