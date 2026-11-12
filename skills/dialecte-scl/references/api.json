@@ -164,13 +164,13 @@
 			"entry": "@dialecte/scl/v2019C1/test",
 			"otherRoutes": [],
 			"signature": "(params: AssertNoNewSclOutputViolationsParams) => void",
-			"summary": "Throw with every violation of `after` that `before` did not hold (compared by key, each occurrence counted: a second copy of a violation already there is new), unless `carried` holds it: a violation of the documents the act read from, copied as it was, each copy counted. A case's opt-out tolerates the violations it lists, and only those; a tolerance no added violation matches, for a check that ran, fails the case (the opt-out is stale). An opt-out with an empty reason or no violation is refused.",
+			"summary": "Throw with every violation of `after` that `before` did not hold (compared by key, each occurrence counted: a second copy of a violation already there is new), unless `carried` holds it: a violation of the documents the act read from, copied as it was, each copy counted. A case's opt-out tolerates the violations it lists, and only those; a tolerance no added violation matches, for a check that ran, fails the case (the opt-out is stale). An opt-out with an empty reason or no violation is refused. When an added violation is untolerated the error is an `XmlAssertionError` (the stale tolerances stay in its message); stale tolerances alone, and a refused opt-out, throw a plain `Error`.",
 			"intents": [
 				"fail a test that leaves an invalid SCL document",
 				"compare output violations before and after an act",
 				"tolerate known violations with a reason"
 			],
-			"declaredAt": "src/v2019C1/test/assert-scl-output.ts:109"
+			"declaredAt": "src/v2019C1/test/assert-scl-output.ts:112"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.assertUnexpectedElementQueries",
@@ -211,7 +211,7 @@
 				"check the SCL output against the XSD in a test",
 				"list the violations of an SCL document (XSD and output rules)"
 			],
-			"declaredAt": "src/v2019C1/test/assert-scl-output.ts:61"
+			"declaredAt": "src/v2019C1/test/assert-scl-output.ts:62"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.configureSclXsdSchemas",

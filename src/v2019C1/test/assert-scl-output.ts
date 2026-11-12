@@ -18,6 +18,7 @@ import {
 import { assertValidSclXml } from './assert-valid-scl-xml'
 import { collectSclXsdViolations } from './scl-xsd'
 
+import { XmlAssertionError } from '@dialecte/core/test'
 import { resolveDefinition } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
@@ -103,6 +104,8 @@ export async function collectSclOutputViolations(
  * act read from, copied as it was, each copy counted. A case's opt-out tolerates the violations it lists, and only
  * those; a tolerance no added violation matches, for a check that ran, fails the case (the opt-out is stale). An
  * opt-out with an empty reason or no violation is refused.
+ * When an added violation is untolerated the error is an `XmlAssertionError` (the stale tolerances stay in its
+ * message); stale tolerances alone, and a refused opt-out, throw a plain `Error`.
  *
  * @intent fail a test that leaves an invalid SCL document, compare output violations before and after an act, tolerate known violations with a reason
  */
@@ -113,13 +116,17 @@ export function assertNoNewSclOutputViolations(params: AssertNoNewSclOutputViola
 	const added = findAddedSclOutputViolations({ before, after, carried })
 	const tolerances = allowInvalidOutput?.violations ?? []
 	const ranChecks = checks ?? Object.values(SCL_OUTPUT_CHECK)
+	const failing = added.filter((violation) => !isTolerated({ tolerances, violation }))
 	const failure = describeSclOutputFailure({
 		label,
-		failing: added.filter((violation) => !isTolerated({ tolerances, violation })),
+		failing,
 		stale: findStaleTolerances({ tolerances, added, ranChecks }),
 		ranChecks,
 	})
-	if (failure) throw new Error(failure)
+	if (!failure) return
+	// an added violation is the case's behaviour missing; stale tolerances alone are a defect of its opt-out
+	if (failing.length > 0) throw new XmlAssertionError(failure)
+	throw new Error(failure)
 }
 
 /**

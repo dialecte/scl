@@ -7,7 +7,7 @@ import { SCL_OUTPUT_CHECK } from './assert-scl-output.constants'
 import { ALL_XMLNS_NAMESPACES, runSclTestCases } from './hydrated-test'
 import { isSclXsdConfigured } from './scl-xsd'
 
-import { createTestProject } from '@dialecte/core/test'
+import { createTestProject, XmlAssertionError } from '@dialecte/core/test'
 import { describe, expect } from 'vitest'
 
 import { SCL_DIALECTE } from '@/v2019C1/declaration.constants'
@@ -254,6 +254,8 @@ describe('assertNoNewSclOutputViolations', () => {
 		checks?: SclOutputCheck[]
 		/** The error message; `undefined` when nothing is thrown. */
 		expectedMessage: string | undefined
+		/** The kind thrown: an assertion miss, or a test defect (plain `Error`); `undefined` when nothing is thrown. */
+		expectedError: 'assertion' | 'plain' | undefined
 	}
 
 	const danglingLine =
@@ -288,32 +290,38 @@ describe('assertNoNewSclOutputViolations', () => {
 			before: [],
 			after: [],
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
 		'a violation the input already held → not reported': {
 			before: [dangling],
 			after: [dangling],
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
 		'a violation the act added → reported under the label': {
 			before: [dangling],
 			after: [dangling, duplicateUuid],
 			expectedMessage: `case › source: the document left is not a valid SCL file:\n  ${duplicateUuid.description}`,
+			expectedError: 'assertion',
 		},
 		'a violation copied from a document the act read from → not reported': {
 			before: [],
 			after: [dangling],
 			carried: [dangling],
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
 		'a violation the input held, the validator now expecting other children there → not reported': {
 			before: [missingChild('one of ( Private, VoltageLevel )')],
 			after: [missingChild('one of ( VoltageLevel )')],
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
 		'a second copy of a violation the input held → reported': {
 			before: [dangling],
 			after: [dangling, dangling],
 			expectedMessage: `case › source: the document left is not a valid SCL file:\n  ${dangling.description}`,
+			expectedError: 'assertion',
 		},
 		'a violation an opt-out tolerates by check and code → not reported': {
 			before: [],
@@ -323,6 +331,7 @@ describe('assertNoNewSclOutputViolations', () => {
 				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
 			},
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
 		'a violation an opt-out tolerates by check alone → not reported': {
 			before: [],
@@ -332,6 +341,7 @@ describe('assertNoNewSclOutputViolations', () => {
 				violations: [{ check: 'identity' }],
 			},
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
 		'a violation the opt-out does not list → still reported': {
 			before: [],
@@ -341,6 +351,7 @@ describe('assertNoNewSclOutputViolations', () => {
 				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
 			},
 			expectedMessage: `case › source: the document left is not a valid SCL file:\n  ${dangling.description}`,
+			expectedError: 'assertion',
 		},
 		'an opt-out the case no longer needs → reported as stale': {
 			before: [],
@@ -351,6 +362,7 @@ describe('assertNoNewSclOutputViolations', () => {
 			},
 			expectedMessage:
 				'case › source: the document left is not a valid SCL file:\n  [opt-out] allows references dangling, which the case no longer leaves: remove it',
+			expectedError: 'plain',
 		},
 		'an opt-out for a check that did not run → not stale': {
 			before: [],
@@ -358,12 +370,14 @@ describe('assertNoNewSclOutputViolations', () => {
 			allowInvalidOutput: { reason: 'an empty category', violations: [{ check: 'xsd' }] },
 			checks: ['schema', 'uniqueness', 'references', 'identity'],
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
 		'a violation added when the XSD validator did not run → reported, saying so': {
 			before: [],
 			after: [dangling],
 			checks: ['schema', 'uniqueness', 'references', 'identity'],
 			expectedMessage: `case › source: the document left is not a valid SCL file (checked without the XSD validator):\n  ${dangling.description}`,
+			expectedError: 'assertion',
 		},
 		'an opt-out with an empty reason → refused': {
 			before: [],
@@ -371,6 +385,7 @@ describe('assertNoNewSclOutputViolations', () => {
 			allowInvalidOutput: { reason: '', violations: [{ check: 'identity' }] },
 			expectedMessage:
 				'case › source: allowInvalidOutput needs the reason the case leaves an invalid document, not an empty string',
+			expectedError: 'plain',
 		},
 		'an opt-out with no violation → refused': {
 			before: [],
@@ -378,11 +393,12 @@ describe('assertNoNewSclOutputViolations', () => {
 			allowInvalidOutput: { reason: 'an orphan to clean up', violations: [] },
 			expectedMessage:
 				'case › source: allowInvalidOutput needs the violations the case may leave, not an empty list',
+			expectedError: 'plain',
 		},
 	}
 
 	function act(testCase: TestCase) {
-		const message = captureErrorMessage(() =>
+		const thrown = captureThrown(() =>
 			assertNoNewSclOutputViolations({
 				before: testCase.before,
 				after: testCase.after,
@@ -392,19 +408,32 @@ describe('assertNoNewSclOutputViolations', () => {
 				checks: testCase.checks,
 			}),
 		)
-		expect(message).toBe(testCase.expectedMessage)
+		expect(captureErrorMessage(thrown)).toBe(testCase.expectedMessage)
+		if (testCase.expectedError === 'assertion') {
+			expect(thrown).toBeInstanceOf(XmlAssertionError)
+			expect(thrown).toMatchObject({ name: 'AssertionError' })
+		} else if (testCase.expectedError === 'plain') {
+			expect(thrown).toBeInstanceOf(Error)
+			expect(thrown).not.toBeInstanceOf(XmlAssertionError)
+			expect(thrown).toMatchObject({ name: 'Error' })
+		}
 	}
 
 	runSclTestCases.generic(testCases, act)
 })
 
-function captureErrorMessage(run: () => void): string | undefined {
+function captureThrown(run: () => void): unknown {
 	try {
 		run()
-		return undefined
 	} catch (error) {
-		return error instanceof Error ? error.message : String(error)
+		return error
 	}
+	return undefined
+}
+
+function captureErrorMessage(thrown: unknown): string | undefined {
+	if (thrown === undefined) return undefined
+	return thrown instanceof Error ? thrown.message : String(thrown)
 }
 
 describe('xsdCodeOf', () => {

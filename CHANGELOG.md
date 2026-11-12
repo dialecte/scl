@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A variable or behaviour description an update adds is written in its instance's level.** An update started from a level above the instance (`update.asd` from a voltage level) wrote a variable the template gained in that level's `Private`, not in the bay holding the instance. It is now written where the instance sits, as a role is.
 
+- The output gate (`withOutputGate`, `closeGatedTestProject`) and `assertNoNewSclOutputViolations` now fail a violation the act added as core's `XmlAssertionError` (named `AssertionError`), so a test runner reads it as an assertion failure. A stale opt-out alone, and an opt-out without a reason or violations, stay plain errors. Messages are unchanged.
+
 ## [0.15.0] - 2026-11-11
 
 ### Added

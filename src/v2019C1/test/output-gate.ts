@@ -9,6 +9,8 @@ import {
 } from './assert-scl-output'
 import { SCL_OUTPUT_CHECK } from './assert-scl-output.constants'
 
+import { XmlAssertionError } from '@dialecte/core/test'
+
 import type { SclOutputViolation } from './assert-scl-output.types'
 import type { SclTest } from './hydrated-test.types'
 import type {
@@ -25,9 +27,9 @@ import type {
 
 /**
  * Wrap a runner `act` so the documents it leaves are checked: the violations of the source and target documents
- * are read before it runs, and every violation it added fails the case, all of them in one error naming the case. A
- * case's `allowInvalidOutput` tolerates the violations it lists, and only those. An act that throws keeps its own
- * error.
+ * are read before it runs, and every violation it added fails the case, all of them in one `XmlAssertionError` naming
+ * the case (see {@link assertOutputGate}). A case's `allowInvalidOutput` tolerates the violations it lists, and only
+ * those. An act that throws keeps its own error.
  */
 export function withOutputGate<GenericTestCase extends OutputGateTestCase, GenericResult>(
 	params: WithOutputGateParams<GenericTestCase, GenericResult>,
@@ -96,6 +98,8 @@ export async function readOutputBaseline(
  * another document of the project held before the act (the fixture the act copied from, a template it imported) is
  * carried, not gained, as many times as it was held there. Every document is read as a test document (see
  * {@link collectSclOutputViolations}), and a value written as a uuid in a document of the project is a test uuid.
+ * When the act added an untolerated violation the error is an `XmlAssertionError` (the case's stale tolerances stay
+ * in its message); stale tolerances alone throw a plain `Error`.
  */
 export async function assertOutputGate(params: AssertOutputGateParams): Promise<void> {
 	const { project, baseline, label, allowInvalidOutput } = params
@@ -140,21 +144,26 @@ export async function assertOutputGate(params: AssertOutputGateParams): Promise<
 		added: added.flatMap(({ violations }) => violations),
 		ranChecks,
 	})
+	const addedFailures = added.flatMap(({ gated, checks, violations }) => {
+		const failure = describeSclOutputFailure({
+			label: `${label} › ${gated.role}`,
+			failing: violations.filter((violation) => !isTolerated({ tolerances, violation })),
+			stale: [],
+			ranChecks: checks,
+		})
+		return failure ? [failure] : []
+	})
 	const failures = [
-		...added.flatMap(({ gated, checks, violations }) => {
-			const failure = describeSclOutputFailure({
-				label: `${label} › ${gated.role}`,
-				failing: violations.filter((violation) => !isTolerated({ tolerances, violation })),
-				stale: [],
-				ranChecks: checks,
-			})
-			return failure ? [failure] : []
-		}),
+		...addedFailures,
 		...(stale.length > 0
 			? [describeSclOutputFailure({ label, failing: [], stale, ranChecks }) ?? '']
 			: []),
 	]
-	if (failures.length > 0) throw new Error(failures.join('\n'))
+	if (failures.length === 0) return
+	const message = failures.join('\n')
+	// an added violation is the case's behaviour missing; stale tolerances alone are a defect of its opt-out
+	if (addedFailures.length > 0) throw new XmlAssertionError(message)
+	throw new Error(message)
 }
 
 /**
