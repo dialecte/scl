@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.16.0] - 2026-11-12
 
 ### Changed
 
@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A terminal on the predefined grounded node names the bay it was placed as.** An earthing switch's terminal on `TEMPLATE/TEMPLATE/Bay_MV/grounded` kept that template path, and the template's level names, once its bay was placed. No file declares the grounded node, so no uuid repointed it: it now names the grounded node of the bay as placed (`S1/15kV/Bay_MV/grounded`, or `S1/15kV/Bay_MV_1/grounded` when the bay was numbered), with that bay's `substationName`, `voltageLevelName` and `bayName` — on an SSD placement and an SSD update of a bay, and on an FSD or ASD placement of a function holding the earthing switch.
 
-- **A reference a placement leaves out because it names what it does not place is told of.** A role allocating a function another application holds, a category classifying a function not placed, a variable applying to one: the reference by uuid was left out without a word. The report now lists each in `warnings` as `reference-not-placed`, with the reference element, the attribute naming its target and the path written, wherever it is met: in a role, a category, a variable or a behaviour description, whether it is held by a level, by a placed function or referred to by a role, on a first placement or an update, alongside the references to nodes the template does not hold. A variable a placed function holds that is left applying to nothing is not written, and each of its applications is warned.
+- **A reference a placement leaves out because it names what it does not place is told of.** A role allocating a function another application holds, a category classifying a function not placed, a variable applying to one: the reference by uuid was left out without a word. The report now lists each in `warnings` as `reference-not-placed`, with the reference element, the attribute naming its target and the path written, wherever it is met: in a role, a category, a variable or a behaviour description, whether it is held by a level, by a placed function or referred to by a role, on a first placement or an update, alongside the references to nodes the template does not hold. Each report instance also lists them in its new `referencesNotPlaced`, absent when there is none. A variable a placed function holds that is left applying to nothing is not written, and each of its applications is warned.
 
 - **A function placed on its own no longer names a function it does not place.** An FSD placement of one function holding a variable that applies to it and to another function of the template wrote both applications, the second naming that other function by its template path (`TEMPLATE/TEMPLATE/TEMPLATE/Ctrl`), which names nothing in the project. What the function holds is now scoped as an ASD or SSD placement scopes it: such a reference is not written, and warned `reference-not-placed`; a variable left applying to nothing the placement places is not written at all, each of its applications warned; one applying to the bay the function lands on names that bay as placed.
 
