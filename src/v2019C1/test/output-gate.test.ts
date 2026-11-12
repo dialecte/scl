@@ -7,7 +7,7 @@ import {
 } from './output-gate'
 import { isSclXsdConfigured } from './scl-xsd'
 
-import { createTestProject } from '@dialecte/core/test'
+import { createTestProject, XmlAssertionError } from '@dialecte/core/test'
 import { describe, expect } from 'vitest'
 
 import { SCL_DIALECTE } from '@/v2019C1/declaration.constants'
@@ -77,6 +77,45 @@ function invalidDocumentMessage(params: {
 	return [header, ...reported.map((line) => `  ${line}`)].join('\n')
 }
 
+type ErrorKind = 'assertion' | 'plain'
+
+function captureThrown(run: () => void): unknown {
+	try {
+		run()
+	} catch (error) {
+		return error
+	}
+	return undefined
+}
+
+/** An assertion miss is an `XmlAssertionError` named 'AssertionError'; a test defect is a plain `Error`. */
+function expectErrorOfKind(params: { error: unknown; kind: ErrorKind }): void {
+	const { error, kind } = params
+	if (kind === 'assertion') {
+		expect(error).toBeInstanceOf(XmlAssertionError)
+		expect(error).toMatchObject({ name: 'AssertionError' })
+		return
+	}
+	expect(error).toBeInstanceOf(Error)
+	expect(error).not.toBeInstanceOf(XmlAssertionError)
+	expect(error).toMatchObject({ name: 'Error' })
+}
+
+async function expectRejection(params: {
+	outcome: Promise<unknown>
+	kind: ErrorKind
+	message: string
+}): Promise<void> {
+	const { outcome, kind, message } = params
+	const error = await outcome.then(
+		() => undefined,
+		(rejected: unknown) => rejected,
+	)
+	expect(error).toBeDefined()
+	expect(error).toMatchObject({ message: expect.stringContaining(message) })
+	expectErrorOfKind({ error, kind })
+}
+
 async function openProject() {
 	return createTestProject({ dialecte: SCL_DIALECTE, sourceXml: SOURCE_XML })
 }
@@ -87,6 +126,8 @@ describe('withOutputGate', () => {
 		write: (document: SclTest.TestDocument['document']) => Promise<void>
 		/** What the gated act rejects with; `undefined` when it resolves. */
 		expectedMessage: string | undefined
+		/** The kind of that rejection: an assertion miss, or a test defect (plain `Error`). */
+		expectedError: ErrorKind | undefined
 	}
 
 	const testCases: Record<string, TestCase> = {
@@ -99,6 +140,7 @@ describe('withOutputGate', () => {
 					`[references] [dangling] <FunctionRef> functionUuid="${MISSING_UUID}" points at no element of the document`,
 				],
 			}),
+			expectedError: 'assertion',
 		},
 		'the same act in a case that tolerates a dangling reference → resolves': {
 			gatedCase: {
@@ -110,7 +152,26 @@ describe('withOutputGate', () => {
 			},
 			write: pointFunctionRefAtNothing,
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
+		'an act that leaves a valid document under an opt-out that tolerates a dangling reference → rejects as a plain error, naming the stale opt-out':
+			{
+				gatedCase: {
+					sourceXml: SOURCE_XML,
+					allowInvalidOutput: {
+						reason: 'the reference is repaired by the clean-up under test',
+						violations: [{ check: 'references', code: 'dangling' }],
+					},
+				},
+				async write() {},
+				expectedMessage: invalidDocumentMessage({
+					label: 'gated case',
+					lines: [
+						'[opt-out] allows references dangling, which the case no longer leaves: remove it',
+					],
+				}),
+				expectedError: 'plain',
+			},
 		'an act that throws → its own error, never the gate': {
 			gatedCase: { sourceXml: SOURCE_XML },
 			async write(document) {
@@ -118,6 +179,7 @@ describe('withOutputGate', () => {
 				throw new Error('the act failed')
 			},
 			expectedMessage: 'the act failed',
+			expectedError: 'plain',
 		},
 	}
 
@@ -130,8 +192,15 @@ describe('withOutputGate', () => {
 				testCases: { 'gated case': testCase.gatedCase },
 			})
 			const outcome = gatedAct({ testCase: testCase.gatedCase, project, source: source.document })
-			if (testCase.expectedMessage === undefined) await expect(outcome).resolves.toBeUndefined()
-			else await expect(outcome).rejects.toThrow(testCase.expectedMessage)
+			if (testCase.expectedMessage === undefined || testCase.expectedError === undefined) {
+				await expect(outcome).resolves.toBeUndefined()
+			} else {
+				await expectRejection({
+					outcome,
+					kind: testCase.expectedError,
+					message: testCase.expectedMessage,
+				})
+			}
 		} finally {
 			await project.destroy()
 		}
@@ -146,6 +215,8 @@ describe('closeGatedTestProject', () => {
 		testFailed: boolean
 		allowInvalidOutput?: SclOutputOptOut
 		expectedMessage: string | undefined
+		/** The kind of that rejection: an assertion miss, or a test defect (plain `Error`). */
+		expectedError: ErrorKind | undefined
 	}
 
 	const duplicateUuidMessage = invalidDocumentMessage({
@@ -163,11 +234,13 @@ describe('closeGatedTestProject', () => {
 			write: giveSecondLNodeTheFirstUuid,
 			testFailed: false,
 			expectedMessage: duplicateUuidMessage,
+			expectedError: 'assertion',
 		},
 		'a test that failed already → no check, its own failure is the one to read': {
 			write: giveSecondLNodeTheFirstUuid,
 			testFailed: true,
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
 		'a test that tolerates the duplicate it leaves → resolves': {
 			write: giveSecondLNodeTheFirstUuid,
@@ -180,6 +253,7 @@ describe('closeGatedTestProject', () => {
 				],
 			},
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
 		'a test that tolerates another violation than the one it leaves → rejects, with the stale opt-out':
 			{
@@ -198,11 +272,29 @@ describe('closeGatedTestProject', () => {
 						],
 					}),
 				].join('\n'),
+				expectedError: 'assertion',
+			},
+		'a test that leaves a valid document under an opt-out that tolerates a dangling reference → rejects as a plain error, with the stale opt-out alone':
+			{
+				async write() {},
+				testFailed: false,
+				allowInvalidOutput: {
+					reason: 'a dangling reference the clean-up removes',
+					violations: [{ check: 'references', code: 'dangling' }],
+				},
+				expectedMessage: invalidDocumentMessage({
+					label: 'a test',
+					lines: [
+						'[opt-out] allows references dangling, which the case no longer leaves: remove it',
+					],
+				}),
+				expectedError: 'plain',
 			},
 		'a test that leaves a valid document → resolves': {
 			async write() {},
 			testFailed: false,
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
 	}
 
@@ -221,8 +313,15 @@ describe('closeGatedTestProject', () => {
 			allowInvalidOutput: testCase.allowInvalidOutput,
 			testFailed: testCase.testFailed,
 		})
-		if (testCase.expectedMessage === undefined) await expect(outcome).resolves.toBeUndefined()
-		else await expect(outcome).rejects.toThrow(testCase.expectedMessage)
+		if (testCase.expectedMessage === undefined || testCase.expectedError === undefined) {
+			await expect(outcome).resolves.toBeUndefined()
+		} else {
+			await expectRejection({
+				outcome,
+				kind: testCase.expectedError,
+				message: testCase.expectedMessage,
+			})
+		}
 		// destroyed whatever the check found
 		await expect(project.getDocuments()).rejects.toThrow()
 	}
@@ -234,6 +333,8 @@ describe('assertOutputGateTestCases', () => {
 	type TestCase = SclTest.BaseTestCase & {
 		checkedCases: Record<string, OutputGateTestCase>
 		expectedMessage: string | undefined
+		/** The refusal is a declaration defect: a plain `Error`; `undefined` when accepted. */
+		expectedError: 'plain' | undefined
 	}
 
 	const testCases: Record<string, TestCase> = {
@@ -253,10 +354,12 @@ describe('assertOutputGateTestCases', () => {
 			},
 			expectedMessage:
 				'silent case: allowInvalidOutput needs the reason the case leaves an invalid document, not an empty string',
+			expectedError: 'plain',
 		},
 		'cases without an opt-out → accepted': {
 			checkedCases: { 'plain case': { sourceXml: SOURCE_XML } },
 			expectedMessage: undefined,
+			expectedError: undefined,
 		},
 	}
 
@@ -264,8 +367,12 @@ describe('assertOutputGateTestCases', () => {
 		function check() {
 			assertOutputGateTestCases({ testCases: testCase.checkedCases })
 		}
-		if (testCase.expectedMessage === undefined) expect(check).not.toThrow()
-		else expect(check).toThrow(testCase.expectedMessage)
+		if (testCase.expectedMessage === undefined || testCase.expectedError === undefined) {
+			expect(check).not.toThrow()
+			return
+		}
+		expect(check).toThrow(testCase.expectedMessage)
+		expectErrorOfKind({ error: captureThrown(check), kind: testCase.expectedError })
 	}
 
 	runSclTestCases.generic(testCases, act)
@@ -499,7 +606,10 @@ describe('withOutputGate — the documents of the project', () => {
 				target: target?.document,
 			})
 			if (testCase.expectedMessage === undefined) await expect(outcome).resolves.toBeUndefined()
-			else await expect(outcome).rejects.toThrow(testCase.expectedMessage)
+			else {
+				// every rejection here is a violation the act added
+				await expectRejection({ outcome, kind: 'assertion', message: testCase.expectedMessage })
+			}
 		} finally {
 			await project.destroy()
 		}
