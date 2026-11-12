@@ -37,6 +37,7 @@ import {
 	PLACED_FUNCTION_TAGS,
 	placedFunctionTag,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
+import { readTemplateLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import {
 	assertRevisionBaseFits,
 	scenarioPolicy,
@@ -149,6 +150,8 @@ export async function fsd(
 	const structure = await resolveTargetStructure(tx, targetParent)
 	// the instances this write reconciled: one it wrote nothing to (see `writesToInstance`) is not returned
 	const reconciled: AppliedFunction[] = []
+	// the template's levels, read once: where they land for each instance is read from it
+	const templateLevels = await readTemplateLevels(sourceQuery)
 	for (const instance of instances) {
 		const instanceRef = toRef(instance) as Scl.Ref<'Function'> | Scl.Ref<'SubFunction'>
 		const instanceGroups = groupsForInstance(report, instance.id)
@@ -156,6 +159,7 @@ export async function fsd(
 
 		// the satellites as the report read them, before the reconcile below changes the instance
 		const carried = await readCarriedSatellites(tx, {
+			templateLevels,
 			sourceQuery,
 			functionRef,
 			instanceRef: instance,
@@ -200,7 +204,8 @@ export async function fsd(
 		const carriedMappings = await reconcileCarriedSatellites(tx, {
 			sourceQuery,
 			reading: carried,
-			targetParent,
+			// a category the template gained is written where this instance sits, not where the update was started from
+			targetParent: instanceRef,
 			accepted: instanceAccepted,
 			matchKey,
 			identityMode,

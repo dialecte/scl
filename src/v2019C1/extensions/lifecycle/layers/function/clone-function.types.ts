@@ -1,6 +1,6 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type { SourceFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { ResolvedMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -12,8 +12,11 @@ export type CloneFunctionCategoriesParams = {
 	structure: TargetStructure
 	/** The key a project element carries a source element's uuid in, to find what it lands on. Default `templateUuid`. */
 	matchKey?: MatchKey
-	/** The consumer's choices for the categories, by source record id. */
-	decisionMappings?: DecisionMappings
+	/**
+	 * Where each category of the template lands, resolved before the operation wrote anything: see
+	 * `resolveCategoryMappings`.
+	 */
+	categoryMappings: ResolvedMappings
 	/**
 	 * Where the categories this operation already placed landed, by source record id. Shared across
 	 * the functions of one operation so that a category classifying several of them is placed once.

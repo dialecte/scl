@@ -1,6 +1,7 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type { DecisionMappings, ResolvedMapping } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 
 export type ResolveRoleMappingsParams = {
@@ -11,6 +12,8 @@ export type ResolveRoleMappingsParams = {
 	decisionMappings?: DecisionMappings
 	/** The key a project element carries a source element's uuid in. Default `templateUuid`. */
 	matchKey?: MatchKey
+	/** Where the levels of the template land on elements the project holds: a role is found by name only there. */
+	landings: readonly RedirectMapping[]
 }
 
 /** A source AllocationRole an application refers to, and where it lands in the project. */

@@ -3,11 +3,7 @@ import {
 	leaveOutOfScope,
 	resolveContributionScope,
 } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
-import {
-	assertMappingDecided,
-	findMappingPolicy,
-	resolveMapping,
-} from '@/v2019C1/extensions/lifecycle/mapping'
+import { assertMappingDecided } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	deep as deepExtract,
 	cloneTree,
@@ -22,7 +18,7 @@ import type {
 import type { Config, Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { SourceFunctionRef } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DecisionMapping, MappingPolicy } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { ResolvedMapping } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { ResolvedReference } from '@/v2019C1/extensions/reference'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -101,23 +97,16 @@ export async function cloneFunctionCategories(
 	const placedCategories = params.placedCategories ?? new Map<string, Scl.Ref<'FunctionCategory'>>()
 
 	const categoryIds = await findFunctionCategoryIds(sourceQuery, { functionRef })
-	const policy = findMappingPolicy('FunctionCategory')
 	const scope = await resolveContributionScope(sourceQuery, { roots: [functionRef] })
 
 	const cloneMappings: Scl.CloneMapping[] = []
 	const redirectMappings: RedirectMapping[] = []
 	for (const categoryId of categoryIds) {
-		const categoryRef: Scl.Ref<'FunctionCategory'> = { tagName: 'FunctionCategory', id: categoryId }
+		const categoryRef = { tagName: 'FunctionCategory' as const, id: categoryId }
 
 		const existing =
 			placedCategories.get(categoryId) ??
-			(await findMappedCategory(tx, {
-				sourceQuery,
-				categoryRef,
-				policy,
-				decision: params.decisionMappings?.get(categoryId),
-				matchKey: params.matchKey,
-			}))
+			findMappedCategory({ categoryRef, resolved: params.categoryMappings.get(categoryId) })
 		if (existing) {
 			// Do NOT skip - that would drop this function's classification.
 			const contributed = await contribute(tx, {
@@ -190,33 +179,17 @@ async function findRefsForFunctionTree(
 	return results
 }
 
-/** The category of the target a source category is mapped onto — none when it is to be created. */
-async function findMappedCategory(
-	tx: Core.Transaction<Config>,
-	params: {
-		sourceQuery: Core.Query<Config>
-		categoryRef: Scl.Ref<'FunctionCategory'>
-		policy: MappingPolicy | undefined
-		decision: DecisionMapping | undefined
-		matchKey: MatchKey | undefined
-	},
-): Promise<Scl.Ref<'FunctionCategory'> | undefined> {
-	const { sourceQuery, categoryRef, policy, decision, matchKey } = params
-	if (!policy) return undefined
-
-	const resolved = await resolveMapping(tx, {
-		sourceQuery,
-		sourceRef: categoryRef,
-		policy,
-		decision,
-		matchKey,
-	})
-	if (categoryRef.id) {
-		assertMappingDecided({
-			sourceRef: { tagName: 'FunctionCategory', id: categoryRef.id },
-			resolved,
-		})
-	}
+/**
+ * The category of the target a source category is mapped onto, as resolved before anything was written — none when it
+ * is to be created. Nothing is decided for it: refused, nothing is written until the consumer chose.
+ */
+function findMappedCategory(params: {
+	categoryRef: Scl.Ref<'FunctionCategory'> & { id: string }
+	resolved: ResolvedMapping | undefined
+}): Scl.Ref<'FunctionCategory'> | undefined {
+	const { categoryRef, resolved } = params
+	if (!resolved) return undefined
+	assertMappingDecided({ sourceRef: categoryRef, resolved })
 	const { existing } = resolved
 	return existing ? { tagName: 'FunctionCategory', id: existing.id } : undefined
 }

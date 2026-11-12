@@ -7,6 +7,8 @@ import {
 import { reconcileSatellites } from './satellite-reconcile'
 import { writesToInstance } from './writes-to-instance'
 
+import { toRef } from '@dialecte/core/helpers'
+
 import {
 	annotateInstance,
 	sourceToTargetMap,
@@ -43,6 +45,7 @@ import {
 	resolveApplicationSatellites,
 	resolveApplicationScope,
 } from '@/v2019C1/extensions/lifecycle/layers/application'
+import { landLevels, readTemplateLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import {
 	assertMappingsDecided,
 	resolveSatelliteMappings,
@@ -205,6 +208,8 @@ export async function asd(
 	const selections = new Map<string, VariantSelection>()
 	const template = await readVariantTemplate(sourceQuery, { applicationRef, namesFollow })
 
+	// the template's levels, read once: where they land for each instance is read from it
+	const templateLevels = await readTemplateLevels(sourceQuery)
 	for (const instance of instances) {
 		// gate THIS instance by only its own groups (source ids are unique within one instance)
 		const instanceGroups = groupsForInstance(report, instance.id)
@@ -232,12 +237,20 @@ export async function asd(
 		// where the shared satellites land — the answer the report read. Resolved before the
 		// application reconcile: its references to a project element a source element is mapped
 		// onto are the template's references to that element.
+		// where the template's levels land for this instance: a shared satellite is found by name only there
+		// where this instance sits: what the template gained is written there, and found by name or lineage there only
+		const instanceStructure = await resolveTargetStructure(
+			tx,
+			toRef(instance) as Scl.Ref<Scl.ElementsOf>,
+		)
+		const landings = landLevels({ levels: templateLevels, structure: instanceStructure })
 		const resolvedMappings = await resolveSatelliteMappings(tx, {
 			sourceQuery,
 			satelliteRefs,
 			instanceSatelliteRefs,
 			decisionMappings: params.decisionMappings,
 			matchKey,
+			landings,
 		})
 		// a shared element nothing is decided for: nothing is written until the consumer chose
 		assertMappingsDecided({ satelliteRefs, resolvedMappings })
@@ -304,7 +317,7 @@ export async function asd(
 			sourceQuery,
 			satelliteRefs,
 			removals,
-			structure,
+			structure: instanceStructure,
 			accepted,
 			matchKey,
 			identityMode,

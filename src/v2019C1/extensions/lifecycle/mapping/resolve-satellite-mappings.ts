@@ -85,6 +85,7 @@ export async function resolveSatelliteMappings(
 			policy,
 			decision: decisionMappings?.get(ref.id),
 			matchKey,
+			landings: params.landings,
 		})
 		// the instance holds an element for it, but nothing tells which: the consumer's to map
 		const heldUntold = !resolved.existing && undecidedSourceIds.has(ref.id)

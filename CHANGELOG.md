@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking: a role or a category is matched by name only where it lands.** A template's `AllocationRole` or `FunctionCategory` was mapped onto the one element of that name anywhere in the project: a role `PIU` of a bay placed in one substation could land on a `PIU` of another substation, and the placed functions were allocated through it. It is now found by name only in the element of the project its own level lands on (the bay, voltage level or substation whose `Private` holds it); a level the placement creates holds none, so the role or category is created there. The same holds for the one created from the same template element by an earlier placement (its `templateUuid`): a template element may be instantiated several times, so a bay typical placed twice gives each bay its own role instead of sharing the first bay's; a fork, keeping the file's own uuids, still finds it anywhere. One of that name elsewhere stays listed as a candidate the consumer may choose (`resolution.mappings`). A caller relying on the document-wide match chooses it. Breaking for `report`, `apply`, `instantiate.*` and `update.*`.
+
 ### Fixed
 
 - **Applying an SSD whose bays each hold a role of the same name keeps one role per bay.** Two applications of a template, each referring to its own bay's role `PIU`, were written as one role by `instantiate.ssd` (and `apply` of an SSD report): both applications referred to the same bay's role, the other bay lost its own, and which bay kept it changed from run to run, while the report listed two new roles. Each role now lands where the report says, resolved once before anything is written.
+
+- **Bays each holding a category of the same name keep one each.** Two bays of an SSD each classifying their function under a category `MEASUREMENT` were written with one category after `apply`, both functions classified under the one of the first bay, while the report listed two new ones. Categories are now resolved once before anything is written, as roles are, and a category several applications of one placement share is still placed once.
+- **An SSD update giving several bays a new role of the same name keeps one each.** A newer SSD template adding a role `BAY_CTRL` to each of two placed bays was applied as one role, both applications referring to it, while the report listed two. Each is now resolved where its own bay lands.
+- **A role or category an update adds is written in its instance's level.** A role a newer template adds to a placed bay was written in the `Private` of the level the update was started from (the substation, or the voltage level), not in the bay holding the instance; a category the same way. Each is now written where its instance sits, and the report lists it as created there.
 
 ## [0.14.0] - 2026-11-08
 

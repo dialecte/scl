@@ -63,6 +63,8 @@ export async function readCrossCuttingSatellites(
 		satelliteRefs,
 		instanceSatelliteRefs,
 		matchKey,
+		// what applies to a primary is no shared element: nothing of it is found by name
+		landings: [],
 	})
 	const removals = instancePrimaryRef
 		? await resolveSatelliteRemovals(tx, {

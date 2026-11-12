@@ -11,8 +11,9 @@ import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/
 import {
 	cloneFunctionCategories,
 	placedFunctionTag,
+	resolveCategoryMappings,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
-import { landPrimaries } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import { landLevelsByTag, landPrimaries } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
@@ -58,6 +59,16 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		? await landOnTemplateLevel(tx, { ...params, matchKey: policy.matchKey })
 		: { targetParent: params.targetParent, cloneMappings: [], redirectMappings: [] }
 	const { targetParent } = landing
+	// where the template's categories land, resolved before the function is written: a category is found by name only
+	// where its level lands
+	const structure = await resolveTargetStructure(tx, targetParent)
+	const landings = await landLevelsByTag(sourceQuery, { structure })
+	const categoryMappings = await resolveCategoryMappings(tx, {
+		sourceQuery,
+		decisionMappings: params.decisionMappings,
+		matchKey: policy.matchKey,
+		landings,
+	})
 
 	// A function placed under a (Sub)Function is, per schema, a SubFunction.
 	const retagRoot =
@@ -76,14 +87,10 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	// An FSD also carries the FunctionCategory classification that references the
 	// function; clone it at its structural level in the target project. The target
 	// structure is resolved from `targetParent` (Bay / VoltageLevel / Substation).
-	const structure = await resolveTargetStructure(tx, targetParent)
-	const { cloneMappings: categoryMappings, redirectMappings } = await cloneFunctionCategories(tx, {
-		sourceQuery,
-		functionRef,
-		structure,
-		decisionMappings: params.decisionMappings,
-		matchKey: policy.matchKey,
-	})
+	const { cloneMappings: categoryCloneMappings, redirectMappings } = await cloneFunctionCategories(
+		tx,
+		{ sourceQuery, functionRef, structure, categoryMappings, matchKey: policy.matchKey },
+	)
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) that apply
 	// to any element in the function subtree also travel with it, one of each per instance
@@ -102,7 +109,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	const allMappings = [
 		...landing.cloneMappings,
 		...functionMappings,
-		...categoryMappings,
+		...categoryCloneMappings,
 		...applied.cloneMappings,
 	]
 
@@ -120,7 +127,7 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	}
 	await nameCreatedSharedElements(tx, {
 		sourceQuery,
-		cloneMappings: categoryMappings,
+		cloneMappings: categoryCloneMappings,
 		resolveStructure: placementStructure,
 		decisionMappings: params.decisionMappings,
 	})

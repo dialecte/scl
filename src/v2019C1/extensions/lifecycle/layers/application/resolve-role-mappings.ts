@@ -19,7 +19,7 @@ export async function resolveRoleMappings(
 	query: MappingReader,
 	params: ResolveRoleMappingsParams,
 ): Promise<RoleMappings> {
-	const { sourceQuery, applicationRefs, decisionMappings, matchKey } = params
+	const { sourceQuery, applicationRefs, decisionMappings, matchKey, landings } = params
 	const policy = findMappingPolicy('AllocationRole')
 	if (!policy) return new Map()
 
@@ -45,6 +45,7 @@ export async function resolveRoleMappings(
 			policy,
 			decision: decisionMappings?.get(sourceRole.id),
 			matchKey,
+			landings,
 		})
 		resolvedByUuid.set(sourceUuid, { sourceRef, sourceUuid, mapping })
 	}

@@ -8,11 +8,13 @@ import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cut
 import {
 	cloneFunction,
 	cloneFunctionCategories,
+	resolveCategoryMappings,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
 import { removeOwnProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { FsdExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type { ResolvedMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -80,8 +82,17 @@ export async function fsd(
 		asTemplate,
 	})
 
+	// a file of its own holds nothing to map a category onto: each is created
+	const categoryMappingsBefore = withCategories
+		? await resolveCategoryMappings(tx, { sourceQuery, landings: [] })
+		: (new Map() as ResolvedMappings)
 	const { cloneMappings: categoryMappings, redirectMappings } = withCategories
-		? await cloneFunctionCategories(tx, { sourceQuery, functionRef, structure })
+		? await cloneFunctionCategories(tx, {
+				sourceQuery,
+				functionRef,
+				structure,
+				categoryMappings: categoryMappingsBefore,
+			})
 		: { cloneMappings: [], redirectMappings: [] }
 
 	// the function extracted keeps its template link unless the consumer breaks it: then the function and what came with

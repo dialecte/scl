@@ -12,6 +12,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { IndexedSatellite } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
 import type { HeldApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications.types'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
 
@@ -31,6 +32,8 @@ export async function createPlacementListing(
 		stoodOnIds?: ReadonlySet<string>
 		/** What the project holds applying to what it lands on: see `readHeldApplications`. Default: nothing. */
 		held?: HeldApplications
+		/** Where the levels of the template land on elements the project holds, by source uuid. */
+		landings: readonly RedirectMapping[]
 		/** The topology frame it places (the unit of a substation template), with the functions the unit composes. */
 		frame?: {
 			primaryRef: Scl.Ref<Scl.ElementsOf>
@@ -98,6 +101,7 @@ export async function createPlacementListing(
 		),
 		carried,
 		held,
+		landings: params.landings,
 		index,
 		leftOut,
 	}

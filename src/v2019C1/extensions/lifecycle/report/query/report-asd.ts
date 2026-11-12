@@ -37,6 +37,9 @@ import {
 import {
 	describePlacementMappings,
 	findLanding,
+	landAt,
+	readTemplateLevels,
+	landLevelsByTag,
 	resolveLandedLevels,
 	resolvePrimaryPlacement,
 	withLandedLevels,
@@ -67,7 +70,7 @@ import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { StandingPlacement } from '@/v2019C1/extensions/lifecycle/engine/standing'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
-import type { PlacementLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import type { PlacementLevel, TemplateLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type {
 	DecisionMappings,
 	ReportMapping,
@@ -160,6 +163,8 @@ export async function reportAsd(
 
 	// a first placement: where the application and its functions land is where the consumer
 	// started, or — started above a level one of them was made for — the levels their template says
+	// the template's levels, read once for every instance and function this report lists
+	const templateLevels = await readTemplateLevels(sourceQuery)
 	const firstPlacement = applicationInstances.length === 0
 	const composedFunctionRefs = firstPlacement
 		? await findComposedFunctionRefs(sourceQuery, applicationRef)
@@ -211,6 +216,7 @@ export async function reportAsd(
 		: undefined
 	if (firstPlacement) {
 		const { instanceDiff, satellitesNotPlaced } = await reportApplicationInstance(query, {
+			templateLevels,
 			placementListing,
 			pass: params.pass,
 			sourceQuery,
@@ -246,6 +252,7 @@ export async function reportAsd(
 			const selection = await readVariantSelection(query, { template, instance, matchKey })
 			selections.set(instance.id, selection)
 			const { instanceDiff } = await reportApplicationInstance(query, {
+				templateLevels,
 				pass: params.pass,
 				sourceQuery,
 				applicationRef,
@@ -273,6 +280,7 @@ export async function reportAsd(
 	}
 
 	const composedFunctions = await reportComposedFunctions(query, {
+		templateLevels,
 		placementListing,
 		pass: params.pass,
 		sourceQuery,
@@ -343,6 +351,8 @@ export async function reportAsd(
 async function reportApplicationInstance(
 	query: Core.Query<Config>,
 	params: {
+		/** The template's levels, read once per report: see `readTemplateLevels`. */
+		templateLevels: readonly TemplateLevel[]
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		instance: AnyTrackedRecord | undefined
@@ -382,6 +392,10 @@ async function reportApplicationInstance(
 			})
 		: []
 
+	// where the template's levels land: a placement's, as the apply reads them, else where the instance (or the anchor) is
+	const landings =
+		params.placementListing?.landings ??
+		(await landAt(query, { levels: params.templateLevels, at: instance ?? params.anchor }))
 	// where the shared ones land is resolved FIRST: the application's references to an element of
 	// the project a source element is mapped onto are the template's references to that element
 	const resolvedMappings = await resolveSatelliteMappings(query, {
@@ -390,6 +404,7 @@ async function reportApplicationInstance(
 		instanceSatelliteRefs,
 		decisionMappings: params.decisionMappings,
 		matchKey: params.matchKey,
+		landings,
 	})
 	const redirectMappings = await toRedirectMappings({
 		sourceQuery,
@@ -446,6 +461,7 @@ async function reportApplicationInstance(
 
 	await foldSatelliteCompanions(query, {
 		scope,
+		landings,
 		redirectMappings: params.stoodOn,
 		pass: params.pass,
 		sourceQuery,
@@ -455,7 +471,8 @@ async function reportApplicationInstance(
 		report: applicationReport,
 		instanceScopeId: instance?.id,
 		decisionMappings: params.decisionMappings,
-		anchor: params.anchor,
+		// a role an update adds is written where its instance sits: described, and its candidates listed, from there
+		anchor: instance ? (toRef(instance) as Scl.Ref<Scl.ElementsOf>) : params.anchor,
 		matchKey: params.matchKey,
 		resolvedMappings,
 		instancePrimaryRef: instance
@@ -556,9 +573,22 @@ async function listApplicationPlacement(
 		projectQuery: query,
 		matchKey: params.matchKey,
 	})
+	// where a shared element of the template is found by name: each level of the template, by its tag, onto the
+	// structure where the application lands, as the apply places what they hold; a level the placement creates holds none
+	const created = new Set(
+		placementLevels
+			.filter(function isCreated(level) {
+				return !level.resolved.existing
+			})
+			.map(function tagOf(level) {
+				return level.sourceRef.tagName
+			}),
+	)
+	const sharedLandings = await landLevelsByTag(sourceQuery, { structure, created })
 	return createPlacementListing(sourceQuery, {
 		scope,
 		held,
+		landings: sharedLandings,
 		primaryRefs: [applicationRef, ...composedFunctionRefs],
 		stoodOnIds: new Set(
 			composedFunctionRefs
@@ -584,6 +614,8 @@ async function listApplicationPlacement(
 async function reportComposedFunctions(
 	query: Core.Query<Config>,
 	params: {
+		/** The template's levels, read once per report: see `readTemplateLevels`. */
+		templateLevels: readonly TemplateLevel[]
 		sourceQuery: Core.Query<Config>
 		applicationRef: Scl.Ref<'Application'>
 		/** The instances of the application in the project — none on a first placement. */
@@ -709,6 +741,8 @@ async function reportComposedFunctions(
 async function reportComposedFunction(
 	query: Core.Query<Config>,
 	params: {
+		/** The template's levels, read once per report: see `readTemplateLevels`. */
+		templateLevels: readonly TemplateLevel[]
 		sourceQuery: Core.Query<Config>
 		functionRef: Scl.Ref<'Function'>
 		instance: AnyTrackedRecord | undefined
@@ -732,6 +766,7 @@ async function reportComposedFunction(
 ): Promise<ReportInstance> {
 	const { sourceQuery, functionRef, instance, policy } = params
 	const instanceDiff = await reportFunction(query, {
+		templateLevels: params.templateLevels,
 		placementListing: params.placementListing,
 		pass: params.pass,
 		sourceQuery,

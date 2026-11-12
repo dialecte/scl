@@ -15,7 +15,9 @@ import { leaveOutOfScope } from '@/v2019C1/extensions/lifecycle/engine/contribut
 import {
 	cloneFunction,
 	cloneFunctionCategories,
+	resolveCategoryMappings,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
+import { landLevelsByTag } from '@/v2019C1/extensions/lifecycle/layers/topology/landed-levels'
 import { assertMappingDecided } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	cloneAllReferencedTargets,
@@ -38,7 +40,7 @@ import type { SatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cuttin
 import type { CarriedScoping } from '@/v2019C1/extensions/lifecycle/cross-cutting/carried-satellites.types'
 import type { HeldApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications.types'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
-import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { DecisionMappings, ResolvedMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -111,15 +113,42 @@ export async function cloneApplicationContent(
 		 * `resolveRoleMappings`. Default: resolved before this application writes anything.
 		 */
 		roles?: readonly ResolvedRole[]
+		/**
+		 * Where each category of the template lands, resolved before the larger placement wrote anything: see
+		 * `resolveCategoryMappings`. Default: resolved before this application writes anything.
+		 */
+		categoryMappings?: ResolvedMappings
+		/**
+		 * Where the categories the larger placement placed so far landed, by source record id: a category classifying
+		 * functions of several of its applications is placed once. Default: this application's own.
+		 */
+		placedCategories?: Map<string, Scl.Ref<'FunctionCategory'>>
 	},
 ): Promise<CloneApplicationContentResult> {
 	const { sourceQuery, applicationRef, structure, omit, keepNameTypesFrom, leftOut } = params
 	const decisionMappings = params.decisionMappings
 	const matchKey = params.matchKey ?? 'templateUuid'
-	// where its roles land, read before anything is written, as the report reads it
+	// where its roles and categories land, read before anything is written, as the report reads them: a shared element
+	// is found by name where its level lands, each level of the template by its tag on the structure
+	const sharedLandings =
+		params.roles && params.categoryMappings ? [] : await landLevelsByTag(sourceQuery, { structure })
 	const roles =
 		params.roles ??
-		(await resolveOwnRoles(tx, { sourceQuery, applicationRef, decisionMappings, matchKey }))
+		(await resolveOwnRoles(tx, {
+			sourceQuery,
+			applicationRef,
+			decisionMappings,
+			matchKey,
+			landings: sharedLandings,
+		}))
+	const categoryMappings =
+		params.categoryMappings ??
+		(await resolveCategoryMappings(tx, {
+			sourceQuery,
+			decisionMappings,
+			matchKey,
+			landings: sharedLandings,
+		}))
 
 	// Source record id -> cloned target ref, accumulated as functions are cloned, so
 	// step 3's satellites can be placed back under their owning function.
@@ -189,14 +218,14 @@ export async function cloneApplicationContent(
 
 	// 2. FunctionCategories: mapped onto the target's, or cloned at source-side structural level.
 	// A category classifying several of the functions is placed once.
-	const placedCategories = new Map<string, Scl.Ref<'FunctionCategory'>>()
+	const placedCategories = params.placedCategories ?? new Map<string, Scl.Ref<'FunctionCategory'>>()
 	const categoryRedirectMappings: RedirectMapping[] = []
 	for (const ref of missingFunctions) {
 		const categories = await cloneFunctionCategories(tx, {
 			sourceQuery,
 			functionRef: ref,
 			structure,
-			decisionMappings,
+			categoryMappings,
 			placedCategories,
 			matchKey: params.matchKey,
 		})
@@ -315,14 +344,16 @@ async function resolveOwnRoles(
 		applicationRef: Scl.Ref<'Application'>
 		decisionMappings: DecisionMappings | undefined
 		matchKey: MatchKey
+		landings: readonly RedirectMapping[]
 	},
 ): Promise<readonly ResolvedRole[]> {
-	const { sourceQuery, applicationRef, decisionMappings, matchKey } = params
+	const { sourceQuery, applicationRef, decisionMappings, matchKey, landings } = params
 	const roleMappings = await resolveRoleMappings(tx, {
 		sourceQuery,
 		applicationRefs: [applicationRef],
 		decisionMappings,
 		matchKey,
+		landings,
 	})
 	return roleMappings.get(applicationRef.id) ?? []
 }

@@ -19,6 +19,7 @@ import {
 	findLanding,
 	resolvePrimaryPlacement,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import { readTemplateLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { PlacementListing } from './placement-listing.types'
@@ -82,6 +83,8 @@ export async function reportFsd(
 		params
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(functionRef)
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
+	// the template's levels, read once for the function and each of its instances
+	const templateLevels = await readTemplateLevels(sourceQuery)
 	const { matchKey, namesFollow } = policy
 	const removalBase = params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery }))
 	// a new instance is placed whatever the project holds: no existing one is matched
@@ -122,6 +125,7 @@ export async function reportFsd(
 			targetParent
 
 		const instanceDiff = await reportFunction(query, {
+			templateLevels,
 			pass: params.pass,
 			sourceQuery,
 			functionRef,
@@ -155,6 +159,7 @@ export async function reportFsd(
 	const reportInstances: ReportInstance[] = []
 	for (const instance of instances) {
 		const instanceDiff = await reportFunction(query, {
+			templateLevels,
 			pass: params.pass,
 			sourceQuery,
 			functionRef,

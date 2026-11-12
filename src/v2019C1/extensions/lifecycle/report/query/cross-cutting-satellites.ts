@@ -136,6 +136,8 @@ export async function foldCrossCuttingSatellites(
 		pass: params.pass,
 		sourceQuery,
 		primaryRef,
+		// what applies to a primary is no shared element: nothing of it is found by name
+		landings: [],
 		satelliteRefs,
 		instanceSatelliteRefs,
 		report,

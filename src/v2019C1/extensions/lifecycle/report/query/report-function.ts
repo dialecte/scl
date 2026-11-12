@@ -6,6 +6,7 @@ import { toRef } from '@dialecte/core/helpers'
 import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { foreignScopeResolver } from '@/v2019C1/extensions/lifecycle/instance'
+import { landAt } from '@/v2019C1/extensions/lifecycle/layers/topology'
 
 import type { PlacementListing } from './placement-listing.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -15,6 +16,7 @@ import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.ty
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
+import type { TemplateLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -58,6 +60,8 @@ export async function reportFunction(
 		selection?: VariantSelection
 		/** The first placement the function is part of: see `PlacementListing`. */
 		placementListing?: PlacementListing
+		/** The template's levels, read once per report: see `readTemplateLevels`. */
+		templateLevels: readonly TemplateLevel[]
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance } = params
@@ -97,15 +101,21 @@ export async function reportFunction(
 		roots: [functionRef],
 		leftOut: params.selection?.leftOut,
 	})
+	// where the template's levels land: a placement's, as the apply reads them, else where the instance (or the anchor) is
+	const landings =
+		params.placementListing?.landings ??
+		(await landAt(query, { levels: params.templateLevels, at: instance ?? params.anchor }))
 	const withLayerSatellites = await foldCarriedSatellites(query, {
 		scope,
+		landings,
 		pass: params.pass,
 		sourceQuery,
 		functionRef,
 		instance,
 		report,
 		decisionMappings: params.decisionMappings,
-		anchor: params.anchor,
+		// what an update adds is written where its instance sits: described from there
+		anchor: instance ? (toRef(instance) as Scl.Ref<Scl.ElementsOf>) : params.anchor,
 		matchKey: params.matchKey,
 		resolveForeignScope,
 		removalBase: params.removalBase,
@@ -122,7 +132,8 @@ export async function reportFunction(
 		primaryRef: functionRef,
 		instancePrimaryRef: instance ? (toRef(instance) as Scl.Ref<Scl.ElementsOf>) : undefined,
 		report: withLayerSatellites,
-		anchor: params.anchor,
+		// what an update adds is written where its instance sits: described from there
+		anchor: instance ? (toRef(instance) as Scl.Ref<Scl.ElementsOf>) : params.anchor,
 		matchKey: params.matchKey,
 		resolveForeignScope,
 		removalBase: params.removalBase,

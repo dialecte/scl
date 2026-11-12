@@ -1,4 +1,5 @@
 import { cloneFunction, cloneFunctionCategories } from './clone-function'
+import { resolveCategoryMappings } from './resolve-category-mappings'
 
 import { describe } from 'vitest'
 
@@ -46,11 +47,11 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 		targetParentRef: Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>
 	}
 
-	const act = async ({
+	async function act({
 		source,
 		target,
 		testCase,
-	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		await target.transaction(async (tx) => {
 			const functionMappings = await cloneFunction(tx, {
@@ -59,10 +60,16 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 				targetParentRef: testCase.targetParentRef,
 			})
 			const structure = await buildTemplateStructure(tx)
+			// a target holding no category: each is created
+			const categoryMappings = await resolveCategoryMappings(tx, {
+				sourceQuery: source.query,
+				landings: [],
+			})
 			const categories = await cloneFunctionCategories(tx, {
 				sourceQuery: source.query,
 				functionRef: testCase.functionRef,
 				structure,
+				categoryMappings,
 			})
 			// caller owns uuid rewiring across the function + category clones
 			await applyUuidRemap(tx, {

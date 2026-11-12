@@ -195,9 +195,6 @@ const projectBayPlacedXml = /* xml */ `
 	</SCL>
 `
 
-const ROLE = '//v2019C1:AllocationRole[@name="PIU"]'
-const CATEGORY = '//v2019C1:FunctionCategory[@name="PROTECTION"]'
-
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	/** The placements made one after the other, each reported then applied. */
@@ -229,9 +226,9 @@ describe('a placement pours what it contributes into the element the project sha
 			],
 			listed: [['role-protection-ref-s'], ['role-control-ref-s']],
 			expectedQueries: [
-				`${ROLE}[@desc="project"][count(v2019C1:FunctionRef)=2]`,
-				`${ROLE}/v2019C1:FunctionRef[@function="S1/V1/B1/Prot"]`,
-				`${ROLE}/v2019C1:FunctionRef[@function="S1/V1/B1/Ctrl"]`,
+				'//v2019C1:AllocationRole[@name="PIU"][@desc="project"][count(v2019C1:FunctionRef)=2]',
+				'//v2019C1:AllocationRole[@name="PIU"]/v2019C1:FunctionRef[@function="S1/V1/B1/Prot"]',
+				'//v2019C1:AllocationRole[@name="PIU"]/v2019C1:FunctionRef[@function="S1/V1/B1/Ctrl"]',
 			],
 		},
 		'a function placed by an update where it has no instance → its classification listed and written':
@@ -243,11 +240,11 @@ describe('a placement pours what it contributes into the element the project sha
 				],
 				listed: [['category-ref-s']],
 				expectedQueries: [
-					`${CATEGORY}[@desc="project"][count(v2019C1:FunctionCatRef)=2]`,
-					`${CATEGORY}/v2019C1:FunctionCatRef[@function="S1/V1/B2/Prot"]`,
+					'//v2019C1:FunctionCategory[@name="PROTECTION"][@desc="project"][count(v2019C1:FunctionCatRef)=2]',
+					'//v2019C1:FunctionCategory[@name="PROTECTION"]/v2019C1:FunctionCatRef[@function="S1/V1/B2/Prot"]',
 				],
 			},
-		'a bay template placed where the project holds a category of that name → the category classifies the bay function once, nothing rewritten':
+		'a bay template placed beside a bay holding a category of that name → a category of its own in the placed bay, the other one left as it is':
 			{
 				sourceXml: bayXml,
 				targetXml: projectBayWithCategoryXml,
@@ -259,12 +256,13 @@ describe('a placement pours what it contributes into the element the project sha
 						anchor: { tagName: 'VoltageLevel', id: 'voltage-level-t' } as Scl.Ref<'VoltageLevel'>,
 					},
 				],
-				listed: [['category-ref-s', 'terminal-s']],
+				listed: [['category-ref-s', 'category-s', 'terminal-s']],
 				expectedQueries: [
-					`${CATEGORY}[@desc="project"][count(v2019C1:FunctionCatRef)=1]`,
-					`${CATEGORY}/v2019C1:FunctionCatRef[@function="S1/V1/FEEDER/Prot"]`,
+					'//default:Bay[@name="FEEDER"]/default:Private/v2019C1:FunctionCategory[@name="PROTECTION"]/v2019C1:FunctionCatRef[@function="S1/V1/FEEDER/Prot"]',
 				],
-				unexpectedQueries: [`(${CATEGORY})[2]`],
+				unexpectedQueries: [
+					'//v2019C1:FunctionCategory[@name="PROTECTION"][@desc="project"]/v2019C1:FunctionCatRef',
+				],
 			},
 		"a bay template mapped onto the project's bay, whose category of that name classifies a function of its own → the category gains the bay function, what the bay holds of its own kept":
 			{
@@ -281,12 +279,12 @@ describe('a placement pours what it contributes into the element the project sha
 				mappings: new Map([['bay-s', { existing: firstBayRef }]]),
 				listed: [['category-ref-s', 'terminal-s']],
 				expectedQueries: [
-					`${CATEGORY}[@desc="project"][count(v2019C1:FunctionCatRef)=2]`,
-					`${CATEGORY}/v2019C1:FunctionCatRef[@function="S1/V1/B1/Local"]`,
-					`${CATEGORY}/v2019C1:FunctionCatRef[@function="S1/V1/B1/Prot"]`,
+					'//v2019C1:FunctionCategory[@name="PROTECTION"][@desc="project"][count(v2019C1:FunctionCatRef)=2]',
+					'//v2019C1:FunctionCategory[@name="PROTECTION"]/v2019C1:FunctionCatRef[@function="S1/V1/B1/Local"]',
+					'//v2019C1:FunctionCategory[@name="PROTECTION"]/v2019C1:FunctionCatRef[@function="S1/V1/B1/Prot"]',
 					'//default:Bay[@name="B1"]/default:ConductingEquipment[@name="QA1"]/default:Terminal[@cNodeName="CN9"]',
 				],
-				unexpectedQueries: [`(${CATEGORY})[2]`],
+				unexpectedQueries: ['(//v2019C1:FunctionCategory[@name="PROTECTION"])[2]'],
 			},
 		'a bay template placed again onto the bay it was placed as, its category described by the project since → the category gains the new function, nothing it holds rewritten':
 			{
@@ -303,12 +301,12 @@ describe('a placement pours what it contributes into the element the project sha
 				mappings: new Map([['bay-s', { existing: firstBayRef }]]),
 				listed: [['category-ref-s', 'terminal-s']],
 				expectedQueries: [
-					`${CATEGORY}[@desc="project"][count(v2019C1:FunctionCatRef)=2]`,
-					`${CATEGORY}/v2019C1:FunctionCatRef[@function="S1/V1/FEEDER/Prot"]`,
+					'//v2019C1:FunctionCategory[@name="PROTECTION"][@desc="project"][count(v2019C1:FunctionCatRef)=2]',
+					'//v2019C1:FunctionCategory[@name="PROTECTION"]/v2019C1:FunctionCatRef[@function="S1/V1/FEEDER/Prot"]',
 					'//default:Bay[@name="FEEDER"][count(default:ConnectivityNode)=1]/default:ConnectivityNode[@desc="project"]',
-					`${CATEGORY}[count(v2019C1:SubCategory)=1]/v2019C1:SubCategory[@desc="project"]`,
+					'//v2019C1:FunctionCategory[@name="PROTECTION"][count(v2019C1:SubCategory)=1]/v2019C1:SubCategory[@desc="project"]',
 				],
-				unexpectedQueries: [`(${CATEGORY})[2]`],
+				unexpectedQueries: ['(//v2019C1:FunctionCategory[@name="PROTECTION"])[2]'],
 			},
 	}
 

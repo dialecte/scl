@@ -16,6 +16,7 @@ import {
 import {
 	cloneFunction,
 	cloneFunctionCategories,
+	resolveCategoryMappings,
 } from '@/v2019C1/extensions/lifecycle/layers/function'
 import {
 	findMissingReferencedRecords,
@@ -99,7 +100,17 @@ export async function cloneTopologyContent(
 		}),
 		decisionMappings,
 		matchKey,
+		landings,
 	})
+	// and where its categories land, read before anything is written too; one placed classifies all the functions the
+	// placement places that it classifies
+	const categoryMappings = await resolveCategoryMappings(tx, {
+		sourceQuery,
+		decisionMappings,
+		matchKey,
+		landings,
+	})
+	const placedCategories = new Map<string, Scl.Ref<'FunctionCategory'>>()
 
 	const frame = await ensureTopologyFrame(tx, {
 		sourceQuery,
@@ -202,6 +213,8 @@ export async function cloneTopologyContent(
 			carried,
 			held,
 			roles: roleMappings.get(applicationRef.id),
+			categoryMappings,
+			placedCategories,
 		})
 		record(applicationContent.cloneMappings)
 		redirectMappings.push(...applicationContent.redirectMappings)
@@ -217,7 +230,6 @@ export async function cloneTopologyContent(
 	// 2. Standalone Functions under the scope not already pulled in by an Application, and the functions the unit's
 	// applications compose that none placed: a function is placed as its own decision says, whatever its applications'.
 	// A category classifying several of them is placed once.
-	const placedCategories = new Map<string, Scl.Ref<'FunctionCategory'>>()
 	// one the project holds by its uuid already (a fork placed again) is the one the applications refer to: not written twice
 	const heldFunctionIds = await findHeldFunctionIds(tx, { functionTrees: unit.functionTrees })
 	for (const functionRef of [...standaloneFunctions, ...unit.composedRefs]) {
@@ -236,7 +248,7 @@ export async function cloneTopologyContent(
 			sourceQuery,
 			functionRef,
 			structure,
-			decisionMappings,
+			categoryMappings,
 			placedCategories,
 			matchKey: params.matchKey,
 		})

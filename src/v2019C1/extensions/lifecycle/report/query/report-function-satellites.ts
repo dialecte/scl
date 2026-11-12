@@ -16,6 +16,7 @@ import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/app
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord } from '@dialecte/core'
 
@@ -58,6 +59,8 @@ export async function foldCarriedSatellites(
 		selection?: VariantSelection
 		/** What the categories' references may name: the function and what it holds. */
 		scope: ContributionScope
+		/** Where the levels of the template land on elements the project holds: a category is found by name only there. */
+		landings: readonly RedirectMapping[]
 	},
 ): Promise<InstanceDiff> {
 	const { sourceQuery, functionRef, instance, report } = params
@@ -74,6 +77,7 @@ export async function foldCarriedSatellites(
 		pass: params.pass,
 		sourceQuery,
 		primaryRef: functionRef,
+		landings: params.landings,
 		satelliteRefs,
 		instanceSatelliteRefs,
 		report,

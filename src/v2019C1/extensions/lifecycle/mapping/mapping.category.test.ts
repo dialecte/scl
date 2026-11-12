@@ -238,19 +238,18 @@ describe('shared-element mapping — a function category', () => {
 				classifiedUnder: ['MEASUREMENT'],
 			},
 		},
-		'two categories of that name in the project → neither is picked: the consumer has to choose, apply refuses until then':
+		'two categories of that name in the project, one where the category lands, one below it → mapped onto the one where it lands':
 			{
 				sourceXml,
 				targetXml: projectWithTwoCategoriesXml,
 				expected: {
-					mapping: undefined,
+					mapping: { existing: projectCategoryRef },
 					reason: 'name',
-					ambiguous: true,
-					applyRefusal: 'not decided',
-					announcedNew: { FunctionCategory: 1, SubCategory: 0, FunctionCatRef: 1 },
+					ambiguous: false,
+					announcedNew: { FunctionCategory: 0, SubCategory: 0, FunctionCatRef: 1 },
 					categoryNames: ['MEASUREMENT', 'MEASUREMENT'],
 					subCategories: 0,
-					classifiedUnder: [],
+					classifiedUnder: ['MEASUREMENT'],
 				},
 			},
 		'… and the consumer has a new one created → the report asks for its name, apply creates it under a free one':
@@ -346,8 +345,9 @@ describe('shared-element mapping — a function category', () => {
 				),
 			),
 		]
-		const countNew = (tagName: string): number =>
-			announced.filter((node) => node.tagName === tagName && node.change === 'added').length
+		function countNew(tagName: string): number {
+			return announced.filter((node) => node.tagName === tagName && node.change === 'added').length
+		}
 		expect(
 			{
 				FunctionCategory: countNew('FunctionCategory'),
@@ -479,12 +479,12 @@ const createdCategoryRef = {
 } as Scl.Ref<'FunctionCategory'>
 
 /** The template drops the category altogether: the function is no longer classified. */
-const dropClassification = async (tx: Scl.Transaction): Promise<void> => {
+async function dropClassification(tx: Scl.Transaction): Promise<void> {
 	await tx.delete(sourceCategoryRef)
 	await tx.update(functionRef, { attributes: { desc: 'revision 2' } })
 }
 
-const describeFunctionRevision = async (tx: Scl.Transaction): Promise<void> => {
+async function describeFunctionRevision(tx: Scl.Transaction): Promise<void> {
 	await tx.update(functionRef, { attributes: { desc: 'revision 2' } })
 }
 
@@ -749,8 +749,11 @@ describe('shared-element mapping — an update finds the category the instantiat
 				),
 			),
 		]
-		const count = (change: DiffNode['change']) => (tagName: string) =>
-			announced.filter((node) => node.tagName === tagName && node.change === change).length
+		function count(change: DiffNode['change']) {
+			return function countOf(tagName: string): number {
+				return announced.filter((node) => node.tagName === tagName && node.change === change).length
+			}
+		}
 		const countAdded = count('added')
 		const countRemoved = count('removed')
 		expect(
@@ -784,17 +787,20 @@ describe('shared-element mapping — an update finds the category the instantiat
 			})
 		})
 
-		const namesOf = async (tagName: 'FunctionCategory' | 'SubCategory'): Promise<string[]> => {
-			const records = await target.query.getRecordsByTagName(tagName)
+		const projectQuery = target.query
+		async function namesOf(tagName: 'FunctionCategory' | 'SubCategory'): Promise<string[]> {
+			const records = await projectQuery.getRecordsByTagName(tagName)
 			const names: string[] = []
 			for (const record of records) {
-				const name = await target.query.any.getAttribute(record, { name: 'name' })
+				const name = await projectQuery.any.getAttribute(record, { name: 'name' })
 				names.push(name ?? '')
 			}
 			return names.sort()
 		}
-		expect(await namesOf('FunctionCategory'), 'apply').toEqual(testCase.expected.categoryNames)
-		expect(await namesOf('SubCategory'), 'apply').toEqual(testCase.expected.subCategoryNames)
+		const categoryNames = await namesOf('FunctionCategory')
+		const subCategoryNames = await namesOf('SubCategory')
+		expect(categoryNames, 'apply').toEqual(testCase.expected.categoryNames)
+		expect(subCategoryNames, 'apply').toEqual(testCase.expected.subCategoryNames)
 		if ('currentDescription' in testCase.expected) {
 			const current = { tagName: 'SubCategory', id: 'sub-category-t' } as Scl.Ref<'SubCategory'>
 			const currentDescription = await target.query.getAttribute(current, { name: 'desc' })
@@ -820,7 +826,7 @@ describe('shared-element mapping — an update finds the category the instantiat
 				containerNames.unshift(name ?? '')
 			}
 			const functionPath = await target.query.getAttribute(reference, { name: 'function' })
-			classifications.push(`${containerNames.join('/')} -> ${functionPath}`)
+			classifications.push([containerNames.join('/'), functionPath].join(' -> '))
 		}
 		expect(classifications.sort(), 'apply').toEqual(testCase.expected.classifications)
 
@@ -862,19 +868,34 @@ const applicationSourceXml = /* xml */ `
 `
 
 // The same Application, selecting the sub-category "CURRENT" the function is classified under.
-const applicationSubCategorySourceXml = applicationSourceXml
-	.replace(
-		/<eIEC61850-6-100:FunctionCategory name="MEASUREMENT"[\s\S]*?<\/eIEC61850-6-100:FunctionCategory>/,
-		`<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" uuid="category-source-uuid" ${id}="category-s">
+const applicationSubCategorySourceXml = /* xml */ `
+	<SCL ${ns} ${id}="asd">
+		<Substation name="TEMPLATE" ${id}="substation-s">
+			<Private type="eIEC61850-6-100" ${id}="private-s">
+				<eIEC61850-6-100:FunctionCategory name="MEASUREMENT" uuid="category-source-uuid" ${id}="category-s">
 					<eIEC61850-6-100:SubCategory name="CURRENT" uuid="sub-category-source-uuid" ${id}="sub-category-s">
 						<eIEC61850-6-100:FunctionCatRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="function-source-uuid" ${id}="category-ref-s"/>
 					</eIEC61850-6-100:SubCategory>
-				</eIEC61850-6-100:FunctionCategory>`,
-	)
-	.replace(
-		'functionCategory="TEMPLATE/MEASUREMENT" functionCategoryUuid="category-source-uuid"',
-		'functionCategory="TEMPLATE/MEASUREMENT/CURRENT" functionCategoryUuid="sub-category-source-uuid"',
-	)
+				</eIEC61850-6-100:FunctionCategory>
+				<eIEC61850-6-100:Application name="HMI" type="DCS" uuid="application-source-uuid" ${id}="application-s">
+					<eIEC61850-6-100:FunctionRole name="ROOT" ${id}="function-role-s">
+						<eIEC61850-6-100:FunctionRoleContent ${id}="function-content-s">
+							<eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/Prot" functionUuid="function-source-uuid" ${id}="application-function-ref-s"/>
+						</eIEC61850-6-100:FunctionRoleContent>
+						<eIEC61850-6-100:FunctionRoleContent ${id}="category-content-s">
+							<eIEC61850-6-100:FunctionCategoryRef functionCategory="TEMPLATE/MEASUREMENT/CURRENT" functionCategoryUuid="sub-category-source-uuid" ${id}="application-category-ref-s"/>
+						</eIEC61850-6-100:FunctionRoleContent>
+					</eIEC61850-6-100:FunctionRole>
+				</eIEC61850-6-100:Application>
+			</Private>
+			<VoltageLevel name="TEMPLATE" ${id}="voltage-level-s">
+				<Bay name="TEMPLATE" ${id}="bay-s">
+					<Function name="Prot" uuid="function-source-uuid" ${id}="function-s"/>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
 
 const applicationRef = { tagName: 'Application', id: 'application-s' } as Scl.Ref<'Application'>
 
@@ -951,8 +972,9 @@ describe('shared-element mapping — an application selecting a function categor
 				),
 			),
 		]
-		const countNew = (tagName: string): number =>
-			announced.filter((node) => node.tagName === tagName && node.change === 'added').length
+		function countNew(tagName: string): number {
+			return announced.filter((node) => node.tagName === tagName && node.change === 'added').length
+		}
 		expect(
 			{
 				FunctionCategory: countNew('FunctionCategory'),

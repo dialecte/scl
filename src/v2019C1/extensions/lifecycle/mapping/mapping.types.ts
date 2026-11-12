@@ -4,6 +4,7 @@ import type {
 	UnmatchedClass,
 } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -69,6 +70,11 @@ export type ResolveMappingParams = {
 	decision?: DecisionMapping
 	/** How a project element carries the uuid of the source element it was created from. */
 	matchKey?: MatchKey
+	/**
+	 * Where the levels of the template land on elements the project holds, by source uuid: an element of the same name
+	 * is looked for only in the element its own level lands on. Its level created, none is found by name.
+	 */
+	landings: readonly RedirectMapping[]
 }
 
 export type ResolveSatelliteMappingsParams = {
@@ -80,6 +86,8 @@ export type ResolveSatelliteMappingsParams = {
 	/** The consumer's choices, by source record id. */
 	decisionMappings?: DecisionMappings
 	matchKey?: MatchKey
+	/** Where the levels of the template land on elements the project holds: see `ResolveMappingParams.landings`. */
+	landings: readonly RedirectMapping[]
 }
 
 export type ResolveSatelliteRemovalsParams = {

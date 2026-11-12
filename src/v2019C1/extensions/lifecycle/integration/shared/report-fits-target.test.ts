@@ -20,9 +20,8 @@ const ns = ALL_XMLNS_NAMESPACES
 const substationRef = { tagName: 'Substation', id: 'substation-s' } as Scl.Ref<'Substation'>
 const bayRef = { tagName: 'Bay', id: 'bay-t' } as Scl.Ref<'Bay'>
 const gatewayRef = { tagName: 'AllocationRole', id: 'gateway-t' } as Scl.Ref<'AllocationRole'>
-const projectRoleRef = { tagName: 'AllocationRole', id: 'role-t' } as Scl.Ref<'AllocationRole'>
 
-// a bay template whose application is allocated to a role the project holds by name
+// a bay template whose application is allocated to a role; the project holds roles of its own the consumer may choose
 const sourceXml = /* xml */ `
 	<SCL ${ns} ${id}="ssd">
 		<Header id="ssd-header" uuid="ssd-document-uuid" version="0" revision="1" ${id}="header-s"/>
@@ -64,19 +63,23 @@ const projectXml = /* xml */ `
 	</SCL>
 `
 
-const lifecycle = (sourceQuery: Scl.Query) =>
-	({
+function lifecycle(sourceQuery: Scl.Query) {
+	return {
 		verb: 'ssd',
 		scenario: 'instantiate',
 		sourceQuery,
 		ref: substationRef,
 		anchor: bayRef,
-	}) as const
+	} as const
+}
 
 async function roleNames(query: Scl.Query): Promise<string[]> {
 	const names: string[] = []
-	for (const role of await query.getRecordsByTagName('AllocationRole'))
-		names.push((await query.getAttribute(role, { name: 'name' })) ?? '')
+	const roles = await query.getRecordsByTagName('AllocationRole')
+	for (const role of roles) {
+		const name = await query.getAttribute(role, { name: 'name' })
+		names.push(name ?? '')
+	}
 	return names.sort()
 }
 
@@ -109,7 +112,10 @@ async function appliedAfterDeleting(params: {
 			resolution: { decisions: new Map(), ...(mappings ? { mappings } : {}) },
 		})
 	})
-	const refusal = toDialecteError(await applied.catch((error: unknown) => error))
+	const outcome = await applied.catch(function caught(error: unknown) {
+		return error
+	})
+	const refusal = toDialecteError(outcome)
 	return {
 		refusal: { key: refusal?.key, code: refusal?.code, meta: refusal?.meta },
 		unchanged: (await target.document.query.getSnapshot({ as: 'xml' })) === before,
@@ -152,20 +158,6 @@ describe('apply: a report naming an element deleted since is refused, nothing wr
 			roles: ['HMI_PC'],
 		})
 	})
-
-	it('the role the report mapped onto by its name deleted between the report and the apply → refused', async () => {
-		const outcome = await appliedAfterDeleting({ deleted: projectRoleRef })
-
-		expect(outcome).toEqual({
-			refusal: {
-				key: 'REPORT_STALE',
-				code: 'SCL1014',
-				meta: { element: { tagName: 'AllocationRole', id: 'role-t' }, kind: 'mapping' },
-			},
-			unchanged: true,
-			roles: ['Gateway'],
-		})
-	})
 })
 
 describe('apply: a report applied again is safe', () => {
@@ -180,14 +172,15 @@ describe('apply: a report applied again is safe', () => {
 			</Substation>
 		</SCL>
 	`
-	const fsdLifecycle = (sourceQuery: Scl.Query, scenario: 'instantiate' | 'template') =>
-		({
+	function fsdLifecycle(sourceQuery: Scl.Query, scenario: 'instantiate' | 'template') {
+		return {
 			verb: 'fsd',
 			scenario,
 			sourceQuery,
 			ref: { tagName: 'Function', id: 'fn-s' } as Scl.Ref<'Function'>,
 			anchor: bayRef,
-		}) as const
+		} as const
+	}
 
 	it('a first placement applied twice → one instance', async () => {
 		const { source, target } = await createSclTestProject({
@@ -202,13 +195,11 @@ describe('apply: a report applied again is safe', () => {
 			await target.document.transaction(async function applyTurn(tx) {
 				await apply(tx, { ...placement, report: reported, resolution: { decisions: new Map() } })
 			})
-			expect(
-				await target.document.query.findByAttributes({
-					tagName: 'Function',
-					attributes: { templateUuid: 'fn-uuid' },
-				}),
-				`turn ${turn}`,
-			).toHaveLength(1)
+			const instances = await target.document.query.findByAttributes({
+				tagName: 'Function',
+				attributes: { templateUuid: 'fn-uuid' },
+			})
+			expect(instances, 'turn ' + turn).toHaveLength(1)
 		}
 	})
 
@@ -238,6 +229,7 @@ describe('apply: a report applied again is safe', () => {
 			await apply(tx, { ...update, report: reported, resolution: { decisions: new Map() } })
 		})
 
-		expect(await target.document.query.getSnapshot({ as: 'xml' })).toEqual(once)
+		const twice = await target.document.query.getSnapshot({ as: 'xml' })
+		expect(twice).toEqual(once)
 	})
 })

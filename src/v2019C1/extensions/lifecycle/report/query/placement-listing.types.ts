@@ -2,6 +2,7 @@ import type { SatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cuttin
 import type { CarriedScoping } from '@/v2019C1/extensions/lifecycle/cross-cutting/carried-satellites.types'
 import type { HeldApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications.types'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 
 /**
  * One first placement a report lists (a unit of a substation template with what it places, an application with the
@@ -29,6 +30,8 @@ export type PlacementListing = {
 	carried: CarriedScoping
 	/** What the project holds applying to what it lands on: see `readHeldApplications`. */
 	held: HeldApplications
+	/** Where the levels of the template land on elements the project holds, by source uuid, as the apply reads them. */
+	landings: readonly RedirectMapping[]
 	/** The satellites of the template, read once for the report of the placement. */
 	index: SatelliteIndex
 	/** The source elements the placement leaves out (record ids): nothing applying to them alone is listed. */

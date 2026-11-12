@@ -106,6 +106,8 @@ export async function foldSatelliteCompanions(
 		scope: ContributionScope
 		/** On a first placement, source elements it places onto elements the project holds (a function stood on). */
 		redirectMappings?: readonly RedirectMapping[]
+		/** Where the levels of the template land on elements the project holds: a shared satellite is found by name only there. */
+		landings: readonly RedirectMapping[]
 	},
 ): Promise<void> {
 	const { sourceQuery, primaryRef, satelliteRefs, instanceSatelliteRefs, report, instanceScopeId } =
@@ -123,6 +125,7 @@ export async function foldSatelliteCompanions(
 			instanceSatelliteRefs: firstTime ? [] : instanceSatelliteRefs,
 			decisionMappings: params.decisionMappings,
 			matchKey: params.matchKey,
+			landings: params.landings,
 		}))
 	// what the report already listed and named: the caller's, else this fold's own
 	const pass = params.pass ?? createReportPass()

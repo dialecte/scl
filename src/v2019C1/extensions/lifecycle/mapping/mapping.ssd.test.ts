@@ -89,15 +89,17 @@ type TestCase = SclTest.BaseXmlTestCase & {
 
 describe('shared-element mapping — an SSD carrying an application', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'one role of that name in the project → listed and mapped onto it': {
-			sourceXml,
-			targetXml: projectXml,
-			expected: {
-				mapping: { existing: { tagName: 'AllocationRole', id: 'role-t' } },
-				rolePath: 'S1/HMI_PC',
-				roleNames: ['Gateway', 'HMI_PC'],
+		"one role of that name in the project, not where the role's bay lands (the bay is created) → a new role in the placed bay":
+			{
+				sourceXml,
+				targetXml: projectXml,
+				expected: {
+					mapping: { create: { name: 'HMI_PC' } },
+					// the typical's bay is placed as B1_1 beside the project's B1
+					rolePath: 'S1/V1/B1_1/HMI_PC',
+					roleNames: ['Gateway', 'HMI_PC', 'HMI_PC'],
+				},
 			},
-		},
 		'the consumer picks another role of the project → listed and mapped onto that one': {
 			sourceXml,
 			targetXml: projectXml,

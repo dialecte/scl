@@ -283,7 +283,7 @@ describe('shared-element mapping — the report lists where each shared element 
 				},
 			],
 		},
-		'two roles of that name in the project → nothing is picked: the consumer has to choose, apply refuses until then':
+		'two roles of that name in the project, one where the role lands, one below it → mapped onto the one where it lands':
 			{
 				sourceXml,
 				targetXml: /* xml */ `
@@ -306,9 +306,11 @@ describe('shared-element mapping — the report lists where each shared element 
 						id: 'role-s',
 						tagName: 'AllocationRole',
 						kind: 'shared',
-						// no `mapping`: neither of the two is picked, and none is created behind the consumer's back
+						// the one of the substation the template's lands on; the voltage level's sits below it
+						mapping: { existing: { tagName: 'AllocationRole', id: 'role-t' } },
+						projectOwned: true,
 						reason: 'name',
-						ambiguous: true,
+						ambiguous: false,
 						locked: false,
 						candidates: [
 							// the VoltageLevel of the placement comes before its Substation
@@ -325,8 +327,7 @@ describe('shared-element mapping — the report lists where each shared element 
 						],
 					},
 				],
-				expectedNeedsDecisions: true,
-				expectedApplyRefusal: 'not decided',
+				expectedNeedsDecisions: false,
 			},
 		'roles at several levels of the project → candidates listed from the placement outwards': {
 			sourceXml,
@@ -434,13 +435,12 @@ describe('shared-element mapping — the report lists where each shared element 
 			// the name apply writes is read where each mapping landed
 			const appliedNames: (string | undefined)[] = []
 			for (const mapping of applied.mappings) {
-				appliedNames.push(
-					mapping.appliedRef
-						? await target.query.getAttribute(mapping.appliedRef as Scl.Ref<'AllocationRole'>, {
-								name: 'name',
-							})
-						: undefined,
-				)
+				const appliedName = mapping.appliedRef
+					? await target.query.getAttribute(mapping.appliedRef as Scl.Ref<'AllocationRole'>, {
+							name: 'name',
+						})
+					: undefined
+				appliedNames.push(appliedName)
 			}
 			expect(appliedNames, 'apply').toEqual(testCase.expectedNames.applied)
 			return
@@ -459,7 +459,10 @@ describe('shared-element mapping — the report lists where each shared element 
 			})
 			await expect(refused).rejects.toThrow(testCase.expectedApplyRefusal)
 			// the refusal is identified by a key and says what it is about, as data
-			const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+			const outcome = await refused.catch(function caught(error: unknown) {
+				return error
+			})
+			const refusal = toDialecteError(outcome)
 			expect({ key: refusal?.key, meta: refusal?.meta }).toEqual({
 				key: 'MAPPING_UNDECIDED',
 				meta: { sourceId: 'role-s', tagName: 'AllocationRole', kind: 'shared' },

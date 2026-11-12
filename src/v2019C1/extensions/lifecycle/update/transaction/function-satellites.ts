@@ -3,6 +3,7 @@ import { reconcileSatellites } from './satellite-reconcile'
 import { resolveContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { resolveFunctionSatellites } from '@/v2019C1/extensions/lifecycle/layers/function'
+import { landAt } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import {
 	assertMappingsDecided,
 	resolveSatelliteMappings,
@@ -17,6 +18,7 @@ import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ResolveForeignScope } from '@/v2019C1/extensions/lifecycle/instance'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
+import type { TemplateLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -44,6 +46,8 @@ export async function readCarriedSatellites(
 		decisionMappings?: DecisionMappings
 		/** What the selection of functional variants of the instances this is for leaves out of the template. */
 		selection?: VariantSelection
+		/** The template's levels, read once per update: see `readTemplateLevels`. */
+		templateLevels: readonly TemplateLevel[]
 	},
 ): Promise<SatelliteReading> {
 	const { sourceQuery, functionRef, instanceRef, matchKey } = params
@@ -62,12 +66,15 @@ export async function readCarriedSatellites(
 		primaryRef: instancePrimaryRef,
 	})
 
+	// where the template's levels land for this instance: a category is found by name only there
+	const landings = await landAt(tx, { levels: params.templateLevels, at: instanceRef })
 	const resolvedMappings = await resolveSatelliteMappings(tx, {
 		sourceQuery,
 		satelliteRefs,
 		instanceSatelliteRefs,
 		decisionMappings: params.decisionMappings,
 		matchKey,
+		landings,
 	})
 	// a category nothing is decided for: nothing is written until the consumer chose
 	assertMappingsDecided({ satelliteRefs, resolvedMappings })

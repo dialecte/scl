@@ -64,6 +64,8 @@ describe('createPlacementListing', () => {
 		const listing = await createPlacementListing(source.query, {
 			scope: new Set(),
 			primaryRefs: testCase.primaryRefs,
+			// landing on nothing the project holds
+			landings: [],
 		})
 		expect([...listing.satellites].sort()).toEqual(testCase.expectedSatellites)
 		expect([...listing.functions]).toEqual([])

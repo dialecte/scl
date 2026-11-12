@@ -341,6 +341,7 @@ async function listUnitPlacement(
 	return createPlacementListing(sourceQuery, {
 		scope: withLandedLevels({ scope: unit.scope, levels: landedLevels }),
 		held,
+		landings,
 		primaryRefs: [...applicationRefs, ...standaloneFunctions, ...unit.composedRefs],
 		leftOut,
 		frame: { primaryRef: scopeRef, composedRefs: unit.composedRefs },
