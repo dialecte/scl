@@ -8,7 +8,10 @@ import {
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TupleReferencePair } from '@/v2019C1/constants'
-import type { TupleTargetParts } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.types'
+import type {
+	TupleReferenceWrite,
+	TupleTargetParts,
+} from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
 
@@ -30,6 +33,15 @@ export async function tupleNamesOperation(
 	const write = tupleReferenceWrite({ record, pairs, partsByUuid, ownIedName })
 	if (!write) return undefined
 
+	return tupleWriteOperation({ record, write })
+}
+
+/** The update of a tuple reference writing `write`: its attributes and, for an `IEDName`, its text. */
+export function tupleWriteOperation(params: {
+	record: AnyRawRecord
+	write: TupleReferenceWrite
+}): Scl.Operation {
+	const { record, write } = params
 	const written = applyTupleReferenceWrite({ record, write })
 	const operation = updatedOperation(record as Scl.RawRecord<Scl.ElementsOf>, written.attributes)
 	return {

@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The report lists a variable applying to several functions with the first of them in the template.** A variable applying to two functions of a bay was grouped with the function of the lower record id, which changed from one import to the next; it is now grouped with the function that comes first in the template.
 
+- **A reference naming an IED by its names only follows the IED's rename.** Renaming an IED rewrote the references naming it by the uuid of what they point at, and left the others at the old name: an `LNode` of a function naming its IED without a `lnUuid` (the import never fills it), an `ExtRef` or `ConnectedAP` written without the uuid of a target that does not exist yet, kept the old name and no longer named an IED. A reference with no uuid on any of its pairs now takes the new IED name (an `IEDName` its text), and the addresses of the signals of an `LNode` that follows are written from the name it follows to. Nothing follows while another IED still holds the old name (a copy of the IED not renamed yet): the references may name that one; nor when another IED already holds the new name (two names swapped in one step), which would leave the references of both naming one IED. A reference to a logical node, a logical device or an access point named without its uuid still does not follow their renames: only the IED's name does.
+
 ## [0.16.0] - 2026-11-12
 
 ### Changed

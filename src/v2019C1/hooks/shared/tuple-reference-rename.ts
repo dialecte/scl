@@ -1,3 +1,4 @@
+import { followNamesOnlyIedRename } from './names-only-ied-rename'
 import { hasAttributeChange } from './record-ops'
 import { tupleNamesOperation } from './tuple-names-operation'
 
@@ -19,7 +20,7 @@ import type { AnyRawRecord } from '@dialecte/core'
  * When an element naming a part of a tuple address is renamed (an IED, an access point, a logical
  * device, a logical node, a control block), the tuple references pointing by uuid at it or at an
  * element below it write the new names (see `tupleReferenceWrite`). A reference that names its target
- * without the uuid is not found this way.
+ * without the uuid is not found this way, except by the IED it names (see `followNamesOnlyIedRename`).
  */
 export async function followTupleTargetRename(
 	query: Core.Query<Config>,
@@ -32,9 +33,9 @@ export async function followTupleTargetRename(
 
 	const ref = toRef(newRecord) as Scl.Ref<Scl.ElementsOf>
 	const { partsByUuid, targetTags } = await readTargetParts(query, { root: ref })
-	if (partsByUuid.size === 0) return []
+	const operations = await followNamesOnlyIedRename(query, { oldRecord, newRecord })
+	if (partsByUuid.size === 0) return operations
 
-	const operations: Scl.Operation[] = []
 	for (const [tagName, tagPairs] of Object.entries(TUPLE_REFERENCE_PAIRS)) {
 		const pairs = tagPairs as readonly TupleReferencePair[]
 		if (!pairs.some((pair) => pair.target.some((target) => targetTags.has(target)))) continue
