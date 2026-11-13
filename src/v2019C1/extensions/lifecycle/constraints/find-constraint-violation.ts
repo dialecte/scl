@@ -1,3 +1,5 @@
+import { readLiveTargetUuids } from './read-live-target-uuids'
+
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ConstraintScope, ConstraintViolation } from './find-constraint-violation.types'
@@ -48,7 +50,9 @@ export async function readConstraintScope(
 	// direct children via the parent's tree (staged-aware: reflects siblings added earlier in the
 	// same transaction, unlike the parent record's cached children)
 	const tree = await query.any.getTree(parentRef)
-	return { constraints, children: tree?.tree ?? [] }
+	const children = tree?.tree ?? []
+	const liveTargetUuids = await readLiveTargetUuids(query, { childTag, children })
+	return { constraints, children, ...(liveTargetUuids ? { liveTargetUuids } : {}) }
 }
 
 /**
