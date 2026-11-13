@@ -248,6 +248,29 @@ describe('afterUpdated — MinRequestedSCDFile', () => {
 			},
 			expectedQueries: [projectEntryOf('Protection'), projectEntryOf('Control')],
 		},
+
+		'ConnectedAP moved to another IED by its apUuid only → former and new IED synced': {
+			sourceXml: twoIedsOnOneSubNetwork,
+			allowInvalidOutput: {
+				reason:
+					'an update of apUuid alone leaves the names of the connection naming the former access point (a known gap of tx.update)',
+				violations: [{ check: 'references', code: 'path' }],
+			},
+			act: async (document) => {
+				await document.transaction(async (tx) => {
+					// the uuid the import gave Protection's second access point
+					const { uuid } = await tx.getAttributes({
+						tagName: 'AccessPoint',
+						id: 'protection-second-access-point',
+					})
+					await tx.update(
+						{ tagName: 'ConnectedAP', id: 'control-connected-ap' },
+						{ attributes: { apUuid: uuid } },
+					)
+				})
+			},
+			expectedQueries: [projectEntryOf('Protection'), projectEntryOf('Control')],
+		},
 	}
 
 	runSclTestCases.withExport({

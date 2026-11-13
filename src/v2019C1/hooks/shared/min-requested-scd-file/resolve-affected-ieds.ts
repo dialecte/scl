@@ -3,6 +3,7 @@ import {
 	MIN_REQUESTED_SCD_IED_TRIGGER_TAGS,
 	MIN_REQUESTED_SCD_SUBNETWORK_TRIGGER_TAGS,
 } from '@/v2019C1/constants'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -10,8 +11,9 @@ import type * as Core from '@dialecte/core'
 /**
  * The IEDs whose configuration changes when `record` is created, updated or deleted.
  *
- * IED content resolves to its `IED` ancestor. Communication content resolves through
- * `ConnectedAP@iedName`; a `SubNetwork` setting reaches every attached IED, once each.
+ * IED content resolves to its `IED` ancestor. Communication content resolves through its `ConnectedAP`: the IED holding
+ * the access point its `apUuid` names, else the IED its `iedName` names; a `SubNetwork` setting reaches every attached
+ * IED, once each.
  */
 export async function resolveAffectedIeds(
 	query: Core.Query<Config>,
@@ -55,10 +57,10 @@ export async function resolveAncestorIed(
 }
 
 /**
- * The `IED` named `iedName`, or `null` when none carries that name.
+ * The `IED` named `iedName`, or `null` when none carries that name, or several do (a name two IEDs hold, as while an
+ * IED placed beside one of its name is not numbered yet, names neither).
  *
- * @stopgap Finds the IED by the `iedName` string. Remove once `ConnectedAP` resolves its
- * `AccessPoint` by uuid through the reference registry: resolve through that reference instead.
+ * @stopgap Finds the IED by the `iedName` string: what a `ConnectedAP` without `apUuid`, or a former name, gives.
  */
 export async function resolveIedByName(
 	query: Core.Query<Config>,
@@ -67,13 +69,14 @@ export async function resolveIedByName(
 	const { iedName } = params
 	if (!iedName) return null
 
-	const [ied] = await query.findByAttributes({ tagName: 'IED', attributes: { name: iedName } })
-	return ied ? { tagName: 'IED', id: ied.id } : null
+	const ieds = await query.findByAttributes({ tagName: 'IED', attributes: { name: iedName } })
+	const [ied] = ieds
+	return ied && ieds.length === 1 ? { tagName: 'IED', id: ied.id } : null
 }
 
 /**
- * @stopgap Reads each `ConnectedAP@iedName` string. Switch to the uuid reference together with
- * {@link resolveIedByName}.
+ * The IEDs the `ConnectedAP`s of a subnetwork belong to, once each (see {@link resolveConnectedApOwner}): the access
+ * points and the IEDs of the document read once for the whole subnetwork.
  */
 async function resolveSubNetworkIeds(
 	query: Core.Query<Config>,
@@ -85,19 +88,43 @@ async function resolveSubNetworkIeds(
 		{ tagName: 'SubNetwork', id: subNetworkId },
 		'ConnectedAP',
 	)
-	const iedsById = new Map<string, Scl.Ref<'IED'>>()
-	for (const connectedAp of connectedAps) {
-		const iedName = await query.getAttribute(connectedAp, { name: 'iedName' })
-		const ied = await resolveIedByName(query, { iedName })
-		if (ied) iedsById.set(ied.id, ied)
+	if (connectedAps.length === 0) return []
+	const accessPoints = await query.getRecordsByTagName('AccessPoint')
+	const iedIdByAccessPointUuid = new Map<string, string>()
+	for (const accessPoint of accessPoints) {
+		const uuid = readAttribute({
+			record: accessPoint,
+			name: 'uuid',
+			defaults: 'none',
+			fullObject: true,
+		})?.value
+		if (uuid && accessPoint.parent?.tagName === 'IED')
+			iedIdByAccessPointUuid.set(uuid, accessPoint.parent.id)
 	}
-	return [...iedsById.values()]
+	const ieds = await query.getRecordsByTagName('IED')
+	// a name two IEDs hold names neither
+	const iedIdByName = new Map<string, string | undefined>()
+	for (const ied of ieds) {
+		const name = readAttribute({ record: ied, name: 'name' })
+		if (name) iedIdByName.set(name, iedIdByName.has(name) ? undefined : ied.id)
+	}
+
+	const iedIds = new Set<string>()
+	for (const connectedAp of connectedAps) {
+		const apUuid = readAttribute({
+			record: connectedAp,
+			name: 'apUuid',
+			defaults: 'none',
+			fullObject: true,
+		})?.value
+		const iedName = readAttribute({ record: connectedAp, name: 'iedName' })
+		const iedId = apUuid ? iedIdByAccessPointUuid.get(apUuid) : iedIdByName.get(iedName)
+		if (iedId) iedIds.add(iedId)
+	}
+	return [...iedIds].map((id) => ({ tagName: 'IED' as const, id }))
 }
 
-/**
- * @stopgap Reads the `ConnectedAP@iedName` string. Switch to the uuid reference together with
- * {@link resolveIedByName}.
- */
+/** The `IED` the `ConnectedAP` holding `record` (or `record` itself) belongs to: see {@link resolveConnectedApOwner}. */
 async function resolveConnectedApIed(
 	query: Core.Query<Config>,
 	params: { record: Scl.RawRecord<Scl.ElementsOf> },
@@ -106,12 +133,41 @@ async function resolveConnectedApIed(
 
 	const connectedApId = await findSelfOrAncestorId(query, { record, tagName: 'ConnectedAP' })
 	if (!connectedApId) return null
+	const connectedAp =
+		record.tagName === 'ConnectedAP'
+			? record
+			: await query.getRecord({ tagName: 'ConnectedAP', id: connectedApId })
+	return connectedAp ? resolveConnectedApOwner(query, { connectedAp }) : null
+}
 
-	const iedName = await query.getAttribute(
-		{ tagName: 'ConnectedAP', id: connectedApId },
-		{ name: 'iedName' },
-	)
-	return resolveIedByName(query, { iedName })
+/**
+ * The `IED` a `ConnectedAP` belongs to, read from the record as it is given (a former version of it included): the IED
+ * holding the access point its `apUuid` names, as for every reference naming by uuid; `null` when that uuid names
+ * nothing the document holds. A `ConnectedAP` without `apUuid` belongs to the IED its `iedName` names.
+ */
+export async function resolveConnectedApOwner(
+	query: Core.Query<Config>,
+	params: { connectedAp: Scl.RawRecord<Scl.ElementsOf> | Core.AnyTrackedRecord },
+): Promise<Scl.Ref<'IED'> | null> {
+	const { connectedAp } = params
+	const apUuid = readAttribute({
+		record: connectedAp,
+		name: 'apUuid',
+		defaults: 'none',
+		fullObject: true,
+	})?.value
+	if (!apUuid) {
+		return resolveIedByName(query, {
+			iedName: readAttribute({ record: connectedAp, name: 'iedName' }),
+		})
+	}
+	const [accessPoint] = await query.findByAttributes({
+		tagName: 'AccessPoint',
+		attributes: { uuid: apUuid },
+	})
+	return accessPoint?.parent?.tagName === 'IED'
+		? { tagName: 'IED', id: accessPoint.parent.id }
+		: null
 }
 
 /** Id of `record` itself or of its closest ancestor tagged `tagName`. */
