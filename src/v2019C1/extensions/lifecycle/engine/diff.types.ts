@@ -3,6 +3,7 @@ import type { LifecycleScenario, LifecycleVerb } from '../contract.types'
 import type { OffLevel } from '../layers/topology/resolve-primary-placement.types'
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { ReferenceOutsideScope } from './contribution-scope.types'
+import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
 /** How a diffed element changed between the (updated) template and the instance. */
@@ -219,8 +220,8 @@ export type ReportedElement = { tagName: string; id?: string }
 
 /**
  * The target a report was made for, as `query.lifecycle.report` reads it: the documents (their record ids), the
- * layer, the template element, where it lands, the operation (`template` when none was asked for) and the instance
- * asked for, if any.
+ * layer, the template element, where it lands, the operation (`template` when none was asked for), the instance
+ * asked for, if any, and for an IED the type of file the source is, read from its extension.
  */
 export type ReportTarget = {
 	document: string
@@ -230,6 +231,8 @@ export type ReportTarget = {
 	anchor: ReportedElement
 	scenario: LifecycleScenario
 	targetInstance?: ReportedElement
+	/** The type of file the source is (`.isd`, `.icd`, `.iid`, or `.scd`, `.xml` and none for an SCD): an IED's report only. */
+	fileType?: SclFileType
 }
 
 /** What a report applied to another target differs on first: `report` when it carries no target. */

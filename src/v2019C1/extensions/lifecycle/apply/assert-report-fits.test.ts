@@ -74,7 +74,9 @@ type TestCase = {
 	expectedRefusal?: { key: string; code?: string; meta: Record<string, unknown> }
 }
 
-const same = ({ lifecycle }: { lifecycle: Lifecycle }) => lifecycle
+function same({ lifecycle }: { lifecycle: Lifecycle }): Lifecycle {
+	return lifecycle
+}
 
 describe('apply — the report is applied to the target it was made for', () => {
 	const testCases: Record<string, TestCase> = {
@@ -112,7 +114,7 @@ describe('apply — the report is applied to the target it was made for', () => 
 		},
 		'another place in the project -> refused': {
 			reported: same,
-			applied: ({ lifecycle }) => ({ ...lifecycle, anchor: otherBayRef }),
+			applied: ({ lifecycle }) => ({ ...lifecycle, anchor: otherBayRef }) as Lifecycle,
 			expectedRefusal: { key: 'REPORT_TARGET_MISMATCH', meta: { field: 'anchor' } },
 		},
 		'another operation -> refused': {
@@ -195,14 +197,16 @@ describe('apply — the report is applied to the target it was made for', () => 
 			await applied
 			return
 		}
-		const refusal = toDialecteError(await applied.catch((error: unknown) => error))
+		const refused = await applied.catch((error: unknown) => error)
+		const refusal = toDialecteError(refused)
 		const { code } = testCase.expectedRefusal
 		expect({
 			key: refusal?.key,
 			...(code ? { code: refusal?.code } : {}),
 			meta: refusal?.meta,
 		}).toEqual(testCase.expectedRefusal)
-		expect(await targetQuery.getSnapshot({ as: 'xml' }), 'nothing written').toEqual(before)
+		const after = await targetQuery.getSnapshot({ as: 'xml' })
+		expect(after, 'nothing written').toEqual(before)
 	}
 
 	runSclTestCases.generic(testCases, act)
@@ -218,9 +222,11 @@ describe('apply — the report is applied to the target it was made for', () => 
 			anchor: bayRef,
 		})
 
+		const { id: document } = await target.document.query.getDocumentInfo()
+		const { id: sourceDocument } = await source.document.query.getDocumentInfo()
 		expect(reported.target).toEqual({
-			document: (await target.document.query.getDocumentInfo()).id,
-			source: (await source.document.query.getDocumentInfo()).id,
+			document,
+			source: sourceDocument,
 			verb: 'fsd',
 			ref: { tagName: 'Function', id: 'fn-s' },
 			anchor: { tagName: 'Bay', id: 'bay-t1' },

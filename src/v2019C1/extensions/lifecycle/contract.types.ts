@@ -7,8 +7,11 @@ import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/eng
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
 import type * as Core from '@dialecte/core'
 
-/** Which template layer the lifecycle surface operates on. */
-export type LifecycleVerb = 'fsd' | 'asd' | 'ssd'
+/**
+ * Which layer the lifecycle surface operates on: a function (FSD), an application (ASD), a substation template (SSD),
+ * or an IED (`ied`, read from an ISD, ICD, IID or SCD file).
+ */
+export type LifecycleVerb = 'fsd' | 'asd' | 'ssd' | 'ied'
 
 /**
  * The two reconcile modes of the `Update` operation, distinguished by how the
@@ -103,6 +106,24 @@ export type LifecycleVerbTarget =
 			 * its Applications and composed Functions all resolve under it. Absent = all instances.
 			 */
 			targetInstance?: Scl.Ref<Scl.ElementsOf>
+	  }
+	| {
+			verb: 'ied'
+			sourceQuery: Core.Query<Config>
+			/** The IED of the source file to place in the project. */
+			ref: Scl.Ref<'IED'>
+			/** The root of the project the IED is placed under. */
+			anchor: Scl.Ref<'SCL'>
+			/**
+			 * Operation to perform. Defaults to `template`. Only a first placement is reported: `template` or `fork`
+			 * finding the IED already in the project is refused with `OPTION_NOT_AVAILABLE`.
+			 */
+			scenario?: LifecycleScenario
+			/**
+			 * One IED of the project to scope to. Not read yet: only a first placement is reported, which places a new IED
+			 * whatever this names.
+			 */
+			targetInstance?: Scl.Ref<'IED'>
 	  }
 
 /**

@@ -10,7 +10,7 @@ Each operation takes `scenario` (`LifecycleScenario`, default `'instantiate'`), 
 
 ## The root of a template file
 
-`doc.query.lifecycle.sourceRoot.fsd()` / `.asd()` / `.ssd()` read, from the template file, the element a verb takes as its `ref`. They only read, and they never throw on the shape of a file: the answer is data, so a pre-flight can show it before any report is asked for.
+`doc.query.lifecycle.sourceRoot.fsd()` / `.asd()` / `.ssd()` / `.ied()` read, from the template file, the element a verb takes as its `ref`. They only read, and they never throw on the shape of a file: the answer is data, so a pre-flight can show it before any report is asked for.
 
 ```ts
 const root = await templateFile.query.lifecycle.sourceRoot.fsd()
@@ -36,7 +36,8 @@ What each verb finds:
 
 - **`fsd`** — a `Function` at a level of the `TEMPLATE` scaffolding, or a `FunctionTemplate` in the `Private` of the document root. A subfunction is not a root. A file holding a function template and a function, or two functions, holds several. A `Function` plus an `EqFunction` resolves to the `Function`: the placeable roots are judged first, and an equipment function counts only when the file holds none.
 - **`asd`** — an `Application`. A function alone is not an application: `none`.
-- **`ssd`** — the first named level below the `TEMPLATE` scaffolding, as the SSD verbs resolve it: units joined by a reference (a terminal of one on a connectivity node of the other, an input fed by the other) are one element, found as the scaffolding holding them; a scaffolding with nothing named below it is found at its deepest `TEMPLATE` level; several unlinked units are `several`, each candidate listing the units linked to it in `linked` (`{ ref, name }`). `linked` is empty for `fsd` and `asd`.
+- **`ssd`** — the first named level below the `TEMPLATE` scaffolding, as the SSD verbs resolve it: units joined by a reference (a terminal of one on a connectivity node of the other, an input fed by the other) are one element, found as the scaffolding holding them; a scaffolding with nothing named below it is found at its deepest `TEMPLATE` level; several unlinked units are `several`, each candidate listing the units linked to it in `linked` (`{ ref, name }`). `linked` is empty for `fsd`, `asd` and `ied`.
+- **`ied`** — an `IED` of an ISD, ICD, IID or SCD file; two IEDs are `several`, in document order.
 
 ## fsd
 

@@ -74,10 +74,18 @@ const projectXml = /* xml */ `
 	</SCL>
 `
 const projectBay = { tagName: 'Bay', id: 'project-bay' } as Scl.Ref<'Bay'>
-const twoBaysProjectXml = projectXml.replace(
-	'</VoltageLevel>',
-	`<Bay name="B2" ${id}="project-other-bay"/></VoltageLevel>`,
-)
+/** The project with a second bay B2 beside B1. */
+const twoBaysProjectXml = /* xml */ `
+	<SCL ${ns} ${id}="project">
+		<Header id="project" uuid="project-file-uuid" ${id}="project-header"/>
+		<Substation name="S1" ${id}="project-substation">
+			<VoltageLevel name="V1" ${id}="project-voltage-level">
+				<Bay name="B1" ${id}="project-bay"/>
+				<Bay name="B2" ${id}="project-other-bay"/>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
 const projectOtherBay = { tagName: 'Bay', id: 'project-other-bay' } as Scl.Ref<'Bay'>
 const projectVoltageLevel = {
 	tagName: 'VoltageLevel',
@@ -85,10 +93,18 @@ const projectVoltageLevel = {
 } as Scl.Ref<'VoltageLevel'>
 
 /** The project already holding a function carrying the uuid of the template's, without its description. */
-const projectHoldingFunctionXml = projectXml.replace(
-	`<Bay name="B1" ${id}="project-bay"/>`,
-	`<Bay name="B1" ${id}="project-bay"><Function name="Prot" uuid="function-uuid" ${id}="project-function"/></Bay>`,
-)
+const projectHoldingFunctionXml = /* xml */ `
+	<SCL ${ns} ${id}="project">
+		<Header id="project" uuid="project-file-uuid" ${id}="project-header"/>
+		<Substation name="S1" ${id}="project-substation">
+			<VoltageLevel name="V1" ${id}="project-voltage-level">
+				<Bay name="B1" ${id}="project-bay">
+					<Function name="Prot" uuid="function-uuid" ${id}="project-function"/>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
 
 /** An FSD in its first revision. */
 const fsdXml = /* xml */ `
@@ -283,15 +299,21 @@ async function lifecycleOf(params: {
 }): Promise<LifecycleTarget> {
 	const { testCase, sourceQuery, scenario, anchor = testCase.anchor } = params
 	const common = { sourceQuery, anchor, scenario }
-	if (testCase.verb === 'ssd') {
-		const [substation] = await sourceQuery.getRecordsByTagName('Substation')
-		return { ...common, verb: 'ssd', ref: { tagName: 'Substation', id: substation.id } }
+	const uuid = testCase.rootUuid ?? ''
+	switch (testCase.verb) {
+		case 'ssd': {
+			const [substation] = await sourceQuery.getRecordsByTagName('Substation')
+			return { ...common, verb: 'ssd', ref: { tagName: 'Substation', id: substation.id } }
+		}
+		case 'fsd': {
+			const ref = await findByUuid(sourceQuery, { tagName: 'Function', uuid })
+			return { ...common, verb: 'fsd', ref: ref as Scl.Ref<'Function'> }
+		}
+		case 'asd': {
+			const ref = await findByUuid(sourceQuery, { tagName: 'Application', uuid })
+			return { ...common, verb: 'asd', ref: ref as Scl.Ref<'Application'> }
+		}
 	}
-	const tagName = testCase.verb === 'fsd' ? 'Function' : 'Application'
-	const ref = await findByUuid(sourceQuery, { tagName, uuid: testCase.rootUuid ?? '' })
-	return testCase.verb === 'fsd'
-		? { ...common, verb: 'fsd', ref: ref as Scl.Ref<'Function'> }
-		: { ...common, verb: 'asd', ref: ref as Scl.Ref<'Application'> }
 }
 
 /** The file placed, as a first instantiate does. */
@@ -355,7 +377,7 @@ async function resolveInstance(
 			}
 		}
 	}
-	throw new Error(`no ${tagName} ${path} in the project`)
+	throw new Error(['no', tagName, path, 'in the project'].join(' '))
 }
 
 /** The source-file references a project holds, `<anchor kind> <revision>`, sorted. */
@@ -364,11 +386,16 @@ async function provenanceOf(query: Scl.Query): Promise<string[]> {
 	return entries.map((entry) => `${entry.anchor.kind} ${entry.revision}`).sort()
 }
 
-/** The roots an apply returned: the applications, then the functions. */
+/** The roots an apply returned: the applications, then the functions (an IED's, the IEDs). */
 function rootsOf(instances: AppliedInstances): AppliedInstance<Scl.ElementsOf>[] {
-	return instances.verb === 'fsd'
-		? instances.functions
-		: [...instances.applications, ...instances.functions]
+	switch (instances.verb) {
+		case 'fsd':
+			return instances.functions
+		case 'ied':
+			return instances.ieds
+		default:
+			return [...instances.applications, ...instances.functions]
+	}
 }
 
 describe('apply — each instance root says how it was written', () => {

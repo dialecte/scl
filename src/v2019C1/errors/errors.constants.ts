@@ -59,7 +59,9 @@ export const SCL_ERRORS = defineErrors({
 	/**
 	 * An option takes a value the operation does not offer yet, given or by default: an extract writing a new revision
 	 * of the file the element came from (`as: 'revision'`), an FSD holding a function of a line or a process at its own
-	 * level (`placement: 'source-level'`, the default). `meta: { option, value }`
+	 * level (`placement: 'source-level'`, the default), a source file of an extension the operation does not read
+	 * (`sourceExtension`), an IED report reconciling an IED the project already holds (`scenario`: `template` or
+	 * `fork`), an IED report applied (`verb: 'ied'`). `meta: { option, value }`
 	 */
 	OPTION_NOT_AVAILABLE: {
 		code: 'SCL1009',
@@ -89,7 +91,7 @@ export const SCL_ERRORS = defineErrors({
 	/**
 	 * A report is applied to another target than the one it was made for, or carries none (it was not made by
 	 * `query.lifecycle.report`). `meta: { field }` — the first that differs: `report` (none), `document`, `source`,
-	 * `verb`, `ref`, `anchor`, `scenario`, `targetInstance`.
+	 * `verb`, `ref`, `anchor`, `scenario`, `targetInstance`, `fileType` (an IED's: the type of file its source is).
 	 */
 	REPORT_TARGET_MISMATCH: {
 		code: 'SCL1013',

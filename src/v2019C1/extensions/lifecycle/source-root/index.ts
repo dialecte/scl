@@ -1,7 +1,9 @@
-import { asd, fsd, ssd } from './source-root'
+import { asd, fsd, ied, ssd } from './source-root'
 
-/** `query.lifecycle.sourceRoot.<verb>()`: what a template file holds to instantiate, one function per verb. */
-export const sourceRoot = { fsd, asd, ssd }
+import type { SourceRootReaders } from './source-root.types'
+
+/** `query.lifecycle.sourceRoot.<verb>()`: what a source file holds to place, one function per verb. */
+export const sourceRoot = { fsd, asd, ssd, ied } satisfies SourceRootReaders
 
 export type {
 	SourceRoot,

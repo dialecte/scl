@@ -2,6 +2,9 @@ import { assertReportFits } from './assert-report-fits'
 import { collectWrittenImplementation } from './collect-written-implementation'
 import { recheckAfterApply } from './recheck-after-apply'
 
+import { throwDialecteError } from '@dialecte/core'
+
+import { SCL_ERRORS } from '@/v2019C1/errors'
 import { cleanUp } from '@/v2019C1/extensions/clean-up'
 import {
 	allGroups,
@@ -63,6 +66,9 @@ import type * as Core from '@dialecte/core'
  * A fork reads the previous revision of the file it is given (`baseQuery`) once, as `report` did:
  * an element the newer revision lacks is removed when the previous revision held it.
  *
+ * An IED's report (`verb: 'ied'`) is not applied yet: refused with `OPTION_NOT_AVAILABLE`
+ * (`meta: { option: 'verb', value: 'ied' }`), nothing written.
+ *
  * Returns `{ report, instances }` — the effective report plus the instance roots
  * the write produced/reconciled. Run inside `doc.prepare(tx => tx.lifecycle.apply(...))`
  * for a previewable, reversible dry-run.
@@ -87,6 +93,8 @@ export async function apply(
 
 	// a previous revision only a fork reads: refused whatever the track
 	assertRevisionBaseFits({ scenario: params.scenario, baseQuery: params.baseQuery })
+	// an IED is reported, not yet written: refused whatever the track
+	if (params.verb === 'ied') refuseIedApply()
 
 	// No decisions supplied: the full track waits for a human, nothing is written
 	if (!params.resolution?.decisions && report.needsDecisions) {
@@ -178,7 +186,17 @@ function emptyInstances(verb: LifecycleTarget['verb']): AppliedInstances {
 			return { verb: 'asd', applications: [], functions: [] }
 		case 'ssd':
 			return { verb: 'ssd', applications: [], functions: [] }
+		case 'ied':
+			return { verb: 'ied', ieds: [] }
 	}
+}
+
+/** An apply of an IED is not offered yet: its report lists what a first placement would add, nothing is written. */
+function refuseIedApply(): never {
+	return throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
+		meta: { option: 'verb', value: 'ied' },
+		detail: 'apply: writing an IED is not available yet, its report only lists what it would add',
+	})
 }
 
 /**
@@ -248,5 +266,7 @@ async function runVerb(
 			})
 			return { verb: 'asd', applications, functions }
 		}
+		case 'ied':
+			return refuseIedApply()
 	}
 }
