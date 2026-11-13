@@ -34,6 +34,7 @@ export type AppliedInstances =
 			applications: AppliedInstance<'Application'>[]
 			functions: AppliedInstance<'Function' | 'SubFunction'>[]
 	  }
+	| { verb: 'ied'; ieds: AppliedInstance<'IED'>[] }
 
 /**
  * The result of `tx.lifecycle.apply`: the effective `report` plus the instance

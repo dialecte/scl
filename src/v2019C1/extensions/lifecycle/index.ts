@@ -30,7 +30,10 @@ import { checkTemplateUuids } from './validate'
  *                   (`query.lifecycle.classifyIeds()`).
  * - `report`      — read-only classify: `query.lifecycle.report({ verb,
  *                   sourceQuery, ref, anchor })` returns a `DiffReport`
- *                   (fast/full classification) — nothing is written.
+ *                   (fast/full classification) — nothing is written. `verb: 'ied'`
+ *                   reports the first placement of an IED (its apply is not offered yet).
+ * - `sourceRoot`  — read-only: what a source file holds to place, per verb
+ *                   (`query.lifecycle.sourceRoot.fsd` / `.asd` / `.ssd` / `.ied`).
  *
  * Two-track surface (verb-agnostic): `query.lifecycle.report(...)`
  * classifies, then `tx.lifecycle.apply(tx, { ..., report })` applies the fast

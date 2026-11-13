@@ -1,5 +1,5 @@
 import { sortInDocumentOrder } from './document-order'
-import { ASD_ROOT_TAG, FSD_UNSUPPORTED_ROOT_TAG } from './source-root.constants'
+import { ASD_ROOT_TAG, FSD_UNSUPPORTED_ROOT_TAG, IED_ROOT_TAG } from './source-root.constants'
 
 import { FSD_PLACEABLE_ROOT_TAGS } from '@/v2019C1/extensions/lifecycle/contract.constants'
 import { readSsdScope } from '@/v2019C1/extensions/lifecycle/layers/topology'
@@ -85,6 +85,23 @@ export async function ssd(query: Core.Query<Config>): Promise<SourceRoot<'ssd'>>
 			linked: candidate.linked.map((unit) => ({ ref: unitRef(unit), name: unit.name })),
 		})),
 	}
+}
+
+/**
+ * What an IED file (ISD, ICD, IID, SCD) holds to place, read-only and never throwing on the shape of the file: the
+ * one IED (`found`), none, or several to choose from, in document order.
+ *
+ * @intent which IED of a file to place in a project, root of an ISD or ICD file, does the file hold several IEDs
+ */
+export async function ied(query: Core.Query<Config>): Promise<SourceRoot<'ied'>> {
+	const ieds = await readInDocumentOrder(query, { tagNames: [IED_ROOT_TAG] })
+	return oneOrSeveral(
+		ieds.map((record) => ({
+			ref: { tagName: IED_ROOT_TAG, id: record.id },
+			name: nameOf(record),
+			linked: [],
+		})),
+	)
 }
 
 /** Every element of the tags the file holds, read by tag once each, in document order. */

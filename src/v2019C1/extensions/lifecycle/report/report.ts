@@ -1,4 +1,4 @@
-import { listRemovalSideEffects, reportAsd, reportFsd, reportSsd } from './query'
+import { listRemovalSideEffects, reportAsd, reportFsd, reportIed, reportSsd } from './query'
 import { reportTargetOf } from './report-target'
 import { collectReportWarnings } from './report-warnings'
 
@@ -28,7 +28,8 @@ import type * as Core from '@dialecte/core'
 /**
  * `query.lifecycle.report` answers what instantiating or updating from an FSD / ASD / SSD would
  * change, per instance, and whether a human must decide before it is applied (`needsDecisions`).
- * Read-only: nothing is written.
+ * Read-only: nothing is written. For an IED (`verb: 'ied'`), what placing it in the project for the first time would
+ * add, with the type of file the source is (`report.target.fileType`, from its extension).
  *
  * Dispatches on `verb` to the per-layer report and returns a {@link DiffReport} (one
  * {@link ReportInstance} per instance). `report.needsDecisions` tells the consumer the
@@ -42,7 +43,7 @@ import type * as Core from '@dialecte/core'
  * project holds that the newer revision lacks is listed as removed when the previous revision held
  * it, as the project's own otherwise; `report.revisionBase` says whether it was given.
  *
- * @intent preview what instantiating or updating from an FSD/ASD/SSD would change, diff a project against a newer template, decisions to review before a template update
+ * @intent preview what instantiating or updating from an FSD/ASD/SSD would change, diff a project against a newer template, decisions to review before a template update, what placing an IED from an ISD/ICD/IID would add
  */
 export async function report(
 	query: Core.Query<Config>,
@@ -52,6 +53,8 @@ export async function report(
 	// elements to create are those apply gives them, one after the other
 	const pass = createReportPass()
 	assertRevisionBaseFits({ scenario: target.scenario, baseQuery: target.baseQuery })
+	// what the report is made for, read first: a source an IED is not placed from is refused before anything is diffed
+	const reportTarget = await reportTargetOf(query, target)
 	const removalBase = await resolveRemovalBase({
 		policy: scenarioPolicy({ scenario: target.scenario }),
 		sourceQuery: target.sourceQuery,
@@ -71,7 +74,7 @@ export async function report(
 		diffPolicy,
 	})
 	// what the report is made for: apply refuses it for another target
-	report.target = await reportTargetOf(query, target)
+	report.target = reportTarget
 	const warnings = collectReportWarnings(report)
 	if (warnings.length > 0) report.warnings = warnings
 	const revisionBase = revisionBaseOf(removalBase)
@@ -164,6 +167,14 @@ async function reportVerb(
 				resolvePlacement: true,
 				sharedFunctions: target.resolution?.sharedFunctions,
 				removalBase,
+			})
+		case 'ied':
+			return reportIed(query, {
+				sourceQuery: target.sourceQuery,
+				iedRef: target.ref,
+				scenario: target.scenario,
+				diffPolicy,
+				placeholderLineages,
 			})
 	}
 }

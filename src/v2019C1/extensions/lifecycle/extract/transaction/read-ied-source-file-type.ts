@@ -1,6 +1,6 @@
-import { throwDialecteError } from '@dialecte/core'
+import { IED_EXPORT_SOURCE_EXTENSIONS } from './read-ied-source-file-type.constants'
 
-import { SCL_ERRORS } from '@/v2019C1/errors'
+import { readSourceFileType } from '@/v2019C1/extensions/lifecycle/source-file-type'
 
 import type { Config } from '@/v2019C1/config'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
@@ -8,19 +8,8 @@ import type * as Core from '@dialecte/core'
 
 /** Resolve the project source type by registered extension; XML or no extension uses the SCD convention. */
 export async function readIedSourceFileType(query: Core.Query<Config>): Promise<SclFileType> {
-	const { extension } = await query.getDocumentInfo()
-	const sourceExtension = extension.toLowerCase()
-	switch (sourceExtension) {
-		case '.ssd':
-			return 'SSD'
-		case '.scd':
-		case '.xml':
-		case '':
-			return 'SCD'
-		default:
-			throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
-				meta: { option: 'sourceExtension', value: extension },
-				detail: 'extract.ied: source extension is not supported',
-			})
-	}
+	return readSourceFileType(query, {
+		accepted: IED_EXPORT_SOURCE_EXTENSIONS,
+		operation: 'extract.ied',
+	})
 }

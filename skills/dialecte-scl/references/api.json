@@ -93,13 +93,13 @@
 			"entry": "@dialecte/scl/v2019C1",
 			"otherRoutes": [],
 			"signature": "(target: Pick<LifecycleTarget, 'verb'>) => PresentationScope",
-			"summary": "Where to root the structural tree of a lifecycle merge (FSD, ASD or SSD) and which top-level sections to omit or include beside it, for the verb of the merge.",
+			"summary": "Where to root the structural tree of a lifecycle merge (FSD, ASD, SSD or IED) and which top-level sections to omit or include beside it, for the verb of the merge.",
 			"intents": [
 				"show a lifecycle merge as a tree",
 				"which part of the document a merge review displays",
 				"root and sections of a merge view"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/report/presentation-scope.ts:18"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/report/presentation-scope.ts:21"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1.readAttribute",
@@ -504,13 +504,14 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "(target: LifecycleReportParams) => Promise<DiffReport>",
-			"summary": "`query.lifecycle.report` answers what instantiating or updating from an FSD / ASD / SSD would change, per instance, and whether a human must decide before it is applied (`needsDecisions`). Read-only: nothing is written.",
+			"summary": "`query.lifecycle.report` answers what instantiating or updating from an FSD / ASD / SSD would change, per instance, and whether a human must decide before it is applied (`needsDecisions`). Read-only: nothing is written. For an IED (`verb: 'ied'`), what placing it in the project for the first time would add, with the type of file the source is (`report.target.fileType`, from its extension).",
 			"intents": [
 				"preview what instantiating or updating from an FSD/ASD/SSD would change",
 				"diff a project against a newer template",
-				"decisions to review before a template update"
+				"decisions to review before a template update",
+				"what placing an IED from an ISD/ICD/IID would add"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:47"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:48"
 		},
 		{
 			"path": "doc.query.lifecycle.sourceRoot.asd",
@@ -538,6 +539,19 @@
 				"is the FSD file ambiguous"
 			],
 			"declaredAt": "src/v2019C1/extensions/lifecycle/source-root/source-root.ts:28"
+		},
+		{
+			"path": "doc.query.lifecycle.sourceRoot.ied",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "() => Promise<SourceRoot<'ied'>>",
+			"summary": "What an IED file (ISD, ICD, IID, SCD) holds to place, read-only and never throwing on the shape of the file: the one IED (`found`), none, or several to choose from, in document order.",
+			"intents": [
+				"which IED of a file to place in a project",
+				"root of an ISD or ICD file",
+				"does the file hold several IEDs"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/source-root/source-root.ts:96"
 		},
 		{
 			"path": "doc.query.lifecycle.sourceRoot.ssd",
@@ -881,7 +895,7 @@
 				"write a lifecycle report with user decisions",
 				"accept or skip changes from a newer FSD/ASD/SSD"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:72",
+			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:78",
 			"example": "await tx.lifecycle.apply({ ...lifecycleTarget, report: reported, resolution: { afterApply } })"
 		},
 		{

@@ -29,7 +29,7 @@ tx.lifecycle.apply({ verb, scenario, sourceQuery, baseQuery?, ref, anchor, repor
 
 The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & { resolution? }`), `LifecycleApplyParams` and `Resolution`; `LifecycleTarget` is a verb arm (`LifecycleVerbTarget`) and a scenario arm (`LifecycleRevisionBase`): only `scenario: 'fork'` takes `baseQuery`.
 
-- `verb`: `'fsd'` (then `ref` is a `Function` or a `FunctionTemplate` — `FsdFunctionRef`), `'asd'` (then `ref` is an `Application`), or `'ssd'` (then `ref` is the topology scope, `Substation`/`VoltageLevel`/`Bay` — see [the note below](#tx-lifecycle-update-ssd)) — the **layer**;
+- `verb`: `'fsd'` (then `ref` is a `Function` or a `FunctionTemplate` — `FsdFunctionRef`), `'asd'` (then `ref` is an `Application`), `'ssd'` (then `ref` is the topology scope, `Substation`/`VoltageLevel`/`Bay` — see [the note below](#tx-lifecycle-update-ssd)), or `'ied'` (then `ref` is an `IED` and `anchor` the project's `SCL` — see [An IED](#an-ied-—-verb-ied)) — the **layer**;
 - `scenario`: `'instantiate'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`);
 - `anchor`: the target parent the instance lives under / is placed into.
 - `baseQuery`: for a `fork` only, the **previous revision** of the file — the one the project was forked from. An element the project holds that the newer revision lacks is removed when the previous revision held it, and is the project's own otherwise (see [the fork](#scenario-—-instantiate-vs-template-vs-fork)). `report` and `apply` each read it once. Refused with `REVISION_BASE_OTHER_FILE` when its `Header` names another file than the newer revision's (both carry a `uuid`, and they differ); another scenario given one is refused with `REVISION_BASE_WITHOUT_FORK`.
@@ -45,7 +45,8 @@ The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & 
 
 **A report is applied to the target it was made for.** `report` writes what it was made for on `report.target`
 (`ReportTarget`: the record ids of the project and the template documents, `verb`, `ref`, `anchor` as `{ tagName,
-id }`, `scenario` — `'template'` when none was asked for — and `targetInstance` when one was). `apply` compares it
+id }`, `scenario` — `'template'` when none was asked for —, `targetInstance` when one was, and for an IED `fileType`,
+the type of file its source is). `apply` compares it
 with what it is asked for and, whatever the track and before anything is written, refuses:
 
 - a report made for another target, or carrying none, with `REPORT_TARGET_MISMATCH` (`meta: { field }`, the first
@@ -58,6 +59,25 @@ A report applied a second time stays safe: a first placement finds its instance 
 finds nothing left to change.
 
 **An FSD whose function is a `FunctionTemplate`.** A function template has no parent level: it is placed where the consumer starts from, whichever level that is, as a `Function` — a `SubFunction` under a function or a subfunction — and each `SubFunctionTemplate` it holds as a `SubFunction`. Every element inside it takes the namespace the schema declares for it where it now sits. The instance carries the template's lineage, and an update finds it and reconciles it like any function.
+
+### An IED — `verb: 'ied'`
+
+`report({ verb: 'ied', sourceQuery, ref, anchor })` answers what placing the IED `ref` of a source file in the project
+would add, `anchor` being the project's `SCL` root. Only a first placement is reported yet: one instance with no root in
+the project (`rootRef` undefined), every element of the IED `added` — the `IEDSourceFiles` of an ISD among them —, on
+the fast track (`needsDecisions: false`), even when the project holds another IED of the same name.
+
+- `report.target.fileType` is the type of file the source is, read from its document's extension: `.isd` → `ISD`,
+  `.icd` → `ICD`, `.iid` → `IID`, `.scd`, `.xml` or none → `SCD`. Another extension is refused with `OPTION_NOT_AVAILABLE`
+  (`meta: { option: 'sourceExtension', value }`) before anything is diffed.
+- `scenario: 'template'` (the default) or `'fork'` finding the IED in the project — an IED carrying its uuid as
+  `templateUuid`, or for a fork as its own `uuid` — is refused with `OPTION_NOT_AVAILABLE`
+  (`meta: { option: 'scenario', value }`). `'instantiate'` places a new IED whatever the project holds.
+- `apply` of an IED's report is refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'verb', value: 'ied' }`) on
+  either track, nothing written.
+
+`doc.query.lifecycle.sourceRoot.ied()` reads the IED a source file holds (see [the root of a template
+file](./instantiate#the-root-of-a-template-file)).
 
 ### Apply result
 
@@ -569,7 +589,7 @@ await prepared.commit() // or prepared.discard()
 
 ### Presentation scope
 
-`presentationScope(target)` is a small, layer-derived descriptor a UI can use to render the merge as a **structural tree**: where to root it, which top-level SCL sections are irrelevant to the layer, and which to include alongside the rooted subtree. For `fsd` / `asd` / `ssd` it roots at `Substation`, includes `DataTypeTemplates` (a sibling of `Substation` that the layer references), and omits `Communication` and `IED` (the IED layer will bring `IED` back into scope).
+`presentationScope(target)` is a small, layer-derived descriptor a UI can use to render the merge as a **structural tree**: where to root it, which top-level SCL sections are irrelevant to the layer, and which to include alongside the rooted subtree. For `fsd` / `asd` / `ssd` it roots at `Substation`, includes `DataTypeTemplates` (a sibling of `Substation` that the layer references), and omits `Communication` and `IED`. For `ied` it roots at `SCL`, omitting and including nothing: an IED reaches its data types, its communication and the functions its logical nodes implement.
 
 ```ts
 import { presentationScope } from '@dialecte/scl/v2019C1'
