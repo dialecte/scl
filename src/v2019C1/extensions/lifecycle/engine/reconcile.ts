@@ -3,6 +3,7 @@ import { collectUuids, indexByMatchKey } from './match-key'
 import { projectOwnedAttributes } from './project-owned-attributes'
 import { indexRedirectedSourceUuids } from './reference-match'
 import { acceptsRemoval, classifyUnmatched } from './removal-base'
+import { readTargetLineages } from './target-lineages'
 import { textChangeOf } from './text-change'
 import { reconcileTextWrappers } from './text-wrappers'
 import { createTypeComparison, typeChangesOf } from './type-change'
@@ -11,7 +12,7 @@ import { landingParent } from './wrapper'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
+import { KEEP_ON_ORPHAN_REFS } from '@/v2019C1/constants/reference-pairs'
 import { importTypes } from '@/v2019C1/extensions/data-model/transaction'
 import {
 	assertNoIdentityCollision,
@@ -20,6 +21,7 @@ import {
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { leaveOutUndeclaredNodes } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+import { DISPOSABLE_REFERENCE_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { ChildMatch, PinnedMatches } from './match-child.types'
@@ -27,6 +29,7 @@ import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { ReconcileAdditions, ReconcileResult } from './reconcile.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
+import type { TargetLineages } from './target-lineages.types'
 import type { TypeFollowing } from './type-change.types'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
@@ -173,6 +176,12 @@ export async function reconcile(
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
 
 	const redirectedSourceUuids = await indexRedirectedSourceUuids(tx, params.redirectMappings)
+	// read before the first write: the references the instance held, as the report read them
+	const targetLineages = await readTargetLineages(tx, {
+		nodes: [instanceTree],
+		matchKey,
+		referrerTags: DISPOSABLE_REFERENCE_TAGS,
+	})
 	// the matched elements whose type the template changed, brought in one import once the walk is done
 	const typeFollowing: TypeFollowing = { comparison: createTypeComparison(), followers: [] }
 
@@ -210,6 +219,7 @@ export async function reconcile(
 		overrides,
 		keepNameTypesFrom,
 		matchKey,
+		targetLineages,
 		identityMode,
 		bumpsCollisions,
 		namesFollow: params.namesFollow,
@@ -281,6 +291,8 @@ async function reconcileChildren(
 		overrides: CollisionOverrides | undefined
 		keepNameTypesFrom: KeepNameTypesFrom | undefined
 		matchKey: MatchKey
+		/** The lineage of what the instance's references name, read once before the reconcile writes. */
+		targetLineages: TargetLineages
 		/** The identity written on what is added; none on a contribution, finalized by the placement it is part of. */
 		identityMode: ScenarioPolicy['identityMode'] | undefined
 		bumpsCollisions: boolean
@@ -340,6 +352,7 @@ async function reconcileChildren(
 			index,
 			matchedInstanceIds,
 			matchKey,
+			targetLineages: params.targetLineages,
 			redirectedSourceUuids,
 			matchContainersByName: withinProjectOwned,
 			pinnedMatches: params.pinnedMatches,
@@ -359,7 +372,7 @@ async function reconcileChildren(
 			const isProjectContainer =
 				params.contributeOnly ||
 				(withinProjectOwned &&
-					!REFERENCE_TAG_NAMES.has(sourceChild.tagName) &&
+					!DISPOSABLE_REFERENCE_TAGS.has(sourceChild.tagName) &&
 					!(await carriesLineageOf(tx, {
 						sourceQuery,
 						sourceNode: sourceChild,
@@ -393,6 +406,7 @@ async function reconcileChildren(
 				overrides,
 				keepNameTypesFrom,
 				matchKey,
+				targetLineages: params.targetLineages,
 				identityMode,
 				bumpsCollisions,
 				namesFollow,
@@ -478,7 +492,7 @@ async function reconcileChildren(
 		const lineage = await tx.any.getAttribute(instanceChild, { name: matchKey })
 		if (lineage) continue
 		if (
-			REFERENCE_TAG_NAMES.has(instanceChild.tagName) &&
+			DISPOSABLE_REFERENCE_TAGS.has(instanceChild.tagName) &&
 			!KEEP_ON_ORPHAN_REFS.has(instanceChild.tagName)
 		) {
 			// a shared element's other links are not this template's to drop: explicit accept only
@@ -630,6 +644,7 @@ async function updateMatchedAttributes(
 		...visibleAttributes({
 			record: sourceNode,
 			attributes: sourceAttributes,
+			counterpartAttributes: instanceAttributes,
 			namesFollow,
 		}),
 		...overrides?.get(sourceNode.id),
@@ -637,6 +652,7 @@ async function updateMatchedAttributes(
 	const current = visibleAttributes({
 		record: instanceRecord,
 		attributes: instanceAttributes,
+		counterpartAttributes: sourceAttributes,
 		namesFollow,
 	})
 	// what the project owns on the element (a bound LNode's implementation and type) is never

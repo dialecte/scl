@@ -1,3 +1,4 @@
+import type { TargetLineages } from './target-lineages.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 
 /**
@@ -18,7 +19,13 @@ export type RedirectedSourceUuids = ReadonlyMap<string, string>
  */
 export type ReferenceIdentitySide =
 	| { side: 'source' }
-	| { side: 'instance'; matchKey: MatchKey; redirectedSourceUuids?: RedirectedSourceUuids }
+	| {
+			side: 'instance'
+			matchKey: MatchKey
+			redirectedSourceUuids?: RedirectedSourceUuids
+			/** The lineage of what the instance's references name, read once: see `readTargetLineages`. */
+			targetLineages: TargetLineages
+	  }
 	| {
 			side: 'project'
 			redirectedSourceUuids?: RedirectedSourceUuids

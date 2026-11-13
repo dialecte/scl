@@ -9,6 +9,8 @@ describe('visibleAttributes', () => {
 		only?: boolean
 		tagName: string
 		attributes: Record<string, string>
+		/** The attributes of the element it is compared with. Default: the same as its own. */
+		counterpartAttributes?: Record<string, string>
 		/** Whose names the comparison follows. Default: the project's. */
 		namesFollow?: 'project' | 'source'
 		expected: Record<string, string>
@@ -80,12 +82,57 @@ describe('visibleAttributes', () => {
 			namesFollow: 'source',
 			expected: { name: 'T1' },
 		},
+		'ExtRef naming its logical node and control block by uuid → the uuids and the names they follow left out':
+			{
+				tagName: 'ExtRef',
+				attributes: {
+					iedName: 'IED7',
+					ldInst: 'LD1',
+					lnClass: 'XCBR',
+					lnInst: '1',
+					lnUuid: 'xcbr1-uuid',
+					serviceType: 'GOOSE',
+					srcLDInst: 'LD1',
+					srcCBName: 'GC1',
+					srcCBUuid: 'gc1-uuid',
+					doName: 'Pos',
+					daName: 'stVal',
+					intAddr: 'in1',
+					desc: 'trip',
+				},
+				expected: {
+					serviceType: 'GOOSE',
+					doName: 'Pos',
+					daName: 'stVal',
+					intAddr: 'in1',
+					desc: 'trip',
+				},
+			},
+		'ExtRef naming by names only, its counterpart by uuid → the names left out': {
+			tagName: 'ExtRef',
+			attributes: { iedName: 'TPL', ldInst: 'LD1', lnClass: 'XCBR', lnInst: '1', doName: 'Pos' },
+			counterpartAttributes: {
+				iedName: 'IED7',
+				ldInst: 'LD1',
+				lnClass: 'XCBR',
+				lnInst: '1',
+				lnUuid: 'xcbr1-uuid',
+				doName: 'Pos',
+			},
+			expected: { doName: 'Pos' },
+		},
+		'ExtRef naming by names only, its counterpart too → the names compared': {
+			tagName: 'ExtRef',
+			attributes: { iedName: 'TPL', ldInst: 'LD1', lnClass: 'XCBR', lnInst: '1', doName: 'Pos' },
+			expected: { iedName: 'TPL', ldInst: 'LD1', lnClass: 'XCBR', lnInst: '1', doName: 'Pos' },
+		},
 	}
 
 	function act(testCase: TestCase): void {
 		const visible = visibleAttributes({
 			record: { tagName: testCase.tagName, parent: null, attributes: [] },
 			attributes: testCase.attributes,
+			counterpartAttributes: testCase.counterpartAttributes ?? testCase.attributes,
 			namesFollow: testCase.namesFollow ?? 'project',
 		})
 		expect(visible).toEqual(testCase.expected)

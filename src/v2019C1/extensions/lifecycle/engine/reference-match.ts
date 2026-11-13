@@ -1,9 +1,11 @@
 import { throwDialecteError } from '@dialecte/core'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { REFERENCE_UUIDS_BY_TAG } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 
 import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { RedirectedSourceUuids, ReferenceIdentitySide } from './reference-match.types'
+import type { TargetLineages } from './target-lineages.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -14,39 +16,41 @@ import type { AnyTreeRecord } from '@dialecte/core'
 type Reader = Core.Query<Config> | Core.Transaction<Config>
 
 /**
- * The reference identity of a link element: the set of target `*Uuid` attributes it carries, as a
- * stable string. On the instance side (`side: 'instance'`), each target uuid is brought back to the
- * source by the scenario's key: to its element's `templateUuid` for an instance of a template, so an
- * instantiated (remapped) reference compares equal to the template reference it came from; to itself
- * under `uuid`, where source and project share their uuids. A target the source element was MAPPED
- * onto carries no lineage: `redirectedSourceUuids` gives the source element it stands for. The source
- * side reads the raw uuids. Returns `undefined` when no uuid attribute is set (unresolved ref), so
- * matching falls back to position. Lineage-aware by design — this is a matching helper, not an
- * agnostic identity read.
+ * The reference identity of a link element: the set of target uuid attributes it carries (those of its uuid pairs and
+ * of its tuple pairs, see `REFERENCE_UUIDS_BY_TAG`), as a stable string. On the instance side (`side: 'instance'`),
+ * each target uuid is brought back to the source by the scenario's key: to its element's `templateUuid` for an
+ * instance of a template (read from `targetLineages`, once per diff), so an instantiated (remapped) reference compares
+ * equal to the template reference it came from; to itself under `uuid`, where source and project share their uuids. A
+ * target the source element was MAPPED onto carries no lineage: `redirectedSourceUuids` gives the source element it
+ * stands for. The source side reads the raw uuids. Returns `undefined` when no uuid attribute is set (unresolved ref),
+ * so matching falls back to position. Lineage-aware by design — this is a matching helper, not an agnostic identity
+ * read.
  */
 export async function referenceIdentity(
 	query: Reader,
 	node: AnyTreeRecord,
 	options: ReferenceIdentitySide,
 ): Promise<string | undefined> {
-	const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS]
-	if (!pairs) return undefined
+	const references = REFERENCE_UUIDS_BY_TAG.get(node.tagName)
+	if (!references) return undefined
+	const attributes = await query.any.getAttributes(node)
 	const parts: string[] = []
-	for (const pair of pairs) {
-		const uuidValue = await query.any.getAttribute(node, { name: pair.attribute.uuid })
+	for (const reference of references) {
+		const uuidValue = attributes[reference.uuid]
 		if (!uuidValue) continue
-		const identity = await identityOf(query, { uuidValue, targetTags: pair.target, options })
+		const identity = identityOf({ uuidValue, targetTags: reference.target, options })
 		if (identity === undefined) return undefined
-		parts.push(`${pair.attribute.uuid}=${identity}`)
+		parts.push(`${reference.uuid}=${identity}`)
 	}
 	return parts.length > 0 ? parts.sort().join('|') : undefined
 }
 
 /** One uuid a reference names, brought back to the source as its side reads it: see `ReferenceIdentitySide`. */
-async function identityOf(
-	query: Reader,
-	params: { uuidValue: string; targetTags: readonly string[]; options: ReferenceIdentitySide },
-): Promise<string | undefined> {
+function identityOf(params: {
+	uuidValue: string
+	targetTags: readonly string[]
+	options: ReferenceIdentitySide
+}): string | undefined {
 	const { uuidValue, targetTags, options } = params
 	switch (options.side) {
 		case 'source':
@@ -59,7 +63,12 @@ async function identityOf(
 		case 'instance':
 			return (
 				options.redirectedSourceUuids?.get(uuidValue) ??
-				(await toSourceSpaceUuid(query, { uuidValue, targetTags, matchKey: options.matchKey }))
+				toSourceSpaceUuid({
+					uuidValue,
+					targetTags,
+					matchKey: options.matchKey,
+					targetLineages: options.targetLineages,
+				})
 			)
 		default:
 			return throwDialecteError('ASSERTION_FAILED', {
@@ -73,24 +82,33 @@ async function identityOf(
  * `templateUuid` if it is an instance, else the uuid itself (an external/unresolvable target); under
  * `uuid`, the uuid itself — the source names its elements by the uuids the project shares.
  */
-async function toSourceSpaceUuid(
-	query: Reader,
-	params: { uuidValue: string; targetTags: readonly string[]; matchKey: MatchKey },
-): Promise<string> {
-	const { uuidValue, targetTags, matchKey } = params
-	if (matchKey === 'uuid') return uuidValue
+function toSourceSpaceUuid(params: {
+	uuidValue: string
+	targetTags: readonly string[]
+	matchKey: MatchKey
+	targetLineages: TargetLineages
+}): string {
+	if (params.matchKey === 'uuid') return params.uuidValue
+	return lineageOf(params) || params.uuidValue
+}
+
+/**
+ * The lineage, under the scenario's key, of the element of one of `targetTags` a project uuid names, as `targetLineages`
+ * read it: its `templateUuid`, or under `uuid` the uuid itself. Undefined when no such element carries the uuid, or
+ * carries no lineage.
+ */
+function lineageOf(params: {
+	uuidValue: string
+	targetTags: readonly string[]
+	targetLineages: TargetLineages
+}): string | undefined {
+	const { uuidValue, targetTags, targetLineages } = params
+	const carriers = targetLineages.get(uuidValue) ?? []
 	for (const tagName of targetTags) {
-		const matches = await query.any.findByAttributes({
-			tagName: tagName as Parameters<typeof query.any.findByAttributes>[0]['tagName'],
-			attributes: { uuid: uuidValue } as Record<string, string>,
-		})
-		const target = matches[0]
-		if (target) {
-			const templateUuid = await query.any.getAttribute(target, { name: matchKey })
-			return templateUuid || uuidValue
-		}
+		const target = carriers.find((carrier) => carrier.tagName === tagName)
+		if (target) return target.lineage
 	}
-	return uuidValue
+	return undefined
 }
 
 /**
@@ -124,18 +142,21 @@ export async function referenceNameIdentity(
 export async function placeholderLineageOf(
 	query: Reader,
 	node: AnyTreeRecord,
-	params: { matchKey: MatchKey; placeholderLineages: PlaceholderLineages },
+	params: {
+		placeholderLineages: PlaceholderLineages
+		/** The lineage of what the project's references name under the scenario's key, read once: see `readTargetLineages`. */
+		targetLineages: TargetLineages
+	},
 ): Promise<string | undefined> {
-	const { matchKey, placeholderLineages } = params
+	const { placeholderLineages, targetLineages } = params
 	if (placeholderLineages.size === 0) return undefined
 	const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS]
 	if (!pairs) return undefined
+	const attributes = await query.any.getAttributes(node)
 	for (const pair of pairs) {
-		const uuidValue = await query.any.getAttribute(node, { name: pair.attribute.uuid })
+		const uuidValue = attributes[pair.attribute.uuid]
 		if (!uuidValue) continue
-		const target = await findTarget(query, { uuidValue, targetTags: pair.target })
-		if (!target) continue
-		const lineage = await query.any.getAttribute(target, { name: matchKey })
+		const lineage = lineageOf({ uuidValue, targetTags: pair.target, targetLineages })
 		if (lineage && placeholderLineages.has(lineage)) return lineage
 	}
 	return undefined

@@ -1,5 +1,6 @@
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { REFERENCE_TAG_NAMES, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { referenceIdentity } from '@/v2019C1/extensions/lifecycle/engine/reference-match'
+import { readTargetLineages } from '@/v2019C1/extensions/lifecycle/engine/target-lineages'
 
 import type {
 	InstanceSatellitePair,
@@ -38,6 +39,13 @@ export async function pairInstanceSatellites(
 
 	const pairs = new Map<string, InstanceSatellitePair>()
 	const pairedInstanceIds = new Set<string>()
+	// each project element read once, and what its references name brought back to the source in one read
+	const instanceTrees = await readSatelliteTrees({ reader, refs: instanceSatelliteRefs })
+	const targetLineages = await readTargetLineages(reader, {
+		nodes: [...instanceTrees.values()],
+		matchKey,
+		referrerTags: REFERENCE_TAG_NAMES,
+	})
 
 	async function carriesLineage({
 		source,
@@ -54,7 +62,7 @@ export async function pairInstanceSatellites(
 		instanceRef,
 	}: Parameters<Qualifies>[0]): Promise<boolean> {
 		const sourceTree = await sourceQuery.any.getTree(source.ref)
-		const instanceTree = await reader.any.getTree(instanceRef)
+		const instanceTree = instanceTrees.get(instanceRef.id)
 		if (!sourceTree || !instanceTree) return false
 
 		const sourceIdentities = new Set<string>()
@@ -68,7 +76,7 @@ export async function pairInstanceSatellites(
 		const instanceIdentities = new Set<string>()
 		await collectReferenceIdentities(reader, {
 			node: instanceTree,
-			side: { side: 'instance', matchKey },
+			side: { side: 'instance', matchKey, targetLineages },
 			identities: instanceIdentities,
 		})
 		return [...sourceIdentities].some((identity) => instanceIdentities.has(identity))
@@ -137,6 +145,20 @@ export async function pairInstanceSatellites(
 	}
 
 	return { pairs, undecidedSourceIds }
+}
+
+/** The subtree of each project element, by its id: those missing are left out. */
+async function readSatelliteTrees(params: {
+	reader: MappingReader
+	refs: readonly StoredRef[]
+}): Promise<ReadonlyMap<string, AnyTreeRecord>> {
+	const { reader } = params
+	const trees = new Map<string, AnyTreeRecord>()
+	for (const ref of params.refs) {
+		const tree = await reader.any.getTree(ref)
+		if (tree) trees.set(ref.id, tree)
+	}
+	return trees
 }
 
 /** The identity of every reference in a subtree: what it points at, in template space. */

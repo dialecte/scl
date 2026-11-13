@@ -13,6 +13,7 @@ import {
 	referenceNameIdentity,
 } from './reference-match'
 import { classifyUnmatched } from './removal-base'
+import { readTargetLineages } from './target-lineages'
 import { textChangeOf } from './text-change'
 import { diffTextWrappers } from './text-wrappers'
 import { createTypeComparison, typeChangesOf } from './type-change'
@@ -21,9 +22,10 @@ import { visibleAttributes } from './visible-attributes'
 import { throwDialecteError } from '@dialecte/core'
 import { toRef } from '@dialecte/core/helpers'
 
-import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
+import { KEEP_ON_ORPHAN_REFS } from '@/v2019C1/constants/reference-pairs'
 import { numberRenames } from '@/v2019C1/extensions/lifecycle/constraints/number-renames'
 import { leaveOutUndeclaredNodes } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import { DISPOSABLE_REFERENCE_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { DiffPolicy } from './diff-policy.types'
@@ -47,6 +49,7 @@ import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { ProjectOwnedAttributes } from './project-owned-attributes.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
+import type { TargetLineages } from './target-lineages.types'
 import type { TypeComparison } from './type-change.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -192,6 +195,11 @@ export async function diff(params: {
 		targetQuery,
 		params.redirectMappings,
 	)
+	const targetLineages = await readTargetLineages(targetQuery, {
+		nodes: [instanceTree],
+		matchKey,
+		referrerTags: DISPOSABLE_REFERENCE_TAGS,
+	})
 
 	const root = await diffMatched({
 		sourceQuery,
@@ -204,6 +212,7 @@ export async function diff(params: {
 		leftoverRefPolicy,
 		refsAlwaysAdded,
 		matchKey,
+		targetLineages,
 		removalBase,
 		namesFollow,
 		omit,
@@ -243,6 +252,8 @@ async function diffMatched(params: {
 	leftoverRefPolicy?: LeftoverRefPolicy
 	refsAlwaysAdded?: boolean
 	matchKey: MatchKey
+	/** The lineage of what the instance's references name, read once for the diff. */
+	targetLineages: TargetLineages
 	removalBase: RemovalBase
 	namesFollow: NamesFollow
 	omit?: readonly string[]
@@ -318,6 +329,7 @@ async function diffMatched(params: {
 			index,
 			matchedInstanceIds,
 			matchKey,
+			targetLineages: params.targetLineages,
 			refsAlwaysAdded,
 			redirectedSourceUuids: params.redirectedSourceUuids,
 			matchContainersByName: withinProjectOwned,
@@ -332,7 +344,7 @@ async function diffMatched(params: {
 			// a container found by its name is the project's own; on a first placement none is rewritten
 			const skipChildAttributes =
 				withinProjectOwned &&
-				!REFERENCE_TAG_NAMES.has(sourceChild.tagName) &&
+				!DISPOSABLE_REFERENCE_TAGS.has(sourceChild.tagName) &&
 				(contributeOnly ||
 					!(await carriesLineageOf({
 						sourceQuery,
@@ -352,6 +364,7 @@ async function diffMatched(params: {
 				leftoverRefPolicy,
 				refsAlwaysAdded,
 				matchKey,
+				targetLineages: params.targetLineages,
 				removalBase,
 				namesFollow,
 				omit,
@@ -427,7 +440,7 @@ async function diffMatched(params: {
 			continue
 		}
 		if (
-			REFERENCE_TAG_NAMES.has(instanceChild.tagName) &&
+			DISPOSABLE_REFERENCE_TAGS.has(instanceChild.tagName) &&
 			!KEEP_ON_ORPHAN_REFS.has(instanceChild.tagName)
 		) {
 			const sibling = keepLeftoverRefs
@@ -437,6 +450,7 @@ async function diffMatched(params: {
 						instanceChild,
 						sourceRefIdentities,
 						matchKey,
+						targetLineages: params.targetLineages,
 						placeholderLineages: params.placeholderLineages,
 					})
 			const keep = sibling.sibling
@@ -525,7 +539,7 @@ async function collectSourceRefIdentities(params: {
 	const { sourceQuery } = params
 	const identities: SourceRefIdentities = { uuids: new Set(), names: new Set() }
 	for (const child of params.sourceNode.tree) {
-		if (!REFERENCE_TAG_NAMES.has(child.tagName)) continue
+		if (!DISPOSABLE_REFERENCE_TAGS.has(child.tagName)) continue
 		const uuidIdentity = await referenceIdentity(sourceQuery, child, { side: 'source' })
 		if (uuidIdentity) identities.uuids.add(uuidIdentity)
 		if (!params.byName) continue
@@ -544,6 +558,7 @@ async function readMultiInstanceSibling(params: {
 	instanceChild: AnyTreeRecord
 	sourceRefIdentities: SourceRefIdentities
 	matchKey: MatchKey
+	targetLineages: TargetLineages
 	placeholderLineages: PlaceholderLineages
 }): Promise<MultiInstanceSibling> {
 	const { targetQuery, instanceChild, sourceRefIdentities, matchKey, placeholderLineages } = params
@@ -553,12 +568,13 @@ async function readMultiInstanceSibling(params: {
 	const uuidIdentity = await referenceIdentity(targetQuery, instanceChild, {
 		side: 'instance',
 		matchKey,
+		targetLineages: params.targetLineages,
 	})
 	if (uuidIdentity && sourceRefIdentities.uuids.has(uuidIdentity)) return { sibling: true }
 	if (sourceRefIdentities.names.size === 0) return { sibling: false }
 	const placeholder = await placeholderLineageOf(targetQuery, instanceChild, {
-		matchKey,
 		placeholderLineages,
+		targetLineages: params.targetLineages,
 	})
 	if (!placeholder) return { sibling: false }
 	const nameIdentity = await referenceNameIdentity(targetQuery, instanceChild)
@@ -612,11 +628,13 @@ async function computeAttributeChanges(params: {
 	const desired = visibleAttributes({
 		record: sourceNode,
 		attributes: sourceAttributes,
+		counterpartAttributes: instanceAttributes,
 		namesFollow,
 	})
 	const current = visibleAttributes({
 		record: instanceNode,
 		attributes: instanceAttributes,
+		counterpartAttributes: sourceAttributes,
 		namesFollow,
 	})
 	const owned = projectOwnedAttributes({

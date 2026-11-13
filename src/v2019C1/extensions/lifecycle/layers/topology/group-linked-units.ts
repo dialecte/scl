@@ -1,7 +1,6 @@
-import { REFERENCE_UUID_ATTRIBUTES } from './group-linked-units.constants'
-
 import { widen } from '@dialecte/core/helpers'
 
+import { REFERENCE_UUIDS_BY_TAG } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type { UnitContent } from './group-linked-units.types'
@@ -21,7 +20,10 @@ export async function groupLinkedUnits(
 ): Promise<SsdScopeUnit[][]> {
 	const { units } = params
 	const contents: UnitContent[] = []
-	for (const unit of units) contents.push(await readUnitContent(query, { unit }))
+	for (const unit of units) {
+		const content = await readUnitContent(query, { unit })
+		contents.push(content)
+	}
 
 	// each unit starts as its own group; a reference into another unit merges the two
 	const groupOf = units.map((_, index) => index)
@@ -70,8 +72,8 @@ async function collectContent(
 	const { record, content } = params
 	const uuid = readAttribute({ record, name: 'uuid', defaults: 'none' })
 	if (uuid) content.uuids.add(uuid)
-	for (const name of REFERENCE_UUID_ATTRIBUTES.get(record.tagName) ?? []) {
-		const referenced = readAttribute({ record, name, defaults: 'none' })
+	for (const reference of REFERENCE_UUIDS_BY_TAG.get(record.tagName) ?? []) {
+		const referenced = readAttribute({ record, name: reference.uuid, defaults: 'none' })
 		if (referenced) content.referenced.add(referenced)
 	}
 	for (const childRef of record.children) {

@@ -58,7 +58,9 @@ export const ALL_RESOLUTIONS = [...RESOLVABLE_RESOLUTIONS, RESOLUTION_TYPE.unsup
 /**
  * Maps target tagName -> the references that can point at it by uuid, every resolution
  * included: a referrer whose path cannot be PARSED (e.g. VariableApplyTo, an XPath selector)
- * still has its path REBUILT from the target its uuid names.
+ * still has its path REBUILT from the target its uuid names. Uuid pairs only
+ * (`UUID_REFERENCE_PAIRS`): the hooks rebuild paths from it. Every referrer by a uuid, tuple
+ * references included, is `UUID_REFERRERS_BY_TARGET` (reference-uuids.constants.ts).
  */
 export const REF_ENTRIES_BY_TARGET: ReadonlyMap<string, readonly RefEntry[]> =
 	buildRefEntriesByTarget()
@@ -128,7 +130,8 @@ export const MAPPED_NAME_PATTERNS: ReadonlyMap<string, readonly RegExp[]> = new 
 )
 
 /**
- * All uuid attribute names from UUID_REFERENCE_PAIRS, deduplicated.
+ * All uuid attribute names from UUID_REFERENCE_PAIRS, deduplicated: uuid pairs only, the tuple
+ * references' uuids (`lnUuid`, `apUuid`, ...) are not in it (see `REFERENCE_UUIDS_BY_TAG` for both).
  * Use as the attribute list for remapUuidAttrs so new ref pairs are automatically covered.
  */
 export const ALL_REF_UUID_ATTRIBUTES: readonly string[] = [

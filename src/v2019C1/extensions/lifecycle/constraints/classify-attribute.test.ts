@@ -33,11 +33,23 @@ describe('classifyAttribute', () => {
 		// free descriptive attrs
 		'Function.desc -> free': { tag: 'Function', attr: 'desc', expected: 'free' },
 		'Variable.value -> free': { tag: 'Variable', attr: 'value', expected: 'free' },
-		// LNode identity tuple -> identity (delete+create, not an edit)
-		'LNode.lnClass -> identity': { tag: 'LNode', attr: 'lnClass', expected: 'identity' },
-		'LNode.lnInst -> identity': { tag: 'LNode', attr: 'lnInst', expected: 'identity' },
-		'LNode.iedName -> identity': { tag: 'LNode', attr: 'iedName', expected: 'identity' },
-		'LNode.prefix -> identity': { tag: 'LNode', attr: 'prefix', expected: 'identity' },
+		// LNode binding to the logical node implementing it (its names and lnUuid) -> reference
+		'LNode.lnClass -> reference': { tag: 'LNode', attr: 'lnClass', expected: 'reference' },
+		'LNode.lnInst -> reference': { tag: 'LNode', attr: 'lnInst', expected: 'reference' },
+		'LNode.iedName -> reference': { tag: 'LNode', attr: 'iedName', expected: 'reference' },
+		'LNode.prefix -> reference': { tag: 'LNode', attr: 'prefix', expected: 'reference' },
+		'LNode.lnUuid -> reference': { tag: 'LNode', attr: 'lnUuid', expected: 'reference' },
+		// a tuple reference's uuids and the names they follow -> reference; its own path segment stays its identity
+		'ExtRef.lnUuid -> reference': { tag: 'ExtRef', attr: 'lnUuid', expected: 'reference' },
+		'ExtRef.srcCBUuid -> reference': { tag: 'ExtRef', attr: 'srcCBUuid', expected: 'reference' },
+		'ExtRef.iedName -> reference': { tag: 'ExtRef', attr: 'iedName', expected: 'reference' },
+		'ExtRef.intAddr -> identity': { tag: 'ExtRef', attr: 'intAddr', expected: 'identity' },
+		'FCDA.lnUuid -> reference': { tag: 'FCDA', attr: 'lnUuid', expected: 'reference' },
+		'ConnectedAP.apUuid -> reference': {
+			tag: 'ConnectedAP',
+			attr: 'apUuid',
+			expected: 'reference',
+		},
 		// reference attrs -> reference (system-owned)
 		'FunctionCatRef.function -> reference': {
 			tag: 'FunctionCatRef',

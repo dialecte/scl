@@ -1,12 +1,12 @@
-import { EDITABLE_MODES, LINEAGE } from './classify-attribute.constants'
+import { EDITABLE_MODES, LINEAGE, NO_ATTRIBUTES } from './classify-attribute.constants'
 import { getIdentityFields } from './identity-fields'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { ATTRIBUTES } from '@/v2019C1/definition/constants.generated'
 import {
 	PATH_CONTRIBUTING_ATTRIBUTES,
 	TYPE_ID_REF_ATTRIBUTES,
 } from '@/v2019C1/extensions/reference'
+import { REFERENCE_ATTRIBUTES_BY_TAG } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 
 import type { AttributeEditability, EditableAttribute } from './classify-attribute.types'
 
@@ -15,9 +15,10 @@ import type { AttributeEditability, EditableAttribute } from './classify-attribu
  * transaction (schema-derived, no hardcoded element rules):
  *
  *  - lineage (`uuid`/`templateUuid`/`originUuid`) -> `identity`;
- *  - a reference path/uuid attribute (from `UUID_REFERENCE_PAIRS`) or a type-id
- *    reference (`lnType`, `DO/SDO/DA/BDA.type`) -> `reference` (system-owned,
- *    resolved/remapped internally — never a user edit);
+ *  - a reference attribute (`REFERENCE_ATTRIBUTES_BY_TAG`: the path and uuid of a uuid
+ *    reference, the uuid and names of a tuple reference — an LNode's binding to the logical
+ *    node implementing it among them) or a type-id reference (`lnType`, `DO/SDO/DA/BDA.type`)
+ *    -> `reference` (system-owned, resolved/remapped internally — never a user edit);
  *  - `name` -> `rename` (the mutable label; changing it triggers a managed ref-path
  *    rebuild — the uuid is fixed, the name evolves);
  *  - any other path-contributing attribute (lnClass, prefix, inst, …) or scoped-key
@@ -26,7 +27,7 @@ import type { AttributeEditability, EditableAttribute } from './classify-attribu
  */
 export function classifyAttribute(tag: string, attr: string): AttributeEditability {
 	if (LINEAGE.has(attr)) return 'identity'
-	if (referenceAttributesOf(tag).has(attr)) return 'reference'
+	if (REFERENCE_ATTRIBUTES_BY_TAG.get(tag)?.has(attr)) return 'reference'
 	if (typeIdReferenceAttributesOf(tag).has(attr)) return 'reference'
 	if (attr === 'name') return 'rename'
 	if (PATH_CONTRIBUTING_ATTRIBUTES.has(attr) || getIdentityFields(tag).has(attr)) return 'identity'
@@ -62,21 +63,8 @@ export function editableAttributes(
 	return out
 }
 
-function referenceAttributesOf(tag: string): ReadonlySet<string> {
-	const pairs = UUID_REFERENCE_PAIRS[tag as keyof typeof UUID_REFERENCE_PAIRS]
-	if (!pairs) return EMPTY
-	const set = new Set<string>()
-	for (const pair of pairs) {
-		set.add(pair.attribute.path)
-		set.add(pair.attribute.uuid)
-	}
-	return set
-}
-
 /** The type-id reference attributes of `tag` (`lnType`, `DO/SDO/DA/BDA.type`). */
 function typeIdReferenceAttributesOf(tag: string): ReadonlySet<string> {
 	const attrs = TYPE_ID_REF_ATTRIBUTES.get(tag)
-	return attrs ? new Set(attrs) : EMPTY
+	return attrs ? new Set(attrs) : NO_ATTRIBUTES
 }
-
-const EMPTY: ReadonlySet<string> = new Set()

@@ -82,6 +82,8 @@ async function collectContentLandings(
 			index,
 			matchedInstanceIds,
 			matchKey,
+			// every reference is the placement's own (`refsAlwaysAdded`): none is brought back to the source
+			targetLineages: new Map(),
 			refsAlwaysAdded: true,
 			matchContainersByName: true,
 			sourceIsProject: false,

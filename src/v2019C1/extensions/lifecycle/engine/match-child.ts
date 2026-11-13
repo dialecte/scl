@@ -1,11 +1,12 @@
 import { instanceTagOf } from './instance-tag'
 import { placeholderLineageOf, referenceIdentity, referenceNameIdentity } from './reference-match'
 
-import { REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
+import { DISPOSABLE_REFERENCE_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 
 import type { ChildMatch, PinnedMatches } from './match-child.types'
 import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
+import type { TargetLineages } from './target-lineages.types'
 import type { Config } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
@@ -21,7 +22,7 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  *    to the same tag: a placeholder `templateUuid` smeared across unrelated tags (real .ssd files
  *    reuse one dummy value on Substation, LNode, ...) can coincide with a source `uuid`; a cross-type
  *    hit is a collision, not a lineage.
- *  - A uuid-less **REFERENCE** (e.g. `FunctionRef`) matches by its reference IDENTITY — the target
+ *  - A uuid-less **REFERENCE** (`DISPOSABLE_REFERENCE_TAGS`: e.g. `FunctionRef`, `FCDA`) matches by its reference IDENTITY — the target
  *    `*Uuid` it points to, brought back to the source by the scenario's key — never by tag position. Only where the
  *    project's target carries a placeholder lineage the consumer lets pair by name (`placeholderLineages`) does it
  *    fall back to the names of what both name (the match says so: `pairedByName`). `refsAlwaysAdded` forces a fresh
@@ -54,6 +55,8 @@ export async function matchChild(
 		matchedInstanceIds: ReadonlySet<string>
 		/** The scenario's key: how a candidate reference's target is brought back to the source. */
 		matchKey: MatchKey
+		/** The lineage of what the candidates name, read once for the walk: see `readTargetLineages`. */
+		targetLineages: TargetLineages
 		refsAlwaysAdded?: boolean
 		redirectedSourceUuids?: RedirectedSourceUuids
 		matchContainersByName?: boolean
@@ -104,7 +107,7 @@ export async function matchChild(
 
 	// a fresh placement makes its OWN references: one matches only a child already naming, in the project, the very
 	// element it names (a source element mapped onto it) — never a prior instance's reference
-	if (refsAlwaysAdded && REFERENCE_TAG_NAMES.has(sourceChild.tagName)) {
+	if (refsAlwaysAdded && DISPOSABLE_REFERENCE_TAGS.has(sourceChild.tagName)) {
 		return matchReferenceNamingTheSame(sourceQuery, {
 			targetQuery,
 			sourceChild,
@@ -114,7 +117,7 @@ export async function matchChild(
 		})
 	}
 
-	if (REFERENCE_TAG_NAMES.has(sourceChild.tagName)) {
+	if (DISPOSABLE_REFERENCE_TAGS.has(sourceChild.tagName)) {
 		// The source ref's target uuid is read as it is (do not normalize it — an extracted template may
 		// carry its own `templateUuid`). The candidate ref's target uuid is brought back to the source by
 		// the scenario's key so the two compare equal.
@@ -125,6 +128,7 @@ export async function matchChild(
 				side: 'instance',
 				matchKey: params.matchKey,
 				redirectedSourceUuids: params.redirectedSourceUuids,
+				targetLineages: params.targetLineages,
 			})
 			if (candidateIdentity === sourceIdentity) return { record: candidate }
 		}
@@ -134,6 +138,7 @@ export async function matchChild(
 			candidates,
 			matchKey: params.matchKey,
 			placeholderLineages: params.placeholderLineages ?? new Set(),
+			targetLineages: params.targetLineages,
 		})
 	}
 
@@ -183,6 +188,7 @@ async function matchReferenceByName(
 		candidates: readonly AnyTreeRecord[]
 		matchKey: MatchKey
 		placeholderLineages: PlaceholderLineages
+		targetLineages: TargetLineages
 	},
 ): Promise<ChildMatch | undefined> {
 	const { targetQuery, sourceChild, candidates, matchKey, placeholderLineages } = params
@@ -191,8 +197,8 @@ async function matchReferenceByName(
 	if (sourceNameIdentity === undefined) return undefined
 	for (const candidate of candidates) {
 		const placeholder = await placeholderLineageOf(targetQuery, candidate, {
-			matchKey,
 			placeholderLineages,
+			targetLineages: params.targetLineages,
 		})
 		if (!placeholder) continue
 		const candidateNameIdentity = await referenceNameIdentity(targetQuery, candidate)

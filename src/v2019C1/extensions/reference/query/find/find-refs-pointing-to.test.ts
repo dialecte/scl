@@ -21,7 +21,9 @@ type TestCase = SclTest.BaseXmlTestCase & {
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-const byId = (a: Referrer, b: Referrer) => a.id.localeCompare(b.id)
+function byId(first: Referrer, second: Referrer): number {
+	return first.id.localeCompare(second.id)
+}
 
 describe('findRefsPointingTo', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -133,7 +135,9 @@ describe('findRefsPointingTo', () => {
 		},
 	}
 
-	testCases['LN target → the DOS/SDS/DAS it implements, by their own pair and by their default'] = {
+	testCases[
+		'LN target → the LNode bound to it, and the DOS/SDS/DAS it implements, by their own pair and by their default'
+	] = {
 		sourceXml: /* xml */ `
 			<SCL ${ns} ${id}="scl-1">
 				<Substation ${id}="sub" name="S1">
@@ -173,6 +177,7 @@ describe('findRefsPointingTo', () => {
 		`,
 		target: { tagName: 'LN', id: 'ptoc1' },
 		expectedReferrers: [
+			{ tagName: 'LNode', id: 'lnode-ptoc' },
 			{ tagName: 'DOS', id: 'dos-op' },
 			{ tagName: 'DOS', id: 'dos-mod' },
 			{ tagName: 'DAS', id: 'das-ctl' },
@@ -209,6 +214,67 @@ describe('findRefsPointingTo', () => {
 		expectedReferrers: [{ tagName: 'DOS', id: 'dos-op' }],
 	}
 
+	// the logical node XCBR1 and the access point AP1 of I1, each named by a uuid where it sits and from I2
+	const tupleReferrersXml = /* xml */ `
+		<SCL ${ns} ${id}="scl-1">
+			<Communication ${id}="com">
+				<SubNetwork ${id}="net" name="N1">
+					<ConnectedAP ${id}="cap" iedName="I1" apName="AP1" apUuid="ap1-uuid"/>
+				</SubNetwork>
+			</Communication>
+			<IED ${id}="ied-1" name="I1">
+				<AccessPoint ${id}="ap-1" name="AP1" uuid="ap1-uuid">
+					<Server ${id}="srv-1">
+						<Authentication ${id}="auth-1"/>
+						<LDevice ${id}="ld-1" inst="LD1">
+							<LN0 ${id}="ln0-1" lnClass="LLN0" inst="" lnType="LLN0_T">
+								<DataSet ${id}="ds" name="DS1">
+									<FCDA ${id}="fcda" ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" fc="ST" lnUuid="xcbr1-uuid"/>
+								</DataSet>
+							</LN0>
+							<LN ${id}="xcbr1" lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="xcbr1-uuid"/>
+						</LDevice>
+					</Server>
+				</AccessPoint>
+				<AccessPoint ${id}="ap-2" name="AP2">
+					<ServerAt ${id}="server-at" apName="AP1" apUuid="ap1-uuid"/>
+				</AccessPoint>
+			</IED>
+			<IED ${id}="ied-2" name="I2">
+				<AccessPoint ${id}="ap-3" name="AP1">
+					<Server ${id}="srv-2">
+						<Authentication ${id}="auth-2"/>
+						<LDevice ${id}="ld-2" inst="LD2">
+							<LN0 ${id}="ln0-2" lnClass="LLN0" inst="" lnType="LLN0_T">
+								<Inputs ${id}="inputs">
+									<ExtRef ${id}="ext-ref" iedName="I1" ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" lnUuid="xcbr1-uuid"/>
+								</Inputs>
+							</LN0>
+						</LDevice>
+					</Server>
+				</AccessPoint>
+			</IED>
+		</SCL>
+	`
+
+	testCases['LN target → the FCDA and the ExtRef naming it by lnUuid'] = {
+		sourceXml: tupleReferrersXml,
+		target: { tagName: 'LN', id: 'xcbr1' },
+		expectedReferrers: [
+			{ tagName: 'FCDA', id: 'fcda' },
+			{ tagName: 'ExtRef', id: 'ext-ref' },
+		],
+	}
+
+	testCases['AccessPoint target → the ConnectedAP and the ServerAt naming it by apUuid'] = {
+		sourceXml: tupleReferrersXml,
+		target: { tagName: 'AccessPoint', id: 'ap-1' },
+		expectedReferrers: [
+			{ tagName: 'ConnectedAP', id: 'cap' },
+			{ tagName: 'ServerAt', id: 'server-at' },
+		],
+	}
+
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		act: async ({ source, testCase }) => {
@@ -216,7 +282,9 @@ describe('findRefsPointingTo', () => {
 				target: testCase.target as Scl.Ref<Scl.ElementsOf>,
 			})
 
-			const got = result.map((r) => ({ tagName: r.ref.tagName, id: r.ref.id })).sort(byId)
+			const got = result
+				.map((referrer) => ({ tagName: referrer.ref.tagName, id: referrer.ref.id }))
+				.sort(byId)
 			expect(got).toEqual([...testCase.expectedReferrers].sort(byId))
 		},
 	})

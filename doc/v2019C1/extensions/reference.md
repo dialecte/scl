@@ -377,7 +377,12 @@ UUID resolution is always preferred. It is O(1) and unambiguous. The path fallba
 
 ## findRefsPointingTo
 
-Finds all REF records that reference a target element by UUID, optionally resolving each to a container ancestor.
+Finds all REF records that reference a target element by UUID, optionally resolving each to a container ancestor. The
+uuid references of both registries are covered: the uuid pairs (`UUID_REFERENCE_PAIRS`) and the tuple references naming
+an IED-section element by a uuid beside their names (`TUPLE_REFERENCE_PAIRS`): for a logical node, the `FCDA`,
+`ExtRef`, `ClientLN`, `IEDName` and bound `LNode` naming it by `lnUuid`; for an access point, the `ConnectedAP`,
+`ServerAt`, `KDC` and `IEDName` naming it by `apUuid`; for a control block, the `ExtRef` (`srcCBUuid`) and the
+`GSE` / `SMV` (`cbUuid`) naming it.
 
 ```ts
 reference.query.findRefsPointingTo(
@@ -414,7 +419,7 @@ const refs = await reference.query.findRefsPointingTo(query, {
 The function:
 
 1. Reads the target's `uuid` attribute
-2. Uses `UUID_REFERENCE_PAIRS` to find which REF elements can point to that tag name
+2. Uses `UUID_REFERENCE_PAIRS` and `TUPLE_REFERENCE_PAIRS` to find which REF elements can point to that tag name
 3. Queries the DB for REF records whose uuid attribute matches
 4. Optionally resolves each REF to its nearest ancestor of `containerTagName`
 

@@ -3,10 +3,8 @@ import { findMappedDataFollowingLn } from './find-mapped-data-following-ln'
 import { isElementOf } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG, Scl, Config } from '@/v2019C1/config'
-import {
-	REF_ENTRIES_BY_TARGET,
-	TYPE_ID_REFERRERS_BY_TARGET,
-} from '@/v2019C1/extensions/reference/constants'
+import { TYPE_ID_REFERRERS_BY_TARGET } from '@/v2019C1/extensions/reference/constants'
+import { UUID_REFERRERS_BY_TARGET } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 import { isTypeIdTarget } from '@/v2019C1/extensions/reference/guards'
 import { readAttribute } from '@/v2019C1/helpers'
 
@@ -19,7 +17,9 @@ import type * as Core from '@dialecte/core'
  * nearest ancestor of a specific container tagName.
  *
  * Two reference systems are covered uniformly:
- * - **uuid-pair refs** (`UUID_REFERENCE_PAIRS`) — matched on the target `uuid`;
+ * - **uuid refs** — matched on the target `uuid`: the uuid pairs (`UUID_REFERENCE_PAIRS`) and the tuple
+ *   references naming an IED-section element by a uuid beside their names (`TUPLE_REFERENCE_PAIRS`: an
+ *   `FCDA` / `ExtRef` / LNode naming a logical node, a `ConnectedAP` / `ServerAt` an access point, ...);
  * - **type-id refs** (`TYPE_ID_REFERENCE_PAIRS`) — when the target is a
  *   DataTypeTemplates type (LNodeType/DOType/DAType/EnumType), matched on the
  *   target `id` (`lnType`, `DO.type`, `DA.type`, …).
@@ -27,7 +27,7 @@ import type * as Core from '@dialecte/core'
  * For an `LN` / `LN0` target, the `DOS` / `SDS` / `DAS` it implements by default (they
  * carry no `mappedLnUuid`) are included too.
  *
- * @intent find who references an element, list references to a target before deleting or renaming, usages of a data type (LNodeType/DOType/DAType), where an LNode or Function is used
+ * @intent find who references an element, list references to a target before deleting or renaming, usages of a data type (LNodeType/DOType/DAType), where an LNode or Function is used, who subscribes to or names a logical node or access point
  */
 export async function findRefsPointingTo(
 	query: Core.Query<Config>,
@@ -63,7 +63,7 @@ export async function findRefsPointingTo(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Referrers via the uuid-pair system, matched on the target `uuid`. */
+/** Referrers by a uuid attribute (uuid pairs and tuple references), matched on the target `uuid`. */
 async function findUuidReferrers(
 	query: Core.Query<Config>,
 	targetRecord: Scl.TrackedRecord<Scl.ElementsOf>,
@@ -72,7 +72,7 @@ async function findUuidReferrers(
 	const uuid = readAttribute({ record: targetRecord, name: 'uuid' })
 	if (!uuid) return []
 
-	const entries = REF_ENTRIES_BY_TARGET.get(targetRecord.tagName) ?? []
+	const entries = UUID_REFERRERS_BY_TARGET.get(targetRecord.tagName) ?? []
 	if (entries.length === 0) return []
 
 	const results: ResolvedReference[] = []
