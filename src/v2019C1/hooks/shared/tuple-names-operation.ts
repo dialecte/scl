@@ -30,7 +30,21 @@ export async function tupleNamesOperation(
 ): Promise<Scl.Operation | undefined> {
 	const { record, pairs, partsByUuid } = params
 	const ownIedName = await relativeIedName(query, { record, pairs })
-	const write = tupleReferenceWrite({ record, pairs, partsByUuid, ownIedName })
+	return tupleNamesUpdate({ record, pairs, partsByUuid, ownIedName })
+}
+
+/**
+ * The same update for a caller that holds everything it needs: `ownIedName` is the name of the IED the
+ * reference sits in (read only for a reference naming its IED `@`, see `namesRelativeIed`).
+ */
+export function tupleNamesUpdate(params: {
+	record: AnyRawRecord
+	pairs: readonly TupleReferencePair[]
+	partsByUuid: ReadonlyMap<string, TupleTargetParts | undefined>
+	ownIedName: string | undefined
+}): Scl.Operation | undefined {
+	const { record } = params
+	const write = tupleReferenceWrite(params)
 	if (!write) return undefined
 
 	return tupleWriteOperation({ record, write })

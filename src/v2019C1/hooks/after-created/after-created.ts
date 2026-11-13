@@ -1,7 +1,7 @@
 import { reconcileMinRequestedScdFileOnCreate } from './min-requested-scd-file'
 import { wrapWithPrivateElementIfNeeded } from './private-wrapper'
 import { setRefPaths } from './ref-paths'
-import { writeTupleNamesOfCreated } from './tuple-references'
+import { writeTupleNamesOfCreatedReferrer } from './tuple-references'
 
 import { widen } from '@dialecte/core/helpers'
 
@@ -26,7 +26,7 @@ export async function afterCreated<
 
 	const privateOps = await wrapWithPrivateElementIfNeeded({ childRecord, parentRecord, query })
 	const refPathOps = await setRefPaths({ childRecord, query })
-	const tupleNameOps = await writeTupleNamesOfCreated({ childRecord, query })
+	const tupleNameOps = await writeTupleNamesOfCreatedReferrer({ childRecord, query })
 	const minRequestedScdFileOps = await reconcileMinRequestedScdFileOnCreate(query, { childRecord })
 	const name = signalName(widen(childRecord))
 	const siblingOps = name

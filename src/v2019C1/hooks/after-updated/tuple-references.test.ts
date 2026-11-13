@@ -105,6 +105,37 @@ const boundLNode = /* xml */ `
 	</SCL>
 `
 
+// P1's ExtRef names P2's breaker by lnUuid and, by srcCBUuid, P2's access point: a uuid naming an element of another
+// kind than its pair's; its control block names are left as written.
+const crossKindExtRef = /* xml */ `
+	<SCL ${ns} ${id}="root">
+		<Header id="project"/>
+		<IED ${id}="p1" name="P1">
+			<AccessPoint ${id}="p1-ap" name="AP1" uuid="p1-ap-uuid">
+				<Server ${id}="p1-server">
+					<LDevice ${id}="p1-ld" inst="LD0" uuid="p1-ld-uuid">
+						<LN0 ${id}="p1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p1-lln0-uuid">
+							<Inputs ${id}="p1-inputs">
+								<ExtRef ${id}="p1-subscription" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" lnUuid="p2-breaker-uuid" serviceType="GOOSE" srcCBUuid="p2-ap-uuid" srcLDInst="LD0" srcPrefix="Z" srcLNClass="LLN0" srcLNInst="3" srcCBName="gcb1" intAddr="Pos"/>
+							</Inputs>
+						</LN0>
+					</LDevice>
+				</Server>
+			</AccessPoint>
+		</IED>
+		<IED ${id}="p2" name="P2">
+			<AccessPoint ${id}="p2-ap" name="AP1" uuid="p2-ap-uuid">
+				<Server ${id}="p2-server">
+					<LDevice ${id}="p2-ld" inst="LD0" uuid="p2-ld-uuid">
+						<LN0 ${id}="p2-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p2-lln0-uuid"/>
+						<LN ${id}="p2-breaker" prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="p2-breaker-uuid"/>
+					</LDevice>
+				</Server>
+			</AccessPoint>
+		</IED>
+	</SCL>
+`
+
 describe('tuple references follow a rename', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		rename: {
@@ -279,6 +310,16 @@ describe('tuple references follow a rename', () => {
 				sourceXml: boundLNode,
 				rename: { tagName: 'LN', id: 'p1-breaker', attributes: { inst: '3' } },
 				expectedQueries: ['//v2019C1:SourceRef[@extRefUuid="p1-trip-uuid"][@extRefAddr="Trip"]'],
+			},
+		'access point renamed, an ExtRef naming a logical node below it and, by srcCBUuid, the access point itself -> its control block names kept':
+			{
+				allowIncoherentReferences:
+					'the srcCBUuid of the ExtRef names an access point, not a control block',
+				sourceXml: crossKindExtRef,
+				rename: { tagName: 'AccessPoint', id: 'p2-ap', attributes: { name: 'AP9' } },
+				expectedQueries: [
+					'//default:ExtRef[@intAddr="Pos"][@iedName="P2"][@ldInst="LD0"][@prefix="Q0"][@lnInst="2"][@srcLDInst="LD0"][@srcPrefix="Z"][@srcLNClass="LLN0"][@srcLNInst="3"][@srcCBName="gcb1"]',
+				],
 			},
 	}
 

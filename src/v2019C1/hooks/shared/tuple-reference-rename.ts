@@ -1,3 +1,4 @@
+import { namedTargetUuids, partsOf } from './named-target-uuids'
 import { followNamesOnlyIedRename } from './names-only-ied-rename'
 import { hasAttributeChange } from './record-ops'
 import { tupleNamesOperation } from './tuple-names-operation'
@@ -32,7 +33,8 @@ export async function followTupleTargetRename(
 	if (!hasAttributeChange({ oldRecord, newRecord, names })) return []
 
 	const ref = toRef(newRecord) as Scl.Ref<Scl.ElementsOf>
-	const { partsByUuid, targetTags } = await readTargetParts(query, { root: ref })
+	const { partsByUuid, targetTagByUuid } = await readTargetParts(query, { root: ref })
+	const targetTags = new Set(targetTagByUuid.values())
 	const operations = await followNamesOnlyIedRename(query, { oldRecord, newRecord })
 	if (partsByUuid.size === 0) return operations
 
@@ -42,39 +44,27 @@ export async function followTupleTargetRename(
 		const referrers = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
 		for (const referrer of referrers) {
 			const record = toRawRecord(referrer) as AnyRawRecord
-			if (!(await namesTarget(query, { record, pairs, partsByUuid }))) continue
-			const operation = await tupleNamesOperation(query, { record, pairs, partsByUuid })
+			const uuids = namedTargetUuids({ record, pairs, targetTagByUuid })
+			if (uuids.length === 0) continue
+			const operation = await tupleNamesOperation(query, {
+				record,
+				pairs,
+				partsByUuid: partsOf({ uuids, partsByUuid }),
+			})
 			if (operation) operations.push(operation)
 		}
 	}
 	return operations
 }
 
-/** Whether a referrer names, by the uuid of one of its pairs, an element whose address parts are given. */
-async function namesTarget(
-	query: Core.Query<Config>,
-	params: {
-		record: AnyRawRecord
-		pairs: readonly TupleReferencePair[]
-		partsByUuid: ReadonlyMap<string, TupleTargetParts>
-	},
-): Promise<boolean> {
-	const { record, pairs, partsByUuid } = params
-	for (const pair of pairs) {
-		const uuid = await query.any.getAttribute(record, { name: pair.attribute.uuid })
-		if (partsByUuid.has(uuid)) return true
-	}
-	return false
-}
-
-/** The address parts of every tuple target in a subtree, by uuid, and the tags they were read from. */
+/** The address parts of every tuple target in a subtree, by uuid, and the tag of each. */
 async function readTargetParts(
 	query: Core.Query<Config>,
 	params: { root: Scl.Ref<Scl.ElementsOf> },
-): Promise<{ partsByUuid: Map<string, TupleTargetParts>; targetTags: Set<string> }> {
+): Promise<{ partsByUuid: Map<string, TupleTargetParts>; targetTagByUuid: Map<string, string> }> {
 	const collected = await collectWithAncestry(query, { root: params.root })
 	const partsByUuid = new Map<string, TupleTargetParts>()
-	const targetTags = new Set<string>()
+	const targetTagByUuid = new Map<string, string>()
 	for (const record of collected.records) {
 		const uuid = await query.any.getAttribute(record, { name: 'uuid' })
 		const parts = uuid
@@ -82,8 +72,8 @@ async function readTargetParts(
 			: undefined
 		if (uuid && parts) {
 			partsByUuid.set(uuid, parts)
-			targetTags.add(record.tagName)
+			targetTagByUuid.set(uuid, record.tagName)
 		}
 	}
-	return { partsByUuid, targetTags }
+	return { partsByUuid, targetTagByUuid }
 }

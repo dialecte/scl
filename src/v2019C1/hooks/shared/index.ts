@@ -30,5 +30,6 @@ export {
 } from './references-through'
 export { followDataSetRename } from './data-set-rename'
 export { followTupleTargetRename } from './tuple-reference-rename'
-export { tupleNamesOperation } from './tuple-names-operation'
+export { namedTargetUuids, partsOf } from './named-target-uuids'
+export { tupleNamesOperation, tupleNamesUpdate } from './tuple-names-operation'
 export { readTargetTupleParts } from './tuple-target-parts'

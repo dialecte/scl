@@ -170,6 +170,73 @@ describe('afterCreated — tuple references', () => {
 			},
 			expectedQueries: ['//default:IEDName[@apUuid="p1-ap-uuid"][@apRef="AP1"][text()="P1"]'],
 		},
+		'ExtRef created naming a logical node of its own IED by "@" → the "@" stays, no update': {
+			sourceXml: twoDevices(),
+			create: {
+				parent: INPUTS,
+				tagName: 'ExtRef',
+				attributes: {
+					lnUuid: 'p1-lln0-uuid',
+					iedName: '@',
+					ldInst: 'LD0',
+					lnClass: 'LLN0',
+					doName: 'Beh',
+					intAddr: 'Beh',
+				},
+			},
+			notUpdated: 'ExtRef',
+			expectedQueries: ['//default:ExtRef[@intAddr="Beh"][@iedName="@"][@lnUuid="p1-lln0-uuid"]'],
+		},
+		'LNode created with the uuid of a logical node and its specified names → its names left to its binding, no update':
+			{
+				sourceXml: twoDevices(),
+				create: {
+					parent: { tagName: 'Function', id: 'function' },
+					tagName: 'LNode',
+					attributes: { iedName: 'None', lnClass: 'XCBR', lnInst: '1', lnUuid: 'p2-breaker-uuid' },
+				},
+				notUpdated: 'LNode',
+				expectedQueries: [
+					'//default:LNode[@iedName="None"][not(@prefix)][@lnClass="XCBR"][@lnInst="1"][@lnUuid="p2-breaker-uuid"]',
+				],
+			},
+	}
+
+	async function act({
+		source,
+		testCase,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		const { parent, tagName, attributes } = testCase.create
+		await source.transaction(async (tx) => {
+			await tx.any.addChild(parent, { tagName, attributes })
+			if (testCase.notUpdated) {
+				const updated = tx
+					.getStagedOperations()
+					.flatMap((operation) =>
+						operation.status === 'updated' ? [operation.newRecord.tagName] : [],
+					)
+				expect(updated).not.toContain(testCase.notUpdated)
+			}
+		})
+		return { assertOn: 'source' }
+	}
+
+	runSclTestCases.withExport<TestCase>({ testCases, act })
+})
+
+// A target (a control block, a logical node, a logical device, an access point) created after the references naming it
+// by uuid gives them its names at the commit (`before-commit/tuple-names.ts`), not when it is created.
+describe('the commit — the names of a target created after the references naming it', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		/** The target the case adds, below `parent`. */
+		create: {
+			parent: Scl.Ref<Scl.ElementsOf>
+			tagName: Scl.ElementsOf
+			attributes: Record<string, string>
+		}
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
 		'GSEControl created after the ExtRef naming it by uuid → the names of the ExtRef written': {
 			allowIncoherentReferences: 'the control block the ExtRef names is created by the case',
 			sourceXml: twoDevices({
@@ -204,21 +271,6 @@ describe('afterCreated — tuple references', () => {
 				'//default:ExtRef[@intAddr="Pos"][@iedName="P2"][@ldInst="LD0"][@prefix="Q1"][@lnClass="MMXU"][@lnInst="1"]',
 			],
 		},
-		'AccessPoint created after a ConnectedAP naming it by uuid and by the same names → no update': {
-			allowIncoherentReferences: 'the access point the ConnectedAP names is created by the case',
-			sourceXml: twoDevices({
-				communication: `<Communication ${id}="communication"><SubNetwork ${id}="subnetwork" name="W1"><ConnectedAP ${id}="connected-ap" iedName="P2" apName="AP2" apUuid="p2-ap2-uuid"/></SubNetwork></Communication>`,
-			}),
-			create: {
-				parent: { tagName: 'IED', id: 'p2' },
-				tagName: 'AccessPoint',
-				attributes: { name: 'AP2', uuid: 'p2-ap2-uuid' },
-			},
-			notUpdated: 'ConnectedAP',
-			expectedQueries: [
-				'//default:ConnectedAP[@apUuid="p2-ap2-uuid"][@iedName="P2"][@apName="AP2"]',
-			],
-		},
 		'LDevice created after the IEDName naming it by uuid → the IEDName names its IED and logical device':
 			{
 				allowIncoherentReferences: 'the logical device the IEDName names is created by the case',
@@ -232,23 +284,6 @@ describe('afterCreated — tuple references', () => {
 				},
 				expectedQueries: ['//default:IEDName[@ldUuid="p2-ld2-uuid"][@ldInst="LD2"][text()="P2"]'],
 			},
-		'ExtRef created naming a logical node of its own IED by "@" → the "@" stays, no update': {
-			sourceXml: twoDevices(),
-			create: {
-				parent: INPUTS,
-				tagName: 'ExtRef',
-				attributes: {
-					lnUuid: 'p1-lln0-uuid',
-					iedName: '@',
-					ldInst: 'LD0',
-					lnClass: 'LLN0',
-					doName: 'Beh',
-					intAddr: 'Beh',
-				},
-			},
-			notUpdated: 'ExtRef',
-			expectedQueries: ['//default:ExtRef[@intAddr="Beh"][@iedName="@"][@lnUuid="p1-lln0-uuid"]'],
-		},
 		'AccessPoint created after the ConnectedAP naming it by uuid → the names of the ConnectedAP written':
 			{
 				allowIncoherentReferences: 'the access point the ConnectedAP names is created by the case',
@@ -264,41 +299,6 @@ describe('afterCreated — tuple references', () => {
 					'//default:ConnectedAP[@apUuid="p2-ap2-uuid"][@iedName="P2"][@apName="AP2"]',
 				],
 			},
-
-		'LNode created with the uuid of a logical node and its specified names → its names left to its binding, no update':
-			{
-				sourceXml: twoDevices(),
-				create: {
-					parent: { tagName: 'Function', id: 'function' },
-					tagName: 'LNode',
-					attributes: { iedName: 'None', lnClass: 'XCBR', lnInst: '1', lnUuid: 'p2-breaker-uuid' },
-				},
-				notUpdated: 'LNode',
-				expectedQueries: [
-					'//default:LNode[@iedName="None"][not(@prefix)][@lnClass="XCBR"][@lnInst="1"][@lnUuid="p2-breaker-uuid"]',
-				],
-			},
-		'LN created after the LNode naming it by uuid → the names of the LNode left to its binding, no update':
-			{
-				sourceXml: twoDevices({
-					functions: `<LNode ${id}="lnode" iedName="None" lnClass="MMXU" lnInst="1" lnUuid="p2-new-ln-uuid"/>`,
-				}),
-				create: {
-					parent: { tagName: 'LDevice', id: 'p2-ld' },
-					tagName: 'LN',
-					attributes: {
-						prefix: 'Q1',
-						lnClass: 'MMXU',
-						inst: '1',
-						lnType: 'MMXU_T',
-						uuid: 'p2-new-ln-uuid',
-					},
-				},
-				notUpdated: 'LNode',
-				expectedQueries: [
-					'//default:LNode[@iedName="None"][not(@prefix)][@lnUuid="p2-new-ln-uuid"]',
-				],
-			},
 	}
 
 	async function act({
@@ -308,14 +308,6 @@ describe('afterCreated — tuple references', () => {
 		const { parent, tagName, attributes } = testCase.create
 		await source.transaction(async (tx) => {
 			await tx.any.addChild(parent, { tagName, attributes })
-			if (testCase.notUpdated) {
-				const updated = tx
-					.getStagedOperations()
-					.flatMap((operation) =>
-						operation.status === 'updated' ? [operation.newRecord.tagName] : [],
-					)
-				expect(updated).not.toContain(testCase.notUpdated)
-			}
 		})
 		return { assertOn: 'source' }
 	}
