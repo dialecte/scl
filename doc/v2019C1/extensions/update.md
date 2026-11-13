@@ -65,16 +65,23 @@ finds nothing left to change.
 `report({ verb: 'ied', sourceQuery, ref, anchor })` answers what placing the IED `ref` of a source file in the project
 would add, `anchor` being the project's `SCL` root. Only a first placement is reported yet: one instance with no root in
 the project (`rootRef` undefined), every element of the IED `added` — the `IEDSourceFiles` of an ISD among them —, on
-the fast track (`needsDecisions: false`), even when the project holds another IED of the same name.
+the fast track (`needsDecisions: false`), even when the project holds another IED of the same name. What its access
+points' `ConnectedAP`s add to the project's `Communication` rides the IED's group as companions (see
+[`instantiate.ied`](./instantiate#ied)).
 
 - `report.target.fileType` is the type of file the source is, read from its document's extension: `.isd` → `ISD`,
   `.icd` → `ICD`, `.iid` → `IID`, `.scd`, `.xml` or none → `SCD`. Another extension is refused with `OPTION_NOT_AVAILABLE`
   (`meta: { option: 'sourceExtension', value }`) before anything is diffed.
+- Only the IED of a template ISD or of an ICD is placed yet. An IED read from an IID or an SCD is refused with
+  `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value: 'iid' | 'scd' }`), the IED of an ISD instance file — an
+  ISD whose IED is not named `SPECIFICATION` — with `value: 'isd-instance'`.
 - `scenario: 'template'` (the default) or `'fork'` finding the IED in the project — an IED carrying its uuid as
   `templateUuid`, or for a fork as its own `uuid` — is refused with `OPTION_NOT_AVAILABLE`
   (`meta: { option: 'scenario', value }`). `'instantiate'` places a new IED whatever the project holds.
-- `apply` of an IED's report is refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'verb', value: 'ied' }`) on
-  either track, nothing written.
+- `apply` writes the first placement of the IED of an ISD or an ICD ([`instantiate.ied`](./instantiate#ied)), unless
+  its group is skipped. It checks the two refusals above again, so a report applied a second time once its IED is
+  placed is refused rather than placing another. The consumer's
+  `afterApply` receives the placed IED in `instances.ieds`.
 
 `doc.query.lifecycle.sourceRoot.ied()` reads the IED a source file holds (see [the root of a template
 file](./instantiate#the-root-of-a-template-file)).
