@@ -253,7 +253,7 @@ describe('lifecycle — what an apply writes bound to a logical node the project
 								<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1"/>
 							</Private>
 						</LNode>
-						<LNode iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" lnUuid="source-ln-uuid" uuid="added-lnode-src-uuid"/>
+						<LNode iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" lnUuid="source-ln-uuid" uuid="added-lnode-src-uuid"/>
 					`,
 				}),
 				targetXml: projectXml({ bayContent: instanceOfF1() }),
@@ -262,7 +262,7 @@ describe('lifecycle — what an apply writes bound to a logical node the project
 				anchor: projectBay,
 				scenario: 'template',
 				expectedQueries: [
-					'//default:Function[@name="F1"]/default:LNode[@iedName="None"][@lnClass="PTRC"][not(@lnUuid)][@templateUuid="added-lnode-src-uuid"]',
+					'//default:Function[@name="F1"]/default:LNode[@iedName="None"][@lnClass="XCBR"][not(@lnUuid)][@templateUuid="added-lnode-src-uuid"]',
 				],
 				unexpectedQueries: ['//default:LNode[@iedName="P1"]'],
 			},

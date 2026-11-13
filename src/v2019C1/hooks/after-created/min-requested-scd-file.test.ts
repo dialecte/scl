@@ -155,11 +155,7 @@ describe('afterCreated — MinRequestedSCDFile', () => {
 							<Server ${id}="protection-server">
 								<Authentication ${id}="protection-authentication" />
 								<LDevice ${id}="protection-ldevice" inst="LD1">
-									<LN0 ${id}="protection-ln0" lnClass="LLN0" inst="" lnType="LLN0Type">
-										<DataSet ${id}="protection-dataset" name="DS1">
-											<FCDA ${id}="protection-fcda" ldInst="LD1" lnClass="LLN0" fc="ST" doName="Mod" />
-										</DataSet>
-									</LN0>
+									<LN0 ${id}="protection-ln0" lnClass="LLN0" inst="" lnType="LLN0Type" />
 								</LDevice>
 							</Server>
 						</AccessPoint>

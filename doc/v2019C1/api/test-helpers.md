@@ -375,8 +375,22 @@ my case › sourceXml: incoherent references:
   [path] <FunctionRef> function="TEMPLATE/Prot" is not the path of the element functionUuid="fn-uuid" points at, which is "TEMPLATE/TEMPLATE/TEMPLATE/Prot"
 ```
 
+A tuple reference (`ExtRef`, `FCDA`, `ConnectedAP`, `ServerAt`, `IEDName`, a bound `LNode`, … — `TUPLE_REFERENCE_PAIRS`) is
+checked the same way for each uuid it carries (`lnUuid`, `apUuid`, `srcCBUuid`, …): **dangling** when no element of an
+IED the document holds carries it, **wrong-target** when the element carrying it is one the reference cannot point at
+(another tag, a control block of another kind than the `ExtRef`'s `serviceType`), and **path** when its names are not
+the address of that element. The message gives both addresses:
+
+```
+my case › sourceXml: incoherent references:
+  [path] <ExtRef> iedName ldInst prefix lnClass lnInst="ln:I1/LD1/XCBR2" is not the path of the element lnUuid="xcbr1-uuid" points at, which is "ln:I1/LD1/XCBR1"
+```
+
 What is left alone:
 
+- **a uuid naming an element of an IED the document does not hold** — an `LNode` of a specification file bound to a
+  device described elsewhere, a `ConnectedAP` of another device: the element is outside the document;
+- **the names a tuple reference leaves out** (the hooks write them);
 - **a reference written by path only**, with no uuid attribute;
 - **the path of a data or signal reference** — a path that carries a data qualifier or addresses a dataflow input or output (`SourceRef`, `ControlRef`, `LNodeInputRef`, `LNodeOutputRef`, `DOS` / `SDS` / `DAS` mappings, …). Their uuid is still checked;
 - **elements in a namespace the SCL config does not declare**, as for the schema check.

@@ -57,10 +57,7 @@ type TestCase = SclTest.BaseXmlTestCase &
 		signal?: Scl.Ref<'SourceRef'>
 	}
 
-const act: Parameters<typeof runSclTestCases.withoutExport<TestCase>>[0]['act'] = async ({
-	source,
-	testCase,
-}) => {
+async function act({ source, testCase }: SclTest.ActParams<TestCase>): Promise<void> {
 	const ref = testCase.signal ?? REFS.sourceRef
 	const dataflow = await ofSourceRef(source.query, { ref })
 	assertDataflow({ dataflow, expected: testCase })
@@ -407,7 +404,8 @@ describe('ofSourceRef — names written without their uuid', () => {
 		'SourceRef with no companion, its LNode naming a logical node type the document lacks → nothing split, path kept':
 			{
 				sourceXml: buildScd({
-					senderLNode: `${SENDER_LNODE_WITHOUT_UUID} lnType="XCBR_T"`,
+					senderLNode:
+						'iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" lnUuid="uuid-ptrc" lnType="XCBR_T"',
 					senderContent: SENDER_SPEC_NAMING,
 					signals: sourceRef('source="S1/F1/PTRC1.Op.general"'),
 					dataTypeTemplates: DATA_TYPE_TEMPLATES,
@@ -639,6 +637,8 @@ describe('ofSourceRef — names written without their uuid', () => {
 			},
 		'IEDName whose logical device uuid names the subscriber logical device, its ldInst another → registration by logical device':
 			{
+				allowIncoherentReferences:
+					'the IEDName names another logical device than its uuid: the uuid is what registers',
 				sourceXml: buildScd({
 					signals: sourceRef('extRefUuid="uuid-ext-ref"'),
 					receiverLogicalNodes: xcbrWithExtRef(EXT_REF_BY_CONTROL_BLOCK_UUID),

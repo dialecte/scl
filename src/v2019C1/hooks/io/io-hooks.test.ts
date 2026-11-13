@@ -2085,6 +2085,8 @@ describe('import of an LNode naming the logical node implementing it', () => {
 		},
 
 		'LNode whose lnUuid names Q0XCBR2 and names XCBR1 -> left as read': {
+			allowIncoherentReferences:
+				'the LNode names another logical node than its uuid: what the import leaves as read',
 			sourceXml: boundLNodeXml(
 				'iedName="P1" ldInst="LD0" lnClass="XCBR" lnInst="1" lnUuid="p1-breaker-uuid"',
 			),

@@ -42,6 +42,8 @@ const twoIedsOnOneSubNetwork = /* xml */ `
 					</LDevice>
 				</Server>
 			</AccessPoint>
+			<!-- a second access point, not connected: a ConnectedAP may move to it -->
+			<AccessPoint ${id}="protection-second-access-point" name="AP2" />
 			<!-- no MinRequestedSCDFiles -->
 		</IED>
 		<IED ${id}="control" name="Control">
@@ -50,13 +52,6 @@ const twoIedsOnOneSubNetwork = /* xml */ `
 		</IED>
 	</SCL>
 `
-
-// the protection IED with a second access point, not yet connected: a ConnectedAP may move to it
-const protectionWithASecondAccessPoint = twoIedsOnOneSubNetwork.replace(
-	'			<!-- no MinRequestedSCDFiles -->',
-	`			<AccessPoint ${id}="protection-second-access-point" name="AP2" />
-			<!-- no MinRequestedSCDFiles -->`,
-)
 
 function projectEntryOf(iedName: string): string {
 	return `//default:IED[@name="${iedName}"]/default:MinRequestedSCDFiles/default:MinRequestedSCDFile[@fileUuid="${projectUuid}"][@version="2"][@revision="B"]`
@@ -241,12 +236,13 @@ describe('afterUpdated — MinRequestedSCDFile', () => {
 		},
 
 		'ConnectedAP reassigned to another IED → former and new IED synced': {
-			sourceXml: protectionWithASecondAccessPoint,
+			sourceXml: twoIedsOnOneSubNetwork,
 			act: async (document) => {
 				await document.transaction(async (tx) => {
 					await tx.update(
 						{ tagName: 'ConnectedAP', id: 'control-connected-ap' },
-						{ attributes: { iedName: 'Protection', apName: 'AP2' } },
+						// named by its names only: the uuid the import gave it names the former access point
+						{ attributes: { iedName: 'Protection', apName: 'AP2', apUuid: undefined } },
 					)
 				})
 			},

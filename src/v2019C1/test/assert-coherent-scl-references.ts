@@ -2,6 +2,7 @@ import {
 	SCL_FIXTURE_READING_DIALECTE,
 	SCL_NAMESPACE_URIS,
 } from './assert-coherent-scl-references.constants'
+import { collectTupleViolations } from './collect-tuple-violations'
 import { treeEntriesOf } from './tree-entries'
 
 import { ERROR_CATALOG, toDialecteError } from '@dialecte/core'
@@ -24,6 +25,7 @@ import type {
 	CollectXmlReferenceViolationsParams,
 	ReferenceViolation,
 } from './assert-coherent-scl-references.types'
+import type { CollectTupleViolationsParams } from './collect-tuple-violations.types'
 import type { TreeEntry } from './tree-entries.types'
 import type { Config } from '@/v2019C1/config'
 import type { DerivedAttributes, ReferencePair } from '@/v2019C1/extensions/reference'
@@ -33,8 +35,10 @@ import type { TestProjectResult } from '@dialecte/core/test'
 
 /**
  * Every reference of a document that a real file could not contain: a uuid that points at nothing, or at an element
- * the reference cannot target, or a written path that is not the path of the element the uuid points at. Read on the
- * document's record tree (`query.getSnapshot({ as: 'tree' })`).
+ * the reference cannot target, or a written path that is not the path of the element the uuid points at; for a tuple
+ * reference (`ExtRef`, `FCDA`, `ConnectedAP`, a bound LNode...), names that are not the address of the element its
+ * uuid names, a uuid naming an element of an IED the document does not hold being outside it (see
+ * `collectTupleViolations`). Read on the document's record tree (`query.getSnapshot({ as: 'tree' })`).
  */
 export function collectReferenceViolations(
 	params: CollectReferenceViolationsParams,
@@ -43,8 +47,11 @@ export function collectReferenceViolations(
 
 	const elements = treeEntriesOf(tree).filter(isSclElement)
 	const elementsByUuid = indexByUuid(elements)
+	const iedNames = namesOfIeds(elements)
 
-	return elements.flatMap((element) => collectElementViolations({ element, elementsByUuid }))
+	return elements.flatMap((element) =>
+		collectElementViolations({ element, elementsByUuid, iedNames }),
+	)
 }
 
 /**
@@ -155,13 +162,10 @@ export function describeReferenceViolation(violation: ReferenceViolation): strin
 	}
 }
 
-function collectElementViolations(params: {
-	element: TreeEntry
-	elementsByUuid: ReadonlyMap<string, TreeEntry[]>
-}): ReferenceViolation[] {
+function collectElementViolations(params: CollectTupleViolationsParams): ReferenceViolation[] {
 	const { element, elementsByUuid } = params
 
-	const ownViolations = collectOwnPathViolations(element)
+	const ownViolations = [...collectOwnPathViolations(element), ...collectTupleViolations(params)]
 	const pairs: readonly ReferencePair[] | undefined =
 		UUID_REFERENCE_PAIRS[element.record.tagName as keyof typeof UUID_REFERENCE_PAIRS]
 	if (!pairs) return ownViolations
@@ -312,6 +316,17 @@ function isSclElement(element: TreeEntry): boolean {
 function writtenAttribute(params: { record: AnyTreeRecord; name: string }): string | undefined {
 	const { record, name } = params
 	return readAttribute({ record, name, defaults: 'none', fullObject: true })?.value
+}
+
+/** The names of the IEDs a document holds. */
+function namesOfIeds(elements: readonly TreeEntry[]): ReadonlySet<string> {
+	return new Set(
+		elements.flatMap((element) => {
+			if (element.record.tagName !== 'IED') return []
+			const name = writtenAttribute({ record: element.record, name: 'name' })
+			return name === undefined ? [] : [name]
+		}),
+	)
 }
 
 function indexByUuid(elements: readonly TreeEntry[]): Map<string, TreeEntry[]> {

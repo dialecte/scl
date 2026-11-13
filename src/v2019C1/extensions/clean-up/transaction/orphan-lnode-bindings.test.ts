@@ -64,6 +64,8 @@ describe('resetLNodes', () => {
 		},
 
 		'bound by lnUuid, its IED present without that LN -> unlocked': {
+			allowIncoherentReferences:
+				'a bound LNode names a logical node its IED lacks: what the reset unlocks',
 			sourceXml: documentXml({
 				content: /* xml */ `
 					<LNode iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="3" lnUuid="missing-ln-uuid"/>
@@ -76,6 +78,8 @@ describe('resetLNodes', () => {
 
 		'bound by lnUuid to a missing LN, its naming naming an LN of the document -> unlocked: the uuid wins':
 			{
+				allowIncoherentReferences:
+					'a bound LNode names a logical node its IED lacks: what the reset unlocks',
 				sourceXml: documentXml({
 					content: `<LNode iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" lnUuid="missing-ln-uuid"/>`,
 				}),
@@ -221,6 +225,8 @@ describe('resetLNodes', () => {
 
 		'bound to a missing LN, its data mapped to another LN of the document -> unlocked, that LN and the mapping kept':
 			{
+				allowIncoherentReferences:
+					'a bound LNode names a logical node its IED lacks: what the reset unlocks',
 				sourceXml: documentXml({
 					ied: /* xml */ `
 						<IED name="P1">
@@ -253,6 +259,8 @@ describe('resetLNodes', () => {
 			},
 
 		'two bound LNodes, one LN in the document -> only the other unlocked': {
+			allowIncoherentReferences:
+				'a bound LNode names a logical node its IED lacks: what the reset unlocks',
 			sourceXml: documentXml({
 				content: /* xml */ `
 					<LNode iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" lnUuid="ln-uuid"/>
@@ -307,6 +315,8 @@ describe('resetLNodes on some elements', () => {
 		},
 
 		'two LNodes bound to missing LNs, one given -> only that one unlocked': {
+			allowIncoherentReferences:
+				'a bound LNode names a logical node its IED lacks: what the reset unlocks',
 			sourceXml: documentXml({
 				content: /* xml */ `
 					<LNode ${CUSTOM_RECORD_ID_ATTRIBUTE}="given" iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" lnUuid="missing-ln-uuid"/>
