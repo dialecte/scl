@@ -1,4 +1,4 @@
-import { classifyIeds } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds'
+import { classifyIed, readIedKinds } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds'
 import { readSiblings } from '@/v2019C1/extensions/reference/query/build/signal-name'
 import { findMappedLn } from '@/v2019C1/extensions/reference/query/resolve/find-mapped-ln'
 import { resolveMappedLNodes } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes'
@@ -14,7 +14,8 @@ import type * as Core from '@dialecte/core'
 
 /**
  * A context whose facts are read on first use and kept for the rest of the call. Given the LNodes
- * the call is about, what implements them is read once for all; otherwise one LNode at a time.
+ * the call is about, what implements them and the kinds of the IEDs are read once for all;
+ * otherwise one LNode and the one IED it maps to at a time.
  */
 export function createInfoContext(
 	query: Core.Query<Config>,
@@ -26,9 +27,11 @@ export function createInfoContext(
 	const siblingsByParent = new Map<string, Promise<Core.AnyRawRecord[]>>()
 
 	return {
-		iedKindById() {
-			iedKinds ??= readIedKinds(query)
-			return iedKinds
+		async iedKindOf(ied) {
+			if (!lnodes) return classifyIed(query, { ied })
+			iedKinds ??= readIedKindById(query)
+			const kinds = await iedKinds
+			return kinds.get(ied.id)
 		},
 		async mappedLNodeOf(lnode) {
 			if (!lnodes) return readMappedLNode(query, { lnode })
@@ -50,9 +53,9 @@ export function createInfoContext(
 	}
 }
 
-async function readIedKinds(query: Core.Query<Config>): Promise<ReadonlyMap<string, IedKind>> {
-	const classifications = await classifyIeds(query)
-	return new Map(classifications.map(({ ied, kind }) => [ied.id, kind]))
+async function readIedKindById(query: Core.Query<Config>): Promise<ReadonlyMap<string, IedKind>> {
+	const kinds = await readIedKinds(query)
+	return new Map(kinds.map(({ ied, kind }) => [ied.id, kind]))
 }
 
 async function readMappedLNode(

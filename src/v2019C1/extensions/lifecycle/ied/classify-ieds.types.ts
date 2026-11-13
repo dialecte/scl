@@ -16,5 +16,5 @@ export type IedClassification = {
 	basis: IedClassificationBasis
 }
 
-/** An IED with its source file references, as `getTree` returns it. */
-export type IedTreeNode = { tagName: string; id: string; tree: IedTreeNode[] }
+/** An IED with its name and its kind, without what decided the kind. */
+export type IedKindEntry = Pick<IedClassification, 'ied' | 'name' | 'kind'>

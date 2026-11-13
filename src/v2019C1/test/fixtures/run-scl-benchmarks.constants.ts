@@ -46,6 +46,6 @@ export const INFO_BENCHMARKS: InfoBenchmark[] = [
 	{
 		name: 'info.ofEach(every element under the Substation)',
 		instruments: ['core::store::get'],
-		run: ({ sourceDoc, refs }) => ofEach(sourceDoc.query, refs),
+		run: ({ sourceDoc, refs }) => ofEach(sourceDoc.query, refs, { withState: true }),
 	},
 ]

@@ -109,11 +109,11 @@ An `ExtRef` naming a control block that no signal links to.
 
 ## States
 
-**Specification.** `open` until the signal names the other logical node, `connected` once it does (the same as `info.of` gives a signal).
+**Specification.** `open` until the signal names the other logical node, `connected` once it does (the same as `info.of` gives a signal with `withState: true`).
 
 **Implementation.** `unimplemented` until the signal names its `ExtRef` / `ExtCtrl` (`extRefUuid` / `extRefAddr`, `extCtrlUuid` / `extCtrlAddr`), `implemented` once it does. Whether it is implemented never depends on the control block: the control block, its publisher and the registration are facts beside it. A name that finds nothing is still a name: the dataflow is `implemented`, with no `element` and a `dangling` entry.
 
-**Binding.** The shape the `ExtRef` / `ExtCtrl` itself is written in, the same value `info.of` gives the element: `later-binding · expected · subscribed · bound` for an `ExtRef`, `later-binding · bound` for an `ExtCtrl`; `undefined` when it is written in none of them. `later-binding` is the internal address with, for an `ExtRef`, the expected data object (`pDO`), nothing of a signal or a control block, and no service but the one it expects: a `serviceType` equal to its `pServT`, the form an ISD writes its inputs in (an `ExtCtrl`'s `pDO` is optional). The rule for each is in [Info: State](./info#state).
+**Binding.** The shape the `ExtRef` / `ExtCtrl` itself is written in, the same value `info.of` gives the element with `withState: true`: `later-binding · expected · subscribed · bound` for an `ExtRef`, `later-binding · bound` for an `ExtCtrl`; `undefined` when it is written in none of them. `later-binding` is the internal address with, for an `ExtRef`, the expected data object (`pDO`), nothing of a signal or a control block, and no service but the one it expects: a `serviceType` equal to its `pServT`, the form an ISD writes its inputs in (an `ExtCtrl`'s `pDO` is optional). The rule for each is in [Info: State](./info#state).
 
 ## How things are found
 

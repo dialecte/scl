@@ -852,7 +852,7 @@ describe('of — state and signal title', () => {
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		act: async ({ source, testCase }) => {
-			const result = await of(source.query, testCase.ref, { mode: testCase.mode })
+			const result = await of(source.query, testCase.ref, { mode: testCase.mode, withState: true })
 			expect({ title: result.title, state: result.state }).toEqual({
 				title: testCase.expected.title,
 				state: testCase.expected.state,
@@ -1130,7 +1130,7 @@ describe('of — ExtRef and ExtCtrl state', () => {
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		act: async ({ source, testCase }) => {
-			const result = await of(source.query, testCase.ref)
+			const result = await of(source.query, testCase.ref, { withState: true })
 			expect(result.state).toEqual(testCase.expected)
 		},
 	})

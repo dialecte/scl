@@ -4,7 +4,7 @@ description: 'Info extension for @dialecte/scl v2019C1 -- what a UI shows and ch
 
 # Info
 
-The `info` extension tells what a consumer shows and checks about an SCL element: its title (tree labels, breadcrumbs, panels), its state (a SourceRef open or connected, an LNode locked) and, when asked, its i18n labels.
+The `info` extension tells what a consumer shows and checks about an SCL element: its title (tree labels, breadcrumbs, panels) and, when asked, its state (a SourceRef open or connected, an LNode locked) and its i18n labels.
 
 ## Query methods
 
@@ -17,9 +17,10 @@ const info = await doc.query.info.of(ref)
 // ElementInfo: { title: string; state?: ElementState; labels?: Record<string, Record<string, string>> }
 
 const withLabels = await doc.query.info.of(ref, { withLabels: true, mode: 'full' })
+const withState = await doc.query.info.of(ref, { withState: true })
 ```
 
-The type of `state` follows the tag of `ref`: `of({ tagName: 'LNode', id })` returns the state of an LNode (see [State](#state)), a tag without a state has none. `ElementInfo`, `InfoOptions` and the state types are exported from `@dialecte/scl/v2019C1`.
+`state` is computed only with `withState: true`; without it the info has no `state` key. An LNode's state reads what implements it and the kind of that IED; without it, an LNode's info is read from the LNode alone, so a caller that shows titles only does not pay for the state. The type of `state` follows the tag of `ref`: `of({ tagName: 'LNode', id }, { withState: true })` returns the state of an LNode (see [State](#state)), a tag without a state has none. `ElementInfo`, `InfoOptions` and the state types are exported from `@dialecte/scl/v2019C1`.
 
 `info.of` replaces the former `presentation.extractElementTitle`: `extractElementTitle(ref)` becomes `(await info.of(ref)).title`, and `withLabels: true` puts `labels` on the same object.
 
@@ -28,6 +29,7 @@ The type of `state` follows the tag of `ref`: `of({ tagName: 'LNode', id })` ret
 ```ts
 const infos = await doc.query.info.ofEach(refs)
 // ElementInfo[], in the order of refs
+const withStates = await doc.query.info.ofEach(refs, { withState: true })
 ```
 
 Prefer it over a loop of `of` for a tree or a list: the elements are read in one batch, and what they share is read once for the whole call: the facts a state needs across the document (the kind of each IED, what implements each LNode) and the siblings of each signal parent. An element given as a record is described as stored, whatever `parent` or `children` it carries.
@@ -38,11 +40,13 @@ Prefer it over a loop of `of` for a tree or a list: the elements are read in one
 type InfoOptions = {
 	mode?: 'compact' | 'full'
 	withLabels?: boolean
+	withState?: boolean
 }
 ```
 
 - `mode` -- defaults to `'compact'`. Use `'full'` to opt into the full-form spec for elements that define one (e.g. `LNode`, `SourceRef`, `ExtRef`, `FCDA`, `SubscriberLNode`, `ControllingLNode`).
 - `withLabels` -- collects the `<Labels>` children (one more read per element), so asked for.
+- `withState` -- computes the element's [state](#state), so asked for (an LNode's reads what implements it and the kind of that IED). The same option on `of` and `ofEach`.
 
 `labels` is a two-level map `[lang][id]` -> text from `<Labels>/<Label lang="..." id="...">` children (empty when none). The inner `id` key is the `id` attribute of the `<Label>`, or `''` when absent -- so a typical single-label-per-language file lives entirely under the empty-string id. The engine never picks a language or id; the consumer chooses:
 
@@ -192,12 +196,15 @@ await doc.query.info.of(ied, { withLabels: true })
 
 const lnode = { tagName: 'LNode', id: 'lnode-1' }
 await doc.query.info.of(lnode)
+// { title: 'PXCBR1' }
+
+await doc.query.info.of(lnode, { withState: true })
 // { title: 'PXCBR1', state: { locked: true, mapping: 'real-ied' } }
 
-await doc.query.info.of(lnode, { mode: 'full' })
+await doc.query.info.of(lnode, { mode: 'full', withState: true })
 // { title: 'IED_A/LD0/PXCBR1', state: { locked: true, mapping: 'real-ied' } }
 
 const sourceRef = { tagName: 'SourceRef', id: 'sr-1' }
-await doc.query.info.of(sourceRef)
+await doc.query.info.of(sourceRef, { withState: true })
 // { title: 'Trip(1).general', state: { binding: 'open', implemented: false } }
 ```

@@ -65,7 +65,7 @@ describe('the mapping of an LNode is read from native logical nodes', () => {
 	}
 
 	async function act({ testCase, source }: SclTest.ActParams<TestCase>): Promise<void> {
-		const info = await of(source.query, { tagName: 'LNode', id: 'lnode' })
+		const info = await of(source.query, { tagName: 'LNode', id: 'lnode' }, { withState: true })
 		expect(info.state).toMatchObject({ mapping: testCase.expected })
 	}
 
