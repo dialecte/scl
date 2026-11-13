@@ -68,6 +68,28 @@ The stored `FunctionRef` record ends up with both attributes:
 <FunctionRef function="S1/Bay1/VL1/Fn1" functionUuid="abc-123" />
 ```
 
+### Steps told while `afterImport` runs
+
+With `@dialecte/core` 0.11.0 or later, `afterImport` tells each of its steps through the context core hands it
+(`report`), in the order they run, and stops on the import's abort (`signal`): `SCL_IMPORT_STEPS` lists them, so an
+app can map each to the words it shows.
+
+| Step               | Count (`done` / `total`)                                                                                                |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `spec-naming`      | the LNodes                                                                                                              |
+| `path-index`       | the elements a reference can name, twice (under their path, under their name in a scope), then their other paths as one |
+| `data-types`       | none                                                                                                                    |
+| `path-fills`       | the references stored with their uuid only                                                                              |
+| `references`       | the references written with a path                                                                                      |
+| `own-paths`        | the elements writing attributes from their own path                                                                     |
+| `mapped-data`      | the `DOS` / `SDS` / `DAS`                                                                                               |
+| `tuple-references` | the references naming their target by several attributes                                                                |
+
+`path-index`, `path-fills`, `references`, `own-paths` and `mapped-data` tell their count inside the step, once per
+`IMPORT_PROGRESS_INTERVAL_MS`, and there let the queue run, so an abort lands inside the step: the import then fails
+`IMPORT_ABORTED` and keeps nothing. `spec-naming` and `tuple-references` are told as they start and as they end, the
+abort checked before each step. Called with no context, `afterImport` runs the same and tells nothing.
+
 ## Diagnostics
 
 What the import has to say about a file comes back as diagnostics, beside the writes (a path written again from the element its uuid names, a naming made for an LNode, names rewritten from a path are also reported), on the file's entry: `entry.diagnostics` of `project.import(files)`, `diagnostics` of `project.importFile(file)` (`[]` when there is nothing to say). Each is a core `Diagnostic` with `source: 'scl'`; the codes are in `SCL_IMPORT_DIAGNOSTICS`, and their data in [errors](../api/errors#import-diagnostics).

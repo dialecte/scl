@@ -84,7 +84,11 @@ export function createSpecNamingImport(): SpecNamingImport {
 		return { namings, creates, updates, diagnostics }
 	}
 
-	return { collect, resolve }
+	function count(): number {
+		return lnodes.size
+	}
+
+	return { collect, count, resolve }
 }
 
 function newPrivate(lnode: AnyRawRecord): AnyRawRecord {

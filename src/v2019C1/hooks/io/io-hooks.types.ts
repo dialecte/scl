@@ -1,7 +1,13 @@
 import type { IncoherentPathName } from '@/v2019C1/errors/import-diagnostics.types'
+import type { SclImportDiagnostic } from '@/v2019C1/errors/import-diagnostics.types'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
 import type { ElementPath } from '@/v2019C1/extensions/reference/query/build'
-import type { AnyRawRecord } from '@dialecte/core'
+import type {
+	AfterImportContext,
+	AfterImportResult,
+	AnyRawRecord,
+	ImportSession,
+} from '@dialecte/core'
 
 /**
  * A reference written with a path: parsed and looked up once the whole file is read, when the
@@ -87,4 +93,32 @@ export type ImportPathIndex = {
 export type OtherPaths = {
 	underStandardParent: [path: string, uuid: string][]
 	underOwnNaming: [path: string, uuid: string][]
+}
+
+/**
+ * The import session of one SCL file. Its `afterImport` tells its steps through the context core hands it; given
+ * none (a caller of the zero-argument form), it runs the same and tells nothing.
+ */
+export type SclImportSession = Omit<ImportSession<SclImportDiagnostic>, 'afterImport'> & {
+	afterImport(context?: AfterImportContext): Promise<AfterImportResult<SclImportDiagnostic>>
+}
+
+/**
+ * One unit of the path index's work: a target under its standard path, a target under the name it is read by in its
+ * scope, or the other paths of every target (once, last).
+ */
+export type ImportPathIndexUnit =
+	| { pass: 'standard-path' | 'scoped-name'; target: CollectedTarget }
+	| { pass: 'other-paths' }
+
+/** The path index of a file built one unit at a time (`createImportPathIndexBuilder`). */
+export type ImportPathIndexBuilder = {
+	/** The index being built: complete once every unit of `units()` is built, in order */
+	index: ImportPathIndex
+	/** How many units `units()` gives: twice the targets, plus one */
+	total: number
+	/** The units, in the order they are built */
+	units(): Iterable<ImportPathIndexUnit>
+	/** Build one unit */
+	build(unit: ImportPathIndexUnit): void
 }

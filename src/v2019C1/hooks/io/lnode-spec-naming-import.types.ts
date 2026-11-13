@@ -4,6 +4,8 @@ import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
 export type SpecNamingImport = {
 	/** Record one standardized record of the import pass, with its still-open parents. */
 	collect(params: { record: AnyRawRecord; ancestry: readonly AnyRawRecord[] }): void
+	/** How many LNodes the pass collected: what `resolve` goes over. */
+	count(): number
 	/**
 	 * After the pass: the records giving every LNode without `LNodeSpecNaming` its own, and a
 	 * diagnostic for each one taken from the naming of the logical node the LNode is bound to.

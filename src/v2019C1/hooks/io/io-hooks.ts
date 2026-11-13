@@ -1,4 +1,5 @@
-import { buildImportPathIndex } from './import-path-index'
+import { createImportPathIndexBuilder } from './import-path-index'
+import { createImportStepProgress } from './import-step-progress'
 import { LOCAL_NAME_RESOLUTIONS } from './io-hooks.constants'
 
 import {
@@ -45,6 +46,7 @@ import type {
 	ImportPathIndex,
 	PendingPathFill,
 	PendingResolution,
+	SclImportSession,
 } from './io-hooks.types'
 import type {
 	DiagnosticAttributeRef,
@@ -58,7 +60,12 @@ import type {
 	PathSegmentWithRef,
 	ReferrerContext,
 } from '@/v2019C1/extensions/reference/query/build'
-import type { AfterImportResult, AnyRawRecord, ImportSession, RecordPatch } from '@dialecte/core'
+import type {
+	AfterImportContext,
+	AfterImportResult,
+	AnyRawRecord,
+	RecordPatch,
+} from '@dialecte/core'
 
 /**
  * Creates the import session of one SCL file: UUID reference resolution, and what the import has
@@ -103,7 +110,7 @@ import type { AfterImportResult, AnyRawRecord, ImportSession, RecordPatch } from
  * instead of an update.
  *
  */
-export function createSclImportSession(): ImportSession<SclImportDiagnostic> {
+export function createSclImportSession(): SclImportSession {
 	const targets: CollectedTarget[] = []
 	const pendingResolutions: PendingResolution[] = []
 	const pendingPathFills: PendingPathFill[] = []
@@ -212,50 +219,89 @@ export function createSclImportSession(): ImportSession<SclImportDiagnostic> {
 		})
 	}
 
-	async function afterImport(): Promise<AfterImportResult<SclImportDiagnostic>> {
+	/**
+	 * Every step told through `context` as it runs (`SCL_IMPORT_STEPS`), the long ones with their count once per
+	 * progress interval, the abort checked between them. Given no context, nothing is told.
+	 */
+	async function afterImport(
+		context?: AfterImportContext,
+	): Promise<AfterImportResult<SclImportDiagnostic>> {
+		const progress = createImportStepProgress({ context })
 		const updates: RecordPatch[] = []
 		const diagnostics: SclImportDiagnostic[] = [...xpathDiagnostics]
 
-		const specNaming = specNamingImport.resolve()
-		const index = buildImportPathIndex({ targets, specNamings: specNaming.namings })
-		const dataTypes = dataTypeIndex.build()
+		const specNaming = await progress.run({
+			step: 'spec-naming',
+			total: specNamingImport.count(),
+			run: specNamingImport.resolve,
+		})
+		const specNamings = specNaming.namings
+		const pathIndex = createImportPathIndexBuilder({ targets, specNamings })
+		await progress.each({
+			step: 'path-index',
+			items: pathIndex.units(),
+			total: pathIndex.total,
+			visit: pathIndex.build,
+		})
+		const { index } = pathIndex
+		const dataTypes = await progress.run({ step: 'data-types', run: dataTypeIndex.build })
 
-		for (const fill of pendingPathFills) {
-			const outcome = fillPath({ fill, index, specNamings: specNaming.namings })
+		function keep(outcome: { update?: RecordPatch; diagnostics: SclImportDiagnostic[] }): void {
 			if (outcome.update) updates.push(outcome.update)
 			diagnostics.push(...outcome.diagnostics)
 		}
 
-		for (const pending of pendingResolutions) {
-			const outcome = resolvePending({
-				pending,
-				index,
-				specNamings: specNaming.namings,
-				dataTypes,
-			})
-			if (outcome.update) updates.push(outcome.update)
-			diagnostics.push(...outcome.diagnostics)
-		}
+		await progress.each({
+			step: 'path-fills',
+			items: pendingPathFills,
+			total: pendingPathFills.length,
+			visit: function fillOne(fill) {
+				keep(fillPath({ fill, index, specNamings }))
+			},
+		})
+		await progress.each({
+			step: 'references',
+			items: pendingResolutions,
+			total: pendingResolutions.length,
+			visit: function resolveOne(pending) {
+				keep(resolvePending({ pending, index, specNamings, dataTypes }))
+			},
+		})
+		await progress.each({
+			step: 'own-paths',
+			items: ownPathElements,
+			total: ownPathElements.length,
+			visit: function writeOwnPath(element) {
+				keep(ownPathAttributesOf({ element, specNamings }))
+			},
+		})
 
-		for (const element of ownPathElements) {
-			const outcome = ownPathAttributesOf({ element, specNamings: specNaming.namings })
-			if (outcome.update) updates.push(outcome.update)
-			diagnostics.push(...outcome.diagnostics)
-		}
-
-		const mappedData = await mappedDataImport.resolve({ pathIndex: index.byPath })
-		updates.push(...mappedData.updates)
-		diagnostics.push(...mappedData.diagnostics)
-		updates.push(...specNaming.updates)
-		diagnostics.push(...specNaming.diagnostics)
-		const tupleReferences = tupleReferenceImport.resolve()
-		updates.push(...tupleReferences.updates)
-		diagnostics.push(...tupleReferences.diagnostics)
+		const mappedData = await mappedDataImport.resolve({ pathIndex: index.byPath, progress })
+		appendAll({ into: updates, items: mappedData.updates })
+		appendAll({ into: diagnostics, items: mappedData.diagnostics })
+		appendAll({ into: updates, items: specNaming.updates })
+		appendAll({ into: diagnostics, items: specNaming.diagnostics })
+		const tupleReferences = await progress.run({
+			step: 'tuple-references',
+			total: tupleReferenceImport.count(),
+			run: tupleReferenceImport.resolve,
+		})
+		appendAll({ into: updates, items: tupleReferences.updates })
+		appendAll({ into: diagnostics, items: tupleReferences.diagnostics })
 
 		return { creates: specNaming.creates, updates, diagnostics }
 	}
 
 	return { beforeImportRecord, afterImport }
+}
+
+/**
+ * Append every item of `items` to `into`, one push each: a spread (`push(...items)`) passes each item as an argument,
+ * and a file large enough (hundreds of thousands of writes) overflows the call stack.
+ */
+function appendAll<Item>(params: { into: Item[]; items: readonly Item[] }): void {
+	const { into, items } = params
+	for (const item of items) into.push(item)
 }
 
 /**

@@ -9,7 +9,13 @@ import {
 } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { readAttribute } from '@/v2019C1/helpers'
 
-import type { CollectedTarget, ImportPathIndex, OtherPaths } from './io-hooks.types'
+import type {
+	CollectedTarget,
+	ImportPathIndex,
+	ImportPathIndexBuilder,
+	ImportPathIndexUnit,
+	OtherPaths,
+} from './io-hooks.types'
 import type { AnyRawRecord } from '@dialecte/core'
 
 /**
@@ -27,6 +33,20 @@ export function buildImportPathIndex(params: {
 	targets: readonly CollectedTarget[]
 	specNamings: ReadonlyMap<string, AnyRawRecord>
 }): ImportPathIndex {
+	const builder = createImportPathIndexBuilder(params)
+	for (const unit of builder.units()) builder.build(unit)
+	return builder.index
+}
+
+/**
+ * `buildImportPathIndex` one unit of work at a time, so a caller can tell how far it is: each target under its
+ * standard path, then each target under the name it is read by in its scope, then the other paths of every target.
+ * `index` is complete once every unit of `units()` is built, in order; `total` counts them.
+ */
+export function createImportPathIndexBuilder(params: {
+	targets: readonly CollectedTarget[]
+	specNamings: ReadonlyMap<string, AnyRawRecord>
+}): ImportPathIndexBuilder {
 	const { targets, specNamings } = params
 	const siblingsByParent = groupSignalsByParent(targets)
 
@@ -37,12 +57,13 @@ export function buildImportPathIndex(params: {
 	}
 	const otherPaths: OtherPaths = { underStandardParent: [], underOwnNaming: [] }
 
-	for (const { record, ancestry, uuid } of targets) {
+	function addStandardPath(target: CollectedTarget): void {
+		const { record, ancestry, uuid } = target
 		const siblings = siblingsByParent.get(record.parent?.id ?? '')
 		const standard = buildPathFromAncestry({ record, ancestry, siblings, specNamings })
 		// an element with no segment of its own (an access point, a control block) would take its
 		// parent's path: it is not named by a path
-		if (!standard || standard.segments.at(-1)?.ref.id !== record.id) continue
+		if (!standard || standard.segments.at(-1)?.ref.id !== record.id) return
 		index.byPath.set(standard.path, uuid)
 		index.targetsByUuid.set(uuid, {
 			recordId: record.id,
@@ -61,20 +82,35 @@ export function buildImportPathIndex(params: {
 		for (const path of paths.underOwnNaming) otherPaths.underOwnNaming.push([path, uuid])
 	}
 
-	for (const [key, uuid] of targets.flatMap((target) =>
-		scopedNameKeysOf({ target, specNamings }),
-	)) {
-		if (!index.byPath.has(key)) index.byPath.set(key, uuid)
+	function addScopedNames(target: CollectedTarget): void {
+		for (const [key, uuid] of scopedNameKeysOf({ target, specNamings })) {
+			if (!index.byPath.has(key)) index.byPath.set(key, uuid)
+		}
 	}
 
-	// the other names below a target's standard parent first, then the paths through an LNode named
-	// by its own naming: an LNode bound to an IED may take, by its own naming, the name another LNode
-	// is specified with
-	const ambiguous = new Set<string>()
-	for (const tier of [otherPaths.underStandardParent, otherPaths.underOwnNaming]) {
-		indexOtherPaths({ index, paths: tier, ambiguous })
+	function addOtherPaths(): void {
+		// the other names below a target's standard parent first, then the paths through an LNode named
+		// by its own naming: an LNode bound to an IED may take, by its own naming, the name another LNode
+		// is specified with
+		const ambiguous = new Set<string>()
+		for (const tier of [otherPaths.underStandardParent, otherPaths.underOwnNaming]) {
+			indexOtherPaths({ index, paths: tier, ambiguous })
+		}
 	}
-	return index
+
+	function* units(): Generator<ImportPathIndexUnit> {
+		for (const target of targets) yield { pass: 'standard-path', target }
+		for (const target of targets) yield { pass: 'scoped-name', target }
+		yield { pass: 'other-paths' }
+	}
+
+	function build(unit: ImportPathIndexUnit): void {
+		if (unit.pass === 'standard-path') addStandardPath(unit.target)
+		else if (unit.pass === 'scoped-name') addScopedNames(unit.target)
+		else addOtherPaths()
+	}
+
+	return { index, total: targets.length * 2 + 1, units, build }
 }
 
 /**

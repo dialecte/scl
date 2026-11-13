@@ -1,3 +1,4 @@
+import type { ImportStepProgress } from './import-step-progress.types'
 import type {
 	IncoherentReferenceDiagnostic,
 	UnresolvedReferenceDiagnostic,
@@ -35,9 +36,12 @@ export type MappedDataImport = {
 	 * After the pass: the updates that store every `DOS` / `SDS` / `DAS` in canonical form,
 	 * and a diagnostic per record whose implementation cannot be found in the file, or whose name and
 	 * uuid name two logical nodes.
-	 * `pathIndex`: element path -> uuid, as built by the import pass.
+	 * `pathIndex`: element path -> uuid, as built by the import pass; `progress` tells the `mapped-data` step.
 	 */
-	resolve(params: { pathIndex: ReadonlyMap<string, string> }): Promise<{
+	resolve(params: {
+		pathIndex: ReadonlyMap<string, string>
+		progress: ImportStepProgress
+	}): Promise<{
 		updates: RecordPatch[]
 		diagnostics: MappedDataImportDiagnostic[]
 	}>

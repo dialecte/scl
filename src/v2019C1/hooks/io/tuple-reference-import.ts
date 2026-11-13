@@ -105,7 +105,11 @@ export function createTupleReferenceImport(): TupleReferenceImport {
 		return { updates, diagnostics }
 	}
 
-	return { collect, resolve }
+	function count(): number {
+		return referrers.length
+	}
+
+	return { collect, count, resolve }
 }
 
 /**

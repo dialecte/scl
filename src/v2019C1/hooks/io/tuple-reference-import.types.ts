@@ -6,6 +6,8 @@ import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
 export type TupleReferenceImport = {
 	/** Record one standardized record of the import pass, with its still-open parents. */
 	collect(params: { record: AnyRawRecord; ancestry: readonly AnyRawRecord[] }): void
+	/** How many tuple references the pass collected: what `resolve` goes over. */
+	count(): number
 	/**
 	 * After the pass: the uuid of each tuple reference written without it, from the element its names
 	 * name; the names of each one whose uuid names another element, from that element.

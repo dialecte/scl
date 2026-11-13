@@ -1,3 +1,5 @@
+import { DATA_TAGS } from './mapped-data-import.constants'
+
 import { MAPPED_NAME_REFS } from '@/v2019C1/extensions/reference/constants'
 import { buildMappedDataAttributes } from '@/v2019C1/extensions/reference/query/build/build-mapped-data-attributes'
 import { buildMappedLNodePath } from '@/v2019C1/extensions/reference/query/build/build-mapped-lnode-path'
@@ -10,6 +12,7 @@ import {
 	unresolvedReferenceDiagnostic,
 } from '@/v2019C1/hooks/io/import-diagnostic-builders'
 
+import type { ImportStepProgress } from './import-step-progress.types'
 import type {
 	ImportedLNode,
 	ImportedMappedDataNode,
@@ -22,8 +25,6 @@ import type {
 } from '@/v2019C1/errors/import-diagnostics.types'
 import type { MappedDataSource } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-data-from.types'
 import type { AnyRawRecord, DiagnosticRef, RecordPatch } from '@dialecte/core'
-
-const DATA_TAGS: ReadonlySet<string> = new Set(['DOS', 'SDS'])
 
 /**
  * Stores every `DOS` / `SDS` / `DAS` of an imported file in canonical form, with the same rules
@@ -69,8 +70,9 @@ export function createMappedDataImport(): MappedDataImport {
 
 	async function resolve(params: {
 		pathIndex: ReadonlyMap<string, string>
+		progress: ImportStepProgress
 	}): ReturnType<MappedDataImport['resolve']> {
-		const { pathIndex } = params
+		const { pathIndex, progress } = params
 
 		function findLnByUuid(uuid: string): string | undefined {
 			return lnsByUuid.has(uuid) ? uuid : undefined
@@ -104,15 +106,26 @@ export function createMappedDataImport(): MappedDataImport {
 		const updates: RecordPatch[] = []
 		const diagnostics: MappedDataImportDiagnostic[] = []
 
-		for (const [recordId, node] of nodes) {
-			if (!node.mappedName && !node.mappedLnUuid) continue
+		// a node with no mapping, or of no mapped tag, is passed by at once: only a mapped one waits on its resolution
+		function resolveNode(entry: [string, ImportedMappedDataNode]): Promise<void> | undefined {
+			const [, node] = entry
+			if (!node.mappedName && !node.mappedLnUuid) return undefined
 			const attributeNames = MAPPED_NAME_REFS.get(node.tagName)
-			if (!attributeNames) continue
+			if (!attributeNames) return undefined
+			return resolveMappedNode({ entry, attributeNames })
+		}
+
+		async function resolveMappedNode(params: {
+			entry: [string, ImportedMappedDataNode]
+			attributeNames: NonNullable<ReturnType<typeof MAPPED_NAME_REFS.get>>
+		}): Promise<void> {
+			const { attributeNames } = params
+			const [recordId, node] = params.entry
 
 			const { mappedData, defaultData } = await resolveMappedDataFrom(source, { node: recordId })
 			if (mappedData?.origin !== 'own') {
 				diagnostics.push(unresolvedDiagnostic({ recordId, node, attributeNames }))
-				continue
+				return
 			}
 
 			// The uuid wins; an absolute name pointing at another logical node is reported.
@@ -142,16 +155,16 @@ export function createMappedDataImport(): MappedDataImport {
 				},
 				defaultData: defaultData && { lnId: defaultData.ln, dataPath: defaultData.dataPath },
 			})
-			if (attributes.kind === 'inexpressible') continue
+			if (attributes.kind === 'inexpressible') return
 
 			if (attributes.kind === 'default') {
 				updates.push({ recordId, removeAttributes: [attributeNames.path, attributeNames.uuid] })
-				continue
+				return
 			}
 
 			const unchanged =
 				node.mappedName === attributes.mappedName && node.mappedLnUuid === attributes.mappedLnUuid
-			if (unchanged) continue
+			if (unchanged) return
 			updates.push({
 				recordId,
 				attributes: [
@@ -160,6 +173,13 @@ export function createMappedDataImport(): MappedDataImport {
 				],
 			})
 		}
+
+		await progress.each({
+			step: 'mapped-data',
+			items: nodes,
+			total: nodes.size,
+			visit: resolveNode,
+		})
 
 		return { updates, diagnostics }
 	}
