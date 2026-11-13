@@ -42,7 +42,7 @@ storybook-static
 src/generated/
 src/documentation/
 
-AGENTS.md
+AGENTS.local.md
 
 # Local agent skill links and sync state
 /.agents/skills/
