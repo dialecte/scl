@@ -64,7 +64,7 @@ const classifications = await doc.query.lifecycle.classifyIeds()
 // [{ ied: { tagName: 'IED', id }, name, kind: 'implemented' | 'specification', basis }]
 ```
 
-Every IED, in document order. An IED is a real device's IED (`implemented`) when an ICD or IID file is among its own source files (`IEDSourceFiles/SclFileReference`; a reference in the document header does not count, `basis: 'provenance'`), or when the document itself is an `.icd` file (`basis: 'icd-file'`). Any other IED is a specification IED (`basis: 'no-provenance'`). The manufacturer and the name play no part. Types `IedClassification` (`{ ied, name, kind, basis }`), `IedKind` and `IedClassificationBasis` are exported.
+Every IED, in document order. An IED is a real device's IED (`implemented`) when an ICD or IID file is among its own source files (`IEDSourceFiles/SclFileReference` directly under the IED; a reference in the document header or in a list wrapped in a `Private` does not count, `basis: 'provenance'`), or when the document itself is an `.icd` file (`basis: 'icd-file'`). Any other IED is a specification IED (`basis: 'no-provenance'`). The manufacturer and the name play no part. The IEDs and the source file references are read by tag, not by walking the document. Types `IedClassification` (`{ ied, name, kind, basis }`), `IedKind` and `IedClassificationBasis` are exported.
 
 ## Internal lifecycle building blocks
 

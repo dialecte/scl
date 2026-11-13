@@ -76,7 +76,7 @@ async function lnodeMapping(params: StateRuleParams): Promise<LNodeMapping> {
 	const mapped = await context.mappedLNodeOf(record as Scl.TrackedRecord<'LNode'>)
 	if (!mapped) return 'unmapped'
 
-	const kind = (await context.iedKindById()).get(mapped.ied.id)
+	const kind = await context.iedKindOf(mapped.ied)
 	if (kind === 'implemented') return 'real-ied'
 	if (kind === 'specification') return 'specification-ied'
 	return 'unmapped'

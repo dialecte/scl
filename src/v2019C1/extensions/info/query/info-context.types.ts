@@ -8,7 +8,11 @@ import type * as Core from '@dialecte/core'
  * elements of that call (an `ofEach` over a tree classifies the IEDs once, not once per LNode).
  */
 export type InfoContext = {
-	iedKindById: () => Promise<ReadonlyMap<string, IedKind>>
+	/**
+	 * The kind of an IED: a call given its LNodes classifies every IED once, a call without reads that IED alone
+	 * (`undefined` when the store holds none).
+	 */
+	iedKindOf: (ied: Scl.Ref<'IED'>) => Promise<IedKind | undefined>
 	/** What implements an LNode: the logical node and its IED. */
 	mappedLNodeOf: (lnode: Scl.TrackedRecord<'LNode'>) => Promise<MappedLNode | undefined>
 	/** A signal's siblings (its parent's children, the signal included), read once per parent for the call. */

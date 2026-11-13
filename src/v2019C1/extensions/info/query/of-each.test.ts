@@ -47,7 +47,7 @@ describe('ofEach', () => {
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		act: async ({ source, testCase }) => {
-			const infos = await ofEach(source.query, testCase.refs)
+			const infos = await ofEach(source.query, testCase.refs, { withState: true })
 			expect(infos.map(({ title, state }) => ({ title, state }))).toEqual(testCase.expected)
 		},
 	})
@@ -160,7 +160,7 @@ describe('ofEach - reads its elements in one batch and each signal parent once',
 		testCases,
 		act: async ({ source, testCase }) => {
 			const { query, reads } = countQueryReads(source.query)
-			await ofEach(query, testCase.refs)
+			await ofEach(query, testCase.refs, { withState: true })
 			expect({
 				getRecord: reads.filter((method) => method === 'getRecord').length,
 				getRecords: reads.filter((method) => method === 'getRecords').length,
@@ -288,7 +288,7 @@ describe('ofEach - each element described as stored, in the order given', () => 
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		act: async ({ source, testCase }) => {
-			const infos = await ofEach(source.query, testCase.elements)
+			const infos = await ofEach(source.query, testCase.elements, { withState: true })
 			expect(infos).toEqual(testCase.expected)
 		},
 	})

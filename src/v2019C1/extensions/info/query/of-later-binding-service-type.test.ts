@@ -71,7 +71,7 @@ describe('of — a later-binding ExtRef carrying its expected service as its ser
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		act: async ({ source, testCase }) => {
-			const result = await of(source.query, extRef)
+			const result = await of(source.query, extRef, { withState: true })
 			expect(result.state).toEqual(testCase.expected)
 		},
 	})

@@ -21,8 +21,10 @@ import type { AnyRefOrRecord } from '@dialecte/core'
 /**
  * The own title of an SCL element, read from the element itself - its attributes or text, a named
  * child for a few tags, the signal name for a signal - never from its ancestors (a Bay's title is its
- * `name`, not its path from the root, which is `reference.buildElementPath`), its state, and its
- * `<Labels>` when asked (`withLabels: true`, one more read per element).
+ * `name`, not its path from the root, which is `reference.buildElementPath`); its state when asked
+ * (`withState: true`: an LNode's reads what implements it and the kind of that IED, so a title alone
+ * stays one read of the element), and its `<Labels>` when asked (`withLabels: true`, one more read
+ * per element).
  *
  * Resolution precedence for the title (first non-empty wins):
  * 1. `TITLE_FIELDS_OVERRIDE` spec for the tag (compact or full).
@@ -63,7 +65,9 @@ export async function describeRecord<GenericElement extends string = string>(par
 	const specAttributes = await readSpecAttributes({ query, record, spec, attributes, context })
 
 	const title = resolveTitle({ tag, spec, mode, attributes, specAttributes, value: record.value })
-	const state = await readState({ query, record, attributes, context })
+	const state = options.withState
+		? await readState({ query, record, attributes, context })
+		: undefined
 	const labels = options.withLabels ? await collectLabels(query, record) : undefined
 
 	return {

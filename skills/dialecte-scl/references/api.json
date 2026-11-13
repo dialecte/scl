@@ -449,27 +449,27 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "<GenericElement extends string = string>(refOrRecord: AnyRefOrRecord & { readonly tagName: GenericElement; }, options?: InfoOptions) => Promise<ElementInfo<GenericElement>>",
-			"summary": "The own title of an SCL element, read from the element itself - its attributes or text, a named child for a few tags, the signal name for a signal - never from its ancestors (a Bay's title is its `name`, not its path from the root, which is `reference.buildElementPath`), its state, and its `<Labels>` when asked (`withLabels: true`, one more read per element).",
+			"summary": "The own title of an SCL element, read from the element itself - its attributes or text, a named child for a few tags, the signal name for a signal - never from its ancestors (a Bay's title is its `name`, not its path from the root, which is `reference.buildElementPath`); its state when asked (`withState: true`: an LNode's reads what implements it and the kind of that IED, so a title alone stays one read of the element), and its `<Labels>` when asked (`withLabels: true`, one more read per element).",
 			"intents": [
 				"own title or display name of an element",
 				"display name of a Bay/IED/LNode/ExtRef",
 				"state of an LNode or signal (locked, mapped, connected, implemented)",
 				"Labels translations of an element"
 			],
-			"declaredAt": "src/v2019C1/extensions/info/query/of.ts:35"
+			"declaredAt": "src/v2019C1/extensions/info/query/of.ts:37"
 		},
 		{
 			"path": "doc.query.info.ofEach",
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "(refsOrRecords: readonly AnyRefOrRecord[], options?: InfoOptions) => Promise<ElementInfo[]>",
-			"summary": "`of` for several elements, in the order given: each one's own title (not its path from the root, which is `reference.buildElementPath`) and state. The elements are read in one batch, and what they share is read once for the whole call: the kinds of the IEDs, what implements each LNode, and the siblings of each signal parent. An element given as a record is described as stored.",
+			"summary": "`of` for several elements, in the order given: each one's own title (not its path from the root, which is `reference.buildElementPath`), and its state with `withState: true`. The elements are read in one batch, and what they share is read once for the whole call: the siblings of each signal parent and, for the states, the kinds of the IEDs and what implements each LNode. An element given as a record is described as stored.",
 			"intents": [
 				"own titles or display names of many elements in one call",
 				"states of many LNodes or signals",
 				"instead of calling info.of in a loop"
 			],
-			"declaredAt": "src/v2019C1/extensions/info/query/of-each.ts:19"
+			"declaredAt": "src/v2019C1/extensions/info/query/of-each.ts:20"
 		},
 		{
 			"path": "doc.query.lifecycle.checkTemplateUuids",
@@ -490,13 +490,13 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "() => Promise<IedClassification[]>",
-			"summary": "Classify every IED, in document order, as a real device's IED (`implemented`) or one written to specify a device (`specification`). An IED is implemented when an ICD or IID file is among its own source files (`IEDSourceFiles`, a reference in the document header does not count), or when the document itself is an ICD file; any other IED is a specification IED.",
+			"summary": "Classify every IED, in document order, as a real device's IED (`implemented`) or one written to specify a device (`specification`). An IED is implemented when an ICD or IID file is among its own source files (`IEDSourceFiles` directly under the IED; a reference in the document header or in a list wrapped in a `Private` does not count), or when the document itself is an ICD file; any other IED is a specification IED. The IEDs and the source file references are read by tag, whatever the number of IEDs; nothing below the IEDs is walked.",
 			"intents": [
 				"which IEDs are real devices and which are specification IEDs",
 				"is an IED implemented (ICD/IID source)",
 				"S-IED or real IED instead of reading manufacturer"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/ied/classify-ieds.ts:15",
+			"declaredAt": "src/v2019C1/extensions/lifecycle/ied/classify-ieds.ts:24",
 			"example": "await doc.query.lifecycle.classifyIeds()"
 		},
 		{

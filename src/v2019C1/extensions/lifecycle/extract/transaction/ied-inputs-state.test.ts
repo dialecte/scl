@@ -36,7 +36,7 @@ describe('an input of an exported ISD reads as later-binding', () => {
 			attributes: { intAddr: 'RemoteTrip' },
 		})
 		expect(inputs).toHaveLength(1)
-		const info = await of(target.query, inputs[0])
+		const info = await of(target.query, inputs[0], { withState: true })
 		expect(info.state).toBe('later-binding')
 	}
 

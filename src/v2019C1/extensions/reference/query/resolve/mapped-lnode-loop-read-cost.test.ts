@@ -111,7 +111,7 @@ describe('callers looping over LNodes read the logical nodes once', () => {
 		},
 		act: async ({ source }: SclTest.ActParams<TestCase>) => {
 			const { query, calls } = countQueryReads(source.query)
-			await ofEach(query, LNODES)
+			await ofEach(query, LNODES, { withState: true })
 			expect(lookUps(calls)).toEqual(ONE_READ)
 		},
 	})

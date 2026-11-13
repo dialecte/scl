@@ -10,9 +10,10 @@ import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
  * `of` for several elements, in the order given: each one's own title (not its path from the root,
- * which is `reference.buildElementPath`) and state. The elements are read in one batch, and what
- * they share is read once for the whole call: the kinds of the IEDs, what implements each LNode, and
- * the siblings of each signal parent. An element given as a record is described as stored.
+ * which is `reference.buildElementPath`), and its state with `withState: true`. The elements are read
+ * in one batch, and what they share is read once for the whole call: the siblings of each signal
+ * parent and, for the states, the kinds of the IEDs and what implements each LNode. An element given
+ * as a record is described as stored.
  *
  * @intent own titles or display names of many elements in one call, states of many LNodes or signals, instead of calling info.of in a loop
  */
