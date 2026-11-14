@@ -43,14 +43,21 @@ export const UUID_REFERRERS_BY_TARGET: ReadonlyMap<string, readonly UuidReferrer
 const BARE_REFERENCE_CHILDREN: ReadonlySet<string> = new Set(['Text', 'Private'])
 
 /**
+ * The tuple referrers with no identity of their own (no `uuid`) holding nothing but text or vendor data: an IED's
+ * data-flow references (`FCDA`, `ClientLN`, `IEDName`, `Association`, `KDC`, `ServerAt`).
+ */
+export const BARE_TUPLE_REFERRER_TAGS: ReadonlySet<string> = new Set(
+	Object.keys(TUPLE_REFERENCE_PAIRS).filter(isBareTupleReferrer),
+)
+
+/**
  * The tags of the elements that are a reference and nothing else, dropped when what they name goes: every uuid pair's
- * referrer, and the tuple referrers with no identity of their own (no `uuid`) holding nothing but text or vendor data
- * (`FCDA`, `ClientLN`, `IEDName`, ...). A tuple referrer holding addresses or children of its own (`ConnectedAP`,
- * `GSE`, `SMV`) or carrying a uuid (`ExtRef`, `LNode`) is not one.
+ * referrer, and the bare tuple referrers (`BARE_TUPLE_REFERRER_TAGS`). A tuple referrer holding addresses or children of
+ * its own (`ConnectedAP`, `GSE`, `SMV`) or carrying a uuid (`ExtRef`, `LNode`) is not one.
  */
 export const DISPOSABLE_REFERENCE_TAGS: ReadonlySet<string> = new Set([
 	...REFERENCE_TAG_NAMES,
-	...Object.keys(TUPLE_REFERENCE_PAIRS).filter(isBareTupleReferrer),
+	...BARE_TUPLE_REFERRER_TAGS,
 ])
 
 /**

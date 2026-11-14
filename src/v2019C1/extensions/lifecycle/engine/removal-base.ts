@@ -3,11 +3,13 @@ import { collectUuids } from './match-key'
 import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
+import { BARE_TUPLE_REFERRER_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type { AcceptedIds } from './decide.types'
 import type {
 	ClassifyUnmatchedParams,
+	ClassifyUnpairedReferenceParams,
 	DroppedElement,
 	RemovalBase,
 	ResolveRemovalBaseParams,
@@ -65,6 +67,20 @@ export function classifyUnmatched(params: ClassifyUnmatchedParams): UnmatchedCla
 				detail: `classifyUnmatched: unhandled removal base ${String(removalBase satisfies never)}`,
 			})
 	}
+}
+
+/**
+ * Classify a reference of the project with no uuid of its own that no source reference pairs with, and that is not
+ * another instance's link. The report's diff and the apply's reconcile both read it, so the report lists what the
+ * apply removes:
+ *  - an IED's data-flow reference (`BARE_TUPLE_REFERRER_TAGS`) is the project's own (`target-only`): nothing tells one
+ *    the source dropped from one the project added, so it stays unless its removal is accepted;
+ *  - any other (`FunctionRef`, `Terminal`, ...) is `removed`: the link goes when the source no longer holds it.
+ */
+export function classifyUnpairedReference(
+	params: ClassifyUnpairedReferenceParams,
+): Exclude<UnmatchedClass, 'still-held'> {
+	return BARE_TUPLE_REFERRER_TAGS.has(params.tagName) ? 'target-only' : 'removed'
 }
 
 /**
