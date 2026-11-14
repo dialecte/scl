@@ -45,6 +45,50 @@ export async function resolveMappedLNodes(
 	return mapped
 }
 
+/**
+ * One read of the logical nodes of the document's IEDs, or of the IEDs given only (`ieds`: one IED's subtree for one,
+ * one read of every IED kept to those for several, none for none); of two claiming a key, the first in document order.
+ *
+ * @intent index the logical nodes of some IEDs by uuid and name path, find the LN an LNode naming names
+ */
+export async function readLogicalNodeIndex(
+	query: Core.Query<Config> | Core.Transaction<Config>,
+	params: { ieds?: readonly Scl.Ref<'IED'>[] } = {},
+): Promise<LogicalNodeIndex> {
+	const { ieds } = params
+	if (ieds?.length === 0) return { byUuid: new Map(), byPath: new Map(), ldInstById: new Map() }
+	const [onlyIed] = ieds?.length === 1 ? ieds : []
+	const kept = ieds && new Set(ieds.map((ied) => ied.id))
+	const { records, ancestryOf } = await collectWithAncestry(
+		query,
+		onlyIed
+			? { root: onlyIed, select: LOGICAL_NODES_SELECT.IED }
+			: { select: LOGICAL_NODES_SELECT },
+	)
+	const byUuid = new Map<string, MappedLNode>()
+	const byPath = new Map<string, MappedLNode>()
+	const ldInstById = new Map<string, string>()
+	for (const record of records) {
+		if (record.tagName !== 'LN' && record.tagName !== 'LN0') continue
+		const ancestry = ancestryOf(record.id)
+		const ied = ancestry.find((ancestor) => ancestor.tagName === 'IED')
+		if (!ied || !isNativeNode({ record, ancestry })) continue
+		if (kept && !kept.has(ied.id)) continue
+		const mapped = {
+			ln: { tagName: record.tagName, id: record.id },
+			ied: { tagName: 'IED', id: ied.id },
+		} satisfies MappedLNode
+		const lDevice = ancestry.findLast((ancestor) => ancestor.tagName === 'LDevice')
+		const ldInst = lDevice && readAttributes({ record: lDevice, defaults: 'none' }).inst
+		if (ldInst !== undefined) ldInstById.set(record.id, ldInst)
+		const { uuid } = readAttributes({ record, defaults: 'none' })
+		if (uuid && !byUuid.has(uuid)) byUuid.set(uuid, mapped)
+		const path = logicalNodePath({ record, ancestry })
+		if (path && !byPath.has(path)) byPath.set(path, mapped)
+	}
+	return { byUuid, byPath, ldInstById }
+}
+
 // ── Internal ─────────────────────────────────────────────────────────
 
 /** The answer for one LNode, from its own attributes. */
@@ -56,28 +100,4 @@ function implementerOf(params: {
 	const key = mappedLNodeKey(lnode)
 	if (!key) return undefined
 	return key.kind === 'uuid' ? index.byUuid.get(key.uuid) : index.byPath.get(key.path)
-}
-
-/** One read of the logical nodes of the document's IEDs; of two claiming a key, the first in document order. */
-async function readLogicalNodeIndex(
-	query: Core.Query<Config> | Core.Transaction<Config>,
-): Promise<LogicalNodeIndex> {
-	const { records, ancestryOf } = await collectWithAncestry(query, { select: LOGICAL_NODES_SELECT })
-	const byUuid = new Map<string, MappedLNode>()
-	const byPath = new Map<string, MappedLNode>()
-	for (const record of records) {
-		if (record.tagName !== 'LN' && record.tagName !== 'LN0') continue
-		const ancestry = ancestryOf(record.id)
-		const ied = ancestry.find((ancestor) => ancestor.tagName === 'IED')
-		if (!ied || !isNativeNode({ record, ancestry })) continue
-		const mapped = {
-			ln: { tagName: record.tagName, id: record.id },
-			ied: { tagName: 'IED', id: ied.id },
-		} satisfies MappedLNode
-		const { uuid } = readAttributes({ record, defaults: 'none' })
-		if (uuid && !byUuid.has(uuid)) byUuid.set(uuid, mapped)
-		const path = logicalNodePath({ record, ancestry })
-		if (path && !byPath.has(path)) byPath.set(path, mapped)
-	}
-	return { byUuid, byPath }
 }

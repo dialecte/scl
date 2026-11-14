@@ -1,8 +1,10 @@
+import { updatedOperation } from './record-ops'
 import { tupleWriteOperation } from './tuple-names-operation'
 
 import { toRawRecord } from '@dialecte/core/helpers'
 
-import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { SPECIFIED_IED_NAME_ATTRIBUTE, TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { classifyIed } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds'
 import { iedNameOf } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-name-of'
 import { readAttribute } from '@/v2019C1/helpers'
 
@@ -22,6 +24,10 @@ import type { AnyRawRecord } from '@dialecte/core'
  *
  * A reference reading its IED from where it sits (`@`, the IED it is in, the IED of its parent) is
  * not written: it reads the new name already.
+ *
+ * A specification IED is the specification of the LNodes specified on it: every `LNodeSpecNaming` naming it
+ * (`sIedName`) follows its new name too, under the same conditions. The specified naming of a real IED is not
+ * followed: it names what was specified, not the device.
  */
 export async function followNamesOnlyIedRename(
 	query: Core.Query<Config>,
@@ -41,7 +47,11 @@ export async function followNamesOnlyIedRename(
 	})
 	if (nameHeld) return []
 
-	const operations: Scl.Operation[] = []
+	const operations = await followSpecificationIedRename(query, {
+		ied: { tagName: 'IED', id: newRecord.id },
+		oldName,
+		newName,
+	})
 	for (const [tagName, tagPairs] of Object.entries(TUPLE_REFERENCE_PAIRS)) {
 		const pairs = tagPairs as readonly TupleReferencePair[]
 		const { ied } = pairs[0].tuple
@@ -55,6 +65,32 @@ export async function followNamesOnlyIedRename(
 		}
 	}
 	return operations
+}
+
+/** The `LNodeSpecNaming` naming a specification IED by `oldName` written `newName`; none for a real IED. */
+async function followSpecificationIedRename(
+	query: Core.Query<Config>,
+	params: { ied: Scl.Ref<'IED'>; oldName: string; newName: string },
+): Promise<Scl.Operation[]> {
+	const { ied, oldName, newName } = params
+	if ((await classifyIed(query, { ied })) !== 'specification') return []
+	const namings = await query.getRecordsByTagName('LNodeSpecNaming')
+	return namings.flatMap((naming) => {
+		const record = toRawRecord(naming) as Scl.RawRecord<Scl.ElementsOf>
+		const specified = readAttribute({
+			record,
+			name: SPECIFIED_IED_NAME_ATTRIBUTE,
+			defaults: 'none',
+			fullObject: true,
+		})?.value
+		if (specified !== oldName) return []
+		const attributes = record.attributes.map((attribute) =>
+			attribute.name === SPECIFIED_IED_NAME_ATTRIBUTE
+				? { ...attribute, value: newName }
+				: attribute,
+		)
+		return [updatedOperation(record, attributes)]
+	})
 }
 
 /** What a reference naming `oldName` by its names only writes to name `newName`; `undefined` when it is none. */

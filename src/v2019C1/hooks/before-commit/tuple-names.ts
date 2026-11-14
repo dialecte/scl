@@ -139,7 +139,7 @@ function relativeReferrers(params: { naming: readonly NamingReferrer[] }): AnyRa
  * The records above each record held, read a level at a time down to the IED: one read of the records
  * of that level not read yet, whatever the number of records held.
  */
-async function readAncestries(params: {
+export async function readAncestries(params: {
 	records: readonly AnyRawRecord[]
 	query: Core.Query<Config>
 }): Promise<Map<string, AnyRawRecord[]>> {

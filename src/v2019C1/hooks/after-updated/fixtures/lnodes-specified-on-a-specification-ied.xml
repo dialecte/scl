@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- S1 is a specification IED (no source file), R1 a real IED (from an ICD file). The LNodes of F1:
+     - lnode-free: on no IED, specified on none;
+     - lnode-real: bound to R1, specified on S1's CILO1;
+     - lnode-on-s1: bound to S1's CSWI1, specified on it;
+     - lnode-real-unmatched: bound to R1, specified on S1 with a logical node S1 does not hold;
+     - lnode-unassigned: on no IED, specified on S1 with a logical node S1 does not hold;
+     - lnode-specified-on-r1: on no IED, its specified naming names R1. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="root">
+	<Substation name="S1" dev:db-id="substation">
+		<Function name="F1" dev:db-id="function">
+			<LNode iedName="None" lnClass="PTOC" lnInst="1" uuid="lnode-free-uuid" dev:db-id="lnode-free">
+				<Private type="eIEC61850-6-100" dev:db-id="lnode-free-private">
+					<eIEC61850-6-100:LNodeSpecNaming sLnClass="PTOC" sLnInst="1" dev:db-id="lnode-free-naming"/>
+				</Private>
+			</LNode>
+			<LNode iedName="R1" ldInst="LD0" prefix="Q0" lnClass="CILO" lnInst="4" lnUuid="r1-cilo-uuid" uuid="lnode-real-uuid" dev:db-id="lnode-real">
+				<Private type="eIEC61850-6-100" dev:db-id="lnode-real-private">
+					<eIEC61850-6-100:LNodeSpecNaming sIedName="S1" sLdInst="CTRL" sLnClass="CILO" sLnInst="1" dev:db-id="lnode-real-naming"/>
+				</Private>
+			</LNode>
+			<LNode iedName="S1" ldInst="CTRL" prefix="" lnClass="CSWI" lnInst="1" lnUuid="s1-cswi-uuid" uuid="lnode-on-s1-uuid" dev:db-id="lnode-on-s1">
+				<Private type="eIEC61850-6-100" dev:db-id="lnode-on-s1-private">
+					<eIEC61850-6-100:LNodeSpecNaming sIedName="S1" sLdInst="CTRL" sLnClass="CSWI" sLnInst="1" dev:db-id="lnode-on-s1-naming"/>
+				</Private>
+			</LNode>
+			<LNode iedName="R1" ldInst="LD0" prefix="" lnClass="XCBR" lnInst="5" lnUuid="r1-xcbr-uuid" uuid="lnode-real-unmatched-uuid" dev:db-id="lnode-real-unmatched">
+				<Private type="eIEC61850-6-100" dev:db-id="lnode-real-unmatched-private">
+					<eIEC61850-6-100:LNodeSpecNaming sIedName="S1" sLdInst="CTRL" sLnClass="XCBR" sLnInst="9" dev:db-id="lnode-real-unmatched-naming"/>
+				</Private>
+			</LNode>
+			<LNode iedName="None" ldInst="CTRL" lnClass="XCBR" lnInst="9" uuid="lnode-unassigned-uuid" dev:db-id="lnode-unassigned">
+				<Private type="eIEC61850-6-100" dev:db-id="lnode-unassigned-private">
+					<eIEC61850-6-100:LNodeSpecNaming sIedName="S1" sLdInst="CTRL" sLnClass="XCBR" sLnInst="9" dev:db-id="lnode-unassigned-naming"/>
+				</Private>
+			</LNode>
+			<LNode iedName="None" lnClass="XCBR" lnInst="7" uuid="lnode-specified-on-r1-uuid" dev:db-id="lnode-specified-on-r1">
+				<Private type="eIEC61850-6-100" dev:db-id="lnode-specified-on-r1-private">
+					<eIEC61850-6-100:LNodeSpecNaming sIedName="R1" sLnClass="XCBR" sLnInst="7" dev:db-id="lnode-specified-on-r1-naming"/>
+				</Private>
+			</LNode>
+		</Function>
+	</Substation>
+	<IED name="S1" uuid="s1-uuid" dev:db-id="s1">
+		<AccessPoint name="AP1" uuid="s1-ap-uuid" dev:db-id="s1-ap">
+			<Server dev:db-id="s1-server">
+				<LDevice inst="CTRL" uuid="s1-ld-uuid" dev:db-id="s1-ld">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="s1-lln0-uuid" dev:db-id="s1-lln0"/>
+					<LN prefix="" lnClass="CSWI" inst="1" lnType="CSWI_T" uuid="s1-cswi-uuid" dev:db-id="s1-cswi"/>
+					<LN prefix="" lnClass="CILO" inst="1" lnType="CILO_T" uuid="s1-cilo-uuid" dev:db-id="s1-cilo"/>
+					<LN prefix="" lnClass="PTOC" inst="1" lnType="PTOC_T" uuid="s1-ptoc-uuid" dev:db-id="s1-ptoc"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="R1" uuid="r1-uuid" dev:db-id="r1">
+		<IEDSourceFiles dev:db-id="r1-source-files">
+			<SclFileReference fileType="ICD" dev:db-id="r1-icd"/>
+		</IEDSourceFiles>
+		<AccessPoint name="AP1" uuid="r1-ap-uuid" dev:db-id="r1-ap">
+			<Server dev:db-id="r1-server">
+				<LDevice inst="LD0" uuid="r1-ld-uuid" dev:db-id="r1-ld">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="r1-lln0-uuid" dev:db-id="r1-lln0"/>
+					<LN prefix="Q0" lnClass="CILO" inst="4" lnType="CILO_T" uuid="r1-cilo-uuid" dev:db-id="r1-cilo"/>
+					<LN prefix="" lnClass="XCBR" inst="5" lnType="XCBR_T" uuid="r1-xcbr-uuid" dev:db-id="r1-xcbr"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+</SCL>
