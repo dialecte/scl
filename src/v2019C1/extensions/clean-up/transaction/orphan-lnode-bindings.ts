@@ -5,7 +5,7 @@ import {
 
 import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query'
-import { releaseLNodeBinding } from '@/v2019C1/extensions/data-model/transaction/release-lnode-binding'
+import { releaseLNodeBindings } from '@/v2019C1/extensions/data-model/transaction/release-lnode-binding'
 import { IED_SECTION_SELECT } from '@/v2019C1/extensions/dataflow/constants/ied-section.constants'
 import { nativeSectionNodesOf } from '@/v2019C1/extensions/dataflow/query/section-nodes'
 import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
@@ -25,9 +25,11 @@ import type * as Core from '@dialecte/core'
  *   (the store is faithful: an omitted `iedName` is not stamped on import);
  * - bound, its LN in the document → left as it is. With an `lnUuid`, only the LN of that uuid
  *   counts, whatever its naming says; without one, the LN its naming names;
- * - bound, its LN absent → assigned to no IED, its prefix, class and instance back from its
- *   `LNodeSpecNaming`, which is never rewritten. Nothing of a device is removed: unlike
- *   `dataModel.unlockLNode`, the data a device instantiates stays where it is.
+ * - bound, its LN absent → back to the specification its `LNodeSpecNaming` keeps, which is never
+ *   rewritten: bound to the logical node of the specification IED it is specified on when that IED
+ *   holds it and no other LNode is bound to it, else assigned to no IED, its logical device, prefix,
+ *   class and instance from its `LNodeSpecNaming` (see `releaseLNodeBindings`). Nothing of a device is
+ *   removed: unlike `dataModel.unlockLNode`, the data a device instantiates stays where it is.
  *
  * The other names of an LNode's implementation follow the same rule, whether it is bound or not (an
  * LNode implemented by several logical nodes, or sharing one, stays assigned to no IED and names
@@ -48,14 +50,16 @@ export async function resetLNodes(
 	const uuidsByTag = await collectTargetUuids(tx)
 	const mapped = await resolveMappedLNodes(tx, { lnodes })
 
+	const released: Scl.Ref<'LNode'>[] = []
 	for (const lnode of lnodes) {
 		if (!(await isLNodeLocked(tx, lnode))) {
 			// not bound: stamp the explicit 'None' marker (no-op if already stored)
 			await tx.update(lnode, { attributes: { iedName: UNALLOCATED_IED_NAME } })
 			continue
 		}
-		if (!mapped.has(lnode.id)) await releaseLNodeBinding(tx, { lnode })
+		if (!mapped.has(lnode.id)) released.push({ tagName: 'LNode', id: lnode.id })
 	}
+	await releaseLNodeBindings(tx, { lnodes: released })
 
 	// read once the LNodes are released: what a release rewrote is read as it now stands
 	const referrers = await readReferrers(tx, params)

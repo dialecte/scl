@@ -16,6 +16,12 @@ export const SPECIFIED_NAMING_ATTRIBUTES: ReadonlyMap<string, string> = new Map(
 	]).filter(([, specified]) => specified in ATTRIBUTES.byTag.LNodeSpecNaming),
 )
 
+/** The attribute of an `LNodeSpecNaming` naming the specification IED the LNode is specified on. */
+export const SPECIFIED_IED_NAME_ATTRIBUTE: string = specifiedAttributeName('iedName')
+
+/** The attribute of an `LNodeSpecNaming` naming the logical device the LNode is specified in. */
+export const SPECIFIED_LD_INST_ATTRIBUTE: string = specifiedAttributeName('ldInst')
+
 function specifiedAttributeName(name: string): string {
 	return `s${name.charAt(0).toUpperCase()}${name.slice(1)}`
 }

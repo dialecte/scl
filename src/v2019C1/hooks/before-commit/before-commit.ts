@@ -2,12 +2,14 @@ import { findLeftChildren } from './left-children'
 import { LEFT_CHILDREN_PERF_SPAN } from './left-children.constants'
 import { pruneEmptiedContainers } from './prune-emptied-containers'
 import { pruneUnusedTypes } from './prune-unused-types'
+import { specificationIedsOfCreated } from './specification-ieds-of-created'
 import { writeTupleNamesOfCreatedTargets } from './tuple-names'
 
 import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
-import { ensureLNodeSpecNaming } from '@/v2019C1/hooks/shared'
+import { readAttribute } from '@/v2019C1/helpers'
+import { ensureLNodeSpecNaming, hasAttributeChange } from '@/v2019C1/hooks/shared'
 
 import type { LeftChild } from './left-children.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -16,7 +18,10 @@ import type * as Core from '@dialecte/core'
 /**
  * Once the transaction's work is done, every LNode it created and still holds carries an
  * `LNodeSpecNaming`: one brought by a copy or added by the caller is kept, the others get one from
- * the LNode's own naming. Run here, not on create: when an LNode is created, its children (a copied
+ * the LNode's own naming; an LNode the transaction created or bound to a logical node of a
+ * specification IED is specified on it, its naming names that IED and logical device whatever
+ * the naming it was created with (a template's placeholder).
+ * Run here, not on create: when an LNode is created, its children (a copied
  * `LNodeSpecNaming` among them) are not added yet. Then the tuple references naming a target the transaction
  * created by its uuid are written its names, once for all the targets ({@link writeTupleNamesOfCreatedTargets}).
  * Then the types the transaction left unused go, with every record of
@@ -31,15 +36,24 @@ export async function beforeCommit(params: {
 }): Promise<Scl.Operation[]> {
 	const { operations, query } = params
 	const created = new Set<string>()
+	const rebound = new Set<string>()
 	for (const operation of operations) {
 		if (operation.status === 'created' && operation.newRecord.tagName === 'LNode') {
 			created.add(operation.newRecord.id)
 		}
+		if (isRebinding(operation)) rebound.add(operation.newRecord.id)
 	}
 
+	const specificationIeds = await specificationIedsOfCreated({
+		query,
+		lnodeIds: new Set([...created, ...rebound]),
+	})
 	const ensured: Scl.Operation[] = []
-	for (const id of created) {
-		const naming = await ensureLNodeSpecNaming(query, { lnode: { tagName: 'LNode', id } })
+	for (const id of new Set([...created, ...specificationIeds.keys()])) {
+		const naming = await ensureLNodeSpecNaming(query, {
+			lnode: { tagName: 'LNode', id },
+			specificationIed: specificationIeds.get(id),
+		})
 		ensured.push(...naming)
 	}
 	// the references naming what the transaction created by uuid write its names
@@ -62,6 +76,20 @@ export async function beforeCommit(params: {
 	const staged = [...ensured, ...tupleNames, ...unusedTypes, ...pruned]
 	await assertNoChildLeftBehind({ operations: [...operations, ...staged], query })
 	return staged
+}
+
+/** Whether an operation binds an LNode the transaction did not create to a logical node (its `lnUuid` set, changed). */
+function isRebinding(
+	operation: Scl.Operation,
+): operation is Extract<Scl.Operation, { status: 'updated' }> {
+	if (operation.status !== 'updated' || operation.newRecord.tagName !== 'LNode') return false
+	const lnUuid = readAttribute({
+		record: operation.newRecord,
+		name: 'lnUuid',
+		defaults: 'none',
+		fullObject: true,
+	})?.value
+	return Boolean(lnUuid) && hasAttributeChange({ ...operation, names: ['lnUuid'] })
 }
 
 /** Refuse the commit when the operations delete a record and leave one of its children in the store. */

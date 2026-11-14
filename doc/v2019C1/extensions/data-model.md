@@ -110,7 +110,7 @@ In one transaction, in this order:
 
 1. The data its `DOS` / `SDS` / `DAS` specify is no longer instantiated: the `DOI` / `SDI` / `DAI` holding it in the LN that implements it are removed (found by its data path while the binding still names that LN). Other instances of the LN stay.
 2. Its `SourceRef` / `ControlRef` are no longer implemented: `extRefAddr` / `extRefUuid`, `extCtrlAddr` / `extCtrlUuid` are dropped. Their source and the `ExtRef` / `ExtCtrl` in the IED stay.
-3. It is assigned to no IED: `iedName="None"`, `lnUuid` cleared; `ldInst`, `prefix`, `lnClass`, `lnInst` are those of its `LNodeSpecNaming` (`ldInst` removed when it names no logical device), which is left as it is. `lnType` stays.
+3. It goes back to its specification, kept by its `LNodeSpecNaming`, which is left as it is. Specified on a specification IED (an IED with no ICD or IID among its source files) holding the logical node its specified naming names, no other LNode bound to that logical node, and not unlocked from that IED itself: bound to that logical node, `iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst` from its specified naming and `lnUuid` that logical node's uuid. Otherwise assigned to no IED: `iedName="None"`, `lnUuid` cleared; `ldInst`, `prefix`, `lnClass`, `lnInst` are those of its `LNodeSpecNaming` (`ldInst` removed when it names no logical device). `lnType` stays.
 
 An `LNode` assigned to no IED is left as it is.
 

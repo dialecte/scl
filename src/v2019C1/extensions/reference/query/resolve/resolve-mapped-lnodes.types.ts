@@ -14,8 +14,10 @@ export type MappedLNode = {
 /** What implements each LNode, by LNode id; an LNode nothing implements is absent. */
 export type MappedLNodes = ReadonlyMap<string, MappedLNode>
 
-/** The native logical nodes of a document, each with its IED: by uuid and by name path. */
+/** The native logical nodes of a document, each with its IED: by uuid and by name path, and their logical device. */
 export type LogicalNodeIndex = {
 	byUuid: ReadonlyMap<string, MappedLNode>
 	byPath: ReadonlyMap<string, MappedLNode>
+	/** The instance of the logical device holding each logical node, by logical node id. */
+	ldInstById: ReadonlyMap<string, string>
 }
