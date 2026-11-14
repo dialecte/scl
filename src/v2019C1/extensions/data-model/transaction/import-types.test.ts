@@ -22,7 +22,6 @@ type TestCase = SclTest.BaseXmlTestCase & {
 }
 
 describe('importTypes', () => {
-	const DTT = `${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-1"`
 	const EMPTY_TARGET = `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-t"><Header id="target"/></SCL>`
 
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -36,7 +35,7 @@ describe('importTypes', () => {
 						</Bay>
 					</VoltageLevel>
 				</Substation>
-				<DataTypeTemplates ${DTT}>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-1">
 					<LNodeType id="CSWI_Type" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-1">
 						<DO name="Pos" type="DPC_Type" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-1"/>
 					</LNodeType>
@@ -67,7 +66,7 @@ describe('importTypes', () => {
 						</Bay>
 					</VoltageLevel>
 				</Substation>
-				<DataTypeTemplates ${DTT}>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-1">
 					<LNodeType id="CSWI_Type" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-1">
 						<DO name="Pos" type="DPC_Type" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-1"/>
 					</LNodeType>
@@ -99,7 +98,7 @@ describe('importTypes', () => {
 						</Bay>
 					</VoltageLevel>
 				</Substation>
-				<DataTypeTemplates ${DTT}>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-1">
 					<LNodeType id="MMXU_Type" lnClass="MMXU" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-1">
 						<DO name="TotW" type="MV_Type" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-1"/>
 					</LNodeType>
@@ -557,7 +556,7 @@ describe('importTypes', () => {
 						</Bay>
 					</VoltageLevel>
 				</Substation>
-				<DataTypeTemplates ${DTT}>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-1">
 					<LNodeType id="SHARED_ID" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-s">
 						<DO name="Pos" type="DPC_Type" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-s"/>
 					</LNodeType>
@@ -739,6 +738,75 @@ describe('importTypes: a displaced type is kept while a data attribute of any bT
 		})
 
 		if (testCase.expectedStats) expect(stats).toMatchObject(testCase.expectedStats)
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+type OrderCase = SclTest.BaseXmlTestCase & { sourceRefs: { tagName: 'LNode'; id: string }[] }
+
+describe('importTypes: types written in the order of the source DataTypeTemplates', () => {
+	const testCases: SclTest.TestCases<OrderCase> = {
+		'records naming the second type first -> each type kind written in the source order': {
+			sourceXml: `
+			<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">
+				<Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="sub-1">
+					<VoltageLevel name="V1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="vl-1">
+						<Bay name="B1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="bay-1">
+							<LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_Type" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnode-1"/>
+							<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnode-2"/>
+						</Bay>
+					</VoltageLevel>
+				</Substation>
+				<DataTypeTemplates ${CUSTOM_RECORD_ID_ATTRIBUTE}="dtt-1">
+					<LNodeType id="CSWI_Type" lnClass="CSWI" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-2">
+						<DO name="Pos" type="DPC_Type" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-2"/>
+					</LNodeType>
+					<LNodeType id="XCBR_Type" lnClass="XCBR" ${CUSTOM_RECORD_ID_ATTRIBUTE}="lnt-1">
+						<DO name="Loc" type="SPS_Type" ${CUSTOM_RECORD_ID_ATTRIBUTE}="do-1"/>
+					</LNodeType>
+					<DOType id="DPC_Type" cdc="DPC" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-2">
+						<DA name="stVal" bType="Enum" type="Dbpos" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-2"/>
+					</DOType>
+					<DOType id="SPS_Type" cdc="SPS" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dot-1">
+						<DA name="q" bType="Struct" type="Quality_Type" fc="ST" ${CUSTOM_RECORD_ID_ATTRIBUTE}="da-1"/>
+					</DOType>
+					<DAType id="Quality_Type" ${CUSTOM_RECORD_ID_ATTRIBUTE}="dat-1">
+						<BDA name="mode" bType="Enum" type="Mode" ${CUSTOM_RECORD_ID_ATTRIBUTE}="bda-1"/>
+					</DAType>
+					<EnumType id="Dbpos" ${CUSTOM_RECORD_ID_ATTRIBUTE}="et-2">
+						<EnumVal ord="1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ev-2">off</EnumVal>
+					</EnumType>
+					<EnumType id="Mode" ${CUSTOM_RECORD_ID_ATTRIBUTE}="et-1">
+						<EnumVal ord="1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="ev-1">on</EnumVal>
+					</EnumType>
+				</DataTypeTemplates>
+			</SCL>`,
+			targetXml: `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-t"><Header id="target"/></SCL>`,
+			sourceRefs: [
+				{ tagName: 'LNode', id: 'lnode-1' },
+				{ tagName: 'LNode', id: 'lnode-2' },
+			],
+			expectedQueries: [
+				'//default:DataTypeTemplates[default:LNodeType[1]/@id="CSWI_Type"][default:LNodeType[2]/@id="XCBR_Type"][default:DOType[1]/@id="DPC_Type"][default:DOType[2]/@id="SPS_Type"][default:EnumType[1]/@id="Dbpos"][default:EnumType[2]/@id="Mode"]',
+			],
+		},
+	}
+
+	async function act({
+		testCase,
+		source,
+		target,
+	}: SclTest.ActParams<OrderCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		const records = await source.query.getRecords(testCase.sourceRefs)
+		await target.transaction(async function importInRecordOrder(tx) {
+			await importTypes(tx, {
+				sourceQuery: source.query,
+				records: records.filter((record) => !!record),
+			})
+		})
 		return { assertOn: 'target' }
 	}
 
