@@ -65,6 +65,11 @@ describe('one LNode and many LNodes give the same answer', () => {
 		},
 
 		'vendor LN directly under the LDevice before the native one, by lnUuid → the native LN': {
+			allowInvalidFixture: {
+				reason:
+					'a vendor element carries the uuid of a native one: the case reads which of the two is taken',
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			allowIncoherentReferences: 'the look-alike carries the uuid of the native logical node',
 			sourceXml: /* xml */ `
 				<SCL ${NS} ${ID}="scl-1">
@@ -87,6 +92,11 @@ describe('one LNode and many LNodes give the same answer', () => {
 		},
 
 		'vendor LN directly under the LDevice before the native one, by names → the native LN': {
+			allowInvalidFixture: {
+				reason:
+					'the look-alike is a copy of the native logical node, its uuid included: the case reads by names past that copy',
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			allowIncoherentReferences: 'the look-alike carries the uuid of the native logical node',
 			sourceXml: /* xml */ `
 				<SCL ${NS} ${ID}="scl-1">
@@ -131,6 +141,11 @@ describe('one LNode and many LNodes give the same answer', () => {
 		},
 
 		'LN0 then LN carrying one uuid → the LN0, first in document order': {
+			allowInvalidFixture: {
+				reason:
+					'two logical nodes carry one uuid: the case reads which of the two comes first in the document',
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			allowIncoherentReferences: 'two logical nodes carry one uuid',
 			sourceXml: /* xml */ `
 				<SCL ${NS} ${ID}="scl-1">
@@ -153,6 +168,11 @@ describe('one LNode and many LNodes give the same answer', () => {
 		},
 
 		'LN in a first IED and LN0 in a second carrying one uuid → the LN, first in document order': {
+			allowInvalidFixture: {
+				reason:
+					'two logical nodes carry one uuid: the case reads which of the two comes first in the document',
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			allowIncoherentReferences: 'two logical nodes carry one uuid',
 			sourceXml: /* xml */ `
 				<SCL ${NS} ${ID}="scl-1">

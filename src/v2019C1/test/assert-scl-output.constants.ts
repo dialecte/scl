@@ -1,6 +1,6 @@
 import { DEFINITION } from '@/v2019C1/definition/definition.generated'
 
-import type { SclXsdCode } from './assert-scl-output.types'
+import type { SclOutputCheck, SclXsdCode } from './assert-scl-output.types'
 
 /**
  * The checks run on a document a test leaves, in the order they run. The validator is the verdict; the others are
@@ -17,6 +17,26 @@ export const SCL_OUTPUT_CHECK = {
 	references: 'references',
 	/** A uuid used twice, a template uuid shared across element types or naming another type. */
 	identity: 'identity',
+} as const
+
+/**
+ * The checks a case's given documents (its source and target, before the act) are held to: every check of the output
+ * but the XSD validator, whose findings on a hand-made fixture are not ours to judge.
+ */
+export const GIVEN_DOCUMENT_CHECKS: readonly SclOutputCheck[] = Object.values(
+	SCL_OUTPUT_CHECK,
+).filter((check) => check !== SCL_OUTPUT_CHECK.xsd)
+
+/** What each opt-out of a case must give, as its refusal names it: the reason, and the violations. */
+export const SCL_OPT_OUT_NEEDS = {
+	allowInvalidOutput: {
+		reason: 'the reason the case leaves an invalid document',
+		violations: 'the violations the case may leave',
+	},
+	allowInvalidFixture: {
+		reason: "the reason the case's given documents are invalid",
+		violations: 'the violations the given documents hold',
+	},
 } as const
 
 /** The list of what the validator expected where it found a wrong or missing child: it depends on the siblings. */

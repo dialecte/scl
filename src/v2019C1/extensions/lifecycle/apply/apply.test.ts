@@ -488,7 +488,15 @@ describe("apply — what the consumer's step writes is held to the uniqueness ru
 	)
 
 	async function placeWithStep(afterApply: NonNullable<Resolution['afterApply']>) {
-		const { source, target } = await createSclTestProject({ sourceXml, targetXml: busyTargetXml })
+		const { source, target } = await createSclTestProject({
+			sourceXml,
+			targetXml: busyTargetXml,
+			allowInvalidFixture: {
+				reason:
+					'the project already holds two logical nodes of one key: the step is held to what it writes, never to what the project held',
+				violations: [{ check: 'uniqueness', code: 'uniqueLNodeInFunctionB' }],
+			},
+		})
 		if (!target) throw new Error('target required')
 		const lifecycleTarget = {
 			verb: 'fsd' as const,

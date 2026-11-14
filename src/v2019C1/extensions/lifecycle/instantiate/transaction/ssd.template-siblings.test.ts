@@ -33,6 +33,11 @@ describe('instantiate.ssd - a level of the template holding several elements nam
 	const testCases: SclTest.TestCases<RefusalTestCase> = {
 		'a substation of the template holding two voltage levels named TEMPLATE → refused, naming the substation and both, nothing written':
 			{
+				allowInvalidFixture: {
+					reason:
+						'two voltage levels of the template substation share the name TEMPLATE: the refusal the verb gives',
+					violations: [{ check: 'uniqueness', code: 'uniqueChildNameInSubstation' }],
+				},
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="ssd">
 						<Header id="ssd-header" uuid="ssd-document-uuid" version="0" revision="1" ${id}="header-s"/>
@@ -62,6 +67,11 @@ describe('instantiate.ssd - a level of the template holding several elements nam
 			},
 		'a template file holding two substations named TEMPLATE → refused, naming the file and both, nothing written':
 			{
+				allowInvalidFixture: {
+					reason:
+						'two substations of the template file share the name TEMPLATE: the refusal the verb gives',
+					violations: [{ check: 'uniqueness', code: 'SubstationKey' }],
+				},
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="ssd">
 						<Header id="ssd-header" uuid="ssd-document-uuid" version="0" revision="1" ${id}="header-s"/>
@@ -89,6 +99,11 @@ describe('instantiate.ssd - a level of the template holding several elements nam
 			},
 		'one of two substations named TEMPLATE named by the consumer → refused the same, nothing written':
 			{
+				allowInvalidFixture: {
+					reason:
+						'two substations of the template file share the name TEMPLATE: the refusal the verb gives',
+					violations: [{ check: 'uniqueness', code: 'SubstationKey' }],
+				},
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="ssd">
 						<Header id="ssd-header" uuid="ssd-document-uuid" version="0" revision="1" ${id}="header-s"/>

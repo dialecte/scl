@@ -257,6 +257,10 @@ describe('names-only references follow an IED rename', () => {
 
 		'IED renamed while another IED holds its name -> the LNode naming it by names only stays': {
 			sourceXml: twoIedsNamedP1,
+			allowInvalidFixture: {
+				reason: 'two IEDs of one name is the case: the rename tells which one the LNode names',
+				violations: [{ check: 'uniqueness', code: 'IEDKey' }],
+			},
 			rename: { tagName: 'IED', id: 'p1-copy', attributes: { name: 'P9' } },
 			expectedQueries: ['//default:LNode[@iedName="P1"]'],
 			unexpectedQueries: ['//default:LNode[@iedName="P9"]'],

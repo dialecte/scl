@@ -23,6 +23,13 @@ const ns = ALL_XMLNS_NAMESPACES
 const PLACEHOLDER = '123e4567-e89b-12d3-a456-789012345678'
 const UNFLAGGED_PLACEHOLDER = '00000000-0000-0000-0000-000000000000'
 
+/** The project carries a flagged placeholder lineage on purpose: it is what the pairing by name reads. */
+const FLAGGED_PLACEHOLDER = {
+	reason:
+		'one template uuid is shared by two element types in the project: the flagged placeholder the pairing reads',
+	violations: [{ check: 'identity', code: 'cross-type-template-uuid' }],
+} as const
+
 const sourceApplication = { tagName: 'Application', id: 'application-s' } as Scl.Ref<'Application'>
 const instanceApplication = {
 	tagName: 'Application',
@@ -126,12 +133,14 @@ describe('engine diff — a reference pairs by name only on a flagged placeholde
 			expected: ['added role-ref-s', 'removed role-ref-t'],
 		},
 		'a flagged placeholder, nothing asked → removed and added': {
+			allowInvalidFixture: FLAGGED_PLACEHOLDER,
 			sourceXml,
 			targetXml: projectXml({ roleLineage: PLACEHOLDER, substationLineage: PLACEHOLDER }),
 			compared: 'application',
 			expected: ['added role-ref-s', 'removed role-ref-t'],
 		},
 		'a flagged placeholder, pairing by name asked → paired, the pairing said': {
+			allowInvalidFixture: FLAGGED_PLACEHOLDER,
 			sourceXml,
 			targetXml: projectXml({ roleLineage: PLACEHOLDER, substationLineage: PLACEHOLDER }),
 			referencesByName: 'placeholders',
@@ -139,6 +148,7 @@ describe('engine diff — a reference pairs by name only on a flagged placeholde
 			expected: [`unchanged role-ref-t by name on ${PLACEHOLDER}`],
 		},
 		'a flagged placeholder, pairing asked, the names differ → removed and added': {
+			allowInvalidFixture: FLAGGED_PLACEHOLDER,
 			sourceXml,
 			targetXml: projectXml({
 				roleLineage: PLACEHOLDER,
@@ -151,6 +161,7 @@ describe('engine diff — a reference pairs by name only on a flagged placeholde
 		},
 		'a placeholder flagged elsewhere, pairing asked, the reference names an unflagged lineage → removed and added':
 			{
+				allowInvalidFixture: FLAGGED_PLACEHOLDER,
 				sourceXml,
 				targetXml: projectXml({
 					roleLineage: UNFLAGGED_PLACEHOLDER,
@@ -163,6 +174,7 @@ describe('engine diff — a reference pairs by name only on a flagged placeholde
 			},
 		"another instance's reference to a function of a placeholder lineage, nothing asked → removed":
 			{
+				allowInvalidFixture: FLAGGED_PLACEHOLDER,
 				sourceXml,
 				targetXml: projectXml({
 					roleLineage: 'role-source',
@@ -175,6 +187,7 @@ describe('engine diff — a reference pairs by name only on a flagged placeholde
 			},
 		"another instance's reference to a function of a flagged placeholder, pairing asked → kept as its own":
 			{
+				allowInvalidFixture: FLAGGED_PLACEHOLDER,
 				sourceXml,
 				targetXml: projectXml({
 					roleLineage: 'role-source',
@@ -191,6 +204,7 @@ describe('engine diff — a reference pairs by name only on a flagged placeholde
 			},
 		"another instance's reference to a subfunction of a flagged placeholder, pairing asked → kept as its own":
 			{
+				allowInvalidFixture: FLAGGED_PLACEHOLDER,
 				sourceXml,
 				targetXml: projectXml({
 					roleLineage: 'role-source',

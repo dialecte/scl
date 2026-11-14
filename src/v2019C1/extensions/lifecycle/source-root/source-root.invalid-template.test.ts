@@ -14,6 +14,11 @@ type TestCase = SclTest.BaseXmlTestCase & { expected: SourceRoot<'ssd'> }
 describe('query.lifecycle.sourceRoot.ssd - a scaffolding holding two elements named TEMPLATE', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'two substations named TEMPLATE → none: not a valid file, the verbs refuse it': {
+			allowInvalidFixture: {
+				reason:
+					'two substations of the template file share the name TEMPLATE: not a valid file, the case reads that no source root is found',
+				violations: [{ check: 'uniqueness', code: 'SubstationKey' }],
+			},
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="scl-1">
 					<Substation name="TEMPLATE" ${id}="substation-1">

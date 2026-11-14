@@ -53,6 +53,10 @@ describe('resolveMapping — where a shared element of the template lands', () =
 			},
 		},
 		'two project categories of its name → neither picked, the consumer chooses': {
+			allowInvalidFixture: {
+				reason: 'two project categories of one name: the case reads that neither is picked',
+				violations: [{ check: 'uniqueness', code: 'uniqueChildNameInSubstation' }],
+			},
 			sourceXml,
 			targetXml: /* xml */ `
 				<SCL ${ns} ${id}="scd">

@@ -1,6 +1,9 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
-import { ALL_XMLNS_NAMESPACES, createSclTestProject } from '@/v2019C1/test'
+import { ALL_XMLNS_NAMESPACES, createSclTestProject, runSclTestCases } from '@/v2019C1/test'
+
+import type { SclOutputOptOut } from './assert-scl-output.types'
+import type { SclTest } from './hydrated-test.types'
 
 const sourceXml = /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES} />`
 
@@ -63,4 +66,146 @@ describe('createSclTestProject', () => {
 		expect(String(outside.incoherent.error)).toContain('cNodeUuid')
 		await expect(databasesLeftBy({ called: outside.incoherent })).resolves.toEqual([])
 	})
+})
+
+describe('createSclTestProject — the given documents', () => {
+	const VALID_XML = /* xml */ `
+		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+			<Header id="given-documents"/>
+			<Substation name="S1">
+				<VoltageLevel name="V1">
+					<Bay name="B1"/>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+	const DUPLICATE_BAY_XML = /* xml */ `
+		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+			<Header id="given-documents"/>
+			<Substation name="S1">
+				<VoltageLevel name="V1">
+					<Bay name="B1"/>
+					<Bay name="B1"/>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+
+	const PARTIAL_XML = /* xml */ `
+		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+			<Header id="given-documents"/>
+			<Substation name="S1">
+				<VoltageLevel name="V1">
+					<Bay/>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+
+	const reason = 'the case needs a given document a real file could not be'
+	const duplicateBayLine =
+		'  [uniqueness] <Bay> name="B1" repeats an earlier sibling under SCL/Substation[S1]/VoltageLevel[V1] (uniqueChildNameInVoltageLevel)'
+
+	/** The full name of the running test, suite names included, as vitest gives it: the label the check gives its messages. */
+	function labelOfRunningTest(): string {
+		return expect.getState().currentTestName ?? 'createSclTestProject'
+	}
+
+	function fixtureHeader(params: { label: string; role: 'source' | 'target' }): string {
+		const { label, role } = params
+		return `${label} › ${role}: the ${role} document has 1 violation(s) before the act: a given document must pass the output checks (give allowInvalidFixture with the violations and why):`
+	}
+
+	type TestCase = SclTest.BaseTestCase & {
+		sourceXml: string
+		targetXml?: string
+		allowInvalidFixture?: SclOutputOptOut
+		allowIncoherentReferences?: string
+		/** What the call rejects with, given the running test's label; `undefined` when it opens. */
+		expectedMessage: ((label: string) => string) | undefined
+	}
+
+	const testCases: Record<string, TestCase> = {
+		'a source with two siblings of one key, no opt-out → the call rejects, naming the source': {
+			sourceXml: DUPLICATE_BAY_XML,
+			expectedMessage: (label) =>
+				`${fixtureHeader({ label, role: 'source' })}\n${duplicateBayLine}`,
+		},
+		'a source with a duplicate key, opt-out listing it with a reason → opens': {
+			sourceXml: DUPLICATE_BAY_XML,
+			allowInvalidFixture: { reason, violations: [{ check: 'uniqueness' }] },
+			expectedMessage: undefined,
+		},
+		'a valid source, opt-out listing a duplicate key → the call rejects, naming the stale opt-out':
+			{
+				sourceXml: VALID_XML,
+				allowInvalidFixture: { reason, violations: [{ check: 'uniqueness' }] },
+				expectedMessage: (label) =>
+					`${label}: [opt-out] allowInvalidFixture allows uniqueness, which the given documents do not hold: remove it`,
+			},
+		'an opt-out with an empty reason → the call refuses it': {
+			sourceXml: DUPLICATE_BAY_XML,
+			allowInvalidFixture: { reason: '', violations: [{ check: 'uniqueness' }] },
+			expectedMessage: (label) =>
+				`${label}: allowInvalidFixture needs the reason the case's given documents are invalid, not an empty string`,
+		},
+		'an opt-out with an empty list → the call refuses it': {
+			sourceXml: DUPLICATE_BAY_XML,
+			allowInvalidFixture: { reason, violations: [] },
+			expectedMessage: (label) =>
+				`${label}: allowInvalidFixture needs the violations the given documents hold, not an empty list`,
+		},
+		'an opt-out with an xsd tolerance → the call refuses it': {
+			sourceXml: DUPLICATE_BAY_XML,
+			allowInvalidFixture: { reason, violations: [{ check: 'xsd', code: 'missing-child' }] },
+			expectedMessage: (label) =>
+				`${label}: allowInvalidFixture lists xsd, a check given documents are not held to: remove it`,
+		},
+		'an opt-out with a references tolerance → the call refuses it': {
+			sourceXml: DUPLICATE_BAY_XML,
+			allowInvalidFixture: { reason, violations: [{ check: 'references', code: 'dangling' }] },
+			expectedMessage: (label) =>
+				`${label}: allowInvalidFixture lists references, which allowIncoherentReferences covers: give that instead`,
+		},
+		'a source missing a required attribute → opens (partial fixtures)': {
+			sourceXml: PARTIAL_XML,
+			expectedMessage: undefined,
+		},
+		'a source with an incoherent reference, allowIncoherentReferences set → opens': {
+			sourceXml: INCOHERENT_XML,
+			allowIncoherentReferences: 'the reference is repaired by the test',
+			expectedMessage: undefined,
+		},
+		'a target with two siblings of one key → the call rejects, naming the target': {
+			sourceXml: VALID_XML,
+			targetXml: DUPLICATE_BAY_XML,
+			expectedMessage: (label) =>
+				`${fixtureHeader({ label, role: 'target' })}\n${duplicateBayLine}`,
+		},
+	}
+
+	async function act(testCase: TestCase) {
+		const { sourceXml, targetXml, allowInvalidFixture, allowIncoherentReferences } = testCase
+		const opened = createSclTestProject({
+			sourceXml,
+			targetXml,
+			allowInvalidFixture,
+			allowIncoherentReferences,
+		})
+		if (testCase.expectedMessage === undefined) {
+			await expect(opened).resolves.toBeDefined()
+			return
+		}
+		const error = await opened.then(
+			() => undefined,
+			(rejected: unknown) => rejected,
+		)
+		expect(error).toBeDefined()
+		expect(error).toMatchObject({
+			name: 'Error',
+			message: expect.stringContaining(testCase.expectedMessage(labelOfRunningTest())),
+		})
+	}
+
+	runSclTestCases.generic(testCases, act)
 })

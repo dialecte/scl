@@ -185,6 +185,11 @@ describe('resolveMappedLNodes', () => {
 
 		'vendor look-alike before the native LN, named by uuid → the native LN': {
 			allowIncoherentReferences: 'the look-alike carries the uuid of the native logical node',
+			allowInvalidFixture: {
+				reason:
+					"the look-alike carrying the native logical node's uuid is what the case reads past",
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES} xmlns:vendor="urn:vendor" ${ID}="scl-1">
 					<Private type="vendor" ${ID}="before">
@@ -217,6 +222,11 @@ describe('resolveMappedLNodes', () => {
 
 		'vendor look-alike before the native LN, named by names → the native LN': {
 			allowIncoherentReferences: 'the look-alike carries the uuid of the native logical node',
+			allowInvalidFixture: {
+				reason:
+					"the look-alike carrying the native logical node's uuid is what the case reads past",
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES} xmlns:vendor="urn:vendor" ${ID}="scl-1">
 					<Private type="vendor" ${ID}="before">
@@ -249,6 +259,11 @@ describe('resolveMappedLNodes', () => {
 
 		'vendor look-alike after the native LN, named by uuid → the native LN': {
 			allowIncoherentReferences: 'the look-alike carries the uuid of the native logical node',
+			allowInvalidFixture: {
+				reason:
+					"the look-alike carrying the native logical node's uuid is what the case reads past",
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES} xmlns:vendor="urn:vendor" ${ID}="scl-1">
 					
@@ -272,6 +287,11 @@ describe('resolveMappedLNodes', () => {
 
 		'vendor look-alike after the native LN, named by names → the native LN': {
 			allowIncoherentReferences: 'the look-alike carries the uuid of the native logical node',
+			allowInvalidFixture: {
+				reason:
+					"the look-alike carrying the native logical node's uuid is what the case reads past",
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES} xmlns:vendor="urn:vendor" ${ID}="scl-1">
 					
@@ -341,6 +361,10 @@ describe('resolveMappedLNodes', () => {
 
 		'two LNs of two IEDs carrying the uuid → the first in document order': {
 			allowIncoherentReferences: 'two logical nodes carry one uuid',
+			allowInvalidFixture: {
+				reason: 'the case reads which of two logical nodes of one uuid is taken',
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
 					<Substation name="S1" ${ID}="sub-1">

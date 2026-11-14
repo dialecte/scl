@@ -97,6 +97,11 @@ describe('update of an application whose role allocates a function of a placehol
 	const testCases: SclTest.TestCases<TestCase> = {
 		"nothing asked → the role gains the allocation of the instance's function, the other one kept":
 			{
+				allowInvalidFixture: {
+					reason:
+						'the project carries a template uuid shared by a substation and a function: the placeholder lineage the pairing reads',
+					violations: [{ check: 'identity', code: 'cross-type-template-uuid' }],
+				},
 				sourceXml,
 				targetXml,
 				expected: {
@@ -106,6 +111,11 @@ describe('update of an application whose role allocates a function of a placehol
 				},
 			},
 		'pairing by name asked → the allocation is read as the template one, the pairing reported': {
+			allowInvalidFixture: {
+				reason:
+					'the project carries a template uuid shared by a substation and a function: the placeholder lineage the pairing reads',
+				violations: [{ check: 'identity', code: 'cross-type-template-uuid' }],
+			},
 			sourceXml,
 			targetXml,
 			referencesByName: 'placeholders',

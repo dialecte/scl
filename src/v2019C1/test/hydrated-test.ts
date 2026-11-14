@@ -2,9 +2,10 @@ import {
 	assertCoherentSclReferences,
 	assertCoherentSclReferencesTestCases,
 } from './assert-coherent-scl-references'
-import { assertAllowInvalidOutputReason } from './assert-scl-output'
+import { assertAllowInvalidFixtureReason, assertOptOutReason } from './assert-scl-output'
 import { assertValidSclXml } from './assert-valid-scl-xml'
 import {
+	assertGivenDocuments,
 	assertOutputGateTestCases,
 	closeGatedTestProject,
 	readOutputBaseline,
@@ -14,7 +15,7 @@ import { SCL_TEST_HELPERS } from './scl-test-helpers.constants'
 import { FIXTURE_REFERENCES_CHECK_TIMEOUT_MS } from './scl-test-setup.constants'
 
 import { CUSTOM_RECORD_ID_ATTRIBUTE, CUSTOM_RECORD_ID_ATTRIBUTE_NAME } from '@dialecte/core/helpers'
-import { beforeAll, onTestFinished } from 'vitest'
+import { beforeAll, expect, onTestFinished } from 'vitest'
 
 import type { AssertCoherentSclReferencesTestCasesParams } from './assert-coherent-scl-references.types'
 import type { SclOutputOptOut } from './assert-scl-output.types'
@@ -36,8 +37,12 @@ export { assertValidSclXml } from './assert-valid-scl-xml'
 /**
  * The declaration's test runner, which checks every registered case's XML against the SCL schema, wrapped so the
  * cases are also checked for coherent references before the suite runs (see
- * {@link assertCoherentSclReferencesTestCases}) and the documents each case leaves are checked after its act (see
- * {@link withOutputGate}): a violation the act added fails the case. All failing cases are reported at once.
+ * {@link assertCoherentSclReferencesTestCases}), the given documents of each case must pass the output checks before
+ * its act, and the documents each case leaves are checked after its act (see {@link withOutputGate}): a violation the
+ * act added fails the case. A case whose given documents must hold a violation on purpose says so with
+ * `allowInvalidFixture` (the reason and the violations; never the XSD validator, which given documents are not held
+ * to), or `allowIncoherentReferences` for a reference. A refused opt-out is reported before the suite runs, all
+ * failing cases at once.
  */
 export const runSclTestCases: SclTest.TestRunner = {
 	...SCL_TEST_HELPERS.runTestCases,
@@ -71,10 +76,15 @@ function checkReferencesBeforeTheSuite(params: AssertCoherentSclReferencesTestCa
 }
 
 /**
- * Open a test project with `sourceXml` (and `targetXml`) imported, the fixtures checked first. The test owns it
- * until it finishes; then the documents it leaves are checked (a violation the test added fails it unless the test
- * failed already or `allowInvalidOutput` lists it; a stale opt-out fails it too) and the project is destroyed. Call it inside a test, and
- * do not destroy the project yourself.
+ * Open a test project with `sourceXml` (and `targetXml`) imported, the fixtures checked first: once imported, the
+ * given documents must pass the output checks but the XSD validator (schema, uniqueness, references, identity; see
+ * {@link assertGivenDocuments}), or the call rejects with a plain `Error` named after the running test.
+ * `allowInvalidFixture` tolerates the violations it lists (with the reason; a listed violation they lack fails the
+ * call too), `allowIncoherentReferences` leaves the references out.
+ *
+ * The test owns the project until it finishes; then the documents it leaves are checked (a violation the test added
+ * fails it unless the test failed already or `allowInvalidOutput` lists it; a stale opt-out fails it too) and the
+ * project is destroyed. Call it inside a test, and do not destroy the project yourself.
  *
  * The output check validates against the XSD only once `configureSclXsdSchemas` has said where the schema files are;
  * without them that check is skipped silently, and the structure (namespaces, allowed children, known attributes),
@@ -90,9 +100,21 @@ export async function createSclTestProject(params: {
 	allowIncoherentReferences?: string
 	/** The violations the test may leave in its documents, and why; any other violation still fails it. */
 	allowInvalidOutput?: SclOutputOptOut
+	/** The violations the given documents may hold before the test, and why; any other violation fails the call. */
+	allowInvalidFixture?: SclOutputOptOut
 }) {
-	const { sourceXml, targetXml, dev, allowIncoherentReferences, allowInvalidOutput } = params
-	assertAllowInvalidOutputReason({ allowInvalidOutput, label: 'createSclTestProject' })
+	const {
+		sourceXml,
+		targetXml,
+		dev,
+		allowIncoherentReferences,
+		allowInvalidOutput,
+		allowInvalidFixture,
+	} = params
+	// the running test's full name, suite names included, never split: a test name may hold the separator
+	const label = expect.getState().currentTestName ?? 'createSclTestProject'
+	assertOptOutReason({ name: 'allowInvalidOutput', optOut: allowInvalidOutput, label })
+	assertAllowInvalidFixtureReason({ allowInvalidFixture, label })
 	assertValidSclXml({ xml: sourceXml, label: 'sourceXml', requireComplete: false })
 	if (targetXml) assertValidSclXml({ xml: targetXml, label: 'targetXml', requireComplete: false })
 	if (!allowIncoherentReferences) {
@@ -125,6 +147,13 @@ export async function createSclTestProject(params: {
 	const documents: GatedDocument[] = [{ role: 'source', document: result.source.document }]
 	if (result.target) documents.push({ role: 'target', document: result.target.document })
 	opened.baseline = await readOutputBaseline({ project: result.project, documents })
+	// a given document that fails the checks fails the call; the hook above still destroys the project
+	assertGivenDocuments({
+		baseline: opened.baseline,
+		label,
+		allowInvalidFixture,
+		allowIncoherentReferences,
+	})
 	return result
 }
 

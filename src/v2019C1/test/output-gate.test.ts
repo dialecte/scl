@@ -594,7 +594,12 @@ describe('withOutputGate — the documents of the project', () => {
 			targetXml,
 		})
 		try {
-			const gatedCase: OutputGateTestCase = { sourceXml, targetXml }
+			const gatedCase: OutputGateTestCase = {
+				sourceXml,
+				targetXml,
+				allowIncoherentReferences:
+					'the source holds a function reference naming no function on purpose: the tests read what the gate does with a violation a document already holds',
+			}
 			const gatedAct = withOutputGate({
 				act: testCase.act,
 				testCases: { 'gated case': gatedCase },
@@ -613,6 +618,278 @@ describe('withOutputGate — the documents of the project', () => {
 		} finally {
 			await project.destroy()
 		}
+	}
+
+	runSclTestCases.generic(testCases, act)
+})
+
+describe('withOutputGate — the given documents', () => {
+	const DUPLICATE_BAY_XML = /* xml */ `
+		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+			<Header id="given-documents"/>
+			<Substation name="S1">
+				<VoltageLevel name="V1" ${id}="v1">
+					<Bay name="B1" ${id}="bay-1"/>
+					<Bay name="B1" ${id}="bay-2"/>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+	const DUPLICATE_UUID_XML = /* xml */ `
+		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+			<Header id="given-documents"/>
+			<Substation name="S1">
+				<VoltageLevel name="V1">
+					<Bay name="B1">
+						<Function name="F1" uuid="${FUNCTION_UUID}">
+							<LNode iedName="None" ldInst="LD1" lnClass="CSWI" lnInst="1" uuid="${LNODE_UUID}"/>
+							<LNode iedName="None" ldInst="LD1" lnClass="CSWI" lnInst="2" uuid="${LNODE_UUID}"/>
+						</Function>
+					</Bay>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+	const PARTIAL_XML = /* xml */ `
+		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+			<Header id="given-documents"/>
+			<Substation name="S1">
+				<VoltageLevel name="V1">
+					<Bay/>
+				</VoltageLevel>
+			</Substation>
+		</SCL>
+	`
+	const DANGLING_XML = /* xml */ `
+		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+			<Header id="given-documents"/>
+			<Substation name="S1">
+				<Private type="eIEC61850-6-100">
+					<eIEC61850-6-100:AllocationRole name="Operator" uuid="${ROLE_UUID}">
+						<eIEC61850-6-100:FunctionRef functionUuid="${MISSING_UUID}"/>
+					</eIEC61850-6-100:AllocationRole>
+				</Private>
+			</Substation>
+		</SCL>
+	`
+
+	const reason = 'the case needs a given document a real file could not be'
+
+	function fixtureHeader(role: 'source' | 'target'): string {
+		return `gated case › ${role}: the ${role} document has 1 violation(s) before the act: a given document must pass the output checks (give allowInvalidFixture with the violations and why):`
+	}
+	const duplicateBayDescription =
+		'[uniqueness] <Bay> name="B1" repeats an earlier sibling under SCL/Substation[S1]/VoltageLevel[V1] (uniqueChildNameInVoltageLevel)'
+	const duplicateBayLine = `  ${duplicateBayDescription}`
+	const duplicateUuidLine = `  [identity] duplicate-instance-uuid: uuid "${LNODE_UUID}" is used by 2 elements (LNode); every instance UUID in an SCL shall be unique.`
+	const uniquenessOptOut: SclOutputOptOut = { reason, violations: [{ check: 'uniqueness' }] }
+	const danglingLine = `  [references] [dangling] <FunctionRef> functionUuid="${MISSING_UUID}" points at no element of the document`
+
+	type TestCase = SclTest.BaseTestCase & {
+		gatedCase: OutputGateTestCase
+		/** What the gated act rejects with, a plain `Error` before the act; `undefined` when it resolves. */
+		expectedMessage: string | undefined
+		expectedActRan: boolean
+		/** What the act does to the source (default: nothing). */
+		write?: (document: SclTest.TestDocument['document']) => Promise<void>
+		/** The kind of rejection (default: a plain `Error`). */
+		expectedError?: ErrorKind
+	}
+
+	const testCases: Record<string, TestCase> = {
+		'a source with two siblings of one key, no opt-out → rejects before the act, naming the source':
+			{
+				gatedCase: { sourceXml: DUPLICATE_BAY_XML },
+				expectedMessage: `${fixtureHeader('source')}\n${duplicateBayLine}`,
+				expectedActRan: false,
+			},
+		'a source missing a required attribute → resolves (partial fixtures)': {
+			gatedCase: { sourceXml: PARTIAL_XML },
+			expectedMessage: undefined,
+			expectedActRan: true,
+		},
+		'a source holding a duplicate key under an opt-out listing it with a reason → resolves': {
+			gatedCase: {
+				sourceXml: DUPLICATE_BAY_XML,
+				allowInvalidFixture: { reason, violations: [{ check: 'uniqueness' }] },
+			},
+			expectedMessage: undefined,
+			expectedActRan: true,
+		},
+		'a valid source under an opt-out listing a duplicate key → rejects before the act, naming the stale opt-out':
+			{
+				gatedCase: {
+					sourceXml: SOURCE_XML,
+					allowInvalidFixture: uniquenessOptOut,
+				},
+				expectedMessage:
+					'gated case: [opt-out] allowInvalidFixture allows uniqueness, which the given documents do not hold: remove it',
+				expectedActRan: false,
+			},
+		'a source with a dangling reference, allowIncoherentReferences set → resolves': {
+			gatedCase: {
+				sourceXml: DANGLING_XML,
+				allowIncoherentReferences: 'the reference is repaired by the act under test',
+			},
+			expectedMessage: undefined,
+			expectedActRan: true,
+		},
+		'a source with a dangling reference, no opt-out → rejects before the act, naming the references violation':
+			{
+				gatedCase: { sourceXml: DANGLING_XML },
+				expectedMessage: `${fixtureHeader('source')}\n${danglingLine}`,
+				expectedActRan: false,
+			},
+		'a target with two siblings of one key → rejects before the act, naming the target': {
+			gatedCase: { sourceXml: SOURCE_XML, targetXml: DUPLICATE_BAY_XML },
+			expectedMessage: `${fixtureHeader('target')}\n${duplicateBayLine}`,
+			expectedActRan: false,
+		},
+		'a source holding a duplicate key under an opt-out, the act adds another duplicate → the output gate rejects (the fixture opt-out does not leak)':
+			{
+				gatedCase: { sourceXml: DUPLICATE_BAY_XML, allowInvalidFixture: uniquenessOptOut },
+				async write(document) {
+					await document.transaction(async (tx) => {
+						await tx.addChild(
+							{ tagName: 'VoltageLevel', id: 'v1' },
+							{ tagName: 'Bay', attributes: { name: 'B1' } },
+						)
+					})
+				},
+				expectedMessage: invalidDocumentMessage({
+					label: 'gated case › source',
+					xsdLines: [
+						`[xsd] Element '{http://www.iec.ch/61850/2003/SCL}Bay': Duplicate key-sequence ['B1'] in unique identity-constraint '{http://www.iec.ch/61850/2003/SCL}uniqueChildNameInVoltageLevel'.`,
+					],
+					lines: [duplicateBayDescription],
+				}),
+				expectedError: 'assertion',
+				expectedActRan: true,
+			},
+		'a source holding a duplicate key under an opt-out, the act deletes the second Bay → resolves (staleness is judged on the given documents)':
+			{
+				gatedCase: { sourceXml: DUPLICATE_BAY_XML, allowInvalidFixture: uniquenessOptOut },
+				async write(document) {
+					await document.transaction(async (tx) => {
+						await tx.delete({ tagName: 'Bay', id: 'bay-2' })
+					})
+				},
+				expectedMessage: undefined,
+				expectedActRan: true,
+			},
+		'a source holding a duplicate key, only allowInvalidOutput listing it → rejects before the act (the output opt-out never covers a given document)':
+			{
+				gatedCase: { sourceXml: DUPLICATE_BAY_XML, allowInvalidOutput: uniquenessOptOut },
+				expectedMessage: `${fixtureHeader('source')}\n${duplicateBayLine}`,
+				expectedActRan: false,
+			},
+		'a source with two elements of one uuid → rejects before the act, naming the identity violation':
+			{
+				gatedCase: { sourceXml: DUPLICATE_UUID_XML },
+				expectedMessage: `${fixtureHeader('source')}\n${duplicateUuidLine}`,
+				expectedActRan: false,
+			},
+		'a source and a target with two siblings of one key → rejects before the act, both documents in order':
+			{
+				gatedCase: { sourceXml: DUPLICATE_BAY_XML, targetXml: DUPLICATE_BAY_XML },
+				expectedMessage: `${fixtureHeader('source')}\n${duplicateBayLine}\n${fixtureHeader('target')}\n${duplicateBayLine}`,
+				expectedActRan: false,
+			},
+	}
+
+	async function act(testCase: TestCase) {
+		const { sourceXml, targetXml } = testCase.gatedCase
+		const { project, source, target } = await createTestProject({
+			dialecte: SCL_DIALECTE,
+			sourceXml,
+			targetXml,
+		})
+		try {
+			const ran = { act: false }
+			const gatedAct = withOutputGate({
+				async act({ source: document }: SclTest.ActParams<OutputGateTestCase>) {
+					ran.act = true
+					await testCase.write?.(document)
+				},
+				testCases: { 'gated case': testCase.gatedCase },
+			})
+			const outcome = gatedAct({
+				testCase: testCase.gatedCase,
+				project,
+				source: source.document,
+				target: target?.document,
+			})
+			if (testCase.expectedMessage === undefined) {
+				await expect(outcome).resolves.toBeUndefined()
+			} else {
+				await expectRejection({
+					outcome,
+					kind: testCase.expectedError ?? 'plain',
+					message: testCase.expectedMessage,
+				})
+			}
+			expect(ran.act).toBe(testCase.expectedActRan)
+		} finally {
+			await project.destroy()
+		}
+	}
+
+	runSclTestCases.generic(testCases, act)
+})
+
+describe('assertOutputGateTestCases — allowInvalidFixture', () => {
+	type TestCase = SclTest.BaseTestCase & {
+		checkedCase: OutputGateTestCase
+		expectedMessage: string
+	}
+
+	const testCases: Record<string, TestCase> = {
+		'an opt-out with an empty reason → refused before the suite runs': {
+			checkedCase: {
+				sourceXml: SOURCE_XML,
+				allowInvalidFixture: { reason: '', violations: [{ check: 'uniqueness' }] },
+			},
+			expectedMessage:
+				"silent case: allowInvalidFixture needs the reason the case's given documents are invalid, not an empty string",
+		},
+		'an opt-out with an empty list → refused before the suite runs': {
+			checkedCase: {
+				sourceXml: SOURCE_XML,
+				allowInvalidFixture: { reason: 'a duplicate key on purpose', violations: [] },
+			},
+			expectedMessage:
+				'silent case: allowInvalidFixture needs the violations the given documents hold, not an empty list',
+		},
+		'an opt-out with an xsd tolerance → refused before the suite runs': {
+			checkedCase: {
+				sourceXml: SOURCE_XML,
+				allowInvalidFixture: {
+					reason: 'a duplicate key on purpose',
+					violations: [{ check: 'xsd', code: 'missing-child' }],
+				},
+			},
+			expectedMessage:
+				'silent case: allowInvalidFixture lists xsd, a check given documents are not held to: remove it',
+		},
+		'an opt-out with a references tolerance → refused before the suite runs': {
+			checkedCase: {
+				sourceXml: SOURCE_XML,
+				allowInvalidFixture: {
+					reason: 'a dangling reference on purpose',
+					violations: [{ check: 'references', code: 'dangling' }],
+				},
+			},
+			expectedMessage:
+				'silent case: allowInvalidFixture lists references, which allowIncoherentReferences covers: give that instead',
+		},
+	}
+
+	function act(testCase: TestCase) {
+		function check() {
+			assertOutputGateTestCases({ testCases: { 'silent case': testCase.checkedCase } })
+		}
+		expect(check).toThrow(testCase.expectedMessage)
+		expectErrorOfKind({ error: captureThrown(check), kind: 'plain' })
 	}
 
 	runSclTestCases.generic(testCases, act)

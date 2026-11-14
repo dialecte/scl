@@ -21,6 +21,14 @@ export namespace SclTest {
 		 * Any other violation still fails the case; an empty reason or list is refused.
 		 */
 		allowInvalidOutput?: SclOutputOptOut
+		/**
+		 * Set when the case NEEDS a given document (source or target) that a real file could not be
+		 * (a duplicate key, a rule broken on purpose): the reason it does and the violations the given
+		 * documents hold before the act. Any other violation fails the case before the act; a listed
+		 * violation the documents lack fails it too; an empty reason or list, an `xsd` tolerance, or a `references`
+		 * one (`allowIncoherentReferences` covers references), is refused.
+		 */
+		allowInvalidFixture?: SclOutputOptOut
 	}
 	export type TestCases<T extends BaseTestCase = BaseXmlTestCase> = Record<string, T>
 	export type TestDocument = CoreTest.TestDocument<Config>

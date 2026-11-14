@@ -100,6 +100,11 @@ describe('syncMinRequestedScdFiles', () => {
 			expected: { operations: [] },
 		},
 		'project listed twice → folded into the first, hand-set attributes carried over': {
+			allowInvalidFixture: {
+				reason:
+					'the project is listed twice in the request wrapper: the case reads the entries folded into the first',
+				violations: [{ check: 'uniqueness', code: 'uniqueProjectInReqSCD' }],
+			},
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					${header}

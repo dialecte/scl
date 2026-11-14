@@ -33,7 +33,13 @@ type TestCase = SclTest.BaseXmlTestCase
 
 describe('findConstraintViolations (subtree validation)', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'walks a subtree and reports every scoped-uniqueness violation': { sourceXml },
+		'walks a subtree and reports every scoped-uniqueness violation': {
+			allowInvalidFixture: {
+				reason: 'two functions of one bay share a name: the violation the walk reports',
+				violations: [{ check: 'uniqueness', code: 'uniqueChildNameInBay' }],
+			},
+			sourceXml,
+		},
 	}
 
 	async function act({ source }: SclTest.ActParams<TestCase>): Promise<void> {

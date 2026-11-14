@@ -129,7 +129,7 @@ describe('resolveSsdScope', () => {
 				)
 				.replace(
 					'<VoltageLevel name="TEMPLATE" ' + id + '="vl-1">',
-					`<VoltageLevel name="TEMPLATE" ${id}="vl-1"><Private type="eIEC61850-6-100" ${id}="vl-private"><eIEC61850-6-100:Application name="Own" type="DCS" uuid="own-application-uuid" ${id}="own-application"><eIEC61850-6-100:FunctionRole name="ROOT" ${id}="own-role"><eIEC61850-6-100:FunctionRoleContent ${id}="own-content"><eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/Own" functionUuid="own-uuid" ${id}="own-ref"/></eIEC61850-6-100:FunctionRoleContent></eIEC61850-6-100:FunctionRole></eIEC61850-6-100:Application></Private>`,
+					`<VoltageLevel name="TEMPLATE" ${id}="vl-1"><Private type="eIEC61850-6-100" ${id}="vl-private"><eIEC61850-6-100:Application name="OwnApplication" type="DCS" uuid="own-application-uuid" ${id}="own-application"><eIEC61850-6-100:FunctionRole name="ROOT" ${id}="own-role"><eIEC61850-6-100:FunctionRoleContent ${id}="own-content"><eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/Own" functionUuid="own-uuid" ${id}="own-ref"/></eIEC61850-6-100:FunctionRoleContent></eIEC61850-6-100:FunctionRole></eIEC61850-6-100:Application></Private>`,
 				),
 			expected: { tagName: 'VoltageLevel', id: 'vl-1' },
 			expectedUnits: ['bay-1', 'bay-2'],
@@ -348,7 +348,8 @@ describe('resolveSsdScope', () => {
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		const resolved = resolveSsdScope(source.query, { ref: testCase.ref })
 		if (testCase.expectedRefusal) {
-			const refusal = toDialecteError(await resolved.catch((error: unknown) => error))
+			const caught = await resolved.catch((error: unknown) => error)
+			const refusal = toDialecteError(caught)
 			expect({ key: refusal?.key, candidates: refusal?.meta?.candidates }).toEqual(
 				testCase.expectedRefusal,
 			)

@@ -3,8 +3,10 @@ import {
 	describeReferenceViolation,
 } from './assert-coherent-scl-references'
 import {
+	GIVEN_DOCUMENT_CHECKS,
 	SCHEMA_LINE_CODE,
 	SCHEMA_LINE_CODE_UNKNOWN,
+	SCL_OPT_OUT_NEEDS,
 	SCL_OUTPUT_CHECK,
 	SCL_XSD_CODE,
 	SCL_XSD_CODE_MESSAGES,
@@ -30,14 +32,15 @@ import { checkTemplateUuids } from '@/v2019C1/extensions/lifecycle/validate'
 import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 
 import type {
+	AssertAllowInvalidFixtureReasonParams,
 	AssertNoNewSclOutputViolationsParams,
+	AssertOptOutReasonParams,
 	CollectSclOutputViolationsParams,
 	DescribeSclOutputFailureParams,
 	FindAddedSclOutputViolationsParams,
 	FindStaleTolerancesParams,
 	IsToleratedParams,
 	SclOutputCheck,
-	SclOutputOptOut,
 	SclOutputReport,
 	SclOutputTolerance,
 	SclOutputViolation,
@@ -111,7 +114,7 @@ export async function collectSclOutputViolations(
  */
 export function assertNoNewSclOutputViolations(params: AssertNoNewSclOutputViolationsParams): void {
 	const { before, after, carried = [], label, allowInvalidOutput, checks } = params
-	assertAllowInvalidOutputReason({ allowInvalidOutput, label })
+	assertOptOutReason({ name: 'allowInvalidOutput', optOut: allowInvalidOutput, label })
 
 	const added = findAddedSclOutputViolations({ before, after, carried })
 	const tolerances = allowInvalidOutput?.violations ?? []
@@ -175,20 +178,40 @@ export function describeSclOutputFailure(
 }
 
 /** Refuse an opt-out that gives no reason or no violation: they are what a later fix starts from. */
-export function assertAllowInvalidOutputReason(params: {
-	allowInvalidOutput: SclOutputOptOut | undefined
-	label: string
-}): void {
-	const { allowInvalidOutput, label } = params
-	if (allowInvalidOutput === undefined) return
-	if (allowInvalidOutput.reason.trim() === '') {
+export function assertOptOutReason(params: AssertOptOutReasonParams): void {
+	const { name, optOut, label } = params
+	if (optOut === undefined) return
+	const needs = SCL_OPT_OUT_NEEDS[name]
+	if (optOut.reason.trim() === '') {
+		throw new Error(`${label}: ${name} needs ${needs.reason}, not an empty string`)
+	}
+	if (optOut.violations.length === 0) {
+		throw new Error(`${label}: ${name} needs ${needs.violations}, not an empty list`)
+	}
+}
+
+/**
+ * Refuse a case's `allowInvalidFixture` that gives no reason or no violation, that tolerates a check the given
+ * documents are not held to (see {@link GIVEN_DOCUMENT_CHECKS}: the XSD validator), or that tolerates references,
+ * which `allowIncoherentReferences` covers.
+ */
+export function assertAllowInvalidFixtureReason(
+	params: AssertAllowInvalidFixtureReasonParams,
+): void {
+	const { allowInvalidFixture, label } = params
+	assertOptOutReason({ name: 'allowInvalidFixture', optOut: allowInvalidFixture, label })
+	const unheld = allowInvalidFixture?.violations.find(
+		(tolerance) => !GIVEN_DOCUMENT_CHECKS.includes(tolerance.check),
+	)
+	if (unheld) {
 		throw new Error(
-			`${label}: allowInvalidOutput needs the reason the case leaves an invalid document, not an empty string`,
+			`${label}: allowInvalidFixture lists ${unheld.check}, a check given documents are not held to: remove it`,
 		)
 	}
-	if (allowInvalidOutput.violations.length === 0) {
+	// the references of a given document are allowIncoherentReferences's: the check before the suite reads them first
+	if (allowInvalidFixture?.violations.some(({ check }) => check === SCL_OUTPUT_CHECK.references)) {
 		throw new Error(
-			`${label}: allowInvalidOutput needs the violations the case may leave, not an empty list`,
+			`${label}: allowInvalidFixture lists references, which allowIncoherentReferences covers: give that instead`,
 		)
 	}
 }

@@ -156,7 +156,7 @@
 				"check an exported SCL document with XPath in a test",
 				"query SCL elements by namespace prefix"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:148"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:177"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.assertNoNewSclOutputViolations",
@@ -170,7 +170,7 @@
 				"compare output violations before and after an act",
 				"tolerate known violations with a reason"
 			],
-			"declaredAt": "src/v2019C1/test/assert-scl-output.ts:112"
+			"declaredAt": "src/v2019C1/test/assert-scl-output.ts:115"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.assertUnexpectedElementQueries",
@@ -184,7 +184,7 @@
 				"check an SCL element was removed",
 				"assert absence with XPath in a test"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:159"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:188"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.assertValidSclXml",
@@ -211,7 +211,7 @@
 				"check the SCL output against the XSD in a test",
 				"list the violations of an SCL document (XSD and output rules)"
 			],
-			"declaredAt": "src/v2019C1/test/assert-scl-output.ts:62"
+			"declaredAt": "src/v2019C1/test/assert-scl-output.ts:65"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.configureSclXsdSchemas",
@@ -232,14 +232,14 @@
 			"root": "export",
 			"entry": "@dialecte/scl/v2019C1/test",
 			"otherRoutes": [],
-			"signature": "(params: { sourceXml: string; targetXml?: string; dev?: { perf?: boolean; }; allowIncoherentReferences?: string; allowInvalidOutput?: SclOutputOptOut; }) => Promise<TestProjectResult<Config, { cleanUp: { transaction: typeof import(\"../extensions/clean-up/transaction\"); }; dataflow: { query: typeof import(\"../extensions/dataflow/query\"); transaction: typeof import(\"../extensions/dataflow/transaction\"); }; ... 6 more ...; info: { ...; }; }>>",
-			"summary": "Open a test project with `sourceXml` (and `targetXml`) imported, the fixtures checked first. The test owns it until it finishes; then the documents it leaves are checked (a violation the test added fails it unless the test failed already or `allowInvalidOutput` lists it; a stale opt-out fails it too) and the project is destroyed. Call it inside a test, and do not destroy the project yourself.",
+			"signature": "(params: { sourceXml: string; targetXml?: string; dev?: { perf?: boolean; }; allowIncoherentReferences?: string; allowInvalidOutput?: SclOutputOptOut; allowInvalidFixture?: SclOutputOptOut; }) => Promise<TestProjectResult<Config, { cleanUp: { transaction: typeof import(\"../extensions/clean-up/transaction\"); }; dataflow: { query: typeof import(\"../extensions/dataflow/query\"); transaction: typeof import(\"../extensions/dataflow/transaction\"); }; ... 6 more ...; info: { ...; }; }>>",
+			"summary": "Open a test project with `sourceXml` (and `targetXml`) imported, the fixtures checked first: once imported, the given documents must pass the output checks but the XSD validator (schema, uniqueness, references, identity; see `assertGivenDocuments`), or the call rejects with a plain `Error` named after the running test. `allowInvalidFixture` tolerates the violations it lists (with the reason; a listed violation they lack fails the call too), `allowIncoherentReferences` leaves the references out.",
 			"intents": [
 				"open an SCL project in a test with fixtures imported",
 				"get source and target SCL documents to test against",
 				"assert the SCL output is valid against the XSD in a test"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:85"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:95"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.createSclTestRecord",
@@ -252,7 +252,7 @@
 				"build an SCL record for a unit test",
 				"test a pure function or helper on an SCL record without a project"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:137"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:166"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.isSclXsdConfigured",

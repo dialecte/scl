@@ -31,6 +31,29 @@ const projectXml = /* xml */ `
 	</SCL>
 `
 
+/** The project holds the three kinds of lineage on purpose: they are what the resolution tells apart. */
+const LINEAGE_KINDS = {
+	reason:
+		'the project holds a value on several element types, one naming an element of another type, and a uuid used twice: the lineages the resolution tells apart',
+	violations: [
+		{ check: 'identity', code: 'cross-type-template-uuid' },
+		{ check: 'identity', code: 'template-uuid-type-mismatch' },
+		{ check: 'identity', code: 'duplicate-instance-uuid' },
+	],
+} as const
+
+const CROSS_TYPE_ONLY = {
+	reason:
+		'one template uuid is shared by a function, a subfunction and a logical node: the flagged lineage',
+	violations: [{ check: 'identity', code: 'cross-type-template-uuid' }],
+} as const
+
+const TYPE_MISMATCH_ONLY = {
+	reason:
+		'a function and a subfunction name in the file a logical node by template uuid: the flagged lineage',
+	violations: [{ check: 'identity', code: 'template-uuid-type-mismatch' }],
+} as const
+
 type TestCase = SclTest.BaseXmlTestCase & {
 	referencesByName?: ReferencesByName
 	expected: string[]
@@ -38,9 +61,19 @@ type TestCase = SclTest.BaseXmlTestCase & {
 
 describe('placeholder lineages', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'nothing asked → none': { sourceXml: projectXml, expected: [] },
-		'never → none': { sourceXml: projectXml, referencesByName: 'never', expected: [] },
+		'nothing asked → none': {
+			allowInvalidFixture: LINEAGE_KINDS,
+			sourceXml: projectXml,
+			expected: [],
+		},
+		'never → none': {
+			allowInvalidFixture: LINEAGE_KINDS,
+			sourceXml: projectXml,
+			referencesByName: 'never',
+			expected: [],
+		},
 		'placeholders → the flagged lineages, not a duplicated uuid': {
+			allowInvalidFixture: LINEAGE_KINDS,
 			sourceXml: projectXml,
 			referencesByName: 'placeholders',
 			expected: [CROSS_TYPE, TYPE_MISMATCH],
@@ -87,6 +120,7 @@ describe('placeholder lineages — the function forms are one type', () => {
 			expected: [],
 		},
 		'a value shared by a function, a subfunction and a logical node -> flagged': {
+			allowInvalidFixture: CROSS_TYPE_ONLY,
 			sourceXml: familyProjectXml({
 				lnodeXml: `<LNode iedName="None" lnClass="CSWI" lnInst="1" uuid="lnode-project" templateUuid="${FUNCTION_FAMILY}" ${id}="lnode-t"/>`,
 			}),
@@ -94,6 +128,7 @@ describe('placeholder lineages — the function forms are one type', () => {
 			expected: [FUNCTION_FAMILY],
 		},
 		'a value shared by a function and a subfunction, naming a logical node -> flagged': {
+			allowInvalidFixture: TYPE_MISMATCH_ONLY,
 			sourceXml: familyProjectXml({
 				lnodeXml: `<LNode iedName="None" lnClass="CSWI" lnInst="1" uuid="${FUNCTION_FAMILY}" ${id}="lnode-t"/>`,
 			}),

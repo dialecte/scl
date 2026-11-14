@@ -19,6 +19,11 @@ const LN_UUID = '70000000-0000-4000-8000-000000000001'
 describe('the mapping of an LNode is read from native logical nodes', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'lnUuid carried by a vendor LN and a native LN → mapped to the native one': {
+			allowInvalidFixture: {
+				reason:
+					'a vendor element carries the uuid of a native one: the case reads which of the two is taken',
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			allowIncoherentReferences: 'the look-alike carries the uuid of the native logical node',
 			sourceXml: /* xml */ `
 				<SCL ${NS} ${ID}="root">

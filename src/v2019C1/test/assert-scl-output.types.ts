@@ -1,4 +1,8 @@
-import type { SCL_OUTPUT_CHECK, SCL_XSD_CODE } from './assert-scl-output.constants'
+import type {
+	SCL_OPT_OUT_NEEDS,
+	SCL_OUTPUT_CHECK,
+	SCL_XSD_CODE,
+} from './assert-scl-output.constants'
 import type { SclTest } from './hydrated-test.types'
 
 export type SclOutputCheck = (typeof SCL_OUTPUT_CHECK)[keyof typeof SCL_OUTPUT_CHECK]
@@ -95,4 +99,21 @@ export type AssertNoNewSclOutputViolationsParams = {
 	allowInvalidOutput?: SclOutputOptOut
 	/** The checks that ran on `after`: a failure says when the XSD validator was not among them. */
 	checks?: readonly SclOutputCheck[]
+}
+
+/** An opt-out of a case, by its parameter name. */
+export type SclOptOutName = keyof typeof SCL_OPT_OUT_NEEDS
+
+export type AssertOptOutReasonParams = {
+	/** The parameter the opt-out is given as: names it in the refusal. */
+	name: SclOptOutName
+	optOut: SclOutputOptOut | undefined
+	/** Names the case in the refusal. */
+	label: string
+}
+
+export type AssertAllowInvalidFixtureReasonParams = {
+	allowInvalidFixture: SclOutputOptOut | undefined
+	/** Names the case in the refusal. */
+	label: string
 }

@@ -62,6 +62,10 @@ type TestCase = SclTest.BaseXmlTestCase & {
 describe("makeUnique — an element gets a value free where it sits, in the engine's one numbering", () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'a function named like another of its bay -> numbered _1': {
+			allowInvalidFixture: {
+				reason: 'two functions of one bay share a name: the number the second gets',
+				violations: [{ check: 'uniqueness', code: 'uniqueChildNameInBay' }],
+			},
 			sourceXml: bayWith(['HMI_Fn', 'HMI_Fn']),
 			functionId: 'function-1',
 			expected: { status: 'resolved', attr: 'name', from: 'HMI_Fn', to: 'HMI_Fn_1' },
@@ -71,6 +75,10 @@ describe("makeUnique — an element gets a value free where it sits, in the engi
 			],
 		},
 		'a numbered name taken -> the next number, never a second one': {
+			allowInvalidFixture: {
+				reason: 'two functions of one bay share a numbered name: the number the second gets',
+				violations: [{ check: 'uniqueness', code: 'uniqueChildNameInBay' }],
+			},
 			sourceXml: bayWith(['HMI_Fn_1', 'HMI_Fn_1']),
 			functionId: 'function-1',
 			expected: { status: 'resolved', attr: 'name', from: 'HMI_Fn_1', to: 'HMI_Fn_2' },
@@ -79,6 +87,10 @@ describe("makeUnique — an element gets a value free where it sits, in the engi
 		},
 		'an application named like another of its substation, both in its Private (a wrapper the uniqueness rule looks through) -> numbered _1':
 			{
+				allowInvalidFixture: {
+					reason: 'two applications of one substation share a name: the number the second gets',
+					violations: [{ check: 'uniqueness', code: 'uniqueChildNameInSubstation' }],
+				},
 				sourceXml: substationWith(['HMI_App', 'HMI_App']),
 				ref: { tagName: 'Application', id: 'application-1' } as Scl.Ref<Scl.ElementsOf>,
 				expected: { status: 'resolved', attr: 'name', from: 'HMI_App', to: 'HMI_App_1' },

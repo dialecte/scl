@@ -42,6 +42,11 @@ describe('findIdentityCollision — a collision nothing numbered can tell apart'
 	const testCases: SclTest.TestCases<TestCase> = {
 		'two data attributes of one name and index: their key has a name, numbering tells them apart -> none':
 			{
+				allowInvalidFixture: {
+					reason:
+						'two data attributes share their name and index: the key the collision check reads',
+					violations: [{ check: 'uniqueness', code: 'uniqueSDI_DAIinDOI' }],
+				},
 				sourceXml: dataObjectWith(
 					`<DAI name="stVal" ix="1" ${id}="dai-0"/><DAI name="stVal" ix="1" ${id}="dai-1"/>`,
 				),

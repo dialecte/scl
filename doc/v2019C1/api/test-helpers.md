@@ -159,12 +159,16 @@ async function createSclTestProject(params: {
 	dev?: { perf?: boolean }
 	/** Why the fixtures need an incoherent reference: they are then left unchecked. */
 	allowIncoherentReferences?: string
-	/** Why the test leaves a document a real file could not be: the documents are then left unchecked. */
-	allowInvalidOutput?: string
+	/** Why the test leaves a document a real file could not be, and the violations it may leave. */
+	allowInvalidOutput?: SclOutputOptOut
+	/** Why the given documents are not valid SCL files, and the violations they hold. */
+	allowInvalidFixture?: SclOutputOptOut
 }): Promise<SclTest.TestProjectResult>
 ```
 
-Call it inside a test. The test owns the project until it finishes; then the documents it leaves are checked (see
+Call it inside a test. Once imported, the given documents are checked before the call returns (see
+[The given documents are checked before the act](#the-given-documents-are-checked-before-the-act)): a failure rejects
+the call, named after the running test. The test owns the project until it finishes; then the documents it leaves are checked (see
 [The documents a test leaves are checked too](#the-documents-a-test-leaves-are-checked-too)) and the project is
 destroyed. Do not call `project.destroy()` yourself: the check needs the project, and the destroy happens whatever it
 finds.
@@ -457,6 +461,48 @@ counter `0`, `1`, `2`...), or when a document of the project writes it as a uuid
 the act, or another document before or after it. Any other value refused as a uuid (a name with a capital, a path) is
 reported.
 
+### The given documents are checked before the act
+
+The source and target documents a case gives must pass the same checks, read before the act from the violations the
+gate reads anyway: **schema**, **uniqueness**, **references** and **identity**. The XSD validator is not one of them:
+a fixture is partial by design, and missing required attributes or children never fail it. A given document that
+fails is reported before the act, which then does not run, one block per document, as a plain `Error`:
+
+```text
+my case › source: the source document has 1 violation(s) before the act: a given document must pass the output checks (give allowInvalidFixture with the violations and why):
+  [uniqueness] <Bay> name="B1" repeats an earlier sibling under SCL/Substation[S1]/VoltageLevel[V1] (uniqueChildNameInVoltageLevel)
+```
+
+`runSclTestCases.withExport` / `.withoutExport` name the case; `createSclTestProject` names the running test (its full
+name, suite names included), and its call rejects once the project is opened (the project is still destroyed when the
+test ends).
+
+A case that needs a given document a real file could not be (a duplicate key, a uuid used twice, on purpose) says why
+and which violations its given documents hold, with `allowInvalidFixture`, which has the shape of
+`allowInvalidOutput`. Only those are tolerated, and a tolerance the given documents do not hold fails the case before
+the act (`my case: [opt-out] allowInvalidFixture allows uniqueness, which the given documents do not hold: remove it`).
+An empty reason or list, an `xsd` tolerance, or a `references` one (`allowIncoherentReferences` covers references),
+is refused when the suite is registered (by `createSclTestProject`, when it is called). `allowIncoherentReferences`
+leaves the references check of the given documents out. `allowInvalidOutput` covers only what the act leaves, never a
+given document; `allowInvalidFixture` covers only the given documents, never what the act adds. `runSclTestCases.generic`
+runs no gate: its cases are given no documents.
+
+Each line of the failure names the check and the code a tolerance gives: `[uniqueness] … (uniqueChildNameInBay)` the
+constraint in the closing parentheses, `[identity] duplicate-instance-uuid: …` the word before the colon,
+`[references] [dangling] …` and `[schema] [containment] …` the second bracket:
+
+```ts
+const testCases: SclTest.TestCases<TestCase> = {
+	'two Bays of one name → the second renamed': {
+		allowInvalidFixture: {
+			reason: 'the duplicate name is what the rename resolves',
+			violations: [{ check: 'uniqueness', code: 'uniqueChildNameInVoltageLevel' }],
+		},
+		sourceXml: /* xml */ `…`,
+	},
+}
+```
+
 ### Set up the schema check
 
 The validator and the test runner are optional peer dependencies of `@dialecte/scl`: a package using the test helpers
@@ -598,16 +644,16 @@ sandboxes go to `.tmp/mutants/<run id>/` (ignored), removed once the run reports
 
 All types are bound to the SCL dialecte config via the `SclTest` namespace:
 
-| Type                        | Description                                                                                                                                   |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SclTest.BaseTestCase`      | `{ only?: boolean }` - minimal base for non-XML tests (e.g. `runSclTestCases.generic`)                                                        |
-| `SclTest.BaseXmlTestCase`   | `BaseTestCase & { sourceXml, targetXml?, expectedQueries?, unexpectedQueries?, allowIncoherentReferences?, allowInvalidOutput? }` - XML tests |
-| `SclTest.TestCases<T>`      | `Record<string, T>` - key is the test description. Defaults to `BaseXmlTestCase`                                                              |
-| `SclTest.TestDocument`      | `{ documentId: string, document: Scl.Document }` - pre-opened document inside the test project                                                |
-| `SclTest.TestProjectResult` | `{ project, source: TestDocument, target?: TestDocument }` - returned by `createSclTestProject`                                               |
-| `SclTest.ActParams<T>`      | `{ project, source, target?, testCase }` - passed to `act`                                                                                    |
-| `SclTest.ActResult`         | `{ assertOn?: 'source' \| 'target', withDatabaseIds?: boolean }` - returned by `act` in `withExport`                                          |
-| `SclTest.TestRunner`        | Runner type bound to SCL config                                                                                                               |
+| Type                        | Description                                                                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SclTest.BaseTestCase`      | `{ only?: boolean }` - minimal base for non-XML tests (e.g. `runSclTestCases.generic`)                                                                              |
+| `SclTest.BaseXmlTestCase`   | `BaseTestCase & { sourceXml, targetXml?, expectedQueries?, unexpectedQueries?, allowIncoherentReferences?, allowInvalidOutput?, allowInvalidFixture? }` - XML tests |
+| `SclTest.TestCases<T>`      | `Record<string, T>` - key is the test description. Defaults to `BaseXmlTestCase`                                                                                    |
+| `SclTest.TestDocument`      | `{ documentId: string, document: Scl.Document }` - pre-opened document inside the test project                                                                      |
+| `SclTest.TestProjectResult` | `{ project, source: TestDocument, target?: TestDocument }` - returned by `createSclTestProject`                                                                     |
+| `SclTest.ActParams<T>`      | `{ project, source, target?, testCase }` - passed to `act`                                                                                                          |
+| `SclTest.ActResult`         | `{ assertOn?: 'source' \| 'target', withDatabaseIds?: boolean }` - returned by `act` in `withExport`                                                                |
+| `SclTest.TestRunner`        | Runner type bound to SCL config                                                                                                                                     |
 
 `TestCases<T>` accepts any type extending `BaseTestCase` - use `BaseTestCase` for non-XML generic tests, `BaseXmlTestCase` for XML round-trip tests:
 

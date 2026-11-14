@@ -66,6 +66,11 @@ describe('resolveMappedLNode, uuid first, native only', () => {
 		},
 
 		'lnUuid carried by a vendor LN before the native one → the native LN': {
+			allowInvalidFixture: {
+				reason:
+					'a vendor element carries the uuid of a native one: the case reads which of the two is taken',
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			allowIncoherentReferences: 'the look-alike carries the uuid of the native logical node',
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES} xmlns:vendor="urn:vendor" ${ID}="scl-1">
@@ -110,6 +115,11 @@ describe('resolveMappedLNode, uuid first, native only', () => {
 		},
 
 		'no lnUuid, a vendor LN of those names before the native one → the native LN': {
+			allowInvalidFixture: {
+				reason:
+					'the look-alike is a copy of the native logical node, its uuid included: the case reads by names past that copy',
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			allowIncoherentReferences: 'the look-alike repeats the names of a native element',
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES} xmlns:vendor="urn:vendor" ${ID}="scl-1">

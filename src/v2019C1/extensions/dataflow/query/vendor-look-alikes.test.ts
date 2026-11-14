@@ -39,6 +39,11 @@ type ListingCase = SclTest.BaseXmlTestCase & { expectedSignals: readonly string[
 describe('dataflow reads vendor look-alikes as vendor payload', () => {
 	const allocationCases: SclTest.TestCases<AllocationCase> = {
 		'vendor LN carrying the uuid of the native LN → the LNode stays allocated to the native IED': {
+			allowInvalidFixture: {
+				reason:
+					'a vendor element carries the uuid of a native one: the case reads which of the two is taken',
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			allowIncoherentReferences: 'the look-alike carries the uuid of the native logical node',
 			sourceXml: /* xml */ `
 				<SCL ${NS} ${ID}="root">
@@ -81,6 +86,11 @@ describe('dataflow reads vendor look-alikes as vendor payload', () => {
 
 		'vendor IED after the native one, of the same names → the LNode named into it stays in the native IED':
 			{
+				allowInvalidFixture: {
+					reason:
+						'a vendor IED repeats the name of the native one: the case reads which of the two is taken',
+					violations: [{ check: 'uniqueness', code: 'IEDKey' }],
+				},
 				allowIncoherentReferences: 'the look-alike repeats the names of a native element',
 				sourceXml: /* xml */ `
 					<SCL ${NS} ${ID}="root">
@@ -130,6 +140,11 @@ describe('dataflow reads vendor look-alikes as vendor payload', () => {
 			},
 
 		'vendor LNode after the native one, carrying its uuid → the signal names the native LNode': {
+			allowInvalidFixture: {
+				reason:
+					'a vendor element carries the uuid of a native one: the case reads which of the two is taken',
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
 			allowIncoherentReferences: 'the look-alike carries the uuid of the native LNode',
 			sourceXml: /* xml */ `
 				<SCL ${NS} ${ID}="root">

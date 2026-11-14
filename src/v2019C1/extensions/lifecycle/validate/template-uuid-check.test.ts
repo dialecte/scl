@@ -35,7 +35,13 @@ describe('checkTemplateUuids — flags illegitimate cross-type templateUuid reus
 				</Substation>
 			</SCL>
 		`
-		const { source } = await createSclTestProject({ sourceXml: xml })
+		const { source } = await createSclTestProject({
+			sourceXml: xml,
+			allowInvalidFixture: {
+				reason: 'one template uuid is shared by three element types: the warning the check gives',
+				violations: [{ check: 'identity', code: 'cross-type-template-uuid' }],
+			},
+		})
 
 		const warnings = await checkTemplateUuids(source.document.query)
 
@@ -54,7 +60,7 @@ describe('checkTemplateUuids — flags illegitimate cross-type templateUuid reus
 				<Substation name="S1" uuid="s1" templateUuid="tpl-sub" ${id}="sub">
 					<Private type="eIEC61850-6-100" ${id}="priv">
 						<eIEC61850-6-100:AllocationRole name="PIU" uuid="piu" templateUuid="tpl-ar" ${id}="ar1"/>
-						<eIEC61850-6-100:AllocationRole name="PIU" uuid="piu2" templateUuid="tpl-ar" ${id}="ar2"/>
+						<eIEC61850-6-100:AllocationRole name="PIU2" uuid="piu2" templateUuid="tpl-ar" ${id}="ar2"/>
 					</Private>
 				</Substation>
 			</SCL>
@@ -76,7 +82,13 @@ describe('checkTemplateUuids — duplicate instance uuid', () => {
 				</Substation>
 			</SCL>
 		`
-		const { source } = await createSclTestProject({ sourceXml: xml })
+		const { source } = await createSclTestProject({
+			sourceXml: xml,
+			allowInvalidFixture: {
+				reason: 'two voltage levels share a uuid: the warning the check gives',
+				violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+			},
+		})
 
 		const dup = (await checkTemplateUuids(source.document.query)).filter(
 			(warning) => warning.code === 'duplicate-instance-uuid',
@@ -116,7 +128,14 @@ describe('checkTemplateUuids — templateUuid type mismatch', () => {
 				</Substation>
 			</SCL>
 		`
-		const { source } = await createSclTestProject({ sourceXml: xml })
+		const { source } = await createSclTestProject({
+			sourceXml: xml,
+			allowInvalidFixture: {
+				reason:
+					'a role names in the file a substation by template uuid: the warning the check gives',
+				violations: [{ check: 'identity', code: 'template-uuid-type-mismatch' }],
+			},
+		})
 
 		const mismatch = (await checkTemplateUuids(source.document.query)).filter(
 			(warning) => warning.code === 'template-uuid-type-mismatch',
@@ -285,6 +304,11 @@ describe('checkTemplateUuids — the function forms are one type', () => {
 		},
 
 		'Function + LNode on one value -> still warns, the tags those of the elements': {
+			allowInvalidFixture: {
+				reason:
+					'a function and a logical node share one template uuid: the warning the check gives',
+				violations: [{ check: 'identity', code: 'cross-type-template-uuid' }],
+			},
 			sourceXml: functionFamilyXml({
 				bayXml: /* xml */ `
 					<Function name="F1" uuid="function-uuid" templateUuid="${FAMILY}" ${id}="function">
@@ -296,6 +320,11 @@ describe('checkTemplateUuids — the function forms are one type', () => {
 		},
 
 		'a Function naming in-file an LNode -> still a mismatch': {
+			allowInvalidFixture: {
+				reason:
+					'a function names in the file a logical node by template uuid: the mismatch the check gives',
+				violations: [{ check: 'identity', code: 'template-uuid-type-mismatch' }],
+			},
 			sourceXml: functionFamilyXml({
 				bayXml: /* xml */ `
 					<Function name="F1" uuid="function-uuid" templateUuid="${FAMILY}" ${id}="function">
@@ -307,6 +336,11 @@ describe('checkTemplateUuids — the function forms are one type', () => {
 		},
 
 		'a Function and a SubFunction naming in-file an LNode -> one mismatch, the three tags kept': {
+			allowInvalidFixture: {
+				reason:
+					'a function and a subfunction name in the file a logical node by template uuid: the mismatch the check gives',
+				violations: [{ check: 'identity', code: 'template-uuid-type-mismatch' }],
+			},
 			sourceXml: functionFamilyXml({
 				bayXml: /* xml */ `
 					<Function name="F1" uuid="function-uuid" templateUuid="${FAMILY}" ${id}="function">
@@ -319,6 +353,11 @@ describe('checkTemplateUuids — the function forms are one type', () => {
 		},
 
 		'Function + SubFunction + LNode on one value -> one warning, the three tags kept': {
+			allowInvalidFixture: {
+				reason:
+					'a function, a subfunction and a logical node share one template uuid: the warning the check gives',
+				violations: [{ check: 'identity', code: 'cross-type-template-uuid' }],
+			},
 			sourceXml: functionFamilyXml({
 				bayXml: /* xml */ `
 					<Function name="F1" uuid="function-uuid" templateUuid="${FAMILY}" ${id}="function">
