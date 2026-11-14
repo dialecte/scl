@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+## [0.17.0] - 2026-11-14
+
+An SCL import tells its steps while its references are resolved (`SCL_IMPORT_STEPS`, through core 0.11.0's `afterImport` context), and a file of hundreds of thousands of LNodes imports instead of failing with a stack overflow; an IED can be reported for its first placement in a project; `info.of` and `info.ofEach` compute an element's state only with `withState: true`; `lifecycle.classifyIeds` reads by tag, and an `IEDSourceFiles` list wrapped in a `Private` no longer makes its IED implemented; the uuids and names of tuple references are references everywhere the reference attributes are read (the lifecycle, `findRefsPointingTo`, the test helpers' reference check) and their names are written once, at the commit; renames, placement order, the variable report and a reference naming an IED by its names are fixed. Requires `@dialecte/core` 0.11.0.
+
+Breaking: `info.of` / `info.ofEach` without `withState: true` give no `state`; the lifecycle reads tuple references as references (no longer editable content, compared and paired by the element their uuid names; a bare one on an instance that no template one pairs with, one the project added for example, is now `removed` by a fast-track `apply`, where it was kept); `reference.query.findRefsPointingTo` lists the tuple references naming the target; (tests) the reference check of the test helpers fails fixtures whose tuple references disagree; (types) `LifecycleVerb`, `LifecycleVerbTarget` and `AppliedInstances` gain an `'ied'` arm, so a `switch` exhaustive over `verb` needs an `'ied'` case. Tuple-reference names written at the commit follow the target in three raw-write cases (a uuid changed after creation, a name set by the caller on a reference naming a created target, a plain read before the commit), as the entry details. Behaviour change with no type change: an IED whose source files sit only in a `Private` is no longer classified implemented.
+
 ### Added
 
 - **An SCL import tells its steps while its references are resolved.** With `@dialecte/core` 0.11.0 or later, `afterImport` reports each step through the context core hands it (`spec-naming`, `path-index`, `data-types`, `path-fills`, `references`, `own-paths`, `mapped-data`, `tuple-references`, listed in the new `SCL_IMPORT_STEPS`, type `SclImportStep`), with `done` out of `total` where it counts, once per progress interval inside a long step. An abort of the import now lands inside a long step instead of after the whole hook. Called with no context, the session runs as before and tells nothing.
@@ -14,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Requires `@dialecte/core` 0.11.0 (pinned exactly, was 0.10.0): the release whose import hands `afterImport` its context (`report`, `signal`).
 - **Breaking: `info.of` and `info.ofEach` compute an element's state only when asked.** A new option `withState: true` (beside `withLabels`) puts `state` on the info; without it the info has a title (and labels when asked) and no `state` key. An LNode's state reads what implements it and classifies the IED holding it, which made every `info.of` of an LNode read the whole document, also for a caller that shows its title only; without the state, an LNode's info is read from the LNode alone, and a single `info.of` with the state classifies only the IED its LNode maps to (`ofEach` still classifies every IED once for all its LNodes).
   - Migration: a caller reading `state` passes `withState: true` (`info.of(ref, { withState: true })`, `info.ofEach(refs, { withState: true })`); a caller reading `title` or `labels` changes nothing.
 - **`lifecycle.classifyIeds` reads the IEDs and their source file references by tag instead of walking the whole document.** Same kinds, bases and document order for the source files an IED holds directly (`IEDSourceFiles` under the IED); an `IEDSourceFiles` list wrapped in a `Private` no longer makes its IED implemented: the IED's own source files are the ones directly under it.
