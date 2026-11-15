@@ -473,7 +473,7 @@ export const TUPLE_REFERENCE_PAIRS = {
 			},
 		},
 	],
-	// the logical node implementing the LNode: its binding (`reconcileLNodeBinding`) writes the names
+	// the logical node implementing the LNode: its binding (`reconcileLNodeBinding`) and the commit write the names
 	LNode: [
 		{
 			attribute: { uuid: 'lnUuid' },

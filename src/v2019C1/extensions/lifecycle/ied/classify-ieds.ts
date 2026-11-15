@@ -61,7 +61,7 @@ async function readKinds(
 	return ieds.map((ied) => ({
 		ied: { tagName: 'IED', id: ied.id },
 		name: readAttribute({ record: ied, name: 'name', defaults: 'none' }) ?? '',
-		kind: classifyOne({ inIcdFile, fileTypes: fileTypesByIed.get(ied.id) ?? [] }),
+		kind: iedKindOf({ inIcdFile, fileTypes: fileTypesByIed.get(ied.id) ?? [] }),
 	}))
 }
 
@@ -81,7 +81,7 @@ export async function classifyIed(
 	const ied = await query.getRecord(params.ied)
 	if (!ied) return undefined
 	const inIcdFile = await isIcdDocument(query)
-	if (inIcdFile) return classifyOne({ inIcdFile, fileTypes: [] })
+	if (inIcdFile) return iedKindOf({ inIcdFile, fileTypes: [] })
 
 	// getChildren looks through a transparent Private: only the lists and references directly under
 	// their parent count, as for the read by tag
@@ -93,14 +93,17 @@ export async function classifyIed(
 		const ownReferences = references.filter((reference) => reference.parent?.id === list.id)
 		fileTypes.push(...ownReferences.flatMap((reference) => fileTypeOf({ reference })))
 	}
-	return classifyOne({ inIcdFile, fileTypes })
+	return iedKindOf({ inIcdFile, fileTypes })
 }
 
 /**
  * The rule: an IED is implemented in an ICD document, or when an ICD or IID file is among its own
- * source file types; any other IED is a specification IED.
+ * source file types; any other IED is a specification IED. Pure: a reader without a query (the import) gathers
+ * the file types and applies it.
+ *
+ * @internal
  */
-function classifyOne(params: { inIcdFile: boolean; fileTypes: readonly string[] }): IedKind {
+export function iedKindOf(params: { inIcdFile: boolean; fileTypes: readonly string[] }): IedKind {
 	const { inIcdFile, fileTypes } = params
 	if (inIcdFile) return 'implemented'
 	const describesRealDevice = fileTypes.some((fileType) => REAL_DEVICE_FILE_TYPES.has(fileType))

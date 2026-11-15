@@ -8,9 +8,12 @@ import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
 const ns = ALL_XMLNS_NAMESPACES
 
-/** The device P1, holding one logical node: Q0XCBR2 in LD0, uuid `ln-uuid`. */
+/** The device P1 (a real IED: from an ICD file), holding one logical node: Q0XCBR2 in LD0, uuid `ln-uuid`. */
 const device = /* xml */ `
 	<IED name="P1">
+		<IEDSourceFiles>
+			<SclFileReference fileType="ICD"/>
+		</IEDSourceFiles>
 		<AccessPoint name="AP1">
 			<Server>
 				<LDevice inst="LD0">

@@ -1,8 +1,9 @@
 import type { TupleReferencePair } from '@/v2019C1/constants/reference-pairs.types'
 
 /**
- * The pairs of a tuple reference whose names this extension writes when their uuid is set (the
- * reference created or imported): all but the `followsOnly` ones, which only follow their target.
+ * The pairs of a tuple reference whose names this extension writes, or whose uuid it fills, when
+ * the reference is created or imported: all but the `followsOnly` ones (an LNode's `lnUuid`), whose
+ * names the commit writes and whose uuid is never filled.
  */
 export function pairsWrittenWhenSet(params: {
 	pairs: readonly TupleReferencePair[]

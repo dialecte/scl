@@ -157,7 +157,14 @@ describe('createSclImportSession', () => {
 
 	it('DOS whose absolute name names another LN than its uuid → uuid wins, incoherent-reference naming both LNs', async () => {
 		const session = createSclImportSession()
-		const lnode = makeRecord('LNode', { lnClass: 'PTOC', lnInst: '1', lnUuid: 'ptoc1-uuid' })
+		// the LNode names the logical node its uuid names: its own names are not the case's
+		const lnode = makeRecord('LNode', {
+			iedName: 'VENDOR',
+			ldInst: 'LD0',
+			lnClass: 'PTOC',
+			lnInst: '1',
+			lnUuid: 'ptoc1-uuid',
+		})
 		const dos = makeRecord('DOS', {
 			name: 'Op',
 			mappedDoName: 'VENDOR/LD0/GGIO1.Ind2',
@@ -2048,9 +2055,9 @@ describe('import of an IED reference named by a tuple', () => {
 })
 
 /**
- * An LNode names the logical node implementing it by its `lnUuid` and its names, but its binding
- * writes them (`reconcileLNodeBinding`): the import fills and repairs neither, as for an LNode bound
- * by its names only.
+ * An LNode names the logical node implementing it by its `lnUuid` and its names: names disagreeing
+ * with the uuid are written from the logical node the uuid names, as for every tuple reference; an
+ * `lnUuid` is never filled from the names.
  */
 describe('import of an LNode naming the logical node implementing it', () => {
 	function boundLNodeXml(lnode: string): string {
@@ -2084,14 +2091,21 @@ describe('import of an LNode naming the logical node implementing it', () => {
 			],
 		},
 
-		'LNode whose lnUuid names Q0XCBR2 and names XCBR1 -> left as read': {
-			allowIncoherentReferences:
-				'the LNode names another logical node than its uuid: what the import leaves as read',
+		'LNode on no IED whose lnUuid names Q0XCBR2 -> the lnUuid wins, its names Q0XCBR2': {
+			allowIncoherentReferences: 'the LNode names no IED beside its uuid: the case',
+			sourceXml: boundLNodeXml('iedName="None" lnClass="XCBR" lnInst="1" lnUuid="p1-breaker-uuid"'),
+			expectedQueries: [
+				'//default:LNode[@iedName="P1"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"][@lnUuid="p1-breaker-uuid"]',
+			],
+		},
+
+		'LNode whose lnUuid names Q0XCBR2 and names XCBR1 -> the lnUuid wins, its names Q0XCBR2': {
+			allowIncoherentReferences: 'the LNode names another logical node than its uuid: the case',
 			sourceXml: boundLNodeXml(
 				'iedName="P1" ldInst="LD0" lnClass="XCBR" lnInst="1" lnUuid="p1-breaker-uuid"',
 			),
 			expectedQueries: [
-				'//default:LNode[@iedName="P1"][not(@prefix)][@lnClass="XCBR"][@lnInst="1"][@lnUuid="p1-breaker-uuid"]',
+				'//default:LNode[@iedName="P1"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"][@lnUuid="p1-breaker-uuid"]',
 			],
 		},
 	}
@@ -2125,6 +2139,17 @@ describe('import of an LNode naming the logical node implementing it', () => {
 				},
 			],
 		},
+		'LNode on no IED whose lnUuid names Q0XCBR2 -> one incoherent-reference diagnostic, its names naming nothing':
+			{
+				lnode: { iedName: 'None', lnClass: 'XCBR', lnInst: '1', lnUuid: 'p1-breaker-uuid' },
+				expectedDiagnostics: [
+					{
+						code: 'incoherent-reference',
+						ref: { tagName: 'LNode', attribute: 'iedName ldInst prefix lnClass lnInst' },
+						meta: { uuidAttribute: 'lnUuid', pathValue: '', uuidValue: 'p1-breaker-uuid' },
+					},
+				],
+			},
 		'LNode whose lnUuid names the logical node its names name -> no diagnostic': {
 			lnode: {
 				iedName: 'P1',

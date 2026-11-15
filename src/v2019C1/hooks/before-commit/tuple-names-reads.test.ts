@@ -1,4 +1,4 @@
-import { writeTupleNamesOfCreatedTargets } from './tuple-names'
+import { writeTupleNamesAtCommit } from './tuple-names'
 
 import { describe, expect } from 'vitest'
 
@@ -111,9 +111,11 @@ describe('the commit reads the references of a created target once', () => {
 					})
 				}
 				const counted = countQueryReads(tx)
-				await writeTupleNamesOfCreatedTargets({
+				await writeTupleNamesAtCommit({
 					operations: tx.getStagedOperations(),
 					query: counted.query,
+					bound: { lnodes: [], logicalNodesByUuid: new Map() },
+					pending: new Map(),
 				})
 				reads = counted.calls.map(({ method, args }) =>
 					method === 'getRecordsByTagName' ? [method, String(args[0])].join(':') : method,

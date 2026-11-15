@@ -1,6 +1,8 @@
+import { createSpecificationIedImport } from './specification-ied-import'
+
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
-import { specifiedNamingOf } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
-import { readAttribute, readAttributes } from '@/v2019C1/helpers'
+import { newSpecifiedNaming } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
+import { readAttribute } from '@/v2019C1/helpers'
 import { derivedSpecificationNamingDiagnostic } from '@/v2019C1/hooks/io/import-diagnostic-builders'
 
 import type { SpecNamingImport } from './lnode-spec-naming-import.types'
@@ -8,17 +10,20 @@ import type { DerivedSpecificationNamingDiagnostic } from '@/v2019C1/errors/impo
 import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
 
 /**
- * Gives every imported LNode without `LNodeSpecNaming` its own, with the same rule as the record
- * hooks (`specifiedNamingOf`, data-model naming). The import has no store access: the pass collects the LNodes, their
+ * Gives every imported LNode without `LNodeSpecNaming` its own, with the same rules as the commit
+ * (`newSpecifiedNaming`, `specificationIedOf`, data-model naming): one bound to a specification IED is specified on
+ * it ({@link createSpecificationIedImport}). The import has no store access: the pass collects the LNodes, their
  * `eIEC61850-6-100` Private and the LNodes that have one; the records are made at the end.
  */
 export function createSpecNamingImport(): SpecNamingImport {
 	const lnodes = new Map<string, AnyRawRecord>()
 	const privateByLnode = new Map<string, AnyRawRecord>()
 	const namings = new Map<string, AnyRawRecord>()
+	const specificationIeds = createSpecificationIedImport()
 
 	function collect(params: { record: AnyRawRecord; ancestry: readonly AnyRawRecord[] }): void {
 		const { record, ancestry } = params
+		specificationIeds.collect({ record, ancestry })
 		if (record.tagName === 'LNode') {
 			lnodes.set(record.id, record)
 			return
@@ -43,12 +48,15 @@ export function createSpecNamingImport(): SpecNamingImport {
 		const creates: AnyRawRecord[] = []
 		const updates: RecordPatch[] = []
 		const diagnostics: DerivedSpecificationNamingDiagnostic[] = []
+		const specifiedLNodeOf = specificationIeds.resolver()
 
 		for (const lnode of lnodes.values()) {
 			if (namings.has(lnode.id)) continue
-			const { attributes, derived } = specifiedNamingOf(
-				readAttributes({ record: lnode, defaults: 'none' }),
-			)
+			const { specificationIed, namingAttributes } = specifiedLNodeOf({ lnode })
+			const { attributes, derived } = newSpecifiedNaming({
+				lnodeAttributes: namingAttributes,
+				specificationIed,
+			})
 			const existingPrivate = privateByLnode.get(lnode.id)
 			const holder = existingPrivate ?? newPrivate(lnode)
 			const specNaming: AnyRawRecord = {

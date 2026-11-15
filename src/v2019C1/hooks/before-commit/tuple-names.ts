@@ -8,9 +8,11 @@ import {
 } from '@/v2019C1/extensions/reference/query/ied-tuple/own-ied-name'
 import { pairsWrittenWhenSet } from '@/v2019C1/extensions/reference/query/ied-tuple/pairs-written-when-set'
 import { targetTupleParts } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
+import { mappedLNodeKey } from '@/v2019C1/extensions/reference/query/resolve/mapped-lnode-key'
 import { readAttribute } from '@/v2019C1/helpers'
 import { namedTargetUuids, partsOf, tupleNamesUpdate } from '@/v2019C1/hooks/shared'
 
+import type { BoundLNodes } from './bound-logical-nodes.types'
 import type {
 	AncestriesById,
 	Climber,
@@ -24,6 +26,53 @@ import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
 
 /**
+ * The names the commit writes on tuple references: those of the targets the transaction created
+ * ({@link writeTupleNamesOfCreatedTargets}), then, for the LNodes it created or rebound (`bound`), those of the logical
+ * node each names by its `lnUuid`, whatever names it carries: the uuid wins. An LNode is written as the commit's
+ * earlier writes left it (`pending`, by id: a new `LNodeSpecNaming` holder).
+ */
+export async function writeTupleNamesAtCommit(params: {
+	operations: ReadonlyArray<Scl.Operation>
+	query: Core.Query<Config>
+	bound: BoundLNodes
+	pending: ReadonlyMap<string, AnyRawRecord>
+}): Promise<Scl.Operation[]> {
+	const { operations, query, bound, pending } = params
+	const ofCreatedTargets = await writeTupleNamesOfCreatedTargets({ operations, query })
+	return [...ofCreatedTargets, ...composeBoundLNodeNames({ bound, pending })]
+}
+
+/**
+ * One update per LNode of `bound` whose names differ from those of the logical node its `lnUuid` names; an LNode
+ * whose `lnUuid` names nothing is left as written.
+ */
+function composeBoundLNodeNames(params: {
+	bound: BoundLNodes
+	pending: ReadonlyMap<string, AnyRawRecord>
+}): Scl.Operation[] {
+	const { bound, pending } = params
+	const pairs = TUPLE_REFERENCE_PAIRS.LNode
+	const partsByUuid: TargetPartsByUuid = new Map(
+		[...bound.logicalNodesByUuid].map(([uuid, { record, ancestry }]) => [
+			uuid,
+			targetTupleParts({ record, ancestry }),
+		]),
+	)
+	return bound.lnodes.flatMap((lnode) => {
+		const record = pending.get(lnode.id) ?? lnode
+		const key = mappedLNodeKey(record)
+		if (key?.kind !== 'uuid' || !partsByUuid.has(key.uuid)) return []
+		const operation = tupleNamesUpdate({
+			record,
+			pairs,
+			partsByUuid: partsOf({ uuids: [key.uuid], partsByUuid }),
+			ownIedName: undefined,
+		})
+		return operation ? [operation] : []
+	})
+}
+
+/**
  * A transaction that created tuple targets (an access point, a logical device, a logical node, a
  * control block, each with a uuid) has the references naming them by that uuid written their names
  * (see `tupleReferenceWrite`), once, over the records the transaction leaves: a target deleted since
@@ -31,7 +80,7 @@ import type { AnyRawRecord } from '@dialecte/core'
  * of references that can name a created target is read once, whatever the number of targets; the
  * elements above each named target are read a level at a time, never one by one.
  */
-export async function writeTupleNamesOfCreatedTargets(params: {
+async function writeTupleNamesOfCreatedTargets(params: {
 	operations: ReadonlyArray<Scl.Operation>
 	query: Core.Query<Config>
 }): Promise<Scl.Operation[]> {
