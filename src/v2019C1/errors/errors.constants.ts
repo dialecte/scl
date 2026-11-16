@@ -61,7 +61,8 @@ export const SCL_ERRORS = defineErrors({
 	 * of the file the element came from (`as: 'revision'`), an FSD holding a function of a line or a process at its own
 	 * level (`placement: 'source-level'`, the default), a source file of an extension the operation does not read
 	 * (`sourceExtension`), an IED report reconciling an IED the project already holds (`scenario`: `template` or
-	 * `fork`), an IED report applied (`verb: 'ied'`). `meta: { option, value }`
+	 * `fork`), an IED read from an IID or an SCD or the IED of an ISD instance file (`source`: `iid`, `scd`,
+	 * `isd-instance`). `meta: { option, value }`
 	 */
 	OPTION_NOT_AVAILABLE: {
 		code: 'SCL1009',

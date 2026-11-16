@@ -1,5 +1,6 @@
 import { classifyAttribute, isEditableMode } from './classify-attribute'
 import { findViolationInScope, readConstraintScope } from './find-constraint-violation'
+import { scopesTellingTargetsApart } from './names-follow-targets'
 import { findConstraintParent } from './resolve-placement-collision'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -17,9 +18,27 @@ import type { AnyRefOrRecord } from '@dialecte/core'
 
 /**
  * The collision of a candidate with an element of `scope` on a key none of whose fields can be changed, or
- * `undefined`: none, or one a field the engine numbers tells apart. Pure, on a scope read once.
+ * `undefined`: none, or one a field the engine numbers tells apart, or the names of a tuple reference naming another
+ * element by uuid than the sibling's (see {@link scopesTellingTargetsApart}). Pure, on a scope read once.
  */
 export function identityCollisionInScope(
+	params: IdentityCollisionInScopeParams,
+): IdentityCollision | undefined {
+	const { scope, tagName, candidate, excludeId } = params
+	for (const constraintScope of scopesTellingTargetsApart({ scope, tagName, candidate })) {
+		const collision = collisionUnderConstraint({
+			scope: constraintScope,
+			tagName,
+			candidate,
+			excludeId,
+		})
+		if (collision) return collision
+	}
+	return undefined
+}
+
+/** The collision of a candidate under one constraint's scope, on a key none of whose fields can be changed. */
+function collisionUnderConstraint(
 	params: IdentityCollisionInScopeParams,
 ): IdentityCollision | undefined {
 	const { scope, tagName, candidate, excludeId } = params

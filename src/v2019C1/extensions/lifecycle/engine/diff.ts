@@ -12,7 +12,7 @@ import {
 	referenceIdentity,
 	referenceNameIdentity,
 } from './reference-match'
-import { classifyUnmatched } from './removal-base'
+import { classifyUnmatched, classifyUnpairedReference } from './removal-base'
 import { readTargetLineages } from './target-lineages'
 import { textChangeOf } from './text-change'
 import { diffTextWrappers } from './text-wrappers'
@@ -394,7 +394,8 @@ async function diffMatched(params: {
 	//  - an identified element whose lineage the source no longer holds -> removed when the source
 	//    dropped it, target-only when it is the project's own (`classifyUnmatched`);
 	//  - a uuid-less REFERENCE (link) element with no matching source child (e.g. a
-	//    dropped AllocationRoleRef) -> removed;
+	//    dropped AllocationRoleRef) -> removed; an IED's data-flow reference (FCDA, ...) -> target-only
+	//    (`classifyUnpairedReference`);
 	//  - a non-ref element with NO templateUuid = author-added after instantiation
 	//    -> target-only (preserved by default; removed only on explicit accept).
 	//
@@ -462,8 +463,16 @@ async function diffMatched(params: {
 				const kept = unchangedRefNode(instanceChild)
 				if (sibling.pairedByName) kept.pairedByName = sibling.pairedByName
 				children.push(kept)
-			} else {
+			} else if (classifyUnpairedReference({ tagName: instanceChild.tagName }) === 'removed') {
 				children.push(removedNode(instanceChild))
+			} else {
+				// nothing tells one the template dropped from one the project added: listed whatever the consumer's tags
+				pushInstanceOnly({
+					node: instanceChild,
+					out: children,
+					policy: params.diffPolicy,
+					mayBeTemplates: true,
+				})
 			}
 			continue
 		}

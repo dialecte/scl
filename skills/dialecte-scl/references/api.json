@@ -896,7 +896,7 @@
 				"write a lifecycle report with user decisions",
 				"accept or skip changes from a newer FSD/ASD/SSD"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:76",
+			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:75",
 			"example": "await tx.lifecycle.apply({ ...lifecycleTarget, report: reported, resolution: { afterApply } })"
 		},
 		{
@@ -992,6 +992,19 @@
 				"place a function template"
 			],
 			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts:59"
+		},
+		{
+			"path": "tx.lifecycle.instantiate.ied",
+			"root": "tx",
+			"otherRoutes": [],
+			"signature": "(params: IedParams) => Promise<IedResult>",
+			"summary": "Place the IED of a source file (a template ISD, an ICD) in a project as a new IED. The IED of an ISD instance file (not named `SPECIFICATION`), and one `template` or `fork` finds in the project, are refused with `OPTION_NOT_AVAILABLE` before anything is written.",
+			"intents": [
+				"place an IED from an ISD or ICD in a project",
+				"instantiate a template IED",
+				"add an IED from a file as a new IED"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/ied.ts:31"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.resolveTargetStructure",

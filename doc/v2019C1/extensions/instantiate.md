@@ -127,3 +127,28 @@ await project.transaction(async (tx) => {
 ```
 
 Returns `{ scopeRef, cloneMappings }` — the SSD-side scope root that was instantiated, and `cloneMappings`: each source record and the copy made of it, for everything the operation cloned (the reproduced frame, the placed fn/app content and the cross-cutting satellites carried with them).
+
+## ied
+
+`ied({ sourceQuery, iedRef, anchor, fileType, scenario?, overrides?, keepNameTypesFrom? })` places the IED of a source file — the IED of a template ISD (named `SPECIFICATION`) or of an ICD — in a project as a new IED, under the project's `SCL` root (`anchor`):
+
+1. clone the IED with its type closure ([`transplant.deep`](./transplant#deep)): the data types its logical nodes use are added to the project's `DataTypeTemplates`, a type the project holds with the same content is used under the project's id, a type whose id the project uses for other content is added under another id;
+2. write the identity of the scenario: `instantiate` and `template` give every element a uuid of its own and the source's as its `templateUuid`, the IED's own uuid references (a data set's `FCDA` naming a logical node of it) repointed onto the placed elements; `fork` keeps the file's uuids;
+3. number the IED's name when another IED of the project holds it (`SPECIFICATION_1`, `TEMPLATE_1`; a name the consumer edited in the review is written first), as the other verbs do: the consumer names the IED in its own step ([`afterApply`](./update#apply-result));
+4. place its access points' `ConnectedAP`s under the project's `Communication`, by [the contribution](./update#contribute-—-a-first-placement-onto-a-shared-element): each lands under the project's `SubNetwork` carrying its subnetwork's uuid as `templateUuid`, else of its name, or under that subnetwork added; a project with no `Communication` takes the source's. What the source holds for other IEDs is not written, and each `ConnectedAP` names the IED as placed (numbered, then named by the consumer);
+5. record the source file in the IED's `IEDSourceFiles` (`fileType` given, as the report reads it from the source's extension), after what the source IED listed ([`reference.writeProvenance`](./reference#writeprovenance)); a fork records none.
+
+The process section an ISD carries (its functions and their `LNode`s) is not placed: the IED is placed with its Communication part only. `tx.lifecycle.apply` of an IED's report calls it for a first placement (see [An IED](./update#an-ied-—-verb-ied)).
+
+```ts
+await project.transaction(async (tx) => {
+	await tx.lifecycle.instantiate.ied({
+		sourceQuery: isd.query,
+		iedRef: { tagName: 'IED', id: 'ied-1' },
+		anchor: { tagName: 'SCL', id: 'project-root' },
+		fileType: 'ISD',
+	})
+})
+```
+
+Returns `{ iedRef, cloneMappings }` — the placed IED and each source record with the copy made of it.
