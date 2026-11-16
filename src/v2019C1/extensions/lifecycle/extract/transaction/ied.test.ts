@@ -87,6 +87,15 @@ describe('extract.ied - selected instance content', () => {
 				expectedQueries: [...ordinaryQueries, ...closureQueries],
 				unexpectedQueries: absentQueries,
 			},
+		'Type closure reached from LN before LN0 -> types written in the order of the source DataTypeTemplates':
+			{
+				sourceXml: SelectedIedWithSharedAndUnusedTypesXml,
+				targetXml: emptyTarget,
+				expectedWarnings: [],
+				expectedQueries: [
+					'//default:DataTypeTemplates[default:LNodeType[1]/@id="LLN0_Type"][default:LNodeType[2]/@id="PTOC_Type"][default:DOType[1]/@id="Status_Type"][default:DOType[2]/@id="Config_Type"][default:DOType[3]/@id="Detail_Type"][default:DAType[1]/@id="Settings_Type"][default:DAType[2]/@id="Nested_Type"]',
+				],
+			},
 		'Unreferenced LGOS and LSVS beside ordinary logical nodes -> supervision omitted and individually warned':
 			{
 				sourceXml: SelectedIedWithUnreferencedLgosAndLsvsXml,
