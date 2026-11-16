@@ -155,6 +155,7 @@ async function cloneSpecification(
 		policy,
 		decisionMappings: params.decisionMappings,
 		leftOut: params.leftOut,
+		operation: 'instantiate (ied)',
 	})
 }
 

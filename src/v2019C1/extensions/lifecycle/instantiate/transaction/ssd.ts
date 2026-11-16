@@ -45,6 +45,7 @@ export async function ssd(tx: Core.Transaction<Config>, params: SsdParams): Prom
 		policy,
 		decisionMappings,
 		leftOut: params.leftOut,
+		operation: 'instantiate.ssd',
 	})
 	// the consumer left everything out: nothing is written, not even where it came from
 	if (!cloned) return { scopeRef: scope.root, cloneMappings: [] }

@@ -32,7 +32,7 @@ export async function cloneProcessSection(
 	tx: Core.Transaction<Config>,
 	params: CloneProcessSectionParams,
 ): Promise<ClonedProcessSection | undefined> {
-	const { sourceQuery, scope, targetParent, policy, decisionMappings } = params
+	const { sourceQuery, scope, targetParent, policy, decisionMappings, operation } = params
 	const { root } = scope
 	// what the consumer left out, and the units of the scaffolding the scope does not hold
 	const leftOut = new Set([...(params.leftOut ?? []), ...scope.leftOut])
@@ -46,7 +46,7 @@ export async function cloneProcessSection(
 		rootIsContext: scope.scaffolding,
 		leftOut: scope.leftOut,
 	})
-	assertPlacementDecided({ placementLevels, operation: 'instantiate.ssd' })
+	assertPlacementDecided({ placementLevels, operation })
 
 	const content = await cloneTopologyContent(tx, {
 		sourceQuery,

@@ -178,3 +178,70 @@ describe('tx.lifecycle.instantiate.ied - a placement not offered', () => {
 
 	runSclTestCases.withoutExport({ testCases, act })
 })
+
+/** A project holding two voltage levels, E1 and E2, where the template ISD's one could land. */
+const projectWithTwoVoltageLevels = /* xml */ `
+	<SCL ${ns}>
+		<Header id="Two" fileType="SCD" uuid="f0000000-0000-4000-8000-000000000060" version="1" revision="A"/>
+		<Substation name="South" uuid="e0000000-0000-4000-8000-000000000001">
+			<VoltageLevel name="E1" uuid="e0000000-0000-4000-8000-000000000002"/>
+			<VoltageLevel name="E2" uuid="e0000000-0000-4000-8000-000000000003"/>
+		</Substation>
+	</SCL>
+`
+
+type UndecidedCase = SclTest.BaseXmlTestCase & {
+	expected: { key: string | undefined; meta: unknown }
+}
+
+// Where a level of the specification lands is the consumer's to decide when the project holds several of its kind:
+// placing the IED without that decision is refused, naming the placement of the IED as the operation refusing.
+describe('tx.lifecycle.instantiate.ied - a specification level the project holds two of, no decision', () => {
+	const testCases: SclTest.TestCases<UndecidedCase> = {
+		'the template ISD and a project with E1 and E2 → refused, MAPPING_UNDECIDED from instantiate (ied)':
+			{
+				sourceXml: isdTemplate,
+				targetXml: projectWithTwoVoltageLevels,
+				expected: {
+					key: 'MAPPING_UNDECIDED',
+					meta: {
+						sourceId: expect.any(String),
+						tagName: 'VoltageLevel',
+						kind: 'level',
+						operation: 'instantiate (ied)',
+					},
+				},
+			},
+	}
+
+	async function act({
+		project,
+		target,
+		testCase,
+	}: SclTest.ActParams<UndecidedCase>): Promise<void> {
+		if (!target) throw new Error('target required')
+		const imported = await project.importFile(
+			new File([testCase.sourceXml], 'BCU_Template.isd', { type: 'text/xml' }),
+		)
+		const sourceQuery = project.openDocument(imported.documentId).query
+		const [ied] = await sourceQuery.getRecordsByTagName('IED')
+		if (!ied) throw new Error('the source holds no IED')
+		const root = await target.query.getRoot()
+		const refusal = await target
+			.transaction(async function placeUndecided(tx) {
+				await tx.lifecycle.instantiate.ied({
+					sourceQuery,
+					iedRef: { tagName: 'IED', id: ied.id },
+					anchor: { tagName: 'SCL', id: root.id },
+					fileType: 'ISD',
+				})
+			})
+			.then(
+				() => undefined,
+				(error: unknown) => toDialecteError(error),
+			)
+		expect({ key: refusal?.key, meta: refusal?.meta }).toEqual(testCase.expected)
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})

@@ -20,6 +20,8 @@ export type CloneProcessSectionParams = {
 	decisionMappings?: DecisionMappings
 	/** The source elements the consumer left out (record ids). */
 	leftOut?: ReadonlySet<string>
+	/** The operation placing the section, named by a refusal (`instantiate.ssd`, `instantiate (ied)`). */
+	operation: string
 }
 
 /** What the clone step of a process-section placement wrote, before its identity is settled. */
