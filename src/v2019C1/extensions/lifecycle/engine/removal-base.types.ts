@@ -44,6 +44,11 @@ export type ClassifyUnmatchedParams = {
 	removalBase: RemovalBase
 }
 
+export type ClassifyUnpairedReferenceParams = {
+	/** The reference's tag. */
+	tagName: string
+}
+
 /**
  * A primary of the project the source no longer holds — an application or a function of a placed unit, a function an
  * application no longer composes — with what it is: dropped by the source, or the project's own.

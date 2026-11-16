@@ -1,4 +1,4 @@
-import { fsd as updateFsd } from './fsd'
+import { fsd as updateFsd } from '.'
 
 import { describe } from 'vitest'
 
@@ -42,7 +42,7 @@ const sourceXml = /* xml */ `
 	</SCL>
 `
 
-// Target already holds a real IED "VENDOR_A" the instance LNode can be bound to.
+// Target already holds a real IED "VENDOR_A" whose logical node AA CSWI 5 the instance LNode can be bound to.
 const targetXml = /* xml */ `
 	<SCL ${ns} ${id}="scd">
 		<Substation name="S1" ${id}="sub-t">
@@ -50,7 +50,17 @@ const targetXml = /* xml */ `
 				<Bay name="B1" ${id}="bay-t1"/>
 			</VoltageLevel>
 		</Substation>
-		<IED name="VENDOR_A" manufacturer="SIEMENS" ${id}="ied-t"/>
+		<IED name="VENDOR_A" manufacturer="SIEMENS" ${id}="ied-t">
+			<AccessPoint name="AP1" ${id}="ap-t">
+				<Server ${id}="srv-t">
+					<Authentication ${id}="auth-t"/>
+					<LDevice inst="LD0" ${id}="ld-t">
+						<LN0 lnClass="LLN0" inst="" lnType="VENDOR_LLN0_Type" ${id}="ln0-t"/>
+						<LN prefix="AA" lnClass="CSWI" inst="5" lnType="VENDOR_CSWI_Type" ${id}="ln-t"/>
+					</LDevice>
+				</Server>
+			</AccessPoint>
+		</IED>
 	</SCL>
 `
 
@@ -103,6 +113,11 @@ describe('update.fsd — a locked LNode keeps where it is implemented, its type 
 				targetXml,
 				// bind to an IED that is NOT present in the target: an orphaned binding is
 				// still locked, so reconcile must leave it for cleanup to unlock, not reset it.
+				allowInvalidOutput: {
+					reason:
+						'the case binds the LNode to an IED the project lacks itself: update.fsd releases only what it writes, the orphan is left for the clean-up',
+					violations: [{ check: 'references', code: 'absent' }],
+				},
 				mutateTarget: async (tx) => {
 					await bindInstanceLnode(tx, {
 						iedName: 'GHOST',

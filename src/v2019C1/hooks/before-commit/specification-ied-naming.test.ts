@@ -102,20 +102,10 @@ describe('an LNode created on a specification IED is specified on that IED', () 
 				],
 			},
 
-		// Pinned on today's behaviour: an LNode created with names other than those of the logical node its `lnUuid`
-		// names is not written those names at the commit (FOLLOW-UPS-2026-11-12, Owners, H2 follow-up); once it is, its
-		// logical device reads CTRL and so does its specified naming.
-		'an LNode bound to the specification IED created with it, its logical device named OLD -> sLdInst follows the LNode, OLD':
+		'an LNode bound to the specification IED created with it, its logical device named OLD -> the lnUuid wins, sLdInst CTRL':
 			{
 				sourceXml: project,
-				allowInvalidOutput: {
-					reason:
-						'the LNode names logical device OLD while its lnUuid names CTRL/CSWI1 (the names a commit does not write yet), and the logical nodes created name types the document holds no template of',
-					violations: [
-						{ check: 'xsd', code: 'keyref' },
-						{ check: 'references', code: 'path' },
-					],
-				},
+				allowInvalidOutput: KEYREF_TOLERANCE,
 				lnode: {
 					iedName: 'BCU1',
 					ldInst: 'OLD',
@@ -125,8 +115,53 @@ describe('an LNode created on a specification IED is specified on that IED', () 
 					lnUuid: 'bcu1-cswi-uuid',
 				},
 				expectedQueries: [
-					'//default:LNode[@iedName="BCU1"]//v2019C1:LNodeSpecNaming[@sIedName="BCU1"][@sLdInst="OLD"]',
+					'//default:LNode[@iedName="BCU1"][@ldInst="CTRL"]//v2019C1:LNodeSpecNaming[@sIedName="BCU1"][@sLdInst="CTRL"]',
 				],
+			},
+
+		'an LNode created with an lnUuid naming a logical node of a specification IED and no IED name -> it is specified on that IED':
+			{
+				sourceXml: project,
+				allowInvalidOutput: KEYREF_TOLERANCE,
+				lnode: { lnClass: 'CSWI', lnInst: '1', lnUuid: 's1-cswi-uuid' },
+				expectedQueries: [
+					'//default:LNode[@iedName="S1"]//v2019C1:LNodeSpecNaming[@sIedName="S1"][@sLdInst="CTRL"][@sLnClass="CSWI"][@sLnInst="1"]',
+				],
+			},
+
+		"an LNode created naming another logical node of the specification IED than its lnUuid names -> its new specified naming is that logical node's":
+			{
+				sourceXml: project,
+				allowInvalidOutput: KEYREF_TOLERANCE,
+				lnode: {
+					iedName: 'BCU1',
+					ldInst: 'CTRL',
+					prefix: 'QA',
+					lnClass: 'CSWI',
+					lnInst: '7',
+					lnUuid: 'bcu1-cswi-uuid',
+				},
+				expectedQueries: [
+					'//default:LNode[@iedName="BCU1"][@lnInst="1"]//v2019C1:LNodeSpecNaming[@sIedName="BCU1"][@sLdInst="CTRL"][@sLnClass="CSWI"][@sLnInst="1"][not(@sPrefix)]',
+				],
+			},
+
+		'an LNode created naming another logical node of a real IED than its lnUuid names -> its new specified naming keeps the names it was created with':
+			{
+				sourceXml: project,
+				allowInvalidOutput: KEYREF_TOLERANCE,
+				lnode: {
+					iedName: 'R1',
+					ldInst: 'LD0',
+					prefix: 'QA',
+					lnClass: 'CSWI',
+					lnInst: '7',
+					lnUuid: 'r1-cswi-uuid',
+				},
+				expectedQueries: [
+					'//default:LNode[@iedName="R1"][@prefix="Q0"][@lnInst="3"]//v2019C1:LNodeSpecNaming[@sPrefix="QA"][@sLnClass="CSWI"][@sLnInst="7"]',
+				],
+				unexpectedQueries: ['//v2019C1:LNodeSpecNaming[@sIedName]'],
 			},
 
 		'an LNode bound to a real IED is created with no specified naming -> no IED is specified': {

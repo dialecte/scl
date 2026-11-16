@@ -93,7 +93,7 @@ export async function importTypes(
 	const resolved = await resolve(sourceQuery, {
 		records: [...records, ...followers.map((follower) => follower.source)],
 	})
-	const sourceTypes = collectTypesBottomUp(resolved)
+	const sourceTypes = await collectTypesBottomUp(sourceQuery, { resolved })
 
 	// written with the first type cloned: a closure the target already holds, or none, leaves no empty section
 	let dataTypeTemplates: Scl.RawRecord<'DataTypeTemplates'> | undefined
@@ -241,9 +241,46 @@ async function ensureDataTypeTemplates(
 
 // ── Internals ───────────────────────────────────────────────────────────────────
 
-/** Bottom-up so a type's children are reconciled before the parent references them. */
-function collectTypesBottomUp(resolved: ResolvedDataModel): TypeRecord[] {
-	return [...resolved.enumTypes, ...resolved.daTypes, ...resolved.doTypes, ...resolved.lnodeTypes]
+/**
+ * Bottom-up so a type's children are reconciled before the parent references them; each kind in the order of the
+ * source `DataTypeTemplates`, so the target holds them in that order whatever order the records were read in.
+ */
+async function collectTypesBottomUp(
+	query: Core.Query<Config>,
+	params: { resolved: ResolvedDataModel },
+): Promise<TypeRecord[]> {
+	const { resolved } = params
+	const kinds: TypeRecord[][] = [
+		resolved.enumTypes,
+		resolved.daTypes,
+		resolved.doTypes,
+		resolved.lnodeTypes,
+	]
+	const positions = await readSourcePositions(query, { types: kinds.flat() })
+	return kinds.flatMap(function inSourceOrder(kind) {
+		return [...kind].sort(
+			(first, second) => (positions.get(first.id) ?? 0) - (positions.get(second.id) ?? 0),
+		)
+	})
+}
+
+/**
+ * The index of each type among the children of its `DataTypeTemplates` (one per document), each container read once.
+ */
+async function readSourcePositions(
+	query: Core.Query<Config>,
+	params: { types: readonly TypeRecord[] },
+): Promise<Map<string, number>> {
+	const containerRefs = new Map<string, Scl.Ref<Scl.ElementsOf>>()
+	for (const type of params.types) {
+		if (type.parent) containerRefs.set(type.parent.id, type.parent)
+	}
+	const containers = await query.getRecords([...containerRefs.values()])
+	const positions = new Map<string, number>()
+	for (const container of containers) {
+		container?.children.forEach((child, index) => positions.set(child.id, index))
+	}
+	return positions
 }
 
 /** signature -> id of the types already present in the target, first occurrence wins. */

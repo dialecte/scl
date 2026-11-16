@@ -12,9 +12,9 @@ import type { AnyRawRecord } from '@dialecte/core'
 /**
  * A tuple reference created with its uuids (an `ExtRef` with `srcCBUuid` only, an `IEDName` with
  * `apUuid` only) gets the names of the elements they name, when they differ (see `tupleReferenceWrite`),
- * but for a `followsOnly` pair, an LNode's `lnUuid`, whose binding writes the names: one update. The
- * references naming a target the transaction creates are written at the commit
- * (`writeTupleNamesOfCreatedTargets`), once for all the targets.
+ * but for a `followsOnly` pair, an LNode's `lnUuid`: one update. The references naming a target the
+ * transaction creates, and the LNodes it creates, are written at the commit (`writeTupleNamesAtCommit`),
+ * once for all of them.
  */
 export async function writeTupleNamesOfCreatedReferrer<
 	GenericElement extends Scl.ElementsOf,

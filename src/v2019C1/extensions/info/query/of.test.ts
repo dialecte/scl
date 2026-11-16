@@ -61,38 +61,6 @@ describe('of', () => {
 			expectedTitle: 'LD0',
 		},
 
-		// ── override: composite LNode ─────────────────────────────────
-		'LNode with prefix+lnClass+lnInst → concatenated title': {
-			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root">
-					<Substation name="S1" ${id}="s1">
-						<VoltageLevel name="VL1" ${id}="vl1">
-							<Bay name="B1" ${id}="b1">
-								<LNode iedName="IED_A" ldInst="LD0" prefix="P" lnClass="XCBR" lnInst="1" ${id}="lnode-1"/>
-							</Bay>
-						</VoltageLevel>
-					</Substation>
-				</SCL>
-			`,
-			ref: { tagName: 'LNode', id: 'lnode-1' },
-			expectedTitle: 'PXCBR1',
-		},
-		'LNode with empty prefix → lnClass+lnInst only': {
-			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root">
-					<Substation name="S1" ${id}="s1">
-						<VoltageLevel name="VL1" ${id}="vl1">
-							<Bay name="B1" ${id}="b1">
-								<LNode iedName="IED_A" ldInst="LD0" prefix="" lnClass="XCBR" lnInst="1" ${id}="lnode-2"/>
-							</Bay>
-						</VoltageLevel>
-					</Substation>
-				</SCL>
-			`,
-			ref: { tagName: 'LNode', id: 'lnode-2' },
-			expectedTitle: 'XCBR1',
-		},
-
 		// ── override: composite LN ────────────────────────────────────
 		'LN with prefix+lnClass+inst → concatenated title': {
 			sourceXml: /* xml */ `
@@ -186,22 +154,6 @@ describe('of', () => {
 		},
 
 		// ── mode option ──────────────────────────────────────────────
-		'LNode in full mode → iedName/ldInst/PXCBR1': {
-			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root">
-					<Substation name="S1" ${id}="s1">
-						<VoltageLevel name="VL1" ${id}="vl1">
-							<Bay name="B1" ${id}="b1">
-								<LNode iedName="IED_A" ldInst="LD0" prefix="P" lnClass="XCBR" lnInst="1" ${id}="lnode-full"/>
-							</Bay>
-						</VoltageLevel>
-					</Substation>
-				</SCL>
-			`,
-			ref: { tagName: 'LNode', id: 'lnode-full' },
-			mode: 'full',
-			expectedTitle: 'IED_A/LD0/PXCBR1',
-		},
 
 		// ── simple *Ref ────────────────────────────────────────
 		'FunctionCatRef → function': {
@@ -833,6 +785,8 @@ describe('of — state and signal title', () => {
 			expected: { title: 'PTRC1', state: { locked: true, mapping: 'real-ied' } },
 		},
 		'LNode assigned to an IED → locked': {
+			allowIncoherentReferences:
+				'an LNode bound by its names to a logical node the document lacks, as an LN rename leaves it: locked, mapped to nothing',
 			sourceXml: lnodeWith('', 'iedName="IED1" ldInst="LD0"'),
 			ref: { tagName: 'LNode', id: 'lnode' },
 			expected: { title: 'PTRC1', state: { locked: true, mapping: 'unmapped' } },

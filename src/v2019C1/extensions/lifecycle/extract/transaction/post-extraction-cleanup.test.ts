@@ -149,6 +149,8 @@ describe('postExtractionCleanup', () => {
 			},
 			'LNode with missing IED + LNodeSpecNaming → reset from spec naming (its LD included), which keeps its values':
 				{
+					allowIncoherentReferences:
+						'the LNode is bound to an IED the extracted file lacks: what the clean-up releases',
 					sourceXml: /* xml */ `
 						<SCL ${ALL_XMLNS_NAMESPACES}>
 							<Header id="TestSCL"/>
@@ -169,6 +171,8 @@ describe('postExtractionCleanup', () => {
 					],
 				},
 			'LNode with missing IED + no LNodeSpecNaming → only binding-specific attrs cleared': {
+				allowIncoherentReferences:
+					'the LNode is bound to an IED the extracted file lacks: what the clean-up releases',
 				sourceXml: /* xml */ `
 					<SCL ${ALL_XMLNS_NAMESPACES}>
 						<Header id="TestSCL"/>

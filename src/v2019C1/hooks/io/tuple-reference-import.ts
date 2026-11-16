@@ -2,6 +2,7 @@ import {
 	incoherentReferenceDiagnostic,
 	incoherentReferenceRelated,
 } from './import-diagnostic-builders'
+import { NO_WHOLE_ADDRESS } from './tuple-reference-import.constants'
 
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { iedNameOf } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-name-of'
@@ -45,8 +46,9 @@ import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
  *
  * A uuid naming an element the reference cannot point at (a control block of another kind than its
  * service names, an element of another IED than the one an `FCDA` / `ServerAt` / `GSE` / `SMV`
- * names by where it sits) is reported and left as read; so is a `followsOnly` pair (an LNode's
- * `lnUuid`) whose names disagree, and such a pair never gets its uuid filled. A name naming nothing in the file (another
+ * names by where it sits) is reported and left as read. A `followsOnly` pair (an LNode's `lnUuid`)
+ * follows its uuid as any other, also when its names name no whole address (`iedName` `None`), but never gets its
+ * uuid filled from its names, and never follows an element in vendor payload (reported, left as read). A name naming nothing in the file (another
  * device, for a file of one device), or naming several elements a reference cannot tell apart, a
  * uuid naming nothing in the file, and names not naming a whole address are left as they are.
  *
@@ -66,9 +68,11 @@ export function createTupleReferenceImport(): TupleReferenceImport {
 		const pairs: readonly TupleReferencePair[] =
 			TUPLE_REFERENCE_PAIRS[record.tagName as keyof typeof TUPLE_REFERENCE_PAIRS] ?? []
 		const collected = pairs.flatMap((pair): CollectedTuplePair[] => {
-			const address = referrerTupleAddress({ pair, record, ancestry })
-			if (!address) return []
 			const pairUuid = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
+			const address =
+				referrerTupleAddress({ pair, record, ancestry }) ??
+				(pairUuid && !isWrittenWhenSet({ pair }) ? NO_WHOLE_ADDRESS : undefined)
+			if (address === undefined) return []
 			return [
 				{
 					pair,
@@ -90,8 +94,18 @@ export function createTupleReferenceImport(): TupleReferenceImport {
 		const parts = targetTupleParts({ record, ancestry })
 		const address = parts ? tupleAddressOf({ parts }) : undefined
 		if (!parts || !address) return
+		// the pass holds every open parent: a target under a Private is vendor payload
+		const native = !ancestry.some((ancestor) => ancestor.tagName === 'Private')
+		// a copy in vendor payload never takes a uuid from the document's own element
+		if (!native && targetsByUuid.get(uuid)?.native) return
 		targetsByAddress.set(targetKey({ address, tagName: record.tagName }), uuid)
-		targetsByUuid.set(uuid, { tagName: record.tagName, recordId: record.id, address, parts })
+		targetsByUuid.set(uuid, {
+			tagName: record.tagName,
+			recordId: record.id,
+			address,
+			parts,
+			native,
+		})
 	}
 
 	function resolve(): { updates: RecordPatch[]; diagnostics: IncoherentReferenceDiagnostic[] } {
@@ -209,13 +223,13 @@ function pairReadingOf(params: {
 	const { collected, target, record, ancestry } = params
 	const { pair, address, targetTags } = collected
 	if (!targetTags.includes(target.tagName)) return 'cannot-follow'
+	// an LNode is implemented by the document's own logical node, never by vendor payload
+	if (!isWrittenWhenSet({ pair }) && !target.native) return 'cannot-follow'
 	const { ied } = pair.tuple
 	const writesItsIed = 'attribute' in ied || 'text' in ied
 	if (!writesItsIed && target.parts.ied !== iedNameOf({ role: ied, record, ancestry }))
 		return 'cannot-follow'
-	if (target.address === address) return 'follows'
-	// names another writer gives (an LNode's binding) are compared, never written
-	return isWrittenWhenSet({ pair }) ? 'disagrees' : 'cannot-follow'
+	return target.address === address ? 'follows' : 'disagrees'
 }
 
 /** The patch of a write: its attributes, those it removes, its text; `undefined` when it writes nothing. */

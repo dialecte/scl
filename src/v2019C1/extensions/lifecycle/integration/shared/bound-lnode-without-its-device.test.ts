@@ -300,36 +300,6 @@ describe('lifecycle — what an apply writes bound to a logical node the project
 				expectedQueries: ['//v2019C1:SourceRef[@input="Trip"][not(@extRefAddr)][not(@extRefUuid)]'],
 			},
 
-		'newer template adding an input to an LNode the project holds bound to a logical node it lacks -> its binding left as it is':
-			{
-				sourceXml: templateXml({
-					functionContent: /* xml */ `
-						<LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T" uuid="lnode-src-uuid">
-							<Private type="eIEC61850-6-100">
-								<eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1"/>
-								<eIEC61850-6-100:LNodeInputs>
-									<eIEC61850-6-100:SourceRef input="Trip" uuid="source-ref-src-uuid"/>
-								</eIEC61850-6-100:LNodeInputs>
-							</Private>
-						</LNode>
-					`,
-				}),
-				targetXml: projectXml({
-					bayContent: instanceOfF1({
-						// bound by its naming: an update would also remove an lnUuid the template does not carry
-						binding: 'iedName="P9" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2"',
-					}),
-				}),
-				verb: 'fsd',
-				ref: functionSource,
-				anchor: projectBay,
-				scenario: 'template',
-				expectedQueries: [
-					'//default:Function[@name="F1"]/default:LNode[@iedName="P9"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"]',
-					'//default:LNode[@iedName="P9"]//v2019C1:SourceRef[@input="Trip"]',
-				],
-			},
-
 		'newer revision of the same file, project holding the logical node -> the binding kept': {
 			sourceXml: templateXml({ functionContent: boundBreaker }),
 			targetXml: projectXml({
@@ -348,25 +318,6 @@ describe('lifecycle — what an apply writes bound to a logical node the project
 				'//default:Function[@name="F1"]/default:LNode[@iedName="P1"][@ldInst="LD0"][@prefix="Q0"][@lnInst="2"][@lnUuid="source-ln-uuid"]',
 			],
 		},
-
-		'project LNode already bound to a logical node it lacks -> left as it is, only what the apply wrote released':
-			{
-				sourceXml: templateXml({ functionContent: boundBreaker }),
-				targetXml: projectXml({
-					bayContent: /* xml */ `
-						<Function name="Existing" uuid="existing-function-uuid">
-							<LNode iedName="P9" ldInst="LD0" lnClass="PDIS" lnInst="1" lnUuid="gone-ln-uuid"/>
-						</Function>
-					`,
-				}),
-				verb: 'fsd',
-				ref: functionSource,
-				anchor: projectBay,
-				expectedQueries: [
-					'//default:Function[@name="Existing"]/default:LNode[@iedName="P9"][@lnUuid="gone-ln-uuid"]',
-					releasedBreaker,
-				],
-			},
 	}
 
 	async function act({

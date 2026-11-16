@@ -1,9 +1,11 @@
+import { readBoundLNodes } from './bound-logical-nodes'
 import { findLeftChildren } from './left-children'
 import { LEFT_CHILDREN_PERF_SPAN } from './left-children.constants'
 import { pruneEmptiedContainers } from './prune-emptied-containers'
 import { pruneUnusedTypes } from './prune-unused-types'
+import { releaseLNodesOfDeletedLogicalNodes } from './release-deleted-logical-nodes'
 import { specificationIedsOfCreated } from './specification-ieds-of-created'
-import { writeTupleNamesOfCreatedTargets } from './tuple-names'
+import { writeTupleNamesAtCommit } from './tuple-names'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -14,16 +16,20 @@ import { ensureLNodeSpecNaming, hasAttributeChange } from '@/v2019C1/hooks/share
 import type { LeftChild } from './left-children.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
+import type { AnyRawRecord } from '@dialecte/core'
 
 /**
  * Once the transaction's work is done, every LNode it created and still holds carries an
  * `LNodeSpecNaming`: one brought by a copy or added by the caller is kept, the others get one from
  * the LNode's own naming; an LNode the transaction created or bound to a logical node of a
  * specification IED is specified on it, its naming names that IED and logical device whatever
- * the naming it was created with (a template's placeholder).
+ * the naming it was created with (a template's placeholder). The LNodes created or rebound and the logical nodes
+ * their `lnUuid` name are read once ({@link readBoundLNodes}), for this and for their names.
  * Run here, not on create: when an LNode is created, its children (a copied
  * `LNodeSpecNaming` among them) are not added yet. Then the tuple references naming a target the transaction
- * created by its uuid are written its names, once for all the targets ({@link writeTupleNamesOfCreatedTargets}).
+ * created by its uuid are written its names, once for all the targets, and so is each LNode created or rebound, the
+ * names of the logical node its `lnUuid` names ({@link writeTupleNamesAtCommit}). Then the LNodes bound to a logical
+ * node the transaction deleted are released ({@link releaseLNodesOfDeletedLogicalNodes}).
  * Then the types the transaction left unused go, with every record of
  * them ({@link pruneUnusedTypes}), then the containers it left holding nothing ({@link pruneEmptiedContainers}: a
  * `DataTypeTemplates` the prune emptied among them), whatever wrote: a delete, an apply, an extract. Last, over the
@@ -44,26 +50,36 @@ export async function beforeCommit(params: {
 		if (isRebinding(operation)) rebound.add(operation.newRecord.id)
 	}
 
-	const specificationIeds = await specificationIedsOfCreated({
-		query,
-		lnodeIds: new Set([...created, ...rebound]),
-	})
+	const bound = await readBoundLNodes({ query, lnodeIds: new Set([...created, ...rebound]) })
+	const specifiedLNodes = await specificationIedsOfCreated({ query, bound })
 	const ensured: Scl.Operation[] = []
-	for (const id of new Set([...created, ...specificationIeds.keys()])) {
+	for (const id of new Set([...created, ...specifiedLNodes.keys()])) {
+		const specified = specifiedLNodes.get(id)
 		const naming = await ensureLNodeSpecNaming(query, {
 			lnode: { tagName: 'LNode', id },
-			specificationIed: specificationIeds.get(id),
+			specificationIed: specified?.specificationIed,
+			namingAttributes: specified?.namingAttributes,
 		})
 		ensured.push(...naming)
 	}
-	// the references naming what the transaction created by uuid write its names
-	const tupleNames = await writeTupleNamesOfCreatedTargets({ operations, query })
+	// the references naming what the transaction created by uuid write its names, the LNodes it bound those of their logical node
+	const tupleNames = await writeTupleNamesAtCommit({
+		operations,
+		query,
+		bound,
+		pending: lastWrites({ operations: ensured }),
+	})
+	// the LNodes bound to a logical node the transaction deleted are released, from what the steps above wrote
+	const released = await releaseLNodesOfDeletedLogicalNodes(query, {
+		operations,
+		pending: lastWrites({ operations: [...ensured, ...tupleNames] }),
+	})
 	// what no referrer names any more goes, with what only it named
 	const unusedTypes = await pruneUnusedTypes({ operations, query })
-	// what the transaction left holding nothing goes, read with what the naming and the type prune just wrote
+	// what the transaction left holding nothing goes, read with what the naming, the release and the type prune just wrote
 	const pending = new Map<string, Scl.RawRecord<Scl.ElementsOf>>()
 	const gone = new Set<string>()
-	for (const operation of [...ensured, ...unusedTypes]) {
+	for (const operation of [...ensured, ...released, ...unusedTypes]) {
 		if (operation.status === 'deleted') gone.add(operation.oldRecord.id)
 		else pending.set(operation.newRecord.id, operation.newRecord)
 	}
@@ -73,9 +89,19 @@ export async function beforeCommit(params: {
 		pending,
 		gone,
 	})
-	const staged = [...ensured, ...tupleNames, ...unusedTypes, ...pruned]
+	const staged = [...ensured, ...tupleNames, ...released, ...unusedTypes, ...pruned]
 	await assertNoChildLeftBehind({ operations: [...operations, ...staged], query })
 	return staged
+}
+
+/** The record each operation given leaves, by id, the last one written winning; a deleted one left out. */
+function lastWrites(params: { operations: readonly Scl.Operation[] }): Map<string, AnyRawRecord> {
+	const written = new Map<string, AnyRawRecord>()
+	for (const operation of params.operations) {
+		if (operation.status !== 'deleted')
+			written.set(operation.newRecord.id, operation.newRecord as AnyRawRecord)
+	}
+	return written
 }
 
 /** Whether an operation binds an LNode the transaction did not create to a logical node (its `lnUuid` set, changed). */

@@ -91,9 +91,9 @@ export async function readLogicalNodeIndex(
 
 // ── Internal ─────────────────────────────────────────────────────────
 
-/** The answer for one LNode, from its own attributes. */
-function implementerOf(params: {
-	lnode: Scl.TrackedRecord<'LNode'>
+/** The answer for one LNode, from its own attributes (an LNode as written, staged or not), in an index already read. */
+export function implementerOf(params: {
+	lnode: Parameters<typeof mappedLNodeKey>[0]
 	index: LogicalNodeIndex
 }): MappedLNode | undefined {
 	const { lnode, index } = params

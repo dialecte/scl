@@ -8,6 +8,7 @@ import {
 } from '@/v2019C1/constants'
 import {
 	isAssignedToIed,
+	newSpecifiedNaming,
 	onSpecificationIed,
 	specifiedNamingOf,
 } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
@@ -27,11 +28,16 @@ import type * as Core from '@dialecte/core'
  * The operations giving an LNode its `LNodeSpecNaming` when it has none, placed in its
  * `eIEC61850-6-100` Private (created when the LNode has none). Empty when it has one. With a
  * `specificationIed` (the LNode is bound to a specification IED, which is its specification), the
- * naming names that IED and logical device: the one it has is updated, a new one gets them.
+ * naming names that IED and logical device: the one it has is updated, a new one gets them. A new one is built from
+ * `namingAttributes` when given (the names of the logical node the LNode's `lnUuid` names), else from the LNode's own.
  */
 export async function ensureLNodeSpecNaming(
 	query: Core.Query<Config>,
-	params: { lnode: Scl.Ref<'LNode'>; specificationIed?: SpecificationIed },
+	params: {
+		lnode: Scl.Ref<'LNode'>
+		specificationIed?: SpecificationIed
+		namingAttributes?: Readonly<Record<string, string | undefined>>
+	},
 ): Promise<Scl.Operation[]> {
 	const { specificationIed } = params
 	const lnodeRecord = await query.getRecord(params.lnode)
@@ -43,8 +49,8 @@ export async function ensureLNodeSpecNaming(
 		return specifiedOnIed({ naming, specificationIed })
 	}
 
-	const lnodeAttributes = await query.getAttributes(lnodeRecord)
-	const attributes = newSpecifiedNaming({ lnodeAttributes, specificationIed })
+	const lnodeAttributes = params.namingAttributes ?? (await query.getAttributes(lnodeRecord))
+	const { attributes } = newSpecifiedNaming({ lnodeAttributes, specificationIed })
 	const namespace = SCL_DIALECTE_CONFIG.namespaces.v2019C1
 	const specNaming = {
 		id: crypto.randomUUID(),
@@ -87,18 +93,6 @@ export async function ensureLNodeSpecNaming(
 			newRecord: placed.privateRecord,
 		},
 	] as Scl.Operation[]
-}
-
-/** The attributes of the `LNodeSpecNaming` an LNode that has none gets: its own naming, on its specification IED when given. */
-function newSpecifiedNaming(params: {
-	lnodeAttributes: Readonly<Record<string, string>>
-	specificationIed: SpecificationIed | undefined
-}): { name: string; value: string }[] {
-	const { lnodeAttributes, specificationIed } = params
-	const specified = specifiedNamingOf(lnodeAttributes).attributes
-	return specificationIed
-		? onSpecificationIed({ attributes: specified, specificationIed })
-		: specified
 }
 
 /** The update of an `LNodeSpecNaming` naming the specification IED and logical device given; none when it does. */

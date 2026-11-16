@@ -1,9 +1,12 @@
 export { findRecordByUuid, findTargetByUuid, rebuildReferencesByUuid } from './ref-entry-ops'
 export { reconcileMappedData } from './reconcile-mapped-data'
-export { reconcileMappedDataBelow } from './reconcile-mapped-data-below'
+export {
+	reconcileMappedDataBelow,
+	reconcileMappedDataOfLNodes,
+} from './reconcile-mapped-data-below'
 export { reconcileReferrerRefPaths, reconcileSignalRolePaths } from './ref-path-rebuild'
 export { reconcileLNodeBinding } from './lnode-binding'
-export { reconcileSignalAddresses } from './signal-addresses'
+export { reconcileSignalAddresses, reconcileSignalAddressesOfLNodes } from './signal-addresses'
 export {
 	changedAttributeNames,
 	hasAttributeChange,

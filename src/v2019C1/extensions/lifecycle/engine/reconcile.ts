@@ -2,7 +2,7 @@ import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
 import { projectOwnedAttributes } from './project-owned-attributes'
 import { indexRedirectedSourceUuids } from './reference-match'
-import { acceptsRemoval, classifyUnmatched } from './removal-base'
+import { acceptsRemoval, classifyUnmatched, classifyUnpairedReference } from './removal-base'
 import { readTargetLineages } from './target-lineages'
 import { textChangeOf } from './text-change'
 import { reconcileTextWrappers } from './text-wrappers'
@@ -482,7 +482,8 @@ async function reconcileChildren(
 	// Unmatched instance children with no lineage under the scenario's key:
 	//  - a REFERENCE (link) tag = a dropped link → removed (fast track removes it; the
 	//    full track gates on the removed node's acceptance);
-	//  - any other tag = an author-added TARGET-ONLY element → preserved by default and
+	//  - an IED's data-flow reference (`classifyUnpairedReference`) and any other tag = an
+	//    author-added TARGET-ONLY element → preserved by default and
 	//    removed ONLY when its own decision group is explicitly accepted.
 	// Identified removals (lineage gone) are handled by `deleteRemoved`.
 	for (const instanceChild of instanceParent.tree) {
@@ -493,7 +494,8 @@ async function reconcileChildren(
 		if (lineage) continue
 		if (
 			DISPOSABLE_REFERENCE_TAGS.has(instanceChild.tagName) &&
-			!KEEP_ON_ORPHAN_REFS.has(instanceChild.tagName)
+			!KEEP_ON_ORPHAN_REFS.has(instanceChild.tagName) &&
+			classifyUnpairedReference({ tagName: instanceChild.tagName }) === 'removed'
 		) {
 			// a shared element's other links are not this template's to drop: explicit accept only
 			if (keepLeftoverRefs && !accepted) continue

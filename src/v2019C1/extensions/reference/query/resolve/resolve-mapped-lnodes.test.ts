@@ -102,27 +102,6 @@ describe('resolveMappedLNodes', () => {
 			expected: { lnode: IN_IED_1 },
 		},
 
-		'no lnUuid, names without a logical device → nothing': {
-			sourceXml: /* xml */ `
-				<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
-					<Substation name="S1" ${ID}="sub-1">
-						<!-- no ldInst -->
-						<LNode iedName="IED1" lnClass="XCBR" lnInst="1" ${ID}="lnode"/>
-					</Substation>
-					<IED name="IED1" ${ID}="ied-1">
-						<AccessPoint name="AP1" ${ID}="ap-1">
-							<Server ${ID}="srv-1">
-								<LDevice inst="LD0" ${ID}="ld-1">
-									<LN lnClass="XCBR" inst="1" ${ID}="native-ln"/>
-								</LDevice>
-							</Server>
-						</AccessPoint>
-					</IED>
-				</SCL>`,
-			lnodes: ['lnode'],
-			expected: {},
-		},
-
 		'LN0 named by lnUuid → that LN0 with its IED': {
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">

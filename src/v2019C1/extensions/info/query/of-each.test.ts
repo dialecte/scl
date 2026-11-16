@@ -31,6 +31,17 @@ describe('ofEach', () => {
 							</LNode>
 						</Function>
 					</Substation>
+					<IED name="IED1" ${id}="ied1">
+						<AccessPoint name="AP1" ${id}="ap">
+							<Server ${id}="srv">
+								<Authentication ${id}="auth"/>
+								<LDevice inst="LD0" ${id}="ld0">
+									<LN0 lnClass="LLN0" inst="" lnType="T0" ${id}="ln0"/>
+									<LN lnClass="PTRC" inst="1" lnType="T1" ${id}="ln"/>
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
 				</SCL>
 			`,
 			refs: [
@@ -39,7 +50,7 @@ describe('ofEach', () => {
 			],
 			expected: [
 				{ title: 'Trip', state: { binding: 'open', implemented: false } },
-				{ title: 'PTRC1', state: { locked: true, mapping: 'unmapped' } },
+				{ title: 'PTRC1', state: { locked: true, mapping: 'specification-ied' } },
 			],
 		},
 	}

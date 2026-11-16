@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="template" uuid="template-uuid"/>
+    <IED name="P1">
+        <AccessPoint name="AP1">
+            <Server>
+                <LDevice inst="LD0">
+                    <LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="source-ln-uuid">
+                        <Inputs>
+                            <ExtRef intAddr="Trip.general" uuid="source-ext-ref-uuid"/>
+                        </Inputs>
+                    </LN>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <Substation name="TEMPLATE">
+        <VoltageLevel name="TEMPLATE">
+            <Bay dev:db-id="bay-s" name="Q01" uuid="bay-src-uuid">
+                <Function dev:db-id="function-s" name="F1" uuid="function-src-uuid">
+                    <LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T" uuid="lnode-src-uuid">
+                        <Private type="eIEC61850-6-100">
+                            <eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1"/>
+                            <eIEC61850-6-100:LNodeInputs>
+                                <eIEC61850-6-100:SourceRef input="Trip" uuid="source-ref-src-uuid"/>
+                            </eIEC61850-6-100:LNodeInputs>
+                        </Private>
+                    </LNode>
+                </Function>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+    <DataTypeTemplates>
+        <LNodeType id="XCBR_T" lnClass="XCBR">
+            <DO name="Pos" type="DPC_T"/>
+        </LNodeType>
+        <DOType id="DPC_T" cdc="DPC">
+            <DA name="stVal" bType="Dbpos" fc="ST"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>

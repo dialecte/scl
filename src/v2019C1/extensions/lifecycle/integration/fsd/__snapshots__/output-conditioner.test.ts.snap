@@ -17,7 +17,7 @@ exports[`lifecycle integration — Output Conditioner FSD rev1 → rev2 (golden)
                             <eIEC61850-6-100:SclFileReference fileName="source.xml" fileType="FSD" revision="" version=""/>
                         </eIEC61850-6-100:FunctionSclRef>
                     </Private>
-                    <LNode iedName="none" lnClass="LCBO" lnInst="1" lnType="LCBO_Type" templateUuid="lnode-src-uuid" uuid="uuid-8">
+                    <LNode iedName="None" lnClass="LCBO" lnInst="1" lnType="LCBO_Type" templateUuid="lnode-src-uuid" uuid="uuid-8">
                         <Private type="eIEC61850-6-100">
                             <eIEC61850-6-100:LNodeInputs>
                                 <eIEC61850-6-100:SourceRef input="Trip" pDA="stVal" pDO="TrCmd" pLN="XCBR" service="GOOSE" templateUuid="srcref-src-uuid" uuid="uuid-9"/>

@@ -187,7 +187,7 @@ describe('afterCreated — tuple references', () => {
 			notUpdated: 'ExtRef',
 			expectedQueries: ['//default:ExtRef[@intAddr="Beh"][@iedName="@"][@lnUuid="p1-lln0-uuid"]'],
 		},
-		'LNode created with the uuid of a logical node and its specified names → its names left to its binding, no update':
+		'LNode created with the uuid of a logical node and its specified names → no update when created, the names of that logical node at the commit':
 			{
 				sourceXml: twoDevices(),
 				create: {
@@ -197,7 +197,7 @@ describe('afterCreated — tuple references', () => {
 				},
 				notUpdated: 'LNode',
 				expectedQueries: [
-					'//default:LNode[@iedName="None"][not(@prefix)][@lnClass="XCBR"][@lnInst="1"][@lnUuid="p2-breaker-uuid"]',
+					'//default:LNode[@iedName="P2"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"][@lnUuid="p2-breaker-uuid"]',
 				],
 			},
 	}

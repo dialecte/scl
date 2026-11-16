@@ -8,9 +8,12 @@ import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
 const ns = ALL_XMLNS_NAMESPACES
 
-/** The device P1, holding one logical node: Q0XCBR2 in LD0, uuid `ln-uuid`. */
+/** The device P1 (a real IED: from an ICD file), holding one logical node: Q0XCBR2 in LD0, uuid `ln-uuid`. */
 const device = /* xml */ `
 	<IED name="P1">
+		<IEDSourceFiles>
+			<SclFileReference fileType="ICD"/>
+		</IEDSourceFiles>
 		<AccessPoint name="AP1">
 			<Server>
 				<LDevice inst="LD0">
@@ -140,6 +143,8 @@ describe('resetLNodes', () => {
 		},
 
 		'bound by its naming only, no such LN -> unlocked': {
+			allowIncoherentReferences:
+				'the LNode is bound to a logical node the document lacks: what the clean-up releases',
 			sourceXml: documentXml({
 				content: `<LNode iedName="P1" ldInst="LD9" prefix="Q0" lnClass="XCBR" lnInst="2"/>`,
 			}),
@@ -149,6 +154,8 @@ describe('resetLNodes', () => {
 
 		'bound to an absent IED, with an LNodeSpecNaming -> naming and LD back from it, every specified value kept':
 			{
+				allowIncoherentReferences:
+					'the LNode is bound to a logical node the document lacks: what the clean-up releases',
 				sourceXml: documentXml({
 					ied: '<!-- missing: <IED name="GONE_IED"/> -->',
 					content: /* xml */ `
@@ -168,6 +175,8 @@ describe('resetLNodes', () => {
 			},
 
 		'bound to an absent IED, its LNodeSpecNaming without sPrefix -> prefix removed': {
+			allowIncoherentReferences:
+				'the LNode is bound to a logical node the document lacks: what the clean-up releases',
 			sourceXml: documentXml({
 				ied: '<!-- missing: <IED name="GONE_IED"/> -->',
 				content: /* xml */ `
@@ -182,6 +191,8 @@ describe('resetLNodes', () => {
 		},
 
 		'bound to an absent IED, without an LNodeSpecNaming -> only the IED, LD and lnUuid removed': {
+			allowIncoherentReferences:
+				'the LNode is bound to a logical node the document lacks: what the clean-up releases',
 			sourceXml: documentXml({
 				ied: '<!-- missing: <IED name="GONE_IED"/> -->',
 				content: `<LNode iedName="GONE_IED" ldInst="LD0" lnClass="PTRC" lnInst="1" prefix="PFX" lnUuid="old-uuid" templateUuid="tpl-2"/>`,

@@ -21,6 +21,8 @@ export type CollectedTupleTarget = {
 	recordId: string
 	address: string
 	parts: TupleTargetParts
+	/** Whether it is the document's own content, not vendor payload in a `Private`. */
+	native: boolean
 }
 
 /**

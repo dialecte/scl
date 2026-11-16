@@ -157,7 +157,14 @@ describe('createSclImportSession', () => {
 
 	it('DOS whose absolute name names another LN than its uuid → uuid wins, incoherent-reference naming both LNs', async () => {
 		const session = createSclImportSession()
-		const lnode = makeRecord('LNode', { lnClass: 'PTOC', lnInst: '1', lnUuid: 'ptoc1-uuid' })
+		// the LNode names the logical node its uuid names: its own names are not the case's
+		const lnode = makeRecord('LNode', {
+			iedName: 'VENDOR',
+			ldInst: 'LD0',
+			lnClass: 'PTOC',
+			lnInst: '1',
+			lnUuid: 'ptoc1-uuid',
+		})
 		const dos = makeRecord('DOS', {
 			name: 'Op',
 			mappedDoName: 'VENDOR/LD0/GGIO1.Ind2',
@@ -1435,89 +1442,6 @@ describe('import of a resourceName', () => {
 	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
 })
 
-describe('import of an LNode without its LNodeSpecNaming', () => {
-	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
-		'an LNode allocated to no IED -> it gains its specified naming, its own': {
-			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root">
-					<Substation ${id}="substation" name="S1">
-						<Function ${id}="function" name="F1">
-							<LNode ${id}="lnode" iedName="None" ldInst="Prot" prefix="Main" lnClass="PTOC" lnInst="2" />
-						</Function>
-					</Substation>
-				</SCL>
-			`,
-			expectedQueries: [
-				'//default:LNode[@lnClass="PTOC"]/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sLdInst="Prot"][@sPrefix="Main"][@sLnClass="PTOC"][@sLnInst="2"]',
-			],
-			unexpectedQueries: ['//v2019C1:LNodeSpecNaming[@sIedName]'],
-		},
-		'an LNode bound to an IED -> it gains the naming of the logical node it is bound to, without the IED and LD names':
-			{
-				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root">
-						<Substation ${id}="substation" name="S1">
-							<Function ${id}="function" name="F1">
-								<LNode ${id}="lnode" iedName="P1" ldInst="LD0" prefix="Main" lnClass="PTOC" lnInst="2" />
-							</Function>
-						</Substation>
-					</SCL>
-				`,
-				expectedQueries: [
-					'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sPrefix="Main"][@sLnClass="PTOC"][@sLnInst="2"]',
-				],
-				unexpectedQueries: [
-					'//v2019C1:LNodeSpecNaming[@sIedName]',
-					'//v2019C1:LNodeSpecNaming[@sLdInst]',
-				],
-			},
-		'an LNode with inputs in its Private -> the naming joins them in that Private': {
-			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root">
-					<Substation ${id}="substation" name="S1">
-						<Function ${id}="function" name="F1">
-							<LNode ${id}="lnode" iedName="None" lnClass="PTOC" lnInst="1">
-								<Private ${id}="lnode-private" type="eIEC61850-6-100">
-									<eIEC61850-6-100:LNodeInputs ${id}="inputs">
-										<eIEC61850-6-100:SourceRef ${id}="source-ref" input="Trip" />
-									</eIEC61850-6-100:LNodeInputs>
-								</Private>
-							</LNode>
-						</Function>
-					</Substation>
-				</SCL>
-			`,
-			expectedQueries: [
-				'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeSpecNaming[@sLnClass="PTOC"][@sLnInst="1"]',
-				'//default:LNode/default:Private[@type="eIEC61850-6-100"]/v2019C1:LNodeInputs/v2019C1:SourceRef',
-			],
-			unexpectedQueries: ['//default:LNode/default:Private[2]'],
-		},
-		'an LNode with its LNodeSpecNaming -> kept as it is': {
-			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root">
-					<Substation ${id}="substation" name="S1">
-						<Function ${id}="function" name="F1">
-							<LNode ${id}="lnode" iedName="P1" ldInst="LD0" lnClass="PTOC" lnInst="2">
-								<Private ${id}="lnode-private" type="eIEC61850-6-100">
-									<eIEC61850-6-100:LNodeSpecNaming ${id}="spec-naming" sLnClass="PTOC" sLnInst="7" />
-								</Private>
-							</LNode>
-						</Function>
-					</Substation>
-				</SCL>
-			`,
-			expectedQueries: ['//v2019C1:LNodeSpecNaming[@sLnInst="7"]'],
-			unexpectedQueries: [
-				'//v2019C1:LNodeSpecNaming[2]',
-				'//v2019C1:LNodeSpecNaming[@sLnInst="2"]',
-			],
-		},
-	}
-
-	runSclTestCases.withExport({ testCases, act: async () => ({ assertOn: 'source' }) })
-})
-
 describe('import diagnostic for a derived specified naming', () => {
 	it('an LNode bound to an IED without LNodeSpecNaming -> one derived-specification-naming carrying the naming it was given', async () => {
 		const session = createSclImportSession()
@@ -1569,6 +1493,20 @@ describe('import of paths through an LNode bound to an IED', () => {
 						</LNode>
 					</Function>
 				</Substation>
+				<IED ${id}="p1" name="P1">
+					<IEDSourceFiles ${id}="p1-source-files">
+						<SclFileReference ${id}="p1-icd" fileType="ICD" />
+					</IEDSourceFiles>
+					<AccessPoint ${id}="p1-ap" name="AP1">
+						<Server ${id}="p1-server">
+							<Authentication ${id}="p1-authentication" />
+							<LDevice ${id}="p1-ld" inst="LD0">
+								<LN0 ${id}="p1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" />
+								<LN ${id}="p1-ln" prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" />
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
 			</SCL>
 		`
 	}
@@ -2048,9 +1986,9 @@ describe('import of an IED reference named by a tuple', () => {
 })
 
 /**
- * An LNode names the logical node implementing it by its `lnUuid` and its names, but its binding
- * writes them (`reconcileLNodeBinding`): the import fills and repairs neither, as for an LNode bound
- * by its names only.
+ * An LNode names the logical node implementing it by its `lnUuid` and its names: names disagreeing
+ * with the uuid are written from the logical node the uuid names, as for every tuple reference; an
+ * `lnUuid` is never filled from the names.
  */
 describe('import of an LNode naming the logical node implementing it', () => {
 	function boundLNodeXml(lnode: string): string {
@@ -2084,14 +2022,21 @@ describe('import of an LNode naming the logical node implementing it', () => {
 			],
 		},
 
-		'LNode whose lnUuid names Q0XCBR2 and names XCBR1 -> left as read': {
-			allowIncoherentReferences:
-				'the LNode names another logical node than its uuid: what the import leaves as read',
+		'LNode on no IED whose lnUuid names Q0XCBR2 -> the lnUuid wins, its names Q0XCBR2': {
+			allowIncoherentReferences: 'the LNode names no IED beside its uuid: the case',
+			sourceXml: boundLNodeXml('iedName="None" lnClass="XCBR" lnInst="1" lnUuid="p1-breaker-uuid"'),
+			expectedQueries: [
+				'//default:LNode[@iedName="P1"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"][@lnUuid="p1-breaker-uuid"]',
+			],
+		},
+
+		'LNode whose lnUuid names Q0XCBR2 and names XCBR1 -> the lnUuid wins, its names Q0XCBR2': {
+			allowIncoherentReferences: 'the LNode names another logical node than its uuid: the case',
 			sourceXml: boundLNodeXml(
 				'iedName="P1" ldInst="LD0" lnClass="XCBR" lnInst="1" lnUuid="p1-breaker-uuid"',
 			),
 			expectedQueries: [
-				'//default:LNode[@iedName="P1"][not(@prefix)][@lnClass="XCBR"][@lnInst="1"][@lnUuid="p1-breaker-uuid"]',
+				'//default:LNode[@iedName="P1"][@ldInst="LD0"][@prefix="Q0"][@lnClass="XCBR"][@lnInst="2"][@lnUuid="p1-breaker-uuid"]',
 			],
 		},
 	}
@@ -2125,6 +2070,17 @@ describe('import of an LNode naming the logical node implementing it', () => {
 				},
 			],
 		},
+		'LNode on no IED whose lnUuid names Q0XCBR2 -> one incoherent-reference diagnostic, its names naming nothing':
+			{
+				lnode: { iedName: 'None', lnClass: 'XCBR', lnInst: '1', lnUuid: 'p1-breaker-uuid' },
+				expectedDiagnostics: [
+					{
+						code: 'incoherent-reference',
+						ref: { tagName: 'LNode', attribute: 'iedName ldInst prefix lnClass lnInst' },
+						meta: { uuidAttribute: 'lnUuid', pathValue: '', uuidValue: 'p1-breaker-uuid' },
+					},
+				],
+			},
 		'LNode whose lnUuid names the logical node its names name -> no diagnostic': {
 			lnode: {
 				iedName: 'P1',

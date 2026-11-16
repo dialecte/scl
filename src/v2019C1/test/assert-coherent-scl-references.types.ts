@@ -15,6 +15,14 @@ export type ReferenceViolation =
 	  }
 	| { kind: 'dangling'; referenceTagName: string; uuidAttribute: string; uuid: string }
 	| {
+			kind: 'absent'
+			referenceTagName: string
+			/** The attributes naming the target. */
+			namesAttribute: string
+			/** The address those names give, which no element of the document has. */
+			written: string
+	  }
+	| {
 			kind: 'wrong-target'
 			referenceTagName: string
 			uuidAttribute: string

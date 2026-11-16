@@ -14,4 +14,9 @@ export type ConstraintViolation = {
 export type ConstraintScope = {
 	constraints: readonly Core.IdentityConstraint[]
 	children: readonly Core.AnyTreeRecord[]
+	/**
+	 * The uuids the siblings' tuple references name that name an element the document holds: a sibling naming one of
+	 * them has its names written from that element. Absent: none is known, every sibling is compared by its names.
+	 */
+	liveTargetUuids?: ReadonlySet<string>
 }

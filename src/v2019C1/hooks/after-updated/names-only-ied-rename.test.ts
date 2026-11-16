@@ -44,6 +44,7 @@ const namesOnlyReferences = /* xml */ `
 								<ExtRef ${id}="p2-names-only" iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="9" doName="Pos" intAddr="Pos"/>
 							</Inputs>
 						</LN0>
+						<LN ${id}="p2-breaker" lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="p2-breaker-uuid"/>
 					</LDevice>
 				</Server>
 			</AccessPoint>
@@ -246,8 +247,12 @@ describe('names-only references follow an IED rename', () => {
 			rename: { tagName: 'IED', id: 'p1', attributes: { name: 'P2' } },
 			allowInvalidOutput: {
 				reason:
-					'two IEDs named P2 is the state the rename leaves, the case is what references do then',
-				violations: [{ check: 'uniqueness' }, { check: 'xsd' }],
+					'two IEDs named P2 and an LNode naming the gone P1 are the state the rename leaves, the case is what references do then',
+				violations: [
+					{ check: 'uniqueness' },
+					{ check: 'xsd' },
+					{ check: 'references', code: 'absent' },
+				],
 			},
 			expectedQueries: [
 				'//default:LNode[@uuid="lnode-uuid"][@iedName="P1"]',
@@ -269,6 +274,11 @@ describe('names-only references follow an IED rename', () => {
 		'logical node renumbered -> the LNode naming it by names only does not follow': {
 			sourceXml: namesOnlyReferences,
 			rename: { tagName: 'LN', id: 'p1-breaker', attributes: { inst: '3' } },
+			allowInvalidOutput: {
+				reason:
+					'an LNode named by its names only does not follow its logical node: it is left naming the one renumbered away',
+				violations: [{ check: 'references', code: 'absent' }],
+			},
 			expectedQueries: ['//default:LNode[@iedName="P1"][@lnInst="2"]'],
 			unexpectedQueries: ['//default:LNode[@lnInst="3"]'],
 		},

@@ -1,11 +1,8 @@
+import { applyIed } from './apply-ied'
 import { assertReportFits } from './assert-report-fits'
-import { collectWrittenImplementation } from './collect-written-implementation'
 import { recheckAfterApply } from './recheck-after-apply'
+import { releaseWrittenImplementation } from './release-written-implementation'
 
-import { throwDialecteError } from '@dialecte/core'
-
-import { SCL_ERRORS } from '@/v2019C1/errors'
-import { cleanUp } from '@/v2019C1/extensions/clean-up'
 import {
 	allGroups,
 	assertDecisionsCoherent,
@@ -23,11 +20,10 @@ import {
 	assertRevisionBaseFits,
 	scenarioPolicy,
 } from '@/v2019C1/extensions/lifecycle/scenario-policy'
-import {
-	asd as updateAsd,
-	fsd as updateFsd,
-	ssd as updateSsd,
-} from '@/v2019C1/extensions/lifecycle/update'
+// the recipes themselves: this run releases what it wrote once, after them (see `releaseWrittenImplementation`)
+import { asd as updateAsd } from '@/v2019C1/extensions/lifecycle/update/transaction/asd'
+import { fsd as updateFsd } from '@/v2019C1/extensions/lifecycle/update/transaction/fsd'
+import { ssd as updateSsd } from '@/v2019C1/extensions/lifecycle/update/transaction/ssd'
 
 import type { AppliedInstances, ApplyResult } from './apply.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -66,8 +62,9 @@ import type * as Core from '@dialecte/core'
  * A fork reads the previous revision of the file it is given (`baseQuery`) once, as `report` did:
  * an element the newer revision lacks is removed when the previous revision held it.
  *
- * An IED's report (`verb: 'ied'`) is not applied yet: refused with `OPTION_NOT_AVAILABLE`
- * (`meta: { option: 'verb', value: 'ied' }`), nothing written.
+ * An IED's report (`verb: 'ied'`) is applied for a first placement only: the IED of a template ISD or of an ICD placed
+ * as a new IED. The IED of an ISD instance file, one read from an IID or an SCD, or one the project already holds is
+ * refused with `OPTION_NOT_AVAILABLE`, nothing written.
  *
  * Returns `{ report, instances }` — the effective report plus the instance roots
  * the write produced/reconciled. Run inside `doc.prepare(tx => tx.lifecycle.apply(...))`
@@ -93,9 +90,6 @@ export async function apply(
 
 	// a previous revision only a fork reads: refused whatever the track
 	assertRevisionBaseFits({ scenario: params.scenario, baseQuery: params.baseQuery })
-	// an IED is reported, not yet written: refused whatever the track
-	if (params.verb === 'ied') refuseIedApply()
-
 	// No decisions supplied: the full track waits for a human, nothing is written
 	if (!params.resolution?.decisions && report.needsDecisions) {
 		return { report, instances: emptyInstances(params.verb) }
@@ -152,8 +146,7 @@ async function writeReport(
 
 	// what the template brings keeps the implementation it had there: what this run wrote naming a
 	// logical node, ExtRef or ExtCtrl the project lacks is released, once everything is written
-	const elements = collectWrittenImplementation(tx, { from: writtenFrom })
-	if (elements.length > 0) await cleanUp.transaction.resetLNode(tx, { elements })
+	await releaseWrittenImplementation(tx, { from: writtenFrom })
 
 	// the consumer's own step, once everything is written, in the same transaction
 	const afterApply = params.resolution?.afterApply
@@ -189,14 +182,6 @@ function emptyInstances(verb: LifecycleTarget['verb']): AppliedInstances {
 		case 'ied':
 			return { verb: 'ied', ieds: [] }
 	}
-}
-
-/** An apply of an IED is not offered yet: its report lists what a first placement would add, nothing is written. */
-function refuseIedApply(): never {
-	return throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
-		meta: { option: 'verb', value: 'ied' },
-		detail: 'apply: writing an IED is not available yet, its report only lists what it would add',
-	})
 }
 
 /**
@@ -266,7 +251,9 @@ async function runVerb(
 			})
 			return { verb: 'asd', applications, functions }
 		}
-		case 'ied':
-			return refuseIedApply()
+		case 'ied': {
+			const ieds = await applyIed(tx, { target, report, decisions, placeholderLineages })
+			return { verb: 'ied', ieds }
+		}
 	}
 }

@@ -68,7 +68,7 @@ import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/app
 import type * as Core from '@dialecte/core'
 
 /**
- * `tx.lifecycle.update.asd` — reconcile a project against a (possibly newer) ASD.
+ * The recipe of `tx.lifecycle.update.asd` (which then releases what it wrote, see `public-recipes.ts`) — reconcile a project against a (possibly newer) ASD.
  *
  * Same engine as `tx.lifecycle.update.fsd`, one layer up (proves `engine.reconcile` is
  * layer-agnostic): several instances of one ASD template may live under one
@@ -92,8 +92,6 @@ import type * as Core from '@dialecte/core'
  * a function an instance gains), `reconciled` for a matched instance (an application, a function it composes or takes
  * where it stands). Given decisions, only those it wrote to; without decisions it writes everything the template
  * brings and returns every instance it matched.
- *
- * @intent update a project from a newer ASD, reconcile Application instances with their template, instantiate or update an application template
  */
 export async function asd(
 	tx: Core.Transaction<Config>,

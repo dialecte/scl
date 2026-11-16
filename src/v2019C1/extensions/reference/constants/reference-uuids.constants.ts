@@ -43,15 +43,33 @@ export const UUID_REFERRERS_BY_TARGET: ReadonlyMap<string, readonly UuidReferrer
 const BARE_REFERENCE_CHILDREN: ReadonlySet<string> = new Set(['Text', 'Private'])
 
 /**
+ * The tuple referrers with no identity of their own (no `uuid`) holding nothing but text or vendor data: an IED's
+ * data-flow references (`FCDA`, `ClientLN`, `IEDName`, `Association`, `KDC`, `ServerAt`).
+ */
+export const BARE_TUPLE_REFERRER_TAGS: ReadonlySet<string> = new Set(
+	Object.keys(TUPLE_REFERENCE_PAIRS).filter(isBareTupleReferrer),
+)
+
+/**
  * The tags of the elements that are a reference and nothing else, dropped when what they name goes: every uuid pair's
- * referrer, and the tuple referrers with no identity of their own (no `uuid`) holding nothing but text or vendor data
- * (`FCDA`, `ClientLN`, `IEDName`, ...). A tuple referrer holding addresses or children of its own (`ConnectedAP`,
- * `GSE`, `SMV`) or carrying a uuid (`ExtRef`, `LNode`) is not one.
+ * referrer, and the bare tuple referrers (`BARE_TUPLE_REFERRER_TAGS`). A tuple referrer holding addresses or children of
+ * its own (`ConnectedAP`, `GSE`, `SMV`) or carrying a uuid (`ExtRef`, `LNode`) is not one.
  */
 export const DISPOSABLE_REFERENCE_TAGS: ReadonlySet<string> = new Set([
 	...REFERENCE_TAG_NAMES,
-	...Object.keys(TUPLE_REFERENCE_PAIRS).filter(isBareTupleReferrer),
+	...BARE_TUPLE_REFERRER_TAGS,
 ])
+
+/**
+ * The tuple referrers with no identity of their own that are more than a reference: they hold addresses or children of
+ * their own (`ConnectedAP`, `GSE`, `SMV`). Paired with their counterpart by what they name, as a reference is, yet not
+ * dropped when what they name goes.
+ */
+export const CONTENT_HOLDING_TUPLE_REFERRER_TAGS: ReadonlySet<string> = new Set(
+	Object.keys(TUPLE_REFERENCE_PAIRS).filter(
+		(tagName) => !hasIdentityOfItsOwn(tagName) && !isBareTupleReferrer(tagName),
+	),
+)
 
 function uuidPairReference(pair: ReferencePair): ReferenceUuid {
 	return {
@@ -80,9 +98,16 @@ function tupleNamesOf(pair: TupleReferencePair): string[] {
 }
 
 function isBareTupleReferrer(tagName: string): boolean {
-	const attributes = (ATTRIBUTES.byTag as Record<string, object>)[tagName] ?? {}
 	const children = (CHILDREN as Record<string, readonly string[]>)[tagName] ?? []
-	return !('uuid' in attributes) && children.every((child) => BARE_REFERENCE_CHILDREN.has(child))
+	return (
+		!hasIdentityOfItsOwn(tagName) && children.every((child) => BARE_REFERENCE_CHILDREN.has(child))
+	)
+}
+
+/** Whether elements of a tag carry a `uuid` of their own. */
+function hasIdentityOfItsOwn(tagName: string): boolean {
+	const attributes = (ATTRIBUTES.byTag as Record<string, object>)[tagName] ?? {}
+	return 'uuid' in attributes
 }
 
 function indexReferrersByTarget(): Map<string, UuidReferrer[]> {

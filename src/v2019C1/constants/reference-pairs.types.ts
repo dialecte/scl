@@ -38,11 +38,16 @@ export type TupleReferencePair<Name extends string = string> = {
 	/** Which of the `target` tags an attribute's value names, when several may answer one address. */
 	targetByAttribute?: { attribute: Name; tags: Readonly<Record<string, string>> }
 	/**
-	 * The names follow a rename or a clone of the target only: when the uuid is first set, another
-	 * writer gives them (an LNode's binding), so creating or importing the referrer leaves its uuid
-	 * and names as written.
+	 * The uuid is never filled from the names (an import or a create naming the target by its names
+	 * only leaves it unset), and creating the referrer writes no names at once: the binding and the
+	 * commit (`writeTupleNamesAtCommit`) write them, the uuid winning, as everywhere else.
 	 */
 	followsOnly?: true
+	/**
+	 * The target is always in the document once the referrer names an IED (anything but its unassigned name): a target
+	 * of an IED the document does not hold is missing, not outside it.
+	 */
+	inDocument?: true
 }
 
 /**

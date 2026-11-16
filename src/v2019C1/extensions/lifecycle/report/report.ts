@@ -19,7 +19,7 @@ import {
 import type { Config } from '@/v2019C1/config'
 import type { LifecycleReportParams } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
-import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DiffReport, ReportTarget } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -72,6 +72,7 @@ export async function report(
 		removalBase,
 		placeholderLineages,
 		diffPolicy,
+		reportTarget,
 	})
 	// what the report is made for: apply refuses it for another target
 	report.target = reportTarget
@@ -122,6 +123,7 @@ async function reportVerb(
 		removalBase: RemovalBase
 		placeholderLineages: PlaceholderLineages
 		diffPolicy: DiffPolicy
+		reportTarget: ReportTarget
 	},
 ): Promise<DiffReport> {
 	const { target, pass, removalBase, placeholderLineages, diffPolicy } = params
@@ -172,7 +174,9 @@ async function reportVerb(
 			return reportIed(query, {
 				sourceQuery: target.sourceQuery,
 				iedRef: target.ref,
+				anchor: target.anchor,
 				scenario: target.scenario,
+				fileType: params.reportTarget.fileType,
 				diffPolicy,
 				placeholderLineages,
 			})

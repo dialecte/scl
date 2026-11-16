@@ -1,3 +1,1 @@
-export { asd } from './asd'
-export { fsd } from './fsd'
-export { ssd } from './ssd'
+export { asd, fsd, ssd } from './public-recipes'

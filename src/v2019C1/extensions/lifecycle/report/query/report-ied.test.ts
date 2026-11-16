@@ -3,10 +3,11 @@ import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
-import type { Scl } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffNode } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
+import type * as Core from '@dialecte/core'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -14,11 +15,11 @@ const ns = ALL_XMLNS_NAMESPACES
 const iedRef = { tagName: 'IED', id: 'isd-ied' } as const satisfies Scl.Ref<'IED'>
 const projectRoot = { tagName: 'SCL', id: 'project-root' } as const satisfies Scl.Ref<'SCL'>
 
-/** An ISD: the IED P1, with the file it was extracted from. */
+/** A template ISD: the IED SPECIFICATION, with the file it was extracted from. */
 const isdXml = /* xml */ `
 	<SCL ${ns} ${id}="isd-root">
 		<Header id="P1_ISD" fileType="ISD" uuid="10000000-0000-4000-8000-000000000010" version="1" revision="A" ${id}="isd-header"/>
-		<IED name="P1" uuid="20000000-0000-4000-8000-000000000001" ${id}="isd-ied">
+		<IED name="SPECIFICATION" uuid="20000000-0000-4000-8000-000000000001" ${id}="isd-ied">
 			<AccessPoint name="AP1" ${id}="isd-access-point"/>
 			<IEDSourceFiles ${id}="isd-source-files">
 				<SclFileReference fileType="SCD" fileName="project" fileUuid="10000000-0000-4000-8000-000000000001" version="1" revision="A" ${id}="isd-source-file"/>
@@ -26,6 +27,18 @@ const isdXml = /* xml */ `
 		</IED>
 	</SCL>
 `
+
+/** The source opened as a template ISD file, its record ids kept: the IED is placed from its `.isd` extension. */
+async function openAsIsd(params: {
+	project: SclTest.ActParams<SclTest.BaseXmlTestCase>['project']
+	xml: string
+}): Promise<Core.Query<Config>> {
+	const { project, xml } = params
+	const imported = await project.importFile(new File([xml], 'P1.isd', { type: 'text/xml' }), {
+		useCustomRecordsIds: true,
+	})
+	return project.openDocument(imported.documentId).query
+}
 
 /** Every node of a diff tree as `<path> <change>`, in document order. */
 function changesOf(params: { node: DiffNode; parentPath?: string }): string[] {
@@ -84,14 +97,15 @@ describe('query.lifecycle.report - an IED placed for the first time', () => {
 	}
 
 	async function act({
-		source,
+		project,
 		target,
 		testCase,
 	}: SclTest.ActParams<FirstPlacementCase>): Promise<void> {
 		if (!target) throw new Error('target required')
+		const sourceQuery = await openAsIsd({ project, xml: testCase.sourceXml })
 		const reported = await target.query.lifecycle.report({
 			verb: 'ied',
-			sourceQuery: source.query,
+			sourceQuery,
 			ref: iedRef,
 			anchor: projectRoot,
 		})
@@ -191,15 +205,16 @@ describe('query.lifecycle.report - an IED the project already holds', () => {
 	}
 
 	async function act({
-		source,
+		project,
 		target,
 		testCase,
 	}: SclTest.ActParams<MatchedCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
+		const sourceQuery = await openAsIsd({ project, xml: testCase.sourceXml })
 		const outcome = await target.query.lifecycle
 			.report({
 				verb: 'ied',
-				sourceQuery: source.query,
+				sourceQuery,
 				ref: iedRef,
 				anchor: projectRoot,
 				scenario: testCase.scenario,

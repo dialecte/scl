@@ -135,6 +135,23 @@ export async function referenceNameIdentity(
 }
 
 /**
+ * The names a tuple reference gives what it names (an IED, an access point, a device, a control block), as a stable
+ * string: how a uuid-less tuple referrer holding content of its own (a `ConnectedAP` written without `apUuid`) is
+ * paired when it names nothing by uuid. Undefined when it gives none.
+ */
+export async function tupleNamesIdentity(
+	query: Reader,
+	node: AnyTreeRecord,
+): Promise<string | undefined> {
+	const references = REFERENCE_UUIDS_BY_TAG.get(node.tagName)
+	if (!references) return undefined
+	const attributes = await query.any.getAttributes(node)
+	const names = [...new Set(references.flatMap((reference) => reference.names))].sort()
+	const parts = names.flatMap((name) => (attributes[name] ? [`${name}=${attributes[name]}`] : []))
+	return parts.length > 0 ? parts.join('|') : undefined
+}
+
+/**
  * The placeholder lineage a reference of the project names through: the first of its targets whose lineage under the
  * scenario's key is one of `placeholderLineages` (see `PlaceholderLineages`). Undefined when none is: the reference is
  * then paired by the uuids it names only.

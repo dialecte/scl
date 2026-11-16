@@ -101,10 +101,10 @@ What the import has to say about a file comes back as diagnostics, beside the wr
 | `incoherent-reference`         | `warning`     | The path (or the names, for an IED-section reference named by attributes) and the uuid of a reference name two different elements: the uuid wins, or the reference is left as read |
 | `data-path-not-split`          | `warning`     | The path of an LNode a reference names could not be given the data-object name a data reference by uuid carries: the reference is left as read                                     |
 | `incoherent-path-names`        | `information` | Names written from a path disagree with it: they are written again from the path                                                                                                   |
-| `derived-specification-naming` | `information` | An LNode bound to an IED had no `LNodeSpecNaming`: one was made from the LN it is bound to                                                                                         |
+| `derived-specification-naming` | `information` | An LNode bound to a real IED had no `LNodeSpecNaming`: one was made from the LN it is bound to                                                                                     |
 
 ## Specified naming of the logical nodes
 
 The same pass notes every `LNode`, its `eIEC61850-6-100` `Private` and whether it holds an `LNodeSpecNaming`. At the end, each `LNode` without one gets one, placed in that `Private` (created when the `LNode` has none), with the rule of the record hooks (see [reference](../extensions/reference#automatic-coherence-record-hooks)).
 
-An LNode bound to an IED that gets its naming this way is reported with a `derived-specification-naming` diagnostic.
+An LNode bound to a specification IED (by its `lnUuid`, else by its `iedName`) gets a naming specified on that IED and logical device (`sIedName`, `sLdInst`), the same rule as the commit; the pass also notes the IEDs, the file types of their own source files and the logical nodes by uuid. The file's extension is not known here: an IED is told a specification IED by its own source files only. An LNode bound to a real IED that gets its naming this way is reported with a `derived-specification-naming` diagnostic.

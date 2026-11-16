@@ -13,3 +13,6 @@ export const SIGNAL_ADDRESS_PAIRS_BY_REF: ReadonlyMap<string, readonly RefPairEn
 		return addressPairs.length > 0 ? [[tagName, addressPairs] as const] : []
 	}),
 )
+
+/** How many records sit at most between a signal and its LNode: its inputs or outputs, the `Private` holding them. */
+export const SIGNAL_HOLDER_DEPTH = 3

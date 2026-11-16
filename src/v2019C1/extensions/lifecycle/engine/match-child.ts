@@ -1,7 +1,15 @@
 import { instanceTagOf } from './instance-tag'
-import { placeholderLineageOf, referenceIdentity, referenceNameIdentity } from './reference-match'
+import {
+	placeholderLineageOf,
+	referenceIdentity,
+	referenceNameIdentity,
+	tupleNamesIdentity,
+} from './reference-match'
 
-import { DISPOSABLE_REFERENCE_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
+import {
+	CONTENT_HOLDING_TUPLE_REFERRER_TAGS,
+	DISPOSABLE_REFERENCE_TAGS,
+} from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 
 import type { ChildMatch, PinnedMatches } from './match-child.types'
 import type { PlaceholderLineages } from './placeholder-lineages.types'
@@ -29,6 +37,10 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  *    instantiation's refs to surface as `added` instead of matching a prior instance's ref. A reference
  *    to a project element a source element was mapped onto reads as a reference to that source element
  *    (`redirectedSourceUuids`), whatever the two are named.
+ *  - A uuid-less tuple referrer holding content of its own (`CONTENT_HOLDING_TUPLE_REFERRER_TAGS`: `ConnectedAP`, `GSE`,
+ *    `SMV`) matches as a reference does, by what its uuid names; one naming nothing by uuid, or with no sibling naming
+ *    the same element, matches the sibling naming nothing by uuid that gives the same names (its IED, access point,
+ *    device, control block), never one by position.
  *  - Any other uuid-less element (e.g. `FunctionRoleContent`) matches a same-tag sibling by position.
  *
  * Inside an element of the PROJECT a source element is mapped onto (`matchContainersByName`), an
@@ -107,7 +119,10 @@ export async function matchChild(
 
 	// a fresh placement makes its OWN references: one matches only a child already naming, in the project, the very
 	// element it names (a source element mapped onto it) — never a prior instance's reference
-	if (refsAlwaysAdded && DISPOSABLE_REFERENCE_TAGS.has(sourceChild.tagName)) {
+	const pairedAsReference =
+		DISPOSABLE_REFERENCE_TAGS.has(sourceChild.tagName) ||
+		CONTENT_HOLDING_TUPLE_REFERRER_TAGS.has(sourceChild.tagName)
+	if (refsAlwaysAdded && pairedAsReference) {
 		return matchReferenceNamingTheSame(sourceQuery, {
 			targetQuery,
 			sourceChild,
@@ -117,32 +132,75 @@ export async function matchChild(
 		})
 	}
 
-	if (DISPOSABLE_REFERENCE_TAGS.has(sourceChild.tagName)) {
-		// The source ref's target uuid is read as it is (do not normalize it — an extracted template may
-		// carry its own `templateUuid`). The candidate ref's target uuid is brought back to the source by
-		// the scenario's key so the two compare equal.
-		const sourceIdentity = await referenceIdentity(sourceQuery, sourceChild, { side: 'source' })
-		if (sourceIdentity === undefined) return { record: candidates[0] }
-		for (const candidate of candidates) {
-			const candidateIdentity = await referenceIdentity(targetQuery, candidate, {
-				side: 'instance',
-				matchKey: params.matchKey,
-				redirectedSourceUuids: params.redirectedSourceUuids,
-				targetLineages: params.targetLineages,
-			})
-			if (candidateIdentity === sourceIdentity) return { record: candidate }
-		}
-		return matchReferenceByName(sourceQuery, {
+	if (pairedAsReference) {
+		return matchReferenceByIdentity(sourceQuery, {
 			targetQuery,
 			sourceChild,
 			candidates,
 			matchKey: params.matchKey,
-			placeholderLineages: params.placeholderLineages ?? new Set(),
+			redirectedSourceUuids: params.redirectedSourceUuids,
 			targetLineages: params.targetLineages,
+			placeholderLineages: params.placeholderLineages ?? new Set(),
 		})
 	}
 
 	return { record: candidates[0] }
+}
+
+/**
+ * The candidate reference naming what the source reference names: by the uuids it names, brought back to the source by
+ * the scenario's key; for a connection or a control block address, else by the names it gives (see `matchChild`); else
+ * by name on a placeholder lineage the consumer lets pair so.
+ */
+async function matchReferenceByIdentity(
+	sourceQuery: Reader,
+	params: {
+		targetQuery: Reader
+		sourceChild: AnyTreeRecord
+		candidates: readonly AnyTreeRecord[]
+		matchKey: MatchKey
+		redirectedSourceUuids: RedirectedSourceUuids | undefined
+		targetLineages: TargetLineages
+		placeholderLineages: PlaceholderLineages
+	},
+): Promise<ChildMatch | undefined> {
+	const { targetQuery, sourceChild, candidates, matchKey, redirectedSourceUuids, targetLineages } =
+		params
+	// The source ref's target uuid is read as it is (do not normalize it — an extracted template may
+	// carry its own `templateUuid`). The candidate ref's target uuid is brought back to the source by
+	// the scenario's key so the two compare equal.
+	const sourceIdentity = await referenceIdentity(sourceQuery, sourceChild, { side: 'source' })
+	if (sourceIdentity === undefined) {
+		if (!CONTENT_HOLDING_TUPLE_REFERRER_TAGS.has(sourceChild.tagName))
+			return { record: candidates[0] }
+		return matchTupleNames(sourceQuery, { targetQuery, sourceChild, candidates })
+	}
+	for (const candidate of candidates) {
+		const candidateIdentity = await referenceIdentity(targetQuery, candidate, {
+			side: 'instance',
+			matchKey,
+			redirectedSourceUuids,
+			targetLineages,
+		})
+		if (candidateIdentity === sourceIdentity) return { record: candidate }
+	}
+	// a connection of the project written without its uuid is the one giving the same names
+	if (CONTENT_HOLDING_TUPLE_REFERRER_TAGS.has(sourceChild.tagName)) {
+		const uuidless = await candidatesNamingNoUuid(targetQuery, { candidates })
+		const byNames = await matchTupleNames(sourceQuery, {
+			targetQuery,
+			sourceChild,
+			candidates: uuidless,
+		})
+		if (byNames) return byNames
+	}
+	return matchReferenceByName(sourceQuery, {
+		targetQuery,
+		sourceChild,
+		candidates,
+		placeholderLineages: params.placeholderLineages,
+		targetLineages,
+	})
 }
 
 /**
@@ -186,12 +244,11 @@ async function matchReferenceByName(
 		targetQuery: Reader
 		sourceChild: AnyTreeRecord
 		candidates: readonly AnyTreeRecord[]
-		matchKey: MatchKey
 		placeholderLineages: PlaceholderLineages
 		targetLineages: TargetLineages
 	},
 ): Promise<ChildMatch | undefined> {
-	const { targetQuery, sourceChild, candidates, matchKey, placeholderLineages } = params
+	const { targetQuery, sourceChild, candidates, placeholderLineages } = params
 	if (placeholderLineages.size === 0) return undefined
 	const sourceNameIdentity = await referenceNameIdentity(sourceQuery, sourceChild)
 	if (sourceNameIdentity === undefined) return undefined
@@ -207,6 +264,34 @@ async function matchReferenceByName(
 		}
 	}
 	return undefined
+}
+
+/** The candidate giving the same names as a tuple referrer naming nothing by uuid: none when it gives no name. */
+async function matchTupleNames(
+	sourceQuery: Reader,
+	params: { targetQuery: Reader; sourceChild: AnyTreeRecord; candidates: readonly AnyTreeRecord[] },
+): Promise<ChildMatch | undefined> {
+	const { targetQuery, sourceChild, candidates } = params
+	const sourceNames = await tupleNamesIdentity(sourceQuery, sourceChild)
+	if (sourceNames === undefined) return undefined
+	for (const candidate of candidates) {
+		if ((await tupleNamesIdentity(targetQuery, candidate)) === sourceNames)
+			return { record: candidate }
+	}
+	return undefined
+}
+
+/** The candidates naming nothing by uuid: only their names say what they name. */
+async function candidatesNamingNoUuid(
+	targetQuery: Reader,
+	params: { candidates: readonly AnyTreeRecord[] },
+): Promise<AnyTreeRecord[]> {
+	const uuidless: AnyTreeRecord[] = []
+	for (const candidate of params.candidates) {
+		const identity = await referenceIdentity(targetQuery, candidate, { side: 'source' })
+		if (identity === undefined) uuidless.push(candidate)
+	}
+	return uuidless
 }
 
 /** The not-yet-matched child of `instanceParent` with the tag and the name of `sourceChild`. */

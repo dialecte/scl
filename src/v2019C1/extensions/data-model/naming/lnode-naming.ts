@@ -18,7 +18,7 @@ import type {
  * naming is `derived`.
  */
 export function specifiedNamingOf(
-	lnodeAttributes: Readonly<Record<string, string>>,
+	lnodeAttributes: Readonly<Record<string, string | undefined>>,
 ): SpecifiedNaming {
 	const derived = isAssignedToIed({ iedName: lnodeAttributes.iedName })
 	const leftOut = derived ? ['iedName', 'ldInst'] : ['iedName']
@@ -30,6 +30,23 @@ export function specifiedNamingOf(
 		attributes.push({ name: specifiedName, value })
 	}
 	return { attributes, derived }
+}
+
+/**
+ * The `LNodeSpecNaming` of an LNode that has none ({@link specifiedNamingOf}); on a `specificationIed` (the LNode is
+ * bound to it), the naming names that IED and logical device ({@link onSpecificationIed}) and is not derived.
+ */
+export function newSpecifiedNaming(params: {
+	lnodeAttributes: Readonly<Record<string, string | undefined>>
+	specificationIed: SpecificationIed | undefined
+}): SpecifiedNaming {
+	const { lnodeAttributes, specificationIed } = params
+	const specified = specifiedNamingOf(lnodeAttributes)
+	if (!specificationIed) return specified
+	return {
+		attributes: onSpecificationIed({ attributes: specified.attributes, specificationIed }),
+		derived: false,
+	}
 }
 
 /**

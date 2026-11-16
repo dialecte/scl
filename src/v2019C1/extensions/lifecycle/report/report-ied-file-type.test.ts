@@ -13,10 +13,10 @@ const ns = ALL_XMLNS_NAMESPACES
 const iedRef = { tagName: 'IED', id: 'source-ied' } as const satisfies Scl.Ref<'IED'>
 const projectRoot = { tagName: 'SCL', id: 'project-root' } as const satisfies Scl.Ref<'SCL'>
 
-/** A file holding the IED P1 and nothing else, whatever its extension. */
+/** A file holding the IED SPECIFICATION and nothing else, whatever its extension. */
 const sourceXml = /* xml */ `
 	<SCL ${ns} ${id}="source-root">
-		<IED name="P1" uuid="20000000-0000-4000-8000-000000000001" ${id}="source-ied">
+		<IED name="SPECIFICATION" uuid="20000000-0000-4000-8000-000000000001" ${id}="source-ied">
 			<AccessPoint name="AP1"/>
 		</IED>
 	</SCL>
@@ -34,7 +34,8 @@ type TestCase = SclTest.BaseXmlTestCase & {
 }
 
 // The type of file an IED is placed from, read from the source document's extension and written on the report's
-// target: an ISD, an ICD, an IID, or an SCD for `.scd` and `.xml`. Another extension is refused.
+// target: an ISD, an ICD, an IID, or an SCD for `.scd` and `.xml`. Another extension is refused. Only the IED of a
+// template ISD or of an ICD is placed: an IID, an SCD and an ISD instance file are refused.
 describe('query.lifecycle.report - the type of file an IED is placed from', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'.isd source → ISD': {
@@ -43,29 +44,53 @@ describe('query.lifecycle.report - the type of file an IED is placed from', () =
 			sourceFileName: 'P1.isd',
 			expected: { fileType: 'ISD' },
 		},
+		'.isd source whose IED is not named SPECIFICATION → refused, an ISD instance file is not placed yet':
+			{
+				sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="source-root">
+					<IED name="BCU1" uuid="20000000-0000-4000-8000-000000000001" ${id}="source-ied">
+						<AccessPoint name="AP1"/>
+					</IED>
+				</SCL>
+			`,
+				targetXml: projectXml,
+				sourceFileName: 'BCU1.isd',
+				expected: {
+					refused: {
+						key: 'OPTION_NOT_AVAILABLE',
+						meta: { option: 'source', value: 'isd-instance' },
+					},
+				},
+			},
 		'.icd source → ICD': {
 			sourceXml,
 			targetXml: projectXml,
 			sourceFileName: 'P1.icd',
 			expected: { fileType: 'ICD' },
 		},
-		'.iid source → IID': {
+		'.iid source → IID, refused: an IID keeps its identity, not placed yet': {
 			sourceXml,
 			targetXml: projectXml,
 			sourceFileName: 'P1.iid',
-			expected: { fileType: 'IID' },
+			expected: {
+				refused: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'source', value: 'iid' } },
+			},
 		},
-		'.xml source → SCD': {
+		'.xml source → SCD, refused: an SCD keeps its identity, not placed yet': {
 			sourceXml,
 			targetXml: projectXml,
 			sourceFileName: 'P1.xml',
-			expected: { fileType: 'SCD' },
+			expected: {
+				refused: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'source', value: 'scd' } },
+			},
 		},
-		'.scd source → SCD': {
+		'.scd source → SCD, refused: an SCD keeps its identity, not placed yet': {
 			sourceXml,
 			targetXml: projectXml,
 			sourceFileName: 'P1.scd',
-			expected: { fileType: 'SCD' },
+			expected: {
+				refused: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'source', value: 'scd' } },
+			},
 		},
 		'.ssd source → refused, no IED is placed from a specification of the substation': {
 			sourceXml,
@@ -103,15 +128,19 @@ describe('query.lifecycle.report - the type of file an IED is placed from', () =
 })
 
 // An import refuses a file without an extension: the source is a document created without one in the act, holding
-// the IED P1 as the file above holds it; the runner's own source document is left empty.
+// an IED P1; the runner's own source document is left empty.
 describe('query.lifecycle.report - an IED placed from a source without an extension', () => {
-	type CreatedCase = SclTest.BaseXmlTestCase & { expected: { fileType: SclFileType } }
+	type CreatedCase = SclTest.BaseXmlTestCase & {
+		expected: { refused: { key: string; meta: Record<string, unknown> } }
+	}
 
 	const testCases: SclTest.TestCases<CreatedCase> = {
-		'no extension → SCD': {
+		'no extension → SCD, refused: an SCD keeps its identity, not placed yet': {
 			sourceXml: /* xml */ `<SCL ${ns} ${id}="unused-runner-source"/>`,
 			targetXml: projectXml,
-			expected: { fileType: 'SCD' },
+			expected: {
+				refused: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'source', value: 'scd' } },
+			},
 		},
 	}
 
@@ -128,13 +157,16 @@ describe('query.lifecycle.report - an IED placed from a source without an extens
 			await tx.addChild(ied, { tagName: 'AccessPoint', attributes: { name: 'AP1' } })
 			return { tagName: 'IED', id: ied.id } as const
 		})
-		const reported = await target.query.lifecycle.report({
-			verb: 'ied',
-			sourceQuery: sourceFile.query,
-			ref: createdIed,
-			anchor: projectRoot,
-		})
-		expect({ fileType: reported.target?.fileType }).toEqual(testCase.expected)
+		const outcome = await target.query.lifecycle
+			.report({ verb: 'ied', sourceQuery: sourceFile.query, ref: createdIed, anchor: projectRoot })
+			.then(
+				(reported) => ({ fileType: reported.target?.fileType }),
+				(error: unknown) => {
+					const refusal = toDialecteError(error)
+					return { refused: { key: refusal?.key, meta: refusal?.meta } }
+				},
+			)
+		expect(outcome).toEqual(testCase.expected)
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
