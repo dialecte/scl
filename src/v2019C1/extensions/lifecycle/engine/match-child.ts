@@ -9,9 +9,10 @@ import {
 import {
 	CONTENT_HOLDING_TUPLE_REFERRER_TAGS,
 	DISPOSABLE_REFERENCE_TAGS,
+	UUIDLESS_TUPLE_REFERRER_TAGS,
 } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 
-import type { ChildMatch, PinnedMatches } from './match-child.types'
+import type { ChildMatch, PinnedMatches, ReferenceIdentityOf } from './match-child.types'
 import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
 import type { TargetLineages } from './target-lineages.types'
@@ -37,10 +38,12 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  *    instantiation's refs to surface as `added` instead of matching a prior instance's ref. A reference
  *    to a project element a source element was mapped onto reads as a reference to that source element
  *    (`redirectedSourceUuids`), whatever the two are named.
- *  - A uuid-less tuple referrer holding content of its own (`CONTENT_HOLDING_TUPLE_REFERRER_TAGS`: `ConnectedAP`, `GSE`,
- *    `SMV`) matches as a reference does, by what its uuid names; one naming nothing by uuid, or with no sibling naming
- *    the same element, matches the sibling naming nothing by uuid that gives the same names (its IED, access point,
- *    device, control block), never one by position.
+ *  - A tuple referrer with no uuid of its own (`UUIDLESS_TUPLE_REFERRER_TAGS`: `FCDA`, `ClientLN`, `IEDName`,
+ *    `ConnectedAP`, ...) matches as a reference does, by what its uuid names, with what tells apart two naming the same
+ *    target (`REFERRER_DISCRIMINATORS`: the data a data set entry selects); one naming nothing by uuid, or with no
+ *    sibling naming the same element, matches the sibling naming nothing by uuid that gives the same names (an
+ *    `IEDName`'s text among them), never one by position. Siblings naming the very same thing are paired in order, the
+ *    match says so (`pairedAmongTwins`).
  *  - Any other uuid-less element (e.g. `FunctionRoleContent`) matches a same-tag sibling by position.
  *
  * Inside an element of the PROJECT a source element is mapped onto (`matchContainersByName`), an
@@ -109,12 +112,11 @@ export async function matchChild(
 		return sameName && { record: sameName }
 	}
 
-	const candidates = instanceParent.tree.filter(
+	const siblings = instanceParent.tree.filter(
 		(instanceChild) =>
-			instanceChild.tagName === instanceTag &&
-			!matchedInstanceIds.has(instanceChild.id) &&
-			!params.foreignInstanceIds?.has(instanceChild.id),
+			instanceChild.tagName === instanceTag && !params.foreignInstanceIds?.has(instanceChild.id),
 	)
+	const candidates = siblings.filter((instanceChild) => !matchedInstanceIds.has(instanceChild.id))
 	if (candidates.length === 0) return undefined
 
 	// a fresh placement makes its OWN references: one matches only a child already naming, in the project, the very
@@ -136,6 +138,7 @@ export async function matchChild(
 		return matchReferenceByIdentity(sourceQuery, {
 			targetQuery,
 			sourceChild,
+			siblings,
 			candidates,
 			matchKey: params.matchKey,
 			redirectedSourceUuids: params.redirectedSourceUuids,
@@ -149,7 +152,7 @@ export async function matchChild(
 
 /**
  * The candidate reference naming what the source reference names: by the uuids it names, brought back to the source by
- * the scenario's key; for a connection or a control block address, else by the names it gives (see `matchChild`); else
+ * the scenario's key; for a tuple referrer with no uuid of its own, else by the names it gives (see `matchChild`); else
  * by name on a placeholder lineage the consumer lets pair so.
  */
 async function matchReferenceByIdentity(
@@ -157,6 +160,8 @@ async function matchReferenceByIdentity(
 	params: {
 		targetQuery: Reader
 		sourceChild: AnyTreeRecord
+		/** The instance children of the source child's tag, paired or not: what tells twins apart. */
+		siblings: readonly AnyTreeRecord[]
 		candidates: readonly AnyTreeRecord[]
 		matchKey: MatchKey
 		redirectedSourceUuids: RedirectedSourceUuids | undefined
@@ -164,33 +169,46 @@ async function matchReferenceByIdentity(
 		placeholderLineages: PlaceholderLineages
 	},
 ): Promise<ChildMatch | undefined> {
-	const { targetQuery, sourceChild, candidates, matchKey, redirectedSourceUuids, targetLineages } =
-		params
+	const { targetQuery, sourceChild, siblings, candidates, matchKey, targetLineages } = params
+	const pairedByNames = UUIDLESS_TUPLE_REFERRER_TAGS.has(sourceChild.tagName)
 	// The source ref's target uuid is read as it is (do not normalize it — an extracted template may
 	// carry its own `templateUuid`). The candidate ref's target uuid is brought back to the source by
 	// the scenario's key so the two compare equal.
 	const sourceIdentity = await referenceIdentity(sourceQuery, sourceChild, { side: 'source' })
 	if (sourceIdentity === undefined) {
-		if (!CONTENT_HOLDING_TUPLE_REFERRER_TAGS.has(sourceChild.tagName))
-			return { record: candidates[0] }
-		return matchTupleNames(sourceQuery, { targetQuery, sourceChild, candidates })
+		if (!pairedByNames) return { record: candidates[0] }
+		return matchTupleNames(sourceQuery, { targetQuery, sourceChild, siblings, candidates })
 	}
-	for (const candidate of candidates) {
-		const candidateIdentity = await referenceIdentity(targetQuery, candidate, {
-			side: 'instance',
-			matchKey,
-			redirectedSourceUuids,
-			targetLineages,
+	const byUuid = await firstOfIdentity({
+		candidates,
+		identity: sourceIdentity,
+		identityOf: function instanceIdentityOf(candidate) {
+			return referenceIdentity(targetQuery, candidate, {
+				side: 'instance',
+				matchKey,
+				redirectedSourceUuids: params.redirectedSourceUuids,
+				targetLineages,
+			})
+		},
+	})
+	if (byUuid) {
+		return withTwins({
+			record: byUuid,
+			siblings,
+			// twins name the very same elements: their own uuids, not the template element those stand for
+			keyOf: function ownIdentityOfSibling(sibling) {
+				return ownIdentityOf(targetQuery, { candidate: sibling })
+			},
 		})
-		if (candidateIdentity === sourceIdentity) return { record: candidate }
 	}
-	// a connection of the project written without its uuid is the one giving the same names
-	if (CONTENT_HOLDING_TUPLE_REFERRER_TAGS.has(sourceChild.tagName)) {
-		const uuidless = await candidatesNamingNoUuid(targetQuery, { candidates })
+	// a reference of the project written without its uuid is the one giving the same names
+	if (pairedByNames) {
+		const namingNoUuid = await candidatesNamingNoUuid(targetQuery, { candidates })
 		const byNames = await matchTupleNames(sourceQuery, {
 			targetQuery,
 			sourceChild,
-			candidates: uuidless,
+			siblings,
+			candidates: namingNoUuid,
 		})
 		if (byNames) return byNames
 	}
@@ -201,6 +219,52 @@ async function matchReferenceByIdentity(
 		placeholderLineages: params.placeholderLineages,
 		targetLineages,
 	})
+}
+
+/**
+ * What a reference of the instance names itself, whatever the template element it stands for: the uuids it names (with
+ * its discriminators), else, naming none, the names it gives. Two references are twins when this is equal.
+ */
+async function ownIdentityOf(
+	targetQuery: Reader,
+	params: { candidate: AnyTreeRecord },
+): Promise<string | undefined> {
+	const { candidate } = params
+	const byUuid = await referenceIdentity(targetQuery, candidate, { side: 'source' })
+	return byUuid ?? tupleNamesIdentity(targetQuery, candidate)
+}
+
+/** The first candidate, in document order, whose identity is `identity`: twins are paired in order. */
+async function firstOfIdentity(params: {
+	candidates: readonly AnyTreeRecord[]
+	identity: string
+	identityOf: ReferenceIdentityOf
+}): Promise<AnyTreeRecord | undefined> {
+	for (const candidate of params.candidates) {
+		if ((await params.identityOf(candidate)) === params.identity) return candidate
+	}
+	return undefined
+}
+
+/**
+ * The match of `record`, said paired among twins (`pairedAmongTwins`) when another sibling, paired or not, names the
+ * very same thing (`keyOf`) — only for a tuple referrer with no uuid of its own: two other references naming one
+ * element are not one entry written twice.
+ */
+async function withTwins(params: {
+	record: AnyTreeRecord
+	siblings: readonly AnyTreeRecord[]
+	keyOf: ReferenceIdentityOf
+}): Promise<ChildMatch> {
+	const { record, siblings, keyOf } = params
+	if (!UUIDLESS_TUPLE_REFERRER_TAGS.has(record.tagName)) return { record }
+	const key = await keyOf(record)
+	if (key === undefined) return { record }
+	for (const sibling of siblings) {
+		if (sibling.id !== record.id && (await keyOf(sibling)) === key)
+			return { record, pairedAmongTwins: true }
+	}
+	return { record }
 }
 
 /**
@@ -269,16 +333,34 @@ async function matchReferenceByName(
 /** The candidate giving the same names as a tuple referrer naming nothing by uuid: none when it gives no name. */
 async function matchTupleNames(
 	sourceQuery: Reader,
-	params: { targetQuery: Reader; sourceChild: AnyTreeRecord; candidates: readonly AnyTreeRecord[] },
+	params: {
+		targetQuery: Reader
+		sourceChild: AnyTreeRecord
+		siblings: readonly AnyTreeRecord[]
+		candidates: readonly AnyTreeRecord[]
+	},
 ): Promise<ChildMatch | undefined> {
-	const { targetQuery, sourceChild, candidates } = params
+	const { targetQuery, sourceChild } = params
 	const sourceNames = await tupleNamesIdentity(sourceQuery, sourceChild)
 	if (sourceNames === undefined) return undefined
-	for (const candidate of candidates) {
-		if ((await tupleNamesIdentity(targetQuery, candidate)) === sourceNames)
-			return { record: candidate }
+	function namesOf(candidate: AnyTreeRecord): Promise<string | undefined> {
+		return tupleNamesIdentity(targetQuery, candidate)
 	}
-	return undefined
+	const byNames = await firstOfIdentity({
+		candidates: params.candidates,
+		identity: sourceNames,
+		identityOf: namesOf,
+	})
+	return (
+		byNames &&
+		withTwins({
+			record: byNames,
+			siblings: params.siblings,
+			keyOf: function ownIdentityOfSibling(sibling) {
+				return ownIdentityOf(targetQuery, { candidate: sibling })
+			},
+		})
+	)
 }
 
 /** The candidates naming nothing by uuid: only their names say what they name. */

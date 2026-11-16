@@ -11,13 +11,18 @@ import type {
 
 const PLACEHOLDER = 'placeholder-lineage'
 
-function reference(params: { id: string; pairedByName?: string }): DiffNode {
+function reference(params: {
+	id: string
+	pairedByName?: string
+	pairedAmongTwins?: true
+}): DiffNode {
 	return {
 		change: 'unchanged',
 		tagName: 'FunctionRef',
 		instanceRef: { tagName: 'FunctionRef', id: params.id },
 		sourceRef: { tagName: 'FunctionRef', id: `${params.id}-source` },
 		...(params.pairedByName ? { pairedByName: params.pairedByName } : {}),
+		...(params.pairedAmongTwins ? { pairedAmongTwins: params.pairedAmongTwins } : {}),
 		children: [],
 	}
 }
@@ -73,6 +78,25 @@ describe('report warnings', () => {
 		expect(warnings.sort()).toEqual([
 			`reference-paired-by-name in-companion in-companion-source ${PLACEHOLDER}`,
 			`reference-paired-by-name in-tree in-tree-source ${PLACEHOLDER}`,
+		])
+	})
+
+	it('lists each reference paired among identical ones once, wherever the report holds it', () => {
+		const first = reference({ id: 'twin-1', pairedAmongTwins: true })
+		const report = reportOf({
+			tree: container([first, reference({ id: 'twin-2', pairedAmongTwins: true })]),
+			groups: [group({ primary: container([]), companions: [first] })],
+		})
+
+		const warnings = collectReportWarnings(report).map((warning) =>
+			warning.code === 'identical-references-paired-in-order'
+				? `${warning.code} ${warning.reference.id} ${warning.source?.id}`
+				: warning.code,
+		)
+
+		expect(warnings.sort()).toEqual([
+			'identical-references-paired-in-order twin-1 twin-1-source',
+			'identical-references-paired-in-order twin-2 twin-2-source',
 		])
 	})
 

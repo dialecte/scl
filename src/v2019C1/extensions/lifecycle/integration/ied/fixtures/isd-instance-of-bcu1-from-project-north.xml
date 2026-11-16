@@ -47,6 +47,10 @@
 		</SubNetwork>
 	</Communication>
 	<IED manufacturer="ISSUER" name="BCU1" templateUuid="a0000000-0000-4000-8000-000000000030" uuid="b0000000-0000-4000-8000-000000000030">
+		<IEDSourceFiles>
+			<SclFileReference fileName="BCU_Template.isd" fileType="ISD" fileUuid="f0000000-0000-4000-8000-000000000001" revision="1" version="0"/>
+			<SclFileReference fileName="North.ssd" fileType="SSD" fileUuid="f0000000-0000-4000-8000-000000000020" revision="B" version="3"/>
+		</IEDSourceFiles>
 		<AccessPoint name="AP1" templateUuid="a0000000-0000-4000-8000-000000000031" uuid="b0000000-0000-4000-8000-000000000031">
 			<Server>
 				<Authentication/>

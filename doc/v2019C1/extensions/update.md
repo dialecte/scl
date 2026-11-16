@@ -67,14 +67,20 @@ would add, `anchor` being the project's `SCL` root. Only a first placement is re
 the project (`rootRef` undefined), every element of the IED `added` — the `IEDSourceFiles` of an ISD among them —, on
 the fast track (`needsDecisions: false`), even when the project holds another IED of the same name. What its access
 points' `ConnectedAP`s add to the project's `Communication` rides the IED's group as companions (see
-[`instantiate.ied`](./instantiate#ied)).
+[`instantiate.ied`](./instantiate#ied)). The specification the file carries beside its IED (its substation section)
+follows, reported as an SSD's first placement: where each level lands (`report.mappings`, a level the project holds
+several of puts the report on the full track until the consumer chooses), the functions and `LNode`s it adds, each in its
+own group. A placement made earlier from the same template leaves what it placed alone: the specification is placed
+again as a new instance.
 
 - `report.target.fileType` is the type of file the source is, read from its document's extension: `.isd` → `ISD`,
   `.icd` → `ICD`, `.iid` → `IID`, `.scd`, `.xml` or none → `SCD`. Another extension is refused with `OPTION_NOT_AVAILABLE`
   (`meta: { option: 'sourceExtension', value }`) before anything is diffed.
-- Only the IED of a template ISD or of an ICD is placed yet. An IED read from an IID or an SCD is refused with
-  `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value: 'iid' | 'scd' }`), the IED of an ISD instance file — an
-  ISD whose IED is not named `SPECIFICATION` — with `value: 'isd-instance'`.
+- The IED of a template ISD or of an ICD is placed as a new IED, the IED of an ISD instance file — an ISD whose IED is
+  not named `SPECIFICATION` — as a fork keeping its identity. An IED read from an IID or an SCD is refused with
+  `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value: 'iid' | 'scd' }`), an ISD instance file's IED in another
+  scenario with `value: 'isd-instance'`, and a fork whose IED or specification the project holds an element of by its uuid with
+  `meta: { option: 'scenario', value: 'fork', held: { tagName, path } }` (`held`: the project's element holding the uuid).
 - `scenario: 'template'` (the default) or `'fork'` finding the IED in the project — an IED carrying its uuid as
   `templateUuid`, or for a fork as its own `uuid` — is refused with `OPTION_NOT_AVAILABLE`
   (`meta: { option: 'scenario', value }`). `'instantiate'` places a new IED whatever the project holds.
@@ -770,6 +776,7 @@ Pairing is [the shared matcher](#child-matching-—-one-shared-matcher)'s, so th
 
 - **identified** elements match by their lineage under the scenario's key (`templateUuid`, `uuid` for a fork), guarded to the same tag — a placeholder `templateUuid` reused across unrelated element types (see [`checkTemplateUuids`](#identity-integrity-—-checktemplateuuids)) never matches across types;
 - a uuid-less **reference** link (e.g. `FunctionRef`, and an IED's bare tuple references with no uuid of their own and nothing but text or vendor data inside: `FCDA`, `ClientLN`, `IEDName`, `Association`, `KDC`, `ServerAt`) matches by its reference identity — the target it points to, brought back to the source by the same key: its target's `templateUuid`, or for a fork the target's `uuid` itself — never by tag position. A reference whose uuids disagree is the project's own and the template's is new: listed `removed` and `added` (or kept, in a shared element; an IED's data-flow reference is listed `target-only`, kept unless its removal is accepted, and `added`). A project authored with placeholder lineages asks for more with `resolution.referencesByName: 'placeholders'`: such a reference then pairs by the names of what both name, but only where the project's target carries a lineage [`checkTemplateUuids`](#identity-integrity-—-checktemplateuuids) flags (`cross-type-template-uuid` or `template-uuid-type-mismatch`), read once per report and per apply. Each pairing made so is marked on its node (`DiffNode.pairedByName`, the placeholder) and listed in `report.warnings` (`ReportWarning`, code `reference-paired-by-name`); a shared element whose only news is such a pairing is listed with the instance's tree;
+- an IED's tuple reference with no uuid of its own (`FCDA`, `ClientLN`, `IEDName`, `Association`, `KDC`, `ServerAt`, `ConnectedAP`, `GSE`, `SMV`) adds to the target it names what tells apart two naming the same target: a data set entry's `doName`, `daName`, `fc` and `ix`, a report client's `apRef`, an association's `associationID`; two entries selecting different data on one logical node never pair with each other. A report client's `apRef` is optional when its IED has one access point: a template client written without it and the project's written with it are two clients. One naming nothing by uuid (a GOOSE receiver naming an IED outside the file) pairs with the project's reference naming nothing by uuid that gives the same names, an `IEDName`'s text among them, never by position; one naming its target by uuid that no project reference names pairs with the project's written without a uuid that gives the same names. Two such references naming the very same thing (the same entry twice in a data set) are paired in order: each such pairing is marked on its node (`DiffNode.pairedAmongTwins`) and listed in `report.warnings` (`ReportWarning`, code `identical-references-paired-in-order`); references naming two instances of one template element are not twins;
 - anything else falls back to position.
 
 Because both sides share this matcher, `apply` can no longer pair a child differently from the `report` that gated it: the apply path carries the same cross-type guard and reference-identity matching as the report.
