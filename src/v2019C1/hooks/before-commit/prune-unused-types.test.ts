@@ -460,7 +460,7 @@ describe('the commit removes the types a transaction left unused', () => {
 					'//default:DOType[@id="DL"]',
 				],
 			},
-		'the IED LN of T deleted, a substation LNode bound to that LN still names T → T stays (a witness type goes)':
+		'the IED LN of T deleted, the substation LNode bound to it released, still naming T → T stays (a witness type goes)':
 			{
 				sourceXml: documentXml({
 					functionLNodes: { 'lnode-bound': 'T', 'lnode-w': 'W' },
@@ -473,7 +473,7 @@ describe('the commit removes the types a transaction left unused', () => {
 				write: withTheWitnessDeleted(async function deleteTheIedLn(tx) {
 					await tx.delete({ tagName: 'LN', id: 'ln-t' })
 				}),
-				expectedQueries: ['//default:LNode[@iedName="IED1"][@lnType="T"]', ...CHAIN_T_PRESENT],
+				expectedQueries: ['//default:LNode[@iedName="None"][@lnType="T"]', ...CHAIN_T_PRESENT],
 				unexpectedQueries: WITNESS_GONE,
 			},
 		'the last types of DataTypeTemplates pruned → DataTypeTemplates goes in the same commit': {

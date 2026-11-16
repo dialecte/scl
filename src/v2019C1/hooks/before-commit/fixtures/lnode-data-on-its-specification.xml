@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="root" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="project" uuid="project-uuid"/>
+    <Substation name="S1" dev:db-id="substation">
+        <Function name="F1" dev:db-id="function">
+            <!-- specified on the specification IED S_IED's XCBR1, bound to P1's Q0XCBR2 by uuid; its data named on XCBR1 -->
+            <LNode iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" lnUuid="p1-breaker-uuid" uuid="breaker-uuid" dev:db-id="breaker">
+                <Private type="eIEC61850-6-100">
+                    <eIEC61850-6-100:LNodeSpecNaming sIedName="S_IED" sLdInst="LD0" sLnClass="XCBR" sLnInst="1"/>
+                    <!-- its Beh named explicitly on the specification IED's XCBR1 -->
+                    <eIEC61850-6-100:DOS name="Beh" mappedLnUuid="s-breaker-uuid" mappedDoName="Beh"/>
+                </Private>
+            </LNode>
+            <!-- specified on no IED, bound to P1's PTRC1 by its names only -->
+            <LNode iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" uuid="trip-uuid" dev:db-id="trip">
+                <Private type="eIEC61850-6-100">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="1"/>
+                </Private>
+            </LNode>
+        </Function>
+    </Substation>
+    <IED name="S_IED" dev:db-id="s-ied">
+        <AccessPoint name="AP1">
+            <Server>
+                <Authentication/>
+                <LDevice inst="LD0">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="s-breaker-uuid"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="P1" dev:db-id="p1">
+        <IEDSourceFiles>
+            <SclFileReference fileType="ICD"/>
+        </IEDSourceFiles>
+        <AccessPoint name="AP1">
+            <Server>
+                <Authentication/>
+                <LDevice inst="LD0" dev:db-id="p1-ld">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/>
+                    <LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="p1-breaker-uuid" dev:db-id="p1-breaker"/>
+                    <LN lnClass="PTRC" inst="1" lnType="PTRC_T" uuid="p1-trip-uuid" dev:db-id="p1-trip"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates>
+        <LNodeType id="LLN0_T" lnClass="LLN0">
+            <DO name="Beh" type="ENS_T"/>
+        </LNodeType>
+        <LNodeType id="XCBR_T" lnClass="XCBR">
+            <DO name="Beh" type="ENS_T"/>
+        </LNodeType>
+        <LNodeType id="PTRC_T" lnClass="PTRC">
+            <DO name="Beh" type="ENS_T"/>
+        </LNodeType>
+        <DOType id="ENS_T" cdc="ENS">
+            <DA name="stVal" bType="Enum" type="Beh_T" fc="ST"/>
+        </DOType>
+        <EnumType id="Beh_T">
+            <EnumVal ord="1">on</EnumVal>
+        </EnumType>
+    </DataTypeTemplates>
+</SCL>

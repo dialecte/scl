@@ -186,14 +186,16 @@ function relativeReferrers(params: { naming: readonly NamingReferrer[] }): AnyRa
 
 /**
  * The records above each record held, read a level at a time down to the IED: one read of the records
- * of that level not read yet, whatever the number of records held.
+ * of that level not read yet, whatever the number of records held. A record of `held` (one the store no longer holds,
+ * a deleted ancestor) is taken from there, not read.
  */
 export async function readAncestries(params: {
 	records: readonly AnyRawRecord[]
 	query: Core.Query<Config>
+	held?: ReadonlyMap<string, AnyRawRecord>
 }): Promise<Map<string, AnyRawRecord[]>> {
 	const { records, query } = params
-	const known = new Map<string, AnyRawRecord>()
+	const known = new Map<string, AnyRawRecord>(params.held)
 	const ancestries = new Map<string, AnyRawRecord[]>(records.map((record) => [record.id, []]))
 	let climbers: Climber[] = records.map((record) => ({ startId: record.id, record }))
 

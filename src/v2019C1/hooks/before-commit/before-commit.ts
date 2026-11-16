@@ -3,6 +3,7 @@ import { findLeftChildren } from './left-children'
 import { LEFT_CHILDREN_PERF_SPAN } from './left-children.constants'
 import { pruneEmptiedContainers } from './prune-emptied-containers'
 import { pruneUnusedTypes } from './prune-unused-types'
+import { releaseLNodesOfDeletedLogicalNodes } from './release-deleted-logical-nodes'
 import { specificationIedsOfCreated } from './specification-ieds-of-created'
 import { writeTupleNamesAtCommit } from './tuple-names'
 
@@ -27,7 +28,8 @@ import type { AnyRawRecord } from '@dialecte/core'
  * Run here, not on create: when an LNode is created, its children (a copied
  * `LNodeSpecNaming` among them) are not added yet. Then the tuple references naming a target the transaction
  * created by its uuid are written its names, once for all the targets, and so is each LNode created or rebound, the
- * names of the logical node its `lnUuid` names ({@link writeTupleNamesAtCommit}).
+ * names of the logical node its `lnUuid` names ({@link writeTupleNamesAtCommit}). Then the LNodes bound to a logical
+ * node the transaction deleted are released ({@link releaseLNodesOfDeletedLogicalNodes}).
  * Then the types the transaction left unused go, with every record of
  * them ({@link pruneUnusedTypes}), then the containers it left holding nothing ({@link pruneEmptiedContainers}: a
  * `DataTypeTemplates` the prune emptied among them), whatever wrote: a delete, an apply, an extract. Last, over the
@@ -67,12 +69,17 @@ export async function beforeCommit(params: {
 		bound,
 		pending: lastWrites({ operations: ensured }),
 	})
+	// the LNodes bound to a logical node the transaction deleted are released, from what the steps above wrote
+	const released = await releaseLNodesOfDeletedLogicalNodes(query, {
+		operations,
+		pending: lastWrites({ operations: [...ensured, ...tupleNames] }),
+	})
 	// what no referrer names any more goes, with what only it named
 	const unusedTypes = await pruneUnusedTypes({ operations, query })
-	// what the transaction left holding nothing goes, read with what the naming and the type prune just wrote
+	// what the transaction left holding nothing goes, read with what the naming, the release and the type prune just wrote
 	const pending = new Map<string, Scl.RawRecord<Scl.ElementsOf>>()
 	const gone = new Set<string>()
-	for (const operation of [...ensured, ...unusedTypes]) {
+	for (const operation of [...ensured, ...released, ...unusedTypes]) {
 		if (operation.status === 'deleted') gone.add(operation.oldRecord.id)
 		else pending.set(operation.newRecord.id, operation.newRecord)
 	}
@@ -82,7 +89,7 @@ export async function beforeCommit(params: {
 		pending,
 		gone,
 	})
-	const staged = [...ensured, ...tupleNames, ...unusedTypes, ...pruned]
+	const staged = [...ensured, ...tupleNames, ...released, ...unusedTypes, ...pruned]
 	await assertNoChildLeftBehind({ operations: [...operations, ...staged], query })
 	return staged
 }

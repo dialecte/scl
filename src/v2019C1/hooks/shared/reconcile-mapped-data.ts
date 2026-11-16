@@ -22,12 +22,15 @@ export async function reconcileMappedData(
 	query: Core.Query<Config>,
 	params: ReconcileMappedDataParams,
 ): Promise<Scl.Operation | null> {
-	const { record } = params
+	const { record, mappedLNodes } = params
 	const attributeNames = MAPPED_NAME_REFS.get(record.tagName)
 	if (!attributeNames) return null
 
 	const reference = { tagName: record.tagName, id: record.id } as Scl.Ref<'DOS' | 'SDS' | 'DAS'>
-	const { mappedData, defaultData } = await resolveMappedDataAndDefault(query, { reference })
+	const { mappedData, defaultData } = await resolveMappedDataAndDefault(query, {
+		reference,
+		mappedLNodes,
+	})
 	if (mappedData?.origin !== 'own') return null
 
 	const lnUuid = await query.getAttribute(mappedData.ln, { name: 'uuid' })
