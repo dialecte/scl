@@ -381,6 +381,7 @@ async function diffMatched(params: {
 				sourceIsProject: params.sourceIsProject,
 			})
 			if (match.pairedByName) matchedNode.pairedByName = match.pairedByName
+			if (match.pairedAmongTwins) matchedNode.pairedAmongTwins = match.pairedAmongTwins
 			children.push(matchedNode)
 			renamed.push({ node: matchedNode, child: matched })
 		} else if (!params.notSelected?.has(sourceChild.id)) {
