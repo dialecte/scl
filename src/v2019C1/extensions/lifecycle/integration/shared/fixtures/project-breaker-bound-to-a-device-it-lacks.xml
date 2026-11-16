@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="project" uuid="project-uuid"/>
+    <Substation name="S1">
+        <VoltageLevel dev:db-id="voltage-level" name="V1">
+            <Bay dev:db-id="bay" name="B1">
+                <!-- bound by its naming: an update would also remove an lnUuid the template does not carry -->
+                <Function name="F1" uuid="function-instance-uuid" templateUuid="function-src-uuid">
+                    <LNode iedName="P9" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" lnType="XCBR_T" uuid="lnode-instance-uuid" templateUuid="lnode-src-uuid">
+                        <Private type="eIEC61850-6-100">
+                            <eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1"/>
+                        </Private>
+                    </LNode>
+                </Function>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+    <DataTypeTemplates>
+        <LNodeType id="XCBR_T" lnClass="XCBR">
+            <DO name="Pos" type="DPC_T"/>
+        </LNodeType>
+        <DOType id="DPC_T" cdc="DPC">
+            <DA name="stVal" bType="Dbpos" fc="ST"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>

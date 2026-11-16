@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="project" uuid="project-uuid"/>
+    <Substation name="S1">
+        <VoltageLevel dev:db-id="voltage-level" name="V1">
+            <Bay dev:db-id="bay" name="B1">
+                <Function name="Existing" uuid="existing-function-uuid">
+                    <LNode iedName="P9" ldInst="LD0" lnClass="PDIS" lnInst="1" lnUuid="gone-ln-uuid"/>
+                </Function>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+    <DataTypeTemplates>
+        <LNodeType id="XCBR_T" lnClass="XCBR">
+            <DO name="Pos" type="DPC_T"/>
+        </LNodeType>
+        <DOType id="DPC_T" cdc="DPC">
+            <DA name="stVal" bType="Dbpos" fc="ST"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>

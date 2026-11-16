@@ -17,7 +17,7 @@ const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 const v2019C1 = SCL_DIALECTE_CONFIG.namespaces.v2019C1
 
-/** A breaker LNode specified as XCBR1, bound to the IED's Q0XCBR2; a controller LNode beside it. */
+/** A breaker LNode specified as XCBR1, bound to the Q0XCBR2 of the device P1; a controller LNode beside it. */
 const boundBreakerXml = /* xml */ `
 	<SCL ${ns} ${id}="root">
 		<Substation ${id}="substation" name="S1">
@@ -34,6 +34,20 @@ const boundBreakerXml = /* xml */ `
 				</LNode>
 			</Function>
 		</Substation>
+		<IED ${id}="p1" name="P1">
+			<IEDSourceFiles ${id}="p1-source-files">
+				<SclFileReference ${id}="p1-icd" fileType="ICD" />
+			</IEDSourceFiles>
+			<AccessPoint ${id}="p1-ap" name="AP1">
+				<Server ${id}="p1-server">
+					<Authentication ${id}="p1-authentication" />
+					<LDevice ${id}="p1-ld" inst="LD0">
+						<LN0 ${id}="p1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" />
+						<LN ${id}="p1-breaker" prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" />
+					</LDevice>
+				</Server>
+			</AccessPoint>
+		</IED>
 	</SCL>
 `
 

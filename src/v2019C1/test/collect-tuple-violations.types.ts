@@ -6,4 +6,6 @@ export type CollectTupleViolationsParams = {
 	elementsByUuid: ReadonlyMap<string, TreeEntry[]>
 	/** The names of the IEDs the document holds: a uuid naming an element of another IED is outside the document. */
 	iedNames: ReadonlySet<string>
+	/** The tuple address of every logical node the document holds (`ln:` addresses). */
+	logicalNodeAddresses: ReadonlySet<string>
 }

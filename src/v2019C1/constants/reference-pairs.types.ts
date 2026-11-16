@@ -43,6 +43,11 @@ export type TupleReferencePair<Name extends string = string> = {
 	 * commit (`writeTupleNamesAtCommit`) write them, the uuid winning, as everywhere else.
 	 */
 	followsOnly?: true
+	/**
+	 * The target is always in the document once the referrer names an IED (anything but its unassigned name): a target
+	 * of an IED the document does not hold is missing, not outside it.
+	 */
+	inDocument?: true
 }
 
 /**

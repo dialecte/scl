@@ -390,10 +390,20 @@ my case › sourceXml: incoherent references:
   [path] <ExtRef> iedName ldInst prefix lnClass lnInst="ln:I1/LD1/XCBR2" is not the path of the element lnUuid="xcbr1-uuid" points at, which is "ln:I1/LD1/XCBR1"
 ```
 
+An `LNode` bound to an IED (`iedName` set, not `None`) names a logical node that must be in the document: its `lnUuid`
+naming nothing is **dangling** whatever IED it names, and an `LNode` bound by its names alone (no `lnUuid`) is
+**absent** when those names are not the address of a logical node of the document:
+
+```
+my case › sourceXml: incoherent references:
+  [absent] <LNode> iedName ldInst prefix lnClass lnInst name "ln:P1/LD0/XCBR2", which no element of the document is
+```
+
 What is left alone:
 
-- **a uuid naming an element of an IED the document does not hold** — an `LNode` of a specification file bound to a
-  device described elsewhere, a `ConnectedAP` of another device: the element is outside the document;
+- **a uuid naming an element of an IED the document does not hold** — an `ExtRef` naming a device described
+  elsewhere, a `ConnectedAP` of another device: the element is outside the document (never for a bound `LNode`, see
+  above);
 - **the names a tuple reference leaves out** (the hooks write them);
 - **a reference written by path only**, with no uuid attribute;
 - **the path of a data or signal reference** — a path that carries a data qualifier or addresses a dataflow input or output (`SourceRef`, `ControlRef`, `LNodeInputRef`, `LNodeOutputRef`, `DOS` / `SDS` / `DAS` mappings, …). Their uuid is still checked;
@@ -565,8 +575,8 @@ const testCases: SclTest.TestCases<TestCase> = {
 
 The codes (`SclOutputTolerance`): `schema` `namespace` / `containment` / `attribute`; `xsd` one of `SCL_XSD_CODE`
 (`pattern`, `value`, `missing-child`, `unexpected-child`, `required-attribute`, `unknown-attribute`, `duplicate-key`,
-`keyref`, `other`); `uniqueness` the constraint name; `references` `dangling` / `wrong-target` / `path` / `empty` /
-`derived`; `identity` the warning code (`duplicate-instance-uuid`...). `createSclTestProject` takes the same
+`keyref`, `other`); `uniqueness` the constraint name; `references` `dangling` / `absent` / `wrong-target` / `path` /
+`empty` / `derived`; `identity` the warning code (`duplicate-instance-uuid`...). `createSclTestProject` takes the same
 `allowInvalidOutput` parameter. When the fixture only lacks a part (a `Header`, a required child), complete it rather
 than opting out.
 

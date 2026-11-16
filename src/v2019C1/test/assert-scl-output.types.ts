@@ -35,7 +35,7 @@ export type SclXsdCode = (typeof SCL_XSD_CODE)[keyof typeof SCL_XSD_CODE]
 /**
  * A violation a case may leave: of a check, and of one kind within it when `code` is given (schema: `namespace`,
  * `containment`, `attribute`; xsd: an {@link SclXsdCode}; uniqueness: the constraint name; references: `dangling`,
- * `wrong-target`, `path`, `empty`, `derived`; identity: the warning code).
+ * `absent`, `wrong-target`, `path`, `empty`, `derived`; identity: the warning code).
  */
 export type SclOutputTolerance = { check: SclOutputCheck; code?: string }
 

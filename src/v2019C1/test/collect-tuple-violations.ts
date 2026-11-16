@@ -1,4 +1,4 @@
-import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { TUPLE_REFERENCE_PAIRS, UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
 import { REFERENCE_UUIDS_BY_TAG } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 import { iedNameOf } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-name-of'
 import { referrerTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/referrer-tuple-address'
@@ -17,7 +17,9 @@ import type { TupleReferencePair } from '@/v2019C1/constants'
  * real file could not contain: a uuid naming nothing in an IED the document holds (`dangling`; one naming an element of
  * an IED the document does not hold is outside it, not checked), naming an element the reference cannot point at
  * (`wrong-target`), or names that are not the address of the element the uuid names (`path`, the addresses compared).
- * Names left out are not reported: the hooks write them.
+ * A pair whose target is always in the document (`inDocument`: an LNode bound to an IED) has no outside: its uuid naming
+ * nothing is `dangling` whatever IED it names, and without a uuid its names must be the address of a logical node of
+ * the document (`absent` otherwise). Names left out are not reported: the hooks write them.
  */
 export function collectTupleViolations(params: CollectTupleViolationsParams): ReferenceViolation[] {
 	const { element } = params
@@ -38,14 +40,15 @@ function collectTuplePairViolations(
 		defaults: 'none',
 		fullObject: true,
 	})?.value
-	if (uuid === undefined) return []
+	const ied = iedNameOf({ role: pair.tuple.ied, record, ancestry: ancestors })
+	const inDocument = pair.inDocument === true && ied !== undefined && ied !== UNALLOCATED_IED_NAME
+	if (uuid === undefined) return inDocument ? collectAbsentTarget({ ...params, pair }) : []
 
 	const referenceTagName = record.tagName
 	const uuidAttribute = pair.attribute.uuid
 	const carriers = elementsByUuid.get(uuid) ?? []
 	if (carriers.length === 0) {
-		const ied = iedNameOf({ role: pair.tuple.ied, record, ancestry: ancestors })
-		if (ied === undefined || !iedNames.has(ied)) return []
+		if (!inDocument && (ied === undefined || !iedNames.has(ied))) return []
 		return [{ kind: 'dangling', referenceTagName, uuidAttribute, uuid }]
 	}
 
@@ -68,6 +71,27 @@ function collectTuplePairViolations(
 			uuid,
 			written,
 			expected,
+		},
+	]
+}
+
+/** A referrer naming, by its names alone, a target the document must hold and does not. */
+function collectAbsentTarget(
+	params: CollectTupleViolationsParams & { pair: TupleReferencePair },
+): ReferenceViolation[] {
+	const { element, pair, logicalNodeAddresses } = params
+	const written = referrerTupleAddress({
+		pair,
+		record: element.record,
+		ancestry: element.ancestors,
+	})
+	if (written !== undefined && logicalNodeAddresses.has(written)) return []
+	return [
+		{
+			kind: 'absent',
+			referenceTagName: element.record.tagName,
+			namesAttribute: namesOf({ element, pair }).join(' '),
+			written: written ?? '',
 		},
 	]
 }

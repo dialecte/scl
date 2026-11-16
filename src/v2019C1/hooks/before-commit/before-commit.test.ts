@@ -43,6 +43,20 @@ const lnodeWithPrivateXml = /* xml */ `
 			</Function>
 			<Function ${id}="other-function" name="F2" />
 		</Substation>
+		<IED ${id}="p1" name="P1">
+			<IEDSourceFiles ${id}="p1-source-files">
+				<SclFileReference ${id}="p1-icd" fileType="ICD" />
+			</IEDSourceFiles>
+			<AccessPoint ${id}="p1-ap" name="AP1">
+				<Server ${id}="p1-server">
+					<Authentication ${id}="p1-authentication" />
+					<LDevice ${id}="p1-ld" inst="LD0">
+						<LN0 ${id}="p1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" />
+						<LN ${id}="p1-ptoc" lnClass="PTOC" inst="1" lnType="PTOC_T" />
+					</LDevice>
+				</Server>
+			</AccessPoint>
+		</IED>
 	</SCL>
 `
 
@@ -77,7 +91,27 @@ describe('an LNode always has its LNodeSpecNaming', () => {
 			unexpectedQueries: ['//v2019C1:LNodeSpecNaming[@sIedName]'],
 		},
 		'an LNode bound to an IED is created -> only its logical node naming is kept as specified': {
-			sourceXml: functionXml,
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation ${id}="substation" name="S1">
+						<Function ${id}="function" name="F1" />
+					</Substation>
+					<IED ${id}="p1" name="P1">
+						<IEDSourceFiles ${id}="p1-source-files">
+							<SclFileReference ${id}="p1-icd" fileType="ICD" />
+						</IEDSourceFiles>
+						<AccessPoint ${id}="p1-ap" name="AP1">
+							<Server ${id}="p1-server">
+								<Authentication ${id}="p1-authentication" />
+								<LDevice ${id}="p1-ld" inst="LD0">
+									<LN0 ${id}="p1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" />
+									<LN ${id}="p1-ptoc" prefix="Main" lnClass="PTOC" inst="2" lnType="PTOC_T" />
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
 			act: async (document) => {
 				await document.transaction(async (tx) => {
 					await tx.addChild(

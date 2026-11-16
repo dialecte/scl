@@ -83,6 +83,8 @@ describe('resolveMappedLNode', () => {
 		},
 
 		'mapped LNode pointing to missing LN → undefined': {
+			allowIncoherentReferences:
+				'the LNode is bound to a logical node the document lacks: what the read answers then',
 			sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
 					<Substation name="S1" ${ID}="sub-1">

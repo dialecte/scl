@@ -63,17 +63,81 @@ describe('collectReferenceViolations on tuple references', () => {
 					},
 				],
 			},
-		'LNode naming by uuid a logical node of an IED the document does not hold → no violation': {
+		'LNode naming by uuid a logical node of an IED the document does not hold → dangling': {
 			xml: /* xml */ `
 				<SCL ${ns}>
 					<Substation name="S1">
-						<!-- no IED P1 in the document: its logical node is outside it -->
+						<!-- no IED P1 in the document: the logical node an LNode names must be in it -->
 						<LNode iedName="P1" ldInst="LD1" lnClass="XCBR" lnInst="1" lnUuid="outside-ln" />
 					</Substation>
 				</SCL>
 			`,
-			expected: [],
+			expected: [
+				{
+					kind: 'dangling',
+					referenceTagName: 'LNode',
+					uuidAttribute: 'lnUuid',
+					uuid: 'outside-ln',
+				},
+			],
 		},
+		'LNode naming by its names only a logical node its IED does not hold → absent, naming its address':
+			{
+				xml: /* xml */ `
+				<SCL ${ns}>
+					<Substation name="S1">
+						<LNode iedName="I1" ldInst="LD1" lnClass="XCBR" lnInst="2" />
+					</Substation>
+					<IED name="I1">
+						<AccessPoint name="AP1">
+							<Server>
+								<Authentication />
+								<LDevice inst="LD1">
+									<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" />
+									<LN lnClass="XCBR" inst="1" lnType="XCBR_T" />
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
+				expected: [
+					{
+						kind: 'absent',
+						referenceTagName: 'LNode',
+						namesAttribute: 'iedName ldInst prefix lnClass lnInst',
+						written: 'ln:I1/LD1/XCBR2',
+					},
+				],
+			},
+		'LNode naming by its names only a logical node the document holds, LNode on no IED, ExtRef naming by uuid an IED the document does not hold → no violation':
+			{
+				xml: /* xml */ `
+					<SCL ${ns}>
+						<Substation name="S1">
+							<LNode iedName="I1" ldInst="LD1" lnClass="XCBR" lnInst="1" />
+							<LNode iedName="None" ldInst="LD9" lnClass="XCBR" lnInst="9" />
+						</Substation>
+						<IED name="I1">
+							<AccessPoint name="AP1">
+								<Server>
+									<Authentication />
+									<LDevice inst="LD1">
+										<LN0 lnClass="LLN0" inst="" lnType="LLN0_T">
+											<Inputs>
+												<!-- no IED P1 in the document: its logical node is outside it -->
+												<ExtRef iedName="P1" ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" lnUuid="outside-ln" />
+											</Inputs>
+										</LN0>
+										<LN lnClass="XCBR" inst="1" lnType="XCBR_T" />
+									</LDevice>
+								</Server>
+							</AccessPoint>
+						</IED>
+					</SCL>
+				`,
+				expected: [],
+			},
 		'ExtRef whose names are not those of the logical node its uuid names → path violation naming its address':
 			{
 				xml: /* xml */ `

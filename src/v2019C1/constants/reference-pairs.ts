@@ -486,6 +486,7 @@ export const TUPLE_REFERENCE_PAIRS = {
 				lnInst: 'lnInst',
 			},
 			followsOnly: true,
+			inDocument: true,
 		},
 	],
 	KDC: [

@@ -16,6 +16,7 @@ import {
 	derivedAttributesFollowing,
 } from '@/v2019C1/extensions/reference/query/build/compose-derived-attributes'
 import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
+import { targetTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
@@ -37,7 +38,8 @@ import type { TestProjectResult } from '@dialecte/core/test'
  * Every reference of a document that a real file could not contain: a uuid that points at nothing, or at an element
  * the reference cannot target, or a written path that is not the path of the element the uuid points at; for a tuple
  * reference (`ExtRef`, `FCDA`, `ConnectedAP`, a bound LNode...), names that are not the address of the element its
- * uuid names, a uuid naming an element of an IED the document does not hold being outside it (see
+ * uuid names, a uuid naming an element of an IED the document does not hold being outside it, but for an LNode bound to an IED,
+ * whose logical node must be in the document, by uuid or by its names (see
  * `collectTupleViolations`). Read on the document's record tree (`query.getSnapshot({ as: 'tree' })`).
  */
 export function collectReferenceViolations(
@@ -48,9 +50,10 @@ export function collectReferenceViolations(
 	const elements = treeEntriesOf(tree).filter(isSclElement)
 	const elementsByUuid = indexByUuid(elements)
 	const iedNames = namesOfIeds(elements)
+	const logicalNodeAddresses = logicalNodeAddressesOf(elements)
 
 	return elements.flatMap((element) =>
-		collectElementViolations({ element, elementsByUuid, iedNames }),
+		collectElementViolations({ element, elementsByUuid, iedNames, logicalNodeAddresses }),
 	)
 }
 
@@ -155,6 +158,8 @@ export function describeReferenceViolation(violation: ReferenceViolation): strin
 			return `[path] ${reference} ${violation.pathAttribute}="${violation.written}" is not the path of the element ${violation.uuidAttribute}="${violation.uuid}" points at, which is "${violation.expected}"`
 		case 'dangling':
 			return `[dangling] ${reference} ${violation.uuidAttribute}="${violation.uuid}" points at no element of the document`
+		case 'absent':
+			return `[absent] ${reference} ${violation.namesAttribute} name "${violation.written}", which no element of the document is`
 		case 'wrong-target':
 			return `[wrong-target] ${reference} ${violation.uuidAttribute}="${violation.uuid}" points at a <${violation.targetTagName}>, which it cannot reference`
 		case 'derived':
@@ -325,6 +330,17 @@ function namesOfIeds(elements: readonly TreeEntry[]): ReadonlySet<string> {
 			if (element.record.tagName !== 'IED') return []
 			const name = writtenAttribute({ record: element.record, name: 'name' })
 			return name === undefined ? [] : [name]
+		}),
+	)
+}
+
+/** The tuple address of every logical node of the document, read once. */
+function logicalNodeAddressesOf(elements: readonly TreeEntry[]): ReadonlySet<string> {
+	return new Set(
+		elements.flatMap((element) => {
+			if (element.record.tagName !== 'LN' && element.record.tagName !== 'LN0') return []
+			const address = targetTupleAddress({ record: element.record, ancestry: element.ancestors })
+			return address === undefined ? [] : [address]
 		}),
 	)
 }

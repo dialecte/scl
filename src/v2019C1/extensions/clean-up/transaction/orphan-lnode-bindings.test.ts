@@ -143,6 +143,8 @@ describe('resetLNodes', () => {
 		},
 
 		'bound by its naming only, no such LN -> unlocked': {
+			allowIncoherentReferences:
+				'the LNode is bound to a logical node the document lacks: what the clean-up releases',
 			sourceXml: documentXml({
 				content: `<LNode iedName="P1" ldInst="LD9" prefix="Q0" lnClass="XCBR" lnInst="2"/>`,
 			}),
@@ -152,6 +154,8 @@ describe('resetLNodes', () => {
 
 		'bound to an absent IED, with an LNodeSpecNaming -> naming and LD back from it, every specified value kept':
 			{
+				allowIncoherentReferences:
+					'the LNode is bound to a logical node the document lacks: what the clean-up releases',
 				sourceXml: documentXml({
 					ied: '<!-- missing: <IED name="GONE_IED"/> -->',
 					content: /* xml */ `
@@ -171,6 +175,8 @@ describe('resetLNodes', () => {
 			},
 
 		'bound to an absent IED, its LNodeSpecNaming without sPrefix -> prefix removed': {
+			allowIncoherentReferences:
+				'the LNode is bound to a logical node the document lacks: what the clean-up releases',
 			sourceXml: documentXml({
 				ied: '<!-- missing: <IED name="GONE_IED"/> -->',
 				content: /* xml */ `
@@ -185,6 +191,8 @@ describe('resetLNodes', () => {
 		},
 
 		'bound to an absent IED, without an LNodeSpecNaming -> only the IED, LD and lnUuid removed': {
+			allowIncoherentReferences:
+				'the LNode is bound to a logical node the document lacks: what the clean-up releases',
 			sourceXml: documentXml({
 				ied: '<!-- missing: <IED name="GONE_IED"/> -->',
 				content: `<LNode iedName="GONE_IED" ldInst="LD0" lnClass="PTRC" lnInst="1" prefix="PFX" lnUuid="old-uuid" templateUuid="tpl-2"/>`,

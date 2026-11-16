@@ -50,6 +50,8 @@ describe('isLNodeLocked', () => {
 			expected: false,
 		},
 		'iedName set, referenced IED absent (orphan) → still locked': {
+			allowIncoherentReferences:
+				'the LNode is bound to an IED the document lacks: the lock reads iedName alone, the orphan is the case',
 			sourceXml: doc(
 				`<LNode iedName="VENDOR_A" ldInst="LD0" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-1"/>`,
 			),
@@ -59,7 +61,17 @@ describe('isLNodeLocked', () => {
 		'iedName set and referenced IED present → locked': {
 			sourceXml: doc(
 				`<LNode iedName="VENDOR_A" ldInst="LD0" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-1"/>`,
-				`<IED name="VENDOR_A" manufacturer="SIEMENS" ${id}="ied-1"/>`,
+				`<IED name="VENDOR_A" manufacturer="SIEMENS" ${id}="ied-1">
+					<AccessPoint name="AP1">
+						<Server>
+							<Authentication/>
+							<LDevice inst="LD0">
+								<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+								<LN lnClass="CSWI" inst="1" lnType="CSWI_Type"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>`,
 			),
 			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
 			expected: true,
@@ -67,7 +79,17 @@ describe('isLNodeLocked', () => {
 		'iedName set and referenced IED is an S-IED → still locked (S_IED not special-cased)': {
 			sourceXml: doc(
 				`<LNode iedName="S_IED_1" ldInst="LD0" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" ${id}="lnode-1"/>`,
-				`<IED name="S_IED_1" manufacturer="S_IED" ${id}="ied-1"/>`,
+				`<IED name="S_IED_1" manufacturer="S_IED" ${id}="ied-1">
+					<AccessPoint name="AP1">
+						<Server>
+							<Authentication/>
+							<LDevice inst="LD0">
+								<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+								<LN lnClass="CSWI" inst="1" lnType="CSWI_Type"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>`,
 			),
 			lnodeRef: { tagName: 'LNode', id: 'lnode-1' },
 			expected: true,

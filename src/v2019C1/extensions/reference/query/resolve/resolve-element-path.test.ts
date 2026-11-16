@@ -38,6 +38,17 @@ describe('resolveByPath', () => {
 						</LNode>
 					</Function>
 				</Substation>
+				<IED name="P1" ${ID}="p1">
+					<AccessPoint name="AP1">
+						<Server>
+							<Authentication/>
+							<LDevice inst="LD0">
+								<LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/>
+								<LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
 			</SCL>`,
 			path: 'S1/F1/XCBR1',
 			expected: { tagName: 'LNode', id: 'breaker' },
@@ -60,6 +71,17 @@ describe('resolveByPath', () => {
 						</LNode>
 					</Function>
 				</Substation>
+				<IED name="P1" ${ID}="p1">
+					<AccessPoint name="AP1">
+						<Server>
+							<Authentication/>
+							<LDevice inst="LD0">
+								<LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/>
+								<LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T"/>
+							</LDevice>
+						</Server>
+					</AccessPoint>
+				</IED>
 			</SCL>`,
 			path: 'S1/F1/Q0XCBR2',
 			expected: null,

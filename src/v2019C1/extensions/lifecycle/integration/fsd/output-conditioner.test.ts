@@ -52,7 +52,7 @@ const sourceXml = /* xml */ `
 			<VoltageLevel name="TEMPLATE" ${id}="vl-s">
 				<Bay name="TEMPLATE" ${id}="bay-s">
 					<Function name="Output Conditioner" uuid="${FN_UUID}" desc="rev1 function" ${id}="fn-1">
-						<LNode iedName="none" lnClass="LCBO" lnInst="1" lnType="LCBO_Type" uuid="lnode-src-uuid" ${id}="lnode-1">
+						<LNode iedName="None" lnClass="LCBO" lnInst="1" lnType="LCBO_Type" uuid="lnode-src-uuid" ${id}="lnode-1">
 							<Private type="eIEC61850-6-100" ${id}="lnode-priv-s">
 								<eIEC61850-6-100:LNodeInputs ${id}="inputs-s">
 									<eIEC61850-6-100:SourceRef pDO="TrCmd" pLN="XCBR" pDA="stVal" input="Trip" service="GOOSE" uuid="srcref-src-uuid" ${id}="srcref-s"/>
@@ -95,7 +95,7 @@ async function toRev2(tx: Scl.Transaction): Promise<void> {
 	await tx.update(categoryRef, { attributes: { desc: 'rev2 category' } })
 	await tx.addChild(functionRef, {
 		tagName: 'LNode',
-		attributes: { iedName: 'none', lnClass: 'LPDO', lnInst: '1' },
+		attributes: { iedName: 'None', lnClass: 'LPDO', lnInst: '1' },
 	})
 }
 
