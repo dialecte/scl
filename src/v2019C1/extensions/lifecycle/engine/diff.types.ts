@@ -21,7 +21,10 @@ export type AttributeChange = { name: string; before?: string; after?: string }
  * - `instance-configuration`: the instance configures it where it sits (a behaviour description's file, a variable's
  *   value); a template update does not overwrite it.
  */
-export type KeptAttributeReason = 'bound-logical-node' | 'instance-configuration'
+export type KeptAttributeReason =
+	| 'bound-logical-node'
+	| 'instance-configuration'
+	| 'conf-rev-only-rises'
 
 /** A difference the update lists but does not apply: the project keeps `before`, the template says `after`. */
 export type KeptAttributeChange = AttributeChange & { reason: KeptAttributeReason }
@@ -85,11 +88,44 @@ export type DiffNode = {
 	 */
 	pairedByName?: string
 	/**
-	 * Present on a reference paired with the template's among instance references naming the very same thing (the same
-	 * target, the same data): such twins are paired in order. Listed in `DiffReport.warnings`.
+	 * Present on a node paired with the template's among instance siblings that are the very same thing: references
+	 * naming the same target and data, or elements of the same key. Such twins are paired in order. Listed in
+	 * `DiffReport.warnings`.
 	 */
 	pairedAmongTwins?: true
+	/**
+	 * Present on an IED element paired with the template's by its key (the key, as `name=value` parts; `only <tag>` for a
+	 * tag without key the schema holds once, an `LN0`, paired with the one instance element of its tag left free) where
+	 * its lineage
+	 * names nothing the template holds — an IED file imported again, whose uuid-less elements got other uuids. Listed in
+	 * `DiffReport.warnings`.
+	 */
+	pairedByKey?: string
+	/**
+	 * Present on a matched data set whose entries the template lists in another order than the update would leave them
+	 * (the order is the order the data is sent in): `apply` writes the template's order, the project's own entries
+	 * after the entry each followed. Makes the node `modified`.
+	 */
+	orderChange?: OrderChange
+	/**
+	 * Present on a matched data set whose entries the update changes (one added, removed or put in another order): the
+	 * configuration revision each control block naming it takes, one above its own (the project's own blocks included) —
+	 * except a block the template no longer holds, one the template raises above it itself, and one whose counter is no
+	 * unsigned 32-bit number.
+	 * Written by `apply` with the changes of the entries; lists, opens no decision of its own.
+	 */
+	confRevBumps?: ConfRevBump[]
 	children: DiffNode[]
+}
+
+/** The order the template gives the entries of a data set: see `DiffNode.orderChange`. */
+export type OrderChange = { tagName: 'FCDA' }
+
+/** One control block's `confRev` raised because the data set it names changed. */
+export type ConfRevBump = {
+	controlBlock: AnyRefOrRecord
+	before: string
+	after: string
 }
 
 /** An element's text, as the instance holds it (`before`) and as the template gives it (`after`). */
@@ -309,6 +345,31 @@ export type ReportWarning =
 			reference: AnyRefOrRecord
 			/** The template's reference it paired with. */
 			source?: AnyRefOrRecord
+	  }
+	| {
+			/**
+			 * An element that is no reference, paired with the template's among instance elements of the very same key
+			 * (the same label twice): such twins are paired in order.
+			 */
+			code: 'identical-elements-paired-in-order'
+			/** The instance's element. */
+			reference: AnyRefOrRecord
+			/** The template's element it paired with. */
+			source?: AnyRefOrRecord
+	  }
+	| {
+			/**
+			 * An IED element paired with the template's by its key: its lineage names nothing the template holds (an IED
+			 * file imported again, its uuid-less elements given other uuids). `apply` writes the template element's uuid as
+			 * its lineage (a fork keeps its own).
+			 */
+			code: 'element-paired-by-key'
+			/** The instance's element. */
+			reference: AnyRefOrRecord
+			/** The template's element it paired with. */
+			source?: AnyRefOrRecord
+			/** The key it paired on: `DiffNode.pairedByKey`. */
+			key: string
 	  }
 	| {
 			/**

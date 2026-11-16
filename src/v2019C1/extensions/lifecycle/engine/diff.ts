@@ -1,3 +1,4 @@
+import { readDataSetChange } from './data-set-order'
 import { readDiffPolicy } from './diff-policy'
 import { ENGINE_MANAGED_TAGS } from './diff.constants'
 import { groupChanges } from './group'
@@ -5,6 +6,8 @@ import { markIdentityCollisions } from './identity-collisions'
 import { instanceTagOf } from './instance-tag'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
+import { pairByKeyOnLineageMiss } from './pair-by-key'
+import { createPairingMemo } from './pairing-memo'
 import { projectOwnedAttributes } from './project-owned-attributes'
 import {
 	indexRedirectedSourceUuids,
@@ -26,6 +29,7 @@ import { KEEP_ON_ORPHAN_REFS } from '@/v2019C1/constants/reference-pairs'
 import { numberRenames } from '@/v2019C1/extensions/lifecycle/constraints/number-renames'
 import { leaveOutUndeclaredNodes } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
 import { DISPOSABLE_REFERENCE_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { DiffPolicy } from './diff-policy.types'
@@ -191,10 +195,11 @@ export async function diff(params: {
 	const sourceUuids = new Set<string>()
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
 
-	const redirectedSourceUuids = await indexRedirectedSourceUuids(
-		targetQuery,
-		params.redirectMappings,
-	)
+	const redirected = await indexRedirectedSourceUuids(targetQuery, params.redirectMappings)
+	// in an IED, what the template names by uuids the instance's lineages do not know, paired by key before the walk
+	const byKey = pairByKeyOnLineageMiss({ sourceTree, instanceTree, index, sourceUuids, matchKey })
+	// what the caller decided wins over the key pass
+	const redirectedSourceUuids = new Map([...byKey.redirectedSourceUuids, ...redirected])
 	const targetLineages = await readTargetLineages(targetQuery, {
 		nodes: [instanceTree],
 		matchKey,
@@ -220,7 +225,10 @@ export async function diff(params: {
 		withinProjectOwned: params.instanceRootIsProjectOwned ?? false,
 		contributeOnly: params.contributeOnly ?? false,
 		redirectedSourceUuids,
-		pinnedMatches: params.pinnedMatches,
+		pinnedMatches: new Map([...byKey.pinnedMatches, ...(params.pinnedMatches ?? [])]),
+		keyPairings: new Map(
+			[...byKey.keys].filter(([sourceId]) => !params.pinnedMatches?.has(sourceId)),
+		),
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected,
 		typeComparison: createTypeComparison(),
@@ -265,6 +273,8 @@ async function diffMatched(params: {
 	contributeOnly?: boolean
 	redirectedSourceUuids?: RedirectedSourceUuids
 	pinnedMatches?: PinnedMatches
+	/** The key each source element the key pass pinned was paired on, by its record id. */
+	keyPairings?: ReadonlyMap<string, string>
 	foreignInstanceIds?: ReadonlySet<string>
 	notSelected?: ReadonlySet<string>
 	/** The types read on each side so far: one run for the whole diff. */
@@ -313,6 +323,8 @@ async function diffMatched(params: {
 		? []
 		: await diffTextWrappers(sourceQuery, { targetQuery, sourceNode, instanceNode })
 	const matchedInstanceIds = new Set<string>()
+	// what is read of the instance's children while its source children are paired, read once
+	const pairingMemo = createPairingMemo()
 	// the matched children the source renames, numbered below once every rename is known
 	const renamed: RenamedNode[] = []
 	// the children the source adds, compared below with what the instance holds
@@ -334,9 +346,11 @@ async function diffMatched(params: {
 			redirectedSourceUuids: params.redirectedSourceUuids,
 			matchContainersByName: withinProjectOwned,
 			pinnedMatches: params.pinnedMatches,
+			keyPairings: params.keyPairings,
 			foreignInstanceIds: params.foreignInstanceIds,
 			placeholderLineages: params.placeholderLineages,
 			sourceIsProject: params.sourceIsProject,
+			pairingMemo,
 		})
 		if (match) {
 			const matched = match.record
@@ -370,6 +384,7 @@ async function diffMatched(params: {
 				omit,
 				redirectedSourceUuids: params.redirectedSourceUuids,
 				pinnedMatches: params.pinnedMatches,
+				keyPairings: params.keyPairings,
 				foreignInstanceIds: params.foreignInstanceIds,
 				skipOwnAttributes: skipChildAttributes,
 				withinProjectOwned,
@@ -381,6 +396,7 @@ async function diffMatched(params: {
 				sourceIsProject: params.sourceIsProject,
 			})
 			if (match.pairedByName) matchedNode.pairedByName = match.pairedByName
+			if (match.pairedByKey !== undefined) matchedNode.pairedByKey = match.pairedByKey
 			if (match.pairedAmongTwins) matchedNode.pairedAmongTwins = match.pairedAmongTwins
 			children.push(matchedNode)
 			renamed.push({ node: matchedNode, child: matched })
@@ -416,7 +432,7 @@ async function diffMatched(params: {
 		if (matchedInstanceIds.has(instanceChild.id)) continue
 		// a boundary tag is covered by another report - never flag it here
 		if (omit?.includes(instanceChild.tagName)) continue
-		const lineage = await targetQuery.any.getAttribute(instanceChild, { name: matchKey })
+		const lineage = readAttribute({ record: instanceChild, name: matchKey, defaults: 'none' })
 		if (lineage) {
 			// in a project-owned element, an identified child the source does not know is another
 			// template's or the project's: not this template's to remove
@@ -499,7 +515,22 @@ async function diffMatched(params: {
 		added,
 	})
 
-	const modified = attributeChanges.length > 0 || typeChanges.length > 0 || textChange
+	// the entries of a data set in another order than the template's: a change of the data set
+	const dataSetChange = params.skipOwnAttributes
+		? {}
+		: await readDataSetChange(targetQuery, {
+				sourceQuery,
+				sourceNode,
+				instanceNode,
+				children,
+				matchKey,
+				redirectedSourceUuids: params.redirectedSourceUuids ?? new Map(),
+			})
+	const modified =
+		attributeChanges.length > 0 ||
+		typeChanges.length > 0 ||
+		textChange ||
+		dataSetChange.orderChange !== undefined
 	return {
 		change: modified ? 'modified' : 'unchanged',
 		tagName: instanceTagOf(sourceNode.tagName),
@@ -509,6 +540,7 @@ async function diffMatched(params: {
 		...(typeChanges.length > 0 ? { typeChanges } : {}),
 		...(textChange ? { textChange } : {}),
 		keptAttributeChanges: kept.length > 0 ? kept : undefined,
+		...dataSetChange,
 		children,
 	}
 }
@@ -650,6 +682,7 @@ async function computeAttributeChanges(params: {
 	const owned = projectOwnedAttributes({
 		tagName: instanceNode.tagName,
 		instanceAttributes,
+		sourceAttributes,
 		namesFollow,
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 	})

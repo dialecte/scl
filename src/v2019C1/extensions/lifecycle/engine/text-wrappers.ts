@@ -117,11 +117,11 @@ async function readLeafWrappers(
 	reader: Core.Query<Config> | Core.Transaction<Config>,
 	params: { element: AnyTreeRecord },
 ): Promise<AnyTrackedRecord[]> {
-	const wrappers: AnyTrackedRecord[] = []
-	for (const childRef of params.element.children) {
-		if (!isTransparentElement(childRef.tagName)) continue
-		const child = await reader.any.getRecord(childRef)
-		if (child && child.children.length === 0) wrappers.push(child)
-	}
-	return wrappers
+	const refs = params.element.children.filter((childRef) => isTransparentElement(childRef.tagName))
+	if (refs.length === 0) return []
+	// the element's wrappers read at once
+	const children = await reader.any.getRecords(refs)
+	return children.filter(
+		(child): child is AnyTrackedRecord => child !== undefined && child.children.length === 0,
+	)
 }

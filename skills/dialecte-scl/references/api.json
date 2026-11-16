@@ -428,7 +428,7 @@
 				"compare identities from resolveIdentity",
 				"match elements across documents"
 			],
-			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:49",
+			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:50",
 			"example": "doc.query.identity.identityEquals({ kind: 'positional' })"
 		},
 		{
@@ -436,13 +436,13 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "(ref: Core.AnyRefOrRecord) => Promise<ElementIdentity>",
-			"summary": "Resolve an element's identity from the schema (does it carry a `uuid`, else its `identityFields`), reading its attributes through Dialecte's own `getAttributes`. A uuid-bearing tag (`Substation`, `Bay`, `Function`, ...) resolves at the `uuid` branch whatever its `identityFields` say; a uuid-less tag resolves by the fields its schema keys name (`id`/`lnClass`/`inst`/..., and `name` where the schema makes it unique among siblings, e.g. `DA`/`SDO` in a type).",
+			"summary": "Resolve an element's identity from the schema (does it carry a `uuid`, else its `identityFields`), reading its attributes through Dialecte's own `getAttributes`. A uuid-bearing tag (`Substation`, `Bay`, `Function`, ...) resolves at the `uuid` branch whatever its `identityFields` say; a uuid-less tag resolves by the fields its schema keys name (`id`/`lnClass`/`inst`/..., and `name` where the schema makes it unique among siblings, e.g. `DA`/`SDO` in a type), else by its supplement key (`keyFieldsOf`: a `Val`'s `sGroup`, ...).",
 			"intents": [
 				"identity of an element (uuid or key fields)",
 				"key to match an element across two documents",
 				"what makes an element the same element"
 			],
-			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:18"
+			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:19"
 		},
 		{
 			"path": "doc.query.info.of",

@@ -1,4 +1,4 @@
-import { getIdentityFields } from '@/v2019C1/extensions/lifecycle/constraints/identity-fields'
+import { keyFieldsOf } from './key-fields'
 
 import type { ElementIdentity } from './resolve-identity.types'
 import type { Config } from '@/v2019C1/config'
@@ -11,7 +11,8 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  * reading its attributes through Dialecte's own `getAttributes`. A uuid-bearing tag (`Substation`,
  * `Bay`, `Function`, ...) resolves at the `uuid` branch whatever its `identityFields` say; a uuid-less
  * tag resolves by the fields its schema keys name (`id`/`lnClass`/`inst`/..., and `name` where the
- * schema makes it unique among siblings, e.g. `DA`/`SDO` in a type).
+ * schema makes it unique among siblings, e.g. `DA`/`SDO` in a type), else by its supplement key (`keyFieldsOf`: a
+ * `Val`'s `sGroup`, ...).
  *
  * @intent identity of an element (uuid or key fields), key to match an element across two documents, what makes an element the same element
  */
@@ -29,8 +30,8 @@ export async function resolveIdentity(
 		return { kind: 'uuid', uuid: uuid || undefined }
 	}
 
-	const identityFields = getIdentityFields(tagName)
-	if (identityFields.size > 0) {
+	const identityFields = keyFieldsOf(tagName)
+	if (identityFields.length > 0) {
 		const attributes = await query.any.getAttributes(ref)
 		const fields: Record<string, string> = {}
 		for (const field of identityFields) fields[field] = attributes[field] ?? ''

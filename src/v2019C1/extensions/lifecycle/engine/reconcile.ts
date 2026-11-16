@@ -1,5 +1,8 @@
+import { createConfRevBumpQueue, remapCopies, writeDataSetChange } from './data-set-order'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
+import { pairByKeyOnLineageMiss } from './pair-by-key'
+import { createPairingMemo } from './pairing-memo'
 import { projectOwnedAttributes } from './project-owned-attributes'
 import { indexRedirectedSourceUuids } from './reference-match'
 import { acceptsRemoval, classifyUnmatched, classifyUnpairedReference } from './removal-base'
@@ -20,9 +23,12 @@ import {
 } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { leaveOutUndeclaredNodes } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import { writeConfRevBumps } from '@/v2019C1/extensions/lifecycle/layers/ied/bump-data-set-conf-revs'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { DISPOSABLE_REFERENCE_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
+import { readAttribute } from '@/v2019C1/helpers'
 
+import type { ConfRevBumpQueue } from './data-set-order.types'
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { ChildMatch, PinnedMatches } from './match-child.types'
 import type { PlaceholderLineages } from './placeholder-lineages.types'
@@ -175,7 +181,11 @@ export async function reconcile(
 	const sourceUuids = new Set<string>()
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
 
-	const redirectedSourceUuids = await indexRedirectedSourceUuids(tx, params.redirectMappings)
+	const redirected = await indexRedirectedSourceUuids(tx, params.redirectMappings)
+	// in an IED, what the template names by uuids the instance's lineages do not know, paired by key before the walk
+	const byKey = pairByKeyOnLineageMiss({ sourceTree, instanceTree, index, sourceUuids, matchKey })
+	// what the caller decided wins over the key pass
+	const redirectedSourceUuids = new Map([...byKey.redirectedSourceUuids, ...redirected])
 	// read before the first write: the references the instance held, as the report read them
 	const targetLineages = await readTargetLineages(tx, {
 		nodes: [instanceTree],
@@ -208,6 +218,8 @@ export async function reconcile(
 			await resolvePlacementCollision(tx, { ref: toRef(instanceTree) as Scl.Ref<Scl.ElementsOf> })
 		}
 	}
+	// the configuration revisions the walk raises, written once it is done
+	const confRevBumps = createConfRevBumpQueue()
 	// what an addition leaves colliding on a key nothing can change, read again once the removals are written
 	const pendingCollisions: FindIdentityCollisionParams[] = []
 	await reconcileChildren(tx, {
@@ -229,7 +241,11 @@ export async function reconcile(
 		redirectedSourceUuids,
 		keepLeftoverRefs,
 		withinProjectOwned,
-		pinnedMatches: params.pinnedMatches,
+		pinnedMatches: new Map([...byKey.pinnedMatches, ...(params.pinnedMatches ?? [])]),
+		keyPairings: new Map(
+			[...byKey.keys].filter(([sourceId]) => !params.pinnedMatches?.has(sourceId)),
+		),
+		confRevBumps,
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected,
 		typeFollowing,
@@ -245,12 +261,14 @@ export async function reconcile(
 		await deleteRemoved(tx, {
 			instanceNode: instanceTree,
 			sourceUuids,
+			pairedByKey: new Set(byKey.pinnedMatches.values()),
 			accepted,
 			matchKey,
 			removalBase: params.removalBase,
 			omit,
 		})
 	}
+	await writeConfRevBumps(tx, { bumps: confRevBumps.list() })
 	// the types the matched elements take from the template, through its closure, once what it removes is gone
 	if (typeFollowing.followers.length > 0) {
 		await importTypes(tx, {
@@ -263,7 +281,11 @@ export async function reconcile(
 	// what the template drops, or the project's own element whose removal is accepted, frees the key it held
 	await assertNoPendingCollision(tx, { pending: pendingCollisions })
 
-	return { cloneMappings: added, landedOn }
+	// an entry a data set written again in order copied is named by its copy
+	return {
+		cloneMappings: remapCopies({ mappings: added, movedIds: confRevBumps.movedIds() }),
+		landedOn,
+	}
 }
 
 /**
@@ -307,6 +329,10 @@ async function reconcileChildren(
 		/** The children sit in an element of the project a source element is mapped onto. */
 		withinProjectOwned: boolean
 		pinnedMatches?: PinnedMatches
+		/** The key each source element the key pass pinned was paired on, by its record id. */
+		keyPairings?: ReadonlyMap<string, string>
+		/** The configuration revisions the walk raises, written once it is done. */
+		confRevBumps: ConfRevBumpQueue
 		foreignInstanceIds?: ReadonlySet<string>
 		notSelected?: ReadonlySet<string>
 		typeFollowing: TypeFollowing
@@ -338,6 +364,12 @@ async function reconcileChildren(
 		withinProjectOwned,
 	} = params
 	const matchedInstanceIds = new Set<string>()
+	// what is read of the instance's children while its source children are paired, read once
+	const pairingMemo = createPairingMemo()
+	// each source child paired, with the instance child it paired with: the order of a data set's entries
+	const pairs = new Map<string, string>()
+	// the tags of the children this walk removes: an entry removed changes its data set
+	const removedTags: string[] = []
 	// the children renamed here, numbered once every rename of this parent is written
 	const renamedChildren: AnyTreeRecord[] = []
 	for (const sourceChild of sourceNode.tree) {
@@ -356,15 +388,27 @@ async function reconcileChildren(
 			redirectedSourceUuids,
 			matchContainersByName: withinProjectOwned,
 			pinnedMatches: params.pinnedMatches,
+			keyPairings: params.keyPairings,
 			foreignInstanceIds: params.foreignInstanceIds,
 			placeholderLineages: params.placeholderLineages,
 			refsAlwaysAdded: params.contributeOnly,
 			sourceIsProject: params.sourceIsProject,
+			pairingMemo,
 		})
 
 		if (match) {
 			const matched = match.record
 			matchedInstanceIds.add(matched.id)
+			pairs.set(sourceChild.id, matched.id)
+			// an element paired by key now names the template element it stands for, its group accepted (a fork keeps its
+			// own uuid)
+			if (
+				match.pairedByKey !== undefined &&
+				matchKey === 'templateUuid' &&
+				(!accepted || accepted.instanceIds.has(matched.id))
+			) {
+				await restampLineage(tx, { sourceChild, matched })
+			}
 			if (params.contributeOnly)
 				await recordLanding(tx, { sourceQuery, sourceChild, match, landedOn: params.landedOn })
 			// a container found by its name is the project's own: its attributes are not written; on a first placement
@@ -417,6 +461,8 @@ async function reconcileChildren(
 				keepLeftoverRefs,
 				withinProjectOwned,
 				pinnedMatches: params.pinnedMatches,
+				keyPairings: params.keyPairings,
+				confRevBumps: params.confRevBumps,
 				foreignInstanceIds: params.foreignInstanceIds,
 				notSelected: params.notSelected,
 				typeFollowing: params.typeFollowing,
@@ -506,8 +552,28 @@ async function reconcileChildren(
 		}
 
 		const live = await tx.any.getRecord(instanceChild)
-		if (live) await tx.any.delete(instanceChild)
+		if (live) {
+			await tx.any.delete(instanceChild)
+			removedTags.push(instanceChild.tagName)
+		}
 	}
+
+	// a data set's entries in the template's order (the order the data is sent in), its control blocks raised when an
+	// entry changed; a first
+	// placement rewrites nothing the project holds, as the report lists no order change there
+	if (params.contributeOnly) return
+	await writeDataSetChange(tx, {
+		sourceQuery,
+		sourceNode,
+		instanceParent,
+		pairs,
+		added: params.added,
+		removedTags,
+		accepted,
+		confRevBumps: params.confRevBumps,
+		matchKey,
+		redirectedSourceUuids: params.redirectedSourceUuids ?? new Map(),
+	})
 }
 
 /** Record where an identified source element of a contribution landed, when the element it landed on is another. */
@@ -554,6 +620,8 @@ async function deleteRemoved(
 		matchKey: MatchKey
 		removalBase: RemovalBase
 		omit: readonly string[] | undefined
+		/** The instance elements the key pass paired: held by the template whatever their lineage says. */
+		pairedByKey: ReadonlySet<string>
 	},
 ): Promise<void> {
 	const { instanceNode, sourceUuids, accepted, matchKey, removalBase, omit } = params
@@ -561,6 +629,7 @@ async function deleteRemoved(
 	await collectRemoved(tx, {
 		node: instanceNode,
 		sourceUuids,
+		pairedByKey: params.pairedByKey,
 		accepted,
 		matchKey,
 		removalBase,
@@ -581,6 +650,7 @@ async function collectRemoved(
 	params: {
 		node: AnyTreeRecord
 		sourceUuids: ReadonlySet<string>
+		pairedByKey: ReadonlySet<string>
 		accepted: AcceptedIds | undefined
 		matchKey: MatchKey
 		removalBase: RemovalBase
@@ -596,7 +666,7 @@ async function collectRemoved(
 		? classifyUnmatched({
 				tagName: node.tagName,
 				lineage,
-				inSource: sourceUuids.has(lineage),
+				inSource: sourceUuids.has(lineage) || params.pairedByKey.has(node.id),
 				removalBase,
 			})
 		: 'still-held'
@@ -610,6 +680,7 @@ async function collectRemoved(
 		await collectRemoved(tx, {
 			node: child,
 			sourceUuids,
+			pairedByKey: params.pairedByKey,
 			accepted,
 			matchKey,
 			removalBase,
@@ -662,6 +733,7 @@ async function updateMatchedAttributes(
 	const owned = projectOwnedAttributes({
 		tagName: instanceRecord.tagName,
 		instanceAttributes,
+		sourceAttributes,
 		namesFollow,
 	})
 
@@ -727,4 +799,14 @@ async function listTypeFollower(
 		source: sourceNode as unknown as LogicalNodeRecord,
 		target: toRef(instanceRecord) as TypeFollower['target'],
 	})
+}
+
+/** Write the template element's uuid as the lineage of the instance element paired with it by key. */
+async function restampLineage(
+	tx: Core.Transaction<Config>,
+	params: { sourceChild: AnyTreeRecord; matched: AnyTreeRecord },
+): Promise<void> {
+	const sourceUuid = readAttribute({ record: params.sourceChild, name: 'uuid', defaults: 'none' })
+	if (!sourceUuid) return
+	await tx.any.update(params.matched, { attributes: { templateUuid: sourceUuid } })
 }

@@ -1,4 +1,5 @@
 import {
+	CONF_REV_ONLY_RISES,
 	BOUND_LNODE_KEEPING_ITS_TYPE,
 	BOUND_LNODE_OWNED_ATTRIBUTES,
 	INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES,
@@ -8,6 +9,7 @@ import {
 import { throwDialecteError } from '@dialecte/core'
 
 import { isAssignedToIed } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
+import { CONF_REV_CONTROL_TAGS } from '@/v2019C1/extensions/lifecycle/layers/ied/bump-data-set-conf-revs.constants'
 
 import type { ProjectOwnedAttributes } from './project-owned-attributes.types'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -19,6 +21,7 @@ import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy
  * - an LNode bound to an IED keeps where it is implemented (its specification is its `LNodeSpecNaming`, compared as a
  *   child), in every scenario; its type follows the template's, unless the consumer keeps it
  *   (`boundLogicalNodeTypes: 'keep'`): then a type change is listed as kept;
+ * - a control block's configuration revision only rises: a template's lower than the project's is listed as kept;
  * - an instance of a template keeps what it configures where it sits (`INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES`: a
  *   behaviour description's file, a variable's value) — when its names are the project's (`namesFollow: 'project'`);
  *   a fork writes the newer revision's, as it does its names.
@@ -28,11 +31,21 @@ import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy
 export function projectOwnedAttributes(params: {
 	tagName: string
 	instanceAttributes: Readonly<Record<string, string | undefined>>
+	/** The template element's attributes: a revision the template gives lower than the project's is not written. */
+	sourceAttributes?: Readonly<Record<string, string | undefined>>
 	namesFollow: NamesFollow
 	/** Whether a bound LNode takes the type the template gives it. Default: `follow`. */
 	boundLogicalNodeTypes?: BoundLogicalNodeTypes
 }): ProjectOwnedAttributes {
 	const { tagName, instanceAttributes, namesFollow } = params
+	if (
+		CONF_REV_CONTROL_TAGS.has(tagName) &&
+		isLowerRevision({
+			template: params.sourceAttributes?.confRev,
+			project: instanceAttributes.confRev,
+		})
+	)
+		return CONF_REV_ONLY_RISES
 	if (tagName === 'LNode') {
 		if (!isAssignedToIed({ iedName: instanceAttributes.iedName }))
 			return NO_PROJECT_OWNED_ATTRIBUTES
@@ -42,6 +55,16 @@ export function projectOwnedAttributes(params: {
 	}
 	if (!configuredWhereItSits(namesFollow)) return NO_PROJECT_OWNED_ATTRIBUTES
 	return INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES.get(tagName) ?? NO_PROJECT_OWNED_ATTRIBUTES
+}
+
+/** Whether a template's configuration revision is below the project's (both unsigned counters). */
+function isLowerRevision(params: {
+	template: string | undefined
+	project: string | undefined
+}): boolean {
+	const { template, project } = params
+	if (!template || !project || !/^\d+$/.test(template) || !/^\d+$/.test(project)) return false
+	return Number(template) < Number(project)
 }
 
 /** Whether a bound LNode keeps the type it holds against a template: when the consumer says so. */

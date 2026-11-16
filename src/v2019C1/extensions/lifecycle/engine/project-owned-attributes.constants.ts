@@ -60,3 +60,12 @@ export const INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES: ReadonlyMap<string, Projec
 			],
 		),
 	)
+
+/**
+ * A control block whose revision the project raised above the template's: the template's lower revision is listed as
+ * kept, never written (a configuration revision only rises).
+ */
+export const CONF_REV_ONLY_RISES: ProjectOwnedAttributes = {
+	attributes: new Set(['confRev']),
+	listedAsKept: new Map<string, KeptAttributeReason>([['confRev', 'conf-rev-only-rises']]),
+}
