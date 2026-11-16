@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
-Breaking (tests): a case's given documents must pass the output checks before its act.
+## [0.18.0] - 2026-11-16
+
+The IED of a template ISD or of an ICD is written for its first placement (`tx.lifecycle.apply` of an IED's report, `tx.lifecycle.instantiate.ied`), its connections placed under the project's `Communication`; an LNode keeps the specification IED it is specified on, goes back to it when released, and its names follow its `lnUuid` at the commit and on import; deleting a logical node releases the LNodes bound to it at the commit; `update.fsd`, `update.asd` and `update.ssd` called directly release what they wrote bound to a logical node the project lacks; an IED's data-flow reference the newer template lacks is kept, listed for review; the test helpers check a case's given documents before its act and refuse an LNode bound to a logical node the document lacks; a connection is recorded on and paired by the access point it names, and copied data types keep the order of their source file. Requires `@dialecte/core` 0.11.0.
+
+Breaking: the `LNodeSpecNaming` of an LNode bound to a specification IED names that IED, and a released LNode goes back to the specification IED it is specified on instead of always reading `iedName="None"` (every entry point releasing an LNode: `dataModel.unlockLNode`, `cleanUp.resetLNode`, `lifecycle.apply`, `extract.fsd` / `asd` / `ssd`); deleting a logical node, or what holds one, rewrites the LNodes bound to it at the commit; (tests) a case's given documents must pass the output checks before its act (`allowInvalidFixture` to list why not), and the reference check of the test helpers refuses an LNode bound to a logical node the document does not hold (new code `absent`). Behaviour changes with no type change: an IED's report refuses an IED read from an IID or an SCD and the IED of an ISD instance file (`option: 'source'`); an IED's data-flow reference no template one pairs with is listed as the project's own (`target-only`, suggested `skip`) where it was removed; on import, an LNode whose names disagree with its `lnUuid` gets its names from the logical node its uuid names, where they were left as read.
 
 ### Added
 
