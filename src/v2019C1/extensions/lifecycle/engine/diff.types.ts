@@ -84,6 +84,11 @@ export type DiffNode = {
 	 * in `DiffReport.warnings`.
 	 */
 	pairedByName?: string
+	/**
+	 * Present on a reference paired with the template's among instance references naming the very same thing (the same
+	 * target, the same data): such twins are paired in order. Listed in `DiffReport.warnings`.
+	 */
+	pairedAmongTwins?: true
 	children: DiffNode[]
 }
 
@@ -293,6 +298,17 @@ export type ReportWarning =
 			reference: AnyRefOrRecord
 			source?: AnyRefOrRecord
 			lineage: string
+	  }
+	| {
+			/**
+			 * A reference paired with the template's among instance references naming the very same thing: such twins
+			 * are paired in order, which is right whichever pairs with which, but the file holds the same entry twice.
+			 */
+			code: 'identical-references-paired-in-order'
+			/** The instance's reference. */
+			reference: AnyRefOrRecord
+			/** The template's reference it paired with. */
+			source?: AnyRefOrRecord
 	  }
 	| {
 			/**

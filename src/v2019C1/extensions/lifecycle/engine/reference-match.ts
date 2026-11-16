@@ -1,7 +1,11 @@
 import { throwDialecteError } from '@dialecte/core'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
-import { REFERENCE_UUIDS_BY_TAG } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
+import {
+	REFERENCE_UUIDS_BY_TAG,
+	TEXT_NAMED_REFERRER_TAGS,
+} from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
+import { REFERRER_DISCRIMINATORS } from '@/v2019C1/extensions/reference/constants/referrer-discriminators.constants'
 
 import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { RedirectedSourceUuids, ReferenceIdentitySide } from './reference-match.types'
@@ -22,9 +26,9 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  * instance of a template (read from `targetLineages`, once per diff), so an instantiated (remapped) reference compares
  * equal to the template reference it came from; to itself under `uuid`, where source and project share their uuids. A
  * target the source element was MAPPED onto carries no lineage: `redirectedSourceUuids` gives the source element it
- * stands for. The source side reads the raw uuids. Returns `undefined` when no uuid attribute is set (unresolved ref),
- * so matching falls back to position. Lineage-aware by design — this is a matching helper, not an agnostic identity
- * read.
+ * stands for. The source side reads the raw uuids. A referrer naming several things on one target (data set entries on
+ * one logical node) adds what tells them apart (`REFERRER_DISCRIMINATORS`). Returns `undefined` when no uuid attribute
+ * is set (unresolved ref). Lineage-aware by design — this is a matching helper, not an agnostic identity read.
  */
 export async function referenceIdentity(
 	query: Reader,
@@ -42,7 +46,20 @@ export async function referenceIdentity(
 		if (identity === undefined) return undefined
 		parts.push(`${reference.uuid}=${identity}`)
 	}
-	return parts.length > 0 ? parts.sort().join('|') : undefined
+	if (parts.length === 0) return undefined
+	return [
+		parts.sort().join('|'),
+		...discriminatorParts({ tagName: node.tagName, attributes }),
+	].join('|')
+}
+
+/** What tells apart two referrers of a tag naming one target, as `name=value` parts: see `REFERRER_DISCRIMINATORS`. */
+function discriminatorParts(params: {
+	tagName: string
+	attributes: Readonly<Record<string, string | undefined>>
+}): string[] {
+	const names = REFERRER_DISCRIMINATORS.get(params.tagName) ?? []
+	return names.map((name) => `${name}=${params.attributes[name] ?? ''}`)
 }
 
 /** One uuid a reference names, brought back to the source as its side reads it: see `ReferenceIdentitySide`. */
@@ -136,8 +153,9 @@ export async function referenceNameIdentity(
 
 /**
  * The names a tuple reference gives what it names (an IED, an access point, a device, a control block), as a stable
- * string: how a uuid-less tuple referrer holding content of its own (a `ConnectedAP` written without `apUuid`) is
- * paired when it names nothing by uuid. Undefined when it gives none.
+ * string, with what tells apart two naming the same (`REFERRER_DISCRIMINATORS`): how a tuple referrer with no uuid of
+ * its own (a `ConnectedAP` written without `apUuid`, a GOOSE receiver naming an IED outside the file) is paired when it
+ * names nothing by uuid. An `IEDName` gives its IED as its text. Undefined when it gives no name.
  */
 export async function tupleNamesIdentity(
 	query: Reader,
@@ -148,7 +166,10 @@ export async function tupleNamesIdentity(
 	const attributes = await query.any.getAttributes(node)
 	const names = [...new Set(references.flatMap((reference) => reference.names))].sort()
 	const parts = names.flatMap((name) => (attributes[name] ? [`${name}=${attributes[name]}`] : []))
-	return parts.length > 0 ? parts.join('|') : undefined
+	const text = TEXT_NAMED_REFERRER_TAGS.has(node.tagName) ? node.value.trim() : ''
+	if (text) parts.push(`#text=${text}`)
+	if (parts.length === 0) return undefined
+	return [...parts, ...discriminatorParts({ tagName: node.tagName, attributes })].join('|')
 }
 
 /**

@@ -71,6 +71,26 @@ export const CONTENT_HOLDING_TUPLE_REFERRER_TAGS: ReadonlySet<string> = new Set(
 	),
 )
 
+/**
+ * The tuple referrers with no identity of their own (no `uuid`): the bare ones and those holding content
+ * (`BARE_TUPLE_REFERRER_TAGS`, `CONTENT_HOLDING_TUPLE_REFERRER_TAGS`). Paired by what they name, by uuid, else by names.
+ */
+export const UUIDLESS_TUPLE_REFERRER_TAGS: ReadonlySet<string> = new Set(
+	Object.keys(TUPLE_REFERENCE_PAIRS).filter((tagName) => !hasIdentityOfItsOwn(tagName)),
+)
+
+/** The tuple referrers naming the IED of their target by their text (`IEDName`): the text is one of their names. */
+export const TEXT_NAMED_REFERRER_TAGS: ReadonlySet<string> = new Set(
+	Object.entries(TUPLE_REFERENCE_PAIRS)
+		.filter(([, pairs]) => (pairs as readonly TupleReferencePair[]).some(namesIedByText))
+		.map(([tagName]) => tagName),
+)
+
+function namesIedByText(pair: TupleReferencePair): boolean {
+	const ied = pair.tuple.ied
+	return typeof ied === 'object' && 'text' in ied
+}
+
 function uuidPairReference(pair: ReferencePair): ReferenceUuid {
 	return {
 		uuid: pair.attribute.uuid,
