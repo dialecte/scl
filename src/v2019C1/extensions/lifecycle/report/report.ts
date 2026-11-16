@@ -10,6 +10,7 @@ import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { resolvePlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
+import { assertTakeOversOffered } from '@/v2019C1/extensions/lifecycle/engine/value-ownership'
 import { assertMappingsCoherent, createReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	assertRevisionBaseFits,
@@ -74,6 +75,8 @@ export async function report(
 		diffPolicy,
 		reportTarget,
 	})
+	// a value the consumer takes over is one the report keeps: refuse a take-over naming anything else
+	assertTakeOversOffered({ instances: report.instances, takeOver: target.resolution?.takeOver })
 	// what the report is made for: apply refuses it for another target
 	report.target = reportTarget
 	const warnings = collectReportWarnings(report)

@@ -5,6 +5,7 @@ export { clearAnnotations } from './correlate'
 export {
 	acceptedRefIds,
 	assertDecisionsCoherent,
+	assertRequiredDecisionsTaken,
 	acceptedCollisions,
 	assertNoAcceptedCollision,
 	collisionOverrides,

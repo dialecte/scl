@@ -17,9 +17,9 @@ import {
 } from './reference-match'
 import { classifyUnmatched, classifyUnpairedReference } from './removal-base'
 import { readTargetLineages } from './target-lineages'
-import { textChangeOf } from './text-change'
 import { diffTextWrappers } from './text-wrappers'
 import { createTypeComparison, typeChangesOf } from './type-change'
+import { compareText, readSettableValues, resolveTakeOvers } from './value-ownership'
 import { visibleAttributes } from './visible-attributes'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -55,6 +55,7 @@ import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
 import type { TargetLineages } from './target-lineages.types'
 import type { TypeComparison } from './type-change.types'
+import type { ValueOwnership } from './value-ownership.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -206,6 +207,12 @@ export async function diff(params: {
 		referrerTags: DISPOSABLE_REFERENCE_TAGS,
 	})
 
+	const diffPolicy = params.diffPolicy ?? readDiffPolicy({})
+	// what the project keeps of the template's values: the values it may set, read once from the template's types
+	const valueOwnership: ValueOwnership = {
+		settableValues: await readSettableValues(sourceQuery, { tree: sourceTree }),
+		takeOver: resolveTakeOvers({ takeOver: diffPolicy.takeOver, tree: instanceTree }),
+	}
 	const root = await diffMatched({
 		sourceQuery,
 		targetQuery,
@@ -232,7 +239,8 @@ export async function diff(params: {
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected,
 		typeComparison: createTypeComparison(),
-		diffPolicy: params.diffPolicy ?? readDiffPolicy({}),
+		diffPolicy,
+		valueOwnership,
 		placeholderLineages: params.placeholderLineages ?? new Set(),
 		sourceIsProject: params.sourceIsProject ?? false,
 	})
@@ -280,6 +288,8 @@ async function diffMatched(params: {
 	/** The types read on each side so far: one run for the whole diff. */
 	typeComparison: TypeComparison
 	diffPolicy: DiffPolicy
+	/** What the project keeps of the template's values: see `compareText`. */
+	valueOwnership: ValueOwnership
 	placeholderLineages: PlaceholderLineages
 	sourceIsProject: boolean
 }): Promise<DiffNode> {
@@ -316,9 +326,9 @@ async function diffMatched(params: {
 			})
 	// a text the template changed is a change of the element, as an attribute is; so is the vendor data one of its
 	// wrappers holds as text
-	const textChange = params.skipOwnAttributes
-		? undefined
-		: textChangeOf({ sourceNode, instanceNode })
+	const { textChange, ...textOwnership } = params.skipOwnAttributes
+		? {}
+		: compareText({ sourceNode, instanceNode, ownership: params.valueOwnership })
 	const children: DiffNode[] = params.skipOwnAttributes
 		? []
 		: await diffTextWrappers(sourceQuery, { targetQuery, sourceNode, instanceNode })
@@ -392,6 +402,7 @@ async function diffMatched(params: {
 				notSelected: params.notSelected,
 				typeComparison: params.typeComparison,
 				diffPolicy: params.diffPolicy,
+				valueOwnership: params.valueOwnership,
 				placeholderLineages: params.placeholderLineages,
 				sourceIsProject: params.sourceIsProject,
 			})
@@ -539,6 +550,7 @@ async function diffMatched(params: {
 		attributeChanges: attributeChanges.length > 0 ? attributeChanges : undefined,
 		...(typeChanges.length > 0 ? { typeChanges } : {}),
 		...(textChange ? { textChange } : {}),
+		...textOwnership,
 		keptAttributeChanges: kept.length > 0 ? kept : undefined,
 		...dataSetChange,
 		children,
@@ -823,7 +835,7 @@ function summarize(root: DiffNode): DiffSummary {
 		if (node.change === 'added') summary.added++
 		else if (node.change === 'removed') summary.removed++
 		else if (node.change === 'modified') summary.modified++
-		summary.kept += node.keptAttributeChanges?.length ?? 0
+		summary.kept += (node.keptAttributeChanges?.length ?? 0) + (node.keptTextChange ? 1 : 0)
 		for (const child of node.children) visit(child)
 	}
 	visit(root)

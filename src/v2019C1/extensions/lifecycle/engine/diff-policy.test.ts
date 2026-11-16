@@ -16,21 +16,42 @@ describe('readDiffPolicy', () => {
 
 	const testCases: Record<string, TestCase> = {
 		"no resolution → bound logical nodes follow the template, no tag is the consumer's": {
-			expected: { boundLogicalNodeTypes: 'follow', consumerManagedTags: new Set() },
+			expected: {
+				boundLogicalNodeTypes: 'follow',
+				consumerManagedTags: new Set(),
+				takeOver: [],
+			},
 		},
 		'a resolution naming neither option → the same defaults': {
 			resolution: { sharedFunctions: 'merge' },
-			expected: { boundLogicalNodeTypes: 'follow', consumerManagedTags: new Set() },
+			expected: {
+				boundLogicalNodeTypes: 'follow',
+				consumerManagedTags: new Set(),
+				takeOver: [],
+			},
 		},
 		"boundLogicalNodeTypes keep → carried, no tag is the consumer's": {
 			resolution: { boundLogicalNodeTypes: 'keep' },
-			expected: { boundLogicalNodeTypes: 'keep', consumerManagedTags: new Set() },
+			expected: {
+				boundLogicalNodeTypes: 'keep',
+				consumerManagedTags: new Set(),
+				takeOver: [],
+			},
 		},
 		'consumerManagedTags → the set of the tags, bound logical nodes follow': {
 			resolution: { consumerManagedTags: ['FunctionRole', 'FunctionRoleContent'] },
 			expected: {
 				boundLogicalNodeTypes: 'follow',
 				consumerManagedTags: new Set(['FunctionRole', 'FunctionRoleContent']),
+				takeOver: [],
+			},
+		},
+		'takeOver → carried as given, resolved against each tree compared': {
+			resolution: { takeOver: [{ element: { tagName: 'Val', id: 'ctl-t' } }] },
+			expected: {
+				boundLogicalNodeTypes: 'follow',
+				consumerManagedTags: new Set(),
+				takeOver: [{ element: { tagName: 'Val', id: 'ctl-t' } }],
 			},
 		},
 	}

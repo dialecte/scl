@@ -41,6 +41,7 @@ The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & 
   - `referencesByName`: whether a reference of the project whose uuids disagree with the template's pairs with it by the names of what both name — `'never'` (default) or `'placeholders'` (`ReferencesByName`, see [Child matching](#child-matching-—-one-shared-matcher)). `report` and `apply` read it alike;
   - `sharedFunctions`: whether a first placement of an application stands on a function the level already holds for another application, with an identical template reference — `'clone'` (default) or `'merge'` (`SharedFunctions`, see [functions applications share](./instantiate#functions-applications-share)), for `verb: 'asd'`. `report` and `apply` read it alike;
   - `consumerManagedTags`: the element tags the consumer creates on instances and maintains itself, any tag of the schema (default none; `readonly Scl.ElementsOf[]`). An instance element of such a tag that the template does not know is not listed as the project's own (`target-only`), whatever the report says of it otherwise, and `apply` writes what the report lists, so nothing for it. Without the option, a `FunctionRole` or a `FunctionRoleContent` an instance holds without the template's lineage is the project's own like any other element: listed `target-only`, kept unless its removal is accepted. The option hides only what is known not to be the template's: an element the template holds, and one that may be the template's own the newer revision dropped, are listed as for any tag — an element carrying the template's lineage (a level of the unit), and, in a fork given no previous revision, any element carrying a uuid (nothing tells there an element the consumer added from one the newer revision dropped; given the previous revision, `baseQuery`, an element it did not hold is hidden). The tags are not inherited: naming `FunctionRole` leaves a `FunctionRoleContent` the project added inside a role of the template listed. The report reads the option once for every diff it makes;
+  - `takeOver`: the values of an IED the project keeps that the consumer takes the template's for: `'all'` (every one the update keeps), or a list of `{ element }` (type `TakeOver`), each the project's `Val` holding one, or an `IED` or an element inside it (every one below it) — type `TakeOvers`, see [values of an IED](#values-of-an-ied-the-project-may-set). `report` lists each as a change, in a group decided as any. Naming an element that keeps no such value, itself or below it, is refused with `TAKE_OVER_NOT_OFFERED`;
   - `afterApply`: the consumer's own step, run once after the apply — see [below](#the-consumer-s-step-after-the-apply-—-resolution-afterapply).
 
 **A report is applied to the target it was made for.** `report` writes what it was made for on `report.target`
@@ -171,6 +172,9 @@ type DiffNode = {
 	textChange?: { before: string; after: string } // the text an accepted update writes (modified)
 	// what the update lists but does not apply: the project keeps `before` (a matched node, modified or not)
 	keptAttributeChanges?: KeptAttributeChange[] // AttributeChange & { reason: KeptAttributeReason }
+	keptTextChange?: KeptTextChange // the text the update keeps: TextChange & { reason: KeptAttributeReason }
+	takenOver?: true // a kept value the consumer took over (`resolution.takeOver`), listed as a change
+	requiresDecision?: DecisionRequiredReason // why the change waits for a decision of its own
 	// ...tagName, children
 }
 ```
@@ -211,9 +215,13 @@ type DecisionGroup = {
 	companions: DiffNode[] // read-only detail — travel with the primary, never toggled alone
 	dependsOn: string[] // group ids this one requires
 	suggestedAction: 'accept' | 'skip' // default when the group is absent from the decision map
+	requiresDecision?: DecisionRequiredReason // no default: `apply` refuses decisions that do not name it
 	editableAttributes?: EditableAttribute[] // the attributes of `primary` a UI may edit, and how
 	sideEffects?: RemovalSideEffect[] // what removing it does elsewhere: types left unused, references, emptied containers (read only)
 }
+
+// 'value-outside-enumeration': the project's value of an IED is no longer one its type allows
+type DecisionRequiredReason = 'value-outside-enumeration'
 
 type RemovalSideEffect = { element: { tagName: string; id: string }; effect: 'deleted' | 'cleared' }
 
@@ -222,6 +230,27 @@ type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 ```
 
 A group that removes elements (a `removed` change, or a `target-only` one whose removal is accepted) lists in `sideEffects` what that removal does outside them, as the delete hooks and the commit then do it: each data type the removal leaves unused (the removed elements were the last to name it) is `deleted`, with the types only it names, first; each reference elsewhere in the project naming a removed element — an application's `FunctionRef` to a removed function, a `FunctionCatRef`, an input fed by a removed logical node — is `deleted`, or `cleared` when it keeps its content (`SourceRef`, `ControlRef`, `DOS` / `SDS` / `DAS`, `InputVar` / `OutputVar`, `ProcessEcho`: its uuid, path and companion attributes go); a container the removal or those deletions leave holding nothing goes too (a category without its last reference, the wrapper it leaves empty), `deleted`, with the references to it in turn. What the group removes itself is not listed. Nothing there is decided: `apply` writes it with the removal. A group is judged on its own, so the list of a report with several groups is not what `apply` writes for all of them: a type two groups each leave one name of is listed by neither and removed by `apply` when both are accepted, and a type a group would remove while another group adds a logical node that reuses it is listed by the first and kept by `apply`. For a report of a single group, the types it lists are the types `apply` removes.
+
+#### Values of an IED the project may set
+
+The value of a data attribute of an IED (a `DAI`'s `Val`) the project may set is the project's: its data attribute is
+of kind `Set`, or the IED imports it (`valImport` true), read on the `DAI` when it says so, else on the data
+attribute of its type, in the template — a data attribute writing neither is of kind `Set`, not imported, as the
+schema has it. A newer template giving another value does not overwrite it: the node lists
+it in `keptTextChange` (`{ before, after, reason: 'settable-value' }`), opens no decision and counts in
+`report.summary.kept`. Nothing tells a value the project changed from one the template changed: any difference is the
+project's. The consumer takes the template's value over with `resolution.takeOver`: for one value
+(`[{ element }]`, `element` the project's `Val`), for every value of an IED (`[{ element }]`, `element` the
+project's `IED`; another IED's values stay the project's), or for every value of the update (`'all'`). The report then
+lists each as a `textChange` (`takenOver: true`), in a group suggested `accept`. A value the project may not set (of any other kind, `Spec`, `Conf` or `RO`, and not imported) takes the
+template's, listed as any change. The reconcile takes the take-overs as its `takeOver` input; the IED update that
+passes them from `resolution.takeOver` is not offered yet.
+
+A kept value its enumeration no longer allows (the template's type dropped it from the `EnumType`) cannot stay
+silently: its node is `modified` with the template's value as its `textChange`, and `requiresDecision:
+'value-outside-enumeration'`. It is a group of its own, never a companion, whose `requiresDecision` says it has no
+default: accepted, the template's value is written; skipped, the project's stays. `apply` given decisions that do not
+name it refuses with `DECISION_REQUIRED` (`meta: { groupIds }`), before anything is written.
 
 The attributes classified are those the element's definition declares where it sits — the type it names with `xsi:type` included — not only the tag's. Each is `identity`, `reference`, `rename` or `free` (`AttributeEditability`); only the last two are listed. Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids, the uuids and names of a tuple reference — an `ExtRef`'s `iedName`/`ldInst`/`lnClass`/…/`lnUuid`/`srcCBUuid`, an `FCDA`'s `lnUuid`, a `ConnectedAP`'s `apUuid`, an `LNode`'s binding `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`/`lnUuid` — and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. The same reference attributes are left out of the comparison of a matched element, and never written on it: an instance's uuids name its own elements, the template's name the template's (an instance whose IED was renamed reads as unchanged, its `FCDA` and `ExtRef` naming its own logical node). A tuple reference's names are left out when either side writes the uuid they follow (the rename is the IED's, listed once); names neither side writes a uuid beside are the reference itself, compared as any attribute. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns where it is implemented (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`, and `lnUuid`, the logical node it is bound to): `reconcile` never writes them, even when a UI-instructed edit lists them, and none of them is a change to decide. Its type is not implementation: the type of an `LNode` is what it was specified with, its implementation does not change it, so a template changing the type of a bound `LNode` changes it as for any other — listed in `typeChanges`, decided with its group (see the type below). A consumer keeping the type of bound `LNode`s asks the report for it (`resolution.boundLogicalNodeTypes: 'keep'`): the change is then listed on the node's `keptAttributeChanges` as `{ name: 'lnType', before, after, reason: 'bound-logical-node' }` and not applied. A kept change opens no decision: an instance whose only difference it is stays `upToDate`, and `report.summary.kept` counts it. Its implementation differs from the template by design and is never listed. What the template specifies for it is compared with its `LNodeSpecNaming` and written there: a template now specifying `XCBR3` changes `sLnInst`, the `LNode` stays bound where it is. A `fork` keeps the binding made in the project too, even when the newer revision binds the `LNode` elsewhere. The binding is the lock (`dataModel.isLNodeLocked`); a binding to a logical node the document does not hold is released by `apply` for what it places (see [below](#lnodes-placed-bound-to-a-device-the-project-lacks)) and by the extract clean-up.
 

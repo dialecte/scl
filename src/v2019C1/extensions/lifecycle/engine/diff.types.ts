@@ -25,9 +25,20 @@ export type KeptAttributeReason =
 	| 'bound-logical-node'
 	| 'instance-configuration'
 	| 'conf-rev-only-rises'
+	| 'settable-value'
 
 /** A difference the update lists but does not apply: the project keeps `before`, the template says `after`. */
 export type KeptAttributeChange = AttributeChange & { reason: KeptAttributeReason }
+
+/** A text the update lists but does not write: the project keeps `before`, the template says `after`. */
+export type KeptTextChange = TextChange & { reason: KeptAttributeReason }
+
+/**
+ * Why a change cannot be written as it is suggested, so that its group waits for an explicit decision:
+ * - `value-outside-enumeration`: the project's value, which it may set, is not among the values the template's type
+ *   now allows; accepted, the template's value is written, skipped, the project's stays.
+ */
+export type DecisionRequiredReason = 'value-outside-enumeration'
 
 /**
  * One element's attributes compared: the changes an accepted update writes, its type references naming a type of other
@@ -74,6 +85,15 @@ export type DiffNode = {
 	 * `unchanged`) that has any. They neither make the node `modified` nor open a decision: there is nothing to accept.
 	 */
 	keptAttributeChanges?: KeptAttributeChange[]
+	/** The text the template gives that the update does not write, with why: see `KeptTextChange`. */
+	keptTextChange?: KeptTextChange
+	/**
+	 * Present on a change the consumer took over (`Resolution.takeOver`): the project kept it otherwise
+	 * (`keptTextChange`), it is now listed and written as any change.
+	 */
+	takenOver?: true
+	/** Present on a change that cannot be written as suggested: its group waits for a decision, see `DecisionGroup`. */
+	requiresDecision?: DecisionRequiredReason
 	/**
 	 * Present on an `added` node that collides with an element the instance holds where it lands, on a key none of
 	 * whose fields can be changed (an `LNode` sharing class, instance, prefix, device and IED with one the project
@@ -182,6 +202,11 @@ export type DecisionGroup = {
 	companions: DiffNode[]
 	dependsOn: string[]
 	suggestedAction: 'accept' | 'skip'
+	/**
+	 * Present when the group cannot take its suggested action: `apply` refuses decisions that do not name it, with
+	 * `DECISION_REQUIRED`. Why, from its primary: see `DecisionRequiredReason`.
+	 */
+	requiresDecision?: DecisionRequiredReason
 	/**
 	 * The primary element's user-editable attributes with their edit mode
 	 * (schema-derived via the attribute classifier), tagged at report time so the UI

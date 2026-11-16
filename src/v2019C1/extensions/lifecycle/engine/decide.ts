@@ -140,6 +140,24 @@ export function collisionOverrides(params: {
 }
 
 /**
+ * Reject decisions that leave out a group waiting for one (`requiresDecision`): nothing is written.
+ */
+export function assertRequiredDecisionsTaken(params: {
+	groups: readonly DecisionGroup[]
+	decisions: DecisionMap
+}): void {
+	const { groups, decisions } = params
+	const groupIds = groups
+		.filter((group) => group.requiresDecision && !decisions.has(group.id))
+		.map((group) => group.id)
+	invariant(groupIds.length === 0, {
+		key: SCL_ERRORS.DECISION_REQUIRED,
+		meta: { groupIds },
+		detail: `the decisions do not name the groups waiting for one: ${groupIds.join(', ')}`,
+	})
+}
+
+/**
  * Reject, before any write, decisions the report does not hold, and a decision set the report's dependencies refuse:
  * a decision for a group the report does not list, a group depending on a group the report does not list, a group
  * accepted while a group it depends on is skipped.

@@ -36,7 +36,8 @@ function collectGroups(params: {
 
 	// node is a topmost changed node -> a group root; its changed descendants
 	// become companions (we do NOT recurse into groups here) — but what the project added below a
-	// change of the template is its own decision, kept by default: accepting the change never takes it
+	// change of the template is its own decision, kept by default: accepting the change never takes it;
+	// nor does it decide a change waiting for a decision of its own
 	const companions: DiffNode[] = []
 	const apart: DiffNode[] = []
 	collectChangedDescendants({
@@ -53,15 +54,17 @@ function collectGroups(params: {
 		companions,
 		dependsOn: [],
 		// A target-only (author-added) element defaults to KEEP: skip unless the user
-		// explicitly opts into removing it. Everything else defaults to accept.
-		suggestedAction: node.change === 'target-only' ? 'skip' : 'accept',
+		// explicitly opts into removing it; a change waiting for a decision takes none it is not given.
+		// Everything else defaults to accept.
+		suggestedAction: node.change === 'target-only' || node.requiresDecision ? 'skip' : 'accept',
+		...(node.requiresDecision ? { requiresDecision: node.requiresDecision } : {}),
 	})
 	for (const own of apart) collectGroups({ node: own, scopePrefix, out })
 }
 
 /**
  * The changed descendants of a node, in `out`. With `apart`, an element the project added (`target-only`) is set
- * there instead, with what it holds: a group of its own.
+ * there instead, with what it holds: a group of its own; so is a change waiting for a decision (`requiresDecision`).
  */
 export function collectChangedDescendants(params: {
 	node: DiffNode
@@ -70,7 +73,7 @@ export function collectChangedDescendants(params: {
 }): void {
 	const { node, out, apart } = params
 	for (const child of node.children) {
-		if (apart && child.change === 'target-only') {
+		if (apart && (child.change === 'target-only' || child.requiresDecision)) {
 			apart.push(child)
 			continue
 		}

@@ -170,6 +170,22 @@ export const SCL_ERRORS = defineErrors({
 		message: 'A level of the template holds several elements named TEMPLATE',
 	},
 	/**
+	 * Decisions given to `apply` that do not name a group the report says waits for one (`requiresDecision`): its
+	 * suggested action cannot be written as it is. Nothing is written. `meta: { groupIds }` — every such group left out.
+	 */
+	DECISION_REQUIRED: {
+		code: 'SCL2010',
+		message: 'A change waits for a decision the decisions do not give',
+	},
+	/**
+	 * A take-over (`Resolution.takeOver`) naming an element the report does not list as keeping a value the project
+	 * may set, itself or below it. `meta: { element: { tagName, id } }` — the first one.
+	 */
+	TAKE_OVER_NOT_OFFERED: {
+		code: 'SCL2011',
+		message: 'The element named for a take-over keeps no value that can be taken over',
+	},
+	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
 	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`
 	 */

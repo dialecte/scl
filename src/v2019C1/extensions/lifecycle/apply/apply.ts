@@ -7,6 +7,7 @@ import {
 	allGroups,
 	assertDecisionsCoherent,
 	assertNoAcceptedCollision,
+	assertRequiredDecisionsTaken,
 	clearAnnotations,
 	writtenInstanceIds,
 } from '@/v2019C1/extensions/lifecycle/engine'
@@ -100,6 +101,8 @@ export async function apply(
 	// on either track, a conflict-free instantiate can carry edited editable attributes.
 	const groups = allGroups(report)
 	assertDecisionsCoherent({ groups, decisions })
+	// a change that cannot be written as suggested is decided by name, never by default
+	assertRequiredDecisionsTaken({ groups, decisions })
 	// where an element lands that the report leaves to the consumer is chosen before anything is written
 	assertReportMappingsDecided({
 		reportMappings: report.mappings,

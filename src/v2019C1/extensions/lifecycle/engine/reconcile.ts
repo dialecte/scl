@@ -7,9 +7,9 @@ import { projectOwnedAttributes } from './project-owned-attributes'
 import { indexRedirectedSourceUuids } from './reference-match'
 import { acceptsRemoval, classifyUnmatched, classifyUnpairedReference } from './removal-base'
 import { readTargetLineages } from './target-lineages'
-import { textChangeOf } from './text-change'
 import { reconcileTextWrappers } from './text-wrappers'
 import { createTypeComparison, typeChangesOf } from './type-change'
+import { compareText, readSettableValues, resolveTakeOvers } from './value-ownership'
 import { visibleAttributes } from './visible-attributes'
 import { landingParent } from './wrapper'
 
@@ -37,6 +37,7 @@ import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
 import type { TargetLineages } from './target-lineages.types'
 import type { TypeFollowing } from './type-change.types'
+import type { ValueOwnership } from './value-ownership.types'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type {
@@ -45,6 +46,7 @@ import type {
 	TypeFollower,
 } from '@/v2019C1/extensions/data-model/transaction'
 import type { FindIdentityCollisionParams } from '@/v2019C1/extensions/lifecycle/constraints/find-identity-collision.types'
+import type { TakeOvers } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -140,6 +142,8 @@ export async function reconcile(
 		placeholderLineages?: PlaceholderLineages
 		/** The source is the project itself (a copy): a uuid both name is one element, never a reference this walk wrote. */
 		sourceIsProject?: boolean
+		/** The values the project keeps that the consumer takes the template's for: see `Resolution.takeOver`. */
+		takeOver?: TakeOvers
 	} & ReconcileAdditions,
 ): Promise<ReconcileResult> {
 	const {
@@ -194,6 +198,11 @@ export async function reconcile(
 	})
 	// the matched elements whose type the template changed, brought in one import once the walk is done
 	const typeFollowing: TypeFollowing = { comparison: createTypeComparison(), followers: [] }
+	// what the project keeps of the template's values, as the report reads them
+	const valueOwnership: ValueOwnership = {
+		settableValues: await readSettableValues(sourceQuery, { tree: sourceTree }),
+		takeOver: resolveTakeOvers({ takeOver: params.takeOver, tree: instanceTree }),
+	}
 
 	// root + descendants: update matched in place, add new
 	if (!withinProjectOwned) {
@@ -205,6 +214,7 @@ export async function reconcile(
 			overrides,
 			namesFollow: params.namesFollow,
 			typeFollowing,
+			valueOwnership,
 		})
 		await reconcileTextWrappers(tx, {
 			sourceQuery,
@@ -249,6 +259,7 @@ export async function reconcile(
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected,
 		typeFollowing,
+		valueOwnership,
 		placeholderLineages: params.placeholderLineages ?? new Set(),
 		contributeOnly,
 		landedOn,
@@ -336,6 +347,8 @@ async function reconcileChildren(
 		foreignInstanceIds?: ReadonlySet<string>
 		notSelected?: ReadonlySet<string>
 		typeFollowing: TypeFollowing
+		/** What the project keeps of the template's values: see `compareText`. */
+		valueOwnership: ValueOwnership
 		placeholderLineages: PlaceholderLineages
 		/** A first placement onto the project's element: see `reconcile`. */
 		contributeOnly: boolean
@@ -432,6 +445,7 @@ async function reconcileChildren(
 					overrides,
 					namesFollow,
 					typeFollowing: params.typeFollowing,
+					valueOwnership: params.valueOwnership,
 				})
 				if (renamed) renamedChildren.push(matched)
 				await reconcileTextWrappers(tx, {
@@ -466,6 +480,7 @@ async function reconcileChildren(
 				foreignInstanceIds: params.foreignInstanceIds,
 				notSelected: params.notSelected,
 				typeFollowing: params.typeFollowing,
+				valueOwnership: params.valueOwnership,
 				placeholderLineages: params.placeholderLineages,
 				contributeOnly: params.contributeOnly,
 				landedOn: params.landedOn,
@@ -704,6 +719,7 @@ async function updateMatchedAttributes(
 		overrides?: CollisionOverrides
 		namesFollow: NamesFollow
 		typeFollowing: TypeFollowing
+		valueOwnership: ValueOwnership
 	},
 ): Promise<boolean> {
 	const { sourceQuery, instanceRecord, sourceNode, accepted, overrides, namesFollow } = params
@@ -749,8 +765,13 @@ async function updateMatchedAttributes(
 		if (current[name] !== next) updates[name] = next
 	}
 
-	// a text the template changed is written as an attribute is, in the same update
-	const textChange = textChangeOf({ sourceNode, instanceNode: instanceRecord })
+	// a text the template changed is written as an attribute is, in the same update — but a value the project may set
+	// keeps the project's, unless taken over
+	const { textChange } = compareText({
+		sourceNode,
+		instanceNode: instanceRecord,
+		ownership: params.valueOwnership,
+	})
 	const changesAttributes = Object.keys(updates).length > 0
 	if (changesAttributes || textChange) {
 		// `update` removes an attribute on an `undefined` value; the AnyTransaction param is
