@@ -60,7 +60,7 @@ import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
- * `tx.lifecycle.update.fsd` — reconcile a project against a (possibly newer) FSD.
+ * The recipe of `tx.lifecycle.update.fsd` (which then releases what it wrote, see `public-recipes.ts`) — reconcile a project against a (possibly newer) FSD.
  *
  * Unifies instantiate and update (instantiate is the first-time case of update):
  *  - no instance under `targetParent` -> instantiate fresh (`tx.lifecycle.instantiate.fsd`);
@@ -74,8 +74,6 @@ import type { AnyTrackedRecord } from '@dialecte/core'
  * Returns its roots, each saying how (`placed` for a first placement, `reconciled` for a matched instance). Given
  * decisions, only those it wrote to (a change of it accepted, or its file reference brought to the newer revision);
  * without decisions it writes everything the template brings and returns every instance it matched.
- *
- * @intent update a project from a newer FSD, reconcile Function instances with their template, instantiate or update a function template
  */
 export async function fsd(
 	tx: Core.Transaction<Config>,

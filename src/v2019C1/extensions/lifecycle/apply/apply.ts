@@ -1,11 +1,10 @@
 import { assertReportFits } from './assert-report-fits'
-import { collectWrittenImplementation } from './collect-written-implementation'
 import { recheckAfterApply } from './recheck-after-apply'
+import { releaseWrittenImplementation } from './release-written-implementation'
 
 import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
-import { cleanUp } from '@/v2019C1/extensions/clean-up'
 import {
 	allGroups,
 	assertDecisionsCoherent,
@@ -23,11 +22,10 @@ import {
 	assertRevisionBaseFits,
 	scenarioPolicy,
 } from '@/v2019C1/extensions/lifecycle/scenario-policy'
-import {
-	asd as updateAsd,
-	fsd as updateFsd,
-	ssd as updateSsd,
-} from '@/v2019C1/extensions/lifecycle/update'
+// the recipes themselves: this run releases what it wrote once, after them (see `releaseWrittenImplementation`)
+import { asd as updateAsd } from '@/v2019C1/extensions/lifecycle/update/transaction/asd'
+import { fsd as updateFsd } from '@/v2019C1/extensions/lifecycle/update/transaction/fsd'
+import { ssd as updateSsd } from '@/v2019C1/extensions/lifecycle/update/transaction/ssd'
 
 import type { AppliedInstances, ApplyResult } from './apply.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -152,8 +150,7 @@ async function writeReport(
 
 	// what the template brings keeps the implementation it had there: what this run wrote naming a
 	// logical node, ExtRef or ExtCtrl the project lacks is released, once everything is written
-	const elements = collectWrittenImplementation(tx, { from: writtenFrom })
-	if (elements.length > 0) await cleanUp.transaction.resetLNode(tx, { elements })
+	await releaseWrittenImplementation(tx, { from: writtenFrom })
 
 	// the consumer's own step, once everything is written, in the same transaction
 	const afterApply = params.resolution?.afterApply

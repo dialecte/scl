@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="template" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="template" uuid="template-uuid"/>
+    <Substation name="TEMPLATE">
+        <Private type="eIEC61850-6-100">
+            <eIEC61850-6-100:Application name="HMI" type="DCS" uuid="app-src-uuid" dev:db-id="application-s">
+                <eIEC61850-6-100:FunctionRole name="ROOT">
+                    <eIEC61850-6-100:FunctionRoleContent>
+                        <eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/Q01/F1" functionUuid="function-src-uuid"/>
+                    </eIEC61850-6-100:FunctionRoleContent>
+                </eIEC61850-6-100:FunctionRole>
+            </eIEC61850-6-100:Application>
+        </Private>
+        <VoltageLevel name="TEMPLATE">
+            <Bay name="Q01" uuid="bay-src-uuid" dev:db-id="bay-s">
+                <Function name="F1" uuid="function-src-uuid" dev:db-id="function-s">
+                    <LNode iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" lnType="XCBR_T" lnUuid="source-ln-uuid" uuid="lnode-src-uuid">
+                        <Private type="eIEC61850-6-100">
+                            <eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1"/>
+                        </Private>
+                    </LNode>
+                </Function>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+    <IED name="P1">
+        <AccessPoint name="AP1">
+            <Server>
+                <Authentication/>
+                <LDevice inst="LD0">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/>
+                    <LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="source-ln-uuid"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates>
+        <LNodeType id="LLN0_T" lnClass="LLN0">
+            <DO name="Mod" type="ENC_T"/>
+        </LNodeType>
+        <LNodeType id="XCBR_T" lnClass="XCBR">
+            <DO name="Pos" type="DPC_T"/>
+        </LNodeType>
+        <DOType id="ENC_T" cdc="ENC">
+            <DA name="stVal" bType="Enum" type="Beh_T" fc="ST"/>
+        </DOType>
+        <DOType id="DPC_T" cdc="DPC">
+            <DA name="stVal" bType="Dbpos" fc="ST"/>
+        </DOType>
+        <EnumType id="Beh_T">
+            <EnumVal ord="1">on</EnumVal>
+        </EnumType>
+    </DataTypeTemplates>
+</SCL>

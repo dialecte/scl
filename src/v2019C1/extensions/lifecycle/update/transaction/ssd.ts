@@ -46,7 +46,7 @@ import type {
 import type * as Core from '@dialecte/core'
 
 /**
- * `tx.lifecycle.update.ssd` - reconcile a project against a (possibly newer) SSD.
+ * The recipe of `tx.lifecycle.update.ssd` (which then releases what it wrote, see `public-recipes.ts`) - reconcile a project against a (possibly newer) SSD.
  *
  * Mirrors `tx.lifecycle.update.asd` one layer up:
  *  - **first-time** (no instance of any scope primary, or a forced `instantiate`) delegates to
@@ -60,8 +60,6 @@ import type * as Core from '@dialecte/core'
  *
  * Returns its applications and functions, each `placed` or `reconciled`, as `update.asd` and `update.fsd` return
  * them: given decisions only those written to, without decisions every one it placed or matched.
- *
- * @intent update a project from a newer SSD, reconcile a bay typical with its template, propagate an SSD change
  */
 export async function ssd(
 	tx: Core.Transaction<Config>,

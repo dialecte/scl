@@ -505,7 +505,7 @@ An `LNode` bound to an IED names the logical node (`LN` / `LN0`) that implements
 - bound to a logical node the project does not hold → back to the specification its `LNodeSpecNaming` keeps, which keeps its values: bound to the logical node of the specification IED it is specified on when that IED holds it and no other LNode is bound to it, else assigned to no IED (`iedName="None"`, `lnUuid` removed, `ldInst` / `prefix` / `lnClass` / `lnInst` from its `LNodeSpecNaming`; without one, `ldInst` is removed and the rest kept). With an `lnUuid`, only the logical node of that uuid counts, whatever its naming says;
 - its `DOS` / `SDS` / `DAS` mapped to a logical node, or its `SourceRef` / `ControlRef` naming an `ExtRef` / `ExtCtrl`, the project does not hold → that name is removed, the element stays.
 
-A `fork` of the same file whose project holds the logical node keeps the binding. What the run did not write is left as it is, even when it names nothing. The verbs called directly (`tx.lifecycle.instantiate.*`, `tx.lifecycle.update.*`) do not do it: they are steps of `apply`.
+A `fork` of the same file whose project holds the logical node keeps the binding. What the run did not write is left as it is, even when it names nothing. The update verbs called directly (`tx.lifecycle.update.fsd`, `.asd`, `.ssd`) release what they wrote the same way, once at their end; `tx.lifecycle.instantiate.*` called directly does not.
 
 ### The consumer's step after the apply — `resolution.afterApply`
 
