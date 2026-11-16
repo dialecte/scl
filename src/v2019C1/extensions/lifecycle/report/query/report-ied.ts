@@ -1,17 +1,15 @@
 import { buildReportInstance } from './report-instance'
+import { reportSsd } from './report-ssd'
 
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { assertIedPlacementOffered } from '@/v2019C1/extensions/lifecycle/layers/ied/assert-ied-placement'
 import { describeIedCommunication } from '@/v2019C1/extensions/lifecycle/layers/ied/place-ied-communication'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
-import type { WithCompanionParams } from './report-ied.types'
-import type { Config, Scl } from '@/v2019C1/config'
+import type { ReportIedParams, WithCompanionParams } from './report-ied.types'
+import type { Config } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type { DiffReport, InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
-import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -21,22 +19,17 @@ import type * as Core from '@dialecte/core'
  * lacks) as companions of the IED's group, as `apply` writes them.
  * An IED name the project already holds does not change the track.
  *
- * Only a first placement of a template is reported: the IED of an ISD instance file, or `template` / `fork` finding
- * the IED already in the project, is refused with `OPTION_NOT_AVAILABLE` (see `assertIedPlacementOffered`).
+ * The specification an ISD carries beside its IED (a substation section) is reported as `report.ssd` reports a
+ * first placement of a substation scope, its instances after the IED's: where each level lands (a level the consumer
+ * must choose puts the report on the full track), the functions and LNodes it adds.
+ *
+ * Only a first placement is reported: an ISD instance placed other than as a fork, `template` or `fork` finding the IED
+ * in the project, or a fork whose IED or specification the project holds an element of by its uuid, is refused with
+ * `OPTION_NOT_AVAILABLE` (see `assertIedPlacementOffered`).
  */
 export async function reportIed(
 	query: Core.Query<Config>,
-	params: {
-		sourceQuery: Core.Query<Config>
-		iedRef: Scl.Ref<'IED'>
-		/** The root of the project the IED is placed under. */
-		anchor: Scl.Ref<'SCL'>
-		scenario?: LifecycleScenario
-		/** The type of file the source is, from its extension. */
-		fileType: SclFileType | undefined
-		diffPolicy: DiffPolicy
-		placeholderLineages?: PlaceholderLineages
-	},
+	params: ReportIedParams,
 ): Promise<DiffReport> {
 	const { sourceQuery, iedRef, scenario = 'template', fileType } = params
 	await assertIedPlacementOffered(query, {
@@ -70,7 +63,31 @@ export async function reportIed(
 		sourceQuery,
 		sourceRef: iedRef,
 	})
-	return assembleReport({ instances: [reportInstance], templateRoots: [reportInstance] })
+	// an ISD carries the specification of its IED; another file's substation section is no part of the placement
+	if (fileType !== 'ISD')
+		return assembleReport({ instances: [reportInstance], templateRoots: [reportInstance] })
+	// the specification beside the IED: a first placement, whatever a placement made earlier left in the project
+	const specification = await reportSsd(query, {
+		sourceQuery,
+		targetParent: params.anchor,
+		scenario: specificationScenario(scenario),
+		decisionMappings: params.decisionMappings,
+		pass: params.pass,
+		diffPolicy: params.diffPolicy,
+		placeholderLineages: params.placeholderLineages,
+	})
+	const report = assembleReport({
+		instances: [reportInstance, ...specification.instances],
+		templateRoots: [reportInstance],
+	})
+	if (specification.needsDecisions) report.needsDecisions = true
+	if (specification.scopeUnits) report.scopeUnits = specification.scopeUnits
+	return report
+}
+
+/** The scenario the specification is placed with: a fork keeps the file's identity, any other places a new instance. */
+function specificationScenario(scenario: LifecycleScenario): LifecycleScenario {
+	return scenario === 'fork' ? 'fork' : 'instantiate'
 }
 
 /**

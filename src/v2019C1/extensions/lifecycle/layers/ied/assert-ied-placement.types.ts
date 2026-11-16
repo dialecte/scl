@@ -13,3 +13,16 @@ export type AssertIedPlacementParams = {
 	/** The operation refusing, named in the error's detail. */
 	operation: 'report (ied)' | 'instantiate (ied)'
 }
+
+/** The project's element holding a uuid an IED placement keeps, as a refusal tells it. */
+export type HeldElement = {
+	tagName: string
+	/** Its path from the document root (`S1/V1/B1`); absent for an element with no path segment of its own. */
+	path: string | undefined
+}
+
+/** An element of a document carrying a uuid. */
+export type UuidRecord = {
+	uuid: string
+	ref: Scl.Ref<Scl.ElementsOf>
+}

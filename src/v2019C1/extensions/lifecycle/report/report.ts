@@ -179,6 +179,8 @@ async function reportVerb(
 				fileType: params.reportTarget.fileType,
 				diffPolicy,
 				placeholderLineages,
+				decisionMappings: target.resolution?.mappings,
+				pass,
 			})
 	}
 }

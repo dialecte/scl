@@ -8,7 +8,7 @@ import {
 	acceptedRefIds,
 	collisionOverrides,
 	firstTimeGroups,
-	firstTimeReportInstance,
+	leftOutRefIds,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { ied as instantiateIed } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 
@@ -20,10 +20,13 @@ import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
 
 /**
- * Write the first placement of an IED a report lists: the IED placed as a new one (`instantiate.ied`), unless its group
- * is skipped, then each report node annotated with what it became. What the report does not offer yet is refused
- * before anything is written, with `OPTION_NOT_AVAILABLE`: the IED of an ISD instance file or one the project already
- * holds (checked again by `instantiate.ied`, so a report applied twice is refused), or one read from an IID or an SCD.
+ * Write the first placement of an IED a report lists (`instantiate.ied`): a template ISD's or an ICD's IED as a new
+ * one, an ISD instance's as a fork keeping its identity, an ISD's with the specification it carries beside it, where the
+ * consumer mapped its levels and without what the consumer left out, unless the IED's group is skipped; then each report
+ * node annotated with what it became. What the report does not offer is refused before anything is written, with
+ * `OPTION_NOT_AVAILABLE` (checked again by `instantiate.ied`, so a report applied twice is refused): an IED read from an
+ * IID or an SCD, an ISD instance placed other than as a fork, an IED the project already holds, a fork whose IED or
+ * specification the project holds an element of by its uuid.
  */
 export async function applyIed(
 	tx: Core.Transaction<Config>,
@@ -49,10 +52,14 @@ export async function applyIed(
 		overrides: collisionOverrides({ groups, decisions }),
 		keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 		placeholderLineages: params.placeholderLineages,
+		decisionMappings: target.resolution?.mappings,
+		// what the consumer left out of the specification is not placed
+		leftOut: leftOutRefIds({ groups, decisions }).sourceIds,
 	})
-	const reportInstance = firstTimeReportInstance(report, { sourceRootId: iedRef.id })
-	if (reportInstance) {
-		annotateInstance({ reportInstance, added: sourceToTargetMap(placed.cloneMappings) })
+	// the IED and its specification are placed in one pass: every instance of the report is annotated from it
+	const added = sourceToTargetMap(placed.cloneMappings)
+	for (const reportInstance of report.instances) {
+		if (!reportInstance.rootRef) annotateInstance({ reportInstance, added })
 	}
 	return [{ ref: placed.iedRef, placement: 'placed' }]
 }

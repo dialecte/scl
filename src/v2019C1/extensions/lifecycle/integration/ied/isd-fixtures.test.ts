@@ -13,7 +13,7 @@ import type { SclTest } from '@/v2019C1/test'
 /**
  * The S-IED ISD fixtures the IED placement and update tests read. The template's two revisions share their Header and
  * element uuids and name no source file; the instance is the template's first revision placed in project North (its
- * uuids carry the template's as templateUuid) and exported from it, its Header naming the project file only. Project
+ * uuids carry the template's as templateUuid) and exported from it, its Header and its IED naming the project file. Project
  * North holds that placed instance; project South is where an ISD is placed.
  */
 
@@ -102,7 +102,7 @@ describe('the S-IED ISD fixtures hold what the placement and update tests read',
 					'//default:SclFileReference',
 				],
 			},
-		'instance ISD of BCU1 → project names and uuids, template uuids kept, the project file named at the Header':
+		'instance ISD of BCU1 → project names and uuids, template uuids kept, the project file named at the Header and the IED':
 			{
 				// placed from the template's first revision in North / E1 / Q01, then exported: every b... uuid has its a... twin
 				sourceXml: isdInstanceOfBcu1,
@@ -114,12 +114,14 @@ describe('the S-IED ISD fixtures hold what the placement and update tests read',
 					'/default:SCL/default:Substation[@name="North"][@uuid="b0000000-0000-4000-8000-000000000001"][not(@templateUuid)]/default:VoltageLevel[@name="E1"]/default:Bay[@name="Q01"][count(default:Function)=2]/default:Function[@name="LineProtection"][@uuid="b0000000-0000-4000-8000-000000000005"][@templateUuid="a0000000-0000-4000-8000-000000000005"]/default:LNode[@iedName="BCU1"][@lnClass="PTRC"][@lnUuid="b0000000-0000-4000-8000-000000000024"][@templateUuid="a0000000-0000-4000-8000-000000000014"]',
 					'//default:Bay[@name="Q01"]/default:Function[@name="BayControl"][@templateUuid="a0000000-0000-4000-8000-000000000004"][count(default:LNode[@iedName="BCU1"])=2]',
 					'/default:SCL/default:Communication/default:SubNetwork[@name="StationBus"]/default:ConnectedAP[@iedName="BCU1"][@apName="AP1"]/default:Address/default:P[@type="IP"][text()="10.0.1.21"]',
+					// the IED keeps the template it was placed from and records the project file it was exported from
+					'//default:IED[@name="BCU1"]/default:IEDSourceFiles[count(default:SclFileReference)=2][default:SclFileReference[@fileType="ISD"][@fileUuid="f0000000-0000-4000-8000-000000000001"]]/default:SclFileReference[@fileType="SSD"][@fileName="North.ssd"][@fileUuid="f0000000-0000-4000-8000-000000000020"]',
 				],
 				unexpectedQueries: [
 					'//*[@iedName="SPECIFICATION"]',
 					'//*[@name="TEMPLATE"]',
 					'//default:LN[@lnClass="RREC"]',
-					'//default:IEDSourceFiles',
+					'//default:SclFileReference[@fileType="ICD" or @fileType="IID"]',
 					'/default:SCL/default:Header/default:SourceFiles[count(default:SclFileReference)!=1]',
 					'//default:LN[@lnClass="LGOS" or @lnClass="LSVS"]',
 				],

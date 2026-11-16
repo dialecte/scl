@@ -5,10 +5,53 @@ import projectNorth from '../../integration/ied/fixtures/project-north-with-bcu1
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
-import { runSclTestCases } from '@/v2019C1/test'
+import { ALL_XMLNS_NAMESPACES, runSclTestCases } from '@/v2019C1/test'
 
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SclTest } from '@/v2019C1/test'
+
+const ns = ALL_XMLNS_NAMESPACES
+
+/** A project holding North / E1 / Q01 and its function BayControl of the instance ISD by their uuids, and no IED. */
+const projectHoldingBayControl = /* xml */ `
+	<SCL ${ns}>
+		<Header id="North" fileType="SSD" uuid="f0000000-0000-4000-8000-000000000020" version="4" revision="A"/>
+		<Substation name="North" uuid="b0000000-0000-4000-8000-000000000001">
+			<VoltageLevel name="E1" uuid="b0000000-0000-4000-8000-000000000002">
+				<Bay name="Q01" uuid="b0000000-0000-4000-8000-000000000003">
+					<Function name="BayControl" templateUuid="a0000000-0000-4000-8000-000000000004" uuid="b0000000-0000-4000-8000-000000000004"/>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
+/** A project whose IED X holds a logical device carrying the uuid of the instance ISD's function BayControl. */
+const projectWhoseDeviceHoldsBayControlUuid = /* xml */ `
+	<SCL ${ns}>
+		<Header id="East" fileType="SCD" uuid="f0000000-0000-4000-8000-000000000090" version="1" revision="A"/>
+		<IED name="X" manufacturer="Supplier" uuid="e0000000-0000-4000-8000-000000000030">
+			<AccessPoint name="S1" uuid="e0000000-0000-4000-8000-000000000031">
+				<Server>
+					<Authentication/>
+					<LDevice inst="LD0" uuid="b0000000-0000-4000-8000-000000000004"/>
+				</Server>
+			</AccessPoint>
+		</IED>
+	</SCL>
+`
+
+/** A project whose bay B1 carries the uuid of the instance ISD's subnetwork StationBus. */
+const projectWhoseBayHoldsSubNetworkUuid = /* xml */ `
+	<SCL ${ns}>
+		<Header id="East" fileType="SCD" uuid="f0000000-0000-4000-8000-000000000090" version="1" revision="A"/>
+		<Substation name="S1" uuid="e0000000-0000-4000-8000-000000000001">
+			<VoltageLevel name="V1" uuid="e0000000-0000-4000-8000-000000000002">
+				<Bay name="B1" uuid="b0000000-0000-4000-8000-000000000006"/>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	sourceFileName: string
@@ -17,7 +60,8 @@ type TestCase = SclTest.BaseXmlTestCase & {
 }
 
 // What is not placed yet is refused by the placement itself, before anything is written: the IED of an ISD instance
-// file, and an IED `template` finds in the project (project North holds BCU1, placed from the template).
+// file placed as a new instance, an IED `template` finds in the project (project North holds BCU1, placed from the
+// template), and an ISD instance whose IED or specification the project already holds by uuid (that is an update).
 describe('tx.lifecycle.instantiate.ied - a placement not offered', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'the IED BCU1 of an ISD instance file → refused, nothing staged': {
@@ -31,6 +75,62 @@ describe('tx.lifecycle.instantiate.ied - a placement not offered', () => {
 				staged: 0,
 			},
 		},
+		'the IED BCU1 of an ISD instance file as a fork, project North holding BCU1 → refused, nothing staged':
+			{
+				// North holds BCU1 by the instance's own uuid (...030)
+				sourceXml: isdInstanceOfBcu1,
+				targetXml: projectNorth,
+				sourceFileName: 'BCU1.isd',
+				scenario: 'fork',
+				expected: {
+					key: 'OPTION_NOT_AVAILABLE',
+					meta: { option: 'scenario', value: 'fork' },
+					staged: 0,
+				},
+			},
+		'the IED BCU1 of an ISD instance file as a fork, the project holding North / E1 / Q01 and its function BayControl but no BCU1 → refused, nothing staged':
+			{
+				// the instance's North / E1 / Q01 and BayControl uuids are the project's; no BCU1 there
+				sourceXml: isdInstanceOfBcu1,
+				targetXml: projectHoldingBayControl,
+				sourceFileName: 'BCU1.isd',
+				scenario: 'fork',
+				expected: {
+					key: 'OPTION_NOT_AVAILABLE',
+					meta: {
+						option: 'scenario',
+						value: 'fork',
+						held: { tagName: 'Substation', path: 'North' },
+					},
+					staged: 0,
+				},
+			},
+		'the IED BCU1 of an ISD instance file as a fork, a logical device of the project holding the uuid of its function BayControl → refused, nothing staged':
+			{
+				// the project's logical device LD0 carries BayControl's uuid (...004)
+				sourceXml: isdInstanceOfBcu1,
+				targetXml: projectWhoseDeviceHoldsBayControlUuid,
+				sourceFileName: 'BCU1.isd',
+				scenario: 'fork',
+				expected: {
+					key: 'OPTION_NOT_AVAILABLE',
+					meta: { option: 'scenario', value: 'fork', held: { tagName: 'LDevice', path: 'X/LD0' } },
+					staged: 0,
+				},
+			},
+		'the IED BCU1 of an ISD instance file as a fork, a bay of the project holding the uuid of its subnetwork → refused, nothing staged':
+			{
+				// the project's bay B1 carries the uuid of the instance's StationBus (...006)
+				sourceXml: isdInstanceOfBcu1,
+				targetXml: projectWhoseBayHoldsSubNetworkUuid,
+				sourceFileName: 'BCU1.isd',
+				scenario: 'fork',
+				expected: {
+					key: 'OPTION_NOT_AVAILABLE',
+					meta: { option: 'scenario', value: 'fork', held: { tagName: 'Bay', path: 'S1/V1/B1' } },
+					staged: 0,
+				},
+			},
 		'the template ISD as a template, project North holding BCU1 placed from it → refused, nothing staged':
 			{
 				sourceXml: isdTemplate,
