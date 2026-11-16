@@ -3,6 +3,8 @@ import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transact
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
 
@@ -28,6 +30,24 @@ export type IedParams = {
 	keepNameTypesFrom?: KeepNameTypesFrom
 	/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 	placeholderLineages?: PlaceholderLineages
+	/** The consumer's choices for the specification the file carries: where each of its levels lands. */
+	decisionMappings?: DecisionMappings
+	/** The source elements of the specification the consumer left out (record ids). */
+	leftOut?: ReadonlySet<string>
+}
+
+export type CloneSpecificationParams = IedParams & {
+	/** The policy of the scenario the placement is made for. */
+	policy: ScenarioPolicy
+}
+
+export type SettleIedParams = IedParams & {
+	/** The policy of the scenario the placement is made for. */
+	policy: ScenarioPolicy
+	/** The IED placed. */
+	placed: Scl.Ref<'IED'>
+	/** What the Communication part of the placement cloned. */
+	connections: readonly Scl.CloneMapping[]
 }
 
 export type NameConnectionsParams = {

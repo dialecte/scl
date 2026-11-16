@@ -67,14 +67,20 @@ would add, `anchor` being the project's `SCL` root. Only a first placement is re
 the project (`rootRef` undefined), every element of the IED `added` — the `IEDSourceFiles` of an ISD among them —, on
 the fast track (`needsDecisions: false`), even when the project holds another IED of the same name. What its access
 points' `ConnectedAP`s add to the project's `Communication` rides the IED's group as companions (see
-[`instantiate.ied`](./instantiate#ied)).
+[`instantiate.ied`](./instantiate#ied)). The specification the file carries beside its IED (its substation section)
+follows, reported as an SSD's first placement: where each level lands (`report.mappings`, a level the project holds
+several of puts the report on the full track until the consumer chooses), the functions and `LNode`s it adds, each in its
+own group. A placement made earlier from the same template leaves what it placed alone: the specification is placed
+again as a new instance.
 
 - `report.target.fileType` is the type of file the source is, read from its document's extension: `.isd` → `ISD`,
   `.icd` → `ICD`, `.iid` → `IID`, `.scd`, `.xml` or none → `SCD`. Another extension is refused with `OPTION_NOT_AVAILABLE`
   (`meta: { option: 'sourceExtension', value }`) before anything is diffed.
-- Only the IED of a template ISD or of an ICD is placed yet. An IED read from an IID or an SCD is refused with
-  `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value: 'iid' | 'scd' }`), the IED of an ISD instance file — an
-  ISD whose IED is not named `SPECIFICATION` — with `value: 'isd-instance'`.
+- The IED of a template ISD or of an ICD is placed as a new IED, the IED of an ISD instance file — an ISD whose IED is
+  not named `SPECIFICATION` — as a fork keeping its identity. An IED read from an IID or an SCD is refused with
+  `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value: 'iid' | 'scd' }`), an ISD instance file's IED in another
+  scenario with `value: 'isd-instance'`, and a fork whose IED or specification the project holds an element of by its uuid with
+  `meta: { option: 'scenario', value: 'fork', held: { tagName, path } }` (`held`: the project's element holding the uuid).
 - `scenario: 'template'` (the default) or `'fork'` finding the IED in the project — an IED carrying its uuid as
   `templateUuid`, or for a fork as its own `uuid` — is refused with `OPTION_NOT_AVAILABLE`
   (`meta: { option: 'scenario', value }`). `'instantiate'` places a new IED whatever the project holds.

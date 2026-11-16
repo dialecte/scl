@@ -63,8 +63,9 @@ import type * as Core from '@dialecte/core'
  * an element the newer revision lacks is removed when the previous revision held it.
  *
  * An IED's report (`verb: 'ied'`) is applied for a first placement only: the IED of a template ISD or of an ICD placed
- * as a new IED. The IED of an ISD instance file, one read from an IID or an SCD, or one the project already holds is
- * refused with `OPTION_NOT_AVAILABLE`, nothing written.
+ * as a new IED, the IED of an ISD instance file as a fork, an ISD with its specification. One read from an IID or an
+ * SCD, an ISD instance placed otherwise, one the project already holds, or a fork whose IED or specification the project
+ * holds an element of by its uuid, is refused with `OPTION_NOT_AVAILABLE`, nothing written.
  *
  * Returns `{ report, instances }` — the effective report plus the instance roots
  * the write produced/reconciled. Run inside `doc.prepare(tx => tx.lifecycle.apply(...))`
