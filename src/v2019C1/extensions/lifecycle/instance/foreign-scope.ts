@@ -1,7 +1,8 @@
 import { findInstancesByTemplateUuid } from './find-instance'
 import { collectInstanceScope } from './instance-scope'
 
-import { REFERENCE_TAG_NAMES, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { REFERENCE_TAG_NAMES } from '@/v2019C1/constants/reference-pairs'
+import { namedTargetsOf } from '@/v2019C1/extensions/reference/query/find/named-targets'
 
 import type {
 	CollectForeignReferenceIdsParams,
@@ -125,14 +126,12 @@ export async function pointsInto(
 ): Promise<boolean> {
 	const { reference, scope } = params
 
-	const pairs = UUID_REFERENCE_PAIRS[reference.tagName as keyof typeof UUID_REFERENCE_PAIRS] ?? []
-	for (const pair of pairs) {
-		const referencedUuid = await reader.any.getAttribute(reference, { name: pair.attribute.uuid })
-		if (!referencedUuid) continue
-		for (const tagName of pair.target) {
+	// what it names by a uuid pair or a tuple pair, an LNode's binding left out
+	for (const named of namedTargetsOf(reference)) {
+		for (const tagName of named.target) {
 			const referenced = await reader.any.findByAttributes({
 				tagName: tagName as Scl.ElementsOf,
-				attributes: { uuid: referencedUuid },
+				attributes: { uuid: named.uuid },
 			})
 			if (referenced.some((record) => scope.has(record.id))) return true
 		}
