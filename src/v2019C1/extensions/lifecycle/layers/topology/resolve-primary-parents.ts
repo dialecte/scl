@@ -43,9 +43,13 @@ export async function resolvePrimaryParents(
 	for (const instanceLevels of instanceLevelsList) {
 		const placedFor = instanceLevels.get(unitId)
 		if (!placedFor) continue
+		// one instance named: placed there only
+		if (params.gainedIn && placedFor.id !== params.gainedIn.id) continue
 		const sourceLevel = sourceAncestors.find((ancestor) => instanceLevels.has(ancestor.id))
 		const parent = sourceLevel && instanceLevels.get(sourceLevel.id)
 		places.push({ placedFor, ...(parent ? { parent } : {}) })
 	}
+	// with one instance named, never on the element the consumer started from
+	if (params.gainedIn) return { places, gained: true }
 	return { places: places.length > 0 ? places : [{ parent: anchor }], gained: true }
 }

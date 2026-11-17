@@ -51,6 +51,7 @@ export async function reconcileIedSpecification(
 		placeholderLineages: params.placeholderLineages,
 		targetInstance: instance.frames,
 		primaryTargets: instance.primaries,
+		gainedIn: instance.gainedIn,
 		redirectMappings,
 		decisionMappings: params.decisionMappings,
 		scope,

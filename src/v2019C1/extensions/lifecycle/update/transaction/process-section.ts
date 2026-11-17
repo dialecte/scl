@@ -100,6 +100,7 @@ export async function updateProcessSection(
 			instanceLevelsList,
 			matchKey,
 			primaryTargets: params.primaryTargets,
+			gainedIn: params.gainedIn,
 		})
 		for (const { parent, placedFor } of placement.places) {
 			// its level was left out: so is it (the report made it depend on that level)
@@ -137,6 +138,7 @@ export async function updateProcessSection(
 			instanceLevelsList,
 			matchKey,
 			primaryTargets: params.primaryTargets,
+			gainedIn: params.gainedIn,
 		})
 		for (const { parent, placedFor } of placement.places) {
 			if (!parent) continue

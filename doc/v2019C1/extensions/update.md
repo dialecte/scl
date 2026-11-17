@@ -107,14 +107,19 @@ the same report and the same apply: its instances follow the IED's, decided grou
 [Decision groups](#decision-groups-full-track) and [Multiple instances of one template](#multiple-instances-of-one-template)).
 
 - The specification of the IED is what is specified on it: the `LNode`s whose `LNodeSpecNaming` names it (an `LNode`
-  keeps it when the project binds it to another IED), the functions and applications holding them, the bay holding
-  those. Another IED placed from the same template keeps its own, whether it sits on the same bay or on its own. A
+  keeps it when the project binds it to another IED), the functions holding them and the applications composing only
+  those functions, the bay holding them. Another IED placed from the same template keeps its own, whether it sits on the same bay or on its own. A
   function or application holding no `LNode` of the IED is the IED's when that bay holds one copy of it specified on no
   IED; with several (the template placed twice on one bay), none is updated and the report warns of each
   (`specification-instance-unresolved`, `source`: the template's element); with only another IED's, it is left alone.
 - On a bay the template's bay was mapped onto (it carries no lineage of it), a function of the specification the
   revision no longer holds is listed as the project's own (`target-only`, kept unless its removal is accepted): nothing
   tells it from a function another file placed there. On a bay the placement created, it is `removed`.
+- What the revision gains is placed once, in the bay the template puts it. A template on several bays (its voltage
+  level holding them) places it in its own bay. A specification the project spread over several bays: in the bay
+  carrying the template bay's lineage, else in the only one carrying none (the one the template's bay was mapped onto);
+  lineage decides, never a count. When neither singles out one bay, it is not placed and the report warns
+  (`specification-instance-unresolved`).
 - A specification the project moved off any bay (its functions under the voltage level itself) is updated where it sits:
   what the revision gains is not placed, and what it drops is not found (nothing is removed).
 - What the revision drops goes, what it gains is added, names and values the project set are kept. An `LNode` the

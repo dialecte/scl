@@ -23,13 +23,19 @@ export type ResolveSpecificationInstanceParams = {
 export type SpecificationInstance = {
 	/** The levels of the project it sits on, of the kind of the template's unit (its bay). */
 	frames: Scl.Ref<Scl.ElementsOf>[]
+	/**
+	 * The level what the revision gains is placed in: its only frame, or among several the one the template puts it in
+	 * (see `singleOutFrame`). Absent with several and none singled out: nothing gained is placed (`unresolved`).
+	 */
+	gainedIn?: Scl.Ref<Scl.ElementsOf>
 	/** Its LNodes: those specified on the IED (record ids). */
 	lnodes: ReadonlySet<string>
 	/** The instances of the template's applications and functions it holds. */
 	primaries: Scl.Ref<Scl.ElementsOf>[]
 	/**
 	 * The template's applications and functions holding no LNode of the IED, of which its level holds several instances
-	 * specified on no IED: which is the IED's is not told, none is updated.
+	 * specified on no IED (which is the IED's is not told, none is updated), or which the revision gains while the
+	 * specification sits on several levels none singled out (where it goes is not told, it is not placed).
 	 */
 	unresolved: Scl.Ref<Scl.ElementsOf>[]
 	/**
@@ -59,6 +65,8 @@ export type ClaimUnboundParams = {
 	othersPrimaryIds: ReadonlySet<string>
 	/** The levels the IED's specification sits on (record ids). */
 	frameIds: ReadonlySet<string>
+	/** Whether what the revision gains can be placed: one level, or one singled out among several. */
+	placeable: boolean
 }
 
 /** The template's other primaries: claimed, not told apart, another placement's. */
@@ -79,4 +87,18 @@ export type UnbindingIdsParams = {
 	own: readonly SectionNode[]
 	iedName: string | undefined
 	unitTag: string
+}
+
+/** What `composingApplications` reads: the section's nodes, the specification's primaries, another IED's. */
+export type ComposingApplicationsParams = {
+	nodes: readonly SectionNode[]
+	primaries: readonly AnyRawRecord[]
+	/** The primaries holding an LNode specified on another IED (record ids). */
+	othersPrimaryIds: ReadonlySet<string>
+}
+
+/** What `singleOutFrame` chooses among: the IED's frames and the uuid of the template's unit. */
+export type SingleOutFrameParams = {
+	frames: readonly AnyRawRecord[]
+	unitUuid: string | undefined
 }

@@ -224,6 +224,7 @@ async function reportSpecificationUpdate(
 		targetInstance: specificationInstance.frames,
 		primaryTargets: specificationInstance.primaries,
 		leftOut: specification.scope.leftOut,
+		gainedIn: specificationInstance.gainedIn,
 	})
 	// a removal taking away the binding the project gave another IED waits for a decision
 	markOtherIedBindings({

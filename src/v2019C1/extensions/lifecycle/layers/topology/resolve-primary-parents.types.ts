@@ -18,6 +18,11 @@ export type ResolvePrimaryParentsParams = {
 	 * them is an instance of it, another placement's instance telling nothing. Absent: any instance in the project.
 	 */
 	primaryTargets?: readonly Scl.Ref<Scl.ElementsOf>[]
+	/**
+	 * The one instance of the unit (the level it sits on) a primary the template gained is placed in, when the operation
+	 * names one (an IED's specification on several bays). Absent: one placement per instance.
+	 */
+	gainedIn?: Scl.Ref<Scl.ElementsOf>
 }
 
 /** One place a primary of a topology unit is placed or reconciled under. */

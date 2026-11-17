@@ -9,9 +9,11 @@ import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
 	ClaimUnboundParams,
+	ComposingApplicationsParams,
 	ResolveSpecificationInstanceParams,
 	SpecificationInstance,
 	SectionNodeParams,
+	SingleOutFrameParams,
 	SpecifiedLNode,
 	SpecifiedLNodesParams,
 	UnbindingIdsParams,
@@ -26,7 +28,8 @@ import type { AnyRawRecord } from '@dialecte/core'
  * specified naming of its LNodes (`LNodeSpecNaming`), which keeps the IED an LNode was placed for when the project binds
  * it elsewhere, not by lineage alone (the template may be placed twice, both specifications on one bay) nor by today's
  * bindings (an LNode of another file the project bound to the IED is no part of it). The applications and functions
- * holding those LNodes are its primaries, the levels of the template unit's kind above them its frames. A primary of the
+ * holding those LNodes are its primaries, with the applications composing those functions, the levels of the template
+ * unit's kind above them its frames. A primary of the
  * template holding no LNode of it is the IED's when the IED's level holds one instance of it specified on no IED;
  * with several, it is `unresolved`; with only another placement's, left alone. `undefined` when the project holds no
  * specification of the IED. The process section is read once.
@@ -48,17 +51,24 @@ export async function resolveSpecificationInstance(
 			return level ? [level] : []
 		}),
 	)
-	const claimed = uniqueRecords(own.flatMap((node) => primaryOf({ node })))
-	if (frames.length === 0 && claimed.length === 0) return undefined
-
+	const primaries = uniqueRecords(own.flatMap((node) => primaryOf({ node })))
 	// a primary holding an LNode specified on another IED is that IED's specification
 	const othersPrimaryIds = new Set(
 		specified
 			.filter((lnode) => lnode.on !== iedName)
 			.flatMap((lnode) => primaryOf({ node: lnode.node }).map((primary) => primary.id)),
 	)
+	// an application composing functions of the specification only is part of it, whatever the revision holds
+	const applications = composingApplications({ nodes: section.nodes, primaries, othersPrimaryIds })
+	const claimed = uniqueRecords([...primaries, ...applications])
+	if (frames.length === 0 && claimed.length === 0) return undefined
+
+	// several bays: what the revision gains goes to the bay the template puts it, told by lineage, never by a count
+	const unitUuid = await sourceQuery.any.getAttribute(scope.root, { name: 'uuid' })
+	const gainedIn = singleOutFrame({ frames, unitUuid })
 	const unbound = await claimUnbound({
 		sourceQuery,
+		placeable: frames.length <= 1 || gainedIn !== undefined,
 		nodes: section.nodes,
 		templatePrimaries: [...reconcilables.applications, ...reconcilables.standaloneFunctions],
 		claimed,
@@ -69,6 +79,7 @@ export async function resolveSpecificationInstance(
 		frames: frames.map(function refOf(frame) {
 			return toRef(frame) as Scl.Ref<Scl.ElementsOf>
 		}),
+		...(gainedIn ? { gainedIn: toRef(gainedIn) as Scl.Ref<Scl.ElementsOf> } : {}),
 		lnodes: new Set(own.map((node) => node.record.id)),
 		primaries: [...claimed, ...unbound.claimed].map(function refOf(record) {
 			return toRef(record) as Scl.Ref<Scl.ElementsOf>
@@ -97,6 +108,34 @@ function specifiedLNodes(params: SpecifiedLNodesParams): SpecifiedLNode[] {
 		})
 		if (!lnode || !isAssignedToIed({ iedName: on })) return []
 		return [{ node: lnode, on }]
+	})
+}
+
+/**
+ * The applications of the section composing functions of the specification only: each `FunctionRef` of theirs names
+ * the uuid of one, and none holds an LNode specified on another IED. An application composing a function of another
+ * IED's specification too is not the IED's alone, no part of it.
+ */
+function composingApplications(params: ComposingApplicationsParams): AnyRawRecord[] {
+	const { nodes, othersPrimaryIds } = params
+	const ownUuids = new Set(
+		params.primaries.flatMap((record) => {
+			const uuid = readAttribute({ record, name: 'uuid', defaults: 'none' })
+			return uuid ? [uuid] : []
+		}),
+	)
+	const composed = new Map<string, { application: AnyRawRecord; uuids: string[] }>()
+	for (const node of nodes) {
+		if (node.record.tagName !== 'FunctionRef') continue
+		const application = node.ancestry.findLast((ancestor) => ancestor.tagName === 'Application')
+		if (!application) continue
+		const uuid = readAttribute({ record: node.record, name: 'functionUuid', defaults: 'none' })
+		const entry = composed.get(application.id) ?? { application, uuids: [] }
+		composed.set(application.id, { application, uuids: [...entry.uuids, uuid] })
+	}
+	return [...composed.values()].flatMap(function ownedApplication({ application, uuids }) {
+		if (othersPrimaryIds.has(application.id)) return []
+		return uuids.length > 0 && uuids.every((uuid) => ownUuids.has(uuid)) ? [application] : []
 	})
 }
 
@@ -136,7 +175,7 @@ function unbindingIds(params: UnbindingIdsParams): ReadonlySet<string> {
  * revision gained it, or the IED's specification lost it).
  */
 async function claimUnbound(params: ClaimUnboundParams): Promise<UnboundPrimaries> {
-	const { sourceQuery, nodes, templatePrimaries, othersPrimaryIds, frameIds } = params
+	const { sourceQuery, nodes, templatePrimaries, othersPrimaryIds, frameIds, placeable } = params
 	const claimedLineages = new Set(params.claimed.map(lineageOf))
 	const records = await sourceQuery.any.getRecords([...templatePrimaries])
 	const result: UnboundPrimaries = { claimed: [], unresolved: [], others: [] }
@@ -157,8 +196,25 @@ async function claimUnbound(params: ClaimUnboundParams): Promise<UnboundPrimarie
 		else if (free.length > 1) result.unresolved.push(primary)
 		// another placement's, or nowhere to place it: the IED's specification sits on no level of the unit's kind
 		else if (onFrame.length > 0 || frameIds.size === 0) result.others.push(primary)
+		// gained, its specification on several bays none singled out: which bay it goes to is not told
+		else if (!placeable) result.unresolved.push(primary)
 	}
 	return result
+}
+
+/**
+ * The bay of the IED's specification a primary the revision gains goes to: its only one; among several, the one
+ * carrying the template unit's lineage (the placement made it), else the only one carrying none (the one the template's
+ * unit was mapped onto; a bay another file placed carries that file's). `undefined` when none is singled out.
+ */
+function singleOutFrame(params: SingleOutFrameParams): AnyRawRecord | undefined {
+	const { frames, unitUuid } = params
+	if (frames.length <= 1) return frames[0]
+	const placedByUnit = frames.filter((frame) => unitUuid && lineageOf(frame) === unitUuid)
+	if (placedByUnit.length === 1) return placedByUnit[0]
+	if (placedByUnit.length > 1) return undefined
+	const mappedOnto = frames.filter((frame) => !lineageOf(frame))
+	return mappedOnto.length === 1 ? mappedOnto[0] : undefined
 }
 
 /** The template element a record of the project was placed from. */

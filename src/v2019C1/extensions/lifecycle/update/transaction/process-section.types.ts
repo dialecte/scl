@@ -27,6 +27,8 @@ export type UpdateProcessSectionParams = Omit<
 	 * `targetInstance`.
 	 */
 	primaryTargets?: readonly Scl.Ref<Scl.ElementsOf>[]
+	/** The one instance of the unit a primary the template gained is placed in: see `ResolvePrimaryParentsParams`. */
+	gainedIn?: Scl.Ref<Scl.ElementsOf>
 	/** What the template's elements outside a primary stand for in the project: see `UpdateFsdParams`. */
 	redirectMappings?: readonly RedirectMapping[]
 }

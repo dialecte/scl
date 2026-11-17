@@ -86,6 +86,8 @@ export async function reportSsd(
 		primaryTargets?: readonly Scl.Ref<Scl.ElementsOf>[]
 		/** The template's elements the report leaves out beyond what its scope does (record ids). */
 		leftOut?: ReadonlySet<string>
+		/** The one instance of the unit a primary the template gained is placed in: see `ResolvePrimaryParentsParams`. */
+		gainedIn?: Scl.Ref<Scl.ElementsOf>
 		/** The consumer's choices for the shared elements the applications refer to. */
 		decisionMappings?: DecisionMappings
 		/** What the whole report already listed and named. */
@@ -228,6 +230,7 @@ export async function reportSsd(
 			instanceLevelsList,
 			matchKey,
 			primaryTargets: params.primaryTargets,
+			gainedIn: params.gainedIn,
 		})
 		for (const { parent, placedFor } of places) {
 			const report = await reportAsd(query, {
@@ -258,6 +261,7 @@ export async function reportSsd(
 			instanceLevelsList,
 			matchKey,
 			primaryTargets: params.primaryTargets,
+			gainedIn: params.gainedIn,
 		})
 		for (const { parent, placedFor } of places) {
 			const report = await reportFsd(query, {
@@ -418,10 +422,12 @@ async function findPrimaryPlaces(
 	params: ResolvePrimaryParentsParams,
 ): Promise<PrimaryPlace[]> {
 	const once = [{ parent: params.anchor }]
-	if (params.instanceLevelsList.length === 0) return once
+	// one instance named for what is gained: placed there or nowhere, never where the consumer started from
+	if (params.instanceLevelsList.length === 0 && !params.gainedIn) return once
 
 	const { gained, places } = await resolvePrimaryParents(query, params)
 	if (!gained) return once
+	if (places.length === 0) return []
 	if (places.length > 1) return places
 	const [{ parent, placedFor }] = places
 	return [{ parent: parent ?? placedFor ?? params.anchor }]
