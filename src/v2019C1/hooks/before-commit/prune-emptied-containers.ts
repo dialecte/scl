@@ -1,3 +1,5 @@
+import { removedChildrenByParent } from './removed-children'
+
 import { readAttribute } from '@/v2019C1/helpers'
 import { isEmptiedContainer } from '@/v2019C1/helpers/pruned-when-empty'
 import { PRUNED_WHEN_EMPTY_TAGS } from '@/v2019C1/helpers/pruned-when-empty.constants'
@@ -9,6 +11,7 @@ import {
 } from '@/v2019C1/hooks/before-delete'
 
 import type { PruneCandidate } from './prune-emptied-containers.types'
+import type { RemovedChildren } from './removed-children.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -37,10 +40,10 @@ export async function pruneEmptiedContainers(params: {
 	const gone = new Set<string>(params.gone)
 	const roots: Scl.TrackedRecord<Scl.ElementsOf>[] = []
 	const removedByParent = removedChildrenByParent({ operations })
-	for (const candidate of emptiedCandidates(operations)) {
+	for (const candidate of emptiedCandidates({ operations, removedByParent })) {
 		if (gone.has(candidate.id) || kept.has(candidate.id)) continue
 		const record = await query.getRecord(candidate)
-		const removed = removedByParent.get(candidate.id) ?? []
+		const removed = removedByParent.get(candidate.id)?.children ?? []
 		if (!record || !isEmptiedContainer({ record, gone, removed })) continue
 		gone.add(record.id)
 		roots.push(record)
@@ -70,27 +73,22 @@ function raisedBlocksOf(params: { operations: ReadonlyArray<Scl.Operation> }): S
 	)
 }
 
-/** The children the transaction deleted, by the container they left: the staged record no longer lists them. */
-function removedChildrenByParent(params: {
+/**
+ * What an operation may have left holding nothing, each once: the parent of a deleted element, a wrapper created, an
+ * element the transaction took children out of (`removedChildrenByParent`, a move's former parent).
+ */
+function emptiedCandidates(params: {
 	operations: ReadonlyArray<Scl.Operation>
-}): Map<string, { tagName: string }[]> {
-	const byParent = new Map<string, { tagName: string }[]>()
-	for (const operation of params.operations) {
-		const parentId = operation.status === 'deleted' ? operation.oldRecord.parent?.id : undefined
-		if (operation.status !== 'deleted' || parentId === undefined) continue
-		byParent.set(parentId, [
-			...(byParent.get(parentId) ?? []),
-			{ tagName: operation.oldRecord.tagName },
-		])
-	}
-	return byParent
-}
-
-/** What an operation may have left holding nothing: the parent of a deleted element, a wrapper created; each once. */
-function emptiedCandidates(operations: ReadonlyArray<Scl.Operation>): PruneCandidate[] {
+	/** The elements the transaction took children out of, a move's former parent among them. */
+	removedByParent: ReadonlyMap<string, RemovedChildren>
+}): PruneCandidate[] {
+	const { operations, removedByParent } = params
 	const candidates = new Map<string, PruneCandidate>()
-	for (const operation of operations) {
-		const candidate = emptiedBy(operation)
+	const found = [
+		...operations.map((operation) => emptiedBy(operation)),
+		...[...removedByParent.values()].map(({ parent }) => parent as PruneCandidate),
+	]
+	for (const candidate of found) {
 		if (candidate && PRUNED_WHEN_EMPTY_TAGS.has(candidate.tagName)) {
 			candidates.set(candidate.id, candidate)
 		}

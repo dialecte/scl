@@ -26,20 +26,26 @@ export function isPrunedWhenEmpty(record: Scl.RawRecord<Scl.ElementsOf>): boolea
 
 /**
  * Whether a container goes once everything in `gone` is gone, the one judge of the delete cascade, the commit's prune and
- * the clean-up: it has no reason to stay when empty (`isPrunedWhenEmpty`), and it holds nothing but what is gone, or it
- * lost the last of the children of a kind the schema requires there and keeps nothing with an identity of its own (a
- * `Server` its last `LDevice`, its `Authentication` left; a `DataSet` its last `FCDA`). `removed` are the children the
- * transaction already took out of `record` (a commit reads the record as staged). Given nothing gone or removed, only a
- * container holding nothing goes.
+ * the clean-up, read from its content model (`REQUIRED_CHILD_GROUPS_BY_TAG`): it has no reason to stay when empty
+ * (`isPrunedWhenEmpty`), and it holds nothing but what is gone, or it lost every child of a group it requires and keeps
+ * nothing with an identity of its own (a `Server` its last `LDevice`, its `Authentication` left; a `DataSet` its last
+ * `FCDA`; a `SubNetwork` its last `ConnectedAP`). An element with an identity of its own that is not such a container
+ * stays, whatever it lost (an `Application` its last `FunctionRole`). `removed` are the children the transaction already
+ * took out of `record` (deleted, or moved away: not staying, even when the record read still lists them). Given nothing
+ * gone or removed, only a container holding nothing goes.
  */
 export function isEmptiedContainer(params: {
 	record: Scl.RawRecord<Scl.ElementsOf>
 	gone: ReadonlySet<string>
-	removed?: readonly { tagName: string }[]
+	removed?: readonly { tagName: string; id?: string }[]
 }): boolean {
 	const { record, gone, removed = [] } = params
-	if (!isPrunedWhenEmpty(record)) return false
-	return holdsNothingBut({ record, gone }) || lostLastRequiredChild({ record, gone, removed })
+	if (!record.parent || !isPrunedWhenEmpty(record)) return false
+	if (holdsNothingBut({ record, gone })) return true
+	const takenOut = new Set(removed.flatMap((child) => (child.id ? [child.id] : [])))
+	const staying = record.children.filter((child) => !gone.has(child.id) && !takenOut.has(child.id))
+	if (staying.some((child) => IDENTIFIED_TAGS.has(child.tagName))) return false
+	return lostRequiredGroups({ record, staying, removed }).length > 0
 }
 
 /** Whether a record, not the root, holds no text and no child but those in `gone`. */
@@ -53,20 +59,17 @@ export function holdsNothingBut(params: {
 }
 
 /**
- * Whether a record, not the root, lost every child of a group its content model requires (each gone, or `removed`:
- * one branch of a choice staying keeps the group) and keeps no child with an identity of its own.
+ * The groups of children a record's content model requires of which it held one (in `record`, or `removed`) and keeps
+ * none in `staying`: one branch of a choice staying keeps its group.
  */
-function lostLastRequiredChild(params: {
+function lostRequiredGroups(params: {
 	record: Scl.RawRecord<Scl.ElementsOf>
-	gone: ReadonlySet<string>
+	staying: readonly { tagName: string }[]
 	removed: readonly { tagName: string }[]
-}): boolean {
-	const { record, gone, removed } = params
-	if (!record.parent) return false
-	const staying = record.children.filter((child) => !gone.has(child.id))
-	if (staying.some((child) => IDENTIFIED_TAGS.has(child.tagName))) return false
+}): ReadonlySet<string>[] {
+	const { record, staying, removed } = params
 	const groups = REQUIRED_CHILD_GROUPS_BY_TAG.get(record.tagName) ?? []
-	return groups.some(
+	return groups.filter(
 		(group) =>
 			!staying.some((child) => group.has(child.tagName)) &&
 			[...record.children, ...removed].some((child) => group.has(child.tagName)),

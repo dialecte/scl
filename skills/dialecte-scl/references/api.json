@@ -43,7 +43,7 @@
 				"is this Private a wrapper of 6-100 elements",
 				"walk through a Private wrapper"
 			],
-			"declaredAt": "src/v2019C1/helpers/pruned-when-empty.ts:82"
+			"declaredAt": "src/v2019C1/helpers/pruned-when-empty.ts:85"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1.isSclImportDiagnostic",

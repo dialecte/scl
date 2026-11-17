@@ -31,6 +31,7 @@ A container holding nothing — no child element, no text — goes when it has n
 - an element whose content model needs a child it no longer holds, when it is a list with no identity of its own (no key fields, no uuid: `PowerSystemRelations`, `ProcessResources`, `LNodeInputs`, `DataTypeTemplates`, `Communication`) or a set of references (every child it needs is a reference: a `FunctionCategory` and its `FunctionCatRef`, a `Variable` and its `VariableApplyTo`);
 - a transparent wrapper of the dialecte's own elements: a `Private` whose `type` is the prefix of a namespace the dialecte declares (`eIEC61850-6-100`);
 - a `DataSet`, which the schema refuses without an entry: the control blocks sending it (a log control too) lose their `datSet` and, those keeping one, their `confRev` rises (once in a transaction), as when a `DataSet` is deleted.
+- a `SubNetwork`, which the schema refuses without a connected access point: the delete of the only IED or access point connected to it takes it too, and `pruneEmptyContainers` removes one holding none.
 
 Its parent is then judged the same way: the wrapper a category leaves empty goes too. An element of its own that needs a child (an `IED`, an `LNodeType`, an `Application`) is the project's to remove; a `Private` of another `type` is a tool's private data, kept empty or not; a level of the topology (`Substation`, `VoltageLevel`, `Bay`) is never removed.
 
