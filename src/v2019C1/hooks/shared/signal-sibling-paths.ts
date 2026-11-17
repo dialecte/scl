@@ -2,7 +2,7 @@ import { toRawRecord } from '@dialecte/core/helpers'
 
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
 import { readAttribute } from '@/v2019C1/helpers'
-import { rebuildReferencesByUuid } from '@/v2019C1/hooks/shared/ref-entry-ops'
+import { followAncestry } from '@/v2019C1/hooks/shared/follow-ancestry'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -38,14 +38,15 @@ export async function reconcileSignalSiblingPaths(
 				names.includes(readAttribute({ record: child, name: strategy.name, defaults: 'none' })),
 		)
 
-	const operations: Scl.Operation[] = []
-	for (const sibling of sharing) {
-		const uuid = readAttribute({ record: sibling, name: 'uuid' })
-		if (!uuid) continue
-		const target = { tagName: sibling.tagName, id: sibling.id } as Scl.Ref<Scl.ElementsOf>
-		operations.push(...(await rebuildReferencesByUuid(query, { uuid, target })))
-	}
-	return operations
+	const roots = sharing
+		.filter((sibling) => readAttribute({ record: sibling, name: 'uuid' }))
+		.map((sibling) => ({
+			root: { tagName: sibling.tagName, id: sibling.id } as Scl.Ref<Scl.ElementsOf>,
+			references: true,
+			ownPath: false,
+			below: false,
+		}))
+	return roots.length > 0 ? followAncestry(query, { roots }) : []
 }
 
 /** The attributes a signal's name is built from (name, instance, data), empty for another tag. */

@@ -153,6 +153,7 @@ reference.query.buildReferencePath(
   query: Scl.Query,
   params: {
     reference: Scl.Ref<Scl.ElementsOf>   // the REF element
+    referenceRecord?: Scl.TrackedRecord<Scl.ElementsOf> // the REF element's record, when already read
     target: Scl.Ref<Scl.ElementsOf>      // the element it points to
     targetPath?: ElementPath             // the target's path, when already read (several references to one target)
   },

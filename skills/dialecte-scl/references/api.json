@@ -598,14 +598,14 @@
 			"path": "doc.query.reference.buildReferencePath",
 			"root": "q",
 			"otherRoutes": [],
-			"signature": "(params: { reference: Scl.Ref<Scl.ElementsOf>; target: Scl.Ref<Scl.ElementsOf>; targetPath?: ElementPath; referrerContext?: ReferrerContext; functionBases?: FunctionBases; functionBasesCache?: FunctionBasesCache; }) => Promise<string | null>",
+			"signature": "(params: { reference: Scl.Ref<Scl.ElementsOf>; referenceRecord?: Scl.TrackedRecord<Scl.ElementsOf>; target: Scl.Ref<Scl.ElementsOf>; targetPath?: ElementPath; referrerContext?: ReferrerContext; functionBases?: FunctionBases; functionBasesCache?: FunctionBasesCache; }) => Promise<string | null>",
 			"summary": "Build the path value to store on a REF element's path attribute when pointing at a given target.",
 			"intents": [
 				"compute the path value of a reference (SourceRef, FunctionRef, ...) to a target",
 				"write a reference attribute pointing at an element",
 				"refresh a stale reference path"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/build/build-reference-path.ts:49"
+			"declaredAt": "src/v2019C1/extensions/reference/query/build/build-reference-path.ts:50"
 		},
 		{
 			"path": "doc.query.reference.findOwnProvenance",

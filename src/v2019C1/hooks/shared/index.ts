@@ -1,4 +1,4 @@
-export { findRecordByUuid, findTargetByUuid, rebuildReferencesByUuid } from './ref-entry-ops'
+export { findRecordByUuid, findTargetByUuid } from './ref-entry-ops'
 export { reconcileMappedData } from './reconcile-mapped-data'
 export {
 	reconcileMappedDataBelow,
@@ -26,11 +26,7 @@ export {
 	rebuildPathsOfNamedLNode,
 	specifiedNamingChanged,
 } from './lnode-spec-naming'
-export {
-	rebuildOwnPathAttributes,
-	rebuildPathsBelow,
-	rebuildReferencesTo,
-} from './references-through'
+export { followAncestry } from './follow-ancestry'
 export { followDataSetRename } from './data-set-rename'
 export { followTupleTargetRename } from './tuple-reference-rename'
 export { namedTargetUuids, partsOf } from './named-target-uuids'
