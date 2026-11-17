@@ -28,6 +28,7 @@ import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve
 import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 import { namesGroundedNode } from '@/v2019C1/helpers/grounded-node'
 import {
+	ambiguousReferenceDiagnostic,
 	dataPathNotSplitDiagnostic,
 	incoherentPathNamesDiagnostic,
 	incoherentReferenceDiagnostic,
@@ -47,6 +48,7 @@ import type {
 	PendingPathFill,
 	PendingResolution,
 	SclImportSession,
+	SclImportSessionOptions,
 } from './io-hooks.types'
 import type {
 	DiagnosticAttributeRef,
@@ -66,6 +68,11 @@ import type {
 	AnyRawRecord,
 	RecordPatch,
 } from '@dialecte/core'
+
+/** The import session of one SCL file (see `createSclImportSessionWith`), told nothing beside its records. */
+export function createSclImportSession(): SclImportSession {
+	return createSclImportSessionWith({})
+}
 
 /**
  * Creates the import session of one SCL file: UUID reference resolution, and what the import has
@@ -110,7 +117,7 @@ import type {
  * instead of an update.
  *
  */
-export function createSclImportSession(): SclImportSession {
+export function createSclImportSessionWith(options: SclImportSessionOptions): SclImportSession {
 	const targets: CollectedTarget[] = []
 	const pendingResolutions: PendingResolution[] = []
 	const pendingPathFills: PendingPathFill[] = []
@@ -215,7 +222,8 @@ export function createSclImportSession(): SclImportSession {
 				(pair.resolution === RESOLUTION_TYPE.behaviorDescription &&
 					pair.target.every((target) => SIGNAL_TAG_NAMES.has(target))) ||
 				pair.resolution === RESOLUTION_TYPE.ancestorName ||
-				isFunctionScoped(pair),
+				isFunctionScoped(pair) ||
+				options.standardize?.has(record.id) === true,
 		})
 	}
 
@@ -424,7 +432,10 @@ function resolvePending(params: {
 	if (!parsed) return { diagnostics: [] }
 
 	const triedKeys = [parsed.lookupKey, ...(parsed.fallbackLookupKeys ?? [])]
-	const matchedKey = triedKeys.find((key) => index.byPath.has(key))
+	// the first key the file holds: a path several targets hold names none of them
+	const heldKey = triedKeys.find((key) => index.byPath.has(key) || index.shared.has(key))
+	const sharedKey = heldKey !== undefined && index.shared.has(heldKey) ? heldKey : undefined
+	const matchedKey = sharedKey === undefined ? heldKey : undefined
 	const resolvedUuid = matchedKey ? index.byPath.get(matchedKey) : undefined
 	// A path in a form an earlier version wrote: a former name, an absolute signal role path, or the
 	// full path of a target named in its scope.
@@ -445,51 +456,79 @@ function resolvePending(params: {
 		})
 	}
 
-	if (!resolvedUuid || !matchedKey) {
-		const targets = pending.pair.target as readonly string[]
-		if (namesGroundedNode({ targets, path: pending.pathValue })) return { diagnostics: [] }
+	if (sharedKey !== undefined || !resolvedUuid || !matchedKey) {
+		return { diagnostics: unresolvedDiagnosticsOf({ pending, sharedKey, triedKeys }) }
+	}
+
+	const lnType = index.targetsByUuid.get(resolvedUuid)?.lnType
+	const dataNames = dataNamesOfPath({ pending, qualifier: parsed.qualifier, lnType, dataTypes })
+	if (dataNames === undefined) {
 		return {
 			diagnostics: [
-				unresolvedReferenceDiagnostic({
+				dataPathNotSplitDiagnostic({
 					ref: referenceRefOf(pending),
 					meta: {
-						uuidAttribute: pending.pair.attribute.uuid,
 						pathValue: pending.pathValue,
-						triedKeys,
+						...(parsed.qualifier && !lnType ? { untyped: true as const } : {}),
 					},
 				}),
 			],
 		}
 	}
 
-	const dataNames = dataNamesOfPath({
-		pending,
-		qualifier: parsed.qualifier,
-		lnType: index.targetsByUuid.get(resolvedUuid)?.lnType,
-		dataTypes,
-	})
-	if (dataNames === undefined) {
-		return {
-			diagnostics: [
-				dataPathNotSplitDiagnostic({
-					ref: referenceRefOf(pending),
-					meta: { pathValue: pending.pathValue },
-				}),
-			],
-		}
-	}
-
 	const rewrite = pending.alwaysStandardize || formerForm
+	// the standard path written with the data names the path gives, when the reference held none
+	const withDataNames = {
+		...pending,
+		referenceAttributes: [
+			...pending.referenceAttributes.filter(
+				(attribute) => !dataNames.some((dataName) => dataName.name === attribute.name),
+			),
+			...dataNames,
+		],
+	}
 	return patchOf({
 		pending,
 		index,
 		uuid: resolvedUuid,
 		attributes: [
 			{ name: pending.pair.attribute.uuid, value: resolvedUuid },
-			...(rewrite ? standardPathOf({ pending, index, uuid: resolvedUuid, specNamings }) : []),
+			...(rewrite
+				? standardPathOf({ pending: withDataNames, index, uuid: resolvedUuid, specNamings })
+				: []),
 			...dataNames,
 		],
 	})
+}
+
+/**
+ * What the import says of a reference whose path resolves to no element: that it names several (a path several targets
+ * hold, `sharedKey`), or none (unless it names a grounded node, which no reference names).
+ */
+function unresolvedDiagnosticsOf(params: {
+	pending: PendingResolution
+	sharedKey: string | undefined
+	triedKeys: string[]
+}): SclImportDiagnostic[] {
+	const { pending, sharedKey, triedKeys } = params
+	const ref = referenceRefOf(pending)
+	const uuidAttribute = pending.pair.attribute.uuid
+	if (sharedKey !== undefined) {
+		return [
+			ambiguousReferenceDiagnostic({
+				ref,
+				meta: { uuidAttribute, pathValue: pending.pathValue, sharedKey },
+			}),
+		]
+	}
+	const targets = pending.pair.target as readonly string[]
+	if (namesGroundedNode({ targets, path: pending.pathValue })) return []
+	return [
+		unresolvedReferenceDiagnostic({
+			ref,
+			meta: { uuidAttribute, pathValue: pending.pathValue, triedKeys },
+		}),
+	]
 }
 
 /**

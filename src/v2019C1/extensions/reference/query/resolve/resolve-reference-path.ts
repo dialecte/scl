@@ -69,7 +69,7 @@ export async function resolveReferencePath(
 	// Fast path: resolve via UUID when available (exact, no ambiguity)
 	const uuidResolved = await resolveByUuid(query, record, pair)
 	if (uuidResolved)
-		return { record: uuidResolved, qualifier: parseQualifier(pair, pathAttribute, pathValue) }
+		return { record: uuidResolved, qualifier: parseQualifier({ pair, pathAttribute, pathValue }) }
 
 	// Fallback: path-based resolution
 	let ancestry: AnyRawRecord[] | undefined
@@ -281,11 +281,12 @@ export async function resolveByUuid(
  * - behaviorDescription + dataName: the path value itself is the qualifier
  * - behaviorDescription + inputName/outputName: no qualifier (target IS the ref)
  */
-function parseQualifier(
-	pair: ReferencePair,
-	pathAttribute: string,
-	pathValue: string,
-): string | undefined {
+export function parseQualifier(params: {
+	pair: ReferencePair
+	pathAttribute: string
+	pathValue: string
+}): string | undefined {
+	const { pair, pathAttribute, pathValue } = params
 	if (pair.resolution === RESOLUTION_TYPE.lnode) {
 		return splitLnodeQualifier(pathValue).qualifier
 	}

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Function S1/F1 holds SubFunction SF1 with breaker XCBR1 and its output Oper; application A1 names F1 by a FunctionRef
+     whose signal role names Oper from F1 down (SF1/XCBR1.Oper) -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Substation name="S1" dev:db-id="s1">
+        <Function name="F1" uuid="f1" dev:db-id="f1">
+            <SubFunction name="SF1" uuid="sf1" dev:db-id="sf1">
+                <LNode iedName="None" lnClass="XCBR" lnInst="1" uuid="xcbr1" dev:db-id="xcbr1">
+                    <Private type="eIEC61850-6-100" dev:db-id="xcbr1-private">
+                        <eIEC61850-6-100:LNodeOutputs dev:db-id="outputs">
+                            <eIEC61850-6-100:ControlRef output="Oper" uuid="oper" dev:db-id="oper"/>
+                        </eIEC61850-6-100:LNodeOutputs>
+                    </Private>
+                </LNode>
+            </SubFunction>
+        </Function>
+        <Private type="eIEC61850-6-100" dev:db-id="s1-private">
+            <eIEC61850-6-100:Application name="A1" dev:db-id="a1">
+                <eIEC61850-6-100:FunctionRole name="R1" dev:db-id="r1">
+                    <eIEC61850-6-100:FunctionRoleContent dev:db-id="content">
+                        <eIEC61850-6-100:FunctionRef function="S1/F1" functionUuid="f1" dev:db-id="function-ref">
+                            <eIEC61850-6-100:SignalRole name="Signals" dev:db-id="signal-role">
+                                <eIEC61850-6-100:LNodeOutputRef controlRef="SF1/XCBR1.Oper" controlRefUuid="oper" dev:db-id="output-ref"/>
+                            </eIEC61850-6-100:SignalRole>
+                        </eIEC61850-6-100:FunctionRef>
+                    </eIEC61850-6-100:FunctionRoleContent>
+                </eIEC61850-6-100:FunctionRole>
+            </eIEC61850-6-100:Application>
+        </Private>
+    </Substation>
+</SCL>

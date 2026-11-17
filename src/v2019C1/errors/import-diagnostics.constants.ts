@@ -21,6 +21,12 @@ export const SCL_IMPORT_DIAGNOSTICS = {
 			family: 'reference',
 			message: 'A reference names an element the file does not hold',
 		},
+		/** A reference written as a path that several elements of the file hold: its uuid is left unset. */
+		'ambiguous-reference': {
+			severity: 'warning',
+			family: 'reference',
+			message: 'A reference names several elements of the file',
+		},
 		/** A reference written in a form that is not resolved: its uuid is left unset. */
 		'unsupported-xpath-reference': {
 			severity: 'warning',

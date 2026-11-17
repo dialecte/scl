@@ -785,13 +785,13 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: LinkParams) => Promise<void>",
-			"summary": "Links a signal to the element implementing it: the signal names it by its uuid, and the address the hooks write from that uuid follows where the element sits relative to the signal's LNode. Whatever address the signal held is removed with the write, so one the hooks cannot compose (an element without an internal address) does not stay.",
+			"summary": "Links a signal to the element implementing it: the signal names it by its uuid, and the address written with it is the one that uuid gives, where the element sits relative to the signal's LNode. Whatever address the signal held is replaced, so one that cannot be composed (an element without an internal address) does not stay.",
 			"intents": [
 				"connect a signal (SourceRef/ControlRef) to its ExtRef/ExtCtrl",
 				"implement a signal",
 				"link a dataflow to its implementation"
 			],
-			"declaredAt": "src/v2019C1/extensions/dataflow/transaction/link.ts:19"
+			"declaredAt": "src/v2019C1/extensions/dataflow/transaction/link.ts:20"
 		},
 		{
 			"path": "tx.dataflow.unlink",

@@ -20,7 +20,7 @@ import type * as Core from '@dialecte/core'
  * share where their path starts.
  */
 export async function buildReferenceAttributes(
-	query: Core.Query<Config>,
+	query: Core.Query<Config> | Core.Transaction<Config>,
 	params: {
 		reference: Scl.Ref<Scl.ElementsOf>
 		target: Scl.Ref<Scl.ElementsOf>
