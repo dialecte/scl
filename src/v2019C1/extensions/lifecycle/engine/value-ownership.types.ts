@@ -26,7 +26,13 @@ export type ValueTypes = {
 }
 
 /** A member of a type: whether it continues the data object, the type it names, and what its values are held to. */
-export type TypeMember = { continuesObject: boolean; type?: string; definition: ValueDefinition }
+export type TypeMember = {
+	continuesObject: boolean
+	type?: string
+	/** A data attribute's functional constraint. */
+	fc?: string
+	definition: ValueDefinition
+}
 
 /** What the project keeps of a template's values, for one report or apply. */
 export type ValueOwnership = {

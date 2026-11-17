@@ -1,4 +1,5 @@
 import { createConfRevBumpQueue, remapCopies, writeDataSetChange } from './data-set-order'
+import { findDeletedDataReferrers, writeDeletedDataReferrers } from './deleted-data-referrers'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
 import { pairByKeyOnLineageMiss } from './pair-by-key'
@@ -198,6 +199,22 @@ export async function reconcile(
 	})
 	// the matched elements whose type the template changed, brought in one import once the walk is done
 	const typeFollowing: TypeFollowing = { comparison: createTypeComparison(), followers: [] }
+	// a reference naming data the update deletes is written as its decision says, before the walk removes the data
+	const referrers = await findDeletedDataReferrers(tx, {
+		sourceQuery,
+		sourceTree,
+		instanceTree,
+		sourceUuids,
+		matchKey,
+		removalBase: params.removalBase,
+		typeComparison: typeFollowing.comparison,
+	})
+	// the configuration revisions the walk raises, written once it is done: an entry removed here raises its senders too
+	const confRevBumps = createConfRevBumpQueue()
+	const written = await writeDeletedDataReferrers(tx, { referrers, accepted })
+	confRevBumps.defer(written.confRevBumps)
+	// an input cleared above stays: the walk does not take its acceptance for the removal of a project element
+	const walkAccepted = withoutIds({ accepted, ids: written.cleared })
 	// what the project keeps of the template's values, as the report reads them
 	const valueOwnership: ValueOwnership = {
 		settableValues: await readSettableValues(sourceQuery, { tree: sourceTree }),
@@ -228,8 +245,6 @@ export async function reconcile(
 			await resolvePlacementCollision(tx, { ref: toRef(instanceTree) as Scl.Ref<Scl.ElementsOf> })
 		}
 	}
-	// the configuration revisions the walk raises, written once it is done
-	const confRevBumps = createConfRevBumpQueue()
 	// what an addition leaves colliding on a key nothing can change, read again once the removals are written
 	const pendingCollisions: FindIdentityCollisionParams[] = []
 	await reconcileChildren(tx, {
@@ -237,7 +252,7 @@ export async function reconcile(
 		sourceNode: sourceTree,
 		instanceParent: instanceTree,
 		index,
-		accepted,
+		accepted: walkAccepted,
 		overrides,
 		keepNameTypesFrom,
 		matchKey,
@@ -830,4 +845,17 @@ async function restampLineage(
 	const sourceUuid = readAttribute({ record: params.sourceChild, name: 'uuid', defaults: 'none' })
 	if (!sourceUuid) return
 	await tx.any.update(params.matched, { attributes: { templateUuid: sourceUuid } })
+}
+
+/** Accepted ids without some instance ids; undefined (every change written) stays undefined. */
+function withoutIds(params: {
+	accepted: AcceptedIds | undefined
+	ids: ReadonlySet<string>
+}): AcceptedIds | undefined {
+	const { accepted, ids } = params
+	if (!accepted || ids.size === 0) return accepted
+	return {
+		...accepted,
+		instanceIds: new Set([...accepted.instanceIds].filter((id) => !ids.has(id))),
+	}
 }

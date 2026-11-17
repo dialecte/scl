@@ -10,8 +10,7 @@ import {
 import { REFERENCE_UUIDS_BY_TAG } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 import { readAttribute } from '@/v2019C1/helpers'
 import { namesControlBlock } from '@/v2019C1/hooks/shared/control-block-reference'
-import { clearedInputSource } from '@/v2019C1/hooks/shared/input-source'
-import { INTERNAL_ADDRESS_ATTRIBUTE } from '@/v2019C1/hooks/shared/input-source.constants'
+import { inputSourceEffect } from '@/v2019C1/hooks/shared/input-source'
 
 import type { DeletedSubtree, OrphanedRef } from './orphaned-refs.types'
 import type { Scl } from '@/v2019C1/config'
@@ -49,16 +48,11 @@ export function tupleOrphanOf(params: {
 	if (DELETED_TUPLE_REFERRER_TAGS.has(refRecord.tagName))
 		return subscriberOrphanOf({ refRecord, named, subtree })
 	const scope = named.every(namesControlBlock) ? 'control-block' : 'data'
-	const internalAddress = readAttribute({
-		record: refRecord,
-		name: INTERNAL_ADDRESS_ATTRIBUTE,
-		defaults: 'none',
-	})
-	if (scope === 'data' && !internalAddress)
+	const result = inputSourceEffect({ record: refRecord, scope })
+	if (result.effect === 'deleted')
 		return { record: refRecord, effect: 'deleted', attributes: new Set() }
-	const attributes = clearedInputSource({ tagName: refRecord.tagName, scope })
-	return attributes.length > 0
-		? { record: refRecord, effect: 'cleared', attributes: new Set(attributes) }
+	return result.attributes.length > 0
+		? { record: refRecord, effect: 'cleared', attributes: new Set(result.attributes) }
 		: undefined
 }
 

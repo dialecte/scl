@@ -17,3 +17,6 @@ export const VALUE_TAGS = {
 
 /** The type of the values an enumeration allows, and each value of it. */
 export const ENUMERATION_TAGS = { type: 'EnumType', value: 'EnumVal' } as const
+
+/** The attribute of a data attribute (and of a data set entry naming it) giving its functional constraint. */
+export const FUNCTIONAL_CONSTRAINT_ATTRIBUTE = 'fc'

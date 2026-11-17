@@ -221,7 +221,8 @@ type DecisionGroup = {
 }
 
 // 'value-outside-enumeration': the project's value of an IED is no longer one its type allows
-type DecisionRequiredReason = 'value-outside-enumeration'
+// 'names-deleted-data': a reference names data the update deletes
+type DecisionRequiredReason = 'value-outside-enumeration' | 'names-deleted-data'
 
 type RemovalSideEffect = { element: { tagName: string; id: string }; effect: 'deleted' | 'cleared' }
 
@@ -251,6 +252,32 @@ silently: its node is `modified` with the template's value as its `textChange`, 
 'value-outside-enumeration'`. It is a group of its own, never a companion, whose `requiresDecision` says it has no
 default: accepted, the template's value is written; skipped, the project's stays. `apply` given decisions that do not
 name it refuses with `DECISION_REQUIRED` (`meta: { groupIds }`), before anything is written.
+
+#### References to data an IED update deletes
+
+A newer template may delete data the project still refers to: a logical node, a logical device or a control block it
+no longer holds, or a data object or attribute the new type of a logical node lacks (an entry names its data under a
+functional constraint, `fc`: a data attribute moved to another one is deleted for it). Each reference of the project to
+such data — a data set entry (`FCDA`) and an input (`ExtRef`), in this IED or another, outside what the update removes
+itself — waits for a decision of its own (`requiresDecision: 'names-deleted-data'`), and the group deleting the data
+depends on each (`dependsOn`): `apply` refuses decisions that do not name one (`DECISION_REQUIRED`), and refuses to
+delete the data while one is skipped (`DECISION_DEPENDENCY_SKIPPED`). An entry the project added to the instance's data
+set is its node in the tree, a group of its own even inside an element the project added (an input it keeps listed
+`modified`, its source attributes going); any other reference is a group of its own beside the tree: an entry listed
+`removed`, an input `modified`, its source attributes listed going (`removed` when it holds no internal address and its
+whole source goes). The report's `summary` counts these too.
+
+Accepted, an entry is removed and every control block of its logical node sending its data set takes its next
+configuration revision; an input keeps its internal address (`intAddr`), description, service and expected data
+(`pXxx`) and loses its source: all of it for deleted data (an input left for a later binding), the attributes naming the
+control block only (`srcLDInst`, `srcPrefix`, `srcLNClass`, `srcLNInst`, `srcCBName`, `srcCBUuid`) for a deleted control
+block; an input with no internal address losing its whole source is removed. These are the delete cascade's writes (see
+[references](./reference)), applied with the decision. Skipped, it stays, and so must the data. References are found by
+the uuid naming their target (`lnUuid`, `srcCBUuid`): the commit gives every reference whose names name one element its
+uuid, so a reference by names only is one naming nothing. A control block sending a data set the update changes rises
+once, whatever removed its entries. A reference accepted while the deletion it waits for is skipped is written all the
+same (its source cleared, or it goes): the decision on it is the consumer's. Removing an element the project added takes the references in it: its group depends on the decision of each one
+waiting there.
 
 The attributes classified are those the element's definition declares where it sits — the type it names with `xsi:type` included — not only the tag's. Each is `identity`, `reference`, `rename` or `free` (`AttributeEditability`); only the last two are listed. Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids, the uuids and names of a tuple reference — an `ExtRef`'s `iedName`/`ldInst`/`lnClass`/…/`lnUuid`/`srcCBUuid`, an `FCDA`'s `lnUuid`, a `ConnectedAP`'s `apUuid`, an `LNode`'s binding `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`/`lnUuid` — and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. The same reference attributes are left out of the comparison of a matched element, and never written on it: an instance's uuids name its own elements, the template's name the template's (an instance whose IED was renamed reads as unchanged, its `FCDA` and `ExtRef` naming its own logical node). A tuple reference's names are left out when either side writes the uuid they follow (the rename is the IED's, listed once); names neither side writes a uuid beside are the reference itself, compared as any attribute. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns where it is implemented (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`, and `lnUuid`, the logical node it is bound to): `reconcile` never writes them, even when a UI-instructed edit lists them, and none of them is a change to decide. Its type is not implementation: the type of an `LNode` is what it was specified with, its implementation does not change it, so a template changing the type of a bound `LNode` changes it as for any other — listed in `typeChanges`, decided with its group (see the type below). A consumer keeping the type of bound `LNode`s asks the report for it (`resolution.boundLogicalNodeTypes: 'keep'`): the change is then listed on the node's `keptAttributeChanges` as `{ name: 'lnType', before, after, reason: 'bound-logical-node' }` and not applied. A kept change opens no decision: an instance whose only difference it is stays `upToDate`, and `report.summary.kept` counts it. Its implementation differs from the template by design and is never listed. What the template specifies for it is compared with its `LNodeSpecNaming` and written there: a template now specifying `XCBR3` changes `sLnInst`, the `LNode` stays bound where it is. A `fork` keeps the binding made in the project too, even when the newer revision binds the `LNode` elsewhere. The binding is the lock (`dataModel.isLNodeLocked`); a binding to a logical node the document does not hold is released by `apply` for what it places (see [below](#lnodes-placed-bound-to-a-device-the-project-lacks)) and by the extract clean-up.
 

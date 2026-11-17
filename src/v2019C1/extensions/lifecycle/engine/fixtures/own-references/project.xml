@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IED7, an instance of the breaker template. Its data set DS holds the template's stVal entry and the project's q,
+     origin.orCat and LD2/XCBR2 entries (sent by the GOOSE GC, confRev 1); the project added a data set DS2 (an entry
+     naming XCBR1) and, in the template's Inputs, an input of its own naming XCBR1 (internal address own7). IED8
+     subscribes to XCBR1's position twice: ext8 with an internal address, ext9 without. Every reference by uuid. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <IED name="IED7" uuid="ied-ins" templateUuid="ied-src" dev:db-id="ied-t">
+        <AccessPoint name="AP1" uuid="ap-ins" templateUuid="ap-src" dev:db-id="ap-t">
+            <Server dev:db-id="srv-t">
+                <Authentication dev:db-id="auth-t"/>
+                <LDevice inst="LD1" uuid="ld-ins" templateUuid="ld-src" dev:db-id="ld-t">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln0-ins" templateUuid="ln0-src" dev:db-id="ln0-t">
+                        <DataSet name="DS" uuid="ds-ins" templateUuid="ds-src" dev:db-id="ds-t">
+                            <FCDA ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" fc="ST" lnUuid="xcbr-ins" dev:db-id="fst-t"/>
+                            <FCDA ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="q" fc="ST" lnUuid="xcbr-ins" dev:db-id="fq-t"/>
+                            <FCDA ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="origin.orCat" fc="ST" lnUuid="xcbr-ins" dev:db-id="fo-t"/>
+                            <FCDA ldInst="LD2" lnClass="XCBR" lnInst="2" doName="Pos" daName="stVal" fc="ST" lnUuid="xcbr2-ins" dev:db-id="fx2-t"/>
+                        </DataSet>
+                        <DataSet name="DS2" dev:db-id="ds2-t">
+                            <FCDA ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" fc="ST" lnUuid="xcbr-ins" dev:db-id="fds2-t"/>
+                        </DataSet>
+                        <Inputs dev:db-id="in-t">
+                            <ExtRef intAddr="spare" uuid="spare-ins" templateUuid="spare-src" dev:db-id="spare-t"/>
+                            <ExtRef iedName="IED7" ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" lnUuid="xcbr-ins" intAddr="own7" dev:db-id="ext7"/>
+                        </Inputs>
+                        <GSEControl name="GC" appID="GC" datSet="DS" confRev="1" uuid="gc-ins" templateUuid="gc-src" dev:db-id="gc-t"/>
+                    </LN0>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="xcbr-ins" templateUuid="xcbr-src" dev:db-id="xcbr-t"/>
+                </LDevice>
+                <LDevice inst="LD2" uuid="ld2-ins" templateUuid="ld2-src" dev:db-id="ld2-t">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln02-ins" templateUuid="ln02-src" dev:db-id="ln02-t"/>
+                    <LN lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="xcbr2-ins" templateUuid="xcbr2-src" dev:db-id="xcbr2-t"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="IED8" uuid="ied8" dev:db-id="ied8">
+        <AccessPoint name="AP1" uuid="ap8" dev:db-id="ap8">
+            <Server dev:db-id="srv8">
+                <Authentication dev:db-id="auth8"/>
+                <LDevice inst="LD1" uuid="ld8" dev:db-id="ld8">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln08" dev:db-id="ln08">
+                        <Inputs dev:db-id="in8">
+                            <ExtRef iedName="IED7" ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" lnUuid="xcbr-ins" intAddr="pos8" dev:db-id="ext8"/>
+                            <ExtRef iedName="IED7" ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" lnUuid="xcbr-ins" dev:db-id="ext9"/>
+                        </Inputs>
+                    </LN0>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt-t">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0-t"/>
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="lnt1-t"><DO name="Pos" type="DPC_T" dev:db-id="do-pos-t"/></LNodeType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dot-t">
+            <DA name="origin" fc="ST" bType="Struct" type="Originator_T" dev:db-id="da-origin-t"/>
+            <DA name="stVal" fc="ST" bType="Dbpos" dev:db-id="da-st-t"/>
+            <DA name="q" fc="ST" bType="Quality" dev:db-id="da-q-t"/>
+        </DOType>
+        <DAType id="Originator_T" dev:db-id="dat-t">
+            <BDA name="orCat" bType="Enum" type="orCategory" dev:db-id="bda-cat-t"/>
+            <BDA name="orIdent" bType="Octet64" dev:db-id="bda-ident-t"/>
+        </DAType>
+        <EnumType id="orCategory" dev:db-id="enum-t">
+            <EnumVal ord="0" dev:db-id="ev0-t">not-supported</EnumVal>
+            <EnumVal ord="1" dev:db-id="ev1-t">bay-control</EnumVal>
+        </EnumType>
+    </DataTypeTemplates>
+</SCL>

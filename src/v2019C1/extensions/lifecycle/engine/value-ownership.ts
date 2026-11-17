@@ -5,6 +5,7 @@ import {
 	SETTABLE_VALUE_KIND,
 	VALUE_IMPORTED,
 	VALUE_TAGS,
+	FUNCTIONAL_CONSTRAINT_ATTRIBUTE,
 } from './value-ownership.constants'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -147,7 +148,7 @@ function holdsValue(node: AnyTreeRecord): boolean {
  * The members of every type of the template's data model, with what their values are held to, and the values of each
  * enumeration: one read of the `DataTypeTemplates`.
  */
-async function readValueTypes(query: Core.Query<Config>): Promise<ValueTypes> {
+export async function readValueTypes(query: Core.Query<Config>): Promise<ValueTypes> {
 	const collected = await collectWithAncestry(query, { select: DATA_TYPES_SELECT })
 	const placed = collected.records.flatMap(function withParent(record) {
 		const parent = collected.ancestryOf(record.id).at(-1)
@@ -217,12 +218,14 @@ function typeMemberOf(params: {
 	const name = readAttribute({ record, name: modelMember.nameAttribute, defaults: 'none' })
 	if (!typeId || !name) return undefined
 	const type = readAttribute({ record, name: modelMember.typeAttribute, defaults: 'none' })
+	const fc = readAttribute({ record, name: FUNCTIONAL_CONSTRAINT_ATTRIBUTE, defaults: 'none' })
 	return {
 		typeId,
 		name,
 		member: {
 			continuesObject: modelMember.continuesObject,
 			...(type ? { type } : {}),
+			...(fc ? { fc } : {}),
 			definition: readDefinition({ record, defaults: 'optional' }),
 		},
 	}

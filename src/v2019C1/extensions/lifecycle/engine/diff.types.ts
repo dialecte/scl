@@ -4,6 +4,7 @@ import type { OffLevel } from '../layers/topology/resolve-primary-placement.type
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { ReferenceOutsideScope } from './contribution-scope.types'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
+import type { AnyRawRecord } from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
 /** How a diffed element changed between the (updated) template and the instance. */
@@ -36,9 +37,12 @@ export type KeptTextChange = TextChange & { reason: KeptAttributeReason }
 /**
  * Why a change cannot be written as it is suggested, so that its group waits for an explicit decision:
  * - `value-outside-enumeration`: the project's value, which it may set, is not among the values the template's type
- *   now allows; accepted, the template's value is written, skipped, the project's stays.
+ *   now allows; accepted, the template's value is written, skipped, the project's stays;
+ * - `names-deleted-data`: a reference (`FCDA`, `ExtRef`) names data the update deletes (a logical node, a device or a
+ *   control block it removes, a data object or attribute a logical node's new type lacks); accepted, the entry is
+ *   removed or the input's source cleared; skipped, it stays and the group deleting the data cannot be accepted.
  */
-export type DecisionRequiredReason = 'value-outside-enumeration'
+export type DecisionRequiredReason = 'value-outside-enumeration' | 'names-deleted-data'
 
 /**
  * One element's attributes compared: the changes an accepted update writes, its type references naming a type of other
@@ -456,3 +460,9 @@ export type MultiInstanceSibling = { sibling: boolean; pairedByName?: string }
  * it), `'keep'` otherwise (another primary's link / indeterminate). See {@link diff}.
  */
 export type LeftoverRefPolicy = (instanceChild: AnyTreeRecord) => Promise<'keep' | 'removed'>
+
+/**
+ * What the diffs of one update share of their reads, the document unchanged between them (a report): the references
+ * naming data an update may delete, by tag, read once whatever the number of instances.
+ */
+export type DiffReads = { referrersByTag: Map<string, readonly AnyRawRecord[]> }

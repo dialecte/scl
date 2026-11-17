@@ -1,4 +1,6 @@
 import { readDataSetChange } from './data-set-order'
+import { groupDeletedDataReferrers } from './deleted-data-groups'
+import { findDeletedDataReferrers } from './deleted-data-referrers'
 import { readDiffPolicy } from './diff-policy'
 import { ENGINE_MANAGED_TAGS } from './diff.constants'
 import { groupChanges } from './group'
@@ -39,6 +41,7 @@ import type {
 	AttributeComparison,
 	DecisionGroup,
 	DiffNode,
+	DiffReads,
 	DiffReport,
 	DiffSummary,
 	InstanceDiff,
@@ -106,6 +109,8 @@ export async function diff(params: {
 	refsAlwaysAdded?: boolean
 	/** How instance elements match source. `templateUuid` (default) or `uuid` (fork). */
 	matchKey?: MatchKey
+	/** The reads the diffs of one update share (several instances of one report): see `DiffReads`. */
+	reads?: DiffReads
 	/**
 	 * The instance root is an element of the PROJECT that the source root is mapped onto (a shared
 	 * element such as an `AllocationRole`), not an instance of it: its own attributes belong to the
@@ -208,6 +213,8 @@ export async function diff(params: {
 	})
 
 	const diffPolicy = params.diffPolicy ?? readDiffPolicy({})
+	// the types read on each side, once for the whole diff (the walk and the deleted data alike)
+	const typeComparison = createTypeComparison()
 	// what the project keeps of the template's values: the values it may set, read once from the template's types
 	const valueOwnership: ValueOwnership = {
 		settableValues: await readSettableValues(sourceQuery, { tree: sourceTree }),
@@ -238,7 +245,7 @@ export async function diff(params: {
 		),
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected,
-		typeComparison: createTypeComparison(),
+		typeComparison,
 		diffPolicy,
 		valueOwnership,
 		placeholderLineages: params.placeholderLineages ?? new Set(),
@@ -252,9 +259,24 @@ export async function diff(params: {
 			renamed: [{ node: root, child: instanceTree }],
 		})
 	}
-	const summary = summarize(root)
-	const groups = groupChanges(root, instanceTree.id)
-	return { root, groups, summary, ...notPlaced }
+	// a reference naming data the update deletes waits for a decision of its own, the deletion waiting for it
+	const referrers = await findDeletedDataReferrers(targetQuery, {
+		sourceQuery,
+		sourceTree,
+		instanceTree,
+		sourceUuids,
+		matchKey,
+		removalBase,
+		typeComparison,
+		reads: params.reads,
+	})
+	const grouped = groupDeletedDataReferrers({ root, scopePrefix: instanceTree.id, referrers })
+	return {
+		root: grouped.root,
+		groups: grouped.groups,
+		summary: summarize(grouped.root, ...grouped.items),
+		...notPlaced,
+	}
 }
 
 async function diffMatched(params: {
@@ -829,7 +851,7 @@ export function collectTreeIds(params: {
 	return ids
 }
 
-function summarize(root: DiffNode): DiffSummary {
+function summarize(...roots: readonly DiffNode[]): DiffSummary {
 	const summary: DiffSummary = { added: 0, removed: 0, modified: 0, kept: 0 }
 	function visit(node: DiffNode): void {
 		if (node.change === 'added') summary.added++
@@ -838,7 +860,7 @@ function summarize(root: DiffNode): DiffSummary {
 		summary.kept += (node.keptAttributeChanges?.length ?? 0) + (node.keptTextChange ? 1 : 0)
 		for (const child of node.children) visit(child)
 	}
-	visit(root)
+	for (const root of roots) visit(root)
 	return summary
 }
 
