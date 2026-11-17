@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IED7's GOOSE is subscribed to by IED8's device LD1 (IEDName by ldUuid) and by IED8's IHMI1 through its access point
+     (IEDName by apUuid and lnUuid); IED7's sampled values by IED8's IHMI3 in device LD2 (IEDName by lnUuid only) -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <IED name="IED7" uuid="ied7" dev:db-id="ied7">
+        <AccessPoint name="AP1" uuid="ap7" dev:db-id="ap7">
+            <Server dev:db-id="srv7">
+                <Authentication dev:db-id="auth7"/>
+                <LDevice inst="LD1" uuid="ld7" dev:db-id="ld7">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln07" dev:db-id="ln07">
+                        <GSEControl name="GC" appID="GC" confRev="1" uuid="gc7" dev:db-id="gc7">
+                            <IEDName ldInst="LD1" ldUuid="ld8" dev:db-id="sub-ld">IED8</IEDName>
+                            <IEDName apRef="AP1" apUuid="ap8" ldInst="LD1" lnClass="IHMI" lnInst="1" lnUuid="ihmi1" dev:db-id="sub-ap-ln">IED8</IEDName>
+                        </GSEControl>
+                        <SampledValueControl name="SV" smvID="SV" smpRate="80" nofASDU="1" confRev="1" uuid="sv7" dev:db-id="sv7">
+                            <IEDName ldInst="LD2" lnClass="IHMI" lnInst="3" lnUuid="ihmi3" dev:db-id="sub-ln">IED8</IEDName>
+                            <SmvOpts dev:db-id="svo7"/>
+                        </SampledValueControl>
+                    </LN0>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="IED8" uuid="ied8" dev:db-id="ied8">
+        <AccessPoint name="AP1" uuid="ap8" dev:db-id="ap8">
+            <Server dev:db-id="srv8">
+                <Authentication dev:db-id="auth8"/>
+                <LDevice inst="LD1" uuid="ld8" dev:db-id="ld8">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln08" dev:db-id="ln08"/>
+                    <LN lnClass="IHMI" inst="1" lnType="IHMI_T" uuid="ihmi1" dev:db-id="ihmi1"/>
+                </LDevice>
+                <LDevice inst="LD2" uuid="ld8b" dev:db-id="ld8b">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln08b" dev:db-id="ln08b"/>
+                    <LN lnClass="IHMI" inst="3" lnType="IHMI_T" uuid="ihmi3" dev:db-id="ihmi3"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0"/>
+        <LNodeType id="IHMI_T" lnClass="IHMI" dev:db-id="lnt1"/>
+    </DataTypeTemplates>
+</SCL>

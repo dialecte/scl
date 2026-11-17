@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IED7's data set DS (two entries naming XCBR1 by uuid) is sent by a report (confRev 3) and by sampled values at the
+     counter's limit (4294967295); its GOOSE sends DS2, whose entry names CSWI1 -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <IED name="IED7" uuid="ied7" dev:db-id="ied7">
+        <AccessPoint name="AP1" uuid="ap7" dev:db-id="ap7">
+            <Server dev:db-id="srv7">
+                <Authentication dev:db-id="auth7"/>
+                <LDevice inst="LD1" uuid="ld7" dev:db-id="ld7">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln07" dev:db-id="ln07">
+                        <DataSet name="DS" dev:db-id="ds7">
+                            <FCDA ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" fc="ST" lnUuid="xcbr7" dev:db-id="fst7"/>
+                            <FCDA ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="q" fc="ST" lnUuid="xcbr7" dev:db-id="fq7"/>
+                        </DataSet>
+                        <DataSet name="DS2" dev:db-id="ds72">
+                            <FCDA ldInst="LD1" lnClass="CSWI" lnInst="1" doName="Pos" daName="stVal" fc="ST" lnUuid="cswi7" dev:db-id="fcs7"/>
+                        </DataSet>
+                        <ReportControl name="RC" datSet="DS" confRev="3" dev:db-id="rc7">
+                            <OptFields dev:db-id="opt7"/>
+                        </ReportControl>
+                        <GSEControl name="GC" appID="GC" datSet="DS2" confRev="1" uuid="gc7" dev:db-id="gc7"/>
+                        <SampledValueControl name="SV" smvID="SV" smpRate="80" nofASDU="1" datSet="DS" confRev="4294967295" uuid="sv7" dev:db-id="sv7">
+                            <SmvOpts dev:db-id="svo7"/>
+                        </SampledValueControl>
+                    </LN0>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="xcbr7" dev:db-id="xcbr7"/>
+                    <LN lnClass="CSWI" inst="1" lnType="CSWI_T" uuid="cswi7" dev:db-id="cswi7"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0"/>
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="lnt1"><DO name="Pos" type="DPC_T" dev:db-id="do-pos"/></LNodeType>
+        <LNodeType id="CSWI_T" lnClass="CSWI" dev:db-id="lnt2"><DO name="Pos" type="DPC_T" dev:db-id="do-pos2"/></LNodeType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dot">
+            <DA name="stVal" fc="ST" bType="Dbpos" dev:db-id="da-st"/>
+            <DA name="q" fc="ST" bType="Quality" dev:db-id="da-q"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>
