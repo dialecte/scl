@@ -1,5 +1,6 @@
-import { EXPORTED_ROOT_TAGS, INPUT_MODES } from './ied.constants'
+import { EXPORTED_ROOT_TAGS, INPUT_MODES, ISD_KINDS } from './ied.constants'
 import { readIedSourceFileType } from './read-ied-source-file-type'
+import { nameTemplate, writeTemplateIdentity } from './template-identity'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -11,6 +12,7 @@ import { applyIedProcessEdits } from '@/v2019C1/extensions/lifecycle/layers/ied/
 import { applyRecordEdits } from '@/v2019C1/extensions/lifecycle/layers/ied/apply-record-edits'
 import { applySupervisionDependencies } from '@/v2019C1/extensions/lifecycle/layers/ied/apply-supervision-dependencies'
 import { cloneIedProcess } from '@/v2019C1/extensions/lifecycle/layers/ied/clone-ied-process'
+import { TEMPLATE_ISD_IED_NAME } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-placement.constants'
 import { planIedProcess } from '@/v2019C1/extensions/lifecycle/layers/ied/plan-ied-process'
 import { readIedCommunication } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-communication'
 import { readIedProcessSource } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-process-source'
@@ -23,12 +25,13 @@ import { writeProvenance } from '@/v2019C1/extensions/reference/transaction/writ
 
 import type { ExtractWarning } from './extract.types'
 import type { IedExport, IedExtractParams } from './ied.types'
+import type { TemplateIdentityParams } from './template-identity.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
  * Export a specification IED into an ISD: the IED, the process part it implements and its scoped Communication, into an
- * empty target. Requires an explicit `kind: 'instance'` and an explicit input mode. Copies the surviving logical-node type
+ * empty target. Requires an explicit `kind` and an explicit input mode. Copies the surviving logical-node type
  * closure and preserves instance identity and vendor content. Supervision nodes, a supervision capability declaring
  * them, and foreign receiver, client, association and KDC entries are left out with source-record warnings.
  * `inputs: 'none'` leaves the inputs out; `inputs: 'later-binding'` writes each in later-binding form: its description,
@@ -48,13 +51,22 @@ import type * as Core from '@dialecte/core'
  * or output naming what the file does not hold stays with its expected data and without that link. Each LNode gets its
  * own naming as specified naming; data specifications lose their mapping. `labels: false` leaves no label in the file.
  * Replaces the target ISD Header/history with a fresh identity and one initial item, retaining prior history only
- * as labelled inner text. Assigns the issuer and records the source at the Header and IED.
+ * as labelled inner text. Assigns the issuer and, for an instance, records the source at the Header and IED.
  * Source type follows the registered extension: .ssd is SSD; .scd, .xml or no extension is SCD, regardless of Header
  * fileType. Other extensions are refused with OPTION_NOT_AVAILABLE before writes.
  * Refuses an implemented selected IED, a target already holding an IED or a process part (a substation, line or
  * process) and an unavailable revision start.
  *
- * @intent extract an IED into an ISD instance, copy an IED with its reachable data types, export an ISD with its process part, write the inputs of an ISD in later-binding form, mark a dataflow inside one IED as internal
+ * `kind: 'instance'` writes the IED as the project holds it: its name, the levels' names and every identifier as in
+ * the project. `kind: 'template'` writes a template serving every device of a frame agreement, tied to no project: the
+ * IED named `SPECIFICATION`, each substation, voltage level, bay, line and process of the process part named `TEMPLATE`
+ * unless another of its tag sits beside it (levels side by side keep their names), the references in the file naming
+ * them by their uuid following;
+ * every element a uuid of its own, the references in the file repointed onto them; the functions and applications, with
+ * what they hold, keeping the lineage of the templates they were made from, every element outside them none; no source file
+ * recorded, at the Header or on the IED (the IED's own list of source files left out); the Header named `ISD_SPECIFICATION`.
+ *
+ * @intent extract an IED into an ISD instance, export an ISD template for a frame agreement, export an IED named SPECIFICATION with new identifiers, copy an IED with its reachable data types, export an ISD with its process part, write the inputs of an ISD in later-binding form, mark a dataflow inside one IED as internal
  */
 export async function ied(
 	tx: Core.Transaction<Config>,
@@ -74,10 +86,11 @@ async function refuseUnavailableExtraction(
 	const { sourceQuery, iedRef } = params
 	for (const option of ['kind', 'inputs'] as const) {
 		const value = params[option]
-		if (option === 'kind' ? value === 'instance' : INPUT_MODES.has(String(value))) continue
+		const offered = option === 'kind' ? ISD_KINDS : INPUT_MODES
+		if (offered.has(String(value))) continue
 		throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
 			meta: { option, value: String(value) },
-			detail: `extract.ied: an explicit instance extraction and an explicit input mode are required`,
+			detail: `extract.ied: an explicit ISD kind and an explicit input mode are required`,
 		})
 	}
 	const source = await sourceQuery.getRecord(iedRef)
@@ -155,7 +168,7 @@ async function writeIedExport(
 	const targetParent = await tx.getRoot()
 	await startFile(tx, {
 		as: params.params.as ?? 'new',
-		filename: `ISD_${iedName}`,
+		filename: `ISD_${params.params.kind === 'template' ? TEMPLATE_ISD_IED_NAME : iedName}`,
 		header: {
 			fileType: 'ISD',
 			tool: params.params.tool,
@@ -173,7 +186,11 @@ async function writeIedExport(
 		targetParent,
 		leaveOut: read.selection.leaveOut,
 		withTypes: { keepNameFrom: 'source' },
-		omit: ['MinRequestedSCDFiles'],
+		// a template records no file it came from
+		omit:
+			params.params.kind === 'template'
+				? ['MinRequestedSCDFiles', 'IEDSourceFiles']
+				: ['MinRequestedSCDFiles'],
 	})
 	await applyRecordEdits(tx, { edits: read.selection.edits, cloneMappings: cloned.cloneMappings })
 	const cloneMappings: Scl.CloneMapping[] = [...cloned.cloneMappings]
@@ -188,15 +205,41 @@ async function writeIedExport(
 		cloneMappings.push(...communication.cloneMappings)
 	}
 	const processMappings = await cloneIedProcess(tx, { sourceQuery, plan: read.process })
-	await finalizeClonedIdentity(tx, {
-		cloneMappings: [...cloneMappings, ...processMappings],
-		mode: 'keep',
+	await writeExportIdentity(tx, {
+		kind: params.params.kind,
+		iedMappings: cloneMappings,
+		processMappings,
 	})
 	await applyIedProcessEdits(tx, { plan: read.process, cloneMappings: processMappings })
-	await finishIedExport(tx, { params: params.params, read, ied: cloned.record, cloneMappings })
+	await finishIedExport(tx, {
+		params: params.params,
+		read,
+		ied: cloned.record,
+		cloneMappings,
+		processMappings,
+	})
 }
 
-/** The written IED's issuer and provenance, the supervision dependencies, then what no ISD holds. */
+/** The identity of what the export cloned: an instance keeps the project's, a template takes its own. */
+async function writeExportIdentity(
+	tx: Core.Transaction<Config>,
+	params: TemplateIdentityParams & { kind: IedExtractParams['kind'] },
+): Promise<void> {
+	const { kind, iedMappings, processMappings } = params
+	if (kind === 'template') {
+		await writeTemplateIdentity(tx, { iedMappings, processMappings })
+		return
+	}
+	await finalizeClonedIdentity(tx, {
+		cloneMappings: [...iedMappings, ...processMappings],
+		mode: 'keep',
+	})
+}
+
+/**
+ * The written IED's issuer and, for an instance, its provenance; the supervision dependencies, then what no ISD holds;
+ * a template's names last, once everything naming them is written.
+ */
 async function finishIedExport(
 	tx: Core.Transaction<Config>,
 	params: {
@@ -204,20 +247,24 @@ async function finishIedExport(
 		read: IedExport
 		ied: Scl.RawRecord<Scl.ElementsOf>
 		cloneMappings: readonly Scl.CloneMapping[]
+		processMappings: readonly Scl.CloneMapping[]
 	},
 ): Promise<void> {
-	const { sourceQuery, issuer, labels } = params.params
+	const { sourceQuery, issuer, labels, kind } = params.params
 	const { sourceFileType, supervisionDependencies } = params.read
 	const clonedIed = { tagName: 'IED', id: params.ied.id } as const
 	await tx.update(clonedIed, { attributes: { manufacturer: issuer } })
-	await writeProvenance(tx, {
-		sourceQuery,
-		target: { anchor: 'document', fileType: sourceFileType },
-	})
-	await writeProvenance(tx, {
-		sourceQuery,
-		target: { anchor: 'ied', root: clonedIed, fileType: sourceFileType },
-	})
+	// an instance records the project it was extracted from; a template is tied to none
+	if (kind === 'instance') {
+		await writeProvenance(tx, {
+			sourceQuery,
+			target: { anchor: 'document', fileType: sourceFileType },
+		})
+		await writeProvenance(tx, {
+			sourceQuery,
+			target: { anchor: 'ied', root: clonedIed, fileType: sourceFileType },
+		})
+	}
 	await applySupervisionDependencies(tx, {
 		plan: supervisionDependencies,
 		cloneMappings: [...params.cloneMappings],
@@ -226,4 +273,7 @@ async function finishIedExport(
 	const minimumScdFiles = await tx.getChildren(clonedIed, 'MinRequestedSCDFiles')
 	for (const wrapper of minimumScdFiles) await tx.delete(wrapper)
 	if (labels === false) await removeLabels(tx)
+	if (kind === 'template') {
+		await nameTemplate(tx, { ied: clonedIed, processMappings: params.processMappings })
+	}
 }
