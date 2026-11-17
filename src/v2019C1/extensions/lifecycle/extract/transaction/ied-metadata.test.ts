@@ -9,6 +9,7 @@ import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
+import type { IedExtractParams } from './ied.types'
 import type { SclTest } from '@/v2019C1/test'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -16,7 +17,8 @@ const ns = ALL_XMLNS_NAMESPACES
 
 type TestCase = SclTest.BaseXmlTestCase & { targetXml: string }
 type RefusalCase = TestCase & {
-	as?: 'revision'
+	/** What the export is asked besides its defaults, as an untyped caller may pass it. */
+	options?: { as?: 'revision'; kind?: string }
 	expectedRefusal: { key: string; meta?: Record<string, unknown> }
 }
 
@@ -88,8 +90,16 @@ describe('extract IED refusals', () => {
 		'Requested revision start -> OPTION_NOT_AVAILABLE without changes': {
 			sourceXml: SelectedIedWithoutProvenanceXml,
 			targetXml: emptyTarget,
-			as: 'revision',
+			options: { as: 'revision' },
 			expectedRefusal: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'as', value: 'revision' } },
+			expectedQueries: ['/default:SCL[count(*)=0]'],
+		},
+		// the fixture: any specification IED; only the kind asked matters
+		'An ISD kind neither instance nor template -> OPTION_NOT_AVAILABLE without changes': {
+			sourceXml: SelectedIedWithoutProvenanceXml,
+			targetXml: emptyTarget,
+			options: { kind: 'frame' },
+			expectedRefusal: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'kind', value: 'frame' } },
 			expectedQueries: ['/default:SCL[count(*)=0]'],
 		},
 	}
@@ -106,7 +116,7 @@ describe('extract IED refusals', () => {
 				.ied({
 					...EXPORT,
 					sourceQuery: source.query,
-					...(testCase.as ? { as: testCase.as } : {}),
+					...(testCase.options as Partial<IedExtractParams>),
 				})
 				.then(
 					() => undefined,
