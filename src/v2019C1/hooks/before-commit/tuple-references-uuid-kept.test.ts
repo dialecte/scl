@@ -224,6 +224,11 @@ describe('an edit of the names of a reference to an address two elements of one 
 		// breakers-and-a-subscriber.xml: IED7 gets two logical nodes XCBR5; IED8's input is pointed at XCBR5
 		'the names of an input pointed at an address two logical nodes share → refused, naming several':
 			{
+				allowInvalidOutput: {
+					reason:
+						'the case needs two logical nodes on one address, which the schema refuses: the refusal it pins is for that address',
+					violations: [{ check: 'xsd', code: 'duplicate-key' }],
+				},
 				sourceXml: breakersAndASubscriber,
 				nodes: [
 					{ lnClass: 'XCBR', inst: '5', lnType: 'XCBR_T', uuid: 'xcbr5a' },
@@ -273,7 +278,8 @@ describe('an edit of the names of a subscriber naming a device', () => {
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		// breakers-and-a-subscriber.xml: IED7's GOOSE gets a subscriber naming IED8's device LD1 (its ldUuid written)
+		// breakers-and-a-subscriber.xml: IED7's GOOSE gets a subscriber naming IED8's device LD1 by its access point AP1
+		// (its ldUuid written)
 		"a device subscriber's device pointed at one nothing holds → refused, its ldUuid kept": {
 			sourceXml: breakersAndASubscriber,
 			edited: { attributes: { ldInst: 'LD9' } },
@@ -302,7 +308,7 @@ describe('an edit of the names of a subscriber naming a device', () => {
 		const subscriber = await source.transaction(async function addSubscriber(tx) {
 			return tx.any.addChild(goose, {
 				tagName: 'IEDName',
-				attributes: { ldInst: 'LD1' },
+				attributes: { apRef: 'AP1', ldInst: 'LD1' },
 				value: 'IED8',
 			})
 		})

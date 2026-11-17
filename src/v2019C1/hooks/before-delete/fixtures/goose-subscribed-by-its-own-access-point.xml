@@ -29,10 +29,13 @@
         </AccessPoint>
     </IED>
     <DataTypeTemplates dev:db-id="dtt">
-        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0"/>
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0"><DO name="Beh" type="ENS_T" dev:db-id="do-beh"/></LNodeType>
         <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="lnt1"><DO name="Pos" type="DPC_T" dev:db-id="do-pos"/></LNodeType>
         <DOType id="DPC_T" cdc="DPC" dev:db-id="dot">
             <DA name="stVal" fc="ST" bType="Dbpos" dev:db-id="da-st"/>
+        </DOType>
+        <DOType id="ENS_T" cdc="ENS" dev:db-id="dot-ens">
+            <DA name="stVal" fc="ST" bType="INT32" dev:db-id="da-ens-st"/>
         </DOType>
     </DataTypeTemplates>
 </SCL>

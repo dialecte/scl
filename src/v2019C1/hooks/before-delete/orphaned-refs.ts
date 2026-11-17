@@ -1,14 +1,14 @@
-import { CASCADE_PERF_SPAN, DATA_SET_ENTRY_TAG } from './orphaned-refs.constants'
+import { CASCADE_PERF_SPAN, DATA_SET_ENTRY_TAG, DATA_SET_TAG } from './orphaned-refs.constants'
 import { tupleOrphanOf, tupleReferrerTagsReached } from './tuple-orphans'
 
 import { toRawRecord, widen } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS, REFERENCE_TAGS, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
-import { CONF_REV_CONTROL_TAGS } from '@/v2019C1/extensions/lifecycle/layers/ied/bump-data-set-conf-revs.constants'
 import { readAttribute } from '@/v2019C1/helpers'
-import { isPrunedWhenEmpty } from '@/v2019C1/helpers/pruned-when-empty'
+import { isEmptiedContainer } from '@/v2019C1/helpers/pruned-when-empty'
 import { PRUNED_WHEN_EMPTY_TAGS } from '@/v2019C1/helpers/pruned-when-empty.constants'
-import { confRevRaisesOf } from '@/v2019C1/hooks/shared/data-set-entry'
+import { confRevRaisesOf, dataSetRemovalsOf } from '@/v2019C1/hooks/shared/data-set-entry'
+import { DATA_SET_SENDER_TAGS } from '@/v2019C1/hooks/shared/data-set-entry.constants'
 import { updatedOperation, withAttributeValues } from '@/v2019C1/hooks/shared/record-ops'
 
 import type { DeleteCascade, DeletedSubtree, OrphanedRef, RefPairs } from './orphaned-refs.types'
@@ -35,7 +35,12 @@ export async function cleanOrphanedRefs<GenericElement extends Scl.ElementsOf>(p
 			roots: [widen(record)],
 			emptiesContainers: false,
 		})
-		return await buildCascadeOperations(query, { cascade, deletedRoots: [] })
+		// a data set deleted itself is deleted by the store: what it leaves its control blocks still counts
+		return await buildCascadeOperations(query, {
+			cascade,
+			deletedRoots: [],
+			deletedElsewhere: record.tagName === DATA_SET_TAG ? [widen(record)] : [],
+		})
 	} finally {
 		query.perf.stop(CASCADE_PERF_SPAN)
 	}
@@ -65,6 +70,11 @@ export async function collectDeleteCascade(
 
 	const deleted = new Map<string, Scl.TrackedRecord<Scl.ElementsOf>>()
 	const within = new Map<string, Scl.RawRecord<Scl.ElementsOf>>()
+	// a container pruned takes what it still holds (an `Authentication`, a `Private`): the store deletes by id only
+	if (emptiesContainers) {
+		const rootIds = new Set(params.roots.map((root) => root.id))
+		for (const record of rootSubtree) if (!rootIds.has(record.id)) within.set(record.id, record)
+	}
 	const cleared = new Map<string, OrphanedRef>()
 	let roundSubtree: readonly Scl.RawRecord<Scl.ElementsOf>[] = rootSubtree
 	while (roundSubtree.length > 0) {
@@ -94,7 +104,15 @@ export async function collectDeleteCascade(
 			gone.add(record.id)
 			within.set(record.id, record)
 		}
-		roundSubtree = [...referenceSubtree, ...containers]
+		// a container emptied takes what it still holds, nothing else naming it (an `Authentication`, a `Private`)
+		const leftovers = (await readSubtreeRecords(query, { records: containers })).filter(
+			(record) => !gone.has(record.id) && !deleted.has(record.id),
+		)
+		for (const record of leftovers) {
+			gone.add(record.id)
+			within.set(record.id, record)
+		}
+		roundSubtree = [...referenceSubtree, ...containers, ...leftovers]
 	}
 	for (const id of within.keys()) deleted.delete(id)
 	const stillThere = [...cleared.values()].filter((orphaned) => !gone.has(orphaned.record.id))
@@ -107,8 +125,8 @@ export async function collectDeleteCascade(
 }
 
 /**
- * The containers above a record that are left holding nothing once everything in `gone` is gone — no other child,
- * no text — and have no reason to stay then (`isPrunedWhenEmpty`), walked up; each is added to `gone`. One already in
+ * The containers above a record that are left emptied once everything in `gone` is gone (`isEmptiedContainer`: holding
+ * nothing else, or none of the children of a kind they require), walked up; each is added to `gone`. One already in
  * `gone` is not walked through.
  */
 export async function collectEmptiedAbove(
@@ -126,22 +144,12 @@ export async function collectEmptiedAbove(
 	while (parentRef && PRUNED_WHEN_EMPTY_TAGS.has(parentRef.tagName) && !gone.has(parentRef.id)) {
 		if (kept?.has(parentRef.id)) break
 		const parent: Scl.TrackedRecord<Scl.ElementsOf> | undefined = await query.getRecord(parentRef)
-		if (!parent || !isPrunedWhenEmpty(parent) || !holdsNothingBut({ record: parent, gone })) break
+		if (!parent || !isEmptiedContainer({ record: parent, gone })) break
 		gone.add(parent.id)
 		emptied.push(parent)
 		parentRef = parent.parent
 	}
 	return emptied
-}
-
-/** Whether a record, not the root, holds no text and no child but those in `gone`. */
-export function holdsNothingBut(params: {
-	record: Scl.RawRecord<Scl.ElementsOf>
-	gone: ReadonlySet<string>
-}): boolean {
-	const { record, gone } = params
-	if (!record.parent || record.value.trim() !== '') return false
-	return record.children.every((child) => gone.has(child.id))
 }
 
 /**
@@ -155,9 +163,13 @@ export async function buildCascadeOperations(
 		deletedRoots: readonly Scl.TrackedRecord<Scl.ElementsOf>[]
 		/** Records other operations of the same commit write, read instead of the staged state. */
 		pending?: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
+		/** Control blocks whose revision the transaction raised already: a data set change raises it once. */
+		raised?: ReadonlySet<string>
+		/** Data sets the store deletes itself (the delete hook's own record): their control blocks lose them, no delete staged. */
+		deletedElsewhere?: readonly Scl.RawRecord<Scl.ElementsOf>[]
 	},
 ): Promise<Scl.Operation[]> {
-	const { cascade, deletedRoots, pending } = params
+	const { cascade, deletedRoots, pending, raised, deletedElsewhere = [] } = params
 	const operations: Scl.Operation[] = []
 	for (const orphaned of cascade.cleared) {
 		// a reference the same commit writes is cleared from what it writes
@@ -179,9 +191,10 @@ export async function buildCascadeOperations(
 		if (update.status === 'updated') staged.set(update.newRecord.id, update.newRecord)
 	}
 	const confRevRaises = await buildConfRevRaises(query, {
-		deleted,
+		deleted: [...deletedElsewhere, ...deleted],
 		gone: cascade.gone,
 		pending: staged,
+		raised,
 	})
 	operations.push(...mergeUpdates({ first: parentUpdates, last: confRevRaises }))
 	return operations
@@ -212,27 +225,32 @@ function mergeUpdates(params: {
 }
 
 /**
- * One update per control block sending a data set that stays and loses entries (`FCDA`): its configuration revision
- * one up ({@link confRevRaisesOf}). The data sets, their logical nodes and those nodes' control blocks are read a
- * level at a time, only when an entry goes.
+ * One update per control block whose data set changes: one sending a data set that stays and loses entries (`FCDA`)
+ * gets its configuration revision one up ({@link confRevRaisesOf}); one sending a data set that goes (its last entry
+ * gone, or deleted itself) loses its `datSet` too ({@link dataSetRemovalsOf}). The data sets, their logical nodes and
+ * those nodes' control blocks are read a level at a time, only when an entry or a data set goes.
  */
 async function buildConfRevRaises(
 	query: Core.Query<Config>,
 	params: {
-		deleted: readonly Scl.TrackedRecord<Scl.ElementsOf>[]
+		deleted: readonly Scl.RawRecord<Scl.ElementsOf>[]
 		gone: ReadonlySet<string>
 		pending?: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
+		raised?: ReadonlySet<string>
 	},
 ): Promise<Scl.Operation[]> {
-	const { deleted, gone, pending } = params
+	const { deleted, gone, pending, raised = new Set<string>() } = params
 	const dataSetRefs = deleted.flatMap((record) =>
 		record.tagName === DATA_SET_ENTRY_TAG && record.parent && !gone.has(record.parent.id)
 			? [record.parent as Scl.Ref<Scl.ElementsOf>]
 			: [],
 	)
 	const dataSets = await readStaying(query, { refs: dataSetRefs, pending })
+	const removedDataSets = deleted.filter(
+		(record) => record.tagName === DATA_SET_TAG && record.parent && !gone.has(record.parent.id),
+	)
 	const nodes = await readStaying(query, {
-		refs: dataSets.flatMap((dataSet) =>
+		refs: [...dataSets, ...removedDataSets].flatMap((dataSet) =>
 			dataSet.parent && !gone.has(dataSet.parent.id)
 				? [dataSet.parent as Scl.Ref<Scl.ElementsOf>]
 				: [],
@@ -243,24 +261,52 @@ async function buildConfRevRaises(
 		refs: nodes.flatMap(
 			(node) =>
 				node.children.filter(
-					(child) => CONF_REV_CONTROL_TAGS.has(child.tagName) && !gone.has(child.id),
+					(child) => DATA_SET_SENDER_TAGS.has(child.tagName) && !gone.has(child.id),
 				) as Scl.Ref<Scl.ElementsOf>[],
 		),
 		pending,
 	})
-	return dataSets.flatMap((dataSet) => {
-		const dataSetName = readAttribute({ record: dataSet, name: 'name', defaults: 'none' })
-		const ofNode = blocks.filter((block) => block.parent?.id === dataSet.parent?.id)
-		return confRevRaisesOf({ dataSetName, blocks: ofNode as AnyRawRecord[] }).map(
-			({ block, confRev }): Scl.Operation => {
-				const record = block as Scl.RawRecord<Scl.ElementsOf>
-				return updatedOperation(
-					record,
-					withAttributeValues(record.attributes, [{ name: 'confRev', value: confRev }]),
-				)
-			},
-		)
-	})
+	function blocksOf(dataSet: Scl.RawRecord<Scl.ElementsOf>): AnyRawRecord[] {
+		return blocks.filter((block) => block.parent?.id === dataSet.parent?.id) as AnyRawRecord[]
+	}
+	const raises = dataSets.flatMap((dataSet) =>
+		confRevRaisesOf({
+			dataSetName: readAttribute({ record: dataSet, name: 'name', defaults: 'none' }),
+			blocks: blocksOf(dataSet),
+		})
+			.filter(({ block }) => !raised.has(block.id))
+			.map(({ block, confRev }) => controlBlockUpdate({ block, confRev, datSetRemoved: false })),
+	)
+	const removals = removedDataSets.flatMap((dataSet) =>
+		dataSetRemovalsOf({
+			dataSetName: readAttribute({ record: dataSet, name: 'name', defaults: 'none' }),
+			blocks: blocksOf(dataSet),
+		}).map(({ block, confRev }) =>
+			controlBlockUpdate({
+				block,
+				confRev: raised.has(block.id) ? undefined : confRev,
+				datSetRemoved: true,
+			}),
+		),
+	)
+	return [...raises, ...removals]
+}
+
+/** The update of a control block whose data set changed: its revision raised, its `datSet` removed with its data set. */
+function controlBlockUpdate(params: {
+	block: AnyRawRecord
+	confRev: string | undefined
+	datSetRemoved: boolean
+}): Scl.Operation {
+	const { block, confRev, datSetRemoved } = params
+	const record = block as Scl.RawRecord<Scl.ElementsOf>
+	return updatedOperation(
+		record,
+		withAttributeValues(record.attributes, [
+			...(confRev === undefined ? [] : [{ name: 'confRev', value: confRev }]),
+			...(datSetRemoved ? [{ name: 'datSet', value: undefined }] : []),
+		]),
+	)
 }
 
 /** The records of `refs`, each once, read in one batch; one the commit's other operations write taken from `pending`. */

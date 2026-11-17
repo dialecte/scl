@@ -83,6 +83,9 @@ export const TUPLE_ORPHAN_TAGS = [
 /** The entry of a data set: its going changes what the data set's control blocks send. */
 export const DATA_SET_ENTRY_TAG = 'FCDA'
 
+/** The data set a control block sends by its name (`datSet`). */
+export const DATA_SET_TAG = 'DataSet'
+
 /** Whether a reference names one of the `wider` targets. */
 function namesWider(params: { reference: ReferenceUuid; wider: readonly string[] }): boolean {
 	const { reference, wider } = params

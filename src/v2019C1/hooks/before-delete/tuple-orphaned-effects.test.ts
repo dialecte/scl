@@ -29,15 +29,19 @@ describe('delete cascade over references by uuid: what each deletion leaves of i
 				],
 				unexpectedQueries: ['//default:FCDA[@lnUuid="xcbr7"]'],
 			},
-		// the same IED: its device LD1 holds the data sets, their control blocks and the nodes the entries name
-		'the device holding the data sets and the logical nodes they name deleted → nothing outside it written':
+		// the same IED: its device LD1, its server's only one, holds the data sets, their control blocks and the nodes the
+		// entries name
+		'the device holding the data sets and the logical nodes they name deleted → its server goes with it, the access point stays':
 			{
 				sourceXml: dataSetsSentByThreeBlocks,
 				deleted: { tagName: 'LDevice', id: 'ld7' },
-				expectedQueries: [
-					'//default:AccessPoint[@name="AP1"]/default:Server/default:Authentication',
+				expectedQueries: ['//default:IED/default:AccessPoint[@name="AP1"]'],
+				unexpectedQueries: [
+					'//default:LDevice',
+					'//default:FCDA',
+					'//default:Server',
+					'//default:Authentication',
 				],
-				unexpectedQueries: ['//default:LDevice', '//default:FCDA'],
 			},
 		// IED7's GOOSE sends an entry naming XCBR1 under AP2, and AP2 subscribes to that GOOSE
 		'the access point holding the named breaker and subscribing to the GOOSE deleted → the entry and the subscription go, the GOOSE revision rises':

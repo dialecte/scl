@@ -31,4 +31,4 @@ export async function applySupervisionDependencies(
 			await tx.update({ ...edit.source, id: target.id }, { attributes: edit.attributes })
 	}
 }
-import { holdsNothingBut } from '@/v2019C1/hooks/before-delete'
+import { holdsNothingBut } from '@/v2019C1/helpers/pruned-when-empty'

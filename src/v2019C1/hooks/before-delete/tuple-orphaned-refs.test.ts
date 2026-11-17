@@ -12,8 +12,8 @@ describe('delete cascade over the references naming their target by its address 
 	type TestCase = SclTest.BaseXmlTestCase & { deleted: Scl.Ref<Scl.ElementsOf> }
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		// IED7's breaker XCBR1, named by uuid by the stVal entry, IED8's input and IED8's control
-		'the breaker deleted → its entry goes and the GOOSE revision rises, the input and the control keep their internal address':
+		// IED7's breaker XCBR1, named by uuid by the stVal entry (its data set's only one), IED8's input and IED8's control
+		'the breaker deleted → its entry and the data set it empties go, the GOOSE loses its data set and its revision rises once, the input and the control keep their internal address':
 			{
 				sourceXml: breakerSubscribedAndControlled,
 				deleted: { tagName: 'LN', id: 'xcbr7' },
@@ -24,6 +24,8 @@ describe('delete cascade over the references naming their target by its address 
 				],
 				unexpectedQueries: [
 					'//default:FCDA[@daName="stVal"]',
+					'//default:DataSet',
+					'//default:GSEControl[@datSet]',
 					'//default:ExtRef[@iedName or @ldInst or @lnClass or @lnInst or @doName or @daName or @lnUuid]',
 					'//default:ExtRef[@srcLDInst or @srcLNClass or @srcCBName or @srcCBUuid]',
 					'//default:ExtCtrl[@iedName or @ldInst or @lnClass or @lnInst or @doName or @lnUuid]',

@@ -7,7 +7,7 @@ import {
 	referrerWork,
 	touchedTargets,
 } from './tuple-reference-changes'
-import { OWN_NAMES_BY_PAIR } from './tuple-references.constants'
+import { OWN_NAMES_BY_PAIR, REQUIRED_OWN_NAMES_BY_PAIR } from './tuple-references.constants'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -148,16 +148,22 @@ function composeWrite(params: {
 	const following: TupleReferencePair[] = []
 	const partsByUuid = new Map<string, TupleTargetParts>()
 	for (const { pair, action } of work.pairs) {
+		const targetTags = targetTagsOf({ pair, record })
+		const uuid = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
+		const target = uuid ? index.byUuid.get(uuid) : undefined
+		// a name the schema requires removed, the uuid kept (an `IEDName`'s `apRef`): written again from the uuid
+		if (target && targetTags.includes(target.tagName) && lacksRequiredName({ record, pair })) {
+			following.push(pair)
+			partsByUuid.set(uuid, target.parts)
+			continue
+		}
 		// a pair its reference's other names set aside (an `IEDName`'s access point pair beside an `ldInst`) names
 		// nothing here: its uuid is left as it is
 		if (!tuplePairApplies({ record, pair })) continue
-		const targetTags = targetTagsOf({ pair, record })
-		const uuid = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
 		const address = referrerTupleAddress({ pair, record, ancestry })
 		const resolved = address
 			? resolveTupleUuid({ address, targetTags, targetsByAddress: index.byAddress })
 			: undefined
-		const target = uuid ? index.byUuid.get(uuid) : undefined
 		if (action === 'fill' && resolved && fillAllowed({ work, uuid: resolved, index, touched }))
 			uuids[pair.attribute.uuid] = resolved
 		if (action === 'follow-uuid' && target && targetTags.includes(target.tagName)) {
@@ -177,6 +183,13 @@ function composeWrite(params: {
 			})
 	}
 	return updateOf({ record, uuids, following, partsByUuid, ancestry })
+}
+
+/** Whether a reference lacks an own name of a pair the schema requires on it (an `IEDName` with no `apRef`). */
+function lacksRequiredName(params: { record: AnyRawRecord; pair: TupleReferencePair }): boolean {
+	const { record, pair } = params
+	const required = REQUIRED_OWN_NAMES_BY_PAIR.get(record.tagName)?.get(pair.attribute.uuid) ?? []
+	return required.some((name) => !readAttribute({ record, name, defaults: 'none' }))
 }
 
 /**

@@ -51,12 +51,14 @@ describe('the commit follows a subscriber narrowed from a logical node to its de
 	type TestCase = SclTest.BaseXmlTestCase & { subscriber: Record<string, string> }
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		// IED7's GOOSE gets a subscriber naming IED8's CSWI1 in LD1; a later transaction drops its logical node names
+		// IED7's GOOSE gets a subscriber naming IED8's CSWI1 in LD1 of AP1; a later transaction drops its logical node names
 		'a subscriber naming a logical node, its logical node names removed → the device uuid written, the node uuid removed':
 			{
 				sourceXml: connectionsAndAVendorCopy,
-				subscriber: { ldInst: 'LD1', lnClass: 'CSWI', lnInst: '1' },
-				expectedQueries: ['//default:IEDName[.="IED8"][@ldInst="LD1"][@ldUuid="ld8"]'],
+				subscriber: { apRef: 'AP1', ldInst: 'LD1', lnClass: 'CSWI', lnInst: '1' },
+				expectedQueries: [
+					'//default:IEDName[.="IED8"][@apRef="AP1"][@ldInst="LD1"][@ldUuid="ld8"]',
+				],
 				unexpectedQueries: ['//default:IEDName[@lnUuid or @lnClass]'],
 			},
 	}

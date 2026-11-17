@@ -43,7 +43,7 @@
 				"is this Private a wrapper of 6-100 elements",
 				"walk through a Private wrapper"
 			],
-			"declaredAt": "src/v2019C1/helpers/pruned-when-empty.ts:23"
+			"declaredAt": "src/v2019C1/helpers/pruned-when-empty.ts:82"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1.isSclImportDiagnostic",
@@ -752,7 +752,7 @@
 				"remove empty containers left after deletes (reference containers, wrappers, Private elements)",
 				"tidy up a document or an extracted file"
 			],
-			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/prune-empty-containers.ts:19"
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/prune-empty-containers.ts:18"
 		},
 		{
 			"path": "tx.cleanUp.pruneUnusedTypes",

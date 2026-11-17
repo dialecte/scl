@@ -1,3 +1,4 @@
+import { REQUIRED_ATTRIBUTES } from '@/v2019C1/definition/constants.generated'
 import { REFERENCE_UUIDS_BY_TAG } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 
 /** The element whose rename renames every tuple target in it. */
@@ -28,5 +29,31 @@ export const OWN_NAMES_BY_PAIR: ReadonlyMap<
 				}),
 			),
 		],
+	),
+)
+
+/**
+ * Per referrer tag and uuid attribute, the own names of a pair the schema requires on the referrer (an `IEDName`'s
+ * `apRef`): removed, they are written again from the pair's uuid instead of unbinding it.
+ */
+export const REQUIRED_OWN_NAMES_BY_PAIR: ReadonlyMap<
+	string,
+	ReadonlyMap<string, readonly string[]>
+> = new Map(
+	[...OWN_NAMES_BY_PAIR].map(
+		([tagName, pairs]): [string, ReadonlyMap<string, readonly string[]>] => {
+			const required = new Set<string>(
+				(REQUIRED_ATTRIBUTES as Record<string, readonly string[]>)[tagName] ?? [],
+			)
+			return [
+				tagName,
+				new Map(
+					[...pairs].map(([uuid, names]): [string, readonly string[]] => [
+						uuid,
+						names.filter((name) => required.has(name)),
+					]),
+				),
+			]
+		},
 	),
 )

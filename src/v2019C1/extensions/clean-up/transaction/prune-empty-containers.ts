@@ -1,8 +1,7 @@
 import { toRef } from '@dialecte/core/helpers'
 
-import { isPrunedWhenEmpty } from '@/v2019C1/helpers/pruned-when-empty'
+import { isEmptiedContainer } from '@/v2019C1/helpers/pruned-when-empty'
 import { PRUNED_WHEN_EMPTY_TAGS } from '@/v2019C1/helpers/pruned-when-empty.constants'
-import { holdsNothingBut } from '@/v2019C1/hooks/before-delete'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -32,8 +31,7 @@ async function pruneUpward(
 	let ref: Scl.Ref<Scl.ElementsOf> | undefined = params.ref
 	while (ref && PRUNED_WHEN_EMPTY_TAGS.has(ref.tagName)) {
 		const record: Scl.TrackedRecord<Scl.ElementsOf> | undefined = await tx.getRecord(ref)
-		if (!record || !isPrunedWhenEmpty(record) || !holdsNothingBut({ record, gone: new Set() }))
-			return
+		if (!record || !isEmptiedContainer({ record, gone: new Set() })) return
 		if (!record.parent) return
 		await tx.delete(ref)
 		ref = toRef(record.parent) as Scl.Ref<Scl.ElementsOf>
