@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IED7 holds two breakers XCBR1 and XCBR2, an empty data set DS, a GOOSE "C1" and a report "R1"; IED8 subscribes
+     to XCBR1's position through the GOOSE (its ExtRef names both by uuid and by names, with no service: any control block
+     kind named C1 answers its names) and holds an empty data set DS8; the substation S1 holds no LNode -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <Substation name="S1" dev:db-id="s1"/>
+    <IED name="IED7" uuid="ied7" dev:db-id="ied7">
+        <AccessPoint name="AP1" uuid="ap7" dev:db-id="ap7">
+            <Server dev:db-id="srv7">
+                <Authentication dev:db-id="auth7"/>
+                <LDevice inst="LD1" uuid="ld7" dev:db-id="ld7">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln07" dev:db-id="ln07">
+                        <DataSet name="DS" dev:db-id="ds7"/>
+                        <ReportControl name="R1" confRev="1" uuid="rc7" dev:db-id="rc7">
+                            <OptFields dev:db-id="opt7"/>
+                        </ReportControl>
+                        <GSEControl name="C1" appID="C1" confRev="1" uuid="gc7" dev:db-id="gc7"/>
+                    </LN0>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="xcbr1" dev:db-id="xcbr1"/>
+                    <LN lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="xcbr2" dev:db-id="xcbr2"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="IED8" uuid="ied8" dev:db-id="ied8">
+        <AccessPoint name="AP1" uuid="ap8" dev:db-id="ap8">
+            <Server dev:db-id="srv8">
+                <Authentication dev:db-id="auth8"/>
+                <LDevice inst="LD1" uuid="ld8" dev:db-id="ld8">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln08" dev:db-id="ln08">
+                        <DataSet name="DS8" dev:db-id="ds8"/>
+                        <Inputs dev:db-id="in8">
+                            <ExtRef iedName="IED7" ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" lnUuid="xcbr1" srcLDInst="LD1" srcLNClass="LLN0" srcCBName="C1" srcCBUuid="gc7" intAddr="pos" dev:db-id="ext8"/>
+                        </Inputs>
+                    </LN0>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0"/>
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="lnt1"><DO name="Pos" type="DPC_T" dev:db-id="do-pos"/></LNodeType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dot">
+            <DA name="stVal" fc="ST" bType="Dbpos" dev:db-id="da-st"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>

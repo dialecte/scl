@@ -82,7 +82,7 @@ describe('delete cascade over the references naming their target by its address 
 	runSclTestCases.withExport({ testCases, act })
 })
 
-describe('delete cascade over a reference naming its target by names only', () => {
+describe('delete cascade over a reference added by names only', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		/** The entry added through the API by names only, in a transaction before the delete (an import fills its uuid). */
 		entry: Record<string, string>
@@ -90,13 +90,22 @@ describe('delete cascade over a reference naming its target by names only', () =
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		// an entry for the breaker's quality, added with no lnUuid; the stVal entry names the breaker by uuid
-		'an entry naming the breaker by names only, the breaker deleted → the entry stays': {
-			sourceXml: breakerSubscribedAndControlled,
-			entry: { ldInst: 'LD1', lnClass: 'XCBR', lnInst: '1', doName: 'Pos', daName: 'q', fc: 'ST' },
-			deleted: { tagName: 'LN', id: 'xcbr7' },
-			expectedQueries: ['//default:FCDA[@daName="q"][@lnClass="XCBR"][not(@lnUuid)]'],
-		},
+		// an entry for the breaker's quality, added with no lnUuid: its commit writes the breaker's
+		'an entry added naming the breaker by names only, the breaker deleted → its commit gave it the uuid, it goes':
+			{
+				sourceXml: breakerSubscribedAndControlled,
+				entry: {
+					ldInst: 'LD1',
+					lnClass: 'XCBR',
+					lnInst: '1',
+					doName: 'Pos',
+					daName: 'q',
+					fc: 'ST',
+				},
+				deleted: { tagName: 'LN', id: 'xcbr7' },
+				expectedQueries: ['//default:GSEControl[@name="GC"][@confRev="2"]'],
+				unexpectedQueries: ['//default:FCDA'],
+			},
 	}
 
 	async function act({

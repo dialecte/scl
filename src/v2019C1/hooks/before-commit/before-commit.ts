@@ -6,6 +6,7 @@ import { pruneUnusedTypes } from './prune-unused-types'
 import { releaseLNodesOfDeletedLogicalNodes } from './release-deleted-logical-nodes'
 import { specificationIedsOfCreated } from './specification-ieds-of-created'
 import { writeTupleNamesAtCommit } from './tuple-names'
+import { writeTupleReferencesAtCommit } from './tuple-references'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -69,17 +70,24 @@ export async function beforeCommit(params: {
 		bound,
 		pending: lastWrites({ operations: ensured }),
 	})
+	// the tuple references the transaction wrote, and those naming by names what it created or renamed, get uuid and
+	// names in agreement
+	const references = await writeTupleReferencesAtCommit({
+		operations,
+		query,
+		pending: lastWrites({ operations: [...ensured, ...tupleNames] }),
+	})
 	// the LNodes bound to a logical node the transaction deleted are released, from what the steps above wrote
 	const released = await releaseLNodesOfDeletedLogicalNodes(query, {
 		operations,
-		pending: lastWrites({ operations: [...ensured, ...tupleNames] }),
+		pending: lastWrites({ operations: [...ensured, ...tupleNames, ...references] }),
 	})
 	// what no referrer names any more goes, with what only it named
 	const unusedTypes = await pruneUnusedTypes({ operations, query })
 	// what the transaction left holding nothing goes, read with what the naming, the release and the type prune just wrote
 	const pending = new Map<string, Scl.RawRecord<Scl.ElementsOf>>()
 	const gone = new Set<string>()
-	for (const operation of [...ensured, ...released, ...unusedTypes]) {
+	for (const operation of [...ensured, ...references, ...released, ...unusedTypes]) {
 		if (operation.status === 'deleted') gone.add(operation.oldRecord.id)
 		else pending.set(operation.newRecord.id, operation.newRecord)
 	}
@@ -89,7 +97,7 @@ export async function beforeCommit(params: {
 		pending,
 		gone,
 	})
-	const staged = [...ensured, ...tupleNames, ...released, ...unusedTypes, ...pruned]
+	const staged = [...ensured, ...tupleNames, ...references, ...released, ...unusedTypes, ...pruned]
 	await assertNoChildLeftBehind({ operations: [...operations, ...staged], query })
 	return staged
 }
