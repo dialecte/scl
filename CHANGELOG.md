@@ -28,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `DiffNode.pairedByKey`, `DiffNode.orderChange` (`OrderChange`), `DiffNode.confRevBumps` (`ConfRevBump`); `report.warnings` codes `identical-elements-paired-in-order` (an element that is no reference paired among twins; `DiffNode.pairedAmongTwins` now marks those too) and `element-paired-by-key`. Breaking for a consumer switching exhaustively over `ReportWarning['code']`: two more cases.
+- `reference.query.buildReferencePath` takes `referenceRecord`, the reference's record when the caller already read it, so it is not read again.
+
+### Fixed
+
+- **A reference naming two elements below one renamed element writes both paths.** An `InputVar` naming an LNode (`lnodeUuid`) and a `SourceRef` below it (`inputUuid`), or an `OutputVar` naming an LNode and a `ControlRef` below it, kept the old `dataName` when the LNode was renamed or given another instance: the second path written dropped the first. Both now follow.
+
+### Performance
+
+- **Renames follow with fewer reads.** A rename, or a change of the naming of an LNode, rebuilds the paths below the element with one read of its subtree and ancestors and one search per referrer tag and uuid attribute, whatever the number of elements below (was an ancestor walk and one search per referrer tag for each element below); the references found are not read again. A reference whose path depends on its own place (a signal role reference, the variables of a behavior description, an input's IED address) still reads that place once per reference. A created element and the siblings of a signal cost the same searches as before, and one read of their own records.
 
 ## [0.19.0] - 2026-11-16
 

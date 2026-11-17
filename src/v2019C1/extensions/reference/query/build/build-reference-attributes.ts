@@ -14,8 +14,8 @@ import type * as Core from '@dialecte/core'
 /**
  * The attributes a reference holds for `target`: the path of its pair, then the attributes it
  * writes from the target's path (a terminal's level names). Empty when the reference has no pair
- * to that target or the target has no path. Pass `targetPath` when several references share it,
- * so it is read once; pass `referrerContext` when the mapping of the referrer's LNode is held as the
+ * to that target or the target has no path. Pass `referenceRecord` when the reference was already
+ * read, and `targetPath` when several references share it, so it is read once; pass `referrerContext` when the mapping of the referrer's LNode is held as the
  * store does not yet; pass `functionBases` when several signal role references below one FunctionRef
  * share where their path starts.
  */
@@ -23,13 +23,14 @@ export async function buildReferenceAttributes(
 	query: Core.Query<Config> | Core.Transaction<Config>,
 	params: {
 		reference: Scl.Ref<Scl.ElementsOf>
+		referenceRecord?: Scl.TrackedRecord<Scl.ElementsOf>
 		target: Scl.Ref<Scl.ElementsOf>
 		targetPath?: ElementPath
 		referrerContext?: ReferrerContext
 		functionBases?: FunctionBases
 	},
 ): Promise<DerivedAttributeValue[]> {
-	const { reference, target, referrerContext, functionBases } = params
+	const { reference, referenceRecord, target, referrerContext, functionBases } = params
 	const pair = PAIRS_BY_REF.get(reference.tagName)?.find((entry) =>
 		entry.targetTagNames.includes(target.tagName),
 	)
@@ -40,6 +41,7 @@ export async function buildReferenceAttributes(
 
 	const path = await buildReferencePath(query, {
 		reference,
+		referenceRecord,
 		target,
 		targetPath,
 		referrerContext,

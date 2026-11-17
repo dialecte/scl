@@ -9,7 +9,7 @@ const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
 describe('ref-entry-ops', () => {
-	describe('rebuildReferencesByUuid', () => {
+	describe('references to an element follow it by its uuid', () => {
 		type TestCase = SclTest.BaseXmlTestCase & {
 			act: (document: Scl.Document) => Promise<void>
 		}

@@ -8,7 +8,7 @@ import {
 import { readAttribute } from '@/v2019C1/helpers'
 import {
 	findTargetByUuid,
-	rebuildReferencesByUuid,
+	followAncestry,
 	reconcileMappedData,
 	updatedOperation,
 	withAttributeValues,
@@ -97,5 +97,7 @@ async function setRefPathsOnCreatedTarget<GenericElement extends Scl.ElementsOf>
 	if (!uuid || !REF_ENTRIES_BY_TARGET.has(childRecord.tagName)) return []
 
 	const target = { tagName: childRecord.tagName, id: childRecord.id } as Scl.Ref<Scl.ElementsOf>
-	return rebuildReferencesByUuid(query, { uuid, target })
+	return followAncestry(query, {
+		roots: [{ root: target, references: true, ownPath: false, below: false }],
+	})
 }

@@ -146,6 +146,94 @@ describe('an LNode is named in paths by its specified naming', () => {
 			},
 			expectedQueries: ['//v2019C1:ControlRef[@controlled="S1/F1/XCBR3.Pos"]'],
 		},
+		'the specified naming of an LNode is edited -> a reference to a signal below the LNode follows':
+			{
+				sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation ${id}="substation" name="S1">
+						<Function ${id}="function" name="F1">
+							<LNode ${id}="breaker" uuid="breaker-uuid" iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2">
+								<Private ${id}="breaker-private" type="eIEC61850-6-100">
+									<eIEC61850-6-100:LNodeSpecNaming ${id}="breaker-naming" sLnClass="XCBR" sLnInst="1" />
+									<eIEC61850-6-100:LNodeInputs ${id}="inputs">
+										<eIEC61850-6-100:SourceRef ${id}="source-ref" uuid="source-ref-uuid" input="Trip" />
+									</eIEC61850-6-100:LNodeInputs>
+								</Private>
+							</LNode>
+							<Private ${id}="function-private" type="eIEC61850-6-100">
+								<eIEC61850-6-100:BehaviorDescription ${id}="behavior" name="BD1">
+									<eIEC61850-6-100:InputVar ${id}="input-var" varName="trip" inputName="XCBR1.Trip" inputUuid="source-ref-uuid" />
+								</eIEC61850-6-100:BehaviorDescription>
+							</Private>
+						</Function>
+					</Substation>
+					<IED ${id}="p1" name="P1">
+						<AccessPoint ${id}="p1-ap" name="AP1">
+							<Server ${id}="p1-server">
+								<Authentication ${id}="p1-authentication" />
+								<LDevice ${id}="p1-ld" inst="LD0">
+									<LN0 ${id}="p1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" />
+									<LN ${id}="p1-breaker" prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" />
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update(
+							{ tagName: 'LNodeSpecNaming', id: 'breaker-naming' },
+							{ attributes: { sLnInst: '3' } },
+						)
+					})
+				},
+				expectedQueries: ['//v2019C1:InputVar[@inputName="XCBR3.Trip"]'],
+				unexpectedQueries: ['//v2019C1:InputVar[@inputName="XCBR1.Trip"]'],
+			},
+		'a behavior description beside the specified naming of a bound LNode is renamed -> a reference to it names the LNode as specified':
+			{
+				sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation ${id}="substation" name="S1">
+						<Function ${id}="function" name="F1">
+							<LNode ${id}="breaker" uuid="breaker-uuid" iedName="P1" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2">
+								<Private ${id}="breaker-private" type="eIEC61850-6-100">
+									<eIEC61850-6-100:LNodeSpecNaming ${id}="breaker-naming" sLnClass="XCBR" sLnInst="1" />
+									<eIEC61850-6-100:BehaviorDescription ${id}="breaker-behavior" name="BD1" uuid="breaker-behavior-uuid" />
+								</Private>
+							</LNode>
+							<Private ${id}="function-private" type="eIEC61850-6-100">
+								<eIEC61850-6-100:BehaviorDescription ${id}="function-behavior" name="BD2">
+									<eIEC61850-6-100:BehaviorReference ${id}="behavior-reference" behaviorReference="S1/F1/XCBR1/BD1" behaviorUuid="breaker-behavior-uuid" />
+								</eIEC61850-6-100:BehaviorDescription>
+							</Private>
+						</Function>
+					</Substation>
+					<IED ${id}="p1" name="P1">
+						<AccessPoint ${id}="p1-ap" name="AP1">
+							<Server ${id}="p1-server">
+								<Authentication ${id}="p1-authentication" />
+								<LDevice ${id}="p1-ld" inst="LD0">
+									<LN0 ${id}="p1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" />
+									<LN ${id}="p1-breaker" prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" />
+								</LDevice>
+							</Server>
+						</AccessPoint>
+					</IED>
+				</SCL>
+			`,
+				act: async (document) => {
+					await document.transaction(async (tx) => {
+						await tx.update(
+							{ tagName: 'BehaviorDescription', id: 'breaker-behavior' },
+							{ attributes: { name: 'BD9' } },
+						)
+					})
+				},
+				expectedQueries: ['//v2019C1:BehaviorReference[@behaviorReference="S1/F1/XCBR1/BD9"]'],
+				unexpectedQueries: ['//v2019C1:BehaviorReference[@behaviorReference="S1/F1/Q0XCBR2/BD9"]'],
+			},
 		'the specified naming of an LNode is removed -> the paths through it name it by its own naming':
 			{
 				sourceXml: controlledBreakerXml,
