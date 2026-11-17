@@ -1,4 +1,5 @@
 import {
+	BOUND_INPUT_OWNED_ATTRIBUTES,
 	CONF_REV_ONLY_RISES,
 	BOUND_LNODE_KEEPING_ITS_TYPE,
 	BOUND_LNODE_OWNED_ATTRIBUTES,
@@ -23,8 +24,9 @@ import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy
  *   (`boundLogicalNodeTypes: 'keep'`): then a type change is listed as kept;
  * - a control block's configuration revision only rises: a template's lower than the project's is listed as kept;
  * - an instance of a template keeps what it configures where it sits (`INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES`: a
- *   behaviour description's file, a variable's value) — when its names are the project's (`namesFollow: 'project'`);
- *   a fork writes the newer revision's, as it does its names.
+ *   behaviour description's file, a variable's value; `BOUND_INPUT_OWNED_ATTRIBUTES`: the source an input or output
+ *   of an IED is bound to) — when its names are the project's (`namesFollow: 'project'`); a fork writes the newer
+ *   revision's, as it does its names.
  *
  * Read from the project element's own attributes, so the report and the apply decide alike.
  */
@@ -54,7 +56,17 @@ export function projectOwnedAttributes(params: {
 			: BOUND_LNODE_OWNED_ATTRIBUTES
 	}
 	if (!configuredWhereItSits(namesFollow)) return NO_PROJECT_OWNED_ATTRIBUTES
+	const boundInput = BOUND_INPUT_OWNED_ATTRIBUTES.get(tagName)
+	if (boundInput && isBound({ owned: boundInput, instanceAttributes })) return boundInput
 	return INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES.get(tagName) ?? NO_PROJECT_OWNED_ATTRIBUTES
+}
+
+/** Whether an input or output of the project names a source: any of its source attributes written. */
+function isBound(params: {
+	owned: ProjectOwnedAttributes
+	instanceAttributes: Readonly<Record<string, string | undefined>>
+}): boolean {
+	return [...params.owned.attributes].some((name) => Boolean(params.instanceAttributes[name]))
 }
 
 /** Whether a template's configuration revision is below the project's (both unsigned counters). */

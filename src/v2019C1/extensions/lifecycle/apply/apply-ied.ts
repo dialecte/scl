@@ -1,5 +1,6 @@
 import { throwDialecteError } from '@dialecte/core'
 
+import { SCL_ERRORS } from '@/v2019C1/errors'
 import {
 	annotateInstance,
 	sourceToTargetMap,
@@ -11,6 +12,8 @@ import {
 	leftOutRefIds,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { ied as instantiateIed } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { resolveIedInstance } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
+import { reconcileIed } from '@/v2019C1/extensions/lifecycle/update/transaction/ied'
 
 import type { ApplyIedParams } from './apply-ied.types'
 import type { AppliedInstance } from './apply.types'
@@ -35,6 +38,9 @@ export async function applyIed(
 	const { target, report, decisions } = params
 	const { sourceQuery, ref: iedRef } = target
 	const fileType = report.target?.fileType
+	// an IED the project holds from this template is updated, never placed a second time
+	const updated = await applyIedUpdate(tx, params)
+	if (updated) return updated
 	const placedType = placedFileType(fileType)
 
 	// the first placement is one group: skipped, nothing is written
@@ -62,6 +68,48 @@ export async function applyIed(
 		if (!reportInstance.rootRef) annotateInstance({ reportInstance, added })
 	}
 	return [{ ref: placed.iedRef, placement: 'placed' }]
+}
+
+/**
+ * The update the report lists of the IED of the project placed from the template (`reconcileIed`); undefined when the
+ * project holds none (a first placement). A report made for a first placement, or for another instance, is refused
+ * with `REPORT_TARGET_MISMATCH` (`meta: { field: 'targetInstance' }`).
+ */
+async function applyIedUpdate(
+	tx: Core.Transaction<Config>,
+	params: ApplyIedParams,
+): Promise<AppliedInstance<'IED'>[] | undefined> {
+	const { target, report, decisions } = params
+	const fileType = report.target?.fileType
+	const instance = await resolveIedInstance(tx, {
+		sourceQuery: target.sourceQuery,
+		iedRef: target.ref,
+		scenario: target.scenario ?? 'template',
+		fileType,
+		targetInstance: target.targetInstance,
+		operation: 'apply (ied)',
+	})
+	if (!instance || !fileType) return undefined
+	const [reported] = report.instances
+	if (reported?.rootRef?.id !== instance.id) {
+		throwDialecteError(SCL_ERRORS.REPORT_TARGET_MISMATCH, {
+			meta: { field: 'targetInstance' },
+			detail: 'apply (ied): the report was not made for the update of the IED the project holds',
+		})
+	}
+	return reconcileIed(tx, {
+		sourceQuery: target.sourceQuery,
+		iedRef: target.ref,
+		anchor: target.anchor,
+		instance,
+		fileType,
+		report,
+		decisions,
+		removalBase: params.removalBase,
+		placeholderLineages: params.placeholderLineages,
+		keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
+		takeOver: target.resolution?.takeOver,
+	})
 }
 
 /** The type of file an IED is placed from: the report refused another. */

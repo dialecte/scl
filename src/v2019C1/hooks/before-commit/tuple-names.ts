@@ -191,7 +191,7 @@ function relativeReferrers(params: { naming: readonly NamingReferrer[] }): AnyRa
  */
 export async function readAncestries(params: {
 	records: readonly AnyRawRecord[]
-	query: Core.Query<Config>
+	query: Core.Query<Config> | Core.Transaction<Config>
 	held?: ReadonlyMap<string, AnyRawRecord>
 }): Promise<Map<string, AnyRawRecord[]>> {
 	const { records, query } = params

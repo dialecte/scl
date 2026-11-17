@@ -1,4 +1,5 @@
 import { LNODE_BINDING_ATTRIBUTES, TYPE_ID_REF_ATTRIBUTES } from '@/v2019C1/extensions/reference'
+import { SOURCE_ATTRIBUTES_BY_TAG } from '@/v2019C1/hooks/shared/input-source.constants'
 
 import type { KeptAttributeReason } from './diff.types'
 import type { ProjectOwnedAttributes } from './project-owned-attributes.types'
@@ -69,3 +70,20 @@ export const CONF_REV_ONLY_RISES: ProjectOwnedAttributes = {
 	attributes: new Set(['confRev']),
 	listedAsKept: new Map<string, KeptAttributeReason>([['confRev', 'conf-rev-only-rises']]),
 }
+
+/**
+ * An input or output of an IED the project bound to a source: the source it names (the data and the control block
+ * sending it) is the system configuration's, kept against a template, each difference listed as kept. Its internal
+ * address, description, service and expected data (`pXxx`) are the template's.
+ */
+export const BOUND_INPUT_OWNED_ATTRIBUTES: ReadonlyMap<string, ProjectOwnedAttributes> = new Map(
+	[...SOURCE_ATTRIBUTES_BY_TAG].map(([tagName, names]): [string, ProjectOwnedAttributes] => [
+		tagName,
+		{
+			attributes: new Set(names),
+			listedAsKept: new Map(
+				names.map((name): [string, KeptAttributeReason] => [name, 'data-flow']),
+			),
+		},
+	]),
+)

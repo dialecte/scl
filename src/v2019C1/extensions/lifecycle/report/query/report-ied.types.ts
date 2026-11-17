@@ -3,6 +3,7 @@ import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.
 import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
+import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
@@ -21,6 +22,10 @@ export type ReportIedParams = {
 	decisionMappings?: DecisionMappings
 	/** What the whole report already listed and named. */
 	pass?: ReportPass
+	/** The IED of the project an update starts from: required when the project holds several instances. */
+	targetInstance?: Scl.Ref<'IED'>
+	/** What tells an element the template dropped from one the project added, read once for the whole report. */
+	removalBase: RemovalBase
 }
 
 export type WithCompanionParams = {

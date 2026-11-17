@@ -6,6 +6,7 @@ import type { ConfRevBumpQueue, DataSetChange } from './data-set-order.types'
 import type { AcceptedIds } from './decide.types'
 import type { ConfRevBump, DiffNode } from './diff.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { TemplateBlocks } from '@/v2019C1/extensions/lifecycle/layers/ied/bump-data-set-conf-revs.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
@@ -21,15 +22,16 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
 export async function readDataSetChange(
 	targetQuery: Reader,
 	params: {
-		sourceQuery: Reader
 		sourceNode: AnyTreeRecord
 		instanceNode: AnyTreeRecord
 		children: readonly DiffNode[]
 		matchKey: MatchKey
 		redirectedSourceUuids: ReadonlyMap<string, string>
+		/** The template's control blocks by uuid: see `readTemplateBlocks`. */
+		templateBlocks: TemplateBlocks
 	},
 ): Promise<DataSetChange> {
-	const { sourceQuery, sourceNode, instanceNode, children } = params
+	const { sourceNode, instanceNode, children } = params
 	const tagName = ORDERED_CHILD_TAGS.get(sourceNode.tagName)
 	if (!tagName) return {}
 	const entries = children.filter((node) => node.tagName === tagName)
@@ -50,16 +52,16 @@ export async function readDataSetChange(
 	const reordered = isReordered({ templateIds, currentIds })
 	const entriesChange = entries.some((node) => node.change === 'added' || node.change === 'removed')
 	if (!reordered && !entriesChange) return {}
-	const confRevBumps = await readConfRevBumps(targetQuery, {
+	const { bumps, notRaised } = await readConfRevBumps(targetQuery, {
 		instanceDataSet: instanceNode,
-		sourceQuery,
-		sourceDataSet: sourceNode,
+		templateBlocks: params.templateBlocks,
 		matchKey: params.matchKey,
 		redirectedSourceUuids: params.redirectedSourceUuids,
 	})
 	return {
 		...(reordered ? { orderChange: { tagName } } : {}),
-		...(confRevBumps.length > 0 ? { confRevBumps } : {}),
+		...(bumps.length > 0 ? { confRevBumps: bumps } : {}),
+		...(notRaised.length > 0 ? { confRevNotRaised: notRaised } : {}),
 	}
 }
 
@@ -73,7 +75,6 @@ export async function readDataSetChange(
 export async function writeDataSetChange(
 	tx: Core.Transaction<Config>,
 	params: {
-		sourceQuery: Reader
 		sourceNode: AnyTreeRecord
 		instanceParent: AnyTreeRecord
 		/** Each source entry the walk paired, with the instance entry it paired with. */
@@ -85,6 +86,8 @@ export async function writeDataSetChange(
 		confRevBumps: ConfRevBumpQueue
 		matchKey: MatchKey
 		redirectedSourceUuids: ReadonlyMap<string, string>
+		/** The template's control blocks by uuid: see `readTemplateBlocks`. */
+		templateBlocks: TemplateBlocks
 	},
 ): Promise<void> {
 	const { sourceNode, instanceParent, accepted } = params
@@ -109,12 +112,14 @@ export async function writeDataSetChange(
 	if (moved) params.confRevBumps.moved(moved)
 	const removedHere = params.removedTags.includes(tagName)
 	if (!reordered && addedHere.length === 0 && !removedHere) return
-	const bumps = await readConfRevBumps(tx, {
+	// a block whose own change the template raises takes the template's value, unless that change is skipped
+	const { bumps } = await readConfRevBumps(tx, {
 		instanceDataSet: instanceParent,
-		sourceQuery: params.sourceQuery,
-		sourceDataSet: sourceNode,
+		templateBlocks: params.templateBlocks,
 		matchKey: params.matchKey,
 		redirectedSourceUuids: params.redirectedSourceUuids,
+		accepted,
+		writesAll: accepted === undefined,
 	})
 	params.confRevBumps.defer(bumps)
 }
@@ -134,7 +139,8 @@ async function writeTemplateOrder(
 	},
 ): Promise<ReadonlyMap<string, string> | undefined> {
 	const { sourceNode, instanceParent, tagName, accepted } = params
-	if (accepted && !accepted.instanceIds.has(instanceParent.id)) return undefined
+	// a matched data set's change is accepted by its template counterpart (`acceptedRefIds` keys a change by source)
+	if (accepted && !accepted.sourceIds.has(sourceNode.id)) return undefined
 	const templateIds = idsInTemplateOrder({ sourceNode, tagName, placed: params.placed })
 	const live = await tx.any.getRecord(instanceParent)
 	const currentIds = (live?.children ?? [])

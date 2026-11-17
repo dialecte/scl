@@ -11,6 +11,7 @@ import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-polic
 import { resolvePlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { assertTakeOversOffered } from '@/v2019C1/extensions/lifecycle/engine/value-ownership'
+import { readOtherIedImpacts } from '@/v2019C1/extensions/lifecycle/layers/ied/other-ied-impacts'
 import { assertMappingsCoherent, createReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
 	assertRevisionBaseFits,
@@ -98,6 +99,20 @@ export async function report(
 
 	// what a removal makes the delete hooks do outside it, read before anything is decided
 	await listRemovalSideEffects(query, { groups: allGroups(report) })
+	// an IED update never changes another IED: what it would change there is listed, the groups bringing it blocked
+	if (target.verb === 'ied') {
+		const { impacts, blockedGroupIds } = await readOtherIedImpacts(query, { report })
+		for (const group of allGroups(report)) {
+			if (!blockedGroupIds.has(group.id)) continue
+			group.blocked = 'affects-other-ied'
+			group.suggestedAction = 'skip'
+			delete group.requiresDecision
+		}
+		if (impacts.length > 0) {
+			report.otherIedImpacts = impacts
+			report.needsDecisions = true
+		}
+	}
 
 	// a mapping nothing is decided for is the consumer's to choose before anything is written
 	if (report.mappings.some((mapping) => !mapping.mapping)) report.needsDecisions = true
@@ -184,6 +199,8 @@ async function reportVerb(
 				placeholderLineages,
 				decisionMappings: target.resolution?.mappings,
 				pass,
+				targetInstance: target.targetInstance,
+				removalBase,
 			})
 	}
 }

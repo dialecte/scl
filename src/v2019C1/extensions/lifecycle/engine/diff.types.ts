@@ -27,6 +27,7 @@ export type KeptAttributeReason =
 	| 'instance-configuration'
 	| 'conf-rev-only-rises'
 	| 'settable-value'
+	| 'data-flow'
 
 /** A difference the update lists but does not apply: the project keeps `before`, the template says `after`. */
 export type KeptAttributeChange = AttributeChange & { reason: KeptAttributeReason }
@@ -134,11 +135,13 @@ export type DiffNode = {
 	/**
 	 * Present on a matched data set whose entries the update changes (one added, removed or put in another order): the
 	 * configuration revision each control block naming it takes, one above its own (the project's own blocks included) —
-	 * except a block the template no longer holds, one the template raises above it itself, and one whose counter is no
-	 * unsigned 32-bit number.
+	 * except a block the template no longer holds (anywhere in the IED); one the template raises above it itself is
+	 * listed for when its own change is skipped (`onlyIfBlockSkipped`).
 	 * Written by `apply` with the changes of the entries; lists, opens no decision of its own.
 	 */
 	confRevBumps?: ConfRevBump[]
+	/** Present when a control block naming the data set cannot be raised (see `ConfRevNotRaised`): the report warns. */
+	confRevNotRaised?: ConfRevNotRaised[]
 	children: DiffNode[]
 }
 
@@ -150,6 +153,18 @@ export type ConfRevBump = {
 	controlBlock: AnyRefOrRecord
 	before: string
 	after: string
+	/**
+	 * Present when the template raises the block's revision itself (its own change, listed on its node): this raise is
+	 * written only when that change is skipped, the template's value otherwise.
+	 */
+	onlyIfBlockSkipped?: true
+}
+
+/** A control block whose `confRev` a data set change cannot raise: no unsigned 32-bit number, or at its limit. */
+export type ConfRevNotRaised = {
+	controlBlock: AnyRefOrRecord
+	value: string
+	refusal: 'invalid' | 'overflow'
 }
 
 /** An element's text, as the instance holds it (`before`) and as the template gives it (`after`). */
@@ -225,6 +240,24 @@ export type DecisionGroup = {
 	 * with the removal. Absent when nothing outside is touched, or the group removes nothing.
 	 */
 	sideEffects?: RemovalSideEffect[]
+	/**
+	 * Present when accepting the group would change another IED (see `OtherIedImpact`): an update never does, so the
+	 * group is suggested `skip` and `apply` refuses decisions accepting it, with `UPDATE_AFFECTS_OTHER_IED`.
+	 */
+	blocked?: 'affects-other-ied'
+}
+
+/**
+ * What an update of an IED would change in another IED, listed with the group bringing it (`groupId`, blocked): an
+ * element of `ied` `deleted` or `cleared` with what the update removes, an input `unsubscribed` from data a control
+ * block of the updated IED no longer sends, or a reference `renamed` with an element of the updated IED it names.
+ */
+export type OtherIedImpact = {
+	/** The name of the IED changed. */
+	ied: string
+	element: { tagName: string; id: string }
+	effect: 'deleted' | 'cleared' | 'unsubscribed' | 'renamed'
+	groupId: string
 }
 
 /** A reference outside what a group removes that the removal deletes or clears: see `DecisionGroup.sideEffects`. */
@@ -350,6 +383,11 @@ export type DiffReport = {
 	scopeUnits?: ReportedElement[]
 	/** What the report did that the consumer should know of: see {@link ReportWarning}. Absent when nothing. */
 	warnings?: ReportWarning[]
+	/**
+	 * An IED update only: what the update would change in other IEDs, each with the group bringing it, blocked (see
+	 * {@link OtherIedImpact}). A consumer may refuse to confirm the update while any is listed. Absent when none.
+	 */
+	otherIedImpacts?: OtherIedImpact[]
 }
 
 /**
@@ -385,6 +423,17 @@ export type ReportWarning =
 			reference: AnyRefOrRecord
 			/** The template's element it paired with. */
 			source?: AnyRefOrRecord
+	  }
+	| {
+			/**
+			 * A control block naming a data set the update changes whose configuration revision is not raised: its value is
+			 * no unsigned 32-bit number (`invalid`), or at its limit (`overflow`). Set it by hand.
+			 */
+			code: 'conf-rev-not-raised'
+			/** The project's control block. */
+			reference: AnyRefOrRecord
+			value: string
+			refusal: 'invalid' | 'overflow'
 	  }
 	| {
 			/**

@@ -50,13 +50,6 @@ export type SettleIedParams = IedParams & {
 	connections: readonly Scl.CloneMapping[]
 }
 
-export type NameConnectionsParams = {
-	/** The IED placed. */
-	ied: Scl.Ref<'IED'>
-	/** What the Communication part of the placement cloned. */
-	cloneMappings: readonly Scl.CloneMapping[]
-}
-
 export type IedResult = {
 	/** The IED placed in the project. */
 	iedRef: Scl.Ref<'IED'>

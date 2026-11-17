@@ -25,6 +25,11 @@ export type ContributionParams = {
 	omit?: readonly string[]
 	/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 	placeholderLineages?: PlaceholderLineages
+	/**
+	 * Below a container of these tags the project already holds, only the children of the tags listed are contributed;
+	 * the rest is the container's own (a subnetwork's settings on an IED update).
+	 */
+	contributedChildren?: ReadonlyMap<string, ReadonlySet<string>>
 	/** The source is the project itself (a copy): a reference naming an element the copy is made from is a new one. */
 	sourceIsProject?: boolean
 }

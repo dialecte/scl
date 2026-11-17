@@ -17,7 +17,7 @@ export type ValueDefinition = {
 /** Where a walk down an IED's data stands in the types: a logical node, a data object or a data attribute type. */
 export type TypeContext = { kind: 'logical-node' | 'object' | 'attribute'; id: string }
 
-/** What the template's types tell of the values of an IED, read once: see `readSettableValues`. */
+/** What the template's types tell of the values of an IED, read once: see `readValueOwnership`. */
 export type ValueTypes = {
 	/** The members of each type, by type id. */
 	membersById: ReadonlyMap<string, ReadonlyMap<string, TypeMember>>
@@ -37,6 +37,8 @@ export type TypeMember = {
 /** What the project keeps of a template's values, for one report or apply. */
 export type ValueOwnership = {
 	settableValues: SettableValues
+	/** The data instances of the project naming data the template's type no longer holds: see `readLostDataInstances`. */
+	lostData: ReadonlySet<string>
 	/** The project elements whose kept value the consumer takes the template's for: see `resolveTakeOvers`. */
 	takeOver: TakenOver
 }

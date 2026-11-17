@@ -1,4 +1,4 @@
-import type { ConfRevBump, OrderChange } from './diff.types'
+import type { ConfRevBump, ConfRevNotRaised, OrderChange } from './diff.types'
 
 /**
  * The configuration revisions an apply raises, written once its walk is done: a control block is reconciled after the
@@ -14,4 +14,8 @@ export type ConfRevBumpQueue = {
 }
 
 /** What changes in a matched data set's entries, for its report node: see `readDataSetChange`. */
-export type DataSetChange = { orderChange?: OrderChange; confRevBumps?: ConfRevBump[] }
+export type DataSetChange = {
+	orderChange?: OrderChange
+	confRevBumps?: ConfRevBump[]
+	confRevNotRaised?: ConfRevNotRaised[]
+}

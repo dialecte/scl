@@ -186,6 +186,26 @@ export const SCL_ERRORS = defineErrors({
 		message: 'The element named for a take-over keeps no value that can be taken over',
 	},
 	/**
+	 * An update of an IED the project holds several instances of, `targetInstance` naming none of them: an update changes
+	 * the one IED it starts from, never every instance of its template. `meta: { instances: [{ tagName, id }], named?:
+	 * { tagName, id } }` — `named` when the consumer named an element that is no instance.
+	 */
+	TARGET_INSTANCE_REQUIRED: {
+		code: 'SCL2012',
+		message: 'The update needs the instance it starts from, among those the project holds',
+	},
+	/**
+	 * Decisions accepting a group an IED update's report blocks: accepted, it would change another IED (an input or a
+	 * data set entry naming what the update removes, an input subscribed to data the update stops sending). An update
+	 * never changes another IED. `meta: { groups: string[] }` — the blocked groups the decisions accept; or, an update
+	 * written without a report (`tx.lifecycle.update.ied`) or a report it no longer fits, `meta: { ied, element: {
+	 * tagName, id } }` — the first write it would make in another IED.
+	 */
+	UPDATE_AFFECTS_OTHER_IED: {
+		code: 'SCL2013',
+		message: 'The update would change another IED',
+	},
+	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
 	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`
 	 */

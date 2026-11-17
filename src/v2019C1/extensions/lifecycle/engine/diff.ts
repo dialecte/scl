@@ -1,3 +1,4 @@
+import { contributesChild } from './contributed-children'
 import { readDataSetChange } from './data-set-order'
 import { groupDeletedDataReferrers } from './deleted-data-groups'
 import { findDeletedDataReferrers } from './deleted-data-referrers'
@@ -21,7 +22,7 @@ import { classifyUnmatched, classifyUnpairedReference } from './removal-base'
 import { readTargetLineages } from './target-lineages'
 import { diffTextWrappers } from './text-wrappers'
 import { createTypeComparison, typeChangesOf } from './type-change'
-import { compareText, readSettableValues, resolveTakeOvers } from './value-ownership'
+import { compareText, readValueOwnership } from './value-ownership'
 import { visibleAttributes } from './visible-attributes'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -30,6 +31,7 @@ import { toRef } from '@dialecte/core/helpers'
 import { KEEP_ON_ORPHAN_REFS } from '@/v2019C1/constants/reference-pairs'
 import { numberRenames } from '@/v2019C1/extensions/lifecycle/constraints/number-renames'
 import { leaveOutUndeclaredNodes } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import { readTemplateBlocks } from '@/v2019C1/extensions/lifecycle/layers/ied/bump-data-set-conf-revs'
 import { DISPOSABLE_REFERENCE_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 import { readAttribute } from '@/v2019C1/helpers'
 
@@ -61,6 +63,7 @@ import type { TypeComparison } from './type-change.types'
 import type { ValueOwnership } from './value-ownership.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { TemplateBlocks } from '@/v2019C1/extensions/lifecycle/layers/ied/bump-data-set-conf-revs.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -124,6 +127,11 @@ export async function diff(params: {
 	 * whoever created it — the attributes of every container below it are left uncompared too.
 	 */
 	contributeOnly?: boolean
+	/**
+	 * On a contribution: below a container of these tags the project already holds (one the contribution lands on), only
+	 * the children of the tags listed are contributed; the rest is the container's own (a subnetwork's settings).
+	 */
+	contributedChildren?: ReadonlyMap<string, ReadonlySet<string>>
 	/**
 	 * Source elements mapped onto elements the project already holds: a reference of the instance to
 	 * such a project element is the template's reference to the source element.
@@ -206,6 +214,8 @@ export async function diff(params: {
 	const byKey = pairByKeyOnLineageMiss({ sourceTree, instanceTree, index, sourceUuids, matchKey })
 	// what the caller decided wins over the key pass
 	const redirectedSourceUuids = new Map([...byKey.redirectedSourceUuids, ...redirected])
+	// the template's control blocks, by uuid, from its tree as held: a data set change raises the project's against them
+	const templateBlocks = readTemplateBlocks({ sourceTree })
 	const targetLineages = await readTargetLineages(targetQuery, {
 		nodes: [instanceTree],
 		matchKey,
@@ -216,10 +226,12 @@ export async function diff(params: {
 	// the types read on each side, once for the whole diff (the walk and the deleted data alike)
 	const typeComparison = createTypeComparison()
 	// what the project keeps of the template's values: the values it may set, read once from the template's types
-	const valueOwnership: ValueOwnership = {
-		settableValues: await readSettableValues(sourceQuery, { tree: sourceTree }),
-		takeOver: resolveTakeOvers({ takeOver: diffPolicy.takeOver, tree: instanceTree }),
-	}
+	const valueOwnership = await readValueOwnership(sourceQuery, {
+		sourceTree,
+		instanceTree,
+		matchKey,
+		takeOver: diffPolicy.takeOver,
+	})
 	const root = await diffMatched({
 		sourceQuery,
 		targetQuery,
@@ -238,11 +250,14 @@ export async function diff(params: {
 		skipOwnAttributes: params.instanceRootIsProjectOwned ?? false,
 		withinProjectOwned: params.instanceRootIsProjectOwned ?? false,
 		contributeOnly: params.contributeOnly ?? false,
+		contributedChildren: params.contributedChildren,
 		redirectedSourceUuids,
+		templateBlocks,
 		pinnedMatches: new Map([...byKey.pinnedMatches, ...(params.pinnedMatches ?? [])]),
 		keyPairings: new Map(
 			[...byKey.keys].filter(([sourceId]) => !params.pinnedMatches?.has(sourceId)),
 		),
+		keyTwins: byKey.twins,
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected,
 		typeComparison,
@@ -301,10 +316,16 @@ async function diffMatched(params: {
 	withinProjectOwned?: boolean
 	/** First placement: no container of the subtree has its attributes compared. */
 	contributeOnly?: boolean
+	/** On a contribution, the children of a held container it brings: see `diff`. */
+	contributedChildren?: ReadonlyMap<string, ReadonlySet<string>>
 	redirectedSourceUuids?: RedirectedSourceUuids
+	/** The template's control blocks by uuid: see `readTemplateBlocks`. */
+	templateBlocks: TemplateBlocks
 	pinnedMatches?: PinnedMatches
 	/** The key each source element the key pass pinned was paired on, by its record id. */
 	keyPairings?: ReadonlyMap<string, string>
+	/** The source elements the key pass paired among siblings of one key, in order: see `KeyPairings.twins`. */
+	keyTwins?: ReadonlySet<string>
 	foreignInstanceIds?: ReadonlySet<string>
 	notSelected?: ReadonlySet<string>
 	/** The types read on each side so far: one run for the whole diff. */
@@ -366,6 +387,16 @@ async function diffMatched(params: {
 	for (const sourceChild of sourceNode.tree) {
 		// a boundary tag is covered by another report - exclude its subtree
 		if (omit?.includes(sourceChild.tagName)) continue
+		// below a container the project holds, a contribution brings only the children it is told to
+		if (
+			contributeOnly &&
+			!contributesChild({
+				parentTag: sourceNode.tagName,
+				childTag: sourceChild.tagName,
+				contributedChildren: params.contributedChildren,
+			})
+		)
+			continue
 		const match = await matchChild(sourceQuery, {
 			targetQuery,
 			sourceChild,
@@ -415,12 +446,15 @@ async function diffMatched(params: {
 				namesFollow,
 				omit,
 				redirectedSourceUuids: params.redirectedSourceUuids,
+				templateBlocks: params.templateBlocks,
 				pinnedMatches: params.pinnedMatches,
 				keyPairings: params.keyPairings,
+				keyTwins: params.keyTwins,
 				foreignInstanceIds: params.foreignInstanceIds,
 				skipOwnAttributes: skipChildAttributes,
 				withinProjectOwned,
 				contributeOnly,
+				contributedChildren: params.contributedChildren,
 				notSelected: params.notSelected,
 				typeComparison: params.typeComparison,
 				diffPolicy: params.diffPolicy,
@@ -430,7 +464,8 @@ async function diffMatched(params: {
 			})
 			if (match.pairedByName) matchedNode.pairedByName = match.pairedByName
 			if (match.pairedByKey !== undefined) matchedNode.pairedByKey = match.pairedByKey
-			if (match.pairedAmongTwins) matchedNode.pairedAmongTwins = match.pairedAmongTwins
+			if (match.pairedAmongTwins || params.keyTwins?.has(sourceChild.id))
+				matchedNode.pairedAmongTwins = true
 			children.push(matchedNode)
 			renamed.push({ node: matchedNode, child: matched })
 		} else if (!params.notSelected?.has(sourceChild.id)) {
@@ -528,6 +563,11 @@ async function diffMatched(params: {
 		}
 		// what a project-owned element holds besides is the project's: not an author addition to an instance
 		if (withinProjectOwned) continue
+		// data the type the template gives its logical node no longer holds goes with the type change
+		if (params.valueOwnership.lostData.has(instanceChild.id)) {
+			children.push(removedNode(instanceChild))
+			continue
+		}
 		pushInstanceOnly({
 			node: instanceChild,
 			out: children,
@@ -552,12 +592,12 @@ async function diffMatched(params: {
 	const dataSetChange = params.skipOwnAttributes
 		? {}
 		: await readDataSetChange(targetQuery, {
-				sourceQuery,
 				sourceNode,
 				instanceNode,
 				children,
 				matchKey,
 				redirectedSourceUuids: params.redirectedSourceUuids ?? new Map(),
+				templateBlocks: params.templateBlocks,
 			})
 	const modified =
 		attributeChanges.length > 0 ||

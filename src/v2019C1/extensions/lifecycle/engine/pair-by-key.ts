@@ -1,5 +1,5 @@
 import { instanceTagOf } from './instance-tag'
-import { KEY_PAIRING_ROOT_TAGS } from './pair-by-key.constants'
+import { KEY_ALTERNATIVES_ON_LINEAGE_MISS, KEY_PAIRING_ROOT_TAGS } from './pair-by-key.constants'
 
 import { keyFieldsOf } from '@/v2019C1/extensions/identity/query/key-fields'
 import { isSingletonChild } from '@/v2019C1/extensions/identity/query/singleton-child'
@@ -11,7 +11,9 @@ import type { AnyTreeRecord } from '@dialecte/core'
 /**
  * In an IED, the elements whose lineage misses — the template holds no element of the uuid their lineage names, as
  * when an IED file without uuids is imported again and its elements get other uuids — paired by their key (`name`,
- * `inst`, `prefix` + `lnClass` + `inst`, ...; for a tag without key, only one the schema holds once: an `LN0`) with an
+ * `inst`, `prefix` + `lnClass` + `inst`, ...; an input by its internal address and what it expects, else by its source
+ * and service; several siblings of one key paired in order, `twins`; for a tag without key, only one the schema holds
+ * once: an `LN0`) with an
  * instance element of
  * the same parent whose lineage names nothing the template holds, or none. Read top-down from the walk's root pair,
  * before the walk, so a reference naming a paired element (a data set entry naming a logical node walked after it)
@@ -22,7 +24,8 @@ export function pairByKeyOnLineageMiss(params: PairByKeyParams): KeyPairings {
 	const pinnedMatches = new Map<string, string>()
 	const redirectedSourceUuids = new Map<string, string>()
 	const keys = new Map<string, string>()
-	const pairings = { pinnedMatches, redirectedSourceUuids, keys }
+	const twins = new Set<string>()
+	const pairings = { pinnedMatches, redirectedSourceUuids, keys, twins }
 	if (!KEY_PAIRING_ROOT_TAGS.has(params.sourceTree.tagName)) return pairings
 
 	const pending: [AnyTreeRecord, AnyTreeRecord][] = [[params.sourceTree, params.instanceTree]]
@@ -38,6 +41,7 @@ export function pairByKeyOnLineageMiss(params: PairByKeyParams): KeyPairings {
 			if (counterpart.key !== undefined) {
 				pinnedMatches.set(sourceChild.id, counterpart.record.id)
 				keys.set(sourceChild.id, counterpart.key)
+				if (counterpart.amongTwins) twins.add(sourceChild.id)
 				const sourceUuid = readAttribute({ record: sourceChild, name: 'uuid', defaults: 'none' })
 				const instanceUuid = readAttribute({
 					record: counterpart.record,
@@ -64,7 +68,7 @@ function counterpartOf(
 		instanceNode: AnyTreeRecord
 		taken: ReadonlySet<string>
 	},
-): { record: AnyTreeRecord; key?: string } | undefined {
+): { record: AnyTreeRecord; key?: string; amongTwins?: true } | undefined {
 	const { sourceChild, instanceNode, taken, index, sourceUuids, matchKey } = params
 	const tagName = instanceTagOf(sourceChild.tagName)
 	const sameTag = instanceNode.tree.filter(
@@ -88,7 +92,7 @@ function counterpartOf(
 		const lineage = readAttribute({ record: child, name: matchKey, defaults: 'none' })
 		return !lineage || !sourceUuids.has(lineage)
 	})
-	const fields = keyFieldsOf(tagName)
+	const fields = keyFieldsOnMiss({ tagName, record: sourceChild })
 	if (fields.length === 0) {
 		// a tag without key pairs only where the schema holds one of it (an LN0 in its device), the one there is
 		if (!isSingletonChild({ parentTag: params.sourceNode.tagName, childTag: tagName }))
@@ -97,7 +101,28 @@ function counterpartOf(
 	}
 	const key = keyOf({ record: sourceChild, fields })
 	const record = free.find((child) => keyOf({ record: child, fields }) === key)
-	return record && { record, key }
+	if (!record) return undefined
+	// several siblings of that key, paired or not: paired in order, said so
+	const twins = instanceNode.tree.filter(
+		(child) => child.tagName === tagName && keyOf({ record: child, fields }) === key,
+	)
+	return twins.length > 1 ? { record, key, amongTwins: true } : { record, key }
+}
+
+/**
+ * The fields a source element whose lineage misses is paired by: its tag's key (`keyFieldsOf`), else the first key of
+ * its tag's alternatives whose first field it writes, else the last alternative (`KEY_ALTERNATIVES_ON_LINEAGE_MISS`).
+ */
+function keyFieldsOnMiss(params: { tagName: string; record: AnyTreeRecord }): readonly string[] {
+	const { tagName, record } = params
+	const fields = keyFieldsOf(tagName)
+	const alternatives = KEY_ALTERNATIVES_ON_LINEAGE_MISS.get(tagName)
+	if (fields.length > 0 || !alternatives) return fields
+	const written = alternatives.find(
+		([first]) =>
+			first !== undefined && readAttribute({ record, name: first, defaults: 'none' }) !== '',
+	)
+	return written ?? alternatives.at(-1) ?? []
 }
 
 /** A record's key as one string: each key field `name=value`, an absent one empty. */

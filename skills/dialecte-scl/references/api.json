@@ -511,7 +511,7 @@
 				"decisions to review before a template update",
 				"what placing an IED from an ISD/ICD/IID would add"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:49"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:50"
 		},
 		{
 			"path": "doc.query.lifecycle.sourceRoot.asd",
@@ -896,7 +896,7 @@
 				"write a lifecycle report with user decisions",
 				"accept or skip changes from a newer FSD/ASD/SSD"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:77",
+			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:78",
 			"example": "await tx.lifecycle.apply({ ...lifecycleTarget, report: reported, resolution: { afterApply } })"
 		},
 		{
@@ -1006,7 +1006,7 @@
 				"place an ISD with its specification (functions and LNodes) in a project",
 				"import an ISD instance keeping its identity"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/ied.ts:52"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/ied.ts:49"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.resolveTargetStructure",
@@ -1072,7 +1072,7 @@
 				"reconcile Application instances with their template",
 				"instantiate or update an application template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:40"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:45"
 		},
 		{
 			"path": "tx.lifecycle.update.fsd",
@@ -1085,7 +1085,20 @@
 				"reconcile Function instances with their template",
 				"instantiate or update a function template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:24"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:29"
+		},
+		{
+			"path": "tx.lifecycle.update.ied",
+			"root": "tx",
+			"otherRoutes": [],
+			"signature": "(params: UpdateIedParams) => Promise<AppliedInstance<'IED'>[]>",
+			"summary": "`tx.lifecycle.update.ied` - update the IED of the project placed from a template ISD with a newer revision of it (or place it when the project holds none), then release what the run wrote naming a logical node, ExtRef or ExtCtrl the project lacks, as `tx.lifecycle.apply` does after its verb.",
+			"intents": [
+				"update an S-IED from a newer ISD",
+				"reconcile an IED with its template ISD",
+				"update an IED specification"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:78"
 		},
 		{
 			"path": "tx.lifecycle.update.ssd",
@@ -1098,7 +1111,7 @@
 				"reconcile a bay typical with its template",
 				"propagate an SSD change"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:56"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:61"
 		},
 		{
 			"path": "tx.reference.applyTypeIdRemap",

@@ -98,7 +98,7 @@ function resolvedAction(params: {
 }
 
 /** A group is accepted when its resolved action is not `skip`. */
-function isAccepted(params: { group: DecisionGroup; decisions: DecisionMap }): boolean {
+export function isAccepted(params: { group: DecisionGroup; decisions: DecisionMap }): boolean {
 	return resolvedAction(params) !== 'skip'
 }
 
@@ -285,7 +285,10 @@ export function acceptedRefIds(params: {
 	decisions: DecisionMap
 }): AcceptedIds {
 	const { groups, decisions } = params
-	return collectGroupIds(groups.filter((group) => isAccepted({ group, decisions })))
+	return collectGroupIds({
+		groups: groups.filter((group) => isAccepted({ group, decisions })),
+		primaries: new Set(groups.map((group) => nodeKey(group.primary))),
+	})
 }
 
 /**
@@ -298,10 +301,26 @@ export function leftOutRefIds(params: {
 	decisions: DecisionMap
 }): AcceptedIds {
 	const { groups, decisions } = params
-	return collectGroupIds(groups.filter((group) => !isAccepted({ group, decisions })))
+	return collectGroupIds({
+		groups: groups.filter((group) => !isAccepted({ group, decisions })),
+		primaries: new Set(groups.map((group) => nodeKey(group.primary))),
+	})
 }
 
-function collectGroupIds(groups: readonly DecisionGroup[]): AcceptedIds {
+/**
+ * A node as one string, from what it is and the elements it stands for: a report read back (a copy, not the object the
+ * report made) tells its nodes apart the same way.
+ */
+function nodeKey(node: DiffNode): string {
+	return `${node.change}|${node.tagName}|${node.sourceRef?.id ?? ''}|${node.instanceRef?.id ?? ''}`
+}
+
+/** The ids of the groups' nodes; below a node, a node that is the primary of a group is that group's, not collected. */
+function collectGroupIds(params: {
+	groups: readonly DecisionGroup[]
+	primaries: ReadonlySet<string>
+}): AcceptedIds {
+	const { groups, primaries } = params
 	const ids: CollectedIds = {
 		sourceIds: new Set(),
 		instanceIds: new Set(),
@@ -311,7 +330,7 @@ function collectGroupIds(groups: readonly DecisionGroup[]): AcceptedIds {
 		// what the project added below a change of the template is a group of its own: not this one's
 		const ownOnly = group.change === 'target-only'
 		for (const node of [group.primary, ...group.companions]) {
-			collectNodeIds({ node, ids, ownOnly })
+			collectNodeIds({ node, ids, ownOnly, primaries })
 		}
 	}
 	return ids
@@ -319,14 +338,21 @@ function collectGroupIds(groups: readonly DecisionGroup[]): AcceptedIds {
 
 /**
  * Collect the ids of a node and every descendant (structured companions carry nesting) — but those of an element the
- * project added, unless the group is that element's (`ownOnly`).
+ * project added, unless the group is that element's (`ownOnly`), and those of a descendant another group decides.
  */
-function collectNodeIds(params: { node: DiffNode; ids: CollectedIds; ownOnly: boolean }): void {
-	const { node, ids, ownOnly } = params
+function collectNodeIds(params: {
+	node: DiffNode
+	ids: CollectedIds
+	ownOnly: boolean
+	primaries: ReadonlySet<string>
+}): void {
+	const { node, ids, ownOnly, primaries } = params
 	collectNodeId({ node, ids })
 	for (const child of node.children) {
 		if (!ownOnly && child.change === 'target-only') continue
-		collectNodeIds({ node: child, ids, ownOnly })
+		// a part of the node decided apart (see `groupChanges`) is its own group's
+		if (primaries.has(nodeKey(child))) continue
+		collectNodeIds({ ...params, node: child })
 	}
 }
 

@@ -45,7 +45,7 @@ export async function releaseLNodesOfDeletedLogicalNodes(
 	const lnodes = (await query.getRecordsByTagName('LNode')).map(function asWritten(record) {
 		return pending.get(record.id) ?? (toRawRecord(record) as AnyRawRecord)
 	})
-	const released = lnodes.filter((lnode) => isBoundToDeleted({ lnode, deleted }))
+	const released = lnodesBoundTo({ lnodes, logicalNodes: deleted })
 	if (released.length === 0) return []
 
 	const plan = await planLNodeReleases(query, { lnodes: released })
@@ -97,23 +97,42 @@ async function readDeletedLogicalNodes(
 	// a logical node the transaction created and deleted again is gone, not created again
 	const kept = created.filter((record) => !held.has(record.id))
 
-	const ancestries = await readAncestries({ records: [...deleted, ...kept], query, held })
-	function keysOf(records: readonly AnyRawRecord[]): { uuid?: string; address?: string }[] {
-		return records.map((record) => ({
-			uuid: readAttribute({ record, name: 'uuid', defaults: 'none', fullObject: true })?.value,
-			address: targetTupleAddress({ record, ancestry: ancestries.get(record.id) ?? [] }),
-		}))
-	}
-	const again = keysOf(kept)
-	const againUuids = new Set(again.flatMap(({ uuid }) => (uuid ? [uuid] : [])))
-	const againAddresses = new Set(again.flatMap(({ address }) => (address ? [address] : [])))
-	const gone = keysOf(deleted)
+	const gone = await readLogicalNodeKeys(query, { records: deleted, held })
+	const again = await readLogicalNodeKeys(query, { records: kept, held })
 	return {
-		uuids: new Set(gone.flatMap(({ uuid }) => (uuid && !againUuids.has(uuid) ? [uuid] : []))),
-		addresses: new Set(
-			gone.flatMap(({ address }) => (address && !againAddresses.has(address) ? [address] : [])),
-		),
+		uuids: new Set([...gone.uuids].filter((uuid) => !again.uuids.has(uuid))),
+		addresses: new Set([...gone.addresses].filter((address) => !again.addresses.has(address))),
 	}
+}
+
+/**
+ * The uuids and tuple addresses of logical nodes, the records above them read a level at a time (a record of `held`
+ * taken from there, not read): what an LNode bound to one of them names it by.
+ */
+export async function readLogicalNodeKeys(
+	query: Core.Query<Config>,
+	params: { records: readonly AnyRawRecord[]; held?: ReadonlyMap<string, AnyRawRecord> },
+): Promise<DeletedLogicalNodes> {
+	const { records } = params
+	if (records.length === 0) return { uuids: new Set(), addresses: new Set() }
+	const ancestries = await readAncestries({ records, query, held: params.held })
+	const uuids = records.flatMap((record) => {
+		const uuid = readAttribute({ record, name: 'uuid', defaults: 'none', fullObject: true })?.value
+		return uuid ? [uuid] : []
+	})
+	const addresses = records.flatMap((record) => {
+		const address = targetTupleAddress({ record, ancestry: ancestries.get(record.id) ?? [] })
+		return address ? [address] : []
+	})
+	return { uuids: new Set(uuids), addresses: new Set(addresses) }
+}
+
+/** The LNodes, among those given, bound to one of the logical nodes named: they are released when those go. */
+export function lnodesBoundTo(params: {
+	lnodes: readonly AnyRawRecord[]
+	logicalNodes: DeletedLogicalNodes
+}): AnyRawRecord[] {
+	return params.lnodes.filter((lnode) => isBoundToDeleted({ lnode, deleted: params.logicalNodes }))
 }
 
 /** Whether an LNode bound to an IED names, by its `lnUuid` or (without one) by its names, a deleted logical node. */

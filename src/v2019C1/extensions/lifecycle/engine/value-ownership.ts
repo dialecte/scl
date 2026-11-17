@@ -1,3 +1,4 @@
+import { readLostDataInstances } from './lost-data-instances'
 import { textChangeOf } from './text-change'
 import {
 	ENUMERATED_BASIC_TYPE,
@@ -22,7 +23,6 @@ import { readAttribute } from '@/v2019C1/helpers'
 import type { DiffNode, ReportInstance } from './diff.types'
 import type {
 	SettableValue,
-	SettableValues,
 	TakenOver,
 	TextComparison,
 	TypeContext,
@@ -33,21 +33,37 @@ import type {
 } from './value-ownership.types'
 import type { Config } from '@/v2019C1/config'
 import type { TakeOvers } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord, AnyTreeRecord } from '@dialecte/core'
 
 /**
- * The values of a template subtree the project may set, by `Val` record id, each with the values its enumeration allows:
- * a value whose data attribute (its `DAI`, else the data attribute of its type) is of kind `Set`, or that the IED
- * imports (`valImport`). The template's types are read once, and only when the subtree holds a value.
+ * What the project keeps of a template's values, and what of its data the template's types no longer name, for one
+ * report or apply (the diff and the reconcile read it alike, so the report lists what the apply writes): the values the
+ * project may set (see `settableValuesUnder`), the take-overs the consumer names, and the data instances the type of
+ * their logical node no longer holds (`readLostDataInstances`). The template's types are read once, only when either
+ * tree holds data.
  */
-export async function readSettableValues(
+export async function readValueOwnership(
 	query: Core.Query<Config>,
-	params: { tree: AnyTreeRecord },
-): Promise<SettableValues> {
-	if (!holdsValue(params.tree)) return new Map()
+	params: {
+		sourceTree: AnyTreeRecord
+		instanceTree: AnyTreeRecord
+		matchKey: MatchKey
+		takeOver: TakeOvers | undefined
+	},
+): Promise<ValueOwnership> {
+	const { sourceTree, instanceTree, matchKey } = params
+	const takeOver = resolveTakeOvers({ takeOver: params.takeOver, tree: instanceTree })
+	if (!holdsValue(sourceTree) && !holdsDataInstance(instanceTree)) {
+		return { settableValues: new Map(), lostData: new Set(), takeOver }
+	}
 	const types = await readValueTypes(query)
-	return new Map(settableValuesUnder({ node: params.tree, context: undefined, types }))
+	return {
+		settableValues: new Map(settableValuesUnder({ node: sourceTree, context: undefined, types })),
+		lostData: readLostDataInstances({ sourceTree, instanceTree, matchKey, types }),
+		takeOver,
+	}
 }
 
 /**
@@ -137,6 +153,11 @@ function takenOverKeys(params: { node: DiffNode; above: readonly string[] }): st
 	const path = ref ? [...above, elementKey(ref)] : above
 	const own = node.takenOver ? path : []
 	return [...own, ...node.children.flatMap((child) => takenOverKeys({ node: child, above: path }))]
+}
+
+/** Whether a subtree holds a data instance. */
+function holdsDataInstance(node: AnyTreeRecord): boolean {
+	return node.tagName === VALUE_TAGS.object || node.tree.some(holdsDataInstance)
 }
 
 /** Whether a subtree holds a value. */

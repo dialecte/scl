@@ -89,7 +89,7 @@ describe('pairing by key of what an IED file imported again names by other uuids
 					'by key LN:xcbr-t',
 				],
 			},
-		"an input of the template and one of the project's own, of other lineages, in the one input section of a logical node → never paired by key: the template's added, the project's its own":
+		"an input of the template and one of the project's own, of other lineages and other internal addresses, in the one input section of a logical node → not paired by key: the template's added, the project's its own":
 			{
 				sourceXml: /* xml */ `
 					<SCL ${ns} ${id}="template">

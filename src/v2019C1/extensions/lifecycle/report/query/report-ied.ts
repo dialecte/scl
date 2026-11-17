@@ -3,7 +3,9 @@ import { reportSsd } from './report-ssd'
 
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { assertIedPlacementOffered } from '@/v2019C1/extensions/lifecycle/layers/ied/assert-ied-placement'
+import { readInstanceRedirects } from '@/v2019C1/extensions/lifecycle/layers/ied/instance-redirects'
 import { describeIedCommunication } from '@/v2019C1/extensions/lifecycle/layers/ied/place-ied-communication'
+import { resolveIedInstance } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type { ReportIedParams, WithCompanionParams } from './report-ied.types'
@@ -11,27 +13,50 @@ import type { Config } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
+import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
- * Report (read-only) what placing an IED of a source file in the project would add: a first placement, one
- * instance with no root in the project, every element of the IED added, on the fast track (`needsDecisions: false`),
- * and what its Communication part adds to the project's (its access points' `ConnectedAP`s, a subnetwork the project
- * lacks) as companions of the IED's group, as `apply` writes them.
- * An IED name the project already holds does not change the track.
+ * Report (read-only) what placing an IED of a source file in the project would add, or what a newer revision of its
+ * template changes in the IED of the project placed from it (`scenario: 'template'`, the default): the one
+ * `targetInstance` names, required when the project holds several (`TARGET_INSTANCE_REQUIRED`, see
+ * `resolveIedInstance`); only a template ISD's IED is updated yet.
  *
- * The specification an ISD carries beside its IED (a substation section) is reported as `report.ssd` reports a
- * first placement of a substation scope, its instances after the IED's: where each level lands (a level the consumer
- * must choose puts the report on the full track), the functions and LNodes it adds.
+ * A first placement: one instance with no root in the project, every element of the IED added, on the fast track
+ * (`needsDecisions: false`), and what its Communication part adds to the project's (its access points' `ConnectedAP`s,
+ * a subnetwork the project lacks) as companions of the IED's group, as `apply` writes them. An IED name the project
+ * already holds does not change the track. The specification an ISD carries beside its IED (a substation section) is
+ * reported as `report.ssd` reports a first placement of a substation scope, its instances after the IED's.
  *
- * Only a first placement is reported: an ISD instance placed other than as a fork, `template` or `fork` finding the IED
- * in the project, or a fork whose IED or specification the project holds an element of by its uuid, is refused with
- * `OPTION_NOT_AVAILABLE` (see `assertIedPlacementOffered`).
+ * An ISD instance placed other than as a fork, a fork finding the IED in the project or a fork whose IED or
+ * specification the project holds an element of by its uuid, is refused with `OPTION_NOT_AVAILABLE` (see
+ * `assertIedPlacementOffered`).
  */
 export async function reportIed(
 	query: Core.Query<Config>,
 	params: ReportIedParams,
 ): Promise<DiffReport> {
 	const { sourceQuery, iedRef, scenario = 'template', fileType } = params
+	const instance = await resolveIedInstance(query, {
+		sourceQuery,
+		iedRef,
+		scenario,
+		fileType,
+		targetInstance: params.targetInstance,
+		operation: 'report (ied)',
+	})
+	if (instance) return reportIedUpdate(query, { ...params, instance })
+	return reportIedPlacement(query, { ...params, scenario })
+}
+
+/**
+ * Report the first placement of the IED of a source file, with the specification an ISD carries beside it: see
+ * `reportIed`.
+ */
+async function reportIedPlacement(
+	query: Core.Query<Config>,
+	params: ReportIedParams & { scenario: LifecycleScenario },
+): Promise<DiffReport> {
+	const { sourceQuery, iedRef, scenario, fileType } = params
 	await assertIedPlacementOffered(query, {
 		sourceQuery,
 		iedRef,
@@ -83,6 +108,51 @@ export async function reportIed(
 	if (specification.needsDecisions) report.needsDecisions = true
 	if (specification.scopeUnits) report.scopeUnits = specification.scopeUnits
 	return report
+}
+
+/**
+ * Report what a newer revision of its template changes in the IED of the project it was placed from: the IED's own
+ * tree diffed with the template's (a logical node gained or dropped, a type changed, a value the project keeps), and what
+ * the template's Communication part adds for it, as companions of the IED's group. The specification the file carries
+ * is not part of the IED's update.
+ */
+async function reportIedUpdate(
+	query: Core.Query<Config>,
+	params: ReportIedParams & { instance: AnyTrackedRecord },
+): Promise<DiffReport> {
+	const { sourceQuery, iedRef, instance } = params
+	const { matchKey, namesFollow } = scenarioPolicy({ scenario: 'template' })
+	const iedDiff = await diff({
+		sourceQuery,
+		targetQuery: query,
+		sourceRootRef: iedRef,
+		instanceRootRef: instance,
+		matchKey,
+		namesFollow,
+		removalBase: params.removalBase,
+		diffPolicy: params.diffPolicy,
+		placeholderLineages: params.placeholderLineages,
+	})
+	// a connection of an access point the IED holds is the project's: the template's lands on it
+	const redirectMappings = await readInstanceRedirects(query, { instance, matchKey })
+	const communication = await describeIedCommunication(query, {
+		sourceQuery,
+		iedRef,
+		anchor: params.anchor,
+		matchKey,
+		diffPolicy: params.diffPolicy,
+		placeholderLineages: params.placeholderLineages,
+		redirectMappings,
+		keepsSubNetworkSettings: true,
+	})
+	const instanceDiff = withCompanion({ instanceDiff: iedDiff, iedRef, companion: communication })
+	const reportInstance = await buildReportInstance(query, {
+		instanceDiff,
+		instance,
+		sourceQuery,
+		sourceRef: iedRef,
+	})
+	return assembleReport({ instances: [reportInstance], templateRoots: [reportInstance] })
 }
 
 /** The scenario the specification is placed with: a fork keeps the file's identity, any other places a new instance. */
