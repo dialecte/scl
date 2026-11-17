@@ -16,46 +16,8 @@ type Added = {
 
 const IED7_DATA_SET = { tagName: 'DataSet', id: 'ds7' } as Scl.Ref<Scl.ElementsOf>
 const IED8_INPUTS = { tagName: 'Inputs', id: 'in8' } as Scl.Ref<Scl.ElementsOf>
-const SUBSCRIPTION = { tagName: 'ExtRef', id: 'ext8' } as Scl.Ref<Scl.ElementsOf>
 const CONNECTION = { tagName: 'ConnectedAP', id: 'cap7' } as Scl.Ref<Scl.ElementsOf>
 const ENTRY = { ldInst: 'LD1', lnClass: 'XCBR', doName: 'Pos', daName: 'stVal', fc: 'ST' }
-
-describe('the commit reads every name of a reference that says what it names', () => {
-	type TestCase = SclTest.BaseXmlTestCase & { edited: Record<string, string> }
-
-	const testCases: SclTest.TestCases<TestCase> = {
-		// IED8's input names IED7's GOOSE in the data's device: no srcLDInst, so ldInst names the control block's device
-		'the device of an input naming its control block in the data device pointed at one nothing holds → both uuids removed':
-			{
-				sourceXml: connectionsAndAVendorCopy,
-				edited: { ldInst: 'LD9' },
-				expectedQueries: ['//default:ExtRef[@intAddr="pos"][@ldInst="LD9"][@srcCBName="C1"]'],
-				unexpectedQueries: ['//default:ExtRef[@lnUuid or @srcCBUuid]'],
-			},
-		// the same input, its service GOOSE: a report named C1 is none of IED7's control blocks
-		'the service of an input pointed at reports → its control block uuid removed, its logical node kept':
-			{
-				sourceXml: connectionsAndAVendorCopy,
-				edited: { serviceType: 'Report' },
-				expectedQueries: [
-					'//default:ExtRef[@intAddr="pos"][@serviceType="Report"][@lnUuid="xcbr7"]',
-				],
-				unexpectedQueries: ['//default:ExtRef[@srcCBUuid]'],
-			},
-	}
-
-	async function act({
-		testCase,
-		source,
-	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		await source.transaction(async function editInput(tx) {
-			await tx.any.update(SUBSCRIPTION, { attributes: testCase.edited })
-		})
-		return { assertOn: 'source' }
-	}
-
-	runSclTestCases.withExport({ testCases, act })
-})
 
 describe('the commit follows a connection moved to another IED down to the addresses it holds', () => {
 	type TestCase = SclTest.BaseXmlTestCase & { edited: Record<string, string> }

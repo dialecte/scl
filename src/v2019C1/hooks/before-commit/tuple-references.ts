@@ -7,7 +7,11 @@ import {
 	referrerWork,
 	touchedTargets,
 } from './tuple-reference-changes'
+import { OWN_NAMES_BY_PAIR } from './tuple-references.constants'
 
+import { throwDialecteError } from '@dialecte/core'
+
+import { SCL_ERRORS } from '@/v2019C1/errors'
 import { ownIedName } from '@/v2019C1/extensions/reference/query/ied-tuple/own-ied-name'
 import { referrerTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/referrer-tuple-address'
 import { targetKey } from '@/v2019C1/extensions/reference/query/ied-tuple/target-key'
@@ -16,6 +20,7 @@ import {
 	targetTupleParts,
 	tupleAddressOf,
 } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
+import { tuplePairApplies } from '@/v2019C1/extensions/reference/query/ied-tuple/tuple-pair-applies'
 import {
 	applyTupleReferenceWrite,
 	tupleReferenceWrite,
@@ -47,7 +52,10 @@ import type { AnyRawRecord } from '@dialecte/core'
  * - a reference whose uuid changed: its names written from the element it names (the uuid wins over names edited with
  *   it);
  * - a reference whose names changed and uuid did not: kept when its names still name what its uuid names, else the
- *   uuid its names give, or none. A uuid naming no tuple target of the document (a template's uuid) is left as written.
+ *   uuid its names give; none when the edit removed every name of the pair (an unbind); else the commit is refused
+ *   (`REFERENCE_NAMES_UNRESOLVED`): an edit never drops a uuid. A uuid naming no tuple target of the document (a
+ *   template's uuid) is left as written. A pair its reference's other names set aside (an `IEDName`'s access point pair
+ *   beside an `ldInst`) is left as it is, whatever changed.
  * A uuid whose names the transaction did not change is kept, even when another element now shares its names. Nothing
  * is read for a transaction writing no tuple reference and creating or renaming no tuple target; else each referrer
  * tag and each target tag concerned once, and the elements above them a level at a time.
@@ -124,7 +132,7 @@ function indexTargets(params: {
 		byUuid.set(uuid, { tagName: record.tagName, parts, address, lineage })
 	}
 	for (const key of shared) byAddress.delete(key)
-	return { byAddress, byUuid }
+	return { byAddress, byUuid, shared }
 }
 
 /** The one update of a reference: the uuids its names give or no longer confirm, then the names its new uuids give. */
@@ -140,6 +148,9 @@ function composeWrite(params: {
 	const following: TupleReferencePair[] = []
 	const partsByUuid = new Map<string, TupleTargetParts>()
 	for (const { pair, action } of work.pairs) {
+		// a pair its reference's other names set aside (an `IEDName`'s access point pair beside an `ldInst`) names
+		// nothing here: its uuid is left as it is
+		if (!tuplePairApplies({ record, pair })) continue
 		const targetTags = targetTagsOf({ pair, record })
 		const uuid = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
 		const address = referrerTupleAddress({ pair, record, ancestry })
@@ -155,9 +166,50 @@ function composeWrite(params: {
 		}
 		const confirmed =
 			target !== undefined && target.address === address && targetTags.includes(target.tagName)
-		if (action === 'confirm' && target && !confirmed) uuids[pair.attribute.uuid] = resolved
+		if (action === 'confirm' && target && !confirmed)
+			uuids[pair.attribute.uuid] = confirmedUuid({
+				record,
+				pair,
+				address,
+				targetTags,
+				resolved,
+				index,
+			})
 	}
 	return updateOf({ record, uuids, following, partsByUuid, ancestry })
+}
+
+/**
+ * The uuid of a pair whose own names the transaction changed and no longer name what its uuid names: the one they
+ * name now; none when the edit removed every name of the pair (an unbind); else the commit is refused
+ * (`REFERENCE_NAMES_UNRESOLVED`): an edit never drops a uuid its names do not let go of.
+ */
+function confirmedUuid(params: {
+	record: AnyRawRecord
+	pair: TupleReferencePair
+	address: string | undefined
+	targetTags: readonly string[]
+	resolved: string | undefined
+	index: TupleTargetIndex
+}): string | undefined {
+	const { record, pair, address, targetTags, resolved, index } = params
+	if (resolved) return resolved
+	const ownNames = OWN_NAMES_BY_PAIR.get(record.tagName)?.get(pair.attribute.uuid) ?? []
+	const unbound = ownNames.every((name) => !readAttribute({ record, name, defaults: 'none' }))
+	if (unbound) return undefined
+	// two tags answering (a report and a GOOSE of one name), or two targets of one tag sharing the address
+	const keys = address ? targetTags.map((tagName) => targetKey({ address, tagName })) : []
+	const answering = keys.filter((key) => index.byAddress.has(key) || index.shared.has(key))
+	const several = answering.length > 1 || keys.some((key) => index.shared.has(key))
+	return throwDialecteError(SCL_ERRORS.REFERENCE_NAMES_UNRESOLVED, {
+		meta: {
+			reference: { tagName: record.tagName, id: record.id },
+			uuidAttribute: pair.attribute.uuid,
+			address,
+			resolved: several ? 'several' : 'none',
+		},
+		detail: `the names of ${record.tagName} "${record.id}" name ${several ? 'several elements' : 'no element'} (${address ?? 'no whole address'}); its ${pair.attribute.uuid} is kept: point the names at one element, or remove them all to unbind it`,
+	})
 }
 
 /** Whether a reference may take a uuid its names give: any, or for one the transaction did not write, a touched one. */

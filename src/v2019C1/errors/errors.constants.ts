@@ -202,4 +202,14 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL4001',
 		message: 'The commit deletes a record and leaves one of its children behind',
 	},
+	/**
+	 * A reference between IEDs holding a uuid whose own names (or, for a `GSE` / `SMV`, its `ConnectedAP`'s IED) a
+	 * transaction edited to name no element or several: the commit never drops the uuid an edit leaves unconfirmed.
+	 * Removing every name of the pair unbinds it instead. `meta: { reference: { tagName, id }, uuidAttribute, address,
+	 * resolved: 'none' | 'several' }`.
+	 */
+	REFERENCE_NAMES_UNRESOLVED: {
+		code: 'SCL4002',
+		message: 'The names of a reference holding a uuid name no element, or several',
+	},
 })

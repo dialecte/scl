@@ -1,3 +1,4 @@
+import breakersAndASubscriber from './fixtures/breakers-and-a-subscriber.xml?raw'
 import connectionsAndAVendorCopy from './fixtures/connections-and-a-vendor-copy.xml?raw'
 import { writeTupleReferencesAtCommit } from './tuple-references'
 
@@ -69,12 +70,19 @@ describe('the commit reads only the tags a change can reach', () => {
 				attributes: { inst: '5' },
 				expectedTags: ['Association', 'ClientLN', 'ExtCtrl', 'ExtRef', 'FCDA', 'IEDName'],
 			},
-		// IED8's input pointed by names at IED8: its targets read, not the addresses below a connection
-		"an input's IED name edited → the tags it may point at read, no address": {
+		// breakers-and-a-subscriber.xml: IED8's input pointed by names at IED7's XCBR2: only its logical node pair checked
+		"an input's names pointed at another logical node → the logical node tags read": {
+			sourceXml: breakersAndASubscriber,
+			edited: { tagName: 'ExtRef', id: 'ext8' },
+			attributes: { lnInst: '2' },
+			expectedTags: ['LN', 'LN0'],
+		},
+		// IED8's input pointed by uuid at IED8's CSWI1: only the tags its logical node pair may point at read, no address
+		"an input's uuid pointed elsewhere → the logical node tags read, no control block or address": {
 			sourceXml: connectionsAndAVendorCopy,
 			edited: { tagName: 'ExtRef', id: 'ext8' },
-			attributes: { iedName: 'IED8' },
-			expectedTags: ['GSEControl', 'LN', 'LN0', 'ReportControl', 'SampledValueControl'],
+			attributes: { lnUuid: 'cswi8' },
+			expectedTags: ['LN', 'LN0'],
 		},
 	}
 

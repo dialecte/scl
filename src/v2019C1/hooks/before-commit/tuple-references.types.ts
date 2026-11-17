@@ -39,4 +39,6 @@ export type IndexedTarget = {
 export type TupleTargetIndex = {
 	byAddress: ReadonlyMap<string, string>
 	byUuid: ReadonlyMap<string, IndexedTarget>
+	/** The address keys two targets share: they name several elements. */
+	shared: ReadonlySet<string>
 }

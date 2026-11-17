@@ -226,13 +226,6 @@ describe('the commit keeps the uuid and the names of an edited reference in agre
 			edited: { lnInst: '2' },
 			expectedQueries: ['//default:ExtRef[@intAddr="pos"][@lnUuid="xcbr2"][@lnInst="2"]'],
 		},
-		// the same input; IED7 holds no XCBR9
-		'its names pointed at a logical node nothing holds → its uuid removed, its names kept': {
-			sourceXml: breakersAndASubscriber,
-			edited: { lnInst: '9' },
-			expectedQueries: ['//default:ExtRef[@intAddr="pos"][@lnInst="9"][@srcCBUuid="gc7"]'],
-			unexpectedQueries: ['//default:ExtRef[@lnUuid]'],
-		},
 		// the same input
 		'its uuid and its names pointed at different logical nodes → the uuid wins, the names follow it':
 			{
