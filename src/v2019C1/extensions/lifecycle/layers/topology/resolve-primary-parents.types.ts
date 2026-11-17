@@ -13,6 +13,11 @@ export type ResolvePrimaryParentsParams = {
 	/** Where each instance of the unit lives, level by level. */
 	instanceLevelsList: readonly InstanceLevels[]
 	matchKey: MatchKey
+	/**
+	 * The instances the operation is scoped to (those one IED's specification holds): the primary is held when one of
+	 * them is an instance of it, another placement's instance telling nothing. Absent: any instance in the project.
+	 */
+	primaryTargets?: readonly Scl.Ref<Scl.ElementsOf>[]
 }
 
 /** One place a primary of a topology unit is placed or reconciled under. */

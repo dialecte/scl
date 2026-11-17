@@ -1,3 +1,4 @@
+import { PROJECT_OWN } from './find-dropped-primaries.constants'
 import { primariesUnderScope } from './scope-content'
 
 import { toRef } from '@dialecte/core/helpers'
@@ -8,6 +9,7 @@ import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type {
 	FindDroppedPrimariesParams,
+	ScopePrimariesParams,
 	UnitPrimaries,
 	UnitUuids,
 } from './find-dropped-primaries.types'
@@ -36,21 +38,36 @@ export async function findDroppedPrimaries(
 	const frame = await reader.any.getTree(frameInstance)
 	if (!frame) return []
 
-	// a level of the project the unit's root was mapped onto carries no lineage of it: what it holds is the project's
+	// a level of the project the unit's root was mapped onto carries no lineage of it: what it holds is the project's.
+	// The instances the operation names (an IED's specification) are listed there too, as the project's own: nothing
+	// tells one the revision dropped from one another file placed beside them
 	const frameLineage = await reader.any.getAttribute(frame, { name: matchKey })
+	const placedByUnit = frameLineage !== undefined && frameLineage === sourceUuids.root
 	const primaries: UnitPrimaries = { applications: [], functions: [] }
 	await collectUnitPrimaries(reader, {
 		level: frame,
-		holdsUnitPrimaries: frameLineage !== undefined && frameLineage === sourceUuids.root,
+		holdsUnitPrimaries: placedByUnit || params.primaryTargets !== undefined,
 		levelUuids: sourceUuids.levels,
 		matchKey,
 		primaries,
 	})
+	const scoped = scopePrimaries({ primaries, primaryTargets: params.primaryTargets })
 
-	const classify = { sourcePrimaryUuids: sourceUuids.primaries, matchKey, removalBase }
+	// what the operation names held by a level the unit was mapped onto is the project's own; on a level below it the
+	// unit placed, it is read with the caller's removal base
+	// held directly: a child of the level's tree, which sees through its Private (where an application sits)
+	const heldDirectly = new Set(frame.tree.map((child) => child.id))
+	const projectOwn = new Set(
+		params.primaryTargets && !placedByUnit
+			? [...scoped.applications, ...scoped.functions]
+					.filter((primary) => heldDirectly.has(primary.id))
+					.map((primary) => primary.id)
+			: [],
+	)
+	const classify = { sourcePrimaryUuids: sourceUuids.primaries, matchKey, removalBase, projectOwn }
 	const dropped = await classifyPrimaries(reader, {
 		...classify,
-		primaries: primaries.applications,
+		primaries: scoped.applications,
 	})
 
 	// a function composed only by the applications leaving with it goes with them: a removal by the applications
@@ -62,7 +79,7 @@ export async function findDroppedPrimaries(
 	const droppedIds = new Set(dropped.map(({ element }) => element.id))
 	const droppedFunctions = await classifyPrimaries(reader, {
 		...classify,
-		primaries: primaries.functions,
+		primaries: scoped.functions,
 	})
 	for (const droppedFunction of droppedFunctions) {
 		const lastReferred = await isLastReferrer(reader, {
@@ -73,6 +90,17 @@ export async function findDroppedPrimaries(
 		if (lastReferred) dropped.push(droppedFunction)
 	}
 	return dropped
+}
+
+/** The primaries of the level among those the operation is scoped to: every one when it is not scoped. */
+function scopePrimaries(params: ScopePrimariesParams): UnitPrimaries {
+	const { primaries, primaryTargets } = params
+	if (!primaryTargets) return primaries
+	const targetIds = new Set(primaryTargets.map((target) => target.id))
+	return {
+		applications: primaries.applications.filter((primary) => targetIds.has(primary.id)),
+		functions: primaries.functions.filter((primary) => targetIds.has(primary.id)),
+	}
 }
 
 /**
@@ -161,9 +189,11 @@ async function classifyPrimaries(
 		sourcePrimaryUuids: ReadonlySet<string>
 		matchKey: FindDroppedPrimariesParams['matchKey']
 		removalBase: FindDroppedPrimariesParams['removalBase']
+		/** The primaries read as the project's own whatever the removal base (record ids). */
+		projectOwn: ReadonlySet<string>
 	},
 ): Promise<DroppedElement[]> {
-	const { primaries, sourcePrimaryUuids, matchKey, removalBase } = params
+	const { primaries, sourcePrimaryUuids, matchKey, removalBase, projectOwn } = params
 	const dropped: DroppedElement[] = []
 	for (const primary of primaries) {
 		const lineage = await reader.any.getAttribute(primary, { name: matchKey })
@@ -172,7 +202,7 @@ async function classifyPrimaries(
 			tagName: primary.tagName,
 			lineage,
 			inSource: sourcePrimaryUuids.has(lineage),
-			removalBase,
+			removalBase: projectOwn.has(primary.id) ? PROJECT_OWN : removalBase,
 		})
 		if (change === 'still-held') continue
 		if (await carriesOwnProvenance(reader, primary)) continue

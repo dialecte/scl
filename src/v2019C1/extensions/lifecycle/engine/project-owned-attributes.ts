@@ -5,10 +5,12 @@ import {
 	BOUND_LNODE_OWNED_ATTRIBUTES,
 	INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES,
 	NO_PROJECT_OWNED_ATTRIBUTES,
+	SPECIFIED_ON_IED_OWNED_ATTRIBUTES,
 } from './project-owned-attributes.constants'
 
 import { throwDialecteError } from '@dialecte/core'
 
+import { SPECIFIED_IED_NAME_ATTRIBUTE } from '@/v2019C1/constants/lnode-spec-naming'
 import { isAssignedToIed } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 import { CONF_REV_CONTROL_TAGS } from '@/v2019C1/extensions/lifecycle/layers/ied/bump-data-set-conf-revs.constants'
 
@@ -21,7 +23,8 @@ import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy
  * each difference still listed as kept:
  * - an LNode bound to an IED keeps where it is implemented (its specification is its `LNodeSpecNaming`, compared as a
  *   child), in every scenario; its type follows the template's, unless the consumer keeps it
- *   (`boundLogicalNodeTypes: 'keep'`): then a type change is listed as kept;
+ *   (`boundLogicalNodeTypes: 'keep'`): then a type change is listed as kept; the naming specifying it on an IED
+ *   names the IED and logical device the commit writes (`SPECIFIED_ON_IED_OWNED_ATTRIBUTES`);
  * - a control block's configuration revision only rises: a template's lower than the project's is listed as kept;
  * - an instance of a template keeps what it configures where it sits (`INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES`: a
  *   behaviour description's file, a variable's value; `BOUND_INPUT_OWNED_ATTRIBUTES`: the source an input or output
@@ -55,6 +58,11 @@ export function projectOwnedAttributes(params: {
 			? BOUND_LNODE_KEEPING_ITS_TYPE
 			: BOUND_LNODE_OWNED_ATTRIBUTES
 	}
+	if (
+		tagName === 'LNodeSpecNaming' &&
+		isAssignedToIed({ iedName: instanceAttributes[SPECIFIED_IED_NAME_ATTRIBUTE] })
+	)
+		return SPECIFIED_ON_IED_OWNED_ATTRIBUTES
 	if (!configuredWhereItSits(namesFollow)) return NO_PROJECT_OWNED_ATTRIBUTES
 	const boundInput = BOUND_INPUT_OWNED_ATTRIBUTES.get(tagName)
 	if (boundInput && isBound({ owned: boundInput, instanceAttributes })) return boundInput

@@ -5,6 +5,7 @@ import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/eng
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { PlacedIedFileType } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -25,6 +26,8 @@ export type UpdateIedParams = {
 	keepNameTypesFrom?: KeepNameTypesFrom
 	/** The values the project keeps that the consumer takes the template's for (`Resolution.takeOver`). */
 	takeOver?: TakeOvers
+	/** The consumer's choices for the specification: where its levels land (`Resolution.mappings`). */
+	decisionMappings?: DecisionMappings
 }
 
 export type ReconcileIedParams = Omit<UpdateIedParams, 'fileType' | 'targetInstance'> & {

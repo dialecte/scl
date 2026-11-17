@@ -20,10 +20,11 @@ type UpdateCase = SclTest.BaseXmlTestCase & {
 }
 
 // The update of an S-IED from a newer revision of the template ISD it was placed from: the S-IED reconciled in place,
-// its project name kept, a logical node the revision gains added, one it drops removed, the LNode bound to it released.
+// its project name kept, a logical node the revision gains added, one it drops removed with the LNode its specification
+// drops beside it.
 describe('tx.lifecycle.apply - an S-IED updated from a newer revision of its template ISD', () => {
 	const testCases: SclTest.TestCases<UpdateCase> = {
-		'BCU1 placed from the first revision, the revision gaining RREC and dropping PTRC → BCU1 keeps its name and uuid, RREC added with its type, PTRC gone, its LNode released':
+		'BCU1 placed from the first revision, the revision gaining RREC and dropping PTRC → BCU1 keeps its name and uuid, RREC added with its type, PTRC gone, its LNode gone with the specification':
 			{
 				// the revision: PTRC (a…024) replaced by RREC (a…026), PTOC setVal 150 (the project keeps its settable 100)
 				sourceXml: isdTemplateRevised,
@@ -37,14 +38,14 @@ describe('tx.lifecycle.apply - an S-IED updated from a newer revision of its tem
 					'//default:IED[@name="BCU1"]//default:LN[@lnClass="PTOC"]/default:DOI[@name="OpDlTmms"]/default:DAI[@name="setVal"]/default:Val[.="100"]',
 					// a kept logical node keeps its binding
 					'//default:Function[@name="LineProtection"]/default:LNode[@lnClass="PTOC"][@iedName="BCU1"][@lnUuid="b0000000-0000-4000-8000-000000000023"]',
-					// the LNode bound to the dropped PTRC is released
-					'//default:Function[@name="LineProtection"]/default:LNode[@uuid="b0000000-0000-4000-8000-000000000014"][@iedName="None"][not(@lnUuid)]',
 					// the revision is recorded on the IED
 					'//default:IED[@name="BCU1"]/default:IEDSourceFiles/default:SclFileReference[@fileType="ISD"][@fileUuid="f0000000-0000-4000-8000-000000000001"][@revision="2"]',
 				],
 				unexpectedQueries: [
 					'//default:IED[@name="BCU1"]//default:LN[@lnClass="PTRC"]',
 					'//default:IED[@name="SPECIFICATION"]',
+					// the LNode bound to the dropped PTRC goes with the specification's revision, which drops it too
+					'//default:LNode[@uuid="b0000000-0000-4000-8000-000000000014"]',
 				],
 			},
 		'the third revision adding LPHD1.Proxy.stVal to the Positions data set → the entry names the LPHD of BCU1 by its uuid':

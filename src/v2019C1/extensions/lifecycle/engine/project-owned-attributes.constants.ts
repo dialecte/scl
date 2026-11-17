@@ -1,3 +1,7 @@
+import {
+	SPECIFIED_IED_NAME_ATTRIBUTE,
+	SPECIFIED_LD_INST_ATTRIBUTE,
+} from '@/v2019C1/constants/lnode-spec-naming'
 import { LNODE_BINDING_ATTRIBUTES, TYPE_ID_REF_ATTRIBUTES } from '@/v2019C1/extensions/reference'
 import { SOURCE_ATTRIBUTES_BY_TAG } from '@/v2019C1/hooks/shared/input-source.constants'
 
@@ -16,6 +20,16 @@ export const NO_PROJECT_OWNED_ATTRIBUTES: ProjectOwnedAttributes = {
  */
 export const BOUND_LNODE_OWNED_ATTRIBUTES: ProjectOwnedAttributes = {
 	attributes: new Set(LNODE_BINDING_ATTRIBUTES),
+	listedAsKept: new Map(),
+}
+
+/**
+ * The specified naming of an LNode specified on an IED: the IED and the logical device it names are written at the
+ * commit from the specification IED its LNode is bound to (a template's placeholder renamed), silent like the LNode's
+ * own binding.
+ */
+export const SPECIFIED_ON_IED_OWNED_ATTRIBUTES: ProjectOwnedAttributes = {
+	attributes: new Set([SPECIFIED_IED_NAME_ATTRIBUTE, SPECIFIED_LD_INST_ATTRIBUTE]),
 	listedAsKept: new Map(),
 }
 

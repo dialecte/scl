@@ -1,7 +1,8 @@
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 import { identityEquals, resolveIdentity } from '@/v2019C1/extensions/identity/query'
+import { readAttribute } from '@/v2019C1/helpers'
 
-import type { InstanceReader } from './instance.types'
+import type { InstanceReader, TargetInstances } from './instance.types'
 import type { Scl } from '@/v2019C1/config'
 import type { ElementIdentity } from '@/v2019C1/extensions/identity/query'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -48,32 +49,24 @@ export async function findInstancesUnder(
 	if (!sourceUuid) return []
 	const parentTree = await reader.any.getTree(targetParent)
 	if (!parentTree) return []
-	const out: AnyTreeRecord[] = []
-	await collectByMatchKey(reader, { node: parentTree, tagName, sourceUuid, matchKey, out })
-	return out
+	return collectByMatchKey({ node: parentTree, tagName, sourceUuid, matchKey })
 }
 
-async function collectByMatchKey(
-	reader: InstanceReader,
-	params: {
-		node: AnyTreeRecord
-		tagName: Scl.ElementsOf
-		sourceUuid: string
-		matchKey: MatchKey
-		out: AnyTreeRecord[]
-	},
-): Promise<void> {
-	const { node, tagName, sourceUuid, matchKey, out } = params
+/** The nodes of a tree of `tagName` carrying `sourceUuid` under `matchKey`, in document order: a match is not descended into. */
+function collectByMatchKey(params: {
+	node: AnyTreeRecord
+	tagName: Scl.ElementsOf
+	sourceUuid: string
+	matchKey: MatchKey
+}): AnyTreeRecord[] {
+	const { node, tagName, sourceUuid, matchKey } = params
 	if (
 		node.tagName === tagName &&
-		(await reader.any.getAttribute(node, { name: matchKey })) === sourceUuid
+		readAttribute({ record: node, name: matchKey, defaults: 'none' }) === sourceUuid
 	) {
-		out.push(node)
-		return // a matched instance root; do not descend into its own subtree
+		return [node] // a matched instance root; do not descend into its own subtree
 	}
-	for (const child of node.tree) {
-		await collectByMatchKey(reader, { node: child, tagName, sourceUuid, matchKey, out })
-	}
+	return node.tree.flatMap((child) => collectByMatchKey({ ...params, node: child }))
 }
 
 /**
@@ -105,14 +98,11 @@ export async function findInstancesByTemplateUuid(
 	const { tagName, sourceUuid, matchKey = 'templateUuid', sourceIdentity } = params
 	const records = await reader.any.getRecordsByTagName(tagName)
 
-	const byLineage: AnyTrackedRecord[] = []
-	if (sourceUuid) {
-		for (const record of records) {
-			if ((await reader.any.getAttribute(record, { name: matchKey })) === sourceUuid) {
-				byLineage.push(record)
-			}
-		}
-	}
+	const byLineage = sourceUuid
+		? records.filter(
+				(record) => readAttribute({ record, name: matchKey, defaults: 'none' }) === sourceUuid,
+			)
+		: []
 	if (byLineage.length > 0) return byLineage
 
 	// uuid-bearing: lineage is the ONLY identity — no name fallback.
@@ -124,7 +114,8 @@ export async function findInstancesByTemplateUuid(
 	if (sourceIdentity?.kind !== 'fields') return []
 	const byFields: AnyTrackedRecord[] = []
 	for (const record of records) {
-		if (identityEquals(await resolveIdentity(reader, record), sourceIdentity)) byFields.push(record)
+		const identity = await resolveIdentity(reader, record)
+		if (identityEquals(identity, sourceIdentity)) byFields.push(record)
 	}
 	return byFields.length === 1 ? byFields : []
 }
@@ -152,37 +143,51 @@ export async function findByOwnUuid(
 }
 
 /**
- * Narrow a set of matched instances to those SCOPED to one specific target instance: the instance
- * itself, or any instance structurally UNDER it. When `targetInstance` is undefined, every instance
- * passes (the default — operate on ALL instances of the template, a template-rollout).
+ * Narrow a set of matched instances to those SCOPED to the target instances: an instance named, or any instance
+ * structurally UNDER one named. When `targetInstance` is undefined, every instance passes (the default — operate on ALL
+ * instances of the template, a template-rollout); an empty list lets none pass.
  *
  * This is the multi-instance anchor seam: a consumer names ONE target instance (e.g. a specific
- * pasted Bay) and every enumeration point in the update/report verbs filters through here, so the
- * frame, the applications and the composed functions all resolve under the chosen instance and no
- * other. The containment predicate makes it uniform across layers — a Bay `targetInstance` scopes
+ * pasted Bay), or a caller the instances one operation owns (the functions an IED's specification holds, beside those
+ * of another IED placed from the same template on the same bay), and every enumeration point in the update/report verbs
+ * filters through here, so the frame, the applications and the composed functions all resolve under the chosen
+ * instances and no other. The containment predicate makes it uniform across layers — a Bay `targetInstance` scopes
  * its descendant Applications/Functions; a Function/Application `targetInstance` scopes itself.
  */
 export async function scopeToTargetInstance<GenericRecord extends { id: string; tagName: string }>(
 	reader: InstanceReader,
 	params: {
 		instances: readonly GenericRecord[]
-		targetInstance: Scl.Ref<Scl.ElementsOf> | undefined
+		targetInstance: TargetInstances | undefined
 	},
 ): Promise<GenericRecord[]> {
 	const { instances, targetInstance } = params
 	if (!targetInstance) return [...instances]
+	const targetIds = new Set(toRefList(targetInstance).map((target) => target.id))
 
 	const scoped: GenericRecord[] = []
 	for (const instance of instances) {
-		if (instance.id === targetInstance.id) {
+		if (targetIds.has(instance.id)) {
 			scoped.push(instance)
 			continue
 		}
+		if (targetIds.size === 0) continue
 		const ancestors = await reader.findAncestors({
 			tagName: instance.tagName,
 			id: instance.id,
 		} as Scl.Ref<Scl.ElementsOf>)
-		if (ancestors.some((ancestor) => ancestor.id === targetInstance.id)) scoped.push(instance)
+		if (ancestors.some((ancestor) => targetIds.has(ancestor.id))) scoped.push(instance)
 	}
 	return scoped
+}
+
+/** The target instances as a list: one ref is a list of one. */
+function toRefList(targetInstance: TargetInstances): readonly Scl.Ref<Scl.ElementsOf>[] {
+	return isRefList(targetInstance) ? targetInstance : [targetInstance]
+}
+
+function isRefList(
+	targetInstance: TargetInstances,
+): targetInstance is readonly Scl.Ref<Scl.ElementsOf>[] {
+	return Array.isArray(targetInstance)
 }

@@ -11,7 +11,7 @@ import type { SclTest } from '@/v2019C1/test'
 import type * as Core from '@dialecte/core'
 
 // `tx.lifecycle.update.ied` without a report: everything the revision brings is written to the IED placed from the
-// template.
+// template, and to the specification its placement put beside it.
 describe('tx.lifecycle.update.ied - an S-IED updated without a report', () => {
 	const testCases: SclTest.TestCases = {
 		'BCU1 placed from the first revision, the revision gaining RREC and dropping PTRC → RREC added, PTRC gone':
@@ -22,6 +22,16 @@ describe('tx.lifecycle.update.ied - an S-IED updated without a report', () => {
 				expectedQueries: [
 					'//default:IED[@name="BCU1"]//default:LDevice[@inst="PROT"][not(default:LN[@lnClass="PTRC"])]/default:LN[@lnClass="RREC"][@templateUuid="a0000000-0000-4000-8000-000000000026"]',
 				],
+			},
+		'BCU1 with the specification its placement put on Q01, the revision replacing the LNode PTRC by an LNode RREC → the specification updated too, the RREC LNode bound to BCU1':
+			{
+				// LineProtection (b…005) holds the LNode b…014 the revision drops; the revision gains a…015, bound to RREC
+				sourceXml: isdTemplateRevised,
+				targetXml: projectNorth,
+				expectedQueries: [
+					'//default:Function[@uuid="b0000000-0000-4000-8000-000000000005"]/default:LNode[@templateUuid="a0000000-0000-4000-8000-000000000015"][@iedName="BCU1"][@lnUuid=//default:IED[@name="BCU1"]//default:LN[@lnClass="RREC"]/@uuid]',
+				],
+				unexpectedQueries: ['//default:LNode[@uuid="b0000000-0000-4000-8000-000000000014"]'],
 			},
 	}
 

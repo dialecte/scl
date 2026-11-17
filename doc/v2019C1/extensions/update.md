@@ -98,9 +98,37 @@ again as a new instance.
 - What its access points gained connects under the project's subnetworks (a connection of an access point the IED
   holds lands on the project's); a subnetwork's own settings (its bit rate, text, private data) are the project's, never
   taken over, and the project's addresses are kept.
-- The specification the file carries is not part of the IED's update.
-- `apply` writes what the report lists and records the revision in the IED's `IEDSourceFiles`. `afterApply` receives the
-  IED in `instances.ieds`, `reconciled`.
+- `apply` writes what the report lists and records the revision in the IED's `IEDSourceFiles` when any group of the
+  IED or of its specification is accepted; nothing is recorded at the project's header. `afterApply` receives the IED in
+  `instances.ieds`, `reconciled`.
+
+**Its specification.** The specification an ISD carries beside its IED (its substation section) is updated with it, in
+the same report and the same apply: its instances follow the IED's, decided group by group as an SSD's update is (see
+[Decision groups](#decision-groups-full-track) and [Multiple instances of one template](#multiple-instances-of-one-template)).
+
+- The specification of the IED is what is specified on it: the `LNode`s whose `LNodeSpecNaming` names it (an `LNode`
+  keeps it when the project binds it to another IED), the functions and applications holding them, the bay holding
+  those. Another IED placed from the same template keeps its own, whether it sits on the same bay or on its own. A
+  function or application holding no `LNode` of the IED is the IED's when that bay holds one copy of it specified on no
+  IED; with several (the template placed twice on one bay), none is updated and the report warns of each
+  (`specification-instance-unresolved`, `source`: the template's element); with only another IED's, it is left alone.
+- On a bay the template's bay was mapped onto (it carries no lineage of it), a function of the specification the
+  revision no longer holds is listed as the project's own (`target-only`, kept unless its removal is accepted): nothing
+  tells it from a function another file placed there. On a bay the placement created, it is `removed`.
+- A specification the project moved off any bay (its functions under the voltage level itself) is updated where it sits:
+  what the revision gains is not placed, and what it drops is not found (nothing is removed).
+- What the revision drops goes, what it gains is added, names and values the project set are kept. An `LNode` the
+  revision gains is bound to the IED updated, to the logical node the update gives it when the IED gains one: its group
+  depends on that logical node's, so accepting it with the logical node skipped is refused
+  (`DECISION_DEPENDENCY_SKIPPED`). The `IED` and logical device a specified naming names are the project's (the commit
+  writes them from the IED it is bound to).
+- A removal deleting an `LNode` the project bound to another IED waits for a decision (`requiresDecision:
+  'unbinds-another-ied'`, suggested `skip`): accepted, it goes with that binding, nothing in the other IED changing;
+  skipped, it stays. `tx.lifecycle.update.ied` given no report writes everything the revision brings, such a removal
+  included: run `query.lifecycle.report` first to decide it.
+- An IED the project holds no specification of (placed before its file carried one, or with it left out) is offered its
+  specification as a first placement (`report.mappings` for its levels), bound to the IED updated; skipping its groups
+  writes nothing.
 
 **An update never changes another IED.** What accepting a group would change in another IED — an input or a data set
 entry of it the update deletes or clears with what it removes, an input subscribed through a control block of the

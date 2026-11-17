@@ -128,7 +128,7 @@ async function findReferredPlacers(
 }
 
 /** Every node the group adds: its primary and companions, and what they carry. */
-function addedNodes(group: DecisionGroup): Set<DiffNode> {
+export function addedNodes(group: DecisionGroup): Set<DiffNode> {
 	const added = new Set<DiffNode>()
 	const pending: DiffNode[] = [group.primary, ...group.companions]
 	while (pending.length > 0) {
@@ -140,7 +140,8 @@ function addedNodes(group: DecisionGroup): Set<DiffNode> {
 	return added
 }
 
-function addDependency(params: { group: DecisionGroup; dependency: DecisionGroup }): void {
+/** Record that a group depends on another, once. */
+export function addDependency(params: { group: DecisionGroup; dependency: DecisionGroup }): void {
 	const { group, dependency } = params
 	if (!group.dependsOn.includes(dependency.id)) group.dependsOn.push(dependency.id)
 }

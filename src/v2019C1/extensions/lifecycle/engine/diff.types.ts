@@ -41,9 +41,14 @@ export type KeptTextChange = TextChange & { reason: KeptAttributeReason }
  *   now allows; accepted, the template's value is written, skipped, the project's stays;
  * - `names-deleted-data`: a reference (`FCDA`, `ExtRef`) names data the update deletes (a logical node, a device or a
  *   control block it removes, a data object or attribute a logical node's new type lacks); accepted, the entry is
- *   removed or the input's source cleared; skipped, it stays and the group deleting the data cannot be accepted.
+ *   removed or the input's source cleared; skipped, it stays and the group deleting the data cannot be accepted;
+ * - `unbinds-another-ied`: the removal, in the specification of an IED an update updates, deletes an LNode the project
+ *   bound to another IED; accepted, it goes with that binding (nothing in the other IED changes), skipped, it stays.
  */
-export type DecisionRequiredReason = 'value-outside-enumeration' | 'names-deleted-data'
+export type DecisionRequiredReason =
+	| 'value-outside-enumeration'
+	| 'names-deleted-data'
+	| 'unbinds-another-ied'
 
 /**
  * One element's attributes compared: the changes an accepted update writes, its type references naming a type of other
@@ -469,6 +474,16 @@ export type ReportWarning =
 			 */
 			code: 'satellite-not-placed'
 			/** The template's variable or behaviour description: neither it nor the role's reference to it is written. */
+			source: AnyRefOrRecord
+	  }
+	| {
+			/**
+			 * An IED update only: an application or function of the template's specification holding no LNode of the IED,
+			 * of which the IED's level holds several instances (the template placed more than once there): which is the
+			 * IED's is not told, none is updated. Update the right one with its own operation.
+			 */
+			code: 'specification-instance-unresolved'
+			/** The template's application or function. */
 			source: AnyRefOrRecord
 	  }
 

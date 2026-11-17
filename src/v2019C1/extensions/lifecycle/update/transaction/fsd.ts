@@ -139,6 +139,15 @@ export async function fsd(
 			resolvePlacement: params.resolvePlacement,
 			partOfTemplate: params.partOfTemplate,
 		})
+		// what the function names outside it lands on what the project holds for it (an IED's logical node)
+		if (params.redirectMappings?.length) {
+			await repointAddedReferences(tx, {
+				cloneMappings,
+				instanceRootRef: root,
+				matchKey,
+				redirectMappings: params.redirectMappings,
+			})
+		}
 		// annotate the first-time instance's report nodes with what each source element became
 		const firstTime = firstTimeReportInstance(report, {
 			sourceRootId: functionRef.id,
@@ -249,7 +258,7 @@ export async function fsd(
 			cloneMappings: addedMappings,
 			instanceRootRef: instance,
 			matchKey,
-			redirectMappings: cross.redirectMappings,
+			redirectMappings: [...cross.redirectMappings, ...(params.redirectMappings ?? [])],
 		})
 		const reportInstance = reportInstanceById(report, instance.id)
 		if (reportInstance) {

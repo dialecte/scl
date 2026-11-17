@@ -80,7 +80,8 @@ export async function report(
 	assertTakeOversOffered({ instances: report.instances, takeOver: target.resolution?.takeOver })
 	// what the report is made for: apply refuses it for another target
 	report.target = reportTarget
-	const warnings = collectReportWarnings(report)
+	// what a verb told of on its own, then what the report's nodes tell
+	const warnings = [...(report.warnings ?? []), ...collectReportWarnings(report)]
 	if (warnings.length > 0) report.warnings = warnings
 	const revisionBase = revisionBaseOf(removalBase)
 	if (revisionBase) report.revisionBase = revisionBase

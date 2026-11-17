@@ -1,3 +1,5 @@
+import { reconcileIedSpecification } from './ied-specification'
+
 import { toRef } from '@dialecte/core/helpers'
 
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
@@ -27,6 +29,7 @@ import {
 	assertWritesInsideIed,
 } from '@/v2019C1/extensions/lifecycle/layers/ied/other-ied-impacts'
 import { placeIedCommunication } from '@/v2019C1/extensions/lifecycle/layers/ied/place-ied-communication'
+import { readIedSpecification } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-specification'
 import { resolveIedInstance } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
@@ -76,9 +79,9 @@ async function connectAccessPoints(
  * Given a report and decisions, writes what they accept (see `reconcileIed`), a group the report blocks accepted refused
  * with `UPDATE_AFFECTS_OTHER_IED` (`meta: { groups }`) before anything is written; without, everything the revision
  * brings, a write landing in another IED refused once staged (`meta: { ied, element }`): run `query.lifecycle.report`
- * first to see and skip what would.
+ * first to see and skip what would. The specification an ISD carries beside the IED is updated with it.
  *
- * @intent update an S-IED from a newer revision of its template ISD, reconcile an IED with its template
+ * @intent update an S-IED from a newer revision of its template ISD, reconcile an IED with its template, update the specification of an S-IED (its functions and LNodes)
  */
 export async function ied(
 	tx: Core.Transaction<Config>,
@@ -122,7 +125,10 @@ export async function ied(
  * project holds, the revision recorded in its `IEDSourceFiles` when anything the template brings is accepted. What its
  * access points gained connects under the project's subnetworks, naming the IED as the project names it; what the
  * project holds there is its own (a subnetwork's settings, an address). The IED keeps its project name and its
- * identity; nothing it writes lands in another IED (refused otherwise). Returns the IED, `reconciled`.
+ * identity; nothing it writes lands in another IED (refused otherwise). The specification an ISD carries beside it
+ * follows (`reconcileIedSpecification`): told by what binds to the IED before the update, updated as `update.ssd`
+ * updates a substation scope, its gained `LNode`s bound to the IED as it then stands; placed when the project holds
+ * none of it. The revision is recorded when anything of the file is accepted. Returns the IED, `reconciled`.
  */
 export async function reconcileIed(
 	tx: Core.Transaction<Config>,
@@ -133,6 +139,12 @@ export async function reconcileIed(
 	const { matchKey, identityMode, bumpsCollisions, namesFollow } = policy
 	const groups = groupsForInstance(report, instance.id)
 	const instanceRef = toRef(instance) as Scl.Ref<'IED'>
+	// the specification beside the IED, told by what binds to it before the update changes the IED
+	const specification = await readIedSpecification(tx, {
+		sourceQuery,
+		fileType: params.fileType,
+		iedRef: instanceRef,
+	})
 	// what the IED holds before the update: a write landing outside it and in another IED is refused
 	const before = await tx.any.getTree(instanceRef)
 	const from = tx.getStagedOperations().length
@@ -160,9 +172,14 @@ export async function reconcileIed(
 	if (before) await assertWritesInsideIed(tx, { instance: before, from })
 	const reportInstance = reportInstanceById(report, instance.id)
 	if (reportInstance) annotateInstance({ reportInstance, added: sourceToTargetMap(added) })
+	// the specification follows, its LNodes bound to the IED as it now stands
+	if (specification) {
+		await reconcileIedSpecification(tx, { ...params, instanceRef, specification })
+	}
 
-	// the IED now holds this revision of its template: its own reference names it
-	if (followsSource({ groups, decisions })) {
+	// the IED now holds this revision of its template, when anything of the file is written (its specification
+	// included): its own reference names it
+	if (followsSource({ groups: report ? allGroups(report) : groups, decisions })) {
 		await writeProvenance(tx, {
 			sourceQuery,
 			target: { anchor: 'ied', root: instanceRef, fileType: params.fileType },

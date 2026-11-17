@@ -109,6 +109,7 @@ async function applyIedUpdate(
 		placeholderLineages: params.placeholderLineages,
 		keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 		takeOver: target.resolution?.takeOver,
+		decisionMappings: target.resolution?.mappings,
 	})
 }
 
