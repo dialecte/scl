@@ -5,6 +5,9 @@ import { RESOLUTION_TYPE, MAPPED_NAME_REFS } from '@/v2019C1/extensions/referenc
 import { buildReferenceAttributes } from '@/v2019C1/extensions/reference/query/build/build-reference-attributes'
 import { buildSignalRoleAttributes } from '@/v2019C1/extensions/reference/query/build/build-signal-role-attributes'
 import { derivedAttributesFollowing } from '@/v2019C1/extensions/reference/query/build/compose-derived-attributes'
+import { readAttribute } from '@/v2019C1/helpers'
+import { notePathEdit, pathEdits } from '@/v2019C1/hooks/shared/path-edits'
+import { REQUIRED_PATHS } from '@/v2019C1/hooks/shared/path-references.constants'
 import {
 	hasAttributeChange,
 	updatedOperation,
@@ -13,7 +16,7 @@ import {
 import { findTargetByUuid } from '@/v2019C1/hooks/shared/ref-entry-ops'
 
 import type { Scl, Config } from '@/v2019C1/config'
-import type { ReferencePair } from '@/v2019C1/extensions/reference'
+import type { DerivedAttributeValue, ReferencePair } from '@/v2019C1/extensions/reference'
 import type { AttributeList } from '@/v2019C1/hooks/shared/record-ops'
 import type * as Core from '@dialecte/core'
 
@@ -47,6 +50,14 @@ export async function reconcileReferrerRefPaths(params: {
 		if (pair.resolution === RESOLUTION_TYPE.unsupported) continue
 		const names = bindingAttributeNames({ tagName: newRecord.tagName, pair })
 		if (!hasAttributeChange({ oldRecord, newRecord, names })) continue
+		const edited = await pathEditOf({ oldRecord, newRecord, pair, query })
+		if (edited) {
+			attributes = withAttributeValues(attributes, edited)
+			continue
+		}
+		// this pair's path edit waits for the commit, which resolves it with what else changed: no write-back from the
+		// old uuid (a path removed since is written again from it, as any removed required path)
+		if (isPathEditWaiting({ oldRecord, newRecord, pair, query })) continue
 
 		const uuid = await query.any.getAttribute(newRecord, { name: pair.attribute.uuid })
 		const target = uuid
@@ -59,6 +70,57 @@ export async function reconcileReferrerRefPaths(params: {
 	}
 	if (attributes === newRecord.attributes) return []
 	return [updatedOperation(newRecord, attributes)]
+}
+
+/**
+ * Whether a pair's path edit, its uuid kept, waits for the commit: the transaction edited this pair's path, the path is
+ * still there and this update keeps the uuid.
+ */
+function isPathEditWaiting(params: {
+	oldRecord: Scl.RawRecord<Scl.ElementsOf>
+	newRecord: Scl.RawRecord<Scl.ElementsOf>
+	pair: ReferencePair
+	query: Core.Query<Config>
+}): boolean {
+	const { oldRecord, newRecord, pair, query } = params
+	const { uuid, path } = pair.attribute
+	return (
+		pathEdits({ query }).get(newRecord.id)?.has(path) === true &&
+		readAttribute({ record: newRecord, name: path, defaults: 'none' }) !== '' &&
+		!hasAttributeChange({ oldRecord, newRecord, names: [uuid] })
+	)
+}
+
+/**
+ * What a caller's edit of a pair's path, its uuid kept, writes now: for a removed path the definition does not require,
+ * the uuid and the data names beside it (its companions) removed (an unbind); for an edited path, nothing (the uuid
+ * kept until the commit resolves the path, `notePathEdit`). `undefined` when the edit is neither: a removed required
+ * path is written again from the uuid (as any other binding change).
+ */
+async function pathEditOf(params: {
+	oldRecord: Scl.RawRecord<Scl.ElementsOf>
+	newRecord: Scl.RawRecord<Scl.ElementsOf>
+	pair: ReferencePair
+	query: Core.Query<Config>
+}): Promise<DerivedAttributeValue[] | undefined> {
+	const { oldRecord, newRecord, pair, query } = params
+	const { uuid: uuidAttribute, path: pathAttribute } = pair.attribute
+	if (hasAttributeChange({ oldRecord, newRecord, names: [uuidAttribute] })) return undefined
+	if (!hasAttributeChange({ oldRecord, newRecord, names: [pathAttribute] })) return undefined
+	if (!readAttribute({ record: newRecord, name: uuidAttribute, defaults: 'none' })) return undefined
+	const path = readAttribute({ record: newRecord, name: pathAttribute, defaults: 'none' })
+	if (!path) {
+		const required = REQUIRED_PATHS.has(`${newRecord.tagName}@${pathAttribute}`)
+		if (required) return undefined
+		// the data it named on the target (its companions) goes with the binding
+		return [uuidAttribute, ...pair.companions.map((companion) => companion.name)].map((name) => ({
+			name,
+			value: undefined,
+		}))
+	}
+	// resolved at the commit, as the import resolves a path: the element may come later in the transaction
+	notePathEdit({ query, recordId: newRecord.id, pathAttribute })
+	return []
 }
 
 /**

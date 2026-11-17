@@ -1,12 +1,17 @@
+import { contributesChild } from './contributed-children'
+import { createConfRevBumpQueue, remapCopies, writeDataSetChange } from './data-set-order'
+import { findDeletedDataReferrers, writeDeletedDataReferrers } from './deleted-data-referrers'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
+import { pairByKeyOnLineageMiss } from './pair-by-key'
+import { createPairingMemo } from './pairing-memo'
 import { projectOwnedAttributes } from './project-owned-attributes'
 import { indexRedirectedSourceUuids } from './reference-match'
 import { acceptsRemoval, classifyUnmatched, classifyUnpairedReference } from './removal-base'
 import { readTargetLineages } from './target-lineages'
-import { textChangeOf } from './text-change'
 import { reconcileTextWrappers } from './text-wrappers'
 import { createTypeComparison, typeChangesOf } from './type-change'
+import { compareText, readValueOwnership } from './value-ownership'
 import { visibleAttributes } from './visible-attributes'
 import { landingParent } from './wrapper'
 
@@ -20,9 +25,15 @@ import {
 } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { leaveOutUndeclaredNodes } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import {
+	readTemplateBlocks,
+	writeConfRevBumps,
+} from '@/v2019C1/extensions/lifecycle/layers/ied/bump-data-set-conf-revs'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { DISPOSABLE_REFERENCE_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
+import { readAttribute } from '@/v2019C1/helpers'
 
+import type { ConfRevBumpQueue } from './data-set-order.types'
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { ChildMatch, PinnedMatches } from './match-child.types'
 import type { PlaceholderLineages } from './placeholder-lineages.types'
@@ -31,6 +42,7 @@ import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
 import type { TargetLineages } from './target-lineages.types'
 import type { TypeFollowing } from './type-change.types'
+import type { ValueOwnership } from './value-ownership.types'
 import type { Config } from '@/v2019C1/config'
 import type { Scl } from '@/v2019C1/config'
 import type {
@@ -39,6 +51,8 @@ import type {
 	TypeFollower,
 } from '@/v2019C1/extensions/data-model/transaction'
 import type { FindIdentityCollisionParams } from '@/v2019C1/extensions/lifecycle/constraints/find-identity-collision.types'
+import type { TakeOvers } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { TemplateBlocks } from '@/v2019C1/extensions/lifecycle/layers/ied/bump-data-set-conf-revs.types'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -91,6 +105,11 @@ export async function reconcile(
 		/** Whose names a matched element keeps: see `visibleAttributes`. */
 		namesFollow: NamesFollow
 		/**
+		 * On a contribution: below a container of these tags the project already holds (one the contribution lands on), only
+		 * the children of the tags listed are contributed; the rest is the container's own (a subnetwork's settings).
+		 */
+		contributedChildren?: ReadonlyMap<string, ReadonlySet<string>>
+		/**
 		 * Child tags to treat as BOUNDARIES: their subtrees are left untouched (not reconciled,
 		 * added, or deleted) because another pass owns them (e.g. the topology frame reconcile
 		 * delegates Application/Function to the fn/app cascade).
@@ -134,6 +153,8 @@ export async function reconcile(
 		placeholderLineages?: PlaceholderLineages
 		/** The source is the project itself (a copy): a uuid both name is one element, never a reference this walk wrote. */
 		sourceIsProject?: boolean
+		/** The values the project keeps that the consumer takes the template's for: see `Resolution.takeOver`. */
+		takeOver?: TakeOvers
 	} & ReconcileAdditions,
 ): Promise<ReconcileResult> {
 	const {
@@ -175,7 +196,13 @@ export async function reconcile(
 	const sourceUuids = new Set<string>()
 	await collectUuids(sourceQuery, { node: sourceTree, out: sourceUuids })
 
-	const redirectedSourceUuids = await indexRedirectedSourceUuids(tx, params.redirectMappings)
+	const redirected = await indexRedirectedSourceUuids(tx, params.redirectMappings)
+	// in an IED, what the template names by uuids the instance's lineages do not know, paired by key before the walk
+	const byKey = pairByKeyOnLineageMiss({ sourceTree, instanceTree, index, sourceUuids, matchKey })
+	// what the caller decided wins over the key pass
+	const redirectedSourceUuids = new Map([...byKey.redirectedSourceUuids, ...redirected])
+	// the template's control blocks, by uuid, from its tree as held: a data set change raises the project's against them
+	const templateBlocks = readTemplateBlocks({ sourceTree })
 	// read before the first write: the references the instance held, as the report read them
 	const targetLineages = await readTargetLineages(tx, {
 		nodes: [instanceTree],
@@ -184,6 +211,29 @@ export async function reconcile(
 	})
 	// the matched elements whose type the template changed, brought in one import once the walk is done
 	const typeFollowing: TypeFollowing = { comparison: createTypeComparison(), followers: [] }
+	// a reference naming data the update deletes is written as its decision says, before the walk removes the data
+	const referrers = await findDeletedDataReferrers(tx, {
+		sourceQuery,
+		sourceTree,
+		instanceTree,
+		sourceUuids,
+		matchKey,
+		removalBase: params.removalBase,
+		typeComparison: typeFollowing.comparison,
+	})
+	// the configuration revisions the walk raises, written once it is done: an entry removed here raises its senders too
+	const confRevBumps = createConfRevBumpQueue()
+	const written = await writeDeletedDataReferrers(tx, { referrers, accepted })
+	confRevBumps.defer(written.confRevBumps)
+	// an input cleared above stays: the walk does not take its acceptance for the removal of a project element
+	const walkAccepted = withoutIds({ accepted, ids: written.cleared })
+	// what the project keeps of the template's values, as the report reads them
+	const valueOwnership = await readValueOwnership(sourceQuery, {
+		sourceTree,
+		instanceTree,
+		matchKey,
+		takeOver: params.takeOver,
+	})
 
 	// root + descendants: update matched in place, add new
 	if (!withinProjectOwned) {
@@ -195,6 +245,7 @@ export async function reconcile(
 			overrides,
 			namesFollow: params.namesFollow,
 			typeFollowing,
+			valueOwnership,
 		})
 		await reconcileTextWrappers(tx, {
 			sourceQuery,
@@ -215,7 +266,7 @@ export async function reconcile(
 		sourceNode: sourceTree,
 		instanceParent: instanceTree,
 		index,
-		accepted,
+		accepted: walkAccepted,
 		overrides,
 		keepNameTypesFrom,
 		matchKey,
@@ -227,14 +278,21 @@ export async function reconcile(
 		added,
 		pendingCollisions,
 		redirectedSourceUuids,
+		templateBlocks,
 		keepLeftoverRefs,
 		withinProjectOwned,
-		pinnedMatches: params.pinnedMatches,
+		pinnedMatches: new Map([...byKey.pinnedMatches, ...(params.pinnedMatches ?? [])]),
+		keyPairings: new Map(
+			[...byKey.keys].filter(([sourceId]) => !params.pinnedMatches?.has(sourceId)),
+		),
+		confRevBumps,
 		foreignInstanceIds: params.foreignInstanceIds,
 		notSelected,
 		typeFollowing,
+		valueOwnership,
 		placeholderLineages: params.placeholderLineages ?? new Set(),
 		contributeOnly,
+		contributedChildren: params.contributedChildren,
 		landedOn,
 		sourceIsProject: params.sourceIsProject ?? false,
 	})
@@ -245,12 +303,14 @@ export async function reconcile(
 		await deleteRemoved(tx, {
 			instanceNode: instanceTree,
 			sourceUuids,
+			pairedByKey: new Set(byKey.pinnedMatches.values()),
 			accepted,
 			matchKey,
 			removalBase: params.removalBase,
 			omit,
 		})
 	}
+	await writeConfRevBumps(tx, { bumps: confRevBumps.list() })
 	// the types the matched elements take from the template, through its closure, once what it removes is gone
 	if (typeFollowing.followers.length > 0) {
 		await importTypes(tx, {
@@ -263,7 +323,11 @@ export async function reconcile(
 	// what the template drops, or the project's own element whose removal is accepted, frees the key it held
 	await assertNoPendingCollision(tx, { pending: pendingCollisions })
 
-	return { cloneMappings: added, landedOn }
+	// an entry a data set written again in order copied is named by its copy
+	return {
+		cloneMappings: remapCopies({ mappings: added, movedIds: confRevBumps.movedIds() }),
+		landedOn,
+	}
 }
 
 /**
@@ -303,16 +367,26 @@ async function reconcileChildren(
 		/** Accumulates the elements added below here that collide on a key nothing can change. */
 		pendingCollisions: FindIdentityCollisionParams[]
 		redirectedSourceUuids: RedirectedSourceUuids
+		/** The template's control blocks by uuid: see `readTemplateBlocks`. */
+		templateBlocks: TemplateBlocks
 		keepLeftoverRefs: boolean
 		/** The children sit in an element of the project a source element is mapped onto. */
 		withinProjectOwned: boolean
 		pinnedMatches?: PinnedMatches
+		/** The key each source element the key pass pinned was paired on, by its record id. */
+		keyPairings?: ReadonlyMap<string, string>
+		/** The configuration revisions the walk raises, written once it is done. */
+		confRevBumps: ConfRevBumpQueue
 		foreignInstanceIds?: ReadonlySet<string>
 		notSelected?: ReadonlySet<string>
 		typeFollowing: TypeFollowing
+		/** What the project keeps of the template's values: see `compareText`. */
+		valueOwnership: ValueOwnership
 		placeholderLineages: PlaceholderLineages
 		/** A first placement onto the project's element: see `reconcile`. */
 		contributeOnly: boolean
+		/** On a contribution, the children of a held container it brings: see `reconcile`. */
+		contributedChildren: ReadonlyMap<string, ReadonlySet<string>> | undefined
 		/** Accumulates, on a contribution, where its identified source elements landed. */
 		landedOn: RedirectMapping[]
 		sourceIsProject: boolean
@@ -338,11 +412,27 @@ async function reconcileChildren(
 		withinProjectOwned,
 	} = params
 	const matchedInstanceIds = new Set<string>()
+	// what is read of the instance's children while its source children are paired, read once
+	const pairingMemo = createPairingMemo()
+	// each source child paired, with the instance child it paired with: the order of a data set's entries
+	const pairs = new Map<string, string>()
+	// the tags of the children this walk removes: an entry removed changes its data set
+	const removedTags: string[] = []
 	// the children renamed here, numbered once every rename of this parent is written
 	const renamedChildren: AnyTreeRecord[] = []
 	for (const sourceChild of sourceNode.tree) {
 		// a boundary tag is owned by another pass (e.g. fn/app cascade) - leave it untouched
 		if (omit?.includes(sourceChild.tagName)) continue
+		// below a container the project holds, a contribution brings only the children it is told to
+		if (
+			params.contributeOnly &&
+			!contributesChild({
+				parentTag: sourceNode.tagName,
+				childTag: sourceChild.tagName,
+				contributedChildren: params.contributedChildren,
+			})
+		)
+			continue
 		// The SAME matcher the diff (report) side uses, so apply pairs children identically: lineage
 		// with the cross-type guard, reference identity (uuid then name), then positional fallback.
 		const match = await matchChild(sourceQuery, {
@@ -356,15 +446,27 @@ async function reconcileChildren(
 			redirectedSourceUuids,
 			matchContainersByName: withinProjectOwned,
 			pinnedMatches: params.pinnedMatches,
+			keyPairings: params.keyPairings,
 			foreignInstanceIds: params.foreignInstanceIds,
 			placeholderLineages: params.placeholderLineages,
 			refsAlwaysAdded: params.contributeOnly,
 			sourceIsProject: params.sourceIsProject,
+			pairingMemo,
 		})
 
 		if (match) {
 			const matched = match.record
 			matchedInstanceIds.add(matched.id)
+			pairs.set(sourceChild.id, matched.id)
+			// an element paired by key now names the template element it stands for, its group accepted (a fork keeps its
+			// own uuid)
+			if (
+				match.pairedByKey !== undefined &&
+				matchKey === 'templateUuid' &&
+				(!accepted || accepted.instanceIds.has(matched.id))
+			) {
+				await restampLineage(tx, { sourceChild, matched })
+			}
 			if (params.contributeOnly)
 				await recordLanding(tx, { sourceQuery, sourceChild, match, landedOn: params.landedOn })
 			// a container found by its name is the project's own: its attributes are not written; on a first placement
@@ -388,6 +490,7 @@ async function reconcileChildren(
 					overrides,
 					namesFollow,
 					typeFollowing: params.typeFollowing,
+					valueOwnership: params.valueOwnership,
 				})
 				if (renamed) renamedChildren.push(matched)
 				await reconcileTextWrappers(tx, {
@@ -414,14 +517,19 @@ async function reconcileChildren(
 				added,
 				pendingCollisions,
 				redirectedSourceUuids,
+				templateBlocks: params.templateBlocks,
 				keepLeftoverRefs,
 				withinProjectOwned,
 				pinnedMatches: params.pinnedMatches,
+				keyPairings: params.keyPairings,
+				confRevBumps: params.confRevBumps,
 				foreignInstanceIds: params.foreignInstanceIds,
 				notSelected: params.notSelected,
 				typeFollowing: params.typeFollowing,
+				valueOwnership: params.valueOwnership,
 				placeholderLineages: params.placeholderLineages,
 				contributeOnly: params.contributeOnly,
+				contributedChildren: params.contributedChildren,
 				landedOn: params.landedOn,
 				sourceIsProject: params.sourceIsProject,
 			})
@@ -500,14 +608,37 @@ async function reconcileChildren(
 			// a shared element's other links are not this template's to drop: explicit accept only
 			if (keepLeftoverRefs && !accepted) continue
 			if (accepted && !accepted.instanceIds.has(instanceChild.id)) continue
+		} else if (params.valueOwnership.lostData.has(instanceChild.id)) {
+			// data the type the template gives its logical node no longer holds goes with the type change, unless skipped
+			if (accepted && !accepted.instanceIds.has(instanceChild.id)) continue
 		} else {
 			// never remove an author addition implicitly — require an explicit accept
 			if (!accepted || !accepted.instanceIds.has(instanceChild.id)) continue
 		}
 
 		const live = await tx.any.getRecord(instanceChild)
-		if (live) await tx.any.delete(instanceChild)
+		if (live) {
+			await tx.any.delete(instanceChild)
+			removedTags.push(instanceChild.tagName)
+		}
 	}
+
+	// a data set's entries in the template's order (the order the data is sent in), its control blocks raised when an
+	// entry changed; a first
+	// placement rewrites nothing the project holds, as the report lists no order change there
+	if (params.contributeOnly) return
+	await writeDataSetChange(tx, {
+		sourceNode,
+		instanceParent,
+		pairs,
+		added: params.added,
+		removedTags,
+		accepted,
+		confRevBumps: params.confRevBumps,
+		matchKey,
+		redirectedSourceUuids: params.redirectedSourceUuids ?? new Map(),
+		templateBlocks: params.templateBlocks,
+	})
 }
 
 /** Record where an identified source element of a contribution landed, when the element it landed on is another. */
@@ -554,6 +685,8 @@ async function deleteRemoved(
 		matchKey: MatchKey
 		removalBase: RemovalBase
 		omit: readonly string[] | undefined
+		/** The instance elements the key pass paired: held by the template whatever their lineage says. */
+		pairedByKey: ReadonlySet<string>
 	},
 ): Promise<void> {
 	const { instanceNode, sourceUuids, accepted, matchKey, removalBase, omit } = params
@@ -561,6 +694,7 @@ async function deleteRemoved(
 	await collectRemoved(tx, {
 		node: instanceNode,
 		sourceUuids,
+		pairedByKey: params.pairedByKey,
 		accepted,
 		matchKey,
 		removalBase,
@@ -581,6 +715,7 @@ async function collectRemoved(
 	params: {
 		node: AnyTreeRecord
 		sourceUuids: ReadonlySet<string>
+		pairedByKey: ReadonlySet<string>
 		accepted: AcceptedIds | undefined
 		matchKey: MatchKey
 		removalBase: RemovalBase
@@ -596,7 +731,7 @@ async function collectRemoved(
 		? classifyUnmatched({
 				tagName: node.tagName,
 				lineage,
-				inSource: sourceUuids.has(lineage),
+				inSource: sourceUuids.has(lineage) || params.pairedByKey.has(node.id),
 				removalBase,
 			})
 		: 'still-held'
@@ -610,6 +745,7 @@ async function collectRemoved(
 		await collectRemoved(tx, {
 			node: child,
 			sourceUuids,
+			pairedByKey: params.pairedByKey,
 			accepted,
 			matchKey,
 			removalBase,
@@ -633,6 +769,7 @@ async function updateMatchedAttributes(
 		overrides?: CollisionOverrides
 		namesFollow: NamesFollow
 		typeFollowing: TypeFollowing
+		valueOwnership: ValueOwnership
 	},
 ): Promise<boolean> {
 	const { sourceQuery, instanceRecord, sourceNode, accepted, overrides, namesFollow } = params
@@ -662,6 +799,7 @@ async function updateMatchedAttributes(
 	const owned = projectOwnedAttributes({
 		tagName: instanceRecord.tagName,
 		instanceAttributes,
+		sourceAttributes,
 		namesFollow,
 	})
 
@@ -677,8 +815,13 @@ async function updateMatchedAttributes(
 		if (current[name] !== next) updates[name] = next
 	}
 
-	// a text the template changed is written as an attribute is, in the same update
-	const textChange = textChangeOf({ sourceNode, instanceNode: instanceRecord })
+	// a text the template changed is written as an attribute is, in the same update — but a value the project may set
+	// keeps the project's, unless taken over
+	const { textChange } = compareText({
+		sourceNode,
+		instanceNode: instanceRecord,
+		ownership: params.valueOwnership,
+	})
 	const changesAttributes = Object.keys(updates).length > 0
 	if (changesAttributes || textChange) {
 		// `update` removes an attribute on an `undefined` value; the AnyTransaction param is
@@ -727,4 +870,27 @@ async function listTypeFollower(
 		source: sourceNode as unknown as LogicalNodeRecord,
 		target: toRef(instanceRecord) as TypeFollower['target'],
 	})
+}
+
+/** Write the template element's uuid as the lineage of the instance element paired with it by key. */
+async function restampLineage(
+	tx: Core.Transaction<Config>,
+	params: { sourceChild: AnyTreeRecord; matched: AnyTreeRecord },
+): Promise<void> {
+	const sourceUuid = readAttribute({ record: params.sourceChild, name: 'uuid', defaults: 'none' })
+	if (!sourceUuid) return
+	await tx.any.update(params.matched, { attributes: { templateUuid: sourceUuid } })
+}
+
+/** Accepted ids without some instance ids; undefined (every change written) stays undefined. */
+function withoutIds(params: {
+	accepted: AcceptedIds | undefined
+	ids: ReadonlySet<string>
+}): AcceptedIds | undefined {
+	const { accepted, ids } = params
+	if (!accepted || ids.size === 0) return accepted
+	return {
+		...accepted,
+		instanceIds: new Set([...accepted.instanceIds].filter((id) => !ids.has(id))),
+	}
 }

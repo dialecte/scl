@@ -356,6 +356,7 @@ export async function asd(
 		decisions,
 		keepNameTypesFrom,
 		targetInstance,
+		redirectMappings: params.redirectMappings,
 		decisionMappings: params.decisionMappings,
 		selections,
 	})
@@ -371,7 +372,11 @@ export async function asd(
 			cloneMappings,
 			instanceRootRef,
 			matchKey,
-			redirectMappings: [...(redirectMappings ?? []), ...gainedFunctions],
+			redirectMappings: [
+				...(redirectMappings ?? []),
+				...gainedFunctions,
+				...(params.redirectMappings ?? []),
+			],
 		})
 	}
 

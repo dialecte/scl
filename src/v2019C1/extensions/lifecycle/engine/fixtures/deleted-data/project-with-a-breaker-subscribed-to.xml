@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IED7, an instance of the breaker template, its data set given the quality of the position by the project; IED8,
+     another IED, subscribing to that quality through IED7's GOOSE control block -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <IED name="IED7" uuid="ied-ins" templateUuid="ied-src" dev:db-id="ied-t">
+        <AccessPoint name="AP1" uuid="ap-ins" templateUuid="ap-src" dev:db-id="ap-t">
+            <Server dev:db-id="srv-t">
+                <Authentication dev:db-id="auth-t"/>
+                <LDevice inst="LD1" uuid="ld-ins" templateUuid="ld-src" dev:db-id="ld-t">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln0-ins" templateUuid="ln0-src" dev:db-id="ln0-t">
+                        <DataSet name="DS" uuid="ds-ins" templateUuid="ds-src" dev:db-id="ds-t">
+                            <FCDA ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" fc="ST" lnUuid="xcbr-ins" dev:db-id="fst-t"/>
+                            <FCDA ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="q" fc="ST" lnUuid="xcbr-ins" dev:db-id="fq-t"/>
+                        </DataSet>
+                        <GSEControl name="GC" appID="GC" datSet="DS" confRev="1" uuid="gc-ins" templateUuid="gc-src" dev:db-id="gc-t"/>
+                    </LN0>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="xcbr-ins" templateUuid="xcbr-src" dev:db-id="xcbr-t"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="IED8" uuid="ied8" dev:db-id="ied8">
+        <AccessPoint name="AP1" uuid="ap8" dev:db-id="ap8">
+            <Server dev:db-id="srv8">
+                <Authentication dev:db-id="auth8"/>
+                <LDevice inst="LD1" uuid="ld8" dev:db-id="ld8">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln08" dev:db-id="ln08">
+                        <Inputs dev:db-id="in8">
+                            <ExtRef iedName="IED7" ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="q" lnUuid="xcbr-ins" serviceType="GOOSE" srcLDInst="LD1" srcLNClass="LLN0" srcCBName="GC" srcCBUuid="gc-ins" intAddr="posQ" desc="breaker position quality" dev:db-id="ext8"/>
+                        </Inputs>
+                    </LN0>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt-t">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0-t"/>
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="lnt1-t"><DO name="Pos" type="DPC_T" dev:db-id="do-pos-t"/></LNodeType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dot-t">
+            <DA name="stVal" fc="ST" bType="Dbpos" dev:db-id="da-st-t"/>
+            <DA name="q" fc="ST" bType="Quality" dev:db-id="da-q-t"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>

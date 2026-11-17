@@ -4,6 +4,7 @@ import type { OffLevel } from '../layers/topology/resolve-primary-placement.type
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { ReferenceOutsideScope } from './contribution-scope.types'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
+import type { AnyRawRecord } from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
 /** How a diffed element changed between the (updated) template and the instance. */
@@ -21,10 +22,33 @@ export type AttributeChange = { name: string; before?: string; after?: string }
  * - `instance-configuration`: the instance configures it where it sits (a behaviour description's file, a variable's
  *   value); a template update does not overwrite it.
  */
-export type KeptAttributeReason = 'bound-logical-node' | 'instance-configuration'
+export type KeptAttributeReason =
+	| 'bound-logical-node'
+	| 'instance-configuration'
+	| 'conf-rev-only-rises'
+	| 'settable-value'
+	| 'data-flow'
 
 /** A difference the update lists but does not apply: the project keeps `before`, the template says `after`. */
 export type KeptAttributeChange = AttributeChange & { reason: KeptAttributeReason }
+
+/** A text the update lists but does not write: the project keeps `before`, the template says `after`. */
+export type KeptTextChange = TextChange & { reason: KeptAttributeReason }
+
+/**
+ * Why a change cannot be written as it is suggested, so that its group waits for an explicit decision:
+ * - `value-outside-enumeration`: the project's value, which it may set, is not among the values the template's type
+ *   now allows; accepted, the template's value is written, skipped, the project's stays;
+ * - `names-deleted-data`: a reference (`FCDA`, `ExtRef`) names data the update deletes (a logical node, a device or a
+ *   control block it removes, a data object or attribute a logical node's new type lacks); accepted, the entry is
+ *   removed or the input's source cleared; skipped, it stays and the group deleting the data cannot be accepted;
+ * - `unbinds-another-ied`: the removal, in the specification of an IED an update updates, deletes an LNode the project
+ *   bound to another IED; accepted, it goes with that binding (nothing in the other IED changes), skipped, it stays.
+ */
+export type DecisionRequiredReason =
+	| 'value-outside-enumeration'
+	| 'names-deleted-data'
+	| 'unbinds-another-ied'
 
 /**
  * One element's attributes compared: the changes an accepted update writes, its type references naming a type of other
@@ -71,6 +95,15 @@ export type DiffNode = {
 	 * `unchanged`) that has any. They neither make the node `modified` nor open a decision: there is nothing to accept.
 	 */
 	keptAttributeChanges?: KeptAttributeChange[]
+	/** The text the template gives that the update does not write, with why: see `KeptTextChange`. */
+	keptTextChange?: KeptTextChange
+	/**
+	 * Present on a change the consumer took over (`Resolution.takeOver`): the project kept it otherwise
+	 * (`keptTextChange`), it is now listed and written as any change.
+	 */
+	takenOver?: true
+	/** Present on a change that cannot be written as suggested: its group waits for a decision, see `DecisionGroup`. */
+	requiresDecision?: DecisionRequiredReason
 	/**
 	 * Present on an `added` node that collides with an element the instance holds where it lands, on a key none of
 	 * whose fields can be changed (an `LNode` sharing class, instance, prefix, device and IED with one the project
@@ -85,11 +118,58 @@ export type DiffNode = {
 	 */
 	pairedByName?: string
 	/**
-	 * Present on a reference paired with the template's among instance references naming the very same thing (the same
-	 * target, the same data): such twins are paired in order. Listed in `DiffReport.warnings`.
+	 * Present on a node paired with the template's among instance siblings that are the very same thing: references
+	 * naming the same target and data, or elements of the same key. Such twins are paired in order. Listed in
+	 * `DiffReport.warnings`.
 	 */
 	pairedAmongTwins?: true
+	/**
+	 * Present on an IED element paired with the template's by its key (the key, as `name=value` parts; `only <tag>` for a
+	 * tag without key the schema holds once, an `LN0`, paired with the one instance element of its tag left free) where
+	 * its lineage
+	 * names nothing the template holds — an IED file imported again, whose uuid-less elements got other uuids. Listed in
+	 * `DiffReport.warnings`.
+	 */
+	pairedByKey?: string
+	/**
+	 * Present on a matched data set whose entries the template lists in another order than the update would leave them
+	 * (the order is the order the data is sent in): `apply` writes the template's order, the project's own entries
+	 * after the entry each followed. Makes the node `modified`.
+	 */
+	orderChange?: OrderChange
+	/**
+	 * Present on a matched data set whose entries the update changes (one added, removed or put in another order): the
+	 * configuration revision each control block naming it takes, one above its own (the project's own blocks included) —
+	 * except a block the template no longer holds (anywhere in the IED); one the template raises above it itself is
+	 * listed for when its own change is skipped (`onlyIfBlockSkipped`).
+	 * Written by `apply` with the changes of the entries; lists, opens no decision of its own.
+	 */
+	confRevBumps?: ConfRevBump[]
+	/** Present when a control block naming the data set cannot be raised (see `ConfRevNotRaised`): the report warns. */
+	confRevNotRaised?: ConfRevNotRaised[]
 	children: DiffNode[]
+}
+
+/** The order the template gives the entries of a data set: see `DiffNode.orderChange`. */
+export type OrderChange = { tagName: 'FCDA' }
+
+/** One control block's `confRev` raised because the data set it names changed. */
+export type ConfRevBump = {
+	controlBlock: AnyRefOrRecord
+	before: string
+	after: string
+	/**
+	 * Present when the template raises the block's revision itself (its own change, listed on its node): this raise is
+	 * written only when that change is skipped, the template's value otherwise.
+	 */
+	onlyIfBlockSkipped?: true
+}
+
+/** A control block whose `confRev` a data set change cannot raise: no unsigned 32-bit number, or at its limit. */
+export type ConfRevNotRaised = {
+	controlBlock: AnyRefOrRecord
+	value: string
+	refusal: 'invalid' | 'overflow'
 }
 
 /** An element's text, as the instance holds it (`before`) and as the template gives it (`after`). */
@@ -147,6 +227,11 @@ export type DecisionGroup = {
 	dependsOn: string[]
 	suggestedAction: 'accept' | 'skip'
 	/**
+	 * Present when the group cannot take its suggested action: `apply` refuses decisions that do not name it, with
+	 * `DECISION_REQUIRED`. Why, from its primary: see `DecisionRequiredReason`.
+	 */
+	requiresDecision?: DecisionRequiredReason
+	/**
 	 * The primary element's user-editable attributes with their edit mode
 	 * (schema-derived via the attribute classifier), tagged at report time so the UI
 	 * renders inputs directly from the report without re-deriving. Omitted until the
@@ -160,6 +245,24 @@ export type DecisionGroup = {
 	 * with the removal. Absent when nothing outside is touched, or the group removes nothing.
 	 */
 	sideEffects?: RemovalSideEffect[]
+	/**
+	 * Present when accepting the group would change another IED (see `OtherIedImpact`): an update never does, so the
+	 * group is suggested `skip` and `apply` refuses decisions accepting it, with `UPDATE_AFFECTS_OTHER_IED`.
+	 */
+	blocked?: 'affects-other-ied'
+}
+
+/**
+ * What an update of an IED would change in another IED, listed with the group bringing it (`groupId`, blocked): an
+ * element of `ied` `deleted` or `cleared` with what the update removes, an input `unsubscribed` from data a control
+ * block of the updated IED no longer sends, or a reference `renamed` with an element of the updated IED it names.
+ */
+export type OtherIedImpact = {
+	/** The name of the IED changed. */
+	ied: string
+	element: { tagName: string; id: string }
+	effect: 'deleted' | 'cleared' | 'unsubscribed' | 'renamed'
+	groupId: string
 }
 
 /** A reference outside what a group removes that the removal deletes or clears: see `DecisionGroup.sideEffects`. */
@@ -285,6 +388,11 @@ export type DiffReport = {
 	scopeUnits?: ReportedElement[]
 	/** What the report did that the consumer should know of: see {@link ReportWarning}. Absent when nothing. */
 	warnings?: ReportWarning[]
+	/**
+	 * An IED update only: what the update would change in other IEDs, each with the group bringing it, blocked (see
+	 * {@link OtherIedImpact}). A consumer may refuse to confirm the update while any is listed. Absent when none.
+	 */
+	otherIedImpacts?: OtherIedImpact[]
 }
 
 /**
@@ -312,6 +420,42 @@ export type ReportWarning =
 	  }
 	| {
 			/**
+			 * An element that is no reference, paired with the template's among instance elements of the very same key
+			 * (the same label twice): such twins are paired in order.
+			 */
+			code: 'identical-elements-paired-in-order'
+			/** The instance's element. */
+			reference: AnyRefOrRecord
+			/** The template's element it paired with. */
+			source?: AnyRefOrRecord
+	  }
+	| {
+			/**
+			 * A control block naming a data set the update changes whose configuration revision is not raised: its value is
+			 * no unsigned 32-bit number (`invalid`), or at its limit (`overflow`). Set it by hand.
+			 */
+			code: 'conf-rev-not-raised'
+			/** The project's control block. */
+			reference: AnyRefOrRecord
+			value: string
+			refusal: 'invalid' | 'overflow'
+	  }
+	| {
+			/**
+			 * An IED element paired with the template's by its key: its lineage names nothing the template holds (an IED
+			 * file imported again, its uuid-less elements given other uuids). `apply` writes the template element's uuid as
+			 * its lineage (a fork keeps its own).
+			 */
+			code: 'element-paired-by-key'
+			/** The instance's element. */
+			reference: AnyRefOrRecord
+			/** The template's element it paired with. */
+			source?: AnyRefOrRecord
+			/** The key it paired on: `DiffNode.pairedByKey`. */
+			key: string
+	  }
+	| {
+			/**
 			 * A reference of what the placement places naming what it does not place (a terminal on a node no file of the
 			 * template holds; a reference by uuid, of the frame, a role, a category, a variable or a behaviour description, to
 			 * an element the placement leaves out): the reference element is not written. `attribute` is the attribute naming
@@ -330,6 +474,16 @@ export type ReportWarning =
 			 */
 			code: 'satellite-not-placed'
 			/** The template's variable or behaviour description: neither it nor the role's reference to it is written. */
+			source: AnyRefOrRecord
+	  }
+	| {
+			/**
+			 * An IED update only: an application or function of the template's specification holding no LNode of the IED,
+			 * of which the IED's level holds several instances (the template placed more than once there): which is the
+			 * IED's is not told, none is updated. Update the right one with its own operation.
+			 */
+			code: 'specification-instance-unresolved'
+			/** The template's application or function. */
 			source: AnyRefOrRecord
 	  }
 
@@ -370,3 +524,9 @@ export type MultiInstanceSibling = { sibling: boolean; pairedByName?: string }
  * it), `'keep'` otherwise (another primary's link / indeterminate). See {@link diff}.
  */
 export type LeftoverRefPolicy = (instanceChild: AnyTreeRecord) => Promise<'keep' | 'removed'>
+
+/**
+ * What the diffs of one update share of their reads, the document unchanged between them (a report): the references
+ * naming data an update may delete, by tag, read once whatever the number of instances.
+ */
+export type DiffReads = { referrersByTag: Map<string, readonly AnyRawRecord[]> }

@@ -32,11 +32,16 @@ const isdXml = /* xml */ `
 async function openAsIsd(params: {
 	project: SclTest.ActParams<SclTest.BaseXmlTestCase>['project']
 	xml: string
+	/** Absent: `P1.isd`. */
+	fileName?: string
 }): Promise<Core.Query<Config>> {
 	const { project, xml } = params
-	const imported = await project.importFile(new File([xml], 'P1.isd', { type: 'text/xml' }), {
-		useCustomRecordsIds: true,
-	})
+	const imported = await project.importFile(
+		new File([xml], params.fileName ?? 'P1.isd', { type: 'text/xml' }),
+		{
+			useCustomRecordsIds: true,
+		},
+	)
 	return project.openDocument(imported.documentId).query
 }
 
@@ -124,16 +129,36 @@ describe('query.lifecycle.report - an IED placed for the first time', () => {
 type MatchedCase = SclTest.BaseXmlTestCase & {
 	/** Absent: the default scenario. */
 	scenario?: LifecycleScenario
+	/** The IED of the project the update starts from. Absent: none named. */
+	targetInstance?: Scl.Ref<'IED'>
+	/** The name the source file is opened under. Absent: `P1.isd`. */
+	fileName?: string
 	expected:
 		| { refused: { key: string; meta: Record<string, unknown> } }
 		| { instances: number; firstPlacements: number }
 }
 
-// Only a first placement is reported: a scenario reconciling an IED the project already holds is refused, an
-// instantiate places a new one beside it. Read-only: the project is left as it was.
+// An IED the project holds placed from the template is updated, the one the update starts from: named among several,
+// or the only one. A fork finding it is refused, an instantiate places a new one beside it. Read-only: the project is
+// left as it was.
 describe('query.lifecycle.report - an IED the project already holds', () => {
 	const testCases: SclTest.TestCases<MatchedCase> = {
-		'no scenario given, the project holding an IED placed from it → refused, the default template is not available yet':
+		'no scenario given, the project holding one IED placed from it → its update reported, no first placement':
+			{
+				sourceXml: isdXml,
+				targetXml: /* xml */ `
+				<SCL ${ns} ${id}="project-root">
+					<IED name="P1" uuid="20000000-0000-4000-8000-000000000099" templateUuid="20000000-0000-4000-8000-000000000001" ${id}="project-ied">
+						<AccessPoint name="AP1" templateUuid="20000000-0000-4000-8000-000000000002" uuid="20000000-0000-4000-8000-000000000098"/>
+					</IED>
+				</SCL>
+			`,
+				expected: { instances: 1, firstPlacements: 0 },
+				expectedQueries: [
+					'/default:SCL[count(default:IED)=1]/default:IED[@name="P1"][@uuid="20000000-0000-4000-8000-000000000099"][@templateUuid="20000000-0000-4000-8000-000000000001"]',
+				],
+			},
+		'template, the project holding two IEDs placed from it, none named → refused, the update starts from one of them':
 			{
 				sourceXml: isdXml,
 				targetXml: /* xml */ `
@@ -141,16 +166,69 @@ describe('query.lifecycle.report - an IED the project already holds', () => {
 					<IED name="P1" uuid="20000000-0000-4000-8000-000000000099" templateUuid="20000000-0000-4000-8000-000000000001" ${id}="project-ied">
 						<AccessPoint name="AP1"/>
 					</IED>
+					<IED name="P2" uuid="20000000-0000-4000-8000-000000000097" templateUuid="20000000-0000-4000-8000-000000000001" ${id}="project-ied-2">
+						<AccessPoint name="AP1"/>
+					</IED>
 				</SCL>
 			`,
+				scenario: 'template',
 				expected: {
-					refused: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'scenario', value: 'template' } },
+					refused: {
+						key: 'TARGET_INSTANCE_REQUIRED',
+						meta: {
+							instances: [
+								{ tagName: 'IED', id: 'project-ied' },
+								{ tagName: 'IED', id: 'project-ied-2' },
+							],
+						},
+					},
 				},
-				expectedQueries: [
-					'/default:SCL[count(default:IED)=1]/default:IED[@name="P1"][@uuid="20000000-0000-4000-8000-000000000099"][@templateUuid="20000000-0000-4000-8000-000000000001"]',
-				],
+				expectedQueries: ['/default:SCL[count(default:IED)=2]'],
 			},
-		'template, the project holding an IED placed from it → refused, the scenario is not available yet':
+		'template, the project holding two IEDs placed from it, P2 named → its update reported': {
+			sourceXml: isdXml,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="project-root">
+					<IED name="P1" uuid="20000000-0000-4000-8000-000000000099" templateUuid="20000000-0000-4000-8000-000000000001" ${id}="project-ied">
+						<AccessPoint name="AP1"/>
+					</IED>
+					<IED name="P2" uuid="20000000-0000-4000-8000-000000000097" templateUuid="20000000-0000-4000-8000-000000000001" ${id}="project-ied-2">
+						<AccessPoint name="AP1"/>
+					</IED>
+				</SCL>
+			`,
+			scenario: 'template',
+			targetInstance: { tagName: 'IED', id: 'project-ied-2' },
+			expected: { instances: 1, firstPlacements: 0 },
+			expectedQueries: ['/default:SCL[count(default:IED)=2]'],
+		},
+		'template, an IED of the project named that was not placed from it → refused, the update starts from an instance':
+			{
+				sourceXml: isdXml,
+				targetXml: /* xml */ `
+				<SCL ${ns} ${id}="project-root">
+					<IED name="P1" uuid="20000000-0000-4000-8000-000000000099" templateUuid="20000000-0000-4000-8000-000000000001" ${id}="project-ied">
+						<AccessPoint name="AP1"/>
+					</IED>
+					<IED name="R1" uuid="20000000-0000-4000-8000-000000000096" ${id}="other-ied">
+						<AccessPoint name="AP1"/>
+					</IED>
+				</SCL>
+			`,
+				scenario: 'template',
+				targetInstance: { tagName: 'IED', id: 'other-ied' },
+				expected: {
+					refused: {
+						key: 'TARGET_INSTANCE_REQUIRED',
+						meta: {
+							instances: [{ tagName: 'IED', id: 'project-ied' }],
+							named: { tagName: 'IED', id: 'other-ied' },
+						},
+					},
+				},
+				expectedQueries: ['/default:SCL[count(default:IED)=2]'],
+			},
+		'template, the file opened as an ICD, the project holding an IED placed from it → refused, an ICD update is not available yet':
 			{
 				sourceXml: isdXml,
 				targetXml: /* xml */ `
@@ -161,12 +239,11 @@ describe('query.lifecycle.report - an IED the project already holds', () => {
 				</SCL>
 			`,
 				scenario: 'template',
+				fileName: 'P1.icd',
 				expected: {
-					refused: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'scenario', value: 'template' } },
+					refused: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'source', value: 'icd' } },
 				},
-				expectedQueries: [
-					'/default:SCL[count(default:IED)=1]/default:IED[@name="P1"][@uuid="20000000-0000-4000-8000-000000000099"][@templateUuid="20000000-0000-4000-8000-000000000001"]',
-				],
+				expectedQueries: ['/default:SCL[count(default:IED)=1]'],
 			},
 		'fork, the project holding the IED by its own uuid → refused, the scenario is not available yet':
 			{
@@ -210,7 +287,11 @@ describe('query.lifecycle.report - an IED the project already holds', () => {
 		testCase,
 	}: SclTest.ActParams<MatchedCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
-		const sourceQuery = await openAsIsd({ project, xml: testCase.sourceXml })
+		const sourceQuery = await openAsIsd({
+			project,
+			xml: testCase.sourceXml,
+			fileName: testCase.fileName,
+		})
 		const outcome = await target.query.lifecycle
 			.report({
 				verb: 'ied',
@@ -218,6 +299,7 @@ describe('query.lifecycle.report - an IED the project already holds', () => {
 				ref: iedRef,
 				anchor: projectRoot,
 				scenario: testCase.scenario,
+				targetInstance: testCase.targetInstance,
 			})
 			.then(
 				(reported) => ({

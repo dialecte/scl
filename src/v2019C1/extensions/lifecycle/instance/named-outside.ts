@@ -1,5 +1,5 @@
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { findRefsPointingTo } from '@/v2019C1/extensions/reference/query'
+import { namedTargetsOf } from '@/v2019C1/extensions/reference/query/find/named-targets'
 
 import type { InstanceReader } from './instance.types'
 import type { Scl } from '@/v2019C1/config'
@@ -37,14 +37,12 @@ async function namesOutside(
 	params: { node: AnyTreeRecord; instanceScope: ReadonlySet<string> },
 ): Promise<boolean> {
 	const { node, instanceScope } = params
-	const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS] ?? []
-	for (const pair of pairs) {
-		const referencedUuid = await reader.any.getAttribute(node, { name: pair.attribute.uuid })
-		if (!referencedUuid) continue
-		for (const tagName of pair.target) {
+	// what it names by a uuid pair or a tuple pair, an LNode's binding left out
+	for (const named of namedTargetsOf(node)) {
+		for (const tagName of named.target) {
 			const referenced = await reader.any.findByAttributes({
 				tagName: tagName as Scl.ElementsOf,
-				attributes: { uuid: referencedUuid },
+				attributes: { uuid: named.uuid },
 			})
 			if (referenced.some((record) => !instanceScope.has(record.id))) return true
 		}

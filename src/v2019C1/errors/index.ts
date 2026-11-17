@@ -6,6 +6,7 @@ export {
 export { isSclImportDiagnostic } from './import-diagnostics'
 export type { SclErrorKey } from './errors.types'
 export type {
+	AmbiguousReferenceDiagnostic,
 	DataPathNotSplitDiagnostic,
 	DerivedSpecificationNamingDiagnostic,
 	IncoherentPathName,

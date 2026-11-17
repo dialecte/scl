@@ -3,16 +3,17 @@ import { SIGNAL_PAIRS } from '../constants/signal-pairs.constants'
 import { invariant } from '@dialecte/core/utils'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
+import { buildReferenceAttributes } from '@/v2019C1/extensions/reference/query/build/build-reference-attributes'
 
 import type { LinkParams } from './link.types'
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
  * Links a signal to the element implementing it: the signal names it by its uuid, and the address
- * the hooks write from that uuid follows where the element sits relative to the signal's LNode.
- * Whatever address the signal held is removed with the write, so one the hooks cannot compose (an
- * element without an internal address) does not stay.
+ * written with it is the one that uuid gives, where the element sits relative to the signal's LNode.
+ * Whatever address the signal held is replaced, so one that cannot be composed (an element without an
+ * internal address) does not stay.
  *
  * @intent connect a signal (SourceRef/ControlRef) to its ExtRef/ExtCtrl, implement a signal, link a dataflow to its implementation
  */
@@ -41,8 +42,14 @@ export async function link(tx: Core.Transaction<Config>, params: LinkParams): Pr
 		},
 	)
 
+	// the address the uuid gives, written with it: none when the element has no internal address, so a stale one goes
+	const values = await buildReferenceAttributes(tx, {
+		reference: { tagName: signal.tagName, id: signal.id } as Scl.Ref<Scl.ElementsOf>,
+		target: { tagName: implementation.tagName, id: implementation.id } as Scl.Ref<Scl.ElementsOf>,
+	})
+	const written = Object.fromEntries(values.map(({ name, value }) => [name, value]))
 	// `update` removes an attribute given `undefined`; the untyped surface takes string values only
 	await tx.any.update(signal, {
-		attributes: { [pair.uuid]: uuid, [pair.path]: undefined } as Record<string, string>,
+		attributes: { [pair.path]: undefined, ...written, [pair.uuid]: uuid } as Record<string, string>,
 	})
 }

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="template">
+    <IED name="TPL" uuid="ied-src" dev:db-id="ied-s">
+        <AccessPoint name="AP1" uuid="ap-src" dev:db-id="ap-s">
+            <Server dev:db-id="srv-s">
+                <Authentication dev:db-id="auth-s"/>
+                <LDevice inst="LD1" uuid="ld-src" dev:db-id="ld-s">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln0-src" dev:db-id="ln0-s">
+                        <DataSet name="DS" uuid="ds-src" dev:db-id="ds-s">
+                            <FCDA ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" fc="ST" lnUuid="xcbr-src" dev:db-id="fst-s"/>
+                        </DataSet>
+                        <GSEControl name="GC" appID="GC" datSet="DS" confRev="1" uuid="gc-src" dev:db-id="gc-s"/>
+                    </LN0>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="xcbr-src" dev:db-id="xcbr-s"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt-s">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0-s"/>
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="lnt1-s"><DO name="Pos" type="DPC_T" dev:db-id="do-pos-s"/></LNodeType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dot-s">
+            <DA name="stVal" fc="ST" bType="Dbpos" dev:db-id="da-st-s"/>
+            <DA name="q" fc="ST" bType="Quality" dev:db-id="da-q-s"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>

@@ -11,8 +11,11 @@ export type AssertIedPlacementParams = {
 	/** The type of file the source is, from its extension. */
 	fileType: SclFileType | undefined
 	/** The operation refusing, named in the error's detail. */
-	operation: 'report (ied)' | 'instantiate (ied)'
+	operation: IedOperation
 }
+
+/** An operation reading an IED of a source file, named in a refusal's detail. */
+export type IedOperation = 'report (ied)' | 'instantiate (ied)' | 'apply (ied)'
 
 /** The project's element holding a uuid an IED placement keeps, as a refusal tells it. */
 export type HeldElement = {

@@ -35,6 +35,7 @@ import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-poli
 import type { DiffReport, ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { TargetInstances } from '@/v2019C1/extensions/lifecycle/instance'
 import type { PlacementLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
@@ -61,7 +62,7 @@ export async function reportFsd(
 		scenario?: LifecycleScenario
 		/** Placed afresh by a larger operation: a new instance whatever the project holds. */
 		placesFresh?: boolean
-		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		targetInstance?: TargetInstances
 		/** The consumer's choices for the shared elements the function is classified by. */
 		decisionMappings?: DecisionMappings
 		/**

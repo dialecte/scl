@@ -1,4 +1,7 @@
-import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	BoundLogicalNodeTypes,
+	TakeOvers,
+} from '@/v2019C1/extensions/lifecycle/contract.types'
 
 /**
  * What the consumer's `Resolution` tells the diff, resolved once (defaults applied) and handed down as ONE object:
@@ -9,4 +12,6 @@ import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contr
 export type DiffPolicy = {
 	boundLogicalNodeTypes: BoundLogicalNodeTypes
 	consumerManagedTags: ReadonlySet<string>
+	/** The values the project keeps that the consumer takes the template's for (`Resolution.takeOver`). */
+	takeOver: TakeOvers
 }

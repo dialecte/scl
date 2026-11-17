@@ -6,6 +6,7 @@ import {
 } from '@/v2019C1/errors/import-diagnostics.constants'
 
 import type {
+	AmbiguousReferenceDiagnostic,
 	DataPathNotSplitDiagnostic,
 	DerivedSpecificationNamingDiagnostic,
 	IncoherentPathNamesDiagnostic,
@@ -21,6 +22,14 @@ export function unresolvedReferenceDiagnostic(params: {
 	meta: UnresolvedReferenceDiagnostic['meta']
 }): UnresolvedReferenceDiagnostic {
 	return createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'unresolved-reference', params)
+}
+
+/** A reference whose path several elements of the file hold. */
+export function ambiguousReferenceDiagnostic(params: {
+	ref: DiagnosticRef
+	meta: AmbiguousReferenceDiagnostic['meta']
+}): AmbiguousReferenceDiagnostic {
+	return createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'ambiguous-reference', params)
 }
 
 /** A reference written in a form that is not resolved. */

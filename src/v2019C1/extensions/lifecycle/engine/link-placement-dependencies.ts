@@ -1,6 +1,7 @@
 import { toRef } from '@dialecte/core/helpers'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { REFERENCE_UUIDS_BY_TAG } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
+import { namedTargetsOf } from '@/v2019C1/extensions/reference/query/find/named-targets'
 
 import type { DecisionGroup, DiffNode, ReportInstance } from './diff.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -12,7 +13,8 @@ import type * as Core from '@dialecte/core'
  *  - a group placing an element inside an element another group adds depends on it — a level
  *    takes what it holds with it;
  *  - a group adding a reference to an element another group places depends on that group — a
- *    reference goes with what it points at: its primary, or a variable or a behaviour description it lists (a role
+ *    reference (a uuid pair, or a tuple pair: a data set entry naming a logical node; an LNode's binding is the
+ *    binding rules') goes with what it points at: its primary, or a variable or a behaviour description it lists (a role
  *    referring to one a function's group lists depends on that function's group).
  *
  * Leaving out the level, or what is referred to, while keeping what depends on it is then refused
@@ -103,15 +105,22 @@ async function findReferredPlacers(
 ): Promise<DecisionGroup[]> {
 	const { group, placers } = params
 
+	const refs = [...addedNodes(group)].flatMap((node) =>
+		node.sourceRef &&
+		(REFERENCE_UUIDS_BY_TAG.get(node.tagName) ?? []).some((reference) => !reference.followsOnly)
+			? [toRef(node.sourceRef) as Scl.Ref<Scl.ElementsOf>]
+			: [],
+	)
+	if (refs.length === 0) return []
+	// every added reference read at once
+	const records = await sourceQuery.any.getRecords(refs)
+
 	const referred: DecisionGroup[] = []
-	for (const node of addedNodes(group)) {
-		const pairs = UUID_REFERENCE_PAIRS[node.tagName as keyof typeof UUID_REFERENCE_PAIRS]
-		if (!pairs?.length || !node.sourceRef) continue
-		const attributes = await sourceQuery.any.getAttributes(
-			toRef(node.sourceRef) as Scl.Ref<Scl.ElementsOf>,
-		)
-		for (const pair of pairs) {
-			const placer = placers.get(attributes[pair.attribute.uuid] ?? '')
+	for (const record of records) {
+		if (!record) continue
+		// what it names by a uuid pair or a tuple pair (a data set entry naming a logical node)
+		for (const named of namedTargetsOf(record)) {
+			const placer = placers.get(named.uuid)
 			if (placer && placer !== group && !referred.includes(placer)) referred.push(placer)
 		}
 	}
@@ -119,7 +128,7 @@ async function findReferredPlacers(
 }
 
 /** Every node the group adds: its primary and companions, and what they carry. */
-function addedNodes(group: DecisionGroup): Set<DiffNode> {
+export function addedNodes(group: DecisionGroup): Set<DiffNode> {
 	const added = new Set<DiffNode>()
 	const pending: DiffNode[] = [group.primary, ...group.companions]
 	while (pending.length > 0) {
@@ -131,7 +140,8 @@ function addedNodes(group: DecisionGroup): Set<DiffNode> {
 	return added
 }
 
-function addDependency(params: { group: DecisionGroup; dependency: DecisionGroup }): void {
+/** Record that a group depends on another, once. */
+export function addDependency(params: { group: DecisionGroup; dependency: DecisionGroup }): void {
 	const { group, dependency } = params
 	if (!group.dependsOn.includes(dependency.id)) group.dependsOn.push(dependency.id)
 }

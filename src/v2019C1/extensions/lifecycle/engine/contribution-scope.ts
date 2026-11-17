@@ -110,7 +110,8 @@ export function collectReferencesOutsideScope(params: {
 /**
  * What a reference names outside the scope, if it does: by a uuid the scope does not hold, or, for a reference to a
  * connectivity node only, by a path only (`findUndeclaredNodeReference`). This reads imported sources: a reference
- * created in memory by its path alone keeps no uuid either.
+ * created in memory by its path alone keeps no uuid either. Uuid pairs only: a tuple referrer (a data set entry, an
+ * input naming another IED) is never left out: its names are the reference.
  */
 function findNamedOutsideScope(params: {
 	reference: AnyTreeRecord

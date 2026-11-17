@@ -167,6 +167,9 @@ export type SharedFunctions = 'clone' | 'merge'
  *    Read by `report`: an instance element of such a tag known not to be the template's is not listed as the
  *    project's own (`target-only`) — one that may be the template's own, dropped (it carries the template's lineage, or
  *    a uuid in a fork given no previous revision), still is; `apply` writes what the report lists;
+ *  - `takeOver` — the values the project keeps that the consumer takes the template's for (see {@link TakeOvers}). Read
+ *    by `report`: such a value is listed as a change, its group decided as any; the reconcile writes it given the same
+ *    take-overs (`reconcile`'s `takeOver`), which the IED update, not offered yet, passes;
  *  - `afterApply` — the consumer's own step, run by `apply` once it wrote (see {@link AfterApplyHook}).
  */
 export type Resolution = {
@@ -177,8 +180,22 @@ export type Resolution = {
 	referencesByName?: ReferencesByName
 	sharedFunctions?: SharedFunctions
 	consumerManagedTags?: readonly Scl.ElementsOf[]
+	takeOver?: TakeOvers
 	afterApply?: AfterApplyHook
 }
+
+/**
+ * Values the project keeps that the consumer takes over: the template's value of each is listed and written as any
+ * change. Only a value the project may set and keeps (`keptTextChange` with `reason: 'settable-value'`) is offered.
+ * `element` is the project's `Val` holding one, or an `IED` or an element inside it: every one below it.
+ */
+export type TakeOver = { element: Core.AnyRefOrRecord }
+
+/**
+ * The values a consumer takes over: every one the update keeps (`'all'`), or those of the elements named. An element
+ * naming no value the report keeps below it is refused (`TAKE_OVER_NOT_OFFERED`).
+ */
+export type TakeOvers = 'all' | readonly TakeOver[]
 
 /**
  * A consumer's own step after the whole apply, in the same transaction: what it writes is

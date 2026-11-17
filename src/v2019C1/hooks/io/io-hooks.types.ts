@@ -82,6 +82,8 @@ export type PendingPathFill = {
 export type ImportPathIndex = {
 	byPath: Map<string, string>
 	legacyKeys: Set<string>
+	/** The standard paths several targets hold: none of them is named by such a path, which names several. */
+	shared: Set<string>
 	targetsByUuid: Map<string, IndexedTarget>
 }
 
@@ -99,6 +101,15 @@ export type OtherPaths = {
  * The import session of one SCL file. Its `afterImport` tells its steps through the context core hands it; given
  * none (a caller of the zero-argument form), it runs the same and tells nothing.
  */
+/** What a session is told beside the records it is fed. */
+export type SclImportSessionOptions = {
+	/**
+	 * The references whose path is written in its standard form once resolved, whatever form it is in (a path a
+	 * caller just edited), by record id.
+	 */
+	standardize?: ReadonlySet<string>
+}
+
 export type SclImportSession = Omit<ImportSession<SclImportDiagnostic>, 'afterImport'> & {
 	afterImport(context?: AfterImportContext): Promise<AfterImportResult<SclImportDiagnostic>>
 }

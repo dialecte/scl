@@ -1,5 +1,7 @@
 import { FOLLOWED_TYPE_REFERENCES } from './type-change.constants'
 
+import { toRawRecord } from '@dialecte/core/helpers'
+
 import { elementSignature } from '@/v2019C1/extensions/signature/query'
 import { readAttribute } from '@/v2019C1/helpers'
 
@@ -7,13 +9,13 @@ import type { AttributeChange } from './diff.types'
 import type { TypeComparison, TypeSignaturesOfSide } from './type-change.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
-import type { AnyTreeRecord } from '@dialecte/core'
+import type { AnyRawRecord, AnyTreeRecord } from '@dialecte/core'
 
 /** A fresh comparison run: nothing read yet on either side. */
 export function createTypeComparison(): TypeComparison {
 	return {
-		source: { signatures: new Map(), byId: new Map() },
-		target: { signatures: new Map(), byId: new Map() },
+		source: { signatures: new Map(), byId: new Map(), recordsByTag: new Map() },
+		target: { signatures: new Map(), byId: new Map(), recordsByTag: new Map() },
 	}
 }
 
@@ -58,6 +60,25 @@ export async function typeChangesOf(
 	return changes
 }
 
+/** The types of a tag a document holds, by id, read once per comparison side (the first of an id kept). */
+async function typeRecordsOf(
+	query: Core.Query<Config>,
+	params: { side: TypeSignaturesOfSide; tagName: string },
+): Promise<ReadonlyMap<string, AnyRawRecord>> {
+	const { side, tagName } = params
+	const known = side.recordsByTag.get(tagName)
+	if (known) return known
+	const byId = new Map<string, AnyRawRecord>()
+	for (const found of await query.getRecordsByTagName(tagName as Scl.ElementsOf)) {
+		const record = toRawRecord(found) as AnyRawRecord
+		const id = readAttribute({ record, name: 'id', defaults: 'none' })
+		if (id && !byId.has(id)) byId.set(id, record)
+	}
+	// dialecte-allow argument-mutation: the comparison's cache of one side, filled as it reads, as `byId`
+	side.recordsByTag.set(tagName, byId)
+	return byId
+}
+
 /** The signature of the type of `tagName` under `id` in a document, `undefined` when it holds none. */
 async function signatureOf(
 	query: Core.Query<Config>,
@@ -66,7 +87,7 @@ async function signatureOf(
 	const { side, tagName, id } = params
 	const key = `${tagName}#${id}`
 	if (side.byId.has(key)) return side.byId.get(key)
-	const [record] = await query.any.findByAttributes({ tagName, attributes: { id } })
+	const record = (await typeRecordsOf(query, { side, tagName })).get(id)
 	const signature = record
 		? await elementSignature(query, {
 				ref: { tagName, id: record.id } as Scl.Ref<Scl.ElementsOf>,

@@ -43,7 +43,7 @@
 				"is this Private a wrapper of 6-100 elements",
 				"walk through a Private wrapper"
 			],
-			"declaredAt": "src/v2019C1/helpers/pruned-when-empty.ts:23"
+			"declaredAt": "src/v2019C1/helpers/pruned-when-empty.ts:82"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1.isSclImportDiagnostic",
@@ -428,7 +428,7 @@
 				"compare identities from resolveIdentity",
 				"match elements across documents"
 			],
-			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:49",
+			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:50",
 			"example": "doc.query.identity.identityEquals({ kind: 'positional' })"
 		},
 		{
@@ -436,13 +436,13 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "(ref: Core.AnyRefOrRecord) => Promise<ElementIdentity>",
-			"summary": "Resolve an element's identity from the schema (does it carry a `uuid`, else its `identityFields`), reading its attributes through Dialecte's own `getAttributes`. A uuid-bearing tag (`Substation`, `Bay`, `Function`, ...) resolves at the `uuid` branch whatever its `identityFields` say; a uuid-less tag resolves by the fields its schema keys name (`id`/`lnClass`/`inst`/..., and `name` where the schema makes it unique among siblings, e.g. `DA`/`SDO` in a type).",
+			"summary": "Resolve an element's identity from the schema (does it carry a `uuid`, else its `identityFields`), reading its attributes through Dialecte's own `getAttributes`. A uuid-bearing tag (`Substation`, `Bay`, `Function`, ...) resolves at the `uuid` branch whatever its `identityFields` say; a uuid-less tag resolves by the fields its schema keys name (`id`/`lnClass`/`inst`/..., and `name` where the schema makes it unique among siblings, e.g. `DA`/`SDO` in a type), else by its supplement key (`keyFieldsOf`: a `Val`'s `sGroup`, ...).",
 			"intents": [
 				"identity of an element (uuid or key fields)",
 				"key to match an element across two documents",
 				"what makes an element the same element"
 			],
-			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:18"
+			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:19"
 		},
 		{
 			"path": "doc.query.info.of",
@@ -511,7 +511,7 @@
 				"decisions to review before a template update",
 				"what placing an IED from an ISD/ICD/IID would add"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:48"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:50"
 		},
 		{
 			"path": "doc.query.lifecycle.sourceRoot.asd",
@@ -752,7 +752,7 @@
 				"remove empty containers left after deletes (reference containers, wrappers, Private elements)",
 				"tidy up a document or an extracted file"
 			],
-			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/prune-empty-containers.ts:19"
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/prune-empty-containers.ts:18"
 		},
 		{
 			"path": "tx.cleanUp.pruneUnusedTypes",
@@ -785,13 +785,13 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: LinkParams) => Promise<void>",
-			"summary": "Links a signal to the element implementing it: the signal names it by its uuid, and the address the hooks write from that uuid follows where the element sits relative to the signal's LNode. Whatever address the signal held is removed with the write, so one the hooks cannot compose (an element without an internal address) does not stay.",
+			"summary": "Links a signal to the element implementing it: the signal names it by its uuid, and the address written with it is the one that uuid gives, where the element sits relative to the signal's LNode. Whatever address the signal held is replaced, so one that cannot be composed (an element without an internal address) does not stay.",
 			"intents": [
 				"connect a signal (SourceRef/ControlRef) to its ExtRef/ExtCtrl",
 				"implement a signal",
 				"link a dataflow to its implementation"
 			],
-			"declaredAt": "src/v2019C1/extensions/dataflow/transaction/link.ts:19"
+			"declaredAt": "src/v2019C1/extensions/dataflow/transaction/link.ts:20"
 		},
 		{
 			"path": "tx.dataflow.unlink",
@@ -896,7 +896,7 @@
 				"write a lifecycle report with user decisions",
 				"accept or skip changes from a newer FSD/ASD/SSD"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:76",
+			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:78",
 			"example": "await tx.lifecycle.apply({ ...lifecycleTarget, report: reported, resolution: { afterApply } })"
 		},
 		{
@@ -1006,7 +1006,7 @@
 				"place an ISD with its specification (functions and LNodes) in a project",
 				"import an ISD instance keeping its identity"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/ied.ts:52"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/ied.ts:49"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.resolveTargetStructure",
@@ -1072,7 +1072,7 @@
 				"reconcile Application instances with their template",
 				"instantiate or update an application template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:40"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:45"
 		},
 		{
 			"path": "tx.lifecycle.update.fsd",
@@ -1085,7 +1085,20 @@
 				"reconcile Function instances with their template",
 				"instantiate or update a function template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:24"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:29"
+		},
+		{
+			"path": "tx.lifecycle.update.ied",
+			"root": "tx",
+			"otherRoutes": [],
+			"signature": "(params: UpdateIedParams) => Promise<AppliedInstance<'IED'>[]>",
+			"summary": "`tx.lifecycle.update.ied` - update the IED of the project placed from a template ISD with a newer revision of it (or place it when the project holds none), then release what the run wrote naming a logical node, ExtRef or ExtCtrl the project lacks, as `tx.lifecycle.apply` does after its verb.",
+			"intents": [
+				"update an S-IED from a newer ISD",
+				"reconcile an IED with its template ISD",
+				"update an IED specification"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:78"
 		},
 		{
 			"path": "tx.lifecycle.update.ssd",
@@ -1098,7 +1111,7 @@
 				"reconcile a bay typical with its template",
 				"propagate an SSD change"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:56"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:61"
 		},
 		{
 			"path": "tx.reference.applyTypeIdRemap",

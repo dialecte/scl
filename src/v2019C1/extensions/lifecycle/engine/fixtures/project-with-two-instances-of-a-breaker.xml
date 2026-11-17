@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- two instances of the template's breaker, IED7 and IED8, each holding the three values set otherwise -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <IED name="IED7" uuid="ied-ins" templateUuid="ied-src" dev:db-id="ied-t">
+        <AccessPoint name="AP1" uuid="ap-ins" templateUuid="ap-src" dev:db-id="ap-t">
+            <Server dev:db-id="srv-t">
+                <Authentication dev:db-id="auth-t"/>
+                <LDevice inst="LD1" uuid="ld-ins" templateUuid="ld-src" dev:db-id="ld-t">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln0-ins" templateUuid="ln0-src" dev:db-id="ln0-t"/>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="xcbr-ins" templateUuid="xcbr-src" dev:db-id="xcbr-t">
+                        <DOI name="Pos" dev:db-id="pos-t">
+                            <DAI name="ctlModel" dev:db-id="ctl-dai-t"><Val dev:db-id="ctl-t">status-only</Val></DAI>
+                            <DAI name="sboClass" valImport="true" dev:db-id="cls-dai-t"><Val dev:db-id="cls-t">operate-once</Val></DAI>
+                            <DAI name="sboTimeout" dev:db-id="tmo-dai-t"><Val dev:db-id="tmo-t">10000</Val></DAI>
+                        </DOI>
+                    </LN>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="IED8" uuid="ied-ins8" templateUuid="ied-src" dev:db-id="ied-u">
+        <AccessPoint name="AP1" uuid="ap-ins8" templateUuid="ap-src" dev:db-id="ap-u">
+            <Server dev:db-id="srv-u">
+                <Authentication dev:db-id="auth-u"/>
+                <LDevice inst="LD1" uuid="ld-ins8" templateUuid="ld-src" dev:db-id="ld-u">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln0-ins8" templateUuid="ln0-src" dev:db-id="ln0-u"/>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="xcbr-ins8" templateUuid="xcbr-src" dev:db-id="xcbr-u">
+                        <DOI name="Pos" dev:db-id="pos-u">
+                            <DAI name="ctlModel" dev:db-id="ctl-dai-u"><Val dev:db-id="ctl-u">status-only</Val></DAI>
+                            <DAI name="sboClass" valImport="true" dev:db-id="cls-dai-u"><Val dev:db-id="cls-u">operate-once</Val></DAI>
+                            <DAI name="sboTimeout" dev:db-id="tmo-dai-u"><Val dev:db-id="tmo-u">10000</Val></DAI>
+                        </DOI>
+                    </LN>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt-t">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0-t"/>
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="lnt1-t"><DO name="Pos" type="DPC_T" dev:db-id="do-pos-t"/></LNodeType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dot-t">
+            <DA name="ctlModel" fc="CF" bType="Enum" type="CtlModels" valKind="Set" dev:db-id="da-ctl-t"/>
+            <DA name="sboClass" fc="CF" bType="Enum" type="SboClasses" valKind="RO" dev:db-id="da-cls-t"/>
+            <DA name="sboTimeout" fc="CF" bType="INT32U" valKind="RO" dev:db-id="da-tmo-t"/>
+        </DOType>
+        <EnumType id="CtlModels" dev:db-id="en-ctl-t"><EnumVal ord="0" dev:db-id="ev0-t">status-only</EnumVal><EnumVal ord="1" dev:db-id="ev1-t">direct-with-normal-security</EnumVal></EnumType>
+        <EnumType id="SboClasses" dev:db-id="en-cls-t"><EnumVal ord="0" dev:db-id="ev2-t">operate-once</EnumVal><EnumVal ord="1" dev:db-id="ev3-t">operate-many</EnumVal></EnumType>
+    </DataTypeTemplates>
+</SCL>

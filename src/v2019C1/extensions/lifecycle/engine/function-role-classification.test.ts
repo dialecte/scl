@@ -1,4 +1,5 @@
 import { diff } from './diff'
+import { readDiffPolicy } from './diff-policy'
 
 import { describe, expect } from 'vitest'
 
@@ -57,7 +58,7 @@ const targetXml = /* xml */ `
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
 	/** The element tags the consumer names as its own (the diff policy); absent = no option. */
-	consumerManagedTags?: readonly string[]
+	consumerManagedTags?: readonly Scl.ElementsOf[]
 	/** The groups the diff lists, `<change> <tag>`. */
 	groups: string[]
 }
@@ -90,10 +91,9 @@ describe("engine.diff — a FunctionRole an instance holds without lineage is th
 			targetQuery: target.query,
 			sourceRootRef: { tagName: 'Application', id: 'app-s' } as Scl.Ref<'Application'>,
 			instanceRootRef: { tagName: 'Application', id: 'app-i' } as Scl.Ref<'Application'>,
-			diffPolicy: testCase.consumerManagedTags && {
-				boundLogicalNodeTypes: 'follow',
-				consumerManagedTags: new Set(testCase.consumerManagedTags),
-			},
+			diffPolicy: readDiffPolicy({
+				resolution: { consumerManagedTags: testCase.consumerManagedTags },
+			}),
 		})
 
 		expect(report.groups.map((group) => `${group.change} ${group.primary.tagName}`)).toEqual(

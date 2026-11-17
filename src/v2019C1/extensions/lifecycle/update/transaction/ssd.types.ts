@@ -5,6 +5,7 @@ import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { TargetInstances } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
@@ -24,8 +25,11 @@ export type UpdateSsdParams = {
 	report?: DiffReport
 	decisions?: DecisionMap
 	keepNameTypesFrom?: KeepNameTypesFrom
-	/** Multi-instance anchor: scope to ONE placed Bay (frame + fn/app under it). Absent = all. */
-	targetInstance?: Scl.Ref<Scl.ElementsOf>
+	/**
+	 * Multi-instance anchor: scope to ONE placed Bay (frame + fn/app under it), or to the bays of a list (an empty list
+	 * scoping to none). Absent = all.
+	 */
+	targetInstance?: TargetInstances
 	/** The consumer's choices for the shared elements the applications refer to. */
 	decisionMappings?: DecisionMappings
 }

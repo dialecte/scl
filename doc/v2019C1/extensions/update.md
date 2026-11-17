@@ -41,6 +41,7 @@ The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & 
   - `referencesByName`: whether a reference of the project whose uuids disagree with the template's pairs with it by the names of what both name — `'never'` (default) or `'placeholders'` (`ReferencesByName`, see [Child matching](#child-matching-—-one-shared-matcher)). `report` and `apply` read it alike;
   - `sharedFunctions`: whether a first placement of an application stands on a function the level already holds for another application, with an identical template reference — `'clone'` (default) or `'merge'` (`SharedFunctions`, see [functions applications share](./instantiate#functions-applications-share)), for `verb: 'asd'`. `report` and `apply` read it alike;
   - `consumerManagedTags`: the element tags the consumer creates on instances and maintains itself, any tag of the schema (default none; `readonly Scl.ElementsOf[]`). An instance element of such a tag that the template does not know is not listed as the project's own (`target-only`), whatever the report says of it otherwise, and `apply` writes what the report lists, so nothing for it. Without the option, a `FunctionRole` or a `FunctionRoleContent` an instance holds without the template's lineage is the project's own like any other element: listed `target-only`, kept unless its removal is accepted. The option hides only what is known not to be the template's: an element the template holds, and one that may be the template's own the newer revision dropped, are listed as for any tag — an element carrying the template's lineage (a level of the unit), and, in a fork given no previous revision, any element carrying a uuid (nothing tells there an element the consumer added from one the newer revision dropped; given the previous revision, `baseQuery`, an element it did not hold is hidden). The tags are not inherited: naming `FunctionRole` leaves a `FunctionRoleContent` the project added inside a role of the template listed. The report reads the option once for every diff it makes;
+  - `takeOver`: the values of an IED the project keeps that the consumer takes the template's for: `'all'` (every one the update keeps), or a list of `{ element }` (type `TakeOver`), each the project's `Val` holding one, or an `IED` or an element inside it (every one below it) — type `TakeOvers`, see [values of an IED](#values-of-an-ied-the-project-may-set). `report` lists each as a change, in a group decided as any. Naming an element that keeps no such value, itself or below it, is refused with `TAKE_OVER_NOT_OFFERED`;
   - `afterApply`: the consumer's own step, run once after the apply — see [below](#the-consumer-s-step-after-the-apply-—-resolution-afterapply).
 
 **A report is applied to the target it was made for.** `report` writes what it was made for on `report.target`
@@ -62,16 +63,90 @@ finds nothing left to change.
 
 ### An IED — `verb: 'ied'`
 
-`report({ verb: 'ied', sourceQuery, ref, anchor })` answers what placing the IED `ref` of a source file in the project
-would add, `anchor` being the project's `SCL` root. Only a first placement is reported yet: one instance with no root in
-the project (`rootRef` undefined), every element of the IED `added` — the `IEDSourceFiles` of an ISD among them —, on
-the fast track (`needsDecisions: false`), even when the project holds another IED of the same name. What its access
-points' `ConnectedAP`s add to the project's `Communication` rides the IED's group as companions (see
+`report({ verb: 'ied', sourceQuery, ref, anchor, targetInstance? })` answers what placing the IED `ref` of a source file
+in the project would add, or what a newer revision of its template changes in the IED of the project placed from it,
+`anchor` being the project's `SCL` root.
+
+**First placement.** When the project holds no IED placed from it (or `scenario: 'instantiate'`): one instance with no
+root in the project (`rootRef` undefined), every element of the IED `added` — the `IEDSourceFiles` of an ISD among
+them —, on the fast track (`needsDecisions: false`), even when the project holds another IED of the same name. What its
+access points' `ConnectedAP`s add to the project's `Communication` rides the IED's group as companions (see
 [`instantiate.ied`](./instantiate#ied)). The specification the file carries beside its IED (its substation section)
 follows, reported as an SSD's first placement: where each level lands (`report.mappings`, a level the project holds
 several of puts the report on the full track until the consumer chooses), the functions and `LNode`s it adds, each in its
 own group. A placement made earlier from the same template leaves what it placed alone: the specification is placed
 again as a new instance.
+
+**Update** (`scenario: 'template'`, the default). When the project holds an IED carrying the source IED's uuid as its
+`templateUuid`, the report is that IED's update: one instance rooted at it, its tree compared with the template's.
+
+- The IED it starts from: `targetInstance`, required when the project holds several (refused otherwise with
+  `TARGET_INSTANCE_REQUIRED`, `meta: { instances }`, or `meta: { instances, named }` naming an element that is no
+  instance, `instances` empty when the project holds none placed from the template: the file is no version of what it
+  came from); the only one when it holds one. No other IED is changed.
+- Only the IED of a template ISD is updated yet: another file's (an ICD's) found in the project is refused with
+  `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value: 'icd' }`).
+- The IED keeps its project name and its identity; a logical node the revision gains is added, one it drops removed —
+  the `LNode`s bound to it are released at the commit (`iedName` back to its specification, else `None`); a logical node
+  whose type changes follows the template's type, and a data instance (`DOI`, `SDI`, `DAI`) naming data the template's
+  type no longer holds goes (listed removed in the logical node's group). The `LNode`s released are listed on the
+  removal's group (`sideEffects`, `cleared`). An input or output the project bound to a source keeps it (its source
+  attributes listed as kept, reason `data-flow`). Values, data set order, take-overs and the
+  references to deleted data are decided as for any IED (see [Decision groups](#decision-groups-full-track)).
+- An access point, a logical device or a logical node whose parent stays is decided in a group of its own, even when the
+  IED's own attributes change.
+- What its access points gained connects under the project's subnetworks (a connection of an access point the IED
+  holds lands on the project's); a subnetwork's own settings (its bit rate, text, private data) are the project's, never
+  taken over, and the project's addresses are kept.
+- `apply` writes what the report lists and records the revision in the IED's `IEDSourceFiles` when any group of the
+  IED or of its specification is accepted; nothing is recorded at the project's header. `afterApply` receives the IED in
+  `instances.ieds`, `reconciled`.
+
+**Its specification.** The specification an ISD carries beside its IED (its substation section) is updated with it, in
+the same report and the same apply: its instances follow the IED's, decided group by group as an SSD's update is (see
+[Decision groups](#decision-groups-full-track) and [Multiple instances of one template](#multiple-instances-of-one-template)).
+
+- The specification of the IED is what is specified on it: the `LNode`s whose `LNodeSpecNaming` names it (an `LNode`
+  keeps it when the project binds it to another IED), the functions holding them and the applications composing only
+  those functions, the bay holding them. Another IED placed from the same template keeps its own, whether it sits on the same bay or on its own. A
+  function or application holding no `LNode` of the IED is the IED's when that bay holds one copy of it specified on no
+  IED; with several (the template placed twice on one bay), none is updated and the report warns of each
+  (`specification-instance-unresolved`, `source`: the template's element); with only another IED's, it is left alone.
+- On a bay the template's bay was mapped onto (it carries no lineage of it), a function of the specification the
+  revision no longer holds is listed as the project's own (`target-only`, kept unless its removal is accepted): nothing
+  tells it from a function another file placed there. On a bay the placement created, it is `removed`.
+- What the revision gains is placed once, in the bay the template puts it. A template on several bays (its voltage
+  level holding them) places it in its own bay. A specification the project spread over several bays: in the bay
+  carrying the template bay's lineage, else in the only one carrying none (the one the template's bay was mapped onto);
+  lineage decides, never a count. When neither singles out one bay, it is not placed and the report warns
+  (`specification-instance-unresolved`).
+- A specification the project moved off any bay (its functions under the voltage level itself) is updated where it sits:
+  what the revision gains is not placed, and what it drops is not found (nothing is removed).
+- What the revision drops goes, what it gains is added, names and values the project set are kept. An `LNode` the
+  revision gains is bound to the IED updated, to the logical node the update gives it when the IED gains one: its group
+  depends on that logical node's, so accepting it with the logical node skipped is refused
+  (`DECISION_DEPENDENCY_SKIPPED`). The `IED` and logical device a specified naming names are the project's (the commit
+  writes them from the IED it is bound to).
+- A removal deleting an `LNode` the project bound to another IED waits for a decision (`requiresDecision:
+  'unbinds-another-ied'`, suggested `skip`): accepted, it goes with that binding, nothing in the other IED changing;
+  skipped, it stays. `tx.lifecycle.update.ied` given no report writes everything the revision brings, such a removal
+  included: run `query.lifecycle.report` first to decide it.
+- An IED the project holds no specification of (placed before its file carried one, or with it left out) is offered its
+  specification as a first placement (`report.mappings` for its levels), bound to the IED updated; skipping its groups
+  writes nothing.
+
+**An update never changes another IED.** What accepting a group would change in another IED — an input or a data set
+entry of it the update deletes or clears with what it removes, an input subscribed through a control block of the
+updated IED to data a data set entry the update removes (or one of the project's own the template no longer holds)
+sends, a reference whose names would follow an element the update renames — is listed in `report.otherIedImpacts`
+(`{ ied, element, effect: 'deleted' | 'cleared' | 'unsubscribed' | 'renamed', groupId }`, type `OtherIedImpact`), once
+per group bringing it. The group bringing it, the groups it waits for and those waiting for it are `blocked:
+'affects-other-ied'`, suggested `skip`, and the report needs decisions: the rest of the update applies, those groups
+cannot be accepted (`apply` refuses decisions accepting one with `UPDATE_AFFECTS_OTHER_IED`, `meta: { groups }`). A
+consumer may refuse to confirm while any is listed. Once written, a write the update made in another IED is refused too
+(`meta: { ied, element }`).
+
+**Refused.**
 
 - `report.target.fileType` is the type of file the source is, read from its document's extension: `.isd` → `ISD`,
   `.icd` → `ICD`, `.iid` → `IID`, `.scd`, `.xml` or none → `SCD`. Another extension is refused with `OPTION_NOT_AVAILABLE`
@@ -81,13 +156,11 @@ again as a new instance.
   `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value: 'iid' | 'scd' }`), an ISD instance file's IED in another
   scenario with `value: 'isd-instance'`, and a fork whose IED or specification the project holds an element of by its uuid with
   `meta: { option: 'scenario', value: 'fork', held: { tagName, path } }` (`held`: the project's element holding the uuid).
-- `scenario: 'template'` (the default) or `'fork'` finding the IED in the project — an IED carrying its uuid as
-  `templateUuid`, or for a fork as its own `uuid` — is refused with `OPTION_NOT_AVAILABLE`
-  (`meta: { option: 'scenario', value }`). `'instantiate'` places a new IED whatever the project holds.
+- `scenario: 'fork'` finding the IED in the project by its own `uuid` is refused with `OPTION_NOT_AVAILABLE`
+  (`meta: { option: 'scenario', value: 'fork' }`). `'instantiate'` places a new IED whatever the project holds.
 - `apply` writes the first placement of the IED of an ISD or an ICD ([`instantiate.ied`](./instantiate#ied)), unless
-  its group is skipped. It checks the two refusals above again, so a report applied a second time once its IED is
-  placed is refused rather than placing another. The consumer's
-  `afterApply` receives the placed IED in `instances.ieds`.
+  its group is skipped, or the update. A report of a first placement applied once its IED is in the project is refused
+  with `REPORT_TARGET_MISMATCH` (`meta: { field: 'targetInstance' }`) rather than placing another.
 
 `doc.query.lifecycle.sourceRoot.ied()` reads the IED a source file holds (see [the root of a template
 file](./instantiate#the-root-of-a-template-file)).
@@ -171,6 +244,9 @@ type DiffNode = {
 	textChange?: { before: string; after: string } // the text an accepted update writes (modified)
 	// what the update lists but does not apply: the project keeps `before` (a matched node, modified or not)
 	keptAttributeChanges?: KeptAttributeChange[] // AttributeChange & { reason: KeptAttributeReason }
+	keptTextChange?: KeptTextChange // the text the update keeps: TextChange & { reason: KeptAttributeReason }
+	takenOver?: true // a kept value the consumer took over (`resolution.takeOver`), listed as a change
+	requiresDecision?: DecisionRequiredReason // why the change waits for a decision of its own
 	// ...tagName, children
 }
 ```
@@ -211,9 +287,14 @@ type DecisionGroup = {
 	companions: DiffNode[] // read-only detail — travel with the primary, never toggled alone
 	dependsOn: string[] // group ids this one requires
 	suggestedAction: 'accept' | 'skip' // default when the group is absent from the decision map
+	requiresDecision?: DecisionRequiredReason // no default: `apply` refuses decisions that do not name it
 	editableAttributes?: EditableAttribute[] // the attributes of `primary` a UI may edit, and how
 	sideEffects?: RemovalSideEffect[] // what removing it does elsewhere: types left unused, references, emptied containers (read only)
 }
+
+// 'value-outside-enumeration': the project's value of an IED is no longer one its type allows
+// 'names-deleted-data': a reference names data the update deletes
+type DecisionRequiredReason = 'value-outside-enumeration' | 'names-deleted-data'
 
 type RemovalSideEffect = { element: { tagName: string; id: string }; effect: 'deleted' | 'cleared' }
 
@@ -221,13 +302,60 @@ type RemovalSideEffect = { element: { tagName: string; id: string }; effect: 'de
 type EditableAttribute = { attr: string; mode: 'rename' | 'free' }
 ```
 
-A group that removes elements (a `removed` change, or a `target-only` one whose removal is accepted) lists in `sideEffects` what that removal does outside them, as the delete hooks and the commit then do it: each data type the removal leaves unused (the removed elements were the last to name it) is `deleted`, with the types only it names, first; each reference elsewhere in the project naming a removed element — an application's `FunctionRef` to a removed function, a `FunctionCatRef`, an input fed by a removed logical node — is `deleted`, or `cleared` when it keeps its content (`SourceRef`, `ControlRef`, `DOS` / `SDS` / `DAS`, `InputVar` / `OutputVar`, `ProcessEcho`: its uuid, path and companion attributes go); a container the removal or those deletions leave holding nothing goes too (a category without its last reference, the wrapper it leaves empty), `deleted`, with the references to it in turn. What the group removes itself is not listed. Nothing there is decided: `apply` writes it with the removal. A group is judged on its own, so the list of a report with several groups is not what `apply` writes for all of them: a type two groups each leave one name of is listed by neither and removed by `apply` when both are accepted, and a type a group would remove while another group adds a logical node that reuses it is listed by the first and kept by `apply`. For a report of a single group, the types it lists are the types `apply` removes.
+A group that removes elements (a `removed` change, or a `target-only` one whose removal is accepted) lists in `sideEffects` what that removal does outside them, as the delete hooks and the commit then do it: each data type the removal leaves unused (the removed elements were the last to name it) is `deleted`, with the types only it names, first; each reference elsewhere in the project naming a removed element — an application's `FunctionRef` to a removed function, a `FunctionCatRef`, an input fed by a removed logical node — is `deleted`, or `cleared` when it keeps its content (`SourceRef`, `ControlRef`, `DOS` / `SDS` / `DAS`, `InputVar` / `OutputVar`, `ProcessEcho`: its uuid, path and companion attributes go); a container the removal or those deletions leave holding nothing goes too (a category without its last reference, the wrapper it leaves empty), `deleted`, with the references to it in turn. Each `LNode` bound to a removed logical node (by its `lnUuid`, or by its names without one) is `cleared`: the commit releases it to its specification, else to no IED. What the group removes itself is not listed. Nothing there is decided: `apply` writes it with the removal. A group is judged on its own, so the list of a report with several groups is not what `apply` writes for all of them: a type two groups each leave one name of is listed by neither and removed by `apply` when both are accepted, and a type a group would remove while another group adds a logical node that reuses it is listed by the first and kept by `apply`. For a report of a single group, the types it lists are the types `apply` removes.
+
+#### Values of an IED the project may set
+
+The value of a data attribute of an IED (a `DAI`'s `Val`) the project may set is the project's: its data attribute is
+of kind `Set`, or the IED imports it (`valImport` true), read on the `DAI` when it says so, else on the data
+attribute of its type, in the template — a data attribute writing neither is of kind `Set`, not imported, as the
+schema has it. A newer template giving another value does not overwrite it: the node lists
+it in `keptTextChange` (`{ before, after, reason: 'settable-value' }`), opens no decision and counts in
+`report.summary.kept`. Nothing tells a value the project changed from one the template changed: any difference is the
+project's. The consumer takes the template's value over with `resolution.takeOver`: for one value
+(`[{ element }]`, `element` the project's `Val`), for every value of an IED (`[{ element }]`, `element` the
+project's `IED`; another IED's values stay the project's), or for every value of the update (`'all'`). The report then
+lists each as a `textChange` (`takenOver: true`), in a group suggested `accept`. A value the project may not set (of any other kind, `Spec`, `Conf` or `RO`, and not imported) takes the
+template's, listed as any change. The reconcile takes the take-overs as its `takeOver` input; the IED update that
+passes them from `resolution.takeOver` is not offered yet.
+
+A kept value its enumeration no longer allows (the template's type dropped it from the `EnumType`) cannot stay
+silently: its node is `modified` with the template's value as its `textChange`, and `requiresDecision:
+'value-outside-enumeration'`. It is a group of its own, never a companion, whose `requiresDecision` says it has no
+default: accepted, the template's value is written; skipped, the project's stays. `apply` given decisions that do not
+name it refuses with `DECISION_REQUIRED` (`meta: { groupIds }`), before anything is written.
+
+#### References to data an IED update deletes
+
+A newer template may delete data the project still refers to: a logical node, a logical device or a control block it
+no longer holds, or a data object or attribute the new type of a logical node lacks (an entry names its data under a
+functional constraint, `fc`: a data attribute moved to another one is deleted for it). Each reference of the project to
+such data — a data set entry (`FCDA`) and an input (`ExtRef`), in this IED or another, outside what the update removes
+itself — waits for a decision of its own (`requiresDecision: 'names-deleted-data'`), and the group deleting the data
+depends on each (`dependsOn`): `apply` refuses decisions that do not name one (`DECISION_REQUIRED`), and refuses to
+delete the data while one is skipped (`DECISION_DEPENDENCY_SKIPPED`). An entry the project added to the instance's data
+set is its node in the tree, a group of its own even inside an element the project added (an input it keeps listed
+`modified`, its source attributes going); any other reference is a group of its own beside the tree: an entry listed
+`removed`, an input `modified`, its source attributes listed going (`removed` when it holds no internal address and its
+whole source goes). The report's `summary` counts these too.
+
+Accepted, an entry is removed and every control block of its logical node sending its data set takes its next
+configuration revision; an input keeps its internal address (`intAddr`), description, service and expected data
+(`pXxx`) and loses its source: all of it for deleted data (an input left for a later binding), the attributes naming the
+control block only (`srcLDInst`, `srcPrefix`, `srcLNClass`, `srcLNInst`, `srcCBName`, `srcCBUuid`) for a deleted control
+block; an input with no internal address losing its whole source is removed. These are the delete cascade's writes (see
+[references](./reference)), applied with the decision. Skipped, it stays, and so must the data. References are found by
+the uuid naming their target (`lnUuid`, `srcCBUuid`): the commit gives every reference whose names name one element its
+uuid, so a reference by names only is one naming nothing. A control block sending a data set the update changes rises
+once, whatever removed its entries. A reference accepted while the deletion it waits for is skipped is written all the
+same (its source cleared, or it goes): the decision on it is the consumer's. Removing an element the project added takes the references in it: its group depends on the decision of each one
+waiting there.
 
 The attributes classified are those the element's definition declares where it sits — the type it names with `xsi:type` included — not only the tag's. Each is `identity`, `reference`, `rename` or `free` (`AttributeEditability`); only the last two are listed. Schema-derived classification also decides what is **not** editable: reference attributes (paths/uuids, the uuids and names of a tuple reference — an `ExtRef`'s `iedName`/`ldInst`/`lnClass`/…/`lnUuid`/`srcCBUuid`, an `FCDA`'s `lnUuid`, a `ConnectedAP`'s `apUuid`, an `LNode`'s binding `iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`/`lnUuid` — and type-id refs such as `lnType` and `DO`/`SDO`/`DA`/`BDA` `type`) are `reference` — system-owned, resolved internally, never surfaced as editable. The same reference attributes are left out of the comparison of a matched element, and never written on it: an instance's uuids name its own elements, the template's name the template's (an instance whose IED was renamed reads as unchanged, its `FCDA` and `ExtRef` naming its own logical node). A tuple reference's names are left out when either side writes the uuid they follow (the rename is the IED's, listed once); names neither side writes a uuid beside are the reference itself, compared as any attribute. On top of that, a **locked `LNode`** (bound to an IED — `iedName` set, not `'None'`) owns where it is implemented (`iedName`/`ldInst`/`prefix`/`lnClass`/`lnInst`, and `lnUuid`, the logical node it is bound to): `reconcile` never writes them, even when a UI-instructed edit lists them, and none of them is a change to decide. Its type is not implementation: the type of an `LNode` is what it was specified with, its implementation does not change it, so a template changing the type of a bound `LNode` changes it as for any other — listed in `typeChanges`, decided with its group (see the type below). A consumer keeping the type of bound `LNode`s asks the report for it (`resolution.boundLogicalNodeTypes: 'keep'`): the change is then listed on the node's `keptAttributeChanges` as `{ name: 'lnType', before, after, reason: 'bound-logical-node' }` and not applied. A kept change opens no decision: an instance whose only difference it is stays `upToDate`, and `report.summary.kept` counts it. Its implementation differs from the template by design and is never listed. What the template specifies for it is compared with its `LNodeSpecNaming` and written there: a template now specifying `XCBR3` changes `sLnInst`, the `LNode` stays bound where it is. A `fork` keeps the binding made in the project too, even when the newer revision binds the `LNode` elsewhere. The binding is the lock (`dataModel.isLNodeLocked`); a binding to a logical node the document does not hold is released by `apply` for what it places (see [below](#lnodes-placed-bound-to-a-device-the-project-lacks)) and by the extract clean-up.
 
 **A logical node's type is compared by what it holds.** `lnType` names a type of the element's own document: a template and a project may hold the same type under two ids (the project reused an equal type it held when the template was placed), or two types under one id (two library files written apart). So it is never compared or written as a value: the type each side names is read in its own document and compared by its content (`signature.elementSignature`, ids left out, the types it names folded in). An equal type under another id is no change; a type the template changed under the same id (a data object gained, a data attribute changed, an enumeration value) is one, listed on the element's node as `typeChanges: [{ name: 'lnType', before, after }]` — `before` the id the instance names, `after` the id the template names, which may be equal — and decided with the element's group like an attribute change. Accepted, `apply` brings the template's type through its closure (`dataModel.importTypes` with the element as a follower): an equal type the project holds is reused, a free id kept, a taken one forked, and the element is pointed at the id that resolves to — never at the template's id as it is. The type the element leaves is removed once nothing else names it, and a fork then takes the freed id back: a type only this template's instances name is updated in place, under its id; one anything else names — an instance of another template, an element of the project, a logical node of an IED, an instance whose group is skipped — is left as it is, and the instance moves to a fork. Several instances updated in one apply end on one type. A template naming no type any more clears the element's; a template naming a type its own file lacks brings nothing. `apply` writes the type changes the report lists in the groups it accepts; the update verb called on its own (no report) writes every one.
 
-An instance of a template also keeps what it configures where it sits — a `BehaviorDescription`'s `fileReference` (the file describing the instance's behaviour) and a `Variable`'s `value` (set for the instance, or by the variant it selected): a template update never writes them, and a template changing one is listed on the node's `keptAttributeChanges` with `reason: 'instance-configuration'` — no decision, the instance stays `upToDate`. A `fork` writes them, as it writes the revision's names; an element the update adds carries the template's.
+An instance of a template also keeps what it configures where it sits — a `BehaviorDescription`'s `fileReference` (the file describing the instance's behaviour) and a `Variable`'s `value` (set for the instance, or by the variant it selected): a template update never writes them, and a template changing one is listed on the node's `keptAttributeChanges` with `reason: 'instance-configuration'` — no decision, the instance stays `upToDate`. A `fork` writes them, as it writes the revision's names; an element the update adds carries the template's. So does an input or output of an IED (`ExtRef`, `ExtCtrl`) the project bound to a source: the attributes naming that source (the data and the control block sending it, their uuids) are listed as kept with `reason: 'data-flow'`; its internal address, description, service and expected data (`pXxx`) follow the template. One the project holds unbound takes the template's.
 
 `apply` takes `resolution.decisions: Map<groupId, GroupDecision>` where a decision is either a plain
 accept/skip or an object carrying **edited values** for the group's `editableAttributes`:
@@ -662,6 +790,16 @@ The read-only counterpart is `doc.query.lifecycle.report({ verb: 'ssd', sourceQu
 For `verb: 'ssd'`, `report`/`apply` act on the element `ref` names (same resolution as [`instantiate.ssd`](./instantiate#ssd)): a named `Substation`, `VoltageLevel` or `Bay` is the scope — a template holding several independent bays is placed one chosen bay at a time. The `TEMPLATE` scaffolding is resolved only when `ref` names it: it is walked down `Substation → VoltageLevel → Bay` to the first level holding a named element. Units of that level joined by a reference — a terminal of one on a connectivity node of the other, an input of one fed by the other, any reference the registries know — are **one element**: they are placed and updated together, rooted at the `TEMPLATE` scaffolding holding them, which lands (as a level above a unit does) on the project's level of its kind, each of their levels where its level mapping says (the Map step); a `ref` naming one of them selects the whole group, and the report lists them in `scopeUnits`. Several elements at that level: the report is refused with `SSD_SCOPE_AMBIGUOUS` (`SCL2003`), `meta.candidates` listing one per element (`{ tagName, id, name, linked }`: a unit, with the units linked to it) — a consumer offers them to choose from and asks again with the chosen one as `ref`; the units the chosen element does not hold are left out of it, on placement and on update. A `ref` the template does not hold is refused with `TEMPLATE_ROOT_NOT_FOUND`; a level holding several elements named `TEMPLATE` with `SSD_TEMPLATE_NOT_UNIQUE` (`SCL2009`). A terminal or neutral point of the placed content written by path only, with no uuid — its path names a node the template does not hold, a bay of another template — is not written, on a first placement and on an update alike, whether it belongs to a level's equipment or to the equipment of a function placed with it; a reference by uuid to an element the placement leaves out is not written either, wherever it is met: in the placed frame, in a role (an allocation of a function another application holds), a category (a classification of a function not placed), a variable or a behaviour description (an application to an element not placed), on a first placement and on an update. The report lists each in `warnings`: `{ code: 'reference-not-placed', reference, attribute, path? }` (the template's reference element, the attribute naming its target, the path written). A terminal on the predefined `grounded` node, which no file declares, names the grounded node of its bay as placed, with that bay's level names.
 :::
 
+## `tx.lifecycle.update.ied`
+
+`tx.lifecycle.update.ied({ sourceQuery, iedRef, anchor, fileType, targetInstance?, report?, decisions?,
+keepNameTypesFrom?, takeOver? })` updates the IED of the project placed from a template ISD with a newer revision of it,
+as `apply` does for an IED's report (see [An IED](#an-ied-—-verb-ied)), or places it when the project holds none
+([`instantiate.ied`](./instantiate#ied)). Given a report and decisions, a group the report blocks accepted is refused
+with `UPDATE_AFFECTS_OTHER_IED` (`meta: { groups }`) before anything is written. Without them, it writes everything the
+revision brings; a write it would make in another IED is refused once staged (`meta: { ied, element }`): run `report`
+first to see and skip what would. Returns the IED, `placed` or `reconciled`.
+
 ## Satellites
 
 A **satellite** is an element that lives **outside** the transplanted subtree but is linked to it by a UUID reference, so it must travel with it across every verb (extract, instantiate, update, report, apply). The verbs carry satellites automatically — there is no separate API to call.
@@ -725,7 +863,7 @@ Because the instance is already in instance-space, comparing template to instanc
 
 #### References added by an update
 
-An element the update adds may refer to an element outside the subtree it was added with: a function the same update instantiates, a satellite it creates, or an element the instance already holds. Once everything the update adds to an instance exists, the update verbs repoint those references (`repointAddedReferences`): the uuid is replaced by the uuid of the project element and the path is rebuilt, exactly as on a first instantiate.
+An element the update adds may refer to an element outside the subtree it was added with: a function the same update instantiates, a satellite it creates, or an element the instance already holds. Once everything the update adds to an instance exists, the update verbs repoint those references (`repointAddedReferences`): the uuid is replaced by the uuid of the project element and the path is rebuilt, exactly as on a first instantiate. A tuple reference (a data set entry or an input naming a logical node) is repointed the same way, its names written from the element it now names; an LNode's binding is left to the binding rules.
 
 The project element is the one carrying the source element's lineage. When the template was instantiated several times, several elements carry it: the one the instance contains or already refers to is taken, so each instance points at its own elements. A reference that cannot be told apart is left untouched.
 
@@ -777,7 +915,11 @@ Pairing is [the shared matcher](#child-matching-—-one-shared-matcher)'s, so th
 - **identified** elements match by their lineage under the scenario's key (`templateUuid`, `uuid` for a fork), guarded to the same tag — a placeholder `templateUuid` reused across unrelated element types (see [`checkTemplateUuids`](#identity-integrity-—-checktemplateuuids)) never matches across types;
 - a uuid-less **reference** link (e.g. `FunctionRef`, and an IED's bare tuple references with no uuid of their own and nothing but text or vendor data inside: `FCDA`, `ClientLN`, `IEDName`, `Association`, `KDC`, `ServerAt`) matches by its reference identity — the target it points to, brought back to the source by the same key: its target's `templateUuid`, or for a fork the target's `uuid` itself — never by tag position. A reference whose uuids disagree is the project's own and the template's is new: listed `removed` and `added` (or kept, in a shared element; an IED's data-flow reference is listed `target-only`, kept unless its removal is accepted, and `added`). A project authored with placeholder lineages asks for more with `resolution.referencesByName: 'placeholders'`: such a reference then pairs by the names of what both name, but only where the project's target carries a lineage [`checkTemplateUuids`](#identity-integrity-—-checktemplateuuids) flags (`cross-type-template-uuid` or `template-uuid-type-mismatch`), read once per report and per apply. Each pairing made so is marked on its node (`DiffNode.pairedByName`, the placeholder) and listed in `report.warnings` (`ReportWarning`, code `reference-paired-by-name`); a shared element whose only news is such a pairing is listed with the instance's tree;
 - an IED's tuple reference with no uuid of its own (`FCDA`, `ClientLN`, `IEDName`, `Association`, `KDC`, `ServerAt`, `ConnectedAP`, `GSE`, `SMV`) adds to the target it names what tells apart two naming the same target: a data set entry's `doName`, `daName`, `fc` and `ix`, a report client's `apRef`, an association's `associationID`; two entries selecting different data on one logical node never pair with each other. A report client's `apRef` is optional when its IED has one access point: a template client written without it and the project's written with it are two clients. One naming nothing by uuid (a GOOSE receiver naming an IED outside the file) pairs with the project's reference naming nothing by uuid that gives the same names, an `IEDName`'s text among them, never by position; one naming its target by uuid that no project reference names pairs with the project's written without a uuid that gives the same names. Two such references naming the very same thing (the same entry twice in a data set) are paired in order: each such pairing is marked on its node (`DiffNode.pairedAmongTwins`) and listed in `report.warnings` (`ReportWarning`, code `identical-references-paired-in-order`); references naming two instances of one template element are not twins;
-- anything else falls back to position.
+- a uuid-pair reference naming nothing by uuid (a `DOS` of an LNode no device implements, a `FunctionRef` written by path only) matches by its key (`keyFieldsOf`: a data object's `name`), else by the path it writes, among the instance's references naming nothing by uuid; never by position;
+- any other uuid-less element matches the instance sibling of the same key (`keyFieldsOf`: the schema's identity fields — a `DAI`'s `name` and `ix`, a `P`'s `type`, a `Label`'s `id` and `lang` —, else a supplement: a `Val`'s `sGroup`, an `SclFileReference`'s `fileType`, `fileName` and `fileUuid`, a `DOS`'s `name`). No sibling of that key: no match, the template's element is `added` and the instance's is the project's own (`target-only`), never one written over the other. The same key twice is paired in order, marked (`DiffNode.pairedAmongTwins`) and listed in `report.warnings` (code `identical-elements-paired-in-order`). An element with no key of its own (a singleton such as `Server`, `LNodeSpecNaming`) is the one there is, else the next in order;
+- in an IED, an element whose lineage names nothing the template holds — an IED file without uuids imported again, its elements given other uuids by the import — matches, before the walk, the instance element of its key under its paired parent (for a tag without key, only one the schema holds once: an `LN0`) whose lineage names nothing the template holds either; references naming it then pair through it. Never the IED itself, never outside an IED (elsewhere a uuid is the element's identity for its life). Marked on its node (`DiffNode.pairedByKey`, the key) and listed in `report.warnings` (code `element-paired-by-key`); `apply` writes the template element's uuid as its `templateUuid` (a fork keeps its own uuid and lineage). An `ExtRef` has no key of its own: an input offered for later binding (it writes `intAddr`) is paired by `intAddr`, `pServT`, `pLN`, `pDO`, `pDA`, any other by its source (`iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst`, `doName`, `daName`) and its service (`serviceType`, `srcCBName`). Several instance siblings of one key are paired in order, marked (`DiffNode.pairedAmongTwins`) and warned of (`identical-references-paired-in-order`).
+
+A data set's entries are sent in the order it lists them: a matched `DataSet` whose entries the template lists in another order than the update would leave them (the paired entries where the instance holds them, the template's new ones after them; the project's own aside) is `modified` with its `orderChange` (`{ tagName: 'FCDA' }`). `apply`, its group accepted, writes the template's order, each entry of the project's own right after the entry it followed (first when it followed none); the entries take new records, and the copies `reconcile` returns name them. When an entry of the data set is added, removed or put in another order, `apply` raises by one the `confRev` of each report, GOOSE and sampled value control block naming it, listed on the data set's node (`confRevBumps`, before and after), the project's own blocks included, except one the template no longer holds anywhere in the IED (a block it moved to another logical node is still its). A block the template raises above it itself takes the template's value: its raise is listed for when its own change is skipped (`onlyIfBlockSkipped`), written only then. A counter that is no unsigned 32-bit number, or at its limit, is not raised: listed on the data set's node (`confRevNotRaised`) and in `report.warnings` (code `conf-rev-not-raised`, `value`, `refusal: 'invalid' | 'overflow'`). An entry of the project's own the template lacks is kept (`target-only`): when its removal is accepted, `apply` raises the revisions though the report, written before the decision, lists no bump. A control block's `confRev` only rises: a template's lower than the project's is listed as kept (`keptAttributeChanges`, reason `conf-rev-only-rises`), never written.
 
 Because both sides share this matcher, `apply` can no longer pair a child differently from the `report` that gated it: the apply path carries the same cross-type guard and reference-identity matching as the report.
 

@@ -8,6 +8,8 @@ export type ReferenceUuid = {
 	target: readonly string[]
 	names: readonly string[]
 	form: 'path' | 'tuple'
+	/** A tuple pair whose names only follow the uuid (an LNode's binding): no reference a scope or a repoint reads. */
+	followsOnly: boolean
 }
 
 /** A referrer naming a target by one of its uuid attributes. */

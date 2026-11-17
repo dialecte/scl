@@ -67,6 +67,7 @@ import type {
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { StandingPlacement } from '@/v2019C1/extensions/lifecycle/engine/standing'
+import type { TargetInstances } from '@/v2019C1/extensions/lifecycle/instance'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { PlacementLevel, TemplateLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type {
@@ -100,7 +101,7 @@ export async function reportAsd(
 		scenario?: LifecycleScenario
 		/** Placed afresh by a larger operation: a new instance whatever the project holds. */
 		placesFresh?: boolean
-		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		targetInstance?: TargetInstances
 		/** The consumer's choices for the shared elements the application refers to. */
 		decisionMappings?: DecisionMappings
 		/** The project element the application is placed under. */
@@ -626,7 +627,7 @@ async function reportComposedFunctions(
 		applicationInstances: readonly AnyTrackedRecord[]
 		/** The application's policy: the functions it composes are reported under it. */
 		policy: ScenarioPolicy
-		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		targetInstance?: TargetInstances
 		decisionMappings?: DecisionMappings
 		anchor?: Scl.Ref<Scl.ElementsOf>
 		/** What the whole report already listed and named. */

@@ -1,11 +1,13 @@
 import { readBoundLNodes } from './bound-logical-nodes'
 import { findLeftChildren } from './left-children'
 import { LEFT_CHILDREN_PERF_SPAN } from './left-children.constants'
+import { writePathReferencesAtCommit } from './path-references'
 import { pruneEmptiedContainers } from './prune-emptied-containers'
 import { pruneUnusedTypes } from './prune-unused-types'
 import { releaseLNodesOfDeletedLogicalNodes } from './release-deleted-logical-nodes'
 import { specificationIedsOfCreated } from './specification-ieds-of-created'
 import { writeTupleNamesAtCommit } from './tuple-names'
+import { writeTupleReferencesAtCommit } from './tuple-references'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -13,6 +15,7 @@ import { SCL_ERRORS } from '@/v2019C1/errors'
 import { readAttribute } from '@/v2019C1/helpers'
 import { ensureLNodeSpecNaming, hasAttributeChange } from '@/v2019C1/hooks/shared'
 
+import type { BoundLNodes } from './bound-logical-nodes.types'
 import type { LeftChild } from './left-children.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -62,24 +65,23 @@ export async function beforeCommit(params: {
 		})
 		ensured.push(...naming)
 	}
-	// the references naming what the transaction created by uuid write its names, the LNodes it bound those of their logical node
-	const tupleNames = await writeTupleNamesAtCommit({
+	const { tupleNames, references, paths } = await writeReferencesAtCommit({
 		operations,
 		query,
 		bound,
-		pending: lastWrites({ operations: ensured }),
+		ensured,
 	})
 	// the LNodes bound to a logical node the transaction deleted are released, from what the steps above wrote
 	const released = await releaseLNodesOfDeletedLogicalNodes(query, {
 		operations,
-		pending: lastWrites({ operations: [...ensured, ...tupleNames] }),
+		pending: lastWrites({ operations: [...ensured, ...tupleNames, ...references, ...paths] }),
 	})
 	// what no referrer names any more goes, with what only it named
 	const unusedTypes = await pruneUnusedTypes({ operations, query })
 	// what the transaction left holding nothing goes, read with what the naming, the release and the type prune just wrote
 	const pending = new Map<string, Scl.RawRecord<Scl.ElementsOf>>()
 	const gone = new Set<string>()
-	for (const operation of [...ensured, ...released, ...unusedTypes]) {
+	for (const operation of [...ensured, ...references, ...paths, ...released, ...unusedTypes]) {
 		if (operation.status === 'deleted') gone.add(operation.oldRecord.id)
 		else pending.set(operation.newRecord.id, operation.newRecord)
 	}
@@ -89,9 +91,48 @@ export async function beforeCommit(params: {
 		pending,
 		gone,
 	})
-	const staged = [...ensured, ...tupleNames, ...released, ...unusedTypes, ...pruned]
+	const staged = [
+		...ensured,
+		...tupleNames,
+		...references,
+		...paths,
+		...released,
+		...unusedTypes,
+		...pruned,
+	]
 	await assertNoChildLeftBehind({ operations: [...operations, ...staged], query })
 	return staged
+}
+
+/**
+ * The reference steps of the commit, each reading what the steps before it wrote: the names of the tuple references
+ * naming what the transaction created by uuid (and of the LNodes it bound), the tuple references' uuid and names in
+ * agreement, then the path references left without a uuid or with a path their update could not resolve.
+ */
+async function writeReferencesAtCommit(params: {
+	operations: ReadonlyArray<Scl.Operation>
+	query: Core.Query<Config>
+	bound: BoundLNodes
+	ensured: readonly Scl.Operation[]
+}): Promise<{ tupleNames: Scl.Operation[]; references: Scl.Operation[]; paths: Scl.Operation[] }> {
+	const { operations, query, bound, ensured } = params
+	const tupleNames = await writeTupleNamesAtCommit({
+		operations,
+		query,
+		bound,
+		pending: lastWrites({ operations: ensured }),
+	})
+	const references = await writeTupleReferencesAtCommit({
+		operations,
+		query,
+		pending: lastWrites({ operations: [...ensured, ...tupleNames] }),
+	})
+	const paths = await writePathReferencesAtCommit({
+		operations,
+		query,
+		pending: lastWrites({ operations: [...ensured, ...tupleNames, ...references] }),
+	})
+	return { tupleNames, references, paths }
 }
 
 /** The record each operation given leaves, by id, the last one written winning; a deleted one left out. */

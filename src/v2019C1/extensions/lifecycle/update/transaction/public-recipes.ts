@@ -1,14 +1,19 @@
 import { asd as reconcileAsd } from './asd'
 import { fsd as reconcileFsd } from './fsd'
+import { ied as reconcileIedRecipe } from './ied'
 import { ssd as reconcileSsd } from './ssd'
 
 import { releaseWrittenImplementation } from '@/v2019C1/extensions/lifecycle/apply/release-written-implementation'
 
 import type { UpdateAsdParams, WrittenApplications } from './asd.types'
 import type { UpdateFsdParams } from './fsd.types'
+import type { UpdateIedParams } from './ied.types'
 import type { UpdateSsdParams } from './ssd.types'
 import type { Config } from '@/v2019C1/config'
-import type { AppliedFunction } from '@/v2019C1/extensions/lifecycle/apply/apply.types'
+import type {
+	AppliedFunction,
+	AppliedInstance,
+} from '@/v2019C1/extensions/lifecycle/apply/apply.types'
 import type * as Core from '@dialecte/core'
 
 // The update recipes as a caller runs them: each runs its recipe, then releases once what that run wrote naming a
@@ -59,6 +64,23 @@ export async function ssd(
 ): Promise<WrittenApplications> {
 	const from = tx.getStagedOperations().length
 	const written = await reconcileSsd(tx, params)
+	await releaseWrittenImplementation(tx, { from })
+	return written
+}
+
+/**
+ * `tx.lifecycle.update.ied` - update the IED of the project placed from a template ISD with a newer revision of it (or
+ * place it when the project holds none), then release what the run wrote naming a logical node, ExtRef or ExtCtrl the
+ * project lacks, as `tx.lifecycle.apply` does after its verb.
+ *
+ * @intent update an S-IED from a newer ISD, reconcile an IED with its template ISD, update an IED specification
+ */
+export async function ied(
+	tx: Core.Transaction<Config>,
+	params: UpdateIedParams,
+): Promise<AppliedInstance<'IED'>[]> {
+	const from = tx.getStagedOperations().length
+	const written = await reconcileIedRecipe(tx, params)
 	await releaseWrittenImplementation(tx, { from })
 	return written
 }

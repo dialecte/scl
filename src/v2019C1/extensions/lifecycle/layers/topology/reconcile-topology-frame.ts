@@ -31,6 +31,7 @@ import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/eng
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
+import type { TargetInstances } from '@/v2019C1/extensions/lifecycle/instance'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -69,7 +70,7 @@ export async function reconcileTopologyFrame(
 		report?: DiffReport
 		decisions?: DecisionMap
 		/** Multi-instance anchor: reconcile only the frame instance that IS the target (or under it). */
-		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		targetInstance?: TargetInstances
 		/** The consumer's choices, among them where a level the template gained lands per instance. */
 		decisionMappings?: DecisionMappings
 		/** The template's elements the scope leaves out (record ids): never matched to what the project holds, nor written. */

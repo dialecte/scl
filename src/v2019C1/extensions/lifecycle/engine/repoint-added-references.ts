@@ -1,5 +1,5 @@
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { collectInstanceScope } from '@/v2019C1/extensions/lifecycle/instance'
+import { namedTargetsOf } from '@/v2019C1/extensions/reference/query/find/named-targets'
 import { applyUuidRemap } from '@/v2019C1/extensions/reference/transaction'
 
 import type {
@@ -12,7 +12,8 @@ import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
- * Repoint the references an update ADDED to one instance onto the elements of the project.
+ * Repoint the references an update ADDED to one instance onto the elements of the project: by a uuid pair or a tuple
+ * pair (a data set entry or an input naming a logical node), an LNode's binding left to the binding rules.
  *
  * Each subtree an update adds is finalized on its own, so a reference in it whose target lies
  * outside that subtree still carries the uuid of the SOURCE element. That target is either
@@ -50,19 +51,17 @@ export async function repointAddedReferences(
 	}
 
 	for (const { source, target } of cloneMappings) {
-		const pairs = UUID_REFERENCE_PAIRS[target.tagName as keyof typeof UUID_REFERENCE_PAIRS]
-		if (!pairs) continue
-
-		for (const pair of pairs) {
-			const sourceUuid = sourceAttributeValue({
-				attributes: source.attributes,
-				name: pair.attribute.uuid,
-			})
-			if (!sourceUuid || resolvedSourceUuids.has(sourceUuid)) continue
+		// what the copy names by uuid, by a uuid pair or a tuple pair (a data set entry, an input)
+		for (const named of namedTargetsOf({
+			tagName: target.tagName,
+			attributes: source.attributes,
+		})) {
+			const sourceUuid = named.uuid
+			if (resolvedSourceUuids.has(sourceUuid)) continue
 
 			const counterpart = await findInstanceCounterpart(tx, {
 				sourceUuid,
-				targetTags: pair.target,
+				targetTags: named.target,
 				matchKey,
 				resolveInstanceScope,
 			})

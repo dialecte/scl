@@ -10,6 +10,7 @@ import {
 import type { SignalRoleAttributes } from './build-signal-role-attributes.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
+import type { AnyRawRecord } from '@dialecte/core'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -21,7 +22,11 @@ import type * as Core from '@dialecte/core'
  */
 export async function buildSignalRoleAttributes(
 	query: Core.Query<Config>,
-	params: { functionRef: Scl.Ref<Scl.ElementsOf> },
+	params: {
+		functionRef: Scl.Ref<Scl.ElementsOf>
+		/** The FunctionRef as the transaction writes it, when the store does not hold that yet (a path edit retargeting it). */
+		written?: AnyRawRecord
+	},
 ): Promise<SignalRoleAttributes[]> {
 	const descendants = await query.findDescendants(params.functionRef)
 	const referrers: { record: Scl.TrackedRecord<Scl.ElementsOf>; pair: ReferencePair }[] = []
@@ -34,7 +39,9 @@ export async function buildSignalRoleAttributes(
 	}
 	if (referrers.length === 0) return []
 
-	const functionRefRecord = await query.getRecord(params.functionRef)
+	const functionRefRecord =
+		(params.written as Scl.TrackedRecord<Scl.ElementsOf> | undefined) ??
+		(await query.getRecord(params.functionRef))
 	if (!functionRefRecord) return []
 	const functionBases = await functionBasesOfFunctionRef(query, { functionRef: functionRefRecord })
 

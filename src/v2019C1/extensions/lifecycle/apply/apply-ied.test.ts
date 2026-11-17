@@ -370,16 +370,16 @@ type RefusalCase = SclTest.BaseXmlTestCase & {
 	expected: { key: string; meta: Record<string, unknown> }
 }
 
-// What an IED's apply does not offer yet is refused before anything is written: a report applied again once the IED it
-// places is in the project (`template` then finds it).
-describe('tx.lifecycle.apply - an IED placement not offered', () => {
+// A report of a first placement applied again once the IED it places is in the project is refused before anything is
+// written: `template` then finds the IED, and the report was made for no update of it.
+describe('tx.lifecycle.apply - a placement report applied once the IED is placed', () => {
 	const testCases: SclTest.TestCases<RefusalCase> = {
-		'the report of the template ISD applied a second time in the transaction that placed it → refused, the second write staged nothing':
+		'the report of the template ISD applied a second time in the transaction that placed it → refused, the report made for no update of the IED placed, the second write staged nothing':
 			{
 				sourceXml: isdTemplate,
 				targetXml: projectSouth,
 				sourceFileName: 'BCU_Template.isd',
-				expected: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'scenario', value: 'template' } },
+				expected: { key: 'REPORT_TARGET_MISMATCH', meta: { field: 'targetInstance' } },
 			},
 	}
 

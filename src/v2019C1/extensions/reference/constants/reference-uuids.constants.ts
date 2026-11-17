@@ -97,6 +97,7 @@ function uuidPairReference(pair: ReferencePair): ReferenceUuid {
 		target: pair.target,
 		names: [pair.attribute.path],
 		form: 'path',
+		followsOnly: false,
 	}
 }
 
@@ -106,6 +107,7 @@ function tuplePairReference(pair: TupleReferencePair): ReferenceUuid {
 		target: pair.target,
 		names: tupleNamesOf(pair),
 		form: 'tuple',
+		followsOnly: pair.followsOnly ?? false,
 	}
 }
 

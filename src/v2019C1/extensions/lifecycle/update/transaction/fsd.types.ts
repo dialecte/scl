@@ -7,8 +7,10 @@ import type {
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { TargetInstances } from '@/v2019C1/extensions/lifecycle/instance'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
 
 /** What `tx.lifecycle.update.fsd` takes. */
@@ -32,7 +34,13 @@ export type UpdateFsdParams = {
 	/** Type-dedup name authority, forwarded to `importTypes`. Default `'target'`. */
 	keepNameTypesFrom?: KeepNameTypesFrom
 	/** Multi-instance anchor: scope to ONE target instance (or its subtree). Absent = all. */
-	targetInstance?: Scl.Ref<Scl.ElementsOf>
+	targetInstance?: TargetInstances
+	/**
+	 * What the template's elements outside the primary stand for in the project, beyond what the update matches by
+	 * lineage: for the specification of an IED, the IED's logical nodes, so an LNode the update adds is bound to the
+	 * IED updated, not to another placed from the same template.
+	 */
+	redirectMappings?: readonly RedirectMapping[]
 	/** The consumer's choices for the shared elements the function is classified by. */
 	decisionMappings?: DecisionMappings
 	/** The function is placed by this operation alone (an FSD): see `instantiate.fsd`. */

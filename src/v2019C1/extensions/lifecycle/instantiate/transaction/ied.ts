@@ -4,22 +4,19 @@ import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { assertIedPlacementOffered } from '@/v2019C1/extensions/lifecycle/layers/ied/assert-ied-placement'
 import { isIsdInstance } from '@/v2019C1/extensions/lifecycle/layers/ied/is-isd-instance'
+import {
+	bindConnections,
+	nameConnections,
+} from '@/v2019C1/extensions/lifecycle/layers/ied/name-connections'
 import { placeIedCommunication } from '@/v2019C1/extensions/lifecycle/layers/ied/place-ied-communication'
 import { resolveSsdScope } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
-import { readAttributes } from '@/v2019C1/helpers'
 
-import type {
-	CloneSpecificationParams,
-	IedParams,
-	IedResult,
-	NameConnectionsParams,
-	SettleIedParams,
-} from './ied.types'
+import type { CloneSpecificationParams, IedParams, IedResult, SettleIedParams } from './ied.types'
 import type { ClonedProcessSection } from './process-section.types'
-import type { Config, Scl } from '@/v2019C1/config'
+import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -157,49 +154,4 @@ async function cloneSpecification(
 		leftOut: params.leftOut,
 		operation: 'instantiate (ied)',
 	})
-}
-
-/** Write on each `ConnectedAP` the placement added without `apUuid` the uuid of the placed access point it names. */
-async function bindConnections(
-	tx: Core.Transaction<Config>,
-	params: NameConnectionsParams,
-): Promise<void> {
-	const connections = params.cloneMappings.filter(
-		(mapping) => mapping.target.tagName === 'ConnectedAP',
-	)
-	if (connections.length === 0) return
-	const accessPoints = await tx.getChildren(params.ied, 'AccessPoint')
-	const uuidByName = new Map<string, string>()
-	for (const accessPoint of accessPoints) {
-		const { name, uuid } = readAttributes({ record: accessPoint })
-		if (name && uuid) uuidByName.set(name, uuid)
-	}
-	const records = await tx.getRecords(
-		connections.map(({ target }) => target as Scl.Ref<'ConnectedAP'>),
-	)
-	for (const connection of records) {
-		if (!connection) continue
-		const { apName, apUuid } = readAttributes({ record: connection })
-		const placedUuid = apName ? uuidByName.get(apName) : undefined
-		if (apUuid || !placedUuid) continue
-		await tx.update(
-			{ tagName: 'ConnectedAP', id: connection.id },
-			{ attributes: { apUuid: placedUuid } },
-		)
-	}
-}
-
-/** Write the placed IED's name on each `ConnectedAP` the placement added. */
-async function nameConnections(
-	tx: Core.Transaction<Config>,
-	params: NameConnectionsParams,
-): Promise<void> {
-	const connections = params.cloneMappings.filter(
-		(mapping) => mapping.target.tagName === 'ConnectedAP',
-	)
-	if (connections.length === 0) return
-	const { name } = await tx.getAttributes(params.ied)
-	for (const { target } of connections) {
-		await tx.update(target as Scl.Ref<'ConnectedAP'>, { attributes: { iedName: name } })
-	}
 }

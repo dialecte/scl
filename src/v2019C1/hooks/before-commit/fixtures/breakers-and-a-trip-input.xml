@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Function S1/F1 holds the process resources PR1 and PR2, the breakers XCBR1 and XCBR2 (type XCBR_T: Pos.stVal,
+     Pos.q, Loc.stVal), two breakers both named XCBR3, a breaker XCBR4 of no type, a breaker bound to XCBR1 of IED1 named XCBR6 by
+     its specification naming, and a trip PTRC1 whose input (SourceRef ref1) names Pos.stVal of
+     XCBR1 by path and uuid, from resource PR1 -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Substation name="S1" dev:db-id="s1">
+        <Function name="F1" uuid="f1" dev:db-id="f1">
+            <Private type="eIEC61850-6-100" dev:db-id="f1-private">
+                <eIEC61850-6-100:ProcessResources dev:db-id="resources">
+                    <eIEC61850-6-100:ProcessResource name="PR1" uuid="pr1" dev:db-id="pr1"/>
+                    <eIEC61850-6-100:ProcessResource name="PR2" uuid="pr2" dev:db-id="pr2"/>
+                </eIEC61850-6-100:ProcessResources>
+            </Private>
+            <LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T" uuid="xcbr1" dev:db-id="xcbr1">
+                <Private type="eIEC61850-6-100" dev:db-id="xcbr1-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="1" dev:db-id="xcbr1-naming"/>
+                </Private>
+            </LNode>
+            <LNode iedName="None" lnClass="XCBR" lnInst="2" lnType="XCBR_T" uuid="xcbr2" dev:db-id="xcbr2">
+                <Private type="eIEC61850-6-100" dev:db-id="xcbr2-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="2" dev:db-id="xcbr2-naming"/>
+                </Private>
+            </LNode>
+            <LNode iedName="None" lnClass="XCBR" lnInst="3" lnType="XCBR_T" uuid="xcbr3" dev:db-id="xcbr3"/>
+            <LNode iedName="None" lnClass="XCBR" lnInst="3" lnType="XCBR_T" uuid="xcbr3-again" dev:db-id="xcbr3-again"/>
+            <LNode iedName="None" lnClass="XCBR" lnInst="4" uuid="xcbr4" dev:db-id="xcbr4"/>
+            <LNode iedName="IED1" ldInst="LD0" lnClass="XCBR" lnInst="1" uuid="xcbr6" dev:db-id="xcbr6">
+                <Private type="eIEC61850-6-100" dev:db-id="xcbr6-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="6" dev:db-id="xcbr6-naming"/>
+                </Private>
+            </LNode>
+            <LNode iedName="None" lnClass="PTRC" lnInst="1" uuid="ptrc1" dev:db-id="ptrc1">
+                <Private type="eIEC61850-6-100" dev:db-id="ptrc1-private">
+                    <eIEC61850-6-100:LNodeInputs dev:db-id="inputs">
+                        <eIEC61850-6-100:SourceRef input="Pos" source="S1/F1/XCBR1.Pos.stVal" sourceLNodeUuid="xcbr1" sourceDoName="Pos" sourceDaName="stVal" resourceName="PR1" resourceUuid="pr1" dev:db-id="ref1"/>
+                    </eIEC61850-6-100:LNodeInputs>
+                </Private>
+            </LNode>
+        </Function>
+    </Substation>
+    <IED name="IED1" dev:db-id="ied1">
+        <AccessPoint name="AP1" dev:db-id="ap1">
+            <Server dev:db-id="server">
+                <Authentication dev:db-id="authentication"/>
+                <LDevice inst="LD0" dev:db-id="ld0">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="lln0"/>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" dev:db-id="ied1-xcbr1"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="templates">
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="xcbr-type">
+            <DO name="Pos" type="DPC_T" dev:db-id="pos"/>
+            <DO name="Loc" type="SPS_T" dev:db-id="loc"/>
+        </LNodeType>
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lln0-type">
+            <DO name="Beh" type="SPS_T" dev:db-id="beh"/>
+        </LNodeType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dpc-type">
+            <DA name="stVal" bType="Dbpos" fc="ST" dev:db-id="dpc-stval"/>
+            <DA name="q" bType="Quality" fc="ST" dev:db-id="dpc-q"/>
+        </DOType>
+        <DOType id="SPS_T" cdc="SPS" dev:db-id="sps-type">
+            <DA name="stVal" bType="BOOLEAN" fc="ST" dev:db-id="sps-stval"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>

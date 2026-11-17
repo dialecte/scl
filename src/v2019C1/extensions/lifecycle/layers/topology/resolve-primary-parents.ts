@@ -12,8 +12,8 @@ import type * as Core from '@dialecte/core'
  * Where a primary of the scope is updated, and whether the template gained it (no instance of it
  * yet).
  *
- * A primary the project already holds an instance of is reconciled where its instances are: under
- * the element the consumer started from. A primary the template GAINED has none: it is placed once
+ * A primary the project already holds an instance of (among the instances the operation is scoped to, when it is) is
+ * reconciled where its instances are: under the element the consumer started from. A primary the template GAINED has none: it is placed once
  * per instance of the unit — for that instance (`placedFor`, the level it sits on), on the level the
  * instance holds for the level the primary sits on in the template, in the bay the instance lives
  * in, not under the element the update was started from. With no instance of the unit to tell, it
@@ -26,11 +26,14 @@ export async function resolvePrimaryParents(
 	const { sourceQuery, primaryRef, anchor, unitId, instanceLevelsList, matchKey } = params
 
 	const sourceUuid = await sourceQuery.any.getAttribute(primaryRef, { name: 'uuid' })
-	const held = await findInstancesByTemplateUuid(query, {
+	const everyHeld = await findInstancesByTemplateUuid(query, {
 		tagName: primaryRef.tagName,
 		sourceUuid,
 		matchKey,
 	})
+	const targetIds =
+		params.primaryTargets && new Set(params.primaryTargets.map((target) => target.id))
+	const held = targetIds ? everyHeld.filter((instance) => targetIds.has(instance.id)) : everyHeld
 	if (held.length > 0) return { places: [{ parent: anchor }], gained: false }
 
 	const sourceAncestors = await sourceQuery.findAncestors(primaryRef, {
@@ -40,9 +43,13 @@ export async function resolvePrimaryParents(
 	for (const instanceLevels of instanceLevelsList) {
 		const placedFor = instanceLevels.get(unitId)
 		if (!placedFor) continue
+		// one instance named: placed there only
+		if (params.gainedIn && placedFor.id !== params.gainedIn.id) continue
 		const sourceLevel = sourceAncestors.find((ancestor) => instanceLevels.has(ancestor.id))
 		const parent = sourceLevel && instanceLevels.get(sourceLevel.id)
 		places.push({ placedFor, ...(parent ? { parent } : {}) })
 	}
+	// with one instance named, never on the element the consumer started from
+	if (params.gainedIn) return { places, gained: true }
 	return { places: places.length > 0 ? places : [{ parent: anchor }], gained: true }
 }
