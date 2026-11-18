@@ -44,7 +44,11 @@ export async function planCommit(params: {
 		staged.set(step.name, result.operations)
 		state = { ...state, ...result.state }
 	}
-	return { staged: [...staged.values()].flat(), containers: [...(state.containers ?? [])] }
+	return {
+		staged: [...staged.values()].flat(),
+		stagedBy: staged,
+		containers: [...(state.containers ?? [])],
+	}
 }
 
 /** What the steps run so far wrote: the record each left, by id, the last one written winning, and the ids deleted. */

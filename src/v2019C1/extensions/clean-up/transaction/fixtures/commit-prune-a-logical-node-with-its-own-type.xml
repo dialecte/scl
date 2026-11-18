@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IED1's XCBR1 is the only logical node of type XCBR_T, whose DO Pos is of type DPC_T, used by nothing else -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:acme="http://example.com/acme-labels" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="project" dev:db-id="header"/>
+    <IED name="IED1" dev:db-id="ied1">
+        <AccessPoint name="AP1" dev:db-id="ied1-ap">
+            <Server dev:db-id="ied1-server">
+                <Authentication dev:db-id="ied1-authentication"/>
+                <LDevice inst="LD1" dev:db-id="ied1-ld">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ied1-lln0"/>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" dev:db-id="ied1-xcbr1"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="templates">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lln0-type">
+            <DO name="Beh" type="ENS_T" dev:db-id="beh"/>
+        </LNodeType>
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="xcbr-type">
+            <DO name="Pos" type="DPC_T" dev:db-id="xcbr-pos"/>
+        </LNodeType>
+        <DOType id="ENS_T" cdc="ENS" dev:db-id="ens-type">
+            <DA name="stVal" bType="Enum" type="Beh_E" fc="ST" dev:db-id="ens-st-val"/>
+        </DOType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dpc-type">
+            <DA name="stVal" bType="Dbpos" fc="ST" dev:db-id="dpc-st-val"/>
+        </DOType>
+        <EnumType id="Beh_E" dev:db-id="beh-enum">
+            <EnumVal ord="1" dev:db-id="on">on</EnumVal>
+        </EnumType>
+    </DataTypeTemplates>
+</SCL>

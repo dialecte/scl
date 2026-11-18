@@ -11,11 +11,14 @@ import {
 	collectDeleteCascade,
 	collectEmptiedAbove,
 } from '@/v2019C1/hooks/before-delete'
+import { DATA_SET_TAG } from '@/v2019C1/hooks/before-delete/orphaned-refs.constants'
+import { DATA_SET_SENDER_TAGS } from '@/v2019C1/hooks/shared/data-set-entry.constants'
 
 import type {
 	PruneCandidate,
 	PrunedContainer,
 	PrunedEmptiedContainers,
+	PrunedEffect,
 	PruneReason,
 } from './prune-emptied-containers.types'
 import type { RemovedChildren } from './removed-children.types'
@@ -66,18 +69,25 @@ export async function pruneEmptiedContainers(params: {
 		roots.push(...emptiedAbove)
 	}
 	if (roots.length === 0) return { operations: [], containers: [] }
-	const cascade = await collectDeleteCascade(query, { roots, emptiesContainers: true, kept })
+	// what the commit's other operations delete already (the types the type prune removes) is no part of the cascade
+	const alreadyGone = new Set(params.gone)
+	const read = await collectDeleteCascade(query, { roots, emptiesContainers: true, kept })
+	const cascade = {
+		...read,
+		within: read.within.filter((record) => !alreadyGone.has(record.id)),
+		deleted: read.deleted.filter((record) => !alreadyGone.has(record.id)),
+	}
 	const staged = await buildCascadeOperations(query, {
 		cascade,
 		deletedRoots: roots,
 		pending,
 		raised: raisedBlocksOf({ operations }),
 	})
-	return { operations: staged, containers: describeContainers({ roots, reasons, cascade }) }
+	return { operations: staged, containers: describeContainers({ roots, reasons, cascade, staged }) }
 }
 
 /**
- * Each root pruned, with why and what it still holds: a record the cascade takes (`within`, `deleted`) belongs to the
+ * Each root pruned, with why, what it still holds and what goes with it outside: a record the cascade takes (`within`, `deleted`) belongs to the
  * nearest root its parents reach, walked in memory over the records the cascade read.
  */
 function describeContainers(params: {
@@ -87,8 +97,10 @@ function describeContainers(params: {
 		within: readonly Scl.RawRecord<Scl.ElementsOf>[]
 		deleted: readonly Scl.RawRecord<Scl.ElementsOf>[]
 	}
+	/** The operations the cascade staged: what reaches outside each container. */
+	staged: readonly Scl.Operation[]
 }): PrunedContainer[] {
-	const { roots, reasons, cascade } = params
+	const { roots, reasons, cascade, staged } = params
 	const rootIds = new Set(roots.map((root) => root.id))
 	const read = new Map<string, Scl.RawRecord<Scl.ElementsOf>>(
 		[...roots, ...cascade.deleted, ...cascade.within].map((record) => [record.id, record]),
@@ -115,8 +127,39 @@ function describeContainers(params: {
 			parent: { tagName: parent.tagName, id: parent.id },
 			reason,
 			within: withinByRoot.get(root.id) ?? [],
+			goesWith: controlBlockEffects({ root, staged }),
 		}
 	})
+}
+
+/**
+ * What a pruned data set does to the control blocks sending it, read from the updates the cascade staged: a block of
+ * the same parent whose `datSet` named it is `cleared` when its `datSet` goes, and `revised` when its `confRev` rises.
+ * Any other container has none.
+ */
+function controlBlockEffects(params: {
+	root: Scl.RawRecord<Scl.ElementsOf>
+	staged: readonly Scl.Operation[]
+}): PrunedEffect[] {
+	const { root, staged } = params
+	if (root.tagName !== DATA_SET_TAG || !root.parent) return []
+	const name = readAttribute({ record: root, name: 'name', defaults: 'none' })
+	const effects: PrunedEffect[] = []
+	for (const operation of staged) {
+		if (operation.status !== 'updated') continue
+		const { oldRecord, newRecord } = operation
+		if (!DATA_SET_SENDER_TAGS.has(oldRecord.tagName) || oldRecord.parent?.id !== root.parent.id)
+			continue
+		if (readAttribute({ record: oldRecord, name: 'datSet', defaults: 'none' }) !== name) continue
+		const element = { tagName: oldRecord.tagName, id: oldRecord.id }
+		if (!readAttribute({ record: newRecord, name: 'datSet', defaults: 'none', fullObject: true })) {
+			effects.push({ element, effect: 'cleared' })
+		}
+		const before = readAttribute({ record: oldRecord, name: 'confRev', defaults: 'none' })
+		const after = readAttribute({ record: newRecord, name: 'confRev', defaults: 'none' })
+		if (before !== after) effects.push({ element, effect: 'revised' })
+	}
+	return effects
 }
 
 /** The id of the nearest root above a record, its parents walked over the records read; `undefined` when none. */

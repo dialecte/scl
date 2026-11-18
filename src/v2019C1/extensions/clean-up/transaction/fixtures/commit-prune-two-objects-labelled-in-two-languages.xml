@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Bays B1 and B2 are labelled in French only, B3 in English and French -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:acme="http://example.com/acme-labels" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="project" dev:db-id="header"/>
+    <Substation name="S1" dev:db-id="s1">
+        <VoltageLevel name="V1" dev:db-id="v1">
+            <Bay name="B1" dev:db-id="b1">
+                <Labels dev:db-id="b1-labels">
+                    <Label lang="fr" dev:db-id="b1-fr">Départ un</Label>
+                </Labels>
+            </Bay>
+            <Bay name="B2" dev:db-id="b2">
+                <Labels dev:db-id="b2-labels">
+                    <Label lang="fr" dev:db-id="b2-fr">Départ deux</Label>
+                </Labels>
+            </Bay>
+            <Bay name="B3" dev:db-id="b3">
+                <Labels dev:db-id="b3-labels">
+                    <Label lang="en" dev:db-id="b3-en">Feeder three</Label>
+                    <Label lang="fr" dev:db-id="b3-fr">Départ trois</Label>
+                </Labels>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+</SCL>

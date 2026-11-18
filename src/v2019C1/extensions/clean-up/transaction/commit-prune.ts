@@ -1,0 +1,141 @@
+import { DATA_TYPE_TAGS, IDENTITY_ATTRIBUTES } from './commit-prune.constants'
+
+import { throwDialecteError } from '@dialecte/core'
+import { toRef } from '@dialecte/core/helpers'
+
+import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/build/path-segment'
+import { compareDocumentOrder } from '@/v2019C1/extensions/reference/query/find/compare-document-order'
+import { readAttribute } from '@/v2019C1/helpers'
+import { planCommit } from '@/v2019C1/hooks/before-commit/before-commit'
+
+import type {
+	CommitPrune,
+	CommitPrunedContainer,
+	CommitPrunedIdentity,
+	CommitPrunedType,
+} from './commit-prune.types'
+import type { Scl, Config } from '@/v2019C1/config'
+import type { PrunedContainer } from '@/v2019C1/hooks/before-commit/prune-emptied-containers.types'
+import type * as Core from '@dialecte/core'
+import type { AnyRawRecord } from '@dialecte/core'
+
+/**
+ * What the commit of this transaction will prune, before it does, without writing: the commit's own steps run over the
+ * operations staged so far. Each container comes in document order with its identity, its parent, the element a
+ * reference path names at or above it (`owner`), why it goes, every record it holds (another tool's data included) and
+ * what goes with it outside (a data set's control blocks, `cleared` and `revised`); then the types the commit removes as unused, with their records.
+ *
+ * A preview holds only for the staged state it read (`stagedCount` operations): call it last, after every write, then
+ * commit or discard. A step the commit gains later is seen here without a change.
+ *
+ * @intent preview what the commit will remove, warn before a commit prunes a container, list what a commit deletes beyond the edits
+ */
+export async function commitPrune(tx: Core.Transaction<Config>): Promise<CommitPrune> {
+	const operations = tx.getStagedOperations()
+	const planned = await planCommit({ operations, query: tx })
+	const containers = await describeContainers(tx, { containers: planned.containers })
+	return {
+		stagedCount: operations.length,
+		containers,
+		types: describeTypes({ operations: planned.stagedBy.get('unusedTypes') ?? [] }),
+	}
+}
+
+/** Each container with its identity, parent, owner and holds, in document order: its records read once. */
+async function describeContainers(
+	tx: Core.Transaction<Config>,
+	params: { containers: readonly PrunedContainer[] },
+): Promise<CommitPrunedContainer[]> {
+	const { containers } = params
+	if (containers.length === 0) return []
+	const refs = containers.map((container) => toRef(container.element) as Scl.Ref<Scl.ElementsOf>)
+	const read = await tx.getRecords(refs)
+	const records = read.flatMap((record) => (record ? [record] : []))
+	if (records.length !== containers.length) {
+		return throwDialecteError('ASSERTION_FAILED', {
+			detail: 'commitPrune: a container the commit prunes is not in the document',
+		})
+	}
+	const ancestries = await tx.findAncestorsOfEach(records, { order: 'top-down' })
+	const described = containers.map(function describeContainer(container, index) {
+		const record = records[index]
+		const ancestry = ancestries[index] ?? []
+		const path = buildPathFromAncestry({ record, ancestry })
+		const owner = path?.segments.at(-1)?.ref
+		const parentRecord = ancestry.at(-1)
+		const parentName = parentRecord ? identityOf(parentRecord).name : undefined
+		const entry: CommitPrunedContainer = {
+			element: container.element,
+			identity: identityOf(record),
+			parent: { ...container.parent, ...(parentName ? { name: parentName } : {}) },
+			...(path && owner?.id
+				? { owner: { tagName: owner.tagName as Scl.ElementsOf, id: owner.id, path: path.path } }
+				: {}),
+			reason: container.reason,
+			holds: inDocumentOrder({ root: record, byId: recordsById(container.within) }),
+			goesWith: container.goesWith,
+		}
+		return { line: [...ancestry, record], entry }
+	})
+	return described
+		.sort((first, second) => compareDocumentOrder({ first: first.line, second: second.line }))
+		.map(({ entry }) => entry)
+}
+
+/** The name, uuid and type of a record, where its tag has them. */
+function identityOf(record: AnyRawRecord): CommitPrunedIdentity {
+	const identity: CommitPrunedIdentity = {}
+	for (const name of IDENTITY_ATTRIBUTES) {
+		const value = readAttribute({ record, name, defaults: 'none', fullObject: true })?.value
+		if (value) identity[name] = value
+	}
+	return identity
+}
+
+/** Records by id. */
+function recordsById(
+	records: readonly Scl.RawRecord<Scl.ElementsOf>[],
+): ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>> {
+	return new Map(records.map((record) => [record.id, record]))
+}
+
+/** The records of `byId` under `root`, depth first in their parents' child order. */
+function inDocumentOrder(params: {
+	root: AnyRawRecord
+	byId: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
+}): Scl.RawRecord<Scl.ElementsOf>[] {
+	const { byId } = params
+	const ordered: Scl.RawRecord<Scl.ElementsOf>[] = []
+	const pending = [...params.root.children].reverse()
+	while (pending.length > 0) {
+		const next = pending.pop()
+		const record = next ? byId.get(next.id) : undefined
+		if (!record) continue
+		ordered.push(record)
+		pending.push(...[...record.children].reverse())
+	}
+	return ordered
+}
+
+/** The types the commit deletes as unused, each with the records it holds, from that step's deletes. */
+function describeTypes(params: { operations: readonly Scl.Operation[] }): CommitPrunedType[] {
+	const deleted = params.operations.flatMap((operation) =>
+		operation.status === 'deleted' ? [operation.oldRecord] : [],
+	)
+	const byId = recordsById(deleted)
+	return deleted
+		.filter((record) => DATA_TYPE_TAGS.has(record.tagName))
+		.map(function describeType(type): CommitPrunedType {
+			const id = readAttribute({
+				record: type,
+				name: 'id',
+				defaults: 'none',
+				fullObject: true,
+			})?.value
+			return {
+				element: { tagName: type.tagName, id: type.id },
+				identity: id ? { id } : {},
+				holds: inDocumentOrder({ root: type, byId }),
+			}
+		})
+}

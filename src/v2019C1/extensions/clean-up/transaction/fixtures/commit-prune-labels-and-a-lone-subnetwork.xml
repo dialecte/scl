@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Bay S1/V1/B1's Labels holds one Label; the only SubNetwork of the Communication connects IED1 only -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:acme="http://example.com/acme-labels" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="project" dev:db-id="header"/>
+    <Substation name="S1" dev:db-id="s1">
+        <VoltageLevel name="V1" dev:db-id="v1">
+            <Bay name="B1" dev:db-id="b1">
+                <Labels dev:db-id="zz-labels">
+                    <Label lang="en" dev:db-id="zz-label">Feeder one</Label>
+                </Labels>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+    <Communication dev:db-id="aa-communication">
+        <SubNetwork name="Bus_A" type="8-MMS" dev:db-id="mm-bus">
+            <ConnectedAP iedName="IED1" apName="AP1" dev:db-id="mm-ied1"/>
+        </SubNetwork>
+    </Communication>
+    <IED name="IED1" dev:db-id="ied1"><AccessPoint name="AP1" dev:db-id="ied1-ap"/></IED>
+</SCL>

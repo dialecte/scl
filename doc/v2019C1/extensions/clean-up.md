@@ -14,6 +14,7 @@ Post-mutation integrity helpers accessible via `tx.cleanUp`. Also called interna
 | `resetLNode`           | Release the LNodes, data and signals that name a logical node or an ExtRef / ExtCtrl the document lacks |
 | `pruneEmptyContainers` | Delete the containers left holding nothing that have no reason to stay then                             |
 | `pruneUnusedTypes`     | Delete the data types nothing in the document names, with the types only they name                      |
+| `commitPrune`          | List, without writing, what the commit of the transaction will prune                                    |
 
 ```ts
 await doc.transaction(async (tx) => {
@@ -64,6 +65,40 @@ What a transaction leaves unused goes at its commit, with no call — a delete o
 - a type whose last referrer is deleted and another created naming it in the same transaction stays, as does a name changed away and back.
 
 A replace in two transactions (delete the element naming a type, create another naming it later) therefore names a type that is gone: create the new element first, or in the same transaction. A type deleted by hand does not make the elements naming it dangle any less: they keep their `lnType` / `type`, and the types only it named go.
+
+## `commitPrune`
+
+What the commit of this transaction will prune, before it does, without writing anything: the commit's own steps run
+over the operations staged so far. A tool can warn before a commit removes a container, then commit or discard.
+
+```ts
+let preview: CommitPrune | undefined
+const prepared = await doc.prepare(async (tx) => {
+	await tx.delete({ tagName: 'ConnectedAP', id: connectedApId })
+	preview = await tx.cleanUp.commitPrune()
+})
+if (preview && preview.containers.length > 0 && !(await confirmed(preview))) prepared.discard()
+else await prepared.commit()
+```
+
+`tx.cleanUp.commitPrune` returns `{ stagedCount, containers, types }`:
+
+- `containers`: each container the commit removes, in document order:
+  - `element`, `identity` (`name`, `uuid`, `type` where its tag has them), `parent` (with its `name`);
+  - `owner`: the nearest element at or above it that a reference path names, with that path (`S1/V1/B1` for a
+    bay's `Labels`, `IED1/LD1/LLN0` for a data set); absent when none is named (a `SubNetwork`);
+  - `reason`: `emptied` (`holds-nothing`, or `lost-required` with the group of children it lost) or `above` (a container
+    removed below it left it empty);
+  - `holds`: every record it takes with it, its subtree in document order, another tool's data included (its `Private`
+    and that data's own elements); each record names its `parent`; a container listed below it keeps its own records;
+  - `goesWith`: what its removal does outside it. A data set's control blocks lose their `datSet` (`cleared`) and the
+    commit raises their revision (`revised`; a block the transaction already raised is not raised again).
+- `types`: each data type the commit removes as unused, with the records it holds. A `DataTypeTemplates` they leave
+  empty is listed under `containers`, holding none of them.
+- `stagedCount`: the number of staged operations the preview read.
+
+A preview holds only for the staged state it read: a write staged after it is not in it. Call it last, after every
+write. A container the transaction deletes itself is not listed: it is a delete, not a prune.
 
 ## `resetLNode`
 
