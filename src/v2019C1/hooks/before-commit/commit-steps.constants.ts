@@ -15,7 +15,8 @@ import type { CommitStep } from './commit-plan.types'
 
 /**
  * The steps of the commit, in the order they run. Each with `readsEarlier` reads what every step before it wrote; the
- * type prune reads the transaction's operations only.
+ * moved roots (first: a refused move stops the commit before anything is read for the others) and the type prune read
+ * the transaction's operations only.
  */
 export const COMMIT_STEPS: readonly CommitStep[] = [
 	{ name: 'movedRoots', readsEarlier: false, run: movedRoots },

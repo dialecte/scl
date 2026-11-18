@@ -10,8 +10,17 @@ import { countDocumentQueryReads } from '@/v2019C1/test/count-query-reads'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
-/** The reads of one element or one subtree, each counted. */
-const PER_ELEMENT_READS = ['findAncestors', 'findDescendants', 'getRecord', 'getTree'] as const
+/**
+ * The reads of one element or one subtree, and the batched reads of records by ref, each counted: the naming step reads
+ * the LNodes of every commit once (`getRecords`); a move's wrap reads the wrappers of the parents once more.
+ */
+const PER_ELEMENT_READS = [
+	'findAncestors',
+	'findDescendants',
+	'getRecord',
+	'getRecords',
+	'getTree',
+] as const
 
 describe('the reads of a commit creating an element the extension wraps', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
@@ -26,7 +35,7 @@ describe('the reads of a commit creating an element the extension wraps', () => 
 		'a behaviour created under F2 → no document read': {
 			sourceXml: twoVoltageLevels,
 			parent: { tagName: 'Function', id: 'f2' },
-			expected: { findAncestors: 0, findDescendants: 0, getRecord: 1, getTree: 0 },
+			expected: { findAncestors: 0, findDescendants: 0, getRecord: 1, getRecords: 1, getTree: 0 },
 		},
 	}
 

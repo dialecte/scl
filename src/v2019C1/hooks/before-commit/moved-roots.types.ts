@@ -1,9 +1,8 @@
-import type { Scl } from '@/v2019C1/config'
 import type { CollectedWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry.types'
 import type { AnyRawRecord } from '@dialecte/core'
 
 /** An element of the document by its tag and record id. */
-export type MovedRef = { tagName: Scl.ElementsOf; id: string }
+export type MovedRef = { tagName: string; id: string }
 
 /** An element whose parent at the end of the transaction is not the one it had first: where it came from and went. */
 export type MovedRecord = {
@@ -21,6 +20,8 @@ export type MovePlaces = {
 	document: CollectedWithAncestry
 	/** The records of `document` by id. */
 	read: ReadonlyMap<string, AnyRawRecord>
+	/** The children of each element of `document`, by its id and through the transparent wrappers it goes through. */
+	childrenOf: ReadonlyMap<string, readonly AnyRawRecord[]>
 	written: ReadonlyMap<string, AnyRawRecord>
 	/** Each element of a moved subtree, by id, with the nearest move holding it. */
 	movedBy: ReadonlyMap<string, MovedRecord>

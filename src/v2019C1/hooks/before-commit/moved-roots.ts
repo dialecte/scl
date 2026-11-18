@@ -1,5 +1,6 @@
 import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
 import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
+import { childrenIndexOf } from '@/v2019C1/hooks/shared/follow-ancestry'
 
 import type { MovePlaces, MovedRecord, MovedRef } from './moved-roots.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -50,13 +51,16 @@ export function movePlacesOf(params: {
 	operations: ReadonlyArray<Scl.Operation>
 }): MovePlaces {
 	const { moved, document, operations } = params
-	const read = new Map(document.records.map((record) => [record.id, record]))
+	const read = new Map<string, AnyRawRecord>()
+	for (const record of document.records) read.set(record.id, record)
+	const childrenOf = childrenIndexOf({ document })
 	return {
 		moved,
 		document,
 		read,
+		childrenOf,
 		written: writtenRecordsOf({ operations }),
-		movedBy: movedSubtrees({ moved, document, read }),
+		movedBy: movedSubtrees({ moved, document, read, childrenOf }),
 	}
 }
 
@@ -77,20 +81,15 @@ function writtenRecordsOf(params: {
 
 /**
  * Each element of a moved subtree, by id, with the nearest move holding it: read down once from every moved element,
- * the deepest moves first; the children of an element are found by their parent and through a transparent wrapper the
- * read goes through (a moved `Private` included).
+ * the deepest moves first, through the read's children index (a moved `Private` included).
  */
 function movedSubtrees(params: {
 	moved: ReadonlyMap<string, MovedRecord>
 	document: MovePlaces['document']
 	read: ReadonlyMap<string, AnyRawRecord>
+	childrenOf: ReadonlyMap<string, readonly AnyRawRecord[]>
 }): Map<string, MovedRecord> {
-	const { moved, document, read } = params
-	const childrenOf = new Map<string, string[]>()
-	for (const record of document.records) {
-		const above = new Set([record.parent?.id, document.ancestryOf(record.id).at(-1)?.id])
-		for (const id of above) if (id) childrenOf.set(id, [...(childrenOf.get(id) ?? []), record.id])
-	}
+	const { moved, document, read, childrenOf } = params
 	function depthOf(id: string): number {
 		return read.has(id) ? document.ancestryOf(id).length : 0
 	}
@@ -104,7 +103,7 @@ function movedSubtrees(params: {
 			const id = ids[index]
 			if (movedBy.has(id) && index > 0) continue
 			if (!movedBy.has(id)) movedBy.set(id, move)
-			ids.push(...(childrenOf.get(id) ?? []))
+			for (const child of childrenOf.get(id) ?? []) ids.push(child.id)
 		}
 	}
 	return movedBy
@@ -145,7 +144,7 @@ export function isInMovedSubtree(params: { places: MovePlaces; id: string }): bo
 }
 
 function refOf(record: { tagName: string; id: string }): MovedRef {
-	return { tagName: record.tagName as Scl.ElementsOf, id: record.id }
+	return { tagName: record.tagName, id: record.id }
 }
 
 /** The places of the elements the transaction moved, the document read once for them; none without a move. */

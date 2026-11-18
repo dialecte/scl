@@ -1,6 +1,7 @@
-import { TUPLE_REFERENCE_PAIRS, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { PARENTS } from '@/v2019C1/definition/constants.generated'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
+import { PATH_PAIRS_BY_TAG } from '@/v2019C1/hooks/shared/path-references.constants'
 
 import type { PlaceReadingRole } from './moves.types'
 import type { TupleReferencePair } from '@/v2019C1/constants'
@@ -13,22 +14,33 @@ const PLACE_DEPENDENT_RESOLUTIONS: ReadonlySet<string> = new Set([
 	RESOLUTION_TYPE.behaviorDescription,
 ])
 
-/** The pairs of each reference tag whose path is read from the referrer's own place, from the registry. */
-export const PLACE_DEPENDENT_PAIRS_BY_TAG: ReadonlyMap<string, readonly ReferencePair[]> = new Map(
-	Object.entries(UUID_REFERENCE_PAIRS).flatMap(([tagName, pairs]): [string, ReferencePair[]][] => {
-		const dependent = (pairs as readonly ReferencePair[]).filter((pair) =>
-			PLACE_DEPENDENT_RESOLUTIONS.has(pair.resolution),
-		)
-		return dependent.length > 0 ? [[tagName, dependent]] : []
-	}),
-)
+/** The pairs of each path reference tag whose path is read from the referrer's own place (`PATH_PAIRS_BY_TAG`). */
+export const PLACE_DEPENDENT_PAIRS_BY_TAG: ReadonlyMap<string, readonly ReferencePair[]> =
+	placeDependentPairsByTag()
+
+function placeDependentPairsByTag(): Map<string, ReferencePair[]> {
+	const byTag = new Map<string, ReferencePair[]>()
+	for (const [tagName, pairs] of PATH_PAIRS_BY_TAG) {
+		for (const pair of pairs) {
+			if (!PLACE_DEPENDENT_RESOLUTIONS.has(pair.resolution)) continue
+			const held = byTag.get(tagName)
+			if (held) held.push(pair)
+			else byTag.set(tagName, [pair])
+		}
+	}
+	return byTag
+}
 
 /** The tags those pairs may name. */
-export const PLACE_DEPENDENT_TARGET_TAGS: ReadonlySet<string> = new Set(
-	[...PLACE_DEPENDENT_PAIRS_BY_TAG.values()].flatMap((pairs) =>
-		pairs.flatMap((pair) => pair.target),
-	),
-)
+export const PLACE_DEPENDENT_TARGET_TAGS: ReadonlySet<string> = placeDependentTargetTags()
+
+function placeDependentTargetTags(): Set<string> {
+	const tags = new Set<string>()
+	for (const pairs of PLACE_DEPENDENT_PAIRS_BY_TAG.values()) {
+		for (const pair of pairs) for (const tagName of pair.target) tags.add(tagName)
+	}
+	return tags
+}
 
 /** The attribute an element is named by in a reference. */
 export const UUID_ATTRIBUTE = 'uuid'
@@ -63,28 +75,39 @@ function tagsOnlyBelowLogicalNodes(): Set<string> {
  * its place (each pair's `target`: a logical node, a logical device, an access point, a control block) and what the
  * definition places only below a logical node. A moved subtree holding one of them refuses the commit.
  */
-export const UNFOLLOWED_MOVE_TAGS: ReadonlySet<string> = new Set([
-	...Object.values(TUPLE_REFERENCE_PAIRS).flatMap((pairs) =>
-		(pairs as readonly TupleReferencePair[]).flatMap((pair) => pair.target),
-	),
-	...tagsOnlyBelowLogicalNodes(),
-])
+/** The tuple reference registry, read as plain pairs by tag (one widening, no per-entry cast). */
+const TUPLE_PAIRS_BY_TAG: Readonly<Record<string, readonly TupleReferencePair[]>> =
+	TUPLE_REFERENCE_PAIRS
+
+export const UNFOLLOWED_MOVE_TAGS: ReadonlySet<string> = unfollowedMoveTags()
+
+function unfollowedMoveTags(): Set<string> {
+	const tags = tagsOnlyBelowLogicalNodes()
+	for (const pairs of Object.values(TUPLE_PAIRS_BY_TAG)) {
+		for (const pair of pairs) for (const tagName of pair.target) tags.add(tagName)
+	}
+	return tags
+}
 
 /**
  * The tuple references that read the IED they name from their place (the registry's `tuple.ied`: the IED they sit in,
  * `ancestor`, or an attribute of their parent, `parentAttribute`), by tag: moved away from what they read it from, they
  * name another IED. A reference naming its IED outright (an LNode, a connected access point) moves as it is.
  */
-export const PLACE_READING_REFERRERS: ReadonlyMap<string, PlaceReadingRole> = new Map(
-	Object.entries(TUPLE_REFERENCE_PAIRS).flatMap(
-		([tagName, pairs]): [string, PlaceReadingRole][] => {
-			const ied = (pairs as readonly TupleReferencePair[]).map((pair) => pair.tuple.ied)
-			if (ied.some((role) => 'parentAttribute' in role)) return [[tagName, 'parent']]
-			if (ied.some((role) => 'ancestor' in role)) return [[tagName, 'ied']]
-			return []
-		},
-	),
-)
+export const PLACE_READING_REFERRERS: ReadonlyMap<string, PlaceReadingRole> =
+	placeReadingReferrers()
+
+function placeReadingReferrers(): Map<string, PlaceReadingRole> {
+	const byTag = new Map<string, PlaceReadingRole>()
+	for (const [tagName, pairs] of Object.entries(TUPLE_PAIRS_BY_TAG)) {
+		for (const pair of pairs) {
+			const { ied } = pair.tuple
+			if ('parentAttribute' in ied) byTag.set(tagName, 'parent')
+			else if ('ancestor' in ied && !byTag.has(tagName)) byTag.set(tagName, 'ied')
+		}
+	}
+	return byTag
+}
 
 /** The tag of the element an `ancestor` IED role reads. */
 export const IED_TAG = 'IED'

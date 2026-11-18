@@ -9,8 +9,17 @@ import { countDocumentQueryReads } from '@/v2019C1/test/count-query-reads'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
-/** The reads of one element or one subtree, each counted. */
-const PER_ELEMENT_READS = ['findAncestors', 'findDescendants', 'getRecord', 'getTree'] as const
+/**
+ * The reads of one element or one subtree, and the batched reads of records by ref, each counted: the naming step reads
+ * the LNodes of every commit once (`getRecords`); a move's wrap reads the wrappers of the parents once more.
+ */
+const PER_ELEMENT_READS = [
+	'findAncestors',
+	'findDescendants',
+	'getRecord',
+	'getRecords',
+	'getTree',
+] as const
 
 describe('the reads of a commit following moves', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
@@ -28,7 +37,7 @@ describe('the reads of a commit following moves', () => {
 					{ element: { tagName: 'Function', id: 'f1' }, parent: { tagName: 'Bay', id: 'b2' } },
 					{ element: { tagName: 'Bay', id: 'b1' }, parent: { tagName: 'VoltageLevel', id: 'vl2' } },
 				],
-				expected: { findAncestors: 0, findDescendants: 0, getRecord: 0, getTree: 1 },
+				expected: { findAncestors: 0, findDescendants: 0, getRecord: 0, getRecords: 1, getTree: 1 },
 			},
 		// F2 goes into B1, then B1 (now holding F2) goes to VL2: F2 is moved inside a moved root
 		'a move nested in another moved root → the document read once, nothing per moved subtree or element':
@@ -38,7 +47,7 @@ describe('the reads of a commit following moves', () => {
 					{ element: { tagName: 'Function', id: 'f2' }, parent: { tagName: 'Bay', id: 'b1' } },
 					{ element: { tagName: 'Bay', id: 'b1' }, parent: { tagName: 'VoltageLevel', id: 'vl2' } },
 				],
-				expected: { findAncestors: 0, findDescendants: 0, getRecord: 0, getTree: 1 },
+				expected: { findAncestors: 0, findDescendants: 0, getRecord: 0, getRecords: 1, getTree: 1 },
 			},
 		// C1 sits in the Private of B1; B2 holds none: the move wraps it. The prune reads the emptied Private once, as after
 		// a delete of C1
@@ -51,7 +60,7 @@ describe('the reads of a commit following moves', () => {
 						parent: { tagName: 'Bay', id: 'b2' },
 					},
 				],
-				expected: { findAncestors: 0, findDescendants: 0, getRecord: 1, getTree: 1 },
+				expected: { findAncestors: 0, findDescendants: 0, getRecord: 1, getRecords: 2, getTree: 1 },
 			},
 	}
 

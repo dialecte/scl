@@ -19,7 +19,7 @@ export type CommitStepName =
 
 /** What a step adds to the commit's state for the steps after it. */
 export type CommitState = {
-	/** The LNodes created or rebound and the logical nodes they name, read once by the first step. */
+	/** The LNodes created or rebound and the logical nodes they name, read once by the naming step. */
 	bound?: BoundLNodes
 	/** The places of the elements the transaction moved, the document read once for them; none without a move. */
 	movePlaces?: MovePlaces

@@ -24,6 +24,7 @@ import type {
 	FollowedReferrer,
 	FollowedRoot,
 	FollowedWrite,
+	FollowRead,
 	ReferrerSearch,
 } from './follow-ancestry.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -42,7 +43,7 @@ import type { AnyRawRecord } from '@dialecte/core'
  */
 export async function followAncestry(
 	query: Core.Query<Config>,
-	params: { roots: readonly FollowedRoot[]; read?: CollectedWithAncestry },
+	params: { roots: readonly FollowedRoot[]; read?: FollowRead },
 ): Promise<Scl.Operation[]> {
 	const { elements, held } = await readFollowedElements(query, params)
 	if (elements.length === 0) return []
@@ -60,7 +61,7 @@ export async function followAncestry(
  */
 async function readFollowedElements(
 	query: Core.Query<Config>,
-	params: { roots: readonly FollowedRoot[]; read?: CollectedWithAncestry },
+	params: { roots: readonly FollowedRoot[]; read?: FollowRead },
 ): Promise<{ elements: FollowedElement[]; held: ReadonlyMap<string, AnyRawRecord> }> {
 	const { roots, read } = params
 	const belowRoots = roots.filter((root) => root.below)
@@ -95,7 +96,7 @@ async function readFollowedElements(
 	})
 	// a document read holds every record a path may read below or above the roots
 	const held = new Map(
-		(read ? [read] : subtrees).flatMap((subtree) =>
+		(read ? [read.document] : subtrees).flatMap((subtree) =>
 			subtree.records.map((record): [string, AnyRawRecord] => [record.id, record]),
 		),
 	)
@@ -103,32 +104,51 @@ async function readFollowedElements(
 }
 
 /**
- * The subtree of each root, taken from a document read with its ancestries: the root and every element below it, in
- * the order of the read (the children of each element are found by the nearest element above them, through a
- * transparent wrapper).
+ * The children of each element of a document read, by id: by their parent, and by the nearest element above them that
+ * the read holds (through a transparent wrapper the read goes through). Built once per read.
+ */
+export function childrenIndexOf(params: {
+	document: CollectedWithAncestry
+}): Map<string, AnyRawRecord[]> {
+	const { document } = params
+	const childrenOf = new Map<string, AnyRawRecord[]>()
+	for (const record of document.records) {
+		const parentId = record.parent?.id
+		const aboveId = document.ancestryOf(record.id).at(-1)?.id
+		for (const id of parentId === aboveId ? [parentId] : [parentId, aboveId]) {
+			if (!id) continue
+			const children = childrenOf.get(id)
+			if (children) children.push(record)
+			else childrenOf.set(id, [record])
+		}
+	}
+	return childrenOf
+}
+
+/**
+ * The subtree of each root, taken from a document read with its ancestries and children index: the root and every
+ * element below it, in the order of the read.
  */
 function subtreesOfRead(params: {
-	read: CollectedWithAncestry
+	read: FollowRead
 	roots: readonly FollowedRoot[]
 }): CollectedWithAncestry[] {
-	const { read, roots } = params
-	const childrenOf = new Map<string, AnyRawRecord[]>()
-	for (const record of read.records) {
-		const above = read.ancestryOf(record.id).at(-1)
-		if (!above) continue
-		const children = childrenOf.get(above.id)
-		if (children) children.push(record)
-		else childrenOf.set(above.id, [record])
-	}
-	const order = new Map(read.records.map((record, index) => [record.id, index]))
-	return roots.map(function subtreeOf(followed) {
-		const root = read.records[order.get(followed.root.id ?? '') ?? -1]
+	const { document, childrenOf } = params.read
+	const order = new Map<string, number>()
+	document.records.forEach((record, index) => order.set(record.id, index))
+	return params.roots.map(function subtreeOf(followed) {
+		const root = document.records[order.get(followed.root.id ?? '') ?? -1]
 		const records: AnyRawRecord[] = root ? [root] : []
+		const seen = new Set<string>(root ? [root.id] : [])
 		for (let index = 0; index < records.length; index++) {
-			records.push(...(childrenOf.get(records[index].id) ?? []))
+			for (const child of childrenOf.get(records[index].id) ?? []) {
+				if (seen.has(child.id)) continue
+				seen.add(child.id)
+				records.push(child)
+			}
 		}
 		records.sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0))
-		return { records, ancestryOf: read.ancestryOf }
+		return { records, ancestryOf: document.ancestryOf }
 	})
 }
 
