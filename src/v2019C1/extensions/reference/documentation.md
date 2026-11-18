@@ -15,16 +15,16 @@ buildMappedLNodePath ↔ resolveMappedLNode     (mapped LNode ↔ implementing L
 
 ### When to use each
 
-| Function               | Direction | Input                                | Output                                                   | Use when                                                      |
-| ---------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------- |
-| `buildElementPath`     | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry          |
-| `buildRefPath`         | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target               |
-| `resolveElementPath`   | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` — walk tree by path string      |
-| `resolveRefPath`       | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildRefPath` — follow a REF to its target        |
-| `findRefsTo`           | reverse   | target ref                           | `ResolvedReference[]`                                    | find all REF records pointing to a given element              |
-| `buildMappedLNodePath` | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode` |
-| `resolveMappedLNode`   | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`       |
-| `readSpecNamings`      | read      | many `LNode` refs or records         | `LNodeSpecNaming` record or `undefined`, per input       | reading the specified naming of many `LNode`s in 2 or 3 reads |
+| Function               | Direction | Input                                | Output                                                   | Use when                                                              |
+| ---------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | --------------------------------------------------------------------- |
+| `buildElementPath`     | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry                  |
+| `buildRefPath`         | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target                       |
+| `resolveElementPath`   | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` — walk tree by path string              |
+| `resolveRefPath`       | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildRefPath` — follow a REF to its target                |
+| `findRefsTo`           | reverse   | target ref                           | `ResolvedReference[]`                                    | find all REF records pointing to a given element                      |
+| `buildMappedLNodePath` | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode`         |
+| `resolveMappedLNode`   | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`               |
+| `readSpecNamings`      | read      | many `LNode` refs or records         | `LNodeSpecNaming` record or `undefined`, per input       | reading the specified naming of many `LNode`s in at most 2 or 3 reads |
 
 ### Name distinctions
 

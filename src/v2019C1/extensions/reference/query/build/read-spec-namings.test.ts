@@ -4,6 +4,7 @@ import { readSpecNamings } from './read-spec-namings'
 import { toRawRecord } from '@dialecte/core/helpers'
 import { describe, expect } from 'vitest'
 
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import {
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
@@ -15,6 +16,7 @@ import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 import type * as Core from '@dialecte/core'
 
 const ID = CUSTOM_RECORD_ID_ATTRIBUTE
+const V2019C1 = SCL_DIALECTE_CONFIG.namespaces.v2019C1
 
 /** The store calls that read records, counted by the dev perf counters. */
 const STORE_READS = [
@@ -176,7 +178,9 @@ describe('readSpecNamings - a ref naming another element', () => {
 })
 
 function lnodeRefs(count: number): Scl.Ref<'LNode'>[] {
-	return Array.from({ length: count }, (_, index) => lnodeRef(`ln${index}`))
+	return Array.from({ length: count }, function refOfIndex(_, index) {
+		return lnodeRef(`ln${index}`)
+	})
 }
 
 /** The store reads of one `readSpecNamings` call, and how many of its entries are named. */
@@ -252,6 +256,133 @@ describe('readSpecNamings - the store reads of refs', () => {
 			const lnodes = lnodeRefs(testCase.count)
 			const reads = await countReads({ source, lnodes })
 			expect(reads).toEqual(testCase.expected)
+		},
+	})
+})
+
+/** Refs and records together cost the reads of refs: the refs, then the Privates, then the namings. */
+describe('readSpecNamings - the store reads of refs and records together', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		refs: string[]
+		records: string[]
+		expected: { storeReads: number; named: number }
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'six LNodes as refs, six as records → 3 store reads': {
+			// twelve LNodes, each named in its Private
+			sourceXml: twelveLNodesXml,
+			refs: ['ln0', 'ln1', 'ln2', 'ln3', 'ln4', 'ln5'],
+			records: ['ln6', 'ln7', 'ln8', 'ln9', 'ln10', 'ln11'],
+			expected: { storeReads: 3, named: MANY_LNODES },
+		},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		dev: { perf: true },
+		act: async ({ source, testCase }) => {
+			const records = await source.query.getRecords(testCase.records.map(lnodeRef))
+			const lnodes = [
+				...testCase.refs.map(lnodeRef),
+				...records.flatMap(function readOnly(record) {
+					return record ? [record] : []
+				}),
+			]
+			const reads = await countReads({ source, lnodes })
+			expect(reads).toEqual(testCase.expected)
+		},
+	})
+})
+
+/** LNodes named directly, given as records, cost one read: their namings; no Private is looked into. */
+describe('readSpecNamings - the store reads of direct namings', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		records: string[]
+		expected: { storeReads: number; named: number }
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'an LNode named directly under it, as a record → 1 store read': {
+			sourceXml: FOUR_LNODES_XML,
+			records: ['direct'],
+			expected: { storeReads: 1, named: 1 },
+		},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		dev: { perf: true },
+		act: async ({ source, testCase }) => {
+			const records = await source.query.getRecords(testCase.records.map(lnodeRef))
+			const lnodes = records.flatMap(function readOnly(record) {
+				return record ? [record] : []
+			})
+			const reads = await countReads({ source, lnodes })
+			expect(reads).toEqual(testCase.expected)
+		},
+	})
+})
+
+/** Inside a transaction, the staged creates and deletes answer: the naming as staged, not as stored. */
+describe('readSpecNamings - inside a transaction', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		lnode: string
+		/** Stages the change; answers the id of the naming the LNode then has, `undefined` for none. */
+		stage: (tx: Scl.Transaction) => Promise<string | undefined>
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'the naming of an LNode deleted in the transaction → undefined': {
+			sourceXml: FOUR_LNODES_XML,
+			lnode: 'direct',
+			stage: async function deleteNaming(tx) {
+				await tx.delete({ tagName: 'LNodeSpecNaming', id: 'direct-naming' })
+				return undefined
+			},
+		},
+		'a naming added to the LNode in the transaction → the staged naming': {
+			sourceXml: FOUR_LNODES_XML,
+			lnode: 'direct',
+			stage: async function replaceNaming(tx) {
+				await tx.delete({ tagName: 'LNodeSpecNaming', id: 'direct-naming' })
+				const naming = await tx.addChild(lnodeRef('direct'), {
+					tagName: 'LNodeSpecNaming',
+					namespace: V2019C1,
+					attributes: { sLnClass: 'XCBR', sLnInst: '5' },
+				})
+				return naming.id
+			},
+		},
+		'a naming created in a Private created in the transaction → the staged naming': {
+			sourceXml: FOUR_LNODES_XML,
+			lnode: 'direct',
+			stage: async function wrapNaming(tx) {
+				await tx.delete({ tagName: 'LNodeSpecNaming', id: 'direct-naming' })
+				const wrapper = await tx.addChild(lnodeRef('direct'), {
+					tagName: 'Private',
+					attributes: { type: 'eIEC61850-6-100' },
+				})
+				const naming = await tx.any.addChild(wrapper, {
+					tagName: 'LNodeSpecNaming',
+					namespace: V2019C1,
+					attributes: { sLnClass: 'XCBR', sLnInst: '6' },
+				})
+				return naming.id
+			},
+		},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		act: async ({ source, testCase }) => {
+			const staged: { expected?: string; answered?: string } = {}
+			await source.transaction(async function readStaged(tx) {
+				staged.expected = await testCase.stage(tx)
+				const [naming] = await readSpecNamings(tx, { lnodes: [lnodeRef(testCase.lnode)] })
+				staged.answered = naming?.id
+			})
+			expect(staged.answered).toEqual(staged.expected)
 		},
 	})
 })

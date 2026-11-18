@@ -7,8 +7,8 @@ import type * as Core from '@dialecte/core'
  * input order: `undefined` for an LNode without one, or for a ref that names no element. An LNode given several
  * times answers the same naming at each position.
  *
- * Perf: core `getChildrenOfEach` (the Privates are transparent): 2 store reads whatever the number of LNodes when
- * every input is a record, 3 when refs are among them.
+ * Perf: core `getChildrenOfEach` (the Privates are transparent): at most 2 store reads (records), at most 3 with
+ * refs, whatever the number of LNodes; 1 when every LNode is a record named directly.
  *
  * @intent spec naming of many LNodes at once, sLnClass sLnInst of a batch of LNodes, LNodeSpecNaming without one read per LNode, auto-match LNodes against their specification
  *
