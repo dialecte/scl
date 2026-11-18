@@ -230,4 +230,16 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL4002',
 		message: 'The names of a reference holding a uuid name no element, or several',
 	},
+	/**
+	 * A transaction moved a subtree holding what references name by its place and a move does not follow yet: an element
+	 * a tuple reference names (a logical node, a logical device, an access point, a control block), one that sits only
+	 * below a logical node (a data instance, a data set, an input), or a tuple reference that reads its IED from where it
+	 * sits and moves away from it (a GOOSE or sampled value address moved to another connected access point, a served
+	 * access point). A reference naming its IED outright (an LNode, a connected access point) moves as it is.
+	 * `meta: { moved: { tagName, id }, parent: { tagName, id } }` — the first such move, and the parent it was given.
+	 */
+	MOVE_NOT_FOLLOWED: {
+		code: 'SCL4003',
+		message: 'The moved element is named by references a move does not follow yet',
+	},
 })

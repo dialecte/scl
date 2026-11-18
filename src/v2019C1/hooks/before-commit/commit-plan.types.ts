@@ -1,14 +1,17 @@
 import type { BoundLNodes } from './bound-logical-nodes.types'
+import type { MovePlaces, MovedRef } from './moved-roots.types'
 import type { PrunedContainer } from './prune-emptied-containers.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /** The name of a step of the commit. */
 export type CommitStepName =
+	| 'movedRoots'
 	| 'lnodeNamings'
 	| 'tupleNames'
 	| 'tupleReferences'
 	| 'pathReferences'
+	| 'moves'
 	| 'releasedLNodes'
 	| 'unusedTypes'
 	| 'emptiedContainers'
@@ -18,6 +21,10 @@ export type CommitStepName =
 export type CommitState = {
 	/** The LNodes created or rebound and the logical nodes they name, read once by the first step. */
 	bound?: BoundLNodes
+	/** The places of the elements the transaction moved, the document read once for them; none without a move. */
+	movePlaces?: MovePlaces
+	/** The moved elements no other moved element holds: the roots whose paths the commit follows. */
+	targetRoots?: readonly MovedRef[]
 	/** The containers the prune step removes. */
 	containers?: readonly PrunedContainer[]
 }

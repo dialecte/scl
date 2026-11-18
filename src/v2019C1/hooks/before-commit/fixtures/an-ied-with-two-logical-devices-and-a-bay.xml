@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The IED A holds LD1 (LLN0 with the data set DS1, PTRC1 with the data instance Op and a Text) and LD2 (LLN0, XCBR1);
+     the IED A also holds the access point AP3, empty; the IED B holds LDB and the access point AP2 served by AP1 (ServerAt); the bay S1/VL1/B1 holds the function F1 and its Text; the access point AP1 of A is connected to
+     the subnetwork N1 with the address of its GOOSE gcb1 (sent from LLN0 of LD1), and so is AP1 of B; N2 holds nothing -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <Substation name="S1" dev:db-id="s1">
+        <VoltageLevel name="VL1" dev:db-id="vl1">
+            <Bay name="B1" dev:db-id="b1">
+                <Function name="F1" uuid="f1" dev:db-id="f1">
+                    <Text dev:db-id="f1-text">interlocking</Text>
+                </Function>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+    <Communication dev:db-id="communication">
+        <SubNetwork name="N1" dev:db-id="n1">
+            <ConnectedAP iedName="A" apName="AP1" dev:db-id="connected-ap">
+                <GSE ldInst="LD1" cbName="gcb1" dev:db-id="gse1"/>
+            </ConnectedAP>
+            <ConnectedAP iedName="B" apName="AP1" dev:db-id="connected-ap-b"/>
+        </SubNetwork>
+        <SubNetwork name="N2" dev:db-id="n2"/>
+    </Communication>
+    <IED name="A" dev:db-id="ied-a">
+        <AccessPoint name="AP1" dev:db-id="ap1">
+            <Server dev:db-id="server">
+                <Authentication dev:db-id="authentication"/>
+                <LDevice inst="LD1" dev:db-id="ld1">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ld1-lln0">
+                        <DataSet name="DS1" dev:db-id="ds1">
+                            <FCDA ldInst="LD1" prefix="" lnClass="PTRC" lnInst="1" doName="Op" daName="general" fc="ST" dev:db-id="fcda1"/>
+                        </DataSet>
+                        <GSEControl name="gcb1" appID="G1" datSet="DS1" confRev="1" dev:db-id="gcb1"/>
+                    </LN0>
+                    <LN lnClass="PTRC" inst="1" prefix="" lnType="PTRC_T" dev:db-id="ptrc1">
+                        <Text dev:db-id="ptrc1-text">trip</Text>
+                        <DOI name="Op" dev:db-id="op"/>
+                    </LN>
+                </LDevice>
+                <LDevice inst="LD2" dev:db-id="ld2">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ld2-lln0"/>
+                    <LN lnClass="XCBR" inst="1" prefix="" lnType="PTRC_T" dev:db-id="xcbr1"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+        <AccessPoint name="AP3" dev:db-id="ap3"/>
+    </IED>
+    <IED name="B" dev:db-id="ied-b">
+        <AccessPoint name="AP1" dev:db-id="ap1-b">
+            <Server dev:db-id="server-b">
+                <Authentication dev:db-id="authentication-b"/>
+                <LDevice inst="LDB" dev:db-id="ldb">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ldb-lln0"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+        <AccessPoint name="AP2" dev:db-id="ap2-b">
+            <ServerAt apName="AP1" dev:db-id="server-at"/>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="types">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lln0-type">
+            <DO name="Beh" type="ENS_T" dev:db-id="lln0-beh"/>
+        </LNodeType>
+        <LNodeType id="PTRC_T" lnClass="PTRC" dev:db-id="ptrc-type">
+            <DO name="Op" type="ACT_T" dev:db-id="ptrc-op"/>
+        </LNodeType>
+        <DOType id="ENS_T" cdc="ENS" dev:db-id="ens-type">
+            <DA name="stVal" bType="INT32" fc="ST" dev:db-id="ens-stval"/>
+        </DOType>
+        <DOType id="ACT_T" cdc="ACT" dev:db-id="act-type">
+            <DA name="general" bType="BOOLEAN" fc="ST" dev:db-id="act-general"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>

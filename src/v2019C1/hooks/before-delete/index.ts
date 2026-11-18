@@ -5,6 +5,7 @@ export {
 	collectEmptiedAbove,
 	collectSubtreeIds,
 	findOrphanedRefs,
+	orphanEffectOf,
 	readSubtreeRecords,
 } from './orphaned-refs'
 export type { DeleteCascade, OrphanedRef } from './orphaned-refs.types'

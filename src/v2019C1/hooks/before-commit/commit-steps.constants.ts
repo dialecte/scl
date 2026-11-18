@@ -1,6 +1,8 @@
 import {
 	emptiedContainers,
 	lnodeNamings,
+	movedRoots,
+	moves,
 	noChildLeftBehind,
 	pathReferences,
 	releasedLNodes,
@@ -16,10 +18,12 @@ import type { CommitStep } from './commit-plan.types'
  * type prune reads the transaction's operations only.
  */
 export const COMMIT_STEPS: readonly CommitStep[] = [
+	{ name: 'movedRoots', readsEarlier: false, run: movedRoots },
 	{ name: 'lnodeNamings', readsEarlier: true, run: lnodeNamings },
 	{ name: 'tupleNames', readsEarlier: true, run: tupleNames },
 	{ name: 'tupleReferences', readsEarlier: true, run: tupleReferences },
 	{ name: 'pathReferences', readsEarlier: true, run: pathReferences },
+	{ name: 'moves', readsEarlier: true, run: moves },
 	{ name: 'releasedLNodes', readsEarlier: true, run: releasedLNodes },
 	{ name: 'unusedTypes', readsEarlier: false, run: unusedTypes },
 	{ name: 'emptiedContainers', readsEarlier: true, run: emptiedContainers },
