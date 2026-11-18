@@ -9,6 +9,7 @@ import { isEmptiedContainer } from '@/v2019C1/helpers/pruned-when-empty'
 import { PRUNED_WHEN_EMPTY_TAGS } from '@/v2019C1/helpers/pruned-when-empty.constants'
 import { confRevRaisesOf, dataSetRemovalsOf } from '@/v2019C1/hooks/shared/data-set-entry'
 import { DATA_SET_SENDER_TAGS } from '@/v2019C1/hooks/shared/data-set-entry.constants'
+import { inTagReadOrder } from '@/v2019C1/hooks/shared/in-tag-read-order'
 import { updatedOperation, withAttributeValues } from '@/v2019C1/hooks/shared/record-ops'
 
 import type {
@@ -536,37 +537,13 @@ async function readUuidReferrers(
 	)
 	return Promise.all(
 		REFERENCE_TAGS.map(async function referrersOfTag(refTagName) {
-			const lookups = found.filter(
-				(records, index) => searches[index].refTagName === refTagName && records.length > 0,
-			)
-			return { refTagName, refRecords: await inTagReadOrder(query, { refTagName, lookups }) }
+			const lookups = found.filter((_records, index) => searches[index].refTagName === refTagName)
+			return {
+				refTagName,
+				refRecords: await inTagReadOrder(query, { tagName: refTagName, lookups }),
+			}
 		}),
 	)
-}
-
-/**
- * The records several lookups of one tag answer, each once, in the order the tag read lists them. A lookup answers in
- * that order: the stored records in id order, then those the transaction placed after them (created, or written again
- * after a delete). With one lookup answering, its order is kept; with records the transaction left unchanged only, id
- * order is that order; else the place of a record the transaction wrote is known to the tag read only: the tag is read
- * once for that order.
- */
-async function inTagReadOrder(
-	query: Core.Query<Config>,
-	params: {
-		refTagName: (typeof REFERENCE_TAGS)[number]
-		lookups: readonly Scl.TrackedRecord<Scl.ElementsOf>[][]
-	},
-): Promise<Scl.TrackedRecord<Scl.ElementsOf>[]> {
-	const { refTagName, lookups } = params
-	if (lookups.length <= 1) return lookups[0] ?? []
-	const byId = new Map(lookups.flat().map((record) => [record.id, record]))
-	const records = [...byId.values()]
-	if (records.every((record) => record.status === 'unchanged')) {
-		return records.sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0))
-	}
-	const tagRecords = await query.getRecordsByTagName(refTagName)
-	return tagRecords.flatMap((record) => byId.get(record.id) ?? [])
 }
 
 // ── Attribute collection ──────────────────────────────────────────────────────
