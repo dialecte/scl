@@ -1,4 +1,5 @@
-export { buildElementPath } from './build-element-path'
+export { buildElementPath, buildElementPaths } from './build-element-path'
+export type { BuildElementPathsParams, BuildElementPathsResult } from './build-element-path.types'
 export { buildReferencePath } from './build-reference-path'
 export { buildMappedLNodePath } from './build-mapped-lnode-path'
 export type { MappedLNodeAttributes } from './build-mapped-lnode-path.types'
