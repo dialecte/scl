@@ -3,6 +3,7 @@ import { COMMIT_STEPS } from './commit-steps.constants'
 import relationInWrapperXml from './fixtures/commit-plan-a-relation-in-a-namespace-wrapper.xml?raw'
 import serverWithOneLogicalDeviceXml from './fixtures/commit-plan-a-server-with-one-logical-device.xml?raw'
 import inputNamingANewLogicalNodeXml from './fixtures/commit-plan-an-input-naming-a-logical-node-to-create.xml?raw'
+import lnodeNamingALogicalNodeToCreateXml from './fixtures/commit-plan-an-lnode-naming-a-logical-node-to-create.xml?raw'
 import oneSubNetworkWithBitRateXml from './fixtures/commit-plan-one-subnetwork-with-its-bit-rate.xml?raw'
 import twoGooseDataSetsXml from './fixtures/commit-plan-two-goose-data-sets-of-one-entry.xml?raw'
 import twoSubNetworksXml from './fixtures/commit-plan-two-subnetworks-one-with-one-access-point.xml?raw'
@@ -145,6 +146,91 @@ describe('planCommit - stages what the commit stages', () => {
 
 	runSclTestCases.withExport({ testCases, act })
 })
+
+// The prune builds the update of an element losing a pruned child from what every step before it wrote. An LNode that
+// names by uuid a logical node the transaction creates, and whose wrapper the transaction empties, is unbound in a
+// valid document (bound, its names would name a logical node that does not exist), and the commit writes no names on
+// an unbound LNode: its wrapper goes, its names stay as written.
+describe('planCommit - the prune of an LNode wrapper keeps the LNode as written', () => {
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		// the unbound trip names new-ln by uuid only; its wrapper holds only its naming, deleted while new-ln is created
+		'the logical node the unbound trip names created and its only naming deleted → its wrapper gone, the trip unbound as written':
+			{
+				sourceXml: lnodeNamingALogicalNodeToCreateXml,
+				expectedQueries: [
+					'//default:LNode[@uuid="lnode-trip"][@iedName="None"][@lnClass="PTRC"][@lnInst="1"][@lnUuid="new-ln"]',
+				],
+				unexpectedQueries: ['//default:LNode[@uuid="lnode-trip"]/default:Private'],
+			},
+	}
+
+	async function act({
+		source,
+	}: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<SclTest.ActResult> {
+		await source.transaction(async function createTheLogicalNodeAndDeleteTheNaming(tx) {
+			await tx.addChild(
+				{ tagName: 'LDevice', id: 'ied1-ld' },
+				{
+					tagName: 'LN',
+					attributes: { lnClass: 'PTRC', inst: '7', lnType: 'PTRC_T', uuid: 'new-ln' },
+				},
+			)
+			await tx.delete({ tagName: 'LNodeSpecNaming', id: 'trip-naming' })
+		})
+		return { assertOn: 'source' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+// What the plan stages is what the commit stages: the operations the commit adds after the transaction's own, in order.
+describe('planCommit - the plan stages what the commit stages, in order', () => {
+	const testCases: SclTest.TestCases<PlanCase> = {
+		// DS1 emptied: the commit removes it and clears its sender's data set, raising its revision
+		'the only entry of DS1 deleted → the plan stages what the commit adds after the transaction, in order':
+			{
+				sourceXml: twoGooseDataSetsXml,
+				write: deleting([{ tagName: 'FCDA', id: 'ds1-entry' }]),
+				containers: [],
+			},
+	}
+
+	async function act({ testCase, source }: SclTest.ActParams<PlanCase>): Promise<void> {
+		const { planned, committed } = await stagedByPlanAndCommit({ source, write: testCase.write })
+		expect(planned.length).toBeGreaterThan(0)
+		expect(planned).toEqual(committed)
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
+
+/** What the plan stages after `write`, and what the commit adds after the transaction's own operations, described. */
+async function stagedByPlanAndCommit(params: {
+	source: SclTest.ActParams<PlanCase>['source']
+	write: (tx: Scl.Transaction) => Promise<void>
+}): Promise<{ planned: string[]; committed: string[] }> {
+	const { source, write } = params
+	let own = 0
+	let planned: string[] = []
+	const prepared = await source.prepare(async function writeThenPlan(tx) {
+		await write(tx)
+		own = tx.getStagedOperations().length
+		const plan = await planCommit({ operations: tx.getStagedOperations(), query: tx })
+		planned = plan.staged.map(describeOperation)
+	})
+	const committed = prepared.operations.slice(own).map(describeOperation)
+	prepared.discard()
+	return { planned, committed }
+}
+
+/** `<status> <tag> <id> <attributes>`, the attributes of the record it leaves. */
+function describeOperation(operation: Scl.Operation): string {
+	const record = operation.status === 'deleted' ? operation.oldRecord : operation.newRecord
+	const attributes = record.attributes
+		.map((attribute) => `${attribute.name}=${attribute.value}`)
+		.join(' ')
+	return `${operation.status} ${record.tagName} ${record.id} ${attributes}`
+}
 
 /** The containers the plan of the commit lists after `write`, described; the transaction discarded. */
 async function containersPlanned(params: {
