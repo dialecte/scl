@@ -53,8 +53,8 @@ export type ReadVerbs = {
 	/** `readSpecNamingsById` of the records: the naming of each LNode among them, by LNode id. */
 	specNamingsOf: (params: {
 		records: readonly AnyRawRecord[]
-		/** What the records are, when known (`tag` + a tag name for a whole tag): the key of the read, ids otherwise. */
-		key?: string
+		/** The tag the records are the whole of, when they are: the read is keyed by it, by their ids otherwise. */
+		tagName?: string
 	}) => Promise<ReadonlyMap<string, AnyRawRecord>>
 }
 

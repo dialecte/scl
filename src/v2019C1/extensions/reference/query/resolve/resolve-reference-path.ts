@@ -85,8 +85,10 @@ export async function resolveReferencePaths(
 		items: params.records,
 		resolve: (reads, record) => resolveOne({ query, reads, record, pathAttribute, cache }),
 	})
-	// the reads of the call are shared: each answer gets its own record, as one resolve per record gave it
-	return results.map((result) => (result ? { ...result, record: { ...result.record } } : undefined))
+	// the reads of the call are shared: each answer gets its own copy of its record, as one resolve per record gave it
+	return results.map((result) =>
+		result ? { ...result, record: structuredClone(result.record) } : undefined,
+	)
 }
 
 /** The steps of one record's resolve, its reads asked of `reads`. */
@@ -552,7 +554,7 @@ async function findBySegmentScan(params: {
 	const records = await reads.recordsOfTag(tagName)
 	const specNamings = await reads.specNamingsOf({
 		records: records.map(toRawRecord),
-		key: `tag\u0000${tagName}`,
+		tagName,
 	})
 
 	for (const record of records) {

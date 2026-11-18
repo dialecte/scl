@@ -1,5 +1,6 @@
 import { buildElementPaths } from '../build/build-element-path'
 import { readSpecNamingsById } from '../build/spec-namings'
+import { READ_KEY_SEPARATOR } from './batched-reads.constants'
 
 import type { ElementPath } from '../build/path-segment.types'
 import type {
@@ -72,7 +73,10 @@ function createBatchedReads(params: { query: Core.Query<Config>; live: number })
 		state.sending = true
 		const batch = [...pending.values()]
 		pending.clear()
-		void sendBatch(batch)
+		// a send that throws answers every waiter of its batch with that error: no resolve waits forever
+		sendBatch(batch).catch(function rejectBatch(error: unknown) {
+			settleBatch({ batch, outcomeOf: () => ({ ok: false, error }) })
+		})
 	}
 
 	async function sendBatch(batch: PendingRead[]): Promise<void> {
@@ -81,12 +85,22 @@ function createBatchedReads(params: { query: Core.Query<Config>; live: number })
 			for (const [key, outcome] of await readKind({ query, kind, reads }))
 				outcomes.set(key, outcome)
 		}
+		settleBatch({ batch, outcomeOf: (read) => outcomes.get(read.key) as ReadOutcome })
+	}
+
+	/** Answers every waiter of the batch once (a waiter answered is taken off its read), then lets the next send go. */
+	function settleBatch(params: {
+		batch: readonly PendingRead[]
+		outcomeOf: (read: PendingRead) => ReadOutcome
+	}): void {
 		state.sending = false
-		for (const read of batch) {
-			state.waiting -= read.waiters.length
-			const outcome = outcomes.get(read.key) as ReadOutcome
+		for (const read of params.batch) {
+			// dialecte-allow argument-mutation: the waiters of a read are the reader's own state, answered once
+			const waiters = read.waiters.splice(0)
+			state.waiting -= waiters.length
+			const outcome = params.outcomeOf(read)
 			if (outcome.ok) answered.set(read.key, outcome.value)
-			for (const waiter of read.waiters) {
+			for (const waiter of waiters) {
 				if (outcome.ok) waiter.resolve(outcome.value)
 				else waiter.reject(outcome.error)
 			}
@@ -107,34 +121,38 @@ function readVerbs(ask: AskRead): ReadVerbs {
 	return {
 		findByAttribute: (lookup) =>
 			ask<Scl.TrackedRecord<Scl.ElementsOf>[]>({
-				kind: `value\u0000${lookup.tagName}\u0000${lookup.attribute}`,
-				key: `value\u0000${lookup.tagName}\u0000${lookup.attribute}\u0000${lookup.value}`,
+				kind: keyOf(['value', lookup.tagName, lookup.attribute]),
+				key: keyOf(['value', lookup.tagName, lookup.attribute, lookup.value]),
 				arg: lookup,
 			}),
 		recordsOfTag: (tagName) =>
 			ask<Scl.TrackedRecord<Scl.ElementsOf>[]>({
-				kind: `tag\u0000${tagName}`,
-				key: `tag\u0000${tagName}`,
+				kind: keyOf(['tag', tagName]),
+				key: keyOf(['tag', tagName]),
 				arg: tagName,
 			}),
 		ancestorsOf: (ref) =>
 			ask<Scl.TrackedRecord<Scl.ElementsOf>[]>({
 				kind: 'ancestors',
-				key: `ancestors\u0000${ref.id}`,
+				key: keyOf(['ancestors', ref.id]),
 				arg: { tagName: ref.tagName, id: ref.id },
 			}),
 		getRecord: (ref) =>
 			ask<Scl.TrackedRecord<Scl.ElementsOf> | undefined>({
 				kind: 'record',
-				key: `record\u0000${ref.tagName}\u0000${ref.id}`,
+				key: keyOf(['record', ref.tagName, ref.id]),
 				arg: { tagName: ref.tagName, id: ref.id },
 			}),
 		elementPathOf: (ref) =>
-			ask<ElementPath | null>({ kind: 'path', key: `path\u0000${ref.id}`, arg: ref }),
-		specNamingsOf: ({ records, key }) =>
+			ask<ElementPath | null>({ kind: 'path', key: keyOf(['path', ref.id]), arg: ref }),
+		specNamingsOf: ({ records, tagName }) =>
 			ask<ReadonlyMap<string, AnyRawRecord>>({
 				kind: 'namings',
-				key: `namings\u0000${key ?? records.map((record) => record.id).join('\u0000')}`,
+				// a whole tag by its name, other records by their ids
+				key:
+					tagName === undefined
+						? keyOf(['namings', ...records.map((record) => record.id)])
+						: keyOf(['namings', 'tag', tagName]),
 				arg: records,
 			}),
 	}
@@ -176,7 +194,7 @@ async function readMerged(params: {
 	const { query, kind, reads } = params
 	const args = reads.map((read) => read.arg)
 
-	if (kind.startsWith('value\u0000')) {
+	if (kind.startsWith(keyOf(['value', '']))) {
 		const lookups = args as { tagName: string; attribute: string; value: string }[]
 		const { tagName, attribute } = lookups[0]
 		const values = lookups.map((lookup) => lookup.value)
@@ -193,7 +211,7 @@ async function readMerged(params: {
 		const byValue = groupByAttributeValue({ records: found, attribute })
 		return values.map((value) => byValue.get(value) ?? [])
 	}
-	if (kind.startsWith('tag\u0000')) {
+	if (kind.startsWith(keyOf(['tag', '']))) {
 		// one tag per kind: its reads share one key
 		const records = await query.getRecordsByTagName(args[0] as Scl.ElementsOf)
 		return [records]
@@ -234,4 +252,9 @@ function uniqueById(records: readonly AnyRawRecord[]): AnyRawRecord[] {
 	const seen = new Map<string, AnyRawRecord>()
 	for (const record of records) if (!seen.has(record.id)) seen.set(record.id, record)
 	return [...seen.values()]
+}
+
+/** The kind or key of a read: its parts joined by a separator no part holds. */
+function keyOf(parts: readonly string[]): string {
+	return parts.join(READ_KEY_SEPARATOR)
 }

@@ -128,3 +128,48 @@ describe('resolveReferencePaths - records whose reads are refused', () => {
 		},
 	})
 })
+
+/**
+ * A record given twice answers two records of its own, as two resolves did: a change to the first answer's
+ * attributes or children leaves the second as read.
+ */
+describe('resolveReferencePaths - a record given twice', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		ref: Scl.Ref<Scl.ElementsOf>
+		pathAttribute: string
+		expectedTargetId: string
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'a SourceRef twice, the first answer changed → the second answer unchanged': {
+			// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+			sourceXml: mixedXml,
+			allowIncoherentReferences: NAMING_NOTHING,
+			ref: { tagName: 'SourceRef', id: 'sr-uuid' },
+			pathAttribute: 'source',
+			expectedTargetId: 'ln-xcbr',
+		},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		act: async ({ source, testCase }) => {
+			const [record] = await readReferrers({
+				query: source.query,
+				refs: [testCase.ref],
+				byPath: false,
+			})
+			const [first, second] = await resolveReferencePaths(source.query, {
+				records: [record, record],
+				pathAttribute: testCase.pathAttribute,
+			})
+			const secondAsRead = structuredClone(second?.record)
+			first?.record.attributes.push({ name: 'desc', value: 'changed' } as never)
+			first?.record.children.push({ tagName: 'Private', id: 'added' } as never)
+			expect({ firstTarget: first?.record.id, second: second?.record }).toEqual({
+				firstTarget: testCase.expectedTargetId,
+				second: secondAsRead,
+			})
+		},
+	})
+})
