@@ -20,18 +20,19 @@ buildMappedLNodePath <->  resolveMappedLNode     (mapped LNode <-> implementing 
                           resolveMappedData      (DOS/SDS/DAS -> implementing LN + data path)
 ```
 
-| Function               | Direction | Input                                | Output                                                   | Use when                                                      |
-| ---------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------- |
-| `buildElementPath`     | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry          |
-| `buildReferencePath`   | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target               |
-| `resolveElementPath`   | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` -- walk tree by path string     |
-| `resolveReferencePath` | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildReferencePath` -- follow a REF to its target |
-| `findRefsPointingTo`   | reverse   | target ref + optional container      | `ResolvedReference[]`                                    | find all REF records pointing to a given element              |
-| `buildMappedLNodePath` | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode` |
-| `resolveMappedLNode`   | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`       |
-| `resolveMappedLNodes`  | read      | many `LNode` refs                    | `LN`/`LN0` ref and IED ref, by LNode id                  | resolving many mapped `LNode`s with one read of the document  |
-| `resolveMappedData`    | read      | `DOS`/`SDS`/`DAS` ref                | `MappedData` (`LN` ref + data path + origin)             | finding the data that implements a specified data object      |
-| `getPathSegment`       | write     | a record (+ context)                 | `PathSegment` (segment + separator) or `null`            | the segment of one element, without a query                   |
+| Function               | Direction | Input                                | Output                                                   | Use when                                                              |
+| ---------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | --------------------------------------------------------------------- |
+| `buildElementPath`     | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry                  |
+| `buildReferencePath`   | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target                       |
+| `resolveElementPath`   | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` -- walk tree by path string             |
+| `resolveReferencePath` | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildReferencePath` -- follow a REF to its target         |
+| `findRefsPointingTo`   | reverse   | target ref + optional container      | `ResolvedReference[]`                                    | find all REF records pointing to a given element                      |
+| `buildMappedLNodePath` | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode`         |
+| `resolveMappedLNode`   | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`               |
+| `resolveMappedLNodes`  | read      | many `LNode` refs                    | `LN`/`LN0` ref and IED ref, by LNode id                  | resolving many mapped `LNode`s with one read of the document          |
+| `readSpecNamings`      | read      | many `LNode` refs or records         | `LNodeSpecNaming` record or `undefined`, per input       | reading the specified naming of many `LNode`s in at most 2 or 3 reads |
+| `resolveMappedData`    | read      | `DOS`/`SDS`/`DAS` ref                | `MappedData` (`LN` ref + data path + origin)             | finding the data that implements a specified data object              |
+| `getPathSegment`       | write     | a record (+ context)                 | `PathSegment` (segment + separator) or `null`            | the segment of one element, without a query                           |
 
 ### Name distinctions
 
@@ -279,6 +280,26 @@ mapped.get(lnode.id)?.ied // -> the IED implementing that LNode, or undefined
 ```
 
 The map is keyed by LNode id, an LNode nothing implements being absent. A truthy `lnUuid` decides alone, even when it names nothing; otherwise the complete name path of the LNode. A logical node inside a `Private` is vendor payload and is never the answer, wherever it sits and whatever it carries. The LNodes asked about are answered from their own attributes, wherever they sit: a caller that must leave out vendor LNodes chooses the ones it asks about.
+
+---
+
+## readSpecNamings
+
+The `LNodeSpecNaming` of each of many LNodes, directly under it or in one of its `Private`s, in at most 2 store reads (records), at most 3 with refs, whatever their number.
+
+```ts
+reference.query.readSpecNamings(
+  query: Scl.Query | Scl.Transaction,
+  params: { lnodes: readonly (Scl.Ref<'LNode'> | Scl.TrackedRecord<'LNode'> | Scl.RawRecord<'LNode'>)[] },
+): Promise<(Scl.TrackedRecord<'LNodeSpecNaming'> | undefined)[]>
+```
+
+```ts
+const [naming] = await reference.query.readSpecNamings(query, { lnodes })
+naming ? readAttribute({ record: naming, name: 'sLnClass' }) : undefined // -> the specified class of the first LNode
+```
+
+One entry per input, in input order: `undefined` for a ref that names no element (or an LNode without one). An LNode given several times answers the same naming at each position. Import and commit give every LNode a naming, so a stored LNode always has one. A ref naming an element that is not an LNode is refused with `ELEMENT_TAGNAME_MISMATCH`.
 
 ---
 

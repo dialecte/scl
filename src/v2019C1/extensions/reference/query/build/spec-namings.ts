@@ -9,7 +9,7 @@ import type * as Core from '@dialecte/core'
  * among `held` (records already read, by id), or a Private of a held LNode whose children are held (a subtree read
  * skips the Private wrapper itself), is not read again, so none when every one is held.
  */
-export async function readSpecNamings(
+export async function readSpecNamingsById(
 	query: Core.Query<Config>,
 	params: {
 		records: readonly Pick<Core.AnyRawRecord, 'id' | 'tagName' | 'children'>[]

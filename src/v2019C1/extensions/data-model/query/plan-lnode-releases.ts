@@ -1,7 +1,7 @@
 import { SPECIFIED_IED_NAME_ATTRIBUTE } from '@/v2019C1/constants'
 import { planReleases } from '@/v2019C1/extensions/data-model/naming/release-plan'
 import { readSpecificationRelease } from '@/v2019C1/extensions/data-model/query/specification-release'
-import { readSpecNamings } from '@/v2019C1/extensions/reference/query/build/spec-namings'
+import { readSpecNamingsById } from '@/v2019C1/extensions/reference/query/build/spec-namings'
 import { readAttributes } from '@/v2019C1/helpers'
 
 import type { LNodeReleasePlan, PlanLNodeReleasesParams } from './plan-lnode-releases.types'
@@ -20,7 +20,7 @@ export async function planLNodeReleases(
 ): Promise<LNodeReleasePlan> {
 	const { lnodes: records } = params
 	if (records.length === 0) return new Map()
-	const namings = await readSpecNamings(query, { records })
+	const namings = await readSpecNamingsById(query, { records })
 	const lnodes: ReleasedLNode[] = records.map((record) => {
 		const naming = namings.get(record.id)
 		return {

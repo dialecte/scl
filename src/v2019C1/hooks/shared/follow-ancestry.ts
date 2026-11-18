@@ -13,7 +13,7 @@ import {
 	getPathSegment,
 } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { readSiblingsOfEach } from '@/v2019C1/extensions/reference/query/build/read-siblings-of-each'
-import { readSpecNamings } from '@/v2019C1/extensions/reference/query/build/spec-namings'
+import { readSpecNamingsById } from '@/v2019C1/extensions/reference/query/build/spec-namings'
 import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
 import { readAttribute } from '@/v2019C1/helpers'
 import { updatedOperation, withAttributeValues } from '@/v2019C1/hooks/shared/record-ops'
@@ -253,7 +253,7 @@ async function composePaths(
 	function ancestryOf(element: FollowedElement): readonly AnyRawRecord[] {
 		return element.ancestry ?? ancestries.get(element.record.id) ?? []
 	}
-	const specNamings = await readSpecNamings(query, {
+	const specNamings = await readSpecNamingsById(query, {
 		records: elements.flatMap((element) => [...ancestryOf(element), element.record]),
 		held: params.held,
 	})

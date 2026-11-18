@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+    <Substation name="S1" dev:db-id="sub-1">
+        <Function name="F1" dev:db-id="f1">
+            <LNode lnClass="PTRC" lnInst="1" iedName="None" dev:db-id="ln0">
+                <Private type="eIEC61850-6-100" dev:db-id="ln0-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="1" dev:db-id="ln0-naming"/>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="2" iedName="None" dev:db-id="ln1">
+                <Private type="eIEC61850-6-100" dev:db-id="ln1-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="2" dev:db-id="ln1-naming"/>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="3" iedName="None" dev:db-id="ln2">
+                <Private type="eIEC61850-6-100" dev:db-id="ln2-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="3" dev:db-id="ln2-naming"/>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="4" iedName="None" dev:db-id="ln3">
+                <Private type="eIEC61850-6-100" dev:db-id="ln3-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="4" dev:db-id="ln3-naming"/>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="5" iedName="None" dev:db-id="ln4">
+                <Private type="eIEC61850-6-100" dev:db-id="ln4-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="5" dev:db-id="ln4-naming"/>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="6" iedName="None" dev:db-id="ln5">
+                <Private type="eIEC61850-6-100" dev:db-id="ln5-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="6" dev:db-id="ln5-naming"/>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="7" iedName="None" dev:db-id="ln6">
+                <Private type="eIEC61850-6-100" dev:db-id="ln6-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="7" dev:db-id="ln6-naming"/>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="8" iedName="None" dev:db-id="ln7">
+                <Private type="eIEC61850-6-100" dev:db-id="ln7-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="8" dev:db-id="ln7-naming"/>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="9" iedName="None" dev:db-id="ln8">
+                <Private type="eIEC61850-6-100" dev:db-id="ln8-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="9" dev:db-id="ln8-naming"/>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="10" iedName="None" dev:db-id="ln9">
+                <Private type="eIEC61850-6-100" dev:db-id="ln9-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="10" dev:db-id="ln9-naming"/>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="11" iedName="None" dev:db-id="ln10">
+                <Private type="eIEC61850-6-100" dev:db-id="ln10-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="11" dev:db-id="ln10-naming"/>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="12" iedName="None" dev:db-id="ln11">
+                <Private type="eIEC61850-6-100" dev:db-id="ln11-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="12" dev:db-id="ln11-naming"/>
+                </Private>
+            </LNode>
+        </Function>
+    </Substation>
+</SCL>
