@@ -1,8 +1,8 @@
-import { buildElementPath } from '../build/build-element-path'
 import { functionBaseOf, isFunctionScoped } from '../build/function-scope'
 import { nameScopeOf } from '../build/name-scope'
 import { fullSignalName, getPathSegment, joinPathParts } from '../build/path-segment'
-import { readSpecNamingsById } from '../build/spec-namings'
+import { nameAmongSiblings } from '../build/signal-name'
+import { runWithBatchedReads } from './batched-reads'
 import { parseReferencePath, parsePathSegments, splitLnodeQualifier } from './parse-path'
 import { resolveMappedData } from './resolve-mapped-data'
 import { LN_CLASS_INST_ATTR, LN_CLASS_VALUES } from './resolve-reference-path.constants'
@@ -16,8 +16,12 @@ import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ElementPath, PathSegment } from '../build/path-segment.types'
 import type {
+	BatchedReads,
+	ElementRef,
 	FunctionBases,
 	FunctionBasesCache,
+	ResolveReferencePathsParams,
+	ResolveReferencePathsResult,
 	ResolveResult,
 } from './resolve-reference-path.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -46,6 +50,56 @@ export async function resolveReferencePath(
 	record: Scl.TrackedRecord<Scl.ElementsOf>,
 	pathAttribute: string,
 ): Promise<ResolveResult | undefined> {
+	const [result] = await resolveReferencePaths(query, { records: [record], pathAttribute })
+	return result
+}
+
+/**
+ * Resolves the reference path attribute `pathAttribute` of many records at once: one answer per record, in input
+ * order, each what `resolveReferencePath` answers for it (`undefined` for a record whose tag has no such pair, a path
+ * naming nothing, a record with no value).
+ *
+ * Each record runs the steps of `resolveReferencePath`; the reads of all the records are merged: one
+ * `findByAttributes` per target tag and attribute with every value asked (the uuid fast path, names, classes), the
+ * ancestors in one `findAncestorsOfEach`, the paths of the signals searched one candidate per record at a time, each
+ * round in one `buildElementPaths`, each signal tag read once. A DOS / SDS / DAS reads its mapped data on its own. A record never costs more reads than alone.
+ *
+ * @intent resolve many reference paths at once, follow the references of many SourceRefs/ControlRefs to their targets, batch reference resolution
+ *
+ * @example
+ * const [first, second] = await resolveReferencePaths(query, { records: sourceRefs, pathAttribute: 'source' })
+ * // → [{ record: <LNode PXCBR1>, qualifier: "Pos.stVal" }, undefined]
+ */
+export async function resolveReferencePaths(
+	query: Core.Query<Config> | Core.Transaction<Config>,
+	params: ResolveReferencePathsParams,
+): Promise<ResolveReferencePathsResult> {
+	const { pathAttribute } = params
+	// the FunctionRefs of the call read their bases once
+	const cache: FunctionBasesCache = new Map()
+	const results = await runWithBatchedReads<
+		Scl.TrackedRecord<Scl.ElementsOf>,
+		ResolveResult | undefined
+	>({
+		query,
+		items: params.records,
+		resolve: (reads, record) => resolveOne({ query, reads, record, pathAttribute, cache }),
+	})
+	// the reads of the call are shared: each answer gets its own copy of its record, as one resolve per record gave it
+	return results.map((result) =>
+		result ? { ...result, record: structuredClone(result.record) } : undefined,
+	)
+}
+
+/** The steps of one record's resolve, its reads asked of `reads`. */
+async function resolveOne(params: {
+	query: Core.Query<Config> | Core.Transaction<Config>
+	reads: BatchedReads
+	record: Scl.TrackedRecord<Scl.ElementsOf>
+	pathAttribute: string
+	cache?: FunctionBasesCache
+}): Promise<ResolveResult | undefined> {
+	const { query, reads, record, pathAttribute, cache } = params
 	const pair = findReferencePair(record.tagName, pathAttribute)
 	if (!pair) return undefined
 
@@ -67,11 +121,25 @@ export async function resolveReferencePath(
 	if (!pathValue) return undefined
 
 	// Fast path: resolve via UUID when available (exact, no ambiguity)
-	const uuidResolved = await resolveByUuid(query, record, pair)
+	const uuidResolved = await resolveByUuidWith({ reads, record, pair })
 	if (uuidResolved)
 		return { record: uuidResolved, qualifier: parseQualifier({ pair, pathAttribute, pathValue }) }
 
 	// Fallback: path-based resolution
+	return resolveByPath({ query, reads, record, pair, pathAttribute, pathValue, cache })
+}
+
+/** The target a record's path names when its uuid names none: parsed, then searched by its kind. */
+async function resolveByPath(params: {
+	query: Core.Query<Config> | Core.Transaction<Config>
+	reads: BatchedReads
+	record: Scl.TrackedRecord<Scl.ElementsOf>
+	pair: ReferencePair
+	pathAttribute: string
+	pathValue: string
+	cache?: FunctionBasesCache
+}): Promise<ResolveResult | undefined> {
+	const { query, reads, record, pair, pathAttribute, pathValue, cache } = params
 	let ancestry: AnyRawRecord[] | undefined
 	let specNamings: ReadonlyMap<string, AnyRawRecord> | undefined
 	if (
@@ -80,14 +148,14 @@ export async function resolveReferencePath(
 		pair.resolution === RESOLUTION_TYPE.ancestorName ||
 		pair.resolution === RESOLUTION_TYPE.scopedName
 	) {
-		const ancestors = await query.findAncestors(record, { order: 'top-down' })
-		ancestry = ancestors.map((ancestor) => toRawRecord(ancestor) as AnyRawRecord)
-		specNamings = await readSpecNamingsById(query, { records: ancestry })
+		const ancestors = await reads.ancestorsOf(record)
+		ancestry = [...ancestors].reverse().map((ancestor) => toRawRecord(ancestor) as AnyRawRecord)
+		specNamings = await reads.specNamingsOf({ records: ancestry })
 	}
 
 	// a FunctionRef naming nothing gives no base: the path is then read as written, the absolute form
 	const functionBases = isFunctionScoped(pair)
-		? await functionBasesOfReferrer(query, { record })
+		? await functionBasesWith({ query, reads, record, cache })
 		: undefined
 
 	const parsed = parseReferencePath({
@@ -106,7 +174,7 @@ export async function resolveReferencePath(
 	// reads it by is not a path, only the full path an earlier version wrote is.
 	const scopedName = pair.resolution === RESOLUTION_TYPE.scopedName
 	if (scopedName) {
-		const named = await findNamedInScope({ query, pair, name: pathValue, ancestry })
+		const named = await findNamedInScope({ reads, pair, name: pathValue, ancestry })
 		if (named) return { record: named }
 	}
 
@@ -114,7 +182,7 @@ export async function resolveReferencePath(
 	// it is found by its whole path, never by splitting the path into segments.
 	if (pair.target.every((tagName) => SIGNAL_TAG_NAMES.has(tagName))) {
 		const signal = await findSignalByPath({
-			query,
+			reads,
 			targets: pair.target,
 			paths: [parsed.lookupKey, ...(parsed.fallbackLookupKeys ?? [])],
 		})
@@ -130,7 +198,7 @@ export async function resolveReferencePath(
 		if (segments.length === 0) continue
 
 		const resolved = await findBySegmentAndAncestry({
-			query,
+			reads,
 			targets: pair.target,
 			segment: segments[segments.length - 1],
 			expectedAncestry: segments.slice(0, -1),
@@ -150,13 +218,32 @@ export async function functionBasesOfReferrer(
 	query: Core.Query<Config> | Core.Transaction<Config>,
 	params: { record: Scl.TrackedRecord<Scl.ElementsOf>; cache?: FunctionBasesCache },
 ): Promise<FunctionBases | undefined> {
+	const [bases] = await runWithBatchedReads<
+		Scl.TrackedRecord<Scl.ElementsOf>,
+		FunctionBases | undefined
+	>({
+		query,
+		items: [params.record],
+		resolve: (reads, record) => functionBasesWith({ query, reads, record, cache: params.cache }),
+	})
+	return bases
+}
+
+/** `functionBasesOfReferrer` with its reads asked of `reads`: merged with the other records of the call. */
+async function functionBasesWith(params: {
+	query: Core.Query<Config> | Core.Transaction<Config>
+	reads: BatchedReads
+	record: Scl.TrackedRecord<Scl.ElementsOf>
+	cache?: FunctionBasesCache
+}): Promise<FunctionBases | undefined> {
+	const { query, reads, cache } = params
 	// parent by parent: a signal role reference is two levels below its FunctionRef
 	const functionRefRef = await nearestAncestorOfTag({
-		query,
+		reads,
 		record: params.record,
 		tagName: 'FunctionRef',
 	})
-	const functionRef = functionRefRef ? await query.getRecord(functionRefRef) : undefined
+	const functionRef = functionRefRef ? await reads.getRecord(functionRefRef) : undefined
 	if (!functionRef) return undefined
 
 	// keyed by what the FunctionRef names, so a FunctionRef retargeted meanwhile is read again
@@ -165,9 +252,8 @@ export async function functionBasesOfReferrer(
 		readAttribute({ record: functionRef, name: 'functionUuid', defaults: 'none' }),
 		readAttribute({ record: functionRef, name: 'function', defaults: 'none' }),
 	])
-	const { cache } = params
 	if (cache?.has(key)) return cache.get(key)
-	const bases = await functionBasesOfFunctionRef(query, { functionRef })
+	const bases = await functionBasesOfFunctionRefWith({ query, reads, functionRef })
 	cache?.set(key, bases)
 	return bases
 }
@@ -182,12 +268,27 @@ export async function functionBasesOfFunctionRef(
 	query: Core.Query<Config> | Core.Transaction<Config>,
 	params: { functionRef: Scl.TrackedRecord<Scl.ElementsOf> },
 ): Promise<FunctionBases | undefined> {
-	const named = await resolveReferencePath(query, params.functionRef, 'function')
+	const [bases] = await runWithBatchedReads<
+		Scl.TrackedRecord<Scl.ElementsOf>,
+		FunctionBases | undefined
+	>({
+		query,
+		items: [params.functionRef],
+		resolve: (reads, functionRef) => functionBasesOfFunctionRefWith({ query, reads, functionRef }),
+	})
+	return bases
+}
+
+/** `functionBasesOfFunctionRef` with its reads asked of `reads`: merged with the other records of the call. */
+async function functionBasesOfFunctionRefWith(params: {
+	query: Core.Query<Config> | Core.Transaction<Config>
+	reads: BatchedReads
+	functionRef: Scl.TrackedRecord<Scl.ElementsOf>
+}): Promise<FunctionBases | undefined> {
+	const { query, reads, functionRef } = params
+	const named = await resolveOne({ query, reads, record: functionRef, pathAttribute: 'function' })
 	if (!named) return undefined
-	const functionPath = await buildElementPath(query, {
-		tagName: named.record.tagName,
-		id: named.record.id,
-	} as Scl.Ref<Scl.ElementsOf>)
+	const functionPath = await reads.elementPathOf(named.record)
 	if (!functionPath) return undefined
 	return { functionPath, formerBase: functionBaseOf(functionPath) ?? undefined }
 }
@@ -198,28 +299,25 @@ export async function functionBasesOfFunctionRef(
  * the referrer has no such ancestor or no target of the scope has that name.
  */
 async function findNamedInScope(params: {
-	query: Core.Query<Config> | Core.Transaction<Config>
+	reads: BatchedReads
 	pair: ReferencePair
 	name: string
 	ancestry: readonly AnyRawRecord[] | undefined
 }): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
-	const { query, pair, name, ancestry } = params
+	const { reads, pair, name, ancestry } = params
 	const nameScope = nameScopeOf(pair)
 	const scope = ancestry?.findLast((ancestor) => ancestor.tagName === nameScope)
 	if (!nameScope || !scope) return undefined
 
 	for (const tagName of pair.target) {
-		const candidates = await query.findByAttributes({
-			tagName: tagName as Scl.ElementsOf,
-			attributes: { name } as Record<string, string>,
-		})
+		const candidates = await reads.findByAttribute({ tagName, attribute: 'name', value: name })
 		for (const candidate of candidates) {
 			const candidateScope = await nearestAncestorOfTag({
-				query,
+				reads,
 				record: candidate,
 				tagName: nameScope,
 			})
-			if (candidateScope?.id === scope.id) return candidate as Scl.TrackedRecord<Scl.ElementsOf>
+			if (candidateScope?.id === scope.id) return candidate
 		}
 	}
 	return undefined
@@ -227,15 +325,15 @@ async function findNamedInScope(params: {
 
 /** The nearest ancestor of `record` of `tagName`, read parent by parent. */
 async function nearestAncestorOfTag(params: {
-	query: Core.Query<Config> | Core.Transaction<Config>
+	reads: BatchedReads
 	record: Scl.TrackedRecord<Scl.ElementsOf>
 	tagName: string
-}): Promise<Scl.Ref<Scl.ElementsOf> | undefined> {
-	const { query, tagName } = params
-	let parent = params.record.parent as Scl.Ref<Scl.ElementsOf> | null
+}): Promise<ElementRef | undefined> {
+	const { reads, tagName } = params
+	let parent = params.record.parent as ElementRef | null
 	while (parent && parent.tagName !== tagName) {
-		const parentRecord = await query.getRecord(parent)
-		parent = (parentRecord?.parent ?? null) as Scl.Ref<Scl.ElementsOf> | null
+		const parentRecord = await reads.getRecord(parent)
+		parent = (parentRecord?.parent ?? null) as ElementRef | null
 	}
 	return parent ?? undefined
 }
@@ -260,16 +358,30 @@ export async function resolveByUuid(
 	record: Scl.TrackedRecord<Scl.ElementsOf>,
 	pair: ReferencePair,
 ): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
-	const uuidAttrName = pair.attribute.uuid
-	const uuidValue = readAttribute({ record, name: uuidAttrName, defaults: 'none' })
+	const [resolved] = await runWithBatchedReads<
+		Scl.TrackedRecord<Scl.ElementsOf>,
+		Scl.TrackedRecord<Scl.ElementsOf> | undefined
+	>({
+		query,
+		items: [record],
+		resolve: (reads, item) => resolveByUuidWith({ reads, record: item, pair }),
+	})
+	return resolved
+}
+
+/** `resolveByUuid` with its lookups asked of `reads`: one value list per target tag for the call. */
+async function resolveByUuidWith(params: {
+	reads: BatchedReads
+	record: Scl.TrackedRecord<Scl.ElementsOf>
+	pair: ReferencePair
+}): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
+	const { reads, record, pair } = params
+	const uuidValue = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
 	if (!uuidValue) return undefined
 
 	for (const tagName of pair.target) {
-		const matches = await query.findByAttributes({
-			tagName: tagName as Scl.ElementsOf,
-			attributes: { uuid: uuidValue } as Record<string, string>,
-		})
-		if (matches.length > 0) return matches[0] as Scl.TrackedRecord<Scl.ElementsOf>
+		const matches = await reads.findByAttribute({ tagName, attribute: 'uuid', value: uuidValue })
+		if (matches.length > 0) return matches[0]
 	}
 
 	return undefined
@@ -306,13 +418,13 @@ export function parseQualifier(params: {
 export function decomposeLnClassSegment(
 	segment: string,
 ): { prefix: string; lnClass: string; inst: string } | null {
-	for (let i = 0; i <= segment.length - 4; i++) {
-		const candidate = segment.substring(i, i + 4)
+	for (let start = 0; start <= segment.length - 4; start++) {
+		const candidate = segment.substring(start, start + 4)
 		if (LN_CLASS_VALUES.has(candidate)) {
 			return {
-				prefix: segment.substring(0, i),
+				prefix: segment.substring(0, start),
 				lnClass: candidate,
-				inst: segment.substring(i + 4),
+				inst: segment.substring(start + 4),
 			}
 		}
 	}
@@ -320,47 +432,32 @@ export function decomposeLnClassSegment(
 }
 
 async function findBySegmentAndAncestry(params: {
-	query: Core.Query<Config> | Core.Transaction<Config>
+	reads: BatchedReads
 	targets: readonly string[]
 	segment: PathSegment
 	expectedAncestry: PathSegment[]
 }): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
-	const { query, targets, segment, expectedAncestry } = params
+	const { reads, targets, segment, expectedAncestry } = params
 
 	for (const tagName of targets) {
-		const instAttr = LN_CLASS_INST_ATTR[tagName]
-
-		if (instAttr) {
-			const found = await findLnClassTarget({
-				query,
-				tagName,
-				segment,
-				instAttr,
-				expectedAncestry,
-			})
-			if (found) return found
-		} else {
-			const found = await findBySegmentScan({
-				query,
-				tagName,
-				segment,
-				expectedAncestry,
-			})
-			if (found) return found
-		}
+		const instanceAttribute = LN_CLASS_INST_ATTR[tagName]
+		const found = instanceAttribute
+			? await findLnClassTarget({ reads, tagName, segment, instanceAttribute, expectedAncestry })
+			: await findBySegmentScan({ reads, tagName, segment, expectedAncestry })
+		if (found) return found
 	}
 
 	return undefined
 }
 
 async function findLnClassTarget(params: {
-	query: Core.Query<Config> | Core.Transaction<Config>
+	reads: BatchedReads
 	tagName: string
 	segment: PathSegment
-	instAttr: string
+	instanceAttribute: string
 	expectedAncestry: PathSegment[]
 }): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
-	const { query, tagName, segment, instAttr, expectedAncestry } = params
+	const { reads, tagName, segment, instanceAttribute, expectedAncestry } = params
 
 	const parts = decomposeLnClassSegment(segment.segment)
 	if (!parts) return undefined
@@ -368,18 +465,19 @@ async function findLnClassTarget(params: {
 	// findByAttributes narrows by lnClass (always non-empty).
 	// prefix and inst may be empty — findByAttributes rejects empty values,
 	// so we verify those manually after the query.
-	const records = await query.findByAttributes({
-		tagName: tagName as Scl.ElementsOf,
-		attributes: { lnClass: parts.lnClass } as Record<string, string>,
+	const records = await reads.findByAttribute({
+		tagName,
+		attribute: 'lnClass',
+		value: parts.lnClass,
 	})
 
 	for (const record of records) {
 		const prefix = readAttribute({ record, name: 'prefix', defaults: 'none' })
-		const inst = readAttribute({ record, name: instAttr, defaults: 'none' })
+		const inst = readAttribute({ record, name: instanceAttribute, defaults: 'none' })
 		if (prefix !== parts.prefix || inst !== parts.inst) continue
 
-		if (await matchesAncestry(query, record, expectedAncestry)) {
-			return record as Scl.TrackedRecord<Scl.ElementsOf>
+		if (await matchesAncestry({ reads, candidate: record, expectedSegments: expectedAncestry })) {
+			return record
 		}
 	}
 
@@ -390,19 +488,23 @@ async function findLnClassTarget(params: {
  * The signal named by the first of `paths` that names one, the keys in order: a signal's path, built
  * among its siblings, or with its full name (its instance and data attribute, whatever its siblings)
  * is the key. Among the signals of one key, the first in the document.
+ *
+ * Only a signal one of the keys can name has its path built: a signal's path ends with its segment, its own name or
+ * its full name, and its full path ends with its full name; a signal without a name has no path.
  */
 async function findSignalByPath(params: {
-	query: Core.Query<Config> | Core.Transaction<Config>
+	reads: BatchedReads
 	targets: readonly string[]
 	paths: readonly string[]
 }): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
-	const { query, targets, paths } = params
+	const { reads, targets, paths } = params
 
 	let best: { keyIndex: number; record: Scl.TrackedRecord<Scl.ElementsOf> } | undefined
 	for (const tagName of targets) {
-		const records = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
+		const records = await reads.recordsOfTag(tagName)
 		for (const record of records) {
-			const elementPath = await buildElementPath(query, record as Scl.Ref<Scl.ElementsOf>)
+			if (!isNamedByAKey({ record, paths })) continue
+			const elementPath = await reads.elementPathOf(record)
 			if (!elementPath) continue
 			const fullPath = fullSignalPath({ record: toRawRecord(record), elementPath })
 			const keyIndex = [elementPath.path, fullPath]
@@ -410,13 +512,26 @@ async function findSignalByPath(params: {
 				.filter((index) => index !== -1)
 				.reduce((first, index) => Math.min(first, index), paths.length)
 			if (keyIndex === paths.length || (best && keyIndex >= best.keyIndex)) continue
-			best = { keyIndex, record: record as Scl.TrackedRecord<Scl.ElementsOf> }
+			best = { keyIndex, record }
 			// the first key names it: no later signal can name it better
 			if (keyIndex === 0) return best.record
 		}
 	}
 
 	return best?.record
+}
+
+/** Whether one of `paths` ends with the signal's name or its full name: none other can name it. */
+function isNamedByAKey(params: {
+	record: Scl.TrackedRecord<Scl.ElementsOf>
+	paths: readonly string[]
+}): boolean {
+	const { record, paths } = params
+	const raw = toRawRecord(record)
+	const name = nameAmongSiblings({ record: raw, siblings: [raw] })
+	const fullName = fullSignalName(raw)
+	if (!name || !fullName) return false
+	return paths.some((path) => path.endsWith(name) || path.endsWith(fullName))
 }
 
 /** The path of a signal named with its full name below its LNode, `null` when it has none. */
@@ -429,48 +544,50 @@ function fullSignalPath(params: { record: AnyRawRecord; elementPath: ElementPath
 }
 
 async function findBySegmentScan(params: {
-	query: Core.Query<Config> | Core.Transaction<Config>
+	reads: BatchedReads
 	tagName: string
 	segment: PathSegment
 	expectedAncestry: PathSegment[]
 }): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
-	const { query, tagName, segment, expectedAncestry } = params
+	const { reads, tagName, segment, expectedAncestry } = params
 
-	const records = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
-	const specNamings = await readSpecNamingsById(query, { records: records.map(toRawRecord) })
+	const records = await reads.recordsOfTag(tagName)
+	const specNamings = await reads.specNamingsOf({
+		records: records.map(toRawRecord),
+		tagName,
+	})
 
 	for (const record of records) {
 		const seg = getPathSegment(toRawRecord(record), { specNaming: specNamings.get(record.id) })
 		if (!seg || seg.segment !== segment.segment) continue
 
-		if (await matchesAncestry(query, record, expectedAncestry)) {
-			return record as Scl.TrackedRecord<Scl.ElementsOf>
+		if (await matchesAncestry({ reads, candidate: record, expectedSegments: expectedAncestry })) {
+			return record
 		}
 	}
 
 	return undefined
 }
 
-async function matchesAncestry(
-	query: Core.Query<Config> | Core.Transaction<Config>,
-	candidate: Scl.TrackedRecord<Scl.ElementsOf>,
-	expectedSegments: PathSegment[],
-): Promise<boolean> {
+async function matchesAncestry(params: {
+	reads: BatchedReads
+	candidate: Scl.TrackedRecord<Scl.ElementsOf>
+	expectedSegments: PathSegment[]
+}): Promise<boolean> {
+	const { reads, candidate, expectedSegments } = params
 	if (expectedSegments.length === 0) return true
 
-	const ancestors = await query.findAncestors(candidate)
-	const specNamings = await readSpecNamingsById(query, { records: ancestors.map(toRawRecord) })
+	const ancestors = await reads.ancestorsOf(candidate)
+	const specNamings = await reads.specNamingsOf({ records: ancestors.map(toRawRecord) })
 
 	// findAncestors returns bottom-up [parent, grandparent, …]
 	// Build top-down segments, skipping transparent elements
 	const ancestorSegments: PathSegment[] = []
-	for (let i = ancestors.length - 1; i >= 0; i--) {
-		const seg = getPathSegment(toRawRecord(ancestors[i]), {
-			specNaming: specNamings.get(ancestors[i].id),
-		})
+	for (const ancestor of [...ancestors].reverse()) {
+		const seg = getPathSegment(toRawRecord(ancestor), { specNaming: specNamings.get(ancestor.id) })
 		if (seg) ancestorSegments.push(seg)
 	}
 
 	if (ancestorSegments.length !== expectedSegments.length) return false
-	return ancestorSegments.every((seg, i) => seg.segment === expectedSegments[i].segment)
+	return ancestorSegments.every((seg, index) => seg.segment === expectedSegments[index].segment)
 }

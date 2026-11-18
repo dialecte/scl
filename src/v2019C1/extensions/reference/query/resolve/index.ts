@@ -1,4 +1,8 @@
-export { resolveReferencePath } from './resolve-reference-path'
+export { resolveReferencePath, resolveReferencePaths } from './resolve-reference-path'
+export type {
+	ResolveReferencePathsParams,
+	ResolveReferencePathsResult,
+} from './resolve-reference-path.types'
 export { resolveElementPath } from './resolve-element-path'
 export { resolveMappedLNode } from './resolve-mapped-lnode'
 export { resolveMappedLNodes } from './resolve-mapped-lnodes'

@@ -1,0 +1,296 @@
+import {
+	answerOf,
+	expectedOf,
+	NAMING_NOTHING,
+	readReferrers,
+	stageWrites,
+} from './__tests__/reference-paths'
+import mixedXml from './fixtures/reference-paths-mixed.xml?raw'
+import { resolveReferencePaths } from './resolve-reference-path'
+
+import { describe, expect } from 'vitest'
+
+import { runSclTestCases } from '@/v2019C1/test/hydrated-test'
+
+import type { Answer, Referrer } from './__tests__/reference-paths.types'
+import type { Scl } from '@/v2019C1/config'
+import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
+
+/**
+ * Inside a transaction after `stageWrites` (a Bay renamed, a path changed, an LNode deleted, a twin renamed, a variant
+ * created), one call per path attribute over every referrer of the mixed fixture, the first given again and a
+ * Substation after them: the staged state answers, each answer what main's `resolveReferencePath` answered there.
+ */
+describe('resolveReferencePaths - inside a transaction with staged writes', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		pathAttribute: string
+		referrers: readonly Referrer[]
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		"controlled: 3 referrers, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'controlled',
+				referrers: [
+					{ ref: { tagName: 'ControlRef', id: 'cr-oper' }, answer: undefined },
+					{ ref: { tagName: 'ControlRef', id: 'cr-oper-2' }, answer: undefined },
+					{ ref: { tagName: 'ControlRef', id: 'pdis-trip' }, answer: undefined },
+				],
+			},
+		"extCtrlAddr: 3 referrers, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'extCtrlAddr',
+				referrers: [
+					{
+						ref: { tagName: 'ControlRef', id: 'cr-oper' },
+						answer: { tagName: 'ExtCtrl', id: 'ext-ctrl-close' },
+					},
+					{
+						ref: { tagName: 'ControlRef', id: 'cr-oper-2' },
+						answer: { tagName: 'ExtCtrl', id: 'ext-ctrl-open' },
+					},
+					{ ref: { tagName: 'ControlRef', id: 'pdis-trip' }, answer: undefined },
+				],
+			},
+		"resourceName: 11 referrers, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'resourceName',
+				referrers: [
+					{ ref: { tagName: 'ControlRef', id: 'cr-oper' }, answer: undefined },
+					{ ref: { tagName: 'ControlRef', id: 'cr-oper-2' }, answer: undefined },
+					{ ref: { tagName: 'ControlRef', id: 'pdis-trip' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'op-1' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'op-2' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-b2' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-path' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-spec' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-stale' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-twin' }, answer: undefined },
+					{
+						ref: { tagName: 'SourceRef', id: 'sr-uuid' },
+						answer: { tagName: 'ProcessResource', id: 'pr1' },
+					},
+				],
+			},
+		"mappedDoName: 1 referrer, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'mappedDoName',
+				referrers: [
+					{
+						ref: { tagName: 'DOS', id: 'dos-1' },
+						answer: { tagName: 'LN', id: 'ln-1', qualifier: 'Op' },
+					},
+				],
+			},
+		"function: 5 referrers, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'function',
+				referrers: [
+					{ ref: { tagName: 'FunctionCatRef', id: 'fcatref-none' }, answer: undefined },
+					{
+						ref: { tagName: 'FunctionCatRef', id: 'fcatref-path' },
+						answer: { tagName: 'Function', id: 'f1-b2' },
+					},
+					{
+						ref: { tagName: 'FunctionCatRef', id: 'fcatref-sub' },
+						answer: { tagName: 'SubFunction', id: 'sf1' },
+					},
+					{
+						ref: { tagName: 'FunctionRef', id: 'fref-1' },
+						answer: { tagName: 'Function', id: 'f1' },
+					},
+					{
+						ref: { tagName: 'FunctionRef', id: 'fref-2' },
+						answer: { tagName: 'SubFunction', id: 'sf1' },
+					},
+				],
+			},
+		"functionalVariant: 3 referrers, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'functionalVariant',
+				referrers: [
+					{
+						ref: { tagName: 'FunctionalVariantRef', id: 'fvref-1' },
+						answer: { tagName: 'FunctionalVariant', id: 'fv-1-fast' },
+					},
+					{
+						ref: { tagName: 'FunctionalVariantRef', id: 'fvref-2' },
+						answer: { tagName: 'FunctionalVariant', id: 'fv-2-fast' },
+					},
+					{ ref: { tagName: 'FunctionalVariantRef', id: 'fvref-none' }, answer: 'created' },
+				],
+			},
+		"dataName: 3 referrers, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'dataName',
+				referrers: [
+					{
+						ref: { tagName: 'InputVar', id: 'iv-name' },
+						answer: { tagName: 'LNode', id: 'ln-ptrc', qualifier: 'Op.general' },
+					},
+					{ ref: { tagName: 'InputVar', id: 'iv-uuid' }, answer: undefined },
+					{ ref: { tagName: 'OutputVar', id: 'ov-plain' }, answer: undefined },
+				],
+			},
+		"inputName: 2 referrers, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'inputName',
+				referrers: [
+					{
+						ref: { tagName: 'InputVar', id: 'iv-name' },
+						answer: { tagName: 'SourceRef', id: 'sr-path' },
+					},
+					{
+						ref: { tagName: 'InputVar', id: 'iv-uuid' },
+						answer: { tagName: 'SourceRef', id: 'sr-uuid' },
+					},
+				],
+			},
+		"data: 1 referrer, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'data',
+				referrers: [
+					{
+						ref: { tagName: 'LNodeDataRef', id: 'data-ref-1' },
+						answer: { tagName: 'LNode', id: 'ln-pdis', qualifier: 'Str.general' },
+					},
+				],
+			},
+		"sourceRef: 3 referrers, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'sourceRef',
+				referrers: [
+					{
+						ref: { tagName: 'LNodeInputRef', id: 'in-ref-1' },
+						answer: { tagName: 'SourceRef', id: 'op-2' },
+					},
+					{
+						ref: { tagName: 'LNodeInputRef', id: 'in-ref-2' },
+						answer: { tagName: 'SourceRef', id: 'op-1' },
+					},
+					{
+						ref: { tagName: 'LNodeInputRef', id: 'in-ref-uuid' },
+						answer: { tagName: 'SourceRef', id: 'op-1' },
+					},
+				],
+			},
+		"controlRef: 1 referrer, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'controlRef',
+				referrers: [
+					{
+						ref: { tagName: 'LNodeOutputRef', id: 'out-ref-1' },
+						answer: { tagName: 'ControlRef', id: 'pdis-trip' },
+					},
+				],
+			},
+		"outputName: 1 referrer, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'outputName',
+				referrers: [
+					{
+						ref: { tagName: 'OutputVar', id: 'ov-plain' },
+						answer: { tagName: 'ControlRef', id: 'cr-oper' },
+					},
+				],
+			},
+		"source: 8 referrers, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'source',
+				referrers: [
+					{ ref: { tagName: 'SourceRef', id: 'op-1' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'op-2' }, answer: undefined },
+					{
+						ref: { tagName: 'SourceRef', id: 'sr-b2' },
+						answer: { tagName: 'LNode', id: 'ln-xcbr-b2', qualifier: 'Pos' },
+					},
+					{
+						ref: { tagName: 'SourceRef', id: 'sr-path' },
+						answer: { tagName: 'LNode', id: 'ln-xcbr-b2', qualifier: 'Pos' },
+					},
+					{ ref: { tagName: 'SourceRef', id: 'sr-spec' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-stale' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-twin' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-uuid' }, answer: undefined },
+				],
+			},
+		"extRefAddr: 8 referrers, the first again, a Substation → main's answers, the first again, undefined":
+			{
+				// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
+				sourceXml: mixedXml,
+				allowIncoherentReferences: NAMING_NOTHING,
+				pathAttribute: 'extRefAddr',
+				referrers: [
+					{ ref: { tagName: 'SourceRef', id: 'op-1' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'op-2' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-b2' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-path' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-spec' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-stale' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-twin' }, answer: undefined },
+					{ ref: { tagName: 'SourceRef', id: 'sr-uuid' }, answer: undefined },
+				],
+			},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		act: async ({ source, testCase }) => {
+			const refs = testCase.referrers.map((referrer) => referrer.ref)
+			const answered: { answers: Answer[]; expected: Answer[] } = { answers: [], expected: [] }
+			await source.transaction(async function resolveStaged(tx) {
+				const created = await stageWrites(tx)
+				const records = await readReferrers({ query: tx, refs, byPath: false })
+				const substation = await tx.getRecord({ tagName: 'Substation', id: 'sub-1' })
+				const given = [...records, records[0], substation as Scl.TrackedRecord<Scl.ElementsOf>]
+				const results = await resolveReferencePaths(tx, {
+					records: given,
+					pathAttribute: testCase.pathAttribute,
+				})
+				answered.answers = results.map(answerOf)
+				answered.expected = expectedOf({ referrers: testCase.referrers, created })
+			})
+			const { answers, expected } = answered
+			expect(answers).toEqual([...expected, expected[0], undefined])
+		},
+	})
+})

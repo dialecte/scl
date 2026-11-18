@@ -742,7 +742,20 @@
 				"element a SourceRef/ControlRef/FunctionRef path points to",
 				"resolve a path attribute to a record"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-reference-path.ts:44"
+			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-reference-path.ts:48"
+		},
+		{
+			"path": "doc.query.reference.resolveReferencePaths",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: ResolveReferencePathsParams) => Promise<ResolveReferencePathsResult>",
+			"summary": "Resolves the reference path attribute `pathAttribute` of many records at once: one answer per record, in input order, each what `resolveReferencePath` answers for it (`undefined` for a record whose tag has no such pair, a path naming nothing, a record with no value).",
+			"intents": [
+				"resolve many reference paths at once",
+				"follow the references of many SourceRefs/ControlRefs to their targets",
+				"batch reference resolution"
+			],
+			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-reference-path.ts:73"
 		},
 		{
 			"path": "doc.query.signature.elementSignature",

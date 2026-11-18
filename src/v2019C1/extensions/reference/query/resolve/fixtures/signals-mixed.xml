@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+	<Substation name="S1" dev:db-id="sub-1">
+		<Function name="F1" dev:db-id="f1">
+			<LNode iedName="None" lnClass="PTRC" lnInst="1" dev:db-id="ln-ptrc-1">
+				<Private type="eIEC61850-6-100" dev:db-id="ptrc-1-private">
+					<eIEC61850-6-100:LNodeInputs dev:db-id="ptrc-1-inputs">
+						<eIEC61850-6-100:SourceRef input="Op" inputInst="1" pDA="general" dev:db-id="sr-op-1"/>
+						<eIEC61850-6-100:SourceRef input="Op" inputInst="2" dev:db-id="sr-op-2"/>
+						<eIEC61850-6-100:SourceRef input="Trip" pDA="general" dev:db-id="sr-trip"/>
+						<eIEC61850-6-100:SourceRef input="Trip(1)" dev:db-id="sr-trip-paren"/>
+						<eIEC61850-6-100:SourceRef input="Str.phsA" dev:db-id="sr-dotted"/>
+						<eIEC61850-6-100:SourceRef dev:db-id="sr-nameless"/>
+					</eIEC61850-6-100:LNodeInputs>
+					<eIEC61850-6-100:LNodeOutputs dev:db-id="ptrc-1-outputs">
+						<eIEC61850-6-100:ControlRef output="Op" dev:db-id="cr-op"/>
+						<eIEC61850-6-100:ControlRef output="Trip" outputInst="1" dev:db-id="cr-trip-1"/>
+						<eIEC61850-6-100:ControlRef output="Trip" outputInst="2" dev:db-id="cr-trip-2"/>
+						<eIEC61850-6-100:ControlRef dev:db-id="cr-nameless"/>
+					</eIEC61850-6-100:LNodeOutputs>
+					<eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="bd-1">
+						<eIEC61850-6-100:InputVar varName="a" inputName="Op(1).general" dev:db-id="iv-op-full"/>
+						<eIEC61850-6-100:InputVar varName="b" inputName="Op(2)" dev:db-id="iv-op-2"/>
+						<eIEC61850-6-100:InputVar varName="c" inputName="Op" dev:db-id="iv-op"/>
+						<eIEC61850-6-100:InputVar varName="d" inputName="Trip" dev:db-id="iv-trip"/>
+						<eIEC61850-6-100:InputVar varName="e" inputName="Trip(1).general" dev:db-id="iv-trip-full"/>
+						<eIEC61850-6-100:InputVar varName="f" inputName="Trip(1)" dev:db-id="iv-trip-paren"/>
+						<eIEC61850-6-100:InputVar varName="g" inputName="Str.phsA" dev:db-id="iv-dotted"/>
+						<eIEC61850-6-100:InputVar varName="h" inputName="PTRC1" dev:db-id="iv-lnode"/>
+						<eIEC61850-6-100:InputVar varName="i" inputName="PTRC2.Op" dev:db-id="iv-other-lnode"/>
+						<eIEC61850-6-100:InputVar varName="j" inputName="Missing" dev:db-id="iv-missing"/>
+						<eIEC61850-6-100:OutputVar varName="k" outputName="Op" dev:db-id="ov-op"/>
+						<eIEC61850-6-100:OutputVar varName="l" outputName="Trip(2)" dev:db-id="ov-trip-2"/>
+						<eIEC61850-6-100:OutputVar varName="m" outputName="Trip" dev:db-id="ov-trip"/>
+						<eIEC61850-6-100:OutputVar varName="n" outputName="PTRC1" dev:db-id="ov-lnode"/>
+					</eIEC61850-6-100:BehaviorDescription>
+				</Private>
+			</LNode>
+			<LNode iedName="None" lnClass="PTRC" lnInst="2" dev:db-id="ln-ptrc-2">
+				<Private type="eIEC61850-6-100" dev:db-id="ptrc-2-private">
+					<eIEC61850-6-100:LNodeInputs dev:db-id="ptrc-2-inputs">
+						<eIEC61850-6-100:SourceRef input="Op" dev:db-id="sr-op-other"/>
+					</eIEC61850-6-100:LNodeInputs>
+				</Private>
+			</LNode>
+			<Private type="eIEC61850-6-100" dev:db-id="f1-private">
+				<eIEC61850-6-100:BehaviorDescription name="BD2" dev:db-id="bd-2">
+					<eIEC61850-6-100:InputVar varName="o" inputName="PTRC2.Op" dev:db-id="iv-f-other"/>
+					<eIEC61850-6-100:InputVar varName="p" inputName="PTRC1.Op(2)" dev:db-id="iv-f-op-2"/>
+					<eIEC61850-6-100:InputVar varName="q" inputName="PTRC1.Trip(1).general" dev:db-id="iv-f-trip-full"/>
+					<eIEC61850-6-100:OutputVar varName="r" outputName="PTRC1.Trip(1)" dev:db-id="ov-f-trip-1"/>
+				</eIEC61850-6-100:BehaviorDescription>
+			</Private>
+		</Function>
+	</Substation>
+</SCL>

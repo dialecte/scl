@@ -20,20 +20,21 @@ buildMappedLNodePath <->  resolveMappedLNode     (mapped LNode <-> implementing 
                           resolveMappedData      (DOS/SDS/DAS -> implementing LN + data path)
 ```
 
-| Function               | Direction | Input                                | Output                                                   | Use when                                                              |
-| ---------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | --------------------------------------------------------------------- |
-| `buildElementPath`     | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry                  |
-| `buildElementPaths`    | write     | many refs                            | `ElementPath` or `null`, per input                       | the paths of many elements, one read per ancestor level               |
-| `buildReferencePath`   | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target                       |
-| `resolveElementPath`   | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` -- walk tree by path string             |
-| `resolveReferencePath` | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildReferencePath` -- follow a REF to its target         |
-| `findRefsPointingTo`   | reverse   | target ref + optional container      | `ResolvedReference[]`                                    | find all REF records pointing to a given element                      |
-| `buildMappedLNodePath` | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode`         |
-| `resolveMappedLNode`   | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`               |
-| `resolveMappedLNodes`  | read      | many `LNode` refs                    | `LN`/`LN0` ref and IED ref, by LNode id                  | resolving many mapped `LNode`s with one read of the document          |
-| `readSpecNamings`      | read      | many `LNode` refs or records         | `LNodeSpecNaming` record or `undefined`, per input       | reading the specified naming of many `LNode`s in at most 2 or 3 reads |
-| `resolveMappedData`    | read      | `DOS`/`SDS`/`DAS` ref                | `MappedData` (`LN` ref + data path + origin)             | finding the data that implements a specified data object              |
-| `getPathSegment`       | write     | a record (+ context)                 | `PathSegment` (segment + separator) or `null`            | the segment of one element, without a query                           |
+| Function                | Direction | Input                                | Output                                                   | Use when                                                              |
+| ----------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | --------------------------------------------------------------------- |
+| `buildElementPath`      | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry                  |
+| `buildElementPaths`     | write     | many refs                            | `ElementPath` or `null`, per input                       | the paths of many elements, one read per ancestor level               |
+| `buildReferencePath`    | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target                       |
+| `resolveElementPath`    | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` -- walk tree by path string             |
+| `resolveReferencePath`  | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildReferencePath` -- follow a REF to its target         |
+| `resolveReferencePaths` | read      | many REF records + path attribute    | `{ record, qualifier }` or `undefined`, per input        | the targets of many REFs, their reads merged                          |
+| `findRefsPointingTo`    | reverse   | target ref + optional container      | `ResolvedReference[]`                                    | find all REF records pointing to a given element                      |
+| `buildMappedLNodePath`  | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode`         |
+| `resolveMappedLNode`    | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`               |
+| `resolveMappedLNodes`   | read      | many `LNode` refs                    | `LN`/`LN0` ref and IED ref, by LNode id                  | resolving many mapped `LNode`s with one read of the document          |
+| `readSpecNamings`       | read      | many `LNode` refs or records         | `LNodeSpecNaming` record or `undefined`, per input       | reading the specified naming of many `LNode`s in at most 2 or 3 reads |
+| `resolveMappedData`     | read      | `DOS`/`SDS`/`DAS` ref                | `MappedData` (`LN` ref + data path + origin)             | finding the data that implements a specified data object              |
+| `getPathSegment`        | write     | a record (+ context)                 | `PathSegment` (segment + separator) or `null`            | the segment of one element, without a query                           |
 
 ### Name distinctions
 
@@ -423,8 +424,35 @@ The function uses a **UUID-first** approach:
 | `ied-address`          | `extCtrlUuid`          | none                                                        |
 
 ::: tip
-UUID resolution is always preferred. It is O(1) and unambiguous. The path fallback exists for legacy data without UUID attributes.
+UUID resolution is always preferred: one attribute lookup, unambiguous. The path fallback exists for legacy data without UUID attributes.
 :::
+
+To resolve many REFs, call [`resolveReferencePaths`](#resolvereferencepaths) once rather than this function in a loop.
+
+---
+
+## resolveReferencePaths
+
+The targets of many REF records (`doc.query.reference.resolveReferencePaths`), each exactly as [`resolveReferencePath`](#resolvereferencepath) resolves it, one entry per record in input order.
+
+```ts
+reference.query.resolveReferencePaths(
+  query: Scl.Query | Scl.Transaction,
+  params: { records: readonly Scl.TrackedRecord<Scl.ElementsOf>[]; pathAttribute: string },
+): Promise<({ record: Scl.TrackedRecord<Scl.ElementsOf>; qualifier?: string } | undefined)[]>
+```
+
+```ts
+const targets = await reference.query.resolveReferencePaths(query, {
+	records: sourceRefs,
+	pathAttribute: 'source',
+})
+targets.map((target) => target?.record.id) // -> the LNode each SourceRef names, in input order
+```
+
+`undefined` where `resolveReferencePath` answers it: a record whose tag has no pair for `pathAttribute`, a record without a value, a path naming nothing. A record given several times answers the same target at each position. Inside a transaction the staged writes answer.
+
+Each record runs the steps of `resolveReferencePath`; the reads of all the records are merged: one attribute lookup per target tag and attribute with every value asked (the uuid fast path, names, classes), the ancestors in one read per level, the paths of the signals searched one candidate per record at a time, each round of candidates in one `buildElementPaths`, each signal tag read once. A `DOS`/`SDS`/`DAS` reads its mapped data on its own. One record never costs more reads than before; 13 behavior variables naming signals by path: 31 store reads, was 837 one by one. When a read is refused (a record whose parent link names an element of another tag), every record still runs to its end, then the call throws the first error in input order.
 
 ---
 
