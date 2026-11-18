@@ -46,7 +46,7 @@ export async function resolve(
 		const lnType = await query.getAttribute(record, { name: 'lnType' })
 		if (!lnType) continue
 
-		dataTypes ??= await readDataTypeRecords({ query, lnTypes: lnTypesOf(records) })
+		dataTypes ??= await readDataTypeRecords({ query, lnTypes: lnTypesOf({ records }) })
 
 		const lnodeType = await findType({ query, dataTypes, tagName: 'LNodeType', id: lnType })
 		invariant(lnodeType, {
@@ -72,10 +72,12 @@ export async function resolve(
 		}
 	}
 
-	return toResolved(dataModelMap)
+	return toResolved({ dataModelMap })
 }
 
-function toResolved(dataModelMap: DataModelMap): ResolvedDataModel {
+/** The types resolved, list by list, in the order they were reached. */
+function toResolved(params: { dataModelMap: DataModelMap }): ResolvedDataModel {
+	const { dataModelMap } = params
 	return {
 		lnodeTypes: Array.from(dataModelMap.lnodeTypes.values()),
 		doTypes: Array.from(dataModelMap.doTypes.values()),
@@ -91,13 +93,14 @@ function addIfNew<T>(map: Map<string, T>, id: string, record: T): boolean {
 }
 
 /** The logical node types the records name, each once, as the records hold them. */
-function lnTypesOf(
+function lnTypesOf(params: {
 	records: readonly (
 		| Scl.TrackedRecord<'LNode'>
 		| Scl.TrackedRecord<'LN'>
 		| Scl.TrackedRecord<'LN0'>
-	)[],
-): string[] {
+	)[]
+}): string[] {
+	const { records } = params
 	const lnTypes = records.map((record) => readAttribute({ record, name: 'lnType' }))
 	return [...new Set(lnTypes.filter((lnType) => lnType !== ''))]
 }
@@ -180,7 +183,8 @@ async function resolveDataAttributes(params: {
 		const sdoElements = await membersOf({ query, dataTypes, parent, tagName: 'SDO' })
 
 		for (const sdo of sdoElements) {
-			if (!sdo) continue
+			// an SDO listed by its DOType and not stored is an integrity error, refused as the query refuses an undefined record
+			invariant(sdo, { key: 'ASSERTION_FAILED', detail: 'The record or ref is undefined' })
 			const sdoTypeId = readAttribute({ record: sdo, name: 'type' })
 			if (!sdoTypeId) continue
 

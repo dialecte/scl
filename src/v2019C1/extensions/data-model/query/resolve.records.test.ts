@@ -1,3 +1,4 @@
+import typesOfOtherTagsSharingIdsXml from './fixtures/types-of-other-tags-sharing-ids.xml?raw'
 import typesSharingIdsXml from './fixtures/types-sharing-ids.xml?raw'
 import { resolve } from './resolve'
 
@@ -221,6 +222,18 @@ describe('resolve - the records', () => {
 				records: [{ tagName: 'LNode', id: 'lnode-dup' }],
 				expected: { lnodeTypes: ['TD'], doTypes: ['DD'], daTypes: [], enumTypes: ['ED'] },
 			},
+		'a DOType and an EnumType sharing an id, a Struct DA naming an id only a DOType holds → each by its own tag':
+			{
+				// DOType X and EnumType X; DOType X holds an Enum DA of type X, a Struct DA of type Y (only DOType Y), an SDO of type Y
+				sourceXml: typesOfOtherTagsSharingIdsXml,
+				allowIncoherentReferences: 'a Struct DA naming an id no DAType holds is skipped',
+				allowInvalidFixture: {
+					reason: 'a DOType and an EnumType sharing an id: each is looked up under its own tag',
+					violations: [{ check: 'uniqueness' }],
+				},
+				records: [{ tagName: 'LNode', id: 'lnode-1' }],
+				expected: { lnodeTypes: ['T1'], doTypes: ['X', 'Y'], daTypes: [], enumTypes: ['X'] },
+			},
 	}
 
 	runSclTestCases.withoutExport<TestCase>({
@@ -288,6 +301,20 @@ describe('resolve - inside a transaction', () => {
 				daTypes: ['ORIG', 'LEAF'],
 				enumTypes: ['ORCAT', 'DBPOS', 'BEH'],
 			},
+		},
+		'an SDO deleted inside the transaction → its DOType left out': {
+			// DOType X holds an SDO of type Y, deleted before the call
+			sourceXml: typesOfOtherTagsSharingIdsXml,
+			allowIncoherentReferences: 'a Struct DA naming an id no DAType holds is skipped',
+			allowInvalidFixture: {
+				reason: 'a DOType and an EnumType sharing an id: each is looked up under its own tag',
+				violations: [{ check: 'uniqueness' }],
+			},
+			records: [{ tagName: 'LNode', id: 'lnode-1' }],
+			stage: async (tx) => {
+				await tx.delete({ tagName: 'SDO', id: 'sdo-x-sub' })
+			},
+			expected: { lnodeTypes: ['T1'], doTypes: ['X'], daTypes: [], enumTypes: ['X'] },
 		},
 	}
 

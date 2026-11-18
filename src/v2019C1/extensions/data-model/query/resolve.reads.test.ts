@@ -32,6 +32,22 @@ const EVERY_LNODE = Array.from({ length: 12 }, (_, index) => `lnode-${index}`)
 /** One LNode of each of the four LNodeTypes. */
 const ONE_LNODE_PER_TYPE = ['lnode-0', 'lnode-1', 'lnode-2', 'lnode-3']
 
+/** The records the store calls of one `resolve` of the LNodes move. */
+async function recordsMovedOf(params: {
+	source: SclTest.ActParams<SclTest.BaseXmlTestCase>['source']
+	lnodeIds: string[]
+}): Promise<number> {
+	const { source, lnodeIds } = params
+	const query = source.query
+	const records = await query.getRecords(
+		lnodeIds.map((id): Scl.Ref<'LNode'> => ({ tagName: 'LNode', id })),
+	)
+	source.perf.reset()
+	await resolve(query, { records: records.filter((record) => !!record) })
+	const report = source.perf.report()
+	return RECORDS_MOVED.reduce((sum, key) => sum + (report[key]?.count ?? 0), 0)
+}
+
 /**
  * Resolving the data types of many LNodes reads them level by level from their LNodeTypes: the store reads follow the
  * depth of the data model and the types reached, not the number of LNodes; the records moved are those the walk reaches.
@@ -106,29 +122,44 @@ describe('resolve - the records moved', () => {
 		},
 	}
 
-	/** The records the store calls of one `resolve` of the LNodes move. */
-	async function recordsMovedBy(params: {
-		source: SclTest.ActParams<SclTest.BaseXmlTestCase>['source']
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		dev: { perf: true },
+		act: async ({ source, testCase }) => {
+			const moved = await recordsMovedOf({ source, lnodeIds: testCase.lnodeIds })
+			const expected = await recordsMovedOf({ source, lnodeIds: testCase.sameTypesAs })
+			expect(moved).toBe(expected)
+		},
+	})
+})
+
+/**
+ * One LNode moves the records of its own types and their members, no more than one lookup per type did: pinned per
+ * store, each counting what it moves its own way (the node project runs on the in-memory store, the browser on the
+ * local one).
+ */
+describe('resolve - the records one LNode moves', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
 		lnodeIds: string[]
-	}): Promise<number> {
-		const { source, lnodeIds } = params
-		const query = source.query
-		const records = await query.getRecords(
-			lnodeIds.map((id): Scl.Ref<'LNode'> => ({ tagName: 'LNode', id })),
-		)
-		source.perf.reset()
-		await resolve(query, { records: records.filter((record) => !!record) })
-		const report = source.perf.report()
-		return RECORDS_MOVED.reduce((sum, key) => sum + (report[key]?.count ?? 0), 0)
+		expected: { inMemory: number; local: number }
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'one LNode → 14 records on the in-memory store, 26 on the local store': {
+			// twelve LNodes of four LNodeTypes, sharing DOTypes, nested DATypes and EnumTypes
+			sourceXml: twelveLNodesXml,
+			lnodeIds: ['lnode-0'],
+			expected: { inMemory: 14, local: 26 },
+		},
 	}
 
 	runSclTestCases.withoutExport<TestCase>({
 		testCases,
 		dev: { perf: true },
 		act: async ({ source, testCase }) => {
-			const moved = await recordsMovedBy({ source, lnodeIds: testCase.lnodeIds })
-			const expected = await recordsMovedBy({ source, lnodeIds: testCase.sameTypesAs })
-			expect(moved).toBe(expected)
+			const moved = await recordsMovedOf({ source, lnodeIds: testCase.lnodeIds })
+			const store = typeof window === 'undefined' ? 'inMemory' : 'local'
+			expect(moved).toBe(testCase.expected[store])
 		},
 	})
 })
