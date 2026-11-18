@@ -57,5 +57,7 @@ export type CommitStep = {
 /** What the commit stages beyond the transaction's own operations, in order, and the containers its prune removes. */
 export type PlannedCommit = {
 	staged: Scl.Operation[]
+	/** What each step staged, by its name, in run order. */
+	stagedBy: ReadonlyMap<CommitStepName, readonly Scl.Operation[]>
 	containers: PrunedContainer[]
 }

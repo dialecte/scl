@@ -69,7 +69,14 @@ export async function pruneEmptiedContainers(params: {
 		roots.push(...emptiedAbove)
 	}
 	if (roots.length === 0) return { operations: [], containers: [] }
-	const cascade = await collectDeleteCascade(query, { roots, emptiesContainers: true, kept })
+	// what the commit's other operations delete already (the types the type prune removes) is no part of the cascade
+	const alreadyGone = new Set(params.gone)
+	const read = await collectDeleteCascade(query, { roots, emptiesContainers: true, kept })
+	const cascade = {
+		...read,
+		within: read.within.filter((record) => !alreadyGone.has(record.id)),
+		deleted: read.deleted.filter((record) => !alreadyGone.has(record.id)),
+	}
 	const staged = await buildCascadeOperations(query, {
 		cascade,
 		deletedRoots: roots,

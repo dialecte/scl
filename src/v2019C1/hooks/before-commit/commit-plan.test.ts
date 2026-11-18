@@ -1,3 +1,4 @@
+import logicalNodeWithOwnTypeXml from '../../extensions/clean-up/transaction/fixtures/commit-prune-a-logical-node-with-its-own-type.xml?raw'
 import { planCommit } from './before-commit'
 import { COMMIT_STEPS } from './commit-steps.constants'
 import relationInWrapperXml from './fixtures/commit-plan-a-relation-in-a-namespace-wrapper.xml?raw'
@@ -12,6 +13,7 @@ import { describe, expect, it } from 'vitest'
 
 import { runSclTestCases } from '@/v2019C1/test'
 
+import type { PlannedCommit } from './commit-plan.types'
 import type { PrunedContainer } from './prune-emptied-containers.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
@@ -277,43 +279,61 @@ describe('planCommit - what goes outside each container the prune removes', () =
 })
 
 /** `<tag> <id>: <tag> <id> <effect>, ...` of each container the plan of the commit lists after `write`. */
-async function goesWithPlanned(params: {
-	source: SclTest.ActParams<PlanCase>['source']
-	write: (tx: Scl.Transaction) => Promise<void>
-}): Promise<string[]> {
-	const { source, write } = params
-	let described: string[] = []
-	const prepared = await source.prepare(async function writeThenPlan(tx) {
-		await write(tx)
-		const planned = await planCommit({ operations: tx.getStagedOperations(), query: tx })
-		described = planned.containers.map(function describeGoesWith(container) {
-			const outside =
-				container.goesWith.length === 0
-					? 'nothing'
-					: container.goesWith
-							.map((effect) => `${effect.element.tagName} ${effect.element.id} ${effect.effect}`)
-							.join(', ')
-			return `${container.element.tagName} ${container.element.id}: ${outside}`
-		})
+async function goesWithPlanned(params: PlanParams): Promise<string[]> {
+	return (await plannedAfter(params)).containers.map(function describeGoesWith(container) {
+		const outside = container.goesWith.map(
+			(effect) => `${effect.element.tagName} ${effect.element.id} ${effect.effect}`,
+		)
+		return `${container.element.tagName} ${container.element.id}: ${outside.join(', ') || 'nothing'}`
 	})
-	prepared.discard()
-	return described
+}
+
+// The commit's prune never stages a record twice: a DataTypeTemplates emptied by the type prune takes none of the types
+// the type prune already deletes.
+describe('planCommit - each record deleted once', () => {
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		// IED1 is the only IED: its deletion leaves every type unused and the DataTypeTemplates empty
+		'the only IED deleted → every record the plan deletes, deleted once': {
+			sourceXml: logicalNodeWithOwnTypeXml,
+		},
+	}
+
+	async function act({ source }: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<void> {
+		await expect(deletedTwice({ source })).resolves.toEqual([])
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
+
+/** The ids the plan deletes more than once after the only IED is deleted. */
+async function deletedTwice(params: { source: PlanParams['source'] }): Promise<string[]> {
+	const planned = await plannedAfter({
+		...params,
+		write: deleting([{ tagName: 'IED', id: 'ied1' }]),
+	})
+	const ids = planned.staged.flatMap((operation) =>
+		operation.status === 'deleted' ? [operation.oldRecord.id] : [],
+	)
+	return [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))].sort()
 }
 
 /** The containers the plan of the commit lists after `write`, described; the transaction discarded. */
-async function containersPlanned(params: {
-	source: SclTest.ActParams<PlanCase>['source']
-	write: (tx: Scl.Transaction) => Promise<void>
-}): Promise<string[]> {
-	const { source, write } = params
-	let containers: PrunedContainer[] = []
-	const prepared = await source.prepare(async function writeThenPlan(tx) {
-		await write(tx)
-		const planned = await planCommit({ operations: tx.getStagedOperations(), query: tx })
-		containers = planned.containers
+async function containersPlanned(params: PlanParams): Promise<string[]> {
+	return (await plannedAfter(params)).containers.map(describeContainer)
+}
+
+type PlanParams = Pick<PlanCase, 'write'> & { source: SclTest.ActParams<PlanCase>['source'] }
+
+/** The plan of the commit after `write`; the transaction discarded. */
+async function plannedAfter(params: PlanParams): Promise<PlannedCommit> {
+	let planned: PlannedCommit | undefined
+	const prepared = await params.source.prepare(async function writeThenPlan(tx) {
+		await params.write(tx)
+		planned = await planCommit({ operations: tx.getStagedOperations(), query: tx })
 	})
 	prepared.discard()
-	return containers.map(describeContainer)
+	if (!planned) throw new Error('no plan')
+	return planned
 }
 
 /** Whether the plan stages the names written on ext-b; the transaction then committed. */
