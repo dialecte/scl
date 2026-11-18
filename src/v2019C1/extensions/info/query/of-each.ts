@@ -52,19 +52,24 @@ async function readStoredWhereNeeded(params: {
 	options: InfoOptions
 }): Promise<DescribedRecord[]> {
 	const { query, refsOrRecords, options } = params
-	const toRead = [...refsOrRecords.entries()].filter(
-		([, refOrRecord]) => !isDescribedAsGiven({ refOrRecord, options }),
-	)
-	const read =
-		toRead.length > 0
-			? await query.getRecords(
-					toRead.map(([, refOrRecord]) => toRef(refOrRecord) as Scl.Ref<Scl.ElementsOf>),
-				)
-			: []
-	const readByPosition = new Map(toRead.map(([index], position) => [index, read[position]]))
-	return refsOrRecords.map((refOrRecord, index) =>
-		readByPosition.has(index) ? readByPosition.get(index) : (refOrRecord as Core.AnyRawRecord),
-	)
+	const records: DescribedRecord[] = []
+	const positions: number[] = []
+	const refs: Scl.Ref<Scl.ElementsOf>[] = []
+	for (let index = 0; index < refsOrRecords.length; index++) {
+		const refOrRecord = refsOrRecords[index]
+		if (isDescribedAsGiven({ refOrRecord, options })) {
+			records[index] = refOrRecord as Core.AnyRawRecord
+			continue
+		}
+		positions.push(index)
+		refs.push(toRef(refOrRecord) as Scl.Ref<Scl.ElementsOf>)
+	}
+	if (refs.length === 0) return records
+	const read = await query.getRecords(refs)
+	for (let position = 0; position < positions.length; position++) {
+		records[positions[position]] = read[position]
+	}
+	return records
 }
 
 /**

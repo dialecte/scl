@@ -39,17 +39,17 @@ export async function describeRecords(params: DescribeRecordsParams): Promise<El
 	])
 
 	const infos: ElementInfo[] = []
-	for (const [index, record] of records.entries()) {
+	for (let index = 0; index < records.length; index++) {
+		const record = records[index]
 		if (!record) {
 			infos.push({ title: '' })
 			continue
 		}
 		const attributes = readRecordAttributes(record)
+		const signalName = signalNames[index]
 		const specAttributes =
-			childAttributes.get(index) ??
-			(signalNames.has(index)
-				? { ...attributes, signalName: signalNames.get(index) ?? '' }
-				: attributes)
+			childAttributes[index] ??
+			(signalName !== undefined ? { ...attributes, signalName: signalName ?? '' } : attributes)
 		const info = await describeOne({
 			query,
 			record,
@@ -96,60 +96,64 @@ async function describeOne(params: {
 }
 
 /**
- * The name of each signal (SourceRef, ControlRef) among the signals of its LNode, by record position; `null` where
- * it has none. The siblings of all the signals in one batch.
+ * The name of each signal (SourceRef, ControlRef) among the signals of its LNode, by record position: `null` where it
+ * has none, `undefined` for a record that is not a signal. The siblings of all the signals in one batch.
  */
 async function readSignalNames(params: {
 	query: Core.Query<Config>
 	records: readonly DescribedRecord[]
-}): Promise<Map<number, string | null>> {
-	const { query } = params
-	const signals = [...params.records.entries()].flatMap(([index, record]) =>
-		record && SIGNAL_TAG_NAMES.has(record.tagName) ? [{ index, raw: toRawRecord(record) }] : [],
-	)
-	if (signals.length === 0) return new Map()
-	const siblings = await readSiblingsOfEach({ query, records: signals.map(({ raw }) => raw) })
-	return new Map(
-		signals.map(({ index, raw }, position) => [
-			index,
-			nameAmongSiblings({ record: raw, siblings: siblings[position] }),
-		]),
-	)
+}): Promise<(string | null | undefined)[]> {
+	const { query, records } = params
+	const positions: number[] = []
+	const signals: Core.AnyRawRecord[] = []
+	for (let index = 0; index < records.length; index++) {
+		const record = records[index]
+		if (!record || !SIGNAL_TAG_NAMES.has(record.tagName)) continue
+		positions.push(index)
+		signals.push(toRawRecord(record))
+	}
+	const names: (string | null | undefined)[] = []
+	if (signals.length === 0) return names
+	const siblings = await readSiblingsOfEach({ query, records: signals })
+	for (let position = 0; position < signals.length; position++) {
+		names[positions[position]] = nameAmongSiblings({
+			record: signals[position],
+			siblings: siblings[position],
+		})
+	}
+	return names
 }
 
 /**
  * For each record whose title reads a child (`attributesFrom`), that child's attributes (its first child of the tag,
- * `{}` when it has none), by record position; one read per child tag.
+ * `{}` when it has none), by record position (`undefined` for the other records); one read per child tag.
  */
 async function readChildAttributes(params: {
 	query: Core.Query<Config>
 	records: readonly DescribedRecord[]
-}): Promise<Map<number, Record<string, string>>> {
-	const { query } = params
-	const byChildTag = new Map<string, { index: number; record: Core.AnyRawRecord }[]>()
-	for (const [index, record] of params.records.entries()) {
+}): Promise<(Record<string, string> | undefined)[]> {
+	const { query, records } = params
+	const positionsByChildTag = new Map<string, number[]>()
+	for (let index = 0; index < records.length; index++) {
+		const record = records[index]
 		const childTag = record && TITLE_FIELDS_OVERRIDE[record.tagName]?.attributesFrom
-		if (!record || !childTag) continue
-		const group = byChildTag.get(childTag) ?? []
-		group.push({ index, record })
-		byChildTag.set(childTag, group)
+		if (!childTag) continue
+		const positions = positionsByChildTag.get(childTag) ?? []
+		positions.push(index)
+		positionsByChildTag.set(childTag, positions)
 	}
 
-	const answers = await Promise.all(
-		[...byChildTag].map(async function readFirstChildren([tagName, group]) {
-			// dialecte-allow query-in-loop: one read per child tag a title reads (one today), whatever the number of records: core reads one tag per call
-			const children = await query.any.getChildrenOfEach(
-				group.map(({ record }) => record),
-				{ tagName },
-			)
-			return group.map(({ index }, position) => {
-				const [child] = children[position]
-				return [index, child ? readRecordAttributes(child) : {}] as const
-			})
-		}),
-	)
-	const attributesByIndex = new Map<number, Record<string, string>>(answers.flat())
-	return attributesByIndex
+	const attributes: (Record<string, string> | undefined)[] = []
+	for (const [tagName, positions] of positionsByChildTag) {
+		const parents = positions.map((position) => records[position] as Core.AnyRawRecord)
+		// dialecte-allow query-in-loop: one read per child tag a title reads (one today), whatever the number of records: core reads one tag per call
+		const children = await query.any.getChildrenOfEach(parents, { tagName })
+		for (let position = 0; position < positions.length; position++) {
+			const [child] = children[position]
+			attributes[positions[position]] = child ? readRecordAttributes(child) : {}
+		}
+	}
+	return attributes
 }
 
 /**
@@ -164,16 +168,15 @@ async function readLabels(params: {
 	const held = records.flatMap((record) => (record ? [record] : []))
 	const containers =
 		held.length > 0 ? await query.any.getChildrenOfEach(held, { tagName: 'Labels' }) : []
-	const everyContainer = containers.flat()
+	const everyContainer: Core.AnyTrackedRecord[] = []
+	for (const ofRecord of containers) everyContainer.push(...ofRecord)
 	const labelsOfContainers =
 		everyContainer.length > 0
 			? await query.any.getChildrenOfEach(everyContainer, { tagName: 'Label' })
 			: []
-	const labelsByContainer = new Map(
-		everyContainer.map((container, position) => [container, labelsOfContainers[position]]),
-	)
 
 	let heldPosition = 0
+	let containerPosition = 0
 	const labels: (Record<string, Record<string, string>> | undefined)[] = []
 	for (const record of records) {
 		if (!record) {
@@ -181,8 +184,8 @@ async function readLabels(params: {
 			continue
 		}
 		const entries: LabelEntry[] = []
-		for (const container of containers[heldPosition]) {
-			for (const label of labelsByContainer.get(container) ?? []) {
+		for (let count = 0; count < containers[heldPosition].length; count++) {
+			for (const label of labelsOfContainers[containerPosition++]) {
 				const attributes = readRecordAttributes(label)
 				const lang = (attributes['lang'] ?? '').toLowerCase()
 				const text = (label.value ?? '').trim()
