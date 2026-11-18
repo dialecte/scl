@@ -77,9 +77,11 @@ function composeBoundLNodeNames(params: {
  * A transaction that created tuple targets (an access point, a logical device, a logical node, a
  * control block, each with a uuid) has the references naming them by that uuid written their names
  * (see `tupleReferenceWrite`), once, over the records the transaction leaves: a target deleted since
- * is not written, a reference created or updated by the transaction is read as it stands. Each tag
- * of references that can name a created target is read once, whatever the number of targets; the
- * elements above each named target are read a level at a time, never one by one.
+ * is not written, a reference created or updated by the transaction is read as it stands. The
+ * references that can name a created target are looked up once per tag and uuid attribute, whatever
+ * the number of targets (a tag is read once more only when several lookups find a reference the
+ * transaction wrote, for its order); the elements above each named target are read a level at a
+ * time, never one by one.
  */
 async function writeTupleNamesOfCreatedTargets(params: {
 	operations: ReadonlyArray<Scl.Operation>
