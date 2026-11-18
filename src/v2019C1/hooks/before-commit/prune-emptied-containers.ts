@@ -97,7 +97,10 @@ function describeContainers(params: {
 	for (const record of [...cascade.deleted, ...cascade.within]) {
 		if (rootIds.has(record.id)) continue
 		const rootId = nearestRoot({ record, rootIds, read })
-		if (rootId) withinByRoot.set(rootId, [...(withinByRoot.get(rootId) ?? []), record])
+		if (!rootId) continue
+		const held = withinByRoot.get(rootId)
+		if (held) held.push(record)
+		else withinByRoot.set(rootId, [record])
 	}
 	return roots.map(function describeRoot(root): PrunedContainer {
 		const { parent } = root

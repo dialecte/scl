@@ -3,6 +3,7 @@ import { COMMIT_STEPS } from './commit-steps.constants'
 import relationInWrapperXml from './fixtures/commit-plan-a-relation-in-a-namespace-wrapper.xml?raw'
 import serverWithOneLogicalDeviceXml from './fixtures/commit-plan-a-server-with-one-logical-device.xml?raw'
 import inputNamingANewLogicalNodeXml from './fixtures/commit-plan-an-input-naming-a-logical-node-to-create.xml?raw'
+import oneSubNetworkWithBitRateXml from './fixtures/commit-plan-one-subnetwork-with-its-bit-rate.xml?raw'
 import twoGooseDataSetsXml from './fixtures/commit-plan-two-goose-data-sets-of-one-entry.xml?raw'
 import twoSubNetworksXml from './fixtures/commit-plan-two-subnetworks-one-with-one-access-point.xml?raw'
 
@@ -63,6 +64,16 @@ describe('planCommit - the containers the prune removes, each with why it goes a
 				'SubNetwork bus-a in Communication communication: emptied holds-nothing; within nothing',
 			],
 		},
+		// Bus_A keeps its BitRate, which goes with it, not with the Communication above it
+		'the only connected access point of the only SubNetwork deleted → Bus_A emptied holding its BitRate, the Communication above it':
+			{
+				sourceXml: oneSubNetworkWithBitRateXml,
+				write: deleting([{ tagName: 'ConnectedAP', id: 'bus-a-ied1' }]),
+				containers: [
+					'SubNetwork bus-a in Communication communication: emptied lost-required ConnectedAP; within BitRate bus-a-bit-rate',
+					'Communication communication in SCL project: above SubNetwork bus-a; within nothing',
+				],
+			},
 		'the only relation of a list in a namespace wrapper deleted → the list emptied, the wrapper above it':
 			{
 				sourceXml: relationInWrapperXml,

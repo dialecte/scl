@@ -5,7 +5,7 @@ import type { EmptiedRule } from '@/v2019C1/helpers/pruned-when-empty.types'
 export type PruneCandidate = Scl.Ref<Scl.ElementsOf> & { id: string }
 
 /** An element named by its tag and record id. */
-export type PrunedElement = { tagName: string; id: string }
+export type PrunedElement = { tagName: Scl.ElementsOf; id: string }
 
 /**
  * Why the commit removes a container: the transaction emptied it (it holds nothing, or lost every child of a group its

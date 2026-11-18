@@ -12,22 +12,10 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
- * Once the transaction's work is done, the commit's steps run ({@link planCommit}): every LNode it created and still
- * holds carries an `LNodeSpecNaming`: one brought by a copy or added by the caller is kept, the others get one from
- * the LNode's own naming; an LNode the transaction created or bound to a logical node of a
- * specification IED is specified on it, its naming names that IED and logical device whatever
- * the naming it was created with (a template's placeholder). The LNodes created or rebound and the logical nodes
- * their `lnUuid` name are read once ({@link readBoundLNodes}), for this and for their names.
- * Run here, not on create: when an LNode is created, its children (a copied
- * `LNodeSpecNaming` among them) are not added yet. Then the tuple references naming a target the transaction
- * created by its uuid are written its names, once for all the targets, and so is each LNode created or rebound, the
- * names of the logical node its `lnUuid` names ({@link writeTupleNamesAtCommit}). Then the LNodes bound to a logical
- * node the transaction deleted are released ({@link releaseLNodesOfDeletedLogicalNodes}).
- * Then the types the transaction left unused go, with every record of
- * them ({@link pruneUnusedTypes}), then the containers it left holding nothing ({@link pruneEmptiedContainers}: a
- * `DataTypeTemplates` the prune emptied among them), whatever wrote: a delete, an apply, an extract. Last, over the
- * transaction's operations and the ones staged here, a record deleted with a child left in the store refuses the
- * commit ({@link findLeftChildren}).
+ * Once the transaction's work is done, what the commit stages beyond it: the steps of {@link COMMIT_STEPS} run in order
+ * by {@link planCommit} - the LNodes' namings, the names and agreement of the references, the LNodes of a deleted
+ * logical node released, the unused types and the containers left holding nothing pruned - whatever wrote: a delete,
+ * an apply, an extract. A record deleted with a child left in the store refuses the commit.
  */
 export async function beforeCommit(params: {
 	operations: ReadonlyArray<Scl.Operation>
