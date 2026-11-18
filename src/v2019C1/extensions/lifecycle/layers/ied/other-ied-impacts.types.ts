@@ -17,8 +17,15 @@ export type DataSetEntry = {
 /** A reader of the project: the report's query or the apply's transaction. */
 export type IedReader = Core.Query<Config> | Core.Transaction<Config>
 
-/** What an IED update would change in other IEDs, and the groups of its report to block: see `readOtherIedImpacts`. */
+/** What an IED update would change in other IEDs, and the groups bringing it: see `readOtherIedImpacts`. */
 export type OtherIedImpacts = {
 	impacts: OtherIedImpact[]
-	blockedGroupIds: ReadonlySet<string>
+	/** The groups bringing a change to another IED: each waits for a decision. */
+	decidingGroupIds: ReadonlySet<string>
+}
+
+/** An input of another IED subscribed to data entries of an IED's data sets send, with those entries (record ids). */
+export type Subscription = {
+	input: { tagName: string; id: string }
+	entryIds: string[]
 }

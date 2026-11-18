@@ -135,16 +135,22 @@ the same report and the same apply: its instances follow the IED's, decided grou
   specification as a first placement (`report.mappings` for its levels), bound to the IED updated; skipping its groups
   writes nothing.
 
-**An update never changes another IED.** What accepting a group would change in another IED — an input or a data set
-entry of it the update deletes or clears with what it removes, an input subscribed through a control block of the
-updated IED to data a data set entry the update removes (or one of the project's own the template no longer holds)
-sends, a reference whose names would follow an element the update renames — is listed in `report.otherIedImpacts`
-(`{ ied, element, effect: 'deleted' | 'cleared' | 'unsubscribed' | 'renamed', groupId }`, type `OtherIedImpact`), once
-per group bringing it. The group bringing it, the groups it waits for and those waiting for it are `blocked:
-'affects-other-ied'`, suggested `skip`, and the report needs decisions: the rest of the update applies, those groups
-cannot be accepted (`apply` refuses decisions accepting one with `UPDATE_AFFECTS_OTHER_IED`, `meta: { groups }`). A
-consumer may refuse to confirm while any is listed. Once written, a write the update made in another IED is refused too
-(`meta: { ied, element }`).
+**A change to another IED waits for a decision.** What accepting a group would change in another IED is listed in
+`report.otherIedImpacts` before the decision (`{ ied, element, effect: 'deleted' | 'cleared' | 'renamed', groupId }`,
+type `OtherIedImpact`), once per group bringing it:
+
+- `deleted`: an input of it naming what the update removes, holding no internal address;
+- `cleared`: an input naming what the update removes, its source cleared and its internal address kept; an input
+  subscribed through a control block of the updated IED to data no entry of it sends any more (each entry sending it
+  removed, or the project's own whose removal is offered), its control block cleared and its data source kept, listed
+  under each group removing one of those entries and cleared once all are accepted;
+- `renamed`: a reference whose names follow an element the update renames.
+
+The group bringing it waits for a decision (`requiresDecision: 'changes-another-ied'`, a reference to deleted data
+keeping `names-deleted-data`), suggested `skip`, and the report needs decisions. Accepted, the change is written with
+that cleanup in the other IED, which records the project file it now requires (`MinRequestedSCDFiles`) as any edit of an
+IED does; skipped, the other IED stays as it is. A group depending on a skipped one cannot be accepted
+(`DECISION_DEPENDENCY_SKIPPED`).
 
 **Refused.**
 
@@ -795,10 +801,10 @@ For `verb: 'ssd'`, `report`/`apply` act on the element `ref` names (same resolut
 `tx.lifecycle.update.ied({ sourceQuery, iedRef, anchor, fileType, targetInstance?, report?, decisions?,
 keepNameTypesFrom?, takeOver? })` updates the IED of the project placed from a template ISD with a newer revision of it,
 as `apply` does for an IED's report (see [An IED](#an-ied-—-verb-ied)), or places it when the project holds none
-([`instantiate.ied`](./instantiate#ied)). Given a report and decisions, a group the report blocks accepted is refused
-with `UPDATE_AFFECTS_OTHER_IED` (`meta: { groups }`) before anything is written. Without them, it writes everything the
-revision brings; a write it would make in another IED is refused once staged (`meta: { ied, element }`): run `report`
-first to see and skip what would. Returns the IED, `placed` or `reconciled`.
+([`instantiate.ied`](./instantiate#ied)). Given a report and decisions, a group waiting for a decision left out is refused
+(`DECISION_REQUIRED`) before anything is written. Without them, it writes everything the revision brings, a change to
+another IED with its cleanup included: run `report` first to see and decide what would. Returns the IED, `placed` or
+`reconciled`.
 
 ## Satellites
 

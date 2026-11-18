@@ -6,22 +6,25 @@ import {
 	SUBSCRIBED_INPUT_TAG,
 } from './other-ied-impacts.constants'
 
-import { throwDialecteError } from '@dialecte/core'
-import { toRawRecord } from '@dialecte/core/helpers'
+import { toRawRecord, toRef } from '@dialecte/core/helpers'
 
-import { SCL_ERRORS } from '@/v2019C1/errors'
-import { isAccepted } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { getPathSegment } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { TUPLE_TARGET_KINDS } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
 import { readAttribute } from '@/v2019C1/helpers'
 import { readAncestries } from '@/v2019C1/hooks/before-commit/tuple-names'
+import { CONTROL_BLOCK_ATTRIBUTES_BY_TAG } from '@/v2019C1/hooks/shared/input-source.constants'
 
-import type { Candidate, DataSetEntry, IedReader, OtherIedImpacts } from './other-ied-impacts.types'
+import type {
+	Candidate,
+	DataSetEntry,
+	IedReader,
+	OtherIedImpacts,
+	Subscription,
+} from './other-ied-impacts.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type {
 	DecisionGroup,
-	DecisionMap,
 	DiffNode,
 	DiffReport,
 	OtherIedImpact,
@@ -30,33 +33,39 @@ import type * as Core from '@dialecte/core'
 import type { AnyRawRecord, AnyTreeRecord } from '@dialecte/core'
 
 /**
- * What accepting the groups of an IED update's report would change in another IED: an update never changes one. Read
+ * What accepting the groups of an IED update's report would change in another IED, listed before the decision. Read
  * from what the report already lists, once the removal side effects are written:
  *  - a reference of another IED the update deletes or clears with what it removes (`sideEffects`, and the references
  *    waiting for a decision because they name data the update deletes);
  *  - an input of another IED subscribed, through a control block of the updated IED, to data a data set entry the
- *    update removes sends, or one the template no longer holds that the project keeps unless its removal is accepted
- *    (`unsubscribed`);
+ *    update removes sends, or one the template no longer holds that the project keeps unless its removal is accepted:
+ *    its control block cleared (`cleared`, see `clearLostSubscriptions`);
  *  - a reference of another IED naming by uuid an element the update renames, or one below it: the names it gives
  *    follow the rename (`renamed`).
- * Each is listed once, with the group bringing it (`impacts`); that group, the groups it waits for and those waiting
- * for it are the groups to block (`blockedGroupIds`). Reads: the updated IED's tree, the records listed, their
+ * Each is listed once, with the group bringing it (`impacts`); those groups wait for a decision (`decidingGroupIds`).
+ * Reads: the updated IED's tree, the records listed, their
  * ancestries a level at a time, and the inputs and control blocks only when an entry goes.
  */
 export async function readOtherIedImpacts(
 	query: Core.Query<Config>,
 	params: { report: DiffReport },
 ): Promise<OtherIedImpacts> {
-	const none: OtherIedImpacts = { impacts: [], blockedGroupIds: new Set() }
+	const none: OtherIedImpacts = { impacts: [], decidingGroupIds: new Set() }
 	const instanceRef = params.report.instances[0]?.rootRef
 	if (!instanceRef || instanceRef.tagName !== 'IED') return none
 	const instanceTree = await query.any.getTree(instanceRef as Scl.Ref<'IED'>)
 	if (!instanceTree) return none
 	const inside = new Set(flatten(instanceTree).map((node) => node.id))
 	const groups = allGroups(params.report)
+	const references = referenceCandidates({ groups, inside })
+	const deleted = new Set(
+		references.flatMap((candidate) =>
+			candidate.effect === 'deleted' ? [candidate.element.id] : [],
+		),
+	)
 	const candidates = [
-		...referenceCandidates({ groups, inside }),
-		...(await unsubscribedCandidates(query, { groups, inside })),
+		...references,
+		...(await lostSubscriptionCandidates(query, { groups, instanceTree, deleted })),
 		...(await renamedCandidates(query, { groups, inside, instanceTree })),
 	]
 	if (candidates.length === 0) return none
@@ -73,60 +82,69 @@ export async function readOtherIedImpacts(
 		listed.set(key, { ied, ...candidate })
 	}
 	const impacts = [...listed.values()]
-	const named = new Set(impacts.map((impact) => impact.groupId))
-	return { impacts, blockedGroupIds: blockedGroupsOf({ groups, named }) }
+	return { impacts, decidingGroupIds: new Set(impacts.map((impact) => impact.groupId)) }
 }
 
 /**
- * Refuse, before anything is written, decisions accepting a group the report blocks (`UPDATE_AFFECTS_OTHER_IED`,
- * `meta: { groups }`): accepted, it would change another IED.
+ * The inputs outside an IED subscribed, through one of its control blocks, to data an entry of its data sets sends,
+ * each with the entries sending it: read before an update writes, so that an input whose entries all go loses its
+ * control block (`clearLostSubscriptions`). Reads: the IED's tree, the entries' data sets, holders and control blocks a
+ * level at a time, and the inputs once.
  */
-export function assertNoBlockedGroupAccepted(params: {
-	groups: readonly DecisionGroup[]
-	decisions: DecisionMap
-}): void {
-	const { decisions } = params
-	const accepted = params.groups.filter(
-		(group) => group.blocked && isAccepted({ group, decisions }),
-	)
-	if (accepted.length === 0) return
-	throwDialecteError(SCL_ERRORS.UPDATE_AFFECTS_OTHER_IED, {
-		meta: { groups: accepted.map((group) => group.id) },
-		detail: `apply (ied): ${accepted.length} accepted group(s) would change another IED`,
+export async function readSubscriptionsTo(
+	reader: IedReader,
+	params: { instance: AnyTreeRecord },
+): Promise<Subscription[]> {
+	const nodes = flatten(params.instance)
+	const inside = new Set(nodes.map((node) => node.id))
+	const entries = nodes.filter((node) => node.tagName === 'FCDA')
+	if (entries.length === 0) return []
+	const read = await readDataSetEntries(reader, {
+		removed: entries.map((entry) => ({ id: entry.id, groupId: entry.id })),
+	})
+	if (read.length === 0) return []
+	const inputs = await reader.getRecordsByTagName(SUBSCRIBED_INPUT_TAG)
+	return inputs.flatMap(function subscriptionOf(input): Subscription[] {
+		if (inside.has(input.id)) return []
+		const sending = read.filter((entry) => subscribes({ input, entry }))
+		if (sending.length === 0) return []
+		return [
+			{
+				input: { tagName: input.tagName, id: input.id },
+				entryIds: sending.map((entry) => entry.groupId),
+			},
+		]
 	})
 }
 
 /**
- * Refuse a write an IED update staged from its `from`-th operation on that lands in another IED, with
- * `UPDATE_AFFECTS_OTHER_IED` (`meta: { ied, element }`, the first one): an update never changes one. What it creates inside the updated IED counts as inside; a record outside it is climbed to the IED
- * holding it, a level at a time. Elements outside every IED (types, communication, provenance) are not judged.
+ * Clear the control block of each input subscribed before the update and no longer once it is written
+ * (`CONTROL_BLOCK_ATTRIBUTES_BY_TAG`): its data source and internal address kept, it names no control block that no
+ * longer sends its data. An input the update deleted is left as it is. The subscriptions read again from the IED as it
+ * stands, the inputs at once.
  */
-export async function assertWritesInsideIed(
+export async function clearLostSubscriptions(
 	tx: Core.Transaction<Config>,
-	params: { instance: AnyTreeRecord; from: number },
+	params: { subscriptions: readonly Subscription[]; instanceRef: Scl.Ref<'IED'> },
 ): Promise<void> {
-	const inside = new Set(flatten(params.instance).map((node) => node.id))
-	const outside = new Map<string, AnyRawRecord>()
-	for (const operation of tx.getStagedOperations().slice(params.from)) {
-		const record = operation.status === 'deleted' ? operation.oldRecord : operation.newRecord
-		if (inside.has(record.id)) continue
-		if (operation.status === 'created' && record.parent && inside.has(record.parent.id)) {
-			inside.add(record.id)
-			continue
-		}
-		outside.set(record.id, record as AnyRawRecord)
+	if (params.subscriptions.length === 0) return
+	const after = await tx.any.getTree(params.instanceRef)
+	const still = after ? await readSubscriptionsTo(tx, { instance: after }) : []
+	const stillIds = new Set(still.map((subscription) => subscription.input.id))
+	const lost = params.subscriptions.filter((subscription) => !stillIds.has(subscription.input.id))
+	if (lost.length === 0) return
+	const inputs = await tx.any.getRecords(
+		lost.map((subscription) => subscription.input as Scl.Ref<Scl.ElementsOf>),
+	)
+	for (const input of inputs) {
+		if (!input) continue
+		const names = CONTROL_BLOCK_ATTRIBUTES_BY_TAG.get(input.tagName) ?? []
+		const cleared = Object.fromEntries(names.map((name) => [name, undefined]))
+		// `update` removes an attribute given `undefined`; the untyped surface takes string values only
+		await tx.any.update(toRef(input) as Scl.Ref<Scl.ElementsOf>, {
+			attributes: cleared as unknown as Record<string, string>,
+		})
 	}
-	if (outside.size === 0) return
-	// a record the update deleted is no longer read: its ancestry climbs from the record the operation held
-	const iedOf = await owningIeds(tx, { records: [...outside.values()] })
-	const [changed] = [...iedOf.entries()]
-	if (!changed) return
-	const [elementId, ied] = changed
-	const element = outside.get(elementId)
-	throwDialecteError(SCL_ERRORS.UPDATE_AFFECTS_OTHER_IED, {
-		meta: { ied, element: { tagName: element?.tagName ?? '', id: elementId } },
-		detail: `update (ied): the update would write ${element?.tagName} in the IED ${ied}`,
-	})
 }
 
 /** The references of other IEDs a group's removal deletes or clears, and those waiting for a decision on it. */
@@ -155,44 +173,49 @@ function referenceCandidates(params: {
 		const effect = IMPACT_BY_CHANGE[group.change]
 		if (!effect) return []
 		const element = { tagName: instanceRef.tagName, id: instanceRef.id }
-		// one listing per group deleting what it names: each is blocked
+		// one listing per group deleting what it names: each waits for a decision
 		return (causesOf.get(group.id) ?? [group.id]).map((groupId) => ({ element, effect, groupId }))
 	})
 	return [...fromSideEffects, ...waiting]
 }
 
 /**
- * The inputs outside the updated IED subscribed, through a control block of the data set an entry the update removes
- * belongs to, to the data that entry sends: the same logical node (by uuid), its data object or below, its attribute or
- * below when the entry names one.
+ * The inputs outside the updated IED that lose their control block (`clearLostSubscriptions`): subscribed, through a
+ * control block of the updated IED, to data every entry sending it leaves (removed, or the project's own whose removal
+ * is offered). Listed under each group removing one of those entries: cleared once all of them are accepted. An input
+ * the update deletes is not listed again.
  */
-async function unsubscribedCandidates(
+async function lostSubscriptionCandidates(
 	query: Core.Query<Config>,
-	params: { groups: readonly DecisionGroup[]; inside: ReadonlySet<string> },
+	params: {
+		groups: readonly DecisionGroup[]
+		instanceTree: AnyTreeRecord
+		deleted: ReadonlySet<string>
+	},
 ): Promise<Candidate[]> {
-	const removed = params.groups.flatMap((group) =>
-		[group.primary, ...group.companions]
-			.filter((node) => node.tagName === 'FCDA' && LEAVING_CHANGES.has(node.change))
-			.flatMap((node) =>
-				node.instanceRef?.id ? [{ id: node.instanceRef.id, groupId: group.id }] : [],
-			),
+	const leaving = new Map(
+		params.groups.flatMap((group) =>
+			[group.primary, ...group.companions]
+				.flatMap(nodeAndBelow)
+				.filter((node) => node.tagName === 'FCDA' && LEAVING_CHANGES.has(node.change))
+				.flatMap((node) =>
+					node.instanceRef?.id ? [[node.instanceRef.id, group.id] as const] : [],
+				),
+		),
 	)
-	if (removed.length === 0) return []
-	const entries = await readDataSetEntries(query, { removed })
-	if (entries.length === 0) return []
-	const inputs = await query.getRecordsByTagName(SUBSCRIBED_INPUT_TAG)
-	return inputs.flatMap((input): Candidate[] => {
-		if (params.inside.has(input.id)) return []
-		const entry = entries.find((candidate) => subscribes({ input, entry: candidate }))
-		if (!entry) return []
-		return [
-			{
-				element: { tagName: input.tagName, id: input.id },
-				effect: 'unsubscribed',
-				groupId: entry.groupId,
-			},
-		]
+	if (leaving.size === 0) return []
+	const subscriptions = await readSubscriptionsTo(query, { instance: params.instanceTree })
+	return subscriptions.flatMap(function lostOf({ input, entryIds }): Candidate[] {
+		if (params.deleted.has(input.id)) return []
+		if (!entryIds.every((id) => leaving.has(id))) return []
+		const groupIds = [...new Set(entryIds.map((id) => leaving.get(id) ?? ''))]
+		return groupIds.map((groupId) => ({ element: input, effect: 'cleared', groupId }))
 	})
+}
+
+/** A diff node and every node below it. */
+function nodeAndBelow(node: DiffNode): DiffNode[] {
+	return [node, ...node.children.flatMap(nodeAndBelow)]
 }
 
 /**
@@ -377,20 +400,6 @@ async function owningIeds(
 		owners.set(record.id, readAttribute({ record: top, name: 'name', defaults: 'none' }))
 	}
 	return owners
-}
-
-/** The groups to block: each group named, the groups it waits for and the groups waiting for one of them. */
-function blockedGroupsOf(params: {
-	groups: readonly DecisionGroup[]
-	named: ReadonlySet<string>
-}): ReadonlySet<string> {
-	const { groups, named } = params
-	const waitedFor = groups.flatMap((group) => (named.has(group.id) ? group.dependsOn : []))
-	const blocking = new Set([...named, ...waitedFor])
-	const waiting = groups.flatMap((group) =>
-		group.dependsOn.some((dependency) => blocking.has(dependency)) ? [group.id] : [],
-	)
-	return new Set([...blocking, ...waiting])
 }
 
 /** A tree's nodes, the root first. */

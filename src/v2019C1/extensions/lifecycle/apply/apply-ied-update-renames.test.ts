@@ -13,15 +13,15 @@ import type * as Core from '@dialecte/core'
 type RenameCase = SclTest.BaseXmlTestCase & {
 	/** What the report lists the update would change in another IED: `<ied> <effect> <uuid of the element>`, sorted. */
 	impacts: string[]
-	/** The tags of the project elements whose group the report blocks, sorted. */
-	blockedTags: string[]
+	/** The groups waiting for a decision: `<tag> <reason>`, sorted. */
+	waiting: string[]
 }
 
-// No name another IED gives an element of the updated IED changes: a name the template changes that an input of another
-// IED carries is listed as a change of that IED, and the group bringing it is blocked.
+// A name the template changes that an input of another IED gives is listed as a change of that IED before the decision,
+// and the group bringing it waits for one.
 describe('query.lifecycle.report - an S-IED update renaming what another IED names', () => {
 	const testCases: SclTest.TestCases<RenameCase> = {
-		'the revision renaming the device CTRL to CTL, SUB1 subscribing to CSWI1.Pos.stVal in it → that input listed as renamed, the device group blocked':
+		'the revision renaming the device CTRL to CTL, SUB1 subscribing to CSWI1.Pos.stVal in it → that input listed as renamed, the device group waiting for a decision':
 			{
 				// the revision: CTRL renamed CTL (same uuid), PTRC replaced by RREC; SUB1: one input naming PTRC1.Tr.general
 				// (c…006), one naming CTRL/CSWI1.Pos.stVal through PositionGoose (c…007)
@@ -31,7 +31,11 @@ describe('query.lifecycle.report - an S-IED update renaming what another IED nam
 					'SUB1 deleted c0000000-0000-4000-8000-000000000006',
 					'SUB1 renamed c0000000-0000-4000-8000-000000000007',
 				],
-				blockedTags: ['ExtRef', 'LDevice', 'LN'],
+				waiting: [
+					'ExtRef names-deleted-data',
+					'LDevice changes-another-ied',
+					'LN changes-another-ied',
+				],
 			},
 	}
 
@@ -49,8 +53,10 @@ describe('query.lifecycle.report - an S-IED update renaming what another IED nam
 		)
 		expect(listed.sort()).toEqual(testCase.impacts)
 		const groups = report.instances.flatMap((instance) => instance.groups)
-		const blocked = groups.filter((group) => group.blocked === 'affects-other-ied')
-		expect(blocked.map((group) => group.primary.tagName).sort()).toEqual(testCase.blockedTags)
+		const waiting = groups.filter((group) => group.requiresDecision)
+		expect(
+			waiting.map((group) => `${group.primary.tagName} ${group.requiresDecision}`).sort(),
+		).toEqual(testCase.waiting)
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
@@ -92,6 +98,44 @@ describe('tx.lifecycle.apply - an S-IED update renaming what another IED names',
 					await tx.lifecycle.apply({ ...lifecycle, report, resolution: { decisions } })
 				})
 			},
+		})
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+// Accepted, the rename is written, and the names the other IED gives follow it.
+describe('tx.lifecycle.apply - an S-IED update renaming what another IED names, accepted', () => {
+	const testCases: SclTest.TestCases = {
+		'the revision renaming the device CTRL to CTL, the groups waiting for a decision accepted → CTL, SUB1’s input naming CTL':
+			{
+				// SUB1's input c…007 subscribes to CTRL/CSWI1.Pos.stVal through PositionGoose
+				sourceXml: isdTemplateRenamingCtrl,
+				targetXml: projectNorthWithSub1,
+				expectedQueries: [
+					'//default:IED[@name="BCU1"]//default:LDevice[@inst="CTL"][@uuid="b0000000-0000-4000-8000-000000000032"]',
+					'//default:IED[@name="SUB1"]//default:ExtRef[@uuid="c0000000-0000-4000-8000-000000000007"][@ldInst="CTL"]',
+				],
+			},
+	}
+
+	async function act({
+		project,
+		target,
+		testCase,
+	}: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		const lifecycle = await updateOfBcu1({ project, target, sourceXml: testCase.sourceXml })
+		const report = await target.query.lifecycle.report(lifecycle)
+		const groups = report.instances.flatMap((instance) => instance.groups)
+		const decisions = new Map(
+			groups.map(
+				(group) => [group.id, group.requiresDecision ? 'accept' : group.suggestedAction] as const,
+			),
+		)
+		await target.transaction(async function applyUpdate(tx) {
+			await tx.lifecycle.apply({ ...lifecycle, report, resolution: { decisions } })
 		})
 		return { assertOn: 'target' }
 	}
