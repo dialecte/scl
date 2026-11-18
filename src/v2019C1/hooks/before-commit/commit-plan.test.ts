@@ -237,6 +237,69 @@ function describeOperation(operation: Scl.Operation): string {
 	return `${operation.status} ${record.tagName} ${record.id} ${attributes}`
 }
 
+// What goes outside each container the prune removes: the control blocks sending a pruned data set lose its name and
+// rise in revision with it, each listed under its own data set only.
+describe('planCommit - what goes outside each container the prune removes', () => {
+	const testCases: SclTest.TestCases<PlanCase> = {
+		// GC1 sends DS1 and nothing else: DS1 pruned clears its datSet and raises its confRev
+		'the only entry of DS1 deleted → DS1 lists GC1 cleared and revised': {
+			sourceXml: twoGooseDataSetsXml,
+			write: deleting([{ tagName: 'FCDA', id: 'ds1-entry' }]),
+			containers: ['DataSet ds1: GSEControl gc1 cleared, GSEControl gc1 revised'],
+		},
+		// GC1 sends DS1 and GC2 sends DS2: each data set lists its own block only
+		'the only entries of DS1 and DS2 deleted in one transaction → each lists only its own block': {
+			sourceXml: twoGooseDataSetsXml,
+			write: deleting([
+				{ tagName: 'FCDA', id: 'ds1-entry' },
+				{ tagName: 'FCDA', id: 'ds2-entry' },
+			]),
+			containers: [
+				'DataSet ds1: GSEControl gc1 cleared, GSEControl gc1 revised',
+				'DataSet ds2: GSEControl gc2 cleared, GSEControl gc2 revised',
+			],
+		},
+		// Bus_A holds nothing anything outside names: nothing goes with it
+		'the only connected access point of Bus_A deleted → nothing goes with Bus_A': {
+			sourceXml: twoSubNetworksXml,
+			write: deleting([{ tagName: 'ConnectedAP', id: 'bus-a-ied1' }]),
+			containers: ['SubNetwork bus-a: nothing'],
+		},
+	}
+
+	async function act({ testCase, source }: SclTest.ActParams<PlanCase>): Promise<void> {
+		await expect(goesWithPlanned({ source, write: testCase.write })).resolves.toEqual(
+			testCase.containers,
+		)
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
+
+/** `<tag> <id>: <tag> <id> <effect>, ...` of each container the plan of the commit lists after `write`. */
+async function goesWithPlanned(params: {
+	source: SclTest.ActParams<PlanCase>['source']
+	write: (tx: Scl.Transaction) => Promise<void>
+}): Promise<string[]> {
+	const { source, write } = params
+	let described: string[] = []
+	const prepared = await source.prepare(async function writeThenPlan(tx) {
+		await write(tx)
+		const planned = await planCommit({ operations: tx.getStagedOperations(), query: tx })
+		described = planned.containers.map(function describeGoesWith(container) {
+			const outside =
+				container.goesWith.length === 0
+					? 'nothing'
+					: container.goesWith
+							.map((effect) => `${effect.element.tagName} ${effect.element.id} ${effect.effect}`)
+							.join(', ')
+			return `${container.element.tagName} ${container.element.id}: ${outside}`
+		})
+	})
+	prepared.discard()
+	return described
+}
+
 /** The containers the plan of the commit lists after `write`, described; the transaction discarded. */
 async function containersPlanned(params: {
 	source: SclTest.ActParams<PlanCase>['source']

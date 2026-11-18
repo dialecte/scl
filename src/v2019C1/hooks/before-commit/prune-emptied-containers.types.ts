@@ -21,7 +21,12 @@ export type PrunedContainer = {
 	parent: PrunedElement
 	reason: PruneReason
 	within: readonly Scl.RawRecord<Scl.ElementsOf>[]
+	/** Outside it: the references deleted or cleared, the control blocks whose data set it was cleared or revised. */
+	goesWith: readonly PrunedEffect[]
 }
+
+/** What a container's removal does to an element outside it. */
+export type PrunedEffect = { element: PrunedElement; effect: 'deleted' | 'cleared' | 'revised' }
 
 /** What the commit's prune stages, and each container it removes. */
 export type PrunedEmptiedContainers = {
