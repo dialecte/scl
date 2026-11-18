@@ -1,7 +1,9 @@
 import { removedChildrenByParent } from './removed-children'
 
+import { throwDialecteError } from '@dialecte/core'
+
 import { readAttribute } from '@/v2019C1/helpers'
-import { isEmptiedContainer } from '@/v2019C1/helpers/pruned-when-empty'
+import { emptiedRule } from '@/v2019C1/helpers/pruned-when-empty'
 import { PRUNED_WHEN_EMPTY_TAGS } from '@/v2019C1/helpers/pruned-when-empty.constants'
 import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 import {
@@ -10,7 +12,12 @@ import {
 	collectEmptiedAbove,
 } from '@/v2019C1/hooks/before-delete'
 
-import type { PruneCandidate } from './prune-emptied-containers.types'
+import type {
+	PruneCandidate,
+	PrunedContainer,
+	PrunedEmptiedContainers,
+	PruneReason,
+} from './prune-emptied-containers.types'
 import type { RemovedChildren } from './removed-children.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -33,31 +40,95 @@ export async function pruneEmptiedContainers(params: {
 	 * as gone when a container is judged, so a container holding only them is empty.
 	 */
 	gone?: ReadonlySet<string>
-}): Promise<Scl.Operation[]> {
+}): Promise<PrunedEmptiedContainers> {
 	const { operations, query, pending } = params
 	const kept = new Set<string>()
 	for (const record of pending.values()) if (record.parent) kept.add(record.parent.id)
 	const gone = new Set<string>(params.gone)
 	const roots: Scl.TrackedRecord<Scl.ElementsOf>[] = []
+	const reasons = new Map<string, PruneReason>()
 	const removedByParent = removedChildrenByParent({ operations })
 	for (const candidate of emptiedCandidates({ operations, removedByParent })) {
 		if (gone.has(candidate.id) || kept.has(candidate.id)) continue
 		const record = await query.getRecord(candidate)
 		const removed = removedByParent.get(candidate.id)?.children ?? []
-		if (!record || !isEmptiedContainer({ record, gone, removed })) continue
+		const rule = record ? emptiedRule({ record, gone, removed }) : undefined
+		if (!record || !rule) continue
 		gone.add(record.id)
 		roots.push(record)
+		reasons.set(record.id, { kind: 'emptied', ...rule })
 		const emptiedAbove = await collectEmptiedAbove(query, { record, gone, kept })
+		let below: Scl.TrackedRecord<Scl.ElementsOf> = record
+		for (const above of emptiedAbove) {
+			reasons.set(above.id, { kind: 'above', below: { tagName: below.tagName, id: below.id } })
+			below = above
+		}
 		roots.push(...emptiedAbove)
 	}
-	if (roots.length === 0) return []
+	if (roots.length === 0) return { operations: [], containers: [] }
 	const cascade = await collectDeleteCascade(query, { roots, emptiesContainers: true, kept })
-	return buildCascadeOperations(query, {
+	const staged = await buildCascadeOperations(query, {
 		cascade,
 		deletedRoots: roots,
 		pending,
 		raised: raisedBlocksOf({ operations }),
 	})
+	return { operations: staged, containers: describeContainers({ roots, reasons, cascade }) }
+}
+
+/**
+ * Each root pruned, with why and what it still holds: a record the cascade takes (`within`, `deleted`) belongs to the
+ * nearest root its parents reach, walked in memory over the records the cascade read.
+ */
+function describeContainers(params: {
+	roots: readonly Scl.TrackedRecord<Scl.ElementsOf>[]
+	reasons: ReadonlyMap<string, PruneReason>
+	cascade: {
+		within: readonly Scl.RawRecord<Scl.ElementsOf>[]
+		deleted: readonly Scl.RawRecord<Scl.ElementsOf>[]
+	}
+}): PrunedContainer[] {
+	const { roots, reasons, cascade } = params
+	const rootIds = new Set(roots.map((root) => root.id))
+	const read = new Map<string, Scl.RawRecord<Scl.ElementsOf>>(
+		[...roots, ...cascade.deleted, ...cascade.within].map((record) => [record.id, record]),
+	)
+	const withinByRoot = new Map<string, Scl.RawRecord<Scl.ElementsOf>[]>()
+	for (const record of [...cascade.deleted, ...cascade.within]) {
+		if (rootIds.has(record.id)) continue
+		const rootId = nearestRoot({ record, rootIds, read })
+		if (rootId) withinByRoot.set(rootId, [...(withinByRoot.get(rootId) ?? []), record])
+	}
+	return roots.map(function describeRoot(root): PrunedContainer {
+		const { parent } = root
+		const reason = reasons.get(root.id)
+		if (!parent || !reason) {
+			return throwDialecteError('ASSERTION_FAILED', {
+				detail: `describeContainers: a pruned ${root.tagName} "${root.id}" without its parent or its reason`,
+			})
+		}
+		return {
+			element: { tagName: root.tagName, id: root.id },
+			parent: { tagName: parent.tagName, id: parent.id },
+			reason,
+			within: withinByRoot.get(root.id) ?? [],
+		}
+	})
+}
+
+/** The id of the nearest root above a record, its parents walked over the records read; `undefined` when none. */
+function nearestRoot(params: {
+	record: Scl.RawRecord<Scl.ElementsOf>
+	rootIds: ReadonlySet<string>
+	read: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
+}): string | undefined {
+	const { rootIds, read } = params
+	let parentRef = params.record.parent
+	while (parentRef) {
+		if (rootIds.has(parentRef.id)) return parentRef.id
+		parentRef = read.get(parentRef.id)?.parent ?? null
+	}
+	return undefined
 }
 
 /** The control blocks whose configuration revision the transaction changed: a data set change raises it once. */

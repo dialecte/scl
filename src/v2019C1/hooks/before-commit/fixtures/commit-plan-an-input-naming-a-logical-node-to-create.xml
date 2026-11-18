@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- P1's inputs hold the ExtRef ext-a, and ext-b naming the logical node new-ln-uuid by its uuid only; P2's LD0 holds its LLN0; the type XCBR_T awaits the logical node -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="project" dev:db-id="header"/>
+    <IED name="P1" dev:db-id="p1">
+        <AccessPoint name="AP1" dev:db-id="p1-ap">
+            <Server dev:db-id="p1-server">
+                <Authentication dev:db-id="p1-authentication"/>
+                <LDevice inst="LD0" dev:db-id="p1-ld">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="p1-lln0">
+                        <Inputs dev:db-id="p1-inputs">
+                            <ExtRef intAddr="Beh" dev:db-id="ext-a"/>
+                            <ExtRef intAddr="Pos" lnUuid="new-ln-uuid" doName="Beh" dev:db-id="ext-b"/>
+                        </Inputs>
+                    </LN0>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="P2" dev:db-id="p2">
+        <AccessPoint name="AP1" dev:db-id="p2-ap">
+            <Server dev:db-id="p2-server">
+                <Authentication dev:db-id="p2-authentication"/>
+                <LDevice inst="LD0" dev:db-id="p2-ld">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="p2-lln0"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="templates">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lln0-type">
+            <DO name="Beh" type="ENS_T" dev:db-id="beh"/>
+        </LNodeType>
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="xcbr-type">
+            <DO name="Beh" type="ENS_T" dev:db-id="xcbr-beh"/>
+        </LNodeType>
+        <DOType id="ENS_T" cdc="ENS" dev:db-id="ens-type">
+            <DA name="stVal" bType="Enum" type="Beh_E" fc="ST" dev:db-id="st-val"/>
+        </DOType>
+        <EnumType id="Beh_E" dev:db-id="beh-enum">
+            <EnumVal ord="1" dev:db-id="on">on</EnumVal>
+        </EnumType>
+    </DataTypeTemplates>
+</SCL>

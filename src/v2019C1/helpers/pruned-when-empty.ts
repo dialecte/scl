@@ -8,6 +8,7 @@ import {
 import { readAttribute } from './read-attributes'
 import { isTransparentElement } from './transparent-elements'
 
+import type { EmptiedRule, EmptiedRuleParams } from './pruned-when-empty.types'
 import type { ReadAttributeParams } from './read-attributes.types'
 import type { Scl } from '@/v2019C1/config'
 
@@ -34,18 +35,24 @@ export function isPrunedWhenEmpty(record: Scl.RawRecord<Scl.ElementsOf>): boolea
  * took out of `record` (deleted, or moved away: not staying, even when the record read still lists them). Given nothing
  * gone or removed, only a container holding nothing goes.
  */
-export function isEmptiedContainer(params: {
-	record: Scl.RawRecord<Scl.ElementsOf>
-	gone: ReadonlySet<string>
-	removed?: readonly { tagName: string; id?: string }[]
-}): boolean {
+export function isEmptiedContainer(params: EmptiedRuleParams): boolean {
+	return emptiedRule(params) !== undefined
+}
+
+/**
+ * Which rule of {@link isEmptiedContainer} removes a container: it holds nothing but what is gone (`holds-nothing`), or
+ * it lost every child of a group its content model requires (`lost-required`, the group's tags); `undefined` when it
+ * stays.
+ */
+export function emptiedRule(params: EmptiedRuleParams): EmptiedRule | undefined {
 	const { record, gone, removed = [] } = params
-	if (!record.parent || !isPrunedWhenEmpty(record)) return false
-	if (holdsNothingBut({ record, gone })) return true
+	if (!record.parent || !isPrunedWhenEmpty(record)) return undefined
+	if (holdsNothingBut({ record, gone })) return { rule: 'holds-nothing' }
 	const takenOut = new Set(removed.flatMap((child) => (child.id ? [child.id] : [])))
 	const staying = record.children.filter((child) => !gone.has(child.id) && !takenOut.has(child.id))
-	if (staying.some((child) => IDENTIFIED_TAGS.has(child.tagName))) return false
-	return lostRequiredGroups({ record, staying, removed }).length > 0
+	if (staying.some((child) => IDENTIFIED_TAGS.has(child.tagName))) return undefined
+	const [lost] = lostRequiredGroups({ record, staying, removed })
+	return lost ? { rule: 'lost-required', group: [...lost] } : undefined
 }
 
 /** Whether a record, not the root, holds no text and no child but those in `gone`. */
