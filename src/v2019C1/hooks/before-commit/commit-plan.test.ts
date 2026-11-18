@@ -191,13 +191,16 @@ describe('planCommit - the plan stages what the commit stages, in order', () => 
 			{
 				sourceXml: twoGooseDataSetsXml,
 				write: deleting([{ tagName: 'FCDA', id: 'ds1-entry' }]),
-				containers: [],
+				containers: ['DataSet ds1 in LN0 ied1-lln0: emptied holds-nothing; within nothing'],
 			},
 	}
 
 	async function act({ testCase, source }: SclTest.ActParams<PlanCase>): Promise<void> {
-		const { planned, committed } = await stagedByPlanAndCommit({ source, write: testCase.write })
-		expect(planned.length).toBeGreaterThan(0)
+		const { planned, committed, containers } = await stagedByPlanAndCommit({
+			source,
+			write: testCase.write,
+		})
+		expect(containers).toEqual(testCase.containers)
 		expect(planned).toEqual(committed)
 	}
 
@@ -208,19 +211,21 @@ describe('planCommit - the plan stages what the commit stages, in order', () => 
 async function stagedByPlanAndCommit(params: {
 	source: SclTest.ActParams<PlanCase>['source']
 	write: (tx: Scl.Transaction) => Promise<void>
-}): Promise<{ planned: string[]; committed: string[] }> {
+}): Promise<{ planned: string[]; committed: string[]; containers: string[] }> {
 	const { source, write } = params
 	let own = 0
 	let planned: string[] = []
+	let containers: string[] = []
 	const prepared = await source.prepare(async function writeThenPlan(tx) {
 		await write(tx)
 		own = tx.getStagedOperations().length
 		const plan = await planCommit({ operations: tx.getStagedOperations(), query: tx })
 		planned = plan.staged.map(describeOperation)
+		containers = plan.containers.map(describeContainer)
 	})
 	const committed = prepared.operations.slice(own).map(describeOperation)
 	prepared.discard()
-	return { planned, committed }
+	return { planned, committed, containers }
 }
 
 /** `<status> <tag> <id> <attributes>`, the attributes of the record it leaves. */
