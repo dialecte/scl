@@ -463,13 +463,13 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "(refsOrRecords: readonly AnyRefOrRecord[], options?: InfoOptions) => Promise<ElementInfo[]>",
-			"summary": "`of` for several elements, in the order given: each one's own title (not its path from the root, which is `reference.buildElementPath`), and its state with `withState: true`. An element given as a record, in the shape a query answers it (raw, tracked or a tree node, no other key), is described as given, not read again (any other value is read by ref); except where its description depends on its stored neighbours, where the stored record is read: a signal (named among the signals of its stored parent), a tag whose title reads a child, and every element when the labels are asked. What the elements share is read once for the whole call: the siblings of the signals, the children the titles and labels read and, for the states, the kinds of the IEDs and what implements each LNode.",
+			"summary": "`of` for several elements, in the order given: each one's own title (not its path from the root, which is `reference.buildElementPath`), and its state with `withState: true`. An element given as a record, in the shape a query answers it (raw, tracked or a tree node, no other key), is described as given, not read again (any other value is read by ref); except where its description depends on its stored neighbours, where the stored record is read: a signal (named among the signals of its stored parent), a tag whose title reads a child, and every element when the labels are asked. Inside a transaction every element is read by ref, so a record read before a staged write is described as staged, and one deleted in the transaction as missing (an empty title). What the elements share is read once for the whole call: the siblings of the signals, the children the titles and labels read and, for the states, the kinds of the IEDs and what implements each LNode.",
 			"intents": [
 				"own titles or display names of many elements in one call",
 				"states of many LNodes or signals",
 				"instead of calling info.of in a loop"
 			],
-			"declaredAt": "src/v2019C1/extensions/info/query/of-each.ts:30"
+			"declaredAt": "src/v2019C1/extensions/info/query/of-each.ts:33"
 		},
 		{
 			"path": "doc.query.lifecycle.checkTemplateUuids",

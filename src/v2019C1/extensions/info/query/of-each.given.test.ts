@@ -289,3 +289,54 @@ describe('ofEach - inside a transaction', () => {
 		},
 	})
 })
+
+/**
+ * Inside a transaction a record given is read again by ref, so a record read before a staged write is described as
+ * staged - its attributes, its state and what implements it - and one deleted in the transaction as missing.
+ */
+describe('ofEach - a record read before a staged write', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		ref: Scl.Ref<Scl.ElementsOf>
+		/** Stages the change after the record was read. */
+		stage: (tx: Scl.Transaction) => Promise<unknown>
+		options?: InfoOptions
+		expected: { title: string; state?: unknown }
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'a Bay renamed after it was read → the staged name': {
+			sourceXml: EVERY_READ_XML,
+			ref: { tagName: 'Bay', id: 'bay1' },
+			stage: (tx) => tx.update({ tagName: 'Bay', id: 'bay1' }, { attributes: { name: 'B9' } }),
+			expected: { title: 'B9' },
+		},
+		'an LNode unbound after it was read, state asked → unlocked and unmapped': {
+			sourceXml: EVERY_READ_XML,
+			ref: { tagName: 'LNode', id: 'lnode' },
+			stage: (tx) =>
+				tx.update({ tagName: 'LNode', id: 'lnode' }, { attributes: { iedName: 'None' } }),
+			options: { mode: 'full', withState: true },
+			expected: { title: 'None/LD0/PTRC1', state: { locked: false, mapping: 'unmapped' } },
+		},
+		'a Bay deleted after it was read → an empty title, as a ref to it': {
+			sourceXml: EVERY_READ_XML,
+			ref: { tagName: 'Bay', id: 'bay1' },
+			stage: (tx) => tx.delete({ tagName: 'Bay', id: 'bay1' }),
+			expected: { title: '' },
+		},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		act: async ({ source, testCase }) => {
+			const described: { info?: unknown } = {}
+			await source.transaction(async function describeStale(tx) {
+				const stale = await tx.getRecord(testCase.ref)
+				await testCase.stage(tx)
+				const [info] = await ofEach(tx, stale ? [stale] : [], testCase.options)
+				described.info = info
+			})
+			expect(described.info).toEqual(testCase.expected)
+		},
+	})
+})

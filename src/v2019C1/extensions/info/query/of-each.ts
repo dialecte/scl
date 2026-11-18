@@ -2,6 +2,7 @@ import { TITLE_FIELDS_OVERRIDE } from '../constants/title'
 import { describeRecords } from './describe-records'
 import { createInfoContext } from './info-context'
 
+import { Transaction } from '@dialecte/core'
 import { isRawRecord, isTrackedRecord, isTreeRecord, toRef } from '@dialecte/core/helpers'
 
 import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
@@ -18,7 +19,9 @@ import type { AnyRefOrRecord } from '@dialecte/core'
  * record, in the shape a query answers it (raw, tracked or a tree node, no other key), is described as
  * given, not read again (any other value is read by ref); except where its description depends on its stored
  * neighbours, where the stored record is read: a signal (named among the signals of its stored parent),
- * a tag whose title reads a child, and every element when the labels are asked. What the elements share
+ * a tag whose title reads a child, and every element when the labels are asked. Inside a transaction
+ * every element is read by ref, so a record read before a staged write is described as staged, and one
+ * deleted in the transaction as missing (an empty title). What the elements share
  * is read once for the whole call: the siblings of the signals, the children the titles and labels read
  * and, for the states, the kinds of the IEDs and what implements each LNode.
  *
@@ -52,12 +55,13 @@ async function readStoredWhereNeeded(params: {
 	options: InfoOptions
 }): Promise<DescribedRecord[]> {
 	const { query, refsOrRecords, options } = params
+	const inTransaction = query instanceof Transaction
 	const records: DescribedRecord[] = []
 	const positions: number[] = []
 	const refs: Scl.Ref<Scl.ElementsOf>[] = []
 	for (let index = 0; index < refsOrRecords.length; index++) {
 		const refOrRecord = refsOrRecords[index]
-		if (isDescribedAsGiven({ refOrRecord, options })) {
+		if (!inTransaction && isDescribedAsGiven({ refOrRecord, options })) {
 			records[index] = refOrRecord as Core.AnyRawRecord
 			continue
 		}

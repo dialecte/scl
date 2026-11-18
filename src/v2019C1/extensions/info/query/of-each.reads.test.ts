@@ -295,3 +295,70 @@ describe('of and ofEach - labels and titles read from a child', () => {
 		},
 	})
 })
+
+/** A Bay holding two `<Labels>`, an ApplicationSclRef titled by its SclFileReference. */
+const TWO_LABELS_XML = /* xml */ `
+	<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+		<Substation name="S1" dev:db-id="sub-1">
+			<VoltageLevel name="V1" dev:db-id="vl-1">
+				<Bay name="B1" dev:db-id="bay-1">
+					<Labels dev:db-id="labels-a"><Label lang="en" dev:db-id="label-a-en">Bay one</Label></Labels>
+					<Labels dev:db-id="labels-b"><Label lang="fr" dev:db-id="label-b-fr">Travée un</Label><Label lang="de" dev:db-id="label-b-de">Feld eins</Label></Labels>
+				</Bay>
+			</VoltageLevel>
+			<eIEC61850-6-100:ApplicationSclRef dev:db-id="asr-1">
+				<eIEC61850-6-100:SclFileReference fileUuid="uuid-1" fileType="ICD" version="1" revision="A" dev:db-id="sfr-1"/>
+			</eIEC61850-6-100:ApplicationSclRef>
+		</Substation>
+	</SCL>
+`
+
+/** One element alone costs no more calls and records than on main, with several `<Labels>` or a title read from a child. */
+describe('of and ofEach - one element with several labels or a child title', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		ref: Scl.Ref<Scl.ElementsOf>
+		single?: boolean
+		options?: InfoOptions
+		expected: Cost
+	}
+
+	const BAY: Scl.Ref<'Bay'> = { tagName: 'Bay', id: 'bay-1' }
+	const APPLICATION_SCL_REF: Scl.Ref<'ApplicationSclRef'> = {
+		tagName: 'ApplicationSclRef',
+		id: 'asr-1',
+	}
+	const testCases: SclTest.TestCases<TestCase> = {
+		'of a Bay with two Labels': {
+			sourceXml: TWO_LABELS_XML,
+			ref: BAY,
+			single: true,
+			options: { withLabels: true },
+			expected: { calls: { getRecord: 1, getChildrenOfEach: 2 }, recordsMoved: 6 },
+		},
+		'ofEach of a Bay with two Labels': {
+			sourceXml: TWO_LABELS_XML,
+			ref: BAY,
+			options: { withLabels: true },
+			expected: { calls: { getRecords: 1, getChildrenOfEach: 2 }, recordsMoved: 6 },
+		},
+		'ofEach of one ApplicationSclRef': {
+			sourceXml: TWO_LABELS_XML,
+			ref: APPLICATION_SCL_REF,
+			expected: { calls: { getRecords: 1, getChildrenOfEach: 1 }, recordsMoved: 2 },
+		},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		dev: { perf: true },
+		act: async ({ source, testCase }) => {
+			const cost = await costOf({
+				source,
+				refs: [testCase.ref],
+				single: testCase.single,
+				options: testCase.options,
+			})
+			expect(cost).toEqual(testCase.expected)
+		},
+	})
+})

@@ -45,7 +45,7 @@ export async function describeRecords(params: DescribeRecordsParams): Promise<El
 			infos.push({ title: '' })
 			continue
 		}
-		const attributes = readRecordAttributes(record)
+		const attributes = readRecordAttributes({ record })
 		const signalName = signalNames[index]
 		const specAttributes =
 			childAttributes[index] ??
@@ -150,7 +150,7 @@ async function readChildAttributes(params: {
 		const children = await query.any.getChildrenOfEach(parents, { tagName })
 		for (let position = 0; position < positions.length; position++) {
 			const [child] = children[position]
-			attributes[positions[position]] = child ? readRecordAttributes(child) : {}
+			attributes[positions[position]] = child ? readRecordAttributes({ record: child }) : {}
 		}
 	}
 	return attributes
@@ -186,7 +186,7 @@ async function readLabels(params: {
 		const entries: LabelEntry[] = []
 		for (let count = 0; count < containers[heldPosition].length; count++) {
 			for (const label of labelsOfContainers[containerPosition++]) {
-				const attributes = readRecordAttributes(label)
+				const attributes = readRecordAttributes({ record: label })
 				const lang = (attributes['lang'] ?? '').toLowerCase()
 				const text = (label.value ?? '').trim()
 				if (lang && text) entries.push({ lang, id: attributes['id'] ?? '', text })
@@ -199,11 +199,11 @@ async function readLabels(params: {
 }
 
 /**
- * The attributes of a record in hand, as `query.getAttributes` reads them once it holds the record: the records here
- * were read through the call's query (staged state included) or given by the caller, described as given.
+ * The attributes of a record in hand, as `query.getAttributes` reads it with no staged write on it: every record here
+ * was read through the call's query, or given outside a transaction (`ofEach` reads a given record again inside one).
  */
-function readRecordAttributes(record: Core.AnyRawRecord): Record<string, string> {
-	return readAttributes({ record, dialecteConfig: SCL_DIALECTE_CONFIG })
+function readRecordAttributes(params: { record: Core.AnyRawRecord }): Record<string, string> {
+	return readAttributes({ record: params.record, dialecteConfig: SCL_DIALECTE_CONFIG })
 }
 
 async function readState(params: {
