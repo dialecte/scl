@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+    <Substation name="S1" dev:db-id="sub-1">
+        <Function name="F1" dev:db-id="f1">
+            <LNode lnClass="PTRC" lnInst="1" iedName="None" dev:db-id="ln0">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln0-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000000" dev:db-id="ln0-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln0-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln0-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000000" dev:db-id="ln0-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="2" iedName="None" dev:db-id="ln1">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln1-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000001" dev:db-id="ln1-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln1-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln1-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000001" dev:db-id="ln1-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="3" iedName="None" dev:db-id="ln2">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln2-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000002" dev:db-id="ln2-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln2-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln2-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000002" dev:db-id="ln2-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="4" iedName="None" dev:db-id="ln3">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln3-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000003" dev:db-id="ln3-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln3-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln3-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000003" dev:db-id="ln3-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="5" iedName="None" dev:db-id="ln4">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln4-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000004" dev:db-id="ln4-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln4-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln4-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000004" dev:db-id="ln4-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="6" iedName="None" dev:db-id="ln5">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln5-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000005" dev:db-id="ln5-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln5-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln5-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000005" dev:db-id="ln5-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="7" iedName="None" dev:db-id="ln6">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln6-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000006" dev:db-id="ln6-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln6-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln6-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000006" dev:db-id="ln6-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="8" iedName="None" dev:db-id="ln7">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln7-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000007" dev:db-id="ln7-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln7-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln7-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000007" dev:db-id="ln7-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="9" iedName="None" dev:db-id="ln8">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln8-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000008" dev:db-id="ln8-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln8-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln8-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000008" dev:db-id="ln8-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="10" iedName="None" dev:db-id="ln9">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln9-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000009" dev:db-id="ln9-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln9-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln9-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000009" dev:db-id="ln9-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="11" iedName="None" dev:db-id="ln10">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln10-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000010" dev:db-id="ln10-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln10-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln10-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000010" dev:db-id="ln10-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="12" iedName="None" dev:db-id="ln11">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln11-inputs">
+                    <eIEC61850-6-100:SourceRef input="Trip" uuid="00000000-0000-4000-8000-000000000011" dev:db-id="ln11-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="ln11-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="ln11-bd">
+                    <eIEC61850-6-100:InputVar varName="v" inputName="Trip(1)" inputUuid="00000000-0000-4000-8000-000000000011" dev:db-id="ln11-var"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </LNode>
+        </Function>
+    </Substation>
+</SCL>

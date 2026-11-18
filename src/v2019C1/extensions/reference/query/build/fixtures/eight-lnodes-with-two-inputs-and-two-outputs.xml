@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+    <Substation name="S1" dev:db-id="sub-1">
+        <Function name="F1" dev:db-id="f1">
+            <LNode lnClass="PTRC" lnInst="1" iedName="None" dev:db-id="ln0">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln0-inputs">
+                    <eIEC61850-6-100:SourceRef input="In0" dev:db-id="ln0-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="In1" dev:db-id="ln0-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <Private type="eIEC61850-6-100" dev:db-id="ln0-private">
+                    <eIEC61850-6-100:LNodeOutputs dev:db-id="ln0-outputs">
+                        <eIEC61850-6-100:ControlRef output="Out0" dev:db-id="ln0-cr-0"/>
+                        <eIEC61850-6-100:ControlRef output="Out1" dev:db-id="ln0-cr-1"/>
+                    </eIEC61850-6-100:LNodeOutputs>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="2" iedName="None" dev:db-id="ln1">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln1-inputs">
+                    <eIEC61850-6-100:SourceRef input="In0" dev:db-id="ln1-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="In1" dev:db-id="ln1-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <Private type="eIEC61850-6-100" dev:db-id="ln1-private">
+                    <eIEC61850-6-100:LNodeOutputs dev:db-id="ln1-outputs">
+                        <eIEC61850-6-100:ControlRef output="Out0" dev:db-id="ln1-cr-0"/>
+                        <eIEC61850-6-100:ControlRef output="Out1" dev:db-id="ln1-cr-1"/>
+                    </eIEC61850-6-100:LNodeOutputs>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="3" iedName="None" dev:db-id="ln2">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln2-inputs">
+                    <eIEC61850-6-100:SourceRef input="In0" dev:db-id="ln2-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="In1" dev:db-id="ln2-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <Private type="eIEC61850-6-100" dev:db-id="ln2-private">
+                    <eIEC61850-6-100:LNodeOutputs dev:db-id="ln2-outputs">
+                        <eIEC61850-6-100:ControlRef output="Out0" dev:db-id="ln2-cr-0"/>
+                        <eIEC61850-6-100:ControlRef output="Out1" dev:db-id="ln2-cr-1"/>
+                    </eIEC61850-6-100:LNodeOutputs>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="4" iedName="None" dev:db-id="ln3">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln3-inputs">
+                    <eIEC61850-6-100:SourceRef input="In0" dev:db-id="ln3-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="In1" dev:db-id="ln3-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <Private type="eIEC61850-6-100" dev:db-id="ln3-private">
+                    <eIEC61850-6-100:LNodeOutputs dev:db-id="ln3-outputs">
+                        <eIEC61850-6-100:ControlRef output="Out0" dev:db-id="ln3-cr-0"/>
+                        <eIEC61850-6-100:ControlRef output="Out1" dev:db-id="ln3-cr-1"/>
+                    </eIEC61850-6-100:LNodeOutputs>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="5" iedName="None" dev:db-id="ln4">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln4-inputs">
+                    <eIEC61850-6-100:SourceRef input="In0" dev:db-id="ln4-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="In1" dev:db-id="ln4-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <Private type="eIEC61850-6-100" dev:db-id="ln4-private">
+                    <eIEC61850-6-100:LNodeOutputs dev:db-id="ln4-outputs">
+                        <eIEC61850-6-100:ControlRef output="Out0" dev:db-id="ln4-cr-0"/>
+                        <eIEC61850-6-100:ControlRef output="Out1" dev:db-id="ln4-cr-1"/>
+                    </eIEC61850-6-100:LNodeOutputs>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="6" iedName="None" dev:db-id="ln5">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln5-inputs">
+                    <eIEC61850-6-100:SourceRef input="In0" dev:db-id="ln5-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="In1" dev:db-id="ln5-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <Private type="eIEC61850-6-100" dev:db-id="ln5-private">
+                    <eIEC61850-6-100:LNodeOutputs dev:db-id="ln5-outputs">
+                        <eIEC61850-6-100:ControlRef output="Out0" dev:db-id="ln5-cr-0"/>
+                        <eIEC61850-6-100:ControlRef output="Out1" dev:db-id="ln5-cr-1"/>
+                    </eIEC61850-6-100:LNodeOutputs>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="7" iedName="None" dev:db-id="ln6">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln6-inputs">
+                    <eIEC61850-6-100:SourceRef input="In0" dev:db-id="ln6-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="In1" dev:db-id="ln6-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <Private type="eIEC61850-6-100" dev:db-id="ln6-private">
+                    <eIEC61850-6-100:LNodeOutputs dev:db-id="ln6-outputs">
+                        <eIEC61850-6-100:ControlRef output="Out0" dev:db-id="ln6-cr-0"/>
+                        <eIEC61850-6-100:ControlRef output="Out1" dev:db-id="ln6-cr-1"/>
+                    </eIEC61850-6-100:LNodeOutputs>
+                </Private>
+            </LNode>
+            <LNode lnClass="PTRC" lnInst="8" iedName="None" dev:db-id="ln7">
+                <eIEC61850-6-100:LNodeInputs dev:db-id="ln7-inputs">
+                    <eIEC61850-6-100:SourceRef input="In0" dev:db-id="ln7-sr-0"/>
+                    <eIEC61850-6-100:SourceRef input="In1" dev:db-id="ln7-sr-1"/>
+                </eIEC61850-6-100:LNodeInputs>
+                <Private type="eIEC61850-6-100" dev:db-id="ln7-private">
+                    <eIEC61850-6-100:LNodeOutputs dev:db-id="ln7-outputs">
+                        <eIEC61850-6-100:ControlRef output="Out0" dev:db-id="ln7-cr-0"/>
+                        <eIEC61850-6-100:ControlRef output="Out1" dev:db-id="ln7-cr-1"/>
+                    </eIEC61850-6-100:LNodeOutputs>
+                </Private>
+            </LNode>
+        </Function>
+    </Substation>
+</SCL>
