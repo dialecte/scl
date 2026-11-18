@@ -10,7 +10,6 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test/hydrated-test'
 
-import type { SignalPlace } from './read-siblings-of-each.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 import type * as Core from '@dialecte/core'
@@ -53,6 +52,22 @@ const TWO_LNODES_XML = /* xml */ `
 		</Substation>
 	</SCL>`
 
+/** An LNode whose Private holds its signals of both tags together, a SourceRef on either side of a ControlRef. */
+const MIXED_PRIVATE_XML = /* xml */ `
+	<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
+		<Substation name="S1" ${ID}="sub-1">
+			<Function name="F1" ${ID}="f1">
+				<LNode lnClass="PTRC" lnInst="1" iedName="None" ${ID}="a">
+					<Private type="eIEC61850-6-100" ${ID}="signals">
+						<eIEC61850-6-100:SourceRef input="Trip" inputInst="1" ${ID}="sr1"/>
+						<eIEC61850-6-100:ControlRef output="Trip" outputInst="1" ${ID}="cr1"/>
+						<eIEC61850-6-100:SourceRef input="Trip" inputInst="2" ${ID}="sr2"/>
+					</Private>
+				</LNode>
+			</Function>
+		</Substation>
+	</SCL>`
+
 /** The LNodes `ln0` to `ln7` of the fixture, each with two inputs and two outputs. */
 const MANY_LNODES = 8
 
@@ -85,7 +100,7 @@ describe('readSiblingsOfEach', () => {
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		'signals of two LNodes, both tags → each its parent children of its tag, in order, itself included':
+		'signals of two LNodes, both tags → each its parent signal children, in order, itself included':
 			{
 				sourceXml: TWO_LNODES_XML,
 				signals: [
@@ -95,6 +110,12 @@ describe('readSiblingsOfEach', () => {
 					{ tagName: 'SourceRef', id: 'a-sr-0' },
 				],
 				expected: [['a-sr-0', 'a-sr-1'], ['b-sr-0'], ['a-cr-0', 'a-cr-1'], ['a-sr-0', 'a-sr-1']],
+			},
+		'a ControlRef held with SourceRefs by one Private → every signal of the Private, in its order':
+			{
+				sourceXml: MIXED_PRIVATE_XML,
+				signals: [{ tagName: 'ControlRef', id: 'cr1' }],
+				expected: [['sr1', 'cr1', 'sr2']],
 			},
 		'the root, which has no parent → itself alone': {
 			sourceXml: TWO_LNODES_XML,
@@ -121,26 +142,28 @@ describe('readSiblingsOfEach', () => {
 
 describe('readSignalChildrenOfEach', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
-		places: SignalPlace[]
+		parents: { tagName: string; id: string }[]
 		expected: string[][]
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		'inputs and outputs of two LNodes, a parent that names no element → the children of each tag in order, none for it':
+		'inputs and outputs of two LNodes, a parent that names no element → their signals in order, none for it':
 			{
 				sourceXml: TWO_LNODES_XML,
-				places: [
-					{
-						parent: signalRef({ tagName: 'LNodeOutputs', id: 'a-outputs' }),
-						tagName: 'ControlRef',
-					},
-					{ parent: signalRef({ tagName: 'LNodeInputs', id: 'b-inputs' }), tagName: 'SourceRef' },
-					{ parent: signalRef({ tagName: 'LNodeInputs', id: 'gone' }), tagName: 'SourceRef' },
-					{ parent: signalRef({ tagName: 'LNodeInputs', id: 'a-inputs' }), tagName: 'SourceRef' },
+				parents: [
+					{ tagName: 'LNodeOutputs', id: 'a-outputs' },
+					{ tagName: 'LNodeInputs', id: 'b-inputs' },
+					{ tagName: 'LNodeInputs', id: 'gone' },
+					{ tagName: 'LNodeInputs', id: 'a-inputs' },
 				],
 				expected: [['a-cr-0', 'a-cr-1'], ['b-sr-0'], [], ['a-sr-0', 'a-sr-1']],
 			},
-		'a parent with no SourceRef of its own, one inside its Private → no children, the Private not looked into':
+		'a Private holding both signal tags → every signal in its order, its other children left out': {
+			sourceXml: MIXED_PRIVATE_XML,
+			parents: [{ tagName: 'Private', id: 'signals' }],
+			expected: [['sr1', 'cr1', 'sr2']],
+		},
+		'a parent with no signal of its own, one inside its Private → no children, the Private not looked into':
 			{
 				sourceXml: /* xml */ `
 				<SCL ${ALL_XMLNS_NAMESPACES} ${ID}="scl-1">
@@ -156,9 +179,7 @@ describe('readSignalChildrenOfEach', () => {
 						</Function>
 					</Substation>
 				</SCL>`,
-				places: [
-					{ parent: signalRef({ tagName: 'LNodeInputs', id: 'a-inputs' }), tagName: 'SourceRef' },
-				],
+				parents: [{ tagName: 'LNodeInputs', id: 'a-inputs' }],
 				expected: [[]],
 			},
 	}
@@ -168,14 +189,14 @@ describe('readSignalChildrenOfEach', () => {
 		act: async ({ source, testCase }) => {
 			const children = await readSignalChildrenOfEach({
 				query: source.query,
-				places: testCase.places,
+				parents: testCase.parents.map(signalRef),
 			})
 			expect(children.map((list) => list.map((record) => record.id))).toEqual(testCase.expected)
 		},
 	})
 })
 
-/** Reading the siblings of many signals costs the same store reads as for one parent of each tag. */
+/** Reading the siblings of many signals costs the store reads of one parent: the parents, then one read per signal tag. */
 describe('readSiblingsOfEach - the store reads', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		signals: { tagName: string; id: string }[]

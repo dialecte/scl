@@ -1,48 +1,55 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
-import type { SignalPlace } from './read-siblings-of-each.types'
+import { SIGNAL_TAG_NAMES } from '@/v2019C1/extensions/reference/constants/path-extraction'
+
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
- * The direct children of each parent of the signal tag given with it, in the order of the parent's children; `[]`
- * for a parent that names no element (a ref without an id included: it is not looked up by tag) or holds no direct
- * child of the tag. A signal is a direct child of its parent: a transparent element (`Private`) is never looked into.
+ * The signals (SourceRef, ControlRef) among the direct children of each parent, in the order of the parent's
+ * children; `[]` for a parent that names no element (a ref without an id included: it is not looked up by tag) or
+ * holds no signal of its own. A transparent element (`Private`) below the parent is never looked into: a signal is a
+ * child of the element that holds it.
  *
- * Perf: the distinct parents in one `getRecords`, then one `getChildrenOfEach` per distinct tag, the parents given as
- * read: 1 + one store read per signal tag, at most 3 whatever the number of places.
+ * Perf: the distinct parents in one `getRecords`, then one `getChildrenOfEach` per signal tag some parent holds, the
+ * parents given as read: at most 3 store reads whatever the number of parents.
  */
 export async function readSignalChildrenOfEach(params: {
 	query: Core.Query<Config>
-	places: readonly SignalPlace[]
+	parents: readonly Scl.Ref<Scl.ElementsOf>[]
 }): Promise<Core.AnyRawRecord[][]> {
-	const { query, places } = params
-	const parentRefs = [
+	const { query, parents } = params
+	const refs = [
 		...new Map(
-			places.flatMap((place) =>
-				place.parent.id ? [[place.parent.id, place.parent] as const] : [],
-			),
+			parents.flatMap((parent) => (parent.id ? [[parent.id, parent] as const] : [])),
 		).values(),
 	]
-	const parents = parentRefs.length > 0 ? await query.getRecords(parentRefs) : []
+	const read = refs.length > 0 ? await query.getRecords(refs) : []
 	const parentById = new Map(
-		parents.flatMap((parent) => (parent ? [[parent.id, parent] as const] : [])),
+		read.flatMap((parent) => (parent ? [[parent.id, parent] as const] : [])),
 	)
 
-	const tagNames = [...new Set(places.map((place) => place.tagName))]
-	const childrenByTag = await Promise.all(
-		tagNames.map(function readChildrenOfTag(tagName) {
-			return readChildrenOfTagOfEach({ query, parentById, places, tagName })
+	const signalsByTag = await Promise.all(
+		[...SIGNAL_TAG_NAMES].map(function readSignalsOfTag(tagName) {
+			return readChildrenOfTag({ query, parents: [...parentById.values()], tagName })
 		}),
 	)
-	const byTag = new Map(tagNames.map((tagName, index) => [tagName, childrenByTag[index]]))
-	return places.map((place) => byTag.get(place.tagName)?.get(place.parent.id ?? '') ?? [])
+	const signalById = new Map(signalsByTag.flatMap((signals) => [...signals]))
+
+	return parents.map((ref) => {
+		const parent = ref.id ? parentById.get(ref.id) : undefined
+		if (!parent) return []
+		return parent.children.flatMap((link) => {
+			const signal = SIGNAL_TAG_NAMES.has(link.tagName) ? signalById.get(link.id) : undefined
+			return signal ? [signal] : []
+		})
+	})
 }
 
 /**
- * The siblings of each signal (SourceRef, ControlRef): the children of its parent of its tag, the signal included,
- * in the order of the parent's children. A record with no parent, or whose parent names no element or holds no child
- * of its tag, answers itself alone. Signals of one parent and tag share one list.
+ * The siblings of each signal (SourceRef, ControlRef): the signals among its parent's children, of either tag, the
+ * signal included, in the order of the parent's children. A record with no parent, or whose parent names no element
+ * or holds no signal, answers itself alone. Signals of one parent share one list.
  *
  * Perf: as `readSignalChildrenOfEach`, at most 3 store reads whatever the number of signals.
  */
@@ -54,10 +61,7 @@ export async function readSiblingsOfEach(params: {
 	const placed = records.filter((record) => Boolean(record.parent))
 	const children = await readSignalChildrenOfEach({
 		query,
-		places: placed.map((record) => ({
-			parent: record.parent as Scl.Ref<Scl.ElementsOf>,
-			tagName: record.tagName,
-		})),
+		parents: placed.map((record) => record.parent as Scl.Ref<Scl.ElementsOf>),
 	})
 	const siblingsById = new Map(placed.map((record, index) => [record.id, children[index]]))
 	return records.map((record) => {
@@ -67,34 +71,23 @@ export async function readSiblingsOfEach(params: {
 }
 
 /**
- * The children of `tagName` of each distinct parent read that a place of that tag names, by parent id; only the
- * parents holding a direct child of the tag are asked, so `getChildrenOfEach` never reads their transparent wrappers.
+ * The children of `tagName` of the parents holding one directly, by id; only those parents are asked, so
+ * `getChildrenOfEach` never reads a parent's transparent wrappers.
  */
-async function readChildrenOfTagOfEach(params: {
+async function readChildrenOfTag(params: {
 	query: Core.Query<Config>
-	parentById: ReadonlyMap<string, Scl.TrackedRecord<Scl.ElementsOf>>
-	places: readonly SignalPlace[]
+	parents: readonly Scl.TrackedRecord<Scl.ElementsOf>[]
 	tagName: string
-}): Promise<Map<string, Core.AnyRawRecord[]>> {
-	const { query, parentById, places, tagName } = params
-	const parents = [
-		...new Map(
-			places.flatMap((place) => {
-				const parent =
-					place.tagName === tagName && place.parent.id ? parentById.get(place.parent.id) : undefined
-				const holdsTag = parent?.children.some((child) => child.tagName === tagName)
-				return parent && holdsTag ? [[parent.id, parent] as const] : []
-			}),
-		).values(),
-	]
+}): Promise<Map<string, Core.AnyRawRecord>> {
+	const { query, tagName } = params
+	const parents = params.parents.filter((parent) =>
+		parent.children.some((child) => child.tagName === tagName),
+	)
 	if (parents.length === 0) return new Map()
 	const children = await query.getChildrenOfEach(parents, {
 		tagName: tagName as Scl.ChildrenOf<Scl.ElementsOf>,
 	})
 	return new Map(
-		parents.map((parent, index) => [
-			parent.id,
-			children[index].map((child) => toRawRecord(child) as Core.AnyRawRecord),
-		]),
+		children.flat().map((child) => [child.id, toRawRecord(child) as Core.AnyRawRecord] as const),
 	)
 }

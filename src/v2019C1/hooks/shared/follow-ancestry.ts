@@ -300,7 +300,7 @@ async function readMissingSiblings(
 	query: Core.Query<Config>,
 	params: { elements: readonly FollowedElement[] },
 ): Promise<Map<string, readonly AnyRawRecord[]>> {
-	// keyed by parent alone: a signal parent holds one signal tag
+	// keyed by parent alone: a parent's list holds its signals of every tag
 	const firstByParent = new Map<string, AnyRawRecord>()
 	for (const { record, siblings } of params.elements) {
 		if (siblings || !SIGNAL_TAG_NAMES.has(record.tagName) || !record.parent) continue

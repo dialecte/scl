@@ -24,9 +24,11 @@ export async function reconcileSignalSiblingPaths(
 	const strategy = PATH_EXTRACTION_CONFIG[tagName]
 	if (strategy?.type !== 'signal' || names.length === 0) return []
 
-	const [children] = await readSignalChildrenOfEach({ query, places: [{ parent, tagName }] })
-	const sharing = children.filter((child) =>
-		names.includes(readAttribute({ record: child, name: strategy.name, defaults: 'none' })),
+	const [signals] = await readSignalChildrenOfEach({ query, parents: [parent] })
+	const sharing = signals.filter(
+		(signal) =>
+			signal.tagName === tagName &&
+			names.includes(readAttribute({ record: signal, name: strategy.name, defaults: 'none' })),
 	)
 
 	const roots = sharing
