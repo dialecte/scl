@@ -23,7 +23,7 @@ export async function collectFromTree(
 	const belowDocumentRoot = root.tagName !== ROOT_ELEMENT
 	const tree = await query.any.getTree(root, {
 		...(select ? { select } : {}),
-		// stopgap until core C6b: getTree with nothing to prune reads the whole document whatever the root
+		// stopgap until core C6b: getTree with nothing to prune reads the whole document whatever the root (core load-tree-records.ts)
 		...(belowDocumentRoot ? { depth: Number.POSITIVE_INFINITY } : {}),
 	})
 	// `getTree` throws for a root it does not find; its type also allows `undefined` for a missing ref
