@@ -1,6 +1,7 @@
 import type { Scl } from '@/v2019C1/config'
 import type { DerivedAttributeValue } from '@/v2019C1/extensions/reference'
 import type { ElementPath } from '@/v2019C1/extensions/reference/query/build'
+import type { CollectedWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry.types'
 import type { AnyRawRecord } from '@dialecte/core'
 
 /** A root whose path a change moved, and what of it the paths follow. */
@@ -47,3 +48,12 @@ export type ReferrerSearch = {
 
 /** The attributes one record takes from a path it follows. */
 export type FollowedWrite = { record: AnyRawRecord; values: DerivedAttributeValue[] }
+
+/**
+ * A document read once with its ancestries, and its children index (`childrenIndexOf`): what a caller that read the
+ * document gives the follower, so it reads no subtree.
+ */
+export type FollowRead = {
+	document: CollectedWithAncestry
+	childrenOf: ReadonlyMap<string, readonly AnyRawRecord[]>
+}

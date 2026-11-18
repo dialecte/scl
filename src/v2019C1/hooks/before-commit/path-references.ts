@@ -27,6 +27,7 @@ import type { RecordChange } from './tuple-references.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { SclImportDiagnostic } from '@/v2019C1/errors'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
+import type { CollectedWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
 
@@ -39,7 +40,7 @@ import type { AnyRawRecord, RecordPatch } from '@dialecte/core'
  * the reference writes from it; a reference holding a uuid whose path still names nothing (or several elements)
  * refuses the commit (`REFERENCE_NAMES_UNRESOLVED`); one with no uuid stays as written. Nothing is read when no such
  * reference and no created or renamed element (nor any element given as one, `targetRoots`) exist; else each path referrer tag once for the waiting ones (kept when a segment of their path is a name the transaction gave), and the
- * whole document once, only when a reference is to be resolved.
+ * whole document once, only when a reference is to be resolved (none when the caller gives it, `document`).
  */
 export async function writePathReferencesAtCommit(params: {
 	operations: ReadonlyArray<Scl.Operation>
@@ -51,8 +52,10 @@ export async function writePathReferencesAtCommit(params: {
 	 * roots of a moved subtree): the references waiting for a path are read as for a created element.
 	 */
 	targetRoots?: ReadonlySet<string>
+	/** The whole document, when the caller read it already (with its ancestries): not read again. */
+	document?: CollectedWithAncestry
 }): Promise<Scl.Operation[]> {
-	const { operations, query, pending, targetRoots = new Set<string>() } = params
+	const { operations, query, pending, targetRoots = new Set<string>(), document } = params
 	const changes = foldChanges({ operations, pending })
 	const written = [...changes.values()].flatMap((change) => writtenCandidate({ change }))
 	const edited = [...pathEdits({ query }).keys()].flatMap((id) =>
@@ -76,7 +79,7 @@ export async function writePathReferencesAtCommit(params: {
 		]),
 	)
 	if (candidates.size === 0) return []
-	const resolved = await resolveAsImported({ query, candidates })
+	const resolved = await resolveAsImported({ query, candidates, document })
 	const writes = [...candidates.values()].flatMap((candidate) =>
 		writeOf({
 			candidate,
@@ -225,9 +228,10 @@ function isBoundLNode(params: { record: AnyRawRecord }): boolean {
 async function resolveAsImported(params: {
 	query: Core.Query<Config>
 	candidates: ReadonlyMap<string, PathCandidate>
+	document: CollectedWithAncestry | undefined
 }): Promise<ImportedResolution> {
 	const { query, candidates } = params
-	const document = await collectWithAncestry(query, {})
+	const document = params.document ?? (await collectWithAncestry(query, {}))
 	const edited = [...candidates.values()].filter((candidate) => candidate.holdsUuid)
 	const session = createSclImportSessionWith({
 		standardize: new Set(edited.map((candidate) => candidate.record.id)),

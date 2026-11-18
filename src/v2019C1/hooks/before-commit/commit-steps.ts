@@ -1,6 +1,8 @@
 import { readBoundLNodes } from './bound-logical-nodes'
 import { findLeftChildren } from './left-children'
 import { LEFT_CHILDREN_PERF_SPAN } from './left-children.constants'
+import { readMovePlaces, topmostMovedRoots } from './moved-roots'
+import { assertMovesFollowed, followMovesAtCommit } from './moves'
 import { writePathReferencesAtCommit } from './path-references'
 import { pruneEmptiedContainers } from './prune-emptied-containers'
 import { pruneUnusedTypes } from './prune-unused-types'
@@ -18,6 +20,19 @@ import { ensureLNodeSpecNaming, hasAttributeChange } from '@/v2019C1/hooks/share
 import type { CommitStepParams, CommitStepResult } from './commit-plan.types'
 import type { LeftChild } from './left-children.types'
 import type { Scl } from '@/v2019C1/config'
+
+/**
+ * The elements the transaction moved ({@link readMovePlaces}): the document read once when there is one, a moved subtree
+ * holding what a move does not follow refused first ({@link assertMovesFollowed}), and the roots whose paths the commit
+ * follows kept in the state with the places read. Stages nothing; reads nothing without a move.
+ */
+export async function movedRoots({ plan }: CommitStepParams): Promise<CommitStepResult> {
+	const { operations, query } = plan
+	const movePlaces = await readMovePlaces({ operations, query })
+	if (!movePlaces) return { operations: [] }
+	assertMovesFollowed(movePlaces)
+	return { operations: [], state: { movePlaces, targetRoots: topmostMovedRoots(movePlaces) } }
+}
 
 /**
  * Every LNode the transaction created and still holds carries an `LNodeSpecNaming`: one brought by a copy or added by
@@ -85,15 +100,38 @@ export async function tupleReferences({
 
 /**
  * The path references left without a uuid or with a path their update could not resolve
- * ({@link writePathReferencesAtCommit}).
+ * ({@link writePathReferencesAtCommit}); a moved root counts as created, and the document the move step read is not read
+ * again.
  */
 export async function pathReferences({
 	plan,
 	writes,
 }: CommitStepParams): Promise<CommitStepResult> {
-	const { operations, query } = plan
+	const { operations, query, state } = plan
 	return {
-		operations: await writePathReferencesAtCommit({ operations, query, pending: writes.pending }),
+		operations: await writePathReferencesAtCommit({
+			operations,
+			query,
+			pending: writes.pending,
+			targetRoots: new Set((state.targetRoots ?? []).map((root) => root.id)),
+			document: state.movePlaces?.document,
+		}),
+	}
+}
+
+/**
+ * What the transaction's moves change around them, over what every step before wrote ({@link followMovesAtCommit});
+ * nothing without a move.
+ */
+export async function moves({ plan, writes }: CommitStepParams): Promise<CommitStepResult> {
+	const { query, state } = plan
+	if (!state.movePlaces) return { operations: [] }
+	return {
+		operations: await followMovesAtCommit(query, {
+			places: state.movePlaces,
+			roots: state.targetRoots ?? [],
+			pending: writes.pending,
+		}),
 	}
 }
 

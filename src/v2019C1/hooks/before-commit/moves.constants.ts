@@ -1,0 +1,113 @@
+import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { PARENTS } from '@/v2019C1/definition/constants.generated'
+import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
+import { PATH_PAIRS_BY_TAG } from '@/v2019C1/hooks/shared/path-references.constants'
+
+import type { PlaceReadingRole } from './moves.types'
+import type { TupleReferencePair } from '@/v2019C1/constants'
+import type { ReferencePair } from '@/v2019C1/extensions/reference'
+
+/** The resolutions whose path is read from the referrer's own place: a move may leave the target out of reach. */
+const PLACE_DEPENDENT_RESOLUTIONS: ReadonlySet<string> = new Set([
+	RESOLUTION_TYPE.ancestorName,
+	RESOLUTION_TYPE.scopedName,
+	RESOLUTION_TYPE.behaviorDescription,
+])
+
+/** The pairs of each path reference tag whose path is read from the referrer's own place (`PATH_PAIRS_BY_TAG`). */
+export const PLACE_DEPENDENT_PAIRS_BY_TAG: ReadonlyMap<string, readonly ReferencePair[]> =
+	placeDependentPairsByTag()
+
+function placeDependentPairsByTag(): Map<string, ReferencePair[]> {
+	const byTag = new Map<string, ReferencePair[]>()
+	for (const [tagName, pairs] of PATH_PAIRS_BY_TAG) {
+		for (const pair of pairs) {
+			if (!PLACE_DEPENDENT_RESOLUTIONS.has(pair.resolution)) continue
+			const held = byTag.get(tagName)
+			if (held) held.push(pair)
+			else byTag.set(tagName, [pair])
+		}
+	}
+	return byTag
+}
+
+/** The tags those pairs may name. */
+export const PLACE_DEPENDENT_TARGET_TAGS: ReadonlySet<string> = placeDependentTargetTags()
+
+function placeDependentTargetTags(): Set<string> {
+	const tags = new Set<string>()
+	for (const pairs of PLACE_DEPENDENT_PAIRS_BY_TAG.values()) {
+		for (const pair of pairs) for (const tagName of pair.target) tags.add(tagName)
+	}
+	return tags
+}
+
+/** The attribute an element is named by in a reference. */
+export const UUID_ATTRIBUTE = 'uuid'
+
+/** The logical nodes: what sits only below them is named by its place in an IED's data model. */
+const LOGICAL_NODE_TAGS: ReadonlySet<string> = new Set(['LN', 'LN0'])
+
+/**
+ * The tags the definition places only at or below a logical node: each parent is a logical node or such a tag (a
+ * `DOI`, an `SDI`, a `DAI`, a `DataSet`, a control block), found to a fixpoint. A `Text` or a `Private`, which other
+ * elements hold too, is not one.
+ */
+function tagsOnlyBelowLogicalNodes(): Set<string> {
+	const parentsOf = PARENTS as Readonly<Record<string, readonly string[]>>
+	const below = new Set<string>(LOGICAL_NODE_TAGS)
+	let grew = true
+	while (grew) {
+		grew = false
+		for (const [tagName, parents] of Object.entries(parentsOf)) {
+			if (below.has(tagName) || parents.length === 0) continue
+			if (parents.every((parent) => below.has(parent) || parent === tagName)) {
+				below.add(tagName)
+				grew = true
+			}
+		}
+	}
+	return below
+}
+
+/**
+ * What a move does not follow yet, derived from the tuple registry and the definition: what tuple references name by
+ * its place (each pair's `target`: a logical node, a logical device, an access point, a control block) and what the
+ * definition places only below a logical node. A moved subtree holding one of them refuses the commit.
+ */
+/** The tuple reference registry, read as plain pairs by tag (one widening, no per-entry cast). */
+const TUPLE_PAIRS_BY_TAG: Readonly<Record<string, readonly TupleReferencePair[]>> =
+	TUPLE_REFERENCE_PAIRS
+
+export const UNFOLLOWED_MOVE_TAGS: ReadonlySet<string> = unfollowedMoveTags()
+
+function unfollowedMoveTags(): Set<string> {
+	const tags = tagsOnlyBelowLogicalNodes()
+	for (const pairs of Object.values(TUPLE_PAIRS_BY_TAG)) {
+		for (const pair of pairs) for (const tagName of pair.target) tags.add(tagName)
+	}
+	return tags
+}
+
+/**
+ * The tuple references that read the IED they name from their place (the registry's `tuple.ied`: the IED they sit in,
+ * `ancestor`, or an attribute of their parent, `parentAttribute`), by tag: moved away from what they read it from, they
+ * name another IED. A reference naming its IED outright (an LNode, a connected access point) moves as it is.
+ */
+export const PLACE_READING_REFERRERS: ReadonlyMap<string, PlaceReadingRole> =
+	placeReadingReferrers()
+
+function placeReadingReferrers(): Map<string, PlaceReadingRole> {
+	const byTag = new Map<string, PlaceReadingRole>()
+	for (const [tagName, pairs] of Object.entries(TUPLE_PAIRS_BY_TAG)) {
+		for (const pair of pairs) {
+			const { ied } = pair.tuple
+			if ('parentAttribute' in ied) byTag.set(tagName, 'parent')
+			else if ('ancestor' in ied && !byTag.has(tagName)) byTag.set(tagName, 'ied')
+		}
+	}
+	return byTag
+}
+
+/** The tag of the element an `ancestor` IED role reads. */
+export const IED_TAG = 'IED'

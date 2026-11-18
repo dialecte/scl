@@ -491,8 +491,11 @@ async function findOrphanedRefsInSubtrees(params: {
 			if (subtreeIds.has(refRecord.id)) continue
 			const attributes = collectOrphanedAttributes({ refPairs, refRecord, subtreeUuids })
 			if (attributes.size === 0) continue
-			const effect = KEEP_ON_ORPHAN_REFS.has(refTagName) ? 'cleared' : 'deleted'
-			orphaned.push({ record: refRecord, effect, attributes })
+			orphaned.push({
+				record: refRecord,
+				effect: orphanEffectOf({ tagName: refTagName }),
+				attributes,
+			})
 		}
 	}
 	const tupleReferrers = await Promise.all(
@@ -544,6 +547,14 @@ async function readUuidReferrers(
 			}
 		}),
 	)
+}
+
+/**
+ * What becomes of a reference whose target goes: one holding content of its own (`KEEP_ON_ORPHAN_REFS`: a signal, a
+ * signal specification, a behaviour variable) is kept with its uuid, path and companions cleared; any other is deleted.
+ */
+export function orphanEffectOf(params: { tagName: string }): OrphanedRef['effect'] {
+	return KEEP_ON_ORPHAN_REFS.has(params.tagName) ? 'cleared' : 'deleted'
 }
 
 // ── Attribute collection ──────────────────────────────────────────────────────

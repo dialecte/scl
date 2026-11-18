@@ -98,7 +98,10 @@ else await prepared.commit()
 - `stagedCount`: the number of staged operations the preview read.
 
 A preview holds only for the staged state it read: a write staged after it is not in it. Call it last, after every
-write. A container the transaction deletes itself is not listed: it is a delete, not a prune.
+write. A container the transaction deletes itself is not listed: it is a delete, not a prune. A transaction the commit
+refuses throws the same error (a move the commit does not follow: `MOVE_NOT_FOLLOWED`). The ids of records the commit
+creates (a `Private` wrapping an element of the extension namespace, on a move or a create) are not part of the
+preview; the ids of the containers it prunes are stable.
 
 ## `resetLNode`
 

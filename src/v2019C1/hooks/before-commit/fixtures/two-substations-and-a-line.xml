@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- S1/VL1/B1 holds the node L1 (uuid n1) and QA1, whose terminal t-inner (holding a vendor Private) names L1; S1/VL1/B2
+     holds QA2, whose terminal t-outer names L1, and QE1, whose terminal names the grounded node; S1/VL1/B4 holds QA4, whose
+     terminal t-cross names L5 of the other substation; S2/VL5/B5 holds the node L5 (uuid n5); the line LN1 holds QL1, whose
+     terminal t-line names L1 of S1 -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <Substation name="S1" dev:db-id="s1">
+        <VoltageLevel name="VL1" dev:db-id="vl1">
+            <Bay name="B1" dev:db-id="b1">
+                <ConductingEquipment name="QA1" type="CBR" dev:db-id="qa1">
+                    <Terminal connectivityNode="S1/VL1/B1/L1" substationName="S1" voltageLevelName="VL1" bayName="B1" cNodeName="L1" cNodeUuid="n1" dev:db-id="t-inner">
+                        <Private type="vendor-x" dev:db-id="t-inner-private">wiring</Private>
+                    </Terminal>
+                </ConductingEquipment>
+                <ConnectivityNode name="L1" pathName="S1/VL1/B1/L1" uuid="n1" dev:db-id="l1"/>
+            </Bay>
+            <Bay name="B2" dev:db-id="b2">
+                <ConductingEquipment name="QA2" type="CBR" dev:db-id="qa2">
+                    <Terminal connectivityNode="S1/VL1/B1/L1" substationName="S1" voltageLevelName="VL1" bayName="B1" cNodeName="L1" cNodeUuid="n1" dev:db-id="t-outer"/>
+                </ConductingEquipment>
+                <ConductingEquipment name="QE1" type="DIS" dev:db-id="qe1">
+                    <Terminal connectivityNode="S1/VL1/B2/grounded" substationName="S1" voltageLevelName="VL1" bayName="B2" cNodeName="grounded" dev:db-id="t-grounded"/>
+                </ConductingEquipment>
+            </Bay>
+            <Bay name="B4" dev:db-id="b4">
+                <ConductingEquipment name="QA4" type="CBR" dev:db-id="qa4">
+                    <Terminal connectivityNode="S2/VL5/B5/L5" substationName="S2" voltageLevelName="VL5" bayName="B5" cNodeName="L5" cNodeUuid="n5" dev:db-id="t-cross"/>
+                </ConductingEquipment>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+    <Substation name="S2" dev:db-id="s2">
+        <VoltageLevel name="VL5" dev:db-id="vl5">
+            <Bay name="B5" dev:db-id="b5">
+                <ConnectivityNode name="L5" pathName="S2/VL5/B5/L5" uuid="n5" dev:db-id="l5"/>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+    <Line name="LN1" dev:db-id="ln1">
+        <ConductingEquipment name="QL1" type="CBR" dev:db-id="ql1">
+            <Terminal connectivityNode="S1/VL1/B1/L1" substationName="S1" voltageLevelName="VL1" bayName="B1" cNodeName="L1" cNodeUuid="n1" dev:db-id="t-line"/>
+        </ConductingEquipment>
+    </Line>
+</SCL>

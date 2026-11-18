@@ -1,3 +1,4 @@
+import anIedAndABayXml from '../../../hooks/before-commit/fixtures/an-ied-with-two-logical-devices-and-a-bay.xml?raw'
 import serverWithOneLogicalDeviceXml from '../../../hooks/before-commit/fixtures/commit-plan-a-server-with-one-logical-device.xml?raw'
 import twoGooseDataSetsXml from '../../../hooks/before-commit/fixtures/commit-plan-two-goose-data-sets-of-one-entry.xml?raw'
 import twoSubNetworksXml from '../../../hooks/before-commit/fixtures/commit-plan-two-subnetworks-one-with-one-access-point.xml?raw'
@@ -7,6 +8,7 @@ import labelsAndLoneSubNetworkXml from './fixtures/commit-prune-labels-and-a-lon
 import threeSubNetworksXml from './fixtures/commit-prune-three-subnetworks.xml?raw'
 import twoLanguagesXml from './fixtures/commit-prune-two-objects-labelled-in-two-languages.xml?raw'
 
+import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
 import { runSclTestCases } from '@/v2019C1/test'
@@ -159,6 +161,54 @@ describe('tx.cleanUp.commitPrune - what the commit will prune, before it does', 
 			containers: testCase.containers,
 			types: testCase.types ?? [],
 		})
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
+
+// The preview runs the commit's own steps: a transaction the commit refuses makes it throw the same error.
+describe('tx.cleanUp.commitPrune - a transaction the commit refuses', () => {
+	type RefusedCase = SclTest.BaseXmlTestCase & {
+		/** What the transaction writes before the preview. */
+		write: (tx: Scl.Transaction) => Promise<void>
+		/** The key and code of the error the preview throws. */
+		expected: string
+	}
+
+	const testCases: SclTest.TestCases<RefusedCase> = {
+		// PTRC1 is a logical node of LD1: tuple references name it by its logical device
+		'a logical node moved to another logical device → the preview throws MOVE_NOT_FOLLOWED (SCL4003)':
+			{
+				sourceXml: anIedAndABayXml,
+				write: async function movePtrc1ToLd2(tx) {
+					await tx.any.move(
+						{ tagName: 'LN', id: 'ptrc1' },
+						{ parent: { tagName: 'LDevice', id: 'ld2' } },
+					)
+				},
+				expected: 'MOVE_NOT_FOLLOWED SCL4003',
+			},
+	}
+
+	async function act({ testCase, source }: SclTest.ActParams<RefusedCase>): Promise<void> {
+		let refused: string | undefined
+		// prepare runs the commit's steps too: it refuses the same transaction, nothing is staged
+		await source
+			.prepare(async function writeThenPreview(tx) {
+				await testCase.write(tx)
+				refused = await tx.cleanUp.commitPrune().then(
+					() => 'no error',
+					function errorOf(error: unknown) {
+						const dialecteError = toDialecteError(error)
+						return `${dialecteError?.key} ${dialecteError?.code}`
+					},
+				)
+			})
+			.then(
+				(prepared) => prepared.discard(),
+				() => undefined,
+			)
+		expect(refused).toBe(testCase.expected)
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

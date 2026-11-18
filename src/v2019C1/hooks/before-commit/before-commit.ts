@@ -13,9 +13,11 @@ import type * as Core from '@dialecte/core'
 
 /**
  * Once the transaction's work is done, what the commit stages beyond it: the steps of {@link COMMIT_STEPS} run in order
- * by {@link planCommit} - the LNodes' namings, the names and agreement of the references, the LNodes of a deleted
- * logical node released, the unused types and the containers left holding nothing pruned - whatever wrote: a delete,
- * an apply, an extract. A record deleted with a child left in the store refuses the commit.
+ * by {@link planCommit} - a moved subtree holding what a move does not follow refused first, the LNodes' namings, the
+ * names and agreement of the references, what the transaction's moves change around them (paths, references out of
+ * reach, terminals across substations, wrappers), the LNodes of a deleted logical node released, the unused types and
+ * the containers left holding nothing pruned - whatever wrote: a delete, an apply, an extract, a move. A record deleted
+ * with a child left in the store refuses the commit.
  */
 export async function beforeCommit(params: {
 	operations: ReadonlyArray<Scl.Operation>
