@@ -77,31 +77,31 @@ describe('buildElementPath - the store reads of one element', () => {
 
 	const testCases: SclTest.TestCases<TestCase> = {
 		'a ControlRef in a Private holding both signal tags → 12 reads, 13 records (was 13, 14)': {
-			// a Bay with an equipment and three LNodes (two named by spec naming, signals of both tags in one Private), an IED, types
+			// a Bay with an equipment and four LNodes (three named by spec naming, signals of both tags in one Private), an IED, types
 			sourceXml: mixedXml,
 			ref: { tagName: 'ControlRef', id: 'cr-1' },
 			expected: { storeReads: 12, recordsMoved: 13 },
 		},
 		'an LNode named in its Private → 7 reads, 7 records (was 8, 8)': {
-			// a Bay with an equipment and three LNodes (two named by spec naming, signals of both tags in one Private), an IED, types
+			// a Bay with an equipment and four LNodes (three named by spec naming, signals of both tags in one Private), an IED, types
 			sourceXml: mixedXml,
 			ref: { tagName: 'LNode', id: 'ln-wrapped' },
 			expected: { storeReads: 7, recordsMoved: 7 },
 		},
 		'a DOI under an LN → 7 reads, 7 records (was 8, 8)': {
-			// a Bay with an equipment and three LNodes (two named by spec naming, signals of both tags in one Private), an IED, types
+			// a Bay with an equipment and four LNodes (three named by spec naming, signals of both tags in one Private), an IED, types
 			sourceXml: mixedXml,
 			ref: { tagName: 'DOI', id: 'doi-1' },
 			expected: { storeReads: 7, recordsMoved: 7 },
 		},
 		'the document root → 1 read, 1 record (as before)': {
-			// a Bay with an equipment and three LNodes (two named by spec naming, signals of both tags in one Private), an IED, types
+			// a Bay with an equipment and four LNodes (three named by spec naming, signals of both tags in one Private), an IED, types
 			sourceXml: mixedXml,
 			ref: { tagName: 'SCL', id: 'scl-1' },
 			expected: { storeReads: 1, recordsMoved: 1 },
 		},
 		'a ref naming nothing → 1 read, no record (as before)': {
-			// a Bay with an equipment and three LNodes (two named by spec naming, signals of both tags in one Private), an IED, types
+			// a Bay with an equipment and four LNodes (three named by spec naming, signals of both tags in one Private), an IED, types
 			sourceXml: mixedXml,
 			ref: { tagName: 'Bay', id: 'missing' },
 			expected: { storeReads: 1, recordsMoved: 0 },

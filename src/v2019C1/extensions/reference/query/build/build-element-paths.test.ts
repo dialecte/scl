@@ -302,6 +302,21 @@ describe('buildElementPaths - inside a transaction', () => {
 					{ path: 'S1/V1/B2/XCBR5', segmentIds: [...STAGED_BAY, 'ln-direct'] },
 				],
 			},
+		'the Bay deleted, its equipment, LNode and signal asked with the VoltageLevel above → null for the deleted subtree, the VoltageLevel its path':
+			{
+				// a Bay with an equipment and four LNodes (three named by spec naming, signals of both tags in one Private), an IED, types
+				sourceXml: mixedXml,
+				stage: async function deleteBay(tx) {
+					await tx.delete({ tagName: 'Bay', id: 'bay-1' })
+					return [
+						{ tagName: 'ConductingEquipment', id: 'ce-1' },
+						{ tagName: 'LNode', id: 'ln-direct' },
+						{ tagName: 'ControlRef', id: 'cr-1' },
+						{ tagName: 'VoltageLevel', id: 'vl-1' },
+					]
+				},
+				expected: () => [null, null, null, { path: 'S1/V1', segmentIds: ['sub-1', 'vl-1'] }],
+			},
 		'a ControlRef created beside the others → named among the staged ControlRefs': {
 			// a Bay with an equipment and four LNodes (three named by spec naming, signals of both tags in one Private), an IED, types
 			sourceXml: mixedXml,
