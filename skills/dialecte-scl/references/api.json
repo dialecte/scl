@@ -768,7 +768,7 @@
 				"warn before a commit prunes a container",
 				"list what a commit deletes beyond the edits"
 			],
-			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/commit-prune.ts:33"
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/commit-prune.ts:35"
 		},
 		{
 			"path": "tx.cleanUp.orphanUuidRefs",

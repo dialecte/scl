@@ -24,6 +24,7 @@ import type {
 	FollowedReferrer,
 	FollowedRoot,
 	FollowedWrite,
+	FollowRead,
 	ReferrerSearch,
 } from './follow-ancestry.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -37,11 +38,12 @@ import type { AnyRawRecord } from '@dialecte/core'
  * references to each root (`references`), the attributes the root writes from its own path (`ownPath`), and, with
  * `below`, both for every element under it. A root followed below is read once with its subtree and ancestry, the
  * other roots in one read; each referrer tag is read once for all the roots, and every path is composed from the
- * ancestry read. One operation per record written, with all it holds for every element it names.
+ * ancestry read. A caller that read the document already gives it (`read`): the subtrees are taken from it, no subtree
+ * or ancestor read. One operation per record written, with all it holds for every element it names.
  */
 export async function followAncestry(
 	query: Core.Query<Config>,
-	params: { roots: readonly FollowedRoot[] },
+	params: { roots: readonly FollowedRoot[]; read?: FollowRead },
 ): Promise<Scl.Operation[]> {
 	const { elements, held } = await readFollowedElements(query, params)
 	if (elements.length === 0) return []
@@ -59,17 +61,19 @@ export async function followAncestry(
  */
 async function readFollowedElements(
 	query: Core.Query<Config>,
-	params: { roots: readonly FollowedRoot[] },
+	params: { roots: readonly FollowedRoot[]; read?: FollowRead },
 ): Promise<{ elements: FollowedElement[]; held: ReadonlyMap<string, AnyRawRecord> }> {
-	const { roots } = params
+	const { roots, read } = params
 	const belowRoots = roots.filter((root) => root.below)
 	const shallowRoots = roots.filter((root) => !root.below)
 
-	const subtrees = await Promise.all(
-		belowRoots.map(function readSubtree(followed) {
-			return collectWithAncestry(query, { root: followed.root })
-		}),
-	)
+	const subtrees = read
+		? subtreesOfRead({ read, roots: belowRoots })
+		: await Promise.all(
+				belowRoots.map(function readSubtree(followed) {
+					return collectWithAncestry(query, { root: followed.root })
+				}),
+			)
 	const shallowRecords =
 		shallowRoots.length > 0 ? await query.getRecords(shallowRoots.map((root) => root.root)) : []
 
@@ -90,12 +94,62 @@ async function readFollowedElements(
 				]
 			: []
 	})
+	// a document read holds every record a path may read below or above the roots
 	const held = new Map(
-		subtrees.flatMap((subtree) =>
+		(read ? [read.document] : subtrees).flatMap((subtree) =>
 			subtree.records.map((record): [string, AnyRawRecord] => [record.id, record]),
 		),
 	)
 	return { elements: mergeElements([...below, ...shallow]).filter(isFollowed), held }
+}
+
+/**
+ * The children of each element of a document read, by id: by their parent, and by the nearest element above them that
+ * the read holds (through a transparent wrapper the read goes through). Built once per read.
+ */
+export function childrenIndexOf(params: {
+	document: CollectedWithAncestry
+}): Map<string, AnyRawRecord[]> {
+	const { document } = params
+	const childrenOf = new Map<string, AnyRawRecord[]>()
+	for (const record of document.records) {
+		const parentId = record.parent?.id
+		const aboveId = document.ancestryOf(record.id).at(-1)?.id
+		for (const id of parentId === aboveId ? [parentId] : [parentId, aboveId]) {
+			if (!id) continue
+			const children = childrenOf.get(id)
+			if (children) children.push(record)
+			else childrenOf.set(id, [record])
+		}
+	}
+	return childrenOf
+}
+
+/**
+ * The subtree of each root, taken from a document read with its ancestries and children index: the root and every
+ * element below it, in the order of the read.
+ */
+function subtreesOfRead(params: {
+	read: FollowRead
+	roots: readonly FollowedRoot[]
+}): CollectedWithAncestry[] {
+	const { document, childrenOf } = params.read
+	const order = new Map<string, number>()
+	document.records.forEach((record, index) => order.set(record.id, index))
+	return params.roots.map(function subtreeOf(followed) {
+		const root = document.records[order.get(followed.root.id ?? '') ?? -1]
+		const records: AnyRawRecord[] = root ? [root] : []
+		const seen = new Set<string>(root ? [root.id] : [])
+		for (let index = 0; index < records.length; index++) {
+			for (const child of childrenOf.get(records[index].id) ?? []) {
+				if (seen.has(child.id)) continue
+				seen.add(child.id)
+				records.push(child)
+			}
+		}
+		records.sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0))
+		return { records, ancestryOf: document.ancestryOf }
+	})
 }
 
 /** The root of a subtree with what its caller follows of it, and every element below it with both followed. */

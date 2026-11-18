@@ -25,15 +25,17 @@ type PlanCase = SclTest.BaseXmlTestCase & {
 	containers: string[]
 }
 
-// The commit's steps run in one order, each reading what every step before it wrote, but the type prune, which reads
-// the transaction's operations only.
+// The commit's steps run in one order, each reading what every step before it wrote, but the moved roots and the type
+// prune, which read the transaction's operations only.
 describe('planCommit - the commit runs its steps in one order', () => {
 	it('lists its steps in the order they run, each reading every step before it but the type prune', () => {
 		expect(COMMIT_STEPS.map((step) => `${step.name} ${step.readsEarlier}`)).toEqual([
+			'movedRoots false',
 			'lnodeNamings true',
 			'tupleNames true',
 			'tupleReferences true',
 			'pathReferences true',
+			'moves true',
 			'releasedLNodes true',
 			'unusedTypes false',
 			'emptiedContainers true',

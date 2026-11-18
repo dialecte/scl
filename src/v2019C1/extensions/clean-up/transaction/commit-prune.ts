@@ -26,7 +26,9 @@ import type { AnyRawRecord } from '@dialecte/core'
  * what goes with it outside (a data set's control blocks, `cleared` and `revised`); then the types the commit removes as unused, with their records.
  *
  * A preview holds only for the staged state it read (`stagedCount` operations): call it last, after every write, then
- * commit or discard. A step the commit gains later is seen here without a change.
+ * commit or discard. A step the commit gains later is seen here without a change. A transaction the commit refuses
+ * throws the same error. The ids of records the commit creates (a `Private` wrapping an element of the extension
+ * namespace, on a move or a create) are not part of the preview; the ids of the containers it prunes are stable.
  *
  * @intent preview what the commit will remove, warn before a commit prunes a container, list what a commit deletes beyond the edits
  */
