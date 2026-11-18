@@ -24,6 +24,7 @@ buildMappedLNodePath ↔ resolveMappedLNode     (mapped LNode ↔ implementing L
 | `findRefsTo`           | reverse   | target ref                           | `ResolvedReference[]`                                    | find all REF records pointing to a given element              |
 | `buildMappedLNodePath` | write     | mapped `LNode` attributes            | IED-section path string (or `null` when unmapped)        | computing the path to the IED `LN` that implements an `LNode` |
 | `resolveMappedLNode`   | read      | `LNode` record                       | `TrackedRecord` (`LN`/`LN0`)                             | resolving a mapped `LNode` to its implementing IED `LN`       |
+| `readSpecNamings`      | read      | many `LNode` refs or records         | `LNodeSpecNaming` record or `undefined`, per input       | reading the specified naming of many `LNode`s in 2 or 3 reads |
 
 ### Name distinctions
 

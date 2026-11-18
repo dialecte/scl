@@ -2,7 +2,7 @@ import { buildElementPath } from '../build/build-element-path'
 import { functionBaseOf, isFunctionScoped } from '../build/function-scope'
 import { nameScopeOf } from '../build/name-scope'
 import { fullSignalName, getPathSegment, joinPathParts } from '../build/path-segment'
-import { readSpecNamings } from '../build/spec-namings'
+import { readSpecNamingsById } from '../build/spec-namings'
 import { parseReferencePath, parsePathSegments, splitLnodeQualifier } from './parse-path'
 import { resolveMappedData } from './resolve-mapped-data'
 import { LN_CLASS_INST_ATTR, LN_CLASS_VALUES } from './resolve-reference-path.constants'
@@ -82,7 +82,7 @@ export async function resolveReferencePath(
 	) {
 		const ancestors = await query.findAncestors(record, { order: 'top-down' })
 		ancestry = ancestors.map((ancestor) => toRawRecord(ancestor) as AnyRawRecord)
-		specNamings = await readSpecNamings(query, { records: ancestry })
+		specNamings = await readSpecNamingsById(query, { records: ancestry })
 	}
 
 	// a FunctionRef naming nothing gives no base: the path is then read as written, the absolute form
@@ -437,7 +437,7 @@ async function findBySegmentScan(params: {
 	const { query, tagName, segment, expectedAncestry } = params
 
 	const records = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
-	const specNamings = await readSpecNamings(query, { records: records.map(toRawRecord) })
+	const specNamings = await readSpecNamingsById(query, { records: records.map(toRawRecord) })
 
 	for (const record of records) {
 		const seg = getPathSegment(toRawRecord(record), { specNaming: specNamings.get(record.id) })
@@ -459,7 +459,7 @@ async function matchesAncestry(
 	if (expectedSegments.length === 0) return true
 
 	const ancestors = await query.findAncestors(candidate)
-	const specNamings = await readSpecNamings(query, { records: ancestors.map(toRawRecord) })
+	const specNamings = await readSpecNamingsById(query, { records: ancestors.map(toRawRecord) })
 
 	// findAncestors returns bottom-up [parent, grandparent, …]
 	// Build top-down segments, skipping transparent elements
