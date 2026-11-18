@@ -386,7 +386,7 @@
 				"LNodeType/DOType/DAType/EnumType closure of a logical node",
 				"collect the DataTypeTemplates of a selection"
 			],
-			"declaredAt": "src/v2019C1/extensions/data-model/query/resolve.ts:15",
+			"declaredAt": "src/v2019C1/extensions/data-model/query/resolve.ts:29",
 			"example": "await doc.query.dataModel.resolve({ records: [lnodeRecord] })"
 		},
 		{

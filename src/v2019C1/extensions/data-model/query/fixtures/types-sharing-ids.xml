@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+	<Substation name="S1" dev:db-id="sub-1">
+		<VoltageLevel name="V1" dev:db-id="vl-1">
+			<Bay name="B1" dev:db-id="bay-1">
+				<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="TD" dev:db-id="lnode-dup"/>
+				<LNode iedName="None" lnClass="CSWI" lnInst="2" lnType="ONLY_DOTYPE" dev:db-id="lnode-on-dotype"/>
+				<LNode iedName="None" lnClass="CSWI" lnInst="3" lnType="NOWHERE" dev:db-id="lnode-nowhere"/>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<DataTypeTemplates dev:db-id="dtt-1">
+		<LNodeType id="TD" lnClass="CSWI" dev:db-id="lnt-td-a">
+			<DO name="Pos" type="DD" dev:db-id="do-a-pos"/>
+			<Private type="vendor" dev:db-id="lnt-td-a-private">
+				<DO name="Hid" type="HIDDEN" dev:db-id="do-a-hid"/>
+			</Private>
+		</LNodeType>
+		<LNodeType id="TD" lnClass="CSWI" dev:db-id="lnt-td-b">
+			<DO name="Other" type="OTHER" dev:db-id="do-b-other"/>
+		</LNodeType>
+		<DOType id="DD" cdc="ENS" dev:db-id="dot-dd-a">
+			<DA name="stVal" bType="Enum" type="ED" fc="ST" dev:db-id="da-dd-a"/>
+		</DOType>
+		<DOType id="DD" cdc="ENS" dev:db-id="dot-dd-b">
+			<DA name="stVal" bType="Enum" type="EOTHER" fc="ST" dev:db-id="da-dd-b"/>
+		</DOType>
+		<DOType id="ONLY_DOTYPE" cdc="SPS" dev:db-id="dot-only">
+			<DA name="q" bType="Quality" fc="ST" dev:db-id="da-only-q"/>
+		</DOType>
+		<DOType id="HIDDEN" cdc="SPS" dev:db-id="dot-hidden">
+			<DA name="q" bType="Quality" fc="ST" dev:db-id="da-hidden-q"/>
+		</DOType>
+		<DOType id="OTHER" cdc="ENS" dev:db-id="dot-other">
+			<DA name="stVal" bType="Enum" type="ED" fc="ST" dev:db-id="da-other"/>
+		</DOType>
+		<EnumType id="ED" dev:db-id="et-ed-a">
+			<EnumVal ord="0" dev:db-id="ev-ed-a">a</EnumVal>
+		</EnumType>
+		<EnumType id="ED" dev:db-id="et-ed-b">
+			<EnumVal ord="0" dev:db-id="ev-ed-b">b</EnumVal>
+		</EnumType>
+		<EnumType id="EOTHER" dev:db-id="et-eother">
+			<EnumVal ord="0" dev:db-id="ev-eother">c</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>
