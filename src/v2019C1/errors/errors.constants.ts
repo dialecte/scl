@@ -106,6 +106,15 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL1014',
 		message: 'The report names an element the document no longer holds',
 	},
+	/**
+	 * A fork on an open ISD document is given a file that is not a version of it: another file (the Headers name
+	 * different files, `reason: 'other-file'`, `fileUuid`, `otherFileUuid`), or the same file holding another IED
+	 * (`reason: 'other-ied'`, `iedUuid`, `otherIedUuid`). `meta: { reason, ... }`
+	 */
+	NOT_A_VERSION_OF_FILE: {
+		code: 'SCL1015',
+		message: 'The file is not a version of the open file',
+	},
 	/** The template file holds nothing that can be instantiated, or not the element an SSD operation names. */
 	TEMPLATE_ROOT_NOT_FOUND: {
 		code: 'SCL2001',
