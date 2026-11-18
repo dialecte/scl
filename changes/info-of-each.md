@@ -1,0 +1,3 @@
+### Changed
+
+- `info.ofEach` reads in a fixed number of calls whatever the number of elements: the refs in one read, the siblings of all the signals in one batch, the children that titles and labels read once for the call (was one read per signal parent and per element). An element given as a record, in the shape a query answers it, is now described as given, not read again; a signal, a tag titled by its child, and every element when labels are asked are still described from the stored record, and so is every element inside a transaction (a record read before a staged write is described as staged). Titles, states and labels are unchanged for refs and for records that match the store.
