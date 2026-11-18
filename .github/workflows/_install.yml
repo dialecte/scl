@@ -1,3 +1,4 @@
+# Written by `dialecte ci sync` from the @dialecte/cli template: change the template, not this file.
 name: _install
 on:
   workflow_call:
@@ -20,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 'latest'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Setup node_modules Cache

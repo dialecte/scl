@@ -1,44 +1,60 @@
+# Written by `dialecte ci sync` from the @dialecte/cli template: change the template, not this file.
 name: _check-npm-version
 
 on:
   workflow_call:
     outputs:
-      version_changed:
-        description: 'Whether the deployed package version has changed'
-        value: ${{ jobs.check.outputs.version_changed }}
+      publish:
+        description: 'Whether this push publishes its version to npm'
+        value: ${{ jobs.check.outputs.publish }}
+      dist_tag:
+        description: 'The npm dist-tag the version is published under: latest, or next for a pre-release'
+        value: ${{ jobs.check.outputs.dist_tag }}
+      tag:
+        description: 'Whether this push pushes the release tag: after the publish, or alone when npm has the version and its tag is missing'
+        value: ${{ jobs.check.outputs.tag }}
 
 jobs:
+  # Only a push that changes the version acts: its version differs from the main it was pushed onto (the push's
+  # `before`); any other push decides from git alone and never asks npm. A version npm lacks is published when it is
+  # above npm's latest (a pre-release: above next too, published under next); a lower or equal one, or a release tag
+  # without its version on npm, fails the run. A version npm has is never published again: when its release tag is
+  # missing, the push tags its own commit. A failed npm or git lookup fails the run (`dialecte ci publish-decision`
+  # decides). A merge-queue batch lands as one push: its head is published, which may be a later commit than the one
+  # that changed the version. The ruleset keeps the queue at one entry per merge (max_entries_to_merge: 1), so the
+  # head is that commit.
   check:
     name: Get Deployed Version
     runs-on: ubuntu-24.04
     outputs:
-      version_changed: ${{ steps.compare_versions.outputs.version_changed }}
+      publish: ${{ steps.decide.outputs.publish }}
+      dist_tag: ${{ steps.decide.outputs.dist_tag }}
+      tag: ${{ steps.decide.outputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Extract Current Version
-        id: current_version
-        run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          echo "Current version: $CURRENT_VERSION"
-          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
 
-      - name: Fetch NPM Version
-        id: npm_version
-        run: |
-          PACKAGE_NAME=$(node -p "require('./package.json').name")
-          PUBLISHED_VERSION=$(npm view "$PACKAGE_NAME" version 2>/dev/null || echo "0.0.0")
-          echo "Latest published version: $PUBLISHED_VERSION"
-          echo "npm_version=$PUBLISHED_VERSION" >> $GITHUB_OUTPUT
+      # the cli decides: it loads from node_modules, which the install job cached
+      - name: Restore node_modules cache
+        uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+          # the install job filled it: a miss stops here, never runs without the locked dependencies
+          fail-on-cache-miss: true
 
-      - name: Compare Versions
-        id: compare_versions
-        run: |
-          if [ "${{ steps.npm_version.outputs.npm_version }}" != "${{ steps.current_version.outputs.current_version }}" ]; then
-            echo "Version has changed: ${{ steps.npm_version.outputs.npm_version }} -> ${{ steps.current_version.outputs.current_version }}"
-            echo "version_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "Version unchanged"
-            echo "version_changed=false" >> $GITHUB_OUTPUT
-          fi
+      - name: Fetch the commit the push started from
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: git fetch --depth=1 origin "$BEFORE"
+
+      - name: Decide
+        id: decide
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: npx --no-install dialecte ci publish-decision

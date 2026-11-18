@@ -1,7 +1,7 @@
+# Written by `dialecte ci sync` from the @dialecte/cli template: change the template, not this file.
 name: _tag-release
 
 on:
-  workflow_dispatch:
   workflow_call:
     inputs:
       version:

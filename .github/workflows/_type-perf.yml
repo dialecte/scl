@@ -1,3 +1,4 @@
+# Written by `dialecte ci sync` from the @dialecte/cli template: change the template, not this file.
 name: _type-perf
 
 on:
@@ -15,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 'latest'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Restore node_modules cache
@@ -23,12 +24,13 @@ jobs:
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+          # the install job filled it: a miss stops here, never runs without the locked dependencies
+          fail-on-cache-miss: true
 
-      # Fails if type-instantiation counts regress > 5% vs benchmarks/types/baseline.json.
-      # To intentionally update the baseline, run `npm run type-bench` and commit the result.
+      # fails when the type instantiation counts regress past the baseline's tolerance
       - name: Type-performance regression gate
         run: npm run type-bench:check
 
-      # Fails if a schema-derived narrowing assertion no longer holds (IntelliSense safety net).
+      # fails when a schema-derived narrowing assertion no longer holds
       - name: Type-narrowing gate
-        run: npm run type-narrowing
+        run: npm run type-narrowing --if-present
