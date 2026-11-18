@@ -1,0 +1,3 @@
+### Changed
+
+- `dataModel.resolve` reads the data types level by level from the logical node types the records name: per level one lookup by id list per type tag and one read of the members, instead of one lookup per type and one read per type's member list. The store reads follow the depth of the data model, not the number of records, and only the types reached and their members are read: twelve LNodes of four types went from 40 store reads to 13, one LNode from 10 to 8. The same records come back in the same order, with their status inside a transaction; an `lnType` naming no LNodeType still fails with `ELEMENT_NOT_FOUND`.

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+	<Substation name="S1" dev:db-id="sub-1">
+		<VoltageLevel name="V1" dev:db-id="vl-1">
+			<Bay name="B1" dev:db-id="bay-1">
+					<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_Type" dev:db-id="lnode-0"/>
+					<LNode iedName="None" lnClass="MMXU" lnInst="2" lnType="MMXU_Type" dev:db-id="lnode-1"/>
+					<LNode iedName="None" lnClass="XCBR" lnInst="3" lnType="XCBR_Type" dev:db-id="lnode-2"/>
+					<LNode iedName="None" lnClass="PTRC" lnInst="4" lnType="PTRC_Type" dev:db-id="lnode-3"/>
+					<LNode iedName="None" lnClass="CSWI" lnInst="5" lnType="CSWI_Type" dev:db-id="lnode-4"/>
+					<LNode iedName="None" lnClass="MMXU" lnInst="6" lnType="MMXU_Type" dev:db-id="lnode-5"/>
+					<LNode iedName="None" lnClass="XCBR" lnInst="7" lnType="XCBR_Type" dev:db-id="lnode-6"/>
+					<LNode iedName="None" lnClass="PTRC" lnInst="8" lnType="PTRC_Type" dev:db-id="lnode-7"/>
+					<LNode iedName="None" lnClass="CSWI" lnInst="9" lnType="CSWI_Type" dev:db-id="lnode-8"/>
+					<LNode iedName="None" lnClass="MMXU" lnInst="10" lnType="MMXU_Type" dev:db-id="lnode-9"/>
+					<LNode iedName="None" lnClass="XCBR" lnInst="11" lnType="XCBR_Type" dev:db-id="lnode-10"/>
+					<LNode iedName="None" lnClass="PTRC" lnInst="12" lnType="PTRC_Type" dev:db-id="lnode-11"/>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<DataTypeTemplates dev:db-id="dtt-1">
+		<LNodeType id="CSWI_Type" lnClass="CSWI" dev:db-id="lnt-cswi">
+			<DO name="Beh" type="ENS_Beh" dev:db-id="do-cswi-beh"/>
+			<DO name="Pos" type="DPC_Type" dev:db-id="do-cswi-pos"/>
+		</LNodeType>
+		<LNodeType id="MMXU_Type" lnClass="MMXU" dev:db-id="lnt-mmxu">
+			<DO name="Beh" type="ENS_Beh" dev:db-id="do-mmxu-beh"/>
+			<DO name="PhV" type="WYE_Type" dev:db-id="do-mmxu-phv"/>
+		</LNodeType>
+		<LNodeType id="XCBR_Type" lnClass="XCBR" dev:db-id="lnt-xcbr">
+			<DO name="Beh" type="ENS_Beh" dev:db-id="do-xcbr-beh"/>
+			<DO name="Pos" type="DPC_Type" dev:db-id="do-xcbr-pos"/>
+		</LNodeType>
+		<LNodeType id="PTRC_Type" lnClass="PTRC" dev:db-id="lnt-ptrc">
+			<DO name="Beh" type="ENS_Beh" dev:db-id="do-ptrc-beh"/>
+			<DO name="Str" type="ACD_Type" dev:db-id="do-ptrc-str"/>
+		</LNodeType>
+		<DOType id="ENS_Beh" cdc="ENS" dev:db-id="dot-ens">
+			<DA name="stVal" bType="Enum" type="BehaviourModeKind" fc="ST" dev:db-id="da-ens-stval"/>
+			<DA name="q" bType="Quality" fc="ST" dev:db-id="da-ens-q"/>
+		</DOType>
+		<DOType id="DPC_Type" cdc="DPC" dev:db-id="dot-dpc">
+			<DA name="stVal" bType="Dbpos" fc="ST" dev:db-id="da-dpc-stval"/>
+			<DA name="origin" bType="Struct" type="Originator_Type" fc="ST" dev:db-id="da-dpc-origin"/>
+		</DOType>
+		<DOType id="WYE_Type" cdc="WYE" dev:db-id="dot-wye">
+			<SDO name="phsA" type="CMV_Type" dev:db-id="sdo-wye-phsa"/>
+			<SDO name="phsB" type="CMV_Type" dev:db-id="sdo-wye-phsb"/>
+		</DOType>
+		<DOType id="CMV_Type" cdc="CMV" dev:db-id="dot-cmv">
+			<DA name="cVal" bType="Struct" type="Vector_Type" fc="MX" dev:db-id="da-cmv-cval"/>
+		</DOType>
+		<DOType id="ACD_Type" cdc="ACD" dev:db-id="dot-acd">
+			<DA name="general" bType="BOOLEAN" fc="ST" dev:db-id="da-acd-general"/>
+			<DA name="dirGeneral" bType="Enum" type="FaultDirectionKind" fc="ST" dev:db-id="da-acd-dir"/>
+		</DOType>
+		<DAType id="Originator_Type" dev:db-id="dat-orig">
+			<BDA name="orCat" bType="Enum" type="OriginatorCategoryKind" dev:db-id="bda-orig-orcat"/>
+			<BDA name="orIdent" bType="Octet64" dev:db-id="bda-orig-orident"/>
+		</DAType>
+		<DAType id="Vector_Type" dev:db-id="dat-vector">
+			<BDA name="mag" bType="Struct" type="AnalogueValue_Type" dev:db-id="bda-vector-mag"/>
+		</DAType>
+		<DAType id="AnalogueValue_Type" dev:db-id="dat-av">
+			<BDA name="f" bType="FLOAT32" dev:db-id="bda-av-f"/>
+		</DAType>
+		<EnumType id="BehaviourModeKind" dev:db-id="et-beh">
+			<EnumVal ord="1" dev:db-id="ev-beh-1">on</EnumVal>
+		</EnumType>
+		<EnumType id="OriginatorCategoryKind" dev:db-id="et-orcat">
+			<EnumVal ord="0" dev:db-id="ev-orcat-0">not-supported</EnumVal>
+		</EnumType>
+		<EnumType id="FaultDirectionKind" dev:db-id="et-dir">
+			<EnumVal ord="0" dev:db-id="ev-dir-0">unknown</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>
