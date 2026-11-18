@@ -1,0 +1,70 @@
+# Written by `dialecte ci sync` from the @dialecte/cli template: change the template, not this file.
+name: ci
+
+# The checks: a pull request and the merge queue run every one. A pull request gets the whole answer early (the tests
+# its own _test.yml runs for mode pr, when it takes one); the queue proves the change on top of main and the changes
+# ahead of it (mode full). The push to main that the queue's merge makes is publish.yml's: it builds and publishes,
+# never tests again.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  merge_group:
+
+# a new push of a pull request cancels the run it supersedes; queue runs always finish
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  install:
+    name: Install Dependencies
+    uses: ./.github/workflows/_install.yml
+
+  build:
+    name: Build Project
+    needs: install
+    uses: ./.github/workflows/_build.yml
+
+  check:
+    name: Check
+    needs: install
+    uses: ./.github/workflows/_check.yml
+
+  type-perf:
+    name: Type Gates
+    needs: install
+    uses: ./.github/workflows/_type-perf.yml
+
+  docs:
+    name: Docs Build
+    needs: install
+    uses: ./.github/workflows/_docs.yml
+
+  # the repository's own tests: .github/workflows/_test.yml is not the template's
+  test:
+    name: Run Tests
+    needs: install
+    uses: ./.github/workflows/_test.yml
+
+  # the one check the ruleset requires: green only when every job of this run passed (none failed, cancelled or
+  # skipped)
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs:
+      - install
+      - build
+      - check
+      - type-perf
+      - docs
+      - test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every job passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for result in $RESULTS; do test "$result" = success; done

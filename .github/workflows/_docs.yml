@@ -1,13 +1,15 @@
-name: _lint
+# Written by `dialecte ci sync` from the @dialecte/cli template: change the template, not this file.
+name: _docs
 
 on:
   workflow_dispatch:
   workflow_call:
 
 jobs:
-  lint:
+  # the docs site builds: a broken page or link is caught before main
+  docs:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -15,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 'latest'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Restore node_modules cache
@@ -23,9 +25,8 @@ jobs:
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+          # the install job filled it: a miss stops here, never runs without the locked dependencies
+          fail-on-cache-miss: true
 
-      - name: Linting
-        run: npm run lint:check
-
-      - name: Format Check
-        run: npm run format:check
+      - name: Build the docs
+        run: npm run doc:build

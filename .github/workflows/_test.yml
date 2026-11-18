@@ -1,13 +1,14 @@
 name: _test
 
+# The package's own tests, called by ci.yml on a pull request and in the merge queue (both run the whole suite: the
+# node tier, then every unit test file in the browser, sharded). Not the cli template's: `dialecte ci sync` leaves it.
 on:
-  workflow_dispatch:
   workflow_call:
 
 jobs:
-  test:
+  node:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -15,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 'latest'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Restore node_modules cache
@@ -23,6 +24,38 @@ jobs:
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+          # the install job filled it: a miss stops here, never runs without the locked dependencies
+          fail-on-cache-miss: true
+
+      - name: Run the node tests
+        run: npm run test:node
+
+  # the whole suite in the browser, split over shards by vitest (a file's shard follows from its path); one shard's
+  # failure never cancels the others
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+          # the install job filled it: a miss stops here, never runs without the locked dependencies
+          fail-on-cache-miss: true
 
       - name: Get Playwright Version
         id: playwright-version
@@ -39,8 +72,5 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Run Tests in node
-        run: npm run test:node
-
       - name: Run the whole suite in the browser
-        run: npm run test:browser:all -- --retry=1
+        run: npm run test:browser:all -- --retry=1 --shard=${{ matrix.shard }}/${{ strategy.job-total }}

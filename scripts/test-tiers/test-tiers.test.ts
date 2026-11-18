@@ -52,8 +52,8 @@ import {
 	PROJECT_FLAG,
 	PROJECTS_PRINTER,
 	PROJECTS_PRINTER_TIMEOUT,
-	PULL_REQUEST_TRIGGER,
-	PULL_REQUEST_WORKFLOW,
+	CI_TRIGGERS,
+	CI_WORKFLOW,
 	RESOLVED_SUFFIXES,
 	RUN_ALL_COMMAND,
 	SOURCE_FILE_PATTERNS,
@@ -925,19 +925,19 @@ describe('test tiers', { timeout: TIER_GUARD_CASE_TIMEOUT_MS }, () => {
 		})
 	})
 
-	it('a pull request runs test:browser:all before merge', () => {
+	it('ci.yml runs test:browser:all on a pull request and in the merge queue', () => {
 		const browserAllProjects = projectsRunBy([readManifest().scripts[BROWSER_ALL_SCRIPT] ?? ''])
 		const ciProjects = new Set(projectsRunBy(workflowRunLines(TEST_WORKFLOW)))
-		const pullRequest = readText(PULL_REQUEST_WORKFLOW)
+		const ci = existsSync(`${ROOT}${CI_WORKFLOW}`) ? readText(CI_WORKFLOW) : ''
 		expect({
-			onPullRequest:
-				PULL_REQUEST_TRIGGER.test(pullRequest) && pullRequest.includes(`uses: ./${TEST_WORKFLOW}`),
+			triggers: CI_TRIGGERS.map((trigger) => trigger.test(ci)),
+			callsTestWorkflow: ci.includes(`uses: ./${TEST_WORKFLOW}`),
 			runsBrowserAll:
 				browserAllProjects.length > 0 &&
 				browserAllProjects.every(function ranByCi(project) {
 					return ciProjects.has(project)
 				}),
-		}).toEqual({ onPullRequest: true, runsBrowserAll: true })
+		}).toEqual({ triggers: [true, true], callsTestWorkflow: true, runsBrowserAll: true })
 	})
 
 	it('the test script runs the node project, then the browser list', () => {

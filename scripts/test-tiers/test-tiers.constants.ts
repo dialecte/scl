@@ -121,12 +121,12 @@ export const BROWSER_GLOBAL_SET_BY_HAND = {
 		/globalThis\s*(?:\.\s*\w+|\[[^\]]+\])\s*=|Object\.(?:assign|defineProperty|defineProperties)\(\s*globalThis\b|vi\.stubGlobal\(/,
 } as const
 
-/** The workflow a pull request runs, and the test workflow it calls. */
-export const PULL_REQUEST_WORKFLOW = '.github/workflows/pr.yml'
+/** The workflow a pull request and the merge queue run, and the test workflow it calls. */
+export const CI_WORKFLOW = '.github/workflows/ci.yml'
 export const TEST_WORKFLOW = '.github/workflows/_test.yml'
 
-/** A workflow's `pull_request` trigger. */
-export const PULL_REQUEST_TRIGGER = /^\s+pull_request:/m
+/** The triggers ci.yml runs on before a change reaches main: a pull request, then the merge queue. */
+export const CI_TRIGGERS: readonly RegExp[] = [/^\s+pull_request:/m, /^\s+merge_group:/m]
 
 /** A workflow step's `run:` line: its command, or `|` / `>` when a block follows. */
 export const WORKFLOW_RUN_LINE = /^(\s*)(?:-\s+)?run:\s*(.*)$/

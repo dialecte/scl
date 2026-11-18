@@ -1,3 +1,4 @@
+# Written by `dialecte ci sync` from the @dialecte/cli template: change the template, not this file.
 name: _check
 
 on:
@@ -15,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 'latest'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Restore node_modules cache
@@ -23,6 +24,12 @@ jobs:
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+          # the install job filled it: a miss stops here, never runs without the locked dependencies
+          fail-on-cache-miss: true
 
-      - name: Check (type-check, type-check:test, lint, format)
+      - name: Check the package (its check script)
         run: npm run check
+
+      # the CI files in step with the template of the cli this package runs (dialecte ci sync writes them)
+      - name: CI files in step with the cli template
+        run: npx --no-install dialecte ci check

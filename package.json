@@ -125,6 +125,11 @@
 					"run": "npx vitest run --project node --changed",
 					"counts": "tests",
 					"changedOnly": true
+				},
+				{
+					"name": "rules",
+					"run": "dialecte rules",
+					"scoped": true
 				}
 			],
 			"full": [
@@ -149,6 +154,22 @@
 					"name": "browser tests",
 					"run": "npx vitest run --project browser",
 					"counts": "tests"
+				},
+				{
+					"name": "rules",
+					"run": "dialecte rules",
+					"scoped": true
+				}
+			],
+			"hook": [
+				{
+					"name": "check",
+					"run": "npm run check"
+				},
+				{
+					"name": "rules",
+					"run": "dialecte rules",
+					"scoped": true
 				}
 			]
 		},
