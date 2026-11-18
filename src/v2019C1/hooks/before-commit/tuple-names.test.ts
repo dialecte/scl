@@ -200,14 +200,14 @@ describe('the commit writes the names of the tuple targets a transaction created
 				],
 				expectedQueries: [NAMED_EXT_REF],
 			},
-		'logical node created then deleted in one transaction, an ExtRef naming it with stale names → the ExtRef keeps its names':
+		'logical node created then deleted in one transaction, an ExtRef naming it with stale names → none of its names written, the ExtRef unbound':
 			{
-				allowIncoherentReferences: 'the logical node the ExtRef names never exists',
 				sourceXml: STALE_EXT_REF,
 				created: [{ parent: P2_LD, tagName: 'LN', attributes: NEW_LN }],
 				deletes: [0],
-				expectedQueries: [
-					'//default:ExtRef[@intAddr="Pos"][@iedName="P9"][@ldInst="LD9"][@lnClass="MMXU"][@lnInst="7"]',
+				expectedQueries: ['//default:ExtRef[@intAddr="Pos"]'],
+				unexpectedQueries: [
+					'//default:ExtRef[@iedName or @ldInst or @lnClass or @lnInst or @lnUuid]',
 				],
 			},
 		'ExtRef naming by uuid a logical node of its own IED with iedName "@", the logical node created there → the "@" stays, the other names written':

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IED7's GOOSE is subscribed to by IED8's IHMI3, named by lnUuid, through IED8's access point AP1 named by apRef only;
+     IED8 has a second access point AP0 -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <IED name="IED7" uuid="ied7" dev:db-id="ied7">
+        <AccessPoint name="AP1" uuid="ap7" dev:db-id="ap7">
+            <Server dev:db-id="srv7">
+                <Authentication dev:db-id="auth7"/>
+                <LDevice inst="LD1" uuid="ld7" dev:db-id="ld7">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln07" dev:db-id="ln07">
+                        <GSEControl name="GC" appID="GC" confRev="1" uuid="gc7" dev:db-id="gc7">
+                            <IEDName apRef="AP1" ldInst="LD1" lnClass="IHMI" lnInst="3" lnUuid="ihmi3" dev:db-id="sub8">IED8</IEDName>
+                        </GSEControl>
+                    </LN0>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="IED8" uuid="ied8" dev:db-id="ied8">
+        <AccessPoint name="AP0" uuid="ap8a" dev:db-id="ap8a"/>
+        <AccessPoint name="AP1" uuid="ap8" dev:db-id="ap8">
+            <Server dev:db-id="srv8">
+                <Authentication dev:db-id="auth8"/>
+                <LDevice inst="LD1" uuid="ld8" dev:db-id="ld8">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln08" dev:db-id="ln08"/>
+                    <LN lnClass="IHMI" inst="3" lnType="IHMI_T" uuid="ihmi3" dev:db-id="ihmi3"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0"/>
+        <LNodeType id="IHMI_T" lnClass="IHMI" dev:db-id="lnt1"/>
+    </DataTypeTemplates>
+</SCL>

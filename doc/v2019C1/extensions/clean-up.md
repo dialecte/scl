@@ -29,7 +29,9 @@ await doc.transaction(async (tx) => {
 A container holding nothing — no child element, no text — goes when it has no reason to stay then. Read from the definition and the namespaces:
 
 - an element whose content model needs a child it no longer holds, when it is a list with no identity of its own (no key fields, no uuid: `PowerSystemRelations`, `ProcessResources`, `LNodeInputs`, `DataTypeTemplates`, `Communication`) or a set of references (every child it needs is a reference: a `FunctionCategory` and its `FunctionCatRef`, a `Variable` and its `VariableApplyTo`);
-- a transparent wrapper of the dialecte's own elements: a `Private` whose `type` is the prefix of a namespace the dialecte declares (`eIEC61850-6-100`).
+- a transparent wrapper of the dialecte's own elements: a `Private` whose `type` is the prefix of a namespace the dialecte declares (`eIEC61850-6-100`);
+- a `DataSet`, which the schema refuses without an entry: the control blocks sending it (a log control too) lose their `datSet` and, those keeping one, their `confRev` rises (once in a transaction), as when a `DataSet` is deleted.
+- a `SubNetwork`, which the schema refuses without a connected access point: the delete of the only IED or access point connected to it takes it too, and `pruneEmptyContainers` removes one holding none.
 
 Its parent is then judged the same way: the wrapper a category leaves empty goes too. An element of its own that needs a child (an `IED`, an `LNodeType`, an `Application`) is the project's to remove; a `Private` of another `type` is a tool's private data, kept empty or not; a level of the topology (`Substation`, `VoltageLevel`, `Bay`) is never removed.
 
@@ -38,6 +40,8 @@ pruneEmptyContainers(): Promise<void>
 ```
 
 It judges every container of the document, deleted through the transaction (the delete hooks clean what refers to it): the extract clean-up runs it on the file it writes, whose containers may have been empty already.
+
+A transaction also empties a container that loses every child of a kind its content model requires there and keeps nothing with an identity of its own: a `Server` its last `LDevice` (its `Authentication` goes with it), a `DataSet` its last `FCDA` (its `Private` goes with it); one branch of a required choice staying keeps it (an `SMVSettings` keeping its `SmpRate`). One judge decides for the delete cascade, the commit and `pruneEmptyContainers`, which, judging no removal, removes a container only when it holds nothing.
 
 What a transaction leaves holding nothing goes at its commit, whatever wrote — a delete, `tx.lifecycle.apply`, an extract: the parent of every element it deleted and every wrapper it created are judged by the same rule, once everything is written (a category whose reference the transaction swaps stays), and deleted with what refers to them, as a delete does. The delete hook removes the references naming what is deleted, and the references naming those in turn.
 

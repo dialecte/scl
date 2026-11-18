@@ -42,20 +42,8 @@ export async function assertIedPlacementOffered(
 	query: Core.Query<Config>,
 	params: AssertIedPlacementParams,
 ): Promise<void> {
-	const { sourceQuery, iedRef, scenario, fileType } = params
-	if (fileType && IDENTITY_KEEPING_FILE_TYPES.has(fileType)) {
-		throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
-			meta: { option: 'source', value: fileType.toLowerCase() },
-			detail: `${params.operation}: an IED read from an ${fileType} is not placed yet, only one of a template ISD or an ICD`,
-		})
-	}
-	const { name, uuid } = await sourceQuery.getAttributes(iedRef)
-	if (isIsdInstance({ fileType, iedName: name }) && scenario !== 'fork') {
-		throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
-			meta: { option: 'source', value: 'isd-instance' },
-			detail: `${params.operation}: the IED of an ISD instance file (named "${name}") keeps its identity: it is placed as a fork only`,
-		})
-	}
+	const { sourceQuery, scenario } = params
+	const { uuid } = await assertIedSourceOffered(params)
 	const { matchesInstances, matchKey } = scenarioPolicy({ scenario })
 	if (!matchesInstances) return
 	const matched = await findInstancesByTemplateUuid(query, {
@@ -76,6 +64,31 @@ export async function assertIedPlacementOffered(
 		meta: { option: 'scenario', value: scenario, held },
 		detail: `${params.operation}: "${scenario}" finds in the project the ${held.tagName} ${held.path ?? ''} holding a uuid of the IED or of its specification, only a first placement is offered yet`,
 	})
+}
+
+/**
+ * Refuse a source an IED is not read from yet, with `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value }`): an
+ * IID or an SCD (`'iid'` / `'scd'`), an ISD instance file other than as a fork (`'isd-instance'`). Returns the source
+ * IED's name and uuid, read once.
+ */
+export async function assertIedSourceOffered(
+	params: AssertIedPlacementParams,
+): Promise<{ name: string; uuid: string | undefined }> {
+	const { sourceQuery, iedRef, scenario, fileType } = params
+	if (fileType && IDENTITY_KEEPING_FILE_TYPES.has(fileType)) {
+		throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
+			meta: { option: 'source', value: fileType.toLowerCase() },
+			detail: `${params.operation}: an IED read from an ${fileType} is not placed yet, only one of a template ISD or an ICD`,
+		})
+	}
+	const { name, uuid } = await sourceQuery.getAttributes(iedRef)
+	if (isIsdInstance({ fileType, iedName: name }) && scenario !== 'fork') {
+		throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
+			meta: { option: 'source', value: 'isd-instance' },
+			detail: `${params.operation}: the IED of an ISD instance file (named "${name}") keeps its identity: it is placed as a fork only`,
+		})
+	}
+	return { name, uuid }
 }
 
 /**

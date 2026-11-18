@@ -17,6 +17,13 @@ export type FindDroppedPrimariesParams = {
 	removalBase: RemovalBase
 	/** The template's elements the scope leaves out (record ids): no level nor primary of the unit. */
 	leftOut: ReadonlySet<string>
+	/**
+	 * The instances of the applications and functions the operation is scoped to (those one IED's specification holds):
+	 * another placement's on the same level is not dropped by it. On a level the unit was mapped onto (which carries no
+	 * lineage of it) those named are listed as the project's own (`target-only`). Absent: every one the level holds that
+	 * the unit placed.
+	 */
+	primaryTargets?: readonly Scl.Ref<Scl.ElementsOf>[]
 }
 
 /** What the levels of a unit's instance hold: the applications, then the functions. */
@@ -30,4 +37,10 @@ export type UnitUuids = {
 	root: string | undefined
 	levels: Set<string>
 	primaries: Set<string>
+}
+
+/** What `scopePrimaries` narrows: the level's primaries, to those the operation is scoped to. */
+export type ScopePrimariesParams = {
+	primaries: UnitPrimaries
+	primaryTargets: readonly Scl.Ref<Scl.ElementsOf>[] | undefined
 }

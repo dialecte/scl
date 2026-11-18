@@ -43,7 +43,7 @@
 				"is this Private a wrapper of 6-100 elements",
 				"walk through a Private wrapper"
 			],
-			"declaredAt": "src/v2019C1/helpers/pruned-when-empty.ts:23"
+			"declaredAt": "src/v2019C1/helpers/pruned-when-empty.ts:85"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1.isSclImportDiagnostic",
@@ -428,7 +428,7 @@
 				"compare identities from resolveIdentity",
 				"match elements across documents"
 			],
-			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:49",
+			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:50",
 			"example": "doc.query.identity.identityEquals({ kind: 'positional' })"
 		},
 		{
@@ -436,13 +436,13 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "(ref: Core.AnyRefOrRecord) => Promise<ElementIdentity>",
-			"summary": "Resolve an element's identity from the schema (does it carry a `uuid`, else its `identityFields`), reading its attributes through Dialecte's own `getAttributes`. A uuid-bearing tag (`Substation`, `Bay`, `Function`, ...) resolves at the `uuid` branch whatever its `identityFields` say; a uuid-less tag resolves by the fields its schema keys name (`id`/`lnClass`/`inst`/..., and `name` where the schema makes it unique among siblings, e.g. `DA`/`SDO` in a type).",
+			"summary": "Resolve an element's identity from the schema (does it carry a `uuid`, else its `identityFields`), reading its attributes through Dialecte's own `getAttributes`. A uuid-bearing tag (`Substation`, `Bay`, `Function`, ...) resolves at the `uuid` branch whatever its `identityFields` say; a uuid-less tag resolves by the fields its schema keys name (`id`/`lnClass`/`inst`/..., and `name` where the schema makes it unique among siblings, e.g. `DA`/`SDO` in a type), else by its supplement key (`keyFieldsOf`: a `Val`'s `sGroup`, ...).",
 			"intents": [
 				"identity of an element (uuid or key fields)",
 				"key to match an element across two documents",
 				"what makes an element the same element"
 			],
-			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:18"
+			"declaredAt": "src/v2019C1/extensions/identity/query/resolve-identity.ts:19"
 		},
 		{
 			"path": "doc.query.info.of",
@@ -511,7 +511,7 @@
 				"decisions to review before a template update",
 				"what placing an IED from an ISD/ICD/IID would add"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:48"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:50"
 		},
 		{
 			"path": "doc.query.lifecycle.sourceRoot.asd",
@@ -598,14 +598,14 @@
 			"path": "doc.query.reference.buildReferencePath",
 			"root": "q",
 			"otherRoutes": [],
-			"signature": "(params: { reference: Scl.Ref<Scl.ElementsOf>; target: Scl.Ref<Scl.ElementsOf>; targetPath?: ElementPath; referrerContext?: ReferrerContext; functionBases?: FunctionBases; functionBasesCache?: FunctionBasesCache; }) => Promise<string | null>",
+			"signature": "(params: { reference: Scl.Ref<Scl.ElementsOf>; referenceRecord?: Scl.TrackedRecord<Scl.ElementsOf>; target: Scl.Ref<Scl.ElementsOf>; targetPath?: ElementPath; referrerContext?: ReferrerContext; functionBases?: FunctionBases; functionBasesCache?: FunctionBasesCache; }) => Promise<string | null>",
 			"summary": "Build the path value to store on a REF element's path attribute when pointing at a given target.",
 			"intents": [
 				"compute the path value of a reference (SourceRef, FunctionRef, ...) to a target",
 				"write a reference attribute pointing at an element",
 				"refresh a stale reference path"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/build/build-reference-path.ts:49"
+			"declaredAt": "src/v2019C1/extensions/reference/query/build/build-reference-path.ts:50"
 		},
 		{
 			"path": "doc.query.reference.findOwnProvenance",
@@ -752,7 +752,7 @@
 				"remove empty containers left after deletes (reference containers, wrappers, Private elements)",
 				"tidy up a document or an extracted file"
 			],
-			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/prune-empty-containers.ts:19"
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/prune-empty-containers.ts:18"
 		},
 		{
 			"path": "tx.cleanUp.pruneUnusedTypes",
@@ -785,13 +785,13 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: LinkParams) => Promise<void>",
-			"summary": "Links a signal to the element implementing it: the signal names it by its uuid, and the address the hooks write from that uuid follows where the element sits relative to the signal's LNode. Whatever address the signal held is removed with the write, so one the hooks cannot compose (an element without an internal address) does not stay.",
+			"summary": "Links a signal to the element implementing it: the signal names it by its uuid, and the address written with it is the one that uuid gives, where the element sits relative to the signal's LNode. Whatever address the signal held is replaced, so one that cannot be composed (an element without an internal address) does not stay.",
 			"intents": [
 				"connect a signal (SourceRef/ControlRef) to its ExtRef/ExtCtrl",
 				"implement a signal",
 				"link a dataflow to its implementation"
 			],
-			"declaredAt": "src/v2019C1/extensions/dataflow/transaction/link.ts:19"
+			"declaredAt": "src/v2019C1/extensions/dataflow/transaction/link.ts:20"
 		},
 		{
 			"path": "tx.dataflow.unlink",
@@ -896,7 +896,7 @@
 				"write a lifecycle report with user decisions",
 				"accept or skip changes from a newer FSD/ASD/SSD"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:76",
+			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:78",
 			"example": "await tx.lifecycle.apply({ ...lifecycleTarget, report: reported, resolution: { afterApply } })"
 		},
 		{
@@ -943,15 +943,17 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: IedExtractParams) => Promise<{ warnings: ExtractWarning[]; }>",
-			"summary": "Export a specification IED into an ISD: the IED, the process part it implements and its scoped Communication, into an empty target. Requires an explicit `kind: 'instance'` and an explicit input mode. Copies the surviving logical-node type closure and preserves instance identity and vendor content. Supervision nodes, a supervision capability declaring them, and foreign receiver, client, association and KDC entries are left out with source-record warnings. `inputs: 'none'` leaves the inputs out; `inputs: 'later-binding'` writes each in later-binding form: its description, internal address and expected data and service, an expected value it lacks taken from what it was bound to, its service type equal to its expected service, nothing of that source; an input still lacking its description, expected data or a service is written as it is and listed. With later-binding inputs the IED is no receiver or client of its own control blocks. `internalService: true` writes a specified flow between two LNodes the file holds for the IED as an internal service with no link to its input; the source keeps the service it specifies. Removes FCDA depending on omitted supervision, dropping DataSets with no surviving native FCDA. Retained affected Report/GSE/SV controls increment confRev by 10000 once; affected LogControls are disabled. Removed DataSets are unlinked without replacing controls. Missing/invalid or overflowing counters refuse before output writes. The process part holds the IED's LNodes in their substation, line or process frame, names and identifiers as in the source: a function or subfunction holding none of them is left out, the levels and equipment above them stay, an equipment of the frame keeps the connectivity node it connects to. A behaviour description goes only when all its LNodes do, variables and process resources when they belong to the LNodes written; applications, allocation roles and power system relations travel with what they name unless their option is `false`. A specification of an input or output naming what the file does not hold stays with its expected data and without that link. Each LNode gets its own naming as specified naming; data specifications lose their mapping. `labels: false` leaves no label in the file. Replaces the target ISD Header/history with a fresh identity and one initial item, retaining prior history only as labelled inner text. Assigns the issuer and records the source at the Header and IED. Source type follows the registered extension: .ssd is SSD; .scd, .xml or no extension is SCD, regardless of Header fileType. Other extensions are refused with OPTION_NOT_AVAILABLE before writes. Refuses an implemented selected IED, a target already holding an IED or a process part (a substation, line or process) and an unavailable revision start.",
+			"summary": "Export a specification IED into an ISD: the IED, the process part it implements and its scoped Communication, into an empty target. Requires an explicit `kind` and an explicit input mode. Copies the surviving logical-node type closure and preserves instance identity and vendor content. Supervision nodes, a supervision capability declaring them, and foreign receiver, client, association and KDC entries are left out with source-record warnings. `inputs: 'none'` leaves the inputs out; `inputs: 'later-binding'` writes each in later-binding form: its description, internal address and expected data and service, an expected value it lacks taken from what it was bound to, its service type equal to its expected service, nothing of that source; an input still lacking its description, expected data or a service is written as it is and listed. With later-binding inputs the IED is no receiver or client of its own control blocks. `internalService: true` writes a specified flow between two LNodes the file holds for the IED as an internal service with no link to its input; the source keeps the service it specifies. Removes FCDA depending on omitted supervision, dropping DataSets with no surviving native FCDA. Retained affected Report/GSE/SV controls increment confRev by 10000 once; affected LogControls are disabled. Removed DataSets are unlinked without replacing controls. Missing/invalid or overflowing counters refuse before output writes. The process part holds the IED's LNodes in their substation, line or process frame, names and identifiers as in the source: a function or subfunction holding none of them is left out, the levels and equipment above them stay, an equipment of the frame keeps the connectivity node it connects to. A behaviour description goes only when all its LNodes do, variables and process resources when they belong to the LNodes written; applications, allocation roles and power system relations travel with what they name unless their option is `false`. A specification of an input or output naming what the file does not hold stays with its expected data and without that link. Each LNode gets its own naming as specified naming; data specifications lose their mapping. `labels: false` leaves no label in the file. Replaces the target ISD Header/history with a fresh identity and one initial item, retaining prior history only as labelled inner text. Assigns the issuer and, for an instance, records the source at the Header and IED. Source type follows the registered extension: .ssd is SSD; .scd, .xml or no extension is SCD, regardless of Header fileType. Other extensions are refused with OPTION_NOT_AVAILABLE before writes. Refuses an implemented selected IED, a target already holding an IED or a process part (a substation, line or process) and an unavailable revision start.",
 			"intents": [
 				"extract an IED into an ISD instance",
+				"export an ISD template for a frame agreement",
+				"export an IED named SPECIFICATION with new identifiers",
 				"copy an IED with its reachable data types",
 				"export an ISD with its process part",
 				"write the inputs of an ISD in later-binding form",
 				"mark a dataflow inside one IED as internal"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/transaction/ied.ts:59"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/transaction/ied.ts:71"
 		},
 		{
 			"path": "tx.lifecycle.extract.ssd",
@@ -1006,7 +1008,7 @@
 				"place an ISD with its specification (functions and LNodes) in a project",
 				"import an ISD instance keeping its identity"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/ied.ts:52"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/ied.ts:49"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.resolveTargetStructure",
@@ -1072,7 +1074,7 @@
 				"reconcile Application instances with their template",
 				"instantiate or update an application template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:40"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:45"
 		},
 		{
 			"path": "tx.lifecycle.update.fsd",
@@ -1085,7 +1087,20 @@
 				"reconcile Function instances with their template",
 				"instantiate or update a function template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:24"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:29"
+		},
+		{
+			"path": "tx.lifecycle.update.ied",
+			"root": "tx",
+			"otherRoutes": [],
+			"signature": "(params: UpdateIedParams) => Promise<AppliedInstance<'IED'>[]>",
+			"summary": "`tx.lifecycle.update.ied` - update the IED of the project placed from a template ISD with a newer revision of it (or place it when the project holds none), then release what the run wrote naming a logical node, ExtRef or ExtCtrl the project lacks, as `tx.lifecycle.apply` does after its verb.",
+			"intents": [
+				"update an S-IED from a newer ISD",
+				"reconcile an IED with its template ISD",
+				"update an IED specification"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:78"
 		},
 		{
 			"path": "tx.lifecycle.update.ssd",
@@ -1098,7 +1113,7 @@
 				"reconcile a bay typical with its template",
 				"propagate an SSD change"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:56"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:61"
 		},
 		{
 			"path": "tx.reference.applyTypeIdRemap",

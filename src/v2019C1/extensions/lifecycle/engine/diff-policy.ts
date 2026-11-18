@@ -9,5 +9,6 @@ export function readDiffPolicy(params: { resolution?: Resolution }): DiffPolicy 
 	return {
 		boundLogicalNodeTypes: resolution?.boundLogicalNodeTypes ?? DEFAULT_BOUND_LOGICAL_NODE_TYPES,
 		consumerManagedTags: new Set(resolution?.consumerManagedTags),
+		takeOver: resolution?.takeOver ?? [],
 	}
 }

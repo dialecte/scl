@@ -30,6 +30,16 @@ export type UnresolvedReferenceDiagnostic = Diagnostic<'unresolved-reference'> &
 	}
 }
 
+/** A reference written as a path several elements hold: `ref` is the reference and its path attribute. */
+export type AmbiguousReferenceDiagnostic = Diagnostic<'ambiguous-reference'> & {
+	meta: {
+		uuidAttribute: string
+		pathValue: string
+		/** The path several elements hold. */
+		sharedKey: string
+	}
+}
+
 /** A reference written in a form that is not resolved: `ref` is the reference and its path attribute. */
 export type UnsupportedXPathDiagnostic = Diagnostic<'unsupported-xpath-reference'> & {
 	meta: {
@@ -69,6 +79,8 @@ export type IncoherentReferenceDiagnostic = Diagnostic<'incoherent-reference'> &
 export type DataPathNotSplitDiagnostic = Diagnostic<'data-path-not-split'> & {
 	meta: {
 		pathValue: string
+		/** The path names data after an LNode that has no type to split it by. */
+		untyped?: true
 	}
 }
 
@@ -97,6 +109,7 @@ export type DerivedSpecificationNamingDiagnostic = Diagnostic<'derived-specifica
 /** Every diagnostic the import of an SCL file returns: its `code` is a key of `SCL_IMPORT_DIAGNOSTICS`. */
 export type SclImportDiagnostic =
 	| UnresolvedReferenceDiagnostic
+	| AmbiguousReferenceDiagnostic
 	| UnsupportedXPathDiagnostic
 	| IncoherentReferenceDiagnostic
 	| DataPathNotSplitDiagnostic

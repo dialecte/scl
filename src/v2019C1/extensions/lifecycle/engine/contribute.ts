@@ -39,6 +39,7 @@ export async function contribute(
 		sourceRootRef: source,
 		instanceRootRef: target,
 		contributeOnly: true,
+		contributedChildren: params.contributedChildren,
 		matchKey: params.matchKey,
 		// a container of a child's name is the project's own and is contributed to: nothing added is numbered
 		bumpsCollisions: false,
@@ -79,6 +80,7 @@ export async function describeContribution(
 		instanceRootRef: target,
 		instanceRootIsProjectOwned: true,
 		contributeOnly: true,
+		contributedChildren: params.contributedChildren,
 		refsAlwaysAdded: true,
 		keepLeftoverRefs: true,
 		matchKey: params.matchKey,

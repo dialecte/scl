@@ -44,6 +44,7 @@ import type {
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { TargetInstances } from '@/v2019C1/extensions/lifecycle/instance'
 import type {
 	PrimaryPlace,
 	ResolvePrimaryParentsParams,
@@ -76,7 +77,17 @@ export async function reportSsd(
 		scopeRef?: Scl.Ref<TopologyStructuralTag>
 		targetParent: Scl.Ref<Scl.ElementsOf>
 		scenario?: LifecycleScenario
-		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		targetInstance?: TargetInstances
+		/**
+		 * The instances of the applications and functions the report is scoped to, beside the frame `targetInstance`
+		 * names: those one IED's specification holds, another placement's on the same level left out. Absent: those under
+		 * `targetInstance`.
+		 */
+		primaryTargets?: readonly Scl.Ref<Scl.ElementsOf>[]
+		/** The template's elements the report leaves out beyond what its scope does (record ids). */
+		leftOut?: ReadonlySet<string>
+		/** The one instance of the unit a primary the template gained is placed in: see `ResolvePrimaryParentsParams`. */
+		gainedIn?: Scl.Ref<Scl.ElementsOf>
 		/** The consumer's choices for the shared elements the applications refer to. */
 		decisionMappings?: DecisionMappings
 		/** What the whole report already listed and named. */
@@ -94,8 +105,11 @@ export async function reportSsd(
 ): Promise<DiffReport> {
 	const { sourceQuery, scopeRef, targetParent, scenario, targetInstance, decisionMappings } = params
 
-	const scope = await resolveSsdScope(sourceQuery, { ref: scopeRef })
-	if (!scope) return assembleReport({ instances: [], templateRoots: [] })
+	const resolved = await resolveSsdScope(sourceQuery, { ref: scopeRef })
+	if (!resolved) return assembleReport({ instances: [], templateRoots: [] })
+	const scope = params.leftOut
+		? { ...resolved, leftOut: new Set([...resolved.leftOut, ...params.leftOut]) }
+		: resolved
 	const { root } = scope
 
 	const { applications, standaloneFunctions } = await resolveTopologyReconcilables(sourceQuery, {
@@ -171,6 +185,7 @@ export async function reportSsd(
 			matchKey,
 			removalBase,
 			leftOut: scope.leftOut,
+			primaryTargets: params.primaryTargets,
 		})
 		const groups = addDroppedGroups({ reportInstance: frameInstance, dropped })
 		await linkToComposingApplications(query, { groups })
@@ -214,6 +229,8 @@ export async function reportSsd(
 			unitId: root.id,
 			instanceLevelsList,
 			matchKey,
+			primaryTargets: params.primaryTargets,
+			gainedIn: params.gainedIn,
 		})
 		for (const { parent, placedFor } of places) {
 			const report = await reportAsd(query, {
@@ -224,7 +241,7 @@ export async function reportSsd(
 				// placed for an instance of the unit: a new one, whatever another instance holds
 				scenario,
 				placesFresh: placedFor !== undefined,
-				targetInstance,
+				targetInstance: params.primaryTargets ?? targetInstance,
 				decisionMappings,
 				anchor: parent ?? placedFor ?? landing,
 				removalBase,
@@ -243,6 +260,8 @@ export async function reportSsd(
 			unitId: root.id,
 			instanceLevelsList,
 			matchKey,
+			primaryTargets: params.primaryTargets,
+			gainedIn: params.gainedIn,
 		})
 		for (const { parent, placedFor } of places) {
 			const report = await reportFsd(query, {
@@ -253,7 +272,7 @@ export async function reportSsd(
 				targetParent: parent ?? placedFor ?? landing,
 				scenario,
 				placesFresh: placedFor !== undefined,
-				targetInstance,
+				targetInstance: params.primaryTargets ?? targetInstance,
 				decisionMappings,
 				removalBase,
 				diffPolicy: params.diffPolicy,
@@ -403,10 +422,12 @@ async function findPrimaryPlaces(
 	params: ResolvePrimaryParentsParams,
 ): Promise<PrimaryPlace[]> {
 	const once = [{ parent: params.anchor }]
-	if (params.instanceLevelsList.length === 0) return once
+	// one instance named for what is gained: placed there or nowhere, never where the consumer started from
+	if (params.instanceLevelsList.length === 0 && !params.gainedIn) return once
 
 	const { gained, places } = await resolvePrimaryParents(query, params)
 	if (!gained) return once
+	if (places.length === 0) return []
 	if (places.length > 1) return places
 	const [{ parent, placedFor }] = places
 	return [{ parent: parent ?? placedFor ?? params.anchor }]

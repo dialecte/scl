@@ -53,6 +53,7 @@ export function createImportPathIndexBuilder(params: {
 	const index: ImportPathIndex = {
 		byPath: new Map(),
 		legacyKeys: new Set(),
+		shared: new Set(),
 		targetsByUuid: new Map(),
 	}
 	const otherPaths: OtherPaths = { underStandardParent: [], underOwnNaming: [] }
@@ -64,7 +65,13 @@ export function createImportPathIndexBuilder(params: {
 		// an element with no segment of its own (an access point, a control block) would take its
 		// parent's path: it is not named by a path
 		if (!standard || standard.segments.at(-1)?.ref.id !== record.id) return
-		index.byPath.set(standard.path, uuid)
+		// a path another target holds already names several: neither is named by it
+		const held = index.byPath.get(standard.path)
+		const shared = index.shared.has(standard.path) || (held !== undefined && held !== uuid)
+		if (shared) {
+			index.byPath.delete(standard.path)
+			index.shared.add(standard.path)
+		} else index.byPath.set(standard.path, uuid)
 		index.targetsByUuid.set(uuid, {
 			recordId: record.id,
 			tagName: record.tagName,
@@ -84,7 +91,7 @@ export function createImportPathIndexBuilder(params: {
 
 	function addScopedNames(target: CollectedTarget): void {
 		for (const [key, uuid] of scopedNameKeysOf({ target, specNamings })) {
-			if (!index.byPath.has(key)) index.byPath.set(key, uuid)
+			if (!index.byPath.has(key) && !index.shared.has(key)) index.byPath.set(key, uuid)
 		}
 	}
 
@@ -128,7 +135,7 @@ function indexOtherPaths(params: {
 		claims.set(path, (claims.get(path) ?? new Set()).add(uuid))
 	}
 	for (const [path, uuids] of claims) {
-		if (index.byPath.has(path) || ambiguous.has(path)) continue
+		if (index.byPath.has(path) || index.shared.has(path) || ambiguous.has(path)) continue
 		if (uuids.size > 1) {
 			ambiguous.add(path)
 			continue

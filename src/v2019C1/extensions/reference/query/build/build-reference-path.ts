@@ -39,6 +39,7 @@ import type * as Core from '@dialecte/core'
  *
  * @param query   - Active document query
  * @param params  - reference (the REF element) + target (the element it points to), the
+ *                  reference's record when the caller already read it, the
  *                  target's path when the caller already read it (several references to one target),
  *                  where the referrer's LNode is mapped when the caller holds it as the store
  *                  does not yet (an `ied-address` path), and where its signal role path starts
@@ -50,6 +51,7 @@ export async function buildReferencePath(
 	query: Core.Query<Config>,
 	params: {
 		reference: Scl.Ref<Scl.ElementsOf>
+		referenceRecord?: Scl.TrackedRecord<Scl.ElementsOf>
 		target: Scl.Ref<Scl.ElementsOf>
 		targetPath?: ElementPath
 		referrerContext?: ReferrerContext
@@ -70,7 +72,7 @@ export async function buildReferencePath(
 	const targetPath = params.targetPath ?? (await buildElementPath(query, target))
 	if (!targetPath) return null
 
-	const referenceRecord = await query.getRecord(reference)
+	const referenceRecord = params.referenceRecord ?? (await query.getRecord(reference))
 	const behaviorContext =
 		pair.resolution === RESOLUTION_TYPE.behaviorDescription && referenceRecord?.parent
 			? await behaviorContextOf(query, referenceRecord.parent as Scl.Ref<Scl.ElementsOf>)

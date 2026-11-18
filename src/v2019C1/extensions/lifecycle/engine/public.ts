@@ -14,6 +14,8 @@ export type {
 	KeptAttributeReason,
 	RemovalSideEffect,
 	TextChange,
+	OrderChange,
+	ConfRevBump,
 	ReportedElement,
 	ReportTarget,
 	ReportTargetField,

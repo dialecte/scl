@@ -132,7 +132,7 @@ tx.lifecycle.extract.ied(params: {
   sourceQuery: Scl.Query
   iedRef: Scl.Ref<'IED'>
   fileType: 'ISD'
-  kind: 'instance'                  // required, no default
+  kind: 'instance' | 'template'     // required, no default
   inputs: 'none' | 'later-binding'  // required, no default
   issuer: string                    // the IED's manufacturer in the file
   tool: string
@@ -149,7 +149,7 @@ tx.lifecycle.extract.ied(params: {
 
 Steps:
 
-1. Refuse before anything is written: an omitted `kind` or `inputs`, or `as: 'revision'` (`OPTION_NOT_AVAILABLE`); a source registered with an extension other than `.ssd`, `.scd`, `.xml` or none (`OPTION_NOT_AVAILABLE`, `meta: { option: 'sourceExtension', value }`); an IED of a real device (`IED_NOT_SPECIFICATION`, `SCL2005`); a target already holding an `IED`, a `Substation`, a `Line` or a `Process` (`EXTRACTION_TARGET_NOT_EMPTY`, `SCL2006`); a control block whose `confRev` cannot take the increase of step 3 (`EXTRACTION_CONF_REV_INVALID`, `EXTRACTION_CONF_REV_OVERFLOW`).
+1. Refuse before anything is written: an omitted or unknown `kind` or `inputs`, or `as: 'revision'` (`OPTION_NOT_AVAILABLE`); a source registered with an extension other than `.ssd`, `.scd`, `.xml` or none (`OPTION_NOT_AVAILABLE`, `meta: { option: 'sourceExtension', value }`); an IED of a real device (`IED_NOT_SPECIFICATION`, `SCL2005`); a target already holding an `IED`, a `Substation`, a `Line` or a `Process` (`EXTRACTION_TARGET_NOT_EMPTY`, `SCL2006`); a control block whose `confRev` cannot take the increase of step 3 (`EXTRACTION_CONF_REV_INVALID`, `EXTRACTION_CONF_REV_OVERFLOW`).
 2. Write the ISD history header (`fileType: 'ISD'`, via [`history.startFile`](./history#startfile)) and record the source in the `Header` and the IED's source files ([`reference.writeProvenance`](./reference#writeprovenance)): its file name with its extension, its version and revision, and its type, `SSD` for a `.ssd` file and `SCD` for any other, whatever its `Header` says.
 3. Write the IED under its name and uuids, `issuer` as its `manufacturer`, with its logical nodes, data sets, control blocks, values and vendor content, and the data types its logical nodes use; the file holds no `MinRequestedSCDFiles`:
    - supervision logical nodes (`LGOS`, `LSVS`) are left out, and so is a `SupSubscription` declaring a `maxGo` or `maxSv` above `0`; each is told (`supervision-left-out`). The data set members naming them go, and a data set left with none; each report, GOOSE or sampled-value control block whose data set changed gets `confRev` raised by `10000` once, a log control block `logEna="false"`;
@@ -180,6 +180,19 @@ Options of `ied`, each `true` by default:
 - `applications`: an `Application` holding a function the file holds is written with only what it may still name. `false` leaves every application out.
 - `allocationRoles`: the same for an `AllocationRole`. `false` leaves them out.
 - `powerSystemRelations`: the relations of the written functions to written equipment. `false` leaves them out.
+
+The `kind` of ISD:
+
+- `'instance'`: the ISD of the IED in the project, as the steps above write it: its name, the levels' names and every identifier as in the project, the project recorded as its source.
+- `'template'`: a template serving every device of a frame agreement, tied to no project. The content is the same; what differs:
+  - the IED is named `SPECIFICATION`, and the `Header` `ISD_SPECIFICATION`;
+  - each level of the process part (`Substation`, `VoltageLevel`, `Bay`, `Line`, `Process`) is named `TEMPLATE`, unless another level of its tag sits beside it (an IED specified across two bays): levels side by side keep their names;
+  - every reference in the file naming the IED follows (an `LNode`'s `iedName`, an `LNodeSpecNaming`, a `ConnectedAP`, a receiver of its own control block), and so does every path through a renamed level that its reference holds with a uuid (a `SourceRef` with its `sourceLNodeUuid`, a `Terminal` with its `cNodeUuid`); a path the reference holds with no uuid is written as the project has it and does not follow the renamed levels;
+  - every element gets a uuid of its own, the references inside the file repointed onto them, so no identifier of the project is left;
+  - the functions and applications, with what they hold, keep the lineage (`templateUuid`, `originUuid`) of the templates they were made from; every element outside them (the IED, its connections, the levels, an equipment holding a function) carries none;
+  - no source file is recorded: no `SclFileReference` at the `Header`, and no `IEDSourceFiles` on the IED, the project's list left out too.
+
+  `instantiate.ied` places a template whose substation frame is all `TEMPLATE` as a new IED as many times as wanted, each with a bay of its own; a template whose bays or voltage levels keep their names, side by side, is refused there with `SSD_SCOPE_AMBIGUOUS` unless they are linked, and the process part of a line or process template is not placed (the IED alone is).
 
 ```ts
 await targetDoc.transaction(async (tx) => {

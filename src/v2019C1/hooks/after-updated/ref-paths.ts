@@ -11,9 +11,7 @@ import {
 	followTupleTargetRename,
 	hasAttributeChange,
 	mirrorSpecifiedNaming,
-	rebuildOwnPathAttributes,
-	rebuildPathsBelow,
-	rebuildReferencesTo,
+	followAncestry,
 	reconcileLNodeBinding,
 	reconcileMappedData,
 	reconcileMappedDataBelow,
@@ -99,18 +97,19 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 	operations.push(...signalRoleOps)
 
 	const target = { tagName: newRecord.tagName, id: newRecord.id } as Scl.Ref<Scl.ElementsOf>
-	const referenceOps = await rebuildReferencesTo(query, { target })
-	operations.push(...referenceOps)
-
 	const pathChanged = hasPathAttributeChange(oldRecord, newRecord)
-	if (pathChanged || ownPathAttributeChanged({ oldRecord: previous, newRecord: current })) {
-		const ownOps = await rebuildOwnPathAttributes(query, { element: target })
-		operations.push(...ownOps)
-	}
-	if (pathChanged) {
-		const belowOps = await rebuildPathsBelow(query, { record: target })
-		operations.push(...belowOps)
-	}
+	const followOps = await followAncestry(query, {
+		roots: [
+			{
+				root: target,
+				references: true,
+				ownPath:
+					pathChanged || ownPathAttributeChanged({ oldRecord: previous, newRecord: current }),
+				below: pathChanged,
+			},
+		],
+	})
+	operations.push(...followOps)
 
 	if (specifiedNamingChanged({ oldRecord: previous, newRecord: current })) {
 		const namedLNodeOps = await rebuildPathsOfNamedLNode(query, { specNaming: current })

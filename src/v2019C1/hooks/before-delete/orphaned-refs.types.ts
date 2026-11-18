@@ -28,3 +28,15 @@ export type DeleteCascade = {
 	within: Scl.RawRecord<Scl.ElementsOf>[]
 	cleared: OrphanedRef[]
 }
+
+/**
+ * What a delete removes, as the references outside read it: the record ids, the records by id and by their uuid, the names of the
+ * IEDs it removes whole, and the tags of the records it removes that carry a uuid.
+ */
+export type DeletedSubtree = {
+	ids: ReadonlySet<string>
+	byId: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
+	byUuid: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
+	iedNames: ReadonlySet<string>
+	uuidTags: ReadonlySet<string>
+}

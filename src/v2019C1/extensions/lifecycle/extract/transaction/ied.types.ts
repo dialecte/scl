@@ -8,6 +8,9 @@ import type { LinkedSectionReading } from '@/v2019C1/extensions/lifecycle/linked
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
 
+/** The kind of ISD an IED export writes: an instance of the project, or a template independent of it. */
+export type IsdKind = 'instance' | 'template'
+
 /** Parameters of `extract.ied`: the ISD export of one specification IED. */
 export type IedExtractParams = {
 	/** Source type follows its registered extension; .xml or no extension uses SCD, ignoring Header fileType. */
@@ -16,8 +19,12 @@ export type IedExtractParams = {
 	iedRef: Scl.Ref<'IED'>
 	/** Initializes an ISD Header with a fresh file UUID and initial history. */
 	fileType: 'ISD'
-	/** Explicit 'instance' required for now; no default is implemented. */
-	kind?: 'instance'
+	/**
+	 * The kind of ISD written, required, no default: an `'instance'` of the project (the IED's name, the levels' names and
+	 * every identifier as in the project, the project recorded as its source), or a `'template'` serving every device of a
+	 * frame agreement (see `extract.ied`).
+	 */
+	kind?: IsdKind
 	/**
 	 * The inputs of the IED's logical nodes: none (`'none'`), or each in later-binding form (`'later-binding'`): its
 	 * description, internal address and expected data and service, its service type equal to the expected service, and

@@ -1,3 +1,7 @@
+import {
+	CONTRIBUTED_SUBNETWORK_CHILDREN,
+	SUBNETWORK_TAG,
+} from './place-ied-communication.constants'
 import { readIedCommunication } from './read-ied-communication'
 
 import { toRef } from '@dialecte/core/helpers'
@@ -51,7 +55,9 @@ export async function placeIedCommunication(
 		scope: description.scope,
 		matchKey: params.matchKey,
 		leftOut: description.leaveOut,
+		contributedChildren: contributedChildrenOf(params),
 		placeholderLineages: params.placeholderLineages,
+		redirectMappings: params.redirectMappings,
 	})
 }
 
@@ -78,7 +84,9 @@ export async function describeIedCommunication(
 			scope: description.scope,
 			matchKey: params.matchKey,
 			leftOut: description.leaveOut,
+			contributedChildren: contributedChildrenOf(params),
 			placeholderLineages: params.placeholderLineages,
+			redirectMappings: params.redirectMappings,
 		})
 	}
 	return diff({
@@ -88,7 +96,20 @@ export async function describeIedCommunication(
 		diffPolicy: params.diffPolicy,
 		notSelected: description.leaveOut,
 		placeholderLineages: params.placeholderLineages,
+		redirectMappings: params.redirectMappings,
 	})
+}
+
+/**
+ * What the IED contributes below a subnetwork the project holds, on an update (`keepsSubNetworkSettings`): its
+ * connections only, the subnetwork's settings (its bit rate, its text, its private data) being shared by every IED on
+ * it. A first placement brings what the source holds.
+ */
+function contributedChildrenOf(
+	params: IedCommunicationParams,
+): ReadonlyMap<string, ReadonlySet<string>> | undefined {
+	if (!params.keepsSubNetworkSettings) return undefined
+	return new Map([[SUBNETWORK_TAG, CONTRIBUTED_SUBNETWORK_CHILDREN]])
 }
 
 /** The Communication slice of the source IED, by its name. */

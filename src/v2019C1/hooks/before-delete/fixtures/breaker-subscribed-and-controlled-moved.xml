@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The same document as breaker-subscribed-and-controlled.xml, IED8's input moved to posMoved and the GOOSE described:
+     IED7 sends its breaker position by GOOSE (data set DS: stVal, named by uuid) and serves a second
+     access point AP2 through AP1; IED8 subscribes to the position (ExtRef), controls the breaker (ExtCtrl) and takes
+     its keys from IED7's AP1 (KDC), each by uuid -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <IED name="IED7" uuid="ied7" dev:db-id="ied7">
+        <AccessPoint name="AP1" uuid="ap7" dev:db-id="ap7">
+            <Server dev:db-id="srv7">
+                <Authentication dev:db-id="auth7"/>
+                <LDevice inst="LD1" uuid="ld7" dev:db-id="ld7">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln07" dev:db-id="ln07">
+                        <DataSet name="DS" dev:db-id="ds7">
+                            <FCDA ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" fc="ST" lnUuid="xcbr7" dev:db-id="fst7"/>
+                        </DataSet>
+                        <GSEControl name="GC" appID="GC" desc="position GOOSE" datSet="DS" confRev="1" uuid="gc7" dev:db-id="gc7"/>
+                    </LN0>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="xcbr7" dev:db-id="xcbr7"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+        <AccessPoint name="AP2" uuid="ap7b" dev:db-id="ap7b">
+            <ServerAt apName="AP1" apUuid="ap7" dev:db-id="sat7"/>
+        </AccessPoint>
+    </IED>
+    <IED name="IED8" uuid="ied8" dev:db-id="ied8">
+        <AccessPoint name="AP1" uuid="ap8" dev:db-id="ap8">
+            <Server dev:db-id="srv8">
+                <Authentication dev:db-id="auth8"/>
+                <LDevice inst="LD1" uuid="ld8" dev:db-id="ld8">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln08" dev:db-id="ln08">
+                        <Inputs dev:db-id="in8">
+                            <ExtRef iedName="IED7" ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" lnUuid="xcbr7" serviceType="GOOSE" srcLDInst="LD1" srcLNClass="LLN0" srcCBName="GC" srcCBUuid="gc7" intAddr="posMoved" desc="breaker position" dev:db-id="ext8"/>
+                        </Inputs>
+                    </LN0>
+                    <LN lnClass="CSWI" inst="1" lnType="CSWI_T" uuid="cswi8" dev:db-id="cswi8">
+                        <Outputs dev:db-id="out8">
+                            <ExtCtrl iedName="IED7" ldInst="LD1" lnClass="XCBR" lnInst="1" doName="Pos" lnUuid="xcbr7" intAddr="posOper" desc="breaker control" dev:db-id="ctl8"/>
+                        </Outputs>
+                    </LN>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+        <KDC iedName="IED7" apName="AP1" apUuid="ap7" dev:db-id="kdc8"/>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0"/>
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="lnt1"><DO name="Pos" type="DPC_T" dev:db-id="do-pos"/></LNodeType>
+        <LNodeType id="CSWI_T" lnClass="CSWI" dev:db-id="lnt2"><DO name="Pos" type="DPC_T" dev:db-id="do-pos2"/></LNodeType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dot">
+            <DA name="stVal" fc="ST" bType="Dbpos" dev:db-id="da-st"/>
+            <DA name="q" fc="ST" bType="Quality" dev:db-id="da-q"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>

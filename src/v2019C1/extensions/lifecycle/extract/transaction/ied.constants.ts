@@ -8,3 +8,6 @@ export const EXPORTED_ROOT_TAGS: ReadonlySet<string> = new Set([
 
 /** The input modes an IED export offers: no input, or every input in later-binding form. */
 export const INPUT_MODES: ReadonlySet<string> = new Set(['none', 'later-binding'])
+
+/** The kinds of ISD an IED export writes. */
+export const ISD_KINDS: ReadonlySet<string> = new Set(['instance', 'template'])

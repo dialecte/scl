@@ -29,6 +29,7 @@ import type { ReportInstance } from '@/v2019C1/extensions/lifecycle/engine/diff.
 import type { PinnedMatches } from '@/v2019C1/extensions/lifecycle/engine/match-child.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { TargetInstances } from '@/v2019C1/extensions/lifecycle/instance'
 import type { InstanceLevels } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -61,7 +62,7 @@ export async function reportTopologyFrame(
 		matchKey: MatchKey
 		/** The project holds no instance of the scope yet, or a new one was asked for. */
 		firstPlacement: boolean
-		targetInstance?: Scl.Ref<Scl.ElementsOf>
+		targetInstance?: TargetInstances
 		/** The element of the project the scope root is mapped onto, on a first placement. */
 		mappedOnto?: Scl.Ref<Scl.ElementsOf>
 		/** Where each level below the scope root lands, on a first placement. */

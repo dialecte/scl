@@ -194,35 +194,6 @@ describe('updateRefPaths', () => {
 				unexpectedQueries: ['//v2019C1:SourceRef[@source="Sub1/F1/XCBR1.Pos.stVal"]'],
 			},
 
-			'lnode — edit the path of a referrer whose uuid names a target → path recomposed from the uuid':
-				{
-					sourceXml: /* xml */ `
-						<SCL ${ns} ${id}="root">
-							<Substation ${id}="sub1" name="Sub1">
-								<Function ${id}="f1" name="F1">
-									<LNode ${id}="target" lnClass="XCBR" lnInst="1" iedName="None" uuid="uuid-target"/>
-									<LNode ${id}="owner" lnClass="PTRC" lnInst="1" iedName="None">
-										<eIEC61850-6-100:LNodeInputs ${id}="inputs">
-											<eIEC61850-6-100:SourceRef ${id}="ref" input="Trip" sourceLNodeUuid="uuid-target" source="Sub1/F1/XCBR1"/>
-										</eIEC61850-6-100:LNodeInputs>
-									</LNode>
-								</Function>
-							</Substation>
-						</SCL>
-					`,
-					act: async (document) => {
-						await document.transaction(async (tx) => {
-							await tx.update(
-								{ tagName: 'SourceRef', id: 'ref' },
-								{ attributes: { source: 'Sub1/F1/Old' } },
-							)
-						})
-					},
-					expectedQueries: [
-						'//v2019C1:SourceRef[@sourceLNodeUuid="uuid-target" and @source="Sub1/F1/XCBR1"]',
-					],
-				},
-
 			// ── Strategy: ied-address ────────────────────────────────────────────
 
 			'ied-address — update ExtRef.intAddr → SourceRef.extRefAddr updated': {

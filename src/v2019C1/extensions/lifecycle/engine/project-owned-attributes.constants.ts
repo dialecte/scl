@@ -1,4 +1,9 @@
+import {
+	SPECIFIED_IED_NAME_ATTRIBUTE,
+	SPECIFIED_LD_INST_ATTRIBUTE,
+} from '@/v2019C1/constants/lnode-spec-naming'
 import { LNODE_BINDING_ATTRIBUTES, TYPE_ID_REF_ATTRIBUTES } from '@/v2019C1/extensions/reference'
+import { SOURCE_ATTRIBUTES_BY_TAG } from '@/v2019C1/hooks/shared/input-source.constants'
 
 import type { KeptAttributeReason } from './diff.types'
 import type { ProjectOwnedAttributes } from './project-owned-attributes.types'
@@ -15,6 +20,16 @@ export const NO_PROJECT_OWNED_ATTRIBUTES: ProjectOwnedAttributes = {
  */
 export const BOUND_LNODE_OWNED_ATTRIBUTES: ProjectOwnedAttributes = {
 	attributes: new Set(LNODE_BINDING_ATTRIBUTES),
+	listedAsKept: new Map(),
+}
+
+/**
+ * The specified naming of an LNode specified on an IED: the IED and the logical device it names are written at the
+ * commit from the specification IED its LNode is bound to (a template's placeholder renamed), silent like the LNode's
+ * own binding.
+ */
+export const SPECIFIED_ON_IED_OWNED_ATTRIBUTES: ProjectOwnedAttributes = {
+	attributes: new Set([SPECIFIED_IED_NAME_ATTRIBUTE, SPECIFIED_LD_INST_ATTRIBUTE]),
 	listedAsKept: new Map(),
 }
 
@@ -60,3 +75,29 @@ export const INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES: ReadonlyMap<string, Projec
 			],
 		),
 	)
+
+/**
+ * A control block whose revision the project raised above the template's: the template's lower revision is listed as
+ * kept, never written (a configuration revision only rises).
+ */
+export const CONF_REV_ONLY_RISES: ProjectOwnedAttributes = {
+	attributes: new Set(['confRev']),
+	listedAsKept: new Map<string, KeptAttributeReason>([['confRev', 'conf-rev-only-rises']]),
+}
+
+/**
+ * An input or output of an IED the project bound to a source: the source it names (the data and the control block
+ * sending it) is the system configuration's, kept against a template, each difference listed as kept. Its internal
+ * address, description, service and expected data (`pXxx`) are the template's.
+ */
+export const BOUND_INPUT_OWNED_ATTRIBUTES: ReadonlyMap<string, ProjectOwnedAttributes> = new Map(
+	[...SOURCE_ATTRIBUTES_BY_TAG].map(([tagName, names]): [string, ProjectOwnedAttributes] => [
+		tagName,
+		{
+			attributes: new Set(names),
+			listedAsKept: new Map(
+				names.map((name): [string, KeptAttributeReason] => [name, 'data-flow']),
+			),
+		},
+	]),
+)

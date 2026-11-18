@@ -1,3 +1,5 @@
+import { GROUPED_APART_BELOW } from './group.constants'
+
 import { toRef } from '@dialecte/core/helpers'
 
 import type { DecisionGroup, DiffNode, ReportInstance } from './diff.types'
@@ -19,7 +21,8 @@ import type { AnyRefOrRecord } from '@dialecte/core'
  */
 export function groupChanges(root: DiffNode, scopePrefix?: string): DecisionGroup[] {
 	const groups: DecisionGroup[] = []
-	collectGroups({ node: root, scopePrefix, out: groups })
+	const apartTags = GROUPED_APART_BELOW.get(root.tagName)
+	collectGroups({ node: root, scopePrefix, out: groups, apartTags })
 	return groups
 }
 
@@ -27,22 +30,26 @@ function collectGroups(params: {
 	node: DiffNode
 	scopePrefix: string | undefined
 	out: DecisionGroup[]
+	apartTags: ReadonlySet<string> | undefined
 }): void {
-	const { node, scopePrefix, out } = params
+	const { node, scopePrefix, out, apartTags } = params
 	if (node.change === 'unchanged') {
-		for (const child of node.children) collectGroups({ node: child, scopePrefix, out })
+		for (const child of node.children) collectGroups({ ...params, node: child })
 		return
 	}
 
 	// node is a topmost changed node -> a group root; its changed descendants
 	// become companions (we do NOT recurse into groups here) — but what the project added below a
-	// change of the template is its own decision, kept by default: accepting the change never takes it
+	// change of the template is its own decision, kept by default: accepting the change never takes it;
+	// nor does it decide a change waiting for a decision of its own, even below what the project added
 	const companions: DiffNode[] = []
 	const apart: DiffNode[] = []
 	collectChangedDescendants({
 		node,
 		out: companions,
-		apart: node.change === 'target-only' ? undefined : apart,
+		apart,
+		waitingOnly: node.change === 'target-only',
+		apartTags,
 	})
 
 	out.push({
@@ -53,29 +60,41 @@ function collectGroups(params: {
 		companions,
 		dependsOn: [],
 		// A target-only (author-added) element defaults to KEEP: skip unless the user
-		// explicitly opts into removing it. Everything else defaults to accept.
-		suggestedAction: node.change === 'target-only' ? 'skip' : 'accept',
+		// explicitly opts into removing it; a change waiting for a decision takes none it is not given.
+		// Everything else defaults to accept.
+		suggestedAction: node.change === 'target-only' || node.requiresDecision ? 'skip' : 'accept',
+		...(node.requiresDecision ? { requiresDecision: node.requiresDecision } : {}),
 	})
-	for (const own of apart) collectGroups({ node: own, scopePrefix, out })
+	for (const own of apart) collectGroups({ ...params, node: own })
 }
 
 /**
  * The changed descendants of a node, in `out`. With `apart`, an element the project added (`target-only`) is set
- * there instead, with what it holds: a group of its own.
+ * there instead, with what it holds: a group of its own; so is a change waiting for a decision (`requiresDecision`),
+ * and an element of `apartTags` whose parent stays (`modified` or `unchanged`), with what it holds: a part of the root
+ * decided on its own, its own changes grouped from it (see `GROUPED_APART_BELOW`). With `waitingOnly` (below an element the project added, which takes what it
+ * holds), only a change waiting for a decision is set apart.
  */
 export function collectChangedDescendants(params: {
 	node: DiffNode
 	out: DiffNode[]
 	apart?: DiffNode[]
+	waitingOnly?: boolean
+	apartTags?: ReadonlySet<string>
 }): void {
-	const { node, out, apart } = params
+	const { node, out, apart, waitingOnly, apartTags } = params
+	const parentStays = node.change === 'modified' || node.change === 'unchanged'
 	for (const child of node.children) {
-		if (apart && child.change === 'target-only') {
+		// an element staying holds its own changes too: they are grouped from it, as below a root that stays
+		const decidedApart = !waitingOnly && parentStays && apartTags?.has(child.tagName)
+		const ownGroup =
+			child.requiresDecision || (!waitingOnly && child.change === 'target-only') || decidedApart
+		if (apart && ownGroup) {
 			apart.push(child)
 			continue
 		}
 		if (child.change !== 'unchanged') out.push(child)
-		collectChangedDescendants({ node: child, out, apart })
+		collectChangedDescendants({ ...params, node: child })
 	}
 }
 

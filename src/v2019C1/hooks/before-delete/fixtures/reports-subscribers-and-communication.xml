@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IED7 reports to IED8's three operator nodes IHMI1-3 (ClientLN, in that order), holds an association with IHMI1,
+     sends a GOOSE subscribed to by IED9's access point AP1 (IEDName at access point level) and sampled values
+     subscribed to by IED8's IHMI3 (IEDName at logical node level); the subnetwork connects IED7's and IED9's access
+     points, IED7's with the addresses of the GOOSE (GSE) and the sampled values (SMV). Every reference by uuid. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <Communication dev:db-id="com">
+        <SubNetwork name="N1" dev:db-id="n1">
+            <ConnectedAP iedName="IED7" apName="AP1" apUuid="ap7" dev:db-id="cap7">
+                <GSE ldInst="LD1" cbName="GC" cbUuid="gc7" dev:db-id="gse7"/>
+                <SMV ldInst="LD1" cbName="SV" cbUuid="sv7" dev:db-id="smv7"/>
+            </ConnectedAP>
+            <ConnectedAP iedName="IED9" apName="AP1" apUuid="ap9" dev:db-id="cap9"/>
+        </SubNetwork>
+    </Communication>
+    <IED name="IED7" uuid="ied7" dev:db-id="ied7">
+        <AccessPoint name="AP1" uuid="ap7" dev:db-id="ap7">
+            <Server dev:db-id="srv7">
+                <Authentication dev:db-id="auth7"/>
+                <LDevice inst="LD1" uuid="ld7" dev:db-id="ld7">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln07" dev:db-id="ln07">
+                        <ReportControl name="RC" confRev="1" dev:db-id="rc7">
+                            <OptFields dev:db-id="opt7"/>
+                            <RptEnabled max="3" dev:db-id="rpt7">
+                                <ClientLN iedName="IED8" ldInst="LD1" lnClass="IHMI" lnInst="1" lnUuid="ihmi1" dev:db-id="cl1"/>
+                                <ClientLN iedName="IED8" ldInst="LD1" lnClass="IHMI" lnInst="2" lnUuid="ihmi2" dev:db-id="cl2"/>
+                                <ClientLN iedName="IED8" ldInst="LD1" lnClass="IHMI" lnInst="3" lnUuid="ihmi3" dev:db-id="cl3"/>
+                            </RptEnabled>
+                        </ReportControl>
+                        <GSEControl name="GC" appID="GC" confRev="1" uuid="gc7" dev:db-id="gc7">
+                            <IEDName apRef="AP1" apUuid="ap9" dev:db-id="sub9">IED9</IEDName>
+                        </GSEControl>
+                        <SampledValueControl name="SV" smvID="SV" smpRate="80" nofASDU="1" confRev="1" uuid="sv7" dev:db-id="sv7">
+                            <IEDName ldInst="LD1" lnClass="IHMI" lnInst="3" lnUuid="ihmi3" dev:db-id="sub8">IED8</IEDName>
+                            <SmvOpts dev:db-id="svo7"/>
+                        </SampledValueControl>
+                    </LN0>
+                </LDevice>
+                <Association kind="predefined" iedName="IED8" ldInst="LD1" lnClass="IHMI" lnInst="1" lnUuid="ihmi1" dev:db-id="as7"/>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="IED8" uuid="ied8" dev:db-id="ied8">
+        <AccessPoint name="AP1" uuid="ap8" dev:db-id="ap8">
+            <Server dev:db-id="srv8">
+                <Authentication dev:db-id="auth8"/>
+                <LDevice inst="LD1" uuid="ld8" dev:db-id="ld8">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ln08" dev:db-id="ln08"/>
+                    <LN lnClass="IHMI" inst="1" lnType="IHMI_T" uuid="ihmi1" dev:db-id="ihmi1"/>
+                    <LN lnClass="IHMI" inst="2" lnType="IHMI_T" uuid="ihmi2" dev:db-id="ihmi2"/>
+                    <LN lnClass="IHMI" inst="3" lnType="IHMI_T" uuid="ihmi3" dev:db-id="ihmi3"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="IED9" uuid="ied9" dev:db-id="ied9">
+        <AccessPoint name="AP1" uuid="ap9" dev:db-id="ap9"/>
+        <AccessPoint name="AP2" uuid="ap9b" dev:db-id="ap9b"/>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt0"/>
+        <LNodeType id="IHMI_T" lnClass="IHMI" dev:db-id="lnt1"/>
+    </DataTypeTemplates>
+</SCL>

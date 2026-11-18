@@ -1,7 +1,6 @@
-import { holdsNothingBut } from './orphaned-refs'
-
 import { describe, expect, it } from 'vitest'
 
+import { holdsNothingBut } from '@/v2019C1/helpers/pruned-when-empty'
 import { createSclTestRecord } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'

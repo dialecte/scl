@@ -100,6 +100,47 @@ describe('report warnings', () => {
 		])
 	})
 
+	it('lists an element that is no reference, paired among identical ones, under the code for elements', () => {
+		const label: DiffNode = {
+			change: 'unchanged',
+			tagName: 'Label',
+			instanceRef: { tagName: 'Label', id: 'label-1' },
+			sourceRef: { tagName: 'Label', id: 'label-1-source' },
+			pairedAmongTwins: true,
+			children: [],
+		}
+		const report = reportOf({ tree: container([label]), groups: [] })
+
+		const warnings = collectReportWarnings(report).map(
+			(warning) => `${warning.code} ${'reference' in warning ? warning.reference.id : ''}`,
+		)
+
+		expect(warnings).toEqual(['identical-elements-paired-in-order label-1'])
+	})
+
+	it('lists an element paired by its key once, with the key', () => {
+		const device: DiffNode = {
+			change: 'unchanged',
+			tagName: 'LDevice',
+			instanceRef: { tagName: 'LDevice', id: 'device' },
+			sourceRef: { tagName: 'LDevice', id: 'device-source' },
+			pairedByKey: 'inst=LD1',
+			children: [],
+		}
+		const report = reportOf({
+			tree: container([device]),
+			groups: [group({ primary: container([]), companions: [device] })],
+		})
+
+		const warnings = collectReportWarnings(report).map((warning) =>
+			warning.code === 'element-paired-by-key'
+				? `${warning.code} ${warning.reference.id} ${warning.source?.id} ${warning.key}`
+				: warning.code,
+		)
+
+		expect(warnings).toEqual(['element-paired-by-key device device-source inst=LD1'])
+	})
+
 	it('lists nothing when every reference paired by its uuids', () => {
 		const report = reportOf({ tree: container([reference({ id: 'by-uuid' })]), groups: [] })
 

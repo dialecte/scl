@@ -21,6 +21,7 @@ import {
 	tupleReferenceWrite,
 } from '@/v2019C1/extensions/reference/query/ied-tuple/tuple-reference-write'
 import { readAttribute } from '@/v2019C1/helpers'
+import { resolveTupleUuid } from '@/v2019C1/hooks/shared/tuple-reference-resolve'
 
 import type {
 	CollectedTuplePair,
@@ -192,9 +193,8 @@ function resolveReferrer(params: {
 }
 
 /**
- * The uuid of each pair of a reference written without it: the one of the element its names name,
- * when exactly one of the tags it may point at answers (control blocks of different kinds may share
- * a name).
+ * The uuid of each pair of a reference written without it: the one of the element its names name
+ * ({@link resolveTupleUuid}).
  */
 function fillsOf(params: {
 	referrer: PendingTupleReferrer
@@ -204,11 +204,8 @@ function fillsOf(params: {
 	const fills: Record<string, string> = {}
 	for (const { pair, address, uuid, targetTags } of referrer.pairs) {
 		if (uuid || !isWrittenWhenSet({ pair })) continue
-		const uuids = targetTags.flatMap((tagName) => {
-			const found = targetsByAddress.get(targetKey({ address, tagName }))
-			return found ? [found] : []
-		})
-		if (uuids.length === 1) fills[pair.attribute.uuid] = uuids[0]
+		const resolved = resolveTupleUuid({ address, targetTags, targetsByAddress })
+		if (resolved) fills[pair.attribute.uuid] = resolved
 	}
 	return fills
 }

@@ -95,11 +95,6 @@ describe('beforeDelete — MinRequestedSCDFile', () => {
 		},
 
 		'IED deleted → no entry written on the remaining IEDs': {
-			allowInvalidOutput: {
-				reason:
-					'deleting an IED leaves the connected access point naming it: the deletion rule for references named by attributes is a later change',
-				violations: [{ check: 'xsd', code: 'keyref' }],
-			},
 			sourceXml: twoIedsOnOneSubNetwork,
 			act: async (document) => {
 				await document.transaction(async (tx) => {

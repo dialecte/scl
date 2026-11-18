@@ -1,4 +1,5 @@
 import { instanceTagOf } from './instance-tag'
+import { createPairingMemo } from './pairing-memo'
 import {
 	placeholderLineageOf,
 	referenceIdentity,
@@ -6,6 +7,8 @@ import {
 	tupleNamesIdentity,
 } from './reference-match'
 
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { keyFieldsOf } from '@/v2019C1/extensions/identity/query/key-fields'
 import {
 	CONTENT_HOLDING_TUPLE_REFERRER_TAGS,
 	DISPOSABLE_REFERENCE_TAGS,
@@ -13,6 +16,7 @@ import {
 } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 
 import type { ChildMatch, PinnedMatches, ReferenceIdentityOf } from './match-child.types'
+import type { PairingMemo } from './pairing-memo.types'
 import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
 import type { TargetLineages } from './target-lineages.types'
@@ -44,7 +48,12 @@ type Reader = Core.Query<Config> | Core.Transaction<Config>
  *    sibling naming the same element, matches the sibling naming nothing by uuid that gives the same names (an
  *    `IEDName`'s text among them), never one by position. Siblings naming the very same thing are paired in order, the
  *    match says so (`pairedAmongTwins`).
- *  - Any other uuid-less element (e.g. `FunctionRoleContent`) matches a same-tag sibling by position.
+ *  - A uuid-pair reference naming nothing by uuid matches by its key (`keyFieldsOf`: a data object's name), else by the
+ *    path it writes, among siblings naming nothing by uuid; never by position.
+ *  - Any other uuid-less element matches the sibling of the same key (`keyFieldsOf`: the schema's identity fields, else
+ *    a supplement — a `DAI`'s name, a `Val`'s setting group); none of that key: no match (the source's is new, the
+ *    instance's the project's own). Twins (the same key twice) are paired in order and said so. An element with no key
+ *    of its own (a singleton such as `Server`) is the one there is, else the next in order.
  *
  * Inside an element of the PROJECT a source element is mapped onto (`matchContainersByName`), an
  * identified container with no lineage counterpart lands on the same-tag child of the same name —
@@ -76,14 +85,22 @@ export async function matchChild(
 		redirectedSourceUuids?: RedirectedSourceUuids
 		matchContainersByName?: boolean
 		pinnedMatches?: PinnedMatches
+		/** The key each pinned source child was paired on by the key pass (`pairByKeyOnLineageMiss`), by its record id. */
+		keyPairings?: ReadonlyMap<string, string>
 		foreignInstanceIds?: ReadonlySet<string>
 		/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. Default none. */
 		placeholderLineages?: PlaceholderLineages
 		/** The source is the project itself (a copy): a uuid both name is one element, never a reference this walk wrote. */
 		sourceIsProject: boolean
+		/**
+		 * What was read of `instanceParent`'s children while its earlier source children were paired: pass the same memo
+		 * for every child of one parent (`createPairingMemo`). Default: a memo of this call alone.
+		 */
+		pairingMemo?: PairingMemo
 	},
 ): Promise<ChildMatch | undefined> {
 	const { targetQuery, sourceChild, instanceParent, index, matchedInstanceIds } = params
+	const memo = params.pairingMemo ?? createPairingMemo()
 	const refsAlwaysAdded = params.refsAlwaysAdded ?? false
 
 	// where this child lands was decided elsewhere: it is that element, or a new one
@@ -92,7 +109,9 @@ export async function matchChild(
 		const pinned = instanceId
 			? instanceParent.tree.find((instanceChild) => instanceChild.id === instanceId)
 			: undefined
-		return pinned && { record: pinned }
+		const key = params.keyPairings?.get(sourceChild.id)
+		if (!pinned) return undefined
+		return key === undefined ? { record: pinned } : { record: pinned, pairedByKey: key }
 	}
 
 	// a template-only element (a subfunction template) is matched as the element it becomes
@@ -108,6 +127,7 @@ export async function matchChild(
 			sourceChild,
 			instanceParent,
 			matchedInstanceIds,
+			memo,
 		})
 		return sameName && { record: sameName }
 	}
@@ -131,6 +151,7 @@ export async function matchChild(
 			candidates,
 			redirectedSourceUuids: params.redirectedSourceUuids,
 			sourceIsProject: params.sourceIsProject,
+			memo,
 		})
 	}
 
@@ -144,10 +165,54 @@ export async function matchChild(
 			redirectedSourceUuids: params.redirectedSourceUuids,
 			targetLineages: params.targetLineages,
 			placeholderLineages: params.placeholderLineages ?? new Set(),
+			memo,
 		})
 	}
 
-	return { record: candidates[0] }
+	// an element with no key of its own is the one there is, else the next in order
+	if (keyFieldsOf(instanceTag).length === 0) return { record: candidates[0] }
+	return matchByKey(sourceQuery, { targetQuery, sourceChild, siblings, candidates, memo })
+}
+
+/**
+ * The candidate whose key (`keyFieldsOf`: the schema's identity fields, else a supplement) is the source child's,
+ * the first in order: none when no candidate has it — the source child is then new, the candidates the project's own.
+ * Several siblings with that key (paired or not) are twins: paired in order, the match says so (`pairedAmongTwins`).
+ */
+async function matchByKey(
+	sourceQuery: Reader,
+	params: {
+		targetQuery: Reader
+		sourceChild: AnyTreeRecord
+		siblings: readonly AnyTreeRecord[]
+		candidates: readonly AnyTreeRecord[]
+		memo: PairingMemo
+	},
+): Promise<ChildMatch | undefined> {
+	const { targetQuery, sourceChild, siblings, candidates, memo } = params
+	const sourceKey = await keyOf(sourceQuery, { record: sourceChild })
+	function instanceKeyOf(candidate: AnyTreeRecord): Promise<string | undefined> {
+		return memo.read({
+			kind: 'key',
+			record: candidate,
+			read: function readKey() {
+				return keyOf(targetQuery, { record: candidate })
+			},
+		})
+	}
+	const record = await firstOfIdentity({
+		candidates,
+		identity: sourceKey,
+		identityOf: instanceKeyOf,
+	})
+	return record && withTwins({ record, siblings, keyOf: instanceKeyOf })
+}
+
+/** An element's key as one string: each of its key fields `name=value`, an absent one empty. */
+async function keyOf(reader: Reader, params: { record: AnyTreeRecord }): Promise<string> {
+	const attributes = await reader.any.getAttributes(params.record)
+	const fields = keyFieldsOf(instanceTagOf(params.record.tagName))
+	return fields.map((field) => `${field}=${attributes[field] ?? ''}`).join('|')
 }
 
 /**
@@ -167,48 +232,61 @@ async function matchReferenceByIdentity(
 		redirectedSourceUuids: RedirectedSourceUuids | undefined
 		targetLineages: TargetLineages
 		placeholderLineages: PlaceholderLineages
+		memo: PairingMemo
 	},
 ): Promise<ChildMatch | undefined> {
-	const { targetQuery, sourceChild, siblings, candidates, matchKey, targetLineages } = params
+	const { targetQuery, sourceChild, siblings, candidates, matchKey, targetLineages, memo } = params
 	const pairedByNames = UUIDLESS_TUPLE_REFERRER_TAGS.has(sourceChild.tagName)
 	// The source ref's target uuid is read as it is (do not normalize it — an extracted template may
 	// carry its own `templateUuid`). The candidate ref's target uuid is brought back to the source by
 	// the scenario's key so the two compare equal.
 	const sourceIdentity = await referenceIdentity(sourceQuery, sourceChild, { side: 'source' })
 	if (sourceIdentity === undefined) {
-		if (!pairedByNames) return { record: candidates[0] }
-		return matchTupleNames(sourceQuery, { targetQuery, sourceChild, siblings, candidates })
+		if (pairedByNames)
+			return matchTupleNames(sourceQuery, { targetQuery, sourceChild, siblings, candidates, memo })
+		// a reference naming nothing by uuid: by its key, else by the path it names
+		if (keyFieldsOf(sourceChild.tagName).length > 0)
+			return matchByKey(sourceQuery, { targetQuery, sourceChild, siblings, candidates, memo })
+		return matchByPath(sourceQuery, { targetQuery, sourceChild, candidates, memo })
 	}
 	const byUuid = await firstOfIdentity({
 		candidates,
 		identity: sourceIdentity,
 		identityOf: function instanceIdentityOf(candidate) {
-			return referenceIdentity(targetQuery, candidate, {
-				side: 'instance',
-				matchKey,
-				redirectedSourceUuids: params.redirectedSourceUuids,
-				targetLineages,
+			return memo.read({
+				kind: 'instance',
+				record: candidate,
+				read: function readInstanceIdentity() {
+					return referenceIdentity(targetQuery, candidate, {
+						side: 'instance',
+						matchKey,
+						redirectedSourceUuids: params.redirectedSourceUuids,
+						targetLineages,
+					})
+				},
 			})
 		},
 	})
 	if (byUuid) {
+		if (!pairedByNames) return { record: byUuid }
 		return withTwins({
 			record: byUuid,
 			siblings,
 			// twins name the very same elements: their own uuids, not the template element those stand for
 			keyOf: function ownIdentityOfSibling(sibling) {
-				return ownIdentityOf(targetQuery, { candidate: sibling })
+				return ownIdentityOf(targetQuery, { candidate: sibling, memo })
 			},
 		})
 	}
 	// a reference of the project written without its uuid is the one giving the same names
 	if (pairedByNames) {
-		const namingNoUuid = await candidatesNamingNoUuid(targetQuery, { candidates })
+		const namingNoUuid = await candidatesNamingNoUuid(targetQuery, { candidates, memo })
 		const byNames = await matchTupleNames(sourceQuery, {
 			targetQuery,
 			sourceChild,
 			siblings,
 			candidates: namingNoUuid,
+			memo,
 		})
 		if (byNames) return byNames
 	}
@@ -218,6 +296,7 @@ async function matchReferenceByIdentity(
 		candidates,
 		placeholderLineages: params.placeholderLineages,
 		targetLineages,
+		memo,
 	})
 }
 
@@ -227,11 +306,47 @@ async function matchReferenceByIdentity(
  */
 async function ownIdentityOf(
 	targetQuery: Reader,
-	params: { candidate: AnyTreeRecord },
+	params: { candidate: AnyTreeRecord; memo: PairingMemo },
+): Promise<string | undefined> {
+	const { candidate, memo } = params
+	return memo.read({
+		kind: 'own',
+		record: candidate,
+		read: async function readOwnIdentity() {
+			const byUuid = await rawIdentityOf(targetQuery, { candidate, memo })
+			return byUuid ?? namesIdentityOf(targetQuery, { candidate, memo })
+		},
+	})
+}
+
+/** The uuids a reference of the instance names, as written (with its discriminators): read once per parent. */
+function rawIdentityOf(
+	targetQuery: Reader,
+	params: { candidate: AnyTreeRecord; memo: PairingMemo },
 ): Promise<string | undefined> {
 	const { candidate } = params
-	const byUuid = await referenceIdentity(targetQuery, candidate, { side: 'source' })
-	return byUuid ?? tupleNamesIdentity(targetQuery, candidate)
+	return params.memo.read({
+		kind: 'raw',
+		record: candidate,
+		read: function readRawIdentity() {
+			return referenceIdentity(targetQuery, candidate, { side: 'source' })
+		},
+	})
+}
+
+/** The names a reference of the instance gives what it names: read once per parent. */
+function namesIdentityOf(
+	targetQuery: Reader,
+	params: { candidate: AnyTreeRecord; memo: PairingMemo },
+): Promise<string | undefined> {
+	const { candidate } = params
+	return params.memo.read({
+		kind: 'names',
+		record: candidate,
+		read: function readNamesIdentity() {
+			return tupleNamesIdentity(targetQuery, candidate)
+		},
+	})
 }
 
 /** The first candidate, in document order, whose identity is `identity`: twins are paired in order. */
@@ -247,9 +362,9 @@ async function firstOfIdentity(params: {
 }
 
 /**
- * The match of `record`, said paired among twins (`pairedAmongTwins`) when another sibling, paired or not, names the
- * very same thing (`keyOf`) — only for a tuple referrer with no uuid of its own: two other references naming one
- * element are not one entry written twice.
+ * The match of `record`, said paired among twins (`pairedAmongTwins`) when another sibling, paired or not, is the very
+ * same thing (`keyOf`). Two references naming one element are twins only for a tuple referrer with no uuid of its
+ * own: the callers ask only then.
  */
 async function withTwins(params: {
 	record: AnyTreeRecord
@@ -257,7 +372,6 @@ async function withTwins(params: {
 	keyOf: ReferenceIdentityOf
 }): Promise<ChildMatch> {
 	const { record, siblings, keyOf } = params
-	if (!UUIDLESS_TUPLE_REFERRER_TAGS.has(record.tagName)) return { record }
 	const key = await keyOf(record)
 	if (key === undefined) return { record }
 	for (const sibling of siblings) {
@@ -281,20 +395,30 @@ async function matchReferenceNamingTheSame(
 		candidates: readonly AnyTreeRecord[]
 		redirectedSourceUuids: RedirectedSourceUuids | undefined
 		sourceIsProject: boolean
+		memo: PairingMemo
 	},
 ): Promise<ChildMatch | undefined> {
 	const { targetQuery, sourceChild, candidates, redirectedSourceUuids, sourceIsProject } = params
 	const sourceIdentity = await referenceIdentity(sourceQuery, sourceChild, { side: 'source' })
 	if (sourceIdentity === undefined) return undefined
-	for (const candidate of candidates) {
-		const candidateIdentity = await referenceIdentity(targetQuery, candidate, {
-			side: 'project',
-			redirectedSourceUuids,
-			readsSourceUuids: !sourceIsProject,
-		})
-		if (candidateIdentity === sourceIdentity) return { record: candidate }
-	}
-	return undefined
+	const record = await firstOfIdentity({
+		candidates,
+		identity: sourceIdentity,
+		identityOf: function projectIdentityOf(candidate) {
+			return params.memo.read({
+				kind: 'project',
+				record: candidate,
+				read: function readProjectIdentity() {
+					return referenceIdentity(targetQuery, candidate, {
+						side: 'project',
+						redirectedSourceUuids,
+						readsSourceUuids: !sourceIsProject,
+					})
+				},
+			})
+		},
+	})
+	return record && { record }
 }
 
 /**
@@ -310,19 +434,32 @@ async function matchReferenceByName(
 		candidates: readonly AnyTreeRecord[]
 		placeholderLineages: PlaceholderLineages
 		targetLineages: TargetLineages
+		memo: PairingMemo
 	},
 ): Promise<ChildMatch | undefined> {
-	const { targetQuery, sourceChild, candidates, placeholderLineages } = params
+	const { targetQuery, sourceChild, candidates, placeholderLineages, memo } = params
 	if (placeholderLineages.size === 0) return undefined
 	const sourceNameIdentity = await referenceNameIdentity(sourceQuery, sourceChild)
 	if (sourceNameIdentity === undefined) return undefined
 	for (const candidate of candidates) {
-		const placeholder = await placeholderLineageOf(targetQuery, candidate, {
-			placeholderLineages,
-			targetLineages: params.targetLineages,
+		const placeholder = await memo.read({
+			kind: 'placeholder',
+			record: candidate,
+			read: function readPlaceholder() {
+				return placeholderLineageOf(targetQuery, candidate, {
+					placeholderLineages,
+					targetLineages: params.targetLineages,
+				})
+			},
 		})
 		if (!placeholder) continue
-		const candidateNameIdentity = await referenceNameIdentity(targetQuery, candidate)
+		const candidateNameIdentity = await memo.read({
+			kind: 'reference-names',
+			record: candidate,
+			read: function readReferenceNames() {
+				return referenceNameIdentity(targetQuery, candidate)
+			},
+		})
 		if (candidateNameIdentity === sourceNameIdentity) {
 			return { record: candidate, pairedByName: placeholder }
 		}
@@ -338,13 +475,14 @@ async function matchTupleNames(
 		sourceChild: AnyTreeRecord
 		siblings: readonly AnyTreeRecord[]
 		candidates: readonly AnyTreeRecord[]
+		memo: PairingMemo
 	},
 ): Promise<ChildMatch | undefined> {
-	const { targetQuery, sourceChild } = params
+	const { targetQuery, sourceChild, memo } = params
 	const sourceNames = await tupleNamesIdentity(sourceQuery, sourceChild)
 	if (sourceNames === undefined) return undefined
 	function namesOf(candidate: AnyTreeRecord): Promise<string | undefined> {
-		return tupleNamesIdentity(targetQuery, candidate)
+		return namesIdentityOf(targetQuery, { candidate, memo })
 	}
 	const byNames = await firstOfIdentity({
 		candidates: params.candidates,
@@ -357,20 +495,71 @@ async function matchTupleNames(
 			record: byNames,
 			siblings: params.siblings,
 			keyOf: function ownIdentityOfSibling(sibling) {
-				return ownIdentityOf(targetQuery, { candidate: sibling })
+				return ownIdentityOf(targetQuery, { candidate: sibling, memo })
 			},
 		})
 	)
 }
 
+/**
+ * The candidate naming nothing by uuid that writes the same path as a source reference naming nothing by uuid (a
+ * function reference written by path only): the first in order; none when no candidate writes it.
+ */
+async function matchByPath(
+	sourceQuery: Reader,
+	params: {
+		targetQuery: Reader
+		sourceChild: AnyTreeRecord
+		candidates: readonly AnyTreeRecord[]
+		memo: PairingMemo
+	},
+): Promise<ChildMatch | undefined> {
+	const { targetQuery, sourceChild, memo } = params
+	const sourcePath = await pathOf(sourceQuery, { record: sourceChild })
+	if (sourcePath === undefined) return undefined
+	const namingNoUuid = await candidatesNamingNoUuid(targetQuery, {
+		candidates: params.candidates,
+		memo,
+	})
+	const record = await firstOfIdentity({
+		candidates: namingNoUuid,
+		identity: sourcePath,
+		identityOf: function instancePathOf(candidate) {
+			return memo.read({
+				kind: 'path',
+				record: candidate,
+				read: function readPath() {
+					return pathOf(targetQuery, { record: candidate })
+				},
+			})
+		},
+	})
+	return record && { record }
+}
+
+/** The paths a uuid-pair reference writes, as one string: undefined when it writes none. */
+async function pathOf(
+	reader: Reader,
+	params: { record: AnyTreeRecord },
+): Promise<string | undefined> {
+	const pairs =
+		UUID_REFERENCE_PAIRS[params.record.tagName as keyof typeof UUID_REFERENCE_PAIRS] ?? []
+	const attributes = await reader.any.getAttributes(params.record)
+	const parts = pairs.flatMap((pair) => {
+		const path = attributes[pair.attribute.path]
+		return path ? [`${pair.attribute.path}=${path}`] : []
+	})
+	return parts.length > 0 ? parts.join('|') : undefined
+}
+
 /** The candidates naming nothing by uuid: only their names say what they name. */
 async function candidatesNamingNoUuid(
 	targetQuery: Reader,
-	params: { candidates: readonly AnyTreeRecord[] },
+	params: { candidates: readonly AnyTreeRecord[]; memo: PairingMemo },
 ): Promise<AnyTreeRecord[]> {
 	const uuidless: AnyTreeRecord[] = []
 	for (const candidate of params.candidates) {
-		const identity = await referenceIdentity(targetQuery, candidate, { side: 'source' })
+		const identity = await rawIdentityOf(targetQuery, { candidate, memo: params.memo })
 		if (identity === undefined) uuidless.push(candidate)
 	}
 	return uuidless
@@ -384,18 +573,30 @@ async function findSameNameChild(
 		sourceChild: AnyTreeRecord
 		instanceParent: AnyTreeRecord
 		matchedInstanceIds: ReadonlySet<string>
+		memo: PairingMemo
 	},
 ): Promise<AnyTreeRecord | undefined> {
-	const { targetQuery, sourceChild, instanceParent, matchedInstanceIds } = params
+	const { targetQuery, sourceChild, instanceParent, matchedInstanceIds, memo } = params
 
 	const name = await sourceQuery.any.getAttribute(sourceChild, { name: 'name' })
 	if (!name) return undefined
 
-	for (const instanceChild of instanceParent.tree) {
-		if (instanceChild.tagName !== instanceTagOf(sourceChild.tagName)) continue
-		if (matchedInstanceIds.has(instanceChild.id)) continue
-		const instanceName = await targetQuery.any.getAttribute(instanceChild, { name: 'name' })
-		if (instanceName === name) return instanceChild
-	}
-	return undefined
+	const instanceTag = instanceTagOf(sourceChild.tagName)
+	const candidates = instanceParent.tree.filter(
+		(instanceChild) =>
+			instanceChild.tagName === instanceTag && !matchedInstanceIds.has(instanceChild.id),
+	)
+	return firstOfIdentity({
+		candidates,
+		identity: name,
+		identityOf: function nameOf(candidate) {
+			return memo.read({
+				kind: 'name',
+				record: candidate,
+				read: function readName() {
+					return targetQuery.any.getAttribute(candidate, { name: 'name' })
+				},
+			})
+		},
+	})
 }

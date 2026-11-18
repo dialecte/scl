@@ -11,4 +11,7 @@ export const ENGINE_MANAGED_TAGS = new Set<string>([
 	'FunctionSclRef',
 	'ApplicationSclRef',
 	'SclFileReference',
+	// an IED's provenance and the project files it requires, written by the placement and the commit
+	'IEDSourceFiles',
+	'MinRequestedSCDFiles',
 ])

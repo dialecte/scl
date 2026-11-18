@@ -17,8 +17,8 @@ import {
 	addChildToPrivate,
 	handleNewPrivateRecordCase,
 } from '@/v2019C1/hooks/after-created/private-wrapper'
+import { followAncestry } from '@/v2019C1/hooks/shared/follow-ancestry'
 import { hasAttributeChange, updatedOperation } from '@/v2019C1/hooks/shared/record-ops'
-import { rebuildPathsBelow, rebuildReferencesTo } from '@/v2019C1/hooks/shared/references-through'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { SpecificationIed } from '@/v2019C1/extensions/data-model/naming/lnode-naming.types'
@@ -149,9 +149,9 @@ export async function rebuildPathsOfNamedLNode(
 	if (specNaming.tagName !== 'LNodeSpecNaming') return []
 	const lnode = await owningLNode(query, params)
 	if (!lnode) return []
-	const referenceOps = await rebuildReferencesTo(query, { target: lnode })
-	const belowOps = await rebuildPathsBelow(query, { record: lnode })
-	return [...referenceOps, ...belowOps]
+	return followAncestry(query, {
+		roots: [{ root: lnode, references: true, ownPath: false, below: true }],
+	})
 }
 
 /** The LNode an `LNodeSpecNaming` belongs to: its parent, or the parent of its Private. */

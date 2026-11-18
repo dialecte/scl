@@ -6,6 +6,7 @@ import type { AcceptedIds } from '@/v2019C1/extensions/lifecycle/engine/decide.t
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { TargetInstances } from '@/v2019C1/extensions/lifecycle/instance'
 import type { VariantSelection } from '@/v2019C1/extensions/lifecycle/layers/application'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
@@ -34,7 +35,13 @@ export type CascadeComposedFunctionsParams = {
 	report?: DiffReport
 	decisions?: DecisionMap
 	keepNameTypesFrom?: KeepNameTypesFrom
-	targetInstance?: Scl.Ref<Scl.ElementsOf>
+	targetInstance?: TargetInstances
+	/**
+	 * What the template's elements outside the primary stand for in the project, beyond what the update matches by
+	 * lineage: for the specification of an IED, the IED's logical nodes, so an LNode the update adds is bound to the
+	 * IED updated, not to another placed from the same template.
+	 */
+	redirectMappings?: readonly RedirectMapping[]
 	decisionMappings?: DecisionMappings
 	/** What each instance of the application's selection of variants leaves out, by instance record id. */
 	selections?: ReadonlyMap<string, VariantSelection>

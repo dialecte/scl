@@ -23,3 +23,23 @@ export function countQueryReads<GenericQuery extends object>(
 	})
 	return { query: counting, reads, calls }
 }
+
+/**
+ * A document query that answers as `query` does and notes each method called on it or on its `any` (`calls`, each
+ * call once, from either), to assert every read a function makes through both.
+ */
+export function countDocumentQueryReads<GenericQuery extends { any: object }>(
+	query: GenericQuery,
+): { query: GenericQuery; calls: () => CountedQueryCall[] } {
+	const anyReads = countQueryReads(query.any)
+	const ownReads = countQueryReads(query)
+	const counting = new Proxy(ownReads.query, {
+		get(target, property) {
+			return property === 'any' ? anyReads.query : Reflect.get(target, property, target)
+		},
+	})
+	function calls(): CountedQueryCall[] {
+		return [...ownReads.calls, ...anyReads.calls]
+	}
+	return { query: counting, calls }
+}

@@ -127,6 +127,7 @@ export async function cascadeComposedFunctions(
 				report: params.report,
 				decisions: params.decisions,
 				keepNameTypesFrom: params.keepNameTypesFrom,
+				redirectMappings: params.redirectMappings,
 				decisionMappings: params.decisionMappings,
 			})
 			if (!placed?.ref.id) continue
@@ -187,6 +188,7 @@ async function reconcileWhereItSits(
 		decisions: params.decisions,
 		keepNameTypesFrom: params.keepNameTypesFrom,
 		targetInstance: functionInstanceRef,
+		redirectMappings: params.redirectMappings,
 		decisionMappings: params.decisionMappings,
 		selection,
 	})
