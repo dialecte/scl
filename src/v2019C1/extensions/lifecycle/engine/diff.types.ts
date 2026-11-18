@@ -43,12 +43,15 @@ export type KeptTextChange = TextChange & { reason: KeptAttributeReason }
  *   control block it removes, a data object or attribute a logical node's new type lacks); accepted, the entry is
  *   removed or the input's source cleared; skipped, it stays and the group deleting the data cannot be accepted;
  * - `unbinds-another-ied`: the removal, in the specification of an IED an update updates, deletes an LNode the project
- *   bound to another IED; accepted, it goes with that binding (nothing in the other IED changes), skipped, it stays.
+ *   bound to another IED; accepted, it goes with that binding (nothing in the other IED changes), skipped, it stays;
+ * - `changes-another-ied`: accepting the group, in an IED update, changes another IED (`report.otherIedImpacts` lists
+ *   what); accepted, it is written with that change, skipped, the other IED stays as it is.
  */
 export type DecisionRequiredReason =
 	| 'value-outside-enumeration'
 	| 'names-deleted-data'
 	| 'unbinds-another-ied'
+	| 'changes-another-ied'
 
 /**
  * One element's attributes compared: the changes an accepted update writes, its type references naming a type of other
@@ -245,23 +248,20 @@ export type DecisionGroup = {
 	 * with the removal. Absent when nothing outside is touched, or the group removes nothing.
 	 */
 	sideEffects?: RemovalSideEffect[]
-	/**
-	 * Present when accepting the group would change another IED (see `OtherIedImpact`): an update never does, so the
-	 * group is suggested `skip` and `apply` refuses decisions accepting it, with `UPDATE_AFFECTS_OTHER_IED`.
-	 */
-	blocked?: 'affects-other-ied'
 }
 
 /**
- * What an update of an IED would change in another IED, listed with the group bringing it (`groupId`, blocked): an
- * element of `ied` `deleted` or `cleared` with what the update removes, an input `unsubscribed` from data a control
- * block of the updated IED no longer sends, or a reference `renamed` with an element of the updated IED it names.
+ * What accepting a group of an IED update would change in another IED, listed before the decision with the group bringing
+ * it (`groupId`, waiting for a decision: `changes-another-ied`, or `names-deleted-data` for a reference to deleted data):
+ * an input of `ied` `deleted` (holding no internal address) or `cleared` with what the update removes (its source, its
+ * internal address kept), an input subscribed to data no entry of a control block of the updated IED sends any more
+ * `cleared` of that control block (cleared once every group listing it is accepted), or a reference `renamed` with an element of the updated IED it names.
  */
 export type OtherIedImpact = {
 	/** The name of the IED changed. */
 	ied: string
 	element: { tagName: string; id: string }
-	effect: 'deleted' | 'cleared' | 'unsubscribed' | 'renamed'
+	effect: 'deleted' | 'cleared' | 'renamed'
 	groupId: string
 }
 
@@ -389,8 +389,8 @@ export type DiffReport = {
 	/** What the report did that the consumer should know of: see {@link ReportWarning}. Absent when nothing. */
 	warnings?: ReportWarning[]
 	/**
-	 * An IED update only: what the update would change in other IEDs, each with the group bringing it, blocked (see
-	 * {@link OtherIedImpact}). A consumer may refuse to confirm the update while any is listed. Absent when none.
+	 * An IED update only: what accepting would change in other IEDs, each with the group bringing it (see
+	 * {@link OtherIedImpact}), for a consumer to show before the decision. Absent when none.
 	 */
 	otherIedImpacts?: OtherIedImpact[]
 }

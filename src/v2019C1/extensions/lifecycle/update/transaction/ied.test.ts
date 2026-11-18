@@ -55,12 +55,48 @@ describe('tx.lifecycle.update.ied - an S-IED updated without a report', () => {
 	runSclTestCases.withExport({ testCases, act })
 })
 
-// A write the update would make in another IED is refused once staged: the transaction fails, nothing is committed.
-describe('tx.lifecycle.update.ied - an S-IED update that would change another IED', () => {
+// Without a report, the update writes everything the revision brings, a change in another IED with the cleanup it
+// brings there included.
+describe('tx.lifecycle.update.ied - an S-IED update changing another IED, without a report', () => {
 	const testCases: SclTest.TestCases = {
-		'SUB1 naming PTRC1.Tr.general of BCU1, the revision dropping PTRC → refused with UPDATE_AFFECTS_OTHER_IED, the project as it was':
+		'SUB1 naming PTRC1.Tr.general of BCU1 with no internal address, the revision dropping PTRC → PTRC gone, that input deleted':
 			{
 				// the revision replaces PTRC by RREC; SUB1 names PTRC1.Tr.general by its uuid
+				sourceXml: isdTemplateRevised,
+				targetXml: projectNorthWithSub1,
+				expectedQueries: ['//default:IED[@name="BCU1"]//default:LN[@lnClass="RREC"]'],
+				unexpectedQueries: [
+					'//default:IED[@name="BCU1"]//default:LN[@lnClass="PTRC"]',
+					'//default:ExtRef[@uuid="c0000000-0000-4000-8000-000000000006"]',
+				],
+			},
+	}
+
+	async function act({
+		project,
+		target,
+		testCase,
+	}: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		const update = await updateOfBcu1({ project, target, sourceXml: testCase.sourceXml })
+		await offered({
+			call: function updateBcu1() {
+				return target.transaction(async function updateIed(tx) {
+					await tx.lifecycle.update.ied(update)
+				})
+			},
+		})
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+// Given a report and decisions, a group waiting for a decision left out of them is refused before anything is written.
+describe('tx.lifecycle.update.ied - an S-IED update given decisions leaving a waiting group out', () => {
+	const testCases: SclTest.TestCases = {
+		'SUB1 naming PTRC1.Tr.general, the decisions leaving out the groups waiting for one → refused with DECISION_REQUIRED, the project as it was':
+			{
 				sourceXml: isdTemplateRevised,
 				targetXml: projectNorthWithSub1,
 				expectedQueries: [
@@ -77,11 +113,23 @@ describe('tx.lifecycle.update.ied - an S-IED update that would change another IE
 	}: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		const update = await updateOfBcu1({ project, target, sourceXml: testCase.sourceXml })
+		const report = await target.query.lifecycle.report({
+			verb: 'ied',
+			sourceQuery: update.sourceQuery,
+			ref: update.iedRef,
+			anchor: update.anchor,
+		})
+		const groups = report.instances.flatMap((instance) => instance.groups)
+		const decisions = new Map(
+			groups.flatMap((group) =>
+				group.requiresDecision ? [] : [[group.id, group.suggestedAction] as const],
+			),
+		)
 		await expect(
 			target.transaction(async function updateIed(tx) {
-				await tx.lifecycle.update.ied(update)
+				await tx.lifecycle.update.ied({ ...update, report, decisions })
 			}),
-		).rejects.toMatchObject({ cause: { key: 'UPDATE_AFFECTS_OTHER_IED', meta: { ied: 'SUB1' } } })
+		).rejects.toMatchObject({ cause: { key: 'DECISION_REQUIRED' } })
 		return { assertOn: 'target' }
 	}
 

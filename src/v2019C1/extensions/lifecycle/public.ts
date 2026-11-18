@@ -43,6 +43,8 @@ export type {
 	LifecycleScenario,
 	LifecycleTarget,
 	LifecycleVerb,
+	TakeOver,
+	TakeOvers,
 } from './contract.types'
 
 export type { AppliedInstance, AppliedInstances, AppliedPlacement, ApplyResult } from './apply'

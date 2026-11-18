@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## UNRELEASED
+
+### Changed
+
+- **Breaking: a group of an IED update that would change another IED waits for a decision instead of being blocked.** `DecisionGroup.blocked` is gone: such a group is `requiresDecision: 'changes-another-ied'` (a reference to deleted data keeping `names-deleted-data`), suggested `skip`, and `report.otherIedImpacts` lists before the decision each element of the other IED and what accepting does to it: `deleted` (an input without an internal address), `cleared` (an input's source, its internal address kept; an input subscribed to data its control block no longer sends, its control block, once every group removing an entry sending that data is accepted), `renamed` (the names a reference gives follow). Accepted, the change is written with that cleanup; skipped, the element stays. `UPDATE_AFFECTS_OTHER_IED` (`SCL2013`) is removed: `apply` no longer refuses an accepted group and `tx.lifecycle.update.ied` no longer refuses a write in another IED; given a report and decisions, it refuses a waiting group left out (`DECISION_REQUIRED`). `OtherIedImpact['effect']` loses `unsubscribed` (now `cleared`) and `DecisionRequiredReason` gains `changes-another-ied`: an exhaustive `switch` over them needs the change.
+
+### Added
+
+- `TakeOver` and `TakeOvers` are exported: the type of `Resolution.takeOver` (a value the project keeps that the consumer takes the template's for, or `'all'`).
+
 ## [0.20.0] - 2026-11-17
 
 An IED placed from a template ISD is updated from a newer revision of it with the specification its placement put in the project (`query.lifecycle.report` / `tx.lifecycle.apply` with `verb: 'ied'`, `tx.lifecycle.update.ied`): its name, identity, settable values, bound inputs and addresses stay the project's, and the update never changes another IED. An IED is exported as an ISD template (`tx.lifecycle.extract.ied`, `kind: 'template'`). References between IEDs are held by their uuid first: an edit keeps the uuid and the names in agreement at the commit, a delete reaches the references naming the element by uuid, a path edit retargets a path reference. The output stays schema-valid: a container a transaction leaves empty goes. A rename follows its paths with fewer reads.

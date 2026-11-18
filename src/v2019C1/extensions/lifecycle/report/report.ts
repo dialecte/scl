@@ -3,7 +3,10 @@ import { reportTargetOf } from './report-target'
 import { collectReportWarnings } from './report-warnings'
 
 import { throwDialecteError } from '@dialecte/core'
+import { toRef } from '@dialecte/core/helpers'
+import { resolveDefinition } from '@dialecte/core/utils'
 
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
 import { acceptedCollisions } from '@/v2019C1/extensions/lifecycle/engine'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
@@ -18,10 +21,14 @@ import {
 	scenarioPolicy,
 } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type { LifecycleReportParams } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
-import type { DiffReport, ReportTarget } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DecisionGroup,
+	DiffReport,
+	ReportTarget,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -86,28 +93,18 @@ export async function report(
 	const revisionBase = revisionBaseOf(removalBase)
 	if (revisionBase) report.revisionBase = revisionBase
 
-	// as each primary's definition says where it sits - a type it names with xsi:type included -: the
-	// project's element when it has one, the template's otherwise
-	for (const group of allGroups(report)) {
-		const { instanceRef, sourceRef, tagName } = group.primary
-		const definition = instanceRef
-			? await query.any.getDefinition(instanceRef)
-			: sourceRef
-				? await target.sourceQuery.any.getDefinition(sourceRef)
-				: undefined
-		group.editableAttributes = editableAttributes(tagName, definition?.attributes.sequence)
-	}
+	await tagEditableAttributes({ query, sourceQuery: target.sourceQuery, groups: allGroups(report) })
 
 	// what a removal makes the delete hooks do outside it, read before anything is decided
 	await listRemovalSideEffects(query, { groups: allGroups(report) })
-	// an IED update never changes another IED: what it would change there is listed, the groups bringing it blocked
+	// what an IED update would change in another IED is listed before the decision, the groups bringing it waiting for
+	// one (a group already waiting keeps its reason)
 	if (target.verb === 'ied') {
-		const { impacts, blockedGroupIds } = await readOtherIedImpacts(query, { report })
+		const { impacts, decidingGroupIds } = await readOtherIedImpacts(query, { report })
 		for (const group of allGroups(report)) {
-			if (!blockedGroupIds.has(group.id)) continue
-			group.blocked = 'affects-other-ied'
+			if (!decidingGroupIds.has(group.id)) continue
+			group.requiresDecision ??= 'changes-another-ied'
 			group.suggestedAction = 'skip'
-			delete group.requiresDecision
 		}
 		if (impacts.length > 0) {
 			report.otherIedImpacts = impacts
@@ -220,5 +217,41 @@ function revisionBaseOf(removalBase: RemovalBase): DiffReport['revisionBase'] {
 			return throwDialecteError('ASSERTION_FAILED', {
 				detail: `report: unhandled removal base ${String(removalBase satisfies never)}`,
 			})
+	}
+}
+
+/**
+ * Tag each group with its primary's editable attributes, as the primary's definition says where it sits (a type it
+ * names with xsi:type included): the project's element when it has one, the template's otherwise. The records are read
+ * once per document, their definitions resolved from them.
+ */
+async function tagEditableAttributes(params: {
+	query: Core.Query<Config>
+	sourceQuery: Core.Query<Config>
+	groups: readonly DecisionGroup[]
+}): Promise<void> {
+	const { query, sourceQuery, groups } = params
+	const instanceRefs = groups.flatMap((group) =>
+		group.primary.instanceRef ? [toRef(group.primary.instanceRef) as Scl.Ref<Scl.ElementsOf>] : [],
+	)
+	const sourceRefs = groups.flatMap((group) =>
+		!group.primary.instanceRef && group.primary.sourceRef
+			? [toRef(group.primary.sourceRef) as Scl.Ref<Scl.ElementsOf>]
+			: [],
+	)
+	const instanceRecords = await query.any.getRecords(instanceRefs)
+	const sourceRecords = await sourceQuery.any.getRecords(sourceRefs)
+	const records = new Map(
+		[...instanceRecords, ...sourceRecords].flatMap((record) =>
+			record ? [[record.id, record]] : [],
+		),
+	)
+	for (const group of groups) {
+		const { instanceRef, sourceRef, tagName } = group.primary
+		const record = records.get((instanceRef ?? sourceRef)?.id ?? '')
+		const definition = record
+			? resolveDefinition({ dialecteConfig: SCL_DIALECTE_CONFIG, record })
+			: undefined
+		group.editableAttributes = editableAttributes(tagName, definition?.attributes.sequence)
 	}
 }
