@@ -5,7 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## UNRELEASED
+## [0.21.0] - 2026-11-18
+
+In an IED update, a group that would change another IED waits for a decision instead of being blocked: `report.otherIedImpacts` lists before the decision what accepting does in the other IED (an input deleted, cleared of its source, or of a control block no longer sending its data; a reference renamed), accepted the change is written with that cleanup, skipped the other IED stays as it is. `TakeOver` and `TakeOvers` are exported.
+
+Breaking: `DecisionGroup.blocked` is removed, such a group waiting for a decision with the new `DecisionRequiredReason` `changes-another-ied`; `UPDATE_AFFECTS_OTHER_IED` (`SCL2013`) is removed, `apply` no longer refusing an accepted group nor `tx.lifecycle.update.ied` a write in another IED, which given a report now refuses a waiting group left undecided (`DECISION_REQUIRED`); `OtherIedImpact['effect']` loses `unsubscribed` (now `cleared`). An exhaustive `switch` over `DecisionRequiredReason` or `OtherIedImpact['effect']` needs the change.
 
 ### Changed
 
