@@ -1,5 +1,5 @@
 import type { Scl } from '@/v2019C1/config'
-import type { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import type { REFERENCE_TAGS, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 
 /** The uuid pairs of one reference tag. */
 export type RefPairs = (typeof UUID_REFERENCE_PAIRS)[keyof typeof UUID_REFERENCE_PAIRS]
@@ -39,4 +39,10 @@ export type DeletedSubtree = {
 	byUuid: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
 	iedNames: ReadonlySet<string>
 	uuidTags: ReadonlySet<string>
+}
+
+/** The records of one reference tag naming, by a uuid attribute of its pairs, a record of deleted subtrees. */
+export type UuidReferrers = {
+	refTagName: (typeof REFERENCE_TAGS)[number]
+	refRecords: Scl.TrackedRecord<Scl.ElementsOf>[]
 }

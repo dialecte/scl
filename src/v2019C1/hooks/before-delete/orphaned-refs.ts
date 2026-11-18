@@ -11,7 +11,13 @@ import { confRevRaisesOf, dataSetRemovalsOf } from '@/v2019C1/hooks/shared/data-
 import { DATA_SET_SENDER_TAGS } from '@/v2019C1/hooks/shared/data-set-entry.constants'
 import { updatedOperation, withAttributeValues } from '@/v2019C1/hooks/shared/record-ops'
 
-import type { DeleteCascade, DeletedSubtree, OrphanedRef, RefPairs } from './orphaned-refs.types'
+import type {
+	DeleteCascade,
+	DeletedSubtree,
+	OrphanedRef,
+	RefPairs,
+	UuidReferrers,
+} from './orphaned-refs.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
@@ -394,7 +400,10 @@ function mergeCleared(params: { cleared: Map<string, OrphanedRef>; orphaned: Orp
 	cleared.set(orphaned.record.id, { ...orphaned, attributes })
 }
 
-/** One update per parent that stays and loses children: its children list without them. */
+/**
+ * One update per parent that stays and loses children: its children list without them. The parents not in `pending`
+ * are read in one `query.getRecords`.
+ */
 async function buildParentUpdates(
 	query: Core.Query<Config>,
 	params: {
@@ -409,9 +418,14 @@ async function buildParentUpdates(
 		const { parent } = deletedRecord
 		if (parent && !gone.has(parent.id)) parentIds.set(parent.id, parent as Scl.Ref<Scl.ElementsOf>)
 	}
+	const toRead = [...parentIds].flatMap(([parentId, parentRef]) =>
+		pending?.has(parentId) ? [] : [parentRef],
+	)
+	const read = toRead.length > 0 ? await query.getRecords<Scl.ElementsOf>(toRead) : []
+	const readById = new Map(read.flatMap((record) => (record ? [[record.id, record] as const] : [])))
 	const operations: Scl.Operation[] = []
-	for (const [parentId, parentRef] of parentIds) {
-		const parentRecord = pending?.get(parentId) ?? (await query.getRecord(parentRef))
+	for (const parentId of parentIds.keys()) {
+		const parentRecord = pending?.get(parentId) ?? readById.get(parentId)
 		if (!parentRecord) continue
 		const children = parentRecord.children.filter((child) => !gone.has(child.id))
 		operations.push({
@@ -426,7 +440,9 @@ async function buildParentUpdates(
 /**
  * The references outside some subtrees that name an element of them, each with what their deletion does to them:
  * `cleared` for a reference keeping its content (`KEEP_ON_ORPHAN_REFS`: its uuid, path and companion attributes go),
- * `deleted` for any other. A reference inside the subtrees goes with them. The reference tags are read once.
+ * `deleted` for any other. A reference inside the subtrees goes with them. The references are looked up by the uuids of
+ * the subtrees ({@link readUuidReferrers}); a reference tag is read whole only to order the records the transaction
+ * wrote that several lookups of it answer.
  */
 export async function findOrphanedRefs(params: {
 	records: readonly Scl.RawRecord<Scl.ElementsOf>[]
@@ -468,9 +484,9 @@ async function findOrphanedRefsInSubtrees(params: {
 	}
 
 	const orphaned: OrphanedRef[] = []
-	for (const refTagName of REFERENCE_TAGS) {
+	for (const { refTagName, refRecords } of await readUuidReferrers(query, { subtreeUuids })) {
 		const refPairs = UUID_REFERENCE_PAIRS[refTagName]
-		for (const refRecord of await query.getRecordsByTagName(refTagName)) {
+		for (const refRecord of refRecords) {
 			if (subtreeIds.has(refRecord.id)) continue
 			const attributes = collectOrphanedAttributes({ refPairs, refRecord, subtreeUuids })
 			if (attributes.size === 0) continue
@@ -490,6 +506,67 @@ async function findOrphanedRefsInSubtrees(params: {
 		if (tupleOrphan) orphaned.push(tupleOrphan)
 	}
 	return orphaned
+}
+
+/**
+ * The records of each reference tag (in `REFERENCE_TAGS` order) whose uuid attribute of a pair holds one of
+ * `subtreeUuids`, each once, as the tag read would list them: one value-list `findByAttributes` per tag and uuid
+ * attribute, all at once ({@link inTagReadOrder} for a tag several lookups answer).
+ */
+async function readUuidReferrers(
+	query: Core.Query<Config>,
+	params: { subtreeUuids: ReadonlySet<string> },
+): Promise<UuidReferrers[]> {
+	const uuids = [...params.subtreeUuids]
+	const searches = REFERENCE_TAGS.flatMap((refTagName) =>
+		UUID_REFERENCE_PAIRS[refTagName].map((pair) => ({
+			refTagName,
+			uuidAttribute: pair.attribute.uuid,
+		})),
+	)
+	const found = await Promise.all(
+		searches.map(function searchReferrers({ refTagName, uuidAttribute }) {
+			// dialecte-allow query-in-loop: one lookup per reference tag and uuid attribute, for every uuid of the subtrees at once
+			return query.findByAttributes({
+				tagName: refTagName,
+				// the attribute is named at run time: the filter type is per tag, the pair entries say it holds a uuid
+				attributes: { [uuidAttribute]: uuids } as never,
+			}) as Promise<Scl.TrackedRecord<Scl.ElementsOf>[]>
+		}),
+	)
+	return Promise.all(
+		REFERENCE_TAGS.map(async function referrersOfTag(refTagName) {
+			const lookups = found.filter(
+				(records, index) => searches[index].refTagName === refTagName && records.length > 0,
+			)
+			return { refTagName, refRecords: await inTagReadOrder(query, { refTagName, lookups }) }
+		}),
+	)
+}
+
+/**
+ * The records several lookups of one tag answer, each once, in the order the tag read lists them. A lookup answers in
+ * that order: the stored records in id order, then those the transaction placed after them (created, or written again
+ * after a delete). With one lookup answering, its order is kept; with records the transaction left unchanged only, id
+ * order is that order; else the place of a record the transaction wrote is known to the tag read only: the tag is read
+ * once for that order.
+ */
+async function inTagReadOrder(
+	query: Core.Query<Config>,
+	params: {
+		refTagName: (typeof REFERENCE_TAGS)[number]
+		lookups: readonly Scl.TrackedRecord<Scl.ElementsOf>[][]
+	},
+): Promise<Scl.TrackedRecord<Scl.ElementsOf>[]> {
+	const { refTagName, lookups } = params
+	if (lookups.length <= 1) return lookups[0] ?? []
+	const byId = new Map(lookups.flat().map((record) => [record.id, record]))
+	const records = [...byId.values()]
+	if (records.every((record) => record.status === 'unchanged')) {
+		return records.sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0))
+	}
+	const tagRecords = await query.getRecordsByTagName(refTagName)
+	return tagRecords.flatMap((record) => byId.get(record.id) ?? [])
 }
 
 // ── Attribute collection ──────────────────────────────────────────────────────
