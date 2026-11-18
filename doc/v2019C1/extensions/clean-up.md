@@ -81,7 +81,7 @@ if (preview && preview.containers.length > 0 && !(await confirmed(preview))) pre
 else await prepared.commit()
 ```
 
-`tx.cleanUp.commitPrune()` returns `{ stagedCount, containers, types }`:
+`tx.cleanUp.commitPrune` returns `{ stagedCount, containers, types }`:
 
 - `containers`: each container the commit removes, in document order:
   - `element`, `identity` (`name`, `uuid`, `type` where its tag has them), `parent` (with its `name`);
