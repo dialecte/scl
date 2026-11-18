@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-11-18
+
+In an IED update, a group that would change another IED waits for a decision instead of being blocked: `report.otherIedImpacts` lists before the decision what accepting does in the other IED (an input deleted, cleared of its source, or of a control block no longer sending its data; a reference renamed), accepted the change is written with that cleanup, skipped the other IED stays as it is. `TakeOver` and `TakeOvers` are exported.
+
+Breaking: `DecisionGroup.blocked` is removed, such a group waiting for a decision with the new `DecisionRequiredReason` `changes-another-ied`; `UPDATE_AFFECTS_OTHER_IED` (`SCL2013`) is removed, `apply` no longer refusing an accepted group nor `tx.lifecycle.update.ied` a write in another IED; given a report and decisions, `update.ied` checks them as `apply` does, a waiting group left out (`DECISION_REQUIRED`) or incoherent decisions (`DECISION_UNKNOWN`, `DECISION_DEPENDENCY_UNKNOWN`, `DECISION_DEPENDENCY_SKIPPED`) refused before anything is written; `OtherIedImpact['effect']` loses `unsubscribed` (now `cleared`). An exhaustive `switch` over `DecisionRequiredReason` or `OtherIedImpact['effect']` needs the change.
+
+### Changed
+
+- **Breaking: a group of an IED update that would change another IED waits for a decision instead of being blocked.** `DecisionGroup.blocked` is gone: such a group is `requiresDecision: 'changes-another-ied'` (a reference to deleted data keeping `names-deleted-data`), suggested `skip`, and `report.otherIedImpacts` lists before the decision each element of the other IED and what accepting does to it: `deleted` (an input without an internal address), `cleared` (an input's source, its internal address kept; an input subscribed to data its control block no longer sends, its control block, once every group removing an entry sending that data is accepted), `renamed` (the names a reference gives follow). Accepted, the change is written with that cleanup; skipped, the element stays. `UPDATE_AFFECTS_OTHER_IED` (`SCL2013`) is removed: `apply` no longer refuses an accepted group, and `tx.lifecycle.update.ied` no longer refuses a write in another IED (without a report it writes those changes and clears the control block of the inputs no longer sent their data). Given a report and decisions, `update.ied` checks them as `apply` does: a waiting group left out (`DECISION_REQUIRED`) or incoherent decisions (`DECISION_UNKNOWN`, `DECISION_DEPENDENCY_UNKNOWN`, `DECISION_DEPENDENCY_SKIPPED`) are refused before anything is written. `OtherIedImpact['effect']` loses `unsubscribed` (now `cleared`) and `DecisionRequiredReason` gains `changes-another-ied`: an exhaustive `switch` over them needs the change.
+
+### Added
+
+- `TakeOver` and `TakeOvers` are exported: the type of `Resolution.takeOver`: `'all'`, or the elements (a `Val`, an `IED` or an element inside it) whose kept values the consumer takes from the template.
+
 ## [0.20.0] - 2026-11-17
 
 An IED placed from a template ISD is updated from a newer revision of it with the specification its placement put in the project (`query.lifecycle.report` / `tx.lifecycle.apply` with `verb: 'ied'`, `tx.lifecycle.update.ied`): its name, identity, settable values, bound inputs and addresses stay the project's, and the update never changes another IED. An IED is exported as an ISD template (`tx.lifecycle.extract.ied`, `kind: 'template'`). References between IEDs are held by their uuid first: an edit keeps the uuid and the names in agreement at the commit, a delete reaches the references naming the element by uuid, a path edit retargets a path reference. The output stays schema-valid: a container a transaction leaves empty goes. A rename follows its paths with fewer reads.

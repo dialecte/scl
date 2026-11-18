@@ -13,7 +13,6 @@ import {
 } from '@/v2019C1/extensions/lifecycle/engine'
 import { resolvePlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
-import { assertNoBlockedGroupAccepted } from '@/v2019C1/extensions/lifecycle/layers/ied/other-ied-impacts'
 import {
 	assertMappingsCoherent,
 	assertReportMappingsDecided,
@@ -101,8 +100,6 @@ export async function apply(
 	// the gate is always the report's: no decisions = each group at its suggested action. User value edits are honored
 	// on either track, a conflict-free instantiate can carry edited editable attributes.
 	const groups = allGroups(report)
-	// a group the report blocks would change another IED: never accepted
-	assertNoBlockedGroupAccepted({ groups, decisions })
 	assertDecisionsCoherent({ groups, decisions })
 	// a change that cannot be written as suggested is decided by name, never by default
 	assertRequiredDecisionsTaken({ groups, decisions })

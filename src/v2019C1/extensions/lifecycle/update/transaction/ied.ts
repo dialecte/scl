@@ -9,6 +9,8 @@ import {
 } from '@/v2019C1/extensions/lifecycle/engine/correlate'
 import {
 	acceptedRefIds,
+	assertDecisionsCoherent,
+	assertRequiredDecisionsTaken,
 	collisionOverrides,
 	followsSource,
 	groupsForInstance,
@@ -25,8 +27,8 @@ import {
 	nameConnections,
 } from '@/v2019C1/extensions/lifecycle/layers/ied/name-connections'
 import {
-	assertNoBlockedGroupAccepted,
-	assertWritesInsideIed,
+	clearLostSubscriptions,
+	readSubscriptionsTo,
 } from '@/v2019C1/extensions/lifecycle/layers/ied/other-ied-impacts'
 import { placeIedCommunication } from '@/v2019C1/extensions/lifecycle/layers/ied/place-ied-communication'
 import { readIedSpecification } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-specification'
@@ -76,10 +78,10 @@ async function connectAccessPoints(
  * The recipe of `tx.lifecycle.update.ied` (which then releases what it wrote, see `public-recipes.ts`): update the IED of
  * the project placed from a template ISD with a newer revision of it, the one `targetInstance` names (required when the
  * project holds several, `TARGET_INSTANCE_REQUIRED`), or place it when the project holds none (`instantiate.ied`).
- * Given a report and decisions, writes what they accept (see `reconcileIed`), a group the report blocks accepted refused
- * with `UPDATE_AFFECTS_OTHER_IED` (`meta: { groups }`) before anything is written; without, everything the revision
- * brings, a write landing in another IED refused once staged (`meta: { ied, element }`): run `query.lifecycle.report`
- * first to see and skip what would. The specification an ISD carries beside the IED is updated with it.
+ * Given a report and decisions, writes what they accept (see `reconcileIed`), a group waiting for a decision left out
+ * refused (`DECISION_REQUIRED`) before anything is written; without, everything the revision brings, a change to another
+ * IED with its cleanup included: run `query.lifecycle.report` first to see and decide what would. The specification an
+ * ISD carries beside the IED is updated with it.
  *
  * @intent update an S-IED from a newer revision of its template ISD, reconcile an IED with its template, update the specification of an S-IED (its functions and LNodes)
  */
@@ -107,9 +109,11 @@ export async function ied(
 		})
 		return [{ ref: placed.iedRef, placement: 'placed' }]
 	}
-	// a group the report blocks would change another IED: refused before anything is written, as apply refuses it
+	// a group waiting for a decision is decided, and what the decisions accept holds together, before anything is written
 	if (params.report && params.decisions) {
-		assertNoBlockedGroupAccepted({ groups: allGroups(params.report), decisions: params.decisions })
+		const groups = allGroups(params.report)
+		assertRequiredDecisionsTaken({ groups, decisions: params.decisions })
+		assertDecisionsCoherent({ groups, decisions: params.decisions })
 	}
 	const removalBase = await resolveRemovalBase({
 		policy: scenarioPolicy({ scenario: 'template' }),
@@ -125,7 +129,8 @@ export async function ied(
  * project holds, the revision recorded in its `IEDSourceFiles` when anything the template brings is accepted. What its
  * access points gained connects under the project's subnetworks, naming the IED as the project names it; what the
  * project holds there is its own (a subnetwork's settings, an address). The IED keeps its project name and its
- * identity; nothing it writes lands in another IED (refused otherwise). The specification an ISD carries beside it
+ * identity. In another IED it writes what an accepted group changes there, and clears the control block of each input
+ * subscribed to data its entries no longer send (`clearLostSubscriptions`). The specification an ISD carries beside it
  * follows (`reconcileIedSpecification`): told by what binds to the IED before the update, updated as `update.ssd`
  * updates a substation scope, its gained `LNode`s bound to the IED as it then stands; placed when the project holds
  * none of it. The revision is recorded when anything of the file is accepted. Returns the IED, `reconciled`.
@@ -145,9 +150,9 @@ export async function reconcileIed(
 		fileType: params.fileType,
 		iedRef: instanceRef,
 	})
-	// what the IED holds before the update: a write landing outside it and in another IED is refused
+	// the inputs of other IEDs subscribed to what the IED's data sets send, read before the update changes them
 	const before = await tx.any.getTree(instanceRef)
-	const from = tx.getStagedOperations().length
+	const subscriptions = before ? await readSubscriptionsTo(tx, { instance: before }) : []
 
 	const { cloneMappings } = await reconcile(tx, {
 		sourceQuery,
@@ -169,7 +174,8 @@ export async function reconcileIed(
 	const added = [...cloneMappings, ...connections]
 	// a reference the update added may name an element the IED already holds, or one it added: it names the project's
 	await repointAddedReferences(tx, { cloneMappings: added, instanceRootRef: instance, matchKey })
-	if (before) await assertWritesInsideIed(tx, { instance: before, from })
+	// an input of another IED whose entries all went no longer names their control block
+	await clearLostSubscriptions(tx, { subscriptions, instanceRef })
 	const reportInstance = reportInstanceById(report, instance.id)
 	if (reportInstance) annotateInstance({ reportInstance, added: sourceToTargetMap(added) })
 	// the specification follows, its LNodes bound to the IED as it now stands
