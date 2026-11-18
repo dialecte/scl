@@ -11,6 +11,7 @@ import { targetTupleParts } from '@/v2019C1/extensions/reference/query/ied-tuple
 import { mappedLNodeKey } from '@/v2019C1/extensions/reference/query/resolve/mapped-lnode-key'
 import { readAttribute } from '@/v2019C1/helpers'
 import { namedTargetUuids, partsOf, tupleNamesUpdate } from '@/v2019C1/hooks/shared'
+import { inTagReadOrder } from '@/v2019C1/hooks/shared/in-tag-read-order'
 
 import type { BoundLNodes } from './bound-logical-nodes.types'
 import type {
@@ -76,9 +77,11 @@ function composeBoundLNodeNames(params: {
  * A transaction that created tuple targets (an access point, a logical device, a logical node, a
  * control block, each with a uuid) has the references naming them by that uuid written their names
  * (see `tupleReferenceWrite`), once, over the records the transaction leaves: a target deleted since
- * is not written, a reference created or updated by the transaction is read as it stands. Each tag
- * of references that can name a created target is read once, whatever the number of targets; the
- * elements above each named target are read a level at a time, never one by one.
+ * is not written, a reference created or updated by the transaction is read as it stands. The
+ * references that can name a created target are looked up once per tag and uuid attribute, whatever
+ * the number of targets (a tag is read once more only when several lookups find a reference the
+ * transaction wrote, for its order); the elements above each named target are read a level at a
+ * time, never one by one.
  */
 async function writeTupleNamesOfCreatedTargets(params: {
 	operations: ReadonlyArray<Scl.Operation>
@@ -124,26 +127,50 @@ async function readCreatedTargets(params: {
 	return targetsByUuid
 }
 
-/** The references of each tag whose pairs name a kind of target created, one read of the tag. */
+/**
+ * The references of each tag whose pairs can name a kind of target created, as the tag read would list them: one
+ * value-list lookup per tag and uuid attribute of such a pair, by the uuids of the created targets of the kinds the pair
+ * names, all at once; a reference several lookups answer is listed once ({@link inTagReadOrder}).
+ */
 async function readReferrerGroups(params: {
 	targetsByUuid: ReadonlyMap<string, AnyRawRecord>
 	query: Core.Query<Config>
 }): Promise<ReferrerGroup[]> {
 	const { targetsByUuid, query } = params
-	const createdTags = new Set([...targetsByUuid.values()].map((record) => record.tagName))
 	const tagged = Object.entries(TUPLE_REFERENCE_PAIRS).flatMap(([tagName, tagPairs]) => {
 		const pairs = pairsWrittenWhenSet({ pairs: tagPairs as readonly TupleReferencePair[] })
-		return pairs.some((pair) => pair.target.some((target) => createdTags.has(target)))
-			? [{ tagName: tagName as Scl.ElementsOf, pairs }]
-			: []
+		const searches = pairs.flatMap((pair) => {
+			const uuids = createdUuidsOfKinds({ targetsByUuid, kinds: pair.target })
+			return uuids.length > 0 ? [{ uuidAttribute: pair.attribute.uuid, uuids }] : []
+		})
+		return searches.length > 0 ? [{ tagName: tagName as Scl.ElementsOf, pairs, searches }] : []
 	})
 	return Promise.all(
-		tagged.map(async ({ tagName, pairs }) => ({
-			pairs,
-			records: (await query.getRecordsByTagName(tagName)).map(
-				(record) => toRawRecord(record) as AnyRawRecord,
-			),
-		})),
+		tagged.map(async function lookUpTag({ tagName, pairs, searches }) {
+			const lookups = await Promise.all(
+				searches.map(function lookUp({ uuidAttribute, uuids }) {
+					// dialecte-allow query-in-loop: one lookup per referrer tag and uuid attribute, for every created uuid of its kinds at once
+					return query.findByAttributes({
+						tagName,
+						// the attribute is named at run time: the filter type is per tag, the pair says it holds a uuid
+						attributes: { [uuidAttribute]: uuids } as never,
+					}) as Promise<Scl.TrackedRecord<Scl.ElementsOf>[]>
+				}),
+			)
+			const records = await inTagReadOrder(query, { tagName, lookups })
+			return { pairs, records: records.map((record) => toRawRecord(record) as AnyRawRecord) }
+		}),
+	)
+}
+
+/** The uuids of the created targets of some kinds. */
+function createdUuidsOfKinds(params: {
+	targetsByUuid: ReadonlyMap<string, AnyRawRecord>
+	kinds: readonly string[]
+}): string[] {
+	const { targetsByUuid, kinds } = params
+	return [...targetsByUuid].flatMap(([uuid, target]) =>
+		kinds.includes(target.tagName) ? [uuid] : [],
 	)
 }
 
