@@ -23,6 +23,7 @@ buildMappedLNodePath <->  resolveMappedLNode     (mapped LNode <-> implementing 
 | Function               | Direction | Input                                | Output                                                   | Use when                                                              |
 | ---------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | --------------------------------------------------------------------- |
 | `buildElementPath`     | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry                  |
+| `buildElementPaths`    | write     | many refs                            | `ElementPath` or `null`, per input                       | the paths of many elements, one read per ancestor level               |
 | `buildReferencePath`   | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target                       |
 | `resolveElementPath`   | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` -- walk tree by path string             |
 | `resolveReferencePath` | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildReferencePath` -- follow a REF to its target         |
@@ -117,6 +118,28 @@ Most elements contribute their `name` attribute as segment. Special cases:
 ```
 
 On import, the names an earlier version wrote (`Trip.general` for the only `Trip`, `Trip(2)` for the only one of instance 2, `Trip` for instance 1 of several) still resolve, and so does a name written with its instance and data attribute for the only signal of its name (`AmpSv(1).instMag.i`, `TripCmd(1)`): it names that signal as the shorter name does. A signal role path written with `/` before the signal (`SF1/PDIS1/AmpSv`) is read too, and written with `.` (`SF1/PDIS1.AmpSv`), as an `InputVar` does. Each is written again in the standard form, also next to its uuid, as is an `InputVar` / `OutputVar` name. A former path that two signals answer (through two LNodes bound to IEDs under the same naming) names neither: it is left unresolved.
+
+---
+
+## buildElementPaths
+
+The paths of many elements (`doc.query.reference.buildElementPaths`), each exactly as [`buildElementPath`](#buildelementpath) builds it, one entry per input in input order.
+
+```ts
+reference.query.buildElementPaths(
+  query: Scl.Query | Scl.Transaction,
+  params: { refs: readonly (Scl.Ref<Scl.ElementsOf> | Scl.TrackedRecord<Scl.ElementsOf> | Scl.RawRecord<Scl.ElementsOf>)[] },
+): Promise<(ElementPath | null)[]>
+```
+
+```ts
+const paths = await reference.query.buildElementPaths(query, { refs: lnodes })
+paths.map((path) => path?.path ?? '') // -> one label per LNode, in input order
+```
+
+`null` for a ref that names no element and for an element with no segment of its own (the root, a transparent container such as `AccessPoint`, a type). An element given several times answers the same path at each position. A record given is read again: the path is of the element as the query sees it, inside a transaction as staged. A ref naming an element of another tag refuses the whole call with `ELEMENT_TAGNAME_MISMATCH`, no path answered: give refs that match their elements, or build their paths one by one to keep the others.
+
+The elements are read in one read, their ancestors one read per ancestor level (an ancestor shared by several elements is read once), the siblings of the signals among them in at most 3 reads and the spec namings of the LNodes on their paths in at most 2: the reads follow the depth of the tree, not the number of elements. `buildElementPath` is this call for one element.
 
 ---
 

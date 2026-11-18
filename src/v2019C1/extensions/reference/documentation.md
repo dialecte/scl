@@ -18,6 +18,7 @@ buildMappedLNodePath ↔ resolveMappedLNode     (mapped LNode ↔ implementing L
 | Function               | Direction | Input                                | Output                                                   | Use when                                                              |
 | ---------------------- | --------- | ------------------------------------ | -------------------------------------------------------- | --------------------------------------------------------------------- |
 | `buildElementPath`     | write     | `ref`                                | `ElementPath` (path string + segment-to-element mapping) | computing the path _to_ an element from its ancestry                  |
+| `buildElementPaths`    | write     | many refs                            | `ElementPath` or `null`, per input                       | the paths of many elements, one read per ancestor level               |
 | `buildRefPath`         | write     | `reference` (REF element) + `target` | path value to store on the REF attribute                 | updating a REF element to point at a new target                       |
 | `resolveElementPath`   | read      | raw path string                      | `TrackedRecord`                                          | inverse of `buildElementPath` — walk tree by path string              |
 | `resolveRefPath`       | read      | REF record + path attribute name     | `{ record, qualifier }`                                  | inverse of `buildRefPath` — follow a REF to its target                |

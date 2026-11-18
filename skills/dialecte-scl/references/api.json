@@ -578,7 +578,21 @@
 				"full name path instead of walking ancestors",
 				"inverse of resolveElementPath"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/build/build-element-path.ts:20"
+			"declaredAt": "src/v2019C1/extensions/reference/query/build/build-element-path.ts:23"
+		},
+		{
+			"path": "doc.query.reference.buildElementPaths",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: BuildElementPathsParams) => Promise<BuildElementPathsResult>",
+			"summary": "The path of each element given from the document root, as `buildElementPath` answers it, one entry per input in input order: `null` for a ref that names no element and for an element with no segment of its own (the root, a transparent container such as `AccessPoint`, a type). An element given several times answers the same path at each position. A record given is read again, so the path is of the element as the query sees it (inside a transaction, as staged).",
+			"intents": [
+				"paths or labels of many elements at once",
+				"breadcrumb of every row of a list",
+				"element paths without one ancestor walk per element",
+				"batch buildElementPath"
+			],
+			"declaredAt": "src/v2019C1/extensions/reference/query/build/build-element-path.ts:48"
 		},
 		{
 			"path": "doc.query.reference.buildMappedLNodePath",

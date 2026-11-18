@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+    <Substation name="S1" dev:db-id="sub-1">
+        <VoltageLevel name="V1" dev:db-id="vl-1">
+            <Bay name="B1" dev:db-id="bay-1">
+                <ConductingEquipment type="CBR" name="CE1" dev:db-id="ce-1"/>
+                <LNode lnClass="XCBR" lnInst="1" iedName="IED1" ldInst="LD0" dev:db-id="ln-direct">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="5" dev:db-id="ln-direct-naming"/>
+                </LNode>
+                <LNode lnClass="PTRC" lnInst="2" iedName="IED1" ldInst="LD0" dev:db-id="ln-wrapped">
+                    <Private type="eIEC61850-6-100" dev:db-id="ln-wrapped-private">
+                        <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="8" dev:db-id="ln-wrapped-naming"/>
+                        <eIEC61850-6-100:SourceRef input="Trip" inputInst="1" dev:db-id="sr-1"/>
+                        <eIEC61850-6-100:ControlRef output="Trip" outputInst="1" dev:db-id="cr-1"/>
+                        <eIEC61850-6-100:ControlRef output="Trip" outputInst="2" dev:db-id="cr-2"/>
+                    </Private>
+                </LNode>
+                <LNode lnClass="XCBR" lnInst="1" iedName="IED1" ldInst="LD0" dev:db-id="ln-both">
+                    <Private type="eIEC61850-6-100" dev:db-id="ln-both-private">
+                        <eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="7" dev:db-id="ln-both-wrapped-naming"/>
+                    </Private>
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="XCBR" sLnInst="6" dev:db-id="ln-both-direct-naming"/>
+                </LNode>
+                <LNode lnClass="CSWI" lnInst="3" iedName="None" dev:db-id="ln-plain">
+                    <Private type="eIEC61850-6-100" dev:db-id="ln-plain-private">
+                        <eIEC61850-6-100:SourceRef input="Pos" inputInst="1" dev:db-id="sr-2"/>
+                        <eIEC61850-6-100:SourceRef input="Pos" inputInst="2" dev:db-id="sr-3"/>
+                    </Private>
+                </LNode>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+    <IED name="IED1" dev:db-id="ied-1">
+        <AccessPoint name="AP1" dev:db-id="ap-1">
+            <Server dev:db-id="srv-1">
+                <LDevice inst="LD0" dev:db-id="ld-1">
+                    <LN lnClass="XCBR" inst="1" prefix="" lnType="XCBR_Type" dev:db-id="ln-1">
+                        <DOI name="Pos" dev:db-id="doi-1"/>
+                    </LN>
+                    <LN lnClass="PTRC" inst="2" prefix="" lnType="PTRC_Type" dev:db-id="ln-2"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt-1">
+        <LNodeType id="XCBR_Type" lnClass="XCBR" dev:db-id="lnt-1">
+            <DO name="Pos" type="DPC_Type" dev:db-id="do-1"/>
+        </LNodeType>
+        <LNodeType id="PTRC_Type" lnClass="PTRC" dev:db-id="lnt-2"/>
+        <DOType id="DPC_Type" cdc="DPC" dev:db-id="dot-1">
+            <DA name="stVal" bType="Dbpos" fc="ST" dev:db-id="da-1"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>
