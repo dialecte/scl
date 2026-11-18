@@ -2,6 +2,8 @@ import { toAnyRawRecord } from './collect-with-ancestry.helpers'
 
 import { throwDialecteError } from '@dialecte/core'
 
+import { ROOT_ELEMENT } from '@/v2019C1/definition/constants.generated'
+
 import type { CollectedWithAncestry, CollectFromRootParams } from './collect-with-ancestry.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -10,16 +12,20 @@ import type { AnyRawRecord, AnyTreeRecord } from '@dialecte/core'
 /**
  * Reads a subtree with one `getTree` and lays it flat. The ancestry of an element is the path the
  * walk took to it, never a query; a root below the document root has its own ancestors read once
- * (`findAncestors`). The whole document is read once, whatever the select names, which is what a
- * root below the document root needs: a flat collect reads every element of a tag, in the whole
- * document, and checks each against the root.
+ * (`findAncestors`). A root below the document root is read by itself, a level at a time (one read
+ * per level, whatever the select names); the document root is the whole document, read once.
  */
 export async function collectFromTree(
 	query: Core.Query<Config>,
 	params: CollectFromRootParams,
 ): Promise<CollectedWithAncestry> {
 	const { root, select } = params
-	const tree = await query.any.getTree(root, select && { select })
+	const belowDocumentRoot = root.tagName !== ROOT_ELEMENT
+	const tree = await query.any.getTree(root, {
+		...(select ? { select } : {}),
+		// stopgap until core C6b: getTree with nothing to prune reads the whole document whatever the root
+		...(belowDocumentRoot ? { depth: Number.POSITIVE_INFINITY } : {}),
+	})
 	// `getTree` throws for a root it does not find; its type also allows `undefined` for a missing ref
 	if (!tree) throwDialecteError('ELEMENT_NOT_FOUND', { detail: 'No record found for provided ref' })
 
