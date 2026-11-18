@@ -18,10 +18,10 @@ import type * as Core from '@dialecte/core'
  * A select from the document root reads the elements of the tags it names by tag name
  * (`collectFromTags`): on a document whose data instances far outnumber the section read it is
  * several times faster than reading the whole document, though a tag below a `true` entry (`Val`,
- * `Text`, `Private`...) is read in the whole document. A root below the document root, or no select,
- * reads the document once as a tree (`collectFromTree`): a flat collect under a lower root reads
- * every element of each tag in the whole document and checks each against the root, which was
- * measured three times slower on a document of 200 000 elements.
+ * `Text`, `Private`...) is read in the whole document. A root below the document root is read as a
+ * tree by itself, a level at a time; the document root with no select is read once, whole
+ * (`collectFromTree`). A flat collect under a lower root would read every element of each tag in the
+ * whole document and check each against the root.
  *
  * A root that is not found: the tree path throws `ELEMENT_NOT_FOUND` (as `getTree` does), the tags
  * path (always the document root) returns an empty read.

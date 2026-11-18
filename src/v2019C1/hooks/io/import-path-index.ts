@@ -170,15 +170,22 @@ function scopedNameKeysOf(params: {
 	return scopePath ? [[scopedNameKey({ scopePath: scopePath.path, name }), uuid]] : []
 }
 
-/** The signals of the file by parent id: the siblings a signal is named among. */
-function groupSignalsByParent(targets: readonly CollectedTarget[]): Map<string, AnyRawRecord[]> {
+/**
+ * The signals of the file by parent id: the siblings a signal is named among, each list frozen once complete so that
+ * the names it holds are counted once for all its signals.
+ */
+function groupSignalsByParent(
+	targets: readonly CollectedTarget[],
+): Map<string, readonly AnyRawRecord[]> {
 	const byParent = new Map<string, AnyRawRecord[]>()
 	for (const { record } of targets) {
 		if (PATH_EXTRACTION_CONFIG[record.tagName]?.type !== 'signal') continue
 		const parentId = record.parent?.id ?? ''
-		byParent.set(parentId, [...(byParent.get(parentId) ?? []), record])
+		const siblings = byParent.get(parentId)
+		if (siblings) siblings.push(record)
+		else byParent.set(parentId, [record])
 	}
-	return byParent
+	return new Map([...byParent].map(([parentId, siblings]) => [parentId, Object.freeze(siblings)]))
 }
 
 /**

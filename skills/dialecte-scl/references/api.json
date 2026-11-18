@@ -29,7 +29,7 @@
 				"path segment of a record without a query",
 				"build a path label in a custom extension"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/build/path-segment.ts:204"
+			"declaredAt": "src/v2019C1/extensions/reference/query/build/path-segment.ts:39"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1.isNamespaceWrapper",
