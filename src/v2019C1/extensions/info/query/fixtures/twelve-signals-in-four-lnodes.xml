@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+	<Substation name="S1" dev:db-id="sub-1">
+		<VoltageLevel name="V1" dev:db-id="vl-1">
+			<Bay name="B1" dev:db-id="bay-1">
+				<LNode iedName="None" lnClass="PTRC" lnInst="1" dev:db-id="lnode-0">
+					<eIEC61850-6-100:LNodeInputs dev:db-id="inputs-0">
+						<eIEC61850-6-100:SourceRef input="Trip" inputInst="1" dev:db-id="signal-0"/>
+						<eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="signal-1"/>
+						<eIEC61850-6-100:SourceRef input="Close" inputInst="1" dev:db-id="signal-2"/>
+					</eIEC61850-6-100:LNodeInputs>
+				</LNode>
+				<LNode iedName="None" lnClass="CSWI" lnInst="2" dev:db-id="lnode-1">
+					<eIEC61850-6-100:LNodeInputs dev:db-id="inputs-1">
+						<eIEC61850-6-100:SourceRef input="Trip" inputInst="1" dev:db-id="signal-3"/>
+						<eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="signal-4"/>
+						<eIEC61850-6-100:SourceRef input="Close" inputInst="1" dev:db-id="signal-5"/>
+					</eIEC61850-6-100:LNodeInputs>
+				</LNode>
+				<LNode iedName="None" lnClass="XCBR" lnInst="3" dev:db-id="lnode-2">
+					<eIEC61850-6-100:LNodeInputs dev:db-id="inputs-2">
+						<eIEC61850-6-100:SourceRef input="Trip" inputInst="1" dev:db-id="signal-6"/>
+						<eIEC61850-6-100:SourceRef input="Trip" inputInst="2" dev:db-id="signal-7"/>
+						<eIEC61850-6-100:SourceRef input="Close" inputInst="1" dev:db-id="signal-8"/>
+					</eIEC61850-6-100:LNodeInputs>
+				</LNode>
+				<LNode iedName="None" lnClass="CSWI" lnInst="4" dev:db-id="lnode-3">
+					<eIEC61850-6-100:LNodeOutputs dev:db-id="outputs-3">
+						<eIEC61850-6-100:ControlRef output="Open" outputInst="1" dev:db-id="signal-9"/>
+						<eIEC61850-6-100:ControlRef output="Open" outputInst="2" dev:db-id="signal-10"/>
+						<eIEC61850-6-100:ControlRef output="Close" outputInst="1" dev:db-id="signal-11"/>
+					</eIEC61850-6-100:LNodeOutputs>
+				</LNode>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+</SCL>

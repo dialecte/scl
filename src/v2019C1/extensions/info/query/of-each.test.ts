@@ -64,7 +64,7 @@ describe('ofEach', () => {
 	})
 })
 
-describe('ofEach - reads its elements in one batch and each signal parent once', () => {
+describe('ofEach - reads its elements in one batch and the signal parents in one more', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		refs: Scl.Ref<Scl.ElementsOf>[]
 		/** Calls made on the query by the one `ofEach` call. */
@@ -109,7 +109,7 @@ describe('ofEach - reads its elements in one batch and each signal parent once',
 			],
 			expectedCalls: { getRecord: 0, getRecords: 2, getChildrenOfEach: 1 },
 		},
-		'signals under two parents → each parent and its children read once': {
+		'signals under two parents → both parents in one read, their signals in one more': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
@@ -136,9 +136,9 @@ describe('ofEach - reads its elements in one batch and each signal parent once',
 				{ tagName: 'SourceRef', id: 'sr-a2' },
 				{ tagName: 'SourceRef', id: 'sr-b2' },
 			],
-			expectedCalls: { getRecord: 0, getRecords: 3, getChildrenOfEach: 2 },
+			expectedCalls: { getRecord: 0, getRecords: 2, getChildrenOfEach: 1 },
 		},
-		'inputs and outputs of one LNode → each parent read once': {
+		'inputs and outputs of one LNode → both parents in one read, one read per signal tag': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">
 					<Substation name="S1" ${id}="s1">
@@ -163,7 +163,7 @@ describe('ofEach - reads its elements in one batch and each signal parent once',
 				{ tagName: 'SourceRef', id: 'sr2' },
 				{ tagName: 'ControlRef', id: 'cr2' },
 			],
-			expectedCalls: { getRecord: 0, getRecords: 3, getChildrenOfEach: 2 },
+			expectedCalls: { getRecord: 0, getRecords: 2, getChildrenOfEach: 2 },
 		},
 	}
 

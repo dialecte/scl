@@ -3,7 +3,7 @@ import type { ElementState } from '../constants/state.types'
 export type InfoOptions = {
 	/** `compact` (default) for tree labels and breadcrumbs, `full` for tooltips and panels. */
 	mode?: 'compact' | 'full'
-	/** Also collect the element's `<Labels>` (one more read per element, so asked for). */
+	/** Also collect the element's `<Labels>` (two more reads for the call, so asked for). */
 	withLabels?: boolean
 	/**
 	 * Also compute the element's state (see `ElementStateByTag`), so asked for: an LNode's reads what implements it
