@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+	<Substation name="S1" dev:db-id="sub-1">
+		<VoltageLevel name="V1" dev:db-id="vl-1">
+			<Bay name="B1" dev:db-id="bay-1">
+				<Function name="F1" uuid="f1-uuid" dev:db-id="f1">
+					<LNode iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" lnUuid="ln-ptrc-uuid" uuid="ptrc-uuid" dev:db-id="ln-ptrc">
+						<Private type="eIEC61850-6-100" dev:db-id="ptrc-private">
+							<eIEC61850-6-100:LNodeSpecNaming sLdInst="LD0" sLnClass="PTRC" sLnInst="7" dev:db-id="ptrc-naming"/>
+							<eIEC61850-6-100:DOS name="Op" dev:db-id="dos-1"/>
+							<eIEC61850-6-100:LNodeInputs dev:db-id="ptrc-inputs">
+								<eIEC61850-6-100:SourceRef input="Pos" inputInst="1" pDA="stVal" source="S1/V1/B1/F1/XCBR1.Pos.stVal" sourceLNodeUuid="xcbr-uuid" resourceName="PR1" uuid="sr-uuid-uuid" dev:db-id="sr-uuid"/>
+								<eIEC61850-6-100:SourceRef input="Pos" inputInst="2" source="S1/V1/B1/F1/XCBR1.Pos" resourceName="PR9" dev:db-id="sr-path"/>
+								<eIEC61850-6-100:SourceRef input="Amp.phsA" source="S1/V1/B1/F1/XCBR9.Amp" sourceLNodeUuid="missing-uuid" dev:db-id="sr-stale"/>
+								<eIEC61850-6-100:SourceRef input="Twin" source="S1/V1/B1/F1/GGIO1.Ind" dev:db-id="sr-twin"/>
+								<eIEC61850-6-100:SourceRef input="Spec" source="S1/V1/B1/F1/CSWI3" dev:db-id="sr-spec"/>
+								<eIEC61850-6-100:SourceRef input="Other" source="S1/V1/B2/F1/XCBR1.Pos" dev:db-id="sr-b2"/>
+							</eIEC61850-6-100:LNodeInputs>
+							<eIEC61850-6-100:LNodeOutputs dev:db-id="ptrc-outputs">
+								<eIEC61850-6-100:ControlRef output="Oper" controlled="S1/V1/B1/F1/XCBR1" controlledDoName="Pos" extCtrlAddr="@Close" dev:db-id="cr-oper"/>
+								<eIEC61850-6-100:ControlRef output="Oper" outputInst="2" controlled="S1/V1/B1/F1/XCBR1" controlledLNodeUuid="xcbr-uuid" controlledDoName="Pos" extCtrlAddr="LD0/PTRC1.Open" dev:db-id="cr-oper-2"/>
+							</eIEC61850-6-100:LNodeOutputs>
+							<eIEC61850-6-100:BehaviorDescription name="BD1" dev:db-id="bd-1">
+								<eIEC61850-6-100:InputVar varName="a" inputName="Pos(2)" dataName="Op.general" dev:db-id="iv-name"/>
+								<eIEC61850-6-100:InputVar varName="c" inputName="Pos(1).stVal" inputUuid="sr-uuid-uuid" dataName="Op" lnodeUuid="xcbr-uuid" dev:db-id="iv-uuid"/>
+								<eIEC61850-6-100:OutputVar varName="e" outputName="Oper" dev:db-id="ov-plain"/>
+							</eIEC61850-6-100:BehaviorDescription>
+						</Private>
+					</LNode>
+					<LNode iedName="None" lnClass="XCBR" lnInst="1" uuid="xcbr-uuid" dev:db-id="ln-xcbr"/>
+					<LNode iedName="None" lnClass="GGIO" lnInst="1" dev:db-id="ln-ggio-a"/>
+					<LNode iedName="None" lnClass="GGIO" lnInst="1" dev:db-id="ln-ggio-b"/>
+					<LNode iedName="P1" ldInst="LD0" lnClass="CSWI" lnInst="1" dev:db-id="ln-cswi">
+						<Private type="eIEC61850-6-100" dev:db-id="cswi-private">
+							<eIEC61850-6-100:LNodeSpecNaming sLnClass="CSWI" sLnInst="3" dev:db-id="cswi-naming"/>
+						</Private>
+					</LNode>
+					<SubFunction name="SF1" uuid="sf1-uuid" dev:db-id="sf1">
+						<LNode iedName="None" lnClass="PDIS" lnInst="1" uuid="pdis-uuid" dev:db-id="ln-pdis">
+							<Private type="eIEC61850-6-100" dev:db-id="pdis-private">
+								<eIEC61850-6-100:LNodeInputs dev:db-id="pdis-inputs">
+									<eIEC61850-6-100:SourceRef input="Op" inputInst="1" pDA="general" uuid="op-1-uuid" dev:db-id="op-1"/>
+									<eIEC61850-6-100:SourceRef input="Op" inputInst="2" pDA="general" uuid="op-2-uuid" dev:db-id="op-2"/>
+								</eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:LNodeOutputs dev:db-id="pdis-outputs">
+									<eIEC61850-6-100:ControlRef output="Trip" uuid="pdis-trip-uuid" dev:db-id="pdis-trip"/>
+								</eIEC61850-6-100:LNodeOutputs>
+							</Private>
+						</LNode>
+					</SubFunction>
+					<Private type="eIEC61850-6-100" dev:db-id="f1-private">
+						<eIEC61850-6-100:ProcessResources dev:db-id="f1-resources">
+							<eIEC61850-6-100:ProcessResource name="PR1" uuid="pr1-uuid" dev:db-id="pr1"/>
+						</eIEC61850-6-100:ProcessResources>
+					</Private>
+				</Function>
+			</Bay>
+			<Bay name="B2" dev:db-id="bay-2">
+				<Function name="F1" dev:db-id="f1-b2">
+					<LNode iedName="None" lnClass="XCBR" lnInst="1" dev:db-id="ln-xcbr-b2"/>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+		<Private type="eIEC61850-6-100" dev:db-id="sub-private">
+			<eIEC61850-6-100:FunctionCategory name="Cat1" dev:db-id="fcat-1">
+				<eIEC61850-6-100:FunctionCatRef function="S1/V1/B2/F1" dev:db-id="fcatref-path"/>
+				<eIEC61850-6-100:FunctionCatRef function="S1/V1/B1/F1/SF1" dev:db-id="fcatref-sub"/>
+				<eIEC61850-6-100:FunctionCatRef function="S1/V1/B3/F1" dev:db-id="fcatref-none"/>
+			</eIEC61850-6-100:FunctionCategory>
+			<eIEC61850-6-100:Application name="A1" dev:db-id="app-1">
+				<eIEC61850-6-100:FunctionRole name="R1" dev:db-id="role-1">
+					<eIEC61850-6-100:FunctionRoleContent dev:db-id="content-1">
+						<eIEC61850-6-100:FunctionRef function="S1/V1/B1/F1" functionUuid="f1-uuid" dev:db-id="fref-1">
+							<eIEC61850-6-100:FunctionalVariantRef functionalVariant="Fast" dev:db-id="fvref-1"/>
+							<eIEC61850-6-100:FunctionalVariantRef functionalVariant="Slow" dev:db-id="fvref-none"/>
+							<eIEC61850-6-100:SignalRole name="Signals" dev:db-id="role-signals-1">
+								<eIEC61850-6-100:LNodeInputRef sourceRef="SF1/PDIS1.Op(2).general" dev:db-id="in-ref-1"/>
+								<eIEC61850-6-100:LNodeInputRef sourceRef="SF1/PDIS1.Op(1).general" sourceRefUuid="op-1-uuid" dev:db-id="in-ref-uuid"/>
+								<eIEC61850-6-100:LNodeOutputRef controlRef="SF1/PDIS1.Trip" dev:db-id="out-ref-1"/>
+								<eIEC61850-6-100:LNodeDataRef data="SF1/PDIS1.Str.general" dev:db-id="data-ref-1"/>
+							</eIEC61850-6-100:SignalRole>
+						</eIEC61850-6-100:FunctionRef>
+					</eIEC61850-6-100:FunctionRoleContent>
+				</eIEC61850-6-100:FunctionRole>
+				<eIEC61850-6-100:FunctionalVariantGroup name="G1" dev:db-id="fvg-1">
+					<eIEC61850-6-100:FunctionalVariant name="Fast" dev:db-id="fv-1-fast"/>
+				</eIEC61850-6-100:FunctionalVariantGroup>
+			</eIEC61850-6-100:Application>
+			<eIEC61850-6-100:Application name="A2" dev:db-id="app-2">
+				<eIEC61850-6-100:FunctionRole name="R2" dev:db-id="role-2">
+					<eIEC61850-6-100:FunctionRoleContent dev:db-id="content-2">
+						<eIEC61850-6-100:FunctionRef function="S1/V1/B1/F1/SF1" dev:db-id="fref-2">
+							<eIEC61850-6-100:FunctionalVariantRef functionalVariant="Fast" dev:db-id="fvref-2"/>
+							<eIEC61850-6-100:SignalRole name="Signals" dev:db-id="role-signals-2">
+								<eIEC61850-6-100:LNodeInputRef sourceRef="PDIS1.Op(1).general" dev:db-id="in-ref-2"/>
+							</eIEC61850-6-100:SignalRole>
+						</eIEC61850-6-100:FunctionRef>
+					</eIEC61850-6-100:FunctionRoleContent>
+				</eIEC61850-6-100:FunctionRole>
+				<eIEC61850-6-100:FunctionalVariantGroup name="G2" dev:db-id="fvg-2">
+					<eIEC61850-6-100:FunctionalVariant name="Fast" dev:db-id="fv-2-fast"/>
+				</eIEC61850-6-100:FunctionalVariantGroup>
+			</eIEC61850-6-100:Application>
+		</Private>
+	</Substation>
+	<IED name="P1" dev:db-id="ied-1">
+		<AccessPoint name="AP1" dev:db-id="ap-1">
+			<Server dev:db-id="srv-1">
+				<LDevice inst="LD0" dev:db-id="ld-1">
+					<LN lnClass="PTRC" inst="1" lnType="PTRC_T" uuid="ln-ptrc-uuid" dev:db-id="ln-1">
+						<Outputs dev:db-id="outputs-1">
+							<ExtCtrl intAddr="Close" dev:db-id="ext-ctrl-close"/>
+							<ExtCtrl intAddr="Open" dev:db-id="ext-ctrl-open"/>
+						</Outputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+</SCL>
