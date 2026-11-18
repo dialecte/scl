@@ -3,6 +3,7 @@ import { collectUuids } from './match-key'
 import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
+import { readFileUuid } from '@/v2019C1/extensions/lifecycle/read-file-uuid'
 import { BARE_TUPLE_REFERRER_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 import { isTopologyLevel } from '@/v2019C1/helpers'
 
@@ -131,13 +132,6 @@ async function assertSameFile(params: {
 		meta: { fileUuid, baseFileUuid },
 		detail: `the previous revision given names the file "${baseFileUuid}", the newer revision "${fileUuid}"`,
 	})
-}
-
-/** The uuid the Header of a document gives its file, if any. */
-async function readFileUuid(query: Core.Query<Config>): Promise<string | undefined> {
-	const [header] = await query.getRecordsByTagName('Header')
-	if (!header) return undefined
-	return (await query.getAttribute(header, { name: 'uuid' })) || undefined
 }
 
 /** Every uuid an element of a document carries. */

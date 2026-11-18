@@ -27,6 +27,23 @@ export async function readSourceFileType(
 	})
 }
 
+/**
+ * The type of file a document is, read from its registered extension (any case), whatever operation reads it:
+ * `undefined` for an extension no SCL file type is named by.
+ */
+export async function readDocumentFileType(
+	query: Core.Query<Config>,
+): Promise<SclFileType | undefined> {
+	const { extension } = await query.getDocumentInfo()
+	const lower = extension.toLowerCase()
+	return isSclFileExtension(lower) ? SCL_FILE_TYPE_BY_EXTENSION[lower] : undefined
+}
+
+/** Whether an extension (in lower case) names an SCL file type. */
+function isSclFileExtension(extension: string): extension is SclFileExtension {
+	return Object.hasOwn(SCL_FILE_TYPE_BY_EXTENSION, extension)
+}
+
 /** Whether the document's extension is one the operation accepts. */
 function isAcceptedExtension(params: {
 	extension: string

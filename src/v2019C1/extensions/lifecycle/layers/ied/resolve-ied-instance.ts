@@ -1,4 +1,5 @@
 import { assertIedSourceOffered } from './assert-ied-placement'
+import { assertIedVersion } from './assert-ied-version'
 import { UPDATED_IED_FILE_TYPES } from './resolve-ied-instance.constants'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -21,6 +22,8 @@ import type { AnyTrackedRecord } from '@dialecte/core'
  *
  * Refused before anything is read further:
  *  - a source an IED is not read from (`assertIedSourceOffered`);
+ *  - a fork on an open ISD document of a file that is not a version of it, with `NOT_A_VERSION_OF_FILE`
+ *    (`assertIedVersion`);
  *  - the IED of another file than an ISD found in the project, with `OPTION_NOT_AVAILABLE`
  *    (`meta: { option: 'source', value }`, the file type in lower case): only an ISD template's is updated yet;
  *  - several instances and `targetInstance` naming none of them, `targetInstance` naming an element that is no instance,
@@ -33,6 +36,12 @@ export async function resolveIedInstance(
 ): Promise<AnyTrackedRecord | undefined> {
 	const { scenario, fileType, targetInstance, operation } = params
 	const { uuid } = await assertIedSourceOffered(params)
+	if (scenario === 'fork')
+		await assertIedVersion(reader, {
+			sourceQuery: params.sourceQuery,
+			otherIedUuid: uuid,
+			operation,
+		})
 	const { matchesInstances, matchKey, placementIdentity } = scenarioPolicy({ scenario })
 	// a new IED is placed whatever the project holds; a fork keeps its identity and is a first placement only yet
 	if (!matchesInstances || placementIdentity === 'keep') return undefined
