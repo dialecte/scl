@@ -68,7 +68,7 @@ describe('ofEach - reads its elements in one batch and each signal parent once',
 	type TestCase = SclTest.BaseXmlTestCase & {
 		refs: Scl.Ref<Scl.ElementsOf>[]
 		/** Calls made on the query by the one `ofEach` call. */
-		expectedCalls: { getRecord: number; getRecords: number }
+		expectedCalls: { getRecord: number; getRecords: number; getChildrenOfEach: number }
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -84,7 +84,7 @@ describe('ofEach - reads its elements in one batch and each signal parent once',
 				{ tagName: 'Substation', id: 's1' },
 				{ tagName: 'Function', id: 'f1' },
 			],
-			expectedCalls: { getRecord: 0, getRecords: 1 },
+			expectedCalls: { getRecord: 0, getRecords: 1, getChildrenOfEach: 0 },
 		},
 		'three signals under one parent → the parent and its children read once': {
 			sourceXml: /* xml */ `
@@ -107,7 +107,7 @@ describe('ofEach - reads its elements in one batch and each signal parent once',
 				{ tagName: 'SourceRef', id: 'sr2' },
 				{ tagName: 'SourceRef', id: 'sr3' },
 			],
-			expectedCalls: { getRecord: 1, getRecords: 2 },
+			expectedCalls: { getRecord: 0, getRecords: 2, getChildrenOfEach: 1 },
 		},
 		'signals under two parents → each parent and its children read once': {
 			sourceXml: /* xml */ `
@@ -136,7 +136,7 @@ describe('ofEach - reads its elements in one batch and each signal parent once',
 				{ tagName: 'SourceRef', id: 'sr-a2' },
 				{ tagName: 'SourceRef', id: 'sr-b2' },
 			],
-			expectedCalls: { getRecord: 2, getRecords: 3 },
+			expectedCalls: { getRecord: 0, getRecords: 3, getChildrenOfEach: 2 },
 		},
 		'inputs and outputs of one LNode → each parent read once': {
 			sourceXml: /* xml */ `
@@ -163,7 +163,7 @@ describe('ofEach - reads its elements in one batch and each signal parent once',
 				{ tagName: 'SourceRef', id: 'sr2' },
 				{ tagName: 'ControlRef', id: 'cr2' },
 			],
-			expectedCalls: { getRecord: 2, getRecords: 3 },
+			expectedCalls: { getRecord: 0, getRecords: 3, getChildrenOfEach: 2 },
 		},
 	}
 
@@ -175,6 +175,7 @@ describe('ofEach - reads its elements in one batch and each signal parent once',
 			expect({
 				getRecord: reads.filter((method) => method === 'getRecord').length,
 				getRecords: reads.filter((method) => method === 'getRecords').length,
+				getChildrenOfEach: reads.filter((method) => method === 'getChildrenOfEach').length,
 			}).toEqual(testCase.expectedCalls)
 		},
 	})
@@ -260,6 +261,32 @@ describe('ofEach - each element described as stored, in the order given', () => 
 			elements: [{ tagName: 'ControlRef', id: 'cr2' }],
 			expected: [{ title: 'Close', state: { binding: 'open', implemented: false } }],
 		},
+		'inputs and outputs held together by one Private → each named among its own tag, whichever comes first':
+			{
+				sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root">
+					<Substation name="S1" ${id}="s1">
+						<Function name="F1" ${id}="f1">
+							<LNode lnClass="PTRC" lnInst="1" iedName="None" ${id}="lnode">
+								<Private type="eIEC61850-6-100" ${id}="signals">
+									<eIEC61850-6-100:SourceRef input="Trip" inputInst="1" ${id}="sr1"/>
+									<eIEC61850-6-100:ControlRef output="Trip" outputInst="1" ${id}="cr1"/>
+									<eIEC61850-6-100:ControlRef output="Trip" outputInst="2" ${id}="cr2"/>
+								</Private>
+							</LNode>
+						</Function>
+					</Substation>
+				</SCL>
+			`,
+				elements: [
+					{ tagName: 'SourceRef', id: 'sr1' },
+					{ tagName: 'ControlRef', id: 'cr1' },
+				],
+				expected: [
+					{ title: 'Trip', state: { binding: 'open', implemented: false } },
+					{ title: 'Trip(1)', state: { binding: 'open', implemented: false } },
+				],
+			},
 		'a ref without id → the element of that tag': {
 			sourceXml: /* xml */ `
 				<SCL ${ns} ${id}="root">

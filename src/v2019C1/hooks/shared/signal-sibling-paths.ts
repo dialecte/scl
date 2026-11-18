@@ -1,6 +1,5 @@
-import { toRawRecord } from '@dialecte/core/helpers'
-
 import { PATH_EXTRACTION_CONFIG } from '@/v2019C1/extensions/reference/constants/path-extraction'
+import { readSignalChildrenOfEach } from '@/v2019C1/extensions/reference/query/build/read-siblings-of-each'
 import { readAttribute } from '@/v2019C1/helpers'
 import { followAncestry } from '@/v2019C1/hooks/shared/follow-ancestry'
 
@@ -25,18 +24,12 @@ export async function reconcileSignalSiblingPaths(
 	const strategy = PATH_EXTRACTION_CONFIG[tagName]
 	if (strategy?.type !== 'signal' || names.length === 0) return []
 
-	const parentRecord = await query.getRecord(parent)
-	if (!parentRecord) return []
-
-	const children = await query.getRecords(parentRecord.children)
-	const sharing = children
-		.filter((child) => child !== undefined)
-		.map(toRawRecord)
-		.filter(
-			(child) =>
-				child.tagName === tagName &&
-				names.includes(readAttribute({ record: child, name: strategy.name, defaults: 'none' })),
-		)
+	const [signals] = await readSignalChildrenOfEach({ query, parents: [parent] })
+	const sharing = signals.filter(
+		(signal) =>
+			signal.tagName === tagName &&
+			names.includes(readAttribute({ record: signal, name: strategy.name, defaults: 'none' })),
+	)
 
 	const roots = sharing
 		.filter((sibling) => readAttribute({ record: sibling, name: 'uuid' }))

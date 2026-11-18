@@ -12,7 +12,7 @@ import {
 	buildPathFromAncestry,
 	getPathSegment,
 } from '@/v2019C1/extensions/reference/query/build/path-segment'
-import { readSiblings } from '@/v2019C1/extensions/reference/query/build/signal-name'
+import { readSiblingsOfEach } from '@/v2019C1/extensions/reference/query/build/read-siblings-of-each'
 import { readSpecNamings } from '@/v2019C1/extensions/reference/query/build/spec-namings'
 import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
 import { readAttribute } from '@/v2019C1/helpers'
@@ -295,22 +295,19 @@ async function readMissingAncestries(
 	)
 }
 
-/** The children of the parent of each signal read without its siblings, by parent id, one read per parent. */
+/** The siblings of each signal read without them, by parent id: one batch for all their parents. */
 async function readMissingSiblings(
 	query: Core.Query<Config>,
 	params: { elements: readonly FollowedElement[] },
 ): Promise<Map<string, readonly AnyRawRecord[]>> {
+	// keyed by parent alone: a parent's list holds its signals of every tag
 	const firstByParent = new Map<string, AnyRawRecord>()
 	for (const { record, siblings } of params.elements) {
 		if (siblings || !SIGNAL_TAG_NAMES.has(record.tagName) || !record.parent) continue
 		if (!firstByParent.has(record.parent.id)) firstByParent.set(record.parent.id, record)
 	}
 	const signals = [...firstByParent.values()]
-	const read = await Promise.all(
-		signals.map(function readSignalSiblings(record) {
-			return readSiblings(query, record)
-		}),
-	)
+	const read = await readSiblingsOfEach({ query, records: signals })
 	return new Map(signals.map((record, index) => [record.parent?.id ?? '', read[index]]))
 }
 
