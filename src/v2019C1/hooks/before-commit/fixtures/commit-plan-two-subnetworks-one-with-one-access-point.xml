@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Bus_A connects IED1's access point only; Bus_B connects IED2's -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="project" dev:db-id="header"/>
+    <Communication dev:db-id="communication">
+        <SubNetwork name="Bus_A" type="8-MMS" dev:db-id="bus-a">
+            <ConnectedAP iedName="IED1" apName="AP1" dev:db-id="bus-a-ied1"/>
+        </SubNetwork>
+        <SubNetwork name="Bus_B" type="8-MMS" dev:db-id="bus-b">
+            <ConnectedAP iedName="IED2" apName="AP1" dev:db-id="bus-b-ied2"/>
+        </SubNetwork>
+    </Communication>
+    <IED name="IED1" dev:db-id="ied1">
+        <AccessPoint name="AP1" dev:db-id="ied1-ap"/>
+    </IED>
+    <IED name="IED2" dev:db-id="ied2">
+        <AccessPoint name="AP1" dev:db-id="ied2-ap"/>
+    </IED>
+</SCL>

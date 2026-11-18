@@ -60,7 +60,7 @@ describe('the commit prune of a container whose last required child moved away',
 			...oldRecord,
 			children: oldRecord.children.filter((child) => child.id !== 'ld7'),
 		} as Scl.RawRecord<Scl.ElementsOf>
-		const pruned = await pruneEmptiedContainers({
+		const { operations: pruned } = await pruneEmptiedContainers({
 			operations: [{ status: 'updated', oldRecord, newRecord }],
 			query: source.query,
 			pending: new Map(),

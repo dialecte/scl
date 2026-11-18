@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The unbound LNode trip names by its lnUuid the logical node new-ln, which IED1 does not hold yet; its namespace wrapper holds only its specification naming -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="project" dev:db-id="header"/>
+    <Substation name="S1" dev:db-id="s1">
+        <Function name="F1" uuid="uuid-f1" dev:db-id="f1">
+            <LNode iedName="None" lnClass="PTRC" lnInst="1" lnUuid="new-ln" uuid="lnode-trip" dev:db-id="lnode-trip">
+                <Private type="eIEC61850-6-100" dev:db-id="trip-private">
+                    <eIEC61850-6-100:LNodeSpecNaming sLnClass="PTRC" sLnInst="1" dev:db-id="trip-naming"/>
+                </Private>
+            </LNode>
+        </Function>
+    </Substation>
+    <IED name="IED1" dev:db-id="ied1">
+        <AccessPoint name="AP1" dev:db-id="ied1-ap">
+            <Server dev:db-id="ied1-server">
+                <Authentication dev:db-id="ied1-authentication"/>
+                <LDevice inst="LD1" dev:db-id="ied1-ld">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ied1-lln0"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="templates">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lln0-type">
+            <DO name="Beh" type="ENS_T" dev:db-id="beh"/>
+        </LNodeType>
+        <LNodeType id="PTRC_T" lnClass="PTRC" dev:db-id="ptrc-type">
+            <DO name="Beh" type="ENS_T" dev:db-id="ptrc-beh"/>
+        </LNodeType>
+        <DOType id="ENS_T" cdc="ENS" dev:db-id="ens-type">
+            <DA name="stVal" bType="Enum" type="Beh_E" fc="ST" dev:db-id="st-val"/>
+        </DOType>
+        <EnumType id="Beh_E" dev:db-id="beh-enum">
+            <EnumVal ord="1" dev:db-id="on">on</EnumVal>
+        </EnumType>
+    </DataTypeTemplates>
+</SCL>

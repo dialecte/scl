@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The only SubNetwork Bus_A holds its BitRate and connects IED1's access point only -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Header id="project" dev:db-id="header"/>
+    <Communication dev:db-id="communication">
+        <SubNetwork name="Bus_A" type="8-MMS" dev:db-id="bus-a">
+            <BitRate unit="b/s" multiplier="M" dev:db-id="bus-a-bit-rate">100</BitRate>
+            <ConnectedAP iedName="IED1" apName="AP1" dev:db-id="bus-a-ied1"/>
+        </SubNetwork>
+    </Communication>
+    <IED name="IED1" dev:db-id="ied1">
+        <AccessPoint name="AP1" dev:db-id="ied1-ap"/>
+    </IED>
+</SCL>
