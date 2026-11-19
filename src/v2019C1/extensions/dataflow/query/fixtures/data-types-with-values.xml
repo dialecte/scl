@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+	<Substation name="S1" dev:db-id="sub-1">
+		<Text dev:db-id="text-sub">a substation</Text>
+		<VoltageLevel name="V1" dev:db-id="vl-1">
+			<Bay name="B1" dev:db-id="bay-1">
+				<LNode iedName="IED1" ldInst="LD1" lnClass="CSWI" lnInst="1" lnType="T1" dev:db-id="lnode-1"/>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<IED name="IED1" dev:db-id="ied-1">
+		<AccessPoint name="AP1" dev:db-id="ap-1">
+			<Server dev:db-id="server-1">
+				<Authentication dev:db-id="auth-1"/>
+				<LDevice inst="LD1" dev:db-id="ld-1">
+					<LN0 lnClass="LLN0" inst="" lnType="T0" dev:db-id="ln0-1"/>
+					<LN lnClass="CSWI" inst="1" lnType="T1" dev:db-id="ln-1">
+						<DOI name="Beh" dev:db-id="doi-beh">
+							<DAI name="stVal" dev:db-id="dai-beh-stval">
+								<Val dev:db-id="val-dai-beh">on</Val>
+							</DAI>
+						</DOI>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates dev:db-id="dtt-1">
+		<LNodeType id="T1" lnClass="CSWI" dev:db-id="lnt-1">
+			<Text dev:db-id="text-lnt-1">a logical node type</Text>
+			<DO name="Beh" type="ENS" dev:db-id="do-1-beh"/>
+			<DO name="Pos" type="DPC" dev:db-id="do-1-pos"/>
+		</LNodeType>
+		<LNodeType id="T0" lnClass="LLN0" dev:db-id="lnt-0">
+			<DO name="Beh" type="ENS" dev:db-id="do-0-beh"/>
+		</LNodeType>
+		<DOType id="ENS" cdc="ENS" dev:db-id="dot-ens">
+			<DA name="stVal" bType="Enum" type="BEH" fc="ST" dev:db-id="da-ens-stval">
+				<Val dev:db-id="val-da-ens">on</Val>
+			</DA>
+			<DA name="q" bType="Quality" fc="ST" dev:db-id="da-ens-q"/>
+		</DOType>
+		<DOType id="DPC" cdc="DPC" dev:db-id="dot-dpc">
+			<Text dev:db-id="text-dot-dpc">a data object type</Text>
+			<SDO name="sub" type="ENS" dev:db-id="sdo-dpc-sub"/>
+			<DA name="origin" bType="Struct" type="ORIG" fc="ST" dev:db-id="da-dpc-origin"/>
+		</DOType>
+		<DAType id="ORIG" dev:db-id="dat-orig">
+			<BDA name="orCat" bType="Enum" type="ORCAT" dev:db-id="bda-orig-orcat">
+				<Val dev:db-id="val-bda-orcat">not-supported</Val>
+			</BDA>
+			<BDA name="f" bType="FLOAT32" dev:db-id="bda-orig-f"/>
+		</DAType>
+		<EnumType id="BEH" dev:db-id="et-beh">
+			<EnumVal ord="1" dev:db-id="ev-beh-1">on</EnumVal>
+		</EnumType>
+		<EnumType id="ORCAT" dev:db-id="et-orcat">
+			<EnumVal ord="0" dev:db-id="ev-orcat-0">not-supported</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root">
+	<Substation name="S1" dev:db-id="substation">
+		<Function name="F1" dev:db-id="function">
+			<LNode iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" lnUuid="uuid-ptrc" lnType="PTRC_T" dev:db-id="lnode-sender">
+				<eIEC61850-6-100:LNodeSpecNaming sLdInst="LD0" sLnClass="PTRC" sLnInst="1" dev:db-id="spec-naming-sender"/>
+			</LNode>
+			<LNode iedName="B1" ldInst="LD0" lnClass="XCBR" lnInst="1" lnUuid="uuid-xcbr" uuid="uuid-lnode-receiver" dev:db-id="lnode-receiver">
+				<eIEC61850-6-100:LNodeInputs dev:db-id="inputs-receiver">
+					<eIEC61850-6-100:SourceRef input="Trip" source="S1/F1/PTRC1.PhV.phsA.cVal.mag.f" dev:db-id="source-ref-struct"/>
+					<eIEC61850-6-100:SourceRef input="Trip" source="S1/F1/PTRC1.Beh.stVal" dev:db-id="source-ref-enum"/>
+					<eIEC61850-6-100:SourceRef input="Trip" source="S1/F1/PTRC1.Vnd.general" dev:db-id="source-ref-private-do"/>
+					<eIEC61850-6-100:SourceRef input="Trip" source="S1/F1/PTRC1.Pos.Oper.general" dev:db-id="source-ref-private-sdo"/>
+					<eIEC61850-6-100:SourceRef input="Trip" source="S1/F1/PTRC1.VndBeh.stVal" dev:db-id="source-ref-private-enum"/>
+					<eIEC61850-6-100:SourceRef input="Trip" source="S1/F1/PTRC1.VndPhV.phsA.cVal.mag.f" dev:db-id="source-ref-private-struct"/>
+					<eIEC61850-6-100:SourceRef input="Trip" source="S1/F1/PTRC1.Op.general" dev:db-id="source-ref-plain"/>
+					<eIEC61850-6-100:SourceRef input="Trip" source="S1/F1/PTRC1.Op.unknown" dev:db-id="source-ref-unknown"/>
+				</eIEC61850-6-100:LNodeInputs>
+			</LNode>
+		</Function>
+	</Substation>
+	<IED name="P1" dev:db-id="ied-p1">
+		<AccessPoint name="AP1" dev:db-id="ap-p1">
+			<Server dev:db-id="server-p1">
+				<Authentication dev:db-id="authentication-p1"/>
+				<LDevice inst="LD0" dev:db-id="ld-p1">
+					<LN0 lnClass="LLN0" inst="" lnType="T0" uuid="uuid-ln0-p1" dev:db-id="ln0-p1">
+						<DataSet name="DS1" dev:db-id="ds1">
+							<FCDA ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Op" fc="ST" dev:db-id="fcda1"/>
+						</DataSet>
+						<GSEControl name="gcb1" datSet="DS1" appID="app1" uuid="uuid-gcb1" dev:db-id="gcb1">
+							<IEDName apRef="AP1" dev:db-id="iedname-b1">B1</IEDName>
+						</GSEControl>
+					</LN0>
+					<LN lnClass="PTRC" inst="1" lnType="PTRC_T" uuid="uuid-ptrc" dev:db-id="ln-ptrc">
+						<DOI name="Beh" dev:db-id="doi-beh">
+							<DAI name="stVal" dev:db-id="dai-beh-stval">
+								<Val dev:db-id="val-dai-beh">on</Val>
+							</DAI>
+						</DOI>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="B1" dev:db-id="ied-b1">
+		<AccessPoint name="AP1" uuid="uuid-ap1-b1" dev:db-id="ap-b1">
+			<Server dev:db-id="server-b1">
+				<Authentication dev:db-id="authentication-b1"/>
+				<LDevice inst="LD0" uuid="uuid-ld-b1" dev:db-id="ld-b1">
+					<LN0 lnClass="LLN0" inst="" lnType="T0" uuid="uuid-ln0-b1" dev:db-id="ln0-b1"/>
+					<LN lnClass="XCBR" inst="1" lnType="T1" uuid="uuid-xcbr" dev:db-id="ln-xcbr">
+						<Inputs dev:db-id="inputs-ln-xcbr">
+							<ExtRef intAddr="Trip" dev:db-id="ext-ref"/>
+						</Inputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates dev:db-id="data-type-templates">
+		<LNodeType id="PTRC_T" lnClass="PTRC" dev:db-id="lnode-type-ptrc">
+			<Private type="vendor" dev:db-id="private-lnode-type">
+				<DO name="Vnd" type="ACT_T" dev:db-id="do-vnd"/>
+				<DO name="VndBeh" type="ENS_T" dev:db-id="do-vnd-beh"/>
+				<DO name="VndPhV" type="WYE_T" dev:db-id="do-vnd-phv"/>
+			</Private>
+			<DO name="Op" type="ACT_T" dev:db-id="do-op"/>
+			<DO name="PhV" type="WYE_T" dev:db-id="do-phv"/>
+			<DO name="Pos" type="DPC_T" dev:db-id="do-pos"/>
+			<DO name="Beh" type="ENS_T" dev:db-id="do-beh"/>
+		</LNodeType>
+		<DOType id="ACT_T" cdc="ACT" dev:db-id="do-type-act">
+			<DA name="general" fc="ST" bType="BOOLEAN" dev:db-id="da-general">
+				<Val dev:db-id="val-da-general">false</Val>
+			</DA>
+		</DOType>
+		<DOType id="DPC_T" cdc="DPC" dev:db-id="do-type-dpc">
+			<Private type="vendor" dev:db-id="private-do-type">
+				<SDO name="Oper" type="ACT_T" dev:db-id="sdo-oper"/>
+			</Private>
+		</DOType>
+		<DOType id="ENS_T" cdc="ENS" dev:db-id="do-type-ens">
+			<DA name="stVal" fc="ST" bType="Enum" type="BEH_E" dev:db-id="da-stval">
+				<Val dev:db-id="val-da-stval">on</Val>
+			</DA>
+		</DOType>
+		<DOType id="WYE_T" cdc="WYE" dev:db-id="do-type-wye">
+			<SDO name="phsA" type="CMV_T" dev:db-id="sdo-phsa"/>
+		</DOType>
+		<DOType id="CMV_T" cdc="CMV" dev:db-id="do-type-cmv">
+			<DA name="cVal" fc="MX" bType="Struct" type="CVAL_T" dev:db-id="da-cval"/>
+		</DOType>
+		<DAType id="CVAL_T" dev:db-id="da-type-cval">
+			<BDA name="mag" bType="Struct" type="AV_T" dev:db-id="bda-mag"/>
+		</DAType>
+		<DAType id="AV_T" dev:db-id="da-type-av">
+			<BDA name="f" bType="FLOAT32" dev:db-id="bda-f">
+				<Val dev:db-id="val-bda-f">0.0</Val>
+			</BDA>
+		</DAType>
+		<EnumType id="BEH_E" dev:db-id="enum-type-beh">
+			<EnumVal ord="1" dev:db-id="enum-val-on">on</EnumVal>
+			<EnumVal ord="5" dev:db-id="enum-val-off">off</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>
