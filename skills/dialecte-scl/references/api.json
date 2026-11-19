@@ -659,7 +659,7 @@
 				"source files and versions of a document",
 				"template origin of a Function/Application/IED"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/provenance/get-provenance.ts:16",
+			"declaredAt": "src/v2019C1/extensions/reference/query/provenance/get-provenance.ts:20",
 			"example": "await doc.query.reference.getProvenance()"
 		},
 		{

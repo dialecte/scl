@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-1">
+    <Substation dev:db-id="sub" name="S1">
+        <Function dev:db-id="fn-1" name="F1">
+            <LNode dev:db-id="lnode-ptoc" iedName="VENDOR" ldInst="LD0" lnClass="PTOC" lnInst="1" lnUuid="ptoc1-uuid">
+                <Private dev:db-id="priv-ptoc" type="eIEC61850-6-100">
+                    <eIEC61850-6-100:DOS dev:db-id="dos-op" name="Op">
+                        <eIEC61850-6-100:DAS dev:db-id="das-general" name="general"/>
+                    </eIEC61850-6-100:DOS>
+                    <eIEC61850-6-100:DOS dev:db-id="dos-str" name="Str" mappedDoName="Str">
+                        <eIEC61850-6-100:DAS dev:db-id="das-q" name="q"/>
+                    </eIEC61850-6-100:DOS>
+                    <eIEC61850-6-100:DOS dev:db-id="dos-else" name="Beh" mappedLnUuid="ggio1-uuid">
+                        <eIEC61850-6-100:DAS dev:db-id="das-else" name="stVal"/>
+                    </eIEC61850-6-100:DOS>
+                    <eIEC61850-6-100:DOS dev:db-id="dos-sub" name="Sub">
+                        <eIEC61850-6-100:SDS dev:db-id="sds-sub" name="s">
+                            <eIEC61850-6-100:DAS dev:db-id="das-deep" name="d"/>
+                        </eIEC61850-6-100:SDS>
+                    </eIEC61850-6-100:DOS>
+                </Private>
+            </LNode>
+        </Function>
+        <Function dev:db-id="fn-2" name="F2">
+            <LNode dev:db-id="lnode-ggio" iedName="VENDOR" ldInst="LD0" lnClass="GGIO" lnInst="1" lnUuid="ggio1-uuid">
+                <Private dev:db-id="priv-ggio" type="eIEC61850-6-100">
+                    <eIEC61850-6-100:DOS dev:db-id="dos-named" name="Ind" mappedLnUuid="ptoc1-uuid">
+                        <eIEC61850-6-100:DAS dev:db-id="das-under" name="stVal"/>
+                        <eIEC61850-6-100:SDS dev:db-id="sds-under" name="x">
+                            <eIEC61850-6-100:DAS dev:db-id="das-under-deep" name="y"/>
+                        </eIEC61850-6-100:SDS>
+                    </eIEC61850-6-100:DOS>
+                    <eIEC61850-6-100:DOS dev:db-id="dos-ggio" name="Ind2"/>
+                </Private>
+            </LNode>
+        </Function>
+    </Substation>
+    <IED dev:db-id="ied" name="VENDOR">
+        <AccessPoint dev:db-id="ap" name="AP1">
+            <Server dev:db-id="srv">
+                <Authentication dev:db-id="auth"/>
+                <LDevice dev:db-id="ld" inst="LD0">
+                    <LN0 dev:db-id="ln0" lnClass="LLN0" inst="" lnType="LLN0_T"/>
+                    <LN dev:db-id="ptoc1" lnClass="PTOC" inst="1" lnType="PTOC_T" uuid="ptoc1-uuid"/>
+                    <LN dev:db-id="ggio1" lnClass="GGIO" inst="1" lnType="GGIO_T" uuid="ggio1-uuid"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+</SCL>

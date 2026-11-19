@@ -10,7 +10,7 @@ import type { AnyRawRecord } from '@dialecte/core'
 
 /**
  * The document's own `LN` or `LN0` carrying a uuid, with its IED, without reading the document:
- * the elements carrying it are looked up and only those climbed. A logical node outside an IED or
+ * the elements carrying it are looked up and only those climbed, all in one ancestor walk (one read per level). A logical node outside an IED or
  * in a vendor payload is no answer; of several, the first in document order.
  */
 export async function findNativeLnByUuid(
@@ -20,10 +20,12 @@ export async function findNativeLnByUuid(
 	const { uuid } = params
 	const lns = await query.findByAttributes({ tagName: 'LN', attributes: { uuid } })
 	const ln0s = await query.findByAttributes({ tagName: 'LN0', attributes: { uuid } })
+	const matches = [...ln0s, ...lns]
+	if (matches.length === 0) return undefined
+	const ancestries = await query.findAncestorsOfEach(matches)
 	const candidates: { found: NativeLogicalNode; chain: readonly AnyRawRecord[] }[] = []
-	for (const match of [...ln0s, ...lns]) {
-		const ancestors = await query.findAncestors(match)
-		const ancestry = [...ancestors]
+	for (const [index, match] of matches.entries()) {
+		const ancestry = [...(ancestries[index] ?? [])]
 			.reverse()
 			.filter((ancestor) => !TRANSPARENT_TAGS.has(ancestor.tagName))
 			.map(toAnyRawRecord)
