@@ -1,3 +1,4 @@
+import sharedUuidXml from './fixtures/lnode-input-naming-a-uuid-two-extrefs-carry.xml?raw'
 import sourceXml from './fixtures/lnode-inputs-naming-extrefs-by-uuid.xml?raw'
 import { reconcileSignalAddresses, reconcileSignalAddressesOfLNodes } from './signal-addresses'
 
@@ -137,6 +138,16 @@ describe('reconcileSignalAddresses - the ExtRefs the signals of a rebound LNode 
  */
 describe('reconcileSignalAddressesOfLNodes - the signals of the LNodes given', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
+		'an input naming a uuid two ExtRefs carry → the address of the first the ExtRef tag answers, as before':
+			{
+				// the trip LNode's input names ext-shared, carried by ext-z then ext-a in the document: the tag answers ext-a first
+				sourceXml: sharedUuidXml,
+				allowInvalidFixture: {
+					reason: 'two ExtRefs carry one uuid: the first the tag read lists is kept, as before',
+					violations: [{ check: 'identity', code: 'duplicate-instance-uuid' }],
+				},
+				expected: { written: ['in-a:LD0/Q0GGIO1.A'], tagReads: [], lookups: ['ExtRef'] },
+			},
 		'the trip LNode given → its three inputs written, the other LNode untouched, no tag read': {
 			// the trip LNode's three inputs each name an ExtRef of P1 by uuid, the other LNode's input the fourth
 			sourceXml,

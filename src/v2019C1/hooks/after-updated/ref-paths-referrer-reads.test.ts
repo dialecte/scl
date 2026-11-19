@@ -46,14 +46,14 @@ describe('updateRefPaths - an update changing nothing the referrers read', () =>
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		'templateUuid of the Function → nothing written, no referrer looked up': {
+		'templateUuid of the Function → nothing written, no tag looked up or read': {
 			// the FunctionCatRef names F1 by uuid and path
 			sourceXml: COHERENT_XML,
 			target: { tagName: 'Function', id: 'f1' },
 			attributes: { templateUuid: 'tpl-2' },
 			expected: { operations: 0, lookups: 0 },
 		},
-		'lnType of the LNode → nothing written, no referrer looked up': {
+		'lnType of the LNode → nothing written, no tag looked up or read': {
 			// the SourceRef names XCBR1 by uuid and path
 			sourceXml: COHERENT_XML,
 			target: { tagName: 'LNode', id: 'xcbr' },
@@ -74,12 +74,11 @@ describe('updateRefPaths - an update changing nothing the referrers read', () =>
 				const after = toRawRecord(staged!) as Scl.RawRecord<Scl.ElementsOf>
 				const { query, calls } = countDocumentQueryReads(tx)
 				const operations = await updateRefPaths({ query, oldRecord: before, newRecord: after })
-				const searches = calls().filter(
-					(call) =>
-						call.method === 'findByAttributes' &&
-						['FunctionCatRef', 'SourceRef'].includes((call.args[0] as { tagName: string }).tagName),
+				// every lookup or read of a tag, whatever the tag: none may name a referrer
+				const tagReads = calls().filter(
+					(call) => call.method === 'findByAttributes' || call.method === 'getRecordsByTagName',
 				)
-				observed = { operations: operations.length, lookups: searches.length }
+				observed = { operations: operations.length, lookups: tagReads.length }
 			})
 			expect(observed).toEqual(testCase.expected)
 		},
