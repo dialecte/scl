@@ -228,9 +228,9 @@ describe('importTypes - the followers read together', () => {
 	type TestCase = SclTest.BaseXmlTestCase & { targetXml: string; expected: Answer }
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		// main: 21 get, 46 lookups, 25 getMany; now the followers read in one getMany and the ids in one lookup per tag;
-		// the same 69 records moved. The local store: 56 tag reads moving 46 records (main 62, 52)
-		'three followers of nine types, D1 and E1 taken by other content → 2 forked and reclaimed, 18 get, 40 lookups, 26 getMany (main 21, 46, 25)':
+		// main: 21 get, 22 lookups, 25 getMany; now the followers read in one getMany and the ids in one lookup per tag;
+		// the same 69 records moved. The local store: 32 tag reads moving 46 records (main 38, 52)
+		'three followers of nine types, D1 and E1 taken by other content → 2 forked and reclaimed, 18 get, 16 lookups, 26 getMany (main 21, 22, 25)':
 			{
 				// the target's LNodes follow the source's; its D1 and E1 hold other content, its OLD type only they name
 				sourceXml: THREE_CLOSURES_XML,
@@ -254,7 +254,7 @@ describe('importTypes - the followers read together', () => {
 							'records.get': 18,
 							getMany: 26,
 							'records.getMany': 32,
-							getByAttributes: 40,
+							getByAttributes: 16,
 							'records.getByAttributes': 19,
 							getByTagName: 16,
 							'records.getByTagName': 12,
@@ -266,7 +266,7 @@ describe('importTypes - the followers read together', () => {
 							'records.getMany': 32,
 							getByAttributes: 0,
 							'records.getByAttributes': 0,
-							getByTagName: 56,
+							getByTagName: 32,
 							'records.getByTagName': 46,
 						},
 					},

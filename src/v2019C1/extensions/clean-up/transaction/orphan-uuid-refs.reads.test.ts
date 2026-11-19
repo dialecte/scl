@@ -86,15 +86,15 @@ describe('orphanUuidRefs - the lookups', () => {
 			},
 		},
 		// FunctionRef: the four target tags (the last for the uuid naming nothing); its delete looks up nothing more, the
-		// uuids left all found; SourceRef: one lookup; the delete hook of the FunctionRef makes 3 lookups, as on main.
-		// The local store: 37 tag reads moving 10 records (main 43, 18)
-		'6 references, 2 naming nothing → 8 lookups moving 4 records (main 14, 4)': {
+		// uuids left all found; SourceRef: one lookup; the delete hook of the FunctionRef makes none, as on main.
+		// The local store: 34 tag reads moving 10 records (main 40, 18)
+		'6 references, 2 naming nothing → 5 lookups moving 4 records (main 11, 4)': {
 			// as above, plus a FunctionRef and a SourceRef naming nothing
 			sourceXml: referencesTwoGoneXml,
 			allowIncoherentReferences: GONE,
 			expected: {
 				inMemory: {
-					getByAttributes: 8,
+					getByAttributes: 5,
 					'records.getByAttributes': 4,
 					getByTagName: 29,
 					'records.getByTagName': 6,
@@ -102,7 +102,7 @@ describe('orphanUuidRefs - the lookups', () => {
 				local: {
 					getByAttributes: 0,
 					'records.getByAttributes': 0,
-					getByTagName: 37,
+					getByTagName: 34,
 					'records.getByTagName': 10,
 				},
 			},
