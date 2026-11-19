@@ -884,7 +884,7 @@
 				"import a type closure with dedup and id collision handling",
 				"merge DataTypeTemplates"
 			],
-			"declaredAt": "src/v2019C1/extensions/data-model/transaction/import-types.ts:80"
+			"declaredAt": "src/v2019C1/extensions/data-model/transaction/import-types.ts:79"
 		},
 		{
 			"path": "tx.dataModel.unlockLNode",
