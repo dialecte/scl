@@ -7,11 +7,13 @@ import {
 	readLogicalNodeIndex,
 } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes'
 import { readAttribute } from '@/v2019C1/helpers'
-import { readHoldingLNodes } from '@/v2019C1/hooks/shared/read-holding-lnodes'
 import { reconcileMappedData } from '@/v2019C1/hooks/shared/reconcile-mapped-data'
 import { DATA_HOLDER_DEPTH } from '@/v2019C1/hooks/shared/reconcile-mapped-data-below.constants'
 
-import type { ReconcileMappedDataOfLNodesParams } from './reconcile-mapped-data-below.types'
+import type {
+	DataBelow,
+	ReconcileMappedDataOfLNodesParams,
+} from './reconcile-mapped-data-below.types'
 import type { ReconcileMappedDataParams } from './reconcile-mapped-data.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type {
@@ -57,8 +59,8 @@ export async function reconcileMappedDataBelow(
 /**
  * {@link reconcileMappedDataBelow} for many LNodes whose binding a hook rewrote and has not staged (`lnodes`, as
  * rewritten): what implements each is read from those records, in one read of the document's logical nodes when one
- * of them names a logical node at all; the `DOS` / `SDS` / `DAS` of each tag are read once, climbed among themselves
- * to the record holding them, then a level at a time to the LNode; each one naming its implementation below one of
+ * of them names a logical node at all; the `DOS` / `SDS` / `DAS` below the LNodes are read a level at a time from
+ * them (`readNamingDataBelow`), climbed among themselves to the record holding them; each one naming its implementation below one of
  * the LNodes is stored in its canonical form (`reconcileMappedData`, told what implements the LNodes).
  */
 export async function reconcileMappedDataOfLNodes(
@@ -71,7 +73,8 @@ export async function reconcileMappedDataOfLNodes(
 	// a record on no implementer keeps its explicit naming: only one naming its LNode's implementer can change
 	const implementerUuids = new Set(implementerUuidOf.values())
 	if (implementerUuids.size === 0) return []
-	const data = await readNamingData(query)
+	const below = await readNamingDataBelow(query, { lnodeIds: new Set(implementerUuidOf.keys()) })
+	const data = below.map(({ record }) => record)
 	// one named by path only (written while nothing resolved it) is stored in full once its LNode has an implementer
 	const candidates = data.filter(
 		(record) => namesByPathOnly(record) || namesOneOf({ record, uuids: implementerUuids }),
@@ -79,12 +82,15 @@ export async function reconcileMappedDataOfLNodes(
 	if (candidates.length === 0) return []
 
 	const dataById = new Map(data.map((record) => [record.id, record]))
+	const foundById = new Map(below.map((found) => [found.record.id, found]))
 	const topOf = new Map(candidates.map((record) => [record.id, topDataOf({ record, dataById })]))
-	const lnodeOfTop = await readHoldingLNodes(query, {
-		records: [...new Map([...topOf.values()].map((top) => [top.id, top])).values()],
-		lnodeIds: new Set(implementerUuidOf.keys()),
-		depth: DATA_HOLDER_DEPTH,
-	})
+	// the LNode holding a top data record within `DATA_HOLDER_DEPTH` levels, as a climb from it finds it
+	const lnodeOfTop = new Map(
+		[...topOf.values()].flatMap((top) => {
+			const found = foundById.get(top.id)
+			return found && found.level <= DATA_HOLDER_DEPTH ? [[top.id, found.lnodeId] as const] : []
+		}),
+	)
 	const survivors = candidates.filter((record) => {
 		const top = topOf.get(record.id)
 		const lnodeId = top && lnodeOfTop.get(top.id)
@@ -155,22 +161,71 @@ function namesOneOf(params: {
 	return uuid !== undefined && uuids.has(uuid)
 }
 
-/** The `DOS` / `SDS` / `DAS` of the document naming their implementation, each tag read once. */
-async function readNamingData(query: Core.Query<Config>): Promise<Scl.RawRecord<Scl.ElementsOf>[]> {
-	const byTag = await Promise.all(
-		[...MAPPED_NAME_REFS].map(async function readDataOfTag([tagName, attributeNames]) {
-			// dialecte-allow query-in-loop: one read per data tag (DOS, SDS, DAS): core reads one tag per call
-			const records = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
-			return records.flatMap((record) => {
-				const names = [attributeNames.path, attributeNames.uuid].some(
-					(name) =>
-						readAttribute({ record, name, defaults: 'none', fullObject: true }) !== undefined,
-				)
-				return names ? [toRawRecord(record) as Scl.RawRecord<Scl.ElementsOf>] : []
-			})
-		}),
+/**
+ * The `DOS` / `SDS` / `DAS` naming their implementation below the LNodes, with the level each sits at below its LNode:
+ * read a level at a time from the LNodes, following the children of the LNode, the data tags below them and, within
+ * `DATA_HOLDER_DEPTH`, the records holding data (a `Private`), never an LNode below an LNode; never a whole data tag.
+ * In tag order, each tag in id order, as the tag reads answered them.
+ */
+async function readNamingDataBelow(
+	query: Core.Query<Config>,
+	params: { lnodeIds: ReadonlySet<string> },
+): Promise<DataBelow[]> {
+	const lnodes = await query.getRecords(
+		[...params.lnodeIds].map((id): Scl.Ref<Scl.ElementsOf> => ({ tagName: 'LNode', id })),
 	)
-	return byTag.flat()
+	const found: DataBelow[] = []
+	let frontier = lnodes.flatMap((lnode) =>
+		lnode
+			? followedChildren({ record: lnode, level: 0 }).map((ref) => ({ ref, lnodeId: lnode.id }))
+			: [],
+	)
+	for (let level = 1; frontier.length > 0; level++) {
+		// dialecte-allow query-in-loop: one read per level below the LNodes, never per record
+		const records = await query.getRecords(frontier.map(({ ref }) => ref))
+		const next: typeof frontier = []
+		records.forEach(function followRecord(record, position) {
+			if (!record) return
+			const { lnodeId } = frontier[position]
+			if (MAPPED_NAME_REFS.has(record.tagName))
+				found.push({ record: toRawRecord(record) as Scl.RawRecord<Scl.ElementsOf>, level, lnodeId })
+			for (const ref of followedChildren({ record, level })) next.push({ ref, lnodeId })
+		})
+		frontier = next
+	}
+	return [...MAPPED_NAME_REFS].flatMap(([tagName, attributeNames]) =>
+		found
+			.filter(
+				({ record }) =>
+					record.tagName === tagName &&
+					[attributeNames.path, attributeNames.uuid].some(
+						(name) =>
+							readAttribute({ record, name, defaults: 'none', fullObject: true }) !== undefined,
+					),
+			)
+			.sort((one, other) =>
+				one.record.id < other.record.id ? -1 : one.record.id > other.record.id ? 1 : 0,
+			),
+	)
+}
+
+/**
+ * The children of a record read below an LNode that may hold data within reach: below a data record its data, below
+ * the LNode or a record holding data (within `DATA_HOLDER_DEPTH`) the data and the records that may hold some; none
+ * below an LNode below the LNode.
+ */
+function followedChildren(params: {
+	record: Pick<Scl.RawRecord<Scl.ElementsOf>, 'tagName' | 'children'>
+	level: number
+}): Scl.Ref<Scl.ElementsOf>[] {
+	const { record, level } = params
+	const isData = MAPPED_NAME_REFS.has(record.tagName)
+	if (!isData && level > 0 && record.tagName === 'LNode') return []
+	if (!isData && level >= DATA_HOLDER_DEPTH) return []
+	const holdersWithinReach = !isData && level + 1 < DATA_HOLDER_DEPTH
+	return record.children.filter(
+		(child) => MAPPED_NAME_REFS.has(child.tagName) || holdersWithinReach,
+	) as Scl.Ref<Scl.ElementsOf>[]
 }
 
 /**
