@@ -1,4 +1,0 @@
-### Added
-
-- An implementation-only dataflow names the LNodes of the specification on both of its ends: `lnodes.sender` lists the LNodes mapped to the logical node its ExtRef's signal names (by `lnUuid` first, else by its names), `lnodes.subscriber` those mapped to the logical node holding the ExtRef, each in document order; a side is empty while no LNode is mapped to its logical node. The mapping is the one the allocation of the signals reads (an LNode's `lnUuid` first, else its names), so a document of signals reads nothing more for it.
-- Behaviour note for adopters: the sender is found through the logical node the ExtRef names, then the LNodes mapped to it, not by comparing the ExtRef's names with the LNodes' names: an ExtRef naming its logical node by `lnUuid`, or an LNode mapped by `lnUuid` with other names, now finds its LNode; every LNode mapped to the logical node is listed, not only the first.
