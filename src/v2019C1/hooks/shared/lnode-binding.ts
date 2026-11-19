@@ -1,11 +1,9 @@
-import { isElementOf } from '@dialecte/core/helpers'
-
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { SPECIFIED_IED_NAME_ATTRIBUTE, SPECIFIED_NAMING_ATTRIBUTES } from '@/v2019C1/constants'
 import { unassignedNaming } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 import { planReleases } from '@/v2019C1/extensions/data-model/naming/release-plan'
 import { readSpecificationRelease } from '@/v2019C1/extensions/data-model/query/specification-release'
 import { readAttribute, readAttributes } from '@/v2019C1/helpers'
+import { LOGICAL_NODE_TAGS } from '@/v2019C1/hooks/shared/lnode-binding.constants'
 import { ensureLNodeSpecNaming } from '@/v2019C1/hooks/shared/lnode-spec-naming'
 import {
 	hasAttributeChange,
@@ -140,22 +138,23 @@ async function readSpecifiedAttributes(
 	return naming ? readAttributes({ record: naming, defaults: 'none' }) : undefined
 }
 
-/** Identity attributes derived from the implementing `LN` identified by uuid. */
+/**
+ * Identity attributes derived from the implementing `LN` identified by uuid: the logical node found, its logical device
+ * and IED read from its ancestors, no record read again.
+ */
 async function mappedIdentity(
 	query: Core.Query<Config>,
 	lnUuid: string,
 ): Promise<Record<string, string | undefined> | null> {
-	const lnRef = await findLnByUuid(query, lnUuid)
-	if (!lnRef) return null
+	const ln = await findLnByUuid(query, lnUuid)
+	if (!ln) return null
 
-	const lnAttributes = await query.getAttributes(lnRef as Scl.Ref<'LN'>)
-	const ancestors = await query.findAncestors(lnRef)
+	const lnAttributes = await query.any.getAttributes(ln)
+	const ancestors = await query.findAncestors(ln)
 	const ldevice = ancestors.find((ancestor) => ancestor.tagName === 'LDevice')
 	const ied = ancestors.find((ancestor) => ancestor.tagName === 'IED')
-	const lDeviceAttributes = ldevice
-		? await query.getAttributes({ tagName: 'LDevice', id: ldevice.id })
-		: undefined
-	const iedAttributes = ied ? await query.getAttributes({ tagName: 'IED', id: ied.id }) : undefined
+	const lDeviceAttributes = ldevice ? await query.any.getAttributes(ldevice) : undefined
+	const iedAttributes = ied ? await query.any.getAttributes(ied) : undefined
 
 	return {
 		iedName: iedAttributes?.name,
@@ -166,17 +165,19 @@ async function mappedIdentity(
 	}
 }
 
+/**
+ * The `LN`, else the `LN0`, carrying `lnUuid`: one lookup by value per tag, the first match the tag answers. Not
+ * `findNativeLnByUuid`: that one keeps the logical nodes of an IED's own content only, first in document order, where
+ * a binding takes any LN carrying the uuid, an LN before an LN0.
+ */
 async function findLnByUuid(
 	query: Core.Query<Config>,
 	lnUuid: string,
-): Promise<Scl.Ref<'LN' | 'LN0'> | null> {
-	for (const tagName of ['LN', 'LN0']) {
-		if (!isElementOf(tagName, SCL_DIALECTE_CONFIG)) continue
-		for (const record of await query.getRecordsByTagName(tagName)) {
-			if ((await query.any.getAttribute(record, { name: 'uuid' })) === lnUuid) {
-				return { tagName: record.tagName, id: record.id } as Scl.Ref<'LN' | 'LN0'>
-			}
-		}
+): Promise<Scl.TrackedRecord<'LN' | 'LN0'> | null> {
+	for (const tagName of LOGICAL_NODE_TAGS) {
+		// dialecte-allow query-in-loop: one lookup per logical node tag (LN, then LN0), stopping at the first found
+		const [match] = await query.findByAttributes({ tagName, attributes: { uuid: lnUuid } })
+		if (match) return match
 	}
 	return null
 }
