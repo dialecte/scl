@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root">
+	<Substation name="S1" dev:db-id="substation">
+		<VoltageLevel name="V1" dev:db-id="voltage-level">
+			<Bay name="B1" dev:db-id="bay">
+				<LNode iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" dev:db-id="lnode-ptrc"/>
+				<LNode iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" dev:db-id="lnode-ptrc-twin"/>
+				<LNode iedName="None" lnClass="CSWI" lnInst="1" lnUuid="uuid-cswi-p1" dev:db-id="lnode-cswi-by-uuid"/>
+				<LNode iedName="B1" ldInst="LD0" lnClass="XCBR" lnInst="1" dev:db-id="lnode-xcbr">
+					<eIEC61850-6-100:LNodeInputs dev:db-id="inputs-xcbr">
+						<eIEC61850-6-100:SourceRef input="Open" dev:db-id="source-ref-open"/>
+					</eIEC61850-6-100:LNodeInputs>
+				</LNode>
+				<LNode iedName="None" lnClass="GGIO" lnInst="1" lnUuid="uuid-ggio-b1" dev:db-id="lnode-ggio-by-uuid"/>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<IED name="P1" dev:db-id="ied-p1">
+		<AccessPoint name="AP1" dev:db-id="ap-p1">
+			<Server dev:db-id="server-p1">
+				<Authentication dev:db-id="auth-p1"/>
+				<LDevice inst="LD0" dev:db-id="ld-p1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-p1">
+						<GSEControl name="gcb1" appID="app1" dev:db-id="gcb1"/>
+					</LN0>
+					<LN lnClass="PTRC" inst="1" lnType="PTRC_T" dev:db-id="ln-ptrc-p1"/>
+					<LN lnClass="CSWI" inst="1" lnType="CSWI_T" uuid="uuid-cswi-p1" dev:db-id="ln-cswi-p1"/>
+					<LN lnClass="MMXU" inst="1" lnType="MMXU_T" dev:db-id="ln-mmxu-p1"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="B1" dev:db-id="ied-b1">
+		<AccessPoint name="AP1" dev:db-id="ap-b1">
+			<Server dev:db-id="server-b1">
+				<Authentication dev:db-id="auth-b1"/>
+				<LDevice inst="LD0" dev:db-id="ld-b1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-b1"/>
+					<LN lnClass="XCBR" inst="1" lnType="XCBR_T" dev:db-id="ln-xcbr-b1">
+						<Inputs dev:db-id="inputs-ln-xcbr">
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Op" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb1" dev:db-id="ext-by-names"/>
+							<ExtRef lnUuid="uuid-cswi-p1" doName="Pos" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb1" iedName="P1" dev:db-id="ext-by-ln-uuid"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="MMXU" lnInst="1" doName="A" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb1" dev:db-id="ext-sender-unmapped"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="9" doName="Op" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb1" dev:db-id="ext-sender-missing"/>
+						</Inputs>
+					</LN>
+					<LN lnClass="GGIO" inst="1" lnType="GGIO_T" uuid="uuid-ggio-b1" dev:db-id="ln-ggio-b1">
+						<Inputs dev:db-id="inputs-ln-ggio">
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Str" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb1" dev:db-id="ext-in-ggio"/>
+						</Inputs>
+					</LN>
+					<LN lnClass="TCTR" inst="1" lnType="TCTR_T" dev:db-id="ln-tctr-b1">
+						<Inputs dev:db-id="inputs-ln-tctr">
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" doName="Tr" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb1" dev:db-id="ext-subscriber-unmapped"/>
+						</Inputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+</SCL>

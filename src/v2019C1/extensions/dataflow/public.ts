@@ -10,6 +10,7 @@ export type {
 	ExtRefState,
 	IedDataflows,
 	ImplementationOnlyDataflow,
+	ImplementationOnlyLNodes,
 	Registration,
 	SpecifiedDataflow,
 	Supervision,

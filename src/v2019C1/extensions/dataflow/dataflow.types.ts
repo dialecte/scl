@@ -161,10 +161,22 @@ export type SpecifiedDataflow = {
 export type ImplementationOnlyDataflow = {
 	kind: 'implementation-only'
 	element: Scl.Ref<'ExtRef'>
+	/**
+	 * The LNodes of the specification on both ends, in document order: those mapped to the logical
+	 * node the ExtRef's signal names (`sender`) and to the one holding the ExtRef (`subscriber`); a side
+	 * is empty while no LNode is mapped to its logical node, or its logical node is not found.
+	 */
+	lnodes: ImplementationOnlyLNodes
 	implementation: Omit<SpecifiedDataflow['implementation'], 'binding'> & {
 		state: 'implemented'
 		binding?: ExtRefState
 	}
+}
+
+/** The LNodes on the two ends of an implementation-only dataflow, each side in document order. */
+export type ImplementationOnlyLNodes = {
+	sender: readonly Scl.Ref<'LNode'>[]
+	subscriber: readonly Scl.Ref<'LNode'>[]
 }
 
 /**

@@ -2,10 +2,12 @@ import { EXT_REF_CONTROL_BLOCK } from '../constants/ext-ref-state.constants'
 import { describeElement } from './describe-element'
 import { describeSignal } from './describe-signal'
 import { extRefDataflowKey } from './ext-ref-dataflow-key'
+import { implementationOnlyLNodes, readLNodesByLogicalNode } from './implementation-only-lnodes'
 
 import type { Dataflow, ImplementationOnlyDataflow, SpecifiedDataflow } from '../dataflow.types'
 import type { DataflowContext } from './dataflow-context.types'
 import type { IedNode } from './ied-section.types'
+import type { LNodesByLogicalNode } from './implementation-only-lnodes.types'
 
 /**
  * Every dataflow of the document, read through one context: each signal of the process section
@@ -50,8 +52,12 @@ async function describeImplementationOnly(params: {
 	})
 	const named = await withKeys({ extRefs: naming, context })
 	const unresolved = named.filter(({ key }) => key === undefined || !resolvedKeys.has(key))
+	if (unresolved.length === 0) return []
+	const lnodesByLogicalNode = await readLNodesByLogicalNode({ context })
 	return Promise.all(
-		unresolved.map(({ extRef }) => describeExtRefAlone({ element: extRef, context })),
+		unresolved.map(({ extRef }) =>
+			describeExtRefAlone({ element: extRef, lnodesByLogicalNode, context }),
+		),
 	)
 }
 
@@ -66,16 +72,19 @@ function withKeys(params: {
 	)
 }
 
-/** An ExtRef no signal links to: implemented, as the element it is. */
+/** An ExtRef no signal links to: implemented, as the element it is, with the LNodes on both of its ends. */
 async function describeExtRefAlone(params: {
 	element: IedNode<'ExtRef'>
+	lnodesByLogicalNode: LNodesByLogicalNode
 	context: DataflowContext
 }): Promise<ImplementationOnlyDataflow> {
-	const { element, context } = params
+	const { element, lnodesByLogicalNode, context } = params
 	const facts = await describeElement({ element, context })
+	const lnodes = await implementationOnlyLNodes({ extRef: element, lnodesByLogicalNode, context })
 	return {
 		kind: 'implementation-only',
 		element: element.ref,
+		lnodes,
 		implementation: { state: 'implemented', ...facts },
 	}
 }

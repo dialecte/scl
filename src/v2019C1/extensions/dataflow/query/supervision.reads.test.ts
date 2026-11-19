@@ -46,12 +46,12 @@ describe('dataflow supervision - the store reads of all()', () => {
 	}
 
 	const testCases: SclTest.TestCases<AllTestCase> = {
-		'nine dataflows of GOOSE and SMV control blocks, nine LGOS / LSVS → 108 store reads, the 3 of the supervision its only reads of children':
+		'nine implementation-only dataflows of GOOSE and SMV control blocks, nine LGOS / LSVS → 117 store reads, the LNode mapping read once included; the 3 of the supervision its only reads of children':
 			{
 				// P1 publishes gcb1, gcb3, gcb11, svcb1 (LD0), gcb12, gcb13 (LD2) and gcb2, gcb7 (LD1, ldName FUNC1); B1 publishes gcbB and
 				// holds an LGOS per reference form and an LSVS
 				sourceXml: formsXml,
-				expected: { storeReads: 108, childReads: 3 },
+				expected: { storeReads: 117, childReads: 3 },
 			},
 		'a document without LGOS / LSVS → the reads of the dataflows alone, 126 and 1 of children, as before':
 			{
