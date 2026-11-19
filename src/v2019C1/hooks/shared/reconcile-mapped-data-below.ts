@@ -7,6 +7,7 @@ import {
 	readLogicalNodeIndex,
 } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes'
 import { readAttribute } from '@/v2019C1/helpers'
+import { inTagReadOrder } from '@/v2019C1/hooks/shared/in-tag-read-order'
 import { reconcileMappedData } from '@/v2019C1/hooks/shared/reconcile-mapped-data'
 import { DATA_HOLDER_DEPTH } from '@/v2019C1/hooks/shared/reconcile-mapped-data-below.constants'
 
@@ -165,7 +166,7 @@ function namesOneOf(params: {
  * The `DOS` / `SDS` / `DAS` naming their implementation below the LNodes, with the level each sits at below its LNode:
  * read a level at a time from the LNodes, following the children of the LNode, the data tags below them and, within
  * `DATA_HOLDER_DEPTH`, the records holding data (a `Private`), never an LNode below an LNode; never a whole data tag.
- * In tag order, each tag in id order, as the tag reads answered them.
+ * In tag order, each tag in the order its tag read lists them (`inTagReadOrder`).
  */
 async function readNamingDataBelow(
 	query: Core.Query<Config>,
@@ -175,6 +176,7 @@ async function readNamingDataBelow(
 		[...params.lnodeIds].map((id): Scl.Ref<Scl.ElementsOf> => ({ tagName: 'LNode', id })),
 	)
 	const found: DataBelow[] = []
+	const tracked: Scl.TrackedRecord<Scl.ElementsOf>[] = []
 	let frontier = lnodes.flatMap((lnode) =>
 		lnode
 			? followedChildren({ record: lnode, level: 0 }).map((ref) => ({ ref, lnodeId: lnode.id }))
@@ -187,26 +189,34 @@ async function readNamingDataBelow(
 		records.forEach(function followRecord(record, position) {
 			if (!record) return
 			const { lnodeId } = frontier[position]
-			if (MAPPED_NAME_REFS.has(record.tagName))
+			if (MAPPED_NAME_REFS.has(record.tagName)) {
+				tracked.push(record)
 				found.push({ record: toRawRecord(record) as Scl.RawRecord<Scl.ElementsOf>, level, lnodeId })
+			}
 			for (const ref of followedChildren({ record, level })) next.push({ ref, lnodeId })
 		})
 		frontier = next
 	}
-	return [...MAPPED_NAME_REFS].flatMap(([tagName, attributeNames]) =>
-		found
-			.filter(
-				({ record }) =>
+	const recordById = new Map(found.map((entry) => [entry.record.id, entry]))
+	const byTag = await Promise.all(
+		[...MAPPED_NAME_REFS].map(async function orderDataOfTag([tagName, attributeNames]) {
+			const naming = tracked.filter(
+				(record) =>
 					record.tagName === tagName &&
 					[attributeNames.path, attributeNames.uuid].some(
 						(name) =>
 							readAttribute({ record, name, defaults: 'none', fullObject: true }) !== undefined,
 					),
 			)
-			.sort((one, other) =>
-				one.record.id < other.record.id ? -1 : one.record.id > other.record.id ? 1 : 0,
-			),
+			// dialecte-allow query-in-loop: one ordering per data tag, a tag read only when the transaction wrote one of them
+			const ordered = await inTagReadOrder(query, {
+				tagName: tagName as Scl.ElementsOf,
+				lookups: naming.map((record) => [record]),
+			})
+			return ordered.flatMap((record) => recordById.get(record.id) ?? [])
+		}),
 	)
+	return byTag.flat()
 }
 
 /**

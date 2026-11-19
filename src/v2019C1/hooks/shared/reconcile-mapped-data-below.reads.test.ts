@@ -42,7 +42,8 @@ function describeWritten(operation: Scl.Operation): string {
 
 /**
  * The data below LNodes a hook released, stored in canonical form: read under the LNodes given, never the whole DOS,
- * SDS or DAS tag; data below other LNodes untouched.
+ * SDS or DAS tag but for the order of a tag the transaction wrote; data below other LNodes untouched; written in the
+ * order of the tag reads, as before.
  */
 describe('reconcileMappedDataOfLNodes - the data below the LNodes given', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -52,19 +53,21 @@ describe('reconcileMappedDataOfLNodes - the data below the LNodes given', () => 
 				sourceXml,
 				expected: { written: ['breaker-beh:-'], tagReads: [] },
 			},
-		'a DOS added under the breaker in the transaction, one deleted → the staged data': {
-			// the breaker's Pos deleted, a DOS naming XCBR1 explicitly added
-			sourceXml,
-			before: async (tx) => {
-				await tx.delete({ tagName: 'DOS', id: 'breaker-pos' })
-				const [priv] = await tx.getChildren({ tagName: 'LNode', id: 'breaker' }, 'Private')
-				await tx.any.addChild(priv, {
-					tagName: 'DOS',
-					attributes: { name: 'Mod', mappedLnUuid: 's-breaker-uuid', mappedDoName: 'Mod' },
-				})
+		'a DOS added under the breaker in the transaction, one deleted → the staged data, the order of the DOS tag read':
+			{
+				// the breaker's Pos deleted, a DOS naming XCBR1 explicitly added
+				sourceXml,
+				before: async (tx) => {
+					await tx.delete({ tagName: 'DOS', id: 'breaker-pos' })
+					const [priv] = await tx.getChildren({ tagName: 'LNode', id: 'breaker' }, 'Private')
+					await tx.any.addChild(priv, {
+						tagName: 'DOS',
+						attributes: { name: 'Mod', mappedLnUuid: 's-breaker-uuid', mappedDoName: 'Mod' },
+					})
+				},
+				// the stored DOS in id order, then the added one: one DOS tag read for that order
+				expected: { written: ['breaker-beh:-', 'added:-'], tagReads: ['DOS'] },
 			},
-			expected: { written: ['added:-', 'breaker-beh:-'], tagReads: [] },
-		},
 	}
 
 	runSclTestCases.withoutExport<TestCase>({
@@ -87,7 +90,7 @@ describe('reconcileMappedDataOfLNodes - the data below the LNodes given', () => 
 				const { query, calls } = countDocumentQueryReads(tx)
 				const operations = await reconcileMappedDataOfLNodes(query, { lnodes: [released] })
 				observed = {
-					written: operations.map(describeWritten).sort(),
+					written: operations.map(describeWritten),
 					tagReads: calls().flatMap((call) =>
 						call.method === 'getRecordsByTagName' &&
 						['DOS', 'SDS', 'DAS'].includes(String(call.args[0]))

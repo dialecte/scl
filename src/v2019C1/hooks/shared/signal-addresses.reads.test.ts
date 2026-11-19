@@ -68,7 +68,7 @@ async function observeRebinding(params: {
 		const { query, calls } = countDocumentQueryReads(tx)
 		const operations = await reconcile({ query, oldRecord, newRecord })
 		observed = {
-			written: operations.map(describeWritten).sort(),
+			written: operations.map(describeWritten),
 			tagReads: calls().flatMap((call) =>
 				call.method === 'getRecordsByTagName' ? [String(tagOf(call))] : [],
 			),
@@ -131,8 +131,9 @@ describe('reconcileSignalAddresses - the ExtRefs the signals of a rebound LNode 
 })
 
 /**
- * The addresses of the signals of many rebound LNodes: their signals read under them (no whole signal tag read), the
- * ExtRefs they name looked up by value, one lookup whatever their number.
+ * The addresses of the signals of many rebound LNodes: their signals read under them (no whole signal tag read, but
+ * for the order of a tag the transaction wrote), the ExtRefs they name looked up by value, one lookup whatever their
+ * number; written in the order of the tag reads, as before.
  */
 describe('reconcileSignalAddressesOfLNodes - the signals of the LNodes given', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -145,16 +146,18 @@ describe('reconcileSignalAddressesOfLNodes - the signals of the LNodes given', (
 				lookups: ['ExtRef'],
 			},
 		},
-		'an input added and one deleted in the transaction → the staged inputs written': {
-			// the trip LNode's inputs B deleted, one naming the ExtRef D added
-			sourceXml,
-			before: stageInputChanges,
-			expected: {
-				written: ['added:LD0/Q0GGIO1.D', 'in-a:LD0/Q0GGIO1.A', 'in-c:LD0/Q0GGIO1.C'],
-				tagReads: [],
-				lookups: ['ExtRef'],
+		'an input added and one deleted in the transaction → the staged inputs written, the order of the SourceRef tag read':
+			{
+				// the trip LNode's inputs B deleted, one naming the ExtRef D added
+				sourceXml,
+				before: stageInputChanges,
+				expected: {
+					// the stored inputs in id order, then the added one: one SourceRef tag read for that order
+					written: ['in-a:LD0/Q0GGIO1.A', 'in-c:LD0/Q0GGIO1.C', 'added:LD0/Q0GGIO1.D'],
+					tagReads: ['SourceRef'],
+					lookups: ['ExtRef'],
+				},
 			},
-		},
 	}
 
 	runSclTestCases.withoutExport<TestCase>({

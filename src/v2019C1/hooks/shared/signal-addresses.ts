@@ -1,4 +1,5 @@
 import { findTargetsByUuid } from './find-targets-by-uuid'
+import { inTagReadOrder } from './in-tag-read-order'
 import { readHoldingLNodes } from './read-holding-lnodes'
 import { SIGNAL_ADDRESS_PAIRS_BY_REF, SIGNAL_HOLDER_DEPTH } from './signal-addresses.constants'
 
@@ -205,7 +206,7 @@ async function composeSignalAddress(
  * The signals (every tag of `SIGNAL_ADDRESS_PAIRS_BY_REF`) held by one of the LNodes: read under them in one walk, then
  * the records above them (their inputs or outputs, the `Private` holding those) read a level at a time up to the
  * nearest LNode, which keeps only those within `SIGNAL_HOLDER_DEPTH` of the LNode holding them. In tag order, each tag in
- * id order, as the tag reads answered them.
+ * the order its tag read lists them (`inTagReadOrder`).
  */
 async function readSignalsOf(
 	query: Core.Query<Config>,
@@ -218,16 +219,18 @@ async function readSignalsOf(
 	const under = (await query.findDescendantsOfEach(lnodes, { collect })) as unknown as Readonly<
 		Record<string, readonly Scl.TrackedRecord<Scl.ElementsOf>[] | undefined>
 	>[]
-	const all = [...SIGNAL_ADDRESS_PAIRS_BY_REF].flatMap(([tagName, pairs]) => {
-		const byId = new Map(
-			under.flatMap((found) =>
-				(found[tagName] ?? []).map((record) => [record.id, record] as const),
-			),
-		)
-		return [...byId.values()]
-			.sort((one, other) => (one.id < other.id ? -1 : one.id > other.id ? 1 : 0))
-			.map((record) => ({ record: toRawRecord(record), pairs }))
-	})
+	const byTag = await Promise.all(
+		[...SIGNAL_ADDRESS_PAIRS_BY_REF].map(async function orderSignalsOfTag([tagName, pairs]) {
+			const found = under.flatMap((answer) => (answer[tagName] ?? []).map((record) => [record]))
+			// dialecte-allow query-in-loop: one ordering per signal tag, a tag read only when the transaction wrote one of them
+			const records = await inTagReadOrder(query, {
+				tagName: tagName as Scl.ElementsOf,
+				lookups: found,
+			})
+			return records.map((record) => ({ record: toRawRecord(record), pairs }))
+		}),
+	)
+	const all = byTag.flat()
 	const lnodeOf = await readHoldingLNodes(query, {
 		records: all.map(({ record }) => record),
 		lnodeIds,
@@ -239,7 +242,11 @@ async function readSignalsOf(
 	})
 }
 
-/** The elements the signals name, by uuid: each target tag looked up once by the uuids sought, the first match kept. */
+/**
+ * The elements the signals name, by uuid: each target tag looked up once by the uuids sought, the first match across the
+ * tags kept, its tag checked against the pair's afterwards (`rewriteSignalAddresses`). Not `findTargetsByUuid`, which
+ * keeps the first match of the pair's own tags: the two differ only when a uuid names elements of two tags.
+ */
 async function readTargetsByUuid(
 	query: Core.Query<Config>,
 	params: { wanted: readonly { pair: RefPairEntry; uuid: string }[] },
