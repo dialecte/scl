@@ -46,13 +46,19 @@ export async function findMappedDataFollowingLn(
 	const mappedLNodes = await resolveMappedLNodes(query, { lnodes })
 	const dataNamingLn = await findDataNamingLn(query, { uuid })
 	const roots: RootRecord[] = [
-		...lnodes.filter((lnode) => mappedLNodes.get(lnode.id)?.ln.id === ln.id),
+		...lnodes.filter(function isMappedToLn(lnode) {
+			return mappedLNodes.get(lnode.id)?.ln.id === ln.id
+		}),
 		...dataNamingLn,
 	]
 	if (roots.length === 0) return []
 
 	const descendants = await query.findDescendantsOfEach(roots, { collect: [...SUBTREE_COLLECT] })
+	// the answer typed per root tag is not comparable to a record of any tag; the batch verbs take the narrow roots,
+	// which keeps their type cost low
 	const subtrees = descendants as unknown as DataUnderRoot[]
+	// no data under any root: nothing can follow the logical node, and no ancestor is read
+	if (!subtrees.some(holdsData)) return []
 	const ancestries = await query.findAncestorsOfEach(roots)
 	const records = await readRecords({ query, roots, subtrees, ancestries })
 	const source = createRecordSource({ query, records, mappedLNodes })
@@ -71,6 +77,13 @@ export async function findMappedDataFollowingLn(
 		}
 	}
 	return [...found.values()]
+}
+
+/** Whether a root's subtree holds a `DOS`, `SDS` or `DAS`. */
+function holdsData(descendants: DataUnderRoot): boolean {
+	return [...MAPPED_NAME_REFS.keys()].some(function isHeld(tagName) {
+		return (descendants[tagName]?.length ?? 0) > 0
+	})
 }
 
 /** `DOS` / `SDS` whose own pair names the logical node: their children may follow it. */
@@ -96,11 +109,16 @@ async function readRecords(params: {
 	ancestries: readonly (readonly Scl.TrackedRecord<Scl.ElementsOf>[])[]
 }): Promise<RecordsRead> {
 	const { query, roots, subtrees, ancestries } = params
-	const collected = subtrees.flatMap((descendants) => Object.values(descendants).flat())
+	const collected = subtrees.flatMap(function recordsUnder(descendants) {
+		return Object.values(descendants).flat()
+	})
+	// a record of one root tag is not comparable to a record of any tag (see the subtrees above)
 	const rootRecords = roots as unknown as readonly Scl.TrackedRecord<Scl.ElementsOf>[]
 	const records = indexById([...rootRecords, ...ancestries.flat(), ...collected])
 
-	const unclimbed = collected.filter((record) => record && climbsOut({ records, record }))
+	const unclimbed = collected.filter(function isUnclimbed(record) {
+		return record !== undefined && climbsOut({ records, record })
+	})
 	if (unclimbed.length === 0) return records
 	const filled = await query.findAncestorsOfEach(unclimbed as Scl.TrackedRecord<Scl.ElementsOf>[])
 	return indexById([...records.values(), ...filled.flat()])
@@ -108,10 +126,14 @@ async function readRecords(params: {
 
 /** The records by id, the first of an id kept. */
 function indexById(list: readonly (Scl.TrackedRecord<Scl.ElementsOf> | undefined)[]): RecordsRead {
-	const kept = list.filter(
-		(record): record is Scl.TrackedRecord<Scl.ElementsOf> => record !== undefined,
+	const kept = list.filter(function isRecord(record): record is Scl.TrackedRecord<Scl.ElementsOf> {
+		return record !== undefined
+	})
+	return new Map(
+		[...kept].reverse().map(function byId(record) {
+			return [record.id, record] as const
+		}),
 	)
-	return new Map([...kept].reverse().map((record) => [record.id, record]))
 }
 
 /** Whether the record's parents reach one not read before the document root. */

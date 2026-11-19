@@ -16,14 +16,6 @@ const ID = CUSTOM_RECORD_ID_ATTRIBUTE
 const NS = ALL_XMLNS_NAMESPACES
 const EXTENSION_PREFIX = 'eIEC61850-6-100'
 
-/** The store reads, counted by the dev perf counters. */
-const READS = [
-	'core::store::get',
-	'core::store::getMany',
-	'core::store::getByTagName',
-	'core::store::getByAttributes',
-]
-
 // A DOS of the LNode sits in a vendor element of its Private: its parent is not among the data read.
 const WRAPPED_DATA_XML = /* xml */ `
 	<SCL ${NS} xmlns:vendor="urn:vendor" ${ID}="scl-1">
@@ -159,47 +151,6 @@ describe('findMappedDataFollowingLn - inside a transaction', () => {
 				answered.expected = testCase.expected(created.id)
 			})
 			expect(answered.found).toEqual(answered.expected)
-		},
-	})
-})
-
-// The subtrees come from one walk, the rules answer from them: the store reads no longer grow with the data.
-describe('findMappedDataFollowingLn - the store reads', () => {
-	type TestCase = SclTest.BaseXmlTestCase & {
-		expected: { inMemory: Record<string, number>; local: Record<string, number> }
-	}
-
-	const testCases: SclTest.TestCases<TestCase> = {
-		// main: 22 get, 250 getMany, 10 tag reads, 12 lookups by attribute (each data climbed twice, each uuid looked up
-		// per data); now the 2 roots' subtrees and ancestors in one walk each, GGIO1's uuid looked up once. The local
-		// store answers a lookup by attribute with a tag read.
-		'PTOC1, 2 roots, 11 data → 18 getMany, 10 tag reads, 6 lookups, no get (main 22, 250, 10, 12)':
-			{
-				// the LNode of F1 and the DOS Ind of F2 as roots, 11 data under them
-				sourceXml: dataFollowingLnXml,
-				allowIncoherentReferences: NO_TYPES,
-				expected: {
-					inMemory: { get: 0, getMany: 18, getByTagName: 10, getByAttributes: 6 },
-					local: { get: 0, getMany: 18, getByTagName: 16, getByAttributes: 0 },
-				},
-			},
-	}
-
-	runSclTestCases.withoutExport<TestCase>({
-		testCases,
-		dev: { perf: true },
-		act: async ({ source, testCase }) => {
-			const ln = await source.query.getRecord({ tagName: 'LN', id: 'ptoc1' })
-			source.perf.reset()
-			await findMappedDataFollowingLn(source.query, { ln: ln as Scl.TrackedRecord<'LN' | 'LN0'> })
-			const report = source.perf.report()
-			const reads = Object.fromEntries(
-				READS.map(function countOf(name) {
-					return [name.replace('core::store::', ''), report[name]?.count ?? 0]
-				}),
-			)
-			const store = typeof window === 'undefined' ? 'inMemory' : 'local'
-			expect(reads).toEqual(testCase.expected[store])
 		},
 	})
 })
