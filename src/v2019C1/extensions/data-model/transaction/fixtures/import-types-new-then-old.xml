@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- L1 names NEW (the content of the target's OLD) and OLD (other content): NEW comes first in the source. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-s">
+    <Substation name="S1" dev:db-id="sub-s">
+        <LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="L1" dev:db-id="lnode-1"/>
+    </Substation>
+    <DataTypeTemplates dev:db-id="dtt-s">
+        <LNodeType id="L1" lnClass="CSWI" dev:db-id="lnt-1">
+            <DO name="Pos" type="NEW" dev:db-id="do-pos"/>
+            <DO name="Ind" type="OLD" dev:db-id="do-ind"/>
+        </LNodeType>
+        <DOType id="NEW" cdc="DPC" dev:db-id="dot-new"><DA name="stVal" bType="Dbpos" fc="ST" dev:db-id="da-new"/></DOType>
+        <DOType id="OLD" cdc="SPS" dev:db-id="dot-old"><DA name="stVal" bType="BOOLEAN" fc="ST" dev:db-id="da-old"/></DOType>
+    </DataTypeTemplates>
+</SCL>

@@ -99,14 +99,8 @@ export type TargetTypes = {
 	}): Promise<Scl.Ref<Scl.ElementsOf> | undefined>
 	/** A type the loop cloned under `id`. */
 	cloned(params: { tagName: string; id: string; ref: Scl.Ref<Scl.ElementsOf> }): void
-	/** A type the loop renamed from `from` to `to`. */
-	renamed(params: { tagName: string; from: string; to: string; ref: Scl.Ref<Scl.ElementsOf> }): void
-}
-
-/** The id a reused type keeps, and the type when it was renamed to it. */
-export type SurvivingName = {
-	id: string
-	renamed?: Scl.Ref<Scl.ElementsOf>
+	/** A type the loop renamed from `from` to `to`: both ids are looked up again where asked. */
+	renamed(params: { tagName: string; from: string; to: string }): void
 }
 
 /** A source type with its id (empty or absent when it has none) and its signature (when it has an id). */

@@ -16,7 +16,6 @@ import type {
 	ImportTypesStats,
 	ReusedFork,
 	SignedSourceType,
-	SurvivingName,
 	TargetTypes,
 	TypeFollower,
 	TypeRecord,
@@ -146,22 +145,16 @@ export async function importTypes(
 
 		const reusedId = preExisting.get(signature)
 		if (reusedId !== undefined) {
-			const surviving: SurvivingName =
+			const survivingId =
 				keepNameTypesFrom === 'source'
 					? await adoptIncomingName(tx, {
 							tagName: source.tagName,
 							currentId: reusedId,
 							desiredId: sourceId,
 						})
-					: { id: reusedId }
-			const survivingId = surviving.id
-			if (surviving.renamed) {
-				targetTypes.renamed({
-					tagName: source.tagName,
-					from: reusedId,
-					to: survivingId,
-					ref: surviving.renamed,
-				})
+					: reusedId
+			if (survivingId !== reusedId) {
+				targetTypes.renamed({ tagName: source.tagName, from: reusedId, to: survivingId })
 			}
 			idRemap.set(sourceId, survivingId)
 			// Keep the dedup index consistent so a later incoming type sharing this
@@ -335,22 +328,22 @@ async function buildPreExistingSignatureIndex(
  * Adopt the incoming id for a reused (deduped) target type so the incoming file
  * stays the naming authority (`keepNameTypesFrom: 'source'`): rename the pre-existing
  * target type to `desiredId` and repoint the target's existing referrers to
- * follow. Returns the surviving id, and the type renamed when it was. Falls back to `currentId` (current behavior)
+ * follow. Returns the surviving id. Falls back to `currentId` (current behavior)
  * when the rename is a no-op (ids already equal), the record vanished, or
  * `desiredId` is already taken by a different type (invariant: one type per id).
  */
 async function adoptIncomingName(
 	tx: Core.Transaction<Config>,
 	params: { tagName: TypeRecord['tagName']; currentId: string; desiredId: string },
-): Promise<SurvivingName> {
+): Promise<string> {
 	const { tagName, currentId, desiredId } = params
-	if (currentId === desiredId) return { id: currentId }
+	if (currentId === desiredId) return currentId
 
 	const [reusedRecord] = await tx.findByAttributes({ tagName, attributes: { id: currentId } })
-	if (!reusedRecord) return { id: currentId }
+	if (!reusedRecord) return currentId
 
 	const [occupant] = await tx.findByAttributes({ tagName, attributes: { id: desiredId } })
-	if (occupant && occupant.id !== reusedRecord.id) return { id: currentId }
+	if (occupant && occupant.id !== reusedRecord.id) return currentId
 
 	const reusedRef = toRef(reusedRecord.tagName, reusedRecord.id)
 	// Collect referrers before the rename (they still hold `currentId`), then rewrite.
@@ -360,7 +353,7 @@ async function adoptIncomingName(
 		records: referrers.map((r) => toRef(r.ref.tagName, r.ref.id)),
 		idRemap: new Map([[currentId, desiredId]]),
 	})
-	return { id: desiredId, renamed: reusedRef }
+	return desiredId
 }
 
 function withRootId<GenericElement extends Scl.ElementsOf>(
@@ -401,7 +394,7 @@ async function signSourceTypes(params: {
 /**
  * The target types holding the ids of the source types no equal target type reuses: one lookup per type tag over all
  * its ids before the loop, then told of the types the loop clones and renames. An id the lookup found on several types,
- * or never asked, is looked up alone where it is asked, as before.
+ * never asked, or the old or new id of a rename, is looked up alone where it is asked, as before.
  */
 async function createTargetTypes(
 	tx: Core.Transaction<Config>,
@@ -440,9 +433,20 @@ async function createTargetTypes(
 		cloned({ tagName, id, ref }) {
 			answer({ tagName, id, ref })
 		},
-		renamed({ tagName, from, to, ref }) {
-			answer({ tagName, id: from, ref: undefined })
-			answer({ tagName, id: to, ref })
+		renamed({ tagName, from, to }) {
+			const byId = answered.get(tagName)
+			const holder = byId?.get(from)
+			if (byId && holder) {
+				// the one type the lookup found holding the old id is the one renamed: none holds it now; the new id, found free
+				// by the lookup, is held by it now
+				byId.set(from, undefined)
+				if (byId.has(to) && byId.get(to) === undefined) byId.set(to, holder)
+				else byId.delete(to)
+				return
+			}
+			// the old id never asked, or held by several types (a malformed target): both looked up alone again
+			byId?.delete(from)
+			byId?.delete(to)
 		},
 	}
 }
@@ -599,7 +603,7 @@ async function reclaimReusedForks(
 ): Promise<void> {
 	const { reusedForks, idRemap, stats } = params
 	for (const { tagName, sourceId, forkId } of reusedForks) {
-		const { id: survivingId } = await adoptIncomingName(tx, {
+		const survivingId = await adoptIncomingName(tx, {
 			tagName,
 			currentId: forkId,
 			desiredId: sourceId,

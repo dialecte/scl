@@ -1,3 +1,11 @@
+import aTwiceXml from './fixtures/import-types-a-twice.xml?raw'
+import bThenAXml from './fixtures/import-types-b-then-a.xml?raw'
+import newThenOldXml from './fixtures/import-types-new-then-old.xml?raw'
+import oldAsNewXml from './fixtures/import-types-old-as-new.xml?raw'
+import oneFollowerXml from './fixtures/import-types-one-follower.xml?raw'
+import oneTypeXml from './fixtures/import-types-one-type.xml?raw'
+import threeClosuresXml from './fixtures/import-types-three-closures.xml?raw'
+import threeFollowersXml from './fixtures/import-types-three-followers.xml?raw'
 import { importTypes } from './import-types'
 
 import { describe, expect } from 'vitest'
@@ -21,72 +29,6 @@ const COUNTERS = ['get', 'getMany', 'getByAttributes', 'getByTagName'].flatMap(
 		return [`core::store::${read}`, `core::store::records.${read}`]
 	},
 )
-
-// Three LNodes, each with its own LNodeType -> DOType -> EnumType closure: nine types, three of each tag.
-const THREE_CLOSURES_XML = /* xml */ `
-	<SCL ${NS} ${ID}="scl-s">
-		<Substation name="S1" ${ID}="sub-s">
-			<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="L1" ${ID}="lnode-1"/>
-			<LNode iedName="None" lnClass="CSWI" lnInst="2" lnType="L2" ${ID}="lnode-2"/>
-			<LNode iedName="None" lnClass="CSWI" lnInst="3" lnType="L3" ${ID}="lnode-3"/>
-		</Substation>
-		<DataTypeTemplates ${ID}="dtt-s">
-			<LNodeType id="L1" lnClass="CSWI" ${ID}="lnt-1"><DO name="Pos" type="D1" ${ID}="do-1"/></LNodeType>
-			<LNodeType id="L2" lnClass="CSWI" ${ID}="lnt-2"><DO name="Pos" type="D2" ${ID}="do-2"/></LNodeType>
-			<LNodeType id="L3" lnClass="CSWI" ${ID}="lnt-3"><DO name="Pos" type="D3" ${ID}="do-3"/></LNodeType>
-			<DOType id="D1" cdc="ENS" ${ID}="dot-1"><DA name="stVal" bType="Enum" type="E1" fc="ST" ${ID}="da-1"/></DOType>
-			<DOType id="D2" cdc="ENS" ${ID}="dot-2"><DA name="stVal" bType="Enum" type="E2" fc="ST" ${ID}="da-2"/></DOType>
-			<DOType id="D3" cdc="ENS" ${ID}="dot-3"><DA name="stVal" bType="Enum" type="E3" fc="ST" ${ID}="da-3"/></DOType>
-			<EnumType id="E1" ${ID}="et-1"><EnumVal ord="1" ${ID}="ev-1">one</EnumVal></EnumType>
-			<EnumType id="E2" ${ID}="et-2"><EnumVal ord="2" ${ID}="ev-2">two</EnumVal></EnumType>
-			<EnumType id="E3" ${ID}="et-3"><EnumVal ord="3" ${ID}="ev-3">three</EnumVal></EnumType>
-		</DataTypeTemplates>
-	</SCL>
-`
-
-// The target holds the three LNodes too, following the source's, each naming an old type of its own.
-const THREE_FOLLOWERS_XML = /* xml */ `
-	<SCL ${NS} ${ID}="scl-t">
-		<Header id="target" ${ID}="header-t"/>
-		<Substation name="S1" ${ID}="sub-t">
-			<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="OLD" ${ID}="t-lnode-1"/>
-			<LNode iedName="None" lnClass="CSWI" lnInst="2" lnType="OLD" ${ID}="t-lnode-2"/>
-			<LNode iedName="None" lnClass="CSWI" lnInst="3" lnType="OLD" ${ID}="t-lnode-3"/>
-		</Substation>
-		<DataTypeTemplates ${ID}="dtt-t">
-			<LNodeType id="OLD" lnClass="CSWI" ${ID}="t-lnt-old"><DO name="Beh" type="D1" ${ID}="t-do-old"/></LNodeType>
-			<DOType id="D1" cdc="ENS" ${ID}="t-dot-1"><DA name="stVal" bType="Enum" type="E1" fc="ST" ${ID}="t-da-1"/></DOType>
-			<EnumType id="E1" ${ID}="t-et-1"><EnumVal ord="9" ${ID}="t-ev-1">nine</EnumVal></EnumType>
-		</DataTypeTemplates>
-	</SCL>
-`
-
-// L1 names NEW (the content of the target's OLD) and OLD (other content): NEW comes first in the source.
-const NEW_THEN_OLD_XML = /* xml */ `
-	<SCL ${NS} ${ID}="scl-s">
-		<Substation name="S1" ${ID}="sub-s">
-			<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="L1" ${ID}="lnode-1"/>
-		</Substation>
-		<DataTypeTemplates ${ID}="dtt-s">
-			<LNodeType id="L1" lnClass="CSWI" ${ID}="lnt-1">
-				<DO name="Pos" type="NEW" ${ID}="do-pos"/>
-				<DO name="Ind" type="OLD" ${ID}="do-ind"/>
-			</LNodeType>
-			<DOType id="NEW" cdc="DPC" ${ID}="dot-new"><DA name="stVal" bType="Dbpos" fc="ST" ${ID}="da-new"/></DOType>
-			<DOType id="OLD" cdc="SPS" ${ID}="dot-old"><DA name="stVal" bType="BOOLEAN" fc="ST" ${ID}="da-old"/></DOType>
-		</DataTypeTemplates>
-	</SCL>
-`
-
-// The target's OLD holds the content of the source's NEW.
-const OLD_AS_NEW_XML = /* xml */ `
-	<SCL ${NS} ${ID}="scl-t">
-		<Header id="target" ${ID}="header-t"/>
-		<DataTypeTemplates ${ID}="dtt-t">
-			<DOType id="OLD" cdc="DPC" ${ID}="t-dot-old"><DA name="stVal" bType="Dbpos" fc="ST" ${ID}="t-da-old"/></DOType>
-		</DataTypeTemplates>
-	</SCL>
-`
 
 const EMPTY_TARGET_XML = /* xml */ `<SCL ${NS} ${ID}="scl-t"><Header id="target" ${ID}="header-t"/></SCL>`
 
@@ -118,7 +60,7 @@ describe('importTypes - the target lookups and reads', () => {
 		// The local store answers a lookup with a tag read: 17 (main 23)
 		'nine types into an empty target → 12 lookups, 9 kept as they are (main 18 lookups)': {
 			// the three closures, nothing in the target
-			sourceXml: THREE_CLOSURES_XML,
+			sourceXml: threeClosuresXml,
 			targetXml: EMPTY_TARGET_XML,
 			expected: {
 				remap: [
@@ -161,8 +103,8 @@ describe('importTypes - the target lookups and reads', () => {
 		'NEW reused and named so, then the source OLD → OLD kept, not forked (main the same, 10 lookups)':
 			{
 				// the target's OLD holds the source NEW's content; the source's OLD holds other content
-				sourceXml: NEW_THEN_OLD_XML,
-				targetXml: OLD_AS_NEW_XML,
+				sourceXml: newThenOldXml,
+				targetXml: oldAsNewXml,
 				keepNameTypesFrom: 'source',
 				expected: {
 					remap: [
@@ -195,6 +137,82 @@ describe('importTypes - the target lookups and reads', () => {
 					},
 				},
 			},
+		// n = 1: one lookup by id, as on main
+		'one type into an empty target → the reads of main, call for call': {
+			// one LNodeType, nothing in the target
+			sourceXml: oneTypeXml,
+			targetXml: EMPTY_TARGET_XML,
+			expected: {
+				remap: [['L1', 'L1']],
+				stats: { reused: 0, preserved: 1, forked: 0, reclaimed: 0 },
+				reads: {
+					inMemory: {
+						get: 2,
+						'records.get': 2,
+						getMany: 1,
+						'records.getMany': 1,
+						getByAttributes: 2,
+						'records.getByAttributes': 1,
+						getByTagName: 5,
+						'records.getByTagName': 1,
+					},
+					local: {
+						get: 2,
+						'records.get': 2,
+						getMany: 1,
+						'records.getMany': 1,
+						getByAttributes: 0,
+						'records.getByAttributes': 0,
+						getByTagName: 7,
+						'records.getByTagName': 2,
+					},
+				},
+			},
+		},
+		// the first A renamed B; the second A still holds the id, so the source A is forked (then reclaims A), as on main.
+		// The lookup before the loop finds A twice and leaves it to a lookup alone: one lookup and 2 records more than
+		// main (12, 11 against 11, 9), for a target no valid document is
+		'B reused and named so, the target holding A twice → A forked as on main': {
+			// the target's two DOTypes of id A hold the source B's content; the source's A holds other content
+			allowInvalidFixture: {
+				reason:
+					'a target holding one type id twice: the case reads which type a lookup of that id finds',
+				violations: [{ check: 'uniqueness', code: 'DOTypeKey' }],
+			},
+			sourceXml: bThenAXml,
+			targetXml: aTwiceXml,
+			keepNameTypesFrom: 'source',
+			expected: {
+				remap: [
+					['A', 'A'],
+					['B', 'B'],
+					['L1', 'L1'],
+				],
+				stats: { reused: 1, preserved: 1, forked: 1, reclaimed: 1 },
+				reads: {
+					inMemory: {
+						get: 5,
+						'records.get': 5,
+						getMany: 11,
+						'records.getMany': 15,
+						getByAttributes: 12,
+						'records.getByAttributes': 11,
+						getByTagName: 8,
+						'records.getByTagName': 5,
+					},
+					local: {
+						get: 5,
+						'records.get': 5,
+						getMany: 11,
+						'records.getMany': 15,
+						getByAttributes: 0,
+						'records.getByAttributes': 0,
+						getByTagName: 20,
+						'records.getByTagName': 22,
+					},
+				},
+			},
+		},
 	}
 
 	runSclTestCases.withoutExport<TestCase>({
@@ -233,8 +251,8 @@ describe('importTypes - the followers read together', () => {
 		'three followers of nine types, D1 and E1 taken by other content → 2 forked and reclaimed, 18 get, 16 lookups, 26 getMany (main 21, 22, 25)':
 			{
 				// the target's LNodes follow the source's; its D1 and E1 hold other content, its OLD type only they name
-				sourceXml: THREE_CLOSURES_XML,
-				targetXml: THREE_FOLLOWERS_XML,
+				sourceXml: threeClosuresXml,
+				targetXml: threeFollowersXml,
 				expected: {
 					remap: [
 						['D1', 'D1'],
@@ -272,6 +290,38 @@ describe('importTypes - the followers read together', () => {
 					},
 				},
 			},
+		// n = 1: the follower read in one getMany instead of one get: 5 calls moving 5 records, as on main
+		'one follower of one type → the calls and records of main': {
+			// the target's LNode follows the source's, its old type only it names
+			sourceXml: oneTypeXml,
+			targetXml: oneFollowerXml,
+			expected: {
+				remap: [['L1', 'L1']],
+				stats: { reused: 0, preserved: 1, forked: 0, reclaimed: 0 },
+				reads: {
+					inMemory: {
+						get: 2,
+						'records.get': 2,
+						getMany: 3,
+						'records.getMany': 3,
+						getByAttributes: 2,
+						'records.getByAttributes': 1,
+						getByTagName: 9,
+						'records.getByTagName': 4,
+					},
+					local: {
+						get: 2,
+						'records.get': 2,
+						getMany: 3,
+						'records.getMany': 3,
+						getByAttributes: 0,
+						'records.getByAttributes': 0,
+						getByTagName: 11,
+						'records.getByTagName': 6,
+					},
+				},
+			},
+		},
 	}
 
 	runSclTestCases.withoutExport<TestCase>({
