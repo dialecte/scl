@@ -2,6 +2,7 @@ import { readExtRefsByControlBlock } from './ext-refs-by-control-block'
 import { readIedSection } from './ied-section'
 import { readProcessSection } from './process-section'
 import { readDataTypes } from './read-data-types'
+import { readSupervisionIndex } from './supervisions'
 
 import { createInfoContext } from '@/v2019C1/extensions/info/query/info-context'
 import { resolveMappedLNodes } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes'
@@ -9,6 +10,7 @@ import { resolveMappedLNodes } from '@/v2019C1/extensions/reference/query/resolv
 import type { DataflowContext } from './dataflow-context.types'
 import type { IedNode, IedSection } from './ied-section.types'
 import type { ProcessSection } from './process-section.types'
+import type { SupervisionIndex } from './supervisions.types'
 import type { Config } from '@/v2019C1/config'
 import type { DataTypes } from '@/v2019C1/extensions/data-model/query/data-types.types'
 import type { MappedLNodes } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes.types'
@@ -21,6 +23,7 @@ export function createDataflowContext(query: Core.Query<Config>): DataflowContex
 	let extRefsByControlBlock: Promise<ReadonlyMap<string, readonly IedNode<'ExtRef'>[]>> | undefined
 	let dataTypes: Promise<DataTypes> | undefined
 	let mappedProcessLNodes: Promise<MappedLNodes> | undefined
+	let supervisionIndex: Promise<SupervisionIndex> | undefined
 
 	const context: DataflowContext = {
 		...createInfoContext(query),
@@ -44,6 +47,10 @@ export function createDataflowContext(query: Core.Query<Config>): DataflowContex
 		mappedProcessLNodes() {
 			mappedProcessLNodes ??= readMappedProcessLNodes(context)
 			return mappedProcessLNodes
+		},
+		supervisionIndex() {
+			supervisionIndex ??= readSupervisionIndex({ context })
+			return supervisionIndex
 		},
 	}
 	return context

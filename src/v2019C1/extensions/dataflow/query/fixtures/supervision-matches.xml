@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root">
+	<IED name="P1" dev:db-id="ied-p1">
+		<AccessPoint name="AP1" dev:db-id="ap-p1">
+			<Server dev:db-id="server-p1">
+				<Authentication dev:db-id="auth-p1"/>
+				<LDevice inst="LD0" dev:db-id="ld0-p1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-p1-ld0">
+						<ReportControl name="rcb1" rptID="rcb1" confRev="1" dev:db-id="rcb1"/>
+						<GSEControl name="gcb4" appID="app4" uuid="uuid-gcb4" dev:db-id="gcb4"/>
+						<GSEControl name="gcb5" appID="app5" dev:db-id="gcb5"/>
+						<GSEControl name="gcb6" appID="app6" dev:db-id="gcb6"/>
+						<GSEControl name="gcb8" appID="app8" dev:db-id="gcb8"/>
+						<GSEControl name="gcb9" appID="app9" dev:db-id="gcb9"/>
+						<GSEControl name="gcb10" appID="app10" dev:db-id="gcb10"/>
+					</LN0>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="B1" dev:db-id="ied-b1">
+		<AccessPoint name="AP1" dev:db-id="ap-b1">
+			<Server dev:db-id="server-b1">
+				<Authentication dev:db-id="auth-b1"/>
+				<LDevice inst="LD0" dev:db-id="ld0-b1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-b1"/>
+					<LN lnClass="LGOS" inst="4" lnType="LGOS_T" dev:db-id="lgos-4">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-4">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-4">
+								<Val dev:db-id="val-lgos-4">P1LD0/LLN0.gcb4</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="5" lnType="LGOS_T" dev:db-id="lgos-5">
+						<DOI name="GoCBRefX" dev:db-id="doi-lgos-5">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-5">
+								<Val dev:db-id="val-lgos-5">P1LD0/LLN0.gcb6</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="6" lnType="LGOS_T" dev:db-id="lgos-6">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-6">
+							<DAI name="setTstRef" dev:db-id="dai-lgos-6">
+								<Val dev:db-id="val-lgos-6">P1LD0/LLN0.gcb6</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="7" lnType="LGOS_T" dev:db-id="lgos-7">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-7">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-7">
+								<Val dev:db-id="val-lgos-7">P1LD0/LLN0.gcb8</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="8" lnType="LGOS_T" dev:db-id="lgos-8">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-8">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-8">
+								<Val dev:db-id="val-lgos-8">P1LD0/LLN0.gcb8</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="9" lnType="LGOS_T" dev:db-id="lgos-9">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-9">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-9">
+								<Val sGroup="1" dev:db-id="val-lgos-9-a">P1LD0/LLN0.gcb1-other</Val>
+								<Val sGroup="2" dev:db-id="val-lgos-9-b">P1LD0/LLN0.gcb9</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="XCBR" inst="1" lnType="XCBR_T" dev:db-id="ln-xcbr">
+						<Inputs dev:db-id="inputs-xcbr">
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="SMV" srcCBUuid="uuid-gcb4" dev:db-id="ext-gcb4-service-disagrees"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb5" dev:db-id="ext-gcb5-other-ied"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb6" dev:db-id="ext-gcb6-misnamed"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb8" dev:db-id="ext-gcb8-two-supervisions"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb9" dev:db-id="ext-gcb9-second-val"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="Report" srcLDInst="LD0" srcCBName="rcb1" dev:db-id="ext-rcb1-report"/>
+						</Inputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+		<AccessPoint name="AP2" dev:db-id="ap2-b1">
+			<LN lnClass="LGOS" inst="20" lnType="LGOS_T" dev:db-id="lgos-ap">
+				<DOI name="GoCBRef" dev:db-id="doi-lgos-ap">
+					<DAI name="setSrcRef" dev:db-id="dai-lgos-ap">
+						<Val dev:db-id="val-lgos-ap">P1LD0/LLN0.gcb10</Val>
+					</DAI>
+				</DOI>
+			</LN>
+			<LN lnClass="GGIO" inst="1" lnType="GGIO_T" dev:db-id="ln-ggio-ap">
+				<Inputs dev:db-id="inputs-ggio-ap">
+					<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb10" dev:db-id="ext-gcb10-access-point"/>
+				</Inputs>
+			</LN>
+		</AccessPoint>
+	</IED>
+	<IED name="C1" dev:db-id="ied-c1">
+		<AccessPoint name="AP1" dev:db-id="ap-c1">
+			<Server dev:db-id="server-c1">
+				<Authentication dev:db-id="auth-c1"/>
+				<LDevice inst="LD0" dev:db-id="ld0-c1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-c1"/>
+					<LN lnClass="LGOS" inst="1" lnType="LGOS_T" dev:db-id="lgos-c1">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-c1">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-c1">
+								<Val dev:db-id="val-lgos-c1">P1LD0/LLN0.gcb5</Val>
+							</DAI>
+						</DOI>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+</SCL>

@@ -32,6 +32,7 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 		select: IED_SECTION_SELECT,
 	})
 	const extRefs: IedNode<'ExtRef'>[] = []
+	const logicalNodes: IedNode<'LN' | 'LN0'>[] = []
 	const implementations = new Map<string, IedNode<'ExtRef' | 'ExtCtrl'>>()
 	const accessPointUuidsByIed = new Map<string, Set<string>>()
 	const uuidById = new Map<string, string>()
@@ -83,6 +84,7 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 
 		if (LOGICAL_NODE_TAGS.includes(tagName)) {
 			const logicalNode = node as IedNode<'LN' | 'LN0'>
+			logicalNodes.push(logicalNode)
 			const address = targetTupleAddress({ record: node.record, ancestry: node.ancestry })
 			if (address) lnsByAddress.set(address, logicalNode)
 			if (uuid) {
@@ -113,6 +115,7 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 
 	return {
 		extRefs,
+		logicalNodes,
 		implementations,
 		iedByName,
 		accessPointUuidsByIed,

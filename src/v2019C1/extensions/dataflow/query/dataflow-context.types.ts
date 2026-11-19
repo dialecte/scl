@@ -1,5 +1,6 @@
 import type { IedNode, IedSection } from './ied-section.types'
 import type { ProcessSection } from './process-section.types'
+import type { SupervisionIndex } from './supervisions.types'
 import type { Config } from '@/v2019C1/config'
 import type { DataTypes } from '@/v2019C1/extensions/data-model/query/data-types.types'
 import type { InfoContext } from '@/v2019C1/extensions/info/query/info-context.types'
@@ -22,4 +23,6 @@ export type DataflowContext = InfoContext & {
 	dataTypes: () => Promise<DataTypes>
 	/** What implements each LNode of the process section, by LNode id. */
 	mappedProcessLNodes: () => Promise<MappedLNodes>
+	/** The supervisions of the control blocks, by subscriber IED, logical node class and value. */
+	supervisionIndex: () => Promise<SupervisionIndex>
 }
