@@ -1,3 +1,4 @@
+import { inTagReadOrder } from './in-tag-read-order'
 import { namedTargetUuids, partsOf } from './named-target-uuids'
 import { followNamesOnlyIedRename } from './names-only-ied-rename'
 import { hasAttributeChange } from './record-ops'
@@ -10,6 +11,7 @@ import { getIdentityFields } from '@/v2019C1/extensions/lifecycle/constraints/id
 import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
 import { TUPLE_TARGET_KINDS } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
 import { targetTupleParts } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TupleReferencePair } from '@/v2019C1/constants'
@@ -41,7 +43,11 @@ export async function followTupleTargetRename(
 	for (const [tagName, tagPairs] of Object.entries(TUPLE_REFERENCE_PAIRS)) {
 		const pairs = tagPairs as readonly TupleReferencePair[]
 		if (!pairs.some((pair) => pair.target.some((target) => targetTags.has(target)))) continue
-		const referrers = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
+		const referrers = await readReferrersByUuid(query, {
+			tagName: tagName as Scl.ElementsOf,
+			pairs,
+			targetTagByUuid,
+		})
 		for (const referrer of referrers) {
 			const record = toRawRecord(referrer) as AnyRawRecord
 			const uuids = namedTargetUuids({ record, pairs, targetTagByUuid })
@@ -57,6 +63,41 @@ export async function followTupleTargetRename(
 	return operations
 }
 
+/**
+ * The records of `tagName` naming by a pair's uuid attribute one of the targets given whose tag that pair can name:
+ * one lookup per uuid attribute with the list of those uuids, the records in the order a read of the tag lists them.
+ */
+async function readReferrersByUuid(
+	query: Core.Query<Config>,
+	params: {
+		tagName: Scl.ElementsOf
+		pairs: readonly TupleReferencePair[]
+		targetTagByUuid: ReadonlyMap<string, string>
+	},
+): Promise<Scl.TrackedRecord<Scl.ElementsOf>[]> {
+	const { tagName, pairs, targetTagByUuid } = params
+	const uuidsByAttribute = new Map<string, Set<string>>()
+	for (const pair of pairs) {
+		for (const [uuid, targetTag] of targetTagByUuid) {
+			if (!pair.target.includes(targetTag)) continue
+			const uuids = uuidsByAttribute.get(pair.attribute.uuid) ?? new Set<string>()
+			uuids.add(uuid)
+			uuidsByAttribute.set(pair.attribute.uuid, uuids)
+		}
+	}
+	const lookups = await Promise.all(
+		[...uuidsByAttribute].map(function searchReferrers([uuidAttribute, uuids]) {
+			// dialecte-allow query-in-loop: one search per uuid attribute of the tag, for every target uuid at once
+			return query.findByAttributes({
+				tagName,
+				// the attribute is named at run time: the filter type is per tag, the pair entries say it holds a uuid
+				attributes: { [uuidAttribute]: [...uuids] } as never,
+			})
+		}),
+	)
+	return inTagReadOrder(query, { tagName, lookups })
+}
+
 /** The address parts of every tuple target in a subtree, by uuid, and the tag of each. */
 async function readTargetParts(
 	query: Core.Query<Config>,
@@ -66,7 +107,7 @@ async function readTargetParts(
 	const partsByUuid = new Map<string, TupleTargetParts>()
 	const targetTagByUuid = new Map<string, string>()
 	for (const record of collected.records) {
-		const uuid = await query.any.getAttribute(record, { name: 'uuid' })
+		const uuid = readAttribute({ record, name: 'uuid', defaults: 'none', fullObject: true })?.value
 		const parts = uuid
 			? targetTupleParts({ record, ancestry: collected.ancestryOf(record.id) })
 			: undefined

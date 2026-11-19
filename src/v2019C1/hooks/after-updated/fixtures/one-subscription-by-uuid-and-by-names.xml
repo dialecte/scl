@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- P1 subscribes to P2 by uuid and by names only; P2 lists P1 as a subscriber; an LNode is bound to P2's breaker. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="root">
+	<Header id="project"/>
+	<Substation dev:db-id="substation" name="S1">
+		<Function dev:db-id="function" name="F1">
+			<LNode dev:db-id="lnode-bound" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" lnUuid="p2-breaker-uuid" uuid="lnode-bound-uuid"/>
+		</Function>
+	</Substation>
+	<Communication dev:db-id="communication">
+		<SubNetwork dev:db-id="subnetwork" name="W1">
+			<ConnectedAP dev:db-id="p2-connected-ap" iedName="P2" apName="AP1" apUuid="p2-ap-uuid"/>
+		</SubNetwork>
+	</Communication>
+	<IED dev:db-id="p1" name="P1">
+		<AccessPoint dev:db-id="p1-ap" name="AP1" uuid="p1-ap-uuid">
+			<Server dev:db-id="p1-server">
+				<LDevice dev:db-id="p1-ld" inst="LD0" uuid="p1-ld-uuid">
+					<LN0 dev:db-id="p1-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p1-lln0-uuid">
+						<Inputs dev:db-id="p1-inputs">
+							<ExtRef dev:db-id="p1-both" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" lnUuid="p2-breaker-uuid" srcLDInst="LD0" srcCBName="gcb1" srcCBUuid="p2-gcb-uuid" serviceType="GOOSE" intAddr="Pos"/>
+							<!-- names a logical node P2 does not hold: the import has no uuid to fill -->
+							<ExtRef dev:db-id="p1-names-only" iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="9" doName="BlkOpn" intAddr="BlkOpn"/>
+						</Inputs>
+					</LN0>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED dev:db-id="p2" name="P2">
+		<AccessPoint dev:db-id="p2-ap" name="AP1" uuid="p2-ap-uuid">
+			<Server dev:db-id="p2-server">
+				<LDevice dev:db-id="p2-ld" inst="LD0" uuid="p2-ld-uuid">
+					<LN0 dev:db-id="p2-lln0" lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p2-lln0-uuid">
+						<DataSet dev:db-id="p2-dataset" name="ds1">
+							<FCDA dev:db-id="p2-fcda" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" fc="ST" lnUuid="p2-breaker-uuid"/>
+						</DataSet>
+						<GSEControl dev:db-id="p2-gcb" name="gcb1" appID="gcb1" datSet="ds1" uuid="p2-gcb-uuid">
+							<IEDName dev:db-id="p2-subscriber" apRef="AP1" apUuid="p1-ap-uuid">P1</IEDName>
+						</GSEControl>
+					</LN0>
+					<LN dev:db-id="p2-breaker" prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="p2-breaker-uuid"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+</SCL>

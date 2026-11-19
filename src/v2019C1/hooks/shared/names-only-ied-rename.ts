@@ -10,6 +10,7 @@ import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TupleReferencePair } from '@/v2019C1/constants'
+import type { IedRole } from '@/v2019C1/constants/reference-pairs.types'
 import type { TupleReferenceWrite } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
@@ -39,8 +40,11 @@ export async function followNamesOnlyIedRename(
 	const newName = readIedName(newRecord)
 	if (!oldName || !newName || oldName === newName) return []
 
-	const ieds = await query.getRecordsByTagName('IED')
-	const nameHeld = ieds.some((ied) => {
+	const holders = await query.findByAttributes({
+		tagName: 'IED',
+		attributes: { name: [oldName, newName] },
+	})
+	const nameHeld = holders.some((ied) => {
 		if (ied.id === newRecord.id) return false
 		const name = readIedName(toRawRecord(ied))
 		return name === oldName || name === newName
@@ -57,7 +61,11 @@ export async function followNamesOnlyIedRename(
 		const { ied } = pairs[0].tuple
 		// a reference reading its IED from where it sits has no name to write
 		if (!('attribute' in ied) && !('text' in ied)) continue
-		const referrers = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
+		const referrers = await readReferrersNamingIed(query, {
+			tagName: tagName as Scl.ElementsOf,
+			ied,
+			oldName,
+		})
 		for (const referrer of referrers) {
 			const record = toRawRecord(referrer) as AnyRawRecord
 			const write = namesOnlyIedWrite({ record, pairs, oldName, newName })
@@ -74,7 +82,10 @@ async function followSpecificationIedRename(
 ): Promise<Scl.Operation[]> {
 	const { ied, oldName, newName } = params
 	if ((await classifyIed(query, { ied })) !== 'specification') return []
-	const namings = await query.getRecordsByTagName('LNodeSpecNaming')
+	const namings = await query.findByAttributes({
+		tagName: 'LNodeSpecNaming',
+		attributes: { [SPECIFIED_IED_NAME_ATTRIBUTE]: oldName },
+	})
 	return namings.flatMap((naming) => {
 		const record = toRawRecord(naming) as Scl.RawRecord<Scl.ElementsOf>
 		const specified = readAttribute({
@@ -90,6 +101,23 @@ async function followSpecificationIedRename(
 				: attribute,
 		)
 		return [updatedOperation(record, attributes)]
+	})
+}
+
+/**
+ * The records of `tagName` that may name the IED `oldName`: those whose IED attribute holds it, looked up; those
+ * naming their IED by their text (`IEDName`), read whole (a text is not looked up).
+ */
+async function readReferrersNamingIed(
+	query: Core.Query<Config>,
+	params: { tagName: Scl.ElementsOf; ied: IedRole; oldName: string },
+): Promise<Scl.TrackedRecord<Scl.ElementsOf>[]> {
+	const { tagName, ied, oldName } = params
+	if (!('attribute' in ied)) return query.getRecordsByTagName(tagName)
+	return query.findByAttributes({
+		tagName,
+		// the attribute is named at run time: the filter type is per tag, the pair entries say it names an IED
+		attributes: { [ied.attribute]: oldName } as never,
 	})
 }
 
