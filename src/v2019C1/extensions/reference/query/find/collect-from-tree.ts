@@ -2,8 +2,6 @@ import { toAnyRawRecord } from './collect-with-ancestry.helpers'
 
 import { throwDialecteError } from '@dialecte/core'
 
-import { ROOT_ELEMENT } from '@/v2019C1/definition/constants.generated'
-
 import type { CollectedWithAncestry, CollectFromRootParams } from './collect-with-ancestry.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -20,12 +18,7 @@ export async function collectFromTree(
 	params: CollectFromRootParams,
 ): Promise<CollectedWithAncestry> {
 	const { root, select } = params
-	const belowDocumentRoot = root.tagName !== ROOT_ELEMENT
-	const tree = await query.any.getTree(root, {
-		...(select ? { select } : {}),
-		// stopgap until core C6b: getTree with nothing to prune reads the whole document whatever the root (core load-tree-records.ts)
-		...(belowDocumentRoot ? { depth: Number.POSITIVE_INFINITY } : {}),
-	})
+	const tree = await query.any.getTree(root, select ? { select } : {})
 	// `getTree` throws for a root it does not find; its type also allows `undefined` for a missing ref
 	if (!tree) throwDialecteError('ELEMENT_NOT_FOUND', { detail: 'No record found for provided ref' })
 
