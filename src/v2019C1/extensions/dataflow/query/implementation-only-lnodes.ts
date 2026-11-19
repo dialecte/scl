@@ -23,14 +23,17 @@ export async function readLNodesByLogicalNode(params: {
 		const logicalNode = mapped.get(lnode.record.id)?.ln
 		if (!logicalNode) continue
 		const ref: Scl.Ref<'LNode'> = { tagName: 'LNode', id: lnode.record.id }
-		byLogicalNode.set(logicalNode.id, [...(byLogicalNode.get(logicalNode.id) ?? []), ref])
+		const mappedToIt = byLogicalNode.get(logicalNode.id)
+		if (mappedToIt) mappedToIt.push(ref)
+		else byLogicalNode.set(logicalNode.id, [ref])
 	}
 	return byLogicalNode
 }
 
 /**
  * The LNodes on both ends of an implementation-only ExtRef: those mapped to the logical node its
- * signal names (the uuid wins, else its names) and to the logical node holding it.
+ * signal names (the uuid wins, else its names) and to the logical node holding it. Dataflows whose
+ * sides share a logical node share the same read-only list.
  */
 export async function implementationOnlyLNodes(params: {
 	extRef: IedNode<'ExtRef'>

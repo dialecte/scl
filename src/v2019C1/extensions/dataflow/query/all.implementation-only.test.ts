@@ -4,10 +4,11 @@ import implementationOnlyXml from './fixtures/implementation-only-lnodes.xml?raw
 
 import { describe, expect } from 'vitest'
 
+import { resolveMappedLNodes } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes'
 import { runSclTestCases } from '@/v2019C1/test'
 
 import type { ImplementationOnlyDataflow } from '../dataflow.types'
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 import type * as Core from '@dialecte/core'
 
@@ -25,6 +26,18 @@ const STORE_READS = [
  * (none); B1 subscribes from XCBR 1 (mapped by names), GGIO 1 (mapped by lnUuid) and TCTR 1 (none); one open SourceRef.
  */
 const FIXTURE = { sourceXml: implementationOnlyXml }
+
+/** The store reads of one call, counted over a fresh perf report. */
+async function storeReadsOf(params: {
+	source: SclTest.ActParams<SclTest.BaseXmlTestCase>['source']
+	call: () => Promise<unknown>
+}): Promise<number> {
+	const { source, call } = params
+	source.perf.reset()
+	await call()
+	const report = source.perf.report()
+	return STORE_READS.reduce((sum, key) => sum + (report[key]?.count ?? 0), 0)
+}
 
 /** A list of LNode refs by id. */
 function lnodes(...ids: string[]): { tagName: 'LNode'; id: string }[] {
@@ -144,10 +157,7 @@ describe('all - the LNodes of an implementation-only dataflow, inside a transact
 	})
 })
 
-/**
- * A document of signals reads the mapping of the LNodes for its allocation already: its LNodes cost no more read; a
- * document whose only dataflows are implementation-only reads that mapping once for them.
- */
+/** A document of signals reads the mapping of the LNodes for its allocation already: its LNodes cost no more read. */
 describe('all - the store reads of the LNodes of implementation-only dataflows', () => {
 	type TestCase = SclTest.BaseXmlTestCase & { expected: { storeReads: number } }
 
@@ -157,11 +167,41 @@ describe('all - the store reads of the LNodes of implementation-only dataflows',
 				...FIXTURE,
 				expected: { storeReads: 115 },
 			},
-		'six implementation-only dataflows and no signal → 115 store reads: the LNode mapping read once, 10 more than without the LNodes (105)':
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		dev: { perf: true },
+		act: async ({ source, testCase }) => {
+			const storeReads = await storeReadsOf({ source, call: () => all(source.query) })
+			expect({ storeReads }).toEqual(testCase.expected)
+		},
+	})
+})
+
+/**
+ * A document whose only dataflows are implementation-only reads the LNode mapping once for them: its reads are those of
+ * the dataflows alone (105, as before) and those of one read of the mapping.
+ */
+describe('all - the store reads of the LNodes of implementation-only dataflows, without signals', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		lnodes: readonly string[]
+		expected: { storeReads: number; mappingReads: number; readsBesideTheMapping: number }
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'six implementation-only dataflows and no signal → 115 store reads: 105 as before, 10 for the LNode mapping read once':
 			{
 				// the same document without its SourceRef: nothing read the LNode mapping before
 				sourceXml: withoutSignalsXml,
-				expected: { storeReads: 115 },
+				lnodes: [
+					'lnode-ptrc',
+					'lnode-ptrc-twin',
+					'lnode-cswi-by-uuid',
+					'lnode-xcbr',
+					'lnode-ggio-by-uuid',
+				],
+				expected: { storeReads: 115, mappingReads: 10, readsBesideTheMapping: 105 },
 			},
 	}
 
@@ -169,11 +209,14 @@ describe('all - the store reads of the LNodes of implementation-only dataflows',
 		testCases,
 		dev: { perf: true },
 		act: async ({ source, testCase }) => {
-			source.perf.reset()
-			await all(source.query)
-			const report = source.perf.report()
-			const storeReads = STORE_READS.reduce((sum, key) => sum + (report[key]?.count ?? 0), 0)
-			expect({ storeReads }).toEqual(testCase.expected)
+			const storeReads = await storeReadsOf({ source, call: () => all(source.query) })
+			const lnodeRefs = testCase.lnodes.map((id): Scl.Ref<'LNode'> => ({ tagName: 'LNode', id }))
+			const mappingReads = await storeReadsOf({
+				source,
+				call: () => resolveMappedLNodes(source.query, { lnodes: lnodeRefs }),
+			})
+			const readsBesideTheMapping = storeReads - mappingReads
+			expect({ storeReads, mappingReads, readsBesideTheMapping }).toEqual(testCase.expected)
 		},
 	})
 })
