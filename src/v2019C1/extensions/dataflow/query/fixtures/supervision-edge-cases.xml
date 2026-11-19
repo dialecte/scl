@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root">
+	<IED name="P1" dev:db-id="ied-p1">
+		<AccessPoint name="AP1" dev:db-id="ap-p1">
+			<Server dev:db-id="server-p1">
+				<Authentication dev:db-id="auth-p1"/>
+				<LDevice inst="LD0" dev:db-id="ld0-p1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-p1">
+						<GSEControl name="gcbE" appID="appE" dev:db-id="gcb-e"/>
+						<GSEControl name="gcbF" appID="appF" dev:db-id="gcb-f"/>
+					</LN0>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="B1" dev:db-id="ied-b1">
+		<AccessPoint name="AP1" dev:db-id="ap-b1">
+			<Server dev:db-id="server-b1">
+				<Authentication dev:db-id="auth-b1"/>
+				<LDevice inst="LD0" dev:db-id="ld0-b1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-b1"/>
+					<LN lnClass="LGOS" inst="1" lnType="LGOS_T" dev:db-id="lgos-e">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-e">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-e">
+								<Val dev:db-id="val-lgos-e">P1LD0/LLN0.gcbE</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="2" lnType="LGOS_T" dev:db-id="lgos-gone">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-gone">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-gone">
+								<Val dev:db-id="val-lgos-gone">P1LD0/LLN0.gcbGone</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="XCBR" inst="1" lnType="XCBR_T" dev:db-id="ln-xcbr">
+						<Inputs dev:db-id="inputs-xcbr">
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" srcLDInst="LD0" srcCBName="gcbE" dev:db-id="ext-without-service"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcbGone" dev:db-id="ext-dangling"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcbF" dev:db-id="ext-gcbf-ln0-lgos"/>
+						</Inputs>
+					</LN>
+				</LDevice>
+				<LDevice inst="LD9" dev:db-id="ld9-b1">
+					<LN0 lnClass="LGOS" inst="" lnType="LGOS_T" dev:db-id="ln0-lgos">
+						<DOI name="GoCBRef" dev:db-id="doi-ln0-lgos">
+							<DAI name="setSrcRef" dev:db-id="dai-ln0-lgos">
+								<Val dev:db-id="val-ln0-lgos">P1LD0/LLN0.gcbF</Val>
+							</DAI>
+						</DOI>
+					</LN0>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+</SCL>

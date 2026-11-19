@@ -140,6 +140,12 @@ export type SpecifiedDataflow = {
 		/** The subscriber's entry on that control block, when it has one. */
 		registration: Registration | undefined
 		/**
+		 * The supervision of that control block in the IED holding the ExtRef: its LGOS (GOOSE) or
+		 * LSVS (sampled values) logical node naming the control block; absent without a GOOSE or
+		 * sampled value control block, or when none names it.
+		 */
+		supervision?: Supervision
+		/**
 		 * Every uuid and every address of the signal, and every uuid of its element, that names nothing
 		 * in the document. An address fitting several elements without telling them apart is not one.
 		 */
@@ -172,6 +178,18 @@ export type ImplementationOnlyDataflow = {
 export type Registration = {
 	element: Scl.Ref<'IEDName' | 'ClientLN'>
 	names: 'ap' | 'ld' | 'ln'
+}
+
+/**
+ * The supervision of a control block in a subscriber IED: the LGOS / LSVS logical node, its data
+ * object naming the control block it supervises, that data object's `setSrcRef`, and the value
+ * naming the control block (any of the forms a reference to it takes).
+ */
+export type Supervision = {
+	ln: Scl.Ref<'LN'>
+	doi: Scl.Ref<'DOI'>
+	dai: Scl.Ref<'DAI'>
+	val: Scl.Ref<'Val'>
 }
 
 /** A uuid or an address naming nothing in the document: the attribute holding it, on which element. */

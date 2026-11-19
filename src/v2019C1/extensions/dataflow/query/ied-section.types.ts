@@ -20,6 +20,8 @@ export type ControlBlockNode = IedNode<'GSEControl' | 'SampledValueControl' | 'R
  */
 export type IedSection = {
 	extRefs: readonly IedNode<'ExtRef'>[]
+	/** Every logical node (`LN`, `LN0`), in document order, access-point-held ones included. */
+	logicalNodes: readonly IedNode<'LN' | 'LN0'>[]
 	/** Every ExtRef and ExtCtrl, by id. */
 	implementations: ReadonlyMap<string, IedNode<'ExtRef' | 'ExtCtrl'>>
 	/** The uuids of the access points of each IED, by IED id. */

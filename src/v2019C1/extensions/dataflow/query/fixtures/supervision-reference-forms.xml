@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root">
+	<IED name="P1" dev:db-id="ied-p1">
+		<AccessPoint name="AP1" dev:db-id="ap-p1">
+			<Server dev:db-id="server-p1">
+				<Authentication dev:db-id="auth-p1"/>
+				<LDevice inst="LD0" dev:db-id="ld0-p1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-p1-ld0">
+						<GSEControl name="gcb1" appID="app1" dev:db-id="gcb1"/>
+						<GSEControl name="gcb3" appID="app3" uuid="uuid-gcb3" dev:db-id="gcb3"/>
+						<GSEControl name="gcb11" appID="app11" dev:db-id="gcb11"/>
+						<SampledValueControl name="svcb1" smvID="sv1" smpRate="80" nofASDU="1" dev:db-id="svcb1">
+							<SmvOpts dev:db-id="smv-opts-svcb1"/>
+						</SampledValueControl>
+					</LN0>
+				</LDevice>
+				<LDevice inst="LD2" uuid="uuid-ld2-p1" dev:db-id="ld2-p1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="uuid-ln0-p1-ld2" dev:db-id="ln0-p1-ld2">
+						<GSEControl name="gcb12" appID="app12" dev:db-id="gcb12"/>
+						<GSEControl name="gcb13" appID="app13" dev:db-id="gcb13"/>
+					</LN0>
+				</LDevice>
+				<LDevice inst="LD1" ldName="FUNC1" dev:db-id="ld1-p1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-p1-ld1">
+						<GSEControl name="gcb2" appID="app2" dev:db-id="gcb2"/>
+						<GSEControl name="gcb7" appID="app7" dev:db-id="gcb7"/>
+					</LN0>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="B1" dev:db-id="ied-b1">
+		<AccessPoint name="AP1" dev:db-id="ap-b1">
+			<Server dev:db-id="server-b1">
+				<Authentication dev:db-id="auth-b1"/>
+				<LDevice inst="LD0" dev:db-id="ld0-b1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-b1">
+						<GSEControl name="gcbB" appID="appB" dev:db-id="gcb-b"/>
+					</LN0>
+					<LN lnClass="LGOS" inst="1" lnType="LGOS_T" dev:db-id="lgos-1">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-1">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-1">
+								<Val dev:db-id="val-lgos-1">P1LD0/LLN0.gcb1</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="2" lnType="LGOS_T" dev:db-id="lgos-2">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-2">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-2">
+								<Val dev:db-id="val-lgos-2">FUNC1/LLN0.gcb2</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="3" lnType="LGOS_T" dev:db-id="lgos-3">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-3">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-3">
+								<Val dev:db-id="val-lgos-3">#UIDuuid-gcb3</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="10" lnType="LGOS_T" dev:db-id="lgos-10">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-10">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-10">
+								<Val dev:db-id="val-lgos-10">P1LD1/LLN0.gcb7</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="11" lnType="LGOS_T" dev:db-id="lgos-11">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-11">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-11">
+								<Val dev:db-id="val-lgos-11">@LD0/LLN0.gcbB</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="12" lnType="LGOS_T" dev:db-id="lgos-12">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-12">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-12">
+								<Val dev:db-id="val-lgos-12">@LD0/LLN0.gcb11</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="13" lnType="LGOS_T" dev:db-id="lgos-13">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-13">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-13">
+								<Val dev:db-id="val-lgos-13">#UIDuuid-ld2-p1/LLN0.gcb12</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="14" lnType="LGOS_T" dev:db-id="lgos-14">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-14">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-14">
+								<Val dev:db-id="val-lgos-14">#UIDuuid-ln0-p1-ld2.gcb13</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LSVS" inst="1" lnType="LSVS_T" dev:db-id="lsvs-1">
+						<DOI name="SvCBRef" dev:db-id="doi-lsvs-1">
+							<DAI name="setSrcRef" dev:db-id="dai-lsvs-1">
+								<Val dev:db-id="val-lsvs-1">P1LD0/LLN0.svcb1</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="XCBR" inst="1" lnType="XCBR_T" dev:db-id="ln-xcbr">
+						<Inputs dev:db-id="inputs-xcbr">
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb1" dev:db-id="ext-gcb1"/>
+							<ExtRef iedName="P1" ldInst="LD1" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD1" srcCBName="gcb2" dev:db-id="ext-gcb2-ldname"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcCBUuid="uuid-gcb3" dev:db-id="ext-gcb3-uuid-only"/>
+							<ExtRef iedName="P1" ldInst="LD1" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD1" srcCBName="gcb7" dev:db-id="ext-gcb7-default-form"/>
+							<ExtRef iedName="B1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcbB" dev:db-id="ext-gcbb-relative"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb11" dev:db-id="ext-gcb11-relative-other-ied"/>
+							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="SMV" srcLDInst="LD0" srcCBName="svcb1" dev:db-id="ext-svcb1"/>
+							<ExtRef iedName="P1" ldInst="LD2" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD2" srcCBName="gcb12" dev:db-id="ext-gcb12-ldevice-uuid"/>
+							<ExtRef iedName="P1" ldInst="LD2" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD2" srcCBName="gcb13" dev:db-id="ext-gcb13-ln0-uuid"/>
+						</Inputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+</SCL>

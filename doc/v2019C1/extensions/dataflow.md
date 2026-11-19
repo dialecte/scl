@@ -66,6 +66,19 @@ What subscribes to a control block (`GSEControl`, `SampledValueControl` or `Repo
 
 A reference that is not a control block of an IED of the document is refused with `ELEMENT_NOT_FOUND`.
 
+### `supervisionsOf`
+
+```ts
+const supervisions = await doc.query.dataflow.supervisionsOf({
+	requests: [
+		{ controlBlock: { tagName: 'GSEControl', id }, subscriber: { tagName: 'IED', id: iedId } },
+	],
+})
+// (Supervision | undefined)[], one per request, in order
+```
+
+The supervision of each control block (`GSEControl`, `SampledValueControl`) in each subscriber IED asked, as `implementation.supervision` gives it for a dataflow; `undefined` for a control block or IED the document lacks, or one not supervised. It reads the supervision once per call, whatever the number of requests. It is also on the transaction, `tx.dataflow.supervisionsOf`, where it reads the staged state.
+
 ## The dataflow record
 
 A `Dataflow` is a `SpecifiedDataflow` or an `ImplementationOnlyDataflow`, told apart by `kind`.
@@ -91,6 +104,7 @@ A `Dataflow` is a `SpecifiedDataflow` or an `ImplementationOnlyDataflow`, told a
 | `implementation.controlBlock` | the control block the `ExtRef` names                                                                                                                                                                                              |
 | `implementation.publisher`    | the IED holding that control block                                                                                                                                                                                                |
 | `implementation.registration` | the subscriber's own entry on that control block, when it has one                                                                                                                                                                 |
+| `implementation.supervision`  | the LGOS / LSVS of the subscriber supervising that control block, when one does (absent otherwise), see [How things are found](#how-things-are-found)                                                                             |
 | `implementation.dangling`     | the `DanglingLink`s of the signal and of its element, see [How things are found](#how-things-are-found)                                                                                                                           |
 
 The data of `other`: `doName` / `daName` come from the signal's own data attributes when written. Else they come from the qualifier its path carries (`PhV.phsA.cVal.mag.f`), split against the data model of the logical node type the `LNode` names (`lnType`): the data object is a data object then its sub data objects (`PhV.phsA`), the data attribute a data attribute then its nested ones (`cVal.mag.f`), never a cut at the first dot. A `ControlRef` carries a data object only. The split is never guessed: when the data model cannot be followed (the `LNode` names no type, the document lacks the type or a name below it) `doName` and `daName` are absent. `dataPath` is that qualifier as written, set whenever the data comes from the path, split or not; it is absent when the signal's own data attributes gave the data, or when the signal gives none.
@@ -132,6 +146,8 @@ Every link of a dataflow is found the same way: **the uuid wins**, then the name
   | `ap`    | an access point of its IED: the least precise, it always names an IED |
 
   When several registrations name the subscriber, the most precise is taken. `apRef` names an access point of the IED the registration names; it is a matching key only for a client logical node held directly by an access point, and an `apUuid` matches any access point of that IED, not necessarily the one holding the `ExtRef`.
+
+- **The supervision.** In the IED holding the `ExtRef`, the first `LN` (in document order, those of an access point without server included) of class `LGOS` for a `GSEControl`, `LSVS` for a `SampledValueControl`, whose `GoCBRef` / `SvCBRef` holds a `setSrcRef` value naming the control block the dataflow found. A value names it in any form a reference takes inside SCL: `<ldName>/LLN0.<name>` when its logical device has an `ldName`, `<IED name><inst>/LLN0.<name>` (also beside an `ldName`), `@<inst>/LLN0.<name>` when the control block is in that same IED, and `#UID<uuid>` of the control block, `#UID<uuid>/LLN0.<name>` of its logical device or `#UID<uuid>.<name>` of its `LN0`. The control block's own kind tells the class, whatever the `ExtRef`'s `serviceType`; a report control block has none.
 
 **Dangling.** A `DanglingLink` is `{ element, attribute, value }`: a uuid or an address that names nothing in the document, the attribute holding it, on which element. It covers the signal's link to the other logical node, its link to its `ExtRef` / `ExtCtrl` (the uuid when written, else the address), its `resourceUuid`, and the `lnUuid` and `srcCBUuid` of the element. An attribute that is not written is not dangling, it is not a link. An address fitting several elements without telling them apart is not dangling either: it names several things.
 
@@ -206,5 +222,6 @@ Exported from `@dialecte/scl/v2019C1`; the runtime extension object is not.
 | `DanglingLink`                                                | `{ element, attribute, value }`                                                    |
 | `IedDataflows`                                                | `{ published, subscribed }`                                                        |
 | `ControlBlockSubscribers`                                     | `{ registrations, elements, dataflows }`                                           |
+| `Supervision`, `SupervisionRequest`                           | `{ ln, doi, dai, val }`, and a request of `supervisionsOf`                         |
 | `LinkParams`, `UnlinkParams`                                  | the parameters of `link` and `unlink`                                              |
 | `LinkedElement`, `LinkTargetMismatchMeta`                     | an element as an error names it, and the `meta` of `DATAFLOW_LINK_TARGET_MISMATCH` |

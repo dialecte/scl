@@ -363,6 +363,19 @@
 			"declaredAt": "src/v2019C1/extensions/dataflow/query/subscribers-of.ts:19"
 		},
 		{
+			"path": "doc.query.dataflow.supervisionsOf",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: SupervisionsOfParams) => Promise<(Supervision | undefined)[]>",
+			"summary": "Query and transaction extension: the supervision of each control block in each subscriber IED asked, in the order asked: the LGOS (GOOSE) or LSVS (sampled values) logical node of the subscriber whose `setSrcRef` names the control block, as a dataflow's `implementation.supervision` gives it. `undefined` for a control block or IED naming nothing, or no supervision. Read once per call, whatever the number of requests; on a transaction, from its staged state.",
+			"intents": [
+				"which LGOS/LSVS supervises a GOOSE or sampled value control block",
+				"supervision of a control block in a subscriber IED",
+				"setSrcRef naming a control block"
+			],
+			"declaredAt": "src/v2019C1/extensions/dataflow/query/supervisions-of.ts:17"
+		},
+		{
 			"path": "doc.query.dataModel.isLNodeLocked",
 			"root": "q",
 			"otherRoutes": [],

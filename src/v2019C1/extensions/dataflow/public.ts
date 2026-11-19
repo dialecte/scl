@@ -12,6 +12,8 @@ export type {
 	ImplementationOnlyDataflow,
 	Registration,
 	SpecifiedDataflow,
+	Supervision,
 } from './dataflow.types'
+export type { SupervisionRequest } from './query/supervisions-of.types'
 export type { LinkParams, LinkedElement, LinkTargetMismatchMeta } from './transaction/link.types'
 export type { UnlinkParams } from './transaction/unlink.types'

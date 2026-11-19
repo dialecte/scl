@@ -1,0 +1,11 @@
+### Added
+
+- Every dataflow tells the supervision of its control block in the subscriber IED: `implementation.supervision` gives the LGOS (GOOSE) or LSVS (sampled values) logical node of the IED holding the ExtRef, with its `GoCBRef` / `SvCBRef` data object, its `setSrcRef` and the value naming the control block; it is absent when none does. A value names the control block in any form a reference takes inside SCL: by the logical device's `ldName` (`<ldName>/LLN0.<name>`), by its default name (`<IED name><inst>/LLN0.<name>`, also beside an `ldName`), relative inside its own IED (`@<inst>/LLN0.<name>`), and by a uuid replacing its hierarchy: of the control block (`#UID<uuid>`), of its logical device (`#UID<uuid>/LLN0.<name>`) or of its LN0 (`#UID<uuid>.<name>`). The first supervising `LN` in document order wins, those of an access point without server included. It is read once per call, three store reads whatever the number of dataflows, none for a document without LGOS / LSVS.
+- `dataflow.supervisionsOf({ requests })`, on the query and on a transaction: the same supervision for each control block and subscriber IED asked, in the order asked, read once per call; on a transaction, from its staged state.
+- Behaviour notes for adopters, where the answer differs from matching the value against a reference built from the ExtRef's own attributes (`<iedName><srcLDInst>/<srcLNClass>.<srcCBName>`, by `serviceType`, in the first IED named like the subscriber):
+  - the supervision follows the control block the dataflow resolved: an ExtRef naming its control block by uuid only is supervised;
+  - the control block's own kind (GOOSE or sampled values) decides the supervising class, whatever the ExtRef's `serviceType`, and an ExtRef without `serviceType` is supervised too;
+  - an ExtRef without `srcLNClass` is supervised: the control block's LN0 gives the class (`LLN0`), not an empty one;
+  - an ExtRef whose control block the document lacks has no supervision, even when a value spells its reference;
+  - a value by `ldName`, relative with `@`, or by `#UID` matches as well as the default form;
+  - the subscriber is the IED holding the ExtRef, not the first IED with its name, and the logical nodes of an access point without server are looked up too.
