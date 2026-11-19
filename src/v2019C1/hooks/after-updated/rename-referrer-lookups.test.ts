@@ -131,12 +131,58 @@ describe('a rename writes the same references, in the same order, whatever the r
 	})
 })
 
+/** What a transaction stages before the rename: records created, updated and deleted, in this order. */
+type StagedChanges = {
+	creates: {
+		parent: Scl.Ref<Scl.ElementsOf>
+		tagName: Scl.ElementsOf
+		attributes: Record<string, string>
+	}[]
+	updates: { ref: Scl.Ref<Scl.ElementsOf>; attributes: Record<string, string> }[]
+	deletes: Scl.Ref<Scl.ElementsOf>[]
+}
+
+/** An ExtRef of P1 reading P2's breaker position, created by the transaction: `intAddr` and the uuid it names by. */
+function createdExtRef(params: {
+	intAddr: string
+	uuid?: string
+	lnInst?: string
+}): StagedChanges['creates'][number] {
+	const { intAddr, uuid, lnInst = '2' } = params
+	return {
+		parent: { tagName: 'Inputs', id: 'p1-inputs' },
+		tagName: 'ExtRef',
+		attributes: {
+			iedName: 'P2',
+			ldInst: 'LD0',
+			prefix: 'Q0',
+			lnClass: 'XCBR',
+			lnInst,
+			doName: 'Pos',
+			...(uuid ? { lnUuid: uuid } : {}),
+			intAddr,
+		},
+	}
+}
+
 describe('a rename after staged changes of its referrers writes the staged referrers', () => {
-	const testCases: SclTest.TestCases<TestCase> = {
+	type StagedTestCase = TestCase & { staged: StagedChanges }
+
+	const testCases: SclTest.TestCases<StagedTestCase> = {
 		'P2 renamed after a staged create, update and delete of its referrers -> the staged referrers follow':
 			{
 				...withGhost,
 				...namesOnlyLeftAbsent,
+				staged: {
+					creates: [createdExtRef({ intAddr: 'Created', uuid: 'p2-breaker-uuid' })],
+					updates: [
+						{
+							ref: { tagName: 'ExtRef', id: 'p1-ghost' },
+							attributes: { lnInst: '2', lnUuid: 'p2-breaker-uuid' },
+						},
+					],
+					deletes: [{ tagName: 'ExtRef', id: 'p1-cb-only' }],
+				},
 				rename: { tagName: 'IED', id: 'p2', attributes: { name: 'P9' } },
 				expectedUpdates: [
 					'p2',
@@ -160,34 +206,88 @@ describe('a rename after staged changes of its referrers writes the staged refer
 				],
 				unexpectedQueries: ['//default:ExtRef[@intAddr="Cb"]'],
 			},
+		'P2 renamed after a staged LNode bound by uuid -> the one uuid lookup of LNode answers it and it follows':
+			{
+				...withGhost,
+				...namesOnlyLeftAbsent,
+				staged: {
+					creates: [
+						{
+							parent: { tagName: 'Function', id: 'function' },
+							tagName: 'LNode',
+							attributes: {
+								iedName: 'P2',
+								ldInst: 'LD0',
+								prefix: '',
+								lnClass: 'LLN0',
+								lnInst: '',
+								lnUuid: 'p2-lln0-uuid',
+								uuid: 'lnode-created-uuid',
+							},
+						},
+					],
+					updates: [],
+					deletes: [],
+				},
+				rename: { tagName: 'IED', id: 'p2', attributes: { name: 'P9' } },
+				expectedUpdates: [
+					'p2',
+					'LNodeSpecNaming:*',
+					'LNodeSpecNaming:*',
+					'p1-names-only',
+					'lnode-names-only',
+					'p2-connected-ap',
+					'p1-both',
+					'p1-cb-only',
+					'p1-ln-only',
+					'p1-twice',
+					'lnode-bound',
+					'LNode:*',
+					'p2',
+				],
+				expectedQueries: ['//default:LNode[@uuid="lnode-created-uuid"][@iedName="P9"]'],
+			},
+		'P2 renamed after a staged ExtRef naming it by names only -> it follows by its IED name': {
+			...withGhost,
+			...namesOnlyLeftAbsent,
+			staged: {
+				creates: [createdExtRef({ intAddr: 'CreatedNamesOnly', lnInst: '9' })],
+				updates: [],
+				deletes: [],
+			},
+			rename: { tagName: 'IED', id: 'p2', attributes: { name: 'P9' } },
+			expectedUpdates: [
+				'p2',
+				'LNodeSpecNaming:*',
+				'LNodeSpecNaming:*',
+				'p1-names-only',
+				'ExtRef:*',
+				'lnode-names-only',
+				'p2-connected-ap',
+				'p1-both',
+				'p1-cb-only',
+				'p1-ln-only',
+				'p1-twice',
+				'lnode-bound',
+				'p2',
+			],
+			expectedQueries: [
+				'//default:ExtRef[@intAddr="CreatedNamesOnly"][not(@lnUuid)][@iedName="P9"]',
+			],
+		},
 	}
 
-	runSclTestCases.withExport<TestCase>({
+	runSclTestCases.withExport<StagedTestCase>({
 		testCases,
 		act: async ({ source, testCase }) => {
 			await source.transaction(async (tx) => {
-				// staged in the transaction of the rename: a referrer created, one rebound to P2, one deleted
-				await tx.any.addChild(
-					{ tagName: 'Inputs', id: 'p1-inputs' },
-					{
-						tagName: 'ExtRef',
-						attributes: {
-							iedName: 'P2',
-							ldInst: 'LD0',
-							prefix: 'Q0',
-							lnClass: 'XCBR',
-							lnInst: '2',
-							doName: 'Pos',
-							lnUuid: 'p2-breaker-uuid',
-							intAddr: 'Created',
-						},
-					},
-				)
-				await tx.any.update(
-					{ tagName: 'ExtRef', id: 'p1-ghost' },
-					{ attributes: { lnInst: '2', lnUuid: 'p2-breaker-uuid' } },
-				)
-				await tx.any.delete({ tagName: 'ExtRef', id: 'p1-cb-only' })
+				// staged in the transaction of the rename, before it
+				const { creates, updates, deletes } = testCase.staged
+				for (const { parent, tagName, attributes } of creates) {
+					await tx.any.addChild(parent, { tagName, attributes })
+				}
+				for (const { ref, attributes } of updates) await tx.any.update(ref, { attributes })
+				for (const ref of deletes) await tx.any.delete(ref)
 				await expectRenameUpdates({ tx, testCase })
 			})
 			return { assertOn: 'source' }

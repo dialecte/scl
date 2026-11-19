@@ -40,15 +40,19 @@ export async function followTupleTargetRename(
 	const operations = await followNamesOnlyIedRename(query, { oldRecord, newRecord })
 	if (partsByUuid.size === 0) return operations
 
-	for (const [tagName, tagPairs] of Object.entries(TUPLE_REFERENCE_PAIRS)) {
+	const named = Object.entries(TUPLE_REFERENCE_PAIRS).flatMap(([tagName, tagPairs]) => {
 		const pairs = tagPairs as readonly TupleReferencePair[]
-		if (!pairs.some((pair) => pair.target.some((target) => targetTags.has(target)))) continue
-		const referrers = await readReferrersByUuid(query, {
-			tagName: tagName as Scl.ElementsOf,
-			pairs,
-			targetTagByUuid,
-		})
-		for (const referrer of referrers) {
+		return pairs.some((pair) => pair.target.some((target) => targetTags.has(target)))
+			? [{ tagName: tagName as Scl.ElementsOf, pairs }]
+			: []
+	})
+	const referrersByTag = await Promise.all(
+		named.map(function readTag({ tagName, pairs }) {
+			return readReferrersByUuid(query, { tagName, pairs, targetTagByUuid })
+		}),
+	)
+	for (const [index, { pairs }] of named.entries()) {
+		for (const referrer of referrersByTag[index]) {
 			const record = toRawRecord(referrer) as AnyRawRecord
 			const uuids = namedTargetUuids({ record, pairs, targetTagByUuid })
 			if (uuids.length === 0) continue

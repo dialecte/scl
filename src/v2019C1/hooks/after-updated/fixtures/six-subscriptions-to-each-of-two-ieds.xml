@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- P1 reads the six breakers of P2 and the six of P3 by ExtRefs bound by uuid; function F1 holds an LNode bound to each breaker. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="root">
+	<Header id="project"/>
+	<Substation name="S1" dev:db-id="substation">
+		<Function name="F1" dev:db-id="function">
+			<LNode iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="1" lnUuid="p2-xcbr1-uuid" uuid="lnode-p2-1-uuid" dev:db-id="lnode-p2-1"/>
+			<LNode iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" lnUuid="p2-xcbr2-uuid" uuid="lnode-p2-2-uuid" dev:db-id="lnode-p2-2"/>
+			<LNode iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="3" lnUuid="p2-xcbr3-uuid" uuid="lnode-p2-3-uuid" dev:db-id="lnode-p2-3"/>
+			<LNode iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="4" lnUuid="p2-xcbr4-uuid" uuid="lnode-p2-4-uuid" dev:db-id="lnode-p2-4"/>
+			<LNode iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="5" lnUuid="p2-xcbr5-uuid" uuid="lnode-p2-5-uuid" dev:db-id="lnode-p2-5"/>
+			<LNode iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="6" lnUuid="p2-xcbr6-uuid" uuid="lnode-p2-6-uuid" dev:db-id="lnode-p2-6"/>
+			<LNode iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="1" lnUuid="p3-xcbr1-uuid" uuid="lnode-p3-1-uuid" dev:db-id="lnode-p3-1"/>
+			<LNode iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" lnUuid="p3-xcbr2-uuid" uuid="lnode-p3-2-uuid" dev:db-id="lnode-p3-2"/>
+			<LNode iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="3" lnUuid="p3-xcbr3-uuid" uuid="lnode-p3-3-uuid" dev:db-id="lnode-p3-3"/>
+			<LNode iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="4" lnUuid="p3-xcbr4-uuid" uuid="lnode-p3-4-uuid" dev:db-id="lnode-p3-4"/>
+			<LNode iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="5" lnUuid="p3-xcbr5-uuid" uuid="lnode-p3-5-uuid" dev:db-id="lnode-p3-5"/>
+			<LNode iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="6" lnUuid="p3-xcbr6-uuid" uuid="lnode-p3-6-uuid" dev:db-id="lnode-p3-6"/>
+		</Function>
+	</Substation>
+	<Communication dev:db-id="communication">
+		<SubNetwork name="W1" dev:db-id="subnetwork">
+			<ConnectedAP iedName="P2" apName="AP1" apUuid="p2-ap-uuid" dev:db-id="p2-connected-ap"/>
+			<ConnectedAP iedName="P3" apName="AP1" apUuid="p3-ap-uuid" dev:db-id="p3-connected-ap"/>
+		</SubNetwork>
+	</Communication>
+	<IED name="P1" dev:db-id="p1">
+		<AccessPoint name="AP1" uuid="p1-ap-uuid" dev:db-id="p1-ap">
+			<Server dev:db-id="p1-server">
+				<LDevice inst="LD0" uuid="p1-ld-uuid" dev:db-id="p1-ld">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p1-lln0-uuid" dev:db-id="p1-lln0">
+						<Inputs dev:db-id="p1-inputs">
+							<ExtRef iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="1" doName="Pos" lnUuid="p2-xcbr1-uuid" intAddr="P2Pos1" dev:db-id="p1-p2-1"/>
+							<ExtRef iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" lnUuid="p2-xcbr2-uuid" intAddr="P2Pos2" dev:db-id="p1-p2-2"/>
+							<ExtRef iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="3" doName="Pos" lnUuid="p2-xcbr3-uuid" intAddr="P2Pos3" dev:db-id="p1-p2-3"/>
+							<ExtRef iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="4" doName="Pos" lnUuid="p2-xcbr4-uuid" intAddr="P2Pos4" dev:db-id="p1-p2-4"/>
+							<ExtRef iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="5" doName="Pos" lnUuid="p2-xcbr5-uuid" intAddr="P2Pos5" dev:db-id="p1-p2-5"/>
+							<ExtRef iedName="P2" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="6" doName="Pos" lnUuid="p2-xcbr6-uuid" intAddr="P2Pos6" dev:db-id="p1-p2-6"/>
+							<ExtRef iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="1" doName="Pos" lnUuid="p3-xcbr1-uuid" intAddr="P3Pos1" dev:db-id="p1-p3-1"/>
+							<ExtRef iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="2" doName="Pos" lnUuid="p3-xcbr2-uuid" intAddr="P3Pos2" dev:db-id="p1-p3-2"/>
+							<ExtRef iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="3" doName="Pos" lnUuid="p3-xcbr3-uuid" intAddr="P3Pos3" dev:db-id="p1-p3-3"/>
+							<ExtRef iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="4" doName="Pos" lnUuid="p3-xcbr4-uuid" intAddr="P3Pos4" dev:db-id="p1-p3-4"/>
+							<ExtRef iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="5" doName="Pos" lnUuid="p3-xcbr5-uuid" intAddr="P3Pos5" dev:db-id="p1-p3-5"/>
+							<ExtRef iedName="P3" ldInst="LD0" prefix="Q0" lnClass="XCBR" lnInst="6" doName="Pos" lnUuid="p3-xcbr6-uuid" intAddr="P3Pos6" dev:db-id="p1-p3-6"/>
+						</Inputs>
+					</LN0>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="P2" dev:db-id="p2">
+		<AccessPoint name="AP1" uuid="p2-ap-uuid" dev:db-id="p2-ap">
+			<Server dev:db-id="p2-server">
+				<LDevice inst="LD0" uuid="p2-ld-uuid" dev:db-id="p2-ld">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p2-lln0-uuid" dev:db-id="p2-lln0"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="p2-xcbr1-uuid" dev:db-id="p2-xcbr1"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="p2-xcbr2-uuid" dev:db-id="p2-xcbr2"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="3" lnType="XCBR_T" uuid="p2-xcbr3-uuid" dev:db-id="p2-xcbr3"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="4" lnType="XCBR_T" uuid="p2-xcbr4-uuid" dev:db-id="p2-xcbr4"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="5" lnType="XCBR_T" uuid="p2-xcbr5-uuid" dev:db-id="p2-xcbr5"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="6" lnType="XCBR_T" uuid="p2-xcbr6-uuid" dev:db-id="p2-xcbr6"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="P3" dev:db-id="p3">
+		<AccessPoint name="AP1" uuid="p3-ap-uuid" dev:db-id="p3-ap">
+			<Server dev:db-id="p3-server">
+				<LDevice inst="LD0" uuid="p3-ld-uuid" dev:db-id="p3-ld">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="p3-lln0-uuid" dev:db-id="p3-lln0"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="p3-xcbr1-uuid" dev:db-id="p3-xcbr1"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="p3-xcbr2-uuid" dev:db-id="p3-xcbr2"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="3" lnType="XCBR_T" uuid="p3-xcbr3-uuid" dev:db-id="p3-xcbr3"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="4" lnType="XCBR_T" uuid="p3-xcbr4-uuid" dev:db-id="p3-xcbr4"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="5" lnType="XCBR_T" uuid="p3-xcbr5-uuid" dev:db-id="p3-xcbr5"/>
+						<LN prefix="Q0" lnClass="XCBR" inst="6" lnType="XCBR_T" uuid="p3-xcbr6-uuid" dev:db-id="p3-xcbr6"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+</SCL>
