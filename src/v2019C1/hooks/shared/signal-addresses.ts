@@ -54,12 +54,16 @@ export async function reconcileSignalAddresses(
 	}
 
 	const descendants = await query.findDescendants({ tagName: 'LNode', id: newRecord.id })
-	const signals = [...SIGNAL_ADDRESS_PAIRS_BY_REF].flatMap(([tagName, pairs]) =>
-		(descendants[tagName as keyof typeof descendants] ?? []).map((signal) => ({
-			record: pendingRecordOf({ pendingOperations, id: signal.id }) ?? toRawRecord(signal),
-			pairs,
-		})),
-	)
+	const byTag = descendants as Readonly<
+		Record<string, readonly Scl.TrackedRecord<Scl.ElementsOf>[] | undefined>
+	>
+	const signals: { record: Scl.RawRecord<Scl.ElementsOf>; pairs: readonly RefPairEntry[] }[] = []
+	for (const [tagName, pairs] of SIGNAL_ADDRESS_PAIRS_BY_REF) {
+		for (const signal of byTag[tagName] ?? []) {
+			const record = pendingRecordOf({ pendingOperations, id: signal.id }) ?? toRawRecord(signal)
+			signals.push({ record, pairs })
+		}
+	}
 	// the elements every signal's pairs name, looked up together: one lookup per target tag
 	const targets = await findTargetsByUuid(query, {
 		sought: signals.flatMap(({ record, pairs }) =>
@@ -80,7 +84,7 @@ export async function reconcileSignalAddresses(
 			attributes = await composeSignalAddress(query, {
 				reference,
 				pair,
-				target: { tagName: target.tagName, id: target.id } as Scl.Ref<Scl.ElementsOf>,
+				target: toRef(target),
 				referrerContext,
 				attributes,
 			})
@@ -257,10 +261,7 @@ async function readTargetsByUuid(
 	const byTag = await Promise.all(
 		[...tagNames].map(function lookUpTargetsOfTag(tagName) {
 			// dialecte-allow query-in-loop: one lookup per target tag, whatever the number of uuids
-			return query.findByAttributes({
-				tagName: tagName as Scl.ElementsOf,
-				attributes: { uuid: uuids },
-			})
+			return query.any.findByAttributes({ tagName, attributes: { uuid: uuids } })
 		}),
 	)
 	const targets = new Map<string, Scl.Ref<Scl.ElementsOf>>()
@@ -270,6 +271,11 @@ async function readTargetsByUuid(
 			targets.set(uuid, { tagName: record.tagName, id: record.id } as Scl.Ref<Scl.ElementsOf>)
 	}
 	return targets
+}
+
+/** The ref of a record found. */
+function toRef(record: { tagName: string; id: string }): Scl.Ref<Scl.ElementsOf> {
+	return { tagName: record.tagName, id: record.id } as Scl.Ref<Scl.ElementsOf>
 }
 
 /** A record as the last of the pending operations updating it leaves it. */

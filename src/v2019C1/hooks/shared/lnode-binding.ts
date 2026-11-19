@@ -150,7 +150,7 @@ async function mappedIdentity(
 	if (!ln) return null
 
 	const lnAttributes = await query.any.getAttributes(ln)
-	const ancestors = await query.findAncestors(ln)
+	const ancestors = await query.any.findAncestors(ln)
 	const ldevice = ancestors.find((ancestor) => ancestor.tagName === 'LDevice')
 	const ied = ancestors.find((ancestor) => ancestor.tagName === 'IED')
 	const lDeviceAttributes = ldevice ? await query.any.getAttributes(ldevice) : undefined
@@ -173,10 +173,10 @@ async function mappedIdentity(
 async function findLnByUuid(
 	query: Core.Query<Config>,
 	lnUuid: string,
-): Promise<Scl.TrackedRecord<'LN' | 'LN0'> | null> {
+): Promise<Core.AnyTrackedRecord | null> {
 	for (const tagName of LOGICAL_NODE_TAGS) {
 		// dialecte-allow query-in-loop: one lookup per logical node tag (LN, then LN0), stopping at the first found
-		const [match] = await query.findByAttributes({ tagName, attributes: { uuid: lnUuid } })
+		const [match] = await query.any.findByAttributes({ tagName, attributes: { uuid: lnUuid } })
 		if (match) return match
 	}
 	return null
