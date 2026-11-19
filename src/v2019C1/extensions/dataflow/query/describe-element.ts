@@ -5,7 +5,6 @@ import { findDanglingLinks } from './find-dangling-links'
 import { readElementLinks } from './read-element-links'
 import { resolveControlBlock } from './resolve-control-block'
 import { resolveRegistration } from './resolve-registration'
-import { supervisionOf } from './supervisions'
 
 import type { ExtCtrlState, ExtRefState, Supervision } from '../dataflow.types'
 import type { DataflowContext } from './dataflow-context.types'
@@ -26,9 +25,10 @@ export async function describeElement<GenericElement extends 'ExtRef' | 'ExtCtrl
 		element.record.tagName === 'ExtRef'
 			? await resolveControlBlock({ extRef: element as IedNode<'ExtRef'>, context })
 			: undefined
-	const attributes = await context.query.any.getAttributes(element.record)
-	const supervision =
-		controlBlock && (await supervisionOfElement({ controlBlock, element, context }))
+	const [attributes, supervision] = await Promise.all([
+		context.query.any.getAttributes(element.record),
+		controlBlock && supervisionOfElement({ controlBlock, element, context }),
+	])
 	const links = await readElementLinks({
 		element,
 		controlBlockFound: controlBlock !== undefined,
@@ -66,7 +66,7 @@ async function supervisionOfElement(params: {
 	const { controlBlock, element, context } = params
 	if (!(controlBlock.record.tagName in SUPERVISION_BY_CONTROL_BLOCK)) return undefined
 	const index = await context.supervisionIndex()
-	return supervisionOf({ index, controlBlock, subscriber: element.ied })
+	return index.supervisionOf({ controlBlock, subscriber: element.ied })
 }
 
 /** The shape an ExtRef / ExtCtrl is written in, by its kind; `undefined` in none of the documented ones. */

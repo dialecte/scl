@@ -1,4 +1,5 @@
 import { all } from './all'
+import edgeCasesXml from './fixtures/supervision-edge-cases.xml?raw'
 import matchesXml from './fixtures/supervision-matches.xml?raw'
 import formsXml from './fixtures/supervision-reference-forms.xml?raw'
 
@@ -33,7 +34,7 @@ async function supervisionOfExtRef(params: {
 	return dataflow?.implementation.supervision
 }
 
-/** P1 publishes gcb1, gcb3, gcb11, svcb1 (LD0) and gcb2, gcb7 (LD1, ldName FUNC1); B1 publishes gcbB and holds an LGOS per reference form and an LSVS. */
+/** P1 publishes gcb1, gcb3, gcb11, svcb1 (LD0), gcb12, gcb13 (LD2 and its LN0 with uuids) and gcb2, gcb7 (LD1, ldName FUNC1); B1 publishes gcbB and holds an LGOS per reference form and an LSVS. */
 const FORMS = { sourceXml: formsXml }
 
 /** P1 publishes rcb1, gcb4..gcb10; B1 holds LGOS 4..9 (misnamed DOI and DAI, two naming gcb8, two Vals) and an LGOS on its access point AP2; C1 holds the LGOS naming gcb5. */
@@ -41,6 +42,12 @@ const MATCHES = {
 	sourceXml: matchesXml,
 	allowIncoherentReferences:
 		'an ExtRef of service SMV naming a GSEControl by uuid: the control block tells the service',
+}
+
+/** P1 publishes gcbE, gcbF; B1 holds LGOS naming gcbE and a control block P1 lacks, an LN0 of class LGOS naming gcbF. */
+const EDGE_CASES = {
+	sourceXml: edgeCasesXml,
+	allowIncoherentReferences: 'an ExtRef naming a control block the document lacks: no supervision',
 }
 
 /**
@@ -117,6 +124,31 @@ describe('dataflow supervision', () => {
 			...MATCHES,
 			extRef: 'ext-gcb10-access-point',
 			expected: supervisionBy('lgos-ap'),
+		},
+		'a logical device with a uuid, the value naming the control block by #UID of it → its LGOS': {
+			...FORMS,
+			extRef: 'ext-gcb12-ldevice-uuid',
+			expected: supervisionBy('lgos-13'),
+		},
+		'an LN0 with a uuid, the value naming the control block by #UID of it → its LGOS': {
+			...FORMS,
+			extRef: 'ext-gcb13-ln0-uuid',
+			expected: supervisionBy('lgos-14'),
+		},
+		'an ExtRef without serviceType, its control block named by names → its LGOS': {
+			...EDGE_CASES,
+			extRef: 'ext-without-service',
+			expected: supervisionBy('lgos-e'),
+		},
+		'an ExtRef naming a control block the document lacks, an LGOS naming it by text → none': {
+			...EDGE_CASES,
+			extRef: 'ext-dangling',
+			expected: undefined,
+		},
+		'an LN0 of class LGOS naming the control block → none: an LN supervises': {
+			...EDGE_CASES,
+			extRef: 'ext-gcbf-ln0-lgos',
+			expected: undefined,
 		},
 		'report control block → none': {
 			...MATCHES,

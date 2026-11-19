@@ -31,8 +31,8 @@ export async function readSupervisionIndex(params: {
 		const kind = supervisionKindOf(node)
 		return kind ? [{ node, kind }] : []
 	})
-	const index = new Map<string, IndexedSupervision>()
-	if (supervising.length === 0) return index
+	const byValue = new Map<string, IndexedSupervision>()
+	if (supervising.length === 0) return createSupervisionIndex({ byValue })
 
 	const dataObjects = await namedChildrenOfEach({
 		query,
@@ -66,8 +66,8 @@ export async function readSupervisionIndex(params: {
 				lnClass: kind.lnClass,
 				value: value.value ?? '',
 			})
-			if (!index.has(key)) {
-				index.set(key, {
+			if (!byValue.has(key)) {
+				byValue.set(key, {
 					supervision: {
 						ln: { tagName: 'LN', id: node.record.id },
 						doi: { tagName: 'DOI', id: dataObject.child.id },
@@ -80,27 +80,45 @@ export async function readSupervisionIndex(params: {
 			position++
 		}
 	}
-	return index
+	return createSupervisionIndex({ byValue })
 }
 
 /**
- * The supervision of a control block in a subscriber IED: the first (in document order) of the
- * index's supervisions whose value names the control block in one of its reference forms;
+ * The index over the supervisions read: the supervision of a control block in a subscriber IED is
+ * the first (in document order) whose value names the control block in one of its reference forms;
  * `undefined` for a control block that is not supervised (a report control block) or no match.
+ * Each pair is answered once for the call.
  */
-export function supervisionOf(params: {
-	index: SupervisionIndex
+function createSupervisionIndex(params: {
+	byValue: ReadonlyMap<string, IndexedSupervision>
+}): SupervisionIndex {
+	const { byValue } = params
+	const answers = new Map<string, Supervision | undefined>()
+	return {
+		supervisionOf({ controlBlock, subscriber }) {
+			const answerKey = JSON.stringify([controlBlock.record.id, subscriber.id])
+			if (!answers.has(answerKey)) {
+				answers.set(answerKey, findSupervision({ byValue, controlBlock, subscriber }))
+			}
+			return answers.get(answerKey)
+		},
+	}
+}
+
+/** The supervision of a control block in a subscriber IED, looked up for each reference form. */
+function findSupervision(params: {
+	byValue: ReadonlyMap<string, IndexedSupervision>
 	controlBlock: ControlBlockNode
 	subscriber: Scl.Ref<'IED'>
 }): Supervision | undefined {
-	const { index, controlBlock, subscriber } = params
+	const { byValue, controlBlock, subscriber } = params
 	const kind =
 		SUPERVISION_BY_CONTROL_BLOCK[
 			controlBlock.record.tagName as keyof typeof SUPERVISION_BY_CONTROL_BLOCK
 		]
 	if (!kind) return undefined
 	const found = referenceFormsOf({ controlBlock, subscriber }).flatMap((value) => {
-		const indexed = index.get(
+		const indexed = byValue.get(
 			supervisionKey({ iedId: subscriber.id, lnClass: kind.lnClass, value }),
 		)
 		return indexed ? [indexed] : []
@@ -111,8 +129,10 @@ export function supervisionOf(params: {
 /**
  * The forms a reference to the control block takes inside SCL: by the logical device name when it
  * has one (`<ldName>/LLN0.<name>`), by its default name (`<IED name><inst>/LLN0.<name>`, the form
- * files carry even beside an `ldName`), relative inside its own IED (`@<inst>/LLN0.<name>`) and by
- * its uuid (`#UID<uuid>`).
+ * files carry even beside an `ldName`), relative inside its own IED (`@<inst>/LLN0.<name>`), and by
+ * a uuid replacing the hierarchy down to the element it names: the logical device's
+ * (`#UID<uuid>/LLN0.<name>`), the LN0's (`#UID<uuid>.<name>`) or the control block's own
+ * (`#UID<uuid>`).
  */
 function referenceFormsOf(params: {
 	controlBlock: ControlBlockNode
@@ -131,6 +151,8 @@ function referenceFormsOf(params: {
 	const iedName = attributeOf({ record: ied, name: 'name' }) ?? ''
 	const inst = attributeOf({ record: ldevice, name: 'inst' }) ?? ''
 	const ldName = attributeOf({ record: ldevice, name: 'ldName' })
+	const ldeviceUuid = attributeOf({ record: ldevice, name: 'uuid' })
+	const ln0Uuid = attributeOf({ record: ln0, name: 'uuid' })
 	const lnName = attributeOf({ record: ln0, name: 'lnClass' }) ?? ''
 	const objectPath = `/${lnName}.${name}`
 	if (ldName) forms.push(`${ldName}${objectPath}`)
@@ -138,6 +160,8 @@ function referenceFormsOf(params: {
 	if (controlBlock.ied.id === subscriber.id) {
 		forms.push(`${IED_RELATIVE_REFERENCE_PREFIX}${inst}${objectPath}`)
 	}
+	if (ldeviceUuid) forms.push(`${UUID_REFERENCE_PREFIX}${ldeviceUuid}${objectPath}`)
+	if (ln0Uuid) forms.push(`${UUID_REFERENCE_PREFIX}${ln0Uuid}.${name}`)
 	return forms
 }
 

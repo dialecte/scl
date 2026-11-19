@@ -373,7 +373,7 @@
 				"supervision of a control block in a subscriber IED",
 				"setSrcRef naming a control block"
 			],
-			"declaredAt": "src/v2019C1/extensions/dataflow/query/supervisions-of.ts:18"
+			"declaredAt": "src/v2019C1/extensions/dataflow/query/supervisions-of.ts:17"
 		},
 		{
 			"path": "doc.query.dataModel.isLNodeLocked",

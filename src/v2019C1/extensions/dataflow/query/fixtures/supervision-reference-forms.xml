@@ -14,6 +14,12 @@
 						</SampledValueControl>
 					</LN0>
 				</LDevice>
+				<LDevice inst="LD2" uuid="uuid-ld2-p1" dev:db-id="ld2-p1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="uuid-ln0-p1-ld2" dev:db-id="ln0-p1-ld2">
+						<GSEControl name="gcb12" appID="app12" dev:db-id="gcb12"/>
+						<GSEControl name="gcb13" appID="app13" dev:db-id="gcb13"/>
+					</LN0>
+				</LDevice>
 				<LDevice inst="LD1" ldName="FUNC1" dev:db-id="ld1-p1">
 					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-p1-ld1">
 						<GSEControl name="gcb2" appID="app2" dev:db-id="gcb2"/>
@@ -73,6 +79,20 @@
 							</DAI>
 						</DOI>
 					</LN>
+					<LN lnClass="LGOS" inst="13" lnType="LGOS_T" dev:db-id="lgos-13">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-13">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-13">
+								<Val dev:db-id="val-lgos-13">#UIDuuid-ld2-p1/LLN0.gcb12</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="14" lnType="LGOS_T" dev:db-id="lgos-14">
+						<DOI name="GoCBRef" dev:db-id="doi-lgos-14">
+							<DAI name="setSrcRef" dev:db-id="dai-lgos-14">
+								<Val dev:db-id="val-lgos-14">#UIDuuid-ln0-p1-ld2.gcb13</Val>
+							</DAI>
+						</DOI>
+					</LN>
 					<LN lnClass="LSVS" inst="1" lnType="LSVS_T" dev:db-id="lsvs-1">
 						<DOI name="SvCBRef" dev:db-id="doi-lsvs-1">
 							<DAI name="setSrcRef" dev:db-id="dai-lsvs-1">
@@ -89,6 +109,8 @@
 							<ExtRef iedName="B1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcbB" dev:db-id="ext-gcbb-relative"/>
 							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD0" srcCBName="gcb11" dev:db-id="ext-gcb11-relative-other-ied"/>
 							<ExtRef iedName="P1" ldInst="LD0" lnClass="LLN0" doName="Beh" serviceType="SMV" srcLDInst="LD0" srcCBName="svcb1" dev:db-id="ext-svcb1"/>
+							<ExtRef iedName="P1" ldInst="LD2" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD2" srcCBName="gcb12" dev:db-id="ext-gcb12-ldevice-uuid"/>
+							<ExtRef iedName="P1" ldInst="LD2" lnClass="LLN0" doName="Beh" serviceType="GOOSE" srcLDInst="LD2" srcCBName="gcb13" dev:db-id="ext-gcb13-ln0-uuid"/>
 						</Inputs>
 					</LN>
 				</LDevice>

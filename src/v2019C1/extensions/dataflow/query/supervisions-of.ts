@@ -1,5 +1,4 @@
 import { createDataflowContext } from './dataflow-context'
-import { supervisionOf } from './supervisions'
 
 import type { Supervision } from '../dataflow.types'
 import type { SupervisionsOfParams } from './supervisions-of.types'
@@ -29,6 +28,6 @@ export async function supervisionsOf(
 		const controlBlock = controlBlocks.get(ref.id)
 		if (!controlBlock || controlBlock.record.tagName !== ref.tagName) return undefined
 		if (!iedIds.has(subscriber.id)) return undefined
-		return supervisionOf({ index, controlBlock, subscriber })
+		return index.supervisionOf({ controlBlock, subscriber })
 	})
 }
