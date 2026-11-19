@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" version="2007" revision="C" release="5" dev:db-id="scl">
+    <Header id="T" dev:db-id="header"/>
+    <Substation name="S1" dev:db-id="sub">
+        <Function name="F1" uuid="f1-uuid" dev:db-id="f1">
+            <LNode iedName="None" lnClass="XCBR" lnInst="1" uuid="ln1-uuid" dev:db-id="ln1">
+                <Private type="eIEC61850-6-100" dev:db-id="ln1-private">
+                    <eIEC61850-6-100:LNodeInputs dev:db-id="inputs">
+                        <eIEC61850-6-100:SourceRef input="I1" source="S1/F1/XCBR1" sourceLNodeUuid="ln1-uuid" dev:db-id="sref-1"/>
+                        <eIEC61850-6-100:SourceRef input="I2" source="S1/F9/XCBR9" sourceLNodeUuid="gone-lnode-uuid" dev:db-id="sref-gone"/>
+                    </eIEC61850-6-100:LNodeInputs>
+                </Private>
+            </LNode>
+        </Function>
+        <Function name="F2" uuid="f2-uuid" dev:db-id="f2"/>
+        <EqFunction name="E1" uuid="e1-uuid" dev:db-id="e1"/>
+        <Private type="eIEC61850-6-100" dev:db-id="sub-private">
+            <eIEC61850-6-100:AllocationRole name="AR1" dev:db-id="ar1">
+                <eIEC61850-6-100:FunctionRef function="S1/F1" functionUuid="f1-uuid" dev:db-id="fref-1"/>
+                <eIEC61850-6-100:FunctionRef function="S1/Gone" functionUuid="gone-uuid" dev:db-id="fref-gone"/>
+                <eIEC61850-6-100:FunctionRef function="S1/F2" functionUuid="f2-uuid" dev:db-id="fref-2"/>
+                <eIEC61850-6-100:FunctionRef function="S1/E1" functionUuid="e1-uuid" dev:db-id="fref-e1"/>
+            </eIEC61850-6-100:AllocationRole>
+        </Private>
+    </Substation>
+</SCL>
