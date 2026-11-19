@@ -74,14 +74,14 @@ describe('the reads of an update following the paths below the updated element',
 				tagScans: REFERRER_TAGS_OF_A_BAY,
 			},
 		},
-		// no segment of a path changes: the bay itself is read, and the tags a reference to a bay may hold
+		// no segment of a path and no uuid changes: no reference to the bay can change, nothing is read
 		'a bay of 21 elements given a description → nothing below it read': {
 			sourceXml: aSmallBayAndALargeBay,
 			bay: { tagName: 'Bay', id: 'b2' },
 			attributes: { desc: 'feeder' },
 			expected: {
-				reads: { findAncestors: 0, findDescendants: 0, getTree: 0, recordReads: 1 },
-				tagScans: ['Resource', 'VariableApplyTo'],
+				reads: { findAncestors: 0, findDescendants: 0, getTree: 0, recordReads: 0 },
+				tagScans: [],
 			},
 		},
 	}

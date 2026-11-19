@@ -335,11 +335,10 @@ async function readMissingAncestries(
 	params: { elements: readonly FollowedElement[] },
 ): Promise<Map<string, readonly AnyRawRecord[]>> {
 	const alone = params.elements.filter((element) => element.ancestry === undefined)
-	const ancestors = await Promise.all(
-		alone.map(function readAncestors(element) {
-			// dialecte-allow query-in-loop: one ancestor read per root followed alone that a reference names (its own levels)
-			return query.findAncestors(element.record as Scl.Ref<Scl.ElementsOf>, { order: 'top-down' })
-		}),
+	if (alone.length === 0) return new Map()
+	const ancestors = await query.findAncestorsOfEach(
+		alone.map((element) => element.record as Scl.Ref<Scl.ElementsOf>),
+		{ order: 'top-down' },
 	)
 	return new Map(
 		alone.map((element, index) => [

@@ -1,3 +1,5 @@
+import { findTargetsByUuid } from './find-targets-by-uuid'
+import { inTagReadOrder } from './in-tag-read-order'
 import { readHoldingLNodes } from './read-holding-lnodes'
 import { SIGNAL_ADDRESS_PAIRS_BY_REF, SIGNAL_HOLDER_DEPTH } from './signal-addresses.constants'
 
@@ -12,7 +14,6 @@ import {
 	updatedOperation,
 	withAttributeValues,
 } from '@/v2019C1/hooks/shared/record-ops'
-import { findTargetByUuid } from '@/v2019C1/hooks/shared/ref-entry-ops'
 
 import type { HeldSignal, ReboundLNode } from './signal-addresses.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -53,28 +54,42 @@ export async function reconcileSignalAddresses(
 	}
 
 	const descendants = await query.findDescendants({ tagName: 'LNode', id: newRecord.id })
-	const operations: Scl.Operation[] = []
+	const byTag = descendants as Readonly<
+		Record<string, readonly Scl.TrackedRecord<Scl.ElementsOf>[] | undefined>
+	>
+	const signals: { record: Scl.RawRecord<Scl.ElementsOf>; pairs: readonly RefPairEntry[] }[] = []
 	for (const [tagName, pairs] of SIGNAL_ADDRESS_PAIRS_BY_REF) {
-		for (const signal of descendants[tagName as keyof typeof descendants] ?? []) {
+		for (const signal of byTag[tagName] ?? []) {
 			const record = pendingRecordOf({ pendingOperations, id: signal.id }) ?? toRawRecord(signal)
-			const reference = { tagName: record.tagName, id: record.id } as Scl.Ref<Scl.ElementsOf>
-			let attributes: AttributeList = record.attributes
-			for (const pair of pairs) {
-				const uuid = await query.any.getAttribute(record, { name: pair.uuidAttr })
-				const target = uuid
-					? await findTargetByUuid(query, { uuid, targetTagNames: pair.targetTagNames })
-					: undefined
-				if (!target) continue
-				attributes = await composeSignalAddress(query, {
-					reference,
-					pair,
-					target,
-					referrerContext,
-					attributes,
-				})
-			}
-			if (attributes !== record.attributes) operations.push(updatedOperation(record, attributes))
+			signals.push({ record, pairs })
 		}
+	}
+	// the elements every signal's pairs name, looked up together: one lookup per target tag
+	const targets = await findTargetsByUuid(query, {
+		sought: signals.flatMap(({ record, pairs }) =>
+			pairs.map((pair) => ({
+				uuid: readAttribute({ record, name: pair.uuidAttr }),
+				targetTagNames: pair.targetTagNames,
+			})),
+		),
+	})
+	const operations: Scl.Operation[] = []
+	let position = 0
+	for (const { record, pairs } of signals) {
+		const reference = { tagName: record.tagName, id: record.id } as Scl.Ref<Scl.ElementsOf>
+		let attributes: AttributeList = record.attributes
+		for (const pair of pairs) {
+			const target = targets[position++]
+			if (!target) continue
+			attributes = await composeSignalAddress(query, {
+				reference,
+				pair,
+				target: toRef(target),
+				referrerContext,
+				attributes,
+			})
+		}
+		if (attributes !== record.attributes) operations.push(updatedOperation(record, attributes))
 	}
 	return operations
 }
@@ -192,18 +207,30 @@ async function composeSignalAddress(
 }
 
 /**
- * The signals (every tag of `SIGNAL_ADDRESS_PAIRS_BY_REF`) held by one of the LNodes, each tag read once; the records
- * above them (their inputs or outputs, the `Private` holding those) read a level at a time up to the LNode.
+ * The signals (every tag of `SIGNAL_ADDRESS_PAIRS_BY_REF`) held by one of the LNodes: read under them in one walk, then
+ * the records above them (their inputs or outputs, the `Private` holding those) read a level at a time up to the
+ * nearest LNode, which keeps only those within `SIGNAL_HOLDER_DEPTH` of the LNode holding them. In tag order, each tag in
+ * the order its tag read lists them (`inTagReadOrder`).
  */
 async function readSignalsOf(
 	query: Core.Query<Config>,
 	params: { lnodeIds: ReadonlySet<string> },
 ): Promise<HeldSignal[]> {
 	const { lnodeIds } = params
+	const lnodes = [...lnodeIds].map((id): Scl.Ref<'LNode'> => ({ tagName: 'LNode', id }))
+	// the signal tags, read from the reference registry: the collect the definition cannot type
+	const collect = [...SIGNAL_ADDRESS_PAIRS_BY_REF.keys()] as never
+	const under = (await query.findDescendantsOfEach(lnodes, { collect })) as unknown as Readonly<
+		Record<string, readonly Scl.TrackedRecord<Scl.ElementsOf>[] | undefined>
+	>[]
 	const byTag = await Promise.all(
-		[...SIGNAL_ADDRESS_PAIRS_BY_REF].map(async function readSignalsOfTag([tagName, pairs]) {
-			// dialecte-allow query-in-loop: one read per signal tag: core reads one tag per call
-			const records = await query.getRecordsByTagName(tagName as Scl.ElementsOf)
+		[...SIGNAL_ADDRESS_PAIRS_BY_REF].map(async function orderSignalsOfTag([tagName, pairs]) {
+			const found = under.flatMap((answer) => (answer[tagName] ?? []).map((record) => [record]))
+			// dialecte-allow query-in-loop: one ordering per signal tag, a tag read only when the transaction wrote one of them
+			const records = await inTagReadOrder(query, {
+				tagName: tagName as Scl.ElementsOf,
+				lookups: found,
+			})
 			return records.map((record) => ({ record: toRawRecord(record), pairs }))
 		}),
 	)
@@ -219,27 +246,36 @@ async function readSignalsOf(
 	})
 }
 
-/** The elements the signals name by uuid, each target tag read once. */
+/**
+ * The elements the signals name, by uuid: each target tag looked up once by the uuids sought, the first match across the
+ * tags kept, its tag checked against the pair's afterwards (`rewriteSignalAddresses`). Not `findTargetsByUuid`, which
+ * keeps the first match of the pair's own tags: the two differ only when a uuid names elements of two tags.
+ */
 async function readTargetsByUuid(
 	query: Core.Query<Config>,
 	params: { wanted: readonly { pair: RefPairEntry; uuid: string }[] },
 ): Promise<Map<string, Scl.Ref<Scl.ElementsOf>>> {
 	const { wanted } = params
-	const uuids = new Set(wanted.map(({ uuid }) => uuid))
+	const uuids = [...new Set(wanted.map(({ uuid }) => uuid))]
 	const tagNames = new Set(wanted.flatMap(({ pair }) => pair.targetTagNames))
 	const byTag = await Promise.all(
-		[...tagNames].map(function readTargetsOfTag(tagName) {
-			// dialecte-allow query-in-loop: one read per target tag: core reads one tag per call
-			return query.getRecordsByTagName(tagName as Scl.ElementsOf)
+		[...tagNames].map(function lookUpTargetsOfTag(tagName) {
+			// dialecte-allow query-in-loop: one lookup per target tag, whatever the number of uuids
+			return query.any.findByAttributes({ tagName, attributes: { uuid: uuids } })
 		}),
 	)
 	const targets = new Map<string, Scl.Ref<Scl.ElementsOf>>()
 	for (const record of byTag.flat()) {
 		const uuid = readAttribute({ record, name: 'uuid', defaults: 'none', fullObject: true })?.value
-		if (uuid && uuids.has(uuid) && !targets.has(uuid))
+		if (uuid && !targets.has(uuid))
 			targets.set(uuid, { tagName: record.tagName, id: record.id } as Scl.Ref<Scl.ElementsOf>)
 	}
 	return targets
+}
+
+/** The ref of a record found. */
+function toRef(record: { tagName: string; id: string }): Scl.Ref<Scl.ElementsOf> {
+	return { tagName: record.tagName, id: record.id } as Scl.Ref<Scl.ElementsOf>
 }
 
 /** A record as the last of the pending operations updating it leaves it. */

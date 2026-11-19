@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" dev:db-id="root">
+	<!-- the LNode trip, unbound, holds three inputs, each naming an ExtRef of the GGIO1 of P1 by uuid; the LNode other holds one naming the fourth -->
+	<Substation dev:db-id="s1" name="S1">
+		<Function dev:db-id="f1" name="F1">
+			<LNode dev:db-id="trip" iedName="None" lnClass="PTRC" lnInst="1" uuid="trip-uuid">
+				<Private dev:db-id="trip-private" type="eIEC61850-6-100">
+					<eIEC61850-6-100:LNodeInputs dev:db-id="trip-inputs">
+						<eIEC61850-6-100:SourceRef dev:db-id="in-a" input="A" extRefUuid="ext-a"/>
+						<eIEC61850-6-100:SourceRef dev:db-id="in-b" input="B" extRefUuid="ext-b"/>
+						<eIEC61850-6-100:SourceRef dev:db-id="in-c" input="C" extRefUuid="ext-c"/>
+					</eIEC61850-6-100:LNodeInputs>
+				</Private>
+			</LNode>
+			<LNode dev:db-id="other" iedName="None" lnClass="PTRC" lnInst="2" uuid="other-uuid">
+				<Private dev:db-id="other-private" type="eIEC61850-6-100">
+					<eIEC61850-6-100:LNodeInputs dev:db-id="other-inputs">
+						<eIEC61850-6-100:SourceRef dev:db-id="in-d" input="D" extRefUuid="ext-d"/>
+					</eIEC61850-6-100:LNodeInputs>
+				</Private>
+			</LNode>
+		</Function>
+	</Substation>
+	<IED dev:db-id="p1" name="P1">
+		<AccessPoint dev:db-id="ap1" name="AP1">
+			<Server dev:db-id="srv1">
+				<LDevice dev:db-id="ld0" inst="LD0">
+					<LN0 dev:db-id="ln0" lnClass="LLN0" inst="" lnType="LLN0_T"/>
+					<LN dev:db-id="ptrc1" lnClass="PTRC" inst="1" lnType="PTRC_T" uuid="ptrc1-uuid"/>
+					<LN dev:db-id="ggio1" prefix="Q0" lnClass="GGIO" inst="1" lnType="GGIO_T" uuid="ggio1-uuid">
+						<Inputs dev:db-id="ggio1-inputs">
+							<ExtRef dev:db-id="ext-a-ref" intAddr="A" uuid="ext-a"/>
+							<ExtRef dev:db-id="ext-b-ref" intAddr="B" uuid="ext-b"/>
+							<ExtRef dev:db-id="ext-c-ref" intAddr="C" uuid="ext-c"/>
+							<ExtRef dev:db-id="ext-d-ref" intAddr="D" uuid="ext-d"/>
+						</Inputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_T" lnClass="LLN0">
+			<DO name="Beh" type="ENS_T"/>
+		</LNodeType>
+		<LNodeType id="PTRC_T" lnClass="PTRC">
+			<DO name="Beh" type="ENS_T"/>
+		</LNodeType>
+		<LNodeType id="GGIO_T" lnClass="GGIO">
+			<DO name="Beh" type="ENS_T"/>
+		</LNodeType>
+		<DOType id="ENS_T" cdc="ENS">
+			<DA name="stVal" bType="Enum" type="Beh_T" fc="ST"/>
+		</DOType>
+		<EnumType id="Beh_T">
+			<EnumVal ord="1">on</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>
