@@ -200,13 +200,13 @@ describe('readDataTypes - the store reads', () => {
 
 /**
  * Values and texts, in the types or outside them, move no record: a document moves what its twin without them moves,
- * the root (read twice) and the types and their members.
+ * the root (read twice), the Private the import adds, DataTypeTemplates and its types and members.
  */
 describe('readDataTypes - the records moved', () => {
 	type TestCase = SclTest.BaseXmlTestCase & { expected: { recordsMoved: number } }
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		'Val in DA, BDA and DAI, Text in types and a Substation → the root twice and the 16 types and members':
+		'Val in DA, BDA and DAI, Text in types and a Substation → 18: the root twice, the Private the import adds, DataTypeTemplates and its 14 types and members':
 			{
 				// two LNodeTypes, two DOTypes (one SDO), one DAType; Val in DA, BDA and DAI; Text in types and a Substation
 				sourceXml: withValuesXml,

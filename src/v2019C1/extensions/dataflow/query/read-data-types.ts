@@ -1,4 +1,4 @@
-import { DATAFLOW_DATA_TYPES_SELECT } from '../constants/data-types.constants'
+import { DATAFLOW_DATA_TYPES_SELECT } from '../constants/dataflow-data-types.constants'
 
 import { createDataTypeIndex } from '@/v2019C1/extensions/data-model/query/create-data-type-index'
 import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
