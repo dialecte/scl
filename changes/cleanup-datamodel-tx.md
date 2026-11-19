@@ -1,3 +1,0 @@
-### Changed
-
-- **Cleaning orphaned references and importing data types look up in batches.** `cleanUp.orphanUuidRefs` looks the targets of each reference tag up together, one lookup per target tag for the uuids of all its references (was one per reference, pair and target tag); after a reference is cleared or deleted, what it read is checked again before it is used. `dataModel.importTypes` signs the source types first, then looks the target types holding the ids of those it does not reuse up in one lookup per type tag (was one per type cloned), reads the followers together and repoints the clones from what their clone returned (was a tree read of each clone). The operations staged are unchanged, in the same order.
