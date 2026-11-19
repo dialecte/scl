@@ -1,3 +1,5 @@
+import { REFERRER_READ_ATTRIBUTES } from './ref-paths.constants'
+
 import { widen } from '@dialecte/core/helpers'
 
 import {
@@ -98,17 +100,21 @@ export async function updateRefPaths<GenericElement extends Scl.ElementsOf>(para
 
 	const target = { tagName: newRecord.tagName, id: newRecord.id } as Scl.Ref<Scl.ElementsOf>
 	const pathChanged = hasPathAttributeChange(oldRecord, newRecord)
-	const followOps = await followAncestry(query, {
-		roots: [
-			{
-				root: target,
-				references: true,
-				ownPath:
-					pathChanged || ownPathAttributeChanged({ oldRecord: previous, newRecord: current }),
-				below: pathChanged,
-			},
-		],
+	const ownPath =
+		pathChanged || ownPathAttributeChanged({ oldRecord: previous, newRecord: current })
+	// the referrers are looked up only when the update changes what they read of the element (a lineage-only or
+	// type-id-only update changes nothing they hold)
+	const references = hasAttributeChange({
+		oldRecord: previous,
+		newRecord: current,
+		names: REFERRER_READ_ATTRIBUTES,
 	})
+	const followOps =
+		references || ownPath
+			? await followAncestry(query, {
+					roots: [{ root: target, references, ownPath, below: pathChanged }],
+				})
+			: []
 	operations.push(...followOps)
 
 	if (specifiedNamingChanged({ oldRecord: previous, newRecord: current })) {
