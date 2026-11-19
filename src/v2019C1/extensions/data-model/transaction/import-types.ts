@@ -15,6 +15,8 @@ import type {
 	ImportTypesResult,
 	ImportTypesStats,
 	ReusedFork,
+	SignedSourceType,
+	TargetTypes,
 	TypeFollower,
 	TypeRecord,
 } from './import-types.types'
@@ -110,6 +112,9 @@ export async function importTypes(
 	const preExisting = await buildPreExistingSignatureIndex(tx)
 	tx.perf.stop('scl::importTypes::preExistingIndex')
 
+	// the records of each clone, by the id of its root: what is repointed and reclaimed after the loop
+	const cloneRecords = new Map<string, Scl.Ref<Scl.ElementsOf>[]>()
+
 	const idRemap = new Map<string, string>()
 	const clonedRoots: Scl.Ref<Scl.ElementsOf>[] = []
 	const collisions: Collision[] = []
@@ -122,17 +127,21 @@ export async function importTypes(
 
 	tx.perf.start('scl::importTypes::sourceLoop')
 
-	for (const source of sourceTypes) {
-		const sourceId = await sourceQuery.getAttribute(source, { name: 'id' })
+	// First step, the lookups: each source type signed (the source read only), then the target types holding the ids of
+	// those no equal type reuses looked up, one lookup per type tag. The loop keeps them up to date with the types it
+	// clones and renames, so each id is answered as a lookup at that point would answer it.
+	const signed = await signSourceTypes({
+		sourceQuery,
+		sourceTypes,
+		signatureCache: sourceSignatureCache,
+	})
+	const targetTypes = await createTargetTypes(tx, { signed, preExisting })
+
+	// Second step, the trees: each type reused, or its source tree cloned.
+	for (const { source, sourceId, signature } of signed) {
 		// One step per source type; the caption rides the advance (close-previous).
 		tx.progress.nextStep(sourceId ? `Importing ${sourceId}` : undefined)
-		if (!sourceId) continue
-
-		const signature = await elementSignature(sourceQuery, {
-			ref: { tagName: source.tagName, id: source.id },
-			resolveReferences: true,
-			signatureCache: sourceSignatureCache,
-		})
+		if (!sourceId || signature === undefined) continue
 
 		const reusedId = preExisting.get(signature)
 		if (reusedId !== undefined) {
@@ -144,6 +153,9 @@ export async function importTypes(
 							desiredId: sourceId,
 						})
 					: reusedId
+			if (survivingId !== reusedId) {
+				targetTypes.renamed({ tagName: source.tagName, from: reusedId, to: survivingId })
+			}
 			idRemap.set(sourceId, survivingId)
 			// Keep the dedup index consistent so a later incoming type sharing this
 			// signature reuses the renamed (surviving) id, not the vanished old one.
@@ -160,10 +172,7 @@ export async function importTypes(
 		const tree = await sourceQuery.getTree(source)
 		if (!tree) continue
 
-		const [existing] = await tx.findByAttributes({
-			tagName: source.tagName,
-			attributes: { id: sourceId },
-		})
+		const existing = await targetTypes.find({ tagName: source.tagName, id: sourceId })
 
 		let targetId = sourceId
 		let preparedTree = tree
@@ -179,11 +188,19 @@ export async function importTypes(
 		const clone = await tx.deepClone(dataTypeTemplates, preparedTree)
 		idRemap.set(sourceId, targetId)
 		if (clone?.record) {
-			clonedRoots.push(toRef(clone.record.tagName, clone.record.id))
+			const cloneRef = toRef(clone.record.tagName, clone.record.id)
+			clonedRoots.push(cloneRef)
+			cloneRecords.set(
+				clone.record.id,
+				clone.mappings.map(function targetOf(mapping) {
+					return mapping.target as Scl.Ref<Scl.ElementsOf>
+				}),
+			)
+			targetTypes.cloned({ tagName: source.tagName, id: targetId, ref: cloneRef })
 			if (existing) {
 				collisions.push({
 					oldId: sourceId,
-					oldRef: toRef(existing.tagName, existing.id),
+					oldRef: existing,
 					forkRef: toRef(clone.record.tagName, clone.record.id),
 					forkedId: targetId,
 				})
@@ -200,8 +217,7 @@ export async function importTypes(
 	const recordsToRemap: Scl.Ref<Scl.ElementsOf>[] = cloneMappings.map((mapping) => mapping.target)
 	for (const root of clonedRoots) {
 		tx.progress.nextStep('Repointing references…')
-		const tree = await tx.getTree(root)
-		if (tree) collectRefs(tree, recordsToRemap)
+		recordsToRemap.push(...(cloneRecords.get(root.id ?? '') ?? []))
 	}
 	await applyTypeIdRemap(tx, { records: recordsToRemap, idRemap })
 	const leftTypes = await retargetFollowers(tx, { followers, idRemap })
@@ -218,6 +234,7 @@ export async function importTypes(
 			leftTypes,
 			idRemap,
 			referrerRecords: [...recordsToRemap, ...followers.map((follower) => follower.target)],
+			cloneRecords,
 			stats,
 		})
 		tx.perf.stop('scl::importTypes::reclaim')
@@ -351,14 +368,110 @@ function withRootId<GenericElement extends Scl.ElementsOf>(
 	return clone
 }
 
+/** Each source type with its id and, when it has one, its signature (the source read only, one cache for all). */
+async function signSourceTypes(params: {
+	sourceQuery: Core.Query<Config>
+	sourceTypes: readonly TypeRecord[]
+	signatureCache: Map<string, string>
+}): Promise<SignedSourceType[]> {
+	const { sourceQuery } = params
+	const signed: SignedSourceType[] = []
+	for (const source of params.sourceTypes) {
+		// dialecte-allow query-in-loop: the attribute of a record held, read as given (no store read), one per source type as before
+		const sourceId = await sourceQuery.getAttribute(source, { name: 'id' })
+		const signature = sourceId
+			? await elementSignature(sourceQuery, {
+					ref: { tagName: source.tagName, id: source.id },
+					resolveReferences: true,
+					signatureCache: params.signatureCache,
+				})
+			: undefined
+		signed.push({ source, sourceId, signature })
+	}
+	return signed
+}
+
+/**
+ * The target types holding the ids of the source types no equal target type reuses: one lookup per type tag over all
+ * its ids before the loop, then told of the types the loop clones and renames. An id the lookup found on several types,
+ * never asked, or the old or new id of a rename, is looked up alone where it is asked, as before.
+ */
+async function createTargetTypes(
+	tx: Core.Transaction<Config>,
+	params: { signed: readonly SignedSourceType[]; preExisting: ReadonlyMap<string, string> },
+): Promise<TargetTypes> {
+	const idsByTag = new Map<TypeRecord['tagName'], Set<string>>()
+	for (const { source, sourceId, signature } of params.signed) {
+		if (!sourceId || signature === undefined || params.preExisting.has(signature)) continue
+		idsByTag.set(source.tagName, new Set([...(idsByTag.get(source.tagName) ?? []), sourceId]))
+	}
+	const answered = new Map<string, Map<string, Scl.Ref<Scl.ElementsOf> | undefined>>()
+	for (const [tagName, ids] of idsByTag) {
+		// dialecte-allow query-in-loop: one lookup per type tag (four at most), every id of the tag at once
+		const matches = await tx.findByAttributes({ tagName, attributes: { id: [...ids] } })
+		answered.set(tagName, answersById({ ids, matches }))
+	}
+
+	function answer(params: {
+		tagName: string
+		id: string
+		ref: Scl.Ref<Scl.ElementsOf> | undefined
+	}): void {
+		const byId =
+			answered.get(params.tagName) ?? new Map<string, Scl.Ref<Scl.ElementsOf> | undefined>()
+		byId.set(params.id, params.ref)
+		answered.set(params.tagName, byId)
+	}
+
+	return {
+		async find({ tagName, id }) {
+			const byId = answered.get(tagName)
+			if (byId?.has(id)) return byId.get(id)
+			const [found] = await tx.findByAttributes({ tagName, attributes: { id } })
+			return found && toRef(found.tagName, found.id)
+		},
+		cloned({ tagName, id, ref }) {
+			answer({ tagName, id, ref })
+		},
+		renamed({ tagName, from, to }) {
+			const byId = answered.get(tagName)
+			const holder = byId?.get(from)
+			if (byId && holder) {
+				// the one type the lookup found holding the old id is the one renamed: none holds it now; the new id, found free
+				// by the lookup, is held by it now
+				byId.set(from, undefined)
+				if (byId.has(to) && byId.get(to) === undefined) byId.set(to, holder)
+				else byId.delete(to)
+				return
+			}
+			// the old id never asked, or held by several types (a malformed target): both looked up alone again
+			byId?.delete(from)
+			byId?.delete(to)
+		},
+	}
+}
+
+/** Each id asked answered with its one type, or none; an id several types hold is left out (looked up alone). */
+function answersById(params: {
+	ids: ReadonlySet<string>
+	matches: readonly Scl.TrackedRecord<TypeRecord['tagName']>[]
+}): Map<string, Scl.Ref<Scl.ElementsOf> | undefined> {
+	const byId = Map.groupBy(params.matches, function idOf(record) {
+		return readAttribute({ record, name: 'id' })
+	})
+	const answers = new Map<string, Scl.Ref<Scl.ElementsOf> | undefined>()
+	for (const id of params.ids) {
+		const holders = byId.get(id) ?? []
+		if (holders.length > 1) continue
+		const [holder] = holders
+		answers.set(id, holder && toRef(holder.tagName, holder.id))
+	}
+	return answers
+}
+
 /** Build a ref from a dynamic tag name (the per-tag Ref union needs the assertion). */
 function toRef(tagName: string, id: string): Scl.Ref<Scl.ElementsOf> {
 	return { tagName, id } as unknown as Scl.Ref<Scl.ElementsOf>
-}
-
-function collectRefs(node: Scl.TreeRecord<Scl.ElementsOf>, out: Scl.Ref<Scl.ElementsOf>[]): void {
-	out.push(toRef(node.tagName, node.id))
-	for (const child of node.tree ?? []) collectRefs(child, out)
 }
 
 /**
@@ -376,10 +489,12 @@ async function reclaimSupersededTypes(
 		leftTypes: LostTypeNames
 		idRemap: Map<string, string>
 		referrerRecords: Scl.Ref<Scl.ElementsOf>[]
+		/** The records of each clone, by the id of its root. */
+		cloneRecords: ReadonlyMap<string, readonly Scl.Ref<Scl.ElementsOf>[]>
 		stats: ImportTypesStats
 	},
 ): Promise<void> {
-	const { collisions, leftTypes, idRemap, referrerRecords, stats } = params
+	const { collisions, leftTypes, idRemap, referrerRecords, cloneRecords, stats } = params
 
 	const freedOldIds = await pruneDeadSupersededTypes(tx, { collisions, leftTypes })
 
@@ -403,10 +518,7 @@ async function reclaimSupersededTypes(
 	// Repoint everything that pointed at a fork's hashed id (cloned instances and the
 	// forked types' own child refs) to the reclaimed original id.
 	const records = [...referrerRecords]
-	for (const root of reclaimedRoots) {
-		const tree = await tx.getTree(root)
-		if (tree) collectRefs(tree, records)
-	}
+	for (const root of reclaimedRoots) records.push(...(cloneRecords.get(root.id ?? '') ?? []))
 	await applyTypeIdRemap(tx, { records, idRemap: reclaimMap })
 }
 
@@ -446,6 +558,12 @@ async function retargetFollowers(
 ): Promise<LostTypeNames> {
 	const { followers, idRemap } = params
 	const left = new Map<string, TypeIdTarget[]>()
+	// read together: each follower below is then read from the transaction, its earlier updates seen
+	await tx.getRecords(
+		followers.map(function targetOf(follower) {
+			return follower.target as Scl.Ref<Scl.ElementsOf>
+		}),
+	)
 	for (const { source, target } of followers) {
 		const record = await tx.getRecord(target)
 		if (!record) continue

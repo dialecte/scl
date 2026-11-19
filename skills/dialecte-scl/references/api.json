@@ -807,7 +807,7 @@
 				"remove or clear references whose target is gone",
 				"fix orphaned references"
 			],
-			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/orphan-uuid-refs.ts:14",
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/orphan-uuid-refs.ts:26",
 			"example": "await tx.cleanUp.orphanUuidRefs()"
 		},
 		{
@@ -884,7 +884,7 @@
 				"import a type closure with dedup and id collision handling",
 				"merge DataTypeTemplates"
 			],
-			"declaredAt": "src/v2019C1/extensions/data-model/transaction/import-types.ts:77"
+			"declaredAt": "src/v2019C1/extensions/data-model/transaction/import-types.ts:79"
 		},
 		{
 			"path": "tx.dataModel.unlockLNode",

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The target's one LNode follows the source's, naming an old type of its own. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-t">
+    <Header id="target" dev:db-id="header-t"/>
+    <Substation name="S1" dev:db-id="sub-t">
+        <LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="OLD" dev:db-id="t-lnode-1"/>
+    </Substation>
+    <DataTypeTemplates dev:db-id="dtt-t">
+        <LNodeType id="OLD" lnClass="XCBR" dev:db-id="t-lnt-old"/>
+    </DataTypeTemplates>
+</SCL>

@@ -87,3 +87,25 @@ export type ReusedFork = {
 	sourceId: string
 	forkId: string
 }
+
+/**
+ * The target type holding each source id, as a lookup of that id at that point of the loop would answer: looked up
+ * before the loop, told of the types the loop clones and renames.
+ */
+export type TargetTypes = {
+	find(params: {
+		tagName: TypeRecord['tagName']
+		id: string
+	}): Promise<Scl.Ref<Scl.ElementsOf> | undefined>
+	/** A type the loop cloned under `id`. */
+	cloned(params: { tagName: string; id: string; ref: Scl.Ref<Scl.ElementsOf> }): void
+	/** A type the loop renamed from `from` to `to`: both ids are looked up again where asked. */
+	renamed(params: { tagName: string; from: string; to: string }): void
+}
+
+/** A source type with its id (empty or absent when it has none) and its signature (when it has an id). */
+export type SignedSourceType = {
+	source: TypeRecord
+	sourceId: string | undefined
+	signature: string | undefined
+}

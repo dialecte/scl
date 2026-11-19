@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" version="2007" revision="C" release="5" dev:db-id="scl">
+    <Header id="T" dev:db-id="header"/>
+    <Substation name="S1" dev:db-id="sub">
+        <VoltageLevel name="V1" dev:db-id="vl">
+            <Bay name="B1" dev:db-id="bay">
+                <LNode iedName="None" lnClass="PTRC" lnInst="1" uuid="lnode-uuid-1" dev:db-id="ptrc"/>
+                <LNode iedName="None" lnClass="XCBR" lnInst="1" dev:db-id="xcbr">
+                    <Private type="eIEC61850-6-100" dev:db-id="xcbr-private">
+                        <eIEC61850-6-100:LNodeOutputs dev:db-id="outputs">
+                            <eIEC61850-6-100:ControlRef output="TripCmd" controlled="S1/V1/B1/PTRC1" controlledLNodeUuid="lnode-uuid-1" controlledDoName="Tr" resourceName="S1/B1/PR1" resourceUuid="missing-resource-uuid" dev:db-id="cr-1"/>
+                            <eIEC61850-6-100:ControlRef output="Op" controlled="S1/V1/B1/GONE1" controlledLNodeUuid="gone-lnode-uuid" controlledDoName="Op" dev:db-id="cr-2"/>
+                            <eIEC61850-6-100:ControlRef output="Cl" controlled="S1/V1/B1/PTRC1" controlledLNodeUuid="lnode-uuid-1" controlledDoName="Cl" dev:db-id="cr-3"/>
+                        </eIEC61850-6-100:LNodeOutputs>
+                    </Private>
+                </LNode>
+                <Function name="F1" uuid="f1-uuid" dev:db-id="f1"/>
+            </Bay>
+        </VoltageLevel>
+        <Private type="eIEC61850-6-100" dev:db-id="sub-private">
+            <eIEC61850-6-100:AllocationRole name="AR1" dev:db-id="ar1">
+                <eIEC61850-6-100:FunctionRef function="S1/V1/B1/F1" functionUuid="f1-uuid" dev:db-id="fref-a"/>
+                <eIEC61850-6-100:FunctionRef function="S1/V1/B1/F1" functionUuid="f1-uuid" dev:db-id="fref-b"/>
+                <eIEC61850-6-100:FunctionRef function="S1/Gone" functionUuid="gone-uuid" dev:db-id="fref-c"/>
+                <eIEC61850-6-100:FunctionRef function="S1/Gone" functionUuid="gone-uuid" dev:db-id="fref-d"/>
+            </eIEC61850-6-100:AllocationRole>
+        </Private>
+    </Substation>
+</SCL>
