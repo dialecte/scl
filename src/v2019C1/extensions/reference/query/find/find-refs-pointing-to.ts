@@ -37,45 +37,67 @@ export async function findRefsPointingTo(
 	},
 ): Promise<ResolvedReference[]> {
 	const { target, containerTagName } = params
+	const referrers = await findReferrers(query, { target })
+	return withContainers(query, { referrers, containerTagName })
+}
 
-	const targetRecord = await query.getRecord(target)
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** The records referencing the target: type-id referrers, or uuid referrers then the data following an LN. */
+async function findReferrers(
+	query: Core.Query<Config>,
+	params: { target: Scl.Ref<Scl.ElementsOf> },
+): Promise<Scl.TrackedRecord<Scl.ElementsOf>[]> {
+	const targetRecord = await query.getRecord(params.target)
 	if (!targetRecord) return []
 
-	if (isTypeIdTarget(targetRecord.tagName)) {
-		return findTypeIdReferrers(query, targetRecord, containerTagName)
-	}
+	if (isTypeIdTarget(targetRecord.tagName)) return findTypeIdReferrers(query, targetRecord)
 
-	const uuidReferrers = await findUuidReferrers(query, targetRecord, containerTagName)
+	const uuidReferrers = await findUuidReferrers(query, targetRecord)
 	if (targetRecord.tagName !== 'LN' && targetRecord.tagName !== 'LN0') return uuidReferrers
 
 	const following = await findMappedDataFollowingLn(query, {
 		ln: targetRecord as Scl.TrackedRecord<'LN' | 'LN0'>,
 	})
-	const defaultReferrers: ResolvedReference[] = []
-	for (const ref of following) {
-		const container = containerTagName
-			? await findAncestorByTagName(query, ref, containerTagName)
-			: undefined
-		defaultReferrers.push({ ref, container })
-	}
-	return [...uuidReferrers, ...defaultReferrers]
+	return [...uuidReferrers, ...following]
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+/**
+ * Each referrer with its nearest ancestor of `containerTagName`, the ancestors of all referrers read in one
+ * `findAncestorsOfEach` (one read per level), stopping at that tag.
+ */
+async function withContainers(
+	query: Core.Query<Config>,
+	params: {
+		referrers: Scl.TrackedRecord<Scl.ElementsOf>[]
+		containerTagName?: Scl.ElementsOf
+	},
+): Promise<ResolvedReference[]> {
+	const { referrers, containerTagName } = params
+	if (!containerTagName || referrers.length === 0) {
+		return referrers.map(function withoutContainer(ref) {
+			return { ref, container: undefined }
+		})
+	}
+	const ancestries = await query.findAncestorsOfEach(referrers, { stopAtTagName: containerTagName })
+	return referrers.map(function withContainer(ref, index) {
+		const container = ancestries[index]?.find(function isContainer(ancestor) {
+			return ancestor.tagName === containerTagName
+		})
+		return { ref, container }
+	})
+}
 
 /** Referrers by a uuid attribute (uuid pairs and tuple references), matched on the target `uuid`. */
 async function findUuidReferrers(
 	query: Core.Query<Config>,
 	targetRecord: Scl.TrackedRecord<Scl.ElementsOf>,
-	containerTagName?: Scl.ElementsOf,
-): Promise<ResolvedReference[]> {
+): Promise<Scl.TrackedRecord<Scl.ElementsOf>[]> {
 	const uuid = readAttribute({ record: targetRecord, name: 'uuid' })
 	if (!uuid) return []
 
 	const entries = UUID_REFERRERS_BY_TARGET.get(targetRecord.tagName) ?? []
-	if (entries.length === 0) return []
-
-	const results: ResolvedReference[] = []
+	const results: Scl.TrackedRecord<Scl.ElementsOf>[] = []
 
 	for (const entry of entries) {
 		if (!isElementOf(entry.refTagName, SCL_DIALECTE_CONFIG)) continue
@@ -84,13 +106,7 @@ async function findUuidReferrers(
 			tagName: entry.refTagName as Scl.ElementsOf,
 			attributes: { [entry.uuidAttr]: uuid },
 		})
-
-		for (const ref of refRecords) {
-			const container = containerTagName
-				? await findAncestorByTagName(query, ref, containerTagName)
-				: undefined
-			results.push({ ref, container })
-		}
+		results.push(...refRecords)
 	}
 
 	return results
@@ -100,13 +116,12 @@ async function findUuidReferrers(
 async function findTypeIdReferrers(
 	query: Core.Query<Config>,
 	targetRecord: Scl.TrackedRecord<Scl.ElementsOf>,
-	containerTagName?: Scl.ElementsOf,
-): Promise<ResolvedReference[]> {
+): Promise<Scl.TrackedRecord<Scl.ElementsOf>[]> {
 	const id = readAttribute({ record: targetRecord, name: 'id' })
 	if (!id) return []
 
 	const referrers = TYPE_ID_REFERRERS_BY_TARGET.get(targetRecord.tagName as TypeIdTarget) ?? []
-	const results: ResolvedReference[] = []
+	const results: Scl.TrackedRecord<Scl.ElementsOf>[] = []
 
 	for (const referrer of referrers) {
 		if (!isElementOf(referrer.refTagName, SCL_DIALECTE_CONFIG)) continue
@@ -115,13 +130,8 @@ async function findTypeIdReferrers(
 			tagName: referrer.refTagName as Scl.ElementsOf,
 			attributes: { [referrer.attribute]: id },
 		})
-
 		for (const ref of refRecords) {
-			if (!matchesWhen(ref, referrer)) continue
-			const container = containerTagName
-				? await findAncestorByTagName(query, ref, containerTagName)
-				: undefined
-			results.push({ ref, container })
+			if (matchesWhen({ ref, referrer })) results.push(ref)
 		}
 	}
 
@@ -129,17 +139,12 @@ async function findTypeIdReferrers(
 }
 
 /** Honour a referrer's optional discriminator (e.g. DA.bType === 'Enum'). */
-function matchesWhen(ref: Scl.TrackedRecord<Scl.ElementsOf>, referrer: TypeIdReferrer): boolean {
+function matchesWhen(params: {
+	ref: Scl.TrackedRecord<Scl.ElementsOf>
+	referrer: TypeIdReferrer
+}): boolean {
+	const { ref, referrer } = params
 	if (!referrer.when) return true
 	const value = readAttribute({ record: ref, name: referrer.when.attribute, defaults: 'none' })
 	return value === referrer.when.equals
-}
-
-async function findAncestorByTagName(
-	query: Core.Query<Config>,
-	record: Scl.TrackedRecord<Scl.ElementsOf>,
-	tagName: Scl.ElementsOf,
-): Promise<Scl.TrackedRecord<Scl.ElementsOf> | undefined> {
-	const ancestors = await query.findAncestors(record, { stopAtTagName: tagName })
-	return ancestors.find((ancestor) => ancestor.tagName === tagName)
 }

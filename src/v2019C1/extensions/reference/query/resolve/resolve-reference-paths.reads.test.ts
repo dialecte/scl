@@ -135,14 +135,14 @@ describe('resolveReferencePath - the store reads of one record', () => {
 			byPath: true,
 			expected: { storeReads: 12, recordsMoved: { inMemory: 13, local: 13 } },
 		},
-		'DOS dos-1.mappedDoName as imported → 26 reads, 25 records (main the same)': {
+		'DOS dos-1.mappedDoName as imported → 25 reads, 24 records (main 26, 25)': {
 			// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays
 			sourceXml: mixedXml,
 			allowIncoherentReferences: NAMING_NOTHING,
 			refs: [{ tagName: 'DOS', id: 'dos-1' }],
 			pathAttribute: 'mappedDoName',
 			byPath: false,
-			expected: { storeReads: 26, recordsMoved: { inMemory: 25, local: 25 } },
+			expected: { storeReads: 25, recordsMoved: { inMemory: 24, local: 24 } },
 		},
 		'InputVar iv-name.dataName by path → 20 reads, 38 records (main the same)': {
 			// the mixed fixture: every path kind, a stale uuid, twin and same-name targets in two Bays

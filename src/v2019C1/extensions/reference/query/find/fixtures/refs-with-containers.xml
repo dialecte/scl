@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" version="2007" revision="C" release="5" dev:db-id="scl-1">
+    <Header id="project" dev:db-id="header"/>
+    <Substation name="S1" dev:db-id="sub-1">
+        <VoltageLevel name="V1" dev:db-id="vl-1">
+            <Bay name="B1" dev:db-id="bay-1">
+                <LNode iedName="I1" ldInst="LD0" lnClass="XCBR" lnInst="1" lnType="XCBR_T" lnUuid="xcbr1-uuid" dev:db-id="lnode-bay"/>
+                <Function name="F1" dev:db-id="fn-1">
+                    <LNode iedName="I1" ldInst="LD0" lnClass="XCBR" lnInst="1" lnType="XCBR_T" lnUuid="xcbr1-uuid" dev:db-id="lnode-f1">
+                        <Private type="eIEC61850-6-100" dev:db-id="priv-f1">
+                            <eIEC61850-6-100:DOS name="Pos" dev:db-id="dos-pos">
+                                <eIEC61850-6-100:DAS name="stVal" dev:db-id="das-stval"/>
+                            </eIEC61850-6-100:DOS>
+                            <eIEC61850-6-100:DOS name="Beh" mappedLnUuid="xcbr1-uuid" dev:db-id="dos-beh"/>
+                        </Private>
+                    </LNode>
+                </Function>
+                <Function name="F2" dev:db-id="fn-2">
+                    <SubFunction name="SF1" dev:db-id="sf-1">
+                        <LNode iedName="I1" ldInst="LD0" lnClass="XCBR" lnInst="1" lnType="XCBR_T" lnUuid="xcbr1-uuid" dev:db-id="lnode-sf"/>
+                    </SubFunction>
+                </Function>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+    <IED name="I1" dev:db-id="ied-1">
+        <AccessPoint name="AP1" dev:db-id="ap-1">
+            <Server dev:db-id="srv-1">
+                <Authentication dev:db-id="auth-1"/>
+                <LDevice inst="LD0" dev:db-id="ld-1">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-1"/>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="xcbr1-uuid" dev:db-id="xcbr-1"/>
+                    <LN lnClass="XCBR" inst="2" lnType="XCBR_T" uuid="xcbr2-uuid" dev:db-id="xcbr-2"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="I2" dev:db-id="ied-2">
+        <AccessPoint name="AP1" dev:db-id="ap-2">
+            <Server dev:db-id="srv-2">
+                <Authentication dev:db-id="auth-2"/>
+                <LDevice inst="LD0" dev:db-id="ld-2">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" dev:db-id="ln0-2"/>
+                    <LN lnClass="XCBR" inst="1" lnType="XCBR_T" uuid="i2-xcbr1-uuid" dev:db-id="i2-xcbr-1"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="dtt">
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="lnt-xcbr">
+            <DO name="Pos" type="DPC_T" dev:db-id="do-pos"/>
+            <DO name="Beh" type="ENS_T" dev:db-id="do-beh"/>
+        </LNodeType>
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lnt-lln0">
+            <DO name="Beh" type="ENS_T" dev:db-id="do-lln0-beh"/>
+        </LNodeType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dot-dpc">
+            <DA name="stVal" bType="Dbpos" fc="ST" dev:db-id="da-dpc-stval"/>
+        </DOType>
+        <DOType id="ENS_T" cdc="ENS" dev:db-id="dot-ens">
+            <DA name="stVal" bType="Enum" type="Beh_E" fc="ST" dev:db-id="da-ens-stval"/>
+        </DOType>
+        <EnumType id="Beh_E" dev:db-id="et-beh">
+            <EnumVal ord="1" dev:db-id="ev-on">on</EnumVal>
+        </EnumType>
+    </DataTypeTemplates>
+</SCL>
