@@ -1,15 +1,14 @@
-import '@dialecte/core/sqlite'
 import sixBaysXml from './fixtures/six-bays-with-signals.xml?raw'
 import { search } from './search'
 
-import { createTestProject } from '@dialecte/core/test'
-import { describe, expect, it } from 'vitest'
+import { describe, expect } from 'vitest'
 
-import { SCL_DIALECTE } from '@/v2019C1/declaration.constants'
+import { runSclTestCases } from '@/v2019C1/test'
 import { countDocumentQueryReads } from '@/v2019C1/test/count-query-reads'
 
 import type { SearchParams } from './search.types'
 import type { Scl } from '@/v2019C1/config'
+import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
 
 /** The store calls that move records, counted by the dev perf counters. */
 const RECORDS_MOVED = [
@@ -32,9 +31,6 @@ const STORE_CALLS = [
 /** The query methods that read a record in hand without the store; left out of the calls. */
 const RECORD_READERS = new Set(['getAttributes', 'getAttribute'])
 
-/** The stores the reads are pinned on, each named explicitly (the runner's default store is one of them). */
-const STORES = ['inMemory', 'sqlite'] as const
-
 const THREE_TAGS: Scl.ElementsOf[] = ['Bay', 'LNode', 'SourceRef']
 
 /** What one search costs: the hits, the query calls by name, the store calls and the records they move. */
@@ -55,22 +51,16 @@ function sumOf(params: {
 	return total
 }
 
-/** One search on a fresh project of the six-bay fixture, on the store named, counted from the search's first read. */
+/** One search on the case's source document, counted from the search's first read. */
 async function costOf(params: {
-	store: (typeof STORES)[number]
+	source: SclTest.ActParams<SclTest.BaseXmlTestCase>['source']
 	search: SearchParams
 }): Promise<Cost> {
-	const opened = await createTestProject({
-		dialecte: SCL_DIALECTE,
-		sourceXml: sixBaysXml,
-		storage: { type: params.store },
-		dev: { perf: true },
-	})
-	const document = opened.source.document
-	const counted = countDocumentQueryReads(document.query)
-	document.perf.reset()
+	const { source } = params
+	const counted = countDocumentQueryReads(source.query)
+	source.perf.reset()
 	const hits = await search(counted.query, params.search)
-	const report = document.perf.report()
+	const report = source.perf.report()
 	const calls: Record<string, number> = {}
 	for (const { method } of counted.calls()) {
 		if (!RECORD_READERS.has(method)) calls[method] = (calls[method] ?? 0) + 1
@@ -89,21 +79,21 @@ async function costOf(params: {
  * Six bays, each with one LNode whose Private holds the SourceRefs `In(1)`-`In(3)`, the last one also `Close`.
  */
 describe('search - the reads', () => {
-	type Case = { name: string; search: SearchParams; expected: Cost }
+	type TestCase = SclTest.BaseXmlTestCase & { search: SearchParams; expected: Cost }
 
-	const cases: Case[] = [
-		{
-			name: 'an empty term → no read',
+	const testCases: SclTest.TestCases<TestCase> = {
+		'an empty term → no read': {
+			sourceXml: sixBaysXml,
 			search: { term: ' ', tagNames: THREE_TAGS },
 			expected: { hits: 0, calls: {}, storeCalls: 0, recordsMoved: 0 },
 		},
-		{
-			name: 'a limit of 0 → no read',
+		'a limit of 0 → no read': {
+			sourceXml: sixBaysXml,
 			search: { term: 'in', tagNames: THREE_TAGS, limit: 0 },
 			expected: { hits: 0, calls: {}, storeCalls: 0, recordsMoved: 0 },
 		},
-		{
-			name: 'no hit over three tags → the tags and the describer, no ancestor read',
+		'no hit over three tags → the tags and the describer, no ancestor read': {
+			sourceXml: sixBaysXml,
 			search: { term: 'busbar', tagNames: THREE_TAGS },
 			expected: {
 				hits: 0,
@@ -112,8 +102,8 @@ describe('search - the reads', () => {
 				recordsMoved: 56,
 			},
 		},
-		{
-			name: 'one Bay of one tag → one tag read, no describer read, one ancestor read per level',
+		'one Bay of one tag → one tag read, no describer read, one ancestor read per level': {
+			sourceXml: sixBaysXml,
 			search: { term: 'bay4', tagNames: ['Bay'] },
 			expected: {
 				hits: 1,
@@ -122,8 +112,8 @@ describe('search - the reads', () => {
 				recordsMoved: 9,
 			},
 		},
-		{
-			name: 'one SourceRef → the tag, the describer, the ancestors',
+		'one SourceRef → the tag, the describer, the ancestors': {
+			sourceXml: sixBaysXml,
 			search: { term: 'close', tagNames: ['SourceRef'] },
 			expected: {
 				hits: 1,
@@ -137,8 +127,8 @@ describe('search - the reads', () => {
 				recordsMoved: 51,
 			},
 		},
-		{
-			name: 'six SourceRefs at the same depth → the same calls as one',
+		'six SourceRefs at the same depth → the same calls as one': {
+			sourceXml: sixBaysXml,
 			search: { term: 'in(2', tagNames: ['SourceRef'] },
 			expected: {
 				hits: 6,
@@ -152,8 +142,8 @@ describe('search - the reads', () => {
 				recordsMoved: 72,
 			},
 		},
-		{
-			name: 'a tag given twice → read once',
+		'a tag given twice → read once': {
+			sourceXml: sixBaysXml,
 			search: { term: 'close', tagNames: ['SourceRef', 'SourceRef'] },
 			expected: {
 				hits: 1,
@@ -167,8 +157,8 @@ describe('search - the reads', () => {
 				recordsMoved: 51,
 			},
 		},
-		{
-			name: 'many hits of three tags → the calls of no hit, plus one ancestor read',
+		'many hits of three tags → the calls of no hit, plus one ancestor read': {
+			sourceXml: sixBaysXml,
 			search: { term: '1', tagNames: THREE_TAGS },
 			expected: {
 				hits: 8,
@@ -182,14 +172,14 @@ describe('search - the reads', () => {
 				recordsMoved: 84,
 			},
 		},
-	]
-
-	for (const store of STORES) {
-		for (const { name, search: params, expected } of cases) {
-			it(`${store}: ${name}`, async () => {
-				const cost = await costOf({ store, search: params })
-				expect(cost).toEqual(expected)
-			})
-		}
 	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		dev: { perf: true },
+		act: async ({ source, testCase }) => {
+			const cost = await costOf({ source, search: testCase.search })
+			expect(cost).toEqual(testCase.expected)
+		},
+	})
 })
