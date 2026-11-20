@@ -42,6 +42,13 @@ export const SPECIFICATION_LINK_TAGS: ReadonlySet<string> = new Set(['SourceRef'
 /** The data specifications of an LNode, whose mapping to the implementing logical node is no part of a specification. */
 export const MAPPING_DOCUMENTATION_TAGS = ['DOS', 'SDS', 'DAS'] as const
 
+/**
+ * What the process part never holds, whatever the options: the function categories, a classification of the
+ * project's functions, no part of what an IED is specified with (their subcategories and function references go with
+ * them).
+ */
+export const NEVER_EXPORTED_PROCESS_TAGS: ReadonlySet<string> = new Set(['FunctionCategory'])
+
 /** What an export option leaves out when it is `false`, by option. */
 export const PROCESS_OPTION_TAGS: ProcessOptionTags = {
 	applications: 'Application',
