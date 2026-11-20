@@ -120,7 +120,7 @@ describe('summary of a diff with references to deleted data outside its tree', (
 		'the breaker removed → the inputs of another IED counted with the tree': {
 			sourceXml: templateWithoutBreaker,
 			targetXml: project,
-			expected: { added: 0, removed: 2, modified: 2, kept: 0 },
+			expected: { added: 0, removed: 2, modified: 2, moved: 0, kept: 0 },
 		},
 	}
 

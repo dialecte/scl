@@ -237,7 +237,11 @@ async function renamedCandidates(
 	for (const group of params.groups) {
 		for (const node of [group.primary, ...group.companions]) {
 			const record = node.instanceRef?.id ? nodesById.get(node.instanceRef.id) : undefined
-			if (!record || node.change !== 'modified' || !renames({ record, node })) continue
+			if (!record) continue
+			// a moved element takes another path, as a renamed one does: what names it below follows
+			const renamed =
+				node.change === 'moved' || (node.change === 'modified' && renames({ record, node }))
+			if (!renamed) continue
 			for (const below of flatten(record)) {
 				const uuid = readAttribute({ record: below, name: 'uuid', defaults: 'none' })
 				if (uuid && !renamedBy.has(uuid)) renamedBy.set(uuid, group.id)

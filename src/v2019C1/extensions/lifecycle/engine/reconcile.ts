@@ -3,6 +3,7 @@ import { createConfRevBumpQueue, remapCopies, writeDataSetChange } from './data-
 import { findDeletedDataReferrers, writeDeletedDataReferrers } from './deleted-data-referrers'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
+import { findMovedInAdded, movableSourceUuids, topmostBelow, writeMoves } from './moved'
 import { pairByKeyOnLineageMiss } from './pair-by-key'
 import { createPairingMemo } from './pairing-memo'
 import { projectOwnedAttributes } from './project-owned-attributes'
@@ -15,6 +16,7 @@ import { compareText, readValueOwnership } from './value-ownership'
 import { visibleAttributes } from './visible-attributes'
 import { landingParent } from './wrapper'
 
+import { throwDialecteError } from '@dialecte/core'
 import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS } from '@/v2019C1/constants/reference-pairs'
@@ -36,6 +38,7 @@ import { readAttribute } from '@/v2019C1/helpers'
 import type { ConfRevBumpQueue } from './data-set-order.types'
 import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { ChildMatch, PinnedMatches } from './match-child.types'
+import type { PendingMove } from './moved.types'
 import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { ReconcileAdditions, ReconcileResult } from './reconcile.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
@@ -217,6 +220,7 @@ export async function reconcile(
 		sourceTree,
 		instanceTree,
 		sourceUuids,
+		movable: movableSourceUuids({ sourceTree, omit, notSelected }),
 		matchKey,
 		removalBase: params.removalBase,
 		typeComparison: typeFollowing.comparison,
@@ -261,6 +265,7 @@ export async function reconcile(
 	}
 	// what an addition leaves colliding on a key nothing can change, read again once the removals are written
 	const pendingCollisions: FindIdentityCollisionParams[] = []
+	const moves: PendingMove[] = []
 	await reconcileChildren(tx, {
 		sourceQuery,
 		sourceNode: sourceTree,
@@ -295,7 +300,10 @@ export async function reconcile(
 		contributedChildren: params.contributedChildren,
 		landedOn,
 		sourceIsProject: params.sourceIsProject ?? false,
+		moves,
 	})
+	// the moves, once what the walk adds is there to move into, before the removals: a removed parent never takes them
+	await writeMoves(tx, { moves })
 
 	// removed from the template: delete instance elements whose lineage is gone. In a project-owned
 	// element, an identified child the source does not know is another template's or the project's.
@@ -303,6 +311,7 @@ export async function reconcile(
 		await deleteRemoved(tx, {
 			instanceNode: instanceTree,
 			sourceUuids,
+			movedIds: new Set(moves.map((move) => move.instance.id)),
 			pairedByKey: new Set(byKey.pinnedMatches.values()),
 			accepted,
 			matchKey,
@@ -389,6 +398,8 @@ async function reconcileChildren(
 		contributedChildren: ReadonlyMap<string, ReadonlySet<string>> | undefined
 		/** Accumulates, on a contribution, where its identified source elements landed. */
 		landedOn: RedirectMapping[]
+		/** The accepted moves the walk finds, written once it is done (`writeMoves`). */
+		moves: PendingMove[]
 		sourceIsProject: boolean
 	},
 ): Promise<void> {
@@ -532,7 +543,19 @@ async function reconcileChildren(
 				contributedChildren: params.contributedChildren,
 				landedOn: params.landedOn,
 				sourceIsProject: params.sourceIsProject,
+				moves: params.moves,
 			})
+			// paired with an element under another parent: the source moved it here, written after the walk
+			if (
+				!instanceParent.tree.some((child) => child.id === matched.id) &&
+				(!accepted || accepted.sourceIds.has(sourceChild.id))
+			) {
+				// dialecte-allow argument-mutation: the walk's accumulator of accepted moves, as `added`
+				params.moves.push({
+					instance: matched,
+					parent: toRef(instanceParent) as Scl.Ref<Scl.ElementsOf>,
+				})
+			}
 			continue
 		}
 
@@ -544,6 +567,17 @@ async function reconcileChildren(
 
 		// what the source holds in a wrapper lands in the instance's wrapper of its type
 		const targetParent = await landingParent(tx, { sourceQuery, sourceChild, instanceParent })
+		// what the added subtree holds that the instance holds elsewhere moves into the clone, never cloned twice
+		const movedInside = findMovedInAdded({
+			node: sourceChild,
+			index,
+			omit,
+			notSelected: params.notSelected,
+		})
+		const leaveOut =
+			movedInside.length > 0
+				? new Set([...(params.notSelected ?? []), ...movedInside.map((moved) => moved.source.id)])
+				: params.notSelected
 		const { cloneMappings } = await deep(tx, {
 			sourceQuery,
 			ref: toRef(sourceChild) as unknown as Scl.Ref<Scl.ElementsOf>,
@@ -551,8 +585,45 @@ async function reconcileChildren(
 			...(omit ? { omit: [...omit] as OmitEntry<Config>[] } : {}),
 			// a contribution pours shared elements and a level's own content: the types are the placement's to bring
 			withTypes: params.contributeOnly ? false : { keepNameFrom: keepNameTypesFrom },
-			leaveOut: params.notSelected,
+			leaveOut,
 		})
+		for (const moved of movedInside) {
+			if (accepted && !accepted.sourceIds.has(moved.source.id)) continue
+			const parent = cloneMappings.find(
+				(mapping) => mapping.source.id === moved.sourceParent.id,
+			)?.target
+			// the move depends on the addition of its parent: the decisions are checked before anything is written
+			if (!parent) {
+				return throwDialecteError('ASSERTION_FAILED', {
+					detail: `the move of ${moved.instance.tagName} "${moved.instance.id}" found no clone of its new parent ${moved.sourceParent.tagName} "${moved.sourceParent.id}"`,
+				})
+			}
+			// what the moved element itself changes is written as for any element paired in place: a rename riding on the
+			// move, its text, what it holds
+			await updateMatchedAttributes(tx, {
+				sourceQuery,
+				instanceRecord: moved.instance,
+				sourceNode: moved.source,
+				accepted,
+				overrides,
+				namesFollow,
+				typeFollowing: params.typeFollowing,
+				valueOwnership: params.valueOwnership,
+			})
+			await reconcileTextWrappers(tx, {
+				sourceQuery,
+				sourceNode: moved.source,
+				instanceRecord: moved.instance,
+				accepted,
+			})
+			await reconcileChildren(tx, {
+				...params,
+				sourceNode: moved.source,
+				instanceParent: moved.instance,
+			})
+			// dialecte-allow argument-mutation: the walk's accumulator of accepted moves, as `added`
+			params.moves.push({ instance: moved.instance, parent: parent as Scl.Ref<Scl.ElementsOf> })
+		}
 		// keep the clone mappings of the whole grafted subtree (ids are stable; the collision
 		// bump below only edits the added root's name, never its id).
 		added.push(...cloneMappings)
@@ -687,6 +758,8 @@ async function deleteRemoved(
 		omit: readonly string[] | undefined
 		/** The instance elements the key pass paired: held by the template whatever their lineage says. */
 		pairedByKey: ReadonlySet<string>
+		/** The instance elements the walk moved: out of what a removal takes, their own removals collected. */
+		movedIds: ReadonlySet<string>
 	},
 ): Promise<void> {
 	const { instanceNode, sourceUuids, accepted, matchKey, removalBase, omit } = params
@@ -699,6 +772,7 @@ async function deleteRemoved(
 		matchKey,
 		removalBase,
 		omit,
+		movedIds: params.movedIds,
 		out: toDelete,
 	})
 
@@ -720,10 +794,11 @@ async function collectRemoved(
 		matchKey: MatchKey
 		removalBase: RemovalBase
 		omit: readonly string[] | undefined
+		movedIds: ReadonlySet<string>
 		out: AnyTreeRecord[]
 	},
 ): Promise<void> {
-	const { node, sourceUuids, accepted, matchKey, removalBase, omit, out } = params
+	const { node, sourceUuids, accepted, matchKey, removalBase, omit, movedIds, out } = params
 	// a boundary subtree is owned by another pass - do not delete or descend into it
 	if (omit?.includes(node.tagName)) return
 	const lineage = await tx.any.getAttribute(node, { name: matchKey })
@@ -737,21 +812,16 @@ async function collectRemoved(
 		: 'still-held'
 	// one atomic group, its subtree cascading with it (do not descend): a removal is written unless it was
 	// skipped, an element of the project's own only when its removal was accepted
-	if (unmatched !== 'still-held') {
-		if (acceptsRemoval({ change: unmatched, id: node.id, accepted })) out.push(node)
-		return
-	}
-	for (const child of node.tree) {
-		await collectRemoved(tx, {
-			node: child,
-			sourceUuids,
-			pairedByKey: params.pairedByKey,
-			accepted,
-			matchKey,
-			removalBase,
-			omit,
-			out,
-		})
+	// what the walk moved out of it left before the delete: its own removals are collected where it now is
+	const below =
+		unmatched === 'still-held'
+			? node.tree
+			: topmostBelow({ node, picks: (child) => movedIds.has(child.id) })
+	if (unmatched !== 'still-held' && acceptsRemoval({ change: unmatched, id: node.id, accepted }))
+		// dialecte-allow argument-mutation: the walk's accumulator of the removals to write, filled as it walks
+		out.push(node)
+	for (const child of below) {
+		await collectRemoved(tx, { ...params, node: child })
 	}
 }
 

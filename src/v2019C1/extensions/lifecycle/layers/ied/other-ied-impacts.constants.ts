@@ -6,10 +6,17 @@ import type { DiffChange, OtherIedImpact } from '@/v2019C1/extensions/lifecycle/
 /** The input that subscribes to data a control block sends. */
 export const SUBSCRIBED_INPUT_TAG = 'ExtRef'
 
-/** What a reference waiting for a decision on data the update deletes undergoes in another IED, by its change. */
-export const IMPACT_BY_CHANGE: Partial<Record<DiffChange, OtherIedImpact['effect']>> = {
+/**
+ * What a reference waiting for a decision on data the update deletes undergoes in another IED, by its change; none for
+ * a change that does not write it. Every change named, so a new one is decided here.
+ */
+export const IMPACT_BY_CHANGE: Record<DiffChange, OtherIedImpact['effect'] | undefined> = {
+	added: undefined,
 	removed: 'deleted',
 	modified: 'cleared',
+	moved: undefined,
+	unchanged: undefined,
+	'target-only': undefined,
 }
 
 /** The changes that take an entry out of its data set once accepted: removed, or the project's kept unless removed. */

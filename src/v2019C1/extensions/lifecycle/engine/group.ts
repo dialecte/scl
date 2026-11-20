@@ -71,7 +71,7 @@ function collectGroups(params: {
 /**
  * The changed descendants of a node, in `out`. With `apart`, an element the project added (`target-only`) is set
  * there instead, with what it holds: a group of its own; so is a change waiting for a decision (`requiresDecision`),
- * and an element of `apartTags` whose parent stays (`modified` or `unchanged`), with what it holds: a part of the root
+ * a moved element, and an element of `apartTags` whose parent stays (`modified`, `moved` or `unchanged`), with what it holds: a part of the root
  * decided on its own, its own changes grouped from it (see `GROUPED_APART_BELOW`). With `waitingOnly` (below an element the project added, which takes what it
  * holds), only a change waiting for a decision is set apart.
  */
@@ -83,12 +83,17 @@ export function collectChangedDescendants(params: {
 	apartTags?: ReadonlySet<string>
 }): void {
 	const { node, out, apart, waitingOnly, apartTags } = params
-	const parentStays = node.change === 'modified' || node.change === 'unchanged'
+	const parentStays =
+		node.change === 'modified' || node.change === 'moved' || node.change === 'unchanged'
 	for (const child of node.children) {
 		// an element staying holds its own changes too: they are grouped from it, as below a root that stays
 		const decidedApart = !waitingOnly && parentStays && apartTags?.has(child.tagName)
+		// a move is decided on its own wherever it lands, an added parent included
 		const ownGroup =
-			child.requiresDecision || (!waitingOnly && child.change === 'target-only') || decidedApart
+			child.requiresDecision ||
+			child.change === 'moved' ||
+			(!waitingOnly && child.change === 'target-only') ||
+			decidedApart
 		if (apart && ownGroup) {
 			apart.push(child)
 			continue

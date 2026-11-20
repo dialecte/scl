@@ -241,9 +241,11 @@ before failing: the transaction is rolled back, and the report points at nothing
 
 ```ts
 type DiffNode = {
-	change: 'added' | 'removed' | 'modified' | 'unchanged' | 'target-only'
-	sourceRef?: AnyRefOrRecord // template element (added / modified / unchanged)
-	instanceRef?: AnyRefOrRecord // existing element (removed / modified / unchanged)
+	change: 'added' | 'removed' | 'modified' | 'moved' | 'unchanged' | 'target-only'
+	sourceRef?: AnyRefOrRecord // template element (added / modified / moved / unchanged)
+	instanceRef?: AnyRefOrRecord // existing element (removed / modified / moved / unchanged)
+	movedFrom?: AnyRefOrRecord // a moved element's parent now (moved)
+	movedTo?: AnyRefOrRecord // the parent it moves under: the instance element, or the source parent when that parent is added (moved)
 	appliedRef?: AnyRefOrRecord // what it became after apply (filled by apply; absent on a pure report)
 	attributeChanges?: AttributeChange[] // what an accepted update writes (modified)
 	typeChanges?: AttributeChange[] // the type references whose type an accepted update brings (modified)
@@ -279,6 +281,21 @@ group carries its primary change plus the companions that travel with it, so a p
 apply is impossible. An element the project added (`target-only`) is never a companion: below a change of the template it
 is a group of its own, suggested `skip`, so accepting the change never removes it.
 
+An element the source holds under another parent than the instance does is **moved**: one change, `moved`, whatever the
+scenario (an instance's lineage or a fork's uuid pairs it), never added beside itself nor left where it was. Its node
+names where it is (`movedFrom`) and where it goes (`movedTo`), and carries its own attribute changes (a rename on top of
+the move is the same change); it is a group of its own wherever it lands, suggested `accept`. A move into a parent the
+update adds depends on that parent's group (`dependsOn`), and the removal of a parent the moved element still sits in
+depends on the move: accepting the removal with the move skipped is refused with `DECISION_DEPENDENCY_SKIPPED`. A move
+whose referrers in another IED follow its new path waits for a decision (`changes-another-ied`), those referrers listed
+`renamed` in `otherIedImpacts`. Accepted, `apply` writes it with `tx.move` once what the update adds is there and before
+what it removes, the record keeping its id; what the moved element itself changes (a rename, its text, what it holds)
+is written as for an element paired in place, a move into an added parent included; the commit's steps make what names
+it follow. Skipped, nothing is written: the element stays where it was, and so do its attributes. A removal never takes
+what the update moves out of the removed element: neither the report (its removal side effects, the references to its
+data waiting for a decision) nor the apply reads the moved element as removed. The report's `summary` counts each move
+in `moved`.
+
 An IED's data-flow reference the newer template lacks (`FCDA`, `ClientLN`, `IEDName`, `Association`, `KDC`,
 `ServerAt`) is listed the same way, whether the project added it or the template dropped it: nothing tells the two
 apart, so it stays unless its removal is accepted. Any other reference without a uuid of its own the template lacks
@@ -287,7 +304,7 @@ apart, so it stays unless its removal is accepted. Any other reference without a
 ```ts
 type DecisionGroup = {
 	id: string // key in the decisions map
-	change: 'added' | 'removed' | 'modified' | 'target-only'
+	change: 'added' | 'removed' | 'modified' | 'moved' | 'target-only'
 	title: string
 	primary: DiffNode
 	companions: DiffNode[] // read-only detail — travel with the primary, never toggled alone
@@ -881,7 +898,7 @@ The project element is the one carrying the source element's lineage. When the t
 type DiffReport = {
 	instances: ReportInstance[] // one entry per matched instance (both layers for an ASD)
 	needsDecisions: boolean
-	summary: { added: number; removed: number; modified: number; kept: number } // kept: changes listed, not applied
+	summary: { added: number; removed: number; modified: number; moved: number; kept: number } // moved: elements put under another parent; kept: changes listed, not applied
 	mappings: ReportMapping[] // where each shared source element lands — one entry per source element
 	templateInstances: AnyRefOrRecord[] // the instances of the template itself the report covers; none on a first placement
 	offLevel?: { templateLevel: string; startedFrom: string } // set when started above the level the template was made for

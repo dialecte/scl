@@ -72,7 +72,7 @@ describe('diff of the tuple references of an instance', () => {
 						</DataTypeTemplates>
 					</SCL>
 				`,
-				expectedSummary: { added: 0, removed: 0, modified: 0, kept: 0 },
+				expectedSummary: { added: 0, removed: 0, modified: 0, moved: 0, kept: 0 },
 			},
 	}
 

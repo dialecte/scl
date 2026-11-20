@@ -47,7 +47,7 @@ function reportOf(instance: Pick<ReportInstance, 'tree' | 'groups'>): DiffReport
 	return {
 		instances: [{ ...instance, title: 'instance', linked: true, upToDate: false, mappings: [] }],
 		needsDecisions: true,
-		summary: { added: 0, removed: 0, modified: 0, kept: 0 },
+		summary: { added: 0, removed: 0, modified: 0, moved: 0, kept: 0 },
 		mappings: [],
 		templateInstances: [],
 	}

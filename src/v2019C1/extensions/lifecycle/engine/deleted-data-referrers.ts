@@ -1,4 +1,5 @@
 import { DATA_REFERRER_TAGS, LOGICAL_NODE_TAGS } from './deleted-data-referrers.constants'
+import { movedOut, removedElementsOf, topmostBelow } from './moved'
 import { classifyUnmatched } from './removal-base'
 import { typeChangesOf } from './type-change'
 import { readValueTypes } from './value-ownership'
@@ -44,6 +45,8 @@ export async function findDeletedDataReferrers(
 		sourceTree: AnyTreeRecord
 		instanceTree: AnyTreeRecord
 		sourceUuids: ReadonlySet<string>
+		/** The lineages the walk can pair: what carries one below a removed element moves out of it. */
+		movable: ReadonlySet<string>
 		matchKey: MatchKey
 		removalBase: RemovalBase
 		typeComparison: TypeComparison
@@ -97,6 +100,7 @@ async function readDeletedTargets(
 		sourceTree: AnyTreeRecord
 		instanceTree: AnyTreeRecord
 		sourceUuids: ReadonlySet<string>
+		movable: ReadonlySet<string>
 		matchKey: MatchKey
 		removalBase: RemovalBase
 		typeComparison: TypeComparison
@@ -109,7 +113,10 @@ async function readDeletedTargets(
 		}),
 	)
 	const { removedRoots, kept } = splitRemoved({ node: params.instanceTree, params })
-	const removedNodes = removedRoots.flatMap(flatten)
+	// what moved out of a removed element is the source's still, written elsewhere: its data is not deleted
+	const removedNodes = removedRoots.flatMap((node) =>
+		removedElementsOf({ node, matchKey: params.matchKey, movable: params.movable }),
+	)
 	const removed = new Map(
 		removedNodes.flatMap((node): [string, string][] => {
 			if (!LOGICAL_NODE_TAGS.has(node.tagName) && !CONF_REV_CONTROL_TAGS.has(node.tagName))
@@ -158,10 +165,15 @@ async function retypedEntry(
  */
 function splitRemoved(params: {
 	node: AnyTreeRecord
-	params: { sourceUuids: ReadonlySet<string>; matchKey: MatchKey; removalBase: RemovalBase }
+	params: {
+		sourceUuids: ReadonlySet<string>
+		movable: ReadonlySet<string>
+		matchKey: MatchKey
+		removalBase: RemovalBase
+	}
 }): { removedRoots: AnyTreeRecord[]; kept: AnyTreeRecord[] } {
 	const { node } = params
-	const { sourceUuids, matchKey, removalBase } = params.params
+	const { sourceUuids, movable, matchKey, removalBase } = params.params
 	const lineage = readAttribute({ record: node, name: matchKey, defaults: 'none' })
 	const removed =
 		lineage !== '' &&
@@ -171,7 +183,17 @@ function splitRemoved(params: {
 			inSource: sourceUuids.has(lineage),
 			removalBase,
 		}) === 'removed'
-	if (removed) return { removedRoots: [node], kept: [] }
+	if (removed) {
+		// what moves out of the removed element is judged on its own: kept, retyped, or holding removals of its own
+		const movedOutOf = topmostBelow({
+			node,
+			picks: (child) => movedOut({ node: child, matchKey, movable }),
+		}).map((child) => splitRemoved({ node: child, params: params.params }))
+		return {
+			removedRoots: [node, ...movedOutOf.flatMap((part) => part.removedRoots)],
+			kept: movedOutOf.flatMap((part) => part.kept),
+		}
+	}
 	const below = node.tree.map((child) => splitRemoved({ node: child, params: params.params }))
 	return {
 		removedRoots: below.flatMap((part) => part.removedRoots),

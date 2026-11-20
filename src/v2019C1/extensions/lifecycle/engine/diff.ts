@@ -9,6 +9,14 @@ import { markIdentityCollisions } from './identity-collisions'
 import { instanceTagOf } from './instance-tag'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
+import {
+	findMovedInAdded,
+	linkMoveDependencies,
+	movableSourceUuids,
+	replaceAdded,
+	withoutMovedOut,
+	withTreeParents,
+} from './moved'
 import { pairByKeyOnLineageMiss } from './pair-by-key'
 import { createPairingMemo } from './pairing-memo'
 import { projectOwnedAttributes } from './project-owned-attributes'
@@ -232,7 +240,7 @@ export async function diff(params: {
 		matchKey,
 		takeOver: diffPolicy.takeOver,
 	})
-	const root = await diffMatched({
+	const walked = await diffMatched({
 		sourceQuery,
 		targetQuery,
 		sourceNode: sourceTree,
@@ -266,6 +274,9 @@ export async function diff(params: {
 		placeholderLineages: params.placeholderLineages ?? new Set(),
 		sourceIsProject: params.sourceIsProject ?? false,
 	})
+	// a move's old parent named as the walk sees it, not the wrapper it was held in; what moved out of a removal, or out
+	// of an element listed as the project's own, is not also listed there
+	const root = withoutMovedOut({ root: withTreeParents({ root: walked, instanceTree }) })
 	// a rename of the instance itself is numbered among its siblings, as the apply numbers it
 	if (instanceTree.parent) {
 		await numberRenamedNodes({
@@ -280,15 +291,18 @@ export async function diff(params: {
 		sourceTree,
 		instanceTree,
 		sourceUuids,
+		movable: movableSourceUuids({ sourceTree, omit, notSelected }),
 		matchKey,
 		removalBase,
 		typeComparison,
 		reads: params.reads,
 	})
 	const grouped = groupDeletedDataReferrers({ root, scopePrefix: instanceTree.id, referrers })
+	// a move into an added parent waits for it, a removal of what a moved element sits in waits for the move
+	const groups = linkMoveDependencies({ groups: grouped.groups, instanceTree })
 	return {
 		root: grouped.root,
-		groups: grouped.groups,
+		groups,
 		summary: summarize(grouped.root, ...grouped.items),
 		...notPlaced,
 	}
@@ -462,6 +476,13 @@ async function diffMatched(params: {
 				placeholderLineages: params.placeholderLineages,
 				sourceIsProject: params.sourceIsProject,
 			})
+			// paired with an element under another parent: the source moved it there, one change
+			// (the children the walk sees through transparent wrappers: a child inside a wrapper is in place)
+			if (matched.parent && !instanceNode.tree.some((child) => child.id === matched.id)) {
+				matchedNode.change = 'moved'
+				matchedNode.movedFrom = toRef(matched.parent)
+				matchedNode.movedTo = toRef(instanceNode)
+			}
 			if (match.pairedByName) matchedNode.pairedByName = match.pairedByName
 			if (match.pairedByKey !== undefined) matchedNode.pairedByKey = match.pairedByKey
 			if (match.pairedAmongTwins || params.keyTwins?.has(sourceChild.id))
@@ -469,7 +490,25 @@ async function diffMatched(params: {
 			children.push(matchedNode)
 			renamed.push({ node: matchedNode, child: matched })
 		} else if (!params.notSelected?.has(sourceChild.id)) {
-			const node = addedNode({ node: sourceChild, omit, notSelected: params.notSelected })
+			let node = addedNode({ node: sourceChild, omit, notSelected: params.notSelected })
+			// what the added subtree holds that the instance holds elsewhere moves into it, never cloned a second time
+			for (const moved of findMovedInAdded({
+				node: sourceChild,
+				index,
+				omit,
+				notSelected: params.notSelected,
+			})) {
+				const movedNode = await diffMatched({
+					...params,
+					sourceNode: moved.source,
+					instanceNode: moved.instance,
+					skipOwnAttributes: false,
+				})
+				movedNode.change = 'moved'
+				if (moved.instance.parent) movedNode.movedFrom = toRef(moved.instance.parent)
+				movedNode.movedTo = toRef(moved.sourceParent)
+				node = replaceAdded({ node, sourceId: moved.source.id, moved: movedNode })
+			}
 			children.push(node)
 			added.push({ node, source: sourceChild })
 		}
@@ -817,10 +856,11 @@ export function assembleReport(params: {
 				added: acc.added + instanceSummary.added,
 				removed: acc.removed + instanceSummary.removed,
 				modified: acc.modified + instanceSummary.modified,
+				moved: acc.moved + instanceSummary.moved,
 				kept: acc.kept + instanceSummary.kept,
 			}
 		},
-		{ added: 0, removed: 0, modified: 0, kept: 0 },
+		{ added: 0, removed: 0, modified: 0, moved: 0, kept: 0 },
 	)
 	return {
 		instances,
@@ -892,11 +932,12 @@ export function collectTreeIds(params: {
 }
 
 function summarize(...roots: readonly DiffNode[]): DiffSummary {
-	const summary: DiffSummary = { added: 0, removed: 0, modified: 0, kept: 0 }
+	const summary: DiffSummary = { added: 0, removed: 0, modified: 0, moved: 0, kept: 0 }
 	function visit(node: DiffNode): void {
 		if (node.change === 'added') summary.added++
 		else if (node.change === 'removed') summary.removed++
 		else if (node.change === 'modified') summary.modified++
+		else if (node.change === 'moved') summary.moved++
 		summary.kept += (node.keptAttributeChanges?.length ?? 0) + (node.keptTextChange ? 1 : 0)
 		for (const child of node.children) visit(child)
 	}

@@ -10,7 +10,7 @@ import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 /** How a diffed element changed between the (updated) template and the instance. */
 // `target-only` = an instance element with NO source lineage (author-added after
 // instantiation). It is preserved by default and only removed on explicit accept.
-export type DiffChange = 'added' | 'removed' | 'modified' | 'unchanged' | 'target-only'
+export type DiffChange = 'added' | 'removed' | 'modified' | 'moved' | 'unchanged' | 'target-only'
 
 export type AttributeChange = { name: string; before?: string; after?: string }
 
@@ -70,6 +70,13 @@ export type DiffNode = {
 	sourceRef?: AnyRefOrRecord
 	/** Instance element — present for `removed` / `modified` / `unchanged`. */
 	instanceRef?: AnyRefOrRecord
+	/** A `moved` node's instance parent before the move: where the instance element is now. */
+	movedFrom?: AnyRefOrRecord
+	/**
+	 * A `moved` node's parent after the move: the instance element its source parent pairs with, or that source parent
+	 * itself when it is `added` (resolved through its clone when the update is applied).
+	 */
+	movedTo?: AnyRefOrRecord
 	/**
 	 * The element this node became in the APPLIED document, filled by `apply` on the report it
 	 * returns (undefined on a pure `report`). Completes the source/instance/applied triple: a
@@ -182,6 +189,8 @@ export type DiffSummary = {
 	added: number
 	removed: number
 	modified: number
+	/** The elements the source puts under another parent, each one change (`moved`). */
+	moved: number
 	/**
 	 * The template's changes the update lists but does not apply (`keptAttributeChanges` across the tree). They open
 	 * no decision: an instance can be `upToDate` and still carry some.
