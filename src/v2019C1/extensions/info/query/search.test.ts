@@ -1,3 +1,4 @@
+import { pathOf } from './fixtures/search-mixed.path'
 import searchXml from './fixtures/search-mixed.xml?raw'
 import { ofEach } from './of-each'
 import { search } from './search'
@@ -20,27 +21,27 @@ const BAY1: SearchHit = {
 	tagName: 'Bay',
 	id: 'bay1',
 	title: 'Feeder1',
-	ancestorIds: ['root', 's1', 'vl1'],
+	...pathOf('root', 's1', 'vl1'),
 }
 const BAY2: SearchHit = {
 	tagName: 'Bay',
 	id: 'bay2',
 	title: 'FEEDER2',
-	ancestorIds: ['root', 's1', 'vl1'],
+	...pathOf('root', 's1', 'vl1'),
 }
 const BAY3: SearchHit = {
 	tagName: 'Bay',
 	id: 'bay3',
 	title: 'Feeder1',
-	ancestorIds: ['root', 's1', 'vl2'],
+	...pathOf('root', 's1', 'vl2'),
 }
 const LABEL1: SearchHit = {
 	tagName: 'Label',
 	id: 'label1',
 	title: 'Line feeder',
-	ancestorIds: ['root', 's1', 'vl1', 'bay1', 'labels1'],
+	...pathOf('root', 's1', 'vl1', 'bay1', 'labels1'),
 }
-const IED1: SearchHit = { tagName: 'IED', id: 'ied1', title: 'FeederIED', ancestorIds: ['root'] }
+const IED1: SearchHit = { tagName: 'IED', id: 'ied1', title: 'FeederIED', ...pathOf('root') }
 
 /** The hits in a fixed order (by id) where the store's order within a tag is not the point. */
 function byId(hits: readonly SearchHit[]): SearchHit[] {
@@ -94,7 +95,7 @@ describe('search - the elements whose title holds the term', () => {
 					tagName: 'SourceRef',
 					id: 'sr2',
 					title: 'Trip(2)',
-					ancestorIds: ['root', 's1', 'vl1', 'bay1', 'f1', 'lnode1'],
+					...pathOf('root', 's1', 'vl1', 'bay1', 'f1', 'lnode1'),
 				},
 			],
 		},
@@ -106,7 +107,7 @@ describe('search - the elements whose title holds the term', () => {
 					tagName: 'ApplicationSclRef',
 					id: 'asr',
 					title: 'ICD v1.A',
-					ancestorIds: ['root', 's1', 'vl2', 'bay3', 'app1'],
+					...pathOf('root', 's1', 'vl2', 'bay3', 'app1'),
 				},
 			],
 		},
@@ -123,7 +124,7 @@ describe('search - the elements whose title holds the term', () => {
 					tagName: 'LNode',
 					id: 'lnode1',
 					title: 'None/PTRC1',
-					ancestorIds: ['root', 's1', 'vl1', 'bay1', 'f1'],
+					...pathOf('root', 's1', 'vl1', 'bay1', 'f1'),
 				},
 			],
 		},
@@ -136,7 +137,7 @@ describe('search - the elements whose title holds the term', () => {
 			sourceXml: searchXml,
 			params: { term: 'feeder ap', tagNames: ['AccessPoint'] },
 			expected: [
-				{ tagName: 'AccessPoint', id: 'ap1', title: 'Feeder AP', ancestorIds: ['root', 'ied1'] },
+				{ tagName: 'AccessPoint', id: 'ap1', title: 'Feeder AP', ...pathOf('root', 'ied1') },
 			],
 		},
 		'a hit under an omitted tag → left out': {
@@ -147,7 +148,7 @@ describe('search - the elements whose title holds the term', () => {
 		'the document root as a hit → no ancestor': {
 			sourceXml: searchXml,
 			params: { term: 'scl', tagNames: ['SCL'] },
-			expected: [{ tagName: 'SCL', id: 'root', title: 'SCL', ancestorIds: [] }],
+			expected: [{ tagName: 'SCL', id: 'root', title: 'SCL', ...pathOf() }],
 		},
 		'a tag the document does not hold → no hit': {
 			sourceXml: searchXml,
@@ -176,6 +177,33 @@ describe('search - the elements whose title holds the term', () => {
 		act: async ({ source, testCase }) => {
 			const hits = await search(source.query, testCase.params)
 			expect(byId(hits)).toEqual(byId(testCase.expected))
+		},
+	})
+})
+
+/** A hit's ancestors are refs a verb takes: `ofEach` over them titles the hit's path in one call. */
+describe('search - the path of a hit, described', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		params: SearchParams
+		/** The titles of the one hit's ancestors, from the root down. */
+		expected: string[]
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'a signal under a Private → the titles of its path, the Private left out': {
+			// sr2 sits in Grid/V1/Feeder1/Protection/PTRC1 behind the signals Private
+			sourceXml: searchXml,
+			params: { term: 'trip(2', tagNames: ['SourceRef'] },
+			expected: ['SCL', 'Grid', 'V1', 'Feeder1', 'Protection', 'PTRC1'],
+		},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		act: async ({ source, testCase }) => {
+			const [hit] = await search(source.query, testCase.params)
+			const path = await ofEach(source.query, hit?.ancestors ?? [])
+			expect(path.map((info) => info.title)).toEqual(testCase.expected)
 		},
 	})
 })
@@ -269,18 +297,24 @@ describe('search - as a tree filtered in memory', () => {
 			const root = await source.query.getRoot()
 			const tree = await source.query.getTree(root, { unwrap: ['Private'] })
 			if (!tree) throw new Error('the fixture has no root')
-			const rows = treeRows({ node: tree, ancestorIds: [], omit: OMIT })
+			const rows = treeRows({ node: tree, ancestors: [], omit: OMIT })
 			const nodes = rows.map((row) => row.node)
 			const infos = await ofEach(source.query, nodes, { mode: testCase.mode })
 			const needle = testCase.term.toLocaleLowerCase()
 			const filtered: SearchHit[] = []
 			for (let index = 0; index < rows.length; index++) {
-				const { node, ancestorIds } = rows[index]
+				const { node, ancestors } = rows[index]
 				const title = infos[index].title
 				if (!title.toLocaleLowerCase().includes(needle)) continue
-				filtered.push({ tagName: node.tagName, id: node.id, title, ancestorIds })
+				filtered.push({
+					tagName: node.tagName,
+					id: node.id,
+					title,
+					ancestorIds: ancestors.map((ancestor) => ancestor.id),
+					ancestors,
+				})
 			}
-			const everyRow = treeRows({ node: tree, ancestorIds: [], omit: [] })
+			const everyRow = treeRows({ node: tree, ancestors: [], omit: [] })
 			const tagNames = [...new Set(everyRow.map((row) => row.node.tagName as Scl.ElementsOf))]
 
 			const hits = await search(source.query, {
@@ -296,17 +330,17 @@ describe('search - as a tree filtered in memory', () => {
 	})
 })
 
-/** The rows of a tree read, depth first, each with the ids of the rows above it; the omitted tags' branches left out. */
+/** The rows of a tree read, depth first, each with the refs of the rows above it; the omitted tags' branches left out. */
 function treeRows(params: {
 	node: Core.AnyTreeRecord
-	ancestorIds: string[]
+	ancestors: SearchHit['ancestors']
 	omit: readonly string[]
-}): { node: Core.AnyTreeRecord; ancestorIds: string[] }[] {
-	const { node, ancestorIds, omit } = params
+}): { node: Core.AnyTreeRecord; ancestors: SearchHit['ancestors'] }[] {
+	const { node, ancestors, omit } = params
 	if (omit.includes(node.tagName)) return []
-	const below = [...ancestorIds, node.id]
+	const below = [...ancestors, { tagName: node.tagName, id: node.id }]
 	return [
-		{ node, ancestorIds },
-		...node.tree.flatMap((child) => treeRows({ node: child, ancestorIds: below, omit })),
+		{ node, ancestors },
+		...node.tree.flatMap((child) => treeRows({ node: child, ancestors: below, omit })),
 	]
 }
