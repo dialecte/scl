@@ -1,0 +1,4 @@
+schema_version: '1.1'
+name: move-doi-within-ied-refused
+expected_outcome: |
+  No: the commit refuses with MOVE_NOT_FOLLOWED, because a data instance is named relative to its own logical node and a move does not follow it.

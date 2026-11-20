@@ -107,14 +107,21 @@ Every write through a transaction and every import runs them (see
 - **Deleting** an element clears or deletes the references pointing into its subtree, per the
   orphan rules (beforeDelete); a deleted reference goes with everything it holds (a FunctionRef's
   SignalRole, a Terminal's Text and Private); signal sibling paths are rebuilt (afterDelete).
-- **Moving** an element with `tx.move` keeps its uuid and lineage, and the commit follows it:
+- **Moving** an element with `tx.move` (`tx.any.move` for a tag known at run time) keeps its uuid and lineage, and the commit follows it:
   the paths of what it holds and of what names it are rewritten, a reference named from its own
   place that the move puts out of reach is unbound, a Terminal left naming a node its substation
   may not name is removed (a Line's may name a Substation's, never the reverse), an extension
   element moved under a default-namespace parent is wrapped in a `Private`, and an emptied old
-  parent is pruned as after a delete. A moved subtree holding what tuple references name by its
-  place (an LN, LDevice, AccessPoint, DOI, DataSet, control block, or a GSE / SMV moved off its
-  ConnectedAP) refuses the commit (`SCL_ERRORS.MOVE_NOT_FOLLOWED`).
+  parent is pruned as after a delete. Within one IED, two moves commit and are followed: an LN
+  moved to another LDevice (every tuple reference naming it by uuid, LNode, ExtRef, FCDA,
+  ClientLN, IEDName..., takes the new `ldInst`, uuid kept; a LogControl inside without `ldInst`
+  gets the old device's, so it keeps naming the same log), and an LDevice moved to another
+  AccessPoint (no name changes; its GSE / SMV go to the new AccessPoint's ConnectedAP on the same
+  SubNetwork, address kept). Still refused (`SCL_ERRORS.MOVE_NOT_FOLLOWED`):
+  any such element moved to another IED, an AccessPoint moved out of its IED, a DOI, DataSet or
+  control block moved within the IED (named relative to its own LN), a GSE / SMV moved off its
+  ConnectedAP by hand, and an LDevice moved to an AccessPoint with no ConnectedAP on the
+  SubNetwork of an address it sends.
 - **At commit** (beforeCommit): LNodes get their `LNodeSpecNaming`, once children exist; an
   `LNodeType` / `DOType` / `DAType` / `EnumType` the transaction left with no element naming it
   (it had one before) goes, with the types only it named and every record inside them; the

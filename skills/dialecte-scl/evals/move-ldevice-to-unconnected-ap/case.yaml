@@ -1,0 +1,4 @@
+schema_version: '1.1'
+name: move-ldevice-to-unconnected-ap
+expected_outcome: |
+  Unconnected: the commit refuses with MOVE_NOT_FOLLOWED. Connected: it commits and the GSE moves to AP2's ConnectedAP on the same subnetwork, address kept.
