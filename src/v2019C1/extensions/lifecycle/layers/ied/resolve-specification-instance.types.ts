@@ -5,6 +5,7 @@ import type {
 	SsdScope,
 	TopologyReconcilables,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
 
@@ -17,6 +18,8 @@ export type ResolveSpecificationInstanceParams = {
 	scope: SsdScope
 	/** Its applications and the functions none of them composes. */
 	reconcilables: TopologyReconcilables
+	/** What a project element carries of the template element it stands for: its lineage, or in a fork its uuid. */
+	matchKey: MatchKey
 }
 
 /** The specification of an IED in the project, as a placement of the template's put it there. */
@@ -65,6 +68,8 @@ export type ClaimUnboundParams = {
 	othersPrimaryIds: ReadonlySet<string>
 	/** The levels the IED's specification sits on (record ids). */
 	frameIds: ReadonlySet<string>
+	/** What a project element carries of the template element it stands for: its lineage, or in a fork its uuid. */
+	matchKey: MatchKey
 	/** Whether what the revision gains can be placed: one level, or one singled out among several. */
 	placeable: boolean
 }
@@ -101,4 +106,12 @@ export type ComposingApplicationsParams = {
 export type SingleOutFrameParams = {
 	frames: readonly AnyRawRecord[]
 	unitUuid: string | undefined
+	/** What a project element carries of the template element it stands for: its lineage, or in a fork its uuid. */
+	matchKey: MatchKey
+}
+
+/** A record of the project, and what it carries of the template element it stands for. */
+export type LineageOfParams = {
+	record: AnyRawRecord
+	matchKey: MatchKey
 }

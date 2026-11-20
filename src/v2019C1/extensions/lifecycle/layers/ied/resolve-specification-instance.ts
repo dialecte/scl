@@ -10,6 +10,7 @@ import { readAttribute } from '@/v2019C1/helpers'
 import type {
 	ClaimUnboundParams,
 	ComposingApplicationsParams,
+	LineageOfParams,
 	ResolveSpecificationInstanceParams,
 	SpecificationInstance,
 	SectionNodeParams,
@@ -38,7 +39,7 @@ export async function resolveSpecificationInstance(
 	reader: Core.Query<Config> | Core.Transaction<Config>,
 	params: ResolveSpecificationInstanceParams,
 ): Promise<SpecificationInstance | undefined> {
-	const { sourceQuery, iedRef, scope, reconcilables } = params
+	const { sourceQuery, iedRef, scope, reconcilables, matchKey } = params
 	const iedName = await reader.any.getAttribute(iedRef, { name: 'name' })
 	const section = await readProcessSection(reader)
 	const specified = specifiedLNodes({ section })
@@ -65,7 +66,7 @@ export async function resolveSpecificationInstance(
 
 	// several bays: what the revision gains goes to the bay the template puts it, told by lineage, never by a count
 	const unitUuid = await sourceQuery.any.getAttribute(scope.root, { name: 'uuid' })
-	const gainedIn = singleOutFrame({ frames, unitUuid })
+	const gainedIn = singleOutFrame({ frames, unitUuid, matchKey })
 	const unbound = await claimUnbound({
 		sourceQuery,
 		placeable: frames.length <= 1 || gainedIn !== undefined,
@@ -74,6 +75,7 @@ export async function resolveSpecificationInstance(
 		claimed,
 		othersPrimaryIds,
 		frameIds: new Set(frames.map((frame) => frame.id)),
+		matchKey,
 	})
 	return {
 		frames: frames.map(function refOf(frame) {
@@ -175,8 +177,9 @@ function unbindingIds(params: UnbindingIdsParams): ReadonlySet<string> {
  * revision gained it, or the IED's specification lost it).
  */
 async function claimUnbound(params: ClaimUnboundParams): Promise<UnboundPrimaries> {
-	const { sourceQuery, nodes, templatePrimaries, othersPrimaryIds, frameIds, placeable } = params
-	const claimedLineages = new Set(params.claimed.map(lineageOf))
+	const { sourceQuery, nodes, templatePrimaries, othersPrimaryIds, frameIds, placeable, matchKey } =
+		params
+	const claimedLineages = new Set(params.claimed.map((record) => lineageOf({ record, matchKey })))
 	const records = await sourceQuery.any.getRecords([...templatePrimaries])
 	const result: UnboundPrimaries = { claimed: [], unresolved: [], others: [] }
 	for (const [position, record] of records.entries()) {
@@ -186,7 +189,7 @@ async function claimUnbound(params: ClaimUnboundParams): Promise<UnboundPrimarie
 		const onFrame = nodes.filter(function isInstanceOnFrame(node) {
 			return (
 				node.record.tagName === primary.tagName &&
-				lineageOf(node.record) === uuid &&
+				lineageOf({ record: node.record, matchKey }) === uuid &&
 				node.ancestry.some((ancestor) => frameIds.has(ancestor.id))
 			)
 		})
@@ -208,18 +211,20 @@ async function claimUnbound(params: ClaimUnboundParams): Promise<UnboundPrimarie
  * unit was mapped onto; a bay another file placed carries that file's). `undefined` when none is singled out.
  */
 function singleOutFrame(params: SingleOutFrameParams): AnyRawRecord | undefined {
-	const { frames, unitUuid } = params
+	const { frames, unitUuid, matchKey } = params
 	if (frames.length <= 1) return frames[0]
-	const placedByUnit = frames.filter((frame) => unitUuid && lineageOf(frame) === unitUuid)
+	const placedByUnit = frames.filter(
+		(frame) => unitUuid && lineageOf({ record: frame, matchKey }) === unitUuid,
+	)
 	if (placedByUnit.length === 1) return placedByUnit[0]
 	if (placedByUnit.length > 1) return undefined
-	const mappedOnto = frames.filter((frame) => !lineageOf(frame))
+	const mappedOnto = frames.filter((frame) => !lineageOf({ record: frame, matchKey }))
 	return mappedOnto.length === 1 ? mappedOnto[0] : undefined
 }
 
-/** The template element a record of the project was placed from. */
-function lineageOf(record: AnyRawRecord): string {
-	return readAttribute({ record, name: 'templateUuid', defaults: 'none' })
+/** The template element a record of the project stands for: its lineage, or in a fork its own uuid. */
+function lineageOf(params: LineageOfParams): string {
+	return readAttribute({ record: params.record, name: params.matchKey, defaults: 'none' })
 }
 
 /** The records once each, in first-seen order. */

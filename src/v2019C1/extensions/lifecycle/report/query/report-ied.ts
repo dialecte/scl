@@ -18,6 +18,7 @@ import type {
 	ReportFileCommunicationParams,
 	ReportIedParams,
 	WithCompanionParams,
+	WithSpecificationParams,
 } from './report-ied.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -119,21 +120,18 @@ async function reportIedPlacement(
 		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 	})
-	return withSpecification({ reportInstance, specification })
+	return withSpecification({ reportInstance, communicationInstances: [], specification })
 }
 
 /**
  * One report of the IED and the specification beside it: the IED's instance first, the specification's after it, the
  * decisions the specification needs, the units it acts on and what it told of said for the whole.
  */
-function withSpecification(params: {
-	reportInstance: ReportInstance
-	specification: DiffReport
-}): DiffReport {
-	const { reportInstance, specification } = params
+function withSpecification(params: WithSpecificationParams): DiffReport {
+	const { reportInstance, communicationInstances, specification } = params
 	const report = assembleReport({
-		instances: [reportInstance, ...specification.instances],
-		templateRoots: [reportInstance],
+		instances: [reportInstance, ...communicationInstances, ...specification.instances],
+		templateRoots: [reportInstance, ...communicationInstances],
 	})
 	if (specification.needsDecisions) report.needsDecisions = true
 	if (specification.scopeUnits) report.scopeUnits = specification.scopeUnits
@@ -210,7 +208,7 @@ async function reportIedUpdate(
 		iedGroups: reportInstance.groups,
 		specificationGroups: specification.instances.flatMap((instance) => instance.groups),
 	})
-	return withSpecification({ reportInstance, specification })
+	return withSpecification({ reportInstance, communicationInstances, specification })
 }
 
 /**
@@ -253,12 +251,11 @@ async function reportSpecificationUpdate(
 	params: ReportIedParams & { instance: AnyTrackedRecord; policy: ScenarioPolicy },
 ): Promise<DiffReport | undefined> {
 	const { sourceQuery, instance, policy } = params
-	// a fork's specification pairs by uuid, not by lineage: not reported with its IED yet
-	if (policy.matchKey !== 'templateUuid') return undefined
 	const specification = await readIedSpecification(query, {
 		sourceQuery,
 		fileType: params.fileType,
 		iedRef: toRef(instance) as Scl.Ref<'IED'>,
+		matchKey: policy.matchKey,
 	})
 	if (!specification) return undefined
 	const shared = {
@@ -274,7 +271,7 @@ async function reportSpecificationUpdate(
 	if (!specificationInstance) return reportSsd(query, { ...shared, scenario: 'instantiate' })
 	const report = await reportSsd(query, {
 		...shared,
-		scenario: 'template',
+		scenario: params.scenario === 'fork' ? 'fork' : 'template',
 		targetInstance: specificationInstance.frames,
 		primaryTargets: specificationInstance.primaries,
 		leftOut: specification.scope.leftOut,

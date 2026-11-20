@@ -31,7 +31,7 @@ export async function reconcileIedSpecification(
 ): Promise<void> {
 	const { sourceQuery, specification, instanceRef } = params
 	const { scope, reconcilables, instance } = specification
-	const policy = scenarioPolicy({ scenario: 'template' })
+	const { policy } = params
 	// the IED's logical nodes as they stand now, those the update gave it included
 	const redirectMappings = await readInstanceRedirects(tx, {
 		instance: instanceRef,
@@ -44,7 +44,7 @@ export async function reconcileIedSpecification(
 	await updateProcessSection(tx, {
 		sourceQuery,
 		targetParent: params.anchor,
-		scenario: 'template',
+		scenario: params.scenario ?? 'template',
 		report: params.report,
 		decisions: params.decisions,
 		keepNameTypesFrom: params.keepNameTypesFrom,

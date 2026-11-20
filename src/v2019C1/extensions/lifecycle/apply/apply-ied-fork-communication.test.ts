@@ -18,7 +18,7 @@ type CommunicationCase = SclTest.BaseXmlTestCase & {
 	openXml: string
 	/** The other version of it the fork takes. */
 	otherXml: string
-	/** The groups of the report's instances other than the IED's, `<change> <tag> <suggested action>`, sorted. */
+	/** The groups of the report's Communication instance, `<change> <tag> <suggested action>`, sorted. */
 	expectedGroups?: string[]
 }
 
@@ -46,7 +46,7 @@ describe('query.lifecycle.report - the Communication in a fork of another versio
 		const outcome = await open.query.lifecycle.report(lifecycle).then(
 			(report) =>
 				report.instances
-					.filter((instance) => instance.rootRef?.tagName !== 'IED')
+					.filter((instance) => instance.rootRef?.tagName === 'Communication')
 					.flatMap((instance) => instance.groups)
 					.map((group) => `${group.change} ${group.primary.tagName} ${group.suggestedAction}`)
 					.sort(),

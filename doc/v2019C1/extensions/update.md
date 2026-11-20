@@ -176,9 +176,13 @@ IED does; skipped, the other IED stays as it is. A group depending on a skipped 
   in `IEDSourceFiles`. The `Communication` section is the file's own: it is reported as an instance of its own, paired by
   `uuid` (an address changed is `modified P`, a bit rate gained `added BitRate`, a subnetwork or a connection only in
   the open ISD `target-only`), and written as its groups decide; an open ISD without one takes the other version's
-  through the placement of the IED's connections. The specification beside the IED is not reported or updated by a fork
-  yet: a type the IED and the specification's `LNode`s both name is not updated in place, the IED moves to a type of its
-  own holding the other version's content.
+  through the placement of the IED's connections. The specification beside the IED (its functions, applications and
+  `LNode`s, told by their specified naming as in a template update) is reported and written with it, its instances after
+  the IED's and the Communication's, paired by `uuid`: a function or an application only in the open ISD is
+  `target-only`, kept by default; a type the IED and the specification's `LNode`s share follows the other version where
+  it is, under its id. An `LNode`'s binding (the logical node it is bound to, `lnUuid` and the names following it) is a
+  reference, never compared: an `LNode` the other version specifies on another logical node takes its specified naming
+  (`modified LNodeSpecNaming`) and stays bound where it is.
 - `apply` writes the first placement of the IED of an ISD or an ICD ([`instantiate.ied`](./instantiate#ied)), unless
   its group is skipped, or the update. A report of a first placement applied once its IED is in the project is refused
   with `REPORT_TARGET_MISMATCH` (`meta: { field: 'targetInstance' }`) rather than placing another.

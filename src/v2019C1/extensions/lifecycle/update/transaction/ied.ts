@@ -182,15 +182,12 @@ export async function reconcileIed(
 	const groups = groupsForInstance(report, instance.id)
 	const instanceRef = toRef(instance) as Scl.Ref<'IED'>
 	// the specification beside the IED, told by what binds to it before the update changes the IED
-	// a fork's specification pairs by uuid, not by lineage: not updated with its IED yet
-	const specification =
-		policy.matchKey === 'templateUuid'
-			? await readIedSpecification(tx, {
-					sourceQuery,
-					fileType: params.fileType,
-					iedRef: instanceRef,
-				})
-			: undefined
+	const specification = await readIedSpecification(tx, {
+		sourceQuery,
+		fileType: params.fileType,
+		iedRef: instanceRef,
+		matchKey,
+	})
 	// the inputs of other IEDs subscribed to what the IED's data sets send, read before the update changes them
 	const before = await tx.any.getTree(instanceRef)
 	const subscriptions = before ? await readSubscriptionsTo(tx, { instance: before }) : []

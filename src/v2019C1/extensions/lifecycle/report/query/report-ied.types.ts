@@ -1,7 +1,11 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
-import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DiffReport,
+	InstanceDiff,
+	ReportInstance,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { FileCommunications } from '@/v2019C1/extensions/lifecycle/layers/ied/file-communication.types'
@@ -41,4 +45,11 @@ export type WithCompanionParams = {
 export type ReportFileCommunicationParams = ReportIedParams & {
 	policy: ScenarioPolicy
 	communications: FileCommunications
+}
+
+/** The IED's report instance, the Communication's when a fork reports it, and the specification's report. */
+export type WithSpecificationParams = {
+	reportInstance: ReportInstance
+	communicationInstances: readonly ReportInstance[]
+	specification: DiffReport
 }
