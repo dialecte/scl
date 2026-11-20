@@ -38,7 +38,9 @@ import type { AnyTrackedRecord } from '@dialecte/core'
  * Report (read-only) what placing an IED of a source file in the project would add, or what a newer revision of its
  * template changes in the IED of the project placed from it (`scenario: 'template'`, the default): the one
  * `targetInstance` names, required when the project holds several (`TARGET_INSTANCE_REQUIRED`, see
- * `resolveIedInstance`); only a template ISD's IED is updated yet.
+ * `resolveIedInstance`); or, as a fork on an open ISD, what another version of the same file changes in its IED, its
+ * Communication and its specification (`targetInstance` not read). Only an ISD's IED is updated: an ICD's found in the
+ * project is refused.
  *
  * A first placement: one instance with no root in the project, every element of the IED added, on the fast track
  * (`needsDecisions: false`), and what its Communication part adds to the project's (its access points' `ConnectedAP`s,

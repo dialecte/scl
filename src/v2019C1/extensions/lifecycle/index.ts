@@ -31,7 +31,8 @@ import { checkTemplateUuids } from './validate'
  * - `report`      — read-only classify: `query.lifecycle.report({ verb,
  *                   sourceQuery, ref, anchor })` returns a `DiffReport`
  *                   (fast/full classification) — nothing is written. `verb: 'ied'`
- *                   reports the first placement of an IED (its apply is not offered yet).
+ *                   reports the first placement of an IED, or its update (`template`, or a
+ *                   `fork` on an open ISD), which `tx.lifecycle.apply` writes.
  * - `sourceRoot`  — read-only: what a source file holds to place, per verb
  *                   (`query.lifecycle.sourceRoot.fsd` / `.asd` / `.ssd` / `.ied`).
  *

@@ -369,8 +369,8 @@ project's. The consumer takes the template's value over with `resolution.takeOve
 (`[{ element }]`, `element` the project's `Val`), for every value of an IED (`[{ element }]`, `element` the
 project's `IED`; another IED's values stay the project's), or for every value of the update (`'all'`). The report then
 lists each as a `textChange` (`takenOver: true`), in a group suggested `accept`. A value the project may not set (of any other kind, `Spec`, `Conf` or `RO`, and not imported) takes the
-template's, listed as any change. The reconcile takes the take-overs as its `takeOver` input; the IED update that
-passes them from `resolution.takeOver` is not offered yet.
+template's, listed as any change. The reconcile takes the take-overs as its `takeOver` input: `apply` passes
+`resolution.takeOver` to an IED update, and `tx.lifecycle.update.ied` takes them as its `takeOver`.
 
 A fork keeps none of them: the other version's values follow (its names do too), listed as any change, so a
 take-over in a fork names no value the project keeps and is refused with `TAKE_OVER_NOT_OFFERED`.

@@ -110,18 +110,23 @@ export type LifecycleVerbTarget =
 	| {
 			verb: 'ied'
 			sourceQuery: Core.Query<Config>
-			/** The IED of the source file to place in the project. */
+			/** The IED of the source file to place in the project, or to update the project's from. */
 			ref: Scl.Ref<'IED'>
-			/** The root of the project the IED is placed under. */
+			/** The root of the project (or of the open ISD) the IED is placed under or updated in. */
 			anchor: Scl.Ref<'SCL'>
 			/**
-			 * Operation to perform. Defaults to `template`. Only a first placement is reported: `template` or `fork`
-			 * finding the IED already in the project is refused with `OPTION_NOT_AVAILABLE`.
+			 * Operation to perform. Defaults to `template`. `template`: the IED of the project placed from a template ISD is
+			 * updated from a newer revision of it, or the IED placed when the project holds none. `fork`: on an open ISD
+			 * holding the source IED's uuid (another version of the same file), its IED is updated, its Communication and its
+			 * specification with it; into a project, a first placement keeping the file's identity, refused with
+			 * `OPTION_NOT_AVAILABLE` when the project already holds the IED or an element of its specification by uuid.
+			 * `instantiate`: a new IED, whatever the project holds.
 			 */
 			scenario?: LifecycleScenario
 			/**
-			 * One IED of the project to scope to. Not read yet: only a first placement is reported, which places a new IED
-			 * whatever this names.
+			 * The IED of the project a `template` update starts from: required when the project holds several instances of
+			 * the source IED (`TARGET_INSTANCE_REQUIRED`). Not read by a fork on an open ISD (it holds one IED) nor by a first
+			 * placement.
 			 */
 			targetInstance?: Scl.Ref<'IED'>
 	  }
@@ -169,7 +174,8 @@ export type SharedFunctions = 'clone' | 'merge'
  *    a uuid in a fork given no previous revision), still is; `apply` writes what the report lists;
  *  - `takeOver` — the values the project keeps that the consumer takes the template's for (see {@link TakeOvers}). Read
  *    by `report`: such a value is listed as a change, its group decided as any; the reconcile writes it given the same
- *    take-overs (`reconcile`'s `takeOver`), which the IED update, not offered yet, passes;
+ *    take-overs (`reconcile`'s `takeOver`): `apply` passes them to an IED update, and `tx.lifecycle.update.ied` takes
+ *    them as its `takeOver`;
  *  - `afterApply` — the consumer's own step, run by `apply` once it wrote (see {@link AfterApplyHook}).
  */
 export type Resolution = {
