@@ -84,7 +84,7 @@ again as a new instance.
   `TARGET_INSTANCE_REQUIRED`, `meta: { instances }`, or `meta: { instances, named }` naming an element that is no
   instance, `instances` empty when the project holds none placed from the template: the file is no version of what it
   came from); the only one when it holds one. No other IED is changed.
-- Only the IED of a template ISD is updated yet: another file's (an ICD's) found in the project is refused with
+- A template update takes an ISD's IED only: another file's (an ICD's) found in the project is refused with
   `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value: 'icd' }`).
 - The IED keeps its project name and its identity; a logical node the revision gains is added, one it drops removed —
   the `LNode`s bound to it are released at the commit (`iedName` back to its specification, else `None`); a logical node
@@ -369,8 +369,8 @@ project's. The consumer takes the template's value over with `resolution.takeOve
 (`[{ element }]`, `element` the project's `Val`), for every value of an IED (`[{ element }]`, `element` the
 project's `IED`; another IED's values stay the project's), or for every value of the update (`'all'`). The report then
 lists each as a `textChange` (`takenOver: true`), in a group suggested `accept`. A value the project may not set (of any other kind, `Spec`, `Conf` or `RO`, and not imported) takes the
-template's, listed as any change. The reconcile takes the take-overs as its `takeOver` input; the IED update that
-passes them from `resolution.takeOver` is not offered yet.
+template's, listed as any change. The reconcile takes the take-overs as its `takeOver` input: `apply` passes
+`resolution.takeOver` to an IED update, and `tx.lifecycle.update.ied` takes them as its `takeOver`.
 
 A fork keeps none of them: the other version's values follow (its names do too), listed as any change, so a
 take-over in a fork names no value the project keeps and is refused with `TAKE_OVER_NOT_OFFERED`.

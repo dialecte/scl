@@ -63,10 +63,12 @@ import type * as Core from '@dialecte/core'
  * A fork reads the previous revision of the file it is given (`baseQuery`) once, as `report` did:
  * an element the newer revision lacks is removed when the previous revision held it.
  *
- * An IED's report (`verb: 'ied'`) is applied for a first placement only: the IED of a template ISD or of an ICD placed
- * as a new IED, the IED of an ISD instance file as a fork, an ISD with its specification. One read from an IID or an
- * SCD, an ISD instance placed otherwise, one the project already holds, or a fork whose IED or specification the project
- * holds an element of by its uuid, is refused with `OPTION_NOT_AVAILABLE`, nothing written.
+ * An IED's report (`verb: 'ied'`) writes a first placement (the IED of a template ISD or of an ICD placed as a new IED,
+ * the IED of an ISD instance file as a fork, an ISD with its specification) or an update: the IED of the project placed
+ * from a template ISD, from a newer revision of it (`template`), or the IED of an open ISD, from another version of the
+ * same file (`fork`), its specification with it. One read from an IID or an SCD, an ISD instance placed otherwise, a
+ * fork into a project whose IED or specification the project holds an element of by its uuid, or a `template` report
+ * whose IED, of an ICD, the project already holds, is refused with `OPTION_NOT_AVAILABLE`, nothing written.
  *
  * Returns `{ report, instances }` — the effective report plus the instance roots
  * the write produced/reconciled. Run inside `doc.prepare(tx => tx.lifecycle.apply(...))`

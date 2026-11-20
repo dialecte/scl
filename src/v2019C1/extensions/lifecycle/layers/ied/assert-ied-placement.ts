@@ -24,9 +24,10 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
- * Refuse, before anything is read further, an IED placement the report and the apply do not offer yet, with
+ * Refuse, before anything is read further, an IED placement the report and the apply do not offer, with
  * `OPTION_NOT_AVAILABLE`: the IED of a template ISD or of an ICD is placed as a new IED, the IED of an ISD instance file
- * as a fork only, keeping its identity, and only a first placement.
+ * as a fork only, keeping its identity, and into a project only a first placement (another version of an open ISD
+ * updates it, see `resolveIedInstance`).
  *  - an IED read from an IID or an SCD: `meta: { option: 'source', value: 'iid' | 'scd' }`;
  *  - the IED of an ISD instance file (an ISD whose IED is not named `SPECIFICATION`) placed other than as a fork:
  *    `meta: { option: 'source', value: 'isd-instance' }`;
@@ -54,7 +55,7 @@ export async function assertIedPlacementOffered(
 	if (matched.length > 0) {
 		throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
 			meta: { option: 'scenario', value: scenario },
-			detail: `${params.operation}: "${scenario}" finds the IED in the project, only a first placement is offered yet`,
+			detail: `${params.operation}: "${scenario}" finds the IED in the project: into a project, only a first placement is offered`,
 		})
 	}
 	if (scenario !== 'fork') return
@@ -62,7 +63,7 @@ export async function assertIedPlacementOffered(
 	if (!held) return
 	throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
 		meta: { option: 'scenario', value: scenario, held },
-		detail: `${params.operation}: "${scenario}" finds in the project the ${held.tagName} ${held.path ?? ''} holding a uuid of the IED or of its specification, only a first placement is offered yet`,
+		detail: `${params.operation}: "${scenario}" finds in the project the ${held.tagName} ${held.path ?? ''} holding a uuid of the IED or of its specification: into a project, only a first placement is offered`,
 	})
 }
 
