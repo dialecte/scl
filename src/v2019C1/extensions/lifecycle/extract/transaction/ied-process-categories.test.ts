@@ -51,13 +51,13 @@ describe('an exported ISD holds no function category: they classify the function
 					'//default:Private[@type="eIEC61850-6-100"][not(*)]',
 				],
 			},
-		// the application Protection in B1 names F1 and, beside it, the category of B1
-		'an application naming F1 and the bay category → written naming F1, without its reference to the category':
+		// the application Protection in B1 names F1, the category of B1 by uuid and the category of S1 by its path only
+		'an application naming F1 and two categories, by uuid and by path → written naming F1 only, without its references to the categories':
 			{
 				sourceXml: CategoriesAtTheBayAndTheSubstationNamingF1Xml,
 				targetXml: emptyIsd,
 				expectedQueries: [
-					'//default:Bay[@name="B1"]/default:Private/v2019C1:Application[@name="Protection"]//v2019C1:FunctionRef[@functionUuid="12000000-0000-4000-8000-000000000001"]',
+					'//default:Bay[@name="B1"]/default:Private/v2019C1:Application[@name="Protection"][count(.//v2019C1:FunctionRef)=1]//v2019C1:FunctionRef[@functionUuid="12000000-0000-4000-8000-000000000001"]',
 				],
 				unexpectedQueries: ['//v2019C1:FunctionCategoryRef'],
 			},
