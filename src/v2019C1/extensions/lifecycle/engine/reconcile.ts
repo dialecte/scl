@@ -8,7 +8,6 @@ import { pairByKeyOnLineageMiss } from './pair-by-key'
 import { createPairingMemo } from './pairing-memo'
 import { projectOwnedAttributes } from './project-owned-attributes'
 import { indexRedirectedSourceUuids } from './reference-match'
-import { readRetargetUuids, retargetsIn } from './reference-retargets'
 import { acceptsRemoval, classifyUnmatched, classifyUnpairedReference } from './removal-base'
 import { readTargetLineages } from './target-lineages'
 import { reconcileTextWrappers } from './text-wrappers'
@@ -248,12 +247,8 @@ export async function reconcile(
 		namesFollow: params.namesFollow,
 	})
 	// a fork: the references the newer revision re-targets onto an element the document now holds
-	const retargets = await retargetsIn({ namesFollow: params.namesFollow, sourceQuery, target: tx })
-	// held as the report holds them: the open document, or the revision (what the update adds lands before the commit
-	// names the reference; a re-target waits for the group adding its target, so a skipped one is refused)
-	const retargetUuids = retargets
-		? await readRetargetUuids({ sourceTree, holders: [tx, sourceQuery] })
-		: undefined
+	// a fork of the file itself: the re-target scope the update holds, read once at its entry, as the report read it
+	const retargetUuids = 'holds' in params.removalBase ? params.removalBase.holds : undefined
 
 	// root + descendants: update matched in place, add new
 	if (!withinProjectOwned) {
@@ -390,7 +385,7 @@ async function reconcileChildren(
 		identityMode: ScenarioPolicy['identityMode'] | undefined
 		bumpsCollisions: boolean
 		namesFollow: NamesFollow
-		/** In a fork: the uuids a reference of the newer revision may be re-targeted onto (`readRetargetUuids`). */
+		/** In a fork of the file itself: the uuids a reference may be re-targeted onto (`RemovalBase`'s `holds`). */
 		retargetUuids?: ReadonlySet<string>
 		omit: readonly string[] | undefined
 		/** Accumulates the clone mappings of every element added below here (root + subtree). */

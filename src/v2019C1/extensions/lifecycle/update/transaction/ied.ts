@@ -18,6 +18,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
+import { withUpdateHolds } from '@/v2019C1/extensions/lifecycle/engine/reference-retargets'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import { ied as instantiateIed } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
@@ -188,6 +189,13 @@ export async function reconcileIed(
 		iedRef: instanceRef,
 		matchKey,
 	})
+	// what the update holds, read once, as the report read it: what of the specification it leaves out is not held
+	const removalBase = await withUpdateHolds({
+		removalBase: params.removalBase,
+		sourceQuery,
+		target: tx,
+		leftOut: specification?.scope.leftOut,
+	})
 	// the inputs of other IEDs subscribed to what the IED's data sets send, read before the update changes them
 	const before = await tx.any.getTree(instanceRef)
 	const subscriptions = before ? await readSubscriptionsTo(tx, { instance: before }) : []
@@ -202,7 +210,7 @@ export async function reconcileIed(
 		matchKey,
 		identityMode,
 		bumpsCollisions,
-		removalBase: params.removalBase,
+		removalBase,
 		namesFollow,
 		placeholderLineages: params.placeholderLineages,
 		takeOver: params.takeOver,
@@ -215,7 +223,11 @@ export async function reconcileIed(
 		policy,
 	})
 	const connections = fileCommunications
-		? await reconcileFileCommunication(tx, { ...params, communications: fileCommunications })
+		? await reconcileFileCommunication(tx, {
+				...params,
+				removalBase,
+				communications: fileCommunications,
+			})
 		: await connectAccessPoints(tx, { ...params, instanceRef, matchKey })
 	const added = [...cloneMappings, ...connections]
 	// a reference the update added may name an element the IED already holds, or one it added: it names the project's
@@ -226,7 +238,7 @@ export async function reconcileIed(
 	if (reportInstance) annotateInstance({ reportInstance, added: sourceToTargetMap(added) })
 	// the specification follows, its LNodes bound to the IED as it now stands
 	if (specification) {
-		await reconcileIedSpecification(tx, { ...params, instanceRef, specification })
+		await reconcileIedSpecification(tx, { ...params, removalBase, instanceRef, specification })
 	}
 
 	// the IED now holds this revision of its template, when anything of the file is written (its specification

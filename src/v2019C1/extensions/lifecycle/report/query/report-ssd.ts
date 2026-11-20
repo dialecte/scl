@@ -124,7 +124,8 @@ export async function reportSsd(
 	// a first placement: asked for, or the project holds no instance of the scope yet
 	const policy = scenarioPolicy({ scenario })
 	const { matchKey, namesFollow } = policy
-	const removalBase = params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery }))
+	const removalBase =
+		params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery, target: query }))
 	const firstPlacement =
 		!policy.matchesInstances ||
 		!(await hasScopeInstance(query, {

@@ -145,7 +145,8 @@ export async function reportAsd(
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
 	const { matchKey, namesFollow } = policy
-	const removalBase = params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery }))
+	const removalBase =
+		params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery, target: query }))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matchedApplications = policy.matchesInstances
 		? await findInstancesByTemplateUuid(query, { tagName: 'Application', sourceUuid, matchKey })

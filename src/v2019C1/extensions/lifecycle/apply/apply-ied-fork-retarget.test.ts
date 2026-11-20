@@ -1,9 +1,11 @@
 import openSpecificationXml from '../integration/ied/fixtures/isd-bcu1-specification-version-1.xml?raw'
 import otherSpecificationXml from '../integration/ied/fixtures/isd-bcu1-specification-version-2.xml?raw'
 import openWithInputXml from '../integration/ied/fixtures/isd-bcu1-version-1-with-an-input.xml?raw'
+import openBayControlOnBcu9Xml from '../integration/ied/fixtures/isd-bcu1-version-1-with-bay-control-specified-on-bcu9.xml?raw'
 import openIsdXml from '../integration/ied/fixtures/isd-bcu1-version-1.xml?raw'
 import inputFromGainedXml from '../integration/ied/fixtures/isd-bcu1-version-2-input-from-a-gained-lnode.xml?raw'
 import inputFromMissingXml from '../integration/ied/fixtures/isd-bcu1-version-2-input-from-a-missing-lnode.xml?raw'
+import inputFromBcu9Xml from '../integration/ied/fixtures/isd-bcu1-version-2-input-from-an-lnode-of-bcu9.xml?raw'
 import inputFromCilo1Xml from '../integration/ied/fixtures/isd-bcu1-version-2-input-from-cilo1.xml?raw'
 
 import { toDialecteError } from '@dialecte/core'
@@ -60,6 +62,17 @@ describe('tx.lifecycle.apply - a fork re-targeting a reference', () => {
 				'//v2019C1:SourceRef[@sourceLNodeUuid="b0000000-0000-4000-8000-000000000011"][@source="North/E1/Q01/BayControl/CSWI1.Pos.stVal"]',
 			],
 		},
+		'the input fed by an LNode added to a function the update leaves out, accepted → still fed by CSWI1':
+			{
+				sourceXml: openIsdXml,
+				openXml: openBayControlOnBcu9Xml,
+				otherXml: inputFromBcu9Xml,
+				decide: (groups) => decideAll({ groups, action: () => 'accept' }),
+				expectedQueries: [
+					'//v2019C1:SourceRef[@sourceLNodeUuid="b0000000-0000-4000-8000-000000000011"][@source="North/E1/Q01/BayControl/CSWI1.Pos.stVal"]',
+				],
+				unexpectedQueries: ['//default:LNode[@uuid="b0000000-0000-4000-8000-000000000061"]'],
+			},
 		'revision 2 naming an LNode no version holds, accepted → the input still fed by CSWI1': {
 			sourceXml: openIsdXml,
 			openXml: openWithInputXml,
@@ -103,6 +116,16 @@ describe('query.lifecycle.report - a fork re-targeting a reference', () => {
 				}),
 			expected: 'DECISION_DEPENDENCY_SKIPPED',
 		},
+		// BayControl is BCU9's specification, left out of BCU1's update: the LNode revision 2 adds to it is not brought
+		'the input fed by an LNode added to a function the update leaves out → kept, one warning, no change listed':
+			{
+				sourceXml: openIsdXml,
+				openXml: openBayControlOnBcu9Xml,
+				otherXml: inputFromBcu9Xml,
+				decide: (groups) => decideAll({ groups, action: () => 'accept' }),
+				expected:
+					'reference-retarget-unresolved sourceLNodeUuid b0000000-0000-4000-8000-000000000061',
+			},
 		'revision 2 naming an LNode no version holds → reference-retarget-unresolved on the input': {
 			sourceXml: openIsdXml,
 			openXml: openWithInputXml,
@@ -140,7 +163,10 @@ function decideAll(params: {
 	return new Map(params.groups.map((group) => [group.id, params.action(group)] as const))
 }
 
-/** The fork reported, then applied as `decide` says: the report's re-target warnings, `<code> <attribute> <uuid>`. */
+/**
+ * The fork reported, then applied as `decide` says: the report's re-target warnings, `<code> <attribute> <uuid>`, then
+ * any change it lists onto the left-out LNode b…061 (`listed <attribute> <uuid>`).
+ */
 async function reportThenApply(params: {
 	open: OpenDocument
 	lifecycle: ForkLifecycle
@@ -152,11 +178,18 @@ async function reportThenApply(params: {
 	await open.transaction(async function applyEachDecision(tx) {
 		await tx.lifecycle.apply({ ...lifecycle, report, resolution: { decisions } })
 	})
-	return (report.warnings ?? []).flatMap((warning) =>
+	const listed = report.instances
+		.flatMap((instance) => instance.groups)
+		.flatMap((group) => [group.primary, ...group.companions])
+		.flatMap((node) => node.attributeChanges ?? [])
+		.filter((change) => change.name === 'sourceLNodeUuid' && change.after?.endsWith('061'))
+		.map((change) => `listed ${change.name} ${change.after}`)
+	const warnings = (report.warnings ?? []).flatMap((warning) =>
 		warning.code === 'reference-retarget-unresolved'
 			? [`${warning.code} ${warning.attribute} ${warning.uuid}`]
 			: [],
 	)
+	return [...warnings, ...listed]
 }
 
 /** The open ISD and the fork of its other version onto it. */

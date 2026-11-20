@@ -96,7 +96,7 @@ export async function fsd(
 	const { matchKey, identityMode, bumpsCollisions, namesFollow } = policy
 	const removalBase =
 		params.removalBase ??
-		(await resolveRemovalBase({ policy, sourceQuery, baseQuery: params.baseQuery }))
+		(await resolveRemovalBase({ policy, sourceQuery, baseQuery: params.baseQuery, target: tx }))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matched = policy.matchesInstances
 		? await findInstancesUnder(tx, {

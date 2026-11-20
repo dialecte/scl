@@ -26,7 +26,7 @@ import {
 	referenceIdentity,
 	referenceNameIdentity,
 } from './reference-match'
-import { readRetargetUuids, retargetsIn, unresolvedRetargets } from './reference-retargets'
+import { unresolvedRetargets } from './reference-retargets'
 import { classifyUnmatched, classifyUnpairedReference } from './removal-base'
 import { readTargetLineages } from './target-lineages'
 import { diffTextWrappers } from './text-wrappers'
@@ -242,11 +242,8 @@ export async function diff(params: {
 		takeOver: diffPolicy.takeOver,
 		namesFollow,
 	})
-	// a fork: the references the newer revision re-targets onto an element the open document or the revision holds
-	const retargets = await retargetsIn({ namesFollow, sourceQuery, target: targetQuery })
-	const retargetUuids = retargets
-		? await readRetargetUuids({ sourceTree, holders: [targetQuery, sourceQuery] })
-		: undefined
+	// a fork of the file itself: the re-target scope the update holds, read once at its entry
+	const retargetUuids = 'holds' in removalBase ? removalBase.holds : undefined
 	const walked = await diffMatched({
 		sourceQuery,
 		targetQuery,
@@ -331,7 +328,7 @@ async function diffMatched(params: {
 	targetLineages: TargetLineages
 	removalBase: RemovalBase
 	namesFollow: NamesFollow
-	/** In a fork: the uuids a reference of the newer revision may be re-targeted onto (`readRetargetUuids`). */
+	/** In a fork of the file itself: the uuids a reference may be re-targeted onto (`RemovalBase`'s `holds`). */
 	retargetUuids?: ReadonlySet<string>
 	omit?: readonly string[]
 	/** Leave this node's own attributes uncompared. */

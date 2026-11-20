@@ -9,9 +9,11 @@ import type {
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { FileCommunications } from '@/v2019C1/extensions/lifecycle/layers/ied/file-communication.types'
+import type { IedSpecification } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-specification.types'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
+import type { AnyTrackedRecord } from '@dialecte/core'
 import type * as Core from '@dialecte/core'
 
 export type ReportIedParams = {
@@ -52,4 +54,11 @@ export type WithSpecificationParams = {
 	reportInstance: ReportInstance
 	communicationInstances: readonly ReportInstance[]
 	specification: DiffReport
+}
+
+/** An IED update's parameters, its policy, and the specification beside the IED, read once by the update. */
+export type ReportSpecificationUpdateParams = ReportIedParams & {
+	instance: AnyTrackedRecord
+	policy: ScenarioPolicy
+	specification: IedSpecification | undefined
 }
