@@ -75,8 +75,9 @@ as the text searched; the name or the labels are not matched. The term is trimme
 - `ancestorIds` -- the ids of the hit's ancestors from the root down, the hit itself and the transparent `Private`
   left out, as a tree read with `unwrap: ['Private']` shows its rows: the path to open to reveal the hit.
 - `omit` -- tags whose elements, and everything below them, are no hit (the subtrees a view hides).
-- `limit` -- at most that many hits; there is no cap by default, and a limit of 0 or less finds nothing and reads
-  nothing.
+- `limit` -- at most that many hits (its whole part); there is no cap by default or for a limit that is not a finite
+  number, and a limit of 0 or less finds nothing and reads nothing. With nothing omitted, only the hits kept have their
+  ancestors read.
 - A transparent element (`Private`) given among `tagNames` is searched too, but a tree read with
   `unwrap: ['Private']` has no row for it, so a view that unwraps it should leave it out of `tagNames`.
 - Order -- the order of `tagNames` (a tag given twice counts once), then the store's order within a tag.

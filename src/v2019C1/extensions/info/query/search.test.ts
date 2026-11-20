@@ -144,6 +144,26 @@ describe('search - the elements whose title holds the term', () => {
 			params: { term: 'feeder ap', tagNames: ['AccessPoint'], omit: ['IED'] },
 			expected: [],
 		},
+		'the document root as a hit → no ancestor': {
+			sourceXml: searchXml,
+			params: { term: 'scl', tagNames: ['SCL'] },
+			expected: [{ tagName: 'SCL', id: 'root', title: 'SCL', ancestorIds: [] }],
+		},
+		'a tag the document does not hold → no hit': {
+			sourceXml: searchXml,
+			params: { term: 'a', tagNames: ['GSE'] },
+			expected: [],
+		},
+		'a tag the dialecte does not know (past the types) → no hit': {
+			sourceXml: searchXml,
+			params: { term: 'a', tagNames: ['NotATag' as Scl.ElementsOf] },
+			expected: [],
+		},
+		'every tag given omitted → no hit': {
+			sourceXml: searchXml,
+			params: { term: 'feeder', tagNames: ['Bay', 'Label'], omit: ['Label', 'Bay'] },
+			expected: [],
+		},
 		'a hit under a Private, the Private omitted → left out': {
 			sourceXml: searchXml,
 			params: { term: 'trip', tagNames: ['SourceRef'], omit: ['Private'] },
@@ -183,6 +203,21 @@ describe('search - the order of the hits and the limit', () => {
 			sourceXml: searchXml,
 			params: { term: 'feeder', tagNames: ['AccessPoint', 'Label'], omit: ['IED'], limit: 1 },
 			expected: [LABEL1],
+		},
+		'a fractional limit → its whole part': {
+			sourceXml: searchXml,
+			params: { term: 'feeder', tagNames: ['IED', 'Label'], limit: 1.9 },
+			expected: [IED1],
+		},
+		'a limit that is not a number → no cap': {
+			sourceXml: searchXml,
+			params: { term: 'feeder', tagNames: ['IED', 'Label'], limit: Number.NaN },
+			expected: [IED1, LABEL1],
+		},
+		'an infinite limit → no cap': {
+			sourceXml: searchXml,
+			params: { term: 'feeder', tagNames: ['IED', 'Label'], limit: Number.POSITIVE_INFINITY },
+			expected: [IED1, LABEL1],
 		},
 		'a limit of 0 → no hit': {
 			sourceXml: searchXml,

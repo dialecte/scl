@@ -4,52 +4,17 @@ import { search } from './search'
 import { describe, expect } from 'vitest'
 
 import { runSclTestCases } from '@/v2019C1/test'
-import { countDocumentQueryReads } from '@/v2019C1/test/count-query-reads'
+import { measureReadCost } from '@/v2019C1/test/read-cost'
 
 import type { SearchParams } from './search.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
-
-/** The store calls that move records, counted by the dev perf counters. */
-const RECORDS_MOVED = [
-	'core::store::records.get',
-	'core::store::records.getMany',
-	'core::store::records.getByTagName',
-	'core::store::records.getByAttributes',
-	'core::store::records.getByDocumentId',
-] as const
-
-/** The store calls themselves, by the dev perf counters. */
-const STORE_CALLS = [
-	'core::store::get',
-	'core::store::getMany',
-	'core::store::getByTagName',
-	'core::store::getByAttributes',
-	'core::store::getByDocumentId',
-] as const
-
-/** The query methods that read a record in hand without the store; left out of the calls. */
-const RECORD_READERS = new Set(['getAttributes', 'getAttribute'])
+import type { ReadCost } from '@/v2019C1/test/read-cost.types'
 
 const THREE_TAGS: Scl.ElementsOf[] = ['Bay', 'LNode', 'SourceRef']
 
-/** What one search costs: the hits, the query calls by name, the store calls and the records they move. */
-type Cost = {
-	hits: number
-	calls: Record<string, number>
-	storeCalls: number
-	recordsMoved: number
-}
-
-function sumOf(params: {
-	report: Record<string, { count?: number }>
-	keys: readonly string[]
-}): number {
-	const { report, keys } = params
-	let total = 0
-	for (const key of keys) total += report[key]?.count ?? 0
-	return total
-}
+/** What one search costs: the number of hits, with the calls, store calls and records moved. */
+type Cost = ReadCost & { hits: number }
 
 /** One search on the case's source document, counted from the search's first read. */
 async function costOf(params: {
@@ -57,20 +22,13 @@ async function costOf(params: {
 	search: SearchParams
 }): Promise<Cost> {
 	const { source } = params
-	const counted = countDocumentQueryReads(source.query)
-	source.perf.reset()
-	const hits = await search(counted.query, params.search)
-	const report = source.perf.report()
-	const calls: Record<string, number> = {}
-	for (const { method } of counted.calls()) {
-		if (!RECORD_READERS.has(method)) calls[method] = (calls[method] ?? 0) + 1
-	}
-	return {
-		hits: hits.length,
-		calls,
-		storeCalls: sumOf({ report, keys: STORE_CALLS }),
-		recordsMoved: sumOf({ report, keys: RECORDS_MOVED }),
-	}
+	const { result, cost } = await measureReadCost({
+		source,
+		read: function searchCounted(query) {
+			return search(query, params.search)
+		},
+	})
+	return { hits: result.length, ...cost }
 }
 
 /**
@@ -92,6 +50,43 @@ describe('search - the reads', () => {
 			search: { term: 'in', tagNames: THREE_TAGS, limit: 0 },
 			expected: { hits: 0, calls: {}, storeCalls: 0, recordsMoved: 0 },
 		},
+		'every tag given omitted → no read': {
+			sourceXml: sixBaysXml,
+			search: { term: 'in', tagNames: ['Bay', 'SourceRef'], omit: ['SourceRef', 'Bay'] },
+			expected: { hits: 0, calls: {}, storeCalls: 0, recordsMoved: 0 },
+		},
+		'a limit of 2 over eight hits, nothing omitted → the ancestors of the 2 kept only (their chains meet: 3 levels read)':
+			{
+				sourceXml: sixBaysXml,
+				search: { term: '1', tagNames: THREE_TAGS, limit: 2 },
+				expected: {
+					hits: 2,
+					calls: {
+						getRecordsByTagName: 3,
+						getRecords: 1,
+						getChildrenOfEach: 1,
+						findAncestorsOfEach: 1,
+					},
+					storeCalls: 8,
+					recordsMoved: 61,
+				},
+			},
+		'a limit of 2 over eight hits, a tag omitted → the ancestors of every hit, to leave out the omitted':
+			{
+				sourceXml: sixBaysXml,
+				search: { term: '1', tagNames: THREE_TAGS, limit: 2, omit: ['IED'] },
+				expected: {
+					hits: 2,
+					calls: {
+						getRecordsByTagName: 3,
+						getRecords: 1,
+						getChildrenOfEach: 1,
+						findAncestorsOfEach: 1,
+					},
+					storeCalls: 10,
+					recordsMoved: 84,
+				},
+			},
 		'no hit over three tags → the tags and the describer, no ancestor read': {
 			sourceXml: sixBaysXml,
 			search: { term: 'busbar', tagNames: THREE_TAGS },

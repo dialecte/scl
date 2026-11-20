@@ -10,7 +10,10 @@ export type SearchParams = {
 	mode?: 'compact' | 'full'
 	/** Tags whose elements, and everything below them, are left out of the hits. */
 	omit?: readonly Scl.ElementsOf[]
-	/** At most this many hits, the first ones in the answer's order (no cap when absent, none read at 0 or less). */
+	/**
+	 * At most this many hits, the first ones in the answer's order: its whole part; none read at 0 or less; no cap when
+	 * absent or not a finite number.
+	 */
 	limit?: number
 }
 

@@ -495,7 +495,7 @@
 				"search a tree that loads lazily",
 				"reveal a search hit by its ancestor ids"
 			],
-			"declaredAt": "src/v2019C1/extensions/info/query/search.ts:28"
+			"declaredAt": "src/v2019C1/extensions/info/query/search.ts:30"
 		},
 		{
 			"path": "doc.query.lifecycle.checkTemplateUuids",

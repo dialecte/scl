@@ -4,22 +4,14 @@ import { ofEach } from './of-each'
 
 import { describe, expect } from 'vitest'
 
-import { countDocumentQueryReads } from '@/v2019C1/test/count-query-reads'
 import { runSclTestCases } from '@/v2019C1/test/hydrated-test'
+import { measureReadCost } from '@/v2019C1/test/read-cost'
 
 import type { InfoOptions } from './of.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test/hydrated-test.types'
+import type { ReadCost } from '@/v2019C1/test/read-cost.types'
 import type { AnyRefOrRecord } from '@dialecte/core'
-
-/** The records the store calls move, counted by the dev perf counters. */
-const RECORDS_MOVED = [
-	'core::store::records.get',
-	'core::store::records.getMany',
-	'core::store::records.getByTagName',
-	'core::store::records.getByAttributes',
-	'core::store::records.getByDocumentId',
-] as const
 
 /** The twelve signals of the fixture: three SourceRefs in each of three LNodes, three ControlRefs in the fourth. */
 const EVERY_SIGNAL = Array.from({ length: 12 }, (_, index) => signalRef(index))
@@ -34,16 +26,8 @@ function signalRef(index: number): Scl.Ref<'SourceRef' | 'ControlRef'> {
 	return { tagName: index < 9 ? 'SourceRef' : 'ControlRef', id: `signal-${index}` }
 }
 
-/**
- * The query methods that read a record given as a record without the store (its attributes); left out of the calls.
- */
-const RECORD_READERS = new Set(['getAttributes', 'getAttribute'])
-
-/**
- * What one call costs: the query calls made (by name, through the query and its `any`, the record readers left out)
- * and the records moved.
- */
-type Cost = { calls: Record<string, number>; recordsMoved: number }
+/** What one call costs here: the query calls made and the records moved. */
+type Cost = Pick<ReadCost, 'calls' | 'recordsMoved'>
 
 /**
  * The cost of one `ofEach` (or `of` for a single element with `single`) of the elements: given as refs, or as the
@@ -61,17 +45,13 @@ async function costOf(params: {
 	const elements: AnyRefOrRecord[] = asRecords
 		? read.flatMap((record) => (record ? [record] : []))
 		: [...refs]
-	const counted = countDocumentQueryReads(source.query)
-	source.perf.reset()
-	if (single) await of(counted.query, elements[0], options)
-	else await ofEach(counted.query, elements, options)
-	const report = source.perf.report()
-	const calls: Record<string, number> = {}
-	for (const { method } of counted.calls()) {
-		if (!RECORD_READERS.has(method)) calls[method] = (calls[method] ?? 0) + 1
-	}
-	const recordsMoved = RECORDS_MOVED.reduce((sum, key) => sum + (report[key]?.count ?? 0), 0)
-	return { calls, recordsMoved }
+	const { cost } = await measureReadCost({
+		source,
+		read: function describe(query): Promise<unknown> {
+			return single ? of(query, elements[0], options) : ofEach(query, elements, options)
+		},
+	})
+	return { calls: cost.calls, recordsMoved: cost.recordsMoved }
 }
 
 /**
