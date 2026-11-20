@@ -116,17 +116,18 @@ export type LifecycleVerbTarget =
 			anchor: Scl.Ref<'SCL'>
 			/**
 			 * Operation to perform. Defaults to `template`. `template`: the IED of the project placed from a template ISD is
-			 * updated from a newer revision of it, or the IED placed when the project holds none. `fork`: on an open ISD
-			 * holding the source IED's uuid (another version of the same file), its IED is updated, its Communication and its
-			 * specification with it; into a project, a first placement keeping the file's identity, refused with
-			 * `OPTION_NOT_AVAILABLE` when the project already holds the IED or an element of its specification by uuid.
-			 * `instantiate`: a new IED, whatever the project holds.
+			 * updated from a newer revision of it, or the IED placed when the project holds none; the IED of another file
+			 * (an ICD) found in the project is refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value: 'icd' }`).
+			 * `fork`: on an open ISD holding the source IED's uuid (another version of the same file), its IED is updated, its
+			 * Communication and its specification with it; into a project, a first placement keeping the file's identity,
+			 * refused with `OPTION_NOT_AVAILABLE` when the project already holds the IED or an element of its specification by
+			 * uuid. `instantiate`: a new IED, whatever the project holds.
 			 */
 			scenario?: LifecycleScenario
 			/**
 			 * The IED of the project a `template` update starts from: required when the project holds several instances of
-			 * the source IED (`TARGET_INSTANCE_REQUIRED`). Not read by a fork on an open ISD (it holds one IED) nor by a first
-			 * placement.
+			 * the source IED, and refused when it names no instance (the project holding none included), both with
+			 * `TARGET_INSTANCE_REQUIRED`. Not read by a `fork` nor by `instantiate`.
 			 */
 			targetInstance?: Scl.Ref<'IED'>
 	  }

@@ -18,7 +18,7 @@ export type UpdateIedParams = {
 	iedRef: Scl.Ref<'IED'>
 	/** The root of the project. */
 	anchor: Scl.Ref<'SCL'>
-	/** The type of file the template is (only an ISD's IED is updated yet): the revision the IED records. */
+	/** The type of file the template is (only an ISD's IED is updated): the revision the IED records. */
 	fileType: PlacedIedFileType
 	/** The IED of the project the update starts from: required when the project holds several instances. */
 	targetInstance?: Scl.Ref<'IED'>

@@ -84,7 +84,7 @@ again as a new instance.
   `TARGET_INSTANCE_REQUIRED`, `meta: { instances }`, or `meta: { instances, named }` naming an element that is no
   instance, `instances` empty when the project holds none placed from the template: the file is no version of what it
   came from); the only one when it holds one. No other IED is changed.
-- Only the IED of a template ISD is updated yet: another file's (an ICD's) found in the project is refused with
+- A template update takes an ISD's IED only: another file's (an ICD's) found in the project is refused with
   `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value: 'icd' }`).
 - The IED keeps its project name and its identity; a logical node the revision gains is added, one it drops removed —
   the `LNode`s bound to it are released at the commit (`iedName` back to its specification, else `None`); a logical node

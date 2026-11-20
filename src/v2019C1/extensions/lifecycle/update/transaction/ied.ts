@@ -112,13 +112,15 @@ async function reconcileFileCommunication(
 /**
  * The recipe of `tx.lifecycle.update.ied` (which then releases what it wrote, see `public-recipes.ts`): update the IED of
  * the project placed from a template ISD with a newer revision of it, the one `targetInstance` names (required when the
- * project holds several, `TARGET_INSTANCE_REQUIRED`), or place it when the project holds none (`instantiate.ied`).
+ * project holds several, `TARGET_INSTANCE_REQUIRED`), or place it when the project holds none (`instantiate.ied`); with
+ * `scenario: 'fork'`, the IED of an open ISD with another version of the same file, its Communication and its
+ * specification with it.
  * Given a report and decisions, writes what they accept (see `reconcileIed`), a group waiting for a decision left out
  * refused (`DECISION_REQUIRED`) before anything is written; without, everything the revision brings, a change to another
  * IED with its cleanup included: run `query.lifecycle.report` first to see and decide what would. The specification an
  * ISD carries beside the IED is updated with it.
  *
- * @intent update an S-IED from a newer revision of its template ISD, reconcile an IED with its template, update the specification of an S-IED (its functions and LNodes)
+ * @intent update an S-IED from a newer revision of its template ISD, reconcile an IED with its template, update the specification of an S-IED (its functions and LNodes), update an open ISD from another version of it
  */
 export async function ied(
 	tx: Core.Transaction<Config>,

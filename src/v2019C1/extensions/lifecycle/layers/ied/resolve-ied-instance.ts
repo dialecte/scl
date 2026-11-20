@@ -28,7 +28,7 @@ import type { AnyTrackedRecord } from '@dialecte/core'
  *  - a fork on an open ISD document of a file that is not a version of it, with `NOT_A_VERSION_OF_FILE`
  *    (`assertIedVersion`);
  *  - the IED of another file than an ISD found in the project, with `OPTION_NOT_AVAILABLE`
- *    (`meta: { option: 'source', value }`, the file type in lower case): only an ISD template's is updated yet;
+ *    (`meta: { option: 'source', value }`, the file type in lower case): only an ISD's IED is updated;
  *  - several instances and `targetInstance` naming none of them, `targetInstance` naming an element that is no instance,
  *    or naming one while the project holds none (the file is no version of what it was placed from), with
  *    `TARGET_INSTANCE_REQUIRED` (`meta: { instances, named? }`): an update changes the IED it starts from.
