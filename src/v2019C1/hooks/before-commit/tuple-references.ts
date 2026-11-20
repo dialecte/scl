@@ -65,8 +65,10 @@ export async function writeTupleReferencesAtCommit(params: {
 	query: Core.Query<Config>
 	/** The records the commit's earlier steps write, read instead of the staged state. */
 	pending: ReadonlyMap<string, AnyRawRecord>
+	/** Records already read by an earlier step (the document a move step read), taken instead of read again. */
+	held?: ReadonlyMap<string, AnyRawRecord>
 }): Promise<Scl.Operation[]> {
-	const { operations, query, pending } = params
+	const { operations, query, pending, held } = params
 	const changes = foldChanges({ operations, pending })
 	const written = [...changes.values()].flatMap((change) => referrerWork({ change }))
 	const touched = touchedTargets({ changes })
@@ -76,7 +78,7 @@ export async function writeTupleReferencesAtCommit(params: {
 	// a parent's write first: a child naming its IED by its parent reads the parent as written
 	const work = [...written, ...waiting, ...children]
 	if (work.length === 0) return []
-	const { index, ancestries } = await readTupleTargets({ query, work })
+	const { index, ancestries } = await readTupleTargets({ query, work, held })
 	const writtenRecords = new Map<string, AnyRawRecord>()
 	return work.flatMap((referrer) => {
 		const ancestry = (ancestries.get(referrer.record.id) ?? []).map(
@@ -91,13 +93,15 @@ export async function writeTupleReferencesAtCommit(params: {
 
 /**
  * The tuple targets of every tag the work's pairs may point at, each tag read once, indexed by address and by uuid
- * (a target in vendor payload left out), and the elements above the targets and the references, a level at a time.
+ * (a target in vendor payload left out), and the elements above the targets and the references, a level at a time,
+ * a record already `held` taken from there.
  */
 async function readTupleTargets(params: {
 	query: Core.Query<Config>
 	work: readonly ReferenceWork[]
+	held: ReadonlyMap<string, AnyRawRecord> | undefined
 }): Promise<{ index: TupleTargetIndex; ancestries: Map<string, AnyRawRecord[]> }> {
-	const { query, work } = params
+	const { query, work, held } = params
 	const tags = [...new Set(work.flatMap(({ pairs }) => pairs.flatMap(({ pair }) => pair.target)))]
 	const targets = (await readTags({ query, tags })).filter((record) =>
 		readAttribute({ record, name: 'uuid', defaults: 'none' }),
@@ -105,6 +109,7 @@ async function readTupleTargets(params: {
 	const ancestries = await readAncestries({
 		records: [...targets, ...work.map(({ record }) => record)],
 		query,
+		held,
 	})
 	return { index: indexTargets({ targets, ancestries }), ancestries }
 }

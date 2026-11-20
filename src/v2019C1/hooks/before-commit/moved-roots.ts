@@ -60,8 +60,21 @@ export function movePlacesOf(params: {
 		read,
 		childrenOf,
 		written: writtenRecordsOf({ operations }),
+		before: recordsBeforeOf({ operations }),
 		movedBy: movedSubtrees({ moved, document, read, childrenOf }),
 	}
+}
+
+/** Each record an update reached, as its first update found it: the names it carried before the transaction. */
+function recordsBeforeOf(params: {
+	operations: ReadonlyArray<Scl.Operation>
+}): Map<string, AnyRawRecord> {
+	const before = new Map<string, AnyRawRecord>()
+	for (const operation of params.operations) {
+		if (operation.status !== 'updated' || before.has(operation.oldRecord.id)) continue
+		before.set(operation.oldRecord.id, operation.oldRecord as AnyRawRecord)
+	}
+	return before
 }
 
 /**

@@ -2,6 +2,7 @@ import { readBoundLNodes } from './bound-logical-nodes'
 import { findLeftChildren } from './left-children'
 import { LEFT_CHILDREN_PERF_SPAN } from './left-children.constants'
 import { readMovePlaces, topmostMovedRoots } from './moved-roots'
+import { movedTargetNameOperations } from './moved-within-an-ied'
 import { assertMovesFollowed, followMovesAtCommit } from './moves'
 import { writePathReferencesAtCommit } from './path-references'
 import { pruneEmptiedContainers } from './prune-emptied-containers'
@@ -20,6 +21,7 @@ import { ensureLNodeSpecNaming, hasAttributeChange } from '@/v2019C1/hooks/share
 import type { CommitStepParams, CommitStepResult } from './commit-plan.types'
 import type { LeftChild } from './left-children.types'
 import type { Scl } from '@/v2019C1/config'
+import type { AnyRawRecord } from '@dialecte/core'
 
 /**
  * The elements the transaction moved ({@link readMovePlaces}): the document read once when there is one, a moved subtree
@@ -69,7 +71,8 @@ export async function lnodeNamings({ plan }: CommitStepParams): Promise<CommitSt
 
 /**
  * The names of the tuple references naming a target the transaction created by its uuid, and of each LNode created or
- * rebound, those of the logical node its `lnUuid` names ({@link writeTupleNamesAtCommit}).
+ * rebound, those of the logical node its `lnUuid` names ({@link writeTupleNamesAtCommit}); then those naming a target
+ * moved within its IED, at its new place ({@link movedTargetNameOperations}).
  */
 export async function tupleNames({ plan, writes }: CommitStepParams): Promise<CommitStepResult> {
 	const { operations, query, state } = plan
@@ -84,7 +87,14 @@ export async function tupleNames({ plan, writes }: CommitStepParams): Promise<Co
 		bound: state.bound,
 		pending: writes.pending,
 	})
-	return { operations: written }
+	if (!state.movePlaces) return { operations: written }
+	// the targets moved within their IED, named from the document the move step read (nothing read again), over what
+	// the writes above left: one update per reference, the last holding every name written
+	const moved = movedTargetNameOperations({
+		places: state.movePlaces,
+		pending: withWritten({ pending: writes.pending, operations: written }),
+	})
+	return { operations: oneUpdatePerRecord({ operations: [...written, ...moved] }) }
 }
 
 /** The tuple references' uuid and names in agreement ({@link writeTupleReferencesAtCommit}). */
@@ -92,9 +102,15 @@ export async function tupleReferences({
 	plan,
 	writes,
 }: CommitStepParams): Promise<CommitStepResult> {
-	const { operations, query } = plan
+	const { operations, query, state } = plan
 	return {
-		operations: await writeTupleReferencesAtCommit({ operations, query, pending: writes.pending }),
+		operations: await writeTupleReferencesAtCommit({
+			operations,
+			query,
+			pending: writes.pending,
+			// the document a move step read: the elements above the targets a move touched are not read again
+			held: state.movePlaces?.read,
+		}),
 	}
 }
 
@@ -193,6 +209,37 @@ export async function noChildLeftBehind({ plan }: CommitStepParams): Promise<Com
 		meta: { record: first.record, child: first.child },
 		detail: `the commit deletes ${first.record.tagName} "${first.record.id}" and leaves its child ${first.child.tagName} "${first.child.id}" in the store`,
 	})
+}
+
+/** The records the commit's earlier steps left, with the updates of some operations over them. */
+function withWritten(params: {
+	pending: ReadonlyMap<string, AnyRawRecord>
+	operations: readonly Scl.Operation[]
+}): Map<string, AnyRawRecord> {
+	const merged = new Map(params.pending)
+	for (const operation of params.operations) {
+		if (operation.status === 'updated')
+			merged.set(operation.newRecord.id, operation.newRecord as AnyRawRecord)
+	}
+	return merged
+}
+
+/** The updates of the operations folded to one per record: the first state it was read in, the last it is left in. */
+function oneUpdatePerRecord(params: { operations: readonly Scl.Operation[] }): Scl.Operation[] {
+	const byId = new Map<string, Scl.Operation>()
+	const others: Scl.Operation[] = []
+	for (const operation of params.operations) {
+		if (operation.status !== 'updated') {
+			others.push(operation)
+			continue
+		}
+		const known = byId.get(operation.newRecord.id)
+		byId.set(
+			operation.newRecord.id,
+			known?.status === 'updated' ? { ...operation, oldRecord: known.oldRecord } : operation,
+		)
+	}
+	return [...others, ...byId.values()]
 }
 
 /** Whether an operation binds an LNode the transaction did not create to a logical node (its `lnUuid` set, changed). */

@@ -107,8 +107,8 @@ function pairNamingAttributes(params: { pair: TupleReferencePair; tagName: strin
 }
 
 /**
- * The tuple targets the transaction created or renamed (its identity fields changed: an IED, an access point, a device,
- * a logical node, a control block): their ids (`roots`, a renamed one standing for everything in it) and the target
+ * The tuple targets the transaction created, renamed (its identity fields changed: an IED, an access point, a device,
+ * a logical node, a control block) or moved to another parent: their ids (`roots`, a renamed one standing for everything in it) and the target
  * tags a reference with no uuid may now name by its names (a renamed element's kind and the kinds it may hold).
  */
 export function touchedTargets(params: {
@@ -126,7 +126,9 @@ export function touchedTargets(params: {
 				newRecord: after as Scl.RawRecord<Scl.ElementsOf>,
 				names: [...getIdentityFields(after.tagName)],
 			})
-		if (renamed) for (const tagName of kindsRenamedBy(after.tagName)) tags.add(tagName)
+		// a move changes the address of what it moves as a rename does (a move across IEDs is refused at the commit)
+		const moved = before !== undefined && before.parent?.id !== after.parent?.id
+		if (renamed || moved) for (const tagName of kindsRenamedBy(after.tagName)) tags.add(tagName)
 		else if (!before && TUPLE_TARGET_KINDS.has(after.tagName)) tags.add(after.tagName)
 		else continue
 		roots.add(after.id)

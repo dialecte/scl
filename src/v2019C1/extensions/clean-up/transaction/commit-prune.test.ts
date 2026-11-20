@@ -176,14 +176,15 @@ describe('tx.cleanUp.commitPrune - a transaction the commit refuses', () => {
 	}
 
 	const testCases: SclTest.TestCases<RefusedCase> = {
-		// PTRC1 is a logical node of LD1: tuple references name it by its logical device
-		'a logical node moved to another logical device → the preview throws MOVE_NOT_FOLLOWED (SCL4003)':
+		// DS1 is a data set of LD1's LLN0: its control blocks name it within their own logical node, which a move within the
+		// IED does not follow
+		'a data set moved to the LLN0 of another logical device → the preview throws MOVE_NOT_FOLLOWED (SCL4003)':
 			{
 				sourceXml: anIedAndABayXml,
-				write: async function movePtrc1ToLd2(tx) {
+				write: async function moveDs1ToLd2(tx) {
 					await tx.any.move(
-						{ tagName: 'LN', id: 'ptrc1' },
-						{ parent: { tagName: 'LDevice', id: 'ld2' } },
+						{ tagName: 'DataSet', id: 'ds1' },
+						{ parent: { tagName: 'LN0', id: 'ld2-lln0' } },
 					)
 				},
 				expected: 'MOVE_NOT_FOLLOWED SCL4003',

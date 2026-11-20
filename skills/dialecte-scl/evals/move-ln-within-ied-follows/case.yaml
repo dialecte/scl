@@ -1,0 +1,4 @@
+schema_version: '1.1'
+name: move-ln-within-ied-follows
+expected_outcome: |
+  The commit goes through; the ExtRef keeps its lnUuid and its ldInst becomes CTRL; the LNode's ldInst becomes CTRL (bound by uuid).
