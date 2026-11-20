@@ -61,6 +61,14 @@ export type AttributeComparison = {
 	changes: AttributeChange[]
 	typeChanges: AttributeChange[]
 	kept: KeptAttributeChange[]
+	/** A fork: the references the newer revision points at a uuid the fork does not hold. */
+	unresolvedRetargets?: RetargetUnresolved[]
+}
+
+/** A reference's uuid attribute the newer revision of a fork points at a uuid the fork does not hold, and that uuid. */
+export type RetargetUnresolved = {
+	attribute: string
+	uuid: string
 }
 
 export type DiffNode = {
@@ -141,6 +149,12 @@ export type DiffNode = {
 	 * `DiffReport.warnings`.
 	 */
 	pairedByKey?: string
+	/**
+	 * A fork only: the references of the element the newer revision points at an element the fork does not hold (its
+	 * uuid attribute, and the uuid named there): each keeps what it names. Listed in `DiffReport.warnings`
+	 * (`reference-retarget-unresolved`).
+	 */
+	retargetUnresolved?: RetargetUnresolved[]
 	/**
 	 * Present on a matched data set whose entries the template lists in another order than the update would leave them
 	 * (the order is the order the data is sent in): `apply` writes the template's order, the project's own entries
@@ -495,6 +509,18 @@ export type ReportWarning =
 			code: 'specification-instance-unresolved'
 			/** The template's application or function. */
 			source: AnyRefOrRecord
+	  }
+	| {
+			/**
+			 * A fork only: a reference the newer revision points at another element (its uuid attribute changed) that the
+			 * open document does not hold and the update does not add: it keeps the element it names.
+			 */
+			code: 'reference-retarget-unresolved'
+			/** The reference element. */
+			reference: AnyRefOrRecord
+			/** The uuid attribute the newer revision changed, and the uuid it names there. */
+			attribute: string
+			uuid: string
 	  }
 
 /**

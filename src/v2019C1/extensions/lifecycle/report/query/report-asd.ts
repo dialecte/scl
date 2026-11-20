@@ -133,6 +133,11 @@ export async function reportAsd(
 		placementListing?: PlacementListing
 		/** The satellites of the template, read once by the larger report it is part of. Default: the listing's, or read. */
 		index?: SatelliteIndex
+		/**
+		 * The functions the larger update reconciles as standalone ones beside the application (a substation scope's): one
+		 * the application no longer composes is updated as such, never dropped (see `findDroppedComposedFunctions`).
+		 */
+		standaloneFunctions?: readonly Scl.Ref<'Function'>[]
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings } = params
@@ -333,6 +338,7 @@ export async function reportAsd(
 		instances: applicationInstances,
 		matchKey,
 		removalBase,
+		standaloneFunctions: params.standaloneFunctions,
 	})
 	const droppedGroups: DecisionGroup[] = []
 	for (const reportInstance of reportInstances) {

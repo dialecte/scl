@@ -193,6 +193,7 @@ export async function asd(
 		instances,
 		matchKey,
 		removalBase,
+		standaloneFunctions: params.standaloneFunctions,
 	})
 	const droppedFunctions: { dropped: DroppedElement[]; accepted: AcceptedIds | undefined }[] = []
 	// what each instance's selection of variants leaves out of the template, by instance record id: read from the

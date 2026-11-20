@@ -1,4 +1,6 @@
 import openSpecificationXml from '../integration/ied/fixtures/isd-bcu1-specification-version-1.xml?raw'
+import droppingBayControlXml from '../integration/ied/fixtures/isd-bcu1-specification-version-2-supervision-on-line-protection-dropping-bay-control.xml?raw'
+import onLineProtectionXml from '../integration/ied/fixtures/isd-bcu1-specification-version-2-supervision-on-line-protection.xml?raw'
 import otherSpecificationXml from '../integration/ied/fixtures/isd-bcu1-specification-version-2.xml?raw'
 import openWithoutSpecificationXml from '../integration/ied/fixtures/isd-bcu1-version-1-without-specification.xml?raw'
 import openIsdXml from '../integration/ied/fixtures/isd-bcu1-version-1.xml?raw'
@@ -40,10 +42,18 @@ describe('query.lifecycle.report - the specification in a fork of another versio
 				otherXml: otherSpecificationXml,
 				expectedGroups: [
 					'added Function',
-					'modified LNodeSpecNaming',
+					'modified LNode',
 					'modified SubFunction',
 					'target-only Application',
 				],
+			},
+		// BayControl composed by Supervision in revision 1, held nowhere in revision 2: the open ISD's own, kept by default
+		'Supervision composing LineProtection, BayControl held nowhere in revision 2 → BayControl target-only':
+			{
+				sourceXml: openIsdXml,
+				openXml: openSpecificationXml,
+				otherXml: droppingBayControlXml,
+				expectedGroups: ['added FunctionRef', 'removed FunctionRef', 'target-only Function'],
 			},
 	}
 
@@ -75,7 +85,8 @@ describe('tx.lifecycle.apply - the specification in a fork of another version of
 			expectedQueries: [
 				`//default:Bay[@name="Q01"]/default:Function[@uuid="${METERING_UUID}"]/default:LNode[@lnClass="MMXU"]`,
 				'//default:SubFunction[@uuid="b0000000-0000-4000-8000-000000000042"][@name="Tripping"]',
-				'//default:LNode[@uuid="b0000000-0000-4000-8000-000000000014"]//v2019C1:LNodeSpecNaming[@sLnInst="2"]',
+				// re-bound to PTRC2 by its uuid: the commit writes its names from it
+				'//default:LNode[@uuid="b0000000-0000-4000-8000-000000000014"][@lnUuid="b0000000-0000-4000-8000-000000000026"][@lnInst="2"]//v2019C1:LNodeSpecNaming[@sLnInst="2"]',
 			],
 			unexpectedQueries: [
 				`//*[@uuid="${SUPERVISION_UUID}"]`,
@@ -111,6 +122,42 @@ describe('tx.lifecycle.apply - the specification in a fork of another version of
 			],
 			unexpectedQueries: [`//default:Function[@uuid="${METERING_UUID}"]`],
 		},
+	}
+
+	async function act({
+		project,
+		testCase,
+	}: SclTest.ActParams<SpecificationCase>): Promise<SclTest.ActResult> {
+		const { open, lifecycle } = await openFork({ project, ...testCase })
+		const refused = await applyFork({ open, lifecycle, decide: testCase.decide }).then(
+			() => undefined,
+			(error: unknown) => toDialecteError(error)?.key ?? String(error),
+		)
+		expect(refused).toBeUndefined()
+		return { assertOn: 'custom', xmlString: await open.query.getSnapshot({ as: 'xml' }) }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+// An application composing another function in revision 2 (Supervision: BayControl → LineProtection): its composition
+// follows, the function it no longer composes left where it is.
+describe('tx.lifecycle.apply - a fork changing what an application composes', () => {
+	const testCases: SclTest.TestCases<SpecificationCase> = {
+		'Supervision composing LineProtection in revision 2, accepted → its FunctionRef names LineProtection':
+			{
+				sourceXml: openIsdXml,
+				openXml: openSpecificationXml,
+				otherXml: onLineProtectionXml,
+				decide: (groups) => decideAll({ groups, action: () => 'accept' }),
+				expectedQueries: [
+					`//*[@uuid="${SUPERVISION_UUID}"]//v2019C1:FunctionRef[@functionUuid="b0000000-0000-4000-8000-000000000005"][@function="North/E1/Q01/LineProtection"]`,
+					'//default:Function[@uuid="b0000000-0000-4000-8000-000000000004"]',
+				],
+				unexpectedQueries: [
+					'//v2019C1:FunctionRef[@functionUuid="b0000000-0000-4000-8000-000000000004"]',
+				],
+			},
 	}
 
 	async function act({

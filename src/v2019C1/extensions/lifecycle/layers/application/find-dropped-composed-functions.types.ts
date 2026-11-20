@@ -14,4 +14,15 @@ export type FindDroppedComposedFunctionsParams = {
 	matchKey: MatchKey
 	/** What tells a function the source dropped from one the project added: see `classifyUnmatched`. */
 	removalBase: RemovalBase
+	/**
+	 * The functions the update reconciles as standalone ones beside the application (a substation scope's, see
+	 * `resolveTopologyReconcilables`): one the application no longer composes is updated as such, never dropped. Absent:
+	 * an application updated on its own.
+	 */
+	standaloneFunctions?: readonly Scl.Ref<'Function'>[]
+}
+
+/** Functions of the revision. */
+export type UuidsOfParams = {
+	refs: readonly Scl.Ref<'Function'>[]
 }

@@ -41,6 +41,16 @@ export function collectReportWarnings(report: DiffReport): ReportWarning[] {
 				lineage: node.pairedByName,
 			})
 		}
+		for (const unresolved of node.retargetUnresolved ?? []) {
+			const key = `${id}|${unresolved.attribute}`
+			if (!warnings.has(key)) {
+				warnings.set(key, {
+					code: 'reference-retarget-unresolved',
+					reference: node.instanceRef,
+					...unresolved,
+				})
+			}
+		}
 		if (node.pairedByKey !== undefined && !byKey.has(id)) {
 			byKey.set(id, {
 				code: 'element-paired-by-key',

@@ -51,6 +51,15 @@ export const BOUND_LNODE_KEEPING_ITS_TYPE: ProjectOwnedAttributes = {
 }
 
 /**
+ * An LNode bound to an IED in a fork whose consumer keeps the types of bound LNodes: its binding follows the newer
+ * revision (re-targeted by its uuid), its type is kept and a template changing it is listed as kept.
+ */
+export const BOUND_LNODE_TYPE_KEPT_IN_A_FORK: ProjectOwnedAttributes = {
+	attributes: new Set(BOUND_LNODE_TYPE_REFERENCES.keys()),
+	listedAsKept: BOUND_LNODE_TYPE_REFERENCES,
+}
+
+/**
  * What an instance of a template configures where it sits, and so owns against a newer template: the file describing
  * the behaviour of a behaviour description, the value of a variable (set for the instance, or by the variant it
  * selected). An element a template update adds carries the template's value: nothing is configured for it yet.

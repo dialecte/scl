@@ -537,7 +537,7 @@
 				"decisions to review before a template update",
 				"what placing an IED from an ISD/ICD/IID would add"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:57"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:58"
 		},
 		{
 			"path": "doc.query.lifecycle.sourceRoot.asd",
@@ -1175,14 +1175,14 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: UpdateIedParams) => Promise<AppliedInstance<'IED'>[]>",
-			"summary": "`tx.lifecycle.update.ied` - update the IED of the project placed from a template ISD with a newer revision of it (or place it when the project holds none), or, with `scenario: 'fork'`, the IED of an open ISD with another version of it, then release what the run wrote naming a logical node, ExtRef or ExtCtrl the project lacks, as `tx.lifecycle.apply` does after its verb.",
+			"summary": "`tx.lifecycle.update.ied` - update the IED of the project placed from a template ISD with a newer revision of it (or place it when the project holds none), or, with `scenario: 'fork'`, the IED of an open ISD with another version of it (references the other version points elsewhere re-targeted by uuid, the commit naming them; a fork into a project keeps its references), then release what the run wrote naming a logical node, ExtRef or ExtCtrl the project lacks, as `tx.lifecycle.apply` does after its verb.",
 			"intents": [
 				"update an S-IED from a newer ISD",
 				"reconcile an IED with its template ISD",
 				"update an IED specification",
 				"update an open ISD from another version of it"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:79"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/update/transaction/public-recipes.ts:80"
 		},
 		{
 			"path": "tx.lifecycle.update.ssd",

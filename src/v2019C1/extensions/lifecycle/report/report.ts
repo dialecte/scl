@@ -1,4 +1,5 @@
 import { listRemovalSideEffects, reportAsd, reportFsd, reportIed, reportSsd } from './query'
+import { linkRetargets } from './query/reference-retargets'
 import { reportTargetOf } from './report-target'
 import { collectReportWarnings } from './report-warnings'
 
@@ -88,7 +89,20 @@ export async function report(
 	// what the report is made for: apply refuses it for another target
 	report.target = reportTarget
 	// what a verb told of on its own, then what the report's nodes tell
-	const warnings = [...(report.warnings ?? []), ...collectReportWarnings(report)]
+	// a fork: a reference re-targeted onto what the update adds waits for it; onto nothing it brings, it stays
+	const retargets =
+		target.scenario === 'fork'
+			? await linkRetargets(query, { report, sourceQuery: target.sourceQuery })
+			: { dependsOn: new Map<string, readonly string[]>(), warnings: [] }
+	for (const group of allGroups(report)) {
+		const added = retargets.dependsOn.get(group.id)
+		if (added) group.dependsOn = [...new Set([...group.dependsOn, ...added])]
+	}
+	const warnings = [
+		...(report.warnings ?? []),
+		...collectReportWarnings(report),
+		...retargets.warnings,
+	]
 	if (warnings.length > 0) report.warnings = warnings
 	const revisionBase = revisionBaseOf(removalBase)
 	if (revisionBase) report.revisionBase = revisionBase
