@@ -5,14 +5,13 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { withUpdateHolds } from '@/v2019C1/extensions/lifecycle/engine/reference-retargets'
-import { assertIedPlacementOffered } from '@/v2019C1/extensions/lifecycle/layers/ied/assert-ied-placement'
 import { readFileCommunications } from '@/v2019C1/extensions/lifecycle/layers/ied/file-communication'
 import { readInstanceRedirects } from '@/v2019C1/extensions/lifecycle/layers/ied/instance-redirects'
 import { linkSpecificationBindings } from '@/v2019C1/extensions/lifecycle/layers/ied/link-specification-bindings'
 import { markOtherIedBindings } from '@/v2019C1/extensions/lifecycle/layers/ied/mark-other-ied-bindings'
 import { describeIedCommunication } from '@/v2019C1/extensions/lifecycle/layers/ied/place-ied-communication'
 import { readIedSpecification } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-specification'
-import { resolveIedInstance } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
+import { resolveIedScenario } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
 import type {
@@ -38,7 +37,7 @@ import type { AnyTrackedRecord } from '@dialecte/core'
  * Report (read-only) what placing an IED of a source file in the project would add, or what a newer revision of its
  * template changes in the IED of the project placed from it (`scenario: 'template'`, the default): the one
  * `targetInstance` names, required when the project holds several (`TARGET_INSTANCE_REQUIRED`, see
- * `resolveIedInstance`); or, as a fork on an open ISD, what another version of the same file changes in its IED, its
+ * `resolveIedScenario`); or, as a fork on an open ISD, what another version of the same file changes in its IED, its
  * Communication and its specification (`targetInstance` not read). Only an ISD's IED is updated: an ICD's found in the
  * project is refused.
  *
@@ -51,14 +50,15 @@ import type { AnyTrackedRecord } from '@dialecte/core'
  *
  * An ISD instance placed other than as a fork, a fork finding the IED in the project or a fork whose IED or
  * specification the project holds an element of by its uuid, is refused with `OPTION_NOT_AVAILABLE` (see
- * `assertIedPlacementOffered`).
+ * `resolveIedScenario`).
  */
 export async function reportIed(
 	query: Core.Query<Config>,
 	params: ReportIedParams,
 ): Promise<DiffReport> {
 	const { sourceQuery, iedRef, scenario = 'template', fileType } = params
-	const instance = await resolveIedInstance(query, {
+	// the decision `query.lifecycle.scenarioOf` reads too: the IED updated, or a placement offered
+	const instance = await resolveIedScenario(query, {
 		sourceQuery,
 		iedRef,
 		scenario,
@@ -80,14 +80,6 @@ async function reportIedPlacement(
 	params: ReportIedParams & { scenario: LifecycleScenario },
 ): Promise<DiffReport> {
 	const { sourceQuery, iedRef, scenario, fileType } = params
-	await assertIedPlacementOffered(query, {
-		sourceQuery,
-		iedRef,
-		scenario,
-		fileType,
-		operation: 'report (ied)',
-	})
-
 	const iedDiff = await diff({
 		sourceQuery,
 		targetQuery: query,

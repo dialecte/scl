@@ -1,10 +1,8 @@
+import { orThrowRefusal, refuse } from './refusal'
 import { SCL_FILE_TYPE_BY_EXTENSION } from './source-file-type.constants'
 
-import { throwDialecteError } from '@dialecte/core'
-
-import { SCL_ERRORS } from '@/v2019C1/errors'
-
-import type { SclFileExtension } from './source-file-type.types'
+import type { Refused } from './refusal.types'
+import type { SclFileExtension, SourceFileTypeParams } from './source-file-type.types'
 import type { Config } from '@/v2019C1/config'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
@@ -15,13 +13,24 @@ import type * as Core from '@dialecte/core'
  */
 export async function readSourceFileType(
 	query: Core.Query<Config>,
-	params: { accepted: ReadonlySet<SclFileExtension>; operation: string },
+	params: SourceFileTypeParams,
 ): Promise<SclFileType> {
+	const answer = await checkSourceFileType(query, params)
+	return orThrowRefusal(answer)
+}
+
+/** The type `readSourceFileType` reads, or the refusal it throws, as data. */
+export async function checkSourceFileType(
+	query: Core.Query<Config>,
+	params: SourceFileTypeParams,
+): Promise<SclFileType | Refused> {
 	const { accepted, operation } = params
 	const { extension } = await query.getDocumentInfo()
 	const source = { extension: extension.toLowerCase(), accepted }
 	if (isAcceptedExtension(source)) return SCL_FILE_TYPE_BY_EXTENSION[source.extension]
-	return throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
+	return refuse({
+		code: 'OPTION_NOT_AVAILABLE',
+		reason: 'source-extension',
 		meta: { option: 'sourceExtension', value: extension },
 		detail: `${operation}: source extension is not supported`,
 	})
