@@ -21,7 +21,7 @@ import type * as Core from '@dialecte/core'
 export async function readSignalChildrenOfEach(params: {
 	query: Core.Query<Config>
 	parents: readonly Scl.Ref<Scl.ElementsOf>[]
-}): Promise<Core.AnyRawRecord[][]> {
+}): Promise<(readonly Core.AnyRawRecord[])[]> {
 	const { query, parents } = params
 	const refs = [
 		...new Map(
@@ -46,8 +46,7 @@ export async function readSignalChildrenOfEach(params: {
 				const signal = SIGNAL_TAG_NAMES.has(link.tagName) ? signalById.get(link.id) : undefined
 				return signal ? [signal] : []
 			})
-			// frozen, typed as the callers read it: a caller never writes to it
-			return [parent.id, Object.freeze(signals) as Core.AnyRawRecord[]] as const
+			return [parent.id, Object.freeze(signals)] as const
 		}),
 	)
 	return parents.map((ref) => (ref.id ? signalsByParentId.get(ref.id) : undefined) ?? [])
@@ -64,7 +63,7 @@ export async function readSignalChildrenOfEach(params: {
 export async function readSiblingsOfEach(params: {
 	query: Core.Query<Config>
 	records: readonly Core.AnyRawRecord[]
-}): Promise<Core.AnyRawRecord[][]> {
+}): Promise<(readonly Core.AnyRawRecord[])[]> {
 	const { query, records } = params
 	const placed = records.filter((record) => Boolean(record.parent))
 	const children = await readSignalChildrenOfEach({
