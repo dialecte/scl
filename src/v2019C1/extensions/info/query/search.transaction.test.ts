@@ -1,3 +1,4 @@
+import { pathOf } from './fixtures/search-mixed.path'
 import searchXml from './fixtures/search-mixed.xml?raw'
 import { search } from './search'
 
@@ -16,13 +17,13 @@ const BAY2: SearchHit = {
 	tagName: 'Bay',
 	id: 'bay2',
 	title: 'FEEDER2',
-	ancestorIds: ['root', 's1', 'vl1'],
+	...pathOf('root', 's1', 'vl1'),
 }
 const BAY3: SearchHit = {
 	tagName: 'Bay',
 	id: 'bay3',
 	title: 'Feeder1',
-	ancestorIds: ['root', 's1', 'vl2'],
+	...pathOf('root', 's1', 'vl2'),
 }
 
 /** The hits in a fixed order (by id) where the store's order within a tag is not the point. */
@@ -52,7 +53,42 @@ describe('search - inside a transaction', () => {
 							tagName: 'Bay',
 							id: created.id,
 							title: 'Feeder9',
-							ancestorIds: ['root', 's1', 'vl2'],
+							...pathOf('root', 's1', 'vl2'),
+						},
+					],
+				}
+			},
+		},
+		'a Bay created under a VoltageLevel created in the transaction → both named in its path': {
+			// s1 is stored; the level and the bay under it are both staged
+			sourceXml: searchXml,
+			stage: async function createLevelAndBay(tx) {
+				const level = await tx.any.addChild(
+					{ tagName: 'Substation', id: 's1' },
+					{
+						tagName: 'VoltageLevel',
+						namespace: SCL_DIALECTE_CONFIG.namespaces.default,
+						attributes: { name: 'V9' },
+					},
+				)
+				const bay = await tx.any.addChild(level, {
+					tagName: 'Bay',
+					namespace: SCL_DIALECTE_CONFIG.namespaces.default,
+					attributes: { name: 'Feeder9' },
+				})
+				return {
+					params: { term: 'feeder9', tagNames: ['Bay'] },
+					expected: [
+						{
+							tagName: 'Bay',
+							id: bay.id,
+							title: 'Feeder9',
+							ancestorIds: ['root', 's1', level.id],
+							ancestors: [
+								{ tagName: 'SCL', id: 'root' },
+								{ tagName: 'Substation', id: 's1' },
+								{ tagName: 'VoltageLevel', id: level.id },
+							],
 						},
 					],
 				}
@@ -89,7 +125,7 @@ describe('search - inside a transaction', () => {
 							tagName: 'SourceRef',
 							id: 'sr1',
 							title: 'Trip',
-							ancestorIds: ['root', 's1', 'vl1', 'bay1', 'f1', 'lnode1'],
+							...pathOf('root', 's1', 'vl1', 'bay1', 'f1', 'lnode1'),
 						},
 					],
 				}

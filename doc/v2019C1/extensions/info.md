@@ -59,7 +59,7 @@ const display = info.labels?.[currentLang]?.[''] ?? info.labels?.en?.[''] ?? inf
 
 ```ts
 const hits = await doc.query.info.search({ term: 'feeder', tagNames: ['Bay', 'Function', 'LNode'] })
-// SearchHit[]: { tagName, id, title, ancestorIds }[]
+// SearchHit[]: { tagName, id, title, ancestorIds, ancestors }[]
 const inTheTree = await doc.query.info.search({
 	term,
 	tagNames,
@@ -74,6 +74,8 @@ as the text searched; the name or the labels are not matched. The term is trimme
 
 - `ancestorIds` -- the ids of the hit's ancestors from the root down, the hit itself and the transparent `Private`
   left out, as a tree read with `unwrap: ['Private']` shows its rows: the path to open to reveal the hit.
+- `ancestors` -- the same ancestors as refs (`SearchAncestor`, `{ tagName, id }`), in the same order:
+  `doc.query.info.ofEach(hit.ancestors)` titles the hit's path in one call.
 - `omit` -- tags whose elements, and everything below them, are no hit (the subtrees a view hides).
 - `limit` -- at most that many hits (its whole part); there is no cap by default or for a limit that is not a finite
   number, and a limit of 0 or less finds nothing and reads nothing. With nothing omitted, only the hits kept have their
@@ -85,7 +87,7 @@ as the text searched; the name or the labels are not matched. The term is trimme
   or a rename is matched on its staged title.
 
 Reads: one per tag, the titles of all the elements in one batch (as `ofEach`), then one ancestor read per level of the
-deepest hit, whatever the number of hits. `SearchParams` and `SearchHit` are exported from `@dialecte/scl/v2019C1`.
+deepest hit, whatever the number of hits. `SearchParams`, `SearchHit` and `SearchAncestor` are exported from `@dialecte/scl/v2019C1`.
 
 ### State
 

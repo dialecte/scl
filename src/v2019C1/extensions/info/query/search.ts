@@ -8,8 +8,8 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
- * The elements of the tags given whose title holds the term, each with the ids of its ancestors from the root down,
- * so a tree that has not loaded an element can open the path to it. The titles are the ones `ofEach` gives (in the
+ * The elements of the tags given whose title holds the term, each with its ancestors from the root down (as ids and
+ * as refs), so a tree that has not loaded an element can open the path to it. The titles are the ones `ofEach` gives (in the
  * `mode` asked, `compact` by default), so a hit reads in a tree as the text searched. The term is trimmed and matched
  * case aside, anywhere in the title; an empty term finds nothing and reads nothing. The ancestors leave out the
  * element itself and the transparent elements (`Private`), as a tree read unwrapping them shows none. An element of an
@@ -67,13 +67,17 @@ export async function search(
 		const ancestors = ancestorsOfEach[index]
 		if (ancestors.some((ancestor) => omitted.has(ancestor.tagName))) continue
 		const { record, title } = placed[index]
+		const path = ancestors.flatMap((ancestor) =>
+			isTransparentElement(ancestor.tagName)
+				? []
+				: [{ tagName: ancestor.tagName, id: ancestor.id }],
+		)
 		hits.push({
 			tagName: record.tagName,
 			id: record.id,
 			title,
-			ancestorIds: ancestors.flatMap((ancestor) =>
-				isTransparentElement(ancestor.tagName) ? [] : [ancestor.id],
-			),
+			ancestorIds: path.map((ancestor) => ancestor.id),
+			ancestors: path,
 		})
 	}
 	return hits

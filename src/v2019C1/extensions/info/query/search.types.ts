@@ -25,4 +25,15 @@ export type SearchHit = {
 	title: string
 	/** The ids of its ancestors from the root down, itself and transparent elements (`Private`) left out. */
 	ancestorIds: string[]
+	/**
+	 * The same ancestors as refs (`{ tagName, id }`), in the same order: `info.ofEach(hit.ancestors)` titles the hit's
+	 * path in one call.
+	 */
+	ancestors: SearchAncestor[]
 }
+
+/**
+ * An ancestor of a search hit as a ref, its id always set: `info.ofEach` and the `query.any` verbs take it as it is.
+ * Not `Scl.Ref`: that type leaves the id optional for singleton tags and takes a tag name narrowed to one tag.
+ */
+export type SearchAncestor = { tagName: string; id: string }
