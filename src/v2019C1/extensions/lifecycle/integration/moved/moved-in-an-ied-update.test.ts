@@ -1,4 +1,5 @@
 import projectNorthWithSub1 from '../ied/fixtures/project-north-with-bcu1-and-sub1-subscribing-to-it.xml?raw'
+import isdTemplateDroppingProtRetypingPtrc from './fixtures/isd-template-of-a-bay-controller-revised-dropping-prot-keeping-ptrc-in-ctrl-retyped.xml?raw'
 import isdTemplateDroppingProt from './fixtures/isd-template-of-a-bay-controller-revised-dropping-prot-keeping-ptrc-in-ctrl.xml?raw'
 import isdTemplateMovingPtrcIntoNewDeviceAsPtrc2 from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-into-a-new-device-as-ptrc2.xml?raw'
 import isdTemplateMovingPtrcIntoNewDevice from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-into-a-new-device.xml?raw'
@@ -12,7 +13,7 @@ import { readAttribute } from '@/v2019C1/helpers'
 import { runSclTestCases } from '@/v2019C1/test'
 
 import type { Config, Scl } from '@/v2019C1/config'
-import type { DecisionGroup } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { DecisionGroup, DiffNode } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 import type * as Core from '@dialecte/core'
 
@@ -42,6 +43,15 @@ describe('query.lifecycle.report - an S-IED update moving a logical node another
 				targetXml: projectNorthWithSub1,
 				moved: ['moved LN skip changes-another-ied from PROT to CTRL'],
 				impacts: ['SUB1 renamed c0000000-0000-4000-8000-000000000006'],
+			},
+		// the same, PTRC1 now of a type holding Op only: SUB1's input names Tr.general, which the moved PTRC1 no longer holds,
+		// so it is deleted (not renamed: the input goes)
+		'the revision removing PROT while PTRC1 moves out of it retyped without Tr → SUB1 input deleted, naming deleted data':
+			{
+				sourceXml: isdTemplateDroppingProtRetypingPtrc,
+				targetXml: projectNorthWithSub1,
+				moved: ['moved LN skip changes-another-ied from PROT to CTRL'],
+				impacts: ['SUB1 deleted c0000000-0000-4000-8000-000000000006'],
 			},
 	}
 
@@ -122,6 +132,58 @@ describe('query.lifecycle.report - an S-IED update moving logical nodes', () => 
 
 	runSclTestCases.withoutExport({ testCases, act })
 })
+
+type RemovalCase = SclTest.BaseXmlTestCase & {
+	/** What the removal of PROT takes, by its group: `<tag> <lnClass>` of each element listed, sorted. */
+	takes: string[]
+}
+
+// What a removal takes never includes what the revision moves out of it: that is listed once, as a move.
+describe('query.lifecycle.report - the removal of a device a logical node moves out of', () => {
+	const testCases: SclTest.TestCases<RemovalCase> = {
+		// the revision drops PROT and keeps PTRC1 under CTRL: PROT takes its LLN0, LPHD1 and PTOC1, not PTRC1
+		'PROT removed, PTRC1 moved out of it to CTRL → the removal takes LLN0, LPHD1 and PTOC1, not PTRC1':
+			{
+				sourceXml: isdTemplateDroppingProt,
+				targetXml: projectNorthWithSub1,
+				takes: ['LN LPHD', 'LN PTOC', 'LN0 LLN0'],
+			},
+	}
+
+	async function act({ project, target, testCase }: SclTest.ActParams<RemovalCase>): Promise<void> {
+		if (!target) throw new Error('target required')
+		const lifecycle = await updateOfBcu1({ project, target, sourceXml: testCase.sourceXml })
+		const report = await target.query.lifecycle.report(lifecycle)
+		const removal = report.instances
+			.flatMap((instance) => instance.groups)
+			.find((group) => group.change === 'removed' && group.primary.tagName === 'LDevice')
+		const taken = removal ? logicalNodesBelow(removal.primary) : []
+		const classes = await lnClassesOf({ query: target.query, nodes: taken })
+		expect(classes.sort()).toEqual(testCase.takes)
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
+
+/** The logical nodes of a diff subtree. */
+function logicalNodesBelow(node: DiffNode): DiffNode[] {
+	const own = node.tagName === 'LN' || node.tagName === 'LN0' ? [node] : []
+	return [...own, ...node.children.flatMap(logicalNodesBelow)]
+}
+
+/** `<tag> <lnClass>` of each node's instance element. */
+async function lnClassesOf(params: {
+	query: Core.Query<Config>
+	nodes: readonly DiffNode[]
+}): Promise<string[]> {
+	const refs = params.nodes.flatMap((node) => (node.instanceRef ? [node.instanceRef] : []))
+	const records = await params.query.any.getRecords(refs)
+	return records.flatMap((record) =>
+		record
+			? [`${record.tagName} ${readAttribute({ record, name: 'lnClass', defaults: 'none' })}`]
+			: [],
+	)
+}
 
 type SummaryCase = SclTest.BaseXmlTestCase & {
 	/** The report's summary of the update: what it adds, removes and moves (the IED's own record of the revision aside). */

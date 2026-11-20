@@ -1,4 +1,5 @@
 import projectNorthWithSub1 from '../ied/fixtures/project-north-with-bcu1-and-sub1-subscribing-to-it.xml?raw'
+import isdTemplateDroppingCtrlMovingCilo from './fixtures/isd-template-of-a-bay-controller-revised-dropping-ctrl-moving-cilo-to-prot.xml?raw'
 import isdTemplateDroppingProt from './fixtures/isd-template-of-a-bay-controller-revised-dropping-prot-keeping-ptrc-in-ctrl.xml?raw'
 import isdTemplateMovingPtrcIntoNewDeviceAsPtrc2 from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-into-a-new-device-as-ptrc2.xml?raw'
 import isdTemplateMovingPtrcIntoNewDevice from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-into-a-new-device.xml?raw'
@@ -91,6 +92,21 @@ describe('tx.lifecycle.apply - an S-IED update moving a logical node', () => {
 			],
 			unexpectedQueries: ['//default:IED[@name="BCU1"]//default:LDevice[@inst="PROT"]'],
 		},
+		// the revision drops CTRL and moves CILO1 (b…022) to PROT without its input (lineage a…036)
+		'CTRL removed and CILO1 moved out of it to PROT losing its input, every group accepted → CILO1 under PROT, its input gone':
+			{
+				sourceXml: isdTemplateDroppingCtrlMovingCilo,
+				targetXml: projectNorthWithSub1,
+				decide: acceptEvery,
+				keepsRecordOfPtrc1: true,
+				expectedQueries: [
+					'//default:IED[@name="BCU1"]//default:LDevice[@inst="PROT"]/default:LN[@lnClass="CILO"][@uuid="b0000000-0000-4000-8000-000000000022"]',
+				],
+				unexpectedQueries: [
+					'//default:IED[@name="BCU1"]//default:LDevice[@inst="CTRL"]',
+					'//default:IED[@name="BCU1"]//default:ExtRef[@templateUuid="a0000000-0000-4000-8000-000000000036"]',
+				],
+			},
 		// the revision moves PTRC1 to CTRL as PTRC2
 		'PTRC1 moved to CTRL and renamed PTRC2, every group accepted → PTRC2 under CTRL, SUB1 naming PTRC2 there':
 			{

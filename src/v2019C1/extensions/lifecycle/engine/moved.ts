@@ -8,7 +8,13 @@ import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 import type { DecisionGroup, DiffNode } from './diff.types'
 import type {
 	FindMovedInAddedParams,
+	MovableSourceParams,
 	MovedOutParams,
+	ElementRef,
+	PrunedBelowParams,
+	TopmostBelowParams,
+	TreeParentsBelowParams,
+	WithoutMovedOutParams,
 	LinkMovesParams,
 	MovedInAdded,
 	PendingMove,
@@ -106,6 +112,8 @@ export function linkMoveDependencies(params: LinkMovesParams): DecisionGroup[] {
 
 /** The source ids of the added nodes of a diff subtree, the node itself included when added. */
 function addedSourceIds(node: DiffNode): string[] {
+	// what a moved element holds is its own group's, not the addition it lands in
+	if (node.change === 'moved') return []
 	const own = node.change === 'added' && node.sourceRef?.id ? [node.sourceRef.id] : []
 	return [...own, ...node.children.flatMap(addedSourceIds)]
 }
@@ -119,10 +127,7 @@ export function withTreeParents(params: TreeParentsParams): DiffNode {
 	return withTreeParentsBelow({ node: params.root, parentOf })
 }
 
-function withTreeParentsBelow(params: {
-	node: DiffNode
-	parentOf: ReadonlyMap<string, { tagName: string; id: string }>
-}): DiffNode {
+function withTreeParentsBelow(params: TreeParentsBelowParams): DiffNode {
 	const { node, parentOf } = params
 	const children = node.children.map((child) => withTreeParentsBelow({ node: child, parentOf }))
 	const wrapped =
@@ -134,8 +139,8 @@ function withTreeParentsBelow(params: {
 }
 
 /** Each element's parent as the walk sees it (through transparent wrappers), over a tree. */
-function treeParentRefs(tree: AnyTreeRecord): ReadonlyMap<string, { tagName: string; id: string }> {
-	const parents = new Map<string, { tagName: string; id: string }>()
+function treeParentRefs(tree: AnyTreeRecord): ReadonlyMap<string, ElementRef> {
+	const parents = new Map<string, ElementRef>()
 	const pending = [tree]
 	while (pending.length > 0) {
 		const node = pending.pop()
@@ -179,17 +184,65 @@ export async function writeMoves(
 }
 
 /**
- * Whether an instance element below a removed one is the source's still, elsewhere: its lineage the source holds, so
- * the source moved it (it is reported and written as a move), and the removal does not take it.
+ * The lineages a walk can pair an instance element with: the uuids of the source subtree, but those of a boundary tag
+ * another pass owns (`omit`) and of what the instance's selection of variants leaves out (`notSelected`), with what they
+ * hold. An instance element below a removed one carrying one of them is moved out of it, not removed with it.
  */
+export function movableSourceUuids(params: MovableSourceParams): Set<string> {
+	const { omit, notSelected } = params
+	const movable = new Set<string>()
+	const pending = [...params.sourceTree.tree]
+	while (pending.length > 0) {
+		const node = pending.pop()
+		if (!node || omit?.includes(node.tagName) || notSelected?.has(node.id)) continue
+		const uuid = readAttribute({ record: node, name: 'uuid', defaults: 'none' })
+		if (uuid) movable.add(uuid)
+		pending.push(...node.tree)
+	}
+	return movable
+}
+
+/** Whether an instance element below a removed one is the source's still, elsewhere: the walk pairs and moves it. */
 export function movedOut(params: MovedOutParams): boolean {
-	const { node, matchKey, sourceUuids } = params
+	const { node, matchKey, movable } = params
 	const lineage = readAttribute({ record: node, name: matchKey, defaults: 'none' })
-	return lineage !== '' && sourceUuids.has(lineage)
+	return lineage !== '' && movable.has(lineage)
 }
 
 /** The elements of an instance subtree a removal takes: every one, but those moved out of it and what they hold. */
 export function removedElementsOf(params: MovedOutParams): AnyTreeRecord[] {
 	const below = params.node.tree.filter((child) => !movedOut({ ...params, node: child }))
 	return [params.node, ...below.flatMap((child) => removedElementsOf({ ...params, node: child }))]
+}
+
+/** The topmost elements below a node a predicate picks, each with what it holds left to the caller. */
+export function topmostBelow(params: TopmostBelowParams): AnyTreeRecord[] {
+	const { node, picks } = params
+	return node.tree.flatMap((child) =>
+		picks(child) ? [child] : topmostBelow({ node: child, picks }),
+	)
+}
+
+/**
+ * The diff's tree with what the walk reports as moved left out of every removal and every element listed as the
+ * project's own: a moved element is one change, in its own group, never also taken with the parent it leaves.
+ */
+export function withoutMovedOut(params: WithoutMovedOutParams): DiffNode {
+	const movedIds = new Set(movedInstanceIds(params.root))
+	return movedIds.size === 0 ? params.root : prunedBelow({ node: params.root, movedIds })
+}
+
+function prunedBelow(params: PrunedBelowParams): DiffNode {
+	const { node, movedIds } = params
+	const leaves = node.change === 'removed' || node.change === 'target-only'
+	const kept = leaves
+		? node.children.filter((child) => !child.instanceRef?.id || !movedIds.has(child.instanceRef.id))
+		: node.children
+	return { ...node, children: kept.map((child) => prunedBelow({ node: child, movedIds })) }
+}
+
+/** The instance ids of the nodes a diff's tree reports as moved. */
+function movedInstanceIds(node: DiffNode): string[] {
+	const own = node.change === 'moved' && node.instanceRef?.id ? [node.instanceRef.id] : []
+	return [...own, ...node.children.flatMap(movedInstanceIds)]
 }

@@ -3,7 +3,7 @@ import { createConfRevBumpQueue, remapCopies, writeDataSetChange } from './data-
 import { findDeletedDataReferrers, writeDeletedDataReferrers } from './deleted-data-referrers'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
-import { findMovedInAdded, writeMoves } from './moved'
+import { findMovedInAdded, movableSourceUuids, topmostBelow, writeMoves } from './moved'
 import { pairByKeyOnLineageMiss } from './pair-by-key'
 import { createPairingMemo } from './pairing-memo'
 import { projectOwnedAttributes } from './project-owned-attributes'
@@ -220,6 +220,7 @@ export async function reconcile(
 		sourceTree,
 		instanceTree,
 		sourceUuids,
+		movable: movableSourceUuids({ sourceTree, omit, notSelected }),
 		matchKey,
 		removalBase: params.removalBase,
 		typeComparison: typeFollowing.comparison,
@@ -310,6 +311,7 @@ export async function reconcile(
 		await deleteRemoved(tx, {
 			instanceNode: instanceTree,
 			sourceUuids,
+			movedIds: new Set(moves.map((move) => move.instance.id)),
 			pairedByKey: new Set(byKey.pinnedMatches.values()),
 			accepted,
 			matchKey,
@@ -756,6 +758,8 @@ async function deleteRemoved(
 		omit: readonly string[] | undefined
 		/** The instance elements the key pass paired: held by the template whatever their lineage says. */
 		pairedByKey: ReadonlySet<string>
+		/** The instance elements the walk moved: out of what a removal takes, their own removals collected. */
+		movedIds: ReadonlySet<string>
 	},
 ): Promise<void> {
 	const { instanceNode, sourceUuids, accepted, matchKey, removalBase, omit } = params
@@ -768,6 +772,7 @@ async function deleteRemoved(
 		matchKey,
 		removalBase,
 		omit,
+		movedIds: params.movedIds,
 		out: toDelete,
 	})
 
@@ -789,10 +794,11 @@ async function collectRemoved(
 		matchKey: MatchKey
 		removalBase: RemovalBase
 		omit: readonly string[] | undefined
+		movedIds: ReadonlySet<string>
 		out: AnyTreeRecord[]
 	},
 ): Promise<void> {
-	const { node, sourceUuids, accepted, matchKey, removalBase, omit, out } = params
+	const { node, sourceUuids, accepted, matchKey, removalBase, omit, movedIds, out } = params
 	// a boundary subtree is owned by another pass - do not delete or descend into it
 	if (omit?.includes(node.tagName)) return
 	const lineage = await tx.any.getAttribute(node, { name: matchKey })
@@ -806,21 +812,16 @@ async function collectRemoved(
 		: 'still-held'
 	// one atomic group, its subtree cascading with it (do not descend): a removal is written unless it was
 	// skipped, an element of the project's own only when its removal was accepted
-	if (unmatched !== 'still-held') {
-		if (acceptsRemoval({ change: unmatched, id: node.id, accepted })) out.push(node)
-		return
-	}
-	for (const child of node.tree) {
-		await collectRemoved(tx, {
-			node: child,
-			sourceUuids,
-			pairedByKey: params.pairedByKey,
-			accepted,
-			matchKey,
-			removalBase,
-			omit,
-			out,
-		})
+	// what the walk moved out of it left before the delete: its own removals are collected where it now is
+	const below =
+		unmatched === 'still-held'
+			? node.tree
+			: topmostBelow({ node, picks: (child) => movedIds.has(child.id) })
+	if (unmatched !== 'still-held' && acceptsRemoval({ change: unmatched, id: node.id, accepted }))
+		// dialecte-allow argument-mutation: the walk's accumulator of the removals to write, filled as it walks
+		out.push(node)
+	for (const child of below) {
+		await collectRemoved(tx, { ...params, node: child })
 	}
 }
 
