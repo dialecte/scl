@@ -34,7 +34,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/layers/ied/other-ied-impacts'
 import { placeIedCommunication } from '@/v2019C1/extensions/lifecycle/layers/ied/place-ied-communication'
 import { readIedSpecification } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-specification'
-import { resolveIedInstance } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
+import { resolveIedScenario } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
@@ -128,7 +128,8 @@ export async function ied(
 ): Promise<AppliedInstance<'IED'>[]> {
 	const { sourceQuery, iedRef, anchor, fileType, scenario = 'template' } = params
 	const policy = scenarioPolicy({ scenario })
-	const instance = await resolveIedInstance(tx, {
+	// the decision `query.lifecycle.scenarioOf` reads too: the IED updated, or a placement offered
+	const instance = await resolveIedScenario(tx, {
 		sourceQuery,
 		iedRef,
 		scenario,

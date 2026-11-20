@@ -6,10 +6,8 @@ import {
 } from './ied-placement.constants'
 import { isIsdInstance } from './is-isd-instance'
 
-import { throwDialecteError } from '@dialecte/core'
-
-import { SCL_ERRORS } from '@/v2019C1/errors'
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
+import { isRefused, orThrowRefusal, refuse } from '@/v2019C1/extensions/lifecycle/refusal'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { IED_ROOT_TAG } from '@/v2019C1/extensions/lifecycle/source-root/source-root.constants'
 import { buildElementPath } from '@/v2019C1/extensions/reference/query/build'
@@ -18,16 +16,18 @@ import { readAttribute } from '@/v2019C1/helpers'
 import type {
 	AssertIedPlacementParams,
 	HeldElement,
+	IedSource,
 	UuidRecord,
 } from './assert-ied-placement.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { Refused } from '@/v2019C1/extensions/lifecycle/refusal.types'
 import type * as Core from '@dialecte/core'
 
 /**
  * Refuse, before anything is read further, an IED placement the report and the apply do not offer, with
  * `OPTION_NOT_AVAILABLE`: the IED of a template ISD or of an ICD is placed as a new IED, the IED of an ISD instance file
  * as a fork only, keeping its identity, and into a project only a first placement (another version of an open ISD
- * updates it, see `resolveIedInstance`).
+ * updates it, see `resolveIedScenario`).
  *  - an IED read from an IID or an SCD: `meta: { option: 'source', value: 'iid' | 'scd' }`;
  *  - the IED of an ISD instance file (an ISD whose IED is not named `SPECIFICATION`) placed other than as a fork:
  *    `meta: { option: 'source', value: 'isd-instance' }`;
@@ -43,52 +43,67 @@ export async function assertIedPlacementOffered(
 	query: Core.Query<Config>,
 	params: AssertIedPlacementParams,
 ): Promise<void> {
-	const { sourceQuery, scenario } = params
-	const { uuid } = await assertIedSourceOffered(params)
+	const answer = await checkIedPlacement(query, params)
+	orThrowRefusal(answer)
+}
+
+/** The refusal `assertIedPlacementOffered` throws, as data; `undefined` when the placement is offered. */
+export async function checkIedPlacement(
+	query: Core.Query<Config>,
+	params: AssertIedPlacementParams,
+): Promise<Refused | undefined> {
+	const { sourceQuery, scenario, operation } = params
+	const source = await checkIedSource(params)
+	if (isRefused(source)) return source
 	const { matchesInstances, matchKey } = scenarioPolicy({ scenario })
-	if (!matchesInstances) return
+	if (!matchesInstances) return undefined
 	const matched = await findInstancesByTemplateUuid(query, {
 		tagName: IED_ROOT_TAG,
-		sourceUuid: uuid,
+		sourceUuid: source.uuid,
 		matchKey,
 	})
-	if (matched.length > 0) {
-		throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
+	if (matched.length > 0)
+		return refuse({
+			code: 'OPTION_NOT_AVAILABLE',
+			reason: 'already-in-project',
 			meta: { option: 'scenario', value: scenario },
-			detail: `${params.operation}: "${scenario}" finds the IED in the project: into a project, only a first placement is offered`,
+			detail: `${operation}: "${scenario}" finds the IED in the project: into a project, only a first placement is offered`,
 		})
-	}
-	if (scenario !== 'fork') return
+	if (scenario !== 'fork') return undefined
 	const held = await findHeldPlacedElement(query, { sourceQuery })
-	if (!held) return
-	throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
+	if (!held) return undefined
+	return refuse({
+		code: 'OPTION_NOT_AVAILABLE',
+		reason: 'already-in-project',
 		meta: { option: 'scenario', value: scenario, held },
-		detail: `${params.operation}: "${scenario}" finds in the project the ${held.tagName} ${held.path ?? ''} holding a uuid of the IED or of its specification: into a project, only a first placement is offered`,
+		detail: `${operation}: "${scenario}" finds in the project the ${held.tagName} ${held.path ?? ''} holding a uuid of the IED or of its specification: into a project, only a first placement is offered`,
 	})
 }
 
 /**
- * Refuse a source an IED is not read from yet, with `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value }`): an
- * IID or an SCD (`'iid'` / `'scd'`), an ISD instance file other than as a fork (`'isd-instance'`). Returns the source
- * IED's name and uuid, read once.
+ * The refusal of a source an IED is not read from yet, with `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value }`):
+ * an IID or an SCD (`'iid'` / `'scd'`), an ISD instance file other than as a fork (`'isd-instance'`). Otherwise the
+ * source IED's name and uuid, read once.
  */
-export async function assertIedSourceOffered(
+export async function checkIedSource(
 	params: AssertIedPlacementParams,
-): Promise<{ name: string; uuid: string | undefined }> {
-	const { sourceQuery, iedRef, scenario, fileType } = params
-	if (fileType && IDENTITY_KEEPING_FILE_TYPES.has(fileType)) {
-		throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
+): Promise<IedSource | Refused> {
+	const { sourceQuery, iedRef, scenario, fileType, operation } = params
+	if (fileType && IDENTITY_KEEPING_FILE_TYPES.has(fileType))
+		return refuse({
+			code: 'OPTION_NOT_AVAILABLE',
+			reason: 'source-not-read',
 			meta: { option: 'source', value: fileType.toLowerCase() },
-			detail: `${params.operation}: an IED read from an ${fileType} is not placed yet, only one of a template ISD or an ICD`,
+			detail: `${operation}: an IED read from an ${fileType} is not placed yet, only one of a template ISD or an ICD`,
 		})
-	}
 	const { name, uuid } = await sourceQuery.getAttributes(iedRef)
-	if (isIsdInstance({ fileType, iedName: name }) && scenario !== 'fork') {
-		throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
+	if (isIsdInstance({ fileType, iedName: name }) && scenario !== 'fork')
+		return refuse({
+			code: 'OPTION_NOT_AVAILABLE',
+			reason: 'isd-instance-not-fork',
 			meta: { option: 'source', value: 'isd-instance' },
-			detail: `${params.operation}: the IED of an ISD instance file (named "${name}") keeps its identity: it is placed as a fork only`,
+			detail: `${operation}: the IED of an ISD instance file (named "${name}") keeps its identity: it is placed as a fork only`,
 		})
-	}
 	return { name, uuid }
 }
 

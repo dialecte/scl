@@ -40,7 +40,7 @@ export type UpdateIedParams = {
 export type ReconcileIedParams = Omit<UpdateIedParams, 'fileType' | 'targetInstance'> & {
 	/** The type of file the template is: the revision the IED records. */
 	fileType: SclFileType
-	/** The IED of the project the update starts from (see `resolveIedInstance`). */
+	/** The IED of the project the update starts from (see `resolveIedScenario`). */
 	instance: AnyTrackedRecord
 	/** The scenario's policy, read once at the verb's entry. */
 	policy: ScenarioPolicy

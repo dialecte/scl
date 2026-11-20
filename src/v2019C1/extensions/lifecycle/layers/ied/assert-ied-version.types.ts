@@ -2,10 +2,10 @@ import type { IedOperation } from './assert-ied-placement.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
-export type AssertIedVersionParams = {
+export type CheckIedVersionParams = {
 	/** The other file, the fork takes changes over from. */
 	sourceQuery: Core.Query<Config>
-	/** The uuid of the other file's IED, as `assertIedSourceOffered` read it. */
+	/** The uuid of the other file's IED, as `checkIedSource` reads it. */
 	otherIedUuid: string | undefined
 	/** The operation refusing, named in the error's detail. */
 	operation: IedOperation
