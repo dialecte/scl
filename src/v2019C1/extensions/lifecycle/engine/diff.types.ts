@@ -294,7 +294,8 @@ export type ReportInstance = {
 	 * the template): the project element this one is made for — the level it lands under (a primary of
 	 * a substation template), or the instance of the application it is placed for (a function the
 	 * application gained). Its groups are scoped to it, so each is decided on its own. Absent when the
-	 * placement is made once.
+	 * placement is made once. On a primary the update moves to another level: the instance of the unit
+	 * it moves in.
 	 */
 	placedFor?: AnyRefOrRecord
 	/** Human-readable title of the instance root (`info.of`). */

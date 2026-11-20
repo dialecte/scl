@@ -24,3 +24,8 @@ export type ReconcileResult = {
 export type ReconcileAdditions =
 	| { identityMode: ScenarioPolicy['identityMode']; contributeOnly?: false }
 	| { identityMode?: undefined; contributeOnly: true }
+
+/** Called once a reconcile wrote what it adds and its moves, before its removals: what it added. */
+export type ReconcileBeforeRemovals = (params: {
+	added: readonly Scl.CloneMapping[]
+}) => Promise<void>

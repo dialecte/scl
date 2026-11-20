@@ -1,5 +1,6 @@
 import { foldCrossCuttingSatellites } from './cross-cutting-satellites'
 import { createPlacementListing } from './placement-listing'
+import { withPrimaryMoves } from './primary-moves'
 import { reportAsd } from './report-asd'
 import { reportFsd } from './report-fsd'
 import { reportTopologyFrame } from './report-topology-frame'
@@ -47,6 +48,7 @@ import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-
 import type { TargetInstances } from '@/v2019C1/extensions/lifecycle/instance'
 import type {
 	PrimaryPlace,
+	PrimaryMove,
 	ResolvePrimaryParentsParams,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { PlacementLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
@@ -221,8 +223,10 @@ export async function reportSsd(
 	// per instance (for the level the instance sits on), each decided on its own — as the apply
 	// places it. Where its level is not written yet, it is reported from the level the instance sits on.
 	const primaryInstances: ReportInstance[] = []
+	// the held primaries the revision puts on another level of their instance of the unit
+	const primaryMoves: PrimaryMove[] = []
 	for (const applicationRef of applications) {
-		const places = await findPrimaryPlaces(query, {
+		const { places, moves } = await findPrimaryPlaces(query, {
 			sourceQuery,
 			primaryRef: applicationRef,
 			anchor: landing,
@@ -232,6 +236,7 @@ export async function reportSsd(
 			primaryTargets: params.primaryTargets,
 			gainedIn: params.gainedIn,
 		})
+		primaryMoves.push(...moves)
 		for (const { parent, placedFor } of places) {
 			const report = await reportAsd(query, {
 				placementListing,
@@ -253,7 +258,7 @@ export async function reportSsd(
 		}
 	}
 	for (const functionRef of standaloneFunctions) {
-		const places = await findPrimaryPlaces(query, {
+		const { places, moves } = await findPrimaryPlaces(query, {
 			sourceQuery,
 			primaryRef: functionRef,
 			anchor: landing,
@@ -263,6 +268,7 @@ export async function reportSsd(
 			primaryTargets: params.primaryTargets,
 			gainedIn: params.gainedIn,
 		})
+		primaryMoves.push(...moves)
 		for (const { parent, placedFor } of places) {
 			const report = await reportFsd(query, {
 				placementListing,
@@ -313,9 +319,11 @@ export async function reportSsd(
 		await linkPlacementDependencies(sourceQuery, { instances: scope, index })
 	}
 
+	// a primary the revision puts on another level is one move, waiting for the level it lands in
+	const moved = withPrimaryMoves({ frameInstances, primaryInstances, moves: primaryMoves })
 	const report = assembleReport({
-		instances: [...frameInstances, ...primaryInstances],
-		templateRoots: frameInstances,
+		instances: [...moved.frameInstances, ...moved.primaryInstances],
+		templateRoots: moved.frameInstances,
 	})
 	// a level nothing is decided for is the consumer's to choose before anything is written
 	if (placementLevels.some((level) => level.undecided)) report.needsDecisions = true
@@ -420,17 +428,17 @@ async function foldFrameSatellites(
 async function findPrimaryPlaces(
 	query: Core.Query<Config>,
 	params: ResolvePrimaryParentsParams,
-): Promise<PrimaryPlace[]> {
+): Promise<{ places: PrimaryPlace[]; moves: PrimaryMove[] }> {
 	const once = [{ parent: params.anchor }]
 	// one instance named for what is gained: placed there or nowhere, never where the consumer started from
-	if (params.instanceLevelsList.length === 0 && !params.gainedIn) return once
+	if (params.instanceLevelsList.length === 0 && !params.gainedIn) return { places: once, moves: [] }
 
-	const { gained, places } = await resolvePrimaryParents(query, params)
-	if (!gained) return once
-	if (places.length === 0) return []
-	if (places.length > 1) return places
+	const { gained, places, moves } = await resolvePrimaryParents(query, params)
+	if (!gained) return { places: once, moves }
+	if (places.length === 0) return { places: [], moves }
+	if (places.length > 1) return { places, moves }
 	const [{ parent, placedFor }] = places
-	return [{ parent: parent ?? placedFor ?? params.anchor }]
+	return { places: [{ parent: parent ?? placedFor ?? params.anchor }], moves }
 }
 
 /**

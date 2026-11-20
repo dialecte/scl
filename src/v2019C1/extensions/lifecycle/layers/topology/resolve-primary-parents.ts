@@ -1,11 +1,16 @@
+import { toRef } from '@dialecte/core/helpers'
+
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
+import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type {
+	FindPrimaryMovesParams,
+	PrimaryMove,
 	PrimaryParents,
 	PrimaryPlace,
 	ResolvePrimaryParentsParams,
 } from './resolve-primary-parents.types'
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -34,11 +39,19 @@ export async function resolvePrimaryParents(
 	const targetIds =
 		params.primaryTargets && new Set(params.primaryTargets.map((target) => target.id))
 	const held = targetIds ? everyHeld.filter((instance) => targetIds.has(instance.id)) : everyHeld
-	if (held.length > 0) return { places: [{ parent: anchor }], gained: false }
-
 	const sourceAncestors = await sourceQuery.findAncestors(primaryRef, {
 		stopAtTagName: 'Substation',
 	})
+	if (held.length > 0) {
+		const moves = await findPrimaryMoves(query, {
+			held,
+			sourceAncestors,
+			unitId,
+			instanceLevelsList,
+		})
+		return { places: [{ parent: anchor }], gained: false, moves }
+	}
+
 	const places: PrimaryPlace[] = []
 	for (const instanceLevels of instanceLevelsList) {
 		const placedFor = instanceLevels.get(unitId)
@@ -50,6 +63,61 @@ export async function resolvePrimaryParents(
 		places.push({ placedFor, ...(parent ? { parent } : {}) })
 	}
 	// with one instance named, never on the element the consumer started from
-	if (params.gainedIn) return { places, gained: true }
-	return { places: places.length > 0 ? places : [{ parent: anchor }], gained: true }
+	if (params.gainedIn) return { places, gained: true, moves: [] }
+	return { places: places.length > 0 ? places : [{ parent: anchor }], gained: true, moves: [] }
+}
+
+/**
+ * The held instances of a primary the revision puts on another level of their instance of the unit: the level the
+ * instance holds for the template level the primary sits on, when it is not the level the instance is held on (a level
+ * the revision removes included). Not moved: an instance held in no instance of the unit (the project placed it outside
+ * the unit), and the instances of an instance of the unit holding the primary twice (nothing tells which one the
+ * revision moved). The
+ * ancestors of every held instance are read in one call.
+ */
+async function findPrimaryMoves(
+	query: Core.Query<Config>,
+	params: FindPrimaryMovesParams,
+): Promise<PrimaryMove[]> {
+	const { held, sourceAncestors, unitId, instanceLevelsList } = params
+	// the held records as they are: no read to resolve them
+	const ancestries = await query.findAncestorsOfEach(held as readonly Scl.Ref<Scl.ElementsOf>[], {
+		stopAtTagName: 'Substation',
+	})
+	const candidates = held.flatMap(function candidateOf(instance, position): PrimaryMove[] {
+		const ancestry = ancestries[position] ?? []
+		const heldLevel = ancestry.find((ancestor) => isTopologyLevel(ancestor.tagName))
+		const ids = new Set(ancestry.map((ancestor) => ancestor.id))
+		const instanceLevels = instanceLevelsList.find((levels) => {
+			const placedFor = levels.get(unitId)
+			return placedFor?.id !== undefined && ids.has(placedFor.id)
+		})
+		const placedFor = instanceLevels?.get(unitId)
+		if (!heldLevel || !instanceLevels || !placedFor) return []
+		const sourceLevel = sourceAncestors.find((ancestor) => instanceLevels.has(ancestor.id))
+		if (!sourceLevel) return []
+		const to = instanceLevels.get(sourceLevel.id)
+		if (to?.id === heldLevel.id) return []
+		return [
+			{
+				instance: toRef(instance) as PrimaryMove['instance'],
+				from: toRef(heldLevel) as Scl.Ref<Scl.ElementsOf>,
+				...(to ? { to } : {}),
+				toSource: toRef(sourceLevel) as Scl.Ref<Scl.ElementsOf>,
+				placedFor,
+				fromChain: ancestry.map((ancestor) => ancestor.id),
+			},
+		]
+	})
+	// an instance of the unit holding the primary twice moves neither
+	const heldPerInstance = new Map<string, number>()
+	for (const [position] of held.entries()) {
+		const ids = new Set((ancestries[position] ?? []).map((ancestor) => ancestor.id))
+		for (const levels of instanceLevelsList) {
+			const placedFor = levels.get(unitId)
+			if (placedFor?.id && ids.has(placedFor.id))
+				heldPerInstance.set(placedFor.id, (heldPerInstance.get(placedFor.id) ?? 0) + 1)
+		}
+	}
+	return candidates.filter((move) => (heldPerInstance.get(move.placedFor.id ?? '') ?? 0) <= 1)
 }

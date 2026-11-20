@@ -1,6 +1,7 @@
 import { asd as updateAsd } from './asd'
 import { fsd as updateFsd } from './fsd'
 
+import { throwDialecteError } from '@dialecte/core'
 import { toRef } from '@dialecte/core/helpers'
 
 import { acceptedRefIds, groupsForInstance } from '@/v2019C1/extensions/lifecycle/engine/decide'
@@ -14,7 +15,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
 
 import type { WrittenApplications } from './asd.types'
-import type { UpdateProcessSectionParams } from './process-section.types'
+import type { UpdateProcessSectionParams, WritePrimaryMovesParams } from './process-section.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type {
 	AppliedFunction,
@@ -71,6 +72,28 @@ export async function updateProcessSection(
 		targetInstance,
 		decisionMappings: params.decisionMappings,
 		leftOut: scope.leftOut,
+		// a held primary the revision puts on another level moves there once the frame added what it lands in, before
+		// the frame's removals: a removed level never takes it
+		beforeRemovals: async function movePrimaries({ instanceRootRef, instanceLevels, added }) {
+			for (const primaryRef of [...applicationRefs, ...standaloneFunctions]) {
+				const placement = await resolvePrimaryParents(tx, {
+					sourceQuery,
+					primaryRef,
+					anchor: targetParent,
+					unitId: root.id,
+					instanceLevelsList: [instanceLevels],
+					matchKey,
+					primaryTargets: params.primaryTargets,
+					gainedIn: params.gainedIn,
+				})
+				await writePrimaryMoves(tx, {
+					moves: placement.moves,
+					report,
+					decisions,
+					frameAdditions: [{ instanceRootRef, cloneMappings: [...added] }],
+				})
+			}
+		},
 	})
 
 	// the applications and functions each instance holds that the newer template no longer does: the update
@@ -175,4 +198,39 @@ export async function updateProcessSection(
 	}
 
 	return { applications, functions }
+}
+
+/**
+ * Move each accepted held instance of a primary to the level the revision puts it on (the level of the project, or the
+ * one the frame just added for a gained level), the same record: the commit's steps make what names it follow and wrap
+ * an application in the level's Private. Without decisions every move is written; a skipped one writes nothing.
+ */
+async function writePrimaryMoves(
+	tx: Core.Transaction<Config>,
+	params: WritePrimaryMovesParams,
+): Promise<void> {
+	const { moves, report, decisions, frameAdditions } = params
+	for (const move of moves) {
+		const instanceId = move.instance.id ?? ''
+		// the move is the root's group of the primary's report instance: its decision, else its suggested action;
+		// with decisions, a move the report never listed is not written (nobody decided it)
+		const group = report
+			? groupsForInstance(report, instanceId).find((candidate) => candidate.change === 'moved')
+			: undefined
+		const accepted = decisions
+			? group !== undefined && (decisions.get(group.id) ?? group.suggestedAction) === 'accept'
+			: true
+		if (!accepted) continue
+		const added = frameAdditions
+			.find((addition) => addition.instanceRootRef.id === move.placedFor.id)
+			?.cloneMappings.find((mapping) => mapping.source.id === move.toSource.id)?.target
+		const parent = move.to ?? added
+		// the move into a gained level depends on its addition: the decisions are checked before anything is written
+		if (!parent) {
+			return throwDialecteError('ASSERTION_FAILED', {
+				detail: `the move of ${move.instance.tagName} "${instanceId}" found no level ${move.toSource.tagName} "${move.toSource.id}" to move into`,
+			})
+		}
+		await tx.any.move(move.instance, { parent: parent as Scl.Ref<Scl.ElementsOf> })
+	}
 }

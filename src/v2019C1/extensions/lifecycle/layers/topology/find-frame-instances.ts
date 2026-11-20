@@ -2,7 +2,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import { findMappingPolicy } from '@/v2019C1/extensions/lifecycle/mapping'
-import { isTopologyLevel } from '@/v2019C1/helpers'
+import { isTopologyLevel, readAttribute } from '@/v2019C1/helpers'
 
 import type { FindFrameInstancesParams, FrameInstance } from './find-frame-instances.types'
 import type { Scl } from '@/v2019C1/config'
@@ -15,7 +15,8 @@ import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
  *  - a level CREATED from the unit carries its lineage;
  *  - a level of the project the unit was MAPPED onto does not: it is the level of the unit's kind
  *    that contains an element created from what the unit holds of its own (a function, an
- *    application, equipment, a level below).
+ *    application, equipment, a level below), and carries no lineage of another level of the unit
+ *    (`unitLineages`: that one is the other level's instance, holding what moved out of this one).
  * A shared element the unit holds is no evidence: it may have landed anywhere in the project.
  */
 export async function findFrameInstances(
@@ -59,6 +60,9 @@ export async function findFrameInstances(
 			const ancestors = await reader.findAncestors(placedRef, { stopAtTagName: 'Substation' })
 			const level = ancestors.find((ancestor) => ancestor.tagName === scopeRef.tagName)
 			if (!level || knownIds.has(level.id)) continue
+			// a level created from another level of the unit is that level's instance: what it holds may have moved
+			const lineage = readAttribute({ record: level, name: matchKey, defaults: 'none' })
+			if (lineage && lineage !== sourceUuid && params.unitLineages?.has(lineage)) continue
 			if (!(await isWithin(reader, { level, within }))) continue
 			knownIds.add(level.id)
 			frameInstances.push({ instance: level, projectOwned: true })

@@ -1,4 +1,6 @@
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { RESOLUTION_TARGET_REFS } from '@/v2019C1/extensions/reference/constants/derived'
+import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants/resolution-types'
 
 import type { TupleReferencePair } from '@/v2019C1/constants/reference-pairs.types'
 import type { DiffChange, OtherIedImpact } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
@@ -36,4 +38,26 @@ export const RENAME_FOLLOWING_REFERRERS: ReadonlyMap<string, readonly string[]> 
 			? []
 			: [[tagName, (pairs as readonly TupleReferencePair[]).map((pair) => pair.attribute.uuid)]],
 	),
+)
+
+/** The resolutions whose path names its target from the top: such a path follows the target when it moves. */
+const FULL_PATH_RESOLUTIONS = [RESOLUTION_TYPE.direct, RESOLUTION_TYPE.lnode] as const
+
+/**
+ * The references naming an element of the substation by a full path, with the uuid attributes they name it by: their
+ * path follows when an update moves what they name, or what holds it (a primary of an IED's specification).
+ */
+export const MOVE_FOLLOWING_REFERRERS: ReadonlyMap<string, readonly string[]> =
+	FULL_PATH_RESOLUTIONS.flatMap((resolution) =>
+		[...RESOLUTION_TARGET_REFS[resolution].values()].flat(),
+	).reduce(function byReferrerTag(byTag, entry) {
+		byTag.set(entry.refTagName, [
+			...new Set([...(byTag.get(entry.refTagName) ?? []), entry.uuidAttr]),
+		])
+		return byTag
+	}, new Map<string, string[]>())
+
+/** The elements a full-path reference names: what is read under a moved primary for their uuids. */
+export const MOVE_FOLLOWING_TARGETS: ReadonlySet<string> = new Set(
+	FULL_PATH_RESOLUTIONS.flatMap((resolution) => [...RESOLUTION_TARGET_REFS[resolution].keys()]),
 )

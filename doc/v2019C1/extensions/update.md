@@ -144,7 +144,11 @@ type `OtherIedImpact`), once per group bringing it:
   subscribed through a control block of the updated IED to data no entry of it sends any more (each entry sending it
   removed, or the project's own whose removal is offered), its control block cleared and its data source kept, listed
   under each group removing one of those entries and cleared once all are accepted;
-- `renamed`: a reference whose names follow an element the update renames.
+- `renamed`: a reference whose names follow an element the update renames, or moves. A function or an application of
+  the IED's specification the update moves to another level counts too: an input or an output of the substation
+  (`SourceRef`, `ControlRef`, ...) naming it, or what it holds, by a full path is listed under the IED its `LNode` is
+  bound to, else the one it is specified on (`LNodeSpecNaming`); one of the updated IED's own specification is not
+  another IED's, and is not listed.
 
 The group bringing it waits for a decision (`requiresDecision: 'changes-another-ied'`, a reference to deleted data
 keeping `names-deleted-data`), suggested `skip`, and the report needs decisions. Accepted, the change is written with
@@ -295,6 +299,17 @@ it follow. Skipped, nothing is written: the element stays where it was, and so d
 what the update moves out of the removed element: neither the report (its removal side effects, the references to its
 data waiting for a decision) nor the apply reads the moved element as removed. The report's `summary` counts each move
 in `moved`.
+
+A function or an application of the process section (the primary a template places in a level) that the source holds in
+another level than the instance does is moved the same way: one `moved` change on the primary's own node, `movedFrom` the
+level it sits in and `movedTo` the level of the instance the source level stands on (or the source level itself when the
+update adds it, the move then depending on that level's group). The level comes from where the instance's frame stands,
+never from a name. A level the source gains is never read as another level of the same template: a project level
+carrying the lineage of one of them is that level's instance, so a primary moving into a gained level does not make the
+gained level stand where the primary still sits; a level the consumer maps it onto, or a project level carrying no
+lineage of the template, still can. Accepted, the primary is moved with `tx.move` after what the frame adds and before
+what it removes, keeping its record; skipped, it stays where it is. An instance of the template holding the primary
+twice is not moved.
 
 An IED's data-flow reference the newer template lacks (`FCDA`, `ClientLN`, `IEDName`, `Association`, `KDC`,
 `ServerAt`) is listed the same way, whether the project added it or the template dropped it: nothing tells the two

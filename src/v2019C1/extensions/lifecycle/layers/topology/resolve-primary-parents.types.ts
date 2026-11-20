@@ -2,6 +2,7 @@ import type { InstanceLevels } from './resolve-instance-levels.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
+import type { AnyTrackedRecord } from '@dialecte/core'
 
 export type ResolvePrimaryParentsParams = {
 	sourceQuery: Core.Query<Config>
@@ -45,4 +46,30 @@ export type PrimaryParents = {
 	places: PrimaryPlace[]
 	/** The template gained it: the project holds no instance of it yet. */
 	gained: boolean
+	/** The held instances the revision puts on another level of their instance of the unit: one per instance moved. */
+	moves: PrimaryMove[]
+}
+
+/** A held instance of a primary the revision puts on another level of its instance of the unit. */
+export type PrimaryMove = {
+	instance: Scl.Ref<'Application'> | Scl.Ref<'Function'>
+	/** The level it is held on now. */
+	from: Scl.Ref<Scl.ElementsOf>
+	/** The level the revision puts it on; absent when that level is gained, created by this update (`toSource`). */
+	to?: Scl.Ref<Scl.ElementsOf>
+	/** The template's level it is put on. */
+	toSource: Scl.Ref<Scl.ElementsOf>
+	/** The level the instance of the unit sits on: what the report lists the move for. */
+	placedFor: Scl.Ref<Scl.ElementsOf>
+	/** The ids above the instance, its level first: a removal of one of them waits for the move. */
+	fromChain: readonly string[]
+}
+
+/** The held instances of a primary, where the template puts it, and where each instance of the unit stands. */
+export type FindPrimaryMovesParams = {
+	held: readonly AnyTrackedRecord[]
+	/** The primary's ancestors in the template, nearest first. */
+	sourceAncestors: readonly AnyTrackedRecord[]
+	unitId: string
+	instanceLevelsList: readonly InstanceLevels[]
 }

@@ -3,11 +3,14 @@ import {
 	IMPACT_BY_CHANGE,
 	LEAVING_CHANGES,
 	RENAME_FOLLOWING_REFERRERS,
+	MOVE_FOLLOWING_REFERRERS,
+	MOVE_FOLLOWING_TARGETS,
 	SUBSCRIBED_INPUT_TAG,
 } from './other-ied-impacts.constants'
 
 import { toRawRecord, toRef } from '@dialecte/core/helpers'
 
+import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants/naming'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { getPathSegment } from '@/v2019C1/extensions/reference/query/build/path-segment'
 import { TUPLE_TARGET_KINDS } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
@@ -19,6 +22,8 @@ import type {
 	Candidate,
 	DataSetEntry,
 	IedReader,
+	MovedOutsideParams,
+	OwningIedsParams,
 	OtherIedImpacts,
 	Subscription,
 } from './other-ied-impacts.types'
@@ -72,6 +77,7 @@ export async function readOtherIedImpacts(
 	const found = await query.any.getRecords(candidates.map((candidate) => candidate.element))
 	const iedOf = await owningIeds(query, {
 		records: found.flatMap((record) => (record ? [toRawRecord(record) as AnyRawRecord] : [])),
+		updated: readAttribute({ record: instanceTree, name: 'name', defaults: 'none' }),
 	})
 	const listed = new Map<string, OtherIedImpact>()
 	for (const candidate of candidates) {
@@ -234,6 +240,9 @@ async function renamedCandidates(
 ): Promise<Candidate[]> {
 	const nodesById = new Map(flatten(params.instanceTree).map((node) => [node.id, node]))
 	const renamedBy = new Map<string, string>()
+	// a primary of the IED's specification the update moves: what names it, or what it holds, by a full path follows
+	const movedOutside = await movedOutsideUuids(query, { groups: params.groups, nodesById })
+	for (const [uuid, groupId] of movedOutside) renamedBy.set(uuid, groupId)
 	for (const group of params.groups) {
 		for (const node of [group.primary, ...group.companions]) {
 			const record = node.instanceRef?.id ? nodesById.get(node.instanceRef.id) : undefined
@@ -250,7 +259,9 @@ async function renamedCandidates(
 	}
 	if (renamedBy.size === 0) return []
 	// every referrer tag read before the walk, only when something is renamed
-	const following = [...RENAME_FOLLOWING_REFERRERS]
+	const following = movedOutside.size
+		? [...mergeReferrers(RENAME_FOLLOWING_REFERRERS, MOVE_FOLLOWING_REFERRERS)]
+		: [...RENAME_FOLLOWING_REFERRERS]
 	const readByTag = await Promise.all(
 		following.map(function readReferrers([tagName]) {
 			// dialecte-allow query-in-loop: one read per referrer tag (about ten): core reads one tag per call
@@ -277,6 +288,50 @@ async function renamedCandidates(
 		}
 	}
 	return candidates
+}
+
+/**
+ * The uuids of each element outside the IED a group moves (a primary of its specification) and of what it holds that a
+ * reference can name, with the group moving it: the moved records read at once, what they hold in one walk.
+ */
+async function movedOutsideUuids(
+	query: Core.Query<Config>,
+	params: MovedOutsideParams,
+): Promise<Map<string, string>> {
+	const moved = params.groups.flatMap((group) =>
+		group.primary.change === 'moved' &&
+		group.primary.instanceRef?.id &&
+		!params.nodesById.has(group.primary.instanceRef.id)
+			? [{ ref: toRef(group.primary.instanceRef) as Scl.Ref<Scl.ElementsOf>, groupId: group.id }]
+			: [],
+	)
+	const found = new Map<string, string>()
+	if (moved.length === 0) return found
+	const refs = moved.map(({ ref }) => ref)
+	const records = await query.any.getRecords(refs)
+	const below = (await query.findDescendantsOfEach(refs, {
+		collect: [...MOVE_FOLLOWING_TARGETS] as never,
+	})) as unknown as Readonly<Record<string, readonly AnyRawRecord[] | undefined>>[]
+	for (const [position, { groupId }] of moved.entries()) {
+		const held = Object.values(below[position] ?? {}).flatMap((records) => records ?? [])
+		const record = records[position]
+		for (const each of record ? [record, ...held] : held) {
+			const uuid = readAttribute({ record: each, name: 'uuid', defaults: 'none' })
+			if (uuid && !found.has(uuid)) found.set(uuid, groupId)
+		}
+	}
+	return found
+}
+
+/** Maps of referrer tags to the uuid attributes they name by, as one: each tag once, each attribute once. */
+function mergeReferrers(
+	...maps: ReadonlyMap<string, readonly string[]>[]
+): Map<string, readonly string[]> {
+	const merged = new Map<string, readonly string[]>()
+	for (const map of maps)
+		for (const [tagName, attributes] of map)
+			merged.set(tagName, [...new Set([...(merged.get(tagName) ?? []), ...attributes])])
+	return merged
 }
 
 /** Whether the attribute changes a node lists give its element another path segment: it is renamed. */
@@ -390,18 +445,48 @@ function isWithin(params: { path: string; below: string }): boolean {
 	return path === below || path.startsWith(`${below}.`)
 }
 
-/** The name of the IED holding each record, by the record's id: none for a record outside every IED. */
+/**
+ * The IED each record belongs to, by its name: the IED holding it, or, for a record under an LNode of the substation
+ * (an input or an output of a function), the IED the LNode is bound to, else the one it is specified on. A record of the
+ * updated IED's own specification is no other IED's: it is left out. Reads: the ancestries a level at a time, the
+ * specified namings under those LNodes in one walk.
+ */
 async function owningIeds(
 	reader: IedReader,
-	params: { records: readonly AnyRawRecord[] },
+	params: OwningIedsParams,
 ): Promise<Map<string, string>> {
-	const { records } = params
+	const { records, updated } = params
 	const ancestries = await readAncestries({ records, query: reader })
 	const owners = new Map<string, string>()
+	const underLNode = new Map<string, AnyRawRecord>()
 	for (const record of records) {
-		const top = record.tagName === 'IED' ? record : ancestries.get(record.id)?.[0]
-		if (top?.tagName !== 'IED') continue
-		owners.set(record.id, readAttribute({ record: top, name: 'name', defaults: 'none' }))
+		const ancestry = ancestries.get(record.id) ?? []
+		const top = record.tagName === 'IED' ? record : ancestry[0]
+		if (top?.tagName === 'IED') {
+			owners.set(record.id, readAttribute({ record: top, name: 'name', defaults: 'none' }))
+			continue
+		}
+		const lnode = ancestry.findLast((ancestor) => ancestor.tagName === 'LNode')
+		if (lnode) underLNode.set(record.id, lnode)
+	}
+	if (underLNode.size === 0) return owners
+	const lnodes = [...new Map([...underLNode.values()].map((lnode) => [lnode.id, lnode])).values()]
+	const namings = (await reader.findDescendantsOfEach(lnodes as Scl.Ref<'LNode'>[], {
+		collect: ['LNodeSpecNaming'] as never,
+	})) as unknown as Readonly<Record<string, readonly AnyRawRecord[] | undefined>>[]
+	const specifiedOn = new Map(
+		lnodes.map((lnode, position) => {
+			const [naming] = namings[position]?.LNodeSpecNaming ?? []
+			return [
+				lnode.id,
+				naming ? readAttribute({ record: naming, name: 'sIedName', defaults: 'none' }) : '',
+			] as const
+		}),
+	)
+	for (const [recordId, lnode] of underLNode) {
+		const bound = readAttribute({ record: lnode, name: 'iedName', defaults: 'none' })
+		const owner = bound && bound !== UNALLOCATED_IED_NAME ? bound : specifiedOn.get(lnode.id)
+		if (owner && owner !== UNALLOCATED_IED_NAME && owner !== updated) owners.set(recordId, owner)
 	}
 	return owners
 }

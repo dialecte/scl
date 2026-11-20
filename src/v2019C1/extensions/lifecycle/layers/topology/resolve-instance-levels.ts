@@ -4,6 +4,7 @@ import { findFrameInstances } from './find-frame-instances'
 import { toRef } from '@dialecte/core/helpers'
 
 import { standingChoiceKey } from '@/v2019C1/extensions/lifecycle/engine/standing/resolve-standings'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
 	GainedLevel,
@@ -37,6 +38,10 @@ export async function resolveInstanceLevels(
 	const matchKey = params.matchKey ?? 'templateUuid'
 	const { scopeRef } = templateFrame
 
+	// the lineages of the unit's levels, read once: a level carrying one is that level's instance
+	const unitLineages = new Set(
+		templateFrame.elements.flatMap((element) => (element.uuid ? [element.uuid] : [])),
+	)
 	const instanceLevels = new Map<string, Scl.Ref<Scl.ElementsOf> | undefined>()
 	instanceLevels.set(scopeRef.id, frameInstance)
 	const held: HeldLevel[] = []
@@ -47,7 +52,7 @@ export async function resolveInstanceLevels(
 
 	for (const { ref: sourceRef, ancestorIds, uuid, context } of templateFrame.elements) {
 		const parentSourceId = ancestorIds.find((id) => held.some((level) => level.sourceRef.id === id))
-		const holdIt = async (level: Scl.Ref<Scl.ElementsOf>) => {
+		async function holdIt(level: Scl.Ref<Scl.ElementsOf>): Promise<void> {
 			// the project's own level unless it was created from the template's (its lineage)
 			const lineage = await reader.any.getAttribute(level, { name: matchKey })
 			held.push({
@@ -82,6 +87,7 @@ export async function resolveInstanceLevels(
 			scopeRef: sourceRef,
 			matchKey,
 			within: parentLevel,
+			unitLineages,
 		})
 		if (found) {
 			const level = toRef(found.instance) as Scl.Ref<Scl.ElementsOf>
@@ -116,17 +122,30 @@ export async function resolveTemplateFrame(
 ): Promise<TemplateFrame> {
 	const scopeRef = { tagName: unitRef.tagName, id: unitRef.id ?? '' } as TemplateFrame['scopeRef']
 	const contextIds = await strictAncestorIds(sourceQuery, scopeRef)
-	const elements: TemplateFrameElement[] = []
-	for (const frameElement of await collectFrameElements(sourceQuery, scopeRef)) {
-		if (!frameElement.id) continue
-		const ancestors = await sourceQuery.findAncestors(frameElement, { stopAtTagName: 'Substation' })
-		elements.push({
-			ref: { tagName: frameElement.tagName, id: frameElement.id } as TemplateFrameElement['ref'],
-			ancestorIds: ancestors.flatMap((ancestor) => (ancestor.id ? [ancestor.id] : [])),
-			uuid: await sourceQuery.any.getAttribute(frameElement, { name: 'uuid' }),
-			context: contextIds.has(frameElement.id),
-		})
-	}
+	const collected = await collectFrameElements(sourceQuery, scopeRef)
+	const frameRefs = collected.flatMap((frameElement) =>
+		frameElement.id ? [{ ...frameElement, id: frameElement.id }] : [],
+	)
+	// one read for every element's ancestors and one for its uuid
+	const ancestries = await sourceQuery.findAncestorsOfEach(frameRefs, {
+		stopAtTagName: 'Substation',
+	})
+	const records = await sourceQuery.any.getRecords(frameRefs)
+	const elements = frameRefs.map(
+		function frameElementOf(frameElement, position): TemplateFrameElement {
+			const record = records[position]
+			return {
+				ref: { tagName: frameElement.tagName, id: frameElement.id } as TemplateFrameElement['ref'],
+				ancestorIds: (ancestries[position] ?? []).flatMap((ancestor) =>
+					ancestor.id ? [ancestor.id] : [],
+				),
+				uuid: record
+					? readAttribute({ record, name: 'uuid', defaults: 'none' }) || undefined
+					: undefined,
+				context: contextIds.has(frameElement.id),
+			}
+		},
+	)
 	return { scopeRef, elements }
 }
 
