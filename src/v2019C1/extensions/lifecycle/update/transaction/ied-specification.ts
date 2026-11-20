@@ -19,8 +19,8 @@ import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction
 import type * as Core from '@dialecte/core'
 
 /**
- * Update the specification of an IED with the newer revision of its template ISD, once the IED's own part is
- * reconciled, as `update.ssd` updates a substation scope (`updateProcessSection`), scoped to the IED's specification:
+ * Update the specification of an IED with the newer revision of its template ISD, or with another version of the open
+ * ISD in a fork (paired by uuid, its policy), once the IED's own part is reconciled, as `update.ssd` updates a substation scope (`updateProcessSection`), scoped to the IED's specification:
  * its level, its applications and functions, another placement's on the same level left alone. What the template's
  * LNodes name lands on the IED's logical nodes, those it holds and those the update just gave it, so an LNode the
  * revision gains is bound to the IED updated. Records no provenance: the IED's reference names the revision.
@@ -73,10 +73,15 @@ async function placeIedSpecification(
 	params: ReconcileIedSpecificationParams & { redirectMappings: readonly RedirectMapping[] },
 ): Promise<void> {
 	const { sourceQuery, specification, report, decisions, instanceRef } = params
-	const policy = scenarioPolicy({ scenario: 'instantiate' })
-	// the groups of the specification: those of the report's instances other than the IED's
+	// a first placement; a fork keeps the file's identity, as the report placed it
+	const policy = scenarioPolicy({ scenario: params.scenario === 'fork' ? 'fork' : 'instantiate' })
+	// the groups of the specification: those of the report's instances neither the IED's nor its Communication's
 	const groups = (report?.instances ?? [])
-		.filter((reportInstance) => reportInstance.rootRef?.id !== instanceRef.id)
+		.filter(
+			(reportInstance) =>
+				reportInstance.rootRef?.id !== instanceRef.id &&
+				reportInstance.rootRef?.tagName !== 'Communication',
+		)
 		.flatMap((reportInstance) => reportInstance.groups)
 	const cloned = await cloneProcessSection(tx, {
 		sourceQuery,

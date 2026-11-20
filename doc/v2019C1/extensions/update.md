@@ -180,9 +180,9 @@ IED does; skipped, the other IED stays as it is. A group depending on a skipped 
   `LNode`s, told by their specified naming as in a template update) is reported and written with it, its instances after
   the IED's and the Communication's, paired by `uuid`: a function or an application only in the open ISD is
   `target-only`, kept by default; a type the IED and the specification's `LNode`s share follows the other version where
-  it is, under its id. An `LNode`'s binding (the logical node it is bound to, `lnUuid` and the names following it) is a
-  reference, never compared: an `LNode` the other version specifies on another logical node takes its specified naming
-  (`modified LNodeSpecNaming`) and stays bound where it is.
+  it is, under its id; an `LNode` the other version specifies otherwise takes its specified naming (`modified
+  LNodeSpecNaming`). An open ISD holding no specification takes the other version's as a fork places it, its uuids
+  kept and no lineage stamped.
 - `apply` writes the first placement of the IED of an ISD or an ICD ([`instantiate.ied`](./instantiate#ied)), unless
   its group is skipped, or the update. A report of a first placement applied once its IED is in the project is refused
   with `REPORT_TARGET_MISMATCH` (`meta: { field: 'targetInstance' }`) rather than placing another.

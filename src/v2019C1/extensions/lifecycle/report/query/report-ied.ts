@@ -268,7 +268,13 @@ async function reportSpecificationUpdate(
 		placeholderLineages: params.placeholderLineages,
 	}
 	const specificationInstance = specification.instance
-	if (!specificationInstance) return reportSsd(query, { ...shared, scenario: 'instantiate' })
+	// the project holds none of it: a first placement, a fork keeping the file's identity
+	if (!specificationInstance) {
+		return reportSsd(query, {
+			...shared,
+			scenario: specificationScenario(params.scenario ?? 'template'),
+		})
+	}
 	const report = await reportSsd(query, {
 		...shared,
 		scenario: params.scenario === 'fork' ? 'fork' : 'template',

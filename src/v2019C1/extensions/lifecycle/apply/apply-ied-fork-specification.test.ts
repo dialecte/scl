@@ -1,5 +1,6 @@
 import openSpecificationXml from '../integration/ied/fixtures/isd-bcu1-specification-version-1.xml?raw'
 import otherSpecificationXml from '../integration/ied/fixtures/isd-bcu1-specification-version-2.xml?raw'
+import openWithoutSpecificationXml from '../integration/ied/fixtures/isd-bcu1-version-1-without-specification.xml?raw'
 import openIsdXml from '../integration/ied/fixtures/isd-bcu1-version-1.xml?raw'
 import otherVersionXml from '../integration/ied/fixtures/isd-bcu1-version-2.xml?raw'
 
@@ -29,8 +30,7 @@ type SpecificationCase = SclTest.BaseXmlTestCase & {
 }
 
 // Revision 2 drops the application Supervision, renames LineProtection's SubFunction Trip to Tripping, adds Metering
-// with its LNode specified on BCU1, and specifies the PTRC LNode b…014 as PTRC2, which the IED gains. Its binding (to
-// PTRC1) is a reference, kept coherent by the hooks and never compared as content: it stays.
+// with its LNode specified on BCU1, and specifies the PTRC LNode b…014 as PTRC2, which the IED gains.
 describe('query.lifecycle.report - the specification in a fork of another version of the open ISD', () => {
 	const testCases: SclTest.TestCases<SpecificationCase> = {
 		'revision 2 changing the specification → each change by uuid, Supervision only in the open ISD':
@@ -75,7 +75,7 @@ describe('tx.lifecycle.apply - the specification in a fork of another version of
 			expectedQueries: [
 				`//default:Bay[@name="Q01"]/default:Function[@uuid="${METERING_UUID}"]/default:LNode[@lnClass="MMXU"]`,
 				'//default:SubFunction[@uuid="b0000000-0000-4000-8000-000000000042"][@name="Tripping"]',
-				'//default:LNode[@uuid="b0000000-0000-4000-8000-000000000014"][@lnUuid="b0000000-0000-4000-8000-000000000024"]//v2019C1:LNodeSpecNaming[@sLnInst="2"]',
+				'//default:LNode[@uuid="b0000000-0000-4000-8000-000000000014"]//v2019C1:LNodeSpecNaming[@sLnInst="2"]',
 			],
 			unexpectedQueries: [
 				`//*[@uuid="${SUPERVISION_UUID}"]`,
@@ -104,8 +104,46 @@ describe('tx.lifecycle.apply - the specification in a fork of another version of
 			openXml: openSpecificationXml,
 			otherXml: otherSpecificationXml,
 			decide: (groups) => decideAll({ groups, action: () => 'skip' }),
-			expectedQueries: [`//*[@uuid="${SUPERVISION_UUID}"]`, '//default:SubFunction[@name="Trip"]'],
+			expectedQueries: [
+				`//*[@uuid="${SUPERVISION_UUID}"]`,
+				'//default:SubFunction[@name="Trip"]',
+				'//default:LNode[@uuid="b0000000-0000-4000-8000-000000000014"]//v2019C1:LNodeSpecNaming[@sLnInst="1"]',
+			],
 			unexpectedQueries: [`//default:Function[@uuid="${METERING_UUID}"]`],
+		},
+	}
+
+	async function act({
+		project,
+		testCase,
+	}: SclTest.ActParams<SpecificationCase>): Promise<SclTest.ActResult> {
+		const { open, lifecycle } = await openFork({ project, ...testCase })
+		const refused = await applyFork({ open, lifecycle, decide: testCase.decide }).then(
+			() => undefined,
+			(error: unknown) => toDialecteError(error)?.key ?? String(error),
+		)
+		expect(refused).toBeUndefined()
+		return { assertOn: 'custom', xmlString: await open.query.getSnapshot({ as: 'xml' }) }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+// An open ISD holding no specification takes the other version's as a fork places it: its uuids kept, no lineage
+// stamped, so the next fork pairs it by uuid.
+describe('tx.lifecycle.apply - a fork onto an open ISD without a specification', () => {
+	const testCases: SclTest.TestCases<SpecificationCase> = {
+		"every group accepted → revision 2's specification placed with its own uuids": {
+			sourceXml: openIsdXml,
+			openXml: openWithoutSpecificationXml,
+			otherXml: otherSpecificationXml,
+			decide: (groups) => decideAll({ groups, action: () => 'accept' }),
+			expectedQueries: [
+				`//default:Function[@uuid="${METERING_UUID}"]`,
+				'//default:Function[@name="BayControl"][@uuid="b0000000-0000-4000-8000-000000000004"]',
+				'//default:Bay[@name="Q01"][@uuid="b0000000-0000-4000-8000-000000000003"]',
+			],
+			unexpectedQueries: [`//default:Function[@templateUuid="${METERING_UUID}"]`],
 		},
 	}
 
