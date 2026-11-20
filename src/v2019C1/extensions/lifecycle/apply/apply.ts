@@ -129,11 +129,12 @@ async function writeReport(
 ): Promise<AppliedInstances> {
 	const { params, decisions } = context
 	const { report } = params
-	// what tells a dropped element from the project's own, read once for the whole apply
+	// what the update holds, read once at its entry, as the report read it; an IED's records it itself
 	const removalBase = await resolveRemovalBase({
 		policy: scenarioPolicy({ scenario: params.scenario }),
 		sourceQuery: params.sourceQuery,
 		baseQuery: params.baseQuery,
+		...(params.verb === 'ied' ? {} : { target: tx, within: params.ref as Scl.Ref<Scl.ElementsOf> }),
 	})
 	// the lineages a reference may pair by name on, read once for the whole apply, as the report read them
 	const placeholderLineages = await resolvePlaceholderLineages(tx, {

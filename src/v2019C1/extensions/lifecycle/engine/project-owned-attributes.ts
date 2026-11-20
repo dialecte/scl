@@ -2,6 +2,8 @@ import {
 	BOUND_INPUT_OWNED_ATTRIBUTES,
 	CONF_REV_ONLY_RISES,
 	BOUND_LNODE_KEEPING_ITS_TYPE,
+	BOUND_LNODE_FOLLOWING_ITS_UUID,
+	BOUND_LNODE_TYPE_KEPT_IN_A_FORK,
 	BOUND_LNODE_OWNED_ATTRIBUTES,
 	INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES,
 	NO_PROJECT_OWNED_ATTRIBUTES,
@@ -22,7 +24,8 @@ import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy
  * The attributes of a project element a template neither compares into the decisions nor writes, whatever it holds,
  * each difference still listed as kept:
  * - an LNode bound to an IED keeps where it is implemented (its specification is its `LNodeSpecNaming`, compared as a
- *   child), in every scenario; its type follows the template's, unless the consumer keeps it
+ *   child), a fork into a project included; a fork of the file itself takes the newer revision's binding
+ *   (`bindingFollows`, `visibleAttributes`' re-targets); its type follows the template's, unless the consumer keeps it
  *   (`boundLogicalNodeTypes: 'keep'`): then a type change is listed as kept; the naming specifying it on an IED
  *   names the IED and logical device the commit writes (`SPECIFIED_ON_IED_OWNED_ATTRIBUTES`);
  * - a control block's configuration revision only rises: a template's lower than the project's is listed as kept;
@@ -39,6 +42,8 @@ export function projectOwnedAttributes(params: {
 	/** The template element's attributes: a revision the template gives lower than the project's is not written. */
 	sourceAttributes?: Readonly<Record<string, string | undefined>>
 	namesFollow: NamesFollow
+	/** A fork of the file itself (see `readUpdateHolds`): a bound LNode's binding follows the newer revision's. */
+	bindingFollows?: boolean
 	/** Whether a bound LNode takes the type the template gives it. Default: `follow`. */
 	boundLogicalNodeTypes?: BoundLogicalNodeTypes
 }): ProjectOwnedAttributes {
@@ -54,9 +59,11 @@ export function projectOwnedAttributes(params: {
 	if (tagName === 'LNode') {
 		if (!isAssignedToIed({ iedName: instanceAttributes.iedName }))
 			return NO_PROJECT_OWNED_ATTRIBUTES
-		return keepsItsType(params.boundLogicalNodeTypes ?? 'follow')
-			? BOUND_LNODE_KEEPING_ITS_TYPE
-			: BOUND_LNODE_OWNED_ATTRIBUTES
+		const keepsType = keepsItsType(params.boundLogicalNodeTypes ?? 'follow')
+		// a fork of the file itself: the binding is the file's own, the newer revision re-targets it (`readUpdateHolds`)
+		if (params.bindingFollows)
+			return keepsType ? BOUND_LNODE_TYPE_KEPT_IN_A_FORK : BOUND_LNODE_FOLLOWING_ITS_UUID
+		return keepsType ? BOUND_LNODE_KEEPING_ITS_TYPE : BOUND_LNODE_OWNED_ATTRIBUTES
 	}
 	if (
 		tagName === 'LNodeSpecNaming' &&

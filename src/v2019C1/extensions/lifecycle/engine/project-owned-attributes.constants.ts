@@ -1,4 +1,5 @@
 import {
+	LNODE_NAMING_ATTRIBUTES,
 	SPECIFIED_IED_NAME_ATTRIBUTE,
 	SPECIFIED_LD_INST_ATTRIBUTE,
 } from '@/v2019C1/constants/lnode-spec-naming'
@@ -48,6 +49,24 @@ const BOUND_LNODE_TYPE_REFERENCES: ReadonlyMap<string, KeptAttributeReason> = ne
 export const BOUND_LNODE_KEEPING_ITS_TYPE: ProjectOwnedAttributes = {
 	attributes: new Set([...LNODE_BINDING_ATTRIBUTES, ...BOUND_LNODE_TYPE_REFERENCES.keys()]),
 	listedAsKept: BOUND_LNODE_TYPE_REFERENCES,
+}
+
+/**
+ * An LNode bound to an IED in a fork whose consumer keeps the types of bound LNodes: its binding follows the newer
+ * revision (re-targeted by its uuid), its type is kept and a template changing it is listed as kept.
+ */
+export const BOUND_LNODE_TYPE_KEPT_IN_A_FORK: ProjectOwnedAttributes = {
+	attributes: new Set([...LNODE_NAMING_ATTRIBUTES, ...BOUND_LNODE_TYPE_REFERENCES.keys()]),
+	listedAsKept: BOUND_LNODE_TYPE_REFERENCES,
+}
+
+/**
+ * An LNode bound to an IED in a fork of the file itself: its names stay the binding's (the commit writes them from its
+ * uuid); only its `lnUuid` follows the newer revision, as `visibleAttributes` re-targets it.
+ */
+export const BOUND_LNODE_FOLLOWING_ITS_UUID: ProjectOwnedAttributes = {
+	attributes: new Set(LNODE_NAMING_ATTRIBUTES),
+	listedAsKept: new Map(),
 }
 
 /**

@@ -1,4 +1,5 @@
 import { listRemovalSideEffects, reportAsd, reportFsd, reportIed, reportSsd } from './query'
+import { linkRetargets } from './query/reference-retargets'
 import { reportTargetOf } from './report-target'
 import { collectReportWarnings } from './report-warnings'
 
@@ -12,6 +13,7 @@ import { acceptedCollisions } from '@/v2019C1/extensions/lifecycle/engine'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { resolvePlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages'
+import { isSameFile } from '@/v2019C1/extensions/lifecycle/engine/reference-retargets'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { assertTakeOversOffered } from '@/v2019C1/extensions/lifecycle/engine/value-ownership'
 import { readOtherIedImpacts } from '@/v2019C1/extensions/lifecycle/layers/ied/other-ied-impacts'
@@ -64,10 +66,14 @@ export async function report(
 	assertRevisionBaseFits({ scenario: target.scenario, baseQuery: target.baseQuery })
 	// what the report is made for, read first: a source an IED is not placed from is refused before anything is diffed
 	const reportTarget = await reportTargetOf(query, target)
+	// what the update holds, read once at its entry; an IED's records it itself, once it knows what it leaves out
 	const removalBase = await resolveRemovalBase({
 		policy: scenarioPolicy({ scenario: target.scenario }),
 		sourceQuery: target.sourceQuery,
 		baseQuery: target.baseQuery,
+		...(target.verb === 'ied'
+			? {}
+			: { target: query, within: target.ref as Scl.Ref<Scl.ElementsOf> }),
 	})
 	// the lineages a reference may pair by name on, read once for the whole report
 	const placeholderLineages = await resolvePlaceholderLineages(query, {
@@ -88,7 +94,23 @@ export async function report(
 	// what the report is made for: apply refuses it for another target
 	report.target = reportTarget
 	// what a verb told of on its own, then what the report's nodes tell
-	const warnings = [...(report.warnings ?? []), ...collectReportWarnings(report)]
+	// a fork: a reference re-targeted onto what the update adds waits for it; onto nothing it brings, it stays
+	// only a fork of the file itself re-targets references (see `isSameFile`)
+	const retargetsReferences =
+		target.scenario === 'fork' &&
+		(await isSameFile({ sourceQuery: target.sourceQuery, target: query }))
+	const retargets = retargetsReferences
+		? await linkRetargets(query, { report, sourceQuery: target.sourceQuery })
+		: { dependsOn: new Map<string, readonly string[]>(), warnings: [] }
+	for (const group of allGroups(report)) {
+		const added = retargets.dependsOn.get(group.id)
+		if (added) group.dependsOn = [...new Set([...group.dependsOn, ...added])]
+	}
+	const warnings = [
+		...(report.warnings ?? []),
+		...collectReportWarnings(report),
+		...retargets.warnings,
+	]
 	if (warnings.length > 0) report.warnings = warnings
 	const revisionBase = revisionBaseOf(removalBase)
 	if (revisionBase) report.revisionBase = revisionBase

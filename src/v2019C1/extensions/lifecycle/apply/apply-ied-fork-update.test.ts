@@ -40,13 +40,18 @@ type ReportCase = ForkCase & {
 // 200, ACT_T gains phsA, the IP becomes 10.0.1.22 and the bus 100 Mb/s.
 describe('query.lifecycle.report - a fork of another version of the open ISD', () => {
 	const testCases: SclTest.TestCases<ReportCase> = {
-		'v1 open, v2 the other version → the IED updated by uuid, the rename one change; the Communication its own instance':
+		'v1 open, v2 the other version → the IED updated by uuid, the rename one change; the Communication and the specification instances of their own':
 			{
 				sourceXml: openIsdXml,
 				otherXml: otherVersionXml,
+				// then the specification: its voltage level and BayControl unchanged, LineProtection's LNodes taking the
+				// types ACT_T's phsA changes
 				expectedGroups: [
 					['added LN', 'modified LDevice', 'modified LN', 'modified LN', 'target-only LN'],
 					['added BitRate', 'modified P'],
+					[],
+					[],
+					['modified LNode', 'modified LNode'],
 				],
 			},
 	}
@@ -78,9 +83,9 @@ describe('tx.lifecycle.apply - a fork of another version of the open ISD', () =>
 					'//default:FCDA[@ldInst="CTL"]',
 					'//default:LN[@lnClass="PTRC"][@inst="2"][@uuid="b0000000-0000-4000-8000-000000000026"]',
 					'//default:LN[@lnClass="PTOC"]/default:DOI[@name="OpDlTmms"]/default:DAI[@name="setVal"]/default:Val[.="200"]',
-					// v2's types, under ids of their own: the specification's LNodes, left out of a fork, still name PTOC_T and PTRC_T
-					'//default:LN[@lnClass="PTOC"][@lnType!="PTOC_T"]',
-					'//default:DOType[@cdc="ACT"]/default:DA[@name="phsA"]',
+					// v2's types under v2's ids: the specification's LNodes follow too, so they are updated in place
+					'//default:LN[@lnClass="PTOC"][@lnType="PTOC_T"]',
+					'//default:DOType[@id="ACT_T"]/default:DA[@name="phsA"]',
 					'//default:ConnectedAP[@iedName="BCU1"]/default:Address/default:P[@type="IP"][.="10.0.1.22"]',
 					'//default:SubNetwork[@name="StationBus"]/default:BitRate[.="100"]',
 					'/default:SCL/default:Header[@revision="1"]',

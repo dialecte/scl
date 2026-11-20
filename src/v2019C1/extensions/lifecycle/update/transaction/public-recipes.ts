@@ -71,7 +71,8 @@ export async function ssd(
 /**
  * `tx.lifecycle.update.ied` - update the IED of the project placed from a template ISD with a newer revision of it (or
  * place it when the project holds none), or, with `scenario: 'fork'`, the IED of an open ISD with another version of
- * it, then release what the run wrote naming a logical node, ExtRef or ExtCtrl the project lacks, as
+ * it (references the other version points elsewhere re-targeted by uuid, the commit naming them; a fork into a project
+ * keeps its references), then release what the run wrote naming a logical node, ExtRef or ExtCtrl the project lacks, as
  * `tx.lifecycle.apply` does after its verb.
  *
  * @intent update an S-IED from a newer ISD, reconcile an IED with its template ISD, update an IED specification, update an open ISD from another version of it

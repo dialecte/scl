@@ -20,7 +20,7 @@ export async function readIedSpecification(
 	reader: Core.Query<Config> | Core.Transaction<Config>,
 	params: ReadIedSpecificationParams,
 ): Promise<IedSpecification | undefined> {
-	const { sourceQuery, fileType, iedRef } = params
+	const { sourceQuery, fileType, iedRef, matchKey } = params
 	if (fileType !== 'ISD') return undefined
 	const scope = await resolveSsdScope(sourceQuery, {})
 	if (!scope) return undefined
@@ -33,6 +33,7 @@ export async function readIedSpecification(
 		iedRef,
 		scope,
 		reconcilables,
+		matchKey,
 	})
 	const leftOut = instance?.leftOut
 	if (!leftOut?.size) return { scope, reconcilables, instance }

@@ -114,7 +114,13 @@ export async function asd(
 	const { matchKey, identityMode, bumpsCollisions, namesFollow } = policy
 	const removalBase =
 		params.removalBase ??
-		(await resolveRemovalBase({ policy, sourceQuery, baseQuery: params.baseQuery }))
+		(await resolveRemovalBase({
+			policy,
+			sourceQuery,
+			baseQuery: params.baseQuery,
+			target: tx,
+			within: params.applicationRef,
+		}))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matched = policy.matchesInstances
 		? await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid, matchKey })
@@ -193,6 +199,7 @@ export async function asd(
 		instances,
 		matchKey,
 		removalBase,
+		standaloneFunctions: params.standaloneFunctions,
 	})
 	const droppedFunctions: { dropped: DroppedElement[]; accepted: AcceptedIds | undefined }[] = []
 	// what each instance's selection of variants leaves out of the template, by instance record id: read from the

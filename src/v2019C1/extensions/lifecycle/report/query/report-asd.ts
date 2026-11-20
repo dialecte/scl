@@ -133,6 +133,11 @@ export async function reportAsd(
 		placementListing?: PlacementListing
 		/** The satellites of the template, read once by the larger report it is part of. Default: the listing's, or read. */
 		index?: SatelliteIndex
+		/**
+		 * The functions the larger update reconciles as standalone ones beside the application (a substation scope's): one
+		 * the application no longer composes is updated as such, never dropped (see `findDroppedComposedFunctions`).
+		 */
+		standaloneFunctions?: readonly Scl.Ref<'Function'>[]
 	},
 ): Promise<DiffReport> {
 	const { sourceQuery, applicationRef, scenario, targetInstance, decisionMappings } = params
@@ -140,7 +145,9 @@ export async function reportAsd(
 	const { uuid: sourceUuid } = await sourceQuery.getAttributes(applicationRef)
 	const policy = scenarioPolicy({ scenario, placesFresh: params.placesFresh })
 	const { matchKey, namesFollow } = policy
-	const removalBase = params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery }))
+	const removalBase =
+		params.removalBase ??
+		(await resolveRemovalBase({ policy, sourceQuery, target: query, within: applicationRef }))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matchedApplications = policy.matchesInstances
 		? await findInstancesByTemplateUuid(query, { tagName: 'Application', sourceUuid, matchKey })
@@ -333,6 +340,7 @@ export async function reportAsd(
 		instances: applicationInstances,
 		matchKey,
 		removalBase,
+		standaloneFunctions: params.standaloneFunctions,
 	})
 	const droppedGroups: DecisionGroup[] = []
 	for (const reportInstance of reportInstances) {

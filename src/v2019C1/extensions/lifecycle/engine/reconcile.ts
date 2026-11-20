@@ -246,6 +246,9 @@ export async function reconcile(
 		takeOver: params.takeOver,
 		namesFollow: params.namesFollow,
 	})
+	// a fork: the references the newer revision re-targets onto an element the document now holds
+	// a fork of the file itself: the re-target scope the update holds, read once at its entry, as the report read it
+	const retargetUuids = 'holds' in params.removalBase ? params.removalBase.holds : undefined
 
 	// root + descendants: update matched in place, add new
 	if (!withinProjectOwned) {
@@ -256,6 +259,7 @@ export async function reconcile(
 			accepted,
 			overrides,
 			namesFollow: params.namesFollow,
+			retargetUuids,
 			typeFollowing,
 			valueOwnership,
 		})
@@ -287,6 +291,7 @@ export async function reconcile(
 		identityMode,
 		bumpsCollisions,
 		namesFollow: params.namesFollow,
+		retargetUuids,
 		omit,
 		added,
 		pendingCollisions,
@@ -380,6 +385,8 @@ async function reconcileChildren(
 		identityMode: ScenarioPolicy['identityMode'] | undefined
 		bumpsCollisions: boolean
 		namesFollow: NamesFollow
+		/** In a fork of the file itself: the uuids a reference may be re-targeted onto (`RemovalBase`'s `holds`). */
+		retargetUuids?: ReadonlySet<string>
 		omit: readonly string[] | undefined
 		/** Accumulates the clone mappings of every element added below here (root + subtree). */
 		added: Scl.CloneMapping[]
@@ -510,6 +517,7 @@ async function reconcileChildren(
 					accepted,
 					overrides,
 					namesFollow,
+					retargetUuids: params.retargetUuids,
 					typeFollowing: params.typeFollowing,
 					valueOwnership: params.valueOwnership,
 				})
@@ -534,6 +542,7 @@ async function reconcileChildren(
 				identityMode,
 				bumpsCollisions,
 				namesFollow,
+				retargetUuids: params.retargetUuids,
 				omit,
 				added,
 				pendingCollisions,
@@ -617,6 +626,7 @@ async function reconcileChildren(
 				accepted,
 				overrides,
 				namesFollow,
+				retargetUuids: params.retargetUuids,
 				typeFollowing: params.typeFollowing,
 				valueOwnership: params.valueOwnership,
 			})
@@ -848,11 +858,13 @@ async function updateMatchedAttributes(
 		accepted?: AcceptedIds
 		overrides?: CollisionOverrides
 		namesFollow: NamesFollow
+		retargetUuids?: ReadonlySet<string>
 		typeFollowing: TypeFollowing
 		valueOwnership: ValueOwnership
 	},
 ): Promise<boolean> {
 	const { sourceQuery, instanceRecord, sourceNode, accepted, overrides, namesFollow } = params
+	const { retargetUuids } = params
 	if (accepted && !accepted.sourceIds.has(sourceNode.id)) return false
 
 	// The template's attributes, with the user's value edits overlaid (so an in-place
@@ -865,6 +877,7 @@ async function updateMatchedAttributes(
 			attributes: sourceAttributes,
 			counterpartAttributes: instanceAttributes,
 			namesFollow,
+			...(retargetUuids ? { retargets: { uuids: retargetUuids, sourceIs: 'attributes' } } : {}),
 		}),
 		...overrides?.get(sourceNode.id),
 	}
@@ -873,6 +886,7 @@ async function updateMatchedAttributes(
 		attributes: instanceAttributes,
 		counterpartAttributes: sourceAttributes,
 		namesFollow,
+		...(retargetUuids ? { retargets: { uuids: retargetUuids, sourceIs: 'counterpart' } } : {}),
 	})
 	// what the project owns on the element (a bound LNode's implementation and type) is never
 	// written, even when a user edit overlaid above lists it
@@ -881,6 +895,7 @@ async function updateMatchedAttributes(
 		instanceAttributes,
 		sourceAttributes,
 		namesFollow,
+		bindingFollows: retargetUuids !== undefined,
 	})
 
 	// Union of both sides: a name present on the template overwrites, a name the

@@ -1,4 +1,5 @@
 import { collectUuids } from './match-key'
+import { readUpdateHolds } from './reference-retargets'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -33,9 +34,14 @@ export async function resolveRemovalBase(params: ResolveRemovalBaseParams): Prom
 		case 'lineage':
 			return { kind: 'lineage' }
 		case 'revision': {
-			if (!baseQuery) return { kind: 'no-revision' }
+			// a fork of the file itself: what the update holds, the scope of its re-targets
+			const holds = params.target
+				? await readUpdateHolds({ sourceQuery, target: params.target, within: params.within })
+				: undefined
+			const forkHolds = holds ? { holds } : {}
+			if (!baseQuery) return { kind: 'no-revision', ...forkHolds }
 			await assertSameFile({ sourceQuery, baseQuery })
-			return { kind: 'revision', uuids: await collectDocumentUuids(baseQuery) }
+			return { kind: 'revision', uuids: await collectDocumentUuids(baseQuery), ...forkHolds }
 		}
 		default:
 			return throwDialecteError('ASSERTION_FAILED', {

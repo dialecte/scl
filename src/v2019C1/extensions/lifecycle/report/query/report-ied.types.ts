@@ -1,13 +1,19 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
-import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DiffReport,
+	InstanceDiff,
+	ReportInstance,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { FileCommunications } from '@/v2019C1/extensions/lifecycle/layers/ied/file-communication.types'
+import type { IedSpecification } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-specification.types'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
+import type { AnyTrackedRecord } from '@dialecte/core'
 import type * as Core from '@dialecte/core'
 
 export type ReportIedParams = {
@@ -41,4 +47,18 @@ export type WithCompanionParams = {
 export type ReportFileCommunicationParams = ReportIedParams & {
 	policy: ScenarioPolicy
 	communications: FileCommunications
+}
+
+/** The IED's report instance, the Communication's when a fork reports it, and the specification's report. */
+export type WithSpecificationParams = {
+	reportInstance: ReportInstance
+	communicationInstances: readonly ReportInstance[]
+	specification: DiffReport
+}
+
+/** An IED update's parameters, its policy, and the specification beside the IED, read once by the update. */
+export type ReportSpecificationUpdateParams = ReportIedParams & {
+	instance: AnyTrackedRecord
+	policy: ScenarioPolicy
+	specification: IedSpecification | undefined
 }

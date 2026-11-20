@@ -14,19 +14,27 @@ export async function resolveStructureRef(
 	ref: Scl.Ref<Scl.ElementsOf>,
 	structure: TargetStructure,
 ): Promise<Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>> {
-	const ancestors = await sourceQuery.findAncestors(ref, { stopAtTagName: 'Substation' })
-
-	const match = ancestors.find((record) => record.tagName in structure)
-	invariant(match, {
+	const found = await findStructureRef(sourceQuery, ref, structure)
+	invariant(found, {
 		key: 'ELEMENT_NOT_FOUND',
 		detail: `No Substation/VoltageLevel/Bay level in the target structure for ${ref.tagName}`,
 	})
+	return found
+}
 
-	const target = structure[match.tagName as keyof TargetStructure]
-	invariant(target, {
-		key: 'ELEMENT_NOT_FOUND',
-		detail: `Target structure missing the ${match.tagName} level for ${ref.tagName}`,
-	})
+/**
+ * The target-side structural ref standing for the nearest Substation/VoltageLevel/Bay ancestor of a source-side ref,
+ * `undefined` when the target structure holds no level of that kind (an anchor above every level, a document root).
+ */
+export async function findStructureRef(
+	sourceQuery: Core.Query<Config>,
+	ref: Scl.Ref<Scl.ElementsOf>,
+	structure: TargetStructure,
+): Promise<Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'> | undefined> {
+	const ancestors = await sourceQuery.findAncestors(ref, { stopAtTagName: 'Substation' })
+	const match = ancestors.find((record) => record.tagName in structure)
+	const target = match ? structure[match.tagName as keyof TargetStructure] : undefined
+	if (!target) return undefined
 	return { tagName: target.tagName, id: target.id } as
 		| Scl.Ref<'Substation'>
 		| Scl.Ref<'VoltageLevel'>

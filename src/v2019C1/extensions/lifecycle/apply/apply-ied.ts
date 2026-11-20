@@ -100,6 +100,7 @@ async function applyIedUpdate(
 	}
 	return reconcileIed(tx, {
 		policy: scenarioPolicy({ scenario: target.scenario ?? 'template' }),
+		scenario: target.scenario === 'fork' ? 'fork' : 'template',
 		sourceQuery: target.sourceQuery,
 		iedRef: target.ref,
 		anchor: target.anchor,

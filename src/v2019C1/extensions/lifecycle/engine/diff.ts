@@ -26,6 +26,7 @@ import {
 	referenceIdentity,
 	referenceNameIdentity,
 } from './reference-match'
+import { unresolvedRetargets } from './reference-retargets'
 import { classifyUnmatched, classifyUnpairedReference } from './removal-base'
 import { readTargetLineages } from './target-lineages'
 import { diffTextWrappers } from './text-wrappers'
@@ -241,6 +242,8 @@ export async function diff(params: {
 		takeOver: diffPolicy.takeOver,
 		namesFollow,
 	})
+	// a fork of the file itself: the re-target scope the update holds, read once at its entry
+	const retargetUuids = 'holds' in removalBase ? removalBase.holds : undefined
 	const walked = await diffMatched({
 		sourceQuery,
 		targetQuery,
@@ -255,6 +258,7 @@ export async function diff(params: {
 		targetLineages,
 		removalBase,
 		namesFollow,
+		retargetUuids,
 		omit,
 		skipOwnAttributes: params.instanceRootIsProjectOwned ?? false,
 		withinProjectOwned: params.instanceRootIsProjectOwned ?? false,
@@ -324,6 +328,8 @@ async function diffMatched(params: {
 	targetLineages: TargetLineages
 	removalBase: RemovalBase
 	namesFollow: NamesFollow
+	/** In a fork of the file itself: the uuids a reference may be re-targeted onto (`RemovalBase`'s `holds`). */
+	retargetUuids?: ReadonlySet<string>
 	omit?: readonly string[]
 	/** Leave this node's own attributes uncompared. */
 	skipOwnAttributes?: boolean
@@ -371,6 +377,7 @@ async function diffMatched(params: {
 		changes: attributeChanges,
 		typeChanges,
 		kept,
+		unresolvedRetargets: retargetUnresolved,
 	} = params.skipOwnAttributes
 		? { changes: [], typeChanges: [], kept: [] }
 		: await computeAttributeChanges({
@@ -379,6 +386,7 @@ async function diffMatched(params: {
 				sourceNode,
 				instanceNode,
 				namesFollow,
+				retargetUuids: params.retargetUuids,
 				typeComparison: params.typeComparison,
 				boundLogicalNodeTypes: params.diffPolicy.boundLogicalNodeTypes,
 			})
@@ -459,6 +467,7 @@ async function diffMatched(params: {
 				targetLineages: params.targetLineages,
 				removalBase,
 				namesFollow,
+				retargetUuids: params.retargetUuids,
 				omit,
 				redirectedSourceUuids: params.redirectedSourceUuids,
 				templateBlocks: params.templateBlocks,
@@ -654,6 +663,7 @@ async function diffMatched(params: {
 		...(textChange ? { textChange } : {}),
 		...textOwnership,
 		keptAttributeChanges: kept.length > 0 ? kept : undefined,
+		...(retargetUnresolved ? { retargetUnresolved } : {}),
 		...dataSetChange,
 		children,
 	}
@@ -775,10 +785,12 @@ async function computeAttributeChanges(params: {
 	sourceNode: AnyTreeRecord
 	instanceNode: AnyTreeRecord
 	namesFollow: NamesFollow
+	retargetUuids?: ReadonlySet<string>
 	typeComparison: TypeComparison
 	boundLogicalNodeTypes: BoundLogicalNodeTypes
 }): Promise<AttributeComparison> {
 	const { sourceQuery, targetQuery, sourceNode, instanceNode, namesFollow, typeComparison } = params
+	const { retargetUuids } = params
 	const sourceAttributes = await sourceQuery.any.getAttributes(sourceNode)
 	const instanceAttributes = await targetQuery.any.getAttributes(instanceNode)
 	const desired = visibleAttributes({
@@ -786,18 +798,21 @@ async function computeAttributeChanges(params: {
 		attributes: sourceAttributes,
 		counterpartAttributes: instanceAttributes,
 		namesFollow,
+		...(retargetUuids ? { retargets: { uuids: retargetUuids, sourceIs: 'attributes' } } : {}),
 	})
 	const current = visibleAttributes({
 		record: instanceNode,
 		attributes: instanceAttributes,
 		counterpartAttributes: sourceAttributes,
 		namesFollow,
+		...(retargetUuids ? { retargets: { uuids: retargetUuids, sourceIs: 'counterpart' } } : {}),
 	})
 	const owned = projectOwnedAttributes({
 		tagName: instanceNode.tagName,
 		instanceAttributes,
 		sourceAttributes,
 		namesFollow,
+		bindingFollows: retargetUuids !== undefined,
 		boundLogicalNodeTypes: params.boundLogicalNodeTypes,
 	})
 
@@ -823,6 +838,16 @@ async function computeAttributeChanges(params: {
 	for (const difference of typeDifferences) {
 		listDifference({ difference, owned, listedAs: comparison.typeChanges, comparison })
 	}
+	// a fork: what the newer revision re-targets onto an element the fork does not hold keeps its target
+	const unresolved = retargetUuids
+		? unresolvedRetargets({
+				tagName: instanceNode.tagName,
+				sourceAttributes,
+				instanceAttributes,
+				uuids: retargetUuids,
+			})
+		: []
+	if (unresolved.length > 0) comparison.unresolvedRetargets = unresolved
 	return comparison
 }
 

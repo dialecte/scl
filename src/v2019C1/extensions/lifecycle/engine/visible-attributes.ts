@@ -9,6 +9,11 @@ import {
 } from '@/v2019C1/extensions/reference/constants'
 import { REFERENCE_UUIDS_BY_TAG } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 
+import type {
+	IsRetargetedParams,
+	ReferenceAttributesLeftOutParams,
+	ReferenceRetargets,
+} from './visible-attributes.types'
 import type { NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { ResolvableRecord } from '@dialecte/core/utils'
 
@@ -30,10 +35,17 @@ export function visibleAttributes(params: {
 	/** The attributes of the element it is compared with: a tuple reference's names follow a uuid either side writes. */
 	counterpartAttributes: Readonly<Record<string, string | undefined>>
 	namesFollow: NamesFollow
+	/** In a fork: the uuids a reference of the newer revision names that the fork holds (see `ReferenceRetargets`). */
+	retargets?: ReferenceRetargets
 }): Record<string, string> {
 	const { record, attributes, counterpartAttributes, namesFollow } = params
 	const { tagName } = record
-	const references = referenceAttributesLeftOut({ tagName, attributes, counterpartAttributes })
+	const references = referenceAttributesLeftOut({
+		tagName,
+		attributes,
+		counterpartAttributes,
+		retargets: params.retargets,
+	})
 	const derived = DERIVED_ATTRIBUTES_BY_TAG.get(tagName)?.attributes ?? []
 	const typeReferences = TYPE_ID_REF_ATTRIBUTES.get(tagName) ?? []
 	const namesCompared = comparesNames(namesFollow)
@@ -63,20 +75,34 @@ export function visibleAttributes(params: {
  * reference's names when either side writes the uuid they follow (a rename of the target then counts once, on the
  * target). Names neither side writes a uuid beside are the reference itself: compared.
  */
-function referenceAttributesLeftOut(params: {
-	tagName: string
-	attributes: Readonly<Record<string, string | undefined>>
-	counterpartAttributes: Readonly<Record<string, string | undefined>>
-}): ReadonlySet<string> {
-	const { tagName, attributes, counterpartAttributes } = params
+function referenceAttributesLeftOut(params: ReferenceAttributesLeftOutParams): ReadonlySet<string> {
+	const { tagName, attributes, counterpartAttributes, retargets } = params
 	const references = REFERENCE_UUIDS_BY_TAG.get(tagName) ?? []
 	return new Set(
 		references.flatMap((reference) => {
 			const followsUuid =
 				reference.form === 'path' ||
 				Boolean(attributes[reference.uuid] || counterpartAttributes[reference.uuid])
-			return followsUuid ? [reference.uuid, ...reference.names] : [reference.uuid]
+			const names = followsUuid ? reference.names : []
+			// a fork: the newer revision's reference naming another element the fork holds is compared and written by its
+			// uuid alone; the commit's steps write its path or names from it
+			const retargeted = retargets
+				? isRetargeted({ uuid: reference.uuid, attributes, counterpartAttributes, retargets })
+				: false
+			return retargeted ? names : [reference.uuid, ...names]
 		}),
+	)
+}
+
+/** Whether a reference's uuid differs between the two sides and the newer revision's names an element the fork holds. */
+function isRetargeted(params: IsRetargetedParams): boolean {
+	const { uuid, attributes, counterpartAttributes, retargets } = params
+	const sourceValue =
+		retargets.sourceIs === 'attributes' ? attributes[uuid] : counterpartAttributes[uuid]
+	const instanceValue =
+		retargets.sourceIs === 'attributes' ? counterpartAttributes[uuid] : attributes[uuid]
+	return (
+		Boolean(sourceValue) && sourceValue !== instanceValue && retargets.uuids.has(sourceValue ?? '')
 	)
 }
 

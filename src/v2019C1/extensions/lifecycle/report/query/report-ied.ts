@@ -4,6 +4,7 @@ import { reportSsd } from './report-ssd'
 import { toRef } from '@dialecte/core/helpers'
 
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
+import { withUpdateHolds } from '@/v2019C1/extensions/lifecycle/engine/reference-retargets'
 import { assertIedPlacementOffered } from '@/v2019C1/extensions/lifecycle/layers/ied/assert-ied-placement'
 import { readFileCommunications } from '@/v2019C1/extensions/lifecycle/layers/ied/file-communication'
 import { readInstanceRedirects } from '@/v2019C1/extensions/lifecycle/layers/ied/instance-redirects'
@@ -17,7 +18,9 @@ import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import type {
 	ReportFileCommunicationParams,
 	ReportIedParams,
+	ReportSpecificationUpdateParams,
 	WithCompanionParams,
+	WithSpecificationParams,
 } from './report-ied.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -119,21 +122,18 @@ async function reportIedPlacement(
 		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 	})
-	return withSpecification({ reportInstance, specification })
+	return withSpecification({ reportInstance, communicationInstances: [], specification })
 }
 
 /**
  * One report of the IED and the specification beside it: the IED's instance first, the specification's after it, the
  * decisions the specification needs, the units it acts on and what it told of said for the whole.
  */
-function withSpecification(params: {
-	reportInstance: ReportInstance
-	specification: DiffReport
-}): DiffReport {
-	const { reportInstance, specification } = params
+function withSpecification(params: WithSpecificationParams): DiffReport {
+	const { reportInstance, communicationInstances, specification } = params
 	const report = assembleReport({
-		instances: [reportInstance, ...specification.instances],
-		templateRoots: [reportInstance],
+		instances: [reportInstance, ...communicationInstances, ...specification.instances],
+		templateRoots: [reportInstance, ...communicationInstances],
 	})
 	if (specification.needsDecisions) report.needsDecisions = true
 	if (specification.scopeUnits) report.scopeUnits = specification.scopeUnits
@@ -154,6 +154,20 @@ async function reportIedUpdate(
 ): Promise<DiffReport> {
 	const { sourceQuery, iedRef, instance, policy } = params
 	const { matchKey, namesFollow } = policy
+	// the specification beside the IED, read once: what of it the update leaves out is not what it holds
+	const iedSpecification = await readIedSpecification(query, {
+		sourceQuery,
+		fileType: params.fileType,
+		iedRef: toRef(instance) as Scl.Ref<'IED'>,
+		matchKey,
+	})
+	// what the update holds, read once: a fork of the file itself records its re-target scope
+	const removalBase = await withUpdateHolds({
+		removalBase: params.removalBase,
+		sourceQuery,
+		target: query,
+		leftOut: iedSpecification?.scope.leftOut,
+	})
 	const iedDiff = await diff({
 		sourceQuery,
 		targetQuery: query,
@@ -161,7 +175,7 @@ async function reportIedUpdate(
 		instanceRootRef: instance,
 		matchKey,
 		namesFollow,
-		removalBase: params.removalBase,
+		removalBase,
 		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 	})
@@ -196,9 +210,19 @@ async function reportIedUpdate(
 		sourceRef: iedRef,
 	})
 	const communicationInstances = fileCommunications
-		? [await reportFileCommunication(query, { ...params, communications: fileCommunications })]
+		? [
+				await reportFileCommunication(query, {
+					...params,
+					removalBase,
+					communications: fileCommunications,
+				}),
+			]
 		: []
-	const specification = await reportSpecificationUpdate(query, params)
+	const specification = await reportSpecificationUpdate(query, {
+		...params,
+		removalBase,
+		specification: iedSpecification,
+	})
 	if (!specification) {
 		return assembleReport({
 			instances: [reportInstance, ...communicationInstances],
@@ -210,7 +234,7 @@ async function reportIedUpdate(
 		iedGroups: reportInstance.groups,
 		specificationGroups: specification.instances.flatMap((instance) => instance.groups),
 	})
-	return withSpecification({ reportInstance, specification })
+	return withSpecification({ reportInstance, communicationInstances, specification })
 }
 
 /**
@@ -250,16 +274,9 @@ async function reportFileCommunication(
  */
 async function reportSpecificationUpdate(
 	query: Core.Query<Config>,
-	params: ReportIedParams & { instance: AnyTrackedRecord; policy: ScenarioPolicy },
+	params: ReportSpecificationUpdateParams,
 ): Promise<DiffReport | undefined> {
-	const { sourceQuery, instance, policy } = params
-	// a fork's specification pairs by uuid, not by lineage: not reported with its IED yet
-	if (policy.matchKey !== 'templateUuid') return undefined
-	const specification = await readIedSpecification(query, {
-		sourceQuery,
-		fileType: params.fileType,
-		iedRef: toRef(instance) as Scl.Ref<'IED'>,
-	})
+	const { sourceQuery, specification } = params
 	if (!specification) return undefined
 	const shared = {
 		sourceQuery,
@@ -271,10 +288,16 @@ async function reportSpecificationUpdate(
 		placeholderLineages: params.placeholderLineages,
 	}
 	const specificationInstance = specification.instance
-	if (!specificationInstance) return reportSsd(query, { ...shared, scenario: 'instantiate' })
+	// the project holds none of it: a first placement, a fork keeping the file's identity
+	if (!specificationInstance) {
+		return reportSsd(query, {
+			...shared,
+			scenario: specificationScenario(params.scenario ?? 'template'),
+		})
+	}
 	const report = await reportSsd(query, {
 		...shared,
-		scenario: 'template',
+		scenario: params.scenario === 'fork' ? 'fork' : 'template',
 		targetInstance: specificationInstance.frames,
 		primaryTargets: specificationInstance.primaries,
 		leftOut: specification.scope.leftOut,

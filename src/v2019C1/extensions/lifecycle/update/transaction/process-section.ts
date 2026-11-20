@@ -146,6 +146,8 @@ export async function updateProcessSection(
 				targetInstance: params.primaryTargets ?? targetInstance,
 				redirectMappings: params.redirectMappings,
 				decisionMappings: params.decisionMappings,
+				// the scope's standalone functions: one an application stops composing is updated as such
+				standaloneFunctions,
 			})
 			applications.push(...result.applications)
 			functions.push(...result.functions)

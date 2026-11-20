@@ -8,7 +8,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/instance'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/resolve-target-structure'
 import { findHeldLevel } from '@/v2019C1/extensions/lifecycle/layers/topology'
-import { resolveStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
+import { findStructureRef } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 
 import type { ResolveComposedFunctionsParams } from './resolve-composed-functions.types'
 import type { InstanceHoldings } from './resolve-instance-holdings.types'
@@ -43,28 +43,24 @@ export async function resolveComposedFunctions(
 	for (const functionRef of functionRefs) {
 		const lineage = await sourceQuery.getAttribute(functionRef, { name: 'uuid' })
 		children.push({ ref: functionRef, lineage })
-		heldFunctions.set(
-			functionRef.id,
-			await findInstancesByTemplateUuid(query, {
-				tagName: 'Function',
-				sourceUuid: lineage,
-				matchKey,
-			}),
-		)
+		const held = await findInstancesByTemplateUuid(query, {
+			tagName: 'Function',
+			sourceUuid: lineage,
+			matchKey,
+		})
+		heldFunctions.set(functionRef.id, held)
 	}
 
 	const holdings = new Map<string, InstanceHoldings>()
 	for (const instance of applicationInstances) {
-		holdings.set(
-			instance.id,
-			await resolveInstanceHoldings(query, {
-				sourceQuery,
-				applicationRef,
-				instance,
-				functionRefs,
-				heldFunctions,
-			}),
-		)
+		const holding = await resolveInstanceHoldings(query, {
+			sourceQuery,
+			applicationRef,
+			instance,
+			functionRefs,
+			heldFunctions,
+		})
+		holdings.set(instance.id, holding)
 	}
 	const anchorStructure = anchor ? await resolveTargetStructure(query, anchor) : undefined
 
@@ -85,13 +81,12 @@ export async function resolveComposedFunctions(
 				sourceUuid: child.lineage,
 				matchKey,
 			}),
+		// the level of the anchor the child sits on: none when the anchor holds no level of its kind (a document root)
 		anchorLevelOf: async (child) =>
 			anchorStructure
-				? ((await resolveStructureRef(
-						sourceQuery,
-						child.ref,
-						anchorStructure,
-					)) as Scl.Ref<Scl.ElementsOf>)
+				? ((await findStructureRef(sourceQuery, child.ref, anchorStructure)) as
+						| Scl.Ref<Scl.ElementsOf>
+						| undefined)
 				: undefined,
 	}
 

@@ -4,6 +4,7 @@ import type {
 	SsdScope,
 	TopologyReconcilables,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
 
@@ -14,6 +15,8 @@ export type ReadIedSpecificationParams = {
 	fileType: SclFileType | undefined
 	/** The IED of the project updated. */
 	iedRef: Scl.Ref<'IED'>
+	/** What a project element carries of the template element it stands for: its lineage, or in a fork its uuid. */
+	matchKey: MatchKey
 }
 
 /** The specification an ISD carries beside its IED, and what the project holds of it for the IED updated. */

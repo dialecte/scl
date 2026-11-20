@@ -31,6 +31,11 @@ export type UpdateAsdParams = {
 	sharedFunctions?: SharedFunctions
 	/** What tells a dropped element from the project's own, when the caller read it already (once per apply). */
 	removalBase?: RemovalBase
+	/**
+	 * The functions the larger update reconciles as standalone ones beside the application (a substation scope's): one
+	 * the application no longer composes is updated as such, never dropped (see `findDroppedComposedFunctions`).
+	 */
+	standaloneFunctions?: readonly Scl.Ref<'Function'>[]
 	/** The lineages a reference of the project may pair by name on: see `PlaceholderLineages`. */
 	placeholderLineages?: PlaceholderLineages
 	report?: DiffReport
